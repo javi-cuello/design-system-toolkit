@@ -657,11 +657,14 @@ globalThis.__PT_FACTORY = function () {
     };
   };
 
-  PT.audit = async () => {
+  // opts.labels: also hold each table's subcomponent label to containment, as plan() would
+  // set it (a containment scan per page, so off by default: the check before a first apply()
+  // over a file documented by hand asks for it).
+  PT.audit = async (opts = {}) => {
     const cfg = PT.config();
     if (!cfg) return { error: 'Run PT.profile() first.' };
     unreadable = 0;
-    const problems = [], orderDisagreements = [];
+    const problems = [], orderDisagreements = [], labelsUnchecked = [];
     let pages = 0, tables = 0, rows = 0;
 
     for (const page of figma.root.children) {
@@ -687,6 +690,8 @@ globalThis.__PT_FACTORY = function () {
       if (!found.length) continue;
       pages++;
       tables += found.length;
+      const ord = opts.labels && cfg.labelBoolProp ? await orderComponents(page, comps) : null;
+      if (ord && !ord.containmentScanned) labelsUnchecked.push(page.name);
       if (found.length !== comps.length) {
         problems.push(page.name + ': ' + found.length + ' tables vs ' + comps.length + ' components');
       }
@@ -697,6 +702,15 @@ globalThis.__PT_FACTORY = function () {
         if (!title) problems.push(page.name + ': table with no title');
         else if (comps.some(c => c.name === title && shown(c.name) !== title)) problems.push(page.name + ': title "' + title + '" carries the status marker');
         else if (!comps.some(c => shown(c.name) === title)) problems.push(page.name + ': title "' + title + '" matches no component');
+
+        if (ord && ord.contained && titleNode) {
+          const lk = pid(titleNode, cfg.labelBoolProp);
+          const labelled = comps.find(c => shown(c.name) === title);
+          if (lk && labelled) {
+            const has = titleNode.componentProperties[lk].value === true, want = ord.contained.has(labelled.id);
+            if (has !== want) problems.push(page.name + '/' + title + ': labelled ' + (has ? 'a subcomponent' : 'a component') + ', but containment makes it ' + (want ? 'a subcomponent' : 'a component'));
+          }
+        }
 
         const ek = cfg.emptyProp && pid(t, cfg.emptyProp);
         const isEmpty = ek ? t.componentProperties[ek].value === cfg.emptyValue : false;
@@ -717,7 +731,7 @@ globalThis.__PT_FACTORY = function () {
         }
       }
     }
-    return { pages, tables, rows, problems, orderDisagreements, unreadable };
+    return opts.labels ? { pages, tables, rows, problems, orderDisagreements, labelsUnchecked, unreadable } : { pages, tables, rows, problems, orderDisagreements, unreadable };
   };
 
   globalThis.PT = PT;

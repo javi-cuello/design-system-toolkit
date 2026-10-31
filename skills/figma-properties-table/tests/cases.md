@@ -1,4 +1,6 @@
-# Eval cases — figma-properties-table (v1.10.0)
+# Eval cases — figma-properties-table (v1.11.0)
+
+**Walked: 2026-10-31 for 1.11.0** — A13 added and executed: `node tests/test-properties-table.js` 46 passed, the three new assertions failing two of three with the containment answer planted as always false. Not walked live: the label check has met only the stand-in file.
 
 **Walked: 2026-10-31 for 1.10.0** — A11/A12 re-aimed: `node tools/component-contract/test-contract-rows.mjs` 13 passed (A12 through a symlink to the tool's folder), `node tests/test-properties-table.js` 43 passed; the paste hash is comment-stripped, so the comment edits move nothing.
 
@@ -120,3 +122,10 @@ Runs: node tools/component-contract/test-contract-rows.mjs — "variant axes fir
 Fixture: `tools/component-contract/contract-rows.mjs` run by a path through a symlink to its folder, as a linked toolkit runs it, with no arguments.
 Assert: it runs and prints its usage (exit 2). Doing nothing and exiting 0 is the failure (production bug: its main-module check compared a resolved path with an unresolved one).
 Runs: node tools/component-contract/test-contract-rows.mjs — "A12: run through a symlink, the script runs"
+
+## A13 · Before a first apply over a hand-documented file, the audit is the comparison
+Fixture: a stand-in page holding `Chip group`, whose variant nests a `Chip` instance, and `Chip`, each with a properties table whose title carries a `Subcomponent` boolean set false.
+Assert: `PT.audit()` with no options makes no containment scan and says nothing of labels; `PT.audit({ labels: true })` reports Chip's table as labelled a component where containment makes it a subcomponent, and not Chip group's; with Chip's label set true it reports nothing and `labelsUnchecked` is empty.
+Recorded under toolkit-standard §D 23: titles, labels and rows were compared by hand before a first `apply()`.
+
+Runs: node tests/test-properties-table.js — "A13: a contained component's table not labelled a subcomponent is reported; the container's is not". Not walked live.

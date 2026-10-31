@@ -216,6 +216,34 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     a9 = await factory().audit();
     ok(!a9.problems.some(p => /rows do not match/.test(p)), 'A9: rows that match the properties raise nothing');
   }
+  // A13: audit({ labels: true }) holds each table's subcomponent label to containment, as
+  // plan() sets it, so a file documented by hand is checked before apply() rewrites it.
+  {
+    const chipMain = node({ id: '9:1', type: 'COMPONENT', name: 'Size=md' });
+    const chipSet = node({ id: '9:0', type: 'COMPONENT_SET', name: 'Chip', componentPropertyDefinitions: { Size: { type: 'VARIANT', variantOptions: ['md'] } } }, [chipMain]);
+    const inner = node({ id: '9:5', type: 'INSTANCE', name: 'Chip', getMainComponentAsync: async () => chipMain });
+    const groupVariant = node({ id: '9:3', type: 'COMPONENT', name: 'Size=md' }, [inner]);
+    const groupSet = node({ id: '9:2', type: 'COMPONENT_SET', name: 'Chip group', componentPropertyDefinitions: { Size: { type: 'VARIANT', variantOptions: ['md'] } } }, [groupVariant]);
+    const titled = (id, name, sub) => node({ id, type: 'INSTANCE', name: 'Title', componentProperties: { 'Text#0:1': { type: 'TEXT', value: name }, 'Subcomponent#0:2': { type: 'BOOLEAN', value: sub } } });
+    const table = (id, t) => { const x = node({ id, type: 'INSTANCE', name: 'Properties table', componentProperties: {} }, [t]); x.findAll = (fn) => all(x).filter(fn); return x; };
+    const groupTitle = titled('9:11', 'Chip group', false), chipTitle = titled('9:13', 'Chip', false);
+    const gPage = node({ id: '0:3', type: 'PAGE', name: 'Chip group', loadAsync: async () => {} }, [groupSet, chipSet, table('9:10', groupTitle), table('9:12', chipTitle)]);
+    gPage.findAll = (fn) => all(gPage).filter(fn);
+    gPage.findAllWithCriteria = ({ types }) => all(gPage).filter(n => (types || ['INSTANCE']).includes(n.type));
+    groupSet.findAll = (fn) => all(groupSet).filter(fn); groupVariant.findAll = (fn) => all(groupVariant).filter(fn); chipMain.findAll = () => []; chipSet.findAll = (fn) => all(chipSet).filter(fn);
+    const lcfg = Object.assign({}, cfg, { labelBoolProp: 'Subcomponent' });
+    globalThis.figma = { root: Object.assign({ children: [gPage] }, pluginData(lcfg)) };
+    delete globalThis.PT;
+    const plain = await factory().audit();
+    ok(!('labelsUnchecked' in plain) && !plain.problems.some(p => /labelled/.test(p)), 'A13: without opts.labels the audit makes no containment scan and says nothing of labels');
+    delete globalThis.PT;
+    const l1 = await factory().audit({ labels: true });
+    ok(l1.problems.some(p => p === 'Chip group/Chip: labelled a component, but containment makes it a subcomponent') && !l1.problems.some(p => /Chip group\/Chip group: labelled/.test(p)), 'A13: a contained component\'s table not labelled a subcomponent is reported; the container\'s is not');
+    chipTitle.componentProperties['Subcomponent#0:2'].value = true;
+    delete globalThis.PT;
+    const l2 = await factory().audit({ labels: true });
+    ok(!l2.problems.some(p => /labelled/.test(p)) && Array.isArray(l2.labelsUnchecked) && !l2.labelsUnchecked.length, 'A13: labels that follow containment raise nothing');
+  }
   delete globalThis.figma; delete globalThis.PT;
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (failures.length) { console.log(failures.join('\n')); process.exit(1); }
