@@ -18,8 +18,10 @@ node ~/Projects/toolkit/tools/parity/run.mjs --repo . --gates      # only the ga
 node ~/Projects/toolkit/tools/parity/run.mjs --repo . --accept     # make this run's measurements the accepted baseline
 
 # comparison: a library someone else built, rendered in its own Storybook
-node ~/Projects/toolkit/tools/parity/external.mjs --project <label>
+node ~/Projects/toolkit/tools/parity/external.mjs --project <label> [component …]
 ```
+
+The comparison also takes `--draft` (every other component the library and its Storybook share, with a mapping drafted by rule, to start a person's map from, never a finding), `--rebuild` (their Storybook built again though nothing it is built from changed) and `--auto-pair` (every element paired by rule and the map's own pairings ignored, to measure the rule against the map).
 
 **Needs:** Node 22.12+ and Google Chrome. A governed project states its pages, host and baseline in `snapshot.config.json`; a comparison states its code in its context document (`code.repo`, and `code.parity`: the host and how to build it, its one tier, its token files, and where its mappings are). Both write their mappings in one format (below), and `project.mjs` `loadParity` reads either. **Writes** the verdict a docs site shows: `parity/report.json` in the project's `parity` folder (comparison), or where the project's `paths.parity` says (governed).
 

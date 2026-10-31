@@ -4,10 +4,13 @@
  * else built, rendered in its own Storybook, measured against the design's
  * component contracts (tools/component-contract).
  *
- *   node tools/parity/external.mjs --project <label> [component …] [--draft] [--rebuild]
+ *   node tools/parity/external.mjs --project <label> [component …] [--draft] [--rebuild] [--auto-pair]
  *
  * `--draft` adds every other component the library and its Storybook share,
  * with a mapping drafted by rule: a start for a person's map, never a finding.
+ * `--rebuild` builds their Storybook again though nothing it is built from
+ * changed. `--auto-pair` pairs every element by rule and ignores the map's
+ * own pairings, to measure the rule against the map.
  *
  * Parity proper holds code we generate from Figma to the snapshot, pixel by
  * pixel, through selectors we put on every layer. Code built elsewhere has
@@ -973,7 +976,7 @@ async function main() {
   const drafting = argv.includes('--draft'); if (drafting) argv.splice(argv.indexOf('--draft'), 1);
   // --auto-pair: every element paired by rule, the map's own ignored (to measure the rule against it)
   const autoPair = argv.includes('--auto-pair'); if (autoPair) argv.splice(argv.indexOf('--auto-pair'), 1);
-  if (!label) { console.error('usage: external.mjs --project <label> [component …] [--rebuild]'); process.exit(2); }
+  if (!label) { console.error('usage: external.mjs --project <label> [component …] [--draft] [--rebuild] [--auto-pair]'); process.exit(2); }
   const { expand } = req('../component-contract/derive.cjs');
   const { valueOf } = req('../snapshot/tokens.cjs');
   const { navigate, forceState, call, waitFor } = await import('../shared/cdp.mjs');

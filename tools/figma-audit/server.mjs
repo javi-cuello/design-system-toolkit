@@ -14,10 +14,17 @@
 // sandbox: the plugin dials in on its own and reconnects itself forever.
 //
 // No dependencies, deliberately: nothing to install, nothing to keep current,
-// and it can run as a login agent with no terminal.
+// and it can run as a login agent with no terminal. (The docs site it builds
+// has packages of its own: pnpm install in tools/docs-site.)
 //
+//   node server.mjs --all                                   every project whose context document states a port
 //   node server.mjs --data <project home>/audit [--port 9231]
 //   node server.mjs --data <a>/audit --port 9231 --data <b>/audit --port 9232
+//
+// Also: --context <doc> (default: beside the audit folder), --key-file <path>
+// (default ~/.figma-dashboard-key; ANTHROPIC_API_KEY wins), and --scanner,
+// --foundations, --validator, --links, --pairing for a skill installed outside
+// this repo (README, Reference).
 //
 // One record per library inside that folder, named for its Figma file key.
 //
@@ -1150,7 +1157,10 @@ server.on("upgrade", (req, socket) => {
 server.on("error", (e) => {
   if (e.code === "EADDRINUSE") {
     console.error("Port " + PORT + " is already in use — most likely an earlier copy of this service.");
-    console.error("Stop it with:  pkill -f 'server.mjs --data'    (then run this again)");
+    // a login agent killed by hand is started again by launchd at once: it is stopped through launchctl
+    console.error("What holds it:  lsof -nP -iTCP:" + PORT + " -sTCP:LISTEN");
+    console.error("The login agent (install.sh):  launchctl bootout gui/$(id -u)/com.toolkit.figma-audit    (./install.sh loads it again)");
+    console.error("A copy started by hand:  pkill -f 'figma-audit/server.mjs'    (then run this again)");
   } else console.error(e.message);
   process.exit(1);
 });

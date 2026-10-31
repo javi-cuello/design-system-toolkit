@@ -115,27 +115,30 @@ registered anywhere.
   browser global, and every import is exported.
 - `src/lib/` — reading the snapshot, the audit record and the project.
 
+## Publishing
+
+`bin/deploy <project> --public` or `--password` uploads the site the service
+built (`<project home>/site`) to Cloudflare as the Worker `<name>-docs`, serving
+it as static assets at `<name>-docs.<account>.workers.dev` (Cloudflare folded
+Pages into Workers; wrangler 4.138's Pages commands no longer deploy a folder),
+at a domain root since the engine sets no base path. It needs `npx wrangler
+login` once. It refuses without one of the two flags, so who may read a site is
+decided when it is published. `--password` puts `tools/docs-site/deploy/password.js`
+in front, the browser's sign-in box asking for the Worker's secret `PASSWORD`;
+until it is set (`npx wrangler secret put PASSWORD --name <name>-docs`) the site
+serves nothing. A project whose context document's `project` block says
+`"publish": "password"` or `"public"` is redeployed by the dashboard service
+after every build; otherwise run it by hand. A published copy's Audits page is
+its read-only dashboard: no actions, no note fields, the record as of the build.
+
+Why Cloudflare (decided 2026-09-19, the password added 2026-10-14): GitHub Pages
+has no access control outside Enterprise, StatiCrypt is one shared password
+re-encrypted on every build, and Tailscale needs every reader to install it.
+Cloudflare Access (a login per person, free to 50 users) was the first choice;
+the maintainer chose one password over it: no card, one password for everyone.
+
 ## Not here yet
 
-- **Publishing.** Decided (2026-09-19): Cloudflare behind Cloudflare
-  Access, a login per person, free to 50 users. GitHub Pages was ruled out
-  (no access control outside Enterprise), and so were StatiCrypt (one shared
-  password, re-encryption on every build) and Tailscale (every reader
-  installs it). `bin/deploy <project> --public` uploads the site the service
-  built (`<project home>/site`) as the Worker `<name>-docs`, serving it as
-  static assets at `<name>-docs.<account>.workers.dev` (Cloudflare folded Pages
-  into Workers; wrangler 4.138's Pages commands no longer deploy a folder), at
-  a domain root since the engine sets no base path. A project whose context
-  document's `project` block says `"publish": "password"` or `"public"` is
-  redeployed by the dashboard service after every build (2026-10-14);
-  otherwise run it by hand. It refuses without `--public` or `--password`, so who
-  may read a site is decided when it is published. `--password` (2026-10-14,
-  the maintainer's choice over Access: no card, one password for everyone)
-  puts `tools/docs-site/deploy/password.js` in front, the browser's sign-in box
-  asking for the Worker's secret `PASSWORD`; until it is set the site serves
-  nothing. One project is public (2026-09-24), one behind the password.
-  A published copy's Audits page is its read-only dashboard: no actions, no
-  note fields, the record as of the build.
 - **Visual Do and Don't examples.** Parked (2026-09-19). The shape agreed:
   Claude drafts one frame per guidance bullet in Figma from real instances
   (named `Do / <bullet>`), the designer reviews them there, the snapshot

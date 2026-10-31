@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.35.1)
+# Eval cases — figma-components-audit (v2.35.2)
+
+**Walked: 2026-10-31 for 2.35.2** — the Files table names `scanner/scoring.json` and `scanner/measures.json`, which it left out; wording only, no case reads the table, so every case holds unchanged.
 
 **Walked: 2026-10-31 for 2.35.1** — `node tests/test-audit.mjs` 83/83, the two new assertions (guidance still owed, a private placeholder is hygiene) failing on 2.35.0.
 

@@ -25,7 +25,7 @@ case " $* " in
 esac
 
 HOME_DIR="$(node "$REPO/tools/snapshot/projects.cjs" homes | awk -F"\t" -v l="$LABEL" '$1 == l { print $2 }')"
-[ -n "$HOME_DIR" ] || { echo "no project $LABEL: no ~/Projects/$LABEL/figma-design-system/ with a context document" >&2; exit 1; }
+[ -n "$HOME_DIR" ] || { echo "no project $LABEL: no $LABEL/figma-design-system/ with a context document in the folder that holds the toolkit (or TOOLKIT_PROJECTS_ROOT); node tools/snapshot/projects.cjs homes lists the projects" >&2; exit 1; }
 SITE="$HOME_DIR/site"
 [ -f "$SITE/index.html" ] || { echo "no built site at $SITE — start the dashboard service and let it build" >&2; exit 1; }
 # The service writes over the site as it rebuilds; a half-written folder is

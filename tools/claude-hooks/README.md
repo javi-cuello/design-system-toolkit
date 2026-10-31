@@ -30,7 +30,7 @@ Register the four hooks once per machine in `~/.claude/settings.json`, under `ho
 "PreToolUse": [{ "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash", "hooks": [{ "type": "command", "command": "node ~/Projects/toolkit/tools/claude-hooks/hooks.mjs edit", "timeout": 15 }] }]
 ```
 
-They act only inside the toolkit or a project repo (one with a `figma-design-system/` folder); anywhere else they do nothing, except the Stop gates, which follow the files a session wrote wherever it started.
+They act only inside the toolkit or a project repo (one with a `figma-design-system/` folder); anywhere else they do nothing, except the Stop gates, which follow the files a session wrote wherever it started. `TOOLKIT_RULES=off` in the environment turns off the rule list `edit` hands over (the plan gate still runs); the skill evals set it to measure a run without it.
 
 ## What each file does
 

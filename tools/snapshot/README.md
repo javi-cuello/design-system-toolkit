@@ -53,7 +53,11 @@ app open (snapshot-standard rule 26):
 `script` is the plugin's own code.js, its whole-line comments dropped to fit
 use_figma's 50,000 characters. The run leaves the payload as shared plugin data
 on the plugin's temporary page, which `collect` reads back over the REST API
-with the machine's Figma token. A project routing several library files is
+with the machine's Figma token. A token is looked for in this order (`version.cjs`
+`tokenFor`, the one reader): `FIGMA_TOKEN` in the environment; for release
+pinning in a repo, the `figmaToken` command its `snapshot.config.json` names
+(`collect` does not run it); then `~/.config/figma/token` (`FIGMA_TOKEN_FILE`
+names another file; `bin/set-key figma` writes it). A project routing several library files is
 told which one the run was in with `--file <key>`; `--repo <dir>` delivers into a copy of the
 repo instead, and `--save <file>` keeps the payload. A run can outlast the
 tool's answer: when the call reports it lost, look for the temporary page
@@ -210,7 +214,7 @@ that matters.
 
 | Flag | Default |
 |---|---|
-| `--projects <dir>` | none: every `~/Projects/<label>/figma-design-system/` (a folder of `<label>/` homes, for tests) |
+| `--projects <dir>` | none: every `<label>/figma-design-system/` in the folder that holds the toolkit, or in `TOOLKIT_PROJECTS_ROOT` (a folder of `<label>/` homes, for tests) |
 | `--port <n>` | `9317`, the port the plugin posts to |
 
 `node test-router.mjs` walks it: discovery, each route, an unknown key, a

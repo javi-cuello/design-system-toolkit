@@ -67,6 +67,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Left out, every project the contract finds (contract.homes()).
 const PROJECTS = arg('--projects', null);
 const PORT = +arg('--port', 9317);
+// where a failure's trace is, named in the reply the plugin shows: a designer is not looking at a terminal
+const TRACE = `the trace is in ${path.join(os.homedir(), 'Library/Logs/toolkit/figma-snapshot.err')} (or the terminal running the router)`;
 
 /*
  * Where a payload is kept, and why at all.
@@ -225,7 +227,7 @@ const server = (req, res) => {
   // takes the router down with every other project's snapshot
   req.on('end', () => ended().catch((e) => {
     console.error(`  failed: ${e.stack || e.message}`);
-    if (!res.headersSent) { res.writeHead(500, { 'content-type': 'text/plain', ...cors(req) }); res.end(`the router failed, so the snapshot may not be written: ${e.message}. Snapshot again; if it repeats, the router's output has the trace.`); }
+    if (!res.headersSent) { res.writeHead(500, { 'content-type': 'text/plain', ...cors(req) }); res.end(`the router failed, so the snapshot may not be written: ${e.message}. Snapshot again; if it repeats, ${TRACE}.`); }
   }));
   const ended = async () => {
     if (refused) {
@@ -280,7 +282,7 @@ const server = (req, res) => {
     let out;
     try { out = await deliver(project, kind, payload); } catch (e) {
       console.error(e.stack || e);
-      return answer(500, `${project.name}: the snapshot failed, so it may be half written: ${e.message}. Snapshot again; if it repeats, the router's output has the trace.`);
+      return answer(500, `${project.name}: the snapshot failed, so it may be half written: ${e.message}. Snapshot again; if it repeats, ${TRACE}.`);
     }
     if (out.result === 'written') return answer(200, `${project.name}: written`);
     /* A refusal is the guard working, not a crash. Reporting it as one would

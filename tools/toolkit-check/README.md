@@ -19,7 +19,7 @@ bin/closing                                            # what is open across the
 | `check-runs.mjs` | Every assertion a skill's `tests/cases.md` says it runs still exists in the test it names. |
 | `owned-check.mjs` + `owned.json` | `owned.json` lists the jobs the toolkit owns (token build, parity, lint…); the check fails a repo that writes one again instead of calling the toolkit. |
 | `twins.mjs` | Warns when two projects each wrote the same job, before the toolkit owns it. |
-| `readmes.mjs` | Every folder a newcomer opens has a README in the agreed shape (§D 22). |
+| `readmes.mjs` | Every folder a newcomer opens has a README in the agreed shape (§D 22): a title, a lead, a command or import step, and links that resolve, each `#anchor` to a heading that is there. Tested by `test-readmes.mjs`. |
 | `main-guards.mjs` | Every script's "am I the one being run" guard compares `realpathSync(process.argv[1])`, so a run through the skills symlink is not silently a no-op. |
 | `project-names.sh` | The project names the toolkit may never carry, as one regex: bin/check searches the files for them and `.githooks/pre-push` the messages of the commits a push sends (`test-pre-push-names.mjs`). A names read that fails is a failure, never no projects. |
 | `test-sandbox-paste.mjs` | Every script pasted into Figma's sandbox holds nothing the sandbox refuses whole (`import` before `(`, `//` or `/*`, comments included). |

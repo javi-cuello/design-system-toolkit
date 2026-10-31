@@ -12,9 +12,9 @@
 >
 > 5. New rulings: end the run by outputting updated §5/§6 lines for paste-back.
 >
-> 6. Stale-copy check: file evidence showing a queued fix already completed, or conventions this document doesn't know, suggests an outdated Project copy — prompt the maintainer to swap in the latest version before treating it as a conflict.
+> 6. Stale-copy check: file evidence showing a queued fix already completed, or conventions this document doesn't know, suggests an outdated copy of this document — prompt the maintainer to swap in the latest version before treating it as a conflict.
 >
-> > **Deployment (once):** add this doc to the project's Claude knowledge; add to
+> > **Deployment (once):** in Claude Code, none: this doc lives at `<project home>/design-system-context.md`, where the tools and skills read it. In a claude.ai Project, add this doc to the Project's knowledge, and add to
 >
 > custom instructions: `Before any figma-* skill, load the design system context doc and match by fileKey.`
 >
@@ -108,7 +108,7 @@ site. Read through the snapshot contract (snapshot-standard rule 18); stated
 nowhere else.
 
 ```json project
-{"name": "{Display name}", "phase": "design", "port": 9229}
+{"name": "{Display name}", "phase": "design", "port": 9232}
 ```
 
 **Snapshot routing** — which Figma files this project owns, and therefore

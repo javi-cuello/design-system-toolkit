@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.9.0)
+# Eval cases — figma-context-capture (v2.10.0)
+
+**Walked: 2026-10-31 for 2.10.0, by inspection** — C3's assertion (a) moves from "the working folder" to the project's home, `<project home>/design-system-context.md`, and adds that the report names where it is and asks no paste into project knowledge; read against SKILL.md's Write and Close steps and the template's Deployment line, which now say the same. C10's §5 citation and C7–C9's template shape are unchanged by the edit (only the preamble's Deployment line and the project block's example port moved). `node tests/test-passes.mjs` passes. Not walked live: no capture run has met the new path since the 2026-08-08 live C3 run, which wrote to its working folder.
 
 **Walked: 2026-10-31 against v2.9.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -47,7 +49,7 @@ Walked live: 2026-08-08 — a 3-file library's 106 primitives; the mechanism hal
 
 ## C3 · Environment-aware output path
 Fixture: same capture run described (a) in Claude Code with a working folder, (b) in claude.ai.
-Assert: (a) writes/updates `design-system-context.md` in the working folder, no paste-back text; (b) writes to `/mnt/user-data/outputs/` and presents the file.
+Assert: (a) writes/updates `<project home>/design-system-context.md` (the project's `figma-design-system/` folder), no paste-back text, and the report says where it is with no reminder to add it to project knowledge; (b) writes to `/mnt/user-data/outputs/`, presents the file, and reminds that it goes into the Project's knowledge.
 
 Walked live: 2026-08-08 — a Claude Code capture run with a working folder.
 

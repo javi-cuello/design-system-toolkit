@@ -2,7 +2,7 @@
 /*
  * tools/project-check/validate.mjs — what the project's code target cannot draw as
  * designed, read off its stored snapshot by component-validator's engine. The
- * router runs it after every library snapshot, for every project (deliver.cjs);
+ * router runs it after every library snapshot of a project with a code repo (deliver.cjs);
  * a person runs it by hand:
  *
  *   node tools/project-check/validate.mjs --repo <dir> [--context <design-system-context.md>] [component]
