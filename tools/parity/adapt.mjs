@@ -113,7 +113,9 @@ function textBoxes(n, axis) {
    frame's text area is, a phone page 22.94 short. A difference past the cap
    is a waiver with its own `within` and owner, or a finding. A row the slack
    excuses by a pixel or more is reported as waived, never as a match
-   (diff.mjs), so the slack is read, not trusted. */
+   (diff.mjs), so the slack is read, not trusted. A bound on the engine's
+   own allowance, measured across the projects, not a value a project
+   answers: it stays in code, and a project that needs more takes a waiver. */
 export const SLACK_CAP = 3;
 export function sizeSlack(n, axis, chain) {
   const s = sizingOn(n, axis);
