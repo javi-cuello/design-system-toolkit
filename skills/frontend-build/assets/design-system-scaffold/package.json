@@ -1,7 +1,7 @@
 {
   "private": true,
   "devDependencies": {
-    "sass": "1.104.1"
+    "sass": "1.106.1"
   },
   "scripts": {
     "css": "sass --no-source-map --style=compressed assets/design-system/index.sass assets/css/main.css",
