@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { adapt, plan, carriers, SLACK_CAP, SPEC_KEYS } from './adapt.mjs';
 import { diff, BAD } from './diff.mjs';
 import { KINDS } from './schema.mjs';
+import { namer } from '../component-contract/to-code.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -423,6 +424,15 @@ ok('an instance prop is an attribute, off ones included; text, State, Disabled a
   return a.map((x) => x.prop).join() === '-attr:variant,-attr:scroll,-attr:menu,-swap:icon-swap'
     && a.find((x) => x.prop === '-attr:menu').expected.mode === 'off-only' && read('-attr:scroll', { attrs: { scroll: '' } }) === 'set'
     && read('-swap:icon-swap', { children: [{ tag: 'icon', icon: 'house' }] }) === 'house' && typeof read('-swap:icon-swap', { children: [] }) === 'symbol';
+})());
+// the attribute is to-code's (tools/shared/prop-attr.mjs): where to-code writes the sheets, by their naming; else the words
+ok('an instance prop\'s attribute is the one to-code styles by where it writes the sheets, and the prop\'s words where markup is hand-written', (() => {
+  const inst = { name: 'Nav', type: 'INSTANCE', instanceOf: 'Button / lg', w: 10, h: 10, sizing: 'HUG/HUG', props: { Size: 'Large', Tone: 'Info', showIcon: 'True', Role: 'Primary' } };
+  const props = (attrNaming) => doc(F({ children: [inst] }), 'Nav', { Nav: '.n' }, { ...P, attrNaming }).assertions.filter((x) => x.prop.startsWith('-attr')).map((x) => x.prop).join();
+  return props(undefined) === '-attr:size,-attr:tone,-attr:show-icon,-attr:variant'
+    && props({ kind: 'class', prefix: 'ds-' }) === '-attr:data-size,-attr:data-tone,-attr:data-show-icon,-attr:variant'
+    && props({ kind: 'element', prefix: 'ds-' }) === '-attr:data-size,-attr:tone,-attr:show-icon,-attr:variant'
+    && namer('nav', { kind: 'class', prefix: 'ds-' }).attr('showIcon') === 'data-show-icon' && namer('nav', { kind: 'element', prefix: 'ds-' }).attr('size') === 'data-size';
 })());
 // 14 Oct 2026: once a prop's type came from the library, an empty state's
 // `Graphic` swap was judged too, and the page's ds-graphic read as none

@@ -363,6 +363,19 @@
       ]
     },
     {
+      "job": "a component prop's name as the HTML attribute its value is written in",
+      "module": "tools/shared/prop-attr.mjs",
+      "files": [],
+      "names": [
+        "propAttr",
+        "attrWords"
+      ],
+      "evidence": "to-code split camelCase and wrote `data-` attributes while parity's -attr check only kebab-cased, so parity read an attribute the generated CSS never styles (the review of 2026-10-31); to-code's namer, to-markup through it, and parity's adapt now call the one rule",
+      "owners": [
+        "tools/shared/prop-attr.mjs"
+      ]
+    },
+    {
       "job": "reading a variant's name into its values",
       "module": "tools/shared/names.js",
       "files": [],

@@ -14,6 +14,7 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | `real-path.mjs` | `realPath` and `samePath`: a path in its on-disk spelling, so a shell that entered through `~/projects` on a case-insensitive disk still matches a stored `~/Projects` path (project-check, parity, the contract tools). |
 | `knowledge.mjs` | `uiFile` (is a project file interface work) and `pagesFor` (the knowledge pages to read before writing it, by its kind and the words in its path): one notion for the edit hook and the push check's `Knowledge:` gate (toolkit-standard §D 21). |
 | `output.mjs` | What keeps a written file the same for the same input (toolkit-standard §D 23): `compareNames`, one sort order whatever the machine's locale, and `writeReport`, which leaves a run's report alone when only its date and seconds moved (the snapshot store, the contract and parity tools). |
+| `prop-attr.mjs` | A component prop's name as the HTML attribute its value is written in (`propAttr`, `attrWords`): the one rule to-code styles by, to-markup writes and parity's `-attr` check reads, held by `test-prop-attr.mjs`. |
 | `code-inventory.mjs` | What a code library contains, read from its folders, and how its components line up with the ones in Figma (used by the docs site and the audit). |
 
 ```sh
@@ -22,6 +23,7 @@ node tools/shared/test-real-path.mjs
 node tools/shared/test-dialect.mjs
 node tools/shared/test-output.mjs
 node tools/shared/test-knowledge.mjs
+node tools/shared/test-prop-attr.mjs
 node tools/shared/test-cdp.mjs    # needs Chrome
 ```
 
