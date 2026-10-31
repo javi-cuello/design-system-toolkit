@@ -31,6 +31,10 @@ const CONFIG = {
   compactTierExtra: []
 };
 
+// A claim that the component cannot be changed (SKILL.md step 4, false fixity). English
+// only: a description in another language is read for it by hand.
+const FIXITY = /\b(?:is|are) (?:fixed|static|fully composed)\b|\bnot (?:customi[sz]able|configurable)\b|\bcannot be (?:customi[sz]ed|configured|changed)\b|\bfully composed\b|\bhas no (?:props|properties|options)\b/i;
+
 const CONTENT = ['TEXT','INSTANCE','VECTOR','RECTANGLE','ELLIPSE','LINE','POLYGON','STAR','BOOLEAN_OPERATION'];
 
 // A broken instance layer can throw "does not exist" on any read of its name or
@@ -188,6 +192,8 @@ const missing = [];      // subjects with no description
 const defects = [];      // interface defects worth reporting, not description faults
 const unknownNames = []; // names quoted that match nothing in the file
 const headerReport = [];
+const falseFixity = [];  // step 4: a claim of fixity on a component with props or a slot
+const texts = new Map(); // step 4: normalised description -> the components carrying it
 const groups = new Map();
 let ok = 0, compactOk = 0, skippedAlone = 0;
 
@@ -222,6 +228,18 @@ for (const page of figma.root.children) {
 
     const stale = unknownNamesIn(md);
     if (stale.length) unknownNames.push({ page: page.name, name: n.name, names: stale });
+
+    // Step 4's duplicates and false fixity, on every described subject of either tier. A hit is
+    // a candidate: whether the copy is an artefact, or the claim false, is the agent's reading.
+    if (md) {
+      const norm = md.replace(/\s+/g, " ").trim().toLowerCase();
+      if (!texts.has(norm)) texts.set(norm, []);
+      texts.get(norm).push({ page: page.name, name: n.name, id: n.id, axes: Object.keys(defsOf(n) || {}).map(k => k.split("#")[0]) });
+      const d = defsOf(n);
+      const claim = FIXITY.exec(md);
+      if (claim && d && Object.keys(d).length)
+        falseFixity.push({ page: page.name, name: n.name, claim: claim[0], interface: Object.keys(d).map(k => k.split("#")[0] + " (" + d[k].type + ")") });
+    }
 
     if (compact) {
       if (!md) { missing.push({ page: page.name, name: n.name, tier: "compact" }); continue; }
@@ -322,8 +340,18 @@ for (const [key, members] of groups) {
   virtualSets.push({ group: key, members: [...members.keys()], shared: distinct.size === 1 });
 }
 
+// Two differently named components carrying one text (whitespace and case aside): duplicating a
+// component copies its description. A virtual set's members share theirs on purpose, so a group
+// that is exactly one virtual set's members is not a duplicate.
+const sameSet = (xs) => CONFIG.separator && xs.every(x => x.name.includes(CONFIG.separator)) &&
+  new Set(xs.map(x => x.name.split(CONFIG.separator)[0].trim())).size === 1;
+const duplicates = [...texts.values()].filter(xs => new Set(xs.map(x => x.name)).size > 1 && !sameSet(xs))
+  .map(xs => ({ components: xs.map(x => ({ page: x.page, name: x.name, axes: x.axes })) }));
+
 return {
   ok, compactOk,
+  duplicates,                                     // one text on differently named components: check which it was written for
+  falseFixity,                                    // "fixed" / "not customisable" on a component with an interface
   skippedAlone,
   missing,
   shouldBeEmpty,                                  // step 2e violations: clear or confirm
