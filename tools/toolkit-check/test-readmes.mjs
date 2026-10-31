@@ -77,6 +77,7 @@ ok('CONTRIBUTING.md\'s broken link is named', found.includes('CONTRIBUTING.md: a
 
 ok('a link in angle brackets or with a title is read as its file', JSON.stringify(hrefs('[a](<my guide.md>) [b](x.md "t") [c](y%20z.md#h)')) === JSON.stringify(['my guide.md', 'x.md', 'y z.md']));
 ok('an image, inline code, a ~~~ fence and a comment link nothing', hrefs('![i](a.md) `[b](b.md)` <!-- [c](c.md) -->\n~~~\n[d](d.md)\n~~~\n').length === 0);
+ok('anchor-only, URL and mailto links resolve nothing; a %25 in a name is decoded once, not thrown', problems('# T\n\nL.\n\n[a](#h) [b](https://x/y) [c](mailto:a@b)\n', { root }).length === 0 && hrefs('[a](#h)').length === 0 && problems('# T\n\nL.\n\n[d](100%25.md)\n', { root }).some((p) => p.endsWith('100%.md')));
 ok('a broken link with a title is still named', problems('# T\n\nLead.\n\n[x](nope.md "t")\n', { root }).some((p) => /does not resolve: nope\.md/.test(p)));
 
 rmSync(root, { recursive: true, force: true });

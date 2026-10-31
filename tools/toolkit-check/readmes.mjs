@@ -56,7 +56,7 @@ export function problems(text, { runs = false, imports = false, dir = '.', root 
   if (imports && !/manifest\.json/.test(text)) out.push('no import step: say how to import it from its manifest.json');
   for (const href of hrefs(text)) {
     if (/^[a-z]+:/i.test(href) || href.startsWith('/')) continue;
-    if (!existsSync(resolve(root, dir, decodeURI(href)))) out.push(`a link does not resolve: ${href}`);
+    if (!existsSync(resolve(root, dir, href))) out.push(`a link does not resolve: ${href}`);
   }
   return out;
 }
