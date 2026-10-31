@@ -75,13 +75,16 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
   // an exit handler must be synchronous, so the kill and the removal are too
   const tidy = () => {
     try { child.kill('SIGKILL'); } catch { /* already gone */ }
-    if (!profile) rmSync(dir, { recursive: true, force: true, maxRetries: 5 });
+    // at exit nothing can wait for Chrome's helpers, so a temp folder they still write is left for the OS
+    if (!profile) try { rmSync(dir, { recursive: true, force: true, maxRetries: 5 }); } catch { /* the OS clears tmp */ }
   };
   process.on('exit', tidy);
   const close = async () => {
     process.off('exit', tidy);
     if (child.exitCode === null && child.signalCode === null) { child.kill(); await Promise.race([gone, sleep(5000)]); }
-    tidy();
+    try { child.kill('SIGKILL'); } catch { /* already gone */ }
+    // its helpers can outlive it by a moment and write the profile meanwhile (seen on Linux CI), so the removal is tried again
+    if (!profile) for (let i = 0; i < 30; i++) { try { rmSync(dir, { recursive: true, force: true }); break; } catch { await sleep(100); } }
   };
   for (const end = Date.now() + timeout; Date.now() < end; await sleep(100)) {
     if (failed) break;

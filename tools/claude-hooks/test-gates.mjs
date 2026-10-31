@@ -323,6 +323,27 @@ test("a subagent's edits are the session's work; its own reviews are not", () =>
   s.clean();
 });
 
+test("a background agent's edits in its own worktree are not the session's; the session's own there are", () => {
+  const s = session([user('build it'), call('Agent', { description: 'Build it', prompt: 'x', subagent_type: 'general-purpose' })]);
+  const dir = path.join(s.file.replace(/\.jsonl$/, ''), 'subagents');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'agent-1.jsonl'), JSON.stringify(edit('.claude/worktrees/agent-x/a.mjs', 150)) + '\n');
+  assert.equal(size(advance(s.id, s.file, REPOS).total).lines, 0);
+  fs.rmSync(path.dirname(dir), { recursive: true, force: true });
+  s.clean();
+  const own = session([user('build it'), edit('.claude/worktrees/agent-x/a.mjs', 150)]);
+  assert.equal(size(advance(own.id, own.file, REPOS).total).lines, 150);
+  own.clean();
+});
+
+test("the plan gate lets a subagent write its own worktree, and holds the session there", () => {
+  const big = (id) => ({ id, name: 'Write', input: { file_path: path.join(TOOLKIT, '.claude/worktrees/agent-x/big.mjs'), content: Array(900).fill('b').join('\n') } });
+  const s = session([user('build it')]);
+  assert.equal(planGate(s.id, s.file, REPOS, big('w1'), TOOLKIT, true), null);
+  assert.match(String(planGate(s.id, s.file, REPOS, big('w2'), TOOLKIT)), /plan/i);
+  s.clean();
+});
+
 test('a call that failed or was refused counts nothing, and the pending call is never counted twice', () => {
   const s = session([user('go'), withId(edit('a.mjs', 60), 'e1'), result('e1', true)]);
   assert.equal(size(advance(s.id, s.file, REPOS).total).lines, 0);

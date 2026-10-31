@@ -67,7 +67,8 @@ function ecosystemDirs() {
 if (mode === 'edit') {
   // The plan gate (gates.mjs) first: a refused call needs no rule list.
   const { planGate } = await import('./gates.mjs');
-  const refused = planGate(payload.session_id, payload.transcript_path, ecosystemDirs(), { id: payload.tool_use_id, name: payload.tool_name, input: payload.tool_input || {} }, payload.cwd || process.cwd());
+  // a subagent's call carries agent_id: its worktree edits are counted at the merge, as at Stop
+  const refused = planGate(payload.session_id, payload.transcript_path, ecosystemDirs(), { id: payload.tool_use_id, name: payload.tool_name, input: payload.tool_input || {} }, payload.cwd || process.cwd(), Boolean(payload.agent_id));
   if (refused) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: refused } }));
     process.exit(0);

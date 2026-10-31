@@ -34,6 +34,7 @@ export const WIDE = /^(standards|tools\/shared)\//;
 export const WIDE_LINES = 10;
 // Bookkeeping that a change of any size carries; counting it made every
 // skill edit "full" (version, changelog, cases).
+const WORKTREE = /^\.claude\/worktrees\//;
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
 // The plan's sections, each a heading; Impact must hold impact.mjs's output.
 export const PLAN = ['Goal', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
@@ -284,10 +285,13 @@ function carry(session, st) {
 const writes = (c, cwd) => (c.name === 'Bash' ? shellWrites(c.input?.command, cwd) : written(c, cwd));
 
 /* Count a call's writes; returns [file, lines] for each, so a failed call can be taken back. */
-function add(st, c, cwd, repos) {
+function add(st, c, cwd, repos, sub = false) {
   const got = [];
   for (const f of writes(c, cwd)) {
     const w = where(f, repos);
+    // a background agent's edits in its own worktree are counted when its branch is merged, not as it writes them;
+    // the session's own edits in a worktree count like any other
+    if (w && sub && WORKTREE.test(w.rel)) continue;
     if (w && path.basename(w.rel) === 'README.md' && !st.docs.includes(w.file)) st.docs.push(w.file);
     if (!w || BOOKKEEPING.test(w.rel)) continue;
     const n = changed(c, st.measured);
@@ -393,7 +397,7 @@ function record(st, line, repos, sub) {
     if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart };
     if (c.id && st.counted[c.id]) continue; // counted when the plan gate saw it pending
     if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) continue; // a subagent's edit the session's review already covered
-    const got = add(st, c, rec.cwd || process.cwd(), repos);
+    const got = add(st, c, rec.cwd || process.cwd(), repos, sub);
     // a subagent's file is read after the session's, so an edit it made before the person spoke is not this turn's
     if (got.length) { if (!sub || !rec.timestamp || rec.timestamp > st.turnStart) st.turnEdited = true; if (c.id) st.counted[c.id] = got; }
   }
@@ -442,7 +446,7 @@ const planGaps = (text) => [...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 
 
 /* PreToolUse: measures a rewrite against the file it replaces, then refuses
    the call that makes the session's work full-size until the plan exists. */
-export function planGate(session, transcript, repos, call, cwd) {
+export function planGate(session, transcript, repos, call, cwd, sub = false) {
   if (off()) return null;
   const st = load(session);
   // what a shell call's repo holds before it runs, so its script's writes are measured from here
@@ -473,7 +477,7 @@ export function planGate(session, transcript, repos, call, cwd) {
   // the call may already be in the transcript (it is written before its hook runs): then it is counted, and judged as it stands
   const pending = { ...st, total: plus(st.total, st.inherited), since: empty(), docs: [...st.docs] };
   const already = call.id && st.counted[call.id];
-  if (!already && !add(pending, call, cwd, repos).length) { save(session, st); return null; }
+  if (!already && !add(pending, call, cwd, repos, sub).length) { save(session, st); return null; }
   const s = size(pending.total);
   if (!s.full) { save(session, st); return null; }
   if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; if (st.counted[call.id]) uncount(st, call.id); } // a refused call never ran, so it never counts

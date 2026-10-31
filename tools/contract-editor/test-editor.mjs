@@ -343,7 +343,11 @@ try {
 
   // the Kind menu in the dialog: State brings its form and keeps the name
   await js(`${row('Label')}.querySelector('[data-edit]').click()`);
-  ok('the Kind comes first, every kind in sight, all one size', await js(`(() => { const ts = [...document.querySelectorAll('[data-dialog] [data-tile]')].map((t) => t.closest('.ce-tile').getBoundingClientRect()); return document.querySelector('[data-dialog] .ce-form').firstElementChild.matches('.ce-tiles') && ts.length === 8 && ts.every((r) => Math.abs(r.width - ts[0].width) < 1 && Math.abs(r.height - ts[0].height) < 1); })()`));
+  // what was measured is printed when it fails: it failed on Linux CI only, where the fonts differ
+  const kinds = JSON.parse(await js(`(() => { const ts = [...document.querySelectorAll('[data-dialog] [data-tile]')].map((t) => t.closest('.ce-tile').getBoundingClientRect()); return JSON.stringify({ first: document.querySelector('[data-dialog] .ce-form').firstElementChild.matches('.ce-tiles'), sizes: ts.map((r) => [r.width, r.height]) }); })()`));
+  const [w, h] = kinds.sizes[0] || [];
+  if (!(kinds.first && kinds.sizes.length === 8 && kinds.sizes.every(([x, y]) => Math.abs(x - w) < 1 && Math.abs(y - h) < 1))) console.log(JSON.stringify(kinds));
+  ok('the Kind comes first, every kind in sight, all one size', kinds.first && kinds.sizes.length === 8 && kinds.sizes.every(([x, y]) => Math.abs(x - w) < 1 && Math.abs(y - h) < 1));
   await js(`${inDialog('[data-tile="state"]')}.click()`);
   await save();
   c = await json();

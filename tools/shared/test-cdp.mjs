@@ -141,7 +141,9 @@ try {
   const again = await within(10_000, tabs.acquire(), 'acquire again');
   ok('a released window is handed out again, marked reused', again === a && again.reused);
   await within(10_000, tabs.discard(b), 'discard');
-  const listed = await (await fetch(`${CDP}/json/list`)).json();
+  // the browser closes a target after it answers (seen on Linux CI), so the list is read until it catches up
+  let listed = [];
+  for (let t = 0; t < 30; t++) { listed = await (await fetch(`${CDP}/json/list`)).json(); if (!listed.some((x) => x.id === b.id)) break; await new Promise((r) => setTimeout(r, 100)); }
   ok('discard closes the window', !listed.some((t) => t.id === b.id));
   const c = await within(10_000, tabs.acquire(), 'acquire a third');
   tabs.release(c);
