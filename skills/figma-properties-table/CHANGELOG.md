@@ -1,5 +1,6 @@
 # Changelog — figma-properties-table
 
+- 1.12.1 (2026-10-31): before a first profile, a title matches its component past a leading emoji or symbol (`🚧`), and a refused forced re-profile says the stored config is unchanged. Source hash changes. Case A15.
 - 1.12.0 (2026-10-31): `profile()` stores nothing when what it found is on one page and titled with no component there, returning an `error` with the config (`PT.setConfig` stores it). Case A15.
 - 1.11.1 (2026-10-31): the rows slot is the one detection measured, and in `apply()` and `audit()` the one of its name whose rows carry cells: an earlier cell-less slot of that name made `profile()` throw. Source hash changes. Case A14.
 - 1.11.0 (2026-10-31): `PT.audit({ labels: true })` also holds each subcomponent label to containment, so the check before a first `apply()` over a hand-documented file is the audit, not a comparison by hand. Case A13.

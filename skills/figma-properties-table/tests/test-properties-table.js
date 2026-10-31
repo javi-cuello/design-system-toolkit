@@ -294,6 +294,12 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     delete stored['pt.config.v2']; delete globalThis.PT;
     const marked15 = await factory().profile();
     ok(!marked15.error && !!stored['pt.config.v2'], 'A15: before any status marker is set, a title matches its component past a leading marker');
+    pSet.name = '.Pill';
+    delete stored['pt.config.v2']; delete globalThis.PT;
+    const dotted = await factory().profile();
+    ok(dotted.error && !stored['pt.config.v2'], 'A15: a leading . is part of the name, not a marker read past');
+    pSet.name = '🚧 Pill';
+    await factory().profile();
     head.componentProperties['Text#0:1'].value = 'Title';
     delete globalThis.PT;
     const again = await factory().profile({ force: true });

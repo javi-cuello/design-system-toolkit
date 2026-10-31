@@ -251,7 +251,7 @@ globalThis.__PT_FACTORY = function () {
       await page.loadAsync();
       // Before a first profile no status marker is set, so a leading one (an
       // emoji, a symbol) is also read past here: `Time input` titles `🚧 Time input`.
-      const names = componentsOn(page).flatMap(c => [c.name, shown(c.name), c.name.replace(/^[^\p{L}\p{N}_\[]+/u, '')]);
+      const names = componentsOn(page).flatMap(c => [c.name, shown(c.name), c.name.replace(/^[\p{Extended_Pictographic}\p{So}\uFE0F\s]+/u, '')]).filter(Boolean);
       const boolName = cfg.labelBoolProp ? cfg.labelBoolProp.toLowerCase() : null;
       let chosen = texts.find(([, v]) => names.includes(String(v.value)));
       if (!chosen && boolName) chosen = texts.find(([k]) => !nameOf(k).toLowerCase().startsWith(boolName));

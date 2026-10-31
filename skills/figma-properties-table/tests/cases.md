@@ -1,6 +1,8 @@
-# Eval cases — figma-properties-table (v1.12.0)
+# Eval cases — figma-properties-table (v1.12.1)
 
-**Walked: 2026-10-31 for 1.12.0** — A15 added and executed: `node tests/test-properties-table.js` 53 passed, the first two A15 assertions failing with 1.11.1's `profile()`. Walked live on the same library as 1.11.1, writes kept in memory: `profile()` returned the error naming the side panel it found, and stored nothing.
+**Walked: 2026-10-31 for 1.12.1** — A15 extended: `node tests/test-properties-table.js` 54 passed; the marker and forced re-profile assertions fail with 1.12.0's script, and the `.Pill` one with the wider read-past first written for it (a leading `.` is part of a name).
+
+**Walked: 2026-10-31 for 1.12.0** — A15 added and executed: `node tests/test-properties-table.js` 51 passed, the refusal assertion failing with 1.11.1's `profile()`. Walked live on the same library as 1.11.1, writes kept in memory: `profile()` returned the error naming the side panel it found, and stored nothing.
 
 **Walked: 2026-10-31 for 1.11.1** — A14 added and executed: `node tests/test-properties-table.js` 48 passed; with 1.11.0's script the detect assertion fails with the error the live run hit, and with only the audit's slot read put back, the audit counts 3 rows, not 2. Walked live 2026-10-31 on a real component library (64 pages) through the Desktop Bridge, read-only, plugin-data writes kept in memory so nothing reached the document: `profile()` threw in 1.11.0 (the A14 bug) and runs in 1.11.1; `PT.rows()` loaded 63 contracts; `PT.audit({ labels: true })` returned, naming one variant-order disagreement. That file has no properties table, so `profile()` learned a component's own instance as one (`seenOnPages: 1`) and the audit said so ("matches no component"); A13's label check has still met no hand-built table.
 
