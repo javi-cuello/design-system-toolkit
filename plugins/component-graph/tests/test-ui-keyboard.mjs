@@ -16,7 +16,7 @@ const ok = (name, cond, why = '') => { n++; assert.ok(cond, `${name}${why ? `\n$
 const key = (sel, k) => `${sel}.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', bubbles: true }))`;
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
-if (!fs.existsSync(findChrome())) ok('Chrome is here to run the window in (none found: install Chrome, the toolkit\'s one browser)', false);
+if (!fs.existsSync(findChrome())) { console.log(`skip: no Chrome at ${findChrome()} — set CHROME to run plugins/component-graph/tests/test-ui-keyboard.mjs`); process.exit(77); } // a skip: bin/check says "skip"
 const browser = await launch({});
 try {
   const tab = await attach(await newPage(browser.endpoint));
