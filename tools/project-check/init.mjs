@@ -86,7 +86,7 @@ if (!existing) later.push('snapshot.config.json: `paths.styles` is a default (sr
 const SHIM = (tool) => `#!/bin/sh\nREPO="$(cd "$(dirname "$0")/.." && pwd)"\nexec node "$(node -e "console.log(require('$REPO/snapshot.config.json').toolkit.replace(/^~/, require('os').homedir()))")/${tool}"`;
 file('bin/tokens', `${SHIM('tools/tokens/build.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755 });
 file('bin/check', `${SHIM('tools/project-check/check.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755,
-  holds: /tools\/project-check\/check\.mjs/, why: 'does not run tools/project-check/check.mjs: add the line README step 4 shows beside its own steps' });
+  holds: /tools\/project-check\/check\.mjs/, why: 'does not run tools/project-check/check.mjs: add the line tools/project-check/README.md step 4 shows beside its own steps' });
 
 const hooks = git('config', 'core.hooksPath');
 const hookDir = hooks || '.githooks';
@@ -98,8 +98,8 @@ else { did('set', 'core.hooksPath .githooks'); if (!DRY) git('config', 'core.hoo
 /* The context document: written by a person with figma-context-capture; only its repo line is mechanical. */
 const doc = path.join(contract.homeOf(LABEL), 'design-system-context.md');
 const route = contract.routing(doc);
-if (!fs.existsSync(doc)) later.push(`no context document at ${tilde(doc)}: open the library in Figma with the Desktop Bridge and ask Claude to capture its context there (skills/figma-context-capture; root README step 3), then run this again`);
-else if (route.missing) later.push(`${tilde(doc)} has no snapshot-routing block: add the library's file key (root README step 3), then run this again`);
+if (!fs.existsSync(doc)) later.push(`no context document at ${tilde(doc)}: open the library in Figma with the Desktop Bridge and ask Claude to capture its context there (skills/figma-context-capture; docs/setup.md step 3), then run this again`);
+else if (route.missing) later.push(`${tilde(doc)} has no snapshot-routing block: add the library's file key (docs/setup.md step 3), then run this again`);
 else if (route.error) later.push(route.error);
 else if (route.repo && realPath(route.repo) === REPO) kept('snapshot-routing repo');
 else if (route.repo) { kept('snapshot-routing repo', `routes to ${route.repo}, not here`); later.push(`${tilde(doc)}: snapshot-routing sends snapshots to ${route.repo}; change its "repo" if this repo is meant to receive them`); }

@@ -3,7 +3,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { check, problems, required } from './readmes.mjs';
+import { check, problems, required, hrefs } from './readmes.mjs';
 
 let failed = 0, passed = 0;
 const ok = (name, cond) => { if (cond) passed++; else { failed++; console.log(`FAIL ${name}`); } };
@@ -53,6 +53,31 @@ ok('an indented command counts', problems('# Thing\n\nWhat.\n\n    node x.mjs\n'
 write('tools/alpha/README.md', good(true).replace('../README.md', 'missing.md'));
 ok('a broken relative link is named', check(root).some((p) => /does not resolve: missing\.md/.test(p)));
 ok('a URL and an anchor are not checked as files', problems('# T\n\nSee [x](https://example.com) and [y](#here).\n').length === 0);
+
+write('docs/README.md', '# Docs\n\nGuides.\n\n[setup](setup.md)\n'); write('docs/setup.md', '# Setup\n\nHow to set up.\n\nSee [tools](../tools/README.md).\n');
+ok('a docs page the index links, with a title, a lead and links that resolve, passes', !check(root).some((p) => p.startsWith('docs/')));
+write('docs/fits.md', '# Fits\n\nHow.\n\n[x](../nope.md)\n');
+found = check(root);
+ok('a docs page the index does not link is named', found.includes('docs/README.md: the index does not link fits.md'));
+ok('a docs page\'s broken link is named, read from its own folder', found.includes('docs/fits.md: a link does not resolve: ../nope.md'));
+rmSync(join(root, 'docs/fits.md'));
+write('docs/README.md', '# Docs\n\nGuides.\n\n[setup](./setup.md#top) and [x](guides/x.md)\n'); write('docs/guides/x.md', '# X\n\nA nested guide.\n\n[setup](../setup.md)\n');
+ok('a nested docs page reads its links from its own folder; ./ and an #anchor still count as the index linking it', !check(root).some((p) => p.startsWith('docs/')));
+write('docs/guides/x.md', '# X\n\nA nested guide.\n\n[setup](setup.md)\n');
+ok('a nested page\'s link read from docs/ instead of its own folder is named', check(root).includes('docs/guides/x.md: a link does not resolve: setup.md'));
+write('docs/README.md', '# Docs\n\nGuides.\n\n[setup](setup.md)\n\n```\n[x](guides/x.md)\n```\n');
+ok('a link inside a code block is not the index linking a page', check(root).includes('docs/README.md: the index does not link guides/x.md'));
+rmSync(join(root, 'docs'), { recursive: true });
+write('CONTRIBUTING.md', '# Contributing\n\nHow to change it.\n\nSee [tools](tools/README.md).\n');
+ok('a conforming CONTRIBUTING.md passes, its links read from the root', !check(root).some((p) => p.startsWith('CONTRIBUTING.md')));
+write('CONTRIBUTING.md', '# Contributing\n\n- straight into a list, and [x](nope.md)\n');
+found = check(root);
+ok('CONTRIBUTING.md needs a lead paragraph', found.some((p) => p.startsWith('CONTRIBUTING.md: no lead paragraph')));
+ok('CONTRIBUTING.md\'s broken link is named', found.includes('CONTRIBUTING.md: a link does not resolve: nope.md'));
+
+ok('a link in angle brackets or with a title is read as its file', JSON.stringify(hrefs('[a](<my guide.md>) [b](x.md "t") [c](y%20z.md#h)')) === JSON.stringify(['my guide.md', 'x.md', 'y z.md']));
+ok('an image, inline code, a ~~~ fence and a comment link nothing', hrefs('![i](a.md) `[b](b.md)` <!-- [c](c.md) -->\n~~~\n[d](d.md)\n~~~\n').length === 0);
+ok('a broken link with a title is still named', problems('# T\n\nLead.\n\n[x](nope.md "t")\n', { root }).some((p) => /does not resolve: nope\.md/.test(p)));
 
 rmSync(root, { recursive: true, force: true });
 console.log(`${passed} passed, ${failed} failed`);

@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.19.3 (2026-10-31): §D 22: a guide in `docs/` and `CONTRIBUTING.md` are held to the README rule; the root README split into them.
 - 2.19.2 (2026-10-31): §D 11: the review reads against `tools/toolkit-check/review.md`, the list of what it checks.
 - 2.19.1 (2026-10-30): §D 23's *Open:* line: the nine outputs it listed are generated; two narrower ones stay, named.
 - 2.19.0 (2026-10-30): §C clause B: a section cited by its heading must exist, checked; clause D: what follows a `;` must be a pair, and a string holds no double quote; §D 1 and §D 13 point at the READMEs and the clause that hold what they cite.

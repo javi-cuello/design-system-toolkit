@@ -29,4 +29,4 @@ The code every project shares, one copy each: the services that take a Figma sna
 
 ## Requirements
 
-Node 22.12 or later for everything; Google Chrome for parity, ui-check and the docs checks; pnpm inside `docs-site/` and `docs-mcp/` (`pnpm install` there once), the only folders with dependencies. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([the root README](../README.md)).
+Node 22.12 or later for everything; Google Chrome for parity, ui-check and the docs checks; pnpm inside `docs-site/` and `docs-mcp/` (`pnpm install` there once), the only folders with dependencies. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).

@@ -7,6 +7,8 @@
  * The folders that need a README.md: the repo root, each top-level folder,
  * and each tool and plugin folder. A skill is exempt — its SKILL.md is its
  * README, and a skill folder carries no other docs (skill-standard §A).
+ * Each guide in docs/ and the root's CONTRIBUTING.md are held to the same
+ * title, lead and links, and docs/README.md links every guide.
  *
  * What is checked is what a script can see of the consensus (GitHub's "About
  * READMEs", Google's documentation guide, makeareadme.com): a `# ` title on
@@ -19,10 +21,10 @@
  * Whether the words help a newcomer is a read.
  */
 import { existsSync, readdirSync, readFileSync, statSync, realpathSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const TOP = ['bin', 'standards', 'knowledge', 'skills', 'plugins', 'tools'];
+const TOP = ['bin', 'docs', 'standards', 'knowledge', 'skills', 'plugins', 'tools'];
 // the markdown pages under a folder, relative to it, its README aside
 const pages = (d, at = '') => readdirSync(join(d, at)).flatMap((n) => statSync(join(d, at, n)).isDirectory() ? pages(d, join(at, n)) : n.endsWith('.md') && !(at === '' && n === 'README.md') ? [join(at, n)] : []);
 const dirs = (d) => (existsSync(d) ? readdirSync(d).filter((n) => !n.startsWith('.') && statSync(join(d, n)).isDirectory()) : []);
@@ -36,6 +38,14 @@ export function required(root) {
 }
 
 /** Problems with one README's text; `runs` asks for a command in a code block, `imports` for a plugin's import step. */
+// every link's target in a text's prose (no fenced or inline code, no comments, no images): `<a b.md>` and
+// `x.md "title"` forms read, the #anchor dropped, %20 decoded; an anchor-only link gives nothing
+export function hrefs(text) {
+  const prose = text.replace(/(```|~~~)[\s\S]*?\1/g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/`[^`\n]*`/g, '');
+  return [...prose.matchAll(/(!?)\[[^\]]*\]\((?:<([^>]+)>|([^)\s]+))/g)].filter((m) => !m[1])
+    .map((m) => { const h = (m[2] || m[3]).replace(/#.*$/, ''); try { return decodeURI(h); } catch { return h; } }).filter(Boolean);
+}
+
 export function problems(text, { runs = false, imports = false, dir = '.', root = '.' } = {}) {
   const out = [];
   const lines = text.split('\n');
@@ -44,14 +54,18 @@ export function problems(text, { runs = false, imports = false, dir = '.', root 
   if (!lead || /^(#|```|\||- |\* |\d+\. )/.test(lead.trim())) out.push('no lead paragraph under the title saying what this is for');
   if (runs && !/```[a-z]*\n[\s\S]*?\n```|^ {4}\S/m.test(text)) out.push('nothing to copy: no command in a code block');
   if (imports && !/manifest\.json/.test(text)) out.push('no import step: say how to import it from its manifest.json');
-  const prose = text.replace(/```[\s\S]*?```/g, '');
-  for (const m of prose.matchAll(/\]\(([^)\s#]+)(#[^)]*)?\)/g)) {
-    const href = m[1];
+  for (const href of hrefs(text)) {
     if (/^[a-z]+:/i.test(href) || href.startsWith('/')) continue;
     if (!existsSync(resolve(root, dir, decodeURI(href)))) out.push(`a link does not resolve: ${href}`);
   }
   return out;
 }
+
+// the docs guides and CONTRIBUTING.md, held to the README rule beside the READMEs
+const guides = (root) => (existsSync(join(root, 'docs')) ? pages(join(root, 'docs')).length : 0) + (existsSync(join(root, 'CONTRIBUTING.md')) ? 1 : 0);
+
+// the relative pages a text links, outside code blocks, without ./, an #anchor or a title
+const links = (text) => hrefs(text).filter((h) => !/^[a-z]+:/i.test(h)).map((h) => posix.normalize(h));
 
 export function check(root) {
   const found = [];
@@ -74,7 +88,14 @@ export function check(root) {
       const items = (row.split('|')[2] || '').toLowerCase().split(/[,`:()]|\band\b/).map((x) => x.trim());
       if (!items.includes(`${name}.md`) && !items.includes(name.replace(/-/g, ' '))) found.push(`knowledge/README.md: the index does not name ${page}`);
     }
+    // docs' guides: each a page a newcomer reads (title, lead, links that resolve), each linked from the index
+    if (dir === 'docs') for (const page of pages(join(root, dir))) {
+      for (const p of problems(readFileSync(join(root, dir, page), 'utf8'), { dir: join(dir, page, '..'), root })) found.push(`docs/${page}: ${p}`);
+      if (!links(text).includes(page)) found.push(`docs/README.md: the index does not link ${page}`);
+    }
   }
+  // the root's CONTRIBUTING.md, which GitHub shows a contributor, is held to the same
+  if (existsSync(join(root, 'CONTRIBUTING.md'))) for (const p of problems(readFileSync(join(root, 'CONTRIBUTING.md'), 'utf8'), { root })) found.push(`CONTRIBUTING.md: ${p}`);
   return found;
 }
 
@@ -83,6 +104,6 @@ if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.m
   const root = i > -1 ? resolve(process.argv[i + 1]) : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const found = check(root);
   for (const f of found) console.log(f);
-  console.log(found.length ? `${found.length} README problem(s)` : `${required(root).length} READMEs, each with a title, a purpose and working links`);
+  console.log(found.length ? `${found.length} README problem(s)` : `${required(root).length} READMEs and ${guides(root)} guides, each with a title, a purpose and working links`);
   process.exit(found.length ? 1 : 0);
 }

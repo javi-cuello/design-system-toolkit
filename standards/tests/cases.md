@@ -115,7 +115,7 @@ Assert: both warn, naming both values so the disagreement is visible without ope
 ## D4 · A skill's systems/ cache is never committed and never scanned
 Fixture: `skills/figma-library-audit/systems/project-a.md` containing a real file key.
 Assert two things. `.gitignore` covers `skills/*/systems/`, so a cache cannot be committed into the shareable unit. And `scan-clause-d.py` skips the directory, so a legitimate cache does not report a hit on every run — the pre-1.2.0 clause C lesson.
-Assert the third route is now a human step: handing a skill folder to a project means checking it carries no `systems/` cache, no project data and no read into a sibling skill. A script did that between 2026-08-08 and its removal the same day; it was deleted for never having been used, and the check moved into `README.md`'s hand-over note rather than being automated ahead of a hand-over that has not happened.
+Assert the third route is now a human step: handing a skill folder to a project means checking it carries no `systems/` cache, no project data and no read into a sibling skill. A script did that between 2026-08-08 and its removal the same day; it was deleted for never having been used, and the check moved into `README.md`'s hand-over note (now `docs/how-it-fits.md`) rather than being automated ahead of a hand-over that has not happened.
 
 ## S7 · Drift that used to need remembering is now checked
 Fixture: (a) a skill edited in the working tree whose `**Version**` still matches HEAD; (b) a skill whose cases header names an older version than its `SKILL.md`. (A third, a skill with no ds-model-routing row, was listed here with no check behind it; removed 2026-10-30, the row is read when a skill is added, skill-standard *Verifying a skill*.)

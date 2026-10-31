@@ -15,7 +15,7 @@ toolkit-standard §D 13: every change goes round one loop — standards, work, l
 
 ## Connect a code repo
 
-A project whose code lives in a repo of its own connects it so that each snapshot lands in the repo, the token build runs after it, and the repo's check and push hook run the toolkit's gates. The repo is `~/Projects/<label>/`, with the project's design-system files in `figma-design-system/` at its root (the [root README](../../README.md) shows how to start one). Write the context document first, then:
+A project whose code lives in a repo of its own connects it so that each snapshot lands in the repo, the token build runs after it, and the repo's check and push hook run the toolkit's gates. The repo is `~/Projects/<label>/`, with the project's design-system files in `figma-design-system/` at its root ([setup](../../docs/setup.md) shows how to start one). Write the context document first, then:
 
 ```sh
 node ~/Projects/toolkit/tools/project-check/init.mjs --repo ~/Projects/<label> [--project <label>] [--dry-run]
