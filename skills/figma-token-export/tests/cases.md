@@ -1,4 +1,6 @@
-# Eval cases — figma-token-export (v2.8.2)
+# Eval cases — figma-token-export (v2.9.0)
+
+**Walked: 2026-10-31 against v2.9.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 against v2.8.2** — `node ~/.claude/skills/figma-token-export/scripts/from-snapshot.mjs` with no arguments prints its usage and exits 2 through the link, as through the repo path; `node tests/test-from-snapshot.mjs` passes. Other cases untouched.
 

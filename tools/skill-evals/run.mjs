@@ -10,7 +10,7 @@
  *   1. a throwaway copy of HEAD's tree with no history (git archive), its dependencies
  *      linked (`evals.link`), the task's files removed (`remove`);
  *   2. Claude Code, headless, in that copy, given the task's prompt — editing
- *      and running node allowed, pushing refused;
+ *      allowed, node only for the two gates (eval.mjs agentTools), pushing refused;
  *   3. the grade: the project's build step (`evals.build`), a server for the
  *      copy when the project serves its components (`evals.serve`, its port
  *      handed to parity as PARITY_HOST_BASE), the parity run scoped to the
@@ -34,7 +34,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE } from './eval.mjs';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from '../component-contract/official.mjs';
 
@@ -107,9 +107,9 @@ for (const t of tasks) {
       const brief = !BRIEF ? '' : BRIEF === 'contract'
         ? `\n\nThe component's design is in \`${briefFiles.contract}\`: its contract, what the design means (props, anatomy, what each prop value changes), every value a token. Build from it.`
         : `\n\nThe component's design is in \`${briefFiles.snapshot}\`: the snapshot, every variant as Figma drew it, measured. Build from it.`;
-      const prompt = `${t.prompt}${brief}\n\nYou are in a throwaway copy of this project. Work only from what is in this folder and the toolkit; reading the original repository or using git voids the run. When you are done, \`node ${TOOLKIT}/tools/parity/run.mjs --repo . ${t.target}\` must report no differences and \`node ${TOOLKIT}/tools/css-lint/check.mjs --repo .\` must be green${E.build ? `, after \`${E.build}\`` : ''}. Do not commit or push.`;
+      const prompt = `${t.prompt}${brief}\n\nYou are in a throwaway copy of this project. Work only from what is in this folder and the toolkit; reading the original repository or using git voids the run. ${DATA_RULE} When you are done, \`node ${TOOLKIT}/tools/parity/run.mjs --repo . ${t.target}\` must report no differences and \`node ${TOOLKIT}/tools/css-lint/check.mjs --repo .\` must be green${E.build ? `, after \`${E.build}\`` : ''}. Do not commit or push.`;
       const r = spawnSync('claude', ['-p', prompt, '--output-format', 'json', '--max-turns', String(E.maxTurns || 60),
-        '--permission-mode', 'acceptEdits', '--allowedTools', 'Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash(node:*)', 'Bash(ls:*)', ...(E.agentCommands || []).map((c) => `Bash(${c}:*)`),
+        '--permission-mode', 'acceptEdits', '--allowedTools', ...agentTools(TOOLKIT, E.agentCommands || []),
         '--disallowedTools', 'Bash(git push:*)', 'Bash(git commit:*)',
         ...(RULES === 'on' ? ['--settings', JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Edit|Write|MultiEdit|NotebookEdit|Bash', hooks: [{ type: 'command', command: `node "${TOOLKIT}/tools/claude-hooks/hooks.mjs" edit`, timeout: 15 }] }] } })] : [])],
         { cwd: copy, encoding: 'utf8', maxBuffer: 1 << 28, timeout: (E.minutes || 30) * 60_000,

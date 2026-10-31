@@ -468,7 +468,7 @@ const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const plugins = new Map();         // fileKey -> { socket, fileName, at }
 let anon = null;                   // connected but has not reported its file yet
 let nextId = 1;
-const pending = new Map();         // id -> {resolve, reject, timer}
+const pending = new Map();         // id -> {res, rej, timer, socket}: the socket the call went down
 
 const liveFor = (fileKey) => {
   if (fileKey) {
@@ -504,8 +504,31 @@ function exec(code, timeout = 30000, fileKey = null) {
     const head = String(code).match(/const MODE = "([a-z]+)"/) ? `MODE ${String(code).match(/const MODE = "([a-z]+)"/)[1]}` : `${String(code).length} chars`;
     console.log(`plugin → #${id} ${head} to ${who}, ${Math.round(timeout / 1000)}s allowed`);
     const timer = setTimeout(() => { pending.delete(id); console.log(`plugin ✗ #${id} no answer from ${who} after ${Math.round((Date.now() - t0) / 1000)}s`); rej(new Error("plugin_timeout")); }, timeout + 5000);
-    pending.set(id, { res: (v) => { console.log(`plugin ← #${id} answered by ${who} in ${Math.round((Date.now() - t0) / 1000)}s`); res(v); }, rej, timer });
+    pending.set(id, { res: (v) => { console.log(`plugin ← #${id} answered by ${who} in ${Math.round((Date.now() - t0) / 1000)}s`); res(v); }, rej, timer, socket: plugin });
     plugin.write(frame(JSON.stringify({ id, method: "EXECUTE_CODE", params: { code, timeout } })));
+  });
+}
+
+/*
+ * Is a file's socket still there? Asked when another socket claims the file.
+ *
+ * The bridge cannot carry a token (it is the third-party Desktop Bridge,
+ * which sends `Origin: null` and nothing else), so a page that opens a socket
+ * and says FILE_INFO for an open file looks exactly like the plugin
+ * reconnecting. Taking the slot on the claim alone let such a page replace
+ * the real plugin and answer `/exec` for that file (toolkit review,
+ * 2026-10-31). A live socket answers a ping on loopback within milliseconds;
+ * a runtime Figma tore down does not, or is already closed. So the claim wins
+ * only over a socket that is gone or silent.
+ */
+const ALIVE_MS = 3000;
+function alive(socket) {
+  if (socket.destroyed) return Promise.resolve(false);
+  return new Promise((done) => {
+    const timer = setTimeout(() => { socket.off("pong", onPong); done(false); }, ALIVE_MS);
+    const onPong = () => { clearTimeout(timer); done(true); };
+    socket.once("pong", onPong);
+    try { socket.write(Buffer.from([0x89, 0])); } catch { clearTimeout(timer); done(false); }
   });
 }
 
@@ -519,37 +542,59 @@ function attach(socket) {
       if (ev.type === "close") { socket.end(); return; }
       if (ev.type === "too_large") { console.error(`refused a socket message over ${MAX_MESSAGE} bytes — the socket is closed`); socket.destroy(); return; }
       if (ev.type === "ping") { socket.write(Buffer.concat([Buffer.from([0x8a, ev.data.length]), ev.data])); continue; }
+      if (ev.type === "pong") { socket.emit("pong"); continue; }
 
       let msg; try { msg = JSON.parse(ev.data.toString("utf8")); } catch { continue; }
       if (msg.id && pending.has(msg.id)) {
+        // an answer counts only from the socket the call was sent down: ids are
+        // sequential, so any other socket could guess one and answer for Figma
+        if (pending.get(msg.id).socket !== socket) { console.error(`refused an answer to #${msg.id} from a socket it was not sent to`); continue; }
         const { res, rej, timer } = pending.get(msg.id);
         pending.delete(msg.id); clearTimeout(timer);
         msg.error ? rej(new Error(String(msg.error))) : res(msg.result);
         continue;
       }
       if (msg.type === "FILE_INFO" && msg.data && msg.data.fileKey) {
-        const key = msg.data.fileKey;
-        // A reconnect from the same file replaces that file's socket only —
-        // Figma restarts plugin runtimes constantly, and the old one is dead.
-        const prev = plugins.get(key);
-        if (prev && prev.socket !== socket && !prev.socket.destroyed) prev.socket.destroy();
-        plugins.set(key, { socket, fileName: msg.data.fileName || null, at: new Date().toISOString() });
-        if (anon === socket) anon = null;
+        const key = msg.data.fileKey, fileName = msg.data.fileName || null;
+        const take = () => {
+          if (socket.destroyed) return;
+          plugins.set(key, { socket, fileName, at: new Date().toISOString() });
+          if (anon === socket) anon = null;
+        };
+        // A reconnect from the same file replaces that file's socket only when
+        // the old one is gone: Figma restarts plugin runtimes constantly, and
+        // a dead one is closed or silent. One that still answers keeps the file.
+        // Asked again of whoever holds the file once the ping is settled: two
+        // claims racing must not let the second take the first's new slot unasked.
+        const claim = () => {
+          const prev = plugins.get(key);
+          if (!prev || prev.socket === socket) return take();
+          alive(prev.socket).then((up) => {
+            if (plugins.get(key) !== prev) return claim();   // settled meanwhile: ask the new holder
+            if (up) { console.error(`refused a second socket for ${fileName || key}: the one it has still answers`); return socket.destroy(); }
+            prev.socket.destroy();
+            take();
+          });
+        };
+        claim();
       }
     }
   });
   const gone = () => {
     if (anon === socket) anon = null;
     for (const [k, e] of plugins) if (e.socket === socket) plugins.delete(k);
-    // Figma tears the plugin runtime down mid-call routinely. Fail the waiting
-    // calls now rather than making the page sit out a 35-second timeout for an
-    // answer that can no longer arrive.
-    if (!liveFor(null)) {
-      for (const [id, e] of pending) { clearTimeout(e.timer); e.rej(new Error("plugin_not_connected")); pending.delete(id); }
-    }
+    // Figma tears the plugin runtime down mid-call routinely. Fail the calls
+    // sent down this socket now rather than making the page sit out a
+    // 35-second timeout for an answer that can no longer arrive: no other
+    // socket may answer them.
+    for (const [id, e] of pending) if (e.socket === socket) { clearTimeout(e.timer); e.rej(new Error("plugin_not_connected")); pending.delete(id); }
   };
   socket.on("close", gone);
   socket.on("error", gone);
+  // The HTTP server keeps an upgraded socket half-open when its peer goes
+  // (allowHalfOpen), so a runtime torn down without a close frame never
+  // reached `close`: its file stayed held and its calls waited out their timeout.
+  socket.on("end", () => socket.destroy());
 }
 
 // ------------------------------------------------------------------- record
@@ -663,6 +708,8 @@ const json = (res, code, obj) => {
 // never needs to read the reply because running the code is the whole attack.
 // Same-origin fetches send no Origin on GET and send this origin on POST.
 const ALLOWED = new Set([`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
+// The names this machine is addressed by, with this port: the HTTP routes and the socket both take only these.
+const LOCAL_HOST = (h) => [`localhost:${PORT}`, `127.0.0.1:${PORT}`, `[::1]:${PORT}`].includes(String(h || ""));
 const sameOrigin = (req) => {
   const o = req.headers.origin;
   if (o === undefined) return req.method === "GET";   // a form post always sends one
@@ -675,8 +722,7 @@ const server = createServer(async (req, res) => {
     // Only requests addressed to this machine: a page on another site that
     // rebinds its own name to 127.0.0.1 sends its own Host, and without this
     // could read the record, since a same-origin GET carries no Origin.
-    const host = String(req.headers.host || "");
-    if (host !== `localhost:${PORT}` && host !== `127.0.0.1:${PORT}` && host !== `[::1]:${PORT}`) return json(res, 421, { error: "wrong_host" });
+    if (!LOCAL_HOST(req.headers.host)) return json(res, 421, { error: "wrong_host" });
     if (!sameOrigin(req)) {
       // /health is the exception: the Figma plugin probes it from its own
       // sandbox origin before opening the socket.
@@ -1079,6 +1125,11 @@ const socketOriginOk = (o) => {
 server.on("upgrade", (req, socket) => {
   const key = req.headers["sec-websocket-key"];
   if (!key) return socket.destroy();
+  // the HTTP routes' Host rule: a name rebound to 127.0.0.1 sends its own Host
+  if (!LOCAL_HOST(req.headers.host)) {
+    console.error("refused a socket for host " + req.headers.host);
+    return socket.destroy();
+  }
   if (!socketOriginOk(req.headers.origin)) {
     console.error("refused a socket from origin " + req.headers.origin +
                   " — if this was the Desktop Bridge plugin, add its origin to socketOriginOk.");

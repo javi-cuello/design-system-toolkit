@@ -13,6 +13,10 @@ Runs with no build step: import `manifest.json` via Figma → Plugins → Develo
 
 Loads `code.js` against a fake Figma and exercises `buildMasterIcon` (stroke weight, filled paths, single shapes, fill-plus-stroke), the paste-a-list parser and the settings normalisers.
 
+    node tests/test-svg-clean.mjs
+
+An icon's SVG comes from a CDN, so the window never writes it as markup: `cleanSvg` parses it as XML and rebuilds it from shape elements and presentation attributes only, and that is what the card shows and what Figma is given. This test feeds it a hostile icon in Chrome (scripts, handlers, a foreignObject, links, URL values) and checks nothing ran and only the shapes survive.
+
 ## How a full Lucide set is laid out
 
 The maintainer's convention for a file holding the whole set, applied once to one project's icon library on 2026-10-08 (1,875 sets: 232 moved, 1,509 built, none failed). The plugin builds icons; it does not sort a file. Re-sorting is a one-off run through the audit dashboard's `POST /exec`, so the SVGs never pass through a chat; the reference run is `~/Projects/handoff/sort-icons.mjs`, outside this repo because it names one file's ids.

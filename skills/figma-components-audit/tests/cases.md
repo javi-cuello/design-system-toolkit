@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.33.0)
+# Eval cases — figma-components-audit (v2.34.0)
+
+**Walked: 2026-10-31 against v2.34.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 for 2.33.0** — A128 added: `node tools/figma-audit/test-fix-queue.mjs` 16/16. Failing direction checked: with the pipe replacement removed from `text()`, six assertions fail. Not walked against a real project's record.
 

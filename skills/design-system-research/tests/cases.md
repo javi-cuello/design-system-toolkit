@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.7.0)
+# Eval cases — design-system-research (v2.8.0)
+
+**Walked: 2026-10-31 against v2.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 
 **Walked: 2026-10-12 for 2.7.0** — A16 added and observed: the day's loading-indicator run started from actions.md *Loading buttons* and feedback.md *Loading*, re-opened Primer, and corrected feedback.md's stale Primer line in place. A1–A15 unchanged: the clause adds a first read inside Step 1 and changes no step they test.

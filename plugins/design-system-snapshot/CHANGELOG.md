@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.68.0] - 2026-10-31
+### Added
+- Pairing with the router. The router now refuses a snapshot, and the question of which kind a file is, without this machine's pairing code, because any web page can reach localhost and send the same `Origin: null` as the plugin. The window asks for the code once (a field, with the router's own words on the command that prints it), keeps it in clientStorage, and sends it with every request as a `code=` query parameter. With no router listening the snapshot still downloads as a file.
+
 ## [0.67.1] - 2026-10-30
 ### Fixed
 - A router that answers with an error is listening. Any answer other than OK read as "Nothing is listening", so a router failing with 500 had the snapshot saved as a file and its cause unseen; now the snapshot is sent and the router's own error is shown.

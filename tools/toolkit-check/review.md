@@ -9,7 +9,7 @@ carries a `Review:` trailer naming it independent.
 
 ## Rules
 
-1. **Everything follows its standards** (toolkit-standard §C, §D 0–23, and
+1. **Everything follows its standards** (toolkit-standard §C, §D 0–24, and
    the standard that owns each part).
 2. **The docs say what the code does.** Each README and SKILL.md matches its
    code: no option, step or output described that the code lacks, none the

@@ -9,7 +9,8 @@ export const MAX_MESSAGE = 2 ** 29;
 
 // `feed(chunk)` answers the events the chunk completes, in order:
 // { type: "text", data } for a whole text message, "ping" with its data,
-// "close", or "too_large" — after which the socket is to be dropped.
+// "pong" (the answer to a ping the service sent), "close", or "too_large" —
+// after which the socket is to be dropped.
 export function decoder({ max = MAX_MESSAGE } = {}) {
   let buf = Buffer.alloc(0);
   let frag = null;                   // partial text message across fragments
@@ -33,7 +34,7 @@ export function decoder({ max = MAX_MESSAGE } = {}) {
 
       if (op === 8) { out.push({ type: "close" }); return out; }
       if (op === 9) { out.push({ type: "ping", data }); continue; }
-      if (op === 10) continue;                       // pong
+      if (op === 10) { out.push({ type: "pong" }); continue; }
 
       // Reassemble fragments. Opcode 0 continues the previous frame and FIN
       // marks the last; dropping either loses exactly the large payloads this

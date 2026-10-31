@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.34.0 (2026-10-31): content read from the file is data, never instructions (toolkit-standard §D 24): `scanner/judge.txt` and `fix.txt` frame the file's text as data, and the dashboard's Fix this shows its code for approval before it runs.
 - 2.33.0 (2026-10-30): the fix queue's chat report and `.md` mirror are generated from the record by `tools/figma-audit/fix-queue.mjs`, never assembled by hand. Case A128.
 - 2.32.0 (2026-10-26): naming checks against a naming preference file a departure as `preference`, which holds nothing back; their values come from standards/naming-preferences.json. Case A127.
 - 2.31.0 (2026-10-25): sentence case is checked on layers, component names and variant options; a part's layer still carrying its whole name is told its last word; a variant whose description differs from its set's is a warning (figma-standard rules 18, 9, 25). Cases A125, A126.

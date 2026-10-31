@@ -146,6 +146,18 @@ const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]']);
 const trusted = (o) => o === undefined || o === 'null' || isFigmaOrigin(o);
 const allowed = (req) => LOCAL.has(String(req.headers.host || '').replace(/:\d+$/, '')) && trusted(req.headers.origin);
 const cors = (req) => (req.headers.origin !== undefined ? { 'access-control-allow-origin': req.headers.origin } : {});
+/*
+ * And what proves it is the plugin: the pairing code (pairing.cjs). `Origin:
+ * null` is also what a sandboxed iframe on any page sends, so the checks above
+ * stop an ordinary page and nothing more; the code is what a page cannot have.
+ * It rides in the query string (`?code=`): a custom header would make the
+ * plugin's fetch a preflighted one, and a body field would change the payload.
+ * Every POST and every `?file=` question needs it; the bare GET (is anybody
+ * home?) does not, since it answers a count and nothing else.
+ */
+const pairing = require('./pairing.cjs');
+const UNPAIRED = `This plugin is not paired with the snapshot router, so nothing was written. In Terminal, run: ${pairing.COMMAND} — then paste the code it prints into the plugin.`;
+const paired = (url) => { try { return pairing.matches(url.searchParams.get('code')); } catch (e) { console.error(`  pairing: ${e.message}`); return false; } };
 
 const server = (req, res) => {
   if (!allowed(req)) {
@@ -162,12 +174,18 @@ const server = (req, res) => {
    * minute of the designer's file; finding out afterwards is the worst moment
    * to find out.
    */
+  const url = new URL(req.url, 'http://localhost');
   if (req.method === 'GET') {
     // Asked with ?file=<id>, it also says which kind the routing records that
     // file as, so the plugin collects the right thing without guessing.
     // a module that fails to load is answered as the post's failure is, never a crash
     let list, contract, kind;
-    const ids = new URL(req.url, 'http://localhost').searchParams.getAll('file');
+    const ids = url.searchParams.getAll('file');
+    // which kind a file is names a project's file, so only the paired plugin is told
+    if (ids.length && !paired(url)) {
+      res.writeHead(401, { 'content-type': 'application/json', ...cors(req) });
+      return res.end(JSON.stringify({ ok: false, paired: false, error: UNPAIRED }));
+    }
     try { ({ contract } = load()); ({ list } = contract.projects(PROJECTS)); kind = ids.length ? contract.kindOf(list, ids) : null; } catch (e) {
       console.error(`  failed: ${e.message}`);
       res.writeHead(500, { 'content-type': 'application/json', ...cors(req) });
@@ -179,7 +197,14 @@ const server = (req, res) => {
     return res.end(JSON.stringify({ ok: true, projects: list.length, kind }));
   }
   if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
-  const kind = req.url === '/screens' ? 'screens' : req.url === '/library' ? 'library' : null;
+  // refused before a byte is held, routed or kept: a page that posts gets this and nothing else
+  if (!paired(url)) {
+    console.error('  refused a post without the pairing code');
+    res.writeHead(401, { 'content-type': 'text/plain', connection: 'close', ...cors(req) });
+    res.end(UNPAIRED);
+    return req.resume();
+  }
+  const kind = url.pathname === '/screens' ? 'screens' : url.pathname === '/library' ? 'library' : null;
   // Chunks joined as bytes, decoded once: decoding each chunk alone splits a
   // multi-byte character (an emoji page marker, an accented name) that lands
   // on a chunk boundary into two replacement characters.
@@ -215,7 +240,7 @@ const server = (req, res) => {
       res.writeHead(code, { 'content-type': 'text/plain', ...cors(req) });
       res.end(text);
     };
-    if (!kind) return answer(404, `the plugin posted to ${req.url}, which the router does not serve. Reload the plugin (Plugins › Development › Reload), then snapshot again.`);
+    if (!kind) return answer(404, `the plugin posted to ${url.pathname}, which the router does not serve. Reload the plugin (Plugins › Development › Reload), then snapshot again.`);
     const { contract, schema } = load();
     const { identify, projects, route } = contract;
     let payload;
@@ -277,6 +302,8 @@ const server = (req, res) => {
  */
 const { list, errors } = contract.projects(PROJECTS);
 for (const e of errors) console.error(`  ${e}`);
+// made now if this machine has none, so the first snapshot is not the moment it is missing
+try { pairing.code(); } catch (e) { console.error(`  pairing: ${e.message} — snapshots are refused until it is fixed; each request reads the file again`); }
 
 await Promise.all(['127.0.0.1', '::1'].map((host) => new Promise((done) => {
   const s = http.createServer(server);
@@ -295,4 +322,5 @@ for (const p of list) {
   const show = (kind) => contract.namesOf(p.files[kind]).join(' / ') || '(none)';
   console.log(`  ${p.name.padEnd(14)} library ${show('library')}  screens ${show('screens')}${p.repo ? '' : '  — stored in the toolkit'}`);
 }
+console.log(`The plugin asks once for this machine's pairing code: ${pairing.COMMAND}`);
 console.log('In Figma: Plugins › Development › Design system snapshot › Take design snapshot');

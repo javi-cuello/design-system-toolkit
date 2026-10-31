@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.21.2)
+# Eval cases — figma-doc-generator (v1.22.0)
+
+**Walked: 2026-10-31 against v1.22.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked live: 2026-10-30 for 1.21.2** — D47's `verifyPage` on a real documentation file through the Desktop Bridge, read-only (cache writes stubbed): it first failed to load at all (the sandbox refused `docgen.js`, fixed here), then read four generated pages. Semantic: 2 frames, 11 tables, 227 rows, 446 bound swatches, no issue, verdict partial (the page predates `dg.expect`, so seven checks are listed as not run). Three other pages: frames at `cornerSmoothing` 0 against the house 0.6, one page's frames numbered against the layers order, and its swatches bound to the primitive a label's semantic token resolves to — findings about that file's pages, reported to its maintainer, not written.
 

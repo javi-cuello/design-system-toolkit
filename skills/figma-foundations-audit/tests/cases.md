@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.23.0)
+# Eval cases — figma-foundations-audit (v1.25.0)
+
+**Walked: 2026-10-31 against v1.25.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Reviewed against v1.24.0 on 2026-10-26** — F23 added for the preference tier; every case walked with the suite, 86 of 86.
 

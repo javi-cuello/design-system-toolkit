@@ -135,7 +135,7 @@ ok("the manifest asks for the file key, and both payloads send it", manifest.ena
   const id = vm.runInContext(src + "\n;fileId()", vm.createContext({ figma: { ...figma, root }, console }));
   ok("a headless run makes no id in another plugin's data", id === null && writes.length === 0);
   // the run's own start reads the file's kind, and so its id, before this does: one stamp, read back after
-  const made = vm.runInContext(src + "\n;fileId()", vm.createContext({ figma: { ...figma, root, showUI() {}, ui: { postMessage() {}, onmessage: null }, getNodeByIdAsync: async () => null }, console, __html__: "", fetch: () => new Promise(() => {}) }));
+  const made = vm.runInContext(src + "\n;fileId()", vm.createContext({ figma: { ...figma, root, showUI() {}, ui: { postMessage() {}, onmessage: null }, clientStorage: { getAsync: async () => "", setAsync: async () => {} }, getNodeByIdAsync: async () => null }, console, __html__: "", fetch: () => new Promise(() => {}) }));
   ok("…while the plugin's own run stamps one, once", /^f[0-9a-z]+$/.test(made) && writes.join() === "snapshotFileId" && data.snapshotFileId === made);
 }
 {

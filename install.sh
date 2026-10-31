@@ -52,10 +52,13 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   # the services run node through a link named for them, so Login Items says what each is
   ln -sfn "$node_bin" "$repo/tools/figma-audit/figma-audit"
   ln -sfn "$node_bin" "$repo/tools/snapshot/figma-snapshot"
+  # their output names projects, files and keys, so it goes where only this user reads it, never /tmp
+  logs="$HOME/Library/Logs/toolkit"
+  mkdir -p "$logs" && chmod 700 "$logs"
   install_agent() {
     label="$1"; template="$2"; plist="$HOME/Library/LaunchAgents/$label.plist"
     mkdir -p "$HOME/Library/LaunchAgents"
-    sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" "$template" > "$plist.new"
+    sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" -e "s|LOGS|$logs|g" "$template" > "$plist.new"
     if ! cmp -s "$plist.new" "$plist" 2>/dev/null; then
       mv "$plist.new" "$plist"
       launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true  # not loaded yet is fine; set -e would stop here
@@ -66,6 +69,9 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   }
   install_agent com.toolkit.figma-snapshot "$repo/tools/snapshot/com.toolkit.figma-snapshot.plist"
   install_agent com.toolkit.figma-audit "$repo/tools/figma-audit/com.toolkit.figma-audit.plist"
+  echo "logs: $logs"
+  # the snapshot plugin asks once for this machine's pairing code; made here so it is there to print
+  "$node_bin" "$repo/tools/snapshot/pairing.cjs" >/dev/null && echo "pairing: the snapshot plugin asks once for this machine's code; node $repo/tools/snapshot/pairing.cjs prints it"
   # retired 2026-10-26: the daily pass repeated what every session's bin/check runs
   launchctl bootout "gui/$(id -u)/com.toolkit.maintain" 2>/dev/null || true
   rm -f "$HOME/Library/LaunchAgents/com.toolkit.maintain.plist"
