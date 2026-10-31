@@ -4,7 +4,7 @@
 // still break the page.
 //
 //   node tools/docs-site/src/dashboard/check.mjs
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { parse } from "@babel/parser";
@@ -127,6 +127,9 @@ for (const [f, src] of Object.entries(sources)) {
 }
 for (const [f, list] of Object.entries(importsOf))
   for (const { from, names } of list) {
+    // a module outside the page (tools/figma-audit's, which node loads too) is read for its exports where it is
+    if (!exportsOf[from] && from.startsWith("../") && existsSync(join(here, from)))
+      exportsOf[from] = new Set(blockDecls(parse(readFileSync(join(here, from), "utf8"), { sourceType: "module" }).program.body.filter((s) => s.type === "ExportNamedDeclaration")));
     if (!exportsOf[from]) { fail.push(`${f} imports ./${from}, which is not a module here`); continue; }
     for (const n of names) if (!exportsOf[from].has(n)) fail.push(`${f} imports ${n} from ./${from}, which does not export it`);
   }

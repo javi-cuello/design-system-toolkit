@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.36.1)
+# Eval cases — figma-components-audit (v2.37.0)
+
+**Walked: 2026-10-31 for 2.37.0** — A24 executed: `node tools/figma-audit/test-scores.mjs` 18/18 runs the model over the real `scanner/scoring.json` and `checks.json` and the report over the fix queue's fixture record: the gate capping at 25 with its reason, a settled row costing nothing, an unscanned dimension excluded and named partial, the per-dimension delta against the record's last scores, worst first. Its trigger boundary (no score unless asked) is unchanged prose and not re-walked. Other cases unchanged.
 
 **Walked: 2026-10-31 for 2.36.1** — the merge of 2.35.2 (the Files table, wording only) with 2.36.0 (mechanismPadding): `node tests/test-audit.mjs` and `node tests/test-sweep.mjs` rerun on the merged tree; every case holds.
 

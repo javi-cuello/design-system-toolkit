@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// What the dashboard computes and writes, held on its own source: the score
-// model it applies (scores.js), the words an audit ends with and the sweep's
+// What the dashboard computes and writes, held on its own source: that it
+// scores with the shared model (scores.js), the words an audit ends with and the sweep's
 // diff (audit.js), and the queue row it writes as markup (queue.js), with a
 // Figma name in every field that reaches it. Run: node tools/docs-site/test-dashboard-logic.mjs
 //
@@ -42,32 +42,9 @@ const run = (src, names, file, ctx) => {
   return c.__;
 };
 
-// ---- the score model (scores.js computeScores, over the skill's scoring.json) ----
-const scoring = JSON.parse(read('../../skills/figma-components-audit/scanner/scoring.json'));
-const { computeScores } = run(read('./src/dashboard/scores.js'), ['computeScores'], 'scores.js', { isOpen: labels.isOpen, componentOf: labels.componentOf, Object, Math, Date, Set });
-const sets = [{ set: 'Button' }, { set: 'Card' }, { set: 'Chip' }];
-const rows = {
-  a: { where: 'Button — properties panel', rule: 'tokens', sev: 'error' },
-  b: { where: 'Button', rule: 'tokens', sev: 'warn' },
-  c: { where: 'Card', rule: 'properties', sev: 'warn' },        // the gate's rule: capped
-  d: { where: 'Chip', rule: 'tokens', sev: 'error', verified: true },   // settled: costs nothing
-  e: { where: 'Chip', rule: 'nobody-scores-this', sev: 'error' },
-};
-const every = computeScores(sets, rows, scoring, null);
-const by = Object.fromEntries(every.rows.map((r) => [r.name, r]));
-const tokensW = scoring.dimensions.Tokens.weight / Object.values(scoring.dimensions).reduce((s, d) => s + d.weight, 0);
-ok('a component loses its open findings\' penalties in their dimension, by its name before any panel',
-  by.Button.d.Tokens === Math.round((1 - scoring.penalties.error - scoring.penalties.warn) * 100) && by.Button.score === Math.round(100 - tokensW * (scoring.penalties.error + scoring.penalties.warn) * 100), JSON.stringify(by.Button));
-ok('a finding under the gate\'s rule caps the score and says why', by.Card.score === scoring.gate.cap && by.Card.notes.includes(scoring.gate.reason));
-ok('a settled row and a rule no dimension scores cost nothing', by.Chip.score === 100);
-ok('the median is of every component scored', every.median === by.Button.score && every.rows.length === 3);
-// a catalogue in which only Tokens has a running check: every other dimension is excluded, its weight redistributed
-const onlyTokens = { dimensions: [{ dimension: 'Tokens', checks: [{ status: 'scanner' }] }, { dimension: 'Metadata', checks: [{ status: 'backlog' }] }] };
-const partial = computeScores([{ set: 'Button' }], rows, scoring, onlyTokens).rows[0];
-ok('a dimension no running check feeds is excluded, never scored 100, and the score says it is partial',
-  Object.keys(partial.d).join() === 'Tokens' && partial.score === partial.d.Tokens && partial.notes.some((t) => /^partial — /.test(t) && t.includes('Metadata')), JSON.stringify(partial));
-ok('no scoring model, no scores', computeScores(sets, rows, null, null) === null && computeScores(sets, rows, {}, null) === null);
-ok('no components, no median', computeScores([], rows, scoring, null).median === null);
+// ---- the score model: applied by tools/figma-audit/score-model.mjs, tested there (test-scores.mjs) ----
+ok('the page scores with the one model the score report uses, and holds no copy of it',
+  /import \{ computeScores \} from '\.\.\/\.\.\/\.\.\/figma-audit\/score-model\.mjs'/.test(read('./src/dashboard/scores.js')) && !/function computeScores/.test(read('./src/dashboard/scores.js')));
 
 // ---- the words an audit ends with, and the sweep's diff (audit.js) ----
 const A = run(read('./src/dashboard/audit.js'), ['auditHeadline', 'auditDetail', 'diffPrints'], 'audit.js', { plural: F.plural, Object });
