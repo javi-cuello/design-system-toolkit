@@ -82,7 +82,7 @@ for t in tools/parity/test-*.mjs; do node "$t" || break; done
 Tests sit beside them as `test-<module>.mjs`; the toolkit's `bin/check` runs
 them by discovery, and a project's own check does not run them again (they
 read nothing in a project). `../shared/test-cdp.mjs`, `test-probe.mjs` and
-`test-hosts.mjs` need Chrome and print SKIPPED without it.
+`test-hosts.mjs` need Chrome; without it they print `skip:` and exit 77, which bin/check shows as "skip", never "ok".
 
 The environment: `CHROME` is the browser (default the macOS install path);
 `PARITY_WORKERS` the windows measured at once (over `parity.workers`, default

@@ -16,7 +16,7 @@ assert.equal(header && header[1], pinned, `vendor/axe.min.js is axe ${header && 
 console.log(`ok the vendored axe is ${pinned}, the version vendor/package.json names`);
 
 const CHROME = (await import('../shared/cdp.mjs')).findChrome();
-if (!fs.existsSync(CHROME)) { console.log(`skip: no Chrome at ${CHROME}; nothing ran`); process.exit(0); }
+if (!fs.existsSync(CHROME)) { console.log(`skip: no Chrome at ${CHROME}; nothing ran`); process.exit(77); } // a skip: bin/check says "skip", never "ok"
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-axe-'));
 const write = (name, body) => { const f = path.join(dir, name); fs.writeFileSync(f, `<!doctype html><html lang="en"><title>t</title><main><h1>Page</h1>${body}</main></html>`); return 'file://' + f; };
 const bad = write('bad.html', '<img src="x.png"><button></button>');

@@ -15,8 +15,8 @@ console.log('ok a declared default is read as its value, and one that names none
 
 const CHROME = findChrome();
 if (!existsSync(CHROME)) {
-  console.log(`SKIPPED: no Chrome at ${CHROME} — set CHROME to run tools/parity/test-hosts.mjs`);
-  process.exit(0);
+  console.log(`skip: no Chrome at ${CHROME} — set CHROME to run tools/parity/test-hosts.mjs`);
+  process.exit(77); // a skip: bin/check says "skip", never "ok"
 }
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };

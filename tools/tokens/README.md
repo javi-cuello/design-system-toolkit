@@ -29,4 +29,5 @@ node --test tools/tokens/test-check.mjs        # needs a project repo beside the
 node --test tools/tokens/test-build-tokens.mjs # the CSS and Sass build
 node tools/tokens/test-dtcg.js                 # snapshot names and values → DTCG
 node --test tools/tokens/test-from-snapshot.mjs
+node tools/tokens/test-ts.mjs                  # generate-ts and verify-ts, each defect verify-ts exists for
 ```

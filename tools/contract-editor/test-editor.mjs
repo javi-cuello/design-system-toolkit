@@ -16,7 +16,10 @@ import { findChrome, launch, newPage, attach, navigate, viewport, screenshot, wa
 import { suggest, fromContract } from './props.mjs';
 import { partName, fromAnatomy } from './anatomy.mjs';
 
-if (!existsSync(findChrome())) { console.log('SKIPPED: no Chrome — set CHROME to run tools/contract-editor/test-editor.mjs'); process.exit(0); }
+// Every element a query finds passes, and it found at least one: an every() over an empty query is true, so a
+// selector that stopped matching passed every check it was in (code-standard 30; review, 2026-10-31).
+const some = (list, pred) => `((xs) => xs.length > 0 && xs.every(${pred}))([...${list}])`;
+if (!existsSync(findChrome())) { console.log('skip: no Chrome — set CHROME to run tools/contract-editor/test-editor.mjs'); process.exit(77); } // a skip: bin/check says "skip", never "ok"
 
 // --fixtures with no --project: the toolkit's own sample library (sample/, written by hand), served as a project of a
 // root of the run's own, so no one's library is needed and none is touched
@@ -106,7 +109,7 @@ const pickIn = async (label, text) => {
   await js(`${insp(`[data-picker="${label}"]`)}.click()`);
   const is = `(o) => o.dataset.value === ${JSON.stringify(text)} || o.querySelector('.ce-picker__name').textContent === ${JSON.stringify(text)}`;
   if (!(await js(`[...document.querySelectorAll('.ce-picker__pop:popover-open [role=option]')].some(${is})`))) throw new Error(`pick ${label}: no "${text}"`);
-  if (!(await js(`[...document.querySelectorAll('.ce-picker__pop:popover-open [role=option][data-value]:not([data-value=""])')].every((o) => o.title && o.textContent.includes(o.title.split('/').pop()))`))) throw new Error(`pick ${label}: an option with no title saying its whole name`);
+  if (!(await js(`${some(`document.querySelectorAll('.ce-picker__pop:popover-open [role=option][data-value]:not([data-value=""])')`, `(o) => o.title && o.textContent.includes(o.title.split('/').pop())`)}`))) throw new Error(`pick ${label}: an option with no title saying its whole name`);
   await js(`[...document.querySelectorAll('.ce-picker__pop:popover-open [role=option]')].find(${is}).click()`);
 };
 const add = async (block, name, more) => { await js(`document.querySelector('[data-block="${block}"]').click()`); await setName(name); if (more) await more(); await save(); };
@@ -144,7 +147,7 @@ try {
     await mouse('mouseMoved', b.x + 20, b.y);
     ok('a new block still over the palette is carried under the pointer', await js(`(() => { const g = document.querySelector('.ce-lift'); return !!g && Math.abs(g.getBoundingClientRect().left - (${b.x} + 20 - 24)) < 1; })()`));
     await mouse('mouseMoved', zone.x, 600);
-    ok('its slot is an empty space the row\'s size, the copy the only row shown', await js(`(() => { const s = document.querySelector('[data-list] [data-slot]'); return !!s && [...s.children].every((c) => getComputedStyle(c).visibility === 'hidden'); })()`));
+    ok('its slot is an empty space the row\'s size, the copy the only row shown', await js(`(() => { const s = document.querySelector('[data-list] [data-slot]'); return !!s && ${some('s.children', "(c) => getComputedStyle(c).visibility === 'hidden'")}; })()`));
     ok('a block carried from the palette is the row it will make, as a new part in the tree is, and shows dashed where it lands', await js(`(() => { const g = document.querySelector('.ce-lift'), s = document.querySelector('[data-list] [data-slot]');
       return !!g && g.matches('.ce-row') && /Options/.test(g.querySelector('.ce-row__name').textContent) && !!s && s.matches('.ce-row--slot') && Math.abs(g.offsetWidth - document.querySelector('[data-list]').offsetWidth) < 1; })()`));
     // carried up and down its list only, on the list's edge, wherever the pointer is across
@@ -391,7 +394,7 @@ try {
   c = await json();
   ok('an event and a number are code only, a number\'s default a number', c.props.onChange.only === 'code' && !c.props.onChange.figma && c.props.maxLength.default === 120 && c.props.maxLength.only === 'code');
   await js(`${row('On change')}.querySelector('[data-edit]').click()`);
-  ok('an event\'s dialog shows Code only, not to change, and says why', await js(`${inDialog('[data-choice="only-code"]')}.checked && [...document.querySelectorAll('[data-dialog] [data-choice^="only-"]')].every((i) => i.disabled)`) && /Figma has no property for an event/.test(await js(`document.querySelector('[data-dialog-body]').textContent`)));
+  ok('an event\'s dialog shows Code only, not to change, and says why', await js(`${inDialog('[data-choice="only-code"]')}.checked && ${some(`document.querySelectorAll('[data-dialog] [data-choice^="only-"]')`, '(i) => i.disabled')}`) && /Figma has no property for an event/.test(await js(`document.querySelector('[data-dialog-body]').textContent`)));
   await js(`${inDialog('[data-dialog-delete]')}.click()`);
   await js(`${row('Max length')}.querySelector('[data-edit]').click()`);
   await js(`${inDialog('[data-dialog-delete]')}.click()`);
@@ -606,7 +609,7 @@ try {
   await js(`${insp('[data-choice="cross-center"]')}.click()`);
   await js(`${insp('[data-choice="along-space-between"]')}.click()`);
   ok('lining up and distributing are apart: no spread among the line-up choices', await js(`!document.querySelector('[data-inspector] [data-choice="cross-space-between"]')`));
-  ok('the layout choices are drawings, each named', await js(`[...document.querySelectorAll('[data-inspector] :is([data-choice^="dir-"], [data-choice^="cross-"], [data-choice^="along-"])')].every((i) => i.getAttribute('aria-label') && i.closest('label').title && i.closest('label').querySelector('svg'))`));
+  ok('the layout choices are drawings, each named', await js(some(`document.querySelectorAll('[data-inspector] :is([data-choice^="dir-"], [data-choice^="cross-"], [data-choice^="along-"])')`, "(i) => i.getAttribute('aria-label') && i.closest('label').title && i.closest('label').querySelector('svg')")));
   ok('a container\'s alignment is written to its layout, across and along', (await json()).anatomy.content.layout.crossAlign === 'center' && (await json()).anatomy.content.layout.align === 'space-between');
   ok('and read back into its rows', await js(`${insp('[data-choice="cross-center"]')}.checked && ${insp('[data-choice="along-space-between"]')}.checked`));
   ok('the chosen container shows its padding on the stage, a number on each side it pads and none where it is 0, shown and not set there', await js(`(() => { const t = [...document.querySelectorAll('[data-stage] .ce-stage__zoom > .ce-tag[data-tag$="padding"]')]; const cs = getComputedStyle(document.querySelector('[data-stage] [data-selected]')); return t.length === ['Top', 'Right', 'Bottom', 'Left'].filter((k) => parseFloat(cs['padding' + k])).length && t.every((x) => x.matches('span[aria-hidden="true"]') && getComputedStyle(x).pointerEvents === 'none') && !!document.querySelector('[data-stage] [data-selected] > .ce-bands'); })()`));
@@ -1086,7 +1089,7 @@ try {
         await selectPart(panel[placedId].name ?? partName(placedId));
         ok('an instance of a library component lists that component\'s props among its rows', await js(`[...document.querySelectorAll('[data-inspector] .ce-field > span:first-child')].some((x) => x.textContent === ${JSON.stringify(prop.name)})`));
         ok('a part Figma has drawn shows its look, its instance values included, read-only and said to be Figma\'s', await js(`(() => { const g = document.querySelector('[data-inspector] [data-from-figma]'); const i = [...g.querySelectorAll('.ce-field')].find(f => f.firstElementChild.textContent === ${JSON.stringify(prop.name)})?.querySelector('input, button'); return g.disabled && !!i && i.matches(':disabled') && /Figma/.test(g.textContent); })()`));
-        ok('and reads as an inspect list: values as text, no control chrome or chevrons, nothing unset', await js(`(() => { const g = document.querySelector('[data-inspector] [data-from-figma]'); return [...g.querySelectorAll('.ce-picker')].every((b) => getComputedStyle(b).borderTopColor === 'rgba(0, 0, 0, 0)') && ![...g.querySelectorAll('.ce-picker__chevron, .ce-picker__name--none')].some((x) => x.checkVisibility()); })()`));
+        ok('and reads as an inspect list: values as text, no control chrome or chevrons, nothing unset', await js(`(() => { const g = document.querySelector('[data-inspector] [data-from-figma]'); return ${some("g.querySelectorAll('.ce-picker')", "(b) => getComputedStyle(b).borderTopColor === 'rgba(0, 0, 0, 0)'")} && ![...g.querySelectorAll('.ce-picker__chevron, .ce-picker__name--none')].some((x) => x.checkVisibility()); })()`));
         await closePart();
         await js(`document.querySelector('[data-edit-draft]').click()`);
         await js(`document.querySelector('[data-view="anatomy"]').click()`);
@@ -1115,7 +1118,7 @@ try {
         const said = await js(`[...document.querySelectorAll('[data-list] .ce-row__summary')].map((x) => x.textContent).join('|')`);
         ok('a prop row says only what its kind does not', !/False by default|a property in Figma|Interaction states:|Default:/.test(said) && /\(default\)/.test(said));
         await js(`document.querySelector('[data-code-menu]').click()`);
-        ok('a library component being read offers nothing to propose to its code, as to Figma', await js(`[...document.querySelectorAll('#code-menu button')].every((b) => !/Propose|Push/.test(b.textContent))`));
+        ok('a library component being read offers nothing to propose to its code, as to Figma', await js(some("document.querySelectorAll('#code-menu button')", '(b) => !/Propose|Push/.test(b.textContent)')));
         await js(`document.querySelector('#code-menu').hidePopover()`);
         await js(`document.querySelector('[data-view="anatomy"]').click()`);
         await expandAll();
@@ -1162,8 +1165,8 @@ try {
         ok('the Variants tab never prints null', await js(`!/null/.test(document.querySelector('[data-variants]').textContent)`));
         ok('every combination is a cell of the grid, a dot where Figma draws it, a cross where it does not', await js(`(() => { const t = document.querySelector('[data-variants] .ce-vgrid table'); if (!t) return false; const cols = t.querySelectorAll('thead tr:last-child th').length;
           return t.querySelectorAll('tbody td').length === t.querySelectorAll('tbody tr').length * cols && t.querySelectorAll('tbody td').length === t.querySelectorAll('button[data-combo], .ce-vgrid__not').length && !!t.querySelector('.ce-vgrid__not') && !/ is /.test(t.textContent); })()`));
-        ok('a setting changed alone is named in its row (border colour), never one key line in each cell', await js(`[...document.querySelectorAll('[data-variants] [data-change]')].every((r) => r.cells.length < 3 || r.cells[2].querySelectorAll('.ce-vtable__line').length !== 1)`));
-        ok('a fact a row: the part, its default and what it is here, a part added or removed Absent or Present', await js(`[...document.querySelectorAll('[data-variants] [data-change]')].every((r) => r.querySelectorAll('td').length === 3 && (!r.matches('.ce-vtable__added, .ce-vtable__removed') || /^(Absent|Present)$/.test(r.cells[1].textContent))) && [...document.querySelectorAll('.ce-vtable thead th')].map((t) => t.textContent).join('|') === 'Part|Default|Here'`));
+        ok('a setting changed alone is named in its row (border colour), never one key line in each cell', await js(some("document.querySelectorAll('[data-variants] [data-change]')", "(r) => r.cells.length < 3 || r.cells[2].querySelectorAll('.ce-vtable__line').length !== 1")));
+        ok('a fact a row: the part, its default and what it is here, a part added or removed Absent or Present', await js(`${some("document.querySelectorAll('[data-variants] [data-change]')", "(r) => r.querySelectorAll('td').length === 3 && (!r.matches('.ce-vtable__added, .ce-vtable__removed') || /^(Absent|Present)$/.test(r.cells[1].textContent))")} && [...document.querySelectorAll('.ce-vtable thead th')].map((t) => t.textContent).join('|') === 'Part|Default|Here'`));
         ok('the matrix wider than the changes beside it, its columns one width, scrolling inside its box', await js(`(() => { const g = document.querySelector('.ce-vgrid').getBoundingClientRect(), c = document.querySelector('.ce-vchanges').getBoundingClientRect(), s = document.querySelector('.ce-vgrid__scroll'); const w = [...document.querySelectorAll('.ce-vgrid__table thead th[data-col]')].map((t) => Math.round(t.getBoundingClientRect().width)); return g.width > c.width && new Set(w).size === 1 && Math.abs(g.top - c.top) < 1 && getComputedStyle(s).overflowY === 'auto' && s.getBoundingClientRect().bottom <= innerHeight; })()`));
         ok('the Variants tab lists what each value changes, and the combinations not drawn', await js(`document.querySelectorAll('[data-variants] [data-change]').length > 0 && /not drawn/.test(document.querySelector('[data-variants] .ce-vgrid h3').textContent)`) && /tab=variants/.test(await js(`location.search`)));
         await js(`document.querySelector('[data-view="props"]').click()`);
@@ -1198,7 +1201,7 @@ try {
         await new Promise((r) => setTimeout(r, 1300));
         ok('past a second it is, with how long it has taken', await js(`!document.querySelector('[data-busy]').hidden && /Reading the snapshot again… \\d+ s/.test(document.querySelector('[data-busy-text]').textContent)`));
         await js(`document.querySelector('[data-figma-menu]').click()`);
-        ok('while it runs the menus offer no other run, and say why', await js(`[...document.querySelectorAll('#figma-menu button')].every((b) => b.disabled && /Wait: Reading the snapshot again/.test(b.textContent))`));
+        ok('while it runs the menus offer no other run, and say why', await js(some("document.querySelectorAll('#figma-menu button')", '(b) => b.disabled && /Wait: Reading the snapshot again/.test(b.textContent)')));
         await key('Escape');
         await js(`window.__release(); window.fetch = window.__fetch;`);
         await new Promise((r) => setTimeout(r, 700));

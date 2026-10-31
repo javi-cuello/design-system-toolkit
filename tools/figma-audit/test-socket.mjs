@@ -79,10 +79,28 @@ try {
   const rebound = await connect({ host: `attacker.example:${PORT}` });
   ok("a socket for another Host is refused, as the HTTP routes refuse it", !rebound.upgraded && rebound.closed);
 
+  const none = await exec("return 0");
+  ok("a call with no plugin connected says so, and is not left waiting", none.ok === false && none.error === "plugin_not_connected");
+
   const plugin = await connect();
   ok("the bridge's socket, Origin null, is taken", plugin.upgraded);
   plugin.send({ type: "FILE_INFO", data: { fileKey: "FILE", fileName: "Real library" } });
   await waitFor(async () => (await status()).files.some((f) => f.fileName === "Real library"));
+
+  // one file open and a socket beside it that never said its file: a call naming no file goes to the file's plugin,
+  // and the silent socket is neither counted as a file nor sent the call
+  const mute = await connect();
+  await sleep(200);
+  const st = await status();
+  ok("a socket that never said its file is not listed as an open file", mute.upgraded && st.plugin === true && st.files.length === 1 && st.files[0].fileKey === "FILE");
+  const lone = exec("return 3");
+  ok("with one file open, a call naming no file goes to that file's plugin, never to the silent socket beside it",
+    await waitFor(async () => plugin.got.some((m) => m.method === "EXECUTE_CODE" && m.params.code === "return 3")) && !mute.got.length);
+  plugin.send({ id: plugin.got.find((m) => m.params && m.params.code === "return 3").id, result: { lone: true } });
+  ok("…and its answer comes back", (await lone).result.lone === true);
+  const absent = await exec("return 4", "NOT-OPEN");
+  ok("a call naming a file that is not open is refused, never sent to the open one", absent.ok === false && absent.error === "wrong_file_not_open" && !plugin.got.some((m) => m.params && m.params.code === "return 4"));
+  mute.s.destroy();
 
   const page = await connect();
   page.send({ type: "FILE_INFO", data: { fileKey: "FILE", fileName: "Posing page" } });
@@ -93,8 +111,8 @@ try {
   // a call to the file goes to the plugin; another socket answering its id is not taken
   const other = await connect();
   const call = exec("return 1", "FILE");
-  await waitFor(async () => plugin.got.some((m) => m.method === "EXECUTE_CODE"));
-  const sent = plugin.got.find((m) => m.method === "EXECUTE_CODE");
+  await waitFor(async () => plugin.got.some((m) => m.method === "EXECUTE_CODE" && m.params.code === "return 1"));
+  const sent = plugin.got.find((m) => m.method === "EXECUTE_CODE" && m.params.code === "return 1");
   ok("the call is sent down the file's own socket only", !!sent && !other.got.length);
   other.send({ id: sent.id, result: { forged: true } });
   await sleep(200);

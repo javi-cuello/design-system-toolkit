@@ -11,8 +11,8 @@ import { launch, pageTarget, newPage, attach, navigate, viewport, media, screens
 
 const CHROME = findChrome();
 if (!existsSync(CHROME)) {
-  console.log(`SKIPPED: no Chrome at ${CHROME} — set CHROME to run tools/shared/test-cdp.mjs`);
-  process.exit(0);
+  console.log(`skip: no Chrome at ${CHROME} — set CHROME to run tools/shared/test-cdp.mjs`);
+  process.exit(77); // a skip: bin/check says "skip", never "ok"
 }
 
 let n = 0;
