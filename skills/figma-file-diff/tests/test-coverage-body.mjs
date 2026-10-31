@@ -19,7 +19,8 @@ function standIn() {
     const n = { type, name: type === "TEXT" ? "Text" : "Frame", visible: true, opacity: 1, blendMode: "PASS_THROUGH", rotation: 0, width: 100, height: 100,
       fills: [], strokes: [], strokeTopWeight: 1, strokeRightWeight: 1, strokeBottomWeight: 1, strokeLeftWeight: 1, strokeAlign: "INSIDE", dashPattern: [], effects: [],
       maxWidth: null, minWidth: null, maxHeight: null, minHeight: null, cornerRadius: 0, children: [], removed: false,
-      resize(w, h) { n.width = w; n.height = h; },
+      // as Figma does: a resize fixes both axes (seen live)
+      resize(w, h) { n.width = w; n.height = h; if ("layoutSizingHorizontal" in n) n.layoutSizingHorizontal = n.layoutSizingVertical = "FIXED"; },
       appendChild(c) { n.children.push(c); c.parent = n; },
       insertChild(i, c) { n.children = n.children.filter((x) => x !== c); n.children.splice(i, 0, c); c.parent = n; },
       remove() { n.removed = true; }, ...own };
@@ -34,10 +35,16 @@ function standIn() {
     getLocalPaintStylesAsync: async () => [], getLocalTextStylesAsync: async () => [], getLocalEffectStylesAsync: async () => [],
     createFrame: () => node("FRAME", { clipsContent: true, layoutMode: "NONE", paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0, itemSpacing: 0, counterAxisSpacing: 0,
       primaryAxisAlignItems: "MIN", counterAxisAlignItems: "MIN", primaryAxisSizingMode: "AUTO", counterAxisSizingMode: "AUTO", layoutWrap: "NO_WRAP",
-      layoutSizingHorizontal: "HUG", layoutSizingVertical: "HUG", fills: [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }] }),
-    createText: () => node("TEXT", { characters: "", fontName: { family: "Inter", style: "Regular" }, fontSize: 12, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PERCENT", value: 0 },
-      textAlignHorizontal: "LEFT", textAlignVertical: "TOP", textAutoResize: "WIDTH_AND_HEIGHT", textTruncation: "DISABLED", maxLines: null, textStyleId: "",
-      fills: [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }] }),
+      layoutSizingHorizontal: "FIXED", layoutSizingVertical: "FIXED", fills: [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }] }),
+    createText: () => {
+      const t = node("TEXT", { characters: "", fontName: { family: "Inter", style: "Regular" }, fontSize: 12, lineHeight: { unit: "AUTO" }, letterSpacing: { unit: "PERCENT", value: 0 },
+        textAlignHorizontal: "LEFT", textAlignVertical: "TOP", textAutoResize: "WIDTH_AND_HEIGHT", textTruncation: "DISABLED", textStyleId: "",
+        fills: [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }] });
+      // as Figma does: maxLines takes only while the box grows with its text (seen live: null under NONE)
+      let lines = null;
+      Object.defineProperty(t, "maxLines", { get: () => lines, set: (v) => { if (/HEIGHT/.test(t.textAutoResize)) lines = v; }, enumerable: true });
+      return t;
+    },
   };
   return figma;
 }

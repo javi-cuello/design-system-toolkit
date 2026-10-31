@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.2)
+# Eval cases — figma-file-diff (v1.4.3)
+
+**Walked live: 2026-10-31 for 1.4.3** — A9's body in a scratch file through the Desktop Bridge: with 1.4.2's test, 39 checked and two blind spots, `layoutSizingHorizontal` and `maxLines`; probed live, neither mutation changed its property (A10). With 1.4.3's, 39 checked, no blind spot, nothing errored, and the scratch nodes removed. `node tests/test-coverage-body.mjs` 5 passed; with 1.4.2's test it fails naming both, its stand-in now sizing and limiting lines as Figma does.
 
 **Walked: 2026-10-31 for 1.4.2** — A9 added and executed: `node tests/test-coverage-body.mjs` 5/5, its blind-spot assertion shown failing the other way by the dropped `maxWidth` line it plants. A1–A7 read against the change, which touches only the coverage test's delivery: they hold; `test-serialise.mjs` and `test-report.mjs` pass under `bin/check`. Not run in a live scratch file.
 
@@ -76,3 +78,8 @@ Runs: node tests/test-report.mjs
 Fixture: a stand-in `figma` whose nodes hold their properties as plain fields, with the defaults a new frame and text node have; `serialise.js` as shipped, and a copy with its `maxWidth` line dropped.
 Assert: `node scripts/coverage-body.mjs` prints `serialise.js` up to its walk, verbatim, then `coverage-test.js` whole, and says it is generated; `coverage-test.js` alone fails at once (no `h`, no `ser`) and asks no one to paste; the body over today's serialiser reports every check, no blind spot and every scratch node removed; over the copy it reports `maxWidth` blind and does not pass; a `serialise.js` with no walk is refused by name. SKILL.md's *Validating the serialiser* sends the printed body to `figma_execute`.
 Runs: node tests/test-coverage-body.mjs
+
+## A10 · Every coverage check changes the property it names — *executed* 2026-10-31
+Fixture: the stand-in of A9, its frame FIXED on both axes after a resize and its text taking `maxLines` only under a growing `textAutoResize`, as Figma does (both seen live).
+Assert: the coverage body reports no blind spot; with the frame set to `FIXED` again, or `maxLines` set under `NONE`, it reports `layoutSizingHorizontal` and `maxLines`. A check whose mutation changes nothing reads as a blind spot in the serialiser that is not there.
+Runs: node tests/test-coverage-body.mjs — "today's serialiser has no blind spot on the stand-in, and the scratch nodes are removed"

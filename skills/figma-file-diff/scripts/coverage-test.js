@@ -46,7 +46,8 @@ check('counterAxisSpacing', f, n => { n.layoutWrap = 'WRAP'; n.counterAxisSpacin
 check('primaryAxisAlignItems',  f, n => n.primaryAxisAlignItems = 'CENTER');
 check('counterAxisAlignItems',  f, n => n.counterAxisAlignItems = 'CENTER');
 check('layoutWrap',      f, n => n.layoutWrap = 'NO_WRAP');
-check('layoutSizingHorizontal', f, n => n.layoutSizingHorizontal = 'FIXED');
+// a resized frame is FIXED already: setting FIXED again would change nothing
+check('layoutSizingHorizontal', f, n => n.layoutSizingHorizontal = 'HUG');
 check('width (FIXED)',   f, n => n.resize(300, n.height));
 check('maxWidth',        f, n => n.maxWidth = 250);
 check('minWidth',        f, n => n.minWidth = 50);
@@ -76,6 +77,8 @@ check('letterSpacing',   t, n => n.letterSpacing = { value: 2, unit: 'PIXELS' })
 check('textAlignHorizontal', t, n => n.textAlignHorizontal = 'CENTER');
 check('textAlignVertical',   t, n => n.textAlignVertical = 'CENTER');
 check('textAutoResize',  t, n => n.textAutoResize = 'NONE');
+// maxLines takes only while the box grows with its text (seen live: null under NONE)
+t.textAutoResize = 'HEIGHT';
 check('textTruncation',  t, n => n.textTruncation = 'ENDING');
 check('maxLines',        t, n => n.maxLines = 2);
 
