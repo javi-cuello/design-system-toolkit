@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.13.1)
+# Eval cases — figma-plugin-creator (v1.13.2)
+
+**Walked: 2026-10-31 for 1.13.2** — `node tests/test-scaffold.mjs` 9/9, its header assertion now on `· skill-standard v`; `check.sh`'s new stamp warning is silent over every plugin. Other cases unchanged.
 
 **Walked: 2026-10-31 against v1.13.1 — P1 executed (`node tests/test-scaffold.mjs`, 9/9).** `package.json.tpl` pins `@figma/plugin-typings` to an exact version where it read `*`; the scaffold's files are otherwise unchanged. P2–P6 untouched.
 

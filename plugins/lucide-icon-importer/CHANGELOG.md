@@ -1,4 +1,9 @@
 # Changelog — lucide-icon-importer
+## [1.12.1] - 2026-10-31
+### Changed
+- **The manifest allows only the domain the plugin fetches from.** `allowedDomains` listed `unpkg.com` and `lucide.dev` beside `cdn.jsdelivr.net`; the icons and their tags come from jsdelivr alone (unpkg refuses a plugin window's null origin), and `lucide.dev` is only a documentation link written onto a component, which Figma opens itself. A domain the code never fetches is access nobody needs (skill-standard §B 2).
+- The audit stamp names the standard it was audited against, `plugin-standard v1.4.0`, the retired file whose numbering it is (skill-standard §B 8).
+
 ## [1.12.0] - 2026-10-31
 ### Changed
 - **An icon from the CDN is rebuilt before it is shown or sent.** The SVG text was written into the window as markup, so a CDN serving an `<svg>` with a script or an event handler in it would have run it in the plugin's window. It is now parsed as XML and only shape elements (`path`, `circle`, `rect`, `line`, `polyline`, `polygon`, `ellipse`, `g`) and their presentation attributes are copied onto new nodes; a value naming a URL is dropped. That clean SVG is what the card shows and what Figma is given. `tests/test-svg-clean.mjs` feeds it a hostile icon in Chrome.

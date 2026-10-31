@@ -1,5 +1,10 @@
 # Changelog — component-graph
 
+## [3.6.3] - 2026-10-31
+### Changed
+- **The scan skips what is hidden inside an instance** (`figma.skipInvisibleInstanceChildren`, skill-standard §B 3), so a large file's walk reads less. The counts do not change: an instance nested in another is a mirrored copy, which the graph already discarded.
+- The audit stamp names the standard it was audited against, `plugin-standard v1.4.0`, the retired file whose numbering it is (skill-standard §B 8).
+
 ## [3.6.2] - 2026-10-08
 ### Changed
 - Comments cite the standard that owns each rule (skill-standard §B 4 for the ui-base block).

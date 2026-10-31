@@ -10,8 +10,6 @@
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": [
-      "https://unpkg.com",
-      "https://lucide.dev",
       "https://cdn.jsdelivr.net"
     ]
   },

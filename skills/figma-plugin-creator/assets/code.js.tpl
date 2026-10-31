@@ -1,4 +1,4 @@
-// {{name}} — v0.1.0 · standard v{{standard}}
+// {{name}} — v0.1.0 · skill-standard v{{standard}}
 // @ts-check
 // {{purpose}}
 // Data stored: (document in README; keep pluginData entries under 100 kB)
