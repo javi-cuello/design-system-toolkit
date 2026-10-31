@@ -1,5 +1,7 @@
 # Eval cases — figma-doc-generator (v1.22.3)
 
+**Walked live: 2026-10-31, tests only (skill-standard §A clause A)** — D48's snapshot half on a real library: the snapshot plugin's run stored 18 text styles, each line height and letter spacing equal to `tools/shared/text-units.js` `perFontSize` on the style's authored value. That library authors every value in percent and no letter spacing, so the pixel branch met no real input. The page half is not walked live: it needs a documentation target file.
+
 **Walked: 2026-10-31 for 1.22.3** — D48 added and executed: `node tools/shared/test-text-units.mjs` 11/11 (the three copies character for character; the page and the tokens give 1.3333 for a 16px line on 12px text); `node tests/test-docgen.js` 168/168, `node tests/test-recipes.js` 144/144, `node tests/test-load-protocol.js` passing. A2's recorded values (`1`, `1.1`, `1.46`) read the same at four places. Not regenerated on a live docs page.
 
 **Walked: 2026-10-31 for 1.22.2** — D47 reread against the shortened checklist: each of the nine items dropped is one of `references/failures.md`'s *Verification queries* that `verifyPage` runs (placeholders, alias integrity, alias coverage, row order, column mapping, widths, structure, colour format, every row); `node tests/test-docgen.js` 168/168. No case asserted on a checklist item, so all hold.
