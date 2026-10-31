@@ -5,7 +5,7 @@ description: Build and audit an interface — a Figma design, a built front end,
 
 # Front-end build and audit — interfaces that look, behave, read and build right
 
-**Version 2.7.1** — history in CHANGELOG.md.
+**Version 2.7.2** — history in CHANGELOG.md.
 
 Two jobs on one subject. **Build** turns a design into markup, tokens and stylesheets. **Audit** checks a design, a built page, or both, and reports what breaks a rule. Both apply the same two standards from the toolkit repo, and this skill restates neither:
 

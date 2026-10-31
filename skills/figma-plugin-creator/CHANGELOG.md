@@ -1,5 +1,6 @@
 # Changelog — figma-plugin-creator
 
+- 1.12.1 (2026-10-31): `assets/package.json.tpl` pins `@figma/plugin-typings` to 1.142.0, the version the toolkit's plugins lock, where `*` took whatever was newest.
 - 1.12.0 (2026-10-30): `scripts/scaffold.mjs` writes the seven templates with every placeholder filled, where step 2 had the agent copy them by hand; `tests/test-scaffold.mjs` executes P1.
 - 1.11.1 (2026-10-29): `assets/ui.html.tpl` inlined ui-base v1 while the base was at v2; it is now written by `plugins/_shared/sync.mjs` with the plugins' copies, and the checklist reads any marker version.
 - 1.11.0 (2026-10-26): checklist §5b gains nine traps from rebuilding a screens file through the bridge and reworking a plugin window.

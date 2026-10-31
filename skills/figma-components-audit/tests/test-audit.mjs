@@ -9,7 +9,6 @@
 // day, so the first case pins the seam to a real run; the rest mutate a copy
 // to reach the sites a clean library never fires.
 import { readFileSync } from "node:fs";
-import { gunzipSync } from "node:zlib";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,7 +16,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(here, "..", "scanner", "audit.js"), "utf8");
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const checkFacts = await new AsyncFunction(src)();
-const FX = JSON.parse(gunzipSync(readFileSync(join(here, "fixtures", "library-slice.json.gz"))).toString("utf8"));
+const FX = JSON.parse(readFileSync(join(here, "fixtures", "library-slice.json"), "utf8"));
 
 let failed = 0, passed = 0;
 function expect(name, got, want) {

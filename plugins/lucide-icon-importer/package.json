@@ -3,6 +3,6 @@
   "version": "1.11.4",
   "private": true,
   "devDependencies": {
-    "@figma/plugin-typings": "*"
+    "@figma/plugin-typings": "1.142.0"
   }
 }

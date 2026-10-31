@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.12.0)
+# Eval cases — figma-plugin-creator (v1.12.1)
+
+**Walked: 2026-10-31 against v1.12.1 — P1 executed (`node tests/test-scaffold.mjs`, 9/9).** `package.json.tpl` pins `@figma/plugin-typings` to an exact version where it read `*`; the scaffold's files are otherwise unchanged. P2–P6 untouched.
 
 **Walked: 2026-10-30 against v1.12.0 — P1 executed (`node tests/test-scaffold.mjs`, 7/7).** The scaffold is now a script: its files carry every P1 assertion, the same answers give the same files, a name with a quote keeps the manifest valid, and a missing answer is refused. P2–P6 untouched.
 

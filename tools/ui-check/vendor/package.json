@@ -1,0 +1,8 @@
+{
+  "name": "ui-check-vendor",
+  "private": true,
+  "description": "Never installed: names the version of the file vendored beside it, so Dependabot and test-axe.mjs can read it. axe.min.js is axe-core's own, from its npm package at this version.",
+  "devDependencies": {
+    "axe-core": "4.10.2"
+  }
+}

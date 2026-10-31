@@ -5,7 +5,7 @@ description: Scaffold new Figma plugins and check existing ones against the hous
 
 # figma-plugin-creator
 
-**Version 1.12.0** — history in CHANGELOG.md.
+**Version 1.12.1** — history in CHANGELOG.md.
 
 Creates plugins that meet `standards/skill-standard.md` §B (toolkit repo) and audits existing ones. No build step: hand-written `code.js` + single-file `ui.html`. In Claude Code, work inside the toolkit repo (`plugins/<name>/`); follow the repo's CLAUDE.md. In claude.ai, produce the folder as deliverables.
 

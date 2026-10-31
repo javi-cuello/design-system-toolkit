@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.7.1)
+# Eval cases — frontend-build (v2.7.2)
+
+**Walked: 2026-10-31 for 2.7.2** — T6 re-run: the scaffold into a scratch root wrote 16 files, and `bin/css` installed sass 1.104.1 exactly, wrote `package-lock.json` and compiled `main.css`. Other cases unchanged.
 
 **Walked: 2026-10-30 for 2.7.1** — T12 extended: `node --test tests/test-sass-entry.mjs` passes 7/7. Failing direction checked: on 2.7.0 the symlink run of `--check` exited 0 and `bin/css` with a missing toolkit path exited non-zero before compiling; both pass with the fix. Other cases unchanged.
 

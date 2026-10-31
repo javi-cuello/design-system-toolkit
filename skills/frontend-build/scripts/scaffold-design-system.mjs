@@ -96,7 +96,7 @@ console.log(`
 Next:
   1. Turn the gallery on in site/config/config.localhost.php — never in the base config:
        '${vendor}.designsystem.gallery' => true,
-  2. npm install && bin/css
+  2. npm install && bin/css   (commit the package-lock.json the install writes)
   3. Link the stylesheet from your header snippet:
        <?= css('assets/css/main.css') ?>
   4. Open /design-system
