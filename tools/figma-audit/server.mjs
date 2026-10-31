@@ -466,7 +466,6 @@ const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 // whichever file connected last. That is a wrong-file write waiting to happen,
 // and a guard downstream is a safety net, not a design.
 const plugins = new Map();         // fileKey -> { socket, fileName, at }
-let anon = null;                   // connected but has not reported its file yet
 let nextId = 1;
 const pending = new Map();         // id -> {res, rej, timer, socket}: the socket the call went down
 
@@ -535,7 +534,6 @@ function alive(socket) {
 }
 
 function attach(socket) {
-  anon = socket;                   // until it says which file it is
   socket.setNoDelay(true);
   const feed = decoder();
 
@@ -561,7 +559,6 @@ function attach(socket) {
         const take = () => {
           if (socket.destroyed) return;
           plugins.set(key, { socket, fileName, at: new Date().toISOString() });
-          if (anon === socket) anon = null;
         };
         // A reconnect from the same file replaces that file's socket only when
         // the old one is gone: Figma restarts plugin runtimes constantly, and
@@ -583,7 +580,6 @@ function attach(socket) {
     }
   });
   const gone = () => {
-    if (anon === socket) anon = null;
     for (const [k, e] of plugins) if (e.socket === socket) plugins.delete(k);
     // Figma tears the plugin runtime down mid-call routinely. Fail the calls
     // sent down this socket now rather than making the page sit out a
@@ -739,7 +735,7 @@ const server = createServer(async (req, res) => {
         .filter(([, e]) => !e.socket.destroyed)
         .map(([fileKey, e]) => ({ fileKey, fileName: e.fileName, at: e.at }));
       return json(res, 200, {
-        plugin: files.length > 0 || !!(anon && !anon.destroyed),
+        plugin: files.length > 0,
         files,                                   // every library currently open
         file: files[0] || null,                  // kept for the page's simple case
         data: AUDIT_DIR, claude: !!ANTHROPIC_KEY, buildError: lastBuildError

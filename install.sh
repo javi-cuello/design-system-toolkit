@@ -4,8 +4,8 @@
 set -e
 
 # the path as the disk spells it: a shell entered through ~/projects would write that case into the services
-# (bash's pwd -P keeps the typed case on a case-insensitive disk; realpath(3) returns the stored one)
-repo="$(cd "$(dirname "$0")" && { realpath . 2>/dev/null || pwd -P; })"
+# (bash's pwd -P keeps the typed case on a case-insensitive disk; realpath(3) and node's realpathSync.native return the stored one)
+repo="$(cd "$(dirname "$0")" && { realpath . 2>/dev/null || node -e 'console.log(require("fs").realpathSync.native("."))' 2>/dev/null || pwd -P; })"
 
 node_bin="$(command -v node || true)"
 [ -n "$node_bin" ] || { echo "no node on PATH: install Node 22.12 or later, then re-run" >&2; exit 1; }
@@ -66,6 +66,7 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
       launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true  # not loaded yet is fine; set -e would stop here
       # bootout returns before the service is gone: wait, or the check below sees it and never loads the new one
       for _ in 1 2 3 4 5 6 7 8 9 10; do launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 || break; sleep 0.5; done
+      launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 && echo "warn: $label did not stop in 5 s, so its new plist is not loaded: run install.sh again" >&2
     else rm -f "$plist.new"; fi
     # loaded whenever it is not, so a failed first load does not stick
     launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 ||
