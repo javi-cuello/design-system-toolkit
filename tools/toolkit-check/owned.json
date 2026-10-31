@@ -355,11 +355,12 @@
         "srgbToLinear",
         "oklabToLinearSrgb"
       ],
-      "evidence": "the review of 2026-10-31 found the WCAG formula four times with two thresholds (0.03928 and WCAG 2.2's 0.04045) and OKLab twice; the components audit's scanner runs in Figma, which imports nothing, and the OKLCH generator ships alone, so each keeps a copy that tools/shared/test-colour.mjs holds character for character",
+      "evidence": "the review of 2026-10-31 found the WCAG formula four times with two thresholds (0.03928 and WCAG 2.2's 0.04045) and OKLab twice; the components audit's scanner runs in Figma, which imports nothing, and the OKLCH generator ships alone, so each keeps a copy that tools/shared/test-colour.mjs holds character for character; the contrast matrix's builder is Python, so its copy (build-matrix-script.py) is held by its numbers instead, by skills/figma-contrast-matrix/tests/test-wcag-copy.mjs",
       "owners": [
         "tools/shared/colour.js",
         "skills/figma-components-audit/",
-        "skills/oklch-color-scale-system/"
+        "skills/oklch-color-scale-system/",
+        "skills/figma-contrast-matrix/"
       ]
     },
     {

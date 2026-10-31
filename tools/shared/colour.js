@@ -4,7 +4,9 @@
 // scale generator (oklch-color-scale-system's generate.js) keep copies, the
 // first because it runs in Figma, which imports nothing, the second because the
 // skill ships alone; tools/shared/test-colour.mjs holds each copy to these
-// character for character.
+// character for character. The contrast matrix's builder (build-matrix-script.py)
+// is Python, so its copy is held by its numbers, by that skill's
+// tests/test-wcag-copy.mjs.
 //
 // The threshold is 0.04045, WCAG 2.2's (the definition of relative luminance,
 // Note 2: "Before May 2021 the value of 0.04045 in the definition was different
