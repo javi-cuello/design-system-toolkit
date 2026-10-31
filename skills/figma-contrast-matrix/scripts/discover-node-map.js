@@ -96,15 +96,20 @@ for (let r = 0; r < STEPS; r++) {
 // Content/Label fill overrides this script's build step always applies regardless.
 // Recording it without requiring it means build-matrix-script.py can tell the two
 // apart instead of guessing — see its headerIsLightDarkPair handling.
-function propertyKeys(instance, label, { requireVariant }) {
+// A variant's options are not on an instance's properties, which hold only its
+// value: they are read from the component set's definitions.
+async function propertyKeys(instance, label, { requireVariant }) {
   expect(instance && instance.type === "INSTANCE", `${label} is ${instance && instance.type}, expected INSTANCE`);
   const props = instance.componentProperties || {};
+  const main = await instance.getMainComponentAsync();
+  const owner = main && main.parent && main.parent.type === "COMPONENT_SET" ? main.parent : main;
+  const defs = (owner && owner.componentPropertyDefinitions) || {};
   const names = Object.keys(props);
   const labelText = names.find((k) => k.startsWith("Label text#"));
   const variant = names.find((k) => props[k].type === "VARIANT");
   expect(labelText, `${label} has no "Label text#…" property (saw: ${names.join(", ") || "none"})`);
   if (requireVariant) expect(variant, `${label} has no VARIANT property (saw: ${names.join(", ") || "none"})`);
-  const variantOptions = variant ? (props[variant].variantOptions || props[variant].preferredValues || []) : [];
+  const variantOptions = variant ? ((defs[variant] && defs[variant].variantOptions) || []) : [];
   const isLightDarkPair = variant && variantOptions.length === 2 &&
     variantOptions.includes("Light") && variantOptions.includes("Dark");
   return { labelText, variant: variant || null, variantOptions, isLightDarkPair: !!isLightDarkPair };
@@ -123,8 +128,8 @@ const map = {
   columnHeaderSuffixes,
   rows,
   componentPropertyKeys: {
-    header: propertyKeys(kids[1], "first column header", { requireVariant: false }),
-    block: propertyKeys(kids[1 + STEPS + 1], "first block", { requireVariant: true }),
+    header: await propertyKeys(kids[1], "first column header", { requireVariant: false }),
+    block: await propertyKeys(kids[1 + STEPS + 1], "first block", { requireVariant: true }),
   },
 };
 

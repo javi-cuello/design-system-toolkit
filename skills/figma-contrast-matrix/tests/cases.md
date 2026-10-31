@@ -1,4 +1,6 @@
-# Eval cases — figma-contrast-matrix (v3.7.1)
+# Eval cases — figma-contrast-matrix (v3.7.2)
+
+**Walked live: 2026-10-31 for 3.7.2** — A13, A14, A15, A16 and A17 on a fixture built to the documented anatomy in a scratch file through the Desktop Bridge (`_Header` with a Light/Dark `Contrast` variant, `_Block` with `Pass` 4.5/3.1/No/N/A, `_Ratios grid`, one placed instance, a `_Colour ramp`): `find-grid-instances.js` found the one instance; `read-ramp-hexes.js` returned both rows; `discover-node-map.js` mapped 169 cells; `build-matrix-script.py` wrote 8 batches, which updated 24 headers and 144 blocks with no error; both read-back parts read 85 and 84 cells, no mismatch; the export shows the matrix as meant. With 3.7.1's script the map recorded no options for `Contrast` (`isLightDarkPair: false`) and no header switched (A17). `node tests/test-discover-node-map.mjs` all passed, its stand-in now holding options on the set, as Figma does; with 3.7.1's script one check fails.
 
 **Walked: 2026-10-31 for 3.7.1** — A16 re-run: `python3 tests/test-matrix.py` 49 passed, colours given without `#` read back clean.
 
@@ -136,4 +138,9 @@ Fixture: the two-colour grid from A14, built with `--title`, its eight batches r
 Assert: the build writes two read-back parts beside the batches; after the batches, the read-back reads all 169 cells (title, 24 headers, 144 blocks), `read` equal to `expected` and no mismatch; with the block changed, exactly that block is named, field `pass`, with what was meant and what is there.
 Recorded under toolkit-standard §D 23: step 5 checked the values by screenshot and spot check, which reads a wrong `Pass` on a cell nobody spot-checked as right.
 
-Runs: python3 tests/test-matrix.py — "after every batch, the read-back finds every cell as meant", "a block whose Pass reads otherwise is named, with what was meant and what is there". Not walked live.
+Runs: python3 tests/test-matrix.py — "after every batch, the read-back finds every cell as meant", "a block whose Pass reads otherwise is named, with what was meant and what is there". Walked live 2026-10-31 (the 3.7.2 line above).
+
+## A17 · A variant's options come from the component set, not the instance — *executed* 2026-10-31
+Fixture: the stand-in grid of `tests/test-discover-node-map.mjs`, its instances carrying each property's value only and their component set the definitions, as Figma has them; a block whose `Contrast` variant is `Light`/`Dark`, a header whose `Corner` variant is not.
+Assert: the map records the block's options and `isLightDarkPair: true`, and the header's `false`. Production bug: the script read options off the instance, where Figma has none, so every header's Light/Dark toggle went unswitched (seen live on a scratch fixture).
+Runs: node tests/test-discover-node-map.mjs — "property keys are read off the instances: a header's variant is not a light/dark pair, a block's is"

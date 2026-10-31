@@ -1,5 +1,6 @@
 # Changelog — figma-contrast-matrix
 
+- 3.7.2 (2026-10-31): `discover-node-map.js` reads a variant's options from the component set's definitions: an instance's properties carry none, so a Light/Dark header was never switched. Case A17.
 - 3.7.1 (2026-10-31): reviewed: the read-back compares a colour given without its `#` as the apply batch wrote it, so no header is a false mismatch. Case A16.
 - 3.7.0 (2026-10-31): step 5 reads every cell back: `build-matrix-script.py` writes `apply_matrix.verify.*.js` beside the batches, each returning the cells that differ from what was meant; a screenshot is for legibility only. Case A16.
 - 3.6.0 (2026-10-31): the grid's name is the settings' `ratiosGrid` and the target instance a prepended constant; the two scripts are never edited per project (toolkit-standard §C clause F).

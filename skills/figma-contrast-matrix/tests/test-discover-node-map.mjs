@@ -20,7 +20,13 @@ const props = {
 };
 function grid({ id = "5:1", mainName = "_Ratios grid", contentCount = 169, blockProps = props.block } = {}) {
   let n = 0;
-  const child = (type, componentProperties) => ({ id: `I${id};0:${100 + n++}`, type, componentProperties });
+  // as Figma has it: an instance's properties carry a value, never a variant's
+  // options, which are on its component set's definitions
+  const child = (type, defs) => ({
+    id: `I${id};0:${100 + n++}`, type,
+    componentProperties: defs && Object.fromEntries(Object.entries(defs).map(([k, d]) => [k, { type: d.type, value: d.variantOptions ? d.variantOptions[0] : "" }])),
+    getMainComponentAsync: async () => ({ parent: { type: "COMPONENT_SET", componentPropertyDefinitions: defs } }),
+  });
   const kids = [child("FRAME")];
   for (let c = 0; c < 12; c++) kids.push(child("INSTANCE", props.header));
   for (let r = 0; r < 12; r++) { kids.push(child("INSTANCE", props.header)); for (let b = 0; b < 12; b++) kids.push(child("INSTANCE", blockProps)); }
