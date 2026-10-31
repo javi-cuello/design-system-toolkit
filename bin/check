@@ -49,7 +49,7 @@ step "project data in skills (candidates to read)"
 OUT=$(python3 standards/tests/scan-clause-d.py 2>&1)
 ok
 printf '%s\n' "$OUT" | grep -E "candidate|clean" | head -1 | sed 's/^/  /'
-printf '%s\n' "$OUT" | grep -q candidate && echo "  each listed by: python3 standards/tests/scan-clause-d.py"
+printf '%s\n' "$OUT" | grep -qE '^[0-9]+ candidate' && echo "  each listed by: python3 standards/tests/scan-clause-d.py"
 
 # The one gate for "one job, one owner" (toolkit-standard §D 1) ran in every
 # project repo and never here — where the owners live. First run against this

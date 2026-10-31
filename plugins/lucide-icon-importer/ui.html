@@ -367,6 +367,11 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.error { background: var(--danger); }
+  /* the inputs above drop the outline for their own look; the keyboard's focus still gets ui-base's ring */
+  #searchInput:focus-visible, .field-row-control input:focus-visible, .field-row-control select:focus-visible,
+  .color-chip input[type="text"]:focus-visible, .opacity-chip input[type="number"]:focus-visible, .variable-search-wrap input:focus-visible {
+    outline: 2px solid var(--figma-color-border-selected); outline-offset: 1px;
+  }
 </style>
 </head>
 <body>

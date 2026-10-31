@@ -2,6 +2,7 @@
 ## [1.13.2] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
+- The search, colour, opacity and variable inputs, which drop the outline for their own look, keep the ring under the keyboard.
 
 ## [1.13.1] - 2026-10-31
 ### Changed
