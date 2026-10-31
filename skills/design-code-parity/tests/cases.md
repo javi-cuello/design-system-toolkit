@@ -1,4 +1,6 @@
-# Eval cases — design-code-parity (v1.63.0)
+# Eval cases — design-code-parity (v1.63.1)
+
+**Walked: 2026-10-31 against v1.63.1** — the pairing prompt changed: its FIGMA and CODE lists are framed as data before they are given, and the dashboard fills every prompt in one pass (`tools/docs-site/src/dashboard/prompt.js`). T75 read against it: its assertions (a pair proposed only for names on the lists, a ruling not proposed again) hold unchanged. `node tools/toolkit-check/test-content-is-data.mjs` 8/8 (the prompt is listed and frames its lists before `{{FIGMA}}`); `node tools/docs-site/test-dashboard-safety.mjs` 12/12 (a Figma name holding `{{CODE}}` stays a name; the fix, judge and pairing prompts each filled by `fillPrompt`). Not run against a live model.
 
 **Walked: 2026-10-31 against v1.63.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

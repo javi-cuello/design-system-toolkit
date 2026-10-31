@@ -19,7 +19,8 @@
  * `{ kind: 'element', prefix }` gives `ds-chip` and `[data-part="label"]` — and the token build's for tokens
  * (`tools/tokens/names.mjs`, the text style's fields from build-tokens' `textStyleFields`).
  *
- * A prop value is an attribute on the root (`data-size="sm"` with class naming, `size="sm"` with element naming,
+ * A prop value is an attribute on the root (`data-tone="info"` with class naming, `tone="info"` with element naming,
+ * `data-size` there too where the name is an HTML attribute's: tools/shared/prop-attr.mjs,
  * the default also the bare element); a State value is its pseudo-class and Disabled the control's own
  * (code-standard rule 9). Each variant layer of the contract is one rule, what it changes from what the rules
  * before it already give; `selfCheck` replays the cascade at every combination the grid draws and names any
@@ -34,6 +35,7 @@ import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { cssName } from '../tokens/names.mjs';
+import { attrWords, propAttr } from '../shared/prop-attr.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 
 const require = createRequire(import.meta.url);
@@ -41,12 +43,8 @@ const BANNER = "Generated from the component's contract by the toolkit's to-code
 // a draft's sheet is not one of the generated set: no check holds it and no write removes it, and once its component
 // is in the snapshot the generated sheet is written over it
 const DRAFT = "Written by the toolkit's to-code from a draft contract. Once the component is in the snapshot, to-code generates this file over it.";
-// an HTML or ARIA attribute a prop must not be spelt as on a custom element (code-standard rules 9 and 10)
-// (HTML's global attributes among them: a `style` prop on the host would be its inline style)
-const TAKEN = new Set(['role', 'align', 'valign', 'hidden', 'disabled', 'title', 'lang', 'width', 'height', 'border', 'bgcolor', 'size',
-  'style', 'class', 'id', 'slot', 'dir', 'name', 'is', 'part', 'tabindex', 'inert', 'popover', 'draggable', 'translate', 'autofocus', 'nonce', 'accesskey', 'spellcheck', 'contenteditable', 'enterkeyhint', 'inputmode', 'autocapitalize', 'exportparts', 'itemprop']);
-// a prop's key as an attribute name: showIcon → show-icon
-const words = (key) => kebab(String(key).replace(/([a-z0-9])([A-Z])/g, '$1-$2'));
+// a prop's key as its words (showIcon → show-icon) and as its attribute: one rule, parity's -attr check's too
+const words = attrWords;
 /* The settings a sheet is written under: a CLI passes its library's (librarySettingsFor), a caller that names none
    (a test, the contract editor's draft) gets the house's from audit-settings, never a literal of its own (§C F). */
 export const HOUSE = require('../snapshot/projects.cjs').flatSettings(require('../../standards/audit-settings.json')['audit-defaults'], {});
@@ -76,7 +74,7 @@ export function namer(folder, naming = { kind: 'class', prefix: '', part: '__' }
     element,
     root: element ? block : `.${block}`,
     part: (seg) => (element ? `[data-part="${seg}"]` : `.${block}${naming.part || '__'}${seg}`),
-    attr: (key) => (element && !TAKEN.has(words(key)) ? words(key) : `data-${words(key)}`),
+    attr: (key) => propAttr(key, { ...naming, kind: element ? 'element' : 'class' }),
   };
 }
 

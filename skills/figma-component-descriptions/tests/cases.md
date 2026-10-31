@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.18.1)
+# Eval cases — figma-component-descriptions (v1.18.2)
+
+**Walked: 2026-10-31 for 1.18.2** — D20 added and executed: `node tools/toolkit-check/test-missing-input.mjs` 12/12; `node tests/test-sections.mjs` unchanged.
 
 **Walked: 2026-10-31 for 1.18.1** — No case changed: the prose now matches `verify.js`; `node tests/test-verify.mjs` passes as before.
 
@@ -242,3 +244,8 @@ Assert the negative: neither script decides that a duplicate is an artefact or a
 Recorded under toolkit-standard §D 23: duplicates, false fixity and the union were done by hand each run.
 
 Runs: node tests/test-verify.mjs — "step 4: one text on two differently named components is a duplicate, whitespace aside, with each one's axes"; node tests/test-sections.mjs — "virtual sets: a line one member has says which subpart, and no axis is claimed for the set". Not walked live.
+
+## D20 · A missing or broken input to `scripts/sections.mjs` is one line naming it — *executed* 2026-10-31
+Fixture: the script's input flag given a path that is not there, then a file that is not JSON.
+Assert: each exits non-zero with one stderr line naming the path and saying `no such file` or `not JSON (…)`, never a Node stack.
+Runs: node tools/toolkit-check/test-missing-input.mjs

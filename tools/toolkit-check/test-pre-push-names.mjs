@@ -52,7 +52,18 @@ try {
   git('fetch', '-q', 'origin');
   r = push(clean, zero);
   ok('a new branch is not refused for what a remote already has', r.status === 0, r.stdout + r.stderr);
-  r = push(named, base, { TOOLKIT_PROJECTS_ROOT: join(tmp, 'none') });
-  ok('a machine with no projects has no names to refuse', r.status === 0, r.stdout + r.stderr);
+  mkdirSync(join(tmp, 'empty'));
+  r = push(named, base, { TOOLKIT_PROJECTS_ROOT: join(tmp, 'empty') });
+  ok('a projects root with no projects (CI\'s) has no names to refuse', r.status === 0, r.stdout + r.stderr);
+  r = push(clean, named, { TOOLKIT_PROJECTS_ROOT: join(tmp, 'none') });
+  ok('a projects root that is not there refuses the push, never reads as no projects', r.status === 1 && /could not be read/.test(r.stdout), r.stdout + r.stderr);
+  // the script itself, as bin/check reads it
+  const names = (dir) => spawnSync('sh', [join(ROOT, 'tools/toolkit-check/project-names.sh')], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: dir } });
+  r = names(join(tmp, 'none'));
+  ok('project-names.sh exits 1 on a missing root, naming it', r.status === 1 && r.stderr.includes(join(tmp, 'none')) && r.stdout === '', r.stdout + r.stderr);
+  r = names(join(tmp, 'empty'));
+  ok('…and prints nothing, exiting 0, on an empty one', r.status === 0 && r.stdout.trim() === '', r.stdout + r.stderr);
+  r = names(join(tmp, 'projects'));
+  ok('…and the project\'s name, separator optional, where there is one', r.status === 0 && r.stdout.trim() === 'acme[-_. ]?web', r.stdout + r.stderr);
 } finally { rmSync(tmp, { recursive: true, force: true }); }
 console.log(`${n}/${n} passed`);

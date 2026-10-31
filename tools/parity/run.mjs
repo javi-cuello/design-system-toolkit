@@ -149,6 +149,9 @@ const scopedWaivers = (declared, variantName) => {
   return out;
 };
 
+/* How a prop's attribute is spelt: by the naming to-code writes the sheets under, where it writes them
+   (`paths.componentStyles`); markup written by hand is read by the prop's words (tools/shared/prop-attr.mjs). */
+const ATTR_NAMING = project.paths && project.paths.componentStyles ? (project.config.styles && project.config.styles.naming) || { kind: 'class' } : null;
 /* Every (target, variant, tier) a run measures, with what it asks. */
 const jobs = [];
 const mapped = new Set(), drawn = new Set();
@@ -172,7 +175,7 @@ for (const t of targets) {
       const docs = adapt(tree, { root: m.root, layers }, {
         snapshot: project.snapshot, tier, typeTier: typeTierFor(win), parity: P, carried, state: r.pseudo || null,
         children: m.children !== undefined ? m.children : t.kind === 'component' ? P.children : undefined,
-        copy: m.copy, runtime: m.runtime, propTypes,
+        copy: m.copy, runtime: m.runtime, propTypes, attrNaming: ATTR_NAMING,
       });
       jobs.push({ t, name, r, tier, tree, docs, win, frame: frameFor(t, tree), on: r.on || m.state, host, key: `${t.name}/${jobs.length}` });
     }
@@ -235,7 +238,7 @@ const shootOne = async (tab, name, win, t, tier) => {
   const ref = t && t.kind === 'screen' && t.frame && t.frame.reference;
   if (!ref || tier !== TIERS[0]) return;
   try {
-    const r = shots.frameCells({ reference: ref.file, scale: ref.scale, shot });
+    const r = shots.frameCells({ reference: ref.file, scale: ref.scale, shot, cell: project.limits.frameCell, threshold: project.limits.frameCellThreshold });
     fs.mkdirSync(path.join(SHOTS, 'frames'), { recursive: true });
     fs.writeFileSync(path.join(SHOTS, 'frames', `${t.name}.png`), r.sheet);
     framed.push({ name: t.name, pct: Math.round((r.differ / (r.cols * r.rows)) * 100), differ: r.differ, total: r.cols * r.rows });

@@ -37,7 +37,15 @@ ok('Fix all stops at the first fix the maintainer cancels', /=== "cancelled"\) \
 
 // the fix prompt is filled with JSON strings, in one pass, which the template frames as data
 for (const k of ['FINDING', 'REC', 'WHERE']) ok(`the fix prompt's ${k} is a JSON string, so a quote in a name cannot end it`, new RegExp(`${k}: JSON\\.stringify\\(`).test(doRow));
-ok('the fix prompt is filled in one pass, so a {{…}} inside a value is left as written', /fixTemplate\.replace\(\/\\\{\\\{\(\[A-Z_\]\+\)\\\}\\\}\/g/.test(doRow) && !/fill\(fixPrompt/.test(doRow));
+// every prompt the page fills from file text is filled in one pass, by one function
+const { fillPrompt } = await import('./src/dashboard/prompt.js');
+const filled = fillPrompt('FIGMA\n{{FIGMA}}\nCODE\n{{CODE}}\n{{OTHER}}', { FIGMA: JSON.stringify([{ name: 'Card {{CODE}}' }]), CODE: JSON.stringify([{ name: 'Card' }]) });
+ok('a {{…}} inside a value is left as written, and a key the values lack stays a placeholder',
+  filled.includes('"Card {{CODE}}"') && filled.split('"Card"').length === 2 && filled.endsWith('{{OTHER}}'), filled);
+const audit = read('./src/dashboard/audit.js');
+ok('the fix, judge and pairing prompts are each filled by fillPrompt in one pass, never key by key',
+  /fillPrompt\(fixTemplate, values\)/.test(doRow) && /fillPrompt\(judgeTemplate, \{/.test(fnBody(audit, 'judgeOnce')) && /fillPrompt\(sc\.pairing, \{/.test(audit)
+  && !/split\("\{\{" \+/.test(audit + queue) && !/\.replace\(\/\\\{\\\{/.test(audit + queue));
 ok('a second approval waits for the first, and the dialog is never refilled while open', /approving\.then\(\(\) => askToRun/.test(queue) && /dlg\.open\) return Promise\.resolve\(false\)/.test(fnBody(queue, 'askToRun')));
 const note = fnBody(queue, 'answerNote');
 ok('the note prompt gives the file\'s text as JSON strings', ['THE FINDING: " + JSON.stringify(', 'THE ADVICE GIVEN: " + JSON.stringify(', 'THE COMPONENT: " + JSON.stringify('].every((x) => note.includes(x)));

@@ -254,17 +254,19 @@ if (process.argv[1] && process.argv[1].endsWith('from-snapshot.mjs')) {
   const arg = (f, d) => { const i = process.argv.indexOf(f); return i === -1 ? d : process.argv[i + 1]; };
   const input = arg('--input', null);
   if (!input) { console.error('usage: from-snapshot.mjs --input <{pages, specs}.json> [--tokens t.json] [--parents p.json]'); process.exit(2); }
-  const T = arg('--tokens', null) ? JSON.parse(readFileSync(arg('--tokens'), 'utf8')) : {};
+  // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
+  const readJson = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
+  const T = arg('--tokens', null) ? readJson(arg('--tokens')) : {};
   // Which component is placed inside which, from whoever owns that relation
   // — `tools/snapshot/graph.cjs` in this toolkit. Without it
   // this falls back to matching display names, which cannot settle a name two
   // of a project's files both define; the output says which was used.
-  const parents = arg('--parents', null) ? JSON.parse(readFileSync(arg('--parents'), 'utf8')) : null;
+  const parents = arg('--parents', null) ? readJson(arg('--parents')) : null;
   // The scanner body returns checkFacts when `figma` is not in scope — the
   // same door the skill's own tests use, and why it is a pure function.
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const checkFacts = await new AsyncFunction(readFileSync(join(HERE, 'foundations.js'), 'utf8'))();
-  const { facts, unread, unsettled, parentsFrom } = factsFromSnapshot(JSON.parse(readFileSync(input, 'utf8')), T, parents ? { parents } : {});
+  const { facts, unread, unsettled, parentsFrom } = factsFromSnapshot(readJson(input), T, parents ? { parents } : {});
   const out = checkFacts(facts, T);
   console.log(JSON.stringify({ audited: out.audited, reach: out.reach, ran: out.ran, notRun: out.notRun,
     pages: facts.pages.length, components: facts.components.length,

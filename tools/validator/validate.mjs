@@ -1026,10 +1026,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   // the options that take a value; --snapshot is a flag, and a file after it is the file
   const file = args.find((a, i) => !a.startsWith('--') && !['--target', '--text-styles', '--states'].includes(args[i - 1]));
   if (!target || !file) { console.error(`usage: validate.mjs --target ${targets.join('|')} [--text-styles tokens.json] [--states '{"axis":…,"options":[…]}'] [--snapshot] components.json`); process.exit(2); }
-  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
+  const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
+  const data = readJson(file);
   const given = Array.isArray(data) ? data : data.components || [data];
   const components = args.includes('--snapshot') ? fromSnapshot(given) : given;
-  const styles = stylesFile ? JSON.parse(fs.readFileSync(stylesFile, 'utf8')) : null;
+  const styles = stylesFile ? readJson(stylesFile) : null;
   const textStyles = styles ? (Array.isArray(styles) ? styles : styles.textStyles) : null;
   // The state axis and its options, from the library's settings; absent, the state checks stay silent.
   const states = statesJson ? JSON.parse(statesJson) : undefined;

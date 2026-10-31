@@ -320,9 +320,12 @@ test('every stamped note in every project\'s change log has a graded change of i
   if (!contract.projects().list.length) { console.log('skip: no project is registered, so no change log was read'); return t.skip('no project is registered'); }
   const bad = [];
   let logs = 0, stamped = 0;
+  const noLog = [], unresolved = [];
   for (const p of contract.projects().list) {
     const w = contract.layout(null, p.name);
-    if (!w || w.error || !w.paths || !fs.existsSync(w.paths.changes)) continue;
+    // a layout that does not resolve is a failure; a project with no change log yet is said, and not counted
+    if (!w || w.error || !w.paths) { unresolved.push(p.name); continue; }
+    if (!fs.existsSync(w.paths.changes)) { noLog.push(p.name); continue; }
     logs++;
     for (const o of store.readChanges(w.paths.changes)) {
       const has = new Set(((o.grade && o.grade.changes) || []).map((x) => `${x.rule}\u0000${x.subject}`));
@@ -331,6 +334,8 @@ test('every stamped note in every project\'s change log has a graded change of i
       for (const [f, n] of notes) { if (!n || !n.rule) continue; stamped++; if (!has.has(`${n.rule}\u0000${f}`)) bad.push(`${p.name} ${o.at} ${f}: "${n.what}" stamped ${n.rule}`); }
     }
   }
-  assert.ok(logs >= 4 && stamped > 0, `read ${logs} logs and ${stamped} stamped notes`);
+  if (noLog.length) console.log(`skip: no change log yet in ${noLog.join(', ')}`);
+  assert.deepEqual(unresolved, [], 'every registered project\'s layout resolves');
+  assert.ok(logs > 0 && logs === contract.projects().list.length - noLog.length && stamped > 0, `read ${logs} logs of ${contract.projects().list.length} registered projects and ${stamped} stamped notes`);
   assert.deepEqual(bad.slice(0, 10), [], `${bad.length} stamped notes with no graded change of their rule`);
 });

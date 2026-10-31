@@ -1,0 +1,17 @@
+{
+ "project": { "id": "project-a", "name": "Project A", "phase": "build" },
+ "snapshot": { "file": "Project A library", "at": "2026-10-30T09:00:00.000Z" },
+ "components": [
+  { "slug": "button", "title": "Button", "platform": "web", "status": "Ready",
+    "sets": [{ "name": "Button", "path": "/components/button", "private": false, "summary": "Starts an action the user asks for." }],
+    "openFindings": 1, "score": 82 },
+  { "slug": "chip", "title": "Chip", "platform": "web", "status": null,
+    "sets": [{ "name": "Chip", "path": "/components/chip", "private": false, "summary": "A short label for a status." }],
+    "openFindings": 0, "score": null }
+ ],
+ "tokens": [{ "collection": "Semantic", "modes": ["Light", "Dark"], "count": 2 }],
+ "textStyles": 1,
+ "effects": 0,
+ "changes": { "entries": 2, "last": "2026-10-30T09:00:00.000Z" },
+ "audit": { "rows": 2, "open": 1 }
+}

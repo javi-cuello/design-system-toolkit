@@ -13,9 +13,18 @@ import crypto from 'node:crypto';
  * What the agent may run. It works in a copy of a project whose files (a
  * design's names, a contract, a story, a comment) are written by people the
  * run does not vouch for, under acceptEdits, so a file that says "run this"
- * must find nothing to run it with. `node` alone is any code (`node -e`), so
- * node runs only the two gates the prompt names; a project adds its own
- * commands with `evals.agentCommands`, each one a prefix it vouches for.
+ * must find as little as possible to run it with. `node` alone is any code
+ * (`node -e`), so node runs only the two gates the prompt names; a project
+ * adds its own commands with `evals.agentCommands`, each one a prefix it
+ * vouches for. The gates are not inert: parity imports the copy's mapping
+ * modules and token modules and runs a mapping command, so what they run is
+ * only as trusted as those files. The grade's inputs (gradingInput, the
+ * mapping modules among them) are made read-only before the agent starts
+ * (lock), and a run that changed one anyway is never graded (voided). Open,
+ * and said in the README: a file the agent may write that those modules
+ * import, a token module or a mapping command's script outside the grade's
+ * inputs, and a new file a mapping glob matches, which the gate the agent
+ * runs mid-work would import before the tamper check sees it.
  */
 export function agentTools(toolkit, commands = []) {
   return ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash(ls:*)',
@@ -137,6 +146,26 @@ export function inputs(root, extra = [], outputs = []) {
   } };
   walk(root);
   return out;
+}
+/* The grade's inputs made read-only in the copy before the agent starts, so
+   its Edit and Write fail on them rather than change what the gates import;
+   it has no chmod. Returns each file's mode before, for unlock: the project's
+   own build and serve, after the agent, may rewrite them as they always have. */
+export function lock(root, rels) {
+  const modes = new Map(rels.map((rel) => [rel, fs.statSync(path.join(root, rel)).mode & 0o7777]));
+  for (const rel of rels) fs.chmodSync(path.join(root, rel), 0o444);
+  return modes;
+}
+export function unlock(root, modes) {
+  for (const [rel, mode] of modes) if (fs.existsSync(path.join(root, rel))) fs.chmodSync(path.join(root, rel), mode);
+}
+/* A run that read the answer or changed the grade's inputs scores 0 before
+   anything is graded: a gate run over a changed mapping would run the
+   changed code. null when the run may be graded. */
+export function voided({ contaminated = [], tampered = [] } = {}) {
+  if (contaminated.length) return { score: 0, green: false, why: `contaminated: ${contaminated.join('; ')}` };
+  if (tampered.length) return { score: 0, green: false, why: `changed the grade's inputs: ${tampered.join(', ')}` };
+  return null;
 }
 export const changed = (before, after) => [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((k) => before[k] !== after[k]);
 

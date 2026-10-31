@@ -1,4 +1,6 @@
-# Eval cases — figma-token-export (v2.10.1)
+# Eval cases — figma-token-export (v2.10.2)
+
+**Walked: 2026-10-31 against v2.10.2** — `node tests/test-collect.mjs` 10/10 on a stand-in library: aliases by collection and name, an unresolved alias recorded, `only`, bound text styles, an AUTO line height measured and its node removed, a font that does not load left AUTO, effect and paint bindings, a gradient's angle, the export handed over file by file with every reference resolved, and the errors before an export. No case's assertion changed; the SKILL's gate line now names the test.
 
 **Walked: 2026-10-31 for 2.10.1, tests only** — A21 executed: `node tools/tokens/test-ts.mjs` 12/12; it found `verify-ts` blind inside a shadow's layers, fixed in `tools/tokens/verify-ts.mjs` (a tool, not this skill's files).
 

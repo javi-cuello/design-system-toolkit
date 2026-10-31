@@ -610,10 +610,18 @@ if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.m
   const data = arg("--data");
   if (!data) { console.error("usage: node rows.mjs --data <project>/audit/<fileKey>.json [--payload <file>] [--dry-run]"); process.exit(2); }
   const dry = args.includes("--dry-run");
-  const src = arg("--payload") ? readFileSync(arg("--payload"), "utf8") : readFileSync(0, "utf8");
-  const record = existsSync(data) ? JSON.parse(readFileSync(data, "utf8")) : { rows: {}, libraries: {}, runs: {} };
+  // a missing or unreadable input is one line naming it, never a stack (as scores.mjs); nothing piped is said as such,
+  // never "Unexpected end of JSON input", and a terminal is never waited on
+  const payload = arg("--payload") || "the piped payload";
+  if (!arg("--payload") && process.stdin.isTTY) { console.error("no payload: give --payload <file> or pipe the rows in"); process.exit(2); }
+  const parse = (text, f) => { try { return JSON.parse(text); } catch (e) { console.error(`${f}: not JSON (${e.message})`); process.exit(1); } };
+  const read = (f) => { try { return readFileSync(f, "utf8"); } catch (e) { console.error(`${f}: ${e.code === "ENOENT" ? "no such file" : e.message}`); process.exit(1); } };
+  const src = arg("--payload") ? read(arg("--payload")) : read(0);
+  if (!src.trim()) { console.error(`${payload} is empty: give --payload <file> or pipe the rows in`); process.exit(2); }
+  const record = existsSync(data) ? parse(read(data), data) : { rows: {}, libraries: {}, runs: {} };
+  const given = parse(src, payload);
   let out;
-  try { out = applyRows(record, Object.assign(JSON.parse(src), dry ? { dryRun: true } : {})); }
+  try { out = applyRows(record, Object.assign(given, dry ? { dryRun: true } : {})); }
   catch (e) { console.error(e.message); process.exit(1); }
   if (!dry) {
     // A project's first run has no audit folder yet — one record per library

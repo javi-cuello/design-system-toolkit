@@ -3,9 +3,11 @@
 //   node smoke.mjs http://localhost:9232
 //   node smoke.mjs <a built site folder>     served here on a free port (how bin/check runs it)
 // Without its packages (pnpm install in tools/docs-mcp) it says so and exits 77, a skip.
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { createServer } from "node:http";
-import { join, resolve, sep } from "node:path";
+// test-server.mjs holds each tool's exact answers over a committed fixture site.
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { serveFolder } from "./serve-folder.mjs";
 
 if (!existsSync(new URL("./node_modules/@modelcontextprotocol/sdk", import.meta.url))) {
   console.log("skip: the docs MCP's packages are not installed: run (cd tools/docs-mcp && pnpm install --frozen-lockfile)");
@@ -21,19 +23,11 @@ if (!/^https?:/.test(arg)) {
   // a folder: served as the dashboard service serves it, a folder as its index, never a path outside it
   const root = resolve(arg);
   if (!existsSync(join(root, "api", "index.json"))) { console.error(`fail — docs-mcp: ${root} is not a built site with its API (no api/index.json)`); process.exit(1); }
-  site = createServer((req, res) => {
-    let f; try { f = resolve(root, "." + decodeURIComponent(new URL(req.url, "http://x").pathname)); } catch { res.writeHead(400); return res.end(); }
-    if (f !== root && !f.startsWith(root + sep)) { res.writeHead(404); return res.end(); }
-    if (existsSync(f) && statSync(f).isDirectory()) f = join(f, "index.html");
-    if (!existsSync(f)) { res.writeHead(404); return res.end(); }
-    res.writeHead(200, { "Content-Type": f.endsWith(".json") ? "application/json" : f.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream" });
-    res.end(readFileSync(f));
-  });
-  await new Promise((r) => site.listen(0, "127.0.0.1", r));
-  url = `http://127.0.0.1:${site.address().port}`;
+  site = await serveFolder(root);
+  url = site.url;
 }
 const c = new Client({ name: "docs-mcp-test", version: "0" });
-await c.connect(new StdioClientTransport({ command: process.execPath, args: [new URL("./server.mjs", import.meta.url).pathname], env: { ...process.env, DOCS_URL: url } }));
+await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: url } }));
 
 const fails = [];
 const names = (await c.listTools()).tools.map((t) => t.name);

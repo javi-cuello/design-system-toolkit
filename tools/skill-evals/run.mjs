@@ -22,7 +22,9 @@
  * removed) it must score as the project does. `--keep` leaves the copy. A run
  * whose transcript shows a read of the original repo, or git, scores 0, and so
  * does one that changed what the grade reads (the design, a mapping, a story,
- * the config): parity can be made to agree by editing either side.
+ * the config): parity can be made to agree by editing either side. Those
+ * inputs are read-only in the copy while the agent works, and a void run is
+ * never graded: no build, server or gate runs over it.
  *
  * Written 2026-10-03, after a comparison with practitioners named this the
  * toolkit's largest gap: the gates hold the code, but nothing measured whether
@@ -34,7 +36,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided } from './eval.mjs';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from '../component-contract/official.mjs';
 
@@ -92,6 +94,8 @@ for (const t of tasks) {
       if (!KEEP_FILES) fs.rmSync(p, { recursive: true, force: true });
     }
     const before = inputs(copy, gradingPaths(config), gradingOutputs(config));
+    // read-only for the agent: the gates it may run mid-work import some of these (eval.mjs, agentTools)
+    const modes = NO_AGENT ? new Map() : lock(copy, Object.keys(before));
 
     let agent = { turns: 0, costUsd: 0, durationMs: 0, result: '(no agent: graded as prepared)' };
     if (!NO_AGENT) {
@@ -129,13 +133,18 @@ for (const t of tasks) {
       const after = inputs(copy, gradingPaths(config), gradingOutputs(config));
       agent.tampered = changed(before, after);
     }
+    // writable again once the agent is done and its changes are read: the build and serve below may rewrite them
+    unlock(copy, modes);
 
-    // the grade, by the project's own gates, over the copy
+    // the grade, by the project's own gates, over the copy — never over a void
+    // one: a gate run over a changed mapping would run the changed code
     // a build that fails leaves the copy's old compiled output in place, which
     // would grade the original's styles: a failed build scores nothing
-    const built = E.build ? sh(E.build, copy) : { status: 0 };
+    const vo = voided(agent);
+    const none = { status: null, stdout: '' };
+    const built = vo ? none : E.build ? sh(E.build, copy) : { status: 0 };
     const env = {};
-    if (E.serve) {
+    if (!vo && E.serve) {
       const port = await freePort();
       server = spawn(E.serve.replace('{port}', port), { cwd: copy, shell: true, stdio: 'ignore', detached: true });
       env.PARITY_HOST_BASE = `http://localhost:${port}`;
@@ -143,14 +152,12 @@ for (const t of tasks) {
       while (i++ < 60 && !(await up(port))) await new Promise((r) => setTimeout(r, 250));
       if (!(await up(port))) throw new Error(`task ${t.id}: the server (\`${E.serve}\`) never answered on port ${port}`);
     }
-    const p = sh(`node ${TOOLKIT}/tools/parity/run.mjs --repo . ${t.target}`, copy, env);
-    const st = sh(`node ${TOOLKIT}/tools/css-lint/check.mjs --repo .`, copy);
+    const p = vo ? none : sh(`node ${TOOLKIT}/tools/parity/run.mjs --repo . ${t.target}`, copy, env);
+    const st = vo ? none : sh(`node ${TOOLKIT}/tools/css-lint/check.mjs --repo .`, copy);
     // a gate that crashed printed no count: not a clean sheet (styleCount), and an exit no count explains is named (score)
-    const findings = styleCount(st.stdout, st.status);
+    const findings = vo ? null : styleCount(st.stdout, st.status);
     const parity = parseParity(p.stdout);
-    const s = agent.contaminated && agent.contaminated.length ? { score: 0, green: false, why: `contaminated: ${agent.contaminated.join('; ')}` }
-      : agent.tampered && agent.tampered.length ? { score: 0, green: false, why: `changed the grade's inputs: ${agent.tampered.join(', ')}` }
-      : built.status === 0 ? score({ parity, styleFindings: findings, exits: { ...(NO_AGENT ? {} : { agent: agent.exit }), parity: p.status ?? p.signal, styles: st.status ?? st.signal } }) : { score: 0, green: false, why: `the build failed: ${((built.stderr || built.stdout || '').trim().split('\n').pop() || '').slice(0, 120)}` };
+    const s = vo || (built.status === 0 ? score({ parity, styleFindings: findings, exits: { ...(NO_AGENT ? {} : { agent: agent.exit }), parity: p.status ?? p.signal, styles: st.status ?? st.signal } }) : { score: 0, green: false, why: `the build failed: ${((built.stderr || built.stdout || '').trim().split('\n').pop() || '').slice(0, 120)}` });
     record = { at: new Date().toISOString(), task: t.id, commit: execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), toolkit: TOOLKIT_COMMIT,
       agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, brief: NO_AGENT ? null : BRIEF || null, opened: agent.opened ?? null, ...s, matched: parity?.matched ?? 0, waived: parity?.waived ?? 0, didNot: parity?.didNot ?? 0, styleFindings: findings,
       turns: agent.turns, costUsd: agent.costUsd, minutes: Math.round((Date.now() - t0) / 6000) / 10, note: agent.result };

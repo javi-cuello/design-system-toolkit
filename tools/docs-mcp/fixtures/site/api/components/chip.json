@@ -1,0 +1,11 @@
+{
+ "slug": "chip",
+ "title": "Chip",
+ "platform": "web",
+ "components": [{ "name": "Chip", "folder": "chip", "path": "/components/chip", "private": false,
+   "guidance": { "purpose": "A short label for a status." } }],
+ "contracts": {},
+ "changes": [],
+ "findings": [],
+ "scores": []
+}

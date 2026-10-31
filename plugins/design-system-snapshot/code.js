@@ -551,6 +551,10 @@ async function collectTokens() {
   for (const c of collections) collectionCounts[c.name] = c.variableIds.length;
 
   say('reading text styles');
+  // a line height or letter spacing as a fraction of the font size, to four places: tools/shared/text-units.js's,
+  // which test-text-units.mjs holds this copy to (Figma's sandbox imports nothing)
+  /** @type {(o: { unit: string, value?: number } | null | undefined, fontSize?: number) => number | null} */
+  const perFontSize = (o, fontSize) => (!o ? null : o.unit === 'PERCENT' ? +(o.value / 100).toFixed(4) : o.unit === 'PIXELS' && fontSize ? +(o.value / fontSize).toFixed(4) : null);
   const textStyles = [];
   for (const s of await figma.getLocalTextStylesAsync()) {
     let lh, source;
@@ -558,8 +562,7 @@ async function collectTokens() {
       const h = await measureStyle(s);
       if (h !== null) { lh = +(h / s.fontSize).toFixed(4); source = 'measured'; }
       else { lh = +(Math.round(s.fontSize * (METRIC[s.fontName.family] || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
-    } else if (s.lineHeight.unit === 'PERCENT') { lh = +(s.lineHeight.value / 100).toFixed(4); source = 'style'; }
-    else { lh = +(s.lineHeight.value / s.fontSize).toFixed(4); source = 'style'; }
+    } else { lh = perFontSize(s.lineHeight, s.fontSize); source = 'style'; }
     textStyles.push({
       // its key, as each effect's: what another file imports it by (tools/component-contract/to-figma.mjs)
       name: s.name, key: s.key, family: s.fontName.family, weight: s.fontName.style, size: s.fontSize,
@@ -567,7 +570,7 @@ async function collectTokens() {
       // In em, whichever unit the style uses, as the line height is: pixels
       // were sent raw beside percent as a fraction, and every reader took
       // both for em, so -0.5px read as -0.5em.
-      letterSpacing: +(s.letterSpacing.unit === 'PERCENT' ? s.letterSpacing.value / 100 : s.letterSpacing.value / s.fontSize).toFixed(4),
+      letterSpacing: perFontSize(s.letterSpacing, s.fontSize),
       // the two spacings a style owns beside its line height: between the
       // paragraphs of a block, and between the items of a list. A designer
       // changed both on every Text style on 2026-09-06 and the snapshot

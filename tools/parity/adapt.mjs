@@ -31,6 +31,7 @@ import { createRequire } from 'node:module';
 import { layerIndex } from './layers.mjs';
 import { parseColour, figmaWeight } from './values.mjs';
 import { cssName } from '../tokens/names.mjs';
+import { propAttr } from '../shared/prop-attr.mjs';
 import { css, KINDS } from './schema.mjs';
 
 const require = createRequire(import.meta.url);
@@ -113,7 +114,9 @@ function textBoxes(n, axis) {
    frame's text area is, a phone page 22.94 short. A difference past the cap
    is a waiver with its own `within` and owner, or a finding. A row the slack
    excuses by a pixel or more is reported as waived, never as a match
-   (diff.mjs), so the slack is read, not trusted. */
+   (diff.mjs), so the slack is read, not trusted. A bound on the engine's
+   own allowance, measured across the projects, not a value a project
+   answers: it stays in code, and a project that needs more takes a waiver. */
 export const SLACK_CAP = 3;
 export function sizeSlack(n, axis, chain) {
   const s = sizingOn(n, axis);
@@ -676,7 +679,8 @@ export function assertionsFor(at, ctx) {
         continue;
       }
       if (propType(node, key) === 'TEXT' || (P.skip || []).includes(key)) continue;
-      const attr = (P.rename || {})[key] || kebab(key);
+      // the attribute to-code styles the prop by, where it writes the project's sheets (prop-attr.mjs), else the prop's words
+      const attr = (P.rename || {})[key] || propAttr(key, ctx.attrNaming || null);
       if (typeof value === 'boolean') { if (!value) add('attr', `-attr:${attr}`, { mode: 'off-only', want: 'unset' }, key); }
       else if (value === 'True' || value === 'False') add('attr', `-attr:${attr}`, { mode: 'flag', want: value === 'True' ? 'set' : 'unset' }, key);
       else if (typeof value === 'string') add('attr', `-attr:${attr}`, { mode: 'value', want: value.toLowerCase() }, key);

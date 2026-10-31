@@ -1,0 +1,16 @@
+{
+ "slug": "button",
+ "title": "Button",
+ "platform": "web",
+ "components": [{ "name": "Button", "folder": "button", "path": "/components/button", "private": false,
+   "guidance": { "purpose": "Starts an action the user asks for." } }],
+ "contracts": {
+  "button": { "props": { "variant": { "type": "enum", "values": ["primary", "secondary"], "default": "primary" }, "label": { "type": "text" } } }
+ },
+ "changes": [
+  { "at": "2026-10-01T09:00:00.000Z", "file": "Project A library", "folders": ["button"], "lines": ["added"], "changes": [] },
+  { "at": "2026-10-30T09:00:00.000Z", "file": "Project A library", "folders": ["button"], "lines": ["padding: 8 → 12"], "changes": [{ "type": "value", "figma": "minor", "code": "patch", "what": "padding" }] }
+ ],
+ "findings": [{ "key": "button|binding", "open": true, "page": "button", "where": "Button", "check": "the fill is not bound to a variable" }],
+ "scores": [{ "page": "button", "name": "Button", "score": 82, "dimensions": { "binding": 70 }, "notes": [] }]
+}

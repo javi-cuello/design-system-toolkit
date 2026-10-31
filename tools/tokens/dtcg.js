@@ -70,6 +70,10 @@
   function clamp01(n) { return n < 0 ? 0 : n > 1 ? 1 : n; }
   function round(n, dp) { var f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
+  // a line height as a fraction of the font size, to four places: tools/shared/text-units.js's, which
+  // tools/shared/test-text-units.mjs holds this copy to (this file also runs in Figma's sandbox, which imports nothing)
+  const perFontSize = (o, fontSize) => (!o ? null : o.unit === 'PERCENT' ? +(o.value / 100).toFixed(4) : o.unit === 'PIXELS' && fontSize ? +(o.value / fontSize).toFixed(4) : null);
+
   function hex2(n) { return ('0' + Math.round(clamp01(n) * 255).toString(16)).slice(-2); }
 
   // 6-digit hex, per the color module: the `hex` fallback must not carry alpha.
@@ -290,10 +294,9 @@
     var lh = style.lineHeight;
     if (!lh || lh.unit === 'AUTO') {
       warnings.push({ name: style.name, reason: 'line height is AUTO and could not be measured — omitted' });
-    } else if (lh.unit === 'PERCENT') {
-      value.lineHeight = round(lh.value / 100, 4);
     } else {
-      value.lineHeight = round(lh.value / style.fontSize, 4);
+      // a measured AUTO is the rendered line's pixels (collect.js, unit MEASURED)
+      value.lineHeight = perFontSize(lh.unit === 'MEASURED' ? { unit: 'PIXELS', value: lh.value } : lh, style.fontSize);
     }
 
     var ls = style.letterSpacing;

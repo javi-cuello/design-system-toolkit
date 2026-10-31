@@ -1,4 +1,9 @@
 # Changelog — theme-switcher
+## [3.11.2] - 2026-10-31
+### Fixed
+- **The README said Clear is disabled with an empty selection.** Only Apply is; Clear is the page-wide reset and works with nothing selected, as the README's own account of it and the panel's note say.
+- Merged with the focus-ring release below; nothing of either changed.
+
 ## [3.11.1] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).

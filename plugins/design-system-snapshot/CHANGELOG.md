@@ -1,6 +1,11 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.68.3] - 2026-10-31
+### Changed
+- A text style's line height and letter spacing become a fraction of the font size through one function, `perFontSize`, a copy of `tools/shared/text-units.js` that `tools/shared/test-text-units.mjs` holds character for character, as the token build's and the doc generator's copies are. The numbers are the same: four places, by `toFixed`.
+- Merged with the focus-ring release below; nothing of either changed.
+
 ## [0.68.2] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11). The window's hint, when nothing is listening, says how to start the router and where its log is.

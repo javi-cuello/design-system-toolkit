@@ -134,15 +134,17 @@ export function encodePng(width, height, rgb) {
  * half-pixel of hinting and loud about a shape in the wrong place, an image
  * upside down or a block of text that grew a line — and arithmetically blind
  * to a hairline, which is acceptable in an eye-pointer and disqualifying in a
- * gate. A cell is 24px of the page; it differs past 18 levels on a channel.
+ * gate. A cell is `cell` CSS pixels of the page, and it differs past
+ * `threshold` levels on a channel: values, so they are the interface
+ * settings' `frameCell` and `frameCellThreshold` (audit-settings.json), which
+ * run.mjs passes; with either absent nothing is compared.
  * Arithmetic in Node, over the PNGs: the browser version passed both pictures
  * into the page being measured, and a full-page pair broke the DevTools
  * connection mid-run. Returns `{ cols, rows, differ, sheet }`, `sheet` a PNG
  * of design | page | page with the differing cells in red.
  */
-export const CELL = 24;
-export const THRESHOLD = 18;
-export function frameCells({ reference, scale, shot, sheet = true }) {
+export function frameCells({ reference, scale, shot, cell: CELL, threshold: THRESHOLD, sheet = true }) {
+  if (!(CELL > 0) || !(THRESHOLD >= 0)) throw new Error('frameCells needs the interface settings\' frameCell and frameCellThreshold (audit-settings.json)');
   const design = png(fs.readFileSync(reference)), page = png(Buffer.from(shot, 'base64'));
   const w = Math.round(design.width / scale), h = Math.round(design.height / scale);
   const cols = Math.max(1, Math.floor(w / CELL)), rows = Math.max(1, Math.floor(Math.min(h, page.height) / CELL));

@@ -973,8 +973,10 @@ if (require.main === module && process.argv[2] === 'homes') {
 // its routing names, and the name, organisation and host of each project
 // repo's origin, the toolkit's own organisation aside.
 //   node tools/snapshot/projects.cjs names
+// A root that is not there is a misspelt TOOLKIT_PROJECTS_ROOT or a moved folder, never a machine with no projects:
+// it fails, so the names check never passes by searching for nothing. An empty root (CI's) prints nothing.
 if (require.main === module && process.argv[2] === 'names') {
-  if (!fs.existsSync(root())) console.error(`no folder ${root()}: set TOOLKIT_PROJECTS_ROOT to the folder that holds the projects`);
+  if (!fs.statSync(root(), { throwIfNoEntry: false })?.isDirectory()) { console.error(`the projects root ${root()} is not a folder (TOOLKIT_PROJECTS_ROOT, else the toolkit's parent)`); process.exit(1); }
   const { execFileSync } = require('child_process');
   const originOf = (dir) => { try { return execFileSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
   const parts = (url) => { const m = /^(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url); return m ? { host: m[1], org: m[2], repo: m[3] } : null; };

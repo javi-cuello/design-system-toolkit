@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { createRequire } from 'node:module';
 import { png, pixelDiff, compareKept, keep, frameCells } from './shots.mjs';
 
 let n = 0;
@@ -59,12 +60,20 @@ ok('a picture that moved and a picture that is new are named; one that did not i
   JSON.stringify(compareKept(dir).rows) === JSON.stringify([['a.png', '50.0% of pixels moved'], ['b.png', 'new']]));
 fs.writeFileSync(path.join(dir, 'ref.png'), encode(48, 48, grey));
 
-const same = frameCells({ reference: path.join(dir, 'ref.png'), scale: 1, shot: encode(48, 48, grey).toString('base64') });
-const moved = frameCells({ reference: path.join(dir, 'ref.png'), scale: 1, shot: encode(48, 48, grey, { x: 24, y: 0, w: 24, h: 24, colour: red }).toString('base64') });
-const half = frameCells({ reference: path.join(dir, 'ref.png'), scale: 0.5, shot: encode(96, 96, grey, { x: 0, y: 48, w: 48, h: 48, colour: red }).toString('base64') });
+// the comparison's values are the interface settings' (the house's, as a project with none of its own gets them)
+const { frameCell, frameCellThreshold } = createRequire(import.meta.url)('../snapshot/projects.cjs').interfaceLimits(null);
+ok('the cell and its threshold come from the interface settings, and frameCells refuses to compare without them',
+  frameCell === 24 && frameCellThreshold === 18
+  && (() => { try { frameCells({ reference: path.join(dir, 'ref.png'), scale: 1, shot: encode(48, 48, grey).toString('base64') }); return false; } catch (e) { return /frameCell and frameCellThreshold/.test(e.message); } })());
+const cut = { cell: frameCell, threshold: frameCellThreshold };
+const same = frameCells({ reference: path.join(dir, 'ref.png'), scale: 1, shot: encode(48, 48, grey).toString('base64'), ...cut });
+const moved = frameCells({ reference: path.join(dir, 'ref.png'), scale: 1, shot: encode(48, 48, grey, { x: 24, y: 0, w: 24, h: 24, colour: red }).toString('base64'), ...cut });
+const half = frameCells({ reference: path.join(dir, 'ref.png'), scale: 0.5, shot: encode(96, 96, grey, { x: 0, y: 48, w: 48, h: 48, colour: red }).toString('base64'), ...cut });
 const sheet = png(moved.sheet);
-ok('a screen beside its frame: 24px regions by mean colour, the frame read at its export scale, and a contact sheet design | page | heat',
+ok('a screen beside its frame: regions of the settings\' cell by mean colour, the frame read at its export scale, and a contact sheet design | page | heat',
   same.cols === 2 && same.rows === 2 && same.differ === 0 && moved.differ === 1 && half.cols === 4 && half.rows === 4 && half.differ === 4
   && sheet.width === 48 * 3 + 16 && sheet.height === 48 && [...sheet.data.subarray(((5 * sheet.width) + 48 + 8 + 30) * 3, ((5 * sheet.width) + 48 + 8 + 30) * 3 + 3)].join() === red.join());
+ok('a project\'s own cell size is the grid: 12px cells cut the same picture in four each way',
+  frameCells({ reference: path.join(dir, 'ref.png'), scale: 1, shot: encode(48, 48, grey).toString('base64'), cell: 12, threshold: frameCellThreshold, sheet: false }).cols === 4);
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);

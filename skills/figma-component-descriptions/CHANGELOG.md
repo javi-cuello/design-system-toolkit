@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.18.2 (2026-10-31): `scripts/sections.mjs` says a missing or broken input in one line naming it, never a stack. Case D20.
 - 1.18.1 (2026-10-31): reviewed: step 8 says `virtualSets` lists every virtual set, `shared: false` where members differ, as `verify.js` returns it. Prose only.
 - 1.18.0 (2026-10-31): `verify.js` returns step 4's `duplicates` and `falseFixity`; `sections.mjs --separator` writes a virtual set's union, each line only some members have naming its subpart, and `--check` holds every member to it. Case D19.
 - 1.17.1 (2026-10-31): `sections.mjs`'s header names its one import, the toolkit's variant-name reader.

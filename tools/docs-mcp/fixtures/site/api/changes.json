@@ -1,0 +1,5 @@
+[
+ { "at": "2026-10-01T09:00:00.000Z", "file": "Project A library", "components": { "added": ["button", "chip"] }, "tokens": { "added": ["Color/Text/Neutral/primary", "Color/Background/Brand/primary"] } },
+ { "at": "2026-10-30T09:00:00.000Z", "file": "Project A library", "components": { "changed": ["button"] }, "tokens": {},
+   "grade": { "changes": [{ "group": "value", "figma": "minor", "code": "patch", "subject": "button", "what": "padding" }] } }
+]

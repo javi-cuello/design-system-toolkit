@@ -66,6 +66,10 @@ It exits 1 on a finding. `test-validate.mjs` holds its rules.
 Starts the server as a client would, calls every tool, and fails on any error
 or empty answer, or when the page list misses the foundations or changes pages. `bin/check` runs it on every project's built site; without this folder's packages it is a skip (exit 77), never a pass.
 
+    node test-server.mjs
+
+Holds every tool's exact answer over `fixtures/site/`, a committed stand-in of what the docs site writes (`api/` and four pages), so the server is tested where no project has a built site, CI included. `bin/check` always runs it; it skips as the smoke does. Both serve a folder with `serve-folder.mjs`. A change to what the docs site's API writes (`tools/docs-site/src/pages/api/`) moves the fixture with it.
+
 ## Limits
 
 - Needs the site built with the API: a project whose build fails serves none,

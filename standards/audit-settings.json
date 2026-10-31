@@ -92,7 +92,9 @@
       "viewportHeight": 900,
       "componentWindowHeight": 1400,
       "phoneWidth": 390,
-      "shotMaxHeight": 6000
+      "shotMaxHeight": 6000,
+      "frameCell": 24,
+      "frameCellThreshold": 18
     },
     "codeProps": {
       "inherited": [
@@ -333,7 +335,9 @@
       "viewportHeight": "the CSS height a page is measured at (design-standard)",
       "componentWindowHeight": "the CSS height of the window a component is measured in, at viewportWidth, where the project's parity facts name no `window`: taller than a page's, so a tall component is measured whole (design-code-parity)",
       "phoneWidth": "the CSS width a page's phone screenshot is taken at (frontend-build: look before you ship)",
-      "shotMaxHeight": "the tallest a full-page screenshot is taken, in CSS pixels, so a page of thousands of rows still produces an image (frontend-build: look before you ship)"
+      "shotMaxHeight": "the tallest a full-page screenshot is taken, in CSS pixels, so a page of thousands of rows still produces an image (frontend-build: look before you ship)",
+      "frameCell": "the side, in CSS pixels of the page, of the cells a screen's picture and its frame's are compared in by mean colour: large enough to be blind to a half-pixel of hinting, small enough to be loud about a shape in the wrong place (design-code-parity, --shots)",
+      "frameCellThreshold": "the levels (0–255) a cell's mean colour may differ on any channel between a screen's picture and its frame's before the cell is drawn as differing (design-code-parity, --shots)"
     },
     "codeProps": {
       "inherited": "the props every component takes from the platform (children, the global attributes), which no library's own types declare",

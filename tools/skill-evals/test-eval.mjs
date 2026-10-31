@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided } from './eval.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -83,6 +83,27 @@ ok('a change to the grade\'s inputs is named, added files too; the component reb
   JSON.stringify(Object.keys(was).sort()) === JSON.stringify(['elsewhere/src/c/figma.json', 'src/b/figma.json', 'tests/parity/w.json'])
   && JSON.stringify(changed(was, inputs(root)).sort()) === JSON.stringify(['src/b/parity.mjs', 'tests/parity/w.json']));
 fs.rmSync(root, { recursive: true, force: true });
+
+const lk = fs.mkdtempSync(path.join(os.tmpdir(), 'lock-'));
+for (const [rel, text] of [['src/b/figma.json', '{}'], ['src/b/parity.mjs', 'export const b = { layers: {} };'], ['src/b/b.tsx', 'x']]) { fs.mkdirSync(path.dirname(path.join(lk, rel)), { recursive: true }); fs.writeFileSync(path.join(lk, rel), text); }
+const locked = lock(lk, Object.keys(inputs(lk)));
+const refused = (rel) => { try { fs.writeFileSync(path.join(lk, rel), 'export const b = { layers: { evil: 1 } };'); return false; } catch (e) { return e.code === 'EACCES' || e.code === 'EPERM'; } };
+ok('the grade\'s inputs are read-only in the copy before the agent starts: a mapping module the gates import cannot be rewritten; the component can',
+  locked.size === 2 && (process.getuid && process.getuid() === 0 || (refused('src/b/parity.mjs') && refused('src/b/figma.json')))
+  && (() => { fs.writeFileSync(path.join(lk, 'src/b/b.tsx'), 'rebuilt'); return true; })());
+unlock(lk, locked);
+ok('…and writable again, at their old modes, for the build and serve after the agent',
+  (fs.statSync(path.join(lk, 'src/b/parity.mjs')).mode & 0o777) === (locked.get('src/b/parity.mjs') & 0o777) && (() => { fs.writeFileSync(path.join(lk, 'src/b/parity.mjs'), 'rebuilt'); return true; })()
+  && /unlock\(copy, modes\);\n    const vo = voided|unlock\(copy, modes\);[\s\S]{0,400}const built = vo/.test(fs.readFileSync(new URL('./run.mjs', import.meta.url), 'utf8')));
+fs.rmSync(lk, { recursive: true, force: true });
+
+const runSrc = fs.readFileSync(new URL('./run.mjs', import.meta.url), 'utf8');
+ok('a run that changed the grade\'s inputs, or read the answer, scores 0 and is never graded: no build, server or gate runs over it',
+  voided({ tampered: ['src/b/parity.mjs'] }).score === 0 && /changed the grade's inputs: src\/b\/parity\.mjs/.test(voided({ tampered: ['src/b/parity.mjs'] }).why)
+  && /^contaminated/.test(voided({ contaminated: ['Bash ran git'], tampered: ['x'] }).why) && voided({ contaminated: [], tampered: [] }) === null && voided({}) === null
+  && /const built = vo \? none/.test(runSrc) && /if \(!vo && E\.serve\)/.test(runSrc)
+  && /const p = vo \? none : sh\(`node \$\{TOOLKIT\}\/tools\/parity\/run\.mjs/.test(runSrc) && /const st = vo \? none : sh\(/.test(runSrc)
+  && /const modes = NO_AGENT \? new Map\(\) : lock\(copy, Object\.keys\(before\)\)/.test(runSrc));
 
 ok('a run is compared only with a clean one of its kind: not contaminated, not a hook that never fired, not an agent that never answered',
   comparable({ agent: true, rules: 'on', rulesFired: true, turns: 12, why: null })
