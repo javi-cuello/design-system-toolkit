@@ -3,7 +3,9 @@
 # Re-run any time; safe. If a real folder exists there, it is backed up first.
 set -e
 
-repo="$(cd "$(dirname "$0")" && pwd)"
+# the path as the disk spells it: a shell entered through ~/projects would write that case into the services
+# (bash's pwd -P keeps the typed case on a case-insensitive disk; realpath(3) returns the stored one)
+repo="$(cd "$(dirname "$0")" && { realpath . 2>/dev/null || pwd -P; })"
 
 node_bin="$(command -v node || true)"
 [ -n "$node_bin" ] || { echo "no node on PATH: install Node 22.12 or later, then re-run" >&2; exit 1; }
