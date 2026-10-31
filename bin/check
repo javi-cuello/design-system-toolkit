@@ -207,6 +207,23 @@ RC=$?
 rm -rf "$SP"
 [ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E ' passed|SKIPPED' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -B1 -A3 -E 'Error|FAIL|fatal|not checked out' | head -10)"
 
+# Skills alone, the way someone takes them: bin/get them into a sparse clone and run install.sh under an empty
+# HOME. install.sh stopped there on the standards guard until 2026-10-30. figma-plugin-creator brings standards/
+# and figma-foundations-audit brings part of other skills and both services' folders: only the two whole skills
+# are linked, and no service is touched (launchctl is a stand-in that records any call; launchd is not per HOME).
+step "skills, from bin/get, install"
+SP=$(mktemp -d)
+mkdir -p "$SP/fake" && printf '#!/bin/sh\necho "$@" >> "%s/launchctl.log"\nexit 1\n' "$SP" > "$SP/fake/launchctl" && chmod +x "$SP/fake/launchctl"
+OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git sparse-checkout set bin && cp "$REPO/bin/get" bin/get \
+  && node bin/get skills/figma-plugin-creator skills/figma-foundations-audit > /dev/null 2>&1 && cp "$REPO/install.sh" install.sh \
+  && HOME="$SP/home" PATH="$SP/fake:$PATH" ./install.sh \
+  && [ "$(ls "$SP/home/.claude/skills" | tr '\n' ' ')" = "figma-foundations-audit figma-plugin-creator " ] \
+  && [ ! -e "$SP/launchctl.log" ] && [ ! -e "$SP/home/Library/LaunchAgents" ] \
+  || { echo "FAIL: ~/.claude/skills holds: $(ls "$SP/home/.claude/skills" 2>&1 | tr '\n' ' '); launchctl: $(cat "$SP/launchctl.log" 2>&1)"; exit 1; }; } 2>&1)
+RC=$?
+rm -rf "$SP"
+[ $RC -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -6)"
+
 # The contract editor on every project's library: the discovery walk below
 # runs it with none, and it was run on one library by hand until 2026-10-19,
 # when three others failed it on what only that one had.

@@ -29,12 +29,12 @@ The toolkit holds no project. Each project keeps its design-system files in its 
 **Only one tool?** Take it alone, with every toolkit folder it uses and nothing else. It is git's own sparse checkout, so the code is not copied, and `git pull` updates it:
 
 ```sh
-git clone --filter=blob:none --sparse <this repo's url> toolkit && cd toolkit
+git clone --filter=blob:none --sparse https://github.com/javi-cuello/design-system-toolkit.git toolkit && cd toolkit
 git sparse-checkout set --cone bin
 bin/get tools/contract-editor        # or plugins/<name>, skills/<name>; --list prints the folders and changes nothing
 ```
 
-Then follow that tool's README. The rest of this section sets up the whole toolkit.
+A folder with packages of its own (the docs site) is named with its `pnpm install`; a skill goes into Claude Code with `./install.sh`. Then follow that tool's README. The rest of this section sets up the whole toolkit.
 
 **You need:**
 - a Mac (the services install as launchd agents; on Linux, run them by hand);
@@ -46,7 +46,7 @@ Then follow that tool's README. The rest of this section sets up the whole toolk
 1. **Clone and install.** Put the repo at `~/Projects/toolkit` (projects are found beside it, in `~/Projects/`), then:
 
    ```sh
-   cd ~/Projects/toolkit
+   git clone https://github.com/javi-cuello/design-system-toolkit.git ~/Projects/toolkit && cd ~/Projects/toolkit
    (cd tools/docs-site && pnpm install)    # the docs site's engine
    ./install.sh                            # checks the repo, links the skills into Claude Code, installs the services and the push hook
    ```

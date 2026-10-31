@@ -8,7 +8,7 @@ A page for writing a component's contract before anyone draws or builds it: desi
 
 You need Node 22.12 or later, the Figma desktop app, and a Figma library file. None of the toolkit's projects is needed.
 
-1. Clone the toolkit, or only the editor and what it uses: `git clone --filter=blob:none --sparse <url> toolkit && cd toolkit && git sparse-checkout set --cone bin && bin/get tools/contract-editor` (the snapshot plugin comes with it). In Figma, **Plugins › Development › Import plugin from manifest…** and pick `plugins/design-system-snapshot/manifest.json`.
+1. Clone the toolkit, or only the editor and what it uses: `git clone --filter=blob:none --sparse https://github.com/javi-cuello/design-system-toolkit.git toolkit && cd toolkit && git sparse-checkout set --cone bin && bin/get tools/contract-editor` (the snapshot plugin comes with it). In Figma, **Plugins › Development › Import plugin from manifest…** and pick `plugins/design-system-snapshot/manifest.json`.
 2. Run `node tools/contract-editor/serve.mjs` and open http://localhost:9250/. It starts the snapshot router too, unless one is running (a login agent from `install.sh`, restarted after an update: `launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-snapshot`).
 3. Run **Design system snapshot** in your library. No project claims it yet, so the router keeps the snapshot and the plugin shows a code. In the editor's **Settings**, give the project a name, paste the library's address and type the code. The project is made, and the kept snapshot goes into it.
 

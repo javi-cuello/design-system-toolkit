@@ -2,7 +2,7 @@
 /*
  * One tool from the toolkit, with every toolkit folder it uses, and nothing else.
  *
- *   git clone --filter=blob:none --sparse <toolkit url> toolkit && cd toolkit
+ *   git clone --filter=blob:none --sparse https://github.com/javi-cuello/design-system-toolkit.git toolkit && cd toolkit
  *   git sparse-checkout set --cone bin
  *   bin/get tools/contract-editor            # or plugins/<name>, skills/<name>; several at once
  *   bin/get --list tools/contract-editor     # the folders, the checkout left as it is
@@ -120,3 +120,10 @@ const kept = dirs.filter((d) => !(!d.includes('/') && dirs.some((o) => o.startsW
 const top = [...new Set(['bin', ...kept])].filter((d) => !kept.some((o) => o !== d && d.startsWith(o + '/'))).sort();
 if (!list) git('sparse-checkout', 'set', '--cone', ...top);
 console.log(top.join('\n'));
+// a folder with packages of its own (the docs site's Astro) names the one install it needs, on stderr so the list stays a list
+for (const d of top) {
+  const pkg = path.join(d, 'package.json');
+  if (!TRACKED.has(pkg)) continue;
+  let deps = {}; try { deps = JSON.parse(read(path.join(ROOT, pkg))).dependencies || {}; } catch { console.error(`${pkg}: not readable as JSON`); }
+  if (Object.keys(deps).length) console.error(`then: (cd '${d}' && pnpm install)`);
+}

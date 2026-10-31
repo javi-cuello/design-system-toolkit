@@ -7,6 +7,7 @@ every reader in the toolkit does, through the snapshot contract
 keeps its snapshot, its display name, its phase and its page-marker legend
 all come from the project, stated once.
 
+    pnpm install                            # once, in this folder
     DOCS_PROJECT=<label> pnpm dev           # a project's label: its repo under ~/Projects/
     DOCS_PROJECT=<label> pnpm build             # → <project home>/site/
     DOCS_OUT=/tmp/<label>-site …                 # build somewhere else

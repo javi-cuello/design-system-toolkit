@@ -15,7 +15,12 @@ node_bin="$(command -v node || true)"
 # before anything goes live. Its errors block (a skill with folded frontmatter
 # loads with no description and silently stops triggering); its warnings are
 # conformance debt that leaves the skill working, so they print and link.
-if [ "${SKIP_CHECKS:-0}" != 1 ]; then
+# A sparse checkout (bin/get, for some skills) holds only part of what the
+# guard reads; what it holds passed the guard in the repo before it was pushed.
+# There the guard, the push hook and the services are left out, and only whole
+# skills are linked; a full checkout runs everything below as it always has.
+sparse=$(git -C "$repo" config --bool core.sparseCheckout 2>/dev/null || echo false)
+if [ "${SKIP_CHECKS:-0}" != 1 ] && [ "$sparse" != true ]; then
   if ! "$repo/standards/tests/check.sh"; then
     echo
     echo "Refusing to link: fix the errors above first," >&2
@@ -26,10 +31,12 @@ if [ "${SKIP_CHECKS:-0}" != 1 ]; then
 fi
 
 # The toolkit's own push hook (.githooks/pre-push): a push runs bin/check.
-git -C "$repo" config core.hooksPath .githooks
+[ "$sparse" = true ] || git -C "$repo" config core.hooksPath .githooks
 
 mkdir -p ~/.claude/skills
 for s in "$repo"/skills/*/; do
+  # a skill bin/get took only part of (its scripts, for a tool) is not in the checkout's list as a whole folder
+  [ "$sparse" != true ] || git -C "$repo" sparse-checkout list | grep -qx "skills/$(basename "$s")" || continue
   name=$(basename "$s")
   target=~/.claude/skills/$name
   if [ -e "$target" ] && [ ! -L "$target" ]; then mv "$target" "$target.backup-$(date +%s)"; fi
@@ -41,7 +48,7 @@ done
 # with a `port`). macOS only; elsewhere, run `node tools/snapshot/router.mjs`
 # and `node tools/figma-audit/server.mjs --all` yourself.
 # SKIP_SERVICES=1 leaves them alone.
-if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ]; then
+if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" != true ]; then
   # the services run node through a link named for them, so Login Items says what each is
   ln -sfn "$node_bin" "$repo/tools/figma-audit/figma-audit"
   ln -sfn "$node_bin" "$repo/tools/snapshot/figma-snapshot"
