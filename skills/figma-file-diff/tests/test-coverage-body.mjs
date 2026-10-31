@@ -76,6 +76,20 @@ await ok("today's serialiser has no blind spot on the stand-in, and the scratch 
   assert.equal(kept.length, 0, "every top-level scratch node removed");
 });
 
+await ok("a check whose mutation changes nothing reads as a blind spot: FIXED set again, maxLines set while the box is fixed", async () => {
+  const noop = TEST.replace("n.layoutSizingHorizontal = 'HUG'", "n.layoutSizingHorizontal = 'FIXED'").replace("t.textAutoResize = 'HEIGHT';\n", "");
+  assert.notEqual(noop, TEST, "the mutations to undo are in coverage-test.js");
+  const { out } = await run(coverageBody(SERIALISE, noop));
+  assert.deepEqual(out.blindSpots, ["layoutSizingHorizontal", "maxLines"]);
+});
+
+await ok("a serialiser that stops reading the width shows it as a blind spot", async () => {
+  const blind = SERIALISE.replace(" if(n.layoutSizingHorizontal==='FIXED') p.push('W'+Math.round(n.width));", "");
+  assert.notEqual(blind, SERIALISE, "the width read is in serialise.js");
+  const { out } = await run(coverageBody(blind));
+  assert.deepEqual(out.blindSpots, ["width (FIXED)"]);
+});
+
 await ok("a serialiser that stops reading a property shows it as a blind spot, never a pass", async () => {
   const blind = SERIALISE.replace("  if (n.maxWidth!==undefined) p.push('maxW'+n.maxWidth);\n", "");
   assert.notEqual(blind, SERIALISE, "the line to drop is in serialise.js");

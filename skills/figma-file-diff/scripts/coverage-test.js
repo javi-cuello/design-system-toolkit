@@ -48,6 +48,8 @@ check('counterAxisAlignItems',  f, n => n.counterAxisAlignItems = 'CENTER');
 check('layoutWrap',      f, n => n.layoutWrap = 'NO_WRAP');
 // a resized frame is FIXED already: setting FIXED again would change nothing
 check('layoutSizingHorizontal', f, n => n.layoutSizingHorizontal = 'HUG');
+// FIXED again first: from HUG the resize would move the hash by its sizing alone, not its width
+f.layoutSizingHorizontal = 'FIXED';
 check('width (FIXED)',   f, n => n.resize(300, n.height));
 check('maxWidth',        f, n => n.maxWidth = 250);
 check('minWidth',        f, n => n.minWidth = 50);

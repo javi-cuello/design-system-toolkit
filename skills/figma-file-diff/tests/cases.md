@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.3)
+# Eval cases — figma-file-diff (v1.4.4)
+
+**Walked: 2026-10-31 for 1.4.4** — A10 extended: `node tests/test-coverage-body.mjs` 7 passed; the old no-op mutations now fail by test, naming both, and a serialiser that stops reading the width is a blind spot only with the frame set FIXED before the width check.
 
 **Walked live: 2026-10-31 for 1.4.3** — A9's body in a scratch file through the Desktop Bridge: with 1.4.2's test, 39 checked and two blind spots, `layoutSizingHorizontal` and `maxLines`; probed live, neither mutation changed its property (A10). With 1.4.3's, 39 checked, no blind spot, nothing errored, and the scratch nodes removed. `node tests/test-coverage-body.mjs` 5 passed; with 1.4.2's test it fails naming both, its stand-in now sizing and limiting lines as Figma does.
 
@@ -81,5 +83,5 @@ Runs: node tests/test-coverage-body.mjs
 
 ## A10 · Every coverage check changes the property it names — *executed* 2026-10-31
 Fixture: the stand-in of A9, its frame FIXED on both axes after a resize and its text taking `maxLines` only under a growing `textAutoResize`, as Figma does (both seen live).
-Assert: the coverage body reports no blind spot; with the frame set to `FIXED` again, or `maxLines` set under `NONE`, it reports `layoutSizingHorizontal` and `maxLines`. A check whose mutation changes nothing reads as a blind spot in the serialiser that is not there.
-Runs: node tests/test-coverage-body.mjs — "today's serialiser has no blind spot on the stand-in, and the scratch nodes are removed"
+Assert: the coverage body reports no blind spot; with the frame set to `FIXED` again, and `maxLines` set under `NONE`, it reports `layoutSizingHorizontal` and `maxLines`; with the width read dropped from the serialiser, it reports `width (FIXED)`, which a frame left HUG before the resize would hide. A check whose mutation changes nothing reads as a blind spot in the serialiser that is not there.
+Runs: node tests/test-coverage-body.mjs — "today's serialiser has no blind spot on the stand-in, and the scratch nodes are removed", "a check whose mutation changes nothing reads as a blind spot: FIXED set again, maxLines set while the box is fixed", "a serialiser that stops reading the width shows it as a blind spot"

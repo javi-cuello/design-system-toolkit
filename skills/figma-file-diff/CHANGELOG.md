@@ -1,5 +1,6 @@
 # Changelog — figma-file-diff
 
+- 1.4.4 (2026-10-31): the width check sets the frame FIXED first, so it moves on the width, not on the sizing the HUG check left. Case A10.
 - 1.4.3 (2026-10-31): two coverage checks changed nothing in Figma (a resized frame is FIXED already; `maxLines` takes only while the text box grows), so they read as blind spots: they now mutate. Case A10.
 - 1.4.2 (2026-10-31): the coverage test's body is generated, `scripts/coverage-body.mjs` (serialise.js's serialiser, then `coverage-test.js`): nothing is pasted or kept in sync by hand, and the test file alone fails at once. Case A9.
 - 1.4.1 (2026-10-31): reviewed: `report.mjs --next` prints `COMPONENT_PATH`, which `dump-node.js` now takes, since a component's name may hold ` / `; `--stable` refuses two runs that share no script's hash. Case A8.

@@ -18,7 +18,7 @@ const props = {
   header: { "Label text#12:0": { type: "TEXT" }, "Corner#12:1": { type: "VARIANT", variantOptions: ["Yes", "No"] } },
   block: { "Label text#13:0": { type: "TEXT" }, "Contrast": { type: "VARIANT", variantOptions: ["Light", "Dark"] } },
 };
-function grid({ id = "5:1", mainName = "_Ratios grid", contentCount = 169, blockProps = props.block } = {}) {
+function grid({ id = "5:1", mainName = "_Ratios grid", contentCount = 169, blockProps = props.block, headerProps = props.header } = {}) {
   let n = 0;
   // as Figma has it: an instance's properties carry a value, never a variant's
   // options, which are on its component set's definitions
@@ -28,8 +28,8 @@ function grid({ id = "5:1", mainName = "_Ratios grid", contentCount = 169, block
     getMainComponentAsync: async () => ({ parent: { type: "COMPONENT_SET", componentPropertyDefinitions: defs } }),
   });
   const kids = [child("FRAME")];
-  for (let c = 0; c < 12; c++) kids.push(child("INSTANCE", props.header));
-  for (let r = 0; r < 12; r++) { kids.push(child("INSTANCE", props.header)); for (let b = 0; b < 12; b++) kids.push(child("INSTANCE", blockProps)); }
+  for (let c = 0; c < 12; c++) kids.push(child("INSTANCE", headerProps));
+  for (let r = 0; r < 12; r++) { kids.push(child("INSTANCE", headerProps)); for (let b = 0; b < 12; b++) kids.push(child("INSTANCE", blockProps)); }
   const title = { id: `I${id};0:1`, type: "TEXT" }, content = { id: `I${id};0:2`, type: "FRAME", children: kids.slice(0, contentCount) };
   return { id, type: "INSTANCE", children: [title, content], getMainComponentAsync: async () => (mainName ? { name: mainName } : null) };
 }
@@ -62,6 +62,13 @@ await check("property keys are read off the instances: a header's variant is not
   assert.equal(m.componentPropertyKeys.header.isLightDarkPair, false);
   assert.equal(m.componentPropertyKeys.block.variant, "Contrast");
   assert.equal(m.componentPropertyKeys.block.isLightDarkPair, true);
+});
+
+await check("a header with a Light/Dark Contrast variant is a light/dark pair, its options read from its set", async () => {
+  const m = await run(file(grid({ headerProps: { "Label text#12:0": { type: "TEXT" }, "Contrast": { type: "VARIANT", variantOptions: ["Light", "Dark"] } } })), TOKENS, "5:1");
+  assert.equal(m.componentPropertyKeys.header.variant, "Contrast");
+  assert.deepEqual(m.componentPropertyKeys.header.variantOptions, ["Light", "Dark"]);
+  assert.equal(m.componentPropertyKeys.header.isLightDarkPair, true);
 });
 
 await check("without the settings or the instance prepended it says what to prepend", async () => {
