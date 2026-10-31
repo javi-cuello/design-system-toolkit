@@ -1,4 +1,6 @@
-# Eval cases — figma-contrast-matrix (v3.4.0)
+# Eval cases — figma-contrast-matrix (v3.5.0)
+
+**Walked: 2026-10-31 against v3.5.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 against v3.4.0 — A15 executed** (`node tests/test-read-ramp-hexes.mjs`, 7/7; A1–A8, A11 and A14 re-run with `python3 tests/test-matrix.py`). The ramp reader's Figma calls are mocked, not observed: its first live run should be watched.
 

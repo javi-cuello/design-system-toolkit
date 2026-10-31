@@ -1,4 +1,4 @@
-// Design system snapshot — v0.67.1 · skill-standard §B v1.1.0
+// Design system snapshot — v0.68.0 · skill-standard §B v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -9,7 +9,8 @@
 // version, no bridge, no call limit.
 // Data stored: one relaunch-data entry on the document root (the Tools button)
 // and one root pluginData key, `snapshotFileId`, written once so the file can
-// say which file it is; no clientStorage; one POST to localhost per run, or
+// say which file it is; one clientStorage key, `pairingCode`, this machine's
+// router code, asked for once; one POST to localhost per run, or
 // with nothing listening there, a JSON file the user saves.
 
 // Port 9317, and localhost by name: devAllowedDomains takes hostnames only,
@@ -18,6 +19,20 @@
 // half of it — localhost resolves there first on a Mac, and every snapshot
 // came back "server answered 404" from a server that was not the receiver.
 const SERVER = 'http://localhost:9317';
+
+/*
+ * The router's pairing code (tools/snapshot/pairing.cjs), asked for once and
+ * kept in clientStorage, which is this user's, on this machine, and never in
+ * the file. The router refuses a post and a `?file=` question without it: a
+ * page in a browser can reach localhost and sends the same `Origin: null` as
+ * this plugin, so the code is what tells them apart. A query parameter, never
+ * a header: a custom header makes the fetch a preflighted one.
+ */
+let pairingCode = '';
+/** @param {string} path */
+const routed = (path) => `${SERVER}${path}${path.includes('?') ? '&' : '?'}code=${encodeURIComponent(pairingCode)}`;
+/** The router's refusal of the code, when it gave one: what the window shows beside the field. */
+let unpaired = '';
 
 /*
  * HEADLESS: this same file run as a body through the Desktop Bridge, with no
@@ -653,7 +668,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.67.1';
+const VERSION = '0.68.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1251,8 +1266,10 @@ async function reachable() {
 async function kind() {
   try {
     const q = [figma.fileKey, fileId()].filter(Boolean).map((id) => `file=${encodeURIComponent(String(id))}`).join('&');
-    const res = await fetch(`${SERVER}/?${q}`, { method: 'GET' });
-    const known = (await res.json()).kind;
+    const res = await fetch(routed(`/?${q}`), { method: 'GET' });
+    const said = await res.json();
+    unpaired = res.status === 401 ? String(said.error || 'The router does not know this plugin: paste its pairing code.') : '';
+    const known = said.kind;
     if (known === 'library' || known === 'screens') return known;
   } catch (e) { /* not listening: the guess stands, and the button says so */ }
   return detect();
@@ -1540,14 +1557,23 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
 class Unreachable extends Error {}
 /** @param {unknown} e */
 const message = (e) => String((e && typeof e === 'object' && /** @type {{message?: unknown}} */ (e).message) || e);
+/** The router refused the code: the window asks for it again. */
+class Unpaired extends Error {}
 
 if (!HEADLESS) {
-  Promise.all([kind(), reachable()]).then(([mode, up]) =>
-    figma.ui.postMessage({ type: 'ready', mode, up, server: SERVER, file: figma.root.name, version: VERSION }));
+  const ready = () => Promise.all([kind(), reachable()]).then(([mode, up]) =>
+    figma.ui.postMessage({ type: 'ready', mode, up, unpaired: up ? unpaired : '', server: SERVER, file: figma.root.name, version: VERSION }));
+  figma.clientStorage.getAsync('pairingCode').then((c) => { pairingCode = typeof c === 'string' ? c : ''; }, () => {}).then(ready);
 
 
-  figma.ui.onmessage = async (/** @type {{type: string, icons?: boolean, height?: number}} */ msg) => {
+  figma.ui.onmessage = async (/** @type {{type: string, icons?: boolean, height?: number, code?: string}} */ msg) => {
     try {
+      // the code pasted into the window: kept, then the router asked again, so a wrong one is said at once
+      if (msg.type === 'pair') {
+        pairingCode = String(msg.code || '').trim();
+        await figma.clientStorage.setAsync('pairingCode', pairingCode);
+        await ready();
+      }
       if (msg.type === 'snapshot') {
         figma.skipInvisibleInstanceChildren = true;
         const mode = await kind();
@@ -1570,13 +1596,14 @@ if (!HEADLESS) {
           return;
         }
         say('sending the snapshot');
-        const res = await fetch(`${SERVER}/${mode}`, { method: 'POST', body: JSON.stringify(payload) })
+        const res = await fetch(routed(`/${mode}`), { method: 'POST', body: JSON.stringify(payload) })
           .catch(() => { throw new Unreachable(`the router stopped answering, so nothing was written.`); });
         /* Not `res.ok` alone: the router replies once the receiver has finished,
            so the status IS the outcome and the body says what happened. This
            reported "done" over refused and crashed writes for as long as the
            reply came back the moment the payload landed. */
         const answer = await res.text();
+        if (res.status === 401) throw new Unpaired(answer);
         if (!res.ok) throw new Error(answer || `the router answered ${res.status} and said nothing more, so the snapshot may not be written. Its output has the cause.`);
         // The router's own answer names who wrote it ("<project>: written"): a
         // repo's receiver or, for a design-only project, the toolkit's store.
@@ -1586,7 +1613,7 @@ if (!HEADLESS) {
       if (msg.type === 'close') figma.closePlugin();
     } catch (e) {
       // the window says it beside the button; a toast as well said it twice
-      figma.ui.postMessage({ type: 'failed', text: message(e), unreachable: e instanceof Unreachable });
+      figma.ui.postMessage({ type: 'failed', text: message(e), unreachable: e instanceof Unreachable, unpaired: e instanceof Unpaired });
     }
   };
 }

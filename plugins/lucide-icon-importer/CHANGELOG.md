@@ -1,4 +1,8 @@
 # Changelog — lucide-icon-importer
+## [1.12.0] - 2026-10-31
+### Changed
+- **An icon from the CDN is rebuilt before it is shown or sent.** The SVG text was written into the window as markup, so a CDN serving an `<svg>` with a script or an event handler in it would have run it in the plugin's window. It is now parsed as XML and only shape elements (`path`, `circle`, `rect`, `line`, `polyline`, `polygon`, `ellipse`, `g`) and their presentation attributes are copied onto new nodes; a value naming a URL is dropped. That clean SVG is what the card shows and what Figma is given. `tests/test-svg-clean.mjs` feeds it a hostile icon in Chrome.
+
 ## [1.11.4] - 2026-10-08
 ### Changed
 - README records how a full Lucide set is laid out (first category, moved not rebuilt, one grid frame per category) and two Figma behaviours a re-sort works around.

@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.7.1)
+# Eval cases — frontend-build (v2.8.0)
+
+**Walked: 2026-10-31 against v2.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 for 2.7.1** — T12 extended: `node --test tests/test-sass-entry.mjs` passes 7/7. Failing direction checked: on 2.7.0 the symlink run of `--check` exited 0 and `bin/css` with a missing toolkit path exited non-zero before compiling; both pass with the fix. Other cases unchanged.
 

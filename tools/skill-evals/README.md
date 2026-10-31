@@ -22,10 +22,10 @@ In `evals` of its `snapshot.config.json`:
 |---|---|
 | `tasks` | `[{ id, target, remove, prompt }]` — the parity target graded, the files the agent rebuilds, what it is asked |
 | `link` | what the copy needs that git does not carry: a folder is linked (`node_modules`), a file copied (a local config Kirby will not load through a link) |
-| `build` | the step before grading (`bin/css`); a failed build scores 0, since the copy would keep the original's compiled output |
+| `build` | the step before grading (`bin/css`); a failed build scores 0, since the copy would keep the original's compiled output. It runs in the copy after the agent has edited it, so what it runs is only as trusted as the copy: the agent's narrowed tools (toolkit-standard §D 24) do not reach it, so a copy whose files told the agent to rewrite the build script would have the grader run it. `serve` is the same. Open: run both from HEAD's tree rather than the copy |
 | `serve` | the command that serves the copy's components, `{port}` filled; parity is pointed at it by `PARITY_HOST_BASE` |
 | `results` | where the line goes, in the project repo (default `tests/evals/results.jsonl`) |
-| `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits |
+| `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits. Each command is a prefix the project vouches for: the copy's files are data the agent must not take orders from, so `node` runs only the parity and stylesheet gates unless a script is named here (`node scripts/x.mjs`) |
 
 ## Proving the grade
 

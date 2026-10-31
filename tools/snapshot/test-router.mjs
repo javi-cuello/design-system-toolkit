@@ -20,6 +20,15 @@ import contract from './projects.cjs';
 const { identify, projects, route, routing } = contract;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
+/* This machine's pairing code, for the routers the suite starts: a file of
+   the suite's own, never the user's ~/.toolkit/pairing-code. */
+const PAIRING_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-pairing-'));
+const PAIRING = path.join(PAIRING_DIR, 'pairing-code');
+const CODE = 'suite-pairing-code-0123';
+fs.writeFileSync(PAIRING, CODE + '\n', { mode: 0o600 });
+process.on('exit', () => fs.rmSync(PAIRING_DIR, { recursive: true, force: true }));
+const paired = (url) => url + (url.includes('?') ? '&' : '?') + 'code=' + CODE;
+
 /*
  * A world of projects on disk: each one a context document naming its files
  * and its repo, and a repo whose snapshot.config.json names one step after
@@ -69,14 +78,14 @@ async function serving(projectsDir, body) {
   const port = 9400 + Math.floor(Math.random() * 500);
   // SNAPSHOT_QUIET: the router would otherwise spawn the describer after a library write, and the suite must not call an API.
   const server = spawn('node', [path.join(HERE, 'router.mjs'), '--projects', projectsDir, '--port', String(port)],
-    { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, SNAPSHOT_QUIET: '1', TOOLKIT_UNCLAIMED: `${projectsDir}-unclaimed` } });
+    { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, SNAPSHOT_QUIET: '1', TOOLKIT_UNCLAIMED: `${projectsDir}-unclaimed`, TOOLKIT_PAIRING: PAIRING } });
   let banner = '';
   await new Promise((done, fail) => {
     server.stdout.on('data', (c) => { banner += c; if (banner.includes('In Figma')) done(); });
     server.on('exit', () => fail(new Error(`the router exited: ${banner}`)));
     setTimeout(() => fail(new Error(`the router never started: ${banner}`)), 8000);
   });
-  const post = (url, payload) => fetch(`http://127.0.0.1:${port}${url}`, { method: 'POST', body: JSON.stringify(payload) });
+  const post = (url, payload) => fetch(`http://127.0.0.1:${port}${paired(url)}`, { method: 'POST', body: JSON.stringify(payload) });
   try { return await body({ post, port, banner }); } finally { server.kill(); }
 }
 
@@ -101,6 +110,61 @@ test('only the plugin and local tools reach the router: a web page, a look-alike
     }
     assert.equal((await ask(port, { Host: `attacker.example:${port}` })).status, 403, 'a rebound DNS name');
   });
+});
+
+test('only the paired plugin may post or ask about a file: no code, a wrong code or a code from a page writes nothing, keeps nothing and says where the code is', async () => {
+  const { projectsDir, made } = two();
+  await serving(projectsDir, async ({ port }) => {
+    const at = `http://127.0.0.1:${port}`;
+    const unclaimed = `${projectsDir}-unclaimed`;
+    for (const q of ['', '?code=', '?code=wrong', `?code=${CODE.slice(0, -1)}`, `?code=${CODE}x`]) {
+      // a library no project claims: the one a page would use to fill the unclaimed folder
+      const stranger = await fetch(`${at}/library${q}`, { method: 'POST', headers: { Origin: 'null' }, body: JSON.stringify(lib('STRANGER')) });
+      assert.equal(stranger.status, 401, `posted with ${q || 'no code'}`);
+      assert.match(await stranger.text(), /not paired.*node .*pairing\.cjs/, 'the refusal names the command that prints the code');
+      assert.equal((await fetch(`${at}/library${q}`, { method: 'POST', body: JSON.stringify(lib('IDA')) })).status, 401, `a claimed library, ${q || 'no code'}`);
+      const asked = await fetch(`${at}/?file=KEYA${q ? '&' + q.slice(1) : ''}`, { headers: { Origin: 'null' } });
+      assert.equal(asked.status, 401);
+      const said = await asked.json();
+      assert.equal(said.paired, false); assert.equal(said.kind, undefined, 'no kind told');
+    }
+    assert.ok(!fs.existsSync(unclaimed) || !fs.readdirSync(unclaimed).length, 'nothing kept to make a project of');
+    assert.ok(!fs.existsSync(made[0].log), 'no after-snapshot step ran');
+    // the bare question stays open: the plugin asks it before it has a code, and it names nothing
+    assert.equal((await fetch(at, { headers: { Origin: 'null' } })).status, 200);
+    // and with the code, the same post is routed and written
+    assert.equal((await fetch(`${at}${paired('/library')}`, { method: 'POST', headers: { Origin: 'null' }, body: JSON.stringify(lib('IDA')) })).status, 200);
+    assert.equal((await (await fetch(`${at}/${paired('?file=KEYA')}`)).json()).kind, 'library');
+  });
+});
+
+test('the pairing code is made once, for this user alone, and printed by its command', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pairing-made-'));
+  const file = path.join(dir, 'nested', 'pairing-code');
+  const run = () => execFileSync('node', [path.join(HERE, 'pairing.cjs')], { env: { ...process.env, TOOLKIT_PAIRING: file }, encoding: 'utf8' }).trim();
+  const first = run();
+  assert.ok(first.length >= 16, `a code worth guessing at: ${first}`);
+  assert.equal(run(), first, 'the same code every time it is asked for');
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600, 'readable by this user only');
+  assert.equal(fs.statSync(path.dirname(file)).mode & 0o777, 0o700);
+  fs.chmodSync(file, 0o644);
+  run();
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600, 'a file others could read is narrowed before use');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('the login agents log where only this user reads, never the shared temp folder', () => {
+  const install = fs.readFileSync(path.join(HERE, '..', '..', 'install.sh'), 'utf8');
+  for (const plist of [path.join(HERE, 'com.toolkit.figma-snapshot.plist'), path.join(HERE, '..', 'figma-audit', 'com.toolkit.figma-audit.plist')]) {
+    const text = fs.readFileSync(plist, 'utf8');
+    assert.doesNotMatch(text, /<string>\/tmp\//, `${path.basename(plist)} logs to /tmp`);
+    const logs = [...text.matchAll(/<key>Standard(?:Out|Error)Path<\/key>\s*<string>([^<]+)<\/string>/g)].map((m) => m[1]);
+    assert.equal(logs.length, 2, path.basename(plist));
+    assert.ok(logs.every((l) => l.startsWith('LOGS/')), `${path.basename(plist)}: ${logs.join(', ')}`);
+  }
+  assert.match(install, /logs="\$HOME\/Library\/Logs\/toolkit"/);
+  assert.match(install, /chmod 700 "\$logs"/, 'a folder only this user reads');
+  assert.match(install, /-e "s\|LOGS\|\$logs\|g"/, 'install.sh fills it in');
 });
 
 test('a project is discovered by its context document; one without a block claims nothing', () => {
@@ -354,7 +418,7 @@ test('a body past the largest a snapshot is is refused, and the plugin is told s
   const { projectsDir } = two();
   await serving(projectsDir, async ({ port }) => {
     const big = Buffer.alloc(257 * 1024 * 1024, 32);
-    const r = await fetch(`http://127.0.0.1:${port}/library`, { method: 'POST', body: big }).then(async (x) => [x.status, await x.text()], (e) => [e.cause?.code || e.message, '']);
+    const r = await fetch(`http://127.0.0.1:${port}${paired('/library')}`, { method: 'POST', body: big }).then(async (x) => [x.status, await x.text()], (e) => [e.cause?.code || e.message, '']);
     assert.equal(r[0], 413, `answered ${r[0]}`);
     assert.match(r[1], /at most 256 MB/);
   });
@@ -737,7 +801,7 @@ test('a character split across two chunks of the body arrives whole', async () =
   const at = bytes.indexOf(Buffer.from('🔷')) + 2; // mid-character
   await serving(projectsDir, async ({ port }) => {
     const status = await new Promise((done, fail) => {
-      const req = http.request({ host: '127.0.0.1', port, path: '/library', method: 'POST', headers: { 'content-length': bytes.length } },
+      const req = http.request({ host: '127.0.0.1', port, path: paired('/library'), method: 'POST', headers: { 'content-length': bytes.length } },
         (res) => { res.resume(); done(res.statusCode); });
       req.on('error', fail);
       req.write(bytes.subarray(0, at));
@@ -888,7 +952,7 @@ test('one file is one source in the store, whichever of its identities a run car
 test('asked about a file, the router says which kind its routing records, so the plugin need not guess', async () => {
   const { projectsDir } = two();
   await serving(projectsDir, async ({ port }) => {
-    const kind = async (q) => (await (await fetch(`http://127.0.0.1:${port}/${q}`)).json()).kind;
+    const kind = async (q) => (await (await fetch(`http://127.0.0.1:${port}/${q ? paired(q) : ''}`)).json()).kind;
     assert.equal(await kind('?file=SIDB'), 'screens', 'a screens file, by its id');
     assert.equal(await kind('?file=nope&file=KEYA'), 'library', 'any of the ids the plugin sends');
     assert.equal(await kind('?file=NOBODYS'), null, 'a file nobody claims is left to the plugin');
@@ -1503,14 +1567,14 @@ test('a module that fails to load is answered, and the router stays up for the n
   for (const d of ['snapshot', 'shared', 'component-contract']) fs.cpSync(path.join(HERE, '..', d), path.join(copy, 'tools', d), { recursive: true, filter: (f) => !f.includes('node_modules') });
   const { projectsDir } = two();
   const port = 9400 + Math.floor(Math.random() * 500);
-  const server = spawn('node', [path.join(copy, 'tools', 'snapshot', 'router.mjs'), '--projects', projectsDir, '--port', String(port)], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, SNAPSHOT_QUIET: '1' } });
+  const server = spawn('node', [path.join(copy, 'tools', 'snapshot', 'router.mjs'), '--projects', projectsDir, '--port', String(port)], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, SNAPSHOT_QUIET: '1', TOOLKIT_PAIRING: PAIRING } });
   try {
     await new Promise((done, fail) => { let b = ''; server.stdout.on('data', (c) => { b += c; if (b.includes('In Figma')) done(); }); setTimeout(() => fail(new Error(b)), 8000); });
     const store = path.join(copy, 'tools', 'snapshot', 'projects.cjs');
     const was = fs.readFileSync(store, 'utf8');
     fs.appendFileSync(store, '\nthis is not javascript(\n');
     const at = `http://127.0.0.1:${port}`;
-    assert.equal((await fetch(`${at}/library`, { method: 'POST', body: JSON.stringify(lib('IDB')) })).status, 500, 'a post is answered');
+    assert.equal((await fetch(`${at}${paired('/library')}`, { method: 'POST', body: JSON.stringify(lib('IDB')) })).status, 500, 'a post is answered');
     assert.equal((await fetch(at)).status, 500, 'and so is the plugin\'s question');
     fs.writeFileSync(store, was);
     assert.equal((await fetch(at)).status, 200, 'and the router is still there once the module loads');

@@ -6,6 +6,22 @@ Then in Figma, in any project's file: **Plugins › Development › Design syste
 snapshot › Take design snapshot**. The payload goes to the project that owns
 that Figma file.
 
+### Pairing
+
+The first time the plugin reaches the router it asks for this machine's
+pairing code. Print it and paste it into the plugin's window:
+
+    node pairing.cjs
+
+The code is made once, in `~/.toolkit/pairing-code` (only you can read it;
+`TOOLKIT_PAIRING` moves it, for a test), and the plugin keeps it in its own
+clientStorage. The router refuses every snapshot and every `?file=` question
+that does not carry it (`?code=`), before routing and before anything is kept:
+`localhost` is reachable from any web page, and a sandboxed frame on a page
+sends the same `Origin: null` as the plugin, so the code is what a page cannot
+have. Delete the file to make a new one (the next request makes it; nothing
+needs restarting); each plugin then asks again.
+
 A library no project claims is refused, and its snapshot is kept for a day
 under a one-time code the plugin shows, the five newest, in
 `~/.toolkit/snapshot-unclaimed`, a folder no other user may read
@@ -52,7 +68,8 @@ installs it as a login agent (this folder's `com.toolkit.figma-snapshot.plist`,
 with this checkout's paths): it starts with the Mac and restarts if it stops.
 It runs node through a `figma-snapshot` link beside this file, made by
 `install.sh`, so Login Items names it rather than "node". Output goes to
-`/tmp/figma-snapshot.log`.
+`~/Library/Logs/toolkit/figma-snapshot.log`, and errors to `figma-snapshot.err`
+beside it, a folder only you can read.
 After changing `router.mjs`, restart it:
 `launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-snapshot`.
 

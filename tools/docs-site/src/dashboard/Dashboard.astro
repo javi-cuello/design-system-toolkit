@@ -193,6 +193,18 @@ const files = dashboardStatic.libraries;
       <Modal id="runDialog" title="Run">
         <ul class="run-notes" id="runDialogList"></ul>
       </Modal>
+      <!-- Fix this: the code Claude wrote, shown before it runs in Figma (queue.js approveFix) -->
+      <Modal id="fixDialog" title="Run this change in Figma?">
+        <form method="dialog" class="fix-approve">
+          <p id="fixDialogSummary"></p>
+          <p class="fix-where" id="fixDialogWhere"></p>
+          <pre class="fix-code" id="fixDialogCode" tabindex="0" aria-label="The code that will run"></pre>
+          <div class="fix-actions">
+            <button class="button" value="cancel" autofocus>Cancel</button>
+            <button class="button button--primary" value="run">Run in Figma</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   </div>
 

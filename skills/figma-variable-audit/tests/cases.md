@@ -1,4 +1,6 @@
-# Eval cases — figma-variable-audit (v1.25.2)
+# Eval cases — figma-variable-audit (v1.26.0)
+
+**Walked: 2026-10-31 against v1.26.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 against v1.25.2** — A13 extended: `node tests/test-report.mjs` 12/12 plus the symlinked run; the past-eight-layers assertion fails on 1.25.1. Before that, **Walked: 2026-10-30 against v1.25.1** — A13 extended: `node tests/test-report.mjs` 11/11. Four new assertions each failed before the fix: `--scope fills` leaves two findings out before the counts are taken and says so, a batch passed twice renders the same bytes as once, two batches that audited one component are refused, and a `<slot> › _private_` layer path and the component cell are code spans. `test-links.mjs`, `test-descriptions.mjs` and `test-extensions.mjs` pass, unchanged. Not met live.
 

@@ -684,9 +684,7 @@ function renderGrid(icons) {
       var name = card.dataset.name;
       queuedFetchSvg(name).then(function(svgText) {
         var iconEl = card.querySelector('.card-icon');
-        if (iconEl) {
-          iconEl.innerHTML = '<svg viewBox="0 0 24 24">' + extractInner(svgText) + '</svg>';
-        }
+        if (iconEl) iconEl.replaceChildren(cleanSvg(svgText));
         obs.unobserve(card);
       }).catch(function() {
         // Transient network/CDN hiccups happen, especially with many icons
@@ -782,14 +780,46 @@ function fetchSvg(name) {
       return res.text();
     })
     .then(function(text) {
-      svgCache[name] = text;
-      return text;
+      // what the CDN sent is never used as it came: rebuilt from the shapes it draws, then kept
+      var clean = new XMLSerializer().serializeToString(cleanSvg(text));
+      svgCache[name] = clean;
+      return clean;
     });
 }
 
-function extractInner(svgText) {
-  var match = svgText.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-  return match ? match[1] : '';
+/*
+ * An icon from the CDN, rebuilt from the allowlist below. The text is a third
+ * party's: written into the page as markup, an svg holding a script element, an
+ * onload or a foreignObject would run inside the plugin's window, which can
+ * message the plugin and through it the file. So it is parsed as XML, never as
+ * HTML, and only these shape elements and presentation attributes are copied
+ * onto new nodes; anything else, and any value that names a URL, is dropped.
+ * The result is what the card shows and what is sent to Figma.
+ */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var SVG_ELEMENTS = { svg: 1, g: 1, path: 1, circle: 1, ellipse: 1, line: 1, polyline: 1, polygon: 1, rect: 1 };
+var SVG_ATTRS = { viewBox: 1, width: 1, height: 1, fill: 1, stroke: 1, 'stroke-width': 1, 'stroke-linecap': 1, 'stroke-linejoin': 1,
+  'fill-rule': 1, 'clip-rule': 1, opacity: 1, transform: 1, d: 1, cx: 1, cy: 1, r: 1, rx: 1, ry: 1, x: 1, y: 1, x1: 1, y1: 1, x2: 1, y2: 1, points: 1 };
+var SAFE_VALUE = /^[-\w\s.,#%()]*$/;
+function cleanSvg(text) {
+  var doc = new DOMParser().parseFromString(String(text), 'image/svg+xml');
+  var src = doc.documentElement;
+  var copy = function (from) {
+    var to = document.createElementNS(SVG_NS, from.localName);
+    for (var i = 0; i < from.attributes.length; i++) {
+      var a = from.attributes[i];
+      if (a.namespaceURI === null && SVG_ATTRS[a.name] === 1 && SAFE_VALUE.test(a.value) && !/url\s*\(/i.test(a.value)) to.setAttribute(a.name, a.value);
+    }
+    for (var c = from.firstElementChild; c; c = c.nextElementSibling) {
+      if (c.namespaceURI === SVG_NS && SVG_ELEMENTS[c.localName] === 1 && c.localName !== 'svg') to.appendChild(copy(c));
+    }
+    return to;
+  };
+  // a document that is not an svg (a parse error, an HTML page) draws nothing
+  if (!src || src.namespaceURI !== SVG_NS || src.localName !== 'svg' || doc.getElementsByTagName('parsererror').length) return document.createElementNS(SVG_NS, 'svg');
+  var out = copy(src);
+  if (!out.getAttribute('viewBox')) out.setAttribute('viewBox', '0 0 24 24');
+  return out;
 }
 
 function resetPreview() {
@@ -913,7 +943,7 @@ function updatePreviewPanel() {
       previewBox.innerHTML = '';
     } else {
       previewBox.className = 'preview-box';
-      previewBox.innerHTML = '<svg viewBox="0 0 24 24">' + extractInner(entry.svgString) + '</svg>';
+      previewBox.replaceChildren(cleanSvg(entry.svgString));
       previewMeta.textContent = 'lucide.dev · ' + entry.name;
     }
     addBtn.querySelector('.btn-label').textContent = 'Add icon';

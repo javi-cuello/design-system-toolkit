@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- The figma-audit service: every project that states a `port` in its
      project block (--all). install.sh writes it to ~/Library/LaunchAgents with
-     TOOLKIT and NODE_DIR replaced. `figma-audit` is a link to node, so Login
+     TOOLKIT, NODE_DIR and LOGS (~/Library/Logs/toolkit) replaced. `figma-audit` is a link to node, so Login
      Items names the service rather than "node". -->
 <plist version="1.0">
 <dict>
@@ -24,8 +24,8 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StandardErrorPath</key>
-	<string>/tmp/figma-audit.err</string>
+	<string>LOGS/figma-audit.err</string>
 	<key>StandardOutPath</key>
-	<string>/tmp/figma-audit.log</string>
+	<string>LOGS/figma-audit.log</string>
 </dict>
 </plist>

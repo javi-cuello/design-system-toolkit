@@ -342,6 +342,12 @@
     text-decoration: underline; text-underline-offset: var(--underline-offset); cursor: pointer;
   }
   .run-notes { margin: 0; padding-inline-start: 1.2em; color: var(--fg-muted); line-height: 1.6; }
+  /* the fix's code, read before it runs: scrolls inside the dialog rather than stretching it */
+  .fix-approve > * + * { margin-block-start: var(--space-12); }
+  .fix-approve p { margin: 0; }
+  .fix-where { color: var(--fg-muted); }
+  .fix-code { margin: 0; padding: var(--space-12); max-block-size: 50svh; overflow: auto; font-family: var(--font-mono); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); border: var(--stroke-1) solid var(--line); }
+  .fix-actions { display: flex; justify-content: flex-end; gap: var(--space-8); }
   .run-notes li + li { margin-block-start: var(--space-4); }
   td.num { font-family: var(--font-mono); white-space: nowrap; }
   td .kind {

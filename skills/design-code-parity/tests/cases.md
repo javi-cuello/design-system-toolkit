@@ -1,4 +1,6 @@
-# Eval cases — design-code-parity (v1.62.6)
+# Eval cases — design-code-parity (v1.63.0)
+
+**Walked: 2026-10-31 against v1.63.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Reviewed against v1.62.6 on 2026-10-23** — no case changed: one sentence on who keeps `bin/parity`; no case reads it.
 

@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.2.2)
+# Eval cases — figma-file-diff (v1.3.0)
+
+**Walked: 2026-10-31 against v1.3.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 against v1.2.2** — A7 extended: `node tests/test-report.mjs` 16/16 plus the symlinked run; the 0:1 assertion fails on 1.2.1. Before that, **Walked: 2026-10-30 against v1.2.1** — A7 extended: `node tests/test-report.mjs` 15/15. Four new assertions each failed before the fix: a same-name page with a different ID paired by name and its component compared (was "Components that differ: 0"), a variable in a slash-named collection folded into the collection's row, scopes and code syntax in another order hashing the same through `manifest.js`, and a dump path rendered as a code span. `test-serialise.mjs` 4/4, unchanged. A1–A6 unchanged; not met live.
 

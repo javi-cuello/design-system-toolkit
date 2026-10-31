@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.15.1)
+# Eval cases — figma-component-descriptions (v1.16.0)
+
+**Walked: 2026-10-31 against v1.16.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 for 1.15.1** — D18 extended: `node tests/test-sections.mjs` 18/18, `node tests/test-engines.mjs` and `node tests/test-verify.mjs` green. Failing direction checked: the symlink assertion failed on 1.15.0 (the CLI printed nothing through a symlink), and the missing-subject assertion fails with the absent list removed.
 

@@ -90,6 +90,15 @@ progress::-webkit-progress-bar{background:var(--figma-color-bg-tertiary)}
 progress::-webkit-progress-value{background:var(--figma-color-bg-brand);transition:width .2s}
 @media (prefers-reduced-motion: reduce){progress::-webkit-progress-value{transition:none}}
 .hint{margin:var(--space-2) 0 0}
+/* The pairing field: its label above it, the router's words on where the code
+   is between them (knowledge/ui/patterns/forms.md, *Labels*, *Help and hint
+   text*), and the one action beside the field. */
+.pair{margin:0 0 var(--space-3)}
+.pair label{display:block;font-weight:var(--fw-medium)}
+.pair-hint{margin:var(--space-1) 0 var(--space-2);color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
+.pair-row{display:flex;gap:var(--space-2)}
+.pair-row input{flex:1;min-width:0}
+.pair-row button{flex:none;box-sizing:border-box;height:var(--input-h)}
 /* Hover is restated on both states: without it ui-base's button:hover turns
    the OFF switch brand-blue, which reads as ON. Height and box-sizing are
    explicit so ui-base's bare button rule cannot size it by accident. */
@@ -111,6 +120,14 @@ progress::-webkit-progress-value{background:var(--figma-color-bg-brand);transiti
   <div class="row" id="icons-row" hidden>
     <span id="icons-label">Export icons, graphics and previews</span>
     <button class="switch" id="icons" role="switch" aria-checked="true" aria-labelledby="icons-label"></button>
+  </div>
+  <div class="pair" id="pair" hidden>
+    <label for="pair-code">Pairing code</label>
+    <p class="pair-hint" id="pair-hint"></p>
+    <div class="pair-row">
+      <input type="text" id="pair-code" aria-describedby="pair-hint" autocomplete="off" spellcheck="false">
+      <button class="btn-secondary" id="pair-save" type="button">Pair</button>
+    </div>
   </div>
   <button id="run" aria-disabled="true">Take snapshot</button>
   <div class="status" id="status" role="status" hidden>
@@ -154,6 +171,20 @@ run.onclick = function () {
   busy(true); show({ title: 'Starting…', bar: {} });
   parent.postMessage({ pluginMessage: { type: 'snapshot', icons: icons.getAttribute('aria-checked') === 'true' } }, '*');
 };
+// The router refuses a plugin it is not paired with, and says where the code
+// is; the field asks for it once, and the code is kept for this machine.
+function pairing(why) {
+  $('pair').hidden = !why;
+  $('pair-hint').textContent = why || '';
+  if (why) busy(true);
+  fit();
+}
+$('pair-save').onclick = function () {
+  var code = $('pair-code').value.trim();
+  if (!code) return $('pair-code').focus();
+  parent.postMessage({ pluginMessage: { type: 'pair', code: code } }, '*');
+};
+$('pair-code').onkeydown = function (e) { if (e.key === 'Enter') $('pair-save').onclick(); };
 // With a receiver listening the snapshot is posted to it; without one it is
 // saved as a file, which is how anyone without the toolkit uses the plugin.
 function listening(up) {
@@ -174,6 +205,10 @@ onmessage = function (e) {
     document.getElementById('icons-row').hidden = msg.mode !== 'library';
     document.getElementById('server').textContent = msg.server;
     listening(msg.up);
+    // a code just pasted and refused is said as such, so the person knows to check it
+    var tried = $('pair-code').value.trim();
+    pairing(msg.unpaired ? (tried ? 'That code was refused. ' : '') + msg.unpaired : '');
+    if (!msg.unpaired) $('pair-code').value = '';
   }
   if (msg.type === 'progress') show({
     title: sentence(msg.text).replace(/\.$/, '…'),
@@ -194,6 +229,7 @@ onmessage = function (e) {
   }
   if (msg.type === 'failed') {
     if (msg.unreachable) listening(false); else busy(false);
+    if (msg.unpaired) { pairing(msg.text); box.hidden = true; return; }
     show({ tone: 'error', title: sentence(msg.text) });
   }
 };

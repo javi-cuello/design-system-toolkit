@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.12.0)
+# Eval cases — figma-plugin-creator (v1.13.0)
+
+**Walked: 2026-10-31 against v1.13.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked: 2026-10-30 against v1.12.0 — P1 executed (`node tests/test-scaffold.mjs`, 7/7).** The scaffold is now a script: its files carry every P1 assertion, the same answers give the same files, a name with a quote keeps the manifest valid, and a missing answer is refused. P2–P6 untouched.
 

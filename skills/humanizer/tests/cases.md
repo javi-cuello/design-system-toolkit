@@ -1,4 +1,6 @@
-# Eval cases — humanizer (v2.9.4)
+# Eval cases — humanizer (v2.10.0)
+
+**Walked: 2026-10-31 against v2.10.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 
 **Reviewed against v2.9.3 on 2026-09-20** — citation only: the four standards governing the toolkit's parts became `standards/toolkit-standard.md`, and this skill's references point at its §A. No rule and no case changed.

@@ -1,4 +1,6 @@
-# Eval cases — figma-tokens-examples (v1.4.0)
+# Eval cases — figma-tokens-examples (v1.5.0)
+
+**Walked: 2026-10-31 against v1.5.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Walked live: 2026-10-30 against v1.4.0** — T8's `rows` mode on a real library through the Desktop Bridge, read-only, with four of its Semantic Background names and one made up: category Background, content Frame, each row's Role/Type/Emphasis and label as the names give them (a Neutral row with no Type), and only the made-up name flagged `[check-token]`. Before that, **Walked: 2026-10-30 against v1.4.0 — T8 added and executed in node** (`node tests/test-tokens-mapping.mjs`, 14/14); T1–T7 unchanged by it (T7's ten assertions still pass). `rows` mode's name resolution runs against a mock `figma`; not walked live.
 

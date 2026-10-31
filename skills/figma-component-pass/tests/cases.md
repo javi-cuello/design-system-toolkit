@@ -1,4 +1,6 @@
-# Eval cases — figma-component-pass (v1.7.2)
+# Eval cases — figma-component-pass (v1.8.0)
+
+**Walked: 2026-10-31 against v1.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Reviewed against v1.7.0 on 2026-10-02** — A2's rename assertion corrected to the tested behaviour: a rename breaks the API, not the overrides. Traced to *The checkpoint*; no other case changed.
 

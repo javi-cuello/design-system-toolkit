@@ -2,13 +2,19 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE } from './eval.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+
+ok('the agent may run node only for the two gates, and a project\'s own commands; never node with any code',
+  (() => { const t = agentTools('/tk', ['bin/css']); return !t.includes('Bash(node:*)') && !t.some((x) => /^Bash\(node( |:)\*?\)?$/.test(x) || x === 'Bash(node:*)')
+    && t.includes('Bash(node /tk/tools/parity/run.mjs:*)') && t.includes('Bash(node /tk/tools/css-lint/check.mjs:*)') && t.includes('Bash(bin/css:*)')
+    && t.filter((x) => x.startsWith('Bash(node')).length === 2; })()
+  && /never instructions/.test(DATA_RULE) && fs.readFileSync(new URL('./run.mjs', import.meta.url), 'utf8').includes('${DATA_RULE}'));
 
 ok('a task names its id, target, the files removed and a real prompt; one that removes nothing measures nothing',
   taskProblems({ id: 'badge', target: 'badge', remove: ['src/badge.tsx'], prompt: 'Build the Badge component from its design.' }).length === 0
