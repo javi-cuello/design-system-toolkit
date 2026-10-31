@@ -28,12 +28,16 @@ export function real(p) {
   while (!fs.existsSync(head) && path.dirname(head) !== head) { tail = path.join(path.basename(head), tail); head = path.dirname(head); }
   try { return path.join(fs.realpathSync(head), tail); } catch { return path.resolve(p); }
 }
+/* An isolated agent's worktree is the main repo's path under another name, so
+   every path is compared without it: the file's, and the toolkit's and the
+   repos' too. Stripped from the file alone, a hook running in a worktree read
+   its own files as outside itself, and its tests failed there (2026-10-31). */
+const unworktree = (p) => real(p).replace(/\/\.claude\/worktrees\/[^/]+(?=\/|$)/g, '');
 
 export function area(file, toolkit, projectRepos) {
-  // an isolated agent's worktree is the main repo's path under another name
-  const f = real(file).replace(/\/\.claude\/worktrees\/[^/]+(?=\/|$)/, '');
-  toolkit = real(toolkit);
-  projectRepos = projectRepos.map(real);
+  const f = unworktree(file);
+  toolkit = unworktree(toolkit);
+  projectRepos = projectRepos.map(unworktree);
   // a context document records a project's design and naming conventions, wherever its home is
   if (/(^|\/)figma-design-system\/design-system-context\.md$/.test(f)) return { standard: 'figma-standard.md', part: '*' };
   if (f === toolkit || f.startsWith(toolkit + path.sep)) {
@@ -67,7 +71,7 @@ export function area(file, toolkit, projectRepos) {
 export function areas(file, toolkit, projectRepos) {
   const a = area(file, toolkit, projectRepos);
   if (!a) return [];
-  const rel = path.relative(real(toolkit), real(file).replace(/\/\.claude\/worktrees\/[^/]+(?=\/|$)/, ''));
+  const rel = path.relative(unworktree(toolkit), unworktree(file));
   const docs = /^tools\/docs-site\/src\//.test(rel) && (UI.test(rel) || /\.m?js$/.test(rel));
   const plugin = /^plugins\/[^/]+\/ui\.html$/.test(rel);
   const ui = docs || plugin || (a.standard === 'code-standard.md' && uiFile(file));
@@ -80,8 +84,8 @@ export function areas(file, toolkit, projectRepos) {
    design-standard does not govern. */
 export function knowledge(file, toolkit, projectRepos) {
   if (!areas(file, toolkit, projectRepos).some((a) => a.standard === 'design-standard.md')) return [];
-  const f = real(file).replace(/\/\.claude\/worktrees\/[^/]+(?=\/|$)/, '');
-  const root = [toolkit, ...projectRepos].map(real).find((r) => f.startsWith(r + path.sep));
+  const f = unworktree(file);
+  const root = [toolkit, ...projectRepos].map(unworktree).find((r) => f.startsWith(r + path.sep));
   return root ? pagesFor(path.relative(root, f)) : [];
 }
 export const areaKey = (a) => `${a.standard}:${[].concat(a.part).join('+')}`;
