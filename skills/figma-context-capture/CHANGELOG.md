@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.11.0 (2026-10-31): passes B, E, F with S4, S2 and the registry are scripts (`pass-b-naming.mjs`, `registry.mjs`, `pass-e-descriptions.js`, `pass-f-doc-apparatus.js`, `pass-s2-primitives.js`); pass D returns layer names for B. Case C16.
 - 2.10.0 (2026-10-31): the document goes to `<project home>/design-system-context.md`, claude.ai the fallback; template's Deployment line and example port 9232 match; C3 asserts the home path.
 - 2.9.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).
 - 2.8.0 (2026-10-30): passes S1 and S3 are scripts, `pass-s1-collections.js` (collections, mode names, where hiding lives) and `pass-s3-styles.js` (style names in library order, their groups); reading what they mean stays the agent's. Case C15.

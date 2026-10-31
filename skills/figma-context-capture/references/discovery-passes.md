@@ -4,7 +4,7 @@ Every pass is **read-only**. Nothing in this skill ever writes to a Figma file. 
 
 The sandbox accepts **modern JavaScript** — verified 2026-08-08 against Desktop Bridge plugin 1.39.0 by running arrow functions, `const`/`let`, template literals, spread, destructuring, `??`, `?.`, `class` and `globalThis` in one call. This file previously required ES5; that was probably true once and was never re-tested. The scripted passes are written in ES5 and stay that way — they work — but nothing obliges new code to be.
 
-**Passes A, C, D, S1 and S3 are scripts** in `scripts/`, each a `figma_execute` body: read the file, fill its `CONFIG` where it has one, and send the whole body as the call's code. They are short enough that the call is the delivery, so nothing is cached in the Figma file and the script is the single source; do not retype them. `tests/test-passes.mjs` runs all five against a fake file. The other passes are judgement over what the scripts return, or questions (M). Batch per page group, timeout 20000–30000. After any failed or hung call, `figma_get_status({ probe: true })` before retrying.
+**Passes A, C, D, E, F (with S4), S1, S2 and S3 are scripts** in `scripts/`, each a `figma_execute` body: read the file, fill its `CONFIG` where it has one, and send the whole body as the call's code. They are short enough that the call is the delivery, so nothing is cached in the Figma file and the script is the single source; do not retype them. **Pass B and the registry run in node** over what those return (`scripts/pass-b-naming.mjs`, `scripts/registry.mjs`): save each call's result as JSON and pass the files. `tests/test-passes.mjs` runs all of them against a fake file. What is left is judgement over what the scripts return, or questions (M); never count by hand what a script counts (toolkit-standard §D 23). Batch per page group, timeout 20000–30000. After any failed or hung call, `figma_get_status({ probe: true })` before retrying.
 
 Each pass ends with **what to record** and its **confidence tag**. Three tags, used throughout the output:
 
@@ -26,11 +26,11 @@ Never judge a page from `page.children` — libraries wrap pages in one outer fr
 
 ## Pass B — Naming conventions (prefix, separator, suffixes)
 
-Work on the flat name list from A, in analysis (not in Figma):
+Run `scripts/pass-b-naming.mjs` in node, with pass A's saved output and pass D's (`<pass-a.json> [<pass-d.json>]`). It counts what the rules below count: each leading mark with its pages and examples (`recordable` at three or more), the stems two or more siblings share per candidate separator, every name carried both prefixed and bare (`contradictions`), and the layer endings found in two or more of pass D's sampled sets (pass D returns each set's first-variant layer names). What it cannot decide is yours:
 
-- **Internal prefix:** cluster leading characters (`_`, `.`, `Internal /`, `🔒`…). A candidate prefix needs ≥3 components and must correlate with *not being consumed as a top-level subject* (spot-check 2–3: are they nested inside other components' instances?). One prefixed component alone is `[TBD]`, not a convention.
+- **Internal prefix:** a candidate prefix (`_`, `.`, `Internal /`, `🔒`…) needs ≥3 components (`recordable`) and must correlate with *not being consumed as a top-level subject* (spot-check 2–3: are they nested inside other components' instances?). One prefixed component alone is `[TBD]`, not a convention.
 - **Virtual-set separator:** names sharing a pre-separator stem (`Top bar / Default`, `Top bar / Main`). Requires ≥1 group of ≥2 siblings to record; a lone slash-name is not evidence.
-- **Suffixes:** recurring layer/component endings (`-icon`, `-label`). Sample layer names inside 3–5 sets, don't sweep every node.
+- **Suffixes:** recurring layer endings (`-icon`, `-label`), from the 3–5 sets pass D sampled; a suffix in one set alone is not listed.
 
 **Record:** prefix, separator, suffixes — each with example names as evidence. Contradictions (same conceptual child prefixed on one page, bare on another) go to open questions verbatim; that's a maintainer ruling, never a guess.
 
@@ -54,15 +54,15 @@ Derive: the state option set and its **order as authored**, axis ordering patter
 
 ## Pass E — Description dialect & documentation furniture
 
-- Find 1–3 components where A reported `described > 0`. Read `descriptionMarkdown` (never `description` — it strips markdown). Read off: heading spellings actually used (`## Composition`? `## Usage`?), dialect, punctuation habits (full stops on bullets?), whether private components carry compact descriptions.
-- On one documented page, look for a canvas documentation header **outside any component** (walk parents; exclude if any ancestor is COMPONENT/COMPONENT_SET). Record its component name and body text-layer name. Note plainly it was checked on one page — header conventions can be page-specific, so tag `[inferred]`.
+- Send `scripts/pass-e-descriptions.js` (empty `CONFIG.ids` samples the first three described components; or fill it from A's ids, a private one among them). It reads `descriptionMarkdown` (never `description` — it strips markdown) and returns per component the headings as written, bullets and how many end in a full stop, and spelling pairs counted (`colour`/`color`…). Read off from it the heading spellings, the dialect, the punctuation habit and whether private components carry compact descriptions.
+- It also returns `headerCandidates`: on the first sample's page, instances **outside any component** whose name says header, with their main component and text-layer names. Which one is the canvas documentation header, and its body text layer, is yours. Note plainly it was checked on one page — header conventions can be page-specific, so tag `[inferred]`.
 - If zero components carry descriptions: every field here is `[TBD]` and the summary should say the description settings will be established by the *first* figma-component-descriptions run, not by this capture.
 
 ## Pass F — Documentation & properties-table apparatus (optional per file)
 
 Only when the file registry says this file plays a doc role, or pass A's page names suggest it (`Documentation`, `Tokens`, pages named `1 - Colour - …`):
 
-- **Doc components present?** Search local components for the doc-generator name contract (`Table - `, `Section header`, `Cell - `, `Preview - `). Present as local components → this file is a doc component library candidate; present as instances → a previous generation ran here (target candidate). Record which.
+- **Doc components present?** Send `scripts/pass-f-doc-apparatus.js`: per name of the doc-generator contract (`Table - `, `Section header`, `Row - `, `Cell - `, `Preview - `) it counts local components, instances and remote instances (with their library components' keys), and returns the page names and the `_Ratios grid` instances per page. Present as local components → this file is a doc component library candidate; present as instances → a previous generation ran here (target candidate). Record which.
 - **Doc-generator plausibility:** a file holding *only* its own styling primitives as collections and the full doc name contract is a doc library, not a source — record that explicitly so the classic "documented the doc library's own variables" failure stays unreachable.
 - **Properties table:** if the figma-properties-table skill is installed, run its `PT.profile()` and record the returned config (columns by header label, schema, seenOnPages) instead of probing by hand. Check `titleResolvedBy` before trusting a cached profile.
 - **Existing generated pages:** read one Line-height cell per text-style frame group — `%` = as-authored units, bare number = converted — and one colour cell for format (hex/rgb/oklch). These are the doc-generator's two sticky formatting decisions; capturing them prevents a future refill silently flipping every value.
@@ -96,13 +96,13 @@ Pass C reads a library **from the outside** (team enumeration) and is blind to a
 
 Record, per collection: key, count, **mode names** (mode names are architecture: `Light/Dark` = theming; brand/vertical names = multi-brand switching; a single default mode = plain values), and **where hiding lives** — collection-level vs per-variable `hiddenFromPublishing`. A collection that enumerates as 0 from a consumer file but holds N variables here, all `[hidden]`, is *deliberately internal*: record that as the mechanism behind a semantic-only consumption rule, and note it for variable-audit (bindings into it are defects).
 
-**S2 — Internal structure of hidden primitive collections.** Sample enough names to derive the grammar: step counts per ramp (e.g. 12-step), **anchor/source markers** (`8-anchor`, `7-source` — brand colours verbatim at that step), alpha ramps (`Alphas/A0..`), per-vertical brand families. These feed oklch-scale/contrast-matrix work later; capture the grammar, not every value.
+**S2 — Internal structure of hidden primitive collections.** Send `scripts/pass-s2-primitives.js` after S1: for each hidden collection (or those named in `CONFIG.collections`) it returns the ramps (variables grouped by parent path), each ramp's steps in library order and count, the steps carrying a marker, the alpha ramps and `stepCounts`, how many ramps have each length. Derive from it the grammar: step counts per ramp (e.g. 12-step), what the **anchor/source markers** mean (`8-anchor`, `7-source` — brand colours verbatim at that step), alpha ramps (`Alphas/A0..`), per-vertical brand families. These feed oklch-scale/contrast-matrix work later; capture the grammar, not every value.
 
 **S3 — Styles (the non-variable half of the source).** Send `scripts/pass-s3-styles.js` in the source file. It returns `text` and `effect` — each the style `names` in library order (capped at 400, `truncated` saying when it bit), their `count`, and `groups`, the distinct first segments in first-seen order — and the `paint` and `grid` style counts. The groups are what to record verbatim; the role/size grammar and the shadow taxonomy are your reading of the names.
 
 Record text-style **group names verbatim** (they drive the doc-generator's per-group unit rule), the role/size grammar and suffixes, and the effect-style taxonomy.
 
-**S4 — Documentation state.** Compare the page inventory (pass A) against the doc-generator page contract (one page per collection + `Shadows` + per-group `Text styles - *` pages, numbered section frames). If it matches, record that future doc-generator runs are **refills, not first generation**. Inspect the doc furniture instances (`Section header`, `Table - *`, `Row - *`, `Cell - *`): if they are **remote**, their source library is thereby identified as the doc component library — record it in the registry with the evidence. Also record whether `_Ratios grid` (contrast matrix) instances exist yet on the primitive colour page: 0 is a useful "not built yet" fact.
+**S4 — Documentation state.** Send `scripts/pass-f-doc-apparatus.js` (pass F's script). Compare its page names against the doc-generator page contract (one page per collection + `Shadows` + per-group `Text styles - *` pages, numbered section frames) — a read, because the contract is the doc generator's own. If it matches, record that future doc-generator runs are **refills, not first generation**. Its `furniture` counts say whether the doc furniture instances are **remote**: if they are, their source library is thereby identified as the doc component library — record it in the registry with the evidence (the keys). Its `ratiosGrid` says whether `_Ratios grid` (contrast matrix) instances exist yet on the primitive colour page: absent is a useful "not built yet" fact.
 
 **S5 — What NOT to run here.** Passes B, D, E target component conventions and usually have nothing to bite on in a source file (no component sets); run them only if pass A found local components.
 
@@ -112,6 +112,6 @@ Record text-style **group names verbatim** (they drive the doc-generator's per-g
 
 When several files are captured in one engagement:
 
-- **Registry:** one row per file from each Pass A result. Roles come from evidence (Pass F findings, Pass C's consumed-libraries list), stated as proposals for the user to confirm — never silently assigned.
-- **Dependency graph:** file X consumes collections whose `libraryName` is file Y → edge Y → X. Draw it from collection **keys**.
+- **Registry:** `scripts/registry.mjs`, run in node with each file's pass A output and its pass C output after `--c`, prints the template's §2 rows, one per file, each role a proposal from the inventory tagged `[inferred]` and audience `[TBD]`. Correct the role from the evidence (Pass F findings, Pass C's consumed-libraries list) at the step-2 summary — never silently assigned.
+- **Dependency graph:** the same command prints the dependency line: file X consumes collections whose `libraryName` is file Y → edge Y → X, with the collection **keys** behind each edge.
 - **Shared conventions:** a convention goes in the shared section only when independently evidenced in **every** captured library. Anything true in one and unchecked in another stays in that library's own section. Copying a convention "because they're the same project" is exactly the cross-library contamination the downstream skills warn about.
