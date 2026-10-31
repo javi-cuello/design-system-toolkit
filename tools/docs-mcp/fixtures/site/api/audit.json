@@ -1,0 +1,12 @@
+{
+ "libraries": {},
+ "runs": [
+  { "at": "2026-10-30T10:00:00.000Z", "owner": "figma-components-audit", "found": 1, "costUsd": 0.12 },
+  { "at": "2026-10-01T10:00:00.000Z", "owner": "figma-components-audit", "found": 2, "costUsd": 0.15 }
+ ],
+ "rows": [
+  { "key": "button|binding", "open": true, "page": "button", "where": "Button", "check": "the fill is not bound to a variable" },
+  { "key": "chip|naming", "open": false, "page": "chip", "where": "Chip", "check": "a layer is named Frame 12" }
+ ],
+ "scores": [{ "page": "button", "name": "Button", "score": 82, "dimensions": { "binding": 70 }, "notes": [] }]
+}
