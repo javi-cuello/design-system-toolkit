@@ -2,7 +2,7 @@
 
 Two choices and one button: **Theme**, **Brand**, **Apply**.
 
-**Version 3.11.0** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
+**Version 3.11.1** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
 
 Setting a theme by hand means visiting every collection that carries it — the colour primitives, the semantics, the brand — and picking the same mode in each. That is what this does in one click, on the selected layers.
 
@@ -28,7 +28,7 @@ Apply sets the theme on every collection that offers it, pins each choice row's 
 **A team-library call can simply not come back.** `getVariablesInLibraryCollectionAsync` never resolved for one subscribed collection in seven seconds, twice, while the collection beside it answered in one millisecond. Awaited plainly that is a window that never fills. Every team-library call is raced against a timeout, the whole library phase is capped at three seconds and resolved once per open, and what is already known — local collections and the pins in the file — is shown before the library is asked at all.
 
 ## Why there is no "apply to the page"
-A mode pinned on a page is overridden by every frame below it that carries its own pin, so an Apply with nothing selected reported "1 layer" and the canvas did not move — the plugin saying it had worked while nothing had. Apply and Clear are disabled with an empty selection instead.
+A mode pinned on a page is overridden by every frame below it that carries its own pin, so an Apply with nothing selected reported "1 layer" and the canvas did not move — the plugin saying it had worked while nothing had. Apply is disabled with an empty selection instead, and the panel says so ("Apply needs a layer · Clear covers the page"). Clear stays enabled: it is the page-wide reset described above, and needs no selection.
 
 ## A fourth thing the API forces
 **A pin set on an extension is cleared through its parent.** `clearExplicitVariableModeForCollection(extension)` does nothing at all — it does not throw, and the pin stays. Pass the parent collection instead. The same asymmetry runs the other way at the start: *setting* the extension's mode replaces the parent's entry rather than adding one, because the two share a slot.

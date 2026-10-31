@@ -1,4 +1,8 @@
 # Changelog — theme-switcher
+## [3.11.1] - 2026-10-31
+### Fixed
+- **The README said Clear is disabled with an empty selection.** Only Apply is; Clear is the page-wide reset and works with nothing selected, as the README's own account of it and the panel's note say.
+
 ## [3.11.0] - 2026-10-25
 ### Added
 - **Brands kept as modes of one collection can be switched.** A file whose brand collection carries modes `A` and `B` offered no brand at all: those names are not shared, so they are not a theme, and there is no extension to make a brand row. Any collection with modes to pick that the theme does not cover is now its own row, under the collection's name, and Apply pins the mode picked there. The test now builds both shapes, modes and extensions, and checks the rows each produces.
