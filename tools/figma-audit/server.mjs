@@ -476,8 +476,10 @@ const liveFor = (fileKey) => {
     if (e && !e.socket.destroyed) return e.socket;
     return null;                   // asked for a file that is not open: never fall back
   }
-  for (const e of plugins.values()) if (!e.socket.destroyed) return e.socket;
-  return anon && !anon.destroyed ? anon : null;
+  // no file named: only when exactly one file is open, and never a socket that
+  // has not said which file it is — a page posing as the bridge could be that one
+  const live = [...plugins.values()].filter((e) => !e.socket.destroyed);
+  return live.length === 1 ? live[0].socket : null;
 };
 
 function frame(str) {
@@ -492,7 +494,7 @@ function frame(str) {
 function exec(code, timeout = 30000, fileKey = null) {
   return new Promise((res, rej) => {
     const plugin = liveFor(fileKey);
-    if (!plugin) return rej(new Error(fileKey ? "wrong_file_not_open" : "plugin_not_connected"));
+    if (!plugin) return rej(new Error(fileKey ? "wrong_file_not_open" : [...plugins.values()].some((e) => !e.socket.destroyed) ? "several_files_open_name_one" : "plugin_not_connected"));
     const id = nextId++;
     // Every command is logged as it leaves and as it comes back, with the
     // connection it went down: a "listing the sets" call sat 240 s in silence

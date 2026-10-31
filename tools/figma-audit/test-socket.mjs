@@ -127,6 +127,12 @@ try {
   await waitFor(async () => stale.closed && (first.closed || second.closed), 9000);
   const race = (await status()).files.find((f) => f.fileKey === "RACE");
   ok("two claims racing on a silent holder leave one, and it answers", race && first.closed !== second.closed && race.fileName === (first.closed ? "Second" : "First"));
+  // a call naming no file: never to a socket that has not said which file it is, nor a guess among several
+  const silent = await connect();
+  await new Promise((r) => setTimeout(r, 200));
+  const unnamed = await exec("return 1");
+  await new Promise((r) => setTimeout(r, 200));
+  ok("a call naming no file is not sent to a socket that never said its file, nor to one of several open files", unnamed.ok === false && unnamed.error === "several_files_open_name_one" && !silent.got.some((m) => m.method === "EXECUTE_CODE"));
   console.log(`${n}/${n} passed`);
 } finally { done(); }
 process.exit(0);
