@@ -4,9 +4,9 @@
 # a thing anybody can do rather than a list to remember — and the pre-push
 # hook runs it, so a push cannot carry a red toolkit.
 #
-#   bin/check            everything
-#   bin/check --quick    the standards and the scanners, no test suites
-#   bin/check --no-fix   heal nothing (the scheduled pass reads, it never writes)
+#   bin/check            everything (about six minutes)
+#   bin/check --quick    the standards and the scanners, no test suites (under a minute)
+#   bin/check --no-fix   heal nothing: read only
 #
 # Green is the floor, not the answer: bin/closing's questions are what
 # catch what no script can see.

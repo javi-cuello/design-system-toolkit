@@ -1,6 +1,10 @@
 #!/bin/bash
 # Link skills from this repo into ~/.claude/skills (repo = single source of truth).
 # Re-run any time; safe. If a real folder exists there, it is backed up first.
+#
+#   ./install.sh                   the standards guard, the skills, the push hook and (macOS) the services
+#   SKIP_CHECKS=1 ./install.sh     link even though the standards guard fails
+#   SKIP_SERVICES=1 ./install.sh   leave the launchd services alone
 set -e
 
 # the path as the disk spells it: a shell entered through ~/projects would write that case into the services
@@ -58,7 +62,7 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   logs="$HOME/Library/Logs/toolkit"
   mkdir -p "$logs" && chmod 700 "$logs"
   install_agent() {
-    label="$1"; template="$2"; plist="$HOME/Library/LaunchAgents/$label.plist"
+    label="$1"; template="$2"; by_hand="$3"; plist="$HOME/Library/LaunchAgents/$label.plist"
     mkdir -p "$HOME/Library/LaunchAgents"
     sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" -e "s|LOGS|$logs|g" "$template" > "$plist.new"
     if ! cmp -s "$plist.new" "$plist" 2>/dev/null; then
@@ -70,10 +74,10 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
     else rm -f "$plist.new"; fi
     # loaded whenever it is not, so a failed first load does not stick
     launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 ||
-      { launchctl bootstrap "gui/$(id -u)" "$plist" && echo "service: $label" || echo "warn: could not load $label (launchctl bootstrap failed)"; }
+      { launchctl bootstrap "gui/$(id -u)" "$plist" && echo "service: $label" || echo "warn: could not load $label (launchctl bootstrap failed): read $logs/${label#com.toolkit.}.err, fix what it says and run ./install.sh again; until then, start it by hand: $by_hand" >&2; }
   }
-  install_agent com.toolkit.figma-snapshot "$repo/tools/snapshot/com.toolkit.figma-snapshot.plist"
-  install_agent com.toolkit.figma-audit "$repo/tools/figma-audit/com.toolkit.figma-audit.plist"
+  install_agent com.toolkit.figma-snapshot "$repo/tools/snapshot/com.toolkit.figma-snapshot.plist" "node $repo/tools/snapshot/router.mjs"
+  install_agent com.toolkit.figma-audit "$repo/tools/figma-audit/com.toolkit.figma-audit.plist" "node $repo/tools/figma-audit/server.mjs --all"
   echo "logs: $logs"
   # the snapshot plugin asks once for this machine's pairing code; made here so it is there to print
   "$node_bin" "$repo/tools/snapshot/pairing.cjs" >/dev/null && echo "pairing: the snapshot plugin asks once for this machine's code; node $repo/tools/snapshot/pairing.cjs prints it"

@@ -95,7 +95,9 @@ export async function launch({ chrome = findChrome(), port = 0, profile, args = 
   }
   const why = failed || `DevTools did not open in ${timeout / 1000}s`;
   await close();
-  throw new Error(`no browser from ${chrome}: ${why}`);
+  // the one fix said with the failure: where the browser is, when it is not where the toolkit looks
+  const hint = existsSync(chrome) ? '' : `; install Google Chrome, or set CHROME to a Chrome or Chromium binary (CHROME=/path/to/chrome)`;
+  throw new Error(`no browser from ${chrome}: ${why}${hint}`);
 }
 
 /*

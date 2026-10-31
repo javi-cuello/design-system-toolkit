@@ -21,6 +21,10 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
 const within = (ms, p, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what}: no answer in ${ms}ms`)), ms))]);
 const failure = (p) => p.then(() => null, (e) => e);
 
+// No browser where it looks: the failure says the fix, never a bare ENOENT.
+const lost = await failure(launch({ chrome: join(tmpdir(), 'no-such-chrome'), timeout: 2000 }));
+ok('a browser that is not there is said with its fix: install Chrome, or set CHROME', !!lost && /CHROME=/.test(lost.message));
+
 // Pages that take their time: /slow answers after 700ms; /hang starts an
 // image and never finishes it.
 const PAGES = {

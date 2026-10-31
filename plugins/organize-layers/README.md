@@ -33,7 +33,8 @@ The count of skipped layers is shown under the button.
 
 ## The Layers panel
 A run also reorders the layers inside their parent so the Layers panel reads in the
-same order as the canvas: first column top to bottom, then the next. This changes
+same order as the canvas, group by group: under *Horizontal* the first column top to
+bottom, then the next; under *Vertical* the first row left to right, then the next. This changes
 z-order, which is harmless here because the arrangement never overlaps layers — but
 it does mean a deliberate stacking order among the arranged layers is not preserved.
 
@@ -59,7 +60,7 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 Two places, both small.
 
 - `clientStorage`, one key — `organize-layers:settings`: the separator, the grouping
-  toggle, and the two gap values. Per user, per plugin, survives file changes; a few
+  toggle, the flow direction, and the two gap values. Per user, per plugin, survives file changes; a few
   dozen bytes against the 5 MB budget.
 - **Relaunch data** on the parent of the arranged layers, written by `setRelaunchData`.
   This is `pluginData` on that node (100 kB per entry, enforced) and it travels with

@@ -11,21 +11,21 @@ node tools/figma-audit/server.mjs --all                                   # ever
 node tools/figma-audit/server.mjs --data ~/Projects/acme/figma-design-system/audit --port 9231   # one project
 ```
 
-**Needs:** Node 22.12+, the docs engine's packages (`pnpm install` in `tools/docs-site` once), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see *Running it* below).
+**Needs:** Node 22.12+, the docs engine's packages (`(cd tools/docs-site && pnpm install --frozen-lockfile)` once; `corepack enable pnpm` first if pnpm is not installed), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see *Running it* below).
 
 ## Add a project
 
 Give the project's context document a port in its project block, one the other projects do not use, inside 9223–9232 (the only ports the Desktop Bridge plugin scans):
 
 ```json project
-{"name": "Acme", "phase": "design", "port": 9229}
+{"name": "Acme", "phase": "design", "port": 9232}
 ```
 
-The service picks it up within a minute; nothing else changes. Then open `http://localhost:9229/audits/`. A project removed, or a port changed, takes effect at the service's next restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-audit`).
+The service picks it up within a minute; nothing else changes. Then open `http://localhost:9232/audits/`. A project removed, or a port changed, takes effect at the service's next restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-audit`).
 
 ## Use
 
-Open Figma after the service is running (the plugin looks for servers when it starts), run the Desktop Bridge plugin in the library file, then press **Audit** on the project's Audits page. From a Claude session without an API key, `bin/audit <project>` does the same through this service.
+Open Figma after the service is running (the plugin looks for servers when it starts), run the Desktop Bridge plugin in the library file, then press **Audit** on the project's Audits page. From a Claude session without an API key, `bin/audit <project>` runs the components and foundations stages through this service and the session judges them; the validator and token-link stages run from the page, or from their skills.
 
 ## Reference
 
@@ -276,7 +276,7 @@ connected, the project's service may still hold them: `GET /status` lists them, 
 `POST /exec` with `{ code, fileKey, timeout }` and the header
 `origin: http://localhost:<port>` runs the code in the file named; the value comes
 back at `result.result`. Each project's service has its own port (see its plist).
-`bin/audit` (`audit-session.mjs`) is that path for a whole audit with no API key: the
+`bin/audit` (`audit-session.mjs`) is that path for an audit with no API key, its components and foundations stages: the
 scanners through `/exec`, the session's judgement, then `/rows`, dry-run first.
 
 ## Shared vs per-project — the thing to get right

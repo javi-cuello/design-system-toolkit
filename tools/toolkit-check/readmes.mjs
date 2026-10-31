@@ -15,8 +15,9 @@
  * the first line, a lead paragraph under it saying what the folder is for,
  * a copyable command for a tool, the import step for a Figma plugin (it is
  * imported from its manifest.json, never run from a shell), and every relative
- * link resolving. The `skills/`, `plugins/` and `tools/` READMEs are indexes,
- * and an index links every folder beside it, so a new one cannot go unlisted;
+ * link resolving, inline or reference-style, with its #anchor a heading on the
+ * page it names (as GitHub spells it); a fenced block of any length is code.
+ * The `skills/`, `plugins/` and `tools/` READMEs are indexes, and an index links every folder beside it, so a new one cannot go unlisted;
  * `knowledge/`'s names every page under it.
  * Whether the words help a newcomer is a read.
  */
@@ -37,15 +38,46 @@ export function required(root) {
   return out;
 }
 
-/** Problems with one README's text; `runs` asks for a command in a code block, `imports` for a plugin's import step. */
-// every link's target in a text's prose (no fenced or inline code, no comments, no images): `<a b.md>` and
-// `x.md "title"` forms read, the #anchor dropped, %20 decoded; an anchor-only link gives nothing
-export function hrefs(text) {
-  const prose = text.replace(/(```|~~~)[\s\S]*?\1/g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/`[^`\n]*`/g, '');
-  return [...prose.matchAll(/(!?)\[[^\]]*\]\((?:<([^>]+)>|([^)\s]+))/g)].filter((m) => !m[1])
-    .map((m) => { const h = (m[2] || m[3]).replace(/#.*$/, ''); try { return decodeURI(h); } catch { return h; } }).filter(Boolean);
+// A fenced block of any length, closed by a fence of its own character at least as long (so a ```` block may
+// show a ``` one), or by the end of the text; then comments and inline code. What is left is prose.
+const FENCE = /^ {0,3}((`|~)\2{2,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1\2*[ \t]*$|(?![\s\S]))/gm;
+const prose = (text) => text.replace(FENCE, '').replace(/<!--[\s\S]*?-->/g, '').replace(/`[^`\n]*`/g, '');
+const decode = (h) => { try { return decodeURI(h); } catch { return h; } };
+
+// every link in a text's prose (no images): inline `[a](x.md#h)`, in its `<a b.md>` and `x.md "title"` forms,
+// and reference-style, its target on a `[label]: x.md` line (a footnote `[^1]:` is not a link); %20 decoded
+export function targets(text) {
+  const p = prose(text);
+  const inline = [...p.matchAll(/(!?)\[[^\]]*\]\((?:<([^>]+)>|([^)\s]+))/g)].filter((m) => !m[1]).map((m) => m[2] || m[3]);
+  const refs = [...p.matchAll(/^ {0,3}\[(?!\^)[^\]]+\]:[ \t]*(?:<([^>]+)>|(\S+))/gm)].map((m) => m[1] || m[2]);
+  return [...inline, ...refs].map((h) => { const i = h.indexOf('#'); return { path: decode(i < 0 ? h : h.slice(0, i)), anchor: i < 0 ? null : decode(h.slice(i + 1)) }; });
 }
 
+// each link's file, the #anchor dropped; an anchor-only link gives nothing
+export function hrefs(text) {
+  return targets(text).map((t) => t.path).filter(Boolean);
+}
+
+/* The anchors a page has, as GitHub makes them: each heading's text without its markup, lowercased, every
+   character but letters, digits, spaces, hyphens and underscores dropped, spaces as hyphens, a repeat
+   numbered (-1, -2); and every explicit `id` or `name`, lowercased as a link's anchor is. A heading is an ATX
+   `## x` or a setext one, its text over a line of = or -. */
+export function anchors(text) {
+  const out = new Set(), seen = new Map();
+  const body = text.replace(FENCE, '');
+  for (const m of body.matchAll(/^ {0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$|^ {0,3}([^\s|>-].*?)[ \t]*\n {0,3}(?:=+|-+)[ \t]*$/gm)) {
+    // the rendered text: links to their words, tags, entities, code and emphasis marks gone (an _ inside a word stays)
+    const words = (m[1] || m[2]).replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/<[^>]+>/g, '').replace(/&(?:[a-z]+|#\d+);/gi, '')
+      .replace(/[`*]/g, '').replace(/(^|[^\p{L}\p{N}_])_+(?=[\p{L}\p{N}])/gu, '$1').replace(/([\p{L}\p{N}])_+(?![\p{L}\p{N}_])/gu, '$1');
+    const base = words.toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, '').replace(/ /g, '-');
+    const n = seen.get(base) || 0; seen.set(base, n + 1);
+    out.add(n ? `${base}-${n}` : base);
+  }
+  for (const m of body.matchAll(/<[a-z][^>]*\s(?:id|name)="([^"]+)"/gi)) out.add(m[1].toLowerCase());
+  return out;
+}
+
+/** Problems with one README's text; `runs` asks for a command in a code block, `imports` for a plugin's import step. */
 export function problems(text, { runs = false, imports = false, dir = '.', root = '.' } = {}) {
   const out = [];
   const lines = text.split('\n');
@@ -54,9 +86,13 @@ export function problems(text, { runs = false, imports = false, dir = '.', root 
   if (!lead || /^(#|```|\||- |\* |\d+\. )/.test(lead.trim())) out.push('no lead paragraph under the title saying what this is for');
   if (runs && !/```[a-z]*\n[\s\S]*?\n```|^ {4}\S/m.test(text)) out.push('nothing to copy: no command in a code block');
   if (imports && !/manifest\.json/.test(text)) out.push('no import step: say how to import it from its manifest.json');
-  for (const href of hrefs(text)) {
+  for (const { path: href, anchor } of targets(text)) {
     if (/^[a-z]+:/i.test(href) || href.startsWith('/')) continue;
-    if (!existsSync(resolve(root, dir, href))) out.push(`a link does not resolve: ${href}`);
+    const file = resolve(root, dir, href);
+    if (href && !existsSync(file)) { out.push(`a link does not resolve: ${href}`); continue; }
+    // an anchor is held to the page it names, this one or another markdown page; one into code (#L12) is not read
+    if (!anchor || (href && (!href.endsWith('.md') || !statSync(file).isFile()))) continue;
+    if (!anchors(href ? readFileSync(file, 'utf8') : text).has(anchor.toLowerCase())) out.push(`a link's anchor is not a heading there: ${href}#${anchor}`);
   }
   return out;
 }

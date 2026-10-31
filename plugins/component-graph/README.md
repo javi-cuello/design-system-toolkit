@@ -1,10 +1,19 @@
-# Component Graph — v3.6
+# Component Graph
 
-A Figma plugin that shows, for any component, what it's built from and what it's used by — one level deep in each direction — plus a sidebar for browsing every component the file knows about.
+A Figma plugin that shows, for any component, what it's built from and what it's used by — one level deep in each direction — plus a sidebar for browsing every component the file knows about. Its version is in `package.json`, its history in `CHANGELOG.md`.
+
+## Run and test
+
+Figma → Plugins → Development → Import plugin from manifest… → this folder's `manifest.json`. No build step. Everything it does works from the keyboard: Tab reaches the sidebar's rows, group heads and the graph's nodes, arrow keys move through the list, and Enter or Space opens what is focused.
+
+```sh
+node plugins/component-graph/tests/test-graph.js           # the main thread, against a fake Figma
+node plugins/component-graph/tests/test-ui-keyboard.mjs     # the window from the keyboard, in Chrome
+```
 
 ## Publishing to Figma Community
 
-Listing copy lives in `COMMUNITY.md`. Prerequisites and gotchas:
+The listing copy is written on the Community page itself (see *After approval*); this repo keeps no copy. Prerequisites and gotchas:
 
 **Prerequisites**
 - The Figma **desktop app** (macOS or Windows) — publishing is impossible from the browser.
@@ -125,12 +134,10 @@ The library check cannot distinguish *deleted upstream* from *library not enable
 
 **Depth-2 exploration.** The graph is deliberately 1-deep, with navigation as the way to go deeper. A middle ground — expanding a single neighbor in place to preview *its* neighbors without losing the current center — would make dependency chasing faster without turning the view into spaghetti.
 
-**Persistent index via `clientStorage`.** Serializing the index (ids, names, counts — no node references) would let the sidebar appear instantly on launch from the last session's data, marked stale, while the fresh scan runs behind it. Biggest win in very large files.
-
 **Export.** Dumping the full dependency graph as JSON/DOT for docs or CI checks (e.g. "fail if anything depends on `Deprecated/*`").
 
 ## Files
 
-- `manifest.json` — unchanged (`dynamic-page` document access, no network).
+- `manifest.json` — `dynamic-page` document access, no network.
 - `code.js` — main thread: index, graph, history, selection.
 - `ui.html` — sidebar + graph rendering, single file, no build step.

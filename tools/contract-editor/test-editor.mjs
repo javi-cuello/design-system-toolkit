@@ -208,6 +208,7 @@ try {
   await setOptions(['lg', 'md', 'sm', 'md']);
   ok('options are typed in one at a time with Enter, and a duplicate is refused; the field says so while empty, then that more can be added', /press Enter/.test(emptyHint) && await js(`${inDialog('[data-chip-input]')}.placeholder === 'Add another'`) && await js(`[...document.querySelectorAll('[data-dialog] [data-chip]')].map(c => c.textContent).join()`) === 'lg,md,sm'
     && await js(`${inDialog('[data-chip-input]')}.hasAttribute('aria-invalid')`));
+  ok('the field that adds an option shows its focus as the box\'s ring, not a border colour alone', await js(`(() => { const i = ${inDialog('[data-chip-input]')}; i.focus(); const box = i.closest('.ce-chips'); return i.matches(':focus-visible') && getComputedStyle(box).outlineStyle === 'solid'; })()`));
   await js(`${inDialog('[data-chip-input]')}.value = ''; ${inDialog('[data-choice="default-md"]')}.click()`);
   ok('the default is its own choice, from the options, apart from them', await js(`!!${inDialog('[data-choice="default-sm"]')} && !document.querySelector('[data-dialog] [data-chip][aria-pressed]')`));
   await js(`${inDialog('[data-chip="2"]')}.focus()`);

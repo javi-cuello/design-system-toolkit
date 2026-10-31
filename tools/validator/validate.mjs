@@ -5,12 +5,15 @@
  * reports, for one target, the places that target cannot reproduce as
  * drawn. Each finding names the class from references/<target>.md.
  *
- *   node tools/validator/validate.mjs --target web|ios|android components.json
+ *   node tools/validator/validate.mjs --target web|ios|android [--text-styles tokens.json]
+ *     [--states '{"axis":…,"options":[…]}'] [--snapshot] components.json
  *   import { validate } from './validate.mjs'   // validate(components, target)
  *
- * Exit 1 when anything is found. Output: one JSON array of
- * { class, component, layer, detail, align, variants }, identical findings
- * collapsed across variants so one decision reads once.
+ * Exit 1 when anything is found. Output: one JSON object, { target, silent,
+ * findings }: `findings` an array of { class, component, layer, detail, align,
+ * variants }, identical findings collapsed across variants so one decision
+ * reads once, and `silent` the classes that could not look, a field they
+ * need being absent from the trees (`(partly)` where only half could).
  */
 import fs from 'node:fs';
 

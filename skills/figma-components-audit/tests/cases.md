@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.35.1)
+# Eval cases — figma-components-audit (v2.35.2)
+
+**Walked: 2026-10-31 for 2.35.2** — the Files table names `scanner/scoring.json` and `scanner/measures.json`, which it left out; wording only, no case reads the table, so every case holds unchanged.
 
 **Walked: 2026-10-31 for 2.35.1, tests only** — the sweep (`scanner/sweep.js`) had no test: `node tests/test-sweep.mjs` 10/10 runs it on the library slice through a stand-in `figma`, every set printed once and stably, a print moved by a binding, a rename, an option or a hidden layer and not by an unbound colour, and the project's page and section rules applied.
 

@@ -1,6 +1,10 @@
 # Changelog — Layer organiser
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.6.3] - 2026-10-31
+### Changed
+- The Separator field is labelled by its heading, the two gap fields by what each spaces, Flow is a named group, the status line is announced, and the window's language is set. README: the stored settings include the flow direction, and the Layers panel's order follows the direction.
+
 ## [0.6.2] - 2026-10-08
 ### Changed
 - Comments cite the standard that owns each rule (skill-standard §B 4 for the ui-base block).

@@ -1,6 +1,10 @@
 # Changelog — component-guidelines
 Format: Keep a Changelog. Versioning: SemVer.
 
+## [2.0.5] - 2026-10-31
+### Changed
+- The window's language is set (`lang="en"`), so a screen reader reads it in English.
+
 ## [2.0.4] - 2026-10-08
 ### Changed
 - Comments cite the standard that owns each rule (skill-standard §B 4 for the ui-base block).

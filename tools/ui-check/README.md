@@ -9,7 +9,7 @@ node tools/ui-check/check.mjs http://localhost:4321/ --project <label> --shots /
 node tools/ui-check/axe.mjs   http://localhost:4321/ http://localhost:4321/about/
 ```
 
-Both exit 0 when clean, 1 with findings (each naming the rule it breaks), 2 when a page could not be checked. `--shots <dir>` also saves each page at desktop width in light and dark and at phone width, for a person to look at: the checks see what they measure, the screenshots show the rest.
+Both exit 0 when clean, 1 with findings (each naming the rule it breaks), 2 when a page could not be checked. `check.mjs --width <px>` checks at that width instead of the settings' `viewportWidth`; `--shots <dir>` also saves each page at desktop width in light and dark and at phone width, for a person to look at: the checks see what they measure, the screenshots show the rest. `axe.mjs --disable <rule,rule>` turns rules off for a run, for findings a project has ruled on; the caller says which and why, beside the call.
 
 **Needs:** Node 22.12+ and Google Chrome installed. Nothing to install in the project: the browser is driven by [tools/shared](../shared/README.md)'s `cdp.mjs`, and axe-core is vendored in `vendor/` at a pinned version (its licence beside it) and injected into the page under test.
 

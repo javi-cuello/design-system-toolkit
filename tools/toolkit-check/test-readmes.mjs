@@ -3,7 +3,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { check, problems, required, hrefs } from './readmes.mjs';
+import { check, problems, required, hrefs, anchors } from './readmes.mjs';
 
 let failed = 0, passed = 0;
 const ok = (name, cond) => { if (cond) passed++; else { failed++; console.log(`FAIL ${name}`); } };
@@ -52,7 +52,7 @@ ok('a plugin needs its import step', problems('# P\n\nWhat.\n', { imports: true 
 ok('an indented command counts', problems('# Thing\n\nWhat.\n\n    node x.mjs\n', { runs: true }).length === 0);
 write('tools/alpha/README.md', good(true).replace('../README.md', 'missing.md'));
 ok('a broken relative link is named', check(root).some((p) => /does not resolve: missing\.md/.test(p)));
-ok('a URL and an anchor are not checked as files', problems('# T\n\nSee [x](https://example.com) and [y](#here).\n').length === 0);
+ok('a URL is not checked as a file, and an anchor to a heading on the page resolves', problems('# T\n\nSee [x](https://example.com) and [y](#here).\n\n## Here\n').length === 0);
 
 write('docs/README.md', '# Docs\n\nGuides.\n\n[setup](setup.md)\n'); write('docs/setup.md', '# Setup\n\nHow to set up.\n\nSee [tools](../tools/README.md).\n');
 ok('a docs page the index links, with a title, a lead and links that resolve, passes', !check(root).some((p) => p.startsWith('docs/')));
@@ -61,7 +61,7 @@ found = check(root);
 ok('a docs page the index does not link is named', found.includes('docs/README.md: the index does not link fits.md'));
 ok('a docs page\'s broken link is named, read from its own folder', found.includes('docs/fits.md: a link does not resolve: ../nope.md'));
 rmSync(join(root, 'docs/fits.md'));
-write('docs/README.md', '# Docs\n\nGuides.\n\n[setup](./setup.md#top) and [x](guides/x.md)\n'); write('docs/guides/x.md', '# X\n\nA nested guide.\n\n[setup](../setup.md)\n');
+write('docs/README.md', '# Docs\n\nGuides.\n\n[setup](./setup.md#setup) and [x](guides/x.md)\n'); write('docs/guides/x.md', '# X\n\nA nested guide.\n\n[setup](../setup.md)\n');
 ok('a nested docs page reads its links from its own folder; ./ and an #anchor still count as the index linking it', !check(root).some((p) => p.startsWith('docs/')));
 write('docs/guides/x.md', '# X\n\nA nested guide.\n\n[setup](setup.md)\n');
 ok('a nested page\'s link read from docs/ instead of its own folder is named', check(root).includes('docs/guides/x.md: a link does not resolve: setup.md'));
@@ -77,7 +77,28 @@ ok('CONTRIBUTING.md\'s broken link is named', found.includes('CONTRIBUTING.md: a
 
 ok('a link in angle brackets or with a title is read as its file', JSON.stringify(hrefs('[a](<my guide.md>) [b](x.md "t") [c](y%20z.md#h)')) === JSON.stringify(['my guide.md', 'x.md', 'y z.md']));
 ok('an image, inline code, a ~~~ fence and a comment link nothing', hrefs('![i](a.md) `[b](b.md)` <!-- [c](c.md) -->\n~~~\n[d](d.md)\n~~~\n').length === 0);
-ok('anchor-only, URL and mailto links resolve nothing; a %25 in a name is decoded once, not thrown', problems('# T\n\nL.\n\n[a](#h) [b](https://x/y) [c](mailto:a@b)\n', { root }).length === 0 && hrefs('[a](#h)').length === 0 && problems('# T\n\nL.\n\n[d](100%25.md)\n', { root }).some((p) => p.endsWith('100%.md')));
+ok('anchor-only, URL and mailto links name no file; a %25 in a name is decoded once, not thrown', problems('# T\n\nL.\n\n[a](#t) [b](https://x/y) [c](mailto:a@b)\n', { root }).length === 0 && hrefs('[a](#h)').length === 0 && problems('# T\n\nL.\n\n[d](100%25.md)\n', { root }).some((p) => p.endsWith('100%.md')));
+
+// anchors (the review of 2026-10-31: the #part was dropped, so a link to a renamed heading passed)
+ok('an anchor to no heading on the page is named', problems('# T\n\nL.\n\n[a](#gone)\n').includes("a link's anchor is not a heading there: #gone"));
+write('docs/a.md', '# A\n\nA page.\n\n## Moving a keys.conf from the old `set-key`\n\n## Notes\n\n## Notes\n\n<a id="kept"></a>\n');
+ok('an anchor into another page is held to its headings, as GitHub spells them, repeats numbered, explicit ids kept',
+  problems('# T\n\nL.\n\n[a](a.md#moving-a-keysconf-from-the-old-set-key) [b](a.md#notes-1) [c](a.md#kept) [d](a.md#Notes)\n', { dir: 'docs', root }).length === 0);
+ok('an anchor into another page that has no such heading is named', problems('# T\n\nL.\n\n[a](a.md#nope)\n', { dir: 'docs', root }).includes("a link's anchor is not a heading there: a.md#nope"));
+ok('an anchor into a code file is not read', problems('# T\n\nL.\n\n[a](a.js#L12)\n', { dir: 'docs', root: (write('docs/a.js', ''), root) }).length === 0);
+{ const a = anchors('# T\n\n## The _real_ thing\n\n## A &amp; B\n\n## my_var\n\nSetext\n------\n\n<a id="Kept"></a>\n');
+  ok('emphasis and entities drop out of a slug, an _ inside a word stays, a setext heading and a capitalised id count',
+    ['the-real-thing', 'a--b', 'my_var', 'setext', 'kept'].every((x) => a.has(x))); }
+ok('a link to a capitalised explicit id resolves', problems('# T\n\nL.\n\n[a](#Kept)\n\n<a id="Kept"></a>\n').length === 0);
+ok('a heading inside a fence is not an anchor', !anchors('# T\n\n````md\n## Inside\n````\n').has('inside'));
+rmSync(join(root, 'docs'), { recursive: true });
+
+// fences of any length, and reference-style links
+// one inner ``` line, as a page showing how to open a fence has: a ``` closes nothing a ```` opened
+ok('a ```` fence holding a ``` line hides everything inside it', hrefs('# T\n\n````md\n```sh\n[gone](gone.md)\n````\n\n[kept](kept.md)\n').join() === 'kept.md');
+ok('a fence left open hides the rest of the page', hrefs('# T\n\n```\n[a](a.md)\n').length === 0);
+ok('a reference-style link is read from its definition, a footnote is not', hrefs('See [the guide][g] and [^1].\n\n[g]: guide.md#top\n[^1]: a note\n[u]: <my page.md>\n').join() === 'guide.md,my page.md');
+ok('a broken reference-style link is named', problems('# T\n\nL, [x][x].\n\n[x]: nope.md\n', { root }).includes('a link does not resolve: nope.md'));
 ok('a broken link with a title is still named', problems('# T\n\nLead.\n\n[x](nope.md "t")\n', { root }).some((p) => /does not resolve: nope\.md/.test(p)));
 
 rmSync(root, { recursive: true, force: true });

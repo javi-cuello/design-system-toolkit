@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <style>
 /* ui-base v2 start — canonical: plugins/_shared/ui-base.css
@@ -72,7 +72,7 @@ color:var(--figma-color-text-secondary);font-size:var(--fs-11)}
 .field{margin-bottom:var(--space-2)}
 .label{font-size:10px;font-weight:var(--fw-medium);letter-spacing:.06em;
 text-transform:uppercase;color:var(--figma-color-text-secondary);
-line-height:14px;margin-bottom:var(--space-1)}
+line-height:14px;margin-bottom:var(--space-1);display:block}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
 
 input:hover{border-color:var(--figma-color-border-strong)}
@@ -134,13 +134,13 @@ margin-top:var(--space-1);text-align:center;height:14px;line-height:14px}
 <div class="container">
 
   <div class="field">
-    <div class="label">Separator</div>
+    <label class="label" for="delimiter">Separator</label>
     <input id="delimiter" class="input-compact" type="text" maxlength="8" placeholder="-">
   </div>
 
   <div class="field">
-    <div class="label">Flow</div>
-    <div class="segmented">
+    <div class="label" id="flow-label">Flow</div>
+    <div class="segmented" role="group" aria-labelledby="flow-label">
       <button type="button" class="seg" id="dir-horizontal" data-dir="horizontal" aria-pressed="true">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2.5 2.5v11M8 2.5v11M13.5 2.5v11"/>
@@ -153,19 +153,19 @@ margin-top:var(--space-1);text-align:center;height:14px;line-height:14px}
   </div>
 
   <div class="field">
-    <div class="label">Space between layers</div>
+    <div class="label" id="gap-label">Space between layers</div>
     <div class="grid2">
       <div class="input-icon">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2.5 3h11M2.5 13h11"/><path d="M8 5.5v5M6.5 7 8 5.5 9.5 7M6.5 9 8 10.5 9.5 9"/>
         </svg>
-        <input id="gapY" type="number" min="0" step="1" title="Vertical space between rows">
+        <input id="gapY" type="number" min="0" step="1" title="Vertical space between rows" aria-label="Vertical space between rows">
       </div>
       <div class="input-icon">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 2.5v11M13 2.5v11"/><path d="M5.5 8h5M7 6.5 5.5 8 7 9.5M9 6.5l1.5 1.5L9 9.5"/>
         </svg>
-        <input id="gapX" type="number" min="0" step="1" title="Horizontal space between columns">
+        <input id="gapX" type="number" min="0" step="1" title="Horizontal space between columns" aria-label="Horizontal space between columns">
       </div>
     </div>
   </div>
@@ -181,7 +181,7 @@ margin-top:var(--space-1);text-align:center;height:14px;line-height:14px}
   </label>
 
   <button id="run" class="btn-full">Organise Layers</button>
-  <div class="status" id="status"></div>
+  <div class="status" id="status" role="status"></div>
 </div>
 <script>
 var DEFAULT_DELIMITER = '-';

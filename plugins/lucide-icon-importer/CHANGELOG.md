@@ -1,4 +1,8 @@
 # Changelog — lucide-icon-importer
+## [1.13.0] - 2026-10-31
+### Changed
+- **Works from the keyboard, and says what each control is.** The icon cards and the variable picker's rows were click-only `div`s: they are buttons now, each card named by its icon and saying whether it is picked (`aria-pressed`) or already in the file (disabled); a card whose icon failed to load retries on its own press, from the keyboard too. The tabs follow the APG tabs pattern (one stop, Left and Right). The variable picker is a button that says whether it is open and closes on Escape, giving focus back. The search fields, the paste box, the colour pickers and the opacity fields are labelled, each Settings label is tied to its field, and the status line and toast are announced. `tests/test-ui-keyboard.mjs` holds it, in Chrome.
+
 ## [1.12.0] - 2026-10-31
 ### Changed
 - **An icon from the CDN is rebuilt before it is shown or sent.** The SVG text was written into the window as markup, so a CDN serving an `<svg>` with a script or an event handler in it would have run it in the plugin's window. It is now parsed as XML and only shape elements (`path`, `circle`, `rect`, `line`, `polyline`, `polygon`, `ellipse`, `g`) and their presentation attributes are copied onto new nodes; a value naming a URL is dropped. That clean SVG is what the card shows and what Figma is given. `tests/test-svg-clean.mjs` feeds it a hostile icon in Chrome.

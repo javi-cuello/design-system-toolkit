@@ -4,7 +4,7 @@
  * same shape derive.cjs reads from Figma (contract 1), so a reader of
  * contracts cannot tell, and need not ask, where one came from.
  *
- *   node tools/component-contract/from-code.mjs --project <label> <component> [--rebuild]
+ *   node tools/component-contract/from-code.mjs --project <label> <component> [--rebuild] [--code-only]
  *
  * The component is one the project's parity mappings name, governed or
  * compared (tools/parity loadParity): rendered on its own host (a Storybook,
