@@ -158,14 +158,16 @@ export function touched(repo, changed, projectRepos = [], toolkit = TOOLKIT) {
 
 /* The cadence (toolkit-standard §D 11): whether the periodic independent
    review is owed. A review is a commit whose `Review:` trailer names it
-   independent; nothing else is recorded. A change's own review carries a
-   `Review:` trailer too, and once closed the owed review in silence. */
+   independent and names review.md, the list it read against; nothing else is
+   recorded. A change's own review carries a `Review:` trailer too, and once
+   closed the owed review in silence; one calling itself independent did so
+   again (2026-10-31), so the list's name is what tells them apart. */
 export const REVIEW_DAYS = 14;
 export function cadence(repo, now = Date.now()) {
   const out = [];
-  const last = git(repo, ['log', '-1', '--format=%cI', '-i', '--grep=^Review:.*independent']);
+  const last = git(repo, ['log', '-1', '--format=%cI', '-i', '--grep=^Review:.*independent.*review\\.md']);
   const days = last ? (now - Date.parse(last)) / 864e5 : Infinity;
-  if (days > REVIEW_DAYS) out.push(`an independent review is owed (last ${last ? last.slice(0, 10) : 'never'}; every ${REVIEW_DAYS} days, §D 11): fresh agents read the toolkit end to end against tools/toolkit-check/review.md; the commit closing it carries a Review: trailer naming it independent`);
+  if (days > REVIEW_DAYS) out.push(`an independent review is owed (last ${last ? last.slice(0, 10) : 'never'}; every ${REVIEW_DAYS} days, §D 11): fresh agents read the toolkit end to end against tools/toolkit-check/review.md; the commit closing it carries a Review: trailer naming it independent and naming review.md`);
   return out;
 }
 

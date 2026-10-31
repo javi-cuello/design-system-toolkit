@@ -5,7 +5,9 @@ read the toolkit end to end against every point below, across all of it:
 skills, tools, plugins, standards, knowledge, `bin/` and the hooks. Each
 finding is re-checked before it is reported, and the fixes are planned
 with the maintainer before any is made. The commit that closes the review
-carries a `Review:` trailer naming it independent.
+carries a `Review:` trailer naming it independent and naming this file,
+`tools/toolkit-check/review.md`: `bin/closing` counts only that line, so a
+change's own review never closes this one.
 
 ## Rules
 

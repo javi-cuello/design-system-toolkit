@@ -15,7 +15,10 @@ ok("no Review: commit means a review is owed", r.some((l) => /review is owed \(l
 git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a change\n\nReview: two Explore reviewers on this diff");
 r = cadence(repo, now);
 ok("a change's own Review: trailer is not the independent review", r.some((l) => /review is owed \(last never/.test(l)));
-git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a review\n\nReview: independent, the whole toolkit");
+git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a merge\n\nReview: independent — an Explore agent on this merge");
+r = cadence(repo, now);
+ok("a change's trailer calling its own review independent does not close the periodic one", r.some((l) => /review is owed \(last never/.test(l)));
+git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a review\n\nReview: independent — four fresh agents on tools/toolkit-check/review.md");
 r = cadence(repo, now);
 ok("a recent Review: commit leaves nothing open", r.length === 0);
 r = cadence(repo, now + 15 * 864e5);

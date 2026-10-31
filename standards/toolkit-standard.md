@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.20.1** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.21.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -493,11 +493,12 @@ someone to notice drift:
   owed every fourteen days: fresh agents read the toolkit end to end against
   what `tools/toolkit-check/review.md` lists, and the
   commit that closes the review carries a `Review:` trailer naming it
-  independent, which is the only record kept (a change's own review may carry
-  a `Review:` trailer too, and does not close it).
+  independent and naming `review.md`, which is the only record kept (a change's
+  own review may carry a `Review:` trailer too, and does not close it, even
+  when it calls itself independent).
 
 *Checked:* `tools/toolkit-check/closing.mjs`
-"REVIEW_DAYS"; `tools/toolkit-check/test-cadence.mjs` "a review is owed"; `tools/toolkit-check/test-cadence.mjs` "a change's own Review: trailer is not the independent review". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" —
+"REVIEW_DAYS"; `tools/toolkit-check/test-cadence.mjs` "a review is owed"; `tools/toolkit-check/test-cadence.mjs` "a change's own Review: trailer is not the independent review"; `tools/toolkit-check/test-cadence.mjs` "a change's trailer calling its own review independent does not close the periodic one". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" —
 §D 2's triggers — the question asked before code is written in a project and
 the first question; when either names a job twice, the sharing audit runs and
 reports what it found, unasked.
