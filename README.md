@@ -28,7 +28,7 @@ The toolkit holds no project. Each project keeps its design-system files in its 
 
 ## Getting started
 
-**Only one tool?** Take it alone, with every toolkit folder it uses and nothing else. It is git's own sparse checkout, so the code is not copied, and `git pull` updates it:
+**Only one tool?** Take it alone, with every toolkit folder it uses and nothing else. It needs git and [Node](https://nodejs.org) 22.12 or later. It is git's own sparse checkout, so the code is not copied, and `git pull` updates it:
 
 ```sh
 git clone --filter=blob:none --sparse https://github.com/javi-cuello/design-system-toolkit.git toolkit && cd toolkit

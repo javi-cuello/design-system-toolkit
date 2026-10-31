@@ -1,5 +1,6 @@
 # History — skill-standard
 
+- 1.6.2 (2026-10-31): §B 4 shows the ui-base markers as `vN`, not a version the baseline has left; no rule changed.
 - 1.6.1 (2026-10-31): §B 1, 2 and 8 are checked by figma-plugin-creator's `scripts/conformance.mjs`, which `standards/tests/check.sh` runs over `plugins/` in place of its own plugin section; §B 2 adds the sync APIs dynamic-page refuses and a fetch under `["none"]`. No rule changed.
 - 1.6.0 (2026-10-31): §B 8: the audit stamp names the standard it was audited against, `skill-standard` or, before the merge, the retired `plugin-standard`, and `check.sh` warns on one naming no such file or a version that file never had (four plugins named versions of neither as "standard").
 - 1.5.0 (2026-10-31): §A clause H: a skill may run toolkit tools, standards and knowledge pages by repo path, which bin/get takes with it; never another skill's files.

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <style>
-/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+/* ui-base v3 start — canonical: plugins/_shared/ui-base.css
    Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
    --figma-color-* tokens only; metrics per Figma-native controls.
    CAUTION for plugins with rich bespoke controls: the rules below use bare
@@ -44,10 +44,12 @@ padding:0 var(--space-2);border-radius:var(--radius-sm);
 border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
 color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
 input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+/* a border colour alone is no focus indicator (WCAG 2.4.7, 1.4.11): the keyboard's focus gets a ring */
+input:focus-visible,select:focus-visible,.input:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:1px}
 input::placeholder{color:var(--figma-color-text-tertiary)}
 .checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
 .divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
-/* ui-base v2 end */
+/* ui-base v3 end */
 
 /* component-guidelines bespoke styles (extend the base) */
 .component-name{padding:var(--space-2) var(--space-3) 0;font-weight:var(--fw-semibold);

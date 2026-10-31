@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.68.2] - 2026-10-31
+### Fixed
+- **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11). The window's hint, when nothing is listening, says how to start the router and where its log is.
+
 ## [0.68.1] - 2026-10-31
 ### Changed
 - The window's language is set (`lang="en"`), so a screen reader reads it in English. README: the requests are two GETs on open and two GETs and a POST per run, and only the kind GET and the POST carry the pairing code (it said one GET and one POST, each with the code).

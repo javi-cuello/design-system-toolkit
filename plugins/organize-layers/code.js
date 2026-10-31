@@ -1,4 +1,4 @@
-// Layer organiser — v0.6.3 · plugin-standard v1.7.0
+// Layer organiser — v0.6.4 · plugin-standard v1.7.0
 // @ts-check
 // Arranges layers on the canvas from their names: the text before the delimiter
 // picks the group, the text after it orders the members inside it. Groups advance

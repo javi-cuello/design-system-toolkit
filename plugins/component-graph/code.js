@@ -1,4 +1,4 @@
-// Component Graph — v3.7.1 · plugin-standard v1.4.0
+// Component Graph — v3.7.2 · plugin-standard v1.4.0
 // @ts-check
 //
 // One file-wide scan produces everything the plugin knows:

@@ -50,6 +50,9 @@ function homeOf(label) {
 }
 /** The label a home folder belongs to: its repo's name. A folder of `<label>/` homes (a test's) names its own. */
 const labelOf = (home) => (path.basename(home) === HOME ? path.basename(path.dirname(home)) : path.basename(home));
+/** What a missing project needs, said the same way by every command that looks one up. */
+const notFound = (label) => `no project ${label}: no ${label}/${HOME}/ with a context document under ${root()} (TOOLKIT_PROJECTS_ROOT moves it). \`node tools/snapshot/projects.cjs homes\` lists the projects; the figma-context-capture skill writes a context document.`;
+
 /** Every project home: each `<root>/<label>/figma-design-system`. */
 function homes() {
   let entries = [];
@@ -956,11 +959,13 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { EDITOR_PORT, HOME, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>
 if (require.main === module && process.argv[2] === 'homes') {
+  // a root that is not there is said, so a mistyped TOOLKIT_PROJECTS_ROOT does not read as "no projects" (the list stays on stdout)
+  if (!fs.existsSync(root())) console.error(`no folder ${root()}: set TOOLKIT_PROJECTS_ROOT to the folder that holds the projects`);
   for (const h of homes()) console.log(`${h.name}\t${h.home}`);
 }
 // Every name that identifies a project, one per line, for the check that no
@@ -969,6 +974,7 @@ if (require.main === module && process.argv[2] === 'homes') {
 // repo's origin, the toolkit's own organisation aside.
 //   node tools/snapshot/projects.cjs names
 if (require.main === module && process.argv[2] === 'names') {
+  if (!fs.existsSync(root())) console.error(`no folder ${root()}: set TOOLKIT_PROJECTS_ROOT to the folder that holds the projects`);
   const { execFileSync } = require('child_process');
   const originOf = (dir) => { try { return execFileSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
   const parts = (url) => { const m = /^(?:https?:\/\/|git@)([^/:]+)[/:]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url); return m ? { host: m[1], org: m[2], repo: m[3] } : null; };
@@ -997,7 +1003,7 @@ if (require.main === module && process.argv[2] === 'settings') {
   if (!label) { console.error('usage: projects.cjs settings <project> [fileKey]'); process.exit(2); }
   const where = layout(null, label);
   // a project that is not there, or whose routing is broken, says which, rather than the usage line
-  if (where.error || !where.doc) { console.error(`projects.cjs settings: ${where.error || `no context document for ${label}`}`); process.exit(2); }
+  if (where.error || !where.doc) { console.error(`projects.cjs settings: ${where.error ? `${where.error}. \`node tools/snapshot/projects.cjs homes\` lists the projects; the figma-context-capture skill writes a context document.` : notFound(label)}`); process.exit(2); }
   const ctx = auditContext(where.doc);
   if (!ctx.ok) { console.error(ctx.errors.join('\n')); process.exit(1); }
   const libs = key ? { [key]: ctx.libraries[key] } : ctx.libraries;

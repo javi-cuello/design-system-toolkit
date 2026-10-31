@@ -1,6 +1,10 @@
 # Changelog — Layer organiser
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.6.4] - 2026-10-31
+### Fixed
+- **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
+
 ## [0.6.3] - 2026-10-31
 ### Changed
 - The Separator field is labelled by its heading, the two gap fields by what each spaces, Flow is a named group, the status line is announced, and the window's language is set. README: the stored settings include the flow direction, and the Layers panel's order follows the direction.

@@ -12,7 +12,7 @@
 # line names each one, so green-with-skips does not read as all green.
 FAILED=""
 SKIPPED=""
-step() { CUR="$1"; printf '%-44s' "$1"; T_STEP=$(date +%s); }
+step() { CUR="$1"; printf '%-44s ' "$1"; T_STEP=$(date +%s); } # the space: a long label never runs into its result
 took() { echo "($(( $(date +%s) - T_STEP ))s)"; }
 ok() { echo "ok $(took)"; }
 bad() { echo "FAIL $(took)"; FAIL=1; FAILED="${FAILED}${CUR}

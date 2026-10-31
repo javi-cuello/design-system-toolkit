@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.14.1)
+# Eval cases — figma-plugin-creator (v1.14.2)
+
+**Walked: 2026-10-31 for 1.14.2** — the ui-base asset and template take v3 (a focus ring): `node plugins/_shared/sync.mjs --check` clean, `node tests/test-conformance.mjs` 13 passed; no case reads the baseline's focus rule, so every case holds.
 
 **Walked: 2026-10-31 for 1.14.1** — P2 re-run: `node tests/test-conformance.mjs` 13 passed, a root walk after `loadAllPagesAsync` and a local named `currentPage` raise nothing.
 

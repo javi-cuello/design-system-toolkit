@@ -4,7 +4,7 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
 
 **You need:**
 - a Mac (the services install as launchd agents; on Linux, run them by hand);
-- Node 22.12 or later, pnpm (`corepack enable pnpm`, which Node ships with), Google Chrome, and python3 (the Xcode Command Line Tools provide it);
+- Node 22.12 or later ([nodejs.org](https://nodejs.org), or `brew install node`), pnpm (`corepack enable pnpm`, which Node ships with), [Google Chrome](https://www.google.com/chrome/) (or `CHROME=/path/to/chrome` for another Chromium), and python3 (the Xcode Command Line Tools provide it: `xcode-select --install`);
 - the Figma desktop app;
 - Claude Code with the [figma-console MCP server](https://github.com/southleft/figma-console-mcp) and its Desktop Bridge plugin, for the skills that read or change a Figma file;
 - optionally, an Anthropic API key in `~/.figma-dashboard-key`, put there by `bin/set-key audit` on macOS (for the audit page's chat and judgement pass; see [tools/figma-audit](../tools/figma-audit/README.md)) and a Cloudflare account with `npx wrangler login` (to publish a docs site).

@@ -1,5 +1,6 @@
 # Changelog — figma-plugin-creator
 
+- 1.14.2 (2026-10-31): the ui-base asset and template carry v3: the shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
 - 1.14.1 (2026-10-31): reviewed: `conformance.mjs` raises `figma.root.findAll` only where code.js never loads every page, and `currentPage` only as `figma.currentPage =`. Case P2.
 - 1.14.0 (2026-10-31): `scripts/conformance.mjs` runs the checklist's mechanical items, which `standards/tests/check.sh` runs over `plugins/` in place of its own section; a plugin with no UI is not warned for lacking `ui.html`. P2, P3 executed.
 - 1.13.2 (2026-10-31): the scaffolded header's audit stamp names its standard, `· skill-standard vX.Y.Z` (skill-standard §B 8, 1.6.0); the conformance checklist says a pre-merge stamp names `plugin-standard`.

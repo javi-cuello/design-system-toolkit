@@ -1,4 +1,8 @@
 # Changelog — lucide-icon-importer
+## [1.13.2] - 2026-10-31
+### Fixed
+- **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
+
 ## [1.13.1] - 2026-10-31
 ### Changed
 - **The manifest allows only the domain the plugin fetches from.** `allowedDomains` listed `unpkg.com` and `lucide.dev` beside `cdn.jsdelivr.net`; the icons and their tags come from jsdelivr alone (unpkg refuses a plugin window's null origin), and `lucide.dev` is only a documentation link written onto a component, which Figma opens itself. A domain the code never fetches is access nobody needs (skill-standard §B 2).

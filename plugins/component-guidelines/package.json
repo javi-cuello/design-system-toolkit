@@ -1,6 +1,6 @@
 {
   "name": "component-guidelines",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "private": true,
   "devDependencies": {
     "@figma/plugin-typings": "1.142.0"

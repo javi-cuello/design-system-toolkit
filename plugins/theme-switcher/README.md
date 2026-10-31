@@ -2,7 +2,7 @@
 
 Two choices and one button: **Theme**, **Brand**, **Apply**.
 
-**Version 3.11.0** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
+**Version 3.11.1** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
 
 Setting a theme by hand means visiting every collection that carries it — the colour primitives, the semantics, the brand — and picking the same mode in each. That is what this does in one click, on the selected layers.
 

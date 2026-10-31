@@ -76,7 +76,7 @@ if (args[0] === '--file') {
 const [project, keyArg] = args;
 if (!project) die('usage: bin/audit <project> [fileKey]   |   bin/audit --file <payload> [--write]');
 const where = contract.layout(null, project);
-if (!where || !where.doc) die(`no project ${project}`);
+if (!where || !where.doc) die(contract.notFound(project));
 const ctx = contract.auditContext(where.doc);
 if (!ctx.ok) die(ctx.errors.join('\n'));
 const keys = Object.keys(ctx.libraries);

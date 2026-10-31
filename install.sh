@@ -54,6 +54,7 @@ done
 # with a `port`). macOS only; elsewhere, run `node tools/snapshot/router.mjs`
 # and `node tools/figma-audit/server.mjs --all` yourself.
 # SKIP_SERVICES=1 leaves them alone.
+[ "$(uname)" = "Darwin" ] || echo "Services not installed: they install as launchd agents, a Mac's. Run node tools/snapshot/router.mjs and node tools/figma-audit/server.mjs --all yourself (docs/setup.md)."
 if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" != true ]; then
   # the services run node through a link named for them, so Login Items says what each is
   ln -sfn "$node_bin" "$repo/tools/figma-audit/figma-audit"

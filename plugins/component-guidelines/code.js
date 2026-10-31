@@ -1,4 +1,4 @@
-// Component guidelines — v2.0.5 · plugin-standard v1.5.0
+// Component guidelines — v2.0.6 · plugin-standard v1.5.0
 // @ts-check
 // Hand-written vanilla JS (rewrite; the previous compiled-TS version had no
 // source in the repo and parsed a Markdown description format that doesn't

@@ -150,7 +150,7 @@ const factsOf = (label) => {
 };
 // the one library this server serves: the project it was started on, or the snapshot folder; none, the house's settings
 const registered = () => (SNAP ? [{ label: SNAP_LABEL, name: path.basename(SNAP) }] : start ? [{ label: start, name: start }] : []);
-if (arg('--project') && !projects.projects().list.some((p) => p.name === start)) { console.error(`no project called ${start}`); process.exit(2); }
+if (arg('--project') && !projects.projects().list.some((p) => p.name === start)) { console.error(projects.notFound(start)); process.exit(2); }
 if (arg('--project') && SNAP) { console.error('one library per server: --project or --snapshot'); process.exit(2); }
 // the page's own files, read from this folder on each request, so a file added here is served without a restart
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' };

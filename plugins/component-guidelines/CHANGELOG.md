@@ -1,6 +1,10 @@
 # Changelog — component-guidelines
 Format: Keep a Changelog. Versioning: SemVer.
 
+## [2.0.6] - 2026-10-31
+### Fixed
+- **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
+
 ## [2.0.5] - 2026-10-31
 ### Changed
 - The window's language is set (`lang="en"`), so a screen reader reads it in English.

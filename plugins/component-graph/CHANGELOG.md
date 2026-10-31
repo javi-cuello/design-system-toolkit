@@ -1,5 +1,9 @@
 # Changelog — component-graph
 
+## [3.7.2] - 2026-10-31
+### Fixed
+- **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
+
 ## [3.7.1] - 2026-10-31
 ### Changed
 - **The scan skips what is hidden inside an instance** (`figma.skipInvisibleInstanceChildren`, skill-standard §B 3), so a large file's walk reads less. The counts do not change: an instance nested in another is a mirrored copy, which the graph already discarded.
