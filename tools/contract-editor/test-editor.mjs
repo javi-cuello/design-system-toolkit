@@ -1568,7 +1568,10 @@ try {
     const drag = async (release) => { await mouse('mousePressed', d.x, d.y); for (let k = 1; k <= 6; k++) await mouse('mouseMoved', d.x + (l.l + 3 - d.x) * k / 6, d.y); await release(); };
     {
       await drag(async () => {
-        ok('a part dragged on the stage follows the pointer, and takes the place it is over as it goes, the others making room', await js(`(() => { const s = document.querySelector('[data-stage] [data-carried]'); if (!s) return false; const r = s.getBoundingClientRect(); return !s.previousElementSibling?.matches('[data-pv]') && Math.abs(r.left + r.width / 2 - ${l.l + 3}) < r.width; })()`));
+        const carried = `(() => { const s = document.querySelector('[data-stage] [data-carried]'); if (!s) return false; const r = s.getBoundingClientRect(); return !s.previousElementSibling?.matches('[data-pv]') && Math.abs(r.left + r.width / 2 - ${l.l + 3}) < r.width; })()`;
+        // the stage redraws on the next frame, so a check straight after the last move can read the old one
+        await waitFor(tab, carried, { timeout: 2000 }).catch(() => {});
+        ok('a part dragged on the stage follows the pointer, and takes the place it is over as it goes, the others making room', await js(carried));
         await key('Escape'); await mouse('mouseReleased', l.l + 3, d.y);
       });
       await waitFor(tab, `!document.querySelector('[data-carried]')`, { timeout: 2000 }).catch(() => {});
