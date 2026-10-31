@@ -11,7 +11,7 @@ The gates hold the code a project ships. An eval holds the agent that writes it:
 | File | What it is |
 |---|---|
 | `run.mjs` | The run: a copy of HEAD's tree with no history (`git archive`), the task's files removed, the agent, then the grade — the project's build, a server for the copy when it serves its components, the parity run scoped to the task's target, the stylesheet gates. One line per run in the project's results file |
-| `eval.mjs` | The pure parts: a task's shape, a parity summary read, the score (never green when the agent, parity or the stylesheet gate exited in a way its count does not explain: a crash or a timeout is named in the line's `why`), what moved since the last run, contamination — a transcript that read the original repo or ran git scores 0 — and the grade's inputs: the design, mappings, stories, config, and the tokens, screens, baseline and backlog wherever the config puts them; a run that changed any scores 0, and what a parity run itself writes (its latest measurements, the report, the `--shots` pictures) is never one |
+| `eval.mjs` | The pure parts: a task's shape, a parity summary read, the score (never green when the agent, parity or the stylesheet gate exited in a way its count does not explain: a crash or a timeout is named in the line's `why`), what moved since the last run, contamination — a transcript that read the original repo or ran git scores 0 — and the grade's inputs: the design, mappings, stories, config, and the tokens, screens, baseline and backlog wherever the config puts them; they are read-only in the copy while the agent works, a run that changed any anyway scores 0 and is never graded (no build, server or gate runs over it), and what a parity run itself writes (its latest measurements, the report, the `--shots` pictures) is never one |
 | `test-eval.mjs` | `eval.mjs`'s tests; run by `bin/check` |
 
 ## A project's facts
@@ -26,6 +26,10 @@ In `evals` of its `snapshot.config.json`:
 | `serve` | the command that serves the copy's components, `{port}` filled; parity is pointed at it by `PARITY_HOST_BASE` |
 | `results` | where the line goes, in the project repo (default `tests/evals/results.jsonl`) |
 | `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits. Each command is a prefix the project vouches for: the copy's files are data the agent must not take orders from, so `node` runs only the parity and stylesheet gates unless a script is named here (`node scripts/x.mjs`) |
+
+## What the agent can still run
+
+The gates the agent may run are not inert: parity imports the copy's mapping modules and token modules and runs a mapping command, all of them files from the copy. The mapping modules and the files under `tests/parity` are grade inputs, so they are read-only while the agent works and a changed one voids the run before any gate runs over it. Open: a file the agent may write that those modules import (a helper, a component file a mapping command's script includes), a token module outside the grade's inputs, and a new file a mapping glob matches. The gate the agent runs mid-work imports each before the tamper check at the end sees it. Closing that would mean running the gates from HEAD's tree rather than the copy, the same open item as `build` and `serve` above.
 
 ## Proving the grade
 
