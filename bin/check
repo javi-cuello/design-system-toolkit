@@ -224,6 +224,27 @@ RC=$?
 rm -rf "$SP"
 [ $RC -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -6)"
 
+# Every skill alone, each in turn in one sparse clone: bin/get takes the toolkit paths its SKILL.md and
+# references name and the skills it says to run, and fails when one it reached is not in the checkout; a
+# name the toolkit lacks, or a bin/ script that cannot find what it runs, is said on stderr and fails here.
+# Until 2026-10-31 bin/get read only code, and six skills came out without the tools their prose runs.
+step "every skill, from bin/get, has what it names"
+SP=$(mktemp -d)
+OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git sparse-checkout set bin && cp "$REPO/bin/get" bin/get \
+  && N=0 && for s in $(git ls-tree -d --name-only HEAD skills/); do
+       N=$((N + 1))
+       E=$(node bin/get "$s" 2>&1 > /dev/null) || { printf '%s: %s\n' "$s" "$E"; exit 1; }
+       E=$(printf '%s\n' "$E" | grep -v '^then: ')
+       [ -z "$E" ] || { printf '%s: %s\n' "$s" "$E"; exit 1; }
+       # each skill it says to run is in the checkout whole (the oracle is the phrase, read here on its own)
+       for t in $(grep -oE '(^|[^A-Za-z])[Rr]un `[a-z0-9-]+`' "$s/SKILL.md" | sed 's/.*`\(.*\)`/\1/'); do
+         [ ! -d "$REPO/skills/$t" ] || git sparse-checkout list | grep -qx "skills/$t" || { echo "$s: runs $t, which bin/get did not take"; exit 1; }
+       done
+     done && [ "$N" -gt 0 ] || { echo "no skill was taken"; exit 1; }; } 2>&1)
+RC=$?
+rm -rf "$SP"
+[ $RC -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -8)"
+
 # The contract editor on every project's library: the discovery walk below
 # runs it with none, and it was run on one library by hand until 2026-10-19,
 # when three others failed it on what only that one had.

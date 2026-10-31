@@ -33,7 +33,7 @@ Orchestrators exist where an agent must judge things in Figma: `figma-project-au
 
 Three things worth knowing about the shape:
 
-- **An orchestrator cannot work alone.** It names the skills it runs and stops at the first one it cannot reach, so hand it over with them. Naming a sibling to *run* is fine; reading a sibling's *files* is not, and that is the line to check before sending anything.
+- **An orchestrator brings its stages.** `bin/get` takes the skills it says to run with it, and a stage that is not installed is named and skipped while the rest run. Naming a sibling to *run* is fine; reading a sibling's *files* is not, and that is the line to check before sending anything.
 - **Small copies across skills are the price of standalone skills.** The WCAG contrast formula lives in both oklch-color-scale-system and figma-contrast-matrix, because neither may read the other. A copy is accepted only where sharing would break that rule.
 - **Which skills to run first, for a whole engagement, lives per project.** A project's context document holds its suggested first runs, because the right order depends on what that library needs. The pipeline above is what happens after every snapshot, not a plan for an engagement.
 

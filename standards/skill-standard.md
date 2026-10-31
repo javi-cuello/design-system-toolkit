@@ -1,6 +1,6 @@
 # Skill standard — definition of done for a skill and a plugin
 
-**Version 1.4.5** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
+**Version 1.5.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
 
 What a skill (`skills/`) and a plugin (`plugins/`) must be before they are committed. What every standard shares, including how these clauses are enforced and changed, is [`toolkit-standard.md`](toolkit-standard.md)'s; this file adds only what is particular to a skill or a plugin.
 
@@ -187,13 +187,13 @@ Existing skills predating this clause are **debt, reported and never blocking** 
 
 *Checked:* `standards/tests/check.sh` "fenced code block(s) of 8+ lines".
 
-### H — A skill reads only its own files
+### H — A skill reads only its own files and the toolkit's, never another skill's
 
-A skill is self-contained: its own `references/`, `scripts/` and `tests/`. It may name another skill to run, never read that skill's files, because a skill that reads another's files is coupled to its internals and breaks when they move, and a skill handed to a project travels alone.
+A skill's own files are its `references/`, `scripts/` and `tests/`. It may also run a toolkit tool, cite a standard or point at a knowledge page by its path from the repo root (`node tools/figma-audit/fix-queue.mjs`, `standards/audit-settings.json`, `knowledge/code/tokens.md`), and `bin/get` takes each one it names with it: the paths in its `SKILL.md` and `references/*.md`, in a code span, a fenced block or after `node `, and every skill it says to run (run `figma-components-audit`). A `bin/` path the toolkit lacks is a project's own command (`bin/tokens`). It may name another skill to run, never read that skill's files, because a skill that reads another's files is coupled to its internals and breaks when they move.
 
-*Why:* a skill that reads another's files breaks when they move, and cannot travel alone. *Evidence:* an orchestrating skill read its stages' files until 2026-09-10, when it was changed to run them by name (figma-component-pass 1.5.0).
+*Why:* a skill that reads another's files breaks when they move. A toolkit tool is shared on purpose (toolkit-standard §D 1), and a skill that names it travels with it only if the path is one `bin/get` reads. *Evidence:* an orchestrating skill read its stages' files until 2026-09-10, when it was changed to run them by name (figma-component-pass 1.5.0); until 2026-10-31 `bin/get` followed only code, and six skills whose `SKILL.md` runs `tools/` came out of it without them (maintainer decision that day: skills may call the tools `bin/get` follows).
 
-*Checked:* `standards/tests/check.sh` "reads outside its folder" (a path two levels up, or one up into a repo directory, warned per skill); a reader confirms a sibling a skill names is named to run, not read.
+*Checked:* `standards/tests/check.sh` "reads another skill's files" and "names what the toolkit does not have" (warned per skill); `bin/check` "every skill, from bin/get, has what it names" (each skill taken alone, every path it names on disk); a reader confirms a sibling a skill names is named to run, not read.
 
 ### Verifying a skill
 

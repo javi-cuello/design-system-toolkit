@@ -5,7 +5,7 @@ description: Run a project's whole Figma audit by sequencing the stand-alone aud
 
 # Figma Project Audit
 
-**Version 1.2.5** — history in CHANGELOG.md.
+**Version 1.3.0** — history in CHANGELOG.md.
 
 A library is checked by several skills, each owning one subject: its components, the file as a whole, how it will translate to code, whether its token links still resolve. Each runs alone. This skill runs them together, in the one order that keeps their results consistent, into the project's one audit record, so the dashboard shows the whole library's state and every row says which skill raised it.
 
@@ -33,6 +33,8 @@ Ownership is the record contract in `tools/figma-audit/README.md`: settings and 
 8. **Breaking changes are already in the queue, and are not a stage.** Each snapshot the store records is graded for the designers' files that use the library and for its code, and the dashboard service files every change major for either as a row under *Breaking changes* (snapshot-standard rule 21). An audit reads the live file, so it never files or closes these; the report names how many are open, because a library about to be published with an undecided breaking change is the one thing worth saying before the stage lines.
 
 **Any subset runs in the same relative order.** "Just the file and the components" is stages 2 and 3. A stage that fails stops only itself: say which, and run the rest.
+
+**A stage whose skill is not installed** (absent from the session's skills) is skipped and named in the report, with the way to get it: `bin/get` takes the skills this one runs when it is named, so `bin/get skills/figma-project-audit` then `./install.sh` in the toolkit checkout. Never stand in for the missing skill by doing its checks here.
 
 **Fixes wait for the maintainer.** This skill runs checks. Each stage's own rules decide what may be fixed and when, and running inside this skill is never approval to fix.
 

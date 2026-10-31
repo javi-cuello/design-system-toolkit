@@ -46,4 +46,4 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 
 ## Writing or changing a skill
 
-What a skill must be before it is committed is [skill-standard](../standards/skill-standard.md): a version and a history line in the same commit, its cases walked, nothing read from outside its folder, no project's data. `bin/check` from the repo root checks what a script can see.
+What a skill must be before it is committed is [skill-standard](../standards/skill-standard.md): a version and a history line in the same commit, its cases walked, no other skill's files read (a toolkit tool, standard or knowledge page it names by repo path is fine: `bin/get` brings it), no project's data. `bin/check` from the repo root checks what a script can see.

@@ -58,14 +58,27 @@ if [ -d skills ]; then
         errors=$((errors + $(echo "$fm" | grep -c '^FAIL')))
     fi
 
+    # skill-standard §A clause H: the toolkit paths a skill names, read by the one reader bin/get
+    # takes them with, so what is warned here is what a skill taken alone would lack. Outside git
+    # (a copy with no history) there is nothing for it to read.
+    named_missing=""
+    if [ "$in_git" = 1 ] && [ -x bin/get ]; then
+        # the skills HEAD holds: one not yet committed would stop bin/get for all of them
+        named_missing=$(node bin/get --list $(git ls-tree -d --name-only HEAD skills/) 2>&1 >/dev/null) || warn "[H] the paths skills name were not read: $(printf '%s' "$named_missing" | tail -1)"
+        named_missing=$(printf '%s\n' "$named_missing" | grep 'which the toolkit does not have')
+    fi
+
     for d in skills/*/; do
         s=$(basename "$d"); f="${d}SKILL.md"
         [ -f "$f" ] || { warn "[A] $s — no SKILL.md"; continue; }
-        # skill-standard §A clause H: a skill reads nothing outside its own folder.
-        # `../scripts/` from tests/ stays inside; two levels up, or one up into a
-        # repo directory, does not.
-        esc=$(grep -rEn '\.\./\.\./|\.\./(skills|standards|knowledge|tools|plugins)/' "$d" 2>/dev/null | head -3)
-        [ -n "$esc" ] && warn "[H] $s reads outside its folder: $(printf '%s' "$esc" | sed "s|^$d||" | cut -d: -f1,2 | paste -sd' ' -)"
+        # skill-standard §A clause H: a skill may run toolkit tools by repo path, and never reads
+        # another skill's files (`../../<skill>/…`, `../../../skills/<skill>/…`, any file in it);
+        # its own `../scripts/` from tests/ is its own.
+        esc=$(grep -rEno '(\.\./)+(skills/)?[a-z0-9-]+/' "$d" 2>/dev/null | awk -F: -v s="$s" -v all=" $(ls skills | tr '\n' ' ') " \
+            '{ n = $3; sub(/^(\.\.\/)+/, "", n); sub(/^skills\//, "", n); sub(/\/$/, "", n) } n != s && index(all, " " n " ")' | head -3)
+        [ -n "$esc" ] && warn "[H] $s reads another skill's files: $(printf '%s' "$esc" | sed "s|^$d||" | cut -d: -f1,2 | paste -sd' ' -)"
+        nm=$(printf '%s\n' "$named_missing" | grep "^skills/$s/" | head -3)
+        [ -n "$nm" ] && warn "[H] $s names what the toolkit does not have: $(printf '%s' "$nm" | sed "s|^$d||; s|, which the toolkit does not have||" | paste -sd';' -)"
 
         sv=$(grep -m1 -oE '\*\*Version [0-9]+\.[0-9]+\.[0-9]+\*\*' "$f" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
         [ -n "$sv" ] || warn "[A] $s — no '**Version X.Y.Z**' line"

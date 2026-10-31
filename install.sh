@@ -70,5 +70,14 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   launchctl bootout "gui/$(id -u)/com.toolkit.maintain" 2>/dev/null || true
   rm -f "$HOME/Library/LaunchAgents/com.toolkit.maintain.plist"
 fi
+# a sparse checkout says what it left out, and how to start each by hand once its folder is taken
+if [ "$sparse" = true ]; then
+  echo "Skipped, since this checkout holds only part of the toolkit (whole skills alone are linked):"
+  echo "  the standards guard:     standards/tests/check.sh"
+  echo "  the snapshot router:     node tools/snapshot/router.mjs"
+  echo "  the figma-audit service: node tools/figma-audit/server.mjs --all"
+  echo "  the push hook:           only in a full clone (it runs bin/check, which needs the whole toolkit)"
+  echo "The first three run from a folder bin/get must hold: name it there beside the skills you took."
+fi
 
 echo "Done. Claude Code now reads skills directly from this repo — edits here are live."
