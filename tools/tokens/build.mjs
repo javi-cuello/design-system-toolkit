@@ -5,8 +5,8 @@
  *   node <toolkit>/tools/tokens/build.mjs --repo <root>           # write
  *   node <toolkit>/tools/tokens/build.mjs --repo <root> --check   # regenerate beside, diff
  *
- * snapshot → DTCG (figma-token-export's from-snapshot, over its tested
- * dtcg.js), stored in `dtcg/` beside the snapshot → Style Dictionary (frontend-build's build-tokens, with the house
+ * snapshot → DTCG (from-snapshot.mjs here, over its tested
+ * dtcg.js), stored in `dtcg/` beside the snapshot → Style Dictionary (build-tokens.mjs here, with the house
  * conventions) → the repo's `paths.styles`. A repo states where things live
  * and nothing else: code-standard rules 51–55 decide what is written, so two
  * projects cannot drift into two conventions again.
@@ -50,8 +50,8 @@ try {
   process.exit(2);
 }
 
-const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'skills/figma-token-export/scripts/from-snapshot.mjs')).href);
-const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'skills/frontend-build/scripts/build-tokens.mjs')).href);
+const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
+const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
 
 // written in place, or, for --check, beside it and compared
 const STORED = join(dirname(P.tokens), 'dtcg');

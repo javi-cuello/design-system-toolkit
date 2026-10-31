@@ -1,7 +1,7 @@
 /* figma-token-export — layer 1: pure logic, no `figma` global, fully testable.
  *
  * Turns a plain-data snapshot (see collect.js) into DTCG 2025.10 token files.
- * Nothing here touches a node, so `node tests/test-dtcg.js` is the gate.
+ * Nothing here touches a node, so `node tools/tokens/test-dtcg.js` is the gate.
  *
  * Exposes one global: DTCG.
  */
@@ -99,7 +99,7 @@
 
   // The font-weight names: the DTCG format's own aliases, as the parity engine's one table has them
   // (tools/parity/values.mjs WEIGHTS). This file also runs in Figma's sandbox, which imports nothing, so it keeps
-  // a copy that tests/test-dtcg.js holds to that table.
+  // a copy that test-dtcg.js holds to that table.
   var WEIGHTS = {
     thin: 100, hairline: 100, extralight: 200, ultralight: 200, light: 300,
     regular: 400, normal: 400, book: 400, medium: 500, semibold: 600, demibold: 600,

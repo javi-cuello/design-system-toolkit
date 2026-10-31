@@ -2,7 +2,7 @@
 // build-tokens, run through the real Style Dictionary over a small DTCG folder.
 // Style Dictionary is injected, so this borrows the copy a registered repo has
 // installed, and skips (saying so) where none has.
-// Run: node --test skills/frontend-build/tests/test-build-tokens.mjs
+// Run: node --test tools/tokens/test-build-tokens.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { buildTokens, shadowCss } from '../scripts/build-tokens.mjs';
+import { buildTokens, shadowCss } from './build-tokens.mjs';
 
 // any repo beside this one that has Style Dictionary installed lends it
 const projectsDir = join(homedir(), 'Projects');

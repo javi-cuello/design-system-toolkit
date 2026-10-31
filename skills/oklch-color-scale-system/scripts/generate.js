@@ -73,14 +73,25 @@ function parseHex(hex) {
   return '#' + h.toUpperCase();
 }
 
+// The sRGB transfer both ways and OKLab to linear sRGB: the toolkit's one formulas
+// (tools/shared/colour.js), copied because this skill ships alone, and held to them
+// character for character by tools/shared/test-colour.mjs. Every linearisation below
+// goes through srgbToLinear: there were three, written out each time.
+const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+const linearToSrgb = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+const oklabToLinearSrgb = (L, a, b) => {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b, m_ = L - 0.1055613458 * a - 0.0638541728 * b, s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+};
+
 // WCAG 2.x relative luminance and contrast ratio, from an '#RRGGBB' hex. Used only for
 // the contrastWarning check — OKLab L is NOT luminance (the mapping is hue-dependent),
 // which is exactly why the AAA claim has to be measured from output rather than assumed
 // from the fixed L scale whenever anchored mode overrides a text step's L.
 function wcagLuminance(hex) {
   const h = hex.replace('#', '');
-  const c = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
-    .map(v => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+  const c = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(srgbToLinear);
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 }
 
@@ -126,8 +137,7 @@ function hexToLinear(hex) {
   const r = parseInt(hex.slice(0, 2), 16) / 255;
   const g = parseInt(hex.slice(2, 4), 16) / 255;
   const b = parseInt(hex.slice(4, 6), 16) / 255;
-  const toLinear = c => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-  return [toLinear(r), toLinear(g), toLinear(b)];
+  return [r, g, b].map(srgbToLinear);
 }
 
 function linearToOKLCH(r, g, b) {
@@ -146,21 +156,9 @@ function linearToOKLCH(r, g, b) {
 
 function oklchToLinear(L, C, H) {
   const hRad = (H * Math.PI) / 180;
-  const a = C * Math.cos(hRad), bv = C * Math.sin(hRad);
-  const l_ = L + 0.3963377774 * a + 0.2158037573 * bv;
-  const m_ = L - 0.1055613458 * a - 0.0638541728 * bv;
-  const s_ = L - 0.0894841775 * a - 1.2914855480 * bv;
-  const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
-  return [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
-  ];
+  return oklabToLinearSrgb(L, C * Math.cos(hRad), C * Math.sin(hRad));
 }
 
-function linearToSrgb(c) {
-  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
-}
 
 function oklchToRgb01(L, C, H) {
   return oklchToLinear(L, C, H).map(v => Math.max(0, Math.min(1, v))).map(linearToSrgb);
@@ -645,7 +643,7 @@ function generateScale(hex, mode, opts) {
   // Luminance of the continuous (pre-hex-quantization) rendered color — used by the
   // bisection so the solve is smooth; the final quantized hex lands within 1/255.
   const rgb01Luminance = rgb => {
-    const lin = rgb.map(v => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+    const lin = rgb.map(srgbToLinear);
     return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
   };
 

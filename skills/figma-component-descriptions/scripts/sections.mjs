@@ -22,9 +22,11 @@
 //                every subject the file has no description for.
 //
 // Prints JSON: [{ id, name, behaviour[], composition[], markdown, gaps[] }].
-// Plain node, no dependencies; tests/test-sections.mjs runs it on a fixture.
+// Plain node; its one import is the toolkit's variant-name reader (tools/shared/names.js,
+// skill-standard §A clause H), which bin/get takes with it. tests/test-sections.mjs runs it on a fixture.
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { variantValues } from '../../../tools/shared/names.js';
 
 export const GENERATED_BY = 'skills/figma-component-descriptions/scripts/sections.mjs';
 const HEADINGS = { 'en-GB': 'Behaviour', 'en-US': 'Behavior' };
@@ -35,8 +37,8 @@ const list = (xs, last = 'and') => xs.length < 2 ? xs.map(q).join('') : xs.slice
 const byName = (a, b) => a.name.localeCompare(b.name, 'en');
 
 // "Size=Small, State=Rest" -> { Size: "Small", State: "Rest" }
-const axesOf = (variantName) => Object.fromEntries(String(variantName).split(/,\s*/)
-  .map((p) => p.split('=')).filter((kv) => kv.length === 2).map(([k, v]) => [k.trim(), v.trim()]));
+// a variant's name as its values: the toolkit's one reader
+const axesOf = variantValues;
 
 /*
  * The variants a part appears in, said as a condition on the axes when one

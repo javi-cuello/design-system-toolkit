@@ -98,16 +98,10 @@ expect("state coverage: a set without the disabled axis says so (negative)",
   FCA.stateCoverage(set("C", { State: axis(["Rest"]) }, []), ["Rest"], OPTS).hasDisabledAxis, false);
 
 // ---- §3.6 metadata -----------------------------------------------------
-const META = { internalPrefix: "_", descriptionPlaceholder: "^(todo|tbd|wip|lorem)", minDescription: 12 };
-expect("metadata: empty private is hygiene, empty public an error, a placeholder an error",
-  [set("_Part", {}, []), set("Card", {}, []), Object.assign(set("Tag", {}, []), { description: "TODO later" }),
-   Object.assign(set("Tag", {}, []), { description: "Labels a thing in a list." })].map((x) => FCA.metadata(x, META).findings.map((f) => f.severity)),
-  [["hygiene"], ["error"], ["error"], []]);
-expect("metadata: a description under 12 characters is a placeholder even with no placeholder word",
-  FCA.metadata(Object.assign(set("Tag", {}, []), { description: "A small tag" }), META).findings.map((f) => f.severity), ["error"]);
-expect("metadata: without the settings, only an empty description and one that repeats the name are raised",
-  [set("_Part", {}, []), Object.assign(set("Tag", {}, []), { description: "TODO later" }), Object.assign(set("Tag", {}, []), { description: "Tag" })].map((x) => FCA.metadata(x).findings.map((f) => f.severity)),
-  [["error"], [], ["error"]]);
+// The findings are audit.js's (test-audit.mjs); the probe only lists.
+expect("metadata: lists which properties carry a description, and raises nothing itself",
+  (({ props, findings }) => [props.map((p) => p.name + ":" + p.hasDescription), findings])(FCA.metadata(Object.assign(set("Tag", { Size: axis(["sm"]) }, []), { description: "" }))),
+  [["Size:false"], undefined]);
 
 // ---- §3.7a focus ring --------------------------------------------------
 const ring = (w) => ({ strokes: [{ type: "SOLID", color: { r: 0, g: 0, b: 1 } }], strokeTopWeight: w, strokeRightWeight: w, strokeBottomWeight: w, strokeLeftWeight: w });
@@ -119,24 +113,14 @@ expect("focus: a Focus identical to its Rest sibling fires, one with a ring does
   FCA.focusRings(s, { stateAxis: "State", focus: "Focus", rest: "Rest" }).findings.map((f) => f.variant), ["Size=md, State=Focus"]);
 expect("focus: no state words, no verdict (negative)", typeof FCA.focusRings(s, {}).skip, "string");
 
-// ---- §3.7b sizes -------------------------------------------------------
+// ---- §3.7b text size ----------------------------------------------------
 const plain = node("COMPONENT", "Badge", { width: 16, height: 16, children: [node("FRAME", "Dot", { width: 400, height: 400 }), text("N", { fontSize: 10 })] });
-const sz = FCA.sizes(plain, { minTarget: 24, minText: 12 });
-expect("sizes: a plain COMPONENT is measured itself, never its layers as variants",
-  [sz.small.map((x) => x.variant), sz.smallText.map((x) => x.variant + "/" + x.layer)], [["Badge"], ["Badge/N"]]);
-expect("sizes: the minima passed in are the ones applied", sz.minTarget, 24);
-expect("sizes: with no minima in the settings, nothing is measured against a guess", (({ small, smallText }) => [small.length, smallText.length])(FCA.sizes(plain)), [0, 0]);
-
-// ---- §3.7c contrast ----------------------------------------------------
-const solid = (r, g, b, opacity) => [{ type: "SOLID", visible: true, opacity: opacity === undefined ? 1 : opacity, color: { r, g, b } }];
-expect("contrast: black on white is 21:1", +FCA.contrastRatio({ r: 0, g: 0, b: 0 }, { r: 1, g: 1, b: 1 }).toFixed(2), 21);
-s = set("Note", {}, [node("COMPONENT", "Tone=Grey", { fills: solid(1, 1, 1), children: [
-  text("Low", { fills: solid(0.8, 0.8, 0.8), fontSize: 14 }), text("Fine", { fills: solid(0, 0, 0), fontSize: 14 }),
-  text("Large", { fills: solid(0.55, 0.55, 0.55), fontSize: 24 }), text("Tint", { fills: solid(0, 0, 0, 0.6), fontSize: 14 }),
-] })]);
-const ct = FCA.contrast(s);
-expect("contrast: below AA fires, large text gets 3:1, a translucent paint is verify-by-eye",
-  [ct.belowAA.map((x) => x.layer), ct.verifyByEye.map((x) => x.layer)], [["Low"], ["Tint"]]);
+const sz = FCA.textSizes(plain, { minText: 12 });
+expect("text size: a plain COMPONENT is measured itself, never its layers as variants", sz.smallText.map((x) => x.variant + "/" + x.layer), ["Badge/N"]);
+expect("text size: the minimum passed in is the one applied", sz.minText, 12);
+expect("text size: with no minimum in the settings, nothing is measured against a guess", FCA.textSizes(plain).smallText.length, 0);
+expect("target size and contrast are audit.js's alone: probes.js has no second engine",
+  [typeof FCA.sizes, typeof FCA.contrast, typeof FCA.contrastRatio, typeof FCA.luminance], ["undefined", "undefined", "undefined", "undefined"]);
 
 const VARS = {
   sem: { variableCollectionId: "c-sem", valuesByMode: { "m-l": { type: "VARIABLE_ALIAS", id: "pal" }, "m-d": { type: "VARIABLE_ALIAS", id: "pal" } } },
@@ -169,9 +153,9 @@ const cls = FCA.classifyNameSpaces([
   { space: "variables: Palette", names: ["Palette/Blue/9-source", "Palette/Red/9-source", "Utils/white"] },
   { space: "components", names: ["Switch", "switch", "Button", "Card", "chevron-down"] },
 ]);
-expect("case: depths are not pooled, digits are not evidence; a split and a minority are reported",
+expect("case: depths are not pooled, digits are not evidence; a minority is reported, and a split is figma-foundations-audit's, not here",
   cls.map((r) => [r.space, r.splits, Object.keys(r.minorities)]),
-  [["components", [["Switch", "switch"]], ["leaf:lower"]]]);
+  [["components", undefined, ["leaf:lower"]]]);
 
 // ---- §3.9 detached candidates ------------------------------------------
 const prefixes = new Set(["❖", "🚧"]);

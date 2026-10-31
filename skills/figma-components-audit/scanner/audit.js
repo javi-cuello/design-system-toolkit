@@ -133,10 +133,15 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
     for(const [part,pages] of users) if(home.has(part)&&[...pages].every(p=>p===home.get(part))) slotParts.add(part);
   }
   // WCAG relative luminance and contrast (figma-standard rule 32), for an
-  // opaque surface and a text colour already blended over it.
-  const lin=c=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
-  const lum=c=>0.2126*lin(c.r)+0.7152*lin(c.g)+0.0722*lin(c.b);
-  const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
+  // opaque surface and a text colour already blended over it: the toolkit's one
+  // formula (tools/shared/colour.js), a copy because Figma imports nothing, held
+  // to it character for character by tools/shared/test-colour.mjs.
+  const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const relativeLuminance = (c) => 0.2126 * srgbToLinear(c.r) + 0.7152 * srgbToLinear(c.g) + 0.0722 * srgbToLinear(c.b);
+  const contrastRatio = (a, b) => { const x = relativeLuminance(a), y = relativeLuminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  // A variant's name as its prop values: the toolkit's one reader (tools/shared/names.js), a copy
+  // for the same reason, held to it by tools/shared/test-names.mjs.
+  const variantValues = (name) => Object.fromEntries(String(name ?? '').split(/,\s*/).filter((p) => p.includes('=')).map((p) => { const i = p.indexOf('='); return [p.slice(0, i).trim(), p.slice(i + 1).trim()]; }));
   const solid=n=>Array.isArray(n.fills)?n.fills.filter(f=>f.visible!==false&&f.type==="SOLID").pop()||null:null;
   // A layer Figma names itself: the shape or frame type and a number.
   // figma-standard rule 18: a word after the first that starts with a capital breaks sentence
@@ -336,7 +341,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           if(f&&f.color){ const a=def(f.opacity,1)*def(n.opacity,1);
             const c={r:f.color.r*a+bg.r*(1-a), g:f.color.g*a+bg.g*(1-a), b:f.color.b*a+bg.b*(1-a)};
             const large=n.fontSize>=24||(n.fontSize>=18.66&&typeof n.fontWeight==="number"&&n.fontWeight>=700);
-            const need=large?3:4.5, got=ratio(c,bg);
+            const need=large?3:4.5, got=contrastRatio(c,bg);
             M.contrastTotal++;
             if(got>=need) M.contrastPass++;
             else{ const at=path||"/"; const e=(contrast[at]=contrast[at]||{name:n.name,need,min:got,variants:[]}); e.min=Math.min(e.min,got); e.variants.push(curV); }
@@ -359,7 +364,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           advice:"Darken the text or lighten its surface, with a colour pair the library already passes, until it reaches "+e.need+":1."});
       // states that render nothing
       if(set.type==="COMPONENT_SET"&&SAXIS&&SREST&&defs[SAXIS]){
-        const parse=n=>Object.fromEntries(n.name.split(", ").map(x=>x.split("=")));
+        const parse=n=>variantValues(n.name);
         const sig=v=>{const a=[];const g=(n,path)=>{const pt=x=>Array.isArray(x)?x.filter(y=>y.visible!==false).map(y=>y.type==="SOLID"?[Math.round(y.color.r*255),Math.round(y.color.g*255),Math.round(y.color.b*255),Math.round(def(y.opacity,1)*100)].join(","):y.type).join("/"):"";
             // The root's NAME is "Axis=Value" and must not enter the signature; its
             // fills, strokes, effects and opacity must, because that is where states
@@ -526,6 +531,16 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         }
       // figma-standard rule 25: a public component's missing description is an error, a private part's is hygiene.
       const isPrivate=!!(TOK.internalPrefix&&set.name.replace(/^[^\p{L}\p{N}_]+/u,"").startsWith(TOK.internalPrefix));
+      // figma-standard rule 25: a placeholder is no description — one matching the project's
+      // descriptionPlaceholder, shorter than its minDescription, or only the component's own name —
+      // and tiered as an empty one is. Each setting skips its half when absent; a description that
+      // repeats the name is one anywhere. It does not stand in for the guidance sections below,
+      // which a placeholder lacks as well.
+      const d0=(set.description||"").trim();
+      if(d0&&((TOK.descriptionPlaceholder&&new RegExp(TOK.descriptionPlaceholder,"i").test(d0))||d0.toLowerCase()===set.name.toLowerCase()||(TOK.minDescription&&d0.length<TOK.minDescription)))
+        F.push({sev:isPrivate?"hygiene":"error",rule:"metadata",key:"metadata|placeholder",
+          text:'The description is a placeholder ("'+d0+'"), so people and agents reading the library cannot tell what the component is for',
+          advice:isPrivate?"Replace it with a sentence or two saying what the part is and which component it belongs to.":"Replace it with the description: what it is, when to use it and when not to, and how to build it."});
       if(!(set.description||"").trim()) F.push({sev:isPrivate?"hygiene":"error",rule:"metadata",key:"metadata|description",
         text:"No description, so people and agents reading the library cannot tell what the component is for",
         advice:isPrivate?"Write a sentence or two saying what the part is and which component it belongs to.":"Write the description: what it is, when to use it and when not to, and how to build it."});
@@ -600,7 +615,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // set's children is its variant order. Rest is the state scale's first step.
       if(set.type==="COMPONENT_SET"&&TOK.disabledAxis&&TOK.stateAxis&&typeof SCALES!=="undefined"&&SCALES&&SCALES[TOK.stateAxis]){
         const D=TOK.disabledAxis, S=TOK.stateAxis, rest=SCALES[TOK.stateAxis][0];
-        const props=(v)=>Object.fromEntries(v.name.split(",").map(x=>x.split("=").map(y=>y.trim())));
+        const props=(v)=>variantValues(v.name);
         const others=(p)=>Object.keys(p).filter(k=>k!==D&&k!==S).sort().map(k=>k+"="+p[k]).join(", ");
         const kids=set.children.map(props);
         kids.forEach((p,i)=>{

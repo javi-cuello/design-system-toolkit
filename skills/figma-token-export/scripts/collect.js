@@ -1,6 +1,6 @@
 /* figma-token-export — layer 2: everything that needs the `figma` global.
  *
- * Prepend `dtcg.js` before this file; it calls DTCG at runtime.
+ * Prepend the toolkit's `tools/tokens/dtcg.js` before this file; it calls DTCG at runtime.
  * `node --check` is the only gate this layer can have — it needs a live file.
  *
  * Runs in the SOURCE library file: styles have no library API that enumerates
@@ -10,7 +10,7 @@
   'use strict';
 
   function need() {
-    if (typeof DTCG === 'undefined') throw new Error('Prepend scripts/dtcg.js before scripts/collect.js');
+    if (typeof DTCG === 'undefined') throw new Error('Prepend tools/tokens/dtcg.js before scripts/collect.js');
   }
 
   /* ---------- snapshot ---------- */

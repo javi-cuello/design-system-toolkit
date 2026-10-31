@@ -1,5 +1,6 @@
 # History — code-standard
 
+- 1.31.1 (2026-10-31): rules 52 and 23's *Checked:* name the token build at its new home, `tools/tokens/build-tokens.mjs` (toolkit-standard §D 1); no rule changed.
 - 1.31.0 (2026-10-30): rule 6 allows a component's own classes where its stylesheet is generated under class naming; variants and states stay attributes.
 - 1.30.2 (2026-10-29): rule 24 cites toolkit-standard §D 23; no rule changed.
 - 1.30.1 (2026-10-29): rule 23 cites toolkit-standard §D 23, the root principle it applies to code; no rule changed.

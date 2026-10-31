@@ -49,7 +49,7 @@ nobody maintains a second status.
   project gets by default under `<project home>/snapshot/`.
 - **Properties:** each component's contract (`contract.json`, written beside
   its spec on every snapshot), read through `propsOf` in
-  figma-properties-table's `scripts/contract-rows.mjs`, the reader that skill's
+  `tools/component-contract/contract-rows.mjs`, the reader figma-properties-table's
   table in Figma uses too. A component with no stored contract says so.
 - **States:** the interaction states from the contract too, by the rule the
   contract editor uses (`statesOf` in `tools/component-contract/layers.mjs`):

@@ -15,7 +15,7 @@
       "reason": "a swap property named for its type, not the page template's Component section"
     }
   ],
-  "skills/component-validator/scripts/validate.mjs": [
+  "tools/validator/validate.mjs": [
     {
       "literal": "['Text', 'Outlined', 'Contained']",
       "reason": "MUI Button's own variant values, a fact of the framework"

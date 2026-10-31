@@ -162,10 +162,10 @@
         "WEIGHTS",
         "weightName"
       ],
-      "evidence": "the table was kept twice, each missing names the other had (2026-10-01). The token export's dtcg.js runs in Figma's sandbox, which imports nothing, so it keeps a copy, held name for name to this one by skills/figma-token-export/tests/test-dtcg.js",
+      "evidence": "the table was kept twice, each missing names the other had (2026-10-01). The token export's dtcg.js runs in Figma's sandbox, which imports nothing, so it keeps a copy, held name for name to this one by tools/tokens/test-dtcg.js",
       "owners": [
         "tools/parity/values.mjs",
-        "skills/figma-token-export/scripts/dtcg.js"
+        "tools/tokens/dtcg.js"
       ]
     },
     {
@@ -196,13 +196,14 @@
     },
     {
       "job": "validating the stored design for the code target",
-      "module": "tools/project-check/validate.mjs (component-validator's engine, run by the router after every library snapshot)",
+      "module": "tools/validator/validate.mjs (the engine; component-validator calls it, and tools/project-check/validate.mjs runs it for a repo after every library snapshot)",
       "files": [
         "bin/validate"
       ],
       "names": [],
       "owners": [
-        "tools/project-check/validate.mjs"
+        "tools/project-check/validate.mjs",
+        "tools/validator/"
       ]
     },
     {
@@ -347,16 +348,32 @@
       ]
     },
     {
+      "job": "colour arithmetic: the sRGB transfer, WCAG luminance and contrast, OKLab",
+      "module": "tools/shared/colour.js",
+      "files": [],
+      "names": [
+        "srgbToLinear",
+        "oklabToLinearSrgb"
+      ],
+      "evidence": "the review of 2026-10-31 found the WCAG formula four times with two thresholds (0.03928 and WCAG 2.2's 0.04045) and OKLab twice; the components audit's scanner runs in Figma, which imports nothing, and the OKLCH generator ships alone, so each keeps a copy that tools/shared/test-colour.mjs holds character for character",
+      "owners": [
+        "tools/shared/colour.js",
+        "skills/figma-components-audit/",
+        "skills/oklch-color-scale-system/"
+      ]
+    },
+    {
       "job": "reading a variant's name into its values",
       "module": "tools/shared/names.js",
       "files": [],
       "names": [
         "variantValues"
       ],
-      "evidence": "derive, the parity engine, the contract tools and the docs site each split a variant's name their own way, one on a bare `,`, one keeping a part with no `=` as a key. The properties table runs in Figma's sandbox, which imports nothing, so it keeps a copy that its test holds character for character to this one; the contract editor's `variantValues` is a different function under the same name (the values its view shows), not a copy",
+      "evidence": "derive, the parity engine, the contract tools and the docs site each split a variant's name their own way, one on a bare `,`, one keeping a part with no `=` as a key. The properties table's and the components audit's sandbox engines (properties-table.js, probes.js, scanner/audit.js) run in Figma, which imports nothing, so each keeps a copy that a test holds character for character to this one (tools/shared/test-names.mjs); the contract editor's `variantValues` is a different function under the same name (the values its view shows), not a copy",
       "owners": [
         "tools/shared/names.js",
         "skills/figma-properties-table/",
+        "skills/figma-components-audit/",
         "tools/contract-editor/editor.js"
       ]
     },

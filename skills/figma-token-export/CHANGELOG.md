@@ -1,5 +1,7 @@
 # Changelog — figma-token-export
 
+- 2.10.1 (2026-10-31): the case file names `tools/tokens/dtcg.js`; 2.10.0's history line shortened.
+- 2.10.0 (2026-10-31): the engines and their tests move to `tools/tokens/`, which every project's token build calls (toolkit-standard §D 1); the skill keeps `collect.js`; `scripts/from-snapshot.mjs` forwards for one release.
 - 2.9.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).
 - 2.8.2 (2026-10-30): `scripts/from-snapshot.mjs` runs when called through the installed skill link; it had compared the link to its real path and exited 0 having done nothing.
 - 2.8.1 (2026-10-20): the font-weight table is the parity engine's one (`tools/parity/values.mjs` `WEIGHTS`, the DTCG aliases), a copy because the sandbox imports nothing, held to it by `tests/test-dtcg.js`; an underscore reads as a separator too. Case A3 walked.

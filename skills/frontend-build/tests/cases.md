@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.8.1)
+# Eval cases — frontend-build (v2.9.0)
+
+**Walked: 2026-10-31 for 2.9.0** — B1–B11's `Runs:` lines re-aimed: `node --test tools/tokens/test-build-tokens.mjs` 14/14; the forwarder exports the same six names; `node --test tests/test-sass-entry.mjs` 7/7.
 
 **Walked: 2026-10-31 for 2.8.1** — T6 re-run: the scaffold into a scratch root wrote 16 files, and `bin/css` installed sass 1.104.1 exactly, wrote `package-lock.json` and compiled `main.css`. Other cases unchanged.
 
@@ -54,10 +56,10 @@
 
 **Walked: 2026-08-14 — pass (10/10).** Two kinds of check, stated per case. E1–E5 are **executed**: `node tests/test-tokens-to-css.mjs` runs 12 assertions against the engine, all passing, plus one end-to-end CLI run. T1–T5 are **traced** — each assertion followed to the instruction in `SKILL.md` or a reference that mandates it. No case here has been observed against a live build; the skill has not yet run on a real design. That is the gap to close on the first project, and cases T2, T4 and T5 are the ones a real run could still falsify.
 
-Run the executable half from the skill folder:
+Run the executable half from the repo root:
 
 ```sh
-node --test tests/test-build-tokens.mjs
+node --test tools/tokens/test-build-tokens.mjs
 ```
 
 It borrows Style Dictionary from a registered repo's `node_modules` (the build takes it injected) and reports the tests as skipped where none has it installed — a skip is not a pass.
@@ -66,49 +68,49 @@ It borrows Style Dictionary from a registered repo's `node_modules` (the build t
 
 ## B1 · An alias stays a reference — *executed*
 Assert: `--text-link: var(--palette-blue-600);`, never the literal colour, and no property carries its collection (`--semantic-…`). A generator that copies the value destroys the semantic tier while producing output that looks correct.
-Runs: node --test tests/test-build-tokens.mjs — "an alias stays a reference, named by its path without the collection"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "an alias stays a reference, named by its path without the collection"
 
 ## B2 · Light is the base; Dark is the attribute and the unchosen system preference — *executed*
 Assert: the Light value on `:root`, the Dark value under `@media screen { [data-theme="dark"] }` and again under `@media screen and (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` — screen only, so print keeps the light tier. Either alone fails a reader: the attribute alone ignores the OS, the media query alone ignores the toggle.
-Runs: node --test tests/test-build-tokens.mjs — "Light is the base, Dark is the attribute and the unchosen system preference"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "Light is the base, Dark is the attribute and the unchosen system preference"
 
 ## B3 · rem, except what must not scale — *executed*
 Assert: `space/2: 8px` → `0.5rem`; `radius/md: 8px` stays `8px`; a colour is untouched. A radius in rem grows with the reader's text size and stops matching its border.
-Runs: node --test tests/test-build-tokens.mjs — "lengths are rem except the ones that must not scale; colours are untouched"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "lengths are rem except the ones that must not scale; colours are untouched"
 
 ## B4 · Responsive modes switch at the breakpoints, which are Sass — *executed*
 Assert: Desktop's value inside `@media (min-width: 64rem) { :root }`; no `--breakpoint-*` property; `$sm: 40rem` and `@mixin from($bp)` in `_breakpoints.scss`. A media condition cannot read `var()`.
-Runs: node --test tests/test-build-tokens.mjs — "Mobile is the base and Desktop switches at the md breakpoint, which is Sass"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "Mobile is the base and Desktop switches at the md breakpoint, which is Sass"
 
 ## B5 · A text style is its fields, a bound field stays a reference — *executed*
 Assert: `--body-font-family` with the fallback stack, `--body-font-size: var(--body-size)`, letter-spacing present at zero, no `font` shorthand, and `text-style($name)` in `_text-styles.scss`. Regression: Style Dictionary's own `expand` resolved the reference first, so responsive type stopped following its breakpoint.
-Runs: node --test tests/test-build-tokens.mjs — "a text style is its fields, a bound field stays a reference, and the mixin applies it"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "a text style is its fields, a bound field stays a reference, and the mixin applies it"
 
 ## B6 · Two paths that become one property fail the build *(negative)* — *executed*
 Assert: rejects, naming the property. With the collection dropped from names, `Primitive/Space/2` and `Spacing/Space/2` collide, and without the check one silently wins.
-Runs: node --test tests/test-build-tokens.mjs — "two paths that become one property fail the build"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "two paths that become one property fail the build"
 
 ## B7 · An alias to nothing fails the build *(negative)* — *executed*
 Assert: rejects. It must never emit `var(--missing)`, which renders as an unset property with no error anywhere.
-Runs: node --test tests/test-build-tokens.mjs — "an alias to nothing fails the build rather than writing var() to nothing"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "an alias to nothing fails the build rather than writing var() to nothing"
 
 ## B8 · A responsive mode with no breakpoint fails the build *(negative)* — *executed*
 Assert: rejects with `needs Breakpoint/md`. Writing the mode with no query would apply Desktop values everywhere.
-Runs: node --test tests/test-build-tokens.mjs — "a responsive mode with no breakpoint to switch at fails the build"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "a responsive mode with no breakpoint to switch at fails the build"
 
 ## B9 · A diagonal gradient is a corner keyword; a bound stop stays a reference — *executed*
 Assert: a 135° gradient with one bound stop renders `linear-gradient(to bottom right, var(--palette-blue-600) 0%, #ffffff 100%)`. Figma's angle lives in the node's unit square and stretches with the frame, which the corner keywords do and degrees do not. Added 2026-09-19 because no real library had a diagonal gradient to prove it on; shown to fail with 135 removed from the corner table.
-Runs: node --test tests/test-build-tokens.mjs — "a diagonal gradient is a corner keyword, and a bound stop stays a reference"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "a diagonal gradient is a corner keyword, and a bound stop stays a reference"
 
 ## B10 · A mode holding nothing CSS can carry writes no block *(regression)* — *executed*
 Fixture: a collection whose two modes hold only booleans (a component's show/hide switches), so every mode file is empty after export.
 Assert: the build completes, writes no `[data-<collection>]` block, and everything else is intact. It used to crash reading a file Style Dictionary never wrote for an empty mode.
-Runs: node --test tests/test-build-tokens.mjs — "a mode holding nothing CSS can carry writes no block and does not stop the build"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "a mode holding nothing CSS can carry writes no block and does not stop the build"
 
 ## B11 · A collection named for breakpoints is Sass, never custom properties *(regression)* — *executed*
 Fixture: `05. Breakpoints` holding `tablet: 1024`, and `6. Breakpoints` holding `Breakpoint/xl: 1280`.
 Assert: `$tablet: 64rem` and `$xl: 80rem` in `_breakpoints.scss`, and no `--tablet` property. A library that keeps breakpoints in their own collection, without a `Breakpoint/` group, came out as `--mobile`/`--tablet`/`--desktop` with an empty `_breakpoints.scss`; the first fix then named the grouped kind `$breakpoint-xl`, caught by a registered repo's `bin/tokens --check` before it shipped. The group wins over the collection.
-Runs: node --test tests/test-build-tokens.mjs — "a collection named for breakpoints is Sass too, never custom properties"
+Runs: node --test tools/tokens/test-build-tokens.mjs — "a collection named for breakpoints is Sass too, never custom properties"
 
 ## T9 · A deviation is decided where it is found — *traced*
 Fixture: a component whose stylesheet is about to carry a comment explaining why the code differs from the design (an outside hairline drawn as an outer shadow; a ring offset derived from the stroke width; a dim on the host rather than the control).

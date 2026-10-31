@@ -228,10 +228,14 @@ if (!existsSync(join(SCANNER, "audit.js"))) {
 }
 // The other stages the page's Audit runs, each read from its own skill the
 // same way: the foundations audit's scanner (file-level checks) and the
-// component validator's live reader and engine. Either may be absent — an
-// install without that skill — and the page then says the stage did not run.
+// component validator's live reader. Either may be absent — an install
+// without that skill — and the page then says the stage did not run. The
+// validator's engine is a tool (tools/validator), always beside this one, so
+// its absence is a broken install and an error, never a stage that did not run.
 const FOUNDATIONS = arg("--foundations", join(HERE, "..", "..", "skills", "figma-foundations-audit", "scripts", "foundations.js"));
 const VALIDATOR = arg("--validator", join(HERE, "..", "..", "skills", "component-validator", "scripts"));
+const VALIDATE = join(HERE, "..", "validator", "validate.mjs");
+if (!existsSync(VALIDATE)) { console.error(`validator      no engine at ${VALIDATE}: the toolkit checkout is incomplete`); process.exit(1); }
 const LINKS = arg("--links", join(HERE, "..", "..", "skills", "figma-variable-audit", "scripts", "links.js"));
 // The instruction that asks which unpaired Figma and code components are one
 // component under two names: design-code-parity's, as the judge's is the
@@ -298,8 +302,10 @@ const LAYOUT = (() => {
     return w;
   } catch (e) { console.error(`specs          ${LABEL}: ${e.message}`); return null; }
 })();
-const SPECS = (LAYOUT && LAYOUT.paths && LAYOUT.paths.components) || join(dirname(AUDIT_DIR), "snapshot", "components");
-const INDEX = (LAYOUT && LAYOUT.paths && LAYOUT.paths.index) || join(dirname(AUDIT_DIR), "snapshot", "index.json");
+// the canonical layout, as the store states it (store.cjs DEFAULT_PATHS)
+const CANONICAL = store.paths(join(dirname(AUDIT_DIR), "snapshot"));
+const SPECS = (LAYOUT && LAYOUT.paths && LAYOUT.paths.components) || CANONICAL.components;
+const INDEX = (LAYOUT && LAYOUT.paths && LAYOUT.paths.index) || CANONICAL.index;
 /*
  * ONE library's components, not the project's.
  *
@@ -772,7 +778,7 @@ const server = createServer(async (req, res) => {
       // bucket a finding lands in (buckets). The page decides only how to draw
       // the result.
       return json(res, 200, { sweep, audit, judge, fix, buckets: JSON.parse(buckets), checks: JSON.parse(checks), scoring: JSON.parse(scoring), measures: JSON.parse(measures),
-                              foundations, walker, validator: existsSync(join(VALIDATOR, "validate.mjs")), links, snapshot, pairing });
+                              foundations, walker, validator: true, links, snapshot, pairing });
     }
 
     // The validator's engine, run here because it is node code and the page
@@ -815,8 +821,7 @@ const server = createServer(async (req, res) => {
             : "the snapshot holds no component specs \u2014 take a snapshot first" });
       }
       if (!target || !Array.isArray(components)) return json(res, 400, { ok: false, error: "target and components required" });
-      const engine = join(VALIDATOR, "validate.mjs");
-      if (!existsSync(engine)) return json(res, 200, { ok: false, error: "no validator engine at " + engine });
+      const engine = VALIDATE;
       try {
         const m = await import(pathToFileURL(engine).href + "?t=" + Date.now());
         const opts = framework ? { framework, frameworkMap } : {};

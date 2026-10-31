@@ -67,15 +67,10 @@ function file(rel, content, { mode, holds, why } = {}) {
 const SKELETON = {
   toolkit: TK,
   project: LABEL,
+  // the snapshot's layout is the store's (store.cjs DEFAULT_PATHS), under the repo's snapshot folder;
+  // its logs stay where the store keeps them
   paths: {
-    tokens: 'figma-design-system/snapshot/tokens.json',
-    components: 'figma-design-system/snapshot/components',
-    icons: 'figma-design-system/snapshot/icons',
-    graphics: 'figma-design-system/snapshot/graphics',
-    previews: 'figma-design-system/snapshot/previews',
-    screens: 'figma-design-system/snapshot/screens',
-    changes: 'figma-design-system/snapshot/changes.json',
-    index: 'figma-design-system/snapshot/index.json',
+    ...Object.fromEntries(Object.entries(req('../snapshot/store.cjs').DEFAULT_PATHS).filter(([k]) => k !== 'logs').map(([k, v]) => [k, `figma-design-system/snapshot/${v}`])),
     styles: 'src/styles/tokens',
   },
   after: { library: [{ label: 'tokens', run: 'bin/tokens', required: true }] },

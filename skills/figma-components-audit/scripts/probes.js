@@ -98,14 +98,10 @@ globalThis.__FCA_PROBES_FACTORY = function () {
   // them as a variant list mis-walks the tree and mislabels every finding —
   // the bug the old §3.8 carried, and §3.7a–c carried it too.
   FCA.variantsOf = (set) => (set.type === "COMPONENT_SET" ? set.children : [set]);
-  FCA.parseVariant = (name) => {
-    const o = {};
-    for (const part of String(name).split(",")) {
-      const i = part.indexOf("=");
-      if (i > 0) o[part.slice(0, i).trim()] = part.slice(i + 1).trim();
-    }
-    return o;
-  };
+  // A variant's name as its prop values: the toolkit's one reader (tools/shared/names.js), a copy
+  // because Figma imports nothing, held to it character for character by tools/shared/test-names.mjs.
+  const variantValues = (name) => Object.fromEntries(String(name ?? '').split(/,\s*/).filter((p) => p.includes('=')).map((p) => { const i = p.indexOf('='); return [p.slice(0, i).trim(), p.slice(i + 1).trim()]; }));
+  FCA.parseVariant = variantValues;
   const axesOf = (defs) => Object.entries(defs || {}).filter(([, v]) => v.type === "VARIANT")
     .map(([k, v]) => ({ name: k, options: v.variantOptions || [] }));
 
@@ -217,21 +213,13 @@ globalThis.__FCA_PROBES_FACTORY = function () {
   };
 
   // ---- §3.6 metadata ----------------------------------------------------
-  // opts.internalPrefix, opts.descriptionPlaceholder (a pattern) and
-  // opts.minDescription (characters) come from the settings; each skips when
-  // absent. A description that only repeats the name is a placeholder anywhere.
-  FCA.metadata = (set, opts) => {
-    opts = opts || {};
-    const desc = (set.description || "").trim(), findings = [];
-    const isPrivate = !!opts.internalPrefix && set.name.startsWith(opts.internalPrefix);
-    const placeholder = (opts.descriptionPlaceholder && new RegExp(opts.descriptionPlaceholder, "i").test(desc)) || desc.toLowerCase() === set.name.toLowerCase()
-      || (desc && opts.minDescription && desc.length < opts.minDescription);
-    if (!desc) findings.push({ what: "description empty", severity: isPrivate ? "hygiene" : "error" });
-    else if (placeholder) findings.push({ what: 'description is a placeholder: "' + desc + '"', severity: "error" });
-    // Which properties need a description is judgement; this lists them.
+  // The description's findings (empty, a placeholder) are scanner/audit.js's
+  // metadata|description and metadata|placeholder. This lists what a reader
+  // judges: which properties carry a description, and the documentation links.
+  FCA.metadata = (set) => {
     const props = Object.entries(set.componentPropertyDefinitions || {}).map(([k, v]) =>
       ({ name: k.split("#")[0], type: v.type, hasDescription: !!(v.description || "").trim() }));
-    return { set: set.name, description: desc, findings, props, docLinks: (set.documentationLinks || []).map((l) => l.uri) };
+    return { set: set.name, description: (set.description || "").trim(), props, docLinks: (set.documentationLinks || []).map((l) => l.uri) };
   };
 
   // ---- §3.7a focus renders ----------------------------------------------
@@ -261,58 +249,23 @@ globalThis.__FCA_PROBES_FACTORY = function () {
     return { set: set.name, findings };
   };
 
-  // ---- §3.7b target size and text size ----------------------------------
-  // 24 is WCAG 2.2 SC 2.5.8 (AA). 44 is SC 2.5.5 (AAA, mobile touch) — not
-  // this one. Pass the library's own minima when it states them.
-  FCA.sizes = (set, opts) => {
+  // ---- §3.7b text size ---------------------------------------------------
+  // Target size and contrast are scanner/audit.js's (accessibility|target,
+  // accessibility|contrast). Text below opts.minText, from the settings (a
+  // missing minimum skips the probe), is listed for the reader, who drops
+  // disabled text (figma-standard rule 26).
+  FCA.textSizes = (set, opts) => {
     opts = opts || {};
-    // Both minima come from the settings; a missing one skips its half.
-    const MIN_TARGET = opts.minTarget || null, MIN_TEXT = opts.minText || null;
-    const out = { small: [], smallText: [] };
-    for (const v of FCA.variantsOf(set)) {
-      if (Math.min(v.width, v.height) < MIN_TARGET) out.small.push({ variant: v.name, w: v.width, h: v.height });
-      (function walk(n, d) {
-        if (d > 6) return;
-        if (n.type === "TEXT" && typeof n.fontSize === "number" && n.fontSize < MIN_TEXT)
-          out.smallText.push({ variant: v.name, layer: n.name, fontSize: n.fontSize });
-        if (n.children) for (const c of n.children) walk(c, d + 1);
-      })(v, 0);
-    }
-    return Object.assign({ set: set.name, minTarget: MIN_TARGET, minText: MIN_TEXT }, out);
+    const MIN_TEXT = opts.minText || null, smallText = [];
+    if (MIN_TEXT) for (const v of FCA.variantsOf(set)) (function walk(n, d) {
+      if (d > 6) return;
+      if (n.type === "TEXT" && typeof n.fontSize === "number" && n.fontSize < MIN_TEXT)
+        smallText.push({ variant: v.name, layer: n.name, fontSize: n.fontSize });
+      if (n.children) for (const c of n.children) walk(c, d + 1);
+    })(v, 0);
+    return { set: set.name, minText: MIN_TEXT, smallText };
   };
 
-  // ---- §3.7c contrast ---------------------------------------------------
-  FCA.luminance = ({ r, g, b }) => {
-    const f = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-  };
-  FCA.contrastRatio = (a, b) => {
-    const [hi, lo] = [FCA.luminance(a), FCA.luminance(b)].sort((x, y) => y - x);
-    return (hi + 0.05) / (lo + 0.05);
-  };
-  // Reads the paint colour CACHED for the mode on screen — one mode per run.
-  // A translucent paint on either side is marked `verify`: the nearest-solid
-  // model cannot composite it, and a confident wrong ratio is worse than none.
-  FCA.contrast = (set) => {
-    const out = [];
-    for (const v of FCA.variantsOf(set)) (function walk(n, bg, d) {
-      if (d > 6) return;
-      let next = bg;
-      if (isArr(n.fills) && n.type !== "TEXT") {
-        const solid = n.fills.find((f) => f.type === "SOLID" && f.visible !== false && (f.opacity === undefined || f.opacity > 0.5));
-        if (solid) next = solid;
-      }
-      if (n.type === "TEXT" && isArr(n.fills) && n.fills[0] && n.fills[0].type === "SOLID" && next) {
-        const fg = n.fills[0], r = FCA.contrastRatio(fg.color, next.color);
-        const large = typeof n.fontSize === "number" && (n.fontSize >= 24 || (n.fontSize >= 18.66 && /bold|semi/i.test(String(n.fontName && n.fontName.style))));
-        const needs = large ? 3 : 4.5;
-        const verify = (fg.opacity !== undefined && fg.opacity < 1) || (next.opacity !== undefined && next.opacity < 1);
-        if (r < needs || verify) out.push({ variant: v.name, layer: n.name, ratio: +r.toFixed(2), needs, verify });
-      }
-      if (n.children) for (const c of n.children) walk(c, next, d + 1);
-    })(v, null, 0);
-    return { set: set.name, belowAA: out.filter((x) => x.ratio < x.needs), verifyByEye: out.filter((x) => x.verify && x.ratio >= x.needs) };
-  };
   // One bound variable in one mode, following aliases BY MODE NAME — into
   // modes[0] returns a real colour that is simply the wrong one. `api` is
   // { variable(id), collection(id) }, async; it defaults to figma.variables.
@@ -364,12 +317,11 @@ globalThis.__FCA_PROBES_FACTORY = function () {
     : /^[\p{Lu}\s]+$/u.test(s) ? "upper"
     : /^[A-Z][a-z]*[A-Z]/.test(s) ? "camel-inner"
     : "mixed";
-  // spaces: [{ space, names }]. Splits are names equal but for case (figma-standard rule 19);
-  // minorities are case shapes outnumbered at the same DEPTH (figma-standard rule 18's
-  // evidence — pooling depths reports a convention as its own violation).
+  // spaces: [{ space, names }]. Minorities are case shapes outnumbered at the same DEPTH
+  // (figma-standard rule 18's evidence — pooling depths reports a convention as its own
+  // violation). Two names equal but for case (figma-standard rule 19) are figma-foundations-audit's,
+  // never reported here: that skill owns the collision.
   FCA.classifyNameSpaces = (spaces) => spaces.filter((sp) => sp.names.length).map((sp) => {
-    const seen = new Map(), splits = [];
-    for (const n of sp.names) { const k = n.toLowerCase(); if (seen.has(k)) splits.push([seen.get(k), n]); seen.set(k, n); }
     const tally = {}, members = {};
     for (const n of sp.names) {
       const segs = n.split("/");
@@ -390,8 +342,8 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       for (const [sh, n] of counts) if (sh !== top)
         minorities[slot + ":" + sh] = { count: n, majority: top + " x" + tally[slot][top], examples: [...new Set(members[slot][sh])].slice(0, 8) };
     }
-    return { space: sp.space, total: sp.names.length, splits, minorities };
-  }).filter((r) => r.splits.length || Object.keys(r.minorities).length);
+    return { space: sp.space, total: sp.names.length, minorities };
+  }).filter((r) => Object.keys(r.minorities).length);
 
   // ---- §3.9 detached-frame candidates: the decision half ----------------
   // A page's prefix is its first whitespace-free run. A page sharing a

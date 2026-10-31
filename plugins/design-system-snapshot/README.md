@@ -15,7 +15,7 @@ Import it as above (from a copy of this folder, if you have only the plugin). Op
 
 For the per-component files and contracts the router writes, run the toolkit's unpacker on it: `node tools/snapshot/unpack.mjs "<file>.json" snapshot/` (`unpack.mjs --zip <out.zip>` packages it to run on its own).
 
-For DTCG token files (the W3C design-tokens format Style Dictionary reads), pass that file to the `figma-token-export` skill's script: `node skills/figma-token-export/scripts/from-snapshot.mjs "<file>.json" tokens/`.
+For DTCG token files (the W3C design-tokens format Style Dictionary reads), pass that file to the token export (the `figma-token-export` skill runs it): `node tools/tokens/from-snapshot.mjs "<file>.json" tokens/`.
 
 ## Run
 Figma → Plugins → Development → Import plugin from manifest → select this folder's `manifest.json`. A changed manifest needs a re-import; "run last plugin" will not pick it up.

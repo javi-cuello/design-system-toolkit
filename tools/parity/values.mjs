@@ -12,6 +12,7 @@
  * wide-gamut value) and `rgb(r g b / a)`, the other read three- and
  * four-digit hex and padded a shadow's missing spread.
  */
+import { oklabToLinearSrgb, linearToSrgb } from '../shared/colour.js';
 
 /** `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()`/`rgba()` in either
  *  spelling, `color(srgb …)` and `oklab()` → `[r, g, b, a]` (0–255, alpha 0–1
@@ -41,10 +42,7 @@ export function parseColour(value) {
   }
   // what Chrome computes for a colour-mix: OKLab, converted to sRGB
   if ((m = /^oklab\(\s*([-\d.e]+)\s+([-\d.e]+)\s+([-\d.e]+)(?:\s*\/\s*([\d.]+%?))?\s*\)$/i.exec(s))) {
-    const [L, A, B] = [+m[1], +m[2], +m[3]];
-    const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3, mm = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3, s3 = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
-    const lin = [4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * s3, -1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * s3, -0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * s3];
-    return lin.map((x) => clamp(x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055)).concat(alpha(m[4]));
+    return oklabToLinearSrgb(+m[1], +m[2], +m[3]).map((x) => clamp(linearToSrgb(x))).concat(alpha(m[4]));
   }
   return null;
 }

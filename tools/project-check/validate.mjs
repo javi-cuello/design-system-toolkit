@@ -38,7 +38,7 @@ const only = argv[0] || null;
 const config = JSON.parse(fs.readFileSync(path.join(REPO, 'snapshot.config.json'), 'utf8'));
 // where the snapshot stored them, the canonical layout where `paths` is silent
 const where = req('../snapshot/store.cjs').paths(REPO, config.paths || {});
-const ENGINE = path.join(TOOLKIT, 'skills/component-validator/scripts/validate.mjs');
+const ENGINE = path.join(TOOLKIT, 'tools/validator/validate.mjs');
 const SPECS = where.components, STYLES = where.tokens;
 if (!fs.existsSync(ENGINE)) { console.error(`validate: no component-validator at ${ENGINE}`); process.exit(2); }
 if (!fs.existsSync(SPECS)) { console.error('validate: no stored component specs (`paths.components`) — nothing to read, and that is not a pass'); process.exit(2); }

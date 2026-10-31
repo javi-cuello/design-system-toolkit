@@ -13,7 +13,6 @@
 // raised closes. `node tests/test-foundations.mjs` runs them on fixtures.
 
 export const RAN_TOKENS = ["tokens-description", "tokens-unused", "tokens-style-binding", "tokens-naming", "tokens-structure"];
-export const RAN_ICONS = ["icons-sizes", "icons-fill"];
 
 // What a text style and an effect layer can bind to a variable in Figma and
 // carries a design decision. Paragraph spacing and indent are bindable too,

@@ -10,7 +10,7 @@
  *
  * Then drive it with:
  *
- *   PT.rows({...})          load the rows, printed by `node scripts/contract-rows.mjs`
+ *   PT.rows({...})          load the rows, printed by `node tools/component-contract/contract-rows.mjs`
  *                           from the components' contracts in the stored snapshot
  *   PT.profile()            learn this file's scaffolding (once per file, persisted)
  *   PT.pages()              pages that have a Properties table
@@ -385,7 +385,7 @@ globalThis.__PT_FACTORY = function () {
   // ------------------------------------------------------------- row content
 
   // The rows come from the component's contract in the project's stored
-  // snapshot (scripts/contract-rows.mjs, run in node), never from the file: the
+  // snapshot (tools/component-contract/contract-rows.mjs, run in node), never from the file: the
   // snapshot is the one reader of a Figma file. PT.rows() keeps them in the
   // document's plugin data, one entry per component, keyed by its key and
   // name, so a resumable apply() finds them on every later call.
@@ -546,7 +546,7 @@ globalThis.__PT_FACTORY = function () {
     const prep = await preparePage(pageName, cfg);
     if (prep.skipped) return prep;
     // A component with no rows from its contract is not drawn from the file
-    // instead: the page waits for a snapshot (scripts/contract-rows.mjs, then PT.rows).
+    // instead: the page waits for a snapshot (tools/component-contract/contract-rows.mjs, then PT.rows).
     const missing = noRows(prep.comps);
     if (missing.length) return { page: pageName, skipped: 'no rows from a stored contract for ' + missing.join(', ') + ': take a snapshot, then load its rows with PT.rows()' };
     return {
@@ -568,7 +568,7 @@ globalThis.__PT_FACTORY = function () {
     const prep = await preparePage(pageName, cfg);
     if (prep.skipped) return prep;
     // A component with no rows from its contract is not drawn from the file
-    // instead: the page waits for a snapshot (scripts/contract-rows.mjs, then PT.rows).
+    // instead: the page waits for a snapshot (tools/component-contract/contract-rows.mjs, then PT.rows).
     const missing = noRows(prep.comps);
     if (missing.length) return { page: pageName, skipped: 'no rows from a stored contract for ' + missing.join(', ') + ': take a snapshot, then load its rows with PT.rows()' };
     const { page, comps } = prep;

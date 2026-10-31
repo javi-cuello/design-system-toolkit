@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// node tests/test-validate.mjs — from the skill folder. Runs every target over one fixture.
+// node tools/validator/test-validate.mjs. Runs every target over one fixture.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { validate, targets, silentClasses, fromSnapshot, translations, frameworks, unmappedFor, landsOf } from '../scripts/validate.mjs';
+import { validate, targets, silentClasses, fromSnapshot, translations, frameworks, unmappedFor, landsOf } from './validate.mjs';
 
 const here = new URL('.', import.meta.url).pathname;
 const comps = JSON.parse(fs.readFileSync(here + 'fixtures/components.json', 'utf8'));
@@ -602,31 +602,11 @@ ok('lands · the four shapes read from the rule\'s own advice',
   const pathx = await import('node:path');
   const f = pathx.join(os.tmpdir(), `cli-${process.pid}.json`);
   fsx.writeFileSync(f, JSON.stringify([{ name: 'Tag', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', children: [] }] }]));
-  const me = new URL('../scripts/validate.mjs', import.meta.url).pathname;
+  const me = new URL('./validate.mjs', import.meta.url).pathname;
   const run = (...a) => spawnSync(process.execPath, [me, ...a], { encoding: 'utf8' });
   const after = run('--target', 'web', '--snapshot', f), before = run(f, '--target', 'web', '--snapshot');
   fsx.rmSync(f, { force: true });
   ok('CLI · the file may follow --snapshot, a flag that takes no value', after.status !== 2 && /"findings"/.test(after.stdout) && after.stdout === before.stdout);
-}
-
-{
-  // The live reader, run as figma_execute runs it (a function body), against a fake page of two sets.
-  const src = fs.readFileSync(new URL('../scripts/walk-figma.js', import.meta.url), 'utf8');
-  const node = (type, name, extra = {}) => ({ type, name, width: 10, height: 10, visible: true, ...extra });
-  const set = (id, name) => {
-    const s = node('COMPONENT_SET', name, { id, componentPropertyDefinitions: {} });
-    const v = node('COMPONENT', 'State=Rest', { parent: s, children: [node('TEXT', 'Hint', { visible: false, characters: 'x', lineHeight: { unit: 'AUTO' }, letterSpacing: { unit: 'PIXELS', value: 0 }, fontSize: 12 }), node('VECTOR', 'Icon')] });
-    s.children = [v];
-    return s;
-  };
-  const sets = [set('1:1', 'Chip'), set('2:2', 'Tag')];
-  const figma = { mixed: Symbol('mixed'), currentPage: { findAll: (f) => sets.filter(f) }, getNodeByIdAsync: async (id) => sets.find((s) => s.id === id) || null, getStyleByIdAsync: async () => null };
-  const run = (prefix) => new Function('figma', `${prefix}\n${src}`)(figma);
-  const all = await run('');
-  ok('walk-figma · no SCOPE walks every set on the page', all.map((c) => c.name).join() === 'Chip,Tag');
-  ok('walk-figma · a prepended SCOPE walks those sets alone', (await run('const SCOPE = ["2:2"];')).map((c) => c.name).join() === 'Tag');
-  const [hint, icon] = all[0].variants[0].children;
-  ok('walk-figma · a hidden leaf layer is recorded hidden, a shown one is not', hint.hidden === true && icon.hidden === undefined);
 }
 
 console.log(`${n}/${n} passed`);

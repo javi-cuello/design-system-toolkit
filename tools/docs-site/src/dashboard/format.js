@@ -4,9 +4,7 @@
 // own date said something different: no UTC, so a run at 22:13Z read as the
 // next day, which is the bug ../lib/format.js was fixed for and this copy
 // never heard about. Only the browser-only helpers stay here.
-export { date as fmtDate, plural, esc, num } from "../lib/format.js";
-// One decimal, always, rounded down: 99.97% coverage is not 100%.
-export const pct = (n) => (Math.floor(n * 10) / 10).toFixed(1) + "%";
+export { date as fmtDate, plural, esc, num, percent } from "../lib/format.js";
 export const cssEsc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/"/g, '\\"'));
 // Model- and API-written messages end with punctuation about half the time,
 // and joining one to a sentence of ours produced "…not found Nothing was

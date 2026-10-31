@@ -16,6 +16,7 @@ The code every project shares, one copy each: the services that take a Figma sna
 | [parity](parity/README.md) | Measures rendered components against their Figma spec, in a headless Chrome. | a CLI each project's `bin/parity` calls |
 | [css-lint](css-lint/README.md) | Checks a project's stylesheets against the code standard (tokens over literals, component boundaries). | a gate in project-check |
 | [ui-check](ui-check/README.md) | Checks rendered pages against the design standard and axe-core's WCAG rules. | a CLI, and the frontend-build skill |
+| [validator](validator/README.md) | What a code target (web, iOS, Android) cannot draw as a component is designed, from its stored tree. | a library project-check, the docs site and the dashboard call, and the component-validator skill |
 | [project-check](project-check/README.md) | Every toolkit gate a project is held to, in one command, and the push hook that runs it. | each project's `bin/check` and pre-push hook |
 
 ## Keeping the toolkit itself in shape

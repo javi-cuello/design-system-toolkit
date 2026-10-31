@@ -33,9 +33,9 @@ export const tokens = tool('tokens.cjs');
 // the export's slug per segment, the build's house name over the path. Read
 // from the two scripts that do it, so the docs cannot name a property the
 // build does not write.
-const DTCG = require(join(TOOLKIT, 'skills/figma-token-export/scripts/dtcg.js'));
-const build = await import(pathToFileURL(join(TOOLKIT, 'skills/frontend-build/scripts/build-tokens.mjs')).href);
-const fromSnapshot = await import(pathToFileURL(join(TOOLKIT, 'skills/figma-token-export/scripts/from-snapshot.mjs')).href);
+const DTCG = require(join(TOOLKIT, 'tools/tokens/dtcg.js'));
+const build = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
+const fromSnapshot = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
 // What the code has and how a name meets it: the toolkit's one reading, which
 // the audit's Code parity stage uses too (tools/shared/code-inventory.mjs).
 export const inventory = await import(pathToFileURL(join(TOOLKIT, 'tools/shared/code-inventory.mjs')).href);

@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.31.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.31.1** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -231,13 +231,13 @@
 
     *Why:* a name the designer can search for in the variable picker is the only name both sides can talk about; a prefix or a renaming layer is a second vocabulary someone has to keep true. A stripped sign is a silent collision waiting for its sibling.
 
-    *Evidence:* one project's generator named `Position/-1` as `--effect-position-1`, one `Position/1` away from overwriting it; the other project's already spelled the sign out after exactly that near miss. **Mechanical** (the build refuses a collision). *Checked:* `skills/frontend-build/scripts/build-tokens.mjs` "in one block: rename one in Figma" — the token build (`tools/tokens/build.mjs` calls it), which refuses a collision.
+    *Evidence:* one project's generator named `Position/-1` as `--effect-position-1`, one `Position/1` away from overwriting it; the other project's already spelled the sign out after exactly that near miss. **Mechanical** (the build refuses a collision). *Checked:* `tools/tokens/build-tokens.mjs` "in one block: rename one in Figma" — the token build (`tools/tokens/build.mjs` calls it), which refuses a collision.
 
 53. **Themes and modes follow one pattern, and tiers stay references.** A Light/Dark collection writes Light on `:root`, and Dark under `[data-theme="dark"]` and under `prefers-color-scheme: dark` when no theme is chosen. A Mobile/Tablet/Desktop collection writes Mobile on `:root` and the others from the `sm`/`md` breakpoint. Any other mode is `[data-<collection>="<mode>"]`. A semantic token that aliases a primitive is written as `var(--that-primitive)` (Style Dictionary's `outputReferences`), so a mode re-points one tier.
 
     *Why:* a visitor who has chosen nothing gets their system's scheme, an explicit choice always beats the system, and no component style ever mentions a theme. Resolved values would make every mode restate every tier.
 
-    *Evidence:* the two projects reached the same behaviour by opposite routes (dark-first with a light override, light-first with a dark mixin); in every state a browser can be in, the two resolve identically, so one route was kept. **Mechanical** (the build writes it; the check proves the files are the build's). *Checked:* `tools/tokens/check.mjs` "say('code-standard rule 23'" (the files are the build's, and `skills/frontend-build/scripts/build-tokens.mjs` "prefers-color-scheme: " writes them).
+    *Evidence:* the two projects reached the same behaviour by opposite routes (dark-first with a light override, light-first with a dark mixin); in every state a browser can be in, the two resolve identically, so one route was kept. **Mechanical** (the build writes it; the check proves the files are the build's). *Checked:* `tools/tokens/check.mjs` "say('code-standard rule 23'" (the files are the build's, and `tools/tokens/build-tokens.mjs` "prefers-color-scheme: " writes them).
 
 54. **Units, type and breakpoints are written one way.** Lengths are rem, so they follow the reader's font size, except the ones that must not scale: radii, strokes, blur and shadow offsets stay px. A font family carries the system fallback stack. A text style is its fields (`--body-md-regular-font-size`, `-font-family`, `-font-weight`, `-line-height`, `-letter-spacing`, `-paragraph-spacing`, `-list-spacing`), every field written even at zero, and applied whole with `@include text-style(name)`, never as a `font` shorthand. Breakpoints are Sass variables (`$sm` … `$xl`, rem) with `@mixin from($bp)`, never custom properties.
 

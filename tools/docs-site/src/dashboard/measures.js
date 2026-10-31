@@ -1,6 +1,6 @@
 // The About view's account of the measures, the library line, the
 // queue's figures strip, the run history table and the plugin's status line.
-import { cssEsc, fmtDate, num, pct } from './format.js';
+import { cssEsc, fmtDate, num, percent } from './format.js';
 import { DASH, ctx } from './context.js';
 import { shownRows, narrowedView, state } from './queue.js';
 import { isOpen, platformLabel } from './labels.js';
@@ -158,7 +158,7 @@ export function renderRuns(runs) {
 
     const cov = document.createElement("td");
     cov.className = "num";
-    cov.textContent = r.coverage == null ? "\u2014" : pct(r.coverage);
+    cov.textContent = r.coverage == null ? "\u2014" : percent(r.coverage);
 
     // Full or changes. Runs from before `trigger` was written say so only when
     // their kind did ("full", "partial"); the rest are unknown, not guessed.

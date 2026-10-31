@@ -10,8 +10,6 @@ const dayKey = (iso) => new Date(iso).toISOString().slice(0, 10);
 const runs = Object.values(audit?.runs || {}).filter((r) => r && r.at && !Number.isNaN(new Date(r.at).getTime()));
 const snapshots = changes.filter((e) => e && e.at && !Number.isNaN(new Date(e.at).getTime()));
 
-const stamps = [...runs.map((r) => r.at), ...snapshots.map((e) => e.at)].sort();
-export const lastActivity = stamps.at(-1) || null;
 export const lastSnapshot = snapshots.map((e) => e.at).sort().at(-1) || null;
 export const lastRun = runs.map((r) => r.at).sort().at(-1) || null;
 

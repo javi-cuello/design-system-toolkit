@@ -120,7 +120,7 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 - A wrong token is fixed in the design file and regenerated, never patched in the output.
 
 **How**
-- The pipeline: the design file's snapshot becomes DTCG files in `dtcg/` (one folder per collection, one file per mode), and Style Dictionary writes the stylesheets through `tools/tokens/build.mjs`, which frontend-build's `scripts/build-tokens.mjs` implements. A repo's `bin/tokens` calls it and nothing else; `bin/tokens --check` regenerates beside and diffs.
+- The pipeline: the design file's snapshot becomes DTCG files in `dtcg/` (one folder per collection, one file per mode), and Style Dictionary writes the stylesheets through `tools/tokens/build.mjs`, which `tools/tokens/build-tokens.mjs` implements. A repo's `bin/tokens` calls it and nothing else; `bin/tokens --check` regenerates beside and diffs.
 - Three files come out: `_tokens.scss` (the custom properties), `_breakpoints.scss` (`$sm` … `$xl` and `@mixin from`) and `_text-styles.scss` (`@mixin text-style($name)`).
 - A typography token becomes the fields code-standard rule 54 lists, applied with `@include ts.text-style(body-md)`; reading them off the design's text styles is [figma-handoff: text styles to type tokens](figma-handoff.md#text-styles-to-type-tokens).
 - The build fails on an alias pointing at nothing, on two paths collapsing into one property name (code-standard rule 52) and on a responsive mode with no breakpoint to switch at.
