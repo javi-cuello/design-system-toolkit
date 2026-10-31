@@ -1,6 +1,7 @@
 // Check changes and Audit: the sweep, the scan through the Figma bridge, the
 // judgement pass, and filing what it found.
 import { plural, scrollMotion } from './format.js';
+import { fillPrompt } from './prompt.js';
 import { go } from './views.js';
 import { api, askClaude, bridge, claudeReady, forgetClaude } from './api.js';
 import { contextRules, ownerChipLabel as ownerLabel } from './owners.js';
@@ -440,14 +441,14 @@ async function judgeBatch(items, count, rules, judgeTemplate) {
   }
 }
 async function judgeOnce(items, count, rules, judgeTemplate) {
-  const fill = (t, k, v) => t.split("{{" + k + "}}").join(v);
-  let prompt = judgeTemplate;
-  prompt = fill(prompt, "CONVENTIONS", (rules.conventions || []).map((r) => "- " + r).join("\n"));
-  prompt = fill(prompt, "RULINGS", (rules.rulings || []).map((r) => "- " + r).join("\n"));
-  prompt = fill(prompt, "CANDIDATES", JSON.stringify(items.map((e) => ({
-    set: e.set, axes: e.axes,
-    candidates: e.candidates.map((c, i) => ({ i: i, sev: c.sev, rule: c.rule, text: c.text }))
-  })), null, 1));
+  const prompt = fillPrompt(judgeTemplate, {
+    CONVENTIONS: (rules.conventions || []).map((r) => "- " + r).join("\n"),
+    RULINGS: (rules.rulings || []).map((r) => "- " + r).join("\n"),
+    CANDIDATES: JSON.stringify(items.map((e) => ({
+      set: e.set, axes: e.axes,
+      candidates: e.candidates.map((c, i) => ({ i: i, sev: c.sev, rule: c.rule, text: c.text }))
+    })), null, 1),
+  });
   return await askClaude.json(prompt, { max_tokens: Math.min(16000, 1500 + 600 * count), spend: runSpend, use: "judge" });
 }
 // The other stages the page's Audit runs once the components stage is done:
@@ -1066,16 +1067,17 @@ async function otherStages(scan, rules, runId) {
       // points to — that one is said, so a closer match has to beat it.
       const asked = p.figmaOnly.map((name) => ({ name }))
         .concat(p.both.filter((b) => !b.sameName).map((b) => ({ name: b.figma, builtAs: b.code })));
-      const fill = (t, k, v) => t.split("{{" + k + "}}").join(v);
-      let prompt = sc.pairing;
-      prompt = fill(prompt, "RULINGS", (rules.rulings || []).map((r) => "- " + r).join("\n") || "- none");
-      prompt = fill(prompt, "FIGMA", JSON.stringify(asked, null, 1));
-      // A nested component says what it sits in (`ContextualPanel` in Table),
-      // which is often the word its Figma name carries and its own does not.
-      prompt = fill(prompt, "CODE", JSON.stringify(p.codeOnly.map((k) => {
-        const at = k.path.split("/").slice(0, -1).join("/");
-        return at ? { name: k.name, in: at } : { name: k.name };
-      }), null, 1));
+      // One pass (prompt.js): a Figma name holding "{{CODE}}" stays a name.
+      const prompt = fillPrompt(sc.pairing, {
+        RULINGS: (rules.rulings || []).map((r) => "- " + r).join("\n") || "- none",
+        FIGMA: JSON.stringify(asked, null, 1),
+        // A nested component says what it sits in (`ContextualPanel` in Table),
+        // which is often the word its Figma name carries and its own does not.
+        CODE: JSON.stringify(p.codeOnly.map((k) => {
+          const at = k.path.split("/").slice(0, -1).join("/");
+          return at ? { name: k.name, in: at } : { name: k.name };
+        }), null, 1),
+      });
       // The judge's settings: this is a judgement, and at the service's
       // default the model thought its whole budget away and answered nothing
       // (4,000 tokens out, no text, twice running).

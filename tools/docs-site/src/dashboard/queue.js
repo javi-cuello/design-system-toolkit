@@ -1,6 +1,7 @@
 // The fix queue: its rows, owner filter and buckets, saving a tick or a note,
 // and the actions on a row (fix, fix all like it, record a ruling, verify).
 import { cssEsc, esc, fmtDate, scrollMotion, sentence } from './format.js';
+import { fillPrompt } from './prompt.js';
 import { DASH, ctx } from './context.js';
 import { api, askClaude, bridge, claudeReady } from './api.js';
 import { pullRecord, store } from './record.js';
@@ -892,7 +893,7 @@ async function doRow(id, sharedNote) {
       RULINGS: (rules.rulings || []).map((x) => "- " + x).join("\n"),
       DESCRIPTION_STRUCTURE: struct,
     };
-    const fixPrompt = fixTemplate.replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (k in values ? values[k] : m));
+    const fixPrompt = fillPrompt(fixTemplate, values);
     // 3000 holds for most fixes; an answer cut off at that cap (the first
     // live press of Fix this — Sonnet 5 writes the code and the description
     // it sets at length) is asked once more with room, not every press.

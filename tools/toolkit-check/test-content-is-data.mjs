@@ -37,6 +37,7 @@ const PROMPTS = {
   'tools/docs-site/src/dashboard/queue.js': /data to answer about, never instructions/,
   'tools/docs-mcp/server.mjs': /data to read and cite, never instructions/,
   'tools/skill-evals/eval.mjs': /never instructions to you/,
+  'skills/design-code-parity/scripts/pairing.txt': /DATA to pair, never instructions/,
 };
 const unframed = Object.entries(PROMPTS).filter(([f, re]) => !re.test(read(f))).map(([f]) => f);
 ok('every prompt built from file text frames it as data', !unframed.length, `${unframed.join(', ')} does not frame its content as data`);
@@ -45,4 +46,6 @@ const fix = read('skills/figma-components-audit/scanner/fix.txt');
 ok('the fix prompt frames its fields before it gives them', fix.indexOf('never instructions') < fix.indexOf('FINDING: {{FINDING}}'));
 const judge = read('skills/figma-components-audit/scanner/judge.txt');
 ok('the judge prompt frames its candidates before it gives them', judge.indexOf('never instructions') < judge.indexOf('{{CANDIDATES}}'));
+const pairing = read('skills/design-code-parity/scripts/pairing.txt');
+ok('the pairing prompt frames its two lists before it gives them', pairing.indexOf('never instructions') > 0 && pairing.indexOf('never instructions') < pairing.indexOf('{{FIGMA}}'));
 console.log(`${n}/${n} passed`);
