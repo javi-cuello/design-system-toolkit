@@ -1,0 +1,122 @@
+{
+  "contract": 1,
+  "component": "Avatar",
+  "figma": {
+    "name": "Avatar",
+    "key": "880ef9af8925c093b518280c84ab97e17856f3ec",
+    "id": "1:80"
+  },
+  "props": {
+    "initial": {
+      "type": "string",
+      "default": "A",
+      "figma": "Initial",
+      "sets": [
+        "initial"
+      ]
+    },
+    "size": {
+      "type": "enum",
+      "values": [
+        "24",
+        "32",
+        "40"
+      ],
+      "default": "32",
+      "figmaValues": [
+        "24",
+        "32",
+        "40"
+      ],
+      "figma": "Size"
+    },
+    "showImage": {
+      "type": "boolean",
+      "default": true,
+      "figma": "Show image",
+      "shows": [
+        "image"
+      ]
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "center",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": 32,
+      "height": 32,
+      "radius": "Radius/full",
+      "background": "Color/Background/accent-subtle",
+      "overflow": "hidden"
+    },
+    "initial": {
+      "kind": "text",
+      "parent": "root",
+      "width": "hug",
+      "height": "hug",
+      "color": "Color/Text/accent",
+      "typography": "Label/md",
+      "autoResize": "width",
+      "content": "{initial}",
+      "order": 0
+    },
+    "image": {
+      "kind": "graphic",
+      "parent": "root",
+      "position": "absolute",
+      "absolute": {
+        "x": 0,
+        "y": 0,
+        "end": 0,
+        "bottom": 0
+      },
+      "constraints": {
+        "horizontal": "stretch",
+        "vertical": "stretch"
+      },
+      "background": "Color/Background/subtle",
+      "shape": "rectangle",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "size": "24"
+      },
+      "set": {
+        "root.width": 24,
+        "root.height": 24,
+        "initial.typography": "Label/sm"
+      }
+    },
+    {
+      "when": {
+        "size": "40"
+      },
+      "set": {
+        "root.width": 40,
+        "root.height": 40
+      }
+    },
+    {
+      "when": {
+        "showImage": false
+      },
+      "remove": [
+        "image"
+      ]
+    }
+  ]
+}

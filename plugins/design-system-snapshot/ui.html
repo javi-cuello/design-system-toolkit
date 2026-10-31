@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+<style>
+/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v2 end */
+
+/* plugin-specific styles below */
+/* One title, one line of what is taken, one button, one status line: the
+   window says what it will do before the press and what happened after it,
+   in sentences, at the body size (knowledge/ui/design/visual.md, *Quiet
+   chrome*; content.md, *Error messages*). */
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2)}
+.title{margin:0;font-weight:var(--fw-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.version{flex:none;color:var(--figma-color-text-tertiary)}
+.what{margin:0 0 var(--space-3)}
+[hidden]{display:none !important}
+.row{display:flex;align-items:center;justify-content:space-between;height:var(--control-h);margin-bottom:var(--space-2)}
+#run{width:100%}
+/* aria-disabled, not disabled: the button keeps focus while the snapshot runs
+   (knowledge/ui/patterns/actions.md, *Loading buttons*) */
+#run[aria-disabled="true"]{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+/* The ring is the theme's focus colour, for the keyboard only: the browser's
+   own drew an orange box round the button after every click. */
+#run:focus{outline:none}
+#run:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
+/* The status: what is happening or what happened, said once (role="status").
+   Working, it names the step, counts it and fills a bar, because the work is
+   measured (knowledge/ui/patterns/feedback.md, *Loading*); done, it names
+   where the snapshot went first and the counts under it, since the result
+   lands in a repo the designer cannot see (*Success confirmation*). */
+.status{margin:var(--space-3) 0 0}
+.status-head{display:flex;align-items:flex-start;gap:var(--space-2)}
+.status-icon{flex:none;width:16px;height:16px;margin-top:0;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.status[data-tone="done"] .status-icon{stroke:var(--figma-color-icon-success)}
+.status[data-tone="error"] .status-icon{stroke:var(--figma-color-icon-danger)}
+.status-title{flex:1;min-width:0}
+.status[data-tone="done"] .status-title{font-weight:var(--fw-semibold)}
+.status[data-tone="error"] .status-title{color:var(--figma-color-text-danger)}
+.status-count{flex:none;color:var(--figma-color-text-tertiary);font-variant-numeric:tabular-nums}
+.status-detail{margin:0;color:var(--figma-color-text-secondary)}
+.status[data-tone] .status-detail{padding-left:24px}
+progress{display:block;width:100%;height:4px;margin:var(--space-2) 0 0;border:0;border-radius:2px;overflow:hidden;
+  appearance:none;-webkit-appearance:none;background:var(--figma-color-bg-tertiary)}
+progress::-webkit-progress-bar{background:var(--figma-color-bg-tertiary)}
+progress::-webkit-progress-value{background:var(--figma-color-bg-brand);transition:width .2s}
+@media (prefers-reduced-motion: reduce){progress::-webkit-progress-value{transition:none}}
+.hint{margin:var(--space-2) 0 0}
+/* Hover is restated on both states: without it ui-base's button:hover turns
+   the OFF switch brand-blue, which reads as ON. Height and box-sizing are
+   explicit so ui-base's bare button rule cannot size it by accident. */
+.switch{width:30px;height:18px;flex:none;box-sizing:border-box;border:none;padding:0;border-radius:9px;
+  background:var(--figma-color-bg-disabled);position:relative;cursor:default;transition:background .15s}
+.switch:hover{background:var(--figma-color-bg-disabled)}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+  background:var(--figma-color-bg);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--figma-color-bg-brand)}
+.switch[aria-checked="true"]:hover{background:var(--figma-color-bg-brand-hover)}
+.switch[aria-checked="true"]::after{left:14px}
+@media (prefers-reduced-motion: reduce){.switch,.switch::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="head"><p class="title" id="file">Reading the file…</p><span class="version" id="version"></span></div>
+  <p class="what secondary" id="what"></p>
+  <div class="row" id="icons-row" hidden>
+    <span id="icons-label">Export icons, graphics and previews</span>
+    <button class="switch" id="icons" role="switch" aria-checked="true" aria-labelledby="icons-label"></button>
+  </div>
+  <button id="run" aria-disabled="true">Take snapshot</button>
+  <div class="status" id="status" role="status" hidden>
+    <div class="status-head">
+      <svg class="status-icon" id="icon-done" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M5.25 8.25l1.75 1.75 3.75-4"/></svg>
+      <svg class="status-icon" id="icon-error" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M8 4.75v3.75M8 11.25v.01"/></svg>
+      <span class="status-title" id="status-title"></span><span class="status-count" id="status-count"></span>
+    </div>
+    <progress id="bar" max="1" hidden></progress>
+    <p class="status-detail" id="status-detail" hidden></p>
+  </div>
+  <p class="hint secondary" id="hint" hidden>Nothing is listening on <span id="server"></span>, so the snapshot downloads as a file.</p>
+</div>
+<script>
+var run = document.getElementById('run'), box = document.getElementById('status'), icons = document.getElementById('icons');
+function $(id) { return document.getElementById(id); }
+var hint = document.getElementById('hint');
+icons.onclick = function () { icons.setAttribute('aria-checked', icons.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
+// the window follows its content: short at rest, taller when a message is long
+function fit() { var h = Math.ceil(document.querySelector('.container').getBoundingClientRect().height); parent.postMessage({ pluginMessage: { type: 'resize', height: h } }, '*'); }
+// a project's name leads the router's answers ("<project>: …") and keeps its own case
+function sentence(text) { text = String(text).trim(); if (!/^[\w-]+: /.test(text)) text = text.charAt(0).toUpperCase() + text.slice(1); return /[.…]$/.test(text) ? text : text + '.'; }
+/* One status, four shapes: working (title, count, bar), done (check, where it
+   went, the counts and the time), failed (the cause and the fix), or empty. */
+function show(o) {
+  box.hidden = false;
+  if (o.tone) box.dataset.tone = o.tone; else delete box.dataset.tone;
+  // an svg has no `hidden` property, only the attribute
+  $('icon-done').toggleAttribute('hidden', o.tone !== 'done'); $('icon-error').toggleAttribute('hidden', o.tone !== 'error');
+  $('status-title').textContent = o.title;
+  $('status-count').textContent = o.count || '';
+  $('bar').hidden = !o.bar;
+  if (o.bar) { if (o.bar.total) { $('bar').max = o.bar.total; $('bar').value = o.bar.done; } else $('bar').removeAttribute('value'); }
+  $('status-detail').hidden = !o.detail; $('status-detail').textContent = o.detail || '';
+  fit();
+}
+function at() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function busy(on) { run.setAttribute('aria-disabled', on ? 'true' : 'false'); }
+run.onclick = function () {
+  if (run.getAttribute('aria-disabled') === 'true') return;
+  busy(true); show({ title: 'Starting…', bar: {} });
+  parent.postMessage({ pluginMessage: { type: 'snapshot', icons: icons.getAttribute('aria-checked') === 'true' } }, '*');
+};
+// With a receiver listening the snapshot is posted to it; without one it is
+// saved as a file, which is how anyone without the toolkit uses the plugin.
+function listening(up) {
+  busy(false);
+  run.textContent = up ? 'Take snapshot' : 'Download snapshot';
+  hint.hidden = up;
+  fit();
+}
+onmessage = function (e) {
+  var msg = e.data.pluginMessage;
+  if (!msg) return;
+  if (msg.type === 'ready') {
+    document.getElementById('file').textContent = msg.file;
+    document.getElementById('version').textContent = 'v' + msg.version;
+    document.getElementById('what').textContent = msg.mode === 'library'
+      ? 'Tokens, components and icons from this library.'
+      : 'Every frame marked ready for dev.';
+    document.getElementById('icons-row').hidden = msg.mode !== 'library';
+    document.getElementById('server').textContent = msg.server;
+    listening(msg.up);
+  }
+  if (msg.type === 'progress') show({
+    title: sentence(msg.text).replace(/\.$/, '…'),
+    count: msg.total ? Math.min(msg.done + 1, msg.total) + ' of ' + msg.total : '',
+    bar: msg.total ? { done: msg.done, total: msg.total } : {},
+  });
+  if (msg.type === 'file') {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([msg.text], { type: 'application/json' }));
+    a.download = msg.name; document.body.appendChild(a); a.click(); a.remove();
+    show({ tone: 'done', title: 'Saved ' + msg.name, detail: sentence(msg.report).replace(/\.$/, '') + ' · ' + at() }); busy(false);
+  }
+  // the router answers "<project>: written"; said as where it went
+  if (msg.type === 'done') {
+    var to = /^(.+): written$/.exec(msg.answer || '');
+    show({ tone: 'done', title: to ? 'Written to ' + to[1] : sentence(msg.answer || 'Written').replace(/\.$/, ''), detail: sentence(msg.report).replace(/\.$/, '') + ' · ' + at() });
+    busy(false);
+  }
+  if (msg.type === 'failed') {
+    if (msg.unreachable) listening(false); else busy(false);
+    show({ tone: 'error', title: sentence(msg.text) });
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "{{name}}",
+  "id": "{{slug}}",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}

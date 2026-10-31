@@ -1,0 +1,11 @@
+---
+// A change's grade for one audience (snapshot-standard rule 20) as a table
+// cell: Breaking, its level, or "Not graded" for a change recorded before grades.
+// Breaking is the one a reader acts on, so it is the severity badge in red;
+// Minor and Patch are neutral tags.
+import { cap } from '../lib/changes.js';
+// label: the column's name, shown before the badge where a phone stacks the row (site.scss .changes)
+interface Props { level?: string | null; label?: string }
+const { level, label } = Astro.props;
+---
+<td data-label={label}>{level === 'major' ? <span class="sev error">Breaking</span> : level ? <span class="pill">{cap(level)}</span> : <span class="muted">Not graded</span>}</td>

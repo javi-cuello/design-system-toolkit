@@ -1,0 +1,274 @@
+---
+// The overview's Activity card body: one segmented control (design-standard
+// design-standard rule 4) over three views of what moved, the choice kept in the address
+// (`?activity=changes`). Each view is an inline SVG drawn here at build time,
+// one value axis, colours from the --viz tokens (light and dark), with a
+// legend, a detail per mark on hover and focus, a caption naming its source,
+// and the same figures as a table for screen readers (visually hidden)
+// (knowledge/ui/patterns/data-visualisation.md *Colour by job*, *Long
+// descriptions and data tables*). The data is lib/activity.js.
+import { calendar, changeDays, ungraded, findingRuns, FINDINGS_DAYS, lastSnapshot, lastRun } from '../lib/activity.js';
+import { date, day, month, num, plural } from '../lib/format.js';
+import Time from './Time.astro';
+
+const VIEWS = [['activity', 'Activity'], ['changes', 'Changes'], ['findings', 'Findings']];
+
+// ---- shared ----
+// A value axis on round numbers: at most four steps of 1, 2 or 5 a power
+// of ten, the top the first step at or above the largest value.
+const STEPS = new Map();
+const niceMax = (v) => {
+  const p = 10 ** Math.floor(Math.log10(Math.max(1, v)));
+  const step = [1, 2, 5, 10].map((m) => m * p).find((s) => Math.ceil(v / s) <= 4) || 10 * p;
+  const max = Math.max(step, Math.ceil(v / step) * step);
+  STEPS.set(max, step);
+  return max;
+};
+const ticks = (max) => { const step = STEPS.get(max) || max; return Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step); };
+// A bar whose data end is rounded (4px) and whose baseline end is square.
+const bar = (x, y, w, h, up = true) => {
+  if (h <= 0) return '';
+  const r = Math.min(4, w / 2, h);
+  return up
+    ? `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
+    : `M${x},${y}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w - r}Q${x + w},${y + h} ${x + w},${y + h - r}V${y}Z`;
+};
+const longDay = (k) => date(`${k}T00:00:00Z`);
+const shortDay = (k) => day(`${k}T00:00:00Z`);
+const parts = (pairs) => pairs.filter(([n]) => n).map(([n, w]) => plural(n, w)).join(', ');
+
+// ---- 1. Activity: the calendar ----
+// Sized so a year of weeks fills the card (53 × 16 + 30 ≈ the plot width), and the
+// three views come out close in height.
+const CELL = 13, STEP = 16, LEFT = 30, TOP = 18;
+const weeks = Math.ceil(calendar.days.length / 7);
+const calW = LEFT + weeks * STEP, calH = TOP + 7 * STEP;
+const cells = calendar.days.map((d, i) => {
+  const w = Math.floor(i / 7), wd = i % 7;
+  const what = parts([[d.snapshots, 'snapshot'], [d.runs, 'audit run'], [d.filed, 'finding filed'], [d.closed, 'finding closed']]);
+  return { ...d, x: LEFT + w * STEP, y: TOP + wd * STEP, tip: `${longDay(d.day)}\n${what || 'Nothing recorded'}` };
+});
+const months = cells.filter((c, i) => c.day.endsWith('-01') || (i === 0)).map((c) => ({ x: c.x, label: month(`${c.day}T00:00:00Z`) }))
+  .filter((m, i, all) => i === 0 ? all.length < 2 || all[1].x - m.x >= 3 * STEP : true);
+const busiest = [...calendar.activeDays].sort((a, b) => b.total - a.total)[0];
+const activitySummary = calendar.activeDays.length
+  ? `${plural(calendar.activeDays.length, 'day')} with activity in the past year; the busiest was ${longDay(busiest.day)}.`
+  : 'Nothing recorded in the past year.';
+
+// ---- 2. Changes: stacked bars per snapshot day ----
+const SERIES = [['major', 'Breaking', 'l4'], ['minor', 'Minor', 'l3'], ['patch', 'Patch', 'l2'], ...(ungraded ? [['', 'Not graded', 'l0']] : [])];
+// Drawn as two series, not four shades of one hue: Breaking, the one a reader
+// acts on, in the accent on the baseline, and every other change in grey above
+// it (data-visualisation.md *Stacked bars, and when not to stack*). The tooltip
+// and the table keep the full breakdown.
+const DRAWN = [['major', 'Breaking', 'accent'], ['rest', 'Other changes', 'muted']];
+for (const d of changeDays) d.rest = SERIES.filter(([k]) => k !== 'major').reduce((a, [k]) => a + d[k], 0);
+const AX = 44, PH = 140, PT = 24, XB = 28;
+// The plot fills the card's width whatever the number of days (760 is the card's
+// plot width at desktop); past 27 days a slot stays 28 wide and the plot scrolls.
+const slotOf = (n) => Math.max(28, Math.floor(760 / Math.max(1, n)));
+const cSlot = slotOf(changeDays.length);
+const cMax = niceMax(Math.max(0, ...changeDays.map((d) => SERIES.reduce((a, [k]) => a + d[k], 0))));
+const cW = AX + changeDays.length * cSlot + 8, cH = PT + PH + XB;
+const cBarW = Math.min(40, Math.floor(cSlot * 0.5));
+const cEvery = Math.ceil(52 / cSlot);
+const cBars = changeDays.map((d, i) => {
+  const x = AX + i * cSlot + (cSlot - cBarW) / 2;
+  let base = PT + PH;
+  const stack = DRAWN.filter(([k]) => d[k]).map(([k, , cls]) => ({ k, cls, h: (d[k] / cMax) * PH }));
+  const segs = stack.map((s, j) => {
+    const h = Math.max(1, s.h - (j < stack.length - 1 ? 2 : 0));
+    const y = base - s.h + (j < stack.length - 1 ? 2 : 0);
+    const seg = { cls: s.cls, path: j === stack.length - 1 ? bar(x, base - s.h, cBarW, s.h) : `M${x},${y}h${cBarW}v${h}h${-cBarW}Z` };
+    base -= s.h;
+    return seg;
+  });
+  const all = SERIES.reduce((a, [k]) => a + d[k], 0);
+  return { d, x, segs, top: base, label: i % cEvery === 0 ? shortDay(d.day) : '', tip: `${longDay(d.day)}\n${plural(all, 'change')}: ${SERIES.filter(([k]) => d[k]).map(([k, l]) => `${num(d[k])} ${l.toLowerCase()}`).join(', ')}` };
+});
+const changeTotal = changeDays.reduce((a, d) => a + SERIES.reduce((b, [k]) => b + d[k], 0), 0);
+const breakingTotal = changeDays.reduce((a, d) => a + d.major, 0);
+const changesSummary = changeDays.length ? `${plural(changeTotal, 'change')} over ${plural(changeDays.length, 'snapshot day')}, ${num(breakingTotal)} of them breaking for Figma files.` : 'No snapshot has recorded a change yet.';
+
+// ---- 3. Findings: open after each whole audit; what each filed and closed is its detail ----
+// The month fits the card at desktop: a slot is the plot width shared by the days shown.
+// Below 20 a slot is too narrow to point at; past 38 runs the plot scrolls, as
+// the other views do, so its text keeps its size on a phone.
+const fSlot = Math.max(20, Math.floor(760 / Math.max(1, findingRuns.length)));
+const fMax = niceMax(Math.max(0, ...findingRuns.map((r) => r.open)));
+const FH = 150;
+const fW = AX + findingRuns.length * fSlot + 8;
+const fx = (i) => AX + i * fSlot + fSlot / 2;
+const fy = (v) => PT + FH - (v / fMax) * FH;
+const fLine = findingRuns.map((r, i) => `${i ? 'L' : 'M'}${fx(i)},${fy(r.open)}`).join('');
+const fEvery = Math.ceil(52 / fSlot);
+// A date under the first run of each day only: five runs on one day read
+// as one date, not five.
+let lastLabel = -Infinity;
+const fRuns = findingRuns.map((r, i) => ({ ...r, i, label: (i === 0 || r.at.slice(0, 10) !== findingRuns[i - 1].at.slice(0, 10)) && i - lastLabel >= fEvery ? ((lastLabel = i), shortDay(r.at.slice(0, 10))) : '', tip: `${date(r.at)}\n${plural(r.open, 'finding')} open; ${num(r.filed)} filed, ${num(r.closed)} closed` }));
+const first = findingRuns[0], last = findingRuns.at(-1);
+const findingsSummary = findingRuns.length ? `Open findings went from ${num(first.open)} to ${num(last.open)} over the last ${FINDINGS_DAYS} days.` : 'No whole audit has run yet.';
+
+---
+<div class="activity" data-activity>
+  <div class="segmented" role="group" aria-label="Show" data-activity-control>
+    {VIEWS.map(([v, l], i) => <button type="button" class="seg" data-activity-view={v} aria-pressed={String(i === 0)}>{l}</button>)}
+  </div>
+  <div data-views="activity" data-views-stack>
+    <section data-view="activity" class="chart" aria-label="Activity">
+      <p class="chart__summary">{activitySummary}</p>
+      <div class="chart__plot">
+      <svg class="chart__axis" width={LEFT} height={calH} viewBox={`0 0 ${LEFT} ${calH}`} aria-hidden="true">
+        {[['Mon', 0], ['Wed', 2], ['Fri', 4]].map(([l, r]) => <text class="chart__tick" x={0} y={TOP + r * STEP + 9}>{l}</text>)}
+      </svg>
+      <div class="chart__scroll" data-chart-scroll="end" role="region" tabindex="0" aria-label="Activity calendar, past year, scrolls sideways">
+        <svg class="chart__svg" width={calW - LEFT} height={calH} viewBox={`${LEFT} 0 ${calW - LEFT} ${calH}`} role="group" aria-label={activitySummary}>
+          {months.map((m) => <text class="chart__tick" x={m.x} y={11}>{m.label}</text>)}
+          <g data-marks="calendar">
+            {cells.map((c, i) => <rect class={`chart__cell chart__mark--l${c.level}`} x={c.x} y={c.y} width={CELL} height={CELL} rx="2" data-tip={c.tip} role="img" aria-label={c.tip.replace('\n', ': ')} tabindex={i === cells.length - 1 ? '0' : '-1'} />)}
+          </g>
+        </svg>
+      </div>
+      </div>
+      <div class="chart__foot">
+        <p class="chart__source">Snapshots, audit runs and findings filed or closed per day, from {lastSnapshot && <>the change log (latest snapshot <Time at={lastSnapshot} />)</>}{lastSnapshot && lastRun && ' and '}{lastRun && <>the audit record (latest run <Time at={lastRun} />)</>}.</p>
+        <ul class="chart__legend chart__legend--scale" aria-label="Scale">
+          <li>Less</li>{[0, 1, 2, 3, 4].map((l) => <li><span class={`chart__key chart__mark--l${l}`} aria-hidden="true"></span><span class="visually-hidden">{['Nothing', 'Some', 'More', 'Much', 'Most'][l]}</span></li>)}<li>More</li>
+        </ul>
+      </div>
+      <div class="visually-hidden">
+          <table class="table">
+            <caption class="visually-hidden">Each day with activity in the past year</caption>
+            <thead><tr><th scope="col">Day</th><th scope="col" class="num">Snapshots</th><th scope="col" class="num">Audit runs</th><th scope="col" class="num">Findings filed</th><th scope="col" class="num">Findings closed</th></tr></thead>
+            <tbody>{[...calendar.activeDays].reverse().map((d) => <tr><td><Time at={`${d.day}T00:00:00Z`} /></td>{[d.snapshots, d.runs, d.filed, d.closed].map((n) => <td class="num">{num(n || 0)}</td>)}</tr>)}</tbody>
+          </table>
+      </div>
+    </section>
+
+    <section data-view="changes" class="chart" aria-label="Changes">
+      <p class="chart__summary">{changesSummary}</p>
+      <ul class="chart__legend" aria-label="Legend">
+        {DRAWN.map(([, l, cls]) => <li><span class={`chart__key chart__mark--${cls}`} aria-hidden="true"></span>{l}</li>)}
+      </ul>
+      <div class="chart__plot">
+      <svg class="chart__axis" width={AX} height={cH} viewBox={`0 0 ${AX} ${cH}`} aria-hidden="true">
+        {ticks(cMax).map((t) => <text class="chart__tick chart__tick--y" x={AX - 8} y={PT + PH - (t / cMax) * PH + 4}>{num(t)}</text>)}
+      </svg>
+      <div class="chart__scroll" data-chart-scroll="end" role="region" tabindex="0" aria-label="Changes per snapshot day, scrolls sideways">
+        <svg class="chart__svg" width={cW - AX} height={cH} viewBox={`${AX} 0 ${cW - AX} ${cH}`} role="group" aria-label={changesSummary}>
+          {ticks(cMax).map((t) => <line class="chart__grid" x1={AX} x2={cW} y1={PT + PH - (t / cMax) * PH} y2={PT + PH - (t / cMax) * PH} />)}
+          <g data-marks="series">
+            {cBars.map((b, i) => (
+              <g class="chart__bar" data-tip={b.tip} role="img" aria-label={b.tip.replace('\n', ': ')} tabindex={i === cBars.length - 1 ? '0' : '-1'}>
+                <rect class="chart__hit" x={AX + i * cSlot} y={PT} width={cSlot} height={PH} />
+                {b.segs.map((s) => <path class={`chart__mark--${s.cls}`} d={s.path} />)}
+                <circle class="chart__anchor" data-anchor cx={AX + i * cSlot + cSlot / 2} cy={b.top} r="0" />
+              </g>
+            ))}
+          </g>
+          {cBars.map((b, i) => b.label && <text class="chart__tick chart__tick--x" x={AX + i * cSlot + cSlot / 2} y={PT + PH + 18}>{b.label}</text>)}
+        </svg>
+      </div>
+      </div>
+      <p class="chart__source">Changes the snapshot graded for Figma files, per day, from the change log{lastSnapshot && <> (latest snapshot <Time at={lastSnapshot} />)</>}.</p>
+      <div class="visually-hidden">
+          <table class="table">
+            <caption class="visually-hidden">Changes per snapshot day, by grade for Figma files</caption>
+            <thead><tr><th scope="col">Day</th>{SERIES.map(([, l]) => <th scope="col" class="num">{l}</th>)}<th scope="col" class="num">All</th></tr></thead>
+            <tbody>{[...changeDays].reverse().map((d) => <tr><td><Time at={`${d.day}T00:00:00Z`} /></td>{SERIES.map(([k]) => <td class="num">{num(d[k] || 0)}</td>)}<td class="num">{num(SERIES.reduce((a, [k]) => a + d[k], 0))}</td></tr>)}</tbody>
+          </table>
+      </div>
+    </section>
+
+    <section data-view="findings" class="chart" aria-label="Findings">
+      <p class="chart__summary">{findingsSummary}</p>
+      {findingRuns.length > 0 && <>
+      <div class="chart__plot">
+      <svg class="chart__axis" width={AX} height={PT + FH + XB} viewBox={`0 0 ${AX} ${PT + FH + XB}`} aria-hidden="true">
+        {ticks(fMax).map((t) => <text class="chart__tick chart__tick--y" x={AX - 8} y={fy(t) + 4}>{num(t)}</text>)}
+      </svg>
+      <div class="chart__scroll" data-chart-scroll="end" role="region" tabindex="0" aria-label="Open findings per audit, scrolls sideways">
+        <svg class="chart__svg" width={fW - AX} height={PT + FH + XB} viewBox={`${AX} 0 ${fW - AX} ${PT + FH + XB}`} role="group" aria-label={findingsSummary}>
+          {ticks(fMax).map((t) => <line class="chart__grid" x1={AX} x2={fW} y1={fy(t)} y2={fy(t)} />)}
+          <path class="chart__line" d={fLine} />
+          {fRuns.map((r) => r.label && <text class="chart__tick chart__tick--x" x={fx(r.i)} y={PT + FH + 18}>{r.label}</text>)}
+          <g data-marks="series">
+            {fRuns.map((r) => (
+              <g class="chart__bar" data-tip={r.tip} role="img" aria-label={r.tip.replace('\n', ': ')} tabindex={r.i === fRuns.length - 1 ? '0' : '-1'}>
+                <rect class="chart__hit" x={AX + r.i * fSlot} y={PT} width={fSlot} height={FH} />
+                <line class="chart__guide" x1={fx(r.i)} x2={fx(r.i)} y1={PT} y2={PT + FH} />
+                <circle class="chart__dot" data-anchor cx={fx(r.i)} cy={fy(r.open)} r="4" />
+              </g>
+            ))}
+          </g>
+        </svg>
+      </div>
+      </div>
+      <p class="chart__source">Open findings across the project's libraries at the end of each day with a whole audit, over the last 30 days (hover or focus a point for what that day filed and closed), from the audit record{lastRun && <> (latest run <Time at={lastRun} />)</>}.</p>
+      <div class="visually-hidden">
+          <table class="table">
+            <caption class="visually-hidden">Open findings after each whole audit, with what it filed and closed</caption>
+            <thead><tr><th scope="col">Audit</th><th scope="col" class="num">Open</th><th scope="col" class="num">Filed</th><th scope="col" class="num">Closed</th></tr></thead>
+            <tbody>{[...fRuns].reverse().map((r) => <tr><td><Time at={r.at} /></td><td class="num">{num(r.open)}</td><td class="num">{num(r.filed || 0)}</td><td class="num">{num(r.closed || 0)}</td></tr>)}</tbody>
+          </table>
+      </div>
+      </>}
+    </section>
+  </div>
+  <div class="chart__tip" data-chart-tip hidden></div>
+</div>
+
+<script>
+  // The view in the address; a detail per mark on hover and focus; arrow keys
+  // between marks (one tab stop per chart); each scroller opens at its newest.
+  for (const card of document.querySelectorAll('[data-activity]')) {
+    const views = card.querySelector('[data-views]');
+    const buttons = [...card.querySelectorAll('[data-activity-view]')];
+    const tip = card.querySelector('[data-chart-tip]');
+    const show = (v, write) => {
+      if (!buttons.some((b) => b.dataset.activityView === v)) v = buttons[0].dataset.activityView;
+      views.dataset.viewShown = v;
+      for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.activityView === v));
+      for (const s of card.querySelectorAll('[data-chart-scroll="end"]')) s.scrollLeft = s.scrollWidth;
+      if (write) {
+        const u = new URL(location.href);
+        v === buttons[0].dataset.activityView ? u.searchParams.delete('activity') : u.searchParams.set('activity', v);
+        history.replaceState(history.state, '', u);
+      }
+    };
+    for (const b of buttons) b.addEventListener('click', () => show(b.dataset.activityView, true));
+    show(new URL(location.href).searchParams.get('activity'), false);
+
+    const place = (el) => {
+      tip.textContent = el.dataset.tip;
+      tip.hidden = false;
+      // Beside the point it describes, never over the chart's title: to its
+      // right, or its left when there is no room, centred on it.
+      const box = card.getBoundingClientRect(), r = (el.querySelector('[data-anchor]') || el).getBoundingClientRect();
+      const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2, gap = 12;
+      const right = cx + gap + tip.offsetWidth <= box.width;
+      tip.style.insetInlineStart = `${right ? cx + gap : Math.max(0, cx - gap - tip.offsetWidth)}px`;
+      tip.style.insetBlockStart = `${Math.max(0, cy - tip.offsetHeight / 2)}px`;
+    };
+    const hide = () => { tip.hidden = true; };
+    for (const group of card.querySelectorAll('[data-marks]')) {
+      const marks = [...group.querySelectorAll('[data-tip]')];
+      const rows = group.dataset.marks === 'calendar' ? 7 : 0;
+      for (const m of marks) {
+        m.addEventListener('pointerenter', () => place(m));
+        m.addEventListener('pointerleave', hide);
+        m.addEventListener('focus', () => place(m));
+        m.addEventListener('blur', hide);
+        m.addEventListener('keydown', (e) => {
+          const i = marks.indexOf(m);
+          const step = { ArrowRight: rows || 1, ArrowLeft: -(rows || 1), ArrowDown: rows ? 1 : 0, ArrowUp: rows ? -1 : 0, Home: -i, End: marks.length - 1 - i }[e.key];
+          if (!step) { if (e.key === 'Escape') hide(); return; }
+          const next = marks[i + step];
+          if (!next) return;
+          e.preventDefault();
+          m.setAttribute('tabindex', '-1'); next.setAttribute('tabindex', '0'); next.focus();
+        });
+      }
+    }
+  }
+</script>

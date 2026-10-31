@@ -1,0 +1,506 @@
+[
+ {
+  "name": "Search input",
+  "props": {
+   "Disabled": [
+    "False",
+    "True"
+   ],
+   "State": [
+    "Rest",
+    "Hover"
+   ]
+  },
+  "variants": [
+   {
+    "name": "Disabled=False, State=Rest",
+    "type": "COMPONENT",
+    "w": 320,
+    "h": 44,
+    "sizing": "FIXED/HUG",
+    "children": [
+     {
+      "name": "Input",
+      "type": "FRAME",
+      "w": 320,
+      "h": 44,
+      "layout": "HORIZONTAL",
+      "sizing": "FILL/HUG",
+      "pad": [
+       12,
+       16,
+       12,
+       16
+      ],
+      "gap": 8,
+      "fills": [
+       "VAR"
+      ],
+      "strokes": [
+       "VAR"
+      ],
+      "strokeAlign": "INSIDE",
+      "children": [
+       {
+        "name": "Icon",
+        "type": "INSTANCE",
+        "instanceOf": "Icon / search",
+        "w": 20,
+        "h": 20,
+        "fills": [
+         "VAR"
+        ]
+       },
+       {
+        "name": "Placeholder",
+        "type": "TEXT",
+        "w": 200,
+        "h": 20,
+        "sizing": "FILL/HUG",
+        "text": "Search",
+        "textStyle": "Body/md",
+        "lineHeight": "auto",
+        "letterSpacing": "PERCENT",
+        "letterSpacingValue": 0,
+        "textAutoResize": "HEIGHT",
+        "truncation": "DISABLED"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Card",
+  "props": {
+   "Checked": "BOOLEAN",
+   "State": [
+    "Rest",
+    "Hover",
+    "Loading"
+   ]
+  },
+  "variants": [
+   {
+    "name": "State=Rest",
+    "type": "COMPONENT",
+    "w": 300,
+    "h": 160,
+    "sizing": "FIXED/HUG",
+    "radius": 12,
+    "smoothing": 0.6,
+    "effect": "literal",
+    "effects": [
+     "DROP_SHADOW:spread",
+     "INNER_SHADOW"
+    ],
+    "children": [
+     {
+      "name": "Wrapper",
+      "type": "FRAME",
+      "w": 300,
+      "h": 120,
+      "layout": "VERTICAL",
+      "sizing": "FILL/HUG",
+      "pad": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "children": [
+       {
+        "name": "Content",
+        "type": "FRAME",
+        "w": 300,
+        "h": 120,
+        "layout": "VERTICAL",
+        "sizing": "FILL/HUG",
+        "pad": [
+         20,
+         20,
+         20,
+         20
+        ],
+        "fills": [
+         "VAR"
+        ],
+        "children": [
+         {
+          "name": "Title",
+          "type": "TEXT",
+          "w": 260,
+          "h": 24,
+          "sizing": "FILL/HUG",
+          "text": "Title",
+          "textStyle": "literal",
+          "lineHeight": "PIXELS",
+          "letterSpacing": "PIXELS",
+          "letterSpacingValue": -0.5,
+          "textAutoResize": "HEIGHT",
+          "truncation": "ENDING",
+          "maxLines": 1
+         },
+         {
+          "name": "Content slot",
+          "type": "FRAME",
+          "w": 260,
+          "h": 130,
+          "sizing": "FILL/FIXED",
+          "fills": [
+           "SOLID"
+          ],
+          "children": []
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "name": "Badge",
+      "type": "FRAME",
+      "w": 24,
+      "h": 24,
+      "absolute": true,
+      "fills": [
+       "VAR"
+      ],
+      "children": []
+     },
+     {
+      "name": "Body",
+      "type": "FRAME",
+      "w": 300,
+      "h": 40,
+      "layout": "VERTICAL",
+      "sizing": "FILL/HUG",
+      "minmax": [
+       0,
+       640,
+       0,
+       0
+      ],
+      "children": [
+       {
+        "name": "Avatar",
+        "type": "INSTANCE",
+        "instanceOf": "Avatar",
+        "w": 48,
+        "h": 48,
+        "sizing": "FIXED/FIXED"
+       }
+      ]
+     },
+     {
+      "name": "Cover",
+      "type": "RECTANGLE",
+      "w": 300,
+      "h": 80,
+      "x": 0,
+      "y": 0,
+      "fills": [
+       "IMAGE:CROP"
+      ],
+      "mask": true
+     },
+     {
+      "name": "Divider",
+      "type": "LINE",
+      "w": 300,
+      "h": 0,
+      "strokes": [
+       "VAR"
+      ],
+      "strokeAlign": "CENTER"
+     },
+     {
+      "name": "Glow",
+      "type": "RECTANGLE",
+      "w": 300,
+      "h": 40,
+      "fills": [
+       "GRADIENT_DIAMOND"
+      ],
+      "blendMode": "PLUS_LIGHTER",
+      "effects": [
+       "BACKGROUND_BLUR_PROGRESSIVE"
+      ],
+      "effect": "style"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Select list",
+  "props": {},
+  "variants": [
+   {
+    "name": "Select list",
+    "type": "COMPONENT",
+    "w": 320,
+    "h": 200,
+    "clips": true,
+    "layout": "VERTICAL",
+    "sizing": "FIXED/HUG",
+    "gap": 12,
+    "children": [
+     {
+      "name": "Legend",
+      "type": "TEXT",
+      "w": 300,
+      "h": 20,
+      "text": "Sort by",
+      "textStyle": "Label/md",
+      "lineHeight": "PERCENT",
+      "letterSpacing": "PERCENT",
+      "letterSpacingValue": 0,
+      "textAutoResize": "HEIGHT",
+      "truncation": "DISABLED"
+     },
+     {
+      "name": "Item",
+      "type": "INSTANCE",
+      "instanceOf": "Select list - item",
+      "w": 320,
+      "h": 40,
+      "children": [
+       {
+        "name": "Focus ring",
+        "type": "RECTANGLE",
+        "w": 324,
+        "h": 44,
+        "strokes": [
+         "VAR"
+        ],
+        "strokeAlign": "OUTSIDE"
+       }
+      ]
+     },
+     {
+      "name": "Item",
+      "type": "INSTANCE",
+      "instanceOf": "Select list - item",
+      "w": 320,
+      "h": 40
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Feed",
+  "props": {},
+  "variants": [
+   {
+    "name": "Feed",
+    "type": "COMPONENT",
+    "w": 680,
+    "h": 900,
+    "layout": "VERTICAL",
+    "sizing": "FIXED/HUG",
+    "children": [
+     {
+      "name": "Row",
+      "type": "INSTANCE",
+      "instanceOf": "List item"
+     },
+     {
+      "name": "Row",
+      "type": "INSTANCE",
+      "instanceOf": "List item"
+     },
+     {
+      "name": "Row",
+      "type": "INSTANCE",
+      "instanceOf": "List item"
+     },
+     {
+      "name": "Row",
+      "type": "INSTANCE",
+      "instanceOf": "List item"
+     },
+     {
+      "name": "Row",
+      "type": "INSTANCE",
+      "instanceOf": "List item"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Toolbar",
+  "props": {
+   "Pressed": "BOOLEAN",
+   "State": [
+    "Rest",
+    "Hover",
+    "Press"
+   ]
+  },
+  "variants": [
+   {
+    "name": "Pressed=False, State=Rest",
+    "type": "COMPONENT",
+    "w": 320,
+    "h": 32,
+    "layout": "HORIZONTAL",
+    "sizing": "FIXED/FIXED",
+    "gap": 8,
+    "children": [
+     {
+      "name": "Left label",
+      "type": "TEXT",
+      "w": 150,
+      "h": 20,
+      "sizing": "FILL/HUG",
+      "text": "Left",
+      "textStyle": "Label/md",
+      "lineHeight": "PERCENT",
+      "letterSpacing": "PERCENT",
+      "letterSpacingValue": 0,
+      "textAutoResize": "HEIGHT",
+      "truncation": "ENDING",
+      "maxLines": 1
+     },
+     {
+      "name": "Right label",
+      "type": "TEXT",
+      "w": 150,
+      "h": 20,
+      "sizing": "FILL/HUG",
+      "text": "Right",
+      "textStyle": "Label/md",
+      "lineHeight": "PERCENT",
+      "letterSpacing": "PERCENT",
+      "letterSpacingValue": 0,
+      "textAutoResize": "HEIGHT",
+      "truncation": "ENDING",
+      "maxLines": 1
+     },
+     {
+      "name": "Brand icon",
+      "type": "INSTANCE",
+      "instanceOf": "Icon / brand",
+      "w": 18,
+      "h": 18,
+      "children": [
+       {
+        "name": "a",
+        "type": "VECTOR",
+        "fills": [
+         "VAR"
+        ]
+       },
+       {
+        "name": "b",
+        "type": "VECTOR",
+        "fills": [
+         "SOLID"
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Clean button",
+  "props": {
+   "Size": [
+    "md"
+   ],
+   "State": [
+    "Rest",
+    "Hover",
+    "Focus",
+    "Press"
+   ],
+   "Icon": "BOOLEAN"
+  },
+  "variants": [
+   {
+    "name": "Size=md, State=Rest",
+    "type": "COMPONENT",
+    "w": 120,
+    "h": 48,
+    "sizing": "HUG/HUG",
+    "children": [
+     {
+      "name": "Content",
+      "type": "FRAME",
+      "w": 120,
+      "h": 48,
+      "layout": "HORIZONTAL",
+      "sizing": "HUG/HUG",
+      "pad": [
+       12,
+       16,
+       12,
+       16
+      ],
+      "gap": 8,
+      "fills": [
+       "VAR"
+      ],
+      "strokes": [
+       "VAR"
+      ],
+      "strokeAlign": "INSIDE",
+      "children": [
+       {
+        "name": "Label",
+        "type": "TEXT",
+        "w": 60,
+        "h": 20,
+        "sizing": "HUG/HUG",
+        "text": "Label",
+        "textStyle": "Label/md",
+        "lineHeight": "PERCENT",
+        "letterSpacing": "PERCENT",
+        "letterSpacingValue": 0,
+        "textAutoResize": "WIDTH_AND_HEIGHT",
+        "truncation": "DISABLED"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Menu",
+  "props": {
+   "State": [
+    "Rest",
+    "Focus"
+   ]
+  },
+  "variants": [
+   {
+    "name": "Menu",
+    "type": "COMPONENT",
+    "w": 200,
+    "h": 80,
+    "clips": true,
+    "layout": "VERTICAL",
+    "sizing": "FIXED/HUG",
+    "children": [
+     {
+      "name": "Focus ring",
+      "type": "RECTANGLE",
+      "w": 204,
+      "h": 84,
+      "strokes": [
+       "VAR"
+      ],
+      "strokeAlign": "OUTSIDE"
+     }
+    ]
+   }
+  ]
+ }
+]

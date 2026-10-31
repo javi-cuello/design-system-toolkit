@@ -1,0 +1,55 @@
+# Changelog — component-validator
+
+- 2.30.10 (2026-10-30): walk-figma.js takes a prepended `SCOPE` (its own declaration shadowed it) and records `hidden` on every layer, not containers only. Case WF1.
+- 2.30.9 (2026-10-23): the usage block names `--states` and `--snapshot`, which the CLI took and the block left out. Prose only; cases unaffected.
+- 2.30.8 (2026-10-14): the dashboard service is `tools/figma-audit` (was `tools/figma-dashboard`); paths in prose and comments only, behaviour unchanged.
+- 2.30.7 (2026-10-13): the description is quoted; its unquoted `: ` failed YAML, so a strict loader dropped it.
+- 2.30.6 (2026-10-08): a reference names the settings section.
+- 2.30.5 (2026-10-08): a comment names the settings section.
+- 2.30.4 (2026-10-08): an instance's component is the longest known name its path starts with (`known` option, else the components given), not the cut at the first " / ".
+- 2.30.3 (2026-10-08): says the iOS and Android tables have never fired on a project; the library map key is frameworkComponents.
+- 2.30.2 (2026-10-08): citations name the standard that owns each rule.
+- 2.30.1 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 2.30.0 (2026-10-07): the state axis and its options are the library's, passed in as `states`; W7, WT1, I12 and hit-target rules read it. Case ST1.
+- 2.29.1 (2026-10-05): the CLI takes its file after `--snapshot`, a flag with no value. Case CLI1.
+- 2.29.0 (2026-10-01): W17, a drop shadow on a frame that does not clip; the live walker records `x` and `y`. Case E11.
+- 2.28.0 (2026-09-30): MU11, components the MUI map does not name, one row against the map; `null` is an answer.
+- 2.27.0 (2026-09-22): `Loading` on the State axis is an implementation note, not a W7 finding.
+- 2.26.1 (2026-09-22): a finding carries a `key`, `<class>|<layer or shared cause>`, for the row writer.
+- 2.26.0 (2026-09-22): the dashboard's validator stage reads the live file through the snapshot plugin's walk; the docs site keeps the snapshot.
+- 2.25.0 (2026-09-22): W1 reads radius, clip, effects, mask, opacity, rotation and absolute; MU9 handles many-to-one maps; half-checked classes read `(partly)`.
+- 2.24.0 (2026-09-22): the slot limits question is asked of every slot whose definition was read, a missing settings object meaning defaults.
+- 2.23.1 (2026-09-22): `plural` renamed `pluralWord`. Naming only.
+- 2.23.0 (2026-09-22): each slot's W12 row states what the slot is drawn with across its variants.
+- 2.22.0 (2026-09-22): slot limits read as `minChildren` / `maxChildren` from the stored settings object; a layer named after a declared slot is not counted again.
+- 2.21.0 (2026-09-22): W12 asks the slot property (plugin 0.40.0 `slots`), filed once per slot by name.
+- 2.20.0 (2026-09-22): inside a slot W12 asks for the slot's limits and preferred instances instead of counting samples.
+- 2.19.0 (2026-09-22): findings collapse on their advice, one decision per layer per advice, keeping every particular.
+- 2.18.0 (2026-09-21): W16 reports a difference to settle, not damage done; Inter's box (about 121%) separated from the 125% recommendation.
+- 2.17.0 (2026-09-21): every finding's `detail` rewritten as a plain clause describing what is in the file. Case V1.
+- 2.16.0 (2026-09-21): an instance is named by its component, the path before the first slash; MU3 and MU4 details in plain words.
+- 2.15.0 (2026-09-21): MU9, a component named differently from its MUI counterpart, and MU10, an axis not named for its prop.
+- 2.14.0 (2026-09-21): an instance node is examined only by rules declaring `onInstance`, which are about its placement.
+- 2.13.0 (2026-09-21): every rule's advice rewritten for the designer: the effect on the file and what the build will show.
+- 2.12.0 (2026-09-21): the walk visits an instance but never enters it; findings may carry `expected`.
+- 2.11.0 (2026-09-21): the docs build passes the framework and component map; MU2's advice offers both sides and lands as `both`.
+- 2.10.0 (2026-09-21): nine rules corrected against their references' Detect lines; findings carry `lands`; `references/mui.md` added.
+- 2.9.0 (2026-09-20): MU5, MU6 and MU8 added after a control pass against a real library; MU7 withdrawn.
+- 2.8.0 (2026-09-20): a framework layer, `mui` first: MU1–MU4 over the web set, with the component map from project settings.
+- 2.7.1 (2026-09-20): the audit record is named `<project>/audit/<fileKey>.json`, one per library. Wording only.
+- 2.7.0 (2026-09-20): the stored snapshot is the documented input; the live reader is for a file without one.
+- 2.6.2 (2026-09-19): WT4 covers `Indeterminate` as the checkbox IDL property. Case E9.
+- 2.6.1 (2026-09-19): `translations()` returns each row as `{ figma, code, why }`. Case E9.
+- 2.6.0 (2026-09-19): `translations()` for developers, WT1–WT14, moved from the docs site; the live reader records stroke-in-layout. Cases E9–E10.
+- 2.5.0 (2026-09-19): `--snapshot` / `fromSnapshot()` read the snapshot plugin's trees; the CLI sets `exitCode` instead of calling `exit()`.
+- 2.4.2 (2026-09-10): the dashboard's judgement pass is held to rulings only for this skill's findings. Wording.
+- 2.4.1 (2026-09-10): the dashboard's Audit runs this skill's reader and engine as a stage. Wording only.
+- 2.4.0 (2026-09-11): rows filed through `POST /rows` or `rows.mjs`, with the target part of each row's identity.
+- 2.3.0 (2026-09-10): findings written to the project's audit record as rows this skill owns.
+- 2.2.1 (2026-09-10): the audit skill it names is now `figma-components-audit`. Wording only.
+- 2.2.0 (2026-09-09): web class W16, a line height under the font's own box inside a text control.
+- 2.1.1 (2026-08-22): the live reader uses async lookups; any line-height source other than `style` reads as Auto.
+- 2.1.0 (2026-08-22): the engine reads stored trees natively and reports silent classes; output is `{ target, silent, findings }`.
+- 2.0.1 (2026-08-22): W8 narrowed to a max width on a fill child.
+- 2.0.0 (2026-08-22): rebuilt stand-alone and multi-target (web, iOS, Android), classes re-sourced from platform documentation, with a live reader.
+- 1.0.0 (2026-08-21): first version, web target only, twelve classes.

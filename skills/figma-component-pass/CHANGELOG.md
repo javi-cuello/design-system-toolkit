@@ -1,0 +1,17 @@
+# Changelog — figma-component-pass
+
+- 1.7.2 (2026-10-08): citations name the standard that owns each rule.
+- 1.7.1 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.7.0 (2026-10-02): the checkpoint flags breaking changes by the audit's two tested kinds: a rename breaks the API, deletions and retypes lose work. Case A2 updated.
+- 1.6.0 (2026-09-20): stage 0 states the per-variant dedupe rule and no longer codes the instance walk.
+- 1.5.1 (2026-09-20): citations point at `standards/toolkit-standard.md` §A after the four part standards merged. No rule changed.
+- 1.5.0 (2026-09-10): runs the three skills by name and no longer reads their files; stage 0 loads the vocabulary from the context document.
+- 1.4.1 (2026-09-10): audit skill renamed `figma-components-audit` from `figma-library-audit`. Wording only.
+- 1.4.0 (2026-08-14): stage 3's interface cross-check runs against a fresh read; when it fires, stages 2 and 3 re-run together. Case P10.
+- 1.3.1 (2026-08-09): changelog only; same-session supersessions compressed. No rule changed.
+- 1.3.0 (2026-08-09): stage 3 asks whether unbound text is a defect at all; two narrow exceptions, static by design and runtime-written, stated as a minority.
+- 1.2.0 (2026-08-09): introduced the unbound-text exclusion. Superseded by 1.3.0.
+- 1.1.2 (2026-08-08): the path to `figma-properties-table`'s script follows its move to `scripts/`.
+- 1.1.1 (2026-08-08): `tests/cases.md` added, nine cases pinning ordering and consent. No behaviour changed.
+- 1.1.0 (2026-08-05): context-document-first (env-aware); project vocabulary.
+- 1.0.x: pre-refactor.

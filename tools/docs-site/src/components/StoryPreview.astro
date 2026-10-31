@@ -1,0 +1,97 @@
+---
+// A component's stories, rendered by the project's own Storybook: one frame,
+// and a button per story to switch it. One frame rather than one per story,
+// because every frame boots a whole Storybook preview.
+import { project } from '../lib/project.js';
+import { base } from '../lib/format.js';
+import { displayName } from '../../../shared/names.js';
+
+interface Props { name: string; stories: { id: string; name: string }[] }
+const { stories } = Astro.props;
+const name = displayName(Astro.props.name);
+const first = stories[0];
+---
+<figure class="preview" data-preview data-base={`${base}/storybook`} data-theme-global={project.storybook?.themeGlobal || ''}>
+  {stories.length > 1 && (
+    <div class="preview__stories" role="group" aria-label={`${name} examples`}>
+      {stories.map((s, i) => (
+        <button type="button" class="preview__story" data-story={s.id} aria-pressed={i === 0 ? 'true' : 'false'}>{s.name}</button>
+      ))}
+    </div>
+  )}
+  <div class="preview__stage"><iframe class="preview__frame" title={`${name} — ${first.name}`} data-story={first.id} loading="lazy"></iframe></div>
+  <figcaption class="preview__caption">
+    <span>Rendered from code</span>
+    <a data-open href={`${base}/storybook/?path=/story/${first.id}`}>Open in Storybook</a>
+  </figcaption>
+</figure>
+
+<script>
+  const siteTheme = () => {
+    const t = document.documentElement.dataset.theme;
+    return t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  };
+
+  for (const figure of document.querySelectorAll<HTMLElement>('[data-preview]')) {
+    const frame = figure.querySelector('iframe')!;
+    const open = figure.querySelector<HTMLAnchorElement>('[data-open]')!;
+    const { base, themeGlobal } = figure.dataset;
+
+    const show = (id: string) => {
+      const globals = themeGlobal ? `&globals=${themeGlobal}:${siteTheme()}` : '';
+      frame.dataset.story = id;
+      frame.src = `${base}/iframe.html?id=${id}&viewMode=story${globals}`;
+      open.href = `${base}/?path=/story/${id}${globals}`;
+    };
+
+    // Same origin, so the frame can take its story's height instead of
+    // clipping it or leaving a blank band under it: the story page's whole
+    // extent, overflow included (an open menu hangs below its trigger), and
+    // measured again whenever the story's content changes.
+    frame.addEventListener('load', () => {
+      const doc = frame.contentDocument, win = frame.contentWindow;
+      const root = doc?.querySelector('#storybook-root') || doc?.body;
+      if (!root || !win) return;
+      // The stage shows through: the story's page paints no ground of its own.
+      doc.documentElement.style.background = doc.body.style.background = 'transparent';
+      // Storybook's centred layout gives the body the frame's own height as a
+      // minimum, which would let the frame grow and never shrink.
+      doc.body.style.minHeight = '0';
+      // Centred on the stage like the design's image, whatever layout the story asks of Storybook: the
+      // story's own box shrinks to what it draws (no wider than the stage) and sits in the middle.
+      if (root !== doc.body) { root.style.width = 'fit-content'; root.style.maxWidth = '100%'; root.style.marginInline = 'auto'; }
+      // A dialog or a panel is fixed, or in the top layer, adds nothing to the
+      // flow and fills the frame's own viewport, so it has no height to
+      // measure: while one shows, the frame takes the stage's canvas as its
+      // floor (the stylesheet's [data-lifted]), and grows only where the
+      // panel's content overflows it.
+      const lifted = () => [...doc.body.querySelectorAll('*')].filter((el) => {
+        const cs = win.getComputedStyle(el);
+        return cs.display !== 'none' && (cs.position === 'fixed' || el.matches(':modal, :popover-open'));
+      });
+      const fit = () => {
+        const s = win.getComputedStyle(doc.body);
+        const flow = doc.body.scrollHeight + parseFloat(s.marginTop) + parseFloat(s.marginBottom);
+        const over = lifted();
+        frame.toggleAttribute('data-lifted', over.length > 0);
+        frame.style.height = `${Math.ceil(Math.max(flow, ...over.map((el) => el.scrollHeight)))}px`;
+      };
+      new ResizeObserver(fit).observe(root);
+      new MutationObserver(fit).observe(root, { subtree: true, childList: true, attributes: true });
+      fit();
+    });
+
+    for (const button of figure.querySelectorAll<HTMLButtonElement>('[data-story]:is(button)')) {
+      button.addEventListener('click', () => {
+        figure.querySelectorAll('button[data-story]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+        frame.title = frame.title.replace(/ — .*$/, ` — ${button.textContent}`);
+        show(button.dataset.story!);
+      });
+    }
+
+    show(frame.dataset.story!);
+    if (themeGlobal) {
+      new MutationObserver(() => show(frame.dataset.story!)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+  }
+</script>

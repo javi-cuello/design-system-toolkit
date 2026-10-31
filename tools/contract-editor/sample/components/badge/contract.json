@@ -1,0 +1,101 @@
+{
+  "contract": 1,
+  "component": "Badge",
+  "figma": {
+    "name": "Badge",
+    "key": "b5d4de8e5ecd6d715c8a66125c47ab4e8b5a6a1c",
+    "id": "1:30"
+  },
+  "props": {
+    "label": {
+      "type": "string",
+      "default": "New",
+      "figma": "Label",
+      "sets": [
+        "label"
+      ]
+    },
+    "tone": {
+      "type": "enum",
+      "values": [
+        "neutral",
+        "accent"
+      ],
+      "default": "neutral",
+      "figmaValues": [
+        "Neutral",
+        "Accent"
+      ],
+      "figma": "Tone"
+    },
+    "showDot": {
+      "type": "boolean",
+      "default": false,
+      "figma": "Show dot",
+      "shows": [
+        "dot"
+      ]
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/4",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/2",
+          "end": "Spacing/8",
+          "bottom": "Spacing/2",
+          "start": "Spacing/8"
+        }
+      },
+      "width": "hug",
+      "height": "hug",
+      "radius": "Radius/full",
+      "background": "Color/Background/subtle"
+    },
+    "dot": {
+      "kind": "graphic",
+      "parent": "root",
+      "width": 6,
+      "height": 6,
+      "radius": "Radius/full",
+      "background": "Color/Icon/accent",
+      "shape": "ellipse",
+      "order": 0
+    },
+    "label": {
+      "kind": "text",
+      "parent": "root",
+      "width": "hug",
+      "height": "hug",
+      "color": "Color/Text/secondary",
+      "typography": "Label/sm",
+      "autoResize": "width",
+      "content": "{label}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "tone": "accent"
+      },
+      "set": {
+        "root.background": "Color/Background/accent-subtle",
+        "label.color": "Color/Text/accent"
+      }
+    },
+    {
+      "when": {
+        "showDot": false
+      },
+      "remove": [
+        "dot"
+      ]
+    }
+  ]
+}

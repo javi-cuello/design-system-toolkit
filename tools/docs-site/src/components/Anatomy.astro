@@ -1,0 +1,123 @@
+---
+// A component's anatomy, as Material, Carbon and Atlassian draw it: the
+// render with every option on that can be on at once, each part numbered by a
+// marker outside it on a leader line, and a list beneath. A part a boolean shows has a hollow
+// marker (Carbon's convention) and names that boolean (Atlassian's). The
+// plugin measured every part on this same render, so a marker cannot drift.
+import { base } from '../lib/format.js';
+import { displayName } from '../../../shared/names.js';
+import { componentPages } from '../lib/snapshot.js';
+
+interface Props { anatomy: { src: string; w: number; h: number; parts: any[]; hidden?: string[] }; name: string; id?: string }
+const { anatomy: a, name, id = 'anatomy' } = Astro.props;
+
+// At its real size: one pixel of the design to one on screen, as the preview
+// shows it. A component wider than the canvas scrolls within it rather than
+// shrinking, so the markers never shrink with it. Everything below is in the
+// render's own pixels.
+const s = 1;
+const R = 11 / s, M = 44 / s, GAP = 2 * R + 6 / s;
+// Each part is pointed at where its content is: half its short side in from
+// the start (the first glyph of a text box, the centre of an icon), from the
+// middle of a centred text box and from the end of a right-aligned one.
+const parts = a.parts.map((p, i) => {
+  const inset = Math.min(p.w, p.h) / 2;
+  const ax = p.align === 'center' ? p.x + p.w / 2 : p.align === 'right' ? p.x + p.w - inset : p.x + inset;
+  return { ...p, n: i + 1, ax, ay: p.y + inset };
+});
+// Each marker goes on the nearest edge whose straight path to the part
+// crosses no other part (a value inside a field is reached from the side, not
+// through the label above it); if every path crosses one, the nearest edge.
+const between = (q, p, side) => q !== p && (
+  side === 'top' ? q.y + q.h <= p.y && q.x <= p.ax && p.ax <= q.x + q.w
+  : side === 'bottom' ? q.y >= p.y + p.h && q.x <= p.ax && p.ax <= q.x + q.w
+  : side === 'left' ? q.x + q.w <= p.x && q.y <= p.ay && p.ay <= q.y + q.h
+  : q.x >= p.x + p.w && q.y <= p.ay && p.ay <= q.y + q.h);
+for (const p of parts) {
+  // Distance to each edge from where the marker points, so centred text is
+  // reached from above or below, not from a far side.
+  const edges = [['top', p.y], ['bottom', a.h - p.y - p.h], ['left', p.ax], ['right', a.w - p.ax]].sort((e, f) => e[1] - f[1]);
+  p.side = (edges.find(([side]) => !parts.some((q) => between(q, p, side))) || edges[0])[0];
+}
+// Along each edge, in the order of the parts, pushed apart where they would
+// touch; parts closer than a marker's width keep reading order, so two that
+// start together (a title over its label) are not numbered backwards.
+for (const side of ['top', 'bottom', 'left', 'right']) {
+  const flat = side === 'top' || side === 'bottom';
+  const list = parts.filter((p) => p.side === side);
+  list.sort((p, q) => { const d = flat ? p.ax - q.ax : p.ay - q.ay; return Math.abs(d) < GAP ? p.n - q.n : d; });
+  let last = -Infinity;
+  for (const p of list) {
+    const along = Math.max(flat ? p.ax : p.ay, last + GAP); last = along;
+    Object.assign(p, side === 'top' ? { mx: along, my: -M / 2, lx: p.ax, ly: p.y }
+      : side === 'bottom' ? { mx: along, my: a.h + M / 2, lx: p.ax, ly: p.y + p.h }
+      : side === 'left' ? { mx: -M / 2, my: along, lx: p.ax - Math.min(p.w, p.h) / 2, ly: p.ay }
+      : { mx: a.w + M / 2, my: along, lx: p.ax + Math.min(p.w, p.h) / 2, ly: p.ay });
+  }
+}
+// The drawing takes in every marker, however far the spreading pushed it.
+const x0 = Math.min(-M, ...parts.map((p) => p.mx - R - 4 / s)), y0 = Math.min(-M, ...parts.map((p) => p.my - R - 4 / s));
+const x1 = Math.max(a.w + M, ...parts.map((p) => p.mx + R + 4 / s)), y1 = Math.max(a.h + M, ...parts.map((p) => p.my + R + 4 / s));
+const vb = `${x0} ${y0} ${x1 - x0} ${y1 - y0}`;
+// A leader line from the marker's edge to the part's. It is perpendicular to
+// the edge wherever the marker sits over the part it names, and only slants
+// where it does not: two markers pushed apart along the edge to clear each
+// other (GAP above) still drop straight, landing clamped inside the part's
+// own box, and only a marker pushed clear of its part leans to reach it.
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+const line = (p) => {
+  const flat = p.side === 'top' || p.side === 'bottom';
+  const x = flat ? clamp(p.mx, p.x, p.x + p.w) : p.lx;
+  const y = flat ? p.ly : clamp(p.my, p.y, p.y + p.h);
+  const dx = x - p.mx, dy = y - p.my, d = Math.hypot(dx, dy) || 1;
+  return { x1: p.mx + (dx / d) * R, y1: p.my + (dy / d) * R, x2: x, y2: y };
+};
+// A nested instance links to its own page where the docs have one.
+const pageOf = (component) => componentPages.find((pg) => pg.components.some((c) => c.name === component || pg.title === component));
+const label = parts.map((p) => `${p.n} ${displayName(p.name)}${p.optional ? ' (optional)' : ''}`).join(', ');
+const named = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0]);
+---
+<section class="section" id={id} aria-labelledby={`${id}-h`}>
+  <h2 id={`${id}-h`}>Anatomy</h2>
+  <figure class="preview preview--design anatomy">
+    <div class="preview__canvas">
+      <svg class="anatomy__figure" viewBox={vb} style={`inline-size: ${(x1 - x0) * s}px`} role="img" aria-label={`${name}: ${label}`}>
+        <image href={`${base}/previews/${a.src}`} x="0" y="0" width={a.w} height={a.h} />
+        {parts.map((p) => { const l = line(p); return <line class="anatomy__leader" x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} style={`stroke-width: ${1.25 / s}; stroke-dasharray: ${2 / s} ${2 / s}`} />; })}
+        {parts.map((p) => (
+          <g class:list={['anatomy__marker', p.optional && 'anatomy__marker--optional']}>
+            <circle cx={p.mx} cy={p.my} r={R} style={`stroke-width: ${1.5 / s}`} />
+            <text x={p.mx} y={p.my} style={`font-size: ${12 / s}px`} dominant-baseline="central" text-anchor="middle">{p.n}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+    {/* Named, not implied. Where two options are alternatives the snapshot
+        draws the first and says which it left off (`hidden`); a caption that
+        still claimed "every option" would be describing a different picture
+        from the one above it. */}
+    <figcaption class="preview__caption"><span>
+      {a.hidden?.length
+        ? `Every option switched on except ${named(a.hidden)}, which ${a.hidden.length === 1 ? 'covers' : 'cover'} another: what the component can contain, not how it is usually used`
+        : 'Every option switched on: what the component can contain, not how it is usually used'}
+    </span></figcaption>
+  </figure>
+  <div class="table-wrap" data-scrolls>
+    <table class="table anatomy__parts">
+      <thead><tr><th scope="col">#</th><th scope="col">Part</th><th scope="col">Shown</th><th scope="col">Component</th></tr></thead>
+      <tbody>
+        {parts.map((p) => {
+          const pg = p.component && pageOf(p.component);
+          return (
+            <tr>
+              <td><span class:list={['anatomy__key', p.optional && 'anatomy__key--optional']}>{p.n}</span></td>
+              <th scope="row">{displayName(p.name)}{p.count > 1 && <span class="muted"> × {p.count}</span>}</th>
+              <td>{p.optional ? <>By <code>{p.optional}</code></> : <span class="muted">Always</span>}</td>
+              <td>{p.component ? (pg ? <a href={`${base}/components/${pg.slug}`}>{displayName(p.component)}</a> : <code>{displayName(p.component)}</code>) : <span class="muted">–</span>}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</section>

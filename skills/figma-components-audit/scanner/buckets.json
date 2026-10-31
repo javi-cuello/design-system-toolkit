@@ -1,0 +1,12 @@
+{
+  "_note": "Which bucket a candidate lands in, keyed by the scanner rule that raised it. This is the skill's reporting contract (SKILL.md, 'Group by the action required'), not a rendering choice, so it lives here and the dashboard reads it rather than holding an opinion.",
+  "b1": ["tokens", "naming", "metadata", "structure"],
+  "b2": ["schema"],
+  "b3": ["states", "properties", "accessibility"],
+  "_why": {
+    "b1": "Safe, unambiguous, programmatic — one approval applies the batch.",
+    "b2": "Figma-UI-only operations. Option and axis reorders cannot be written through the plugin API, confirmed by reordering a set's children and watching variantOptions stay put.",
+    "b3": "Each item is a question with options, not a fix. A missing state may be a gap or a decision, and only the maintainer knows which."
+  },
+  "_default": "b3"
+}

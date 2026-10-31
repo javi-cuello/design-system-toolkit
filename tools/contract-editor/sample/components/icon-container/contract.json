@@ -1,0 +1,81 @@
+{
+  "contract": 1,
+  "component": "Icon container",
+  "figma": {
+    "name": "Icon container",
+    "key": "3333bb4ff1155c458896d9c950bbe14e8d4f92cb",
+    "id": "1:10"
+  },
+  "props": {
+    "icon": {
+      "type": "instance",
+      "figma": "Icon",
+      "swaps": [
+        "icon"
+      ]
+    },
+    "size": {
+      "type": "enum",
+      "values": [
+        "16",
+        "20",
+        "24"
+      ],
+      "default": "16",
+      "figmaValues": [
+        "16",
+        "20",
+        "24"
+      ],
+      "figma": "Size"
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "hug",
+      "height": "hug"
+    },
+    "icon": {
+      "kind": "instance",
+      "parent": "root",
+      "component": "star",
+      "width": 16,
+      "height": 16,
+      "overflow": "hidden",
+      "order": 0
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "size": "20"
+      },
+      "set": {
+        "icon.width": 20,
+        "icon.height": 20
+      }
+    },
+    {
+      "when": {
+        "size": "24"
+      },
+      "set": {
+        "icon.width": 24,
+        "icon.height": 24
+      }
+    }
+  ]
+}

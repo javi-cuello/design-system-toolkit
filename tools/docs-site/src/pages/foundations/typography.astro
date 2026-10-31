@@ -1,0 +1,168 @@
+---
+/*
+ * Text styles, two ways.
+ *
+ * TABLE is the default and the first view: a reader arriving here is usually
+ * after the numbers. The name with its code beneath, as the variable tables
+ * set theirs, then the values.
+ *
+ * PREVIEW is the specimen the doc generator draws in Figma — the style's name
+ * as a small label, and a paragraph actually set in the style. It is a whole
+ * view rather than a column because a 40px specimen squeezed into a table
+ * cell showed nothing the numbers did not.
+ *
+ * The toggle is `components/ViewToggle.astro`, the site's one view toggle.
+ */
+import Base from '../../layouts/Base.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import ViewToggle from '../../components/ViewToggle.astro';
+import { snapshot, weight, slug } from '../../lib/snapshot.js';
+import { mixinName } from '../../lib/project.js';
+
+const styles = snapshot.textStyles || [];
+const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
+// Line height arrives as a ratio (1.25) or, when the style fixes it, in px.
+const lh = (s) => (s.lineHeight > 4 ? `${s.lineHeight}px` : s.lineHeight);
+// The variable a field is bound to, as the snapshot records it, so a
+// responsive size reads as a token rather than a number.
+const FIELD = { size: 'fontSize', family: 'fontFamily', weight: 'fontWeight' };
+const bound = (s, field) => s.bound?.[FIELD[field]]?.name ?? null;
+
+/*
+ * `Mobile app / Headline / lg` is three things: the library it belongs to,
+ * the group within it, and the style. The library is the h2, the group is
+ * the h3, and the leaf is the row, so the outline lists libraries rather
+ * than every group under one repeated prefix.
+ */
+const tree = new Map();
+for (const s of styles) {
+  const parts = s.name.split('/').map((p) => p.trim());
+  const leaf = parts.at(-1);
+  const [h2, h3] = parts.length >= 3 ? [parts[0], parts.slice(1, -1).join(' / ')]
+    : parts.length === 2 ? [parts[0], '']
+    : ['Styles', ''];
+  if (!tree.has(h2)) tree.set(h2, new Map());
+  const groups = tree.get(h2);
+  if (!groups.has(h3)) groups.set(h3, []);
+  groups.get(h3).push({ ...s, leaf });
+}
+const id = (a, b) => slug([a, b].filter(Boolean).join('-'));
+/*
+ * One paragraph, the same for every style, long enough to wrap.
+ *
+ * A specimen of one line shows the size, the weight and the letterforms and
+ * says NOTHING about the line height — the one value on this page you cannot
+ * read off a number and picture. Two styles at 14px, one at 1.3 and one at
+ * 1.6, looked identical.
+ *
+ * A 32px heading and a 12px caption cannot share a sentence length in a
+ * column of fixed width, so the measure is set in `em` (see
+ * `.specimen__text`): the style's own size decides the column, every
+ * specimen wraps at about the same character count, and one paragraph
+ * serves all of them.
+ */
+const SPECIMEN = 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs before the end of the day.';
+/*
+ * A specimen that silently substitutes a face is worse than no specimen: it
+ * shows the size, the weight and the line height honestly and the SHAPE of
+ * the letters not at all, and nothing on the page says which.
+ *
+ * The site loads Inter, Inter Tight and JetBrains Mono. A library set in
+ * anything else — Inter Display, say, which is a separate release and not on
+ * Google Fonts — renders in the fallback, so the page says so once per group
+ * rather than letting a designer read the wrong letterforms as the library's.
+ */
+const LOADED = ['Inter', 'Inter Tight', 'JetBrains Mono'];
+const substituted = [...new Set(styles.map((s) => s.family).filter((f) => f && !LOADED.includes(f)))];
+const css = (s) => `font-family: '${s.family}', sans-serif; font-weight: ${weight(s.weight)}; font-size: ${s.size}px; line-height: ${s.lineHeight > 4 ? `${s.lineHeight}px` : s.lineHeight}; letter-spacing: ${s.letterSpacing || 0}em`;
+// A bound variable by its last two segments, its full path on hover, as the
+// collection pages show an alias: the family the column already names
+// ("Font/") is noise, and the room goes to the style's code name.
+const short = (v) => v.split('/').slice(-2).join('/');
+---
+<Base title="Text styles">
+  <h1>Text styles</h1>
+  <UpdatedBy from={['snapshot']} />
+  <p class="lede">Apply a style whole with <code>@include text-style(name)</code>.</p>
+  {substituted.length > 0 && (
+    <p class="note">
+      Specimens show each style's size, weight, line height and letter spacing.
+      The letterforms are this site's Inter: {substituted.join(', ')} {substituted.length === 1 ? 'is' : 'are'} not
+      loaded here, so the shape of the type is the one thing a preview cannot show you.
+    </p>
+  )}
+
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <ViewToggle key="type" label="Show styles as"
+        options={[{ value: 'table', label: 'Table' }, { value: 'preview', label: 'Preview' }]} />
+    </div>
+  </div>
+
+  {[...tree].map(([h2, groups]) => {
+    // A family every style in the library shares is said once, under its
+    // heading; a column repeating it on every row pushed the table past its
+    // column. Mixed families keep the column.
+    const families = [...new Set([...groups.values()].flat().map((s) => s.family))];
+    const mixed = families.length > 1;
+    return (
+    <section class="section" aria-labelledby={id(h2)}>
+      <h2 id={id(h2)}>{h2}</h2>
+      {!mixed && families[0] && <p class="section__note">Every style here is set in {families[0]}.</p>}
+      <div data-views="type">
+        {/* One table per library, a row group per group under its own header
+            row: the columns are then ruled once for the whole library from
+            its own content, instead of a fixed share each that clipped the
+            longer names and values. On a phone each style is a block. */}
+        <div class="table-wrap" data-scrolls data-view="table">
+          <table class="table table--stack">
+            <caption class="visually-hidden">{h2} text styles</caption>
+            <thead><tr><th scope="col">Name and code</th>{mixed && <th scope="col">Family</th>}<th scope="col">Weight</th><th scope="col">Size</th><th scope="col" class="num">Line height</th><th scope="col" class="num">Letter spacing</th></tr></thead>
+            {[...groups].map(([h3, list]) => (
+              <tbody>
+                {h3 && <tr class="table__group"><th scope="rowgroup" colspan={mixed ? 6 : 5} id={id(h2, h3)}>{h3}</th></tr>}
+                {list.map((s) => (
+                  <tr>
+                    <th scope="row">
+                      <span class="token-name">{s.leaf}</span>
+                      <button type="button" class="code-chip" data-copy={`@include text-style(${mixinName(s.name)});`} aria-label={`Copy ${mixinName(s.name)}`} title={`${s.name} — copy the mixin call`}>{mixinName(s.name)}</button>
+                    </th>
+                    {mixed && <td data-label="Family">{s.family}</td>}
+                    <td data-label="Weight">{bound(s, 'weight') ? <code class="nowrap" title={bound(s, 'weight')}>{short(bound(s, 'weight'))}</code> : s.weight}</td>
+                    <td data-label="Size">{bound(s, 'size') ? <code class="nowrap" title={bound(s, 'size')}>{short(bound(s, 'size'))}</code> : <span class="nowrap">{rem(s.size)} <span class="muted">/ {s.size}px</span></span>}</td>
+                    <td class="num" data-label="Line height">{lh(s)}</td>
+                    <td class="num" data-label="Letter spacing">{s.letterSpacing ? `${s.letterSpacing}em` : '0'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
+
+        <div data-view="preview">
+          {[...groups].map(([h3, list]) => (
+            <div class="type-group">
+              {h3 && <h3>{h3}</h3>}
+              <ol class="specimens">
+                {list.map((s) => (
+                  <li class="specimen">
+                    <p class="specimen__label">
+                      <span class="token-name">{s.leaf}</span>
+                      <button type="button" class="code-chip" data-copy={`@include text-style(${mixinName(s.name)});`} aria-label={`Copy ${mixinName(s.name)}`} title={`${s.name} — copy the mixin call`}>{mixinName(s.name)}</button>
+                      <span class="specimen__meta">{s.family} · {s.size}px · {lh(s)}</span>
+                    </p>
+                    {/* The measure is on the text, not on the box: put it on the
+                        box and every specimen's box is a different width, since
+                        the measure is in the style's own em. */}
+                    <p class="specimen__text" style={css(s)}><span>{SPECIMEN}</span></p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+    );
+  })}
+</Base>

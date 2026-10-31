@@ -1,0 +1,62 @@
+# History — code-standard
+
+- 1.31.0 (2026-10-30): rule 6 allows a component's own classes where its stylesheet is generated under class naming; variants and states stay attributes.
+- 1.30.2 (2026-10-29): rule 24 cites toolkit-standard §D 23; no rule changed.
+- 1.30.1 (2026-10-29): rule 23 cites toolkit-standard §D 23, the root principle it applies to code; no rule changed.
+- (candidate, 2026-10-27): candidate added: a secret has one home, and the command that renews it writes every copy.
+- 1.30.0 (2026-10-22): rule 66, one focus, one ring: a holder that rings itself takes its parts' rings away; parity counts a focus variant's outlines.
+- 1.29.3 (2026-10-14): tool paths follow the move of the toolkit's own checks to tools/toolkit-check and of the project registry to tools/snapshot/projects.cjs; no rule or behaviour changed.
+- 1.29.2 (2026-10-14): tool paths follow the renames (tools/snapshot, tools/component-contract, tools/docs-site, tools/css-lint, tools/ui-check, tools/project-check, tools/claude-hooks, tools/skill-evals); no rule changed.
+- 1.29.1 (2026-10-13): rule 55: `screens`, the states a project's frame names add to snapshot-standard rule 24's list.
+- 1.29.0 (2026-10-11): candidates and supporting sources moved to knowledge/code/candidates.md, as design-standard's depth moved to knowledge/ui.
+- 1.28.6 (2026-10-11): precedence names design-standard as the owner of how an interface looks, behaves and reads.
+- 1.28.5 (2026-10-08): *Reviewed:* markers name their prompt; rules 3 and 20 read their unchecked halves at review.
+- 1.28.4 (2026-10-08): markers join their pairs with ";"; rule 3 checks its two strings.
+- 1.28.3 (2026-10-08): *Checked:* markers open with their pairs (toolkit-standard §C clause D).
+- 1.28.2 (2026-10-08): a *Checked:* names its file before every string.
+- 1.28.1 (2026-10-08): intro defers to the root; *Checked:* markers name a file and a string.
+- 1.28.0 (2026-10-08): history moved to its own file; enforcement lines take the shared form (*Checked:*, *Reviewed:*, *No check yet.*); every rule now carries one; four candidates and the reasons for rules 55 and 61 moved out of history into the text.
+- 1.27.3 (2026-10-03): rule 51: the build's DTCG files are stored in `dtcg/` beside the snapshot and gated by `build.mjs --check`.
+- 1.27.2 (2026-10-03): rule 59's evidence cites toolkit-standard §D 2 instead of `CLAUDE.md`.
+- 1.27.1 (2026-10-03): rule 5's gate also refuses selectors past a nested component's element; stylesheet gate parsing fixes; missing inputs report *not run*.
+- 1.27.0 (2026-10-03): rules 11, 14, 19, 30, 35, 42, 43 and 49 gain checks; rules 45 and 50 lose their mechanical label.
+- 1.26.0 (2026-10-03): rules 9, 36 and 47 checked by `tools/styles`.
+- 1.25.0 (2026-10-03): rules 10, 15, 16, 21 and 39 checked, run in every project through `tools/project/check.mjs`.
+- 1.24.0 (2026-10-03): rule 64 added (`aria-current` in navigation); rule 65 added (Figma linear gradients only at corner or axis angles).
+- 1.23.1 (2026-10-03): rules 4, 5, 17, 18, 22, 40, 46 and 48 checked by the shared `tools/styles`.
+- 1.23.0 (2026-10-03): mechanical rules carry *Checked by* or *No check yet*, counted by `check.sh` `[R]`.
+- 1.22.1 (2026-10-02): rule 62: a disabled link drops its `href` and carries `aria-disabled`.
+- 1.22.0 (2026-10-02): rule 62 added (disabled dim on the host, once); rule 63 added (Figma stroke to CSS channel); rule 55 corrected about the `parity` block.
+- 1.21.0 (2026-10-01): rule 55 admits a `parity` block in `snapshot.config.json`, starting with tolerances per assertion kind.
+- 1.20.1 (2026-10-01): rule 59 cites toolkit-standard §D 2 instead of restating it; rule 60 labelled *needs a read*.
+- 1.20.0 (2026-09-22): rule 61 added: a failure that knows its cause reports it.
+- 1.19.0 (2026-09-22): rule 60 added: a rule inside `@scope` cannot reach the document element.
+- 1.18.0 (2026-09-19): rule 58 added: a write replaces only what it wrote.
+- 1.17.0 (2026-09-19): rule 57 added: a fix holds for any value its input can take.
+- 1.16.1 (2026-09-19): harness rule renumbered 31 to 56; rule 37's Why and Evidence restored from under rule 40.
+- 1.16.0 (2026-09-19): rules 51 to 55 added: the one token build, naming, themes, units and project config.
+- 1.15.0 (2026-09-17): rule 50 added: a structure-only rule does not follow moved markup.
+- (candidates, 2026-09-16): fourteen candidates added from one project's front-end audit; no rule changed.
+- 1.14.0 (2026-09-14): rule 31 (now 56) added: a parity loop grades its harness, not the product.
+- 1.13.0 (2026-09-11): rule 49 added: a check's verdict must not be overwritten by how it is invoked.
+- 1.12.0 (2026-09-10): rule 48 added: overridden browser defaults stated once in the base layer, scoped.
+- 1.11.0 (2026-09-10): rules 45 to 47 added: failing scripted edits, one page-grid dimension, client boundary cost.
+- 1.10.0 (2026-09-09): rules 43 and 44 added: serialised props take no functions; equal-specificity conflicts decided by load order.
+- 1.9.0 (2026-09-09): rule 42 added: no declaration exists to make a check agree.
+- 1.8.0 (2026-09-09): rule 41 added: exemptions from a closed list; declared rules proved to run.
+- (candidates, 2026-09-05): two candidates added: localhost services reachable cross-site, and `__proto__` path writes.
+- (candidate, 2026-09-09): candidate added: a build step that fails must say why.
+- (candidate, 2026-09-08): candidate added: a failed lookup returns a failure, not an empty value.
+- (candidate, 2026-09-08): candidate added: a tool prunes only what it produced.
+- (candidate, 2026-09-08): candidate added: an old style base goes in a cascade layer.
+- (candidate, 2026-09-08): candidate added: a green check covers only what it checks.
+- (candidate, 2026-09-04): candidate added: `opacity` on a text container defeats contrast checking.
+- 1.7.0 (2026-09-01): rules 38 to 40 added: custom-property overrides, hook-name collisions, off computes to off.
+- 1.6.0 (2026-08-25): rule 37 added: a parity check measures everything or names what it does not.
+- 1.5.0 (2026-08-23): rule 36 added: one enhancement, one implementation.
+- 1.4.0 (2026-08-22): rule 35 added: a check pins its environment; one candidate added.
+- 1.3.0 (2026-08-22): rule 34 added: parity measures what a frame says; two candidates added.
+- 1.2.1 (2026-08-22): Curtis's lifecycle argument added to candidates; no rule changed.
+- 1.2.0 (2026-08-21): rule 33 added: parity proves the set and reports unnameable values; Curtis candidates added.
+- 1.1.0 (2026-08-21): rules 31 and 32 added: parity compares content; release gates fail only on being behind.
+- 1.0.0 (2026-08-20): first version, thirty rules.

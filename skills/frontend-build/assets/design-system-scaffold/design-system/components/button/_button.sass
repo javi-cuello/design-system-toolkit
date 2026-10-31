@@ -1,0 +1,52 @@
+// Every selector reaches the component's parts through child combinators.
+// A descendant combinator escapes into whatever the component nests, and
+// nothing about the rule says so.
+
+__PREFIX__-button
+  display: inline-block
+
+  > :is(a, button)
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    gap: var(--space-8)
+    border: 1px solid transparent
+    border-radius: var(--radius-md)
+    background: none
+    text-decoration: none
+    cursor: pointer
+
+  &[size="sm"] > :is(a, button)
+    padding: var(--space-4) var(--space-12)
+    font-size: var(--text-sm)
+
+  &[size="md"] > :is(a, button)
+    padding: var(--space-8) var(--space-16)
+    font-size: var(--text-md)
+
+  &[size="lg"] > :is(a, button)
+    padding: var(--space-12) var(--space-24)
+    font-size: var(--text-lg)
+
+  &[variant="primary"] > :is(a, button)
+    background: var(--color-accent)
+    color: var(--color-accent-text)
+
+  &[variant="secondary"] > :is(a, button)
+    border-color: var(--color-border)
+    color: var(--color-text)
+
+  // state is a pseudo-class, never an attribute: an attribute would let a
+  // template claim a state the control is not in
+  > :is(a, button):hover
+    filter: brightness(0.94)
+
+  // Disabled is the control's attribute and the dim is the host's, once
+  // (code-standard 62): a component that holds this one and dims itself sets
+  // --__PREFIX__-dim: 1 on what it holds, so the two do not composite to 25%
+  &:has(> :is(button:disabled, a[aria-disabled="true"]))
+    opacity: var(--__PREFIX__-dim, var(--state-disabled-opacity))
+
+  > :is(button:disabled, a[aria-disabled="true"])
+    cursor: not-allowed
+    filter: none

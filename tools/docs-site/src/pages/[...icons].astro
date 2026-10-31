@@ -1,0 +1,139 @@
+---
+// The icons, at one of two addresses. A project whose context document
+// routes a library of icons, illustrations and other assets (the `icons`
+// role) gets that library as its own section at /icons, named as Figma names
+// it: the icons at /icons and each asset page of the file (Illustrations,
+// Other…) a page of its own at /icons/<page>. A project with no such
+// library keeps its icons as a Foundations page at /foundations/icons.
+//
+// Icons as icon libraries show them (Lucide, Primer, Carbon): a hairline grid
+// of one glyph per tile at the largest size, its name beneath, the sizes said
+// once for the set rather than on every tile. Assets take the same grid with
+// larger tiles, each image its stored preview at up to the size it was drawn.
+import Base from '../layouts/Base.astro';
+import UpdatedBy from '../components/UpdatedBy.astro';
+import Filter from '../components/Filter.astro';
+import DesignShot from '../components/DesignShot.astro';
+import Modal from '../components/Modal.astro';
+import { icons, iconGroups, iconLibrary, assetGroups, slug } from '../lib/snapshot.js';
+
+export function getStaticPaths() {
+  if (iconLibrary) return [{ params: { icons: 'icons' }, props: { group: null } }, ...assetGroups.map((group) => ({ params: { icons: `icons/${group.slug}` }, props: { group } }))];
+  return icons.length ? [{ params: { icons: 'foundations/icons' }, props: { group: null } }] : [];
+}
+const { group } = Astro.props;
+const sizes = [...new Set(icons.flatMap((i) => i.sizes.map((s) => s.size)).filter(Boolean))].sort((a, b) => a - b);
+const largest = (i) => [...i.sizes].sort((a, b) => (b.size || 0) - (a.size || 0))[0];
+const title = iconLibrary ? iconLibrary.name : 'Icons';
+// Grouped as the file groups them, each under its heading, once a run has
+// recorded the groups; one grid until then.
+const groups = iconGroups.length ? iconGroups : [{ title: null, icons }];
+// A group is a section named by its heading; the one ungrouped list is not.
+const Group = iconGroups.length ? 'section' : 'div';
+---
+{group ? (
+<Base title={group.title}>
+  <h1>{group.title}</h1>
+  <UpdatedBy from={['snapshot']} />
+  <p class="lede">{group.assets.length} {group.assets.length === 1 ? 'item' : 'items'} from the {title} library.</p>
+  <ul class="icon-grid asset-grid">
+    {group.assets.map((a) => (
+      <li>
+        <figure class="asset-tile">
+          {a.preview ? <DesignShot preview={a.preview} alt={a.name} lazy /> : <span class="asset-tile__none">No image recorded</span>}
+          <figcaption class="icon-tile__name">{a.name}</figcaption>
+        </figure>
+      </li>
+    ))}
+  </ul>
+</Base>
+) : (
+<Base title="Icons">
+  <h1>Icons</h1>
+  <UpdatedBy from={['snapshot']} />
+  {icons.length ? <>
+    <p class="lede">{icons.length} icons{sizes.length ? `, each drawn at ${sizes.join(', ')} px` : ''}. Choose one for its sizes and its SVG.</p>
+    <Filter scope="#icons" placeholder={`Filter ${icons.length} icons`} searchLabel="Filter icons" />
+    <div id="icons">
+      {groups.map((g) => (
+        <Group class="icon-group" data-filter-part aria-labelledby={g.title ? `group-${slug(g.title)}` : undefined}>
+          {g.title && <h2 id={`group-${slug(g.title)}`}>{g.title}</h2>}
+          <ul class="icon-grid">
+            {g.icons.map((i) => (
+              <li data-name={i.name} data-keywords={i.keywords.join(', ') || undefined}>
+                <button type="button" class="icon-tile" popovertarget="icon-dialog" data-icon={i.name} data-group={i.group} data-keywords={i.keywords.join(', ') || undefined} data-sizes={i.sizes.map((s) => s.size).filter(Boolean).join(' ')}>
+                  <span class="icon-tile__glyph" aria-hidden="true" set:html={largest(i).svg} />
+                  <span class="icon-tile__name">{i.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Group>
+      ))}
+    </div>
+    <Modal id="icon-dialog" title="Icon">
+      <div class="icon-detail">
+        <div class="icon-detail__glyph" aria-hidden="true" data-icon-big></div>
+        <div class="icon-detail__about">
+          <div class="icon-detail__words">
+            <p class="icon-detail__keywords" data-icon-keywords></p>
+            <p class="icon-detail__group"><span class="pill" data-icon-group></span></p>
+          </div>
+          <ul class="icon-detail__sizes" data-icon-sizes></ul>
+          <p class="icon-detail__actions">
+            <button type="button" class="button" data-icon-copy-name>Copy name</button>
+            <button type="button" class="button button--primary" data-icon-copy-svg data-copy-label="the SVG">Copy SVG</button>
+          </p>
+        </div>
+      </div>
+    </Modal>
+    <script is:inline define:vars={{ base: import.meta.env.BASE_URL.replace(/\/$/, '') }}>
+      // The icon dialog (design-standard rule 13): the tile says which icon
+      // and its sizes; the files come from /svg, each read once. Copy SVG
+      // copies the largest, as the grid shows it.
+      const dialog = document.getElementById('icon-dialog');
+      const got = new Map();
+      dialog.addEventListener('close', () => document.querySelector('.icon-tile[aria-current]')?.removeAttribute('aria-current'));
+      dialog.addEventListener('toggle', (e) => e.newState === 'closed' && document.querySelector('.icon-tile[aria-current]')?.removeAttribute('aria-current'));
+      const svg = (file) => got.get(file) || got.set(file, fetch(`${base}/svg/${file}`).then((r) => (r.ok ? r.text() : ''))).get(file);
+      document.addEventListener('click', async (e) => {
+        // A copy says so on the button itself, for as long as the site's
+        // copy listener marks it (Base.astro).
+        const copy = e.target.closest('.icon-detail__actions [data-copy]');
+        if (copy) {
+          const was = copy.dataset.label ||= copy.textContent;
+          copy.textContent = 'Copied ✓';
+          clearTimeout(copy.timer);
+          copy.timer = setTimeout(() => (copy.textContent = was), 1200);
+          return;
+        }
+        const tile = e.target.closest('[data-icon]');
+        if (!tile) return;
+        // The icon open in the dialog stays marked on the grid behind it.
+        document.querySelector('.icon-tile[aria-current]')?.removeAttribute('aria-current');
+        tile.setAttribute('aria-current', 'true');
+        const name = tile.dataset.icon, sizes = tile.dataset.sizes ? tile.dataset.sizes.split(' ') : [];
+        const files = sizes.length ? sizes.map((s) => `${name}-${s}.svg`) : [`${name}.svg`];
+        dialog.querySelector('h2').textContent = name;
+        dialog.querySelector('[data-icon-group]').textContent = tile.dataset.group || '';
+        dialog.querySelector('[data-icon-keywords]').textContent = (tile.dataset.keywords || '').split(', ').join(' • ');
+        dialog.querySelector('[data-icon-big]').innerHTML = tile.querySelector('.icon-tile__glyph').innerHTML;
+        dialog.querySelector('[data-icon-copy-name]').dataset.copy = name;
+        const copySvg = dialog.querySelector('[data-icon-copy-svg]');
+        delete copySvg.dataset.copy;
+        const list = dialog.querySelector('[data-icon-sizes]');
+        list.replaceChildren(...files.map((f, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="icon-detail__at"></span><span class="icon-tile__name">${sizes[i] ? sizes[i] + ' px' : ''}</span>`;
+          return li;
+        }));
+        const texts = await Promise.all(files.map(svg));
+        if (dialog.querySelector('h2').textContent !== name) return;
+        texts.forEach((t, i) => (list.children[i].firstElementChild.innerHTML = t));
+        copySvg.dataset.copy = texts.at(-1);
+      });
+    </script>
+  </> : <p class="lede">No icons recorded yet: run the snapshot plugin in {title}.</p>}
+  {iconLibrary && !assetGroups.length && <p>No illustrations or other assets recorded yet: run the snapshot plugin in {title}.</p>}
+</Base>
+)}

@@ -1,0 +1,120 @@
+---
+// AI readiness, design only: everything the site measures about what a
+// person or an agent reading the Figma library (through Figma's MCP or this
+// site) can learn. Per component, from the audit's open rows (one source):
+// Usage, Don't and Code gen notes; automatic layer names; frames without
+// auto layout. Library-wide, from the snapshot: how current it is, published
+// tokens described, deprecations that name a replacement. Method:
+// Research/ai-ready-design-systems.md.
+import ComponentCell from '../../components/ComponentCell.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import Base from '../../layouts/Base.astro';
+import { rows, audit } from '../../lib/tracker.js';
+import { health } from '../../lib/measures.js';
+import { tokenCollections, tokensPublished, tokensDescribed, deprecated, deprecatedClear } from '../../lib/readiness.js';
+import { base } from '../../lib/format.js';
+
+const keyOf = (f) => String(f.key || '');
+// Each measure as the last full audit recorded it, or null when that audit
+// did not run the check yet.
+const tile = (key) => health.flatMap((h) => h.tiles).find((t) => t.key === key) || null;
+const metrics = Object.values(audit?.libraries || {}).map((l) => l && l.metrics).filter(Boolean);
+const ran = (field) => metrics.some((m) => field in m);
+const gaps = (test) => rows.map((r) => ({ r, hits: r.findings.filter(test) })).filter((x) => x.hits.length);
+const guidance = gaps((f) => keyOf(f) === 'metadata|guidance' || keyOf(f) === 'metadata|guidance-code');
+const layout = gaps((f) => keyOf(f).startsWith('naming|default|') || keyOf(f).startsWith('structure|no-autolayout|'));
+const SECTION = { 'metadata|guidance': "Usage or Don't", 'metadata|guidance-code': 'Code gen notes' };
+// A section every page in the table lacks singles nothing out: its column is
+// dropped and said once above the table.
+const lacks = (hits, k) => hits.some((f) => keyOf(f) === k);
+const everyRow = guidance.length > 1 ? Object.keys(SECTION).filter((k) => guidance.every(({ hits }) => lacks(hits, k))) : [];
+const columns = Object.keys(SECTION).filter((k) => !everyRow.includes(k));
+const status = (key, field) => { const t = tile(key); return t ? `${t.label}: ${t.figure}${t.detail ? ` (${t.detail})` : ''}.` : ran(field) ? '' : 'Checked at the next full audit.'; };
+---
+<Base title="AI readiness">
+  <h1>AI readiness</h1>
+  <UpdatedBy from={['snapshot', 'audit']} />
+  <p class="lede">What a person or an agent reading the Figma library can learn about intent. Whether an agent's code comes out right needs the code, or a run with real agents.</p>
+
+  <section class="report-section" aria-labelledby="guidance">
+    <h2 id="guidance">Guidance to act on</h2>
+    <p>A public component's description says when to use it (Usage), when not to and what instead (Don't), and how to build it (Code gen notes). Slot parts are left out: they are chosen through their parent. {status('guidance', 'guidable')}{guidance.length > 0 && ` That figure counts components; the table counts docs pages, ${guidance.length} with a gap, and one page can hold several components.`}</p>
+    {everyRow.length > 0 && <p class="section__note">Every page in the table lacks {everyRow.map((k) => SECTION[k]).join(' and ')}.</p>}
+    {guidance.length > 0 && (
+      <div class:list={['table-wrap', guidance.length > 20 && 'table-wrap--long']} data-scrolls>
+        <table class="table">
+          <caption class="visually-hidden">Components whose description lacks a section</caption>
+          <thead><tr><th scope="col">Component</th>{columns.map((k) => <th scope="col">{SECTION[k]}</th>)}</tr></thead>
+          <tbody>
+            {guidance.map(({ r, hits }) => (
+              <tr><ComponentCell page={r.page} />{columns.map((k) => lacks(hits, k) ? <td>Missing</td> : <td class="muted">Written</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <section class="report-section" aria-labelledby="tokens">
+    <h2 id="tokens">Tokens described</h2>
+    <p>{tokensDescribed} of {tokensPublished} published tokens have a description: how an agent tells two similar tokens apart and picks the one meant for the job. Tokens hidden from publishing and private ones are not counted.</p>
+    <div class="table-wrap" data-scrolls>
+      <table class="table">
+        <caption class="visually-hidden">Published tokens and their descriptions, by collection</caption>
+        <thead><tr><th scope="col">Collection</th><th scope="col" class="num">Published</th><th scope="col" class="num">Described</th><th scope="col" class="num">Without</th></tr></thead>
+        <tbody>
+          {tokenCollections.map((c) => (
+            <tr>
+              <th scope="row"><a href={`${base}/foundations/${c.slug}`}>{c.label}</a></th>
+              <td class="num">{c.published}</td>
+              <td class="num">{c.published - c.missing.length}</td>
+              <td class:list={['num', !c.missing.length && 'muted']}>{c.missing.length}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="report-section" aria-labelledby="layers">
+    <h2 id="layers">Layers and layout</h2>
+    <p>Figma recommends both for a file its MCP reads: a layer named for what it is, not "Frame 12", and frames built with auto layout, not absolute positions an agent can only copy. {[...new Set([status('named', 'autoNamed'), status('autoLayout', 'frames')])].join(' ')}</p>
+    {layout.length > 0 && (
+      <div class:list={['table-wrap', layout.length > 20 && 'table-wrap--long']} data-scrolls>
+        <table class="table">
+          <caption class="visually-hidden">Components with automatic layer names or frames without auto layout</caption>
+          <thead><tr><th scope="col">Component</th><th scope="col" class="num">Automatic names</th><th scope="col" class="num">Without auto layout</th></tr></thead>
+          <tbody>
+            {layout.map(({ r, hits }) => (
+              <tr>
+                <ComponentCell page={r.page} />
+                {['naming|default|', 'structure|no-autolayout|'].map((p) => { const n = hits.filter((f) => keyOf(f).startsWith(p)).length; return <td class:list={['num', !n && 'muted']}>{n}</td>; })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <section class="report-section" aria-labelledby="deprecated">
+    <h2 id="deprecated">Deprecations clear</h2>
+    {deprecated.length === 0 ? <p>Nothing in the library is marked deprecated.</p> : <>
+      <p>{deprecatedClear} of {deprecated.length} deprecated components name their replacement first in their description ("Deprecated: use List instead."). Without it an agent that meets the old name has nowhere to go.</p>
+      <div class="table-wrap" data-scrolls>
+        <table class="table">
+          <caption class="visually-hidden">Deprecated components and their replacement</caption>
+          <thead><tr><th scope="col">Component</th><th scope="col">Replacement</th></tr></thead>
+          <tbody>
+            {deprecated.map((d) => (
+              <tr>
+                <ComponentCell page={d.page} name={d.name} />
+                <td>{d.replacement ? d.replacement : d.unknown ? 'Not in this snapshot' : 'None named'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>}
+  </section>
+</Base>

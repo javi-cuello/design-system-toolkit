@@ -1,0 +1,24 @@
+---
+// The caption under a data page's title (design-standard rule 1): what wrote
+// the page's figures and when each last did, so the lede can say what the
+// page means and leave where it comes from to this line. Every page built
+// from the snapshot, the audit or the code audit carries it. An audit older
+// than a week, or older than the snapshot it is read beside, says so here
+// (data.md *Provenance and freshness*).
+import Time from './Time.astro';
+import { freshness } from '../lib/readiness.js';
+import { auditedAt, hasAudit } from '../lib/tracker.js';
+import { codeAudit } from '../lib/project.js';
+
+interface Props { from: ('snapshot' | 'audit' | 'code')[] }
+const { from } = Astro.props;
+const days = auditedAt ? (Date.now() - new Date(auditedAt)) / 86400000 : 0;
+const behind = auditedAt && freshness.takenAt && new Date(auditedAt) < new Date(freshness.takenAt);
+---
+<p class="byline">Updated by {from.map((s, i) => (
+  <>{i > 0 && ' and '}{
+    s === 'snapshot' ? (freshness.takenAt ? <>the snapshot of <Time at={freshness.takenAt} />{freshness.editedSince && ' (the file has been edited in Figma since)'}</> : 'no snapshot yet')
+    : s === 'audit' ? (auditedAt ? <>the audit of <Time at={auditedAt} />{behind ? ' (older than the snapshot)' : days > 7 ? ' (over a week old)' : ''}</> : hasAudit ? 'an audit with no date recorded' : 'no audit yet')
+    : codeAudit ? <>the code audit of <Time at={codeAudit.at} /></> : 'no code audit yet'
+  }</>
+))}</p>

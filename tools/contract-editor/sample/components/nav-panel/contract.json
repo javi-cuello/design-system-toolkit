@@ -1,0 +1,182 @@
+{
+  "contract": 1,
+  "component": "Nav panel",
+  "figma": {
+    "name": "Nav panel",
+    "key": "eba90e0db5227c52093b9f386fd44c5c186aa2fc",
+    "id": "1:50"
+  },
+  "props": {
+    "title": {
+      "type": "string",
+      "default": "Workspace",
+      "figma": "Title",
+      "sets": [
+        "header/title"
+      ]
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "column",
+        "gap": "Spacing/16",
+        "align": "start",
+        "crossAlign": "start",
+        "padding": {
+          "top": "Spacing/16",
+          "end": "Spacing/16",
+          "bottom": "Spacing/16",
+          "start": "Spacing/16"
+        }
+      },
+      "width": 272,
+      "height": "hug",
+      "background": "Color/Background/surface",
+      "border": {
+        "color": "Color/Border/default",
+        "width": [
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1"
+        ],
+        "sides": {
+          "top": 1,
+          "end": 1,
+          "bottom": 1,
+          "start": 1
+        }
+      }
+    },
+    "header": {
+      "kind": "container",
+      "parent": "root",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/8",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 0
+    },
+    "header/title": {
+      "kind": "text",
+      "parent": "header",
+      "width": "hug",
+      "height": "hug",
+      "color": "Color/Text/primary",
+      "typography": "Label/md",
+      "autoResize": "width",
+      "content": "{title}",
+      "order": 0
+    },
+    "list": {
+      "kind": "container",
+      "parent": "root",
+      "layout": {
+        "direction": "column",
+        "gap": "Spacing/4",
+        "align": "start",
+        "crossAlign": "start",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 1
+    },
+    "list/item": {
+      "kind": "instance",
+      "parent": "list",
+      "component": "Nav item",
+      "with": {
+        "Label": "Home",
+        "Icon": "home",
+        "Selected": true
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 0
+    },
+    "list/item_2": {
+      "kind": "instance",
+      "parent": "list",
+      "component": "Nav item",
+      "with": {
+        "Label": "Inbox",
+        "Icon": "inbox",
+        "Selected": false
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 1
+    },
+    "list/item_3": {
+      "kind": "instance",
+      "parent": "list",
+      "component": "Nav item",
+      "with": {
+        "Label": "People",
+        "Icon": "user",
+        "Selected": false
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 2
+    },
+    "list/item_4": {
+      "kind": "instance",
+      "parent": "list",
+      "component": "Nav item",
+      "with": {
+        "Label": "Search",
+        "Icon": "search",
+        "Selected": false
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 3
+    },
+    "list/item_5": {
+      "kind": "instance",
+      "parent": "list",
+      "component": "Nav item",
+      "with": {
+        "Label": "Starred",
+        "Icon": "star",
+        "Selected": false
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 4
+    },
+    "list/item_6": {
+      "kind": "instance",
+      "parent": "list",
+      "component": "Nav item",
+      "with": {
+        "Label": "Settings",
+        "Icon": "settings",
+        "Selected": false
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 5
+    }
+  },
+  "variants": []
+}

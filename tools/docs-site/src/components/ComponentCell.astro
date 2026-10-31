@@ -1,0 +1,8 @@
+---
+// A table row's header naming a component page: its link, and its platform
+// where the project has more than one. Anything after it goes in the slot.
+import { base } from '../lib/format.js';
+interface Props { page: { slug: string; title: string; platform?: string | null }; name?: string }
+const { page, name } = Astro.props;
+---
+<th scope="row"><a href={`${base}/components/${page.slug}`}>{name || page.title}</a>{page.platform && <span class="muted"> · {page.platform}</span>}<slot /></th>

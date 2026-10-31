@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-density="compact">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contract editor</title>
+  <link rel="stylesheet" href="system.css">
+  <link rel="stylesheet" href="editor.css">
+  <!-- the theme chosen on this browser, before paint (the switch itself is theme.js, the docs site's too) -->
+  <script>try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
+  <script src="theme.js" defer></script>
+  <script type="module" src="editor.js"></script>
+</head>
+<body>
+  <!-- the window's bar: each sidebar's toggle on that sidebar's side, where it stays whether the sidebar is shown or not -->
+  <header class="ce-bar">
+    <div class="ce-bar__side">
+      <button type="button" class="button" aria-expanded="false" aria-controls="nav-pane" data-nav-toggle>Components</button>
+      <button type="button" class="button button--primary" data-new>New component</button>
+    </div>
+    <!-- the window's own settings at its end: the library's (kept in its context document) and the theme (this browser's) -->
+    <div class="ce-bar__side">
+      <div class="segmented" role="group" aria-label="Theme">
+        <button type="button" class="seg" data-theme-choice="system" aria-pressed="true">System</button><button type="button" class="seg" data-theme-choice="light" aria-pressed="false">Light</button><button type="button" class="seg" data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+      <button type="button" class="button" data-settings>Settings</button>
+    </div>
+  </header>
+  <main class="ce">
+    <h1 class="visually-hidden">Contract editor</h1>
+    <nav class="ce-nav sidenav" id="nav-pane" aria-labelledby="nav-title" data-nav hidden>
+      <h2 id="nav-title" class="visually-hidden">Components</h2>
+      <div data-nav-list></div>
+    </nav>
+    <!-- the component's own bar: its name, where it goes, and its tabs, over the panels; it stays put whichever tab is open -->
+    <header class="ce-head" aria-label="Component">
+      <div class="ce-top">
+        <label class="ce-field ce-field--component">
+          <span class="visually-hidden">Component name</span>
+          <input class="filter" data-component autocomplete="off" placeholder="Component name">
+        </label>
+        <button type="button" class="button" data-edit-draft hidden>Edit as draft</button>
+        <!-- a library component's page in the project's docs site, where a team reads it -->
+        <a class="button" data-docs hidden>Docs <span aria-hidden="true">↗</span></a>
+        <span class="ce-linked" data-linked hidden></span>
+        <!-- where the library takes the contract as its source: a linked draft becomes its component's official contract -->
+        <button type="button" class="button button--primary" data-save-official hidden>Save as official</button>
+        <button type="button" class="button" data-figma-menu>Figma</button>
+        <button type="button" class="button" data-code-menu>Code</button>
+        <button type="button" class="button" aria-expanded="true" aria-controls="json-pane" data-json-toggle>Preview</button>
+      </div>
+      <div class="ce-stale" role="status" data-stale hidden></div>
+      <!-- where the library takes the contract as its source: what Figma is behind on for this component -->
+      <div class="ce-stale" role="status" data-behind hidden></div>
+      <div class="tabs ce-views" role="tablist" aria-label="Part of the contract">
+        <button type="button" role="tab" class="tab" id="view-props" aria-controls="panel-props" aria-selected="true" data-view="props">Props <span class="ce-count" data-count></span></button>
+        <button type="button" role="tab" class="tab" id="view-anatomy" aria-controls="panel-anatomy" aria-selected="false" tabindex="-1" data-view="anatomy">Anatomy <span class="ce-count" data-part-count></span></button>
+        <button type="button" role="tab" class="tab" id="view-variants" aria-controls="panel-variants" aria-selected="false" tabindex="-1" data-view="variants">Variants <span class="ce-count" data-variant-count></span></button>
+      </div>
+    </header>
+    <section class="ce-palette" aria-labelledby="palette-title">
+      <h2 id="palette-title" class="visually-hidden">Blocks</h2>
+      <div class="segmented ce-blocks-switch" role="group" aria-label="Blocks" data-tabs></div>
+      <div data-palette></div>
+    </section>
+
+    <section class="ce-props" aria-label="Contract">
+      <div role="tabpanel" id="panel-props" aria-labelledby="view-props" data-panel="props">
+        <ol class="ce-list" data-list></ol>
+        <div class="ce-empty" data-empty>
+          <h3>Add the first prop</h3>
+          <p>Drag a block here, or click one in the panel.</p>
+        </div>
+        <div class="ce-suggest" data-suggest hidden></div>
+      </div>
+      <div role="tabpanel" id="panel-anatomy" aria-labelledby="view-anatomy" data-panel="anatomy" hidden>
+        <div class="ce-tree-tools" hidden><button type="button" class="button button--ghost" data-fold-all></button></div>
+        <ol class="ce-list ce-parts" data-parts></ol>
+      </div>
+      <div role="tabpanel" id="panel-variants" aria-labelledby="view-variants" data-panel="variants" hidden>
+        <div data-variants></div>
+      </div>
+    </section>
+
+    <section class="ce-out" id="json-pane" aria-label="Preview and JSON">
+      <div class="tabs ce-out__tabs" role="tablist" aria-label="Show">
+        <button type="button" role="tab" class="tab" id="out-json" aria-controls="out-json-panel" aria-selected="true" data-out-tab="json">JSON</button>
+        <button type="button" role="tab" class="tab" id="out-preview" aria-controls="out-preview-panel" aria-selected="false" tabindex="-1" data-out-tab="preview">Preview</button>
+      </div>
+      <div role="tabpanel" id="out-json-panel" aria-labelledby="out-json" class="ce-json-panel" data-out="json">
+        <div class="ce-out__actions">
+          <button type="button" class="button" data-copy>Copy JSON</button>
+          <button type="button" class="button button--primary" data-download>Download</button>
+          <button type="button" class="button" data-json-apply hidden>Apply</button>
+          <button type="button" class="button" data-json-revert hidden>Undo edits</button>
+        </div>
+        <label class="visually-hidden" for="json-text">The contract as JSON; edit it, then Apply</label>
+        <textarea id="json-text" class="ce-json" spellcheck="false" data-json aria-describedby="json-errors"></textarea>
+        <p class="ce-error" id="json-errors" data-json-errors></p>
+      </div>
+      <div role="tabpanel" id="out-preview-panel" aria-labelledby="out-preview" class="ce-preview" data-out="preview" hidden></div>
+    </section>
+  </main>
+
+  <dialog class="modal" aria-labelledby="dialog-title" data-dialog>
+    <form method="dialog" class="ce-dialog-form" data-dialog-form>
+      <header class="modal__head">
+        <h2 id="dialog-title" data-dialog-title></h2>
+        <button type="button" class="ce-dialog-close" aria-label="Close" data-dialog-close></button>
+      </header>
+      <div class="modal__body">
+        <div data-dialog-body></div>
+        <div id="dialog-errors" data-dialog-errors></div>
+      </div>
+      <footer class="modal__foot">
+        <button type="button" class="button ce-delete" data-dialog-delete hidden>Delete</button>
+        <button type="button" class="button" data-dialog-cancel>Cancel</button>
+        <button type="submit" class="button button--primary" data-dialog-save>Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- a part, opened from the tree: the component drawn with the part outlined, its look listed beside; edits apply as they are made -->
+  <dialog class="modal ce-part-modal" aria-labelledby="part-title" data-part-dialog>
+    <header class="modal__head">
+      <h2 id="part-title" data-part-title></h2>
+      <button type="button" class="ce-dialog-close" aria-label="Close" data-part-close></button>
+    </header>
+    <div class="modal__body ce-anatomy">
+      <aside class="ce-views-side" data-views></aside>
+      <div class="ce-stage" data-stage></div>
+      <div class="ce-inspector" data-inspector></div>
+    </div>
+    <footer class="modal__foot">
+      <div class="ce-part-modal__delete" data-part-delete></div>
+      <div class="ce-part-modal__adds" data-part-add></div>
+      <button type="button" class="button" data-part-cancel hidden>Cancel</button>
+      <button type="button" class="button" data-part-done>Close</button>
+    </footer>
+  </dialog>
+
+  <div role="status" class="visually-hidden" data-status></div>
+  <div class="ce-undo ce-busy" data-busy hidden><span class="ce-busy__spin" aria-hidden="true"></span><span data-busy-text></span></div>
+  <div class="ce-undo" data-undo hidden><span data-undo-text></span><button type="button" class="button" data-undo-button>Undo</button><button type="button" class="ce-dialog-close" aria-label="Close" data-undo-close></button></div>
+
+  <noscript><p>The editor needs JavaScript: it builds the contract in the page.</p></noscript>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "libraries": {
+    "LIBKEY": {
+      "name": "Library",
+      "figmaUrl": "https://www.figma.com/design/LIBKEY/Library?m=dev",
+      "metrics": { "coverage": 91, "bound": 180, "unbound": 20, "totalFindings": 11, "openFindings": 9 }
+    }
+  },
+  "runs": {
+    "2026-10-01-page-090000": { "fileKey": "LIBKEY", "at": "2026-10-01T09:00:00.000Z", "kind": "audit", "trigger": "full", "coverage": 88, "sets": 12, "variants": 140, "found": 9, "cleared": 0, "open": 9, "scope": "In-page audit of 12 components." },
+    "2026-10-20-sweep": { "fileKey": "LIBKEY", "at": "2026-10-21T09:00:00.000Z", "kind": "sweep" },
+    "2026-10-20-page-100000": { "fileKey": "LIBKEY", "at": "2026-10-20T10:00:00.000Z", "kind": "audit", "trigger": "full", "coverage": 91, "sets": 12, "variants": 144, "found": 3, "cleared": 2, "open": 9, "scope": "In-page audit of 12 components." }
+  },
+  "rows": {
+    "a-button-padding": { "owner": "figma-components-audit", "bucket": "b1", "sev": "warn", "rule": "tokens", "where": "Button › Container", "node": "1:2", "visible": false,
+      "check": "padding is raw", "fix": ["Left padding is a raw 12"], "rec": ["Bind it to <code>space/300</code>"], "done": false },
+    "a-badge-fill": { "owner": "figma-components-audit", "bucket": "b1", "sev": "error", "rule": "tokens", "where": "Badge › Fill", "node": "2:4", "visible": true,
+      "check": "fill is raw", "fix": ["Fill is a raw hex, so it stays the same in dark mode"], "rec": ["Bind it to <code>color/bg/accent</code>"], "done": false },
+    "a-avatar-name": { "owner": "figma-components-audit", "bucket": "b1", "sev": "pref", "rule": "naming", "where": "Avatar › Frame 12", "node": "3:1", "visible": false,
+      "check": "default layer name", "fix": ["Layer keeps Figma's default name"], "rec": ["Rename it <b>Image</b>"], "done": true },
+    "a-tabs-order": { "owner": "figma-components-audit", "bucket": "b2", "sev": "warn", "rule": "schema", "where": "Tabs — properties panel", "node": "4:1", "visible": false,
+      "check": "options out of order", "fix": ["Size runs Large before Small"], "rec": ["Drag Small above Large in the Size property"], "done": false },
+    "a-input-states": { "owner": "figma-components-audit", "bucket": "b3", "sev": "warn", "rule": "states", "where": "Text input — properties panel", "node": "5:1", "visible": false,
+      "check": "no Focus state", "fix": ["State offers Rest|Hover and no Focus (keyboard users get no ring)"], "rec": ["Add Focus"], "done": false },
+    "a-card-removed": { "owner": "figma-snapshot-router", "bucket": "b3", "sev": "error", "rule": "breaking-change", "where": "Card", "node": null, "visible": true,
+      "check": "Breaking for designers: component removed", "fix": ["Card was removed on 2026-10-19; every instance in a designer's file detaches"], "rec": ["Intended: say it in the release note, with what consumers must change.", "Not intended: revert it in Figma before the next publish."], "done": false },
+    "a-chip-long": { "owner": "figma-foundations-audit", "bucket": "b3", "sev": "warn", "rule": "page-order", "where": "Page list", "node": null, "visible": false,
+      "check": "page order", "fix": ["In INPUTS, Chip should come before Combobox, because the category is sorted alphabetically everywhere else in the file and this one page breaks it"], "rec": ["Move it"], "done": false },
+    "a-legacy": { "bucket": "b1", "sev": "warn", "rule": "metadata", "where": "Tooltip", "node": "6:1", "visible": false,
+      "check": "no description", "fix": [], "rec": ["Add a description"], "done": false },
+    "a-verified": { "owner": "figma-components-audit", "bucket": "b1", "sev": "error", "rule": "tokens", "where": "Switch › Track", "node": "7:1", "visible": true,
+      "check": "fill is raw", "fix": ["Track fill is raw"], "rec": ["Bind it"], "done": true, "verified": true }
+  }
+}

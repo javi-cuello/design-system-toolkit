@@ -1,0 +1,240 @@
+{
+ "_note": "The measures an audit reports: what each counts, how it renders, the threshold that turns it amber, and why it is measured at all. The SKILL owns this. The dashboard renders both the tiles and the About tab from it and states no threshold of its own — before this the labels and thresholds sat in the page twice, once as tile logic and once as About prose.",
+ "_value": "`of` reads one metric key; `num`/`den` is a ratio; `sum` adds keys. `render`: percent | ratio | count | cleanOrCount. `good`: gte (on the percentage, or on num/den x100) or eq (on the number); null means this is context, not a grade.",
+ "_detail": "A template over metric keys in {braces}. `boundTotal` (bound+unbound) and `contrastShort` (contrastTotal-contrastPass) are derived for templates only.",
+ "_missing": "A measure whose inputs this run did not record renders NO TILE — never a zero. A figure nobody checked is not a measurement.",
+ "intro": "Each is counted over the components in scope — every published component and component set on the library's component pages, walking every variant. Instances and slot contents are skipped: their styling belongs to the component they came from, so counting them would measure the same thing twice and blame the wrong file.",
+ "measures": [
+  {
+   "key": "coverage",
+   "label": "Token coverage",
+   "value": {
+    "of": "coverage"
+   },
+   "render": "percent",
+   "good": {
+    "gte": 99.5
+   },
+   "detail": "{bound} / {boundTotal} bindings",
+   "why": "{unbound} properties still hold raw values",
+   "whyWhen": "notGood",
+   "grade": "good ≥ 99.5%",
+   "about": [
+    "Bound bindable properties as a share of all of them: padding, gaps, per-corner radius, fills, strokes, per-side stroke weights, and font family, size and weight on every text layer.",
+    "<b>Why it leads:</b> a raw value is a decision that cannot be changed centrally. It survives every rebrand and scale revision untouched, and nothing about a hard-coded 12 says it was meant to be a token. Only non-zero values count — an unset property is not a missed binding."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "contrast",
+   "label": "Contrast (AA)",
+   "value": {
+    "num": "contrastPass",
+    "den": "contrastTotal"
+   },
+   "render": "percent",
+   "good": {
+    "gte": 100
+   },
+   "detail": "{contrastPass} / {contrastTotal} text layers",
+   "why": "{contrastShort} text layers below the AA floor",
+   "whyWhen": "notGood",
+   "grade": "WCAG 2.2 AA<br>4.5:1 · 3:1 large",
+   "about": [
+    "Text layers over an opaque surface inside the same component, in the mode each variant resolves to, with the text's own alpha blended over that surface before the ratio is computed. Disabled variants are exempt (WCAG 1.4.3). Text with no opaque surface under it inside the component is not judged: its surface is wherever the consumer places it.",
+    "<b>What it leaves to the reader:</b> every other mode, and translucent surfaces, stay a reviewed check (figma-standard rule 32): the canvas shows one mode, so one reading checks one mode."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "described",
+   "label": "Descriptions",
+   "value": {
+    "num": "described",
+    "den": "sets"
+   },
+   "render": "percent",
+   "good": {
+    "gte": 100
+   },
+   "detail": "{described} / {sets} components",
+   "grade": "good at 100%",
+   "about": [
+    "Components carrying a non-empty description, over all of them.",
+    "<b>Why it counts:</b> the description is the only channel that reaches someone who never opens the file — a developer in Dev Mode, a teammate in the asset panel, a model reading the library. Everything else measured here governs what a component <i>is</i>; this governs whether anyone can find out."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "guidance",
+   "label": "Guidance",
+   "value": {
+    "num": "guided",
+    "den": "guidable"
+   },
+   "render": "ratio",
+   "good": {
+    "gte": 100
+   },
+   "detail": "components with Usage, Don't and Code gen notes",
+   "grade": "good at 100%",
+   "about": [
+    "Public components, slot parts left out, whose description carries the three sections an agent or a person acts on: Usage, Don't and Code gen notes (figma-standard rule 25).",
+    "<b>Why beside Descriptions:</b> any text counts as a description; these sections are what steer a choice. A slot part is chosen through its parent, so it owes none."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "named",
+   "label": "Named layers",
+   "value": {
+    "num": "named",
+    "den": "layers"
+   },
+   "render": "percent",
+   "good": {
+    "gte": 100
+   },
+   "detail": "{autoNamed} named like Frame 12",
+   "grade": "good at 100%",
+   "about": [
+    "Layers whose name is not one Figma gave them (Frame 12, Rectangle 3), over the layers the name check reads: every layer below a variant root, instances' insides left to their own component (figma-standard rule 10).",
+    "<b>Why it counts:</b> a layer name is what a developer and an agent read to know what a part is."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "autoLayout",
+   "label": "Auto layout",
+   "value": {
+    "num": "framesAuto",
+    "den": "frames"
+   },
+   "render": "percent",
+   "good": {
+    "gte": 100
+   },
+   "detail": "{staticFrames} frames without it",
+   "grade": "good at 100%",
+   "about": [
+    "Frames holding visible layers that lay them out with auto layout (figma-standard rule 33).",
+    "<b>Why it counts:</b> without it a frame reaches an agent through Figma's MCP as absolute positions it can only copy, and stays put when content moves."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "propDesc",
+   "label": "Property notes",
+   "value": {
+    "num": "propDesc",
+    "den": "propTotal"
+   },
+   "render": "ratio",
+   "good": {
+    "gte": 100
+   },
+   "detail": "component properties",
+   "why": "No property carries a description; abstract booleans are where this costs a reader",
+   "whyWhen": "zero",
+   "grade": "count, not a share",
+   "about": [
+    "Component properties carrying their own description, over every property declared across the library.",
+    "<b>Why separately:</b> an abstract boolean is where this costs a reader. A property called <code>Compact</code> or <code>Emphasis</code> means nothing from its name alone, and the panel is the only place the answer could live."
+   ],
+   "status": "backlog"
+  },
+  {
+   "key": "states",
+   "label": "States render",
+   "value": {
+    "of": "statesBroken"
+   },
+   "render": "cleanOrCount",
+   "good": {
+    "eq": 0
+   },
+   "detail": "every non-rest state differs",
+   "detailWhenNotGood": "states identical to rest",
+   "grade": "good at zero",
+   "about": [
+    "Non-rest variants whose appearance is identical to their rest sibling. The comparison includes the variant root's own <code>opacity</code>, fills, strokes and effects — excluding only its name, which is <code>Axis=Value</code> by construction.",
+    "<b>Why it outranks cosmetics:</b> a Press or Disabled variant that looks like Rest is indistinguishable from a working one on the canvas and completely broken in use. Dimming the root is the commonest way Disabled is built, so a comparison blind to it reports correct components as faults."
+   ],
+   "status": "backlog"
+  },
+  {
+   "key": "structure",
+   "label": "Structure",
+   "value": {
+    "sum": [
+     "groups",
+     "hidden"
+    ]
+   },
+   "render": "cleanOrCount",
+   "good": {
+    "eq": 0
+   },
+   "detail": "{groups} groups · {hidden} orphan hidden layers",
+   "grade": "good at zero",
+   "about": [
+    "Two counts: <code>GROUP</code> nodes inside components, and layers hidden without any property controlling them.",
+    "<b>Why these two:</b> a group has no layout behaviour of its own, so one group silently opts a subtree out of the auto-layout everything around it obeys. A hidden layer nothing toggles is either dead weight or a conditional the property model never captured — and a reader cannot tell which."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "annotated",
+   "label": "Dev Mode notes",
+   "value": {
+    "num": "annotated",
+    "den": "sets"
+   },
+   "render": "ratio",
+   "good": {
+    "gte": 100
+   },
+   "detail": "annotated components",
+   "grade": "often deferred",
+   "about": [
+    "Components carrying at least one Dev Mode annotation.",
+    "<b>What they are for:</b> the spec detail too specific for prose and too load-bearing for tribal knowledge — a cursor rule, an exact transition, an ARIA role that applies to one state. Most libraries have written none, which is a backlog rather than a defect; a project that has ruled it deferred sees this tile as deferred."
+   ],
+   "status": "backlog"
+  },
+  {
+   "key": "openFindings",
+   "label": "Open findings",
+   "value": {
+    "of": "openFindings"
+   },
+   "render": "count",
+   "good": {
+    "eq": 0
+   },
+   "detail": "of {totalFindings} raised to date",
+   "grade": "good at zero",
+   "about": [
+    "Findings still open, over every finding raised across all runs. A finding closes when a run measures it as fixed, or when a ruling settles it — both count, and the queue records which.",
+    "<b>Why the denominator:</b> two open findings out of four is a different library from two out of forty."
+   ],
+   "status": "scanner"
+  },
+  {
+   "key": "inventory",
+   "label": "Inventory",
+   "value": {
+    "of": "sets"
+   },
+   "render": "count",
+   "good": null,
+   "detail": "{variants} variants · {variables} variables · {textStyles} text · {effectStyles} effect",
+   "grade": "context, not a grade",
+   "about": [
+    "Component sets, variants, variables, text and effect styles. Ungraded on purpose: there is no correct number of components, and a library is not healthier for being larger."
+   ],
+   "status": "scanner"
+  }
+ ],
+ "_status": "`scanner` — the run records this measure's inputs, so it renders. `backlog` — the check that would produce it is not built yet (see checks.json), so no run records it and NO TILE appears. The About tab still lists it, marked, because a measure the audit intends to take and does not is a fact about the audit's reach — the same honesty checks.json applies to checks."
+}

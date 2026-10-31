@@ -1,0 +1,30 @@
+# Changelog — figma-token-export
+
+- 2.8.2 (2026-10-30): `scripts/from-snapshot.mjs` runs when called through the installed skill link; it had compared the link to its real path and exited 0 having done nothing.
+- 2.8.1 (2026-10-20): the font-weight table is the parity engine's one (`tools/parity/values.mjs` `WEIGHTS`, the DTCG aliases), a copy because the sandbox imports nothing, held to it by `tests/test-dtcg.js`; an underscore reads as a separator too. Case A3 walked.
+- 2.8.0 (2026-10-14): `from-snapshot.mjs` also reads the file the snapshot plugin downloads (0.59.0), so DTCG export needs no router or repo. A31.
+- 2.7.4 (2026-10-13): the description is quoted; its unquoted `: ` failed YAML, so a strict loader dropped it.
+- 2.7.3 (2026-10-08): citations name the standard that owns each rule.
+- 2.7.2 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 2.7.1 (2026-10-01): `scripts/discover.mjs` drops the unused `loadFrom`, `axesOf` and `countTokens`; the opacity row's escaped pipe is prose. No behaviour change.
+- 2.7.0 (2026-10-01): shadow layers are listed top first (the reverse of Figma's effects array); `inset` is standard DTCG, so its `$extensions` mirror is removed. A19 re-aimed.
+- 2.6.2 (2026-09-30): the project cited as evidence is renamed. No rule changed.
+- 2.6.1 (2026-09-20): `parseColour` in `scripts/from-snapshot.mjs` renamed `figmaRgba`, for what it returns. Behaviour unchanged.
+- 2.6.0 (2026-09-19): the naming-convention fallback for text-style bindings is removed; a snapshot without `bound` (older than plugin 0.24.0) is refused.
+- 2.5.0 (2026-09-19): the snapshot is the refresh and the refresh server is retired; `from-snapshot.mjs` runs the TypeScript steps and replaces only what an export owns. A29, A30.
+- 2.4.0 (2026-09-19): `from-snapshot.mjs` keeps a shadow layer's bindings as references; a foreign variable keeps its literal.
+- 2.3.0 (2026-09-19): `from-snapshot.mjs` takes text-style bindings from the snapshot's `bound`; a foreign binding keeps its literal value.
+- 2.2.1 (2026-09-19): an alias to a name two collections define points away from its own collection (A27); a non-empty folder without `manifest.json` is refused (A28).
+- 2.2.0 (2026-09-19): the CSS build leaves this skill for `frontend-build`'s one token build; `scripts/from-snapshot.mjs` exports from a stored snapshot (A26); weights match with any separator.
+- 2.1.0 (2026-08-21): the kind segment matches anywhere in a name (A23); AUTO line heights are measured (A24); colour styles export as `color` and `gradient` (A25).
+- 2.0.0 (2026-08-18): multi-layer shadows keep their references; `verify-ts` resolves every path and refuses literal references; the refresh server's output argument is required. A21, A22.
+- 1.6.0 (2026-08-18): `scripts/refresh-server.mjs` serves the exporter to the plugin and writes the export to disk. Case A20.
+- 1.5.0 (2026-08-18): effect styles export as `shadow` tokens, `inset: true` on inner layers. Case A19.
+- 1.4.0 (2026-08-18): generated output moves under `dist/`, leaving the DTCG source at the root of the tokens folder.
+- 1.3.0 (2026-08-18): the export is one folder per collection, one file per mode; discovery moves into `scripts/discover.mjs`. Case A18.
+- 1.2.0 (2026-08-18): the TypeScript generator and the verifiers move into the skill and discover collections and modes from the files. A15–A17.
+- 1.1.2 (2026-08-18): Step 4 gains the check that decides how many bundles to ship: diff two built bundles first. Documentation only.
+- 1.1.1 (2026-08-18): Step 4's Style Dictionary guidance replaced with findings from a real 5.5.1 build. No behaviour change.
+- 1.1.0 (2026-08-18): the report gains `renamed`, for lossy renames between Figma and code. Case A14.
+- 1.0.1 (2026-08-18): a leading minus slugs to `minus-1`, and `setDeep` refuses to overwrite an occupied path. Case A13.
+- 1.0.0 (2026-08-18): first version: pure layer (`dtcg.js`) and live layer (`collect.js`); collections grouped by mode-name set in the manifest.

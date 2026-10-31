@@ -1,0 +1,38 @@
+---
+// A strip of figures (system.css `.kpis`): each a label, its value, an
+// optional "of" total and a note whose dot and first word give the verdict.
+// Framed on its own; inside a card it runs to the card's edges (site.scss
+// `.panel > .kpis`).
+// `tone`: 'good' (green dot, "Good"), 'warn' (amber dot, "Attention"),
+// 'idle' (grey) or 'plain' (the default; no dot: a note that is a count or
+// a description, not a verdict). A verdict is always set by the caller: a
+// default of 'warn' printed "Attention" on pure counts. The word is there because the dot's colour
+// alone carries nothing for a reader who cannot tell the two apart (WCAG
+// 1.4.1); the dashboard's tiles say it the same way.
+// `lead`: one of the two figures a page is read for, drawn larger and wider,
+// so the strip ranks its figures instead of giving each the same weight.
+import { base, num } from '../lib/format.js';
+import { kpiStyles } from '../dashboard/kpis.js';
+
+export interface Kpi { label: string; value: string | number; of?: number; note?: string | null; tone?: 'good' | 'warn' | 'idle' | 'plain'; href?: string; lead?: boolean }
+interface Props { items: Kpi[]; label?: string; perRow?: number }
+const { items, label, perRow = 6 } = Astro.props;
+// Each tile's share of its row at the strip's three widths (dashboard/kpis.js).
+const styles = kpiStyles(items.map((k) => (k.lead ? 2 : 1)), perRow);
+const NOTE = { good: 'kpi__note--ok', idle: 'kpi__note--idle', plain: 'kpi__note--plain', warn: null };
+const VERDICT = { good: 'Good', warn: 'Attention' };
+const shown = (v) => (typeof v === 'number' ? num(v) : v);
+---
+<ul class="kpis kpis--fill" aria-label={label}>
+  {items.map((k, i) => {
+    const Tag = k.href ? 'a' : 'div';
+    const verdict = VERDICT[k.tone || 'plain'];
+    return (
+      <li class:list={[k.lead && 'kpis__lead']} style={styles[i]}><Tag class="kpi" href={k.href && (k.href.startsWith('?') ? k.href : `${base}${k.href}`)}>
+        <span class="kpi__label">{k.label}</span>
+        <span class="kpi__value">{shown(k.value)}{k.of !== undefined && <span class="kpi__of"> / {num(k.of)}</span>}</span>
+        {(k.note || verdict) && <span class:list={['kpi__note', NOTE[k.tone || 'plain']]}>{verdict && <strong class="kpi__verdict">{verdict}{k.note ? ':' : ''}</strong>}{k.note && <span>{k.note}</span>}</span>}
+      </Tag></li>
+    );
+  })}
+</ul>

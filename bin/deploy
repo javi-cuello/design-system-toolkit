@@ -1,0 +1,59 @@
+#!/bin/sh
+# Publish one project's built docs site to Cloudflare, as the Worker
+# `<project>-docs` serving it as static assets. The dashboard service builds the site; this only uploads
+# what it built. A project whose context-document block says `"publish": "password"`
+# (or "public") is redeployed by the service after every build; otherwise run it by hand.
+#
+#   bin/deploy <project> --public      anyone may read it
+#   bin/deploy <project> --password    one shared password (tools/docs-site/deploy/password.js)
+#
+# The Worker lives at <project>-docs.<account>.workers.dev. One of the two flags
+# is required, so who may read a site is decided at the moment it is published.
+# --password serves nothing until the password is set, once per project:
+#   npx wrangler secret put PASSWORD --name <project>-docs
+#
+# Needs `npx wrangler login` once. The published Audits page is read-only:
+# with no dashboard service behind it, it shows the record it was built with.
+set -eu
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+LABEL="${1:-}"
+[ -n "$LABEL" ] || { echo "usage: bin/deploy <project> --public|--password" >&2; exit 2; }
+case " $* " in
+  *" --public "*) MODE=public ;;
+  *" --password "*) MODE=password ;;
+  *) echo "refused: say who may read $LABEL-docs: --public (anyone) or --password (one shared password)" >&2; exit 2 ;;
+esac
+
+HOME_DIR="$(node "$REPO/tools/snapshot/projects.cjs" homes | awk -F"\t" -v l="$LABEL" '$1 == l { print $2 }')"
+[ -n "$HOME_DIR" ] || { echo "no project $LABEL: no ~/Projects/$LABEL/figma-design-system/ with a context document" >&2; exit 1; }
+SITE="$HOME_DIR/site"
+[ -f "$SITE/index.html" ] || { echo "no built site at $SITE — start the dashboard service and let it build" >&2; exit 1; }
+# The service writes over the site as it rebuilds; a half-written folder is
+# not something to publish, so the build's own last output is read first.
+[ -f "$SITE/api/index.json" ] || { echo "the site at $SITE has no API files — it is mid-build or from before the API; wait for the next build" >&2; exit 1; }
+
+NAME="$LABEL-docs"
+# wrangler at a pinned release: the dashboard service runs this unattended after
+# every build, so a new release must arrive by a change here, not by itself.
+WRANGLER="wrangler@4.151.0"
+# wrangler keeps a cache in its working directory: a scratch folder, not the
+# repo (a stray .wrangler/) nor launchd's `/` (unwritable) when the service runs this.
+WORK="$(mktemp -d)"; cd "$WORK"
+# A Worker serving the folder as static assets. Cloudflare folded Pages into
+# Workers, and wrangler 4.138 hands `pages project create` to a Workers
+# auto-configuration that looked for the site in the working directory and
+# deployed nothing. This is that route stated directly: one command, no
+# project to create first, the site at <name>.<account>.workers.dev.
+if [ "$MODE" = public ]; then
+  npx --yes "$WRANGLER" deploy --assets "$SITE" --name "$NAME" --compatibility-date 2026-09-24
+else
+  # The password check runs before any file is served, which the command line
+  # cannot say (run_worker_first, the ASSETS binding), so a config is written for the run.
+  CONF="$WORK/wrangler.json"
+  cat > "$CONF" <<JSON
+{ "name": "$NAME", "main": "$REPO/tools/docs-site/deploy/password.js", "compatibility_date": "2026-09-24",
+  "assets": { "directory": "$SITE", "binding": "ASSETS", "run_worker_first": true } }
+JSON
+  npx --yes "$WRANGLER" deploy --config "$CONF"
+  echo "password-protected; set or change the password with: npx $WRANGLER secret put PASSWORD --name $NAME"
+fi

@@ -1,0 +1,29 @@
+---
+// The components something is holding (lib/tracker.js `attention`), one row
+// each: the Tracker's Needs attention page lists them all, the overview the
+// first few. One table, so the two read the same. Errors and open findings
+// are two columns of counts, right-aligned, not one sentence per cell
+// (design-standard rule 8); a blocked component says so beside its name.
+import ComponentCell from './ComponentCell.astro';
+import { attention } from '../lib/tracker.js';
+import { base, num } from '../lib/format.js';
+
+interface Props { limit?: number }
+const { limit } = Astro.props;
+const list = limit ? attention.slice(0, limit) : attention;
+---
+<div class="table-wrap" data-scrolls>
+  <table class="table">
+    <caption class="visually-hidden">Components blocked or with an error open in the audit</caption>
+    <thead><tr><th scope="col">Component</th><th scope="col" class="num">Errors</th><th scope="col" class="num">Open findings</th></tr></thead>
+    <tbody>
+      {list.map((r) => (
+        <tr>
+          <ComponentCell page={r.page}>{r.group === 'blocked' && <> <span class="sev error">Blocked</span></>}{/deprecat/i.test(r.page.category || '') && <> <span class="pill">Deprecated</span></>}</ComponentCell>
+          <td class="num">{r.errors ? num(r.errors) : <span class="muted">–</span>}</td>
+          <td class="num">{r.open > 0 ? <a href={`${base}/audits/#queue?component=${r.page.slug}`}>{num(r.open)}</a> : <span class="muted">–</span>}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

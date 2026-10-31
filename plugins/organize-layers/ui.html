@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+<head>
+<style>
+/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v2 end */
+
+/* organize-layers bespoke styles (extend the base; nothing here restates a
+   base control rule except where §4's collision rule requires it to be
+   explicit). Every colour resolves to an injected --figma-color-* token. */
+
+/* Preview. Key in full text colour, the rest secondary — the two used to be
+   secondary and tertiary on a secondary background, which is where the washed
+   -out look came from. */
+.preview.vertical{flex-direction:column;gap:var(--space-1)}
+.preview.vertical .col{flex-direction:row;gap:var(--space-3)}
+.preview{background:var(--figma-color-bg-secondary);
+border-bottom:1px solid var(--figma-color-border);
+padding:var(--space-2) var(--space-3);height:132px;overflow:auto;
+display:flex;gap:var(--space-4);align-items:flex-start;
+font-size:var(--fs-12);line-height:18px}
+.preview.empty{align-items:center;justify-content:center;
+color:var(--figma-color-text-secondary);font-size:var(--fs-11)}
+.col{display:flex;flex-direction:column;white-space:nowrap}
+.row{color:var(--figma-color-text-secondary)}
+.row .key{color:var(--figma-color-text);font-weight:var(--fw-medium)}
+
+.field{margin-bottom:var(--space-2)}
+.label{font-size:10px;font-weight:var(--fw-medium);letter-spacing:.06em;
+text-transform:uppercase;color:var(--figma-color-text-secondary);
+line-height:14px;margin-bottom:var(--space-1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+
+input:hover{border-color:var(--figma-color-border-strong)}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+/* Bespoke controls: height + box-sizing explicit, per skill-standard §B 4 —
+   ui-base's bare input selector would otherwise supply them by accident.
+   Element-qualified on purpose: ui-base's `input[type=text]` carries an
+   attribute selector, so a bare class ties with it on specificity and loses on
+   source order. `.input-compact` alone was measured at 468px inside a 260px
+   window — ui-base's width:100%, not the 56px this rule asks for. */
+input.input-compact{height:var(--input-h);box-sizing:border-box;width:56px;text-align:center}
+.input-icon{position:relative}
+.input-icon svg{position:absolute;left:7px;top:50%;transform:translateY(-50%);
+color:var(--figma-color-text-secondary);pointer-events:none}
+.input-icon input{height:var(--input-h);box-sizing:border-box;width:100%;padding-left:27px}
+
+/* Checkbox. The native control drew its tick in the OS accent's own contrast
+   colour, which came out dark on Figma blue; this draws the tick from
+   --figma-color-icon-onbrand instead. height:auto overrides ui-base's 32px
+   row, which is taller than this dense layout wants. */
+.checkbox{height:auto;min-height:20px;margin-bottom:var(--space-3);cursor:default}
+.checkbox input{position:absolute;opacity:0;width:0;height:0;margin:0}
+.checkbox .box{flex:none;width:12px;height:12px;box-sizing:border-box;
+border:1px solid var(--figma-color-border-strong);border-radius:var(--radius-sm);
+background:var(--figma-color-bg);color:transparent;
+display:flex;align-items:center;justify-content:center}
+.checkbox input:checked + .box{background:var(--figma-color-bg-brand);
+border-color:var(--figma-color-bg-brand);color:var(--figma-color-icon-onbrand,#fff)}
+.checkbox input:focus-visible + .box{outline:2px solid var(--figma-color-border-selected);
+outline-offset:1px}
+
+/* Segmented control. Every rule ui-base sets on a bare `button` is restated:
+   the two selectors tie on specificity, so this wins only by coming later, and
+   leaving hover unstated turns the inactive half brand-blue on the way past. */
+.segmented{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px;
+background:var(--figma-color-bg-secondary);border:1px solid var(--figma-color-border);
+border-radius:var(--radius-lg)}
+button.seg{height:24px;box-sizing:border-box;padding:0;border:none;
+border-radius:4px;background:transparent;color:var(--figma-color-text-secondary);
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);cursor:default;
+display:flex;align-items:center;justify-content:center;gap:5px}
+button.seg svg{flex:none}
+button.seg:hover{background:var(--figma-color-bg-hover,rgba(0,0,0,.06));
+color:var(--figma-color-text)}
+button.seg[aria-pressed="true"]{background:var(--figma-color-bg);
+color:var(--figma-color-text);box-shadow:0 0 0 1px var(--figma-color-border)}
+button.seg[aria-pressed="true"]:hover{background:var(--figma-color-bg)}
+
+.btn-full{width:100%;height:var(--control-h);box-sizing:border-box}
+.status{font-size:10px;color:var(--figma-color-text-secondary);
+margin-top:var(--space-1);text-align:center;height:14px;line-height:14px}
+</style>
+</head>
+<body>
+<div id="preview" class="preview empty">Nothing to organise</div>
+<div class="container">
+
+  <div class="field">
+    <div class="label">Separator</div>
+    <input id="delimiter" class="input-compact" type="text" maxlength="8" placeholder="-">
+  </div>
+
+  <div class="field">
+    <div class="label">Flow</div>
+    <div class="segmented">
+      <button type="button" class="seg" id="dir-horizontal" data-dir="horizontal" aria-pressed="true">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.5 2.5v11M8 2.5v11M13.5 2.5v11"/>
+        </svg>Horizontal</button>
+      <button type="button" class="seg" id="dir-vertical" data-dir="vertical" aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.5 2.5h11M2.5 8h11M2.5 13.5h11"/>
+        </svg>Vertical</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <div class="label">Space between layers</div>
+    <div class="grid2">
+      <div class="input-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.5 3h11M2.5 13h11"/><path d="M8 5.5v5M6.5 7 8 5.5 9.5 7M6.5 9 8 10.5 9.5 9"/>
+        </svg>
+        <input id="gapY" type="number" min="0" step="1" title="Vertical space between rows">
+      </div>
+      <div class="input-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2.5v11M13 2.5v11"/><path d="M5.5 8h5M7 6.5 5.5 8 7 9.5M9 6.5l1.5 1.5L9 9.5"/>
+        </svg>
+        <input id="gapX" type="number" min="0" step="1" title="Horizontal space between columns">
+      </div>
+    </div>
+  </div>
+
+  <label class="checkbox">
+    <input id="grouped" type="checkbox">
+    <span class="box" aria-hidden="true">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M2 5.2 4.1 7.3 8 3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>Group by name</span>
+  </label>
+
+  <button id="run" class="btn-full">Organise Layers</button>
+  <div class="status" id="status"></div>
+</div>
+<script>
+var DEFAULT_DELIMITER = '-';
+var $ = function (id) { return document.getElementById(id); };
+
+function post(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
+
+function delimiter() { return $('delimiter').value || DEFAULT_DELIMITER; }
+
+function direction() {
+  return $('dir-vertical').getAttribute('aria-pressed') === 'true' ? 'vertical' : 'horizontal';
+}
+
+function readSettings() {
+  return {
+    delimiter: delimiter(),
+    grouped: $('grouped').checked,
+    direction: direction(),
+    gapX: parseFloat($('gapX').value),
+    gapY: parseFloat($('gapY').value)
+  };
+}
+
+function applySettings(s) {
+  setDirection(s.direction === 'vertical' ? 'vertical' : 'horizontal');
+  $('delimiter').value = s.delimiter;
+  $('grouped').checked = s.grouped;
+  $('gapX').value = s.gapX;
+  $('gapY').value = s.gapY;
+}
+
+function setDirection(dir) {
+  ['horizontal', 'vertical'].forEach(function (d) {
+    $('dir-' + d).setAttribute('aria-pressed', String(d === dir));
+  });
+}
+
+function changed() { post({ type: 'settings', settings: readSettings() }); }
+
+['horizontal', 'vertical'].forEach(function (d) {
+  $('dir-' + d).onclick = function () { setDirection(d); changed(); };
+});
+
+['delimiter', 'gapX', 'gapY'].forEach(function (id) { $(id).oninput = changed; });
+$('grouped').onchange = changed;
+
+$('run').onclick = function () {
+  $('run').disabled = true;
+  post({ type: 'run' });
+};
+
+function renderPreview(msg) {
+  var box = $('preview');
+  box.textContent = '';
+  if (!msg.count) {
+    box.className = 'preview empty';
+    box.textContent = 'Nothing to organise';
+  } else {
+    box.className = msg.direction === 'vertical' ? 'preview vertical' : 'preview';
+    msg.columns.forEach(function (col) {
+      var el = document.createElement('div');
+      el.className = 'col';
+      col.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'row';
+        var key = document.createElement('span');
+        key.className = 'key';
+        key.textContent = item.key;
+        row.appendChild(key);
+        if (item.rest) row.appendChild(document.createTextNode(' ' + delimiter() + ' ' + item.rest));
+        el.appendChild(row);
+      });
+      box.appendChild(el);
+    });
+  }
+  var parts = [msg.count + ' layer' + (msg.count === 1 ? '' : 's'),
+               msg.columns.length + ' column' + (msg.columns.length === 1 ? '' : 's')];
+  if (msg.skipped) parts.push(msg.skipped + ' skipped');
+  $('status').textContent = msg.count ? parts.join(' · ') : '';
+}
+
+onmessage = function (e) {
+  var msg = e.data.pluginMessage;
+  if (!msg) return;
+  if (msg.type === 'settings') applySettings(msg.settings);
+  else if (msg.type === 'preview') renderPreview(msg);
+  else if (msg.type === 'done') $('run').disabled = false;
+};
+
+post({ type: 'init' });
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+---
+import { compareNames } from '../../../../shared/output.mjs';
+// Design progress: each component's status marker, as the designers set it
+// on its page in Figma. Only while the library is in design (shows.progress):
+// in production the markers are no longer kept. The ladder on the Components
+// page is a separate question, what each component still lacks.
+import ComponentCell from '../../components/ComponentCell.astro';
+import Base from '../../layouts/Base.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import Filter from '../../components/Filter.astro';
+import { rows, done, doneLabel, GROUP_LABEL } from '../../lib/tracker.js';
+import { shows, project } from '../../lib/project.js';
+
+const total = rows.length;
+const count = (g) => rows.filter((r) => r.group === g).length;
+const order = ['finished', 'waiting', 'working', 'blocked', 'deprecated', 'unmarked'];
+const bar = order.map((g) => ({ g, n: count(g) })).filter((x) => x.n);
+const pct = (n) => (total ? (n / total) * 100 : 0);
+const groups = [['all', 'All components', total], ...order.map((g) => [g, GROUP_LABEL[g], count(g)])].filter(([k, , n]) => k === 'all' || n);
+const sorted = [...rows].sort((a, b) => (a.status?.rank ?? -1) - (b.status?.rank ?? -1) || compareNames(a.page.title, b.page.title));
+---
+<Base title="Progress">
+  <h1>Progress</h1>
+  <UpdatedBy from={['snapshot']} />
+  {!shows.progress ? <p class="lede">This library is in {project.phase}: design progress is no longer tracked, and each component's level is on the Components page.</p> : <>
+  <p class="lede">Where each component stands in design, read from the status marker the designers set in Figma. Finished means {doneLabel}. This page goes when the library leaves design.</p>
+  <div class="progress-block">
+    <p class="panel__figure"><strong>{done}</strong> of {total} finished <span class="muted">· {Math.round(pct(done))}%</span></p>
+    <div class="progress" role="img" aria-label={bar.map((x) => `${x.n} ${GROUP_LABEL[x.g].toLowerCase()}`).join(', ')}>
+      {bar.map((x) => <span class={`progress__seg progress__seg--${x.g}`} style={`--w: ${pct(x.n)}%`} title={`${x.n} ${GROUP_LABEL[x.g].toLowerCase()}`}></span>)}
+    </div>
+  </div>
+  <section class="panel panel--plain" aria-labelledby="progress-components">
+    <header class="panel__head"><h2 id="progress-components">By component</h2></header>
+    <Filter groups={groups} label="Show components that are" placeholder={`Filter ${total} components`} />
+    <div class:list={['table-wrap', sorted.length > 20 && 'table-wrap--long']} data-scrolls>
+      <table class="table">
+        <caption class="visually-hidden">Components and their design status</caption>
+        <thead><tr><th scope="col">Component</th><th scope="col">Status</th></tr></thead>
+        <tbody>
+          {sorted.map((r) => (
+            <tr data-name={`${r.page.title} ${r.status?.label || ''}`.toLowerCase()} data-kind={r.group}>
+              <ComponentCell page={r.page} />
+              {/* The group's name, the one the filter and the bar use; which
+                  Figma marker each stands for is said once, under the filter. */}
+              <td>{r.status ? <span class={`status status--${r.group}`}>{GROUP_LABEL[r.group]}</span> : <span class="muted">{GROUP_LABEL.unmarked}</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  </>}
+</Base>

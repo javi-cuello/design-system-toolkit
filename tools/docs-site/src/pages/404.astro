@@ -1,0 +1,16 @@
+---
+// The page an address that does not exist lands on: the site's shell, so
+// the sidebar is still there to go somewhere, and the places a reader most
+// likely meant.
+import Base from '../layouts/Base.astro';
+import { base } from '../lib/format.js';
+---
+<Base title="Page not found">
+  <h1>Page not found</h1>
+  <p class="lede">Nothing lives at this address. A component or token renamed in Figma moves its page with it.</p>
+  <ul>
+    <li><a href={`${base}/`}>Overview</a></li>
+    <li><a href={`${base}/components/`}>Components</a></li>
+    <li><a href={`${base}/changes/`}>Changes</a>, for what was renamed or removed</li>
+  </ul>
+</Base>

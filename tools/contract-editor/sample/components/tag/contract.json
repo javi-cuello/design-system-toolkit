@@ -1,0 +1,77 @@
+{
+  "contract": 1,
+  "component": "Tag",
+  "figma": {
+    "name": "Tag",
+    "key": "9f8a9bc87b4e7895cd6f8ee1dd5ae502efa787bf",
+    "id": "1:70"
+  },
+  "props": {
+    "label": {
+      "type": "string",
+      "default": "Tag",
+      "figma": "Label",
+      "sets": [
+        "label"
+      ]
+    },
+    "tone": {
+      "type": "enum",
+      "values": [
+        "neutral"
+      ],
+      "default": "neutral",
+      "figmaValues": [
+        "Neutral"
+      ],
+      "figma": "Tone"
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/4",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/2",
+          "end": "Spacing/6",
+          "bottom": "Spacing/2",
+          "start": "Spacing/6"
+        }
+      },
+      "width": "hug",
+      "height": "hug",
+      "radius": "Radius/4",
+      "border": {
+        "color": "Color/Border/default",
+        "width": [
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1"
+        ],
+        "sides": {
+          "top": 1,
+          "end": 1,
+          "bottom": 1,
+          "start": 1
+        }
+      }
+    },
+    "label": {
+      "kind": "text",
+      "parent": "root",
+      "width": "hug",
+      "height": "hug",
+      "color": "Color/Text/primary",
+      "typography": "Label/sm",
+      "autoResize": "width",
+      "content": "{label}",
+      "order": 0
+    }
+  },
+  "variants": []
+}

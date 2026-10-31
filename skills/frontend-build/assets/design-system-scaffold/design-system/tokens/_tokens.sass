@@ -1,0 +1,55 @@
+// Starter tokens — replaced wholesale once they are generated from the
+// design source. Names here are deliberately plain; the generated files use
+// the design tool's own names so a designer and an engineer say the same word.
+
+:root
+  color-scheme: light dark
+
+  // colour
+  --color-surface: #ffffff
+  --color-text: #16181d
+  --color-accent: #1b4dd8
+  --color-accent-text: #ffffff
+  --color-border: #d3d7de
+
+  // spacing
+  --space-2: 0.125rem
+  --space-4: 0.25rem
+  --space-8: 0.5rem
+  --space-12: 0.75rem
+  --space-16: 1rem
+  --space-24: 1.5rem
+
+  // radius
+  --radius-sm: 0.25rem
+  --radius-md: 0.5rem
+
+  // type
+  --font-body: system-ui, sans-serif
+  --text-sm: 0.875rem
+  --text-md: 1rem
+  --text-lg: 1.125rem
+
+  // stroke
+  --stroke-1: 1px
+
+  // state: named as a design source's State collection names them, so the
+  // generated file replaces these without touching the mixins that read them
+  --state-focus-stroke-width: 2px
+  --state-focus-stroke-colour: var(--color-accent)
+  --state-disabled-opacity: 0.5
+
+@media (prefers-color-scheme: dark)
+  :root:not([data-theme="light"])
+    --color-surface: #16181d
+    --color-text: #f2f3f5
+    --color-accent: #8fa9ff
+    --color-accent-text: #10131a
+    --color-border: #3a3f4a
+
+:root[data-theme="dark"]
+  --color-surface: #16181d
+  --color-text: #f2f3f5
+  --color-accent: #8fa9ff
+  --color-accent-text: #10131a
+  --color-border: #3a3f4a

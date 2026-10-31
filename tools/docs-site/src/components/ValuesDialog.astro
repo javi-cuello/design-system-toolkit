@@ -1,0 +1,61 @@
+---
+import { statusMarker } from '../lib/project.js';
+// a value naming a component shows it without the project's status marker (figma-standard rule 13)
+const unmarked = (v) => (statusMarker && typeof v === 'string' ? v.split(statusMarker + ' ').join('').split(statusMarker).join('') : v);
+/*
+ * "Details" for one change: a button that opens a modal with the values the
+ * change moved, before and after, in a table. One component, used by the
+ * Changes page and every component's change log, so the two cannot drift.
+ * The modal is the site's one (Modal.astro).
+ */
+import { isColour, resolve } from '../lib/snapshot.js';
+import Modal from './Modal.astro';
+// heads: the three columns' names, a change's by default; Parity's Differences calls them Combination, Design, Code
+// mark: underline what the two values do not share (a change's before and after); off where every row differs anyway
+const { id, title, rows = [], heads = ['What', 'Before', 'After'], mark = true } = Astro.props;   // rows: [{ what, mode?, before, after }]
+const withMode = rows.some((r) => r.mode);
+const blank = (v) => v === undefined || v === null || v === '' || v === 'none' || v === 'present';
+// A colour, or the colour a token it names resolves to today: read from the
+// value before any alias in brackets, so "#fff (White/base)" shows white.
+// What two values do NOT share, start and end trimmed, so a one-letter
+// rename (Colour → Color) is visible: [same start, differing middle, same end].
+// The cut never falls inside a word or a number: character by character,
+// 0.5 → 0.25 marked nothing before and "2" after, and 8 → 18 only the "1".
+// So each end is widened to the edge of the token it lands in.
+const word = (c) => c !== undefined && /[\p{L}\p{N}.#%]/u.test(c);
+const split3 = (v, other) => {
+  const a = String(v), b = String(other ?? '');
+  if (!b || a === b) return [a, '', ''];
+  let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  while (i > 0 && word(a[i - 1]) && (word(a[i]) || word(b[i]))) i--;
+  let j = 0; while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+  while (j > 0 && word(a[a.length - j]) && (word(a[a.length - j - 1]) || word(b[b.length - j - 1]))) j--;
+  return [a.slice(0, i), a.slice(i, a.length - j), a.slice(a.length - j)];
+};
+// a colour written as hex and an opacity (#161616 7.5%) is that hex at that alpha
+const alpha = (v) => { const m = String(v).match(/^#([0-9a-f]{6}) ([\d.]+)%$/i); return m ? `rgb(${[0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)).join(' ')} / ${+m[2] / 100})` : v; };
+const swatch = (v) => { const head = alpha(String(v).split(' (')[0]); return isColour(head) ? head : head.includes('/') && isColour(resolve(head)) ? resolve(head) : null; };
+---
+{/* Named for its change: forty triggers all called "Details" are one name to a screen reader. */}
+<button type="button" class="link-button" popovertarget={id}>Details<span class="visually-hidden">: {title}</span></button>
+<Modal id={id} title={title}>
+  <div class="table-wrap" data-scrolls>
+  <table class="table">
+    <caption class="visually-hidden">{title}</caption>
+    <thead><tr><th scope="col">{heads[0]}</th>{withMode && <th scope="col">Mode</th>}<th scope="col">{heads[1]}</th><th scope="col">{heads[2]}</th></tr></thead>
+    <tbody>
+      {rows.map((r) => (
+        <tr>
+          <th scope="row">{r.what}</th>
+          {withMode && <td>{r.mode}</td>}
+          {[[unmarked(r.before), unmarked(r.after)], [unmarked(r.after), unmarked(r.before)]].map(([v, other]) => (
+            <td class="mono">{blank(v) ? <span class="muted">{v ? String(v).replace(/^./, (c) => c.toUpperCase()) : 'None'}</span> : <>{swatch(v) && <span class="values-swatch" style={`background: ${swatch(v)}`}></span>}{mark ? (([pre, mid, post]) => <>{pre}{mid && <mark>{mid}</mark>}{post}</>)(split3(v, blank(other) ? '' : other)) : v}</>}</td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  </div>
+</Modal>
+
+

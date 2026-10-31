@@ -1,0 +1,27 @@
+---
+// One component's level checks: its level, what blocks the next, and
+// every check of the ladder (lib/ladder.js) with its result. The component
+// page shows it in place; the Components page opens it in a modal per row.
+import { LEVEL_LABEL } from '../lib/ladder.js';
+import { base, plural } from '../lib/format.js';
+
+interface Props { rung: any }
+const { rung } = Astro.props;
+const queue = `${base}/audits/#queue?component=${rung.page.slug}`;
+---
+<p><span class={`status ladder__item--${rung.level}`}>{LEVEL_LABEL[rung.level]}</span>{rung.blocks.length > 0 && <span class="muted"> · next level blocked by {rung.blocks.join(', ')}</span>}</p>
+<div class="table-wrap" data-scrolls>
+  <table class="table checks-table checks-table--even">
+    <caption class="visually-hidden">The ladder's checks for {rung.page.title}</caption>
+    <thead><tr><th scope="col">Check</th><th scope="col">Level</th><th scope="col">Result</th></tr></thead>
+    <tbody>
+      {rung.checks.map((c) => (
+        <tr>
+          <th scope="row">{c.label}</th>
+          <td><span class={`status ladder__item--${c.level}`}>{LEVEL_LABEL[c.level]}</span></td>
+          <td><span class:list={['kpi__note', c.pass === true && 'kpi__note--ok', c.pass === null && 'kpi__note--plain']}>{c.pass === null ? 'Checked at the next audit' : c.pass ? 'Passes' : c.blocker === 'Errors open' && rung.errors ? <a href={queue}>{plural(rung.errors, 'error')} open</a> : 'Not yet'}</span></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

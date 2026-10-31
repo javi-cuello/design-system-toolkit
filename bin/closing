@@ -1,0 +1,9 @@
+#!/bin/sh
+# The closing pass, run (toolkit-standard §D 13, the Close step): what the
+# pass can compute over the toolkit and every registered project on this
+# machine — uncommitted and unpushed work, user-facing files changed since the
+# upstream, the parity run's time against its accepted time, rulings new since
+# the last accepted run, cases proven on paper only — and the questions that
+# need a person. Never a gate: it says what is open; a person closes it.
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+exec node "$REPO/tools/toolkit-check/closing.mjs" "$@"

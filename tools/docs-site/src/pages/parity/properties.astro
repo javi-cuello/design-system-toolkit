@@ -1,0 +1,92 @@
+---
+import { compareNames } from '../../../../shared/output.mjs';
+// Parity › Properties, the code audit's API half: a component library someone else
+// built, rendered in its own Storybook and measured against the design's
+// component contracts (tools/parity/external.mjs writes the report this page
+// reads). Coverage says which components each side has; this says, for the
+// ones both have, where the code does not draw what the design says.
+import Base from '../../layouts/Base.astro';
+import ParityEmpty from '../../components/ParityEmpty.astro';
+import KpiStrip from '../../components/KpiStrip.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import { componentTitle, mapped, draftedOf, few } from '../../lib/parity.js';
+import { statusMarker, codeAudit, project, TOOLKIT } from '../../lib/project.js';
+
+const r = codeAudit;
+const title = (name) => componentTitle(name, r && r.components[name], statusMarker);
+// the framework the code is built on, by the name its profile gives it (audit-defaults frameworks), where it has one
+const fwName = r && r.framework;
+// a component the story refused to draw still has its props compared: a renamed prop is the usual reason
+const components = r ? [...mapped(r, statusMarker), ...Object.entries(r.components).filter(([, c]) => c.error && c.props && !c.draft)].sort(([a], [b]) => compareNames(title(a), title(b))) : [];
+// listed above with their props, so not among the unmapped
+const drafted = draftedOf(r).filter((n) => !components.some(([k]) => k === n));
+// one verdict per prop, the one a reader acts on first; the value pairs show the renames themselves
+const verdict = (p) => {
+  const k = new Set(p.findings.map((f) => f.kind));
+  if (k.has('not-in-code')) return { tone: 'error', label: 'Only in Figma', note: "No prop in the code's API does this" };
+  if (k.has('missing') || k.has('default')) return { tone: 'error', label: 'Code differs', note: p.findings.filter((f) => f.kind === 'missing' || f.kind === 'default').map((f) => f.detail).join('; ') };
+  if (k.has('renamed') || k.has('value-renamed')) return { tone: 'warn', label: 'Code renames it' };
+  if (k.has('not-mapped')) return { tone: 'rule', label: 'Not checked', note: p.code ? 'Not declared in the story' : 'Not joined to a code prop' };
+  if (k.has('only-in-code')) return { tone: 'rule', label: 'Only in code' };
+  if (k.has('code-only-prop')) return { tone: 'warn', label: 'Only in code' };
+  return {};
+};
+// a design prop joined to no code prop, where the code has props joined to nothing: a person pairs them (tools/parity/same-as.mjs)
+const sameAs = (name, c, p) => (p.prop && !p.code && p.findings.some((f) => f.kind === 'not-mapped' || f.kind === 'not-in-code') ? (c.props || []).filter((x) => !x.prop && x.code).map((x) => x.code.prop) : []);
+// a word quoted where the shell needs it, so a path with a space is still one
+const q = (s) => (/^[\w@%+=:,./-]+$/.test(String(s)) ? String(s) : `'${String(s).replace(/'/g, `'\\''`)}'`);
+const sameAsRun = (name, p, k) => ['node', `${TOOLKIT}/tools/parity/same-as.mjs`, '--project', project.id, name, p.prop, k].map(q).join(' ');
+const propFindings = (c) => (c.props || []).flatMap((p) => p.findings);
+const count = (kinds) => components.reduce((n, [, c]) => n + propFindings(c).filter((f) => kinds.includes(f.kind)).length, 0);
+const kpis = [
+  ['Code differs', String(count(['missing', 'default'])), count(['missing', 'default']) ? 'To fix or rule' : 'None', count(['missing', 'default']) ? 'warn' : 'good'],
+  ['Code renames it', String(count(['renamed', 'value-renamed'])), count(['renamed', 'value-renamed']) ? 'To confirm' : 'None', count(['renamed', 'value-renamed']) ? 'warn' : 'good'],
+  ['Components checked', String(components.length), null],
+];
+
+---
+<Base title="Properties">
+  <h1>Properties</h1>
+  {r && <UpdatedBy from={['code']} />}
+  {!r ? (
+    <ParityEmpty shows="each design property beside the code prop that does the same job" />
+  ) : (
+    <>
+      <p class="lede">Each design property beside the prop <code>{r.repo}</code> gives the same job, as its Storybook declares it{fwName && <>, and beside what {fwName} itself calls it. A value marked <em>theirs</em> is one their code adds to {fwName}</>}.</p>
+      <KpiStrip items={kpis.map(([label, value, note, tone]) => ({ label, value, note, tone: tone || 'plain' }))} />
+      {components.map(([name, c]) => (
+        <section id={name} aria-labelledby={`${name}-h`}>
+          <h2 id={`${name}-h`}>{title(name)}<span class="muted heading-note">{c.codeComponent && <> · code <code>{c.codeComponent}</code></>}{c.framework && fwName && <> · {fwName} {c.framework}</>}</span></h2>
+          {c.props && (
+              <div class="table-wrap" data-scrolls>
+                <table class="table props">
+                  <caption class="visually-hidden">{title(name)}: each design property beside the code prop{fwName ? ` and the ${fwName} prop` : ''} that do its job</caption>
+                  <colgroup><col class="props__design" /><col class="props__code" />{fwName && <col class="props__framework" />}<col class="props__verdict" /></colgroup>
+                  <thead><tr><th scope="col">Figma</th><th scope="col">Code</th>{fwName && <th scope="col">{fwName}</th>}<th scope="col">Verdict</th></tr></thead>
+                  <tbody>
+                    {c.props.map((p) => { const v = verdict(p); const inFw = (x) => !p.framework?.values || p.framework.values.includes(x); return (
+                      <tr>
+                        <th scope="row">{p.figma || <span class="muted">Not in Figma</span>}{p.values && <ul class="vals">{p.values.map((x) => <li>{x}</li>)}</ul>}</th>
+                        <td>{p.code ? <code>{p.code.prop}</code> : <span class="muted">None</span>}
+                          {p.code?.values && <ul class="vals">{p.code.values.map((x, i) => <li class:list={[x !== p.values[i] && 'vals--renamed']}>{x}{p.framework?.values && !inFw(x) && <span class="added"> theirs</span>}</li>)}</ul>}
+                          {p.code?.extra?.length > 0 && <p class="muted vals-extra">Also {few(p.code.extra.filter(inFw))}{p.code.extra.some((x) => !inFw(x)) && <>{p.code.extra.some(inFw) && '; '}theirs: {few(p.code.extra.filter((x) => !inFw(x)))}</>}</p>}</td>
+                        {fwName && <td>{p.framework === undefined ? <span class="muted">{p.code?.prop === '(pointer states)' ? 'pointer states' : 'Not recorded'}</span> : p.framework.prop === null ? <span class="muted">Not in {fwName}</span> : <><code>{p.framework.prop}</code>{p.framework.inherited && <span class="muted"> (every component takes it)</span>}</>}
+                          {p.framework?.values && p.code?.values && <ul class="vals">{p.code.values.map((x) => <li>{inFw(x) ? x : <span class="muted">Not in {fwName}</span>}</li>)}</ul>}
+                          {p.framework?.values && p.code?.values && p.framework.values.some((x) => !p.code.values.includes(x) && !(p.code.extra || []).includes(x)) && <p class="muted vals-extra">Also {few(p.framework.values.filter((x) => !p.code.values.includes(x) && !(p.code.extra || []).includes(x)))}</p>}</td>}
+                        <td>{v.label ? <span class:list={['sev', v.tone]}>{v.label}</span> : <span class="sev good">Matches Figma</span>}{v.note && <p class="muted vals-extra">{v.note}</p>}
+                          {/* folded: a row can have a dozen candidates, and most rows need none */}
+                          {sameAs(name, c, p).length > 0 && <details class="vals-extra"><summary>Same as…</summary><p class="muted">Copies the command that pairs {p.figma} with the code prop it is:</p>{sameAs(name, c, p).map((k) => <button type="button" class="button button--ghost" data-copy={sameAsRun(name, p, k)} data-copy-label={`the command pairing ${p.figma} with ${k}`}><code>{k}</code></button>)}</details>}</td>
+                      </tr>
+                    ); })}
+                  </tbody>
+                </table>
+              </div>
+          )}
+        </section>
+      ))}
+      <p class="muted">Figma's properties come from the component contract; the code's from its own types and what its Storybook story declares, joined by rule or by the parity mappings. A prop the story hides from its controls is not declared, so it shows as not checked rather than missing.</p>
+      {drafted.length > 0 && <p class="muted">Not yet mapped, so not checked: {drafted.map(title).join(', ')}. Each needs its story in the parity mappings; its elements are paired by rule.</p>}
+    </>
+  )}
+</Base>
+

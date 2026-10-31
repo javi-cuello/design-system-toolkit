@@ -1,0 +1,15 @@
+---
+// Every component. A multi-platform project lists each platform on its own
+// page (/components/web, /components/mobile); this address then forwards to
+// the first, so the Components link still lands somewhere.
+import ComponentIndex from '../../components/ComponentIndex.astro';
+import { componentGroups, slug } from '../../lib/snapshot.js';
+import { base } from '../../lib/format.js';
+
+const first = componentGroups.length > 1 && `${base}/components/${slug(componentGroups[0].platform)}`;
+---
+{first ? (
+  <html lang="en"><head><meta charset="utf-8" /><meta http-equiv="refresh" content={`0; url=${first}`} /><link rel="canonical" href={first} /><title>Components</title></head><body><a href={first}>Components</a></body></html>
+) : (
+  <ComponentIndex platform={null} groups={componentGroups[0].groups} />
+)}

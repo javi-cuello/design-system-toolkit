@@ -1,0 +1,37 @@
+---
+/*
+ * One control, two or three ways of looking at the same thing.
+ *
+ * Text styles as a specimen or as values, shadows drawn or as values, a
+ * colour scale as swatches or as a table, a collection's values in one mode
+ * or all: one job, one control, wired once in Base.astro and remembered per
+ * key.
+ *
+ * The state lives on the group (`data-view-shown` on each `data-views`
+ * element of the key), not on <html>: the rules that draw these pages
+ * compile inside `@scope (body)`, where a selector starting at `:root` can
+ * never match (code-standard rule 60).
+ *
+ * Usage: this control beside the heading, and each alternative view marked up
+ * as a child of one element:
+ *
+ *   <ViewToggle key="type" options={[{ value: 'table', label: 'Table' },
+ *                                     { value: 'preview', label: 'Preview' }]} />
+ *   <div data-views="type">
+ *     <div data-view="table">…</div>
+ *     <div data-view="preview">…</div>
+ *   </div>
+ *
+ * The FIRST option is the default, and it must be the first child too: before
+ * the script runs, CSS shows the first view and hides the rest, so nothing
+ * flashes and the page is readable with no JavaScript at all. A key whose
+ * panels hold no `[data-view]` children (the mode toggle) reads the state
+ * in rules of its own instead.
+ */
+const { key, options, label = 'Show as' } = Astro.props;
+---
+<div class="segmented" role="group" aria-label={label} data-view-toggle={key}>
+  {options.map((o, i) => (
+    <button type="button" class="seg" data-view={o.value} aria-pressed={String(i === 0)}>{o.label}</button>
+  ))}
+</div>

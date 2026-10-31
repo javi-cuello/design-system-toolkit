@@ -1,0 +1,121 @@
+{
+  "contract": 1,
+  "component": "Nav item",
+  "figma": {
+    "name": "Nav item",
+    "key": "3c99bc7779fdfcb09cfe4e25ae19ab576ebb7d88",
+    "id": "1:40"
+  },
+  "props": {
+    "label": {
+      "type": "string",
+      "default": "Item",
+      "figma": "Label",
+      "sets": [
+        "label"
+      ]
+    },
+    "icon": {
+      "type": "instance",
+      "figma": "Icon",
+      "swaps": [
+        "icon/glyph"
+      ]
+    },
+    "selected": {
+      "type": "boolean",
+      "default": false,
+      "axis": true,
+      "figma": "Selected"
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false,
+      "axis": true,
+      "figma": "Disabled"
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/8",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/8",
+          "end": "Spacing/8",
+          "bottom": "Spacing/8",
+          "start": "Spacing/8"
+        }
+      },
+      "width": 240,
+      "height": "hug",
+      "radius": "Radius/8"
+    },
+    "icon": {
+      "kind": "instance",
+      "parent": "root",
+      "component": "Icon container",
+      "with": {
+        "Icon": "home",
+        "Size": "20"
+      },
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "hug",
+      "height": "hug",
+      "order": 0
+    },
+    "icon/glyph": {
+      "kind": "instance",
+      "parent": "icon",
+      "component": "home",
+      "width": 20,
+      "height": 20,
+      "overflow": "hidden",
+      "order": 0
+    },
+    "label": {
+      "kind": "text",
+      "parent": "root",
+      "width": "fill",
+      "height": "hug",
+      "color": "Color/Text/primary",
+      "typography": "Body/md",
+      "autoResize": "width",
+      "content": "{label}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "selected": true
+      },
+      "set": {
+        "root.background": "Color/Background/accent-subtle",
+        "label.color": "Color/Text/accent"
+      }
+    },
+    {
+      "when": {
+        "disabled": true
+      },
+      "set": {
+        "root.opacity": "Effect/Disabled/opacity"
+      }
+    }
+  ]
+}

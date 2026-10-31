@@ -1,0 +1,39 @@
+@use "focus"
+
+// Only what the browser gets wrong for this document.
+
+*, *::before, *::after
+  box-sizing: border-box
+
+body, h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd
+  margin: 0
+
+// type comes from a token, never from the element: a heading placed inside a
+// component must not bring the browser's size and weight with it
+h1, h2, h3, h4, h5, h6
+  font: inherit
+
+fieldset
+  margin: 0
+  padding: 0
+  border: 0
+
+legend
+  padding: 0
+
+html
+  // the reader's setting is the base every rem is measured against
+  font-size: 100%
+
+img, picture, svg, video
+  display: block
+  max-width: 100%
+
+input, button, textarea, select
+  font: inherit
+  color: inherit
+
+// a focus ring the whole system shares, and only where a pointer did not
+// cause the focus
+:focus-visible
+  @include focus.ring(var(--space-4))

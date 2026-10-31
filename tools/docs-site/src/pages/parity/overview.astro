@@ -1,0 +1,50 @@
+---
+// Parity › Overview: one row per component the code audit measured, one cell
+// per kind of agreement (its properties, the tokens its values come from, what
+// it draws), each the verdict a reader acts on first, linked to the page that
+// holds the detail. Figma is the truth, so every cell reads as how far the
+// code is from it. Read from the same report as Properties and Visual.
+import Base from '../../layouts/Base.astro';
+import ParityEmpty from '../../components/ParityEmpty.astro';
+import KpiStrip from '../../components/KpiStrip.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import { componentTitle, mapped, parityRows, inStep } from '../../lib/parity.js';
+import { statusMarker, codeAudit } from '../../lib/project.js';
+import { base } from '../../lib/format.js';
+
+const r = codeAudit;
+const components = mapped(r, statusMarker);
+const title = (name, c) => componentTitle(name, c, statusMarker);
+const rows = parityRows(components);
+const inSync = rows.filter(inStep).length;
+---
+<Base title="Parity overview">
+  <h1>Parity overview</h1>
+  {r && <UpdatedBy from={['code']} />}
+  {!r ? <ParityEmpty shows="one row per component, with how far its properties, tokens and rendering are from the design" /> : (<>
+    <p class="lede">Each component the code audit measured, against the design: its properties, the tokens its values come from, and what it draws. Each cell is the first thing to act on there; its page holds the detail.</p>
+    <KpiStrip items={[
+      { label: 'In step with the design', value: inSync, of: rows.length },
+      { label: 'Properties differ', value: rows.filter((x) => x.cells[0].tone === 'error').length },
+      { label: 'Draw differently', value: rows.filter((x) => x.cells[2].tone === 'error').length },
+    ]} />
+    <div class:list={['table-wrap', rows.length > 20 && 'table-wrap--long']} data-scrolls>
+      <table class="table scorecard">
+        <caption class="visually-hidden">Each component the code audit measured, and how far its properties, tokens and drawing are from the design</caption>
+        <thead><tr><th scope="col">Component</th><th scope="col">Properties</th><th scope="col">Tokens</th><th scope="col">Visual</th></tr></thead>
+        <tbody>
+          {rows.map(({ name, c, cells }) => (
+            <tr>
+              <th scope="row">{title(name, c)}</th>
+              {cells.map((v, i) => (
+                <td><a class="cell" href={`${base}/parity/${['properties', 'visual', 'visual'][i]}#${name}`}>{v.tone ? <span class={`sev ${v.tone}`}>{v.label}{v.n > 0 && ` ${v.n}`}</span> : <span class="muted">None</span>}</a></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Properties: Code differs is a design prop or value the code lacks or defaults differently; Code renames it is the same prop under another name; Only in code is a prop or value the code has and Figma does not. Tokens: values that differ from the design and that no library token holds; None where no value does. Visual: Mapping suspect means the run's pairing of this component looks wrong, so its differences are not counted until it is checked.</p>
+  </>)}
+</Base>
+

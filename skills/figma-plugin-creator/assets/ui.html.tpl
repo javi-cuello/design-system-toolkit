@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<style>
+/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v2 end */
+
+/* plugin-specific styles below */
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="section-title">{{name}}</div>
+  <p class="secondary">{{purpose}}</p>
+  <button id="run">Run</button>
+</div>
+<script>
+document.getElementById('run').onclick = function () {
+  parent.postMessage({ pluginMessage: { type: 'run', id: Date.now() } }, '*');
+};
+onmessage = function (e) {
+  var msg = e.data.pluginMessage;
+  if (!msg) return;
+  // handle { type: 'done' } etc.
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+#!/bin/sh
+# Runs bin/check before a push. The toolkit's own standards, scanners and every
+# suite a skill or tool ships: a push cannot carry a red toolkit, and a suite
+# nobody runs cannot stay red for weeks (one had).
+#
+# Installed once per clone:  git config core.hooksPath .githooks
+# Override, when you mean it: git push --no-verify
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# --no-fix: a heal rewrites the working tree, not the commit being pushed.
+# The check reads the working tree, so an uncommitted change counts too: push
+# from a tree holding only what you committed.
+# The whole output is kept: a red that does not recur is unreadable once it
+# scrolls away, and one did (2026-10-30).
+# Commit messages reach everyone the repo is shared with, and no file check
+# reads them: six named a project before this scan (2026-10-30). Each commit
+# this push sends that no remote has yet is read against the same names
+# bin/check searches the files for.
+NAMES=$("$REPO/tools/toolkit-check/project-names.sh") || { echo "pre-push: push refused, the project names could not be read"; exit 1; }
+if [ -n "$NAMES" ]; then
+  while read -r _ lsha _ rsha; do
+    case "$lsha" in *[!0]*) ;; *) continue ;; esac
+    # a remote commit this clone never fetched (a force push) cannot bound the range: read all no remote has
+    if case "$rsha" in *[!0]*) git rev-parse -q --verify "$rsha^{commit}" >/dev/null ;; *) false ;; esac
+    then COMMITS=$(git rev-list "$rsha..$lsha") ; else COMMITS=$(git rev-list "$lsha" --not --remotes); fi \
+      || { echo "pre-push: push refused, the commits being pushed could not be listed"; exit 1; }
+    HITS=""
+    for c in $COMMITS; do
+      MSG=$(git log -1 --format=%B "$c") || { echo "pre-push: push refused, commit $c could not be read"; exit 1; }
+      printf '%s\n' "$MSG" | grep -qiE "\b($NAMES)\b" && HITS="$HITS$(git log -1 --format='%h %s' "$c")
+"
+    done
+    [ -z "$HITS" ] || { printf 'pre-push: these commit messages name a project, so the push is refused (reword them):\n%s\n' "$HITS"; exit 1; }
+  done
+fi
+LOG="$(git rev-parse --git-dir)/pre-push.log"
+rm -f "$LOG.status"
+{ "$REPO/bin/check" --no-fix; echo $? > "$LOG.status"; } 2>&1 | tee "$LOG"
+[ "$(cat "$LOG.status")" = 0 ] || { echo "pre-push: bin/check failed, whole output in $LOG; push refused (git push --no-verify to override)"; exit 1; }
+exit 0

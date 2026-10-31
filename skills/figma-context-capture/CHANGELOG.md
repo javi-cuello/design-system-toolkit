@@ -1,0 +1,28 @@
+# Changelog — figma-context-capture
+
+- 2.8.0 (2026-10-30): passes S1 and S3 are scripts, `pass-s1-collections.js` (collections, mode names, where hiding lives) and `pass-s3-styles.js` (style names in library order, their groups); reading what they mean stays the agent's. Case C15.
+- 2.7.9 (2026-10-26): the context template shows the optional `naming-preferences` block, over standards/naming-preferences.json.
+- 2.7.8 (2026-10-22): the context template's project block names the optional `editorPort`.
+- 2.7.7 (2026-10-14): the context template's project block shows the optional `port` and `publish`.
+- 2.7.6 (2026-10-08): the context template writes settings by section.
+- 2.7.5 (2026-10-08): citations follow naming-standard into figma-standard.
+- 2.7.4 (2026-10-08): citations name the standard that owns each rule.
+- 2.7.3 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 2.7.2 (2026-10-08): citations name the standard that owns each rule after the split (figma-, naming-, skill-standard). No behaviour changed.
+- 2.7.1 (2026-10-03): pass A also returns `setIds` per page, the component-set ids pass D takes. C14 extended.
+- 2.7.0 (2026-10-03): passes A, C and D become scripts with a fake-file test; pass C reports `truncated`, pass D returns `error` rows and `fullGrid`. Case C14.
+- 2.6.0 (2026-09-20): the template describes the `project`, `snapshot-routing` and `audit-settings` blocks; guidance blockquote restored to a list; §3 Language & naming asks only for differences.
+- 2.5.4 (2026-09-20): step 4's reason for the overrides block corrected; C11's rationale likewise.
+- 2.5.3 (2026-09-10): the audit skill it names is now `figma-components-audit`. Wording only.
+- 2.5.2 (2026-08-08): drops the false ES5 constraint on the sandbox; the scripted passes stay ES5.
+- 2.5.1 (2026-08-08): pass C falls back to pass S when library enumeration exceeds the timeout budget.
+- 2.5.0 (2026-08-08): the template gains an authored-vs-generated pages slot for documentation files. Case C12.
+- 2.4.0 (2026-08-08): §5 of the template gains the machine-readable **Overrides** line.
+- 2.3.0 (2026-08-08): the closing report lists which house defaults the project overrode. Case C11.
+- 2.2.1 (2026-08-08): adds the `## Project context first` block. No behaviour change.
+- 2.2.0 (2026-08-08): §5 cites house rules 8–11 instead of pre-filling them, and is reserved for deviations. Case C10.
+- 2.1.0 (2026-08-08): pass M asks four maintainer-only facts; registry gains Audience and non-Figma units; §6 gains Decided by; slot cardinality and synonyms captured. Cases C7–C9.
+- 2.0.0 (2026-08-08): the §8 Snapshot section is removed from the emitted template; state is omitted, with one carve-out for costly audit output.
+- 1.1.1 (2026-08-07): formatting only — hard-wrapped prose reflowed to one line per paragraph.
+- 1.1.0 (2026-08-05): role-aware passes (Pass S for source files); slot names are maintainer vocabulary → [TBD]+ask; call-sizing hard rule; half-life assembly; formula-first grammar; env-aware output path; project vocabulary.
+- 1.0.0 (2026-08-04): initial release.

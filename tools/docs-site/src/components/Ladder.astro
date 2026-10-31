@@ -1,0 +1,47 @@
+---
+// The ladder in one block: how many components reach each level, as a bar of
+// the whole and its rows. The overview's headline and the Components page
+// share it; the checks holding the rest are the Components page's tiles.
+import { ladder, levelCount, LEVEL_LABEL, LEVEL_GUIDE } from '../lib/ladder.js';
+
+// Deprecated components are leaving, so they are not in the whole a level
+// is counted against.
+const total = ladder.filter((r) => r.level !== 'deprecated').length;
+const order = ['stable', 'ready', 'draft', 'deprecated'];
+const groups = order.map((level) => ({ level, n: levelCount(level) })).filter((g) => g.n);
+const pct = (n) => (total ? (n / total) * 100 : 0);
+const stable = levelCount('stable');
+const means = Object.fromEntries(LEVEL_GUIDE.map((g) => [g.level, g.means]));
+---
+<div class="progress-block">
+  <p class="panel__figure"><strong>{stable}</strong> of {total} Stable <span class="muted">· {Math.round(pct(stable))}%</span></p>
+  <div class="progress" role="img" aria-label={groups.map((g) => `${g.n} ${LEVEL_LABEL[g.level]}`).join(', ')}>
+    {groups.map((g) => <span class={`progress__seg ladder__seg--${g.level}`} style={`--w: ${pct(g.n)}%`} title={`${g.n} ${LEVEL_LABEL[g.level]}`}></span>)}
+  </div>
+  <ul class="legend">
+    {/* Each level says what it means in a tooltip on its name, on hover and
+        on focus, so the legend is its own explanation. */}
+    {groups.map((g) => (
+      <li class={`legend__item ladder__item--${g.level}`}>
+        <span class="tip" tabindex="0" aria-describedby={`level-tip-${g.level}`}>{LEVEL_LABEL[g.level]}</span>
+        <span class="tip__text" role="tooltip" id={`level-tip-${g.level}`}>{means[g.level]}</span>
+        <strong>{g.n}</strong>
+      </li>
+    ))}
+  </ul>
+  <p class="section__note">A level is computed, never set by hand: a component moves up only when every check of the next level passes.</p>
+</div>
+
+
+<script>
+  // Escape hides an open tooltip until the pointer or focus leaves it (WCAG 1.4.13).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    for (const t of document.querySelectorAll('.tip:hover, .tip:focus-visible')) {
+      t.dataset.tipHidden = '';
+      const show = () => { delete t.dataset.tipHidden; };
+      t.addEventListener('pointerleave', show, { once: true });
+      t.addEventListener('blur', show, { once: true });
+    }
+  });
+</script>

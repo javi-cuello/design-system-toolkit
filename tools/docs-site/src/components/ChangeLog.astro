@@ -1,0 +1,109 @@
+---
+/*
+ * A component's change log, built like the site's Changes page — a table per
+ * day, one row per change with its type and its level for Figma files and for
+ * code — with the detail that page leaves out: under each change, every value
+ * it moved, before and after (a colour with its swatch, a token by name). From
+ * the store's log (`changes.json`) for every set on this page, newest first.
+ * The same property moving in several variants is one line. A day recorded
+ * before changes were graded lists its facts with no type or level. An entry
+ * that says only that a newer plugin re-stamped the spec is not shown.
+ */
+import ChangeLevel from './ChangeLevel.astro';
+import { changes, componentPages } from '../lib/snapshot.js';
+import ValuesDialog from './ValuesDialog.astro';
+import { factsOf } from '../lib/facts.js';
+import Time from './Time.astro';
+import { day } from '../lib/format.js';
+import { cap } from '../lib/changes.js';
+import { displayName } from '../../../shared/names.js';
+import store from '../../../snapshot/store.cjs';
+
+const { GRADE_RULES } = store;
+const { folders, id } = Astro.props;
+const mine = new Set(folders);
+const nameOf = new Map(componentPages.flatMap((p) => p.components.map((c) => [c.folder, c.name])));
+// a note about the component's own root is labelled with its stored name; said as a page shows it
+const said = (f, w) => { const n = nameOf.get(f); return n && String(w).startsWith(n) ? displayName(n) + String(w).slice(n.length) : w; };
+// Which facts a graded change is about: the rule the store stamped on the
+// note (`specNotes`), joined on, and nothing else. A note with no rule (slot
+// settings, variants listed, a nested set renamed) is no graded change's and
+// is shown on its own. Notes logged before notes carried a rule take theirs
+// from the detector replayed over their revisions (`backfill-changes.cjs
+// --regrade`), which rewrites the notes with the grade; the wording match
+// this page kept for them put a removed and an added layer on one day both
+// under the first.
+const about = (rule, fact) => fact.rule === rule || (rule === 'component-deprecated' && fact.rule === 'component-renamed');
+
+const byDay = new Map();
+for (const e of [...changes].reverse()) {
+  const c = e.components || {};
+  const rows = [];
+  for (const f of mine) {
+    const facts = factsOf(c, f);
+    const graded = ((e.grade && e.grade.changes) || []).filter((x) => x.subject === f);
+    const who = folders.length > 1 ? `${nameOf.has(f) ? displayName(nameOf.get(f)) : f} · ` : '';
+    // Each fact takes the type and levels of the graded change it belongs to;
+    // a change with no fact of its own (a size, a re-pointing) is a row too.
+    // A change names its subject after " — " ("a property removed: … —
+    // Icon swap (16)"), and the fact it is about carries that name
+    // ("Property Icon swap (16)", or a rename's before and after): matched on
+    // that first, so five removed properties are five rows, not the first
+    // change taking every fact under its rule and the other four repeating
+    // as rows of their own. A change whose detail names no fact takes what
+    // is left under its rule.
+    const used = new Set();
+    const detailOf = (x) => x.what.split(' — ').slice(1).join(' — ');
+    const names = (ft, d) => Boolean(d) && (ft.what === d || String(ft.what).endsWith(' ' + d) || `${ft.before} → ${ft.after}` === d);
+    const claimed = new Map();
+    for (const x of graded) {
+      const d = detailOf(x);
+      claimed.set(x, facts.filter((ft, i) => !used.has(i) && about(x.rule, ft) && names(ft, d) && used.add(i)));
+    }
+    for (const x of graded) {
+      const [head] = x.what.split(' — ');
+      const level = { type: (GRADE_RULES[x.rule] || [])[2] || x.group, figma: x.figma, code: x.code };
+      const its = claimed.get(x).length ? claimed.get(x) : facts.filter((ft, i) => !used.has(i) && about(x.rule, ft) && used.add(i));
+      if (its.length) for (const ft of its) rows.push({ what: who + said(f, ft.what), before: ft.before, after: ft.after, items: ft.items, ...level });
+      else rows.push({ what: who + cap(head.split(': ')[0]) + (detailOf(x) ? `: ${detailOf(x)}` : ''), before: '', after: '', ...level });
+    }
+    facts.forEach((ft, i) => { if (!used.has(i)) rows.push({ what: who + said(f, ft.what), before: ft.before, after: ft.after, items: ft.items }); });
+  }
+  if (!rows.length) continue;
+  const key = new Date(e.at).toISOString().slice(0, 10);
+  const d = byDay.get(key) || { at: e.at, rows: [] };
+  d.rows.push(...rows);
+  byDay.set(key, d);
+}
+const days = [...byDay.values()];
+// A value as a reader needs it: nothing is "none", a colour carries its swatch.
+const blank = (v) => !v || v === 'none' || v === 'present';
+---
+{days.length > 0 && (
+  <div class="section" id={id}>
+    {days.map((d, di) => (
+        <>
+          <h2><Time at={d.at} short /></h2>
+          <div class:list={['table-wrap', d.rows.length > 20 && 'table-wrap--long']} data-scrolls>
+            <table class="table changes">
+              <caption class="visually-hidden">Changes on {day(d.at)}</caption>
+              <thead><tr><th scope="col" class="changes__what">Change</th><th scope="col">Type</th><th scope="col">Figma files</th><th scope="col">Code</th><th scope="col">Details</th></tr></thead>
+              <tbody>
+                {d.rows.map((r, ri) => {
+                  const pid = `${id}-${di}-${ri}`;
+                  return (
+                    <tr>
+                      <th scope="row" class="changes__what">{r.what}</th>
+                      <td>{r.type ? <span class="pill">{r.type}</span> : <span class="muted">Not graded</span>}</td>
+                      {[[r.figma, 'Figma files'], [r.code, 'Code']].map(([l, label]) => <ChangeLevel level={l} label={label} />)}
+                      <td>{!(blank(r.before) && blank(r.after)) && <ValuesDialog id={pid} title={`${r.what}, ${day(d.at)}`} rows={r.items || [{ what: r.what, before: r.before, after: r.after }]} />}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+    ))}
+  </div>
+)}

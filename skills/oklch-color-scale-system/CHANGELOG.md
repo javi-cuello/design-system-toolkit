@@ -1,0 +1,23 @@
+# Changelog — oklch-color-scale-system
+
+- 2.1.4 (2026-10-14): names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.
+- 2.1.3 (2026-10-08): a closed deprecation watch removed from the open questions.
+- 2.1.2 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 2.1.1 (2026-10-02): citation only — the project context block is toolkit-standard §A clause B, not §B. No behaviour changed.
+- 2.1.0 (2026-09-25): `contrastDriftWarning` reports steps 1–9 whose hue moves them across a WCAG threshold, compared on raw ratios. Additive; no output changed. Case A11.
+- 2.0.0 (2026-09-25): text steps target WCAG luminance by default; `--oklch-text` reproduces a pre-2.0 ramp; `recover.js` tries both schedules and refines its drift fit. Case A11.
+- 1.9.1 (2026-09-22): the dialect is read from the context document's `audit-settings` → `language` key. Behaviour unchanged.
+- 1.9.0 (2026-09-22): `--mode gray`, the en-US spelling of grey mode, and `scale.modeName`; gains a `## Project context first` block. Case A10.
+- 1.8.1 (2026-09-20): citation only — references point at `standards/toolkit-standard.md` §A. No rule changed.
+- 1.8.0 (2026-08-19): the Reference scales table moves to `tests/reference-scales.md`, which `test-oklch.js` reads and asserts on L, C, H and hex.
+- 1.7.1 (2026-08-17): `familyEscapeWarning`'s yellow exemption covers red as well as orange. No hex output moved. Case A8.
+- 1.7.0 (2026-08-16): `--saturation <0-1>` with `maxChromaAt`, `usableChromaAt` and `sourceAtSaturation`; one `FAMILY_C_CEILING` table; `isOutOfGamut` exported. Case A7.
+- 1.6.0 (2026-08-12): complexity pass: one `designatedPeak` boolean, a mode-and-peak decision table, case A6, and a deprecation watch on two flags.
+- 1.5.0 (2026-08-11): `--peak <1-12>` places the free-mode chroma peak; `recover.js` identifies peak ramps. Default output byte-identical.
+- 1.4.0 (2026-08-11): hue-scaled yellow drift holds lime-region hues; `solidForeground` reports APCA beside WCAG.
+- 1.3.1 (2026-08-11): `clampCapZone()` keeps the taper loosen-only in rendered output.
+- 1.3.0 (2026-08-11): anchored-mode background cap tapers toward a nearby vivid anchor within `TAPER_RADIUS` steps.
+- 1.2.0 (2026-08-08): scripts move to `scripts/` and the suite to `tests/test-oklch.js`; every invocation repathed. No behaviour changed.
+- 1.1.1 (2026-08-07): formatting only — hard-wrapped prose reflowed to one line per paragraph in tests/cases.md.
+- 1.1.0 (2026-08-05): brought to `standards/toolkit-standard.md` — version, changelog and cases added. No change to generation.
+- 1.0.x: pre-standard.

@@ -1,0 +1,40 @@
+{
+  "contract": 1,
+  "component": "Graphic/bubble",
+  "figma": {
+    "name": "Graphic/bubble",
+    "key": "6b0902859b158be00c146a52130ce113077ee812",
+    "id": "1:110"
+  },
+  "props": {},
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": 48,
+      "height": 48
+    },
+    "shape": {
+      "kind": "graphic",
+      "parent": "root",
+      "width": 48,
+      "height": 40,
+      "radius": "Radius/full",
+      "background": "Color/Background/accent-subtle",
+      "shape": "ellipse",
+      "order": 0
+    }
+  },
+  "variants": []
+}

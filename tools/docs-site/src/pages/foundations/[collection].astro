@@ -1,0 +1,231 @@
+---
+// One variable collection, as the doc generator documents it in Figma and as
+// Atlassian and Carbon lay theirs out: the category as a heading, its
+// subgroups beneath, a row per variable. The token cell holds its name, the
+// code a stylesheet reads and its description; each mode's value is drawn on
+// that mode's own ground, so a dark value is judged on dark.
+import Base from '../../layouts/Base.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import Filter from '../../components/Filter.astro';
+import ViewToggle from '../../components/ViewToggle.astro';
+import { collectionPages, leaf, isColour, slug, snapshot } from '../../lib/snapshot.js';
+import { cssName, sassName } from '../../lib/project.js';
+import { plural } from '../../lib/format.js';
+
+export function getStaticPaths() {
+  return collectionPages.map((c) => ({ params: { collection: c.slug }, props: { c } }));
+}
+const { c } = Astro.props;
+const source = snapshot.collections[c.name];
+const modes = source.modes;
+const descriptions = source.descriptions || {};
+/*
+ * A description's first line only, with the whole of it on hover.
+ *
+ * Figma's description field is free text, and what is in it varies by who
+ * filled it: one collection here carries a sentence a designer wrote ("12px —
+ * matches Tailwind text-xs default."), another carries six lines a generator
+ * wrote, per mode, per variable. Printed whole, the second kind makes a name
+ * cell taller than the row of values beside it.
+ *
+ * One line for every description, whatever wrote it, rather than none: that
+ * would lose the ones a person wrote.
+ */
+const firstLine = (s) => {
+  const lines = String(s).split('\n').map((x) => x.trim()).filter(Boolean);
+  // A line that is only a label ("Light:", "Dark:") says nothing on its own:
+  // the generator writes the mode as a heading and the value under it.
+  const i = lines.findIndex((x) => !/^[\w .-]{1,20}:$/.test(x));
+  if (i === -1) return lines.join(' ');
+  return i < lines.length - 1 ? `${lines[i]} …` : lines[i];
+};
+// A mode column earns its place only where some value differs by mode.
+const varies = modes.length > 1 && c.vars.some((v) => new Set(modes.map((m) => JSON.stringify([v.values[m], v.aliases[m]]))).size > 1);
+const cols = varies ? modes : [modes[0]];
+/*
+ * Past a few modes, side by side stops being a comparison.
+ *
+ * Two modes are Light and Dark, and seeing them together is the whole point.
+ * A brand collection can have eight, and one variable across eight is a
+ * ten-column table that scrolls sideways. So beyond three, one mode at a
+ * time, as Duet documents its two brands, and no "All modes" option.
+ */
+const manyModes = varies && modes.length > 3;
+const ground = (m) => (!varies ? '' : /dark/i.test(m) ? 'on-dark' : /light/i.test(m) ? 'on-light' : '');
+// Text variables have no token type, so the build writes no property for them.
+const inCss = (n, v) => typeof v === 'number' || isColour(v) || /(^|\/)(family|weight)/i.test(n);
+const list = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0]);
+// A ramp (a scale of one hue, stepped 1…12) reads as a strip, as Altitude,
+// Geist and Atlassian draw theirs: a whole scale in a glance instead of a
+// dozen table rows. Every value a colour, five steps or more, each named by
+// its step number.
+const isRamp = (vars) => vars.length >= 5 && vars.every((v) => /^\d/.test(leaf(v.name)) && Object.values(v.values).every(isColour));
+// Figma stores an easing as an object — `{ type, easingFunctionCubicBezier }`
+// — and printed with String() it read "[object Object]". CSS reads the curve.
+const bezier = (v) => (v && typeof v === 'object' && v.easingFunctionCubicBezier) || null;
+const easing = (v) => {
+  const b = bezier(v);
+  if (b) return `cubic-bezier(${[b.x1, b.y1, b.x2, b.y2].map((n) => +n.toFixed(2)).join(', ')})`;
+  return v && typeof v === 'object' && v.type ? v.type.toLowerCase().replace(/_/g, '-') : null;
+};
+const fmt = (v) => (typeof v === 'number' ? +v.toFixed(3) : easing(v) || String(v));
+// A group of easings reads as curves, as a ramp reads as a strip: the shape is
+// the value, and `cubic-bezier(0.18, 0, 0, 1)` does not show it.
+const isCurves = (vars) => vars.every((v) => Object.values(v.values).every(bezier));
+// The curve in a unit box, y flipped. Every plot shares one scale, so a
+// control point past the box is an overshoot you can see.
+const curvePath = (v) => { const b = bezier(v); return `M0 1 C${b.x1} ${1 - b.y1} ${b.x2} ${1 - b.y2} 1 0`; };
+// What the curve is FOR, shown on a panel doing that job rather than a dot on
+// a bar — Material and Carbon both name easings by it (enter decelerates,
+// exit accelerates). Read from the name, the only place the snapshot says it;
+// a name that says neither just moves.
+const job = (name) => (/enter|entrance|decelerat/i.test(leaf(name)) ? 'enter' : /exit|accelerat/i.test(leaf(name)) ? 'exit' : 'move');
+// Durations as one scale, not four tables: a bar per step, sized against the
+// longest in the collection so the tiers compare. Values are seconds, as
+// Figma's API writes every time.
+const isDurations = (vars) => vars.every((v) => /duration/i.test(v.name) && Object.values(v.values).every((x) => typeof x === 'number'));
+const longest = Math.max(0, ...c.vars.filter((v) => /duration/i.test(v.name)).map((v) => v.values[cols[0]]).filter((x) => typeof x === 'number'));
+// An alias by its last two segments, as Fluent writes `grey[16]`: the family
+// the column already implies is noise ("Colour/Palette/Grey/12" → "Grey/12").
+const short = (a) => a.split('/').slice(-2).join('/');
+// A column of quantities (sizes, breakpoints, durations) is right-aligned in
+// tabular figures, so place values line up (tables.md *Alignment and figures*).
+const numeric = (vars, m) => vars.every((v) => typeof v.values[m] === 'number');
+
+// The first segment every name shares ("Colour/") is the page's own subject,
+// and is dropped from headings. Then the next segment is the category (h2),
+// the rest of the path the subgroup (h3), the last segment the row.
+const names = c.vars.map((v) => v.name);
+const head = names[0]?.split('/')[0];
+const shared = names.length > 1 && names.every((n) => n.split('/').length > 2 && n.split('/')[0] === head) ? head + '/' : '';
+const tree = new Map();
+for (const v of c.vars) {
+  const segs = v.name.slice(shared.length).split('/');
+  const h2 = segs.length > 1 ? segs[0] : '';
+  const h3 = segs.length > 2 ? segs.slice(1, -1).join(' / ') : '';
+  if (!tree.has(h2)) tree.set(h2, new Map());
+  if (!tree.get(h2).has(h3)) tree.get(h2).set(h3, []);
+  tree.get(h2).get(h3).push(v);
+}
+const hasRamps = [...tree.values()].some((groups) => [...groups.values()].some(isRamp));
+// One rule per mode: with a mode chosen, every cell, header and scale of
+// another mode goes. Generated, because the modes are the project's; the
+// choice is ViewToggle's, kept on each section.
+const modeCss = `@layer components { ${modes.map((m) => `[data-views="mode"][data-view-shown=${JSON.stringify(m)}] [data-mode]:not([data-mode=${JSON.stringify(m)}]) { display: none; }`).join(' ')} }`;
+// The mode toggle's choices: all of them first, unless there are too many to
+// show at once, when the first mode is the default.
+const modeOptions = [...(manyModes ? [] : [{ value: '', label: modes.length === 2 ? 'Both' : 'All modes' }]), ...modes.map((m) => ({ value: m, label: m }))];
+const id = (...parts) => slug(parts.filter(Boolean).join(' ')) || 'variables';
+// The property each variable becomes, or null where the build writes none.
+const codeOf = (v) => sassName(c.name, v.name) || (inCss(v.name, v.values[cols[0]]) ? cssName(c.name, v.name) : null);
+---
+<Base title={`${c.label} (tokens)`}>
+  <h1>{c.label}</h1>
+  <UpdatedBy from={['snapshot']} />
+  {/* Past three modes the lede counts them; the toggle below names them. */}
+  <p class="lede">{plural(c.vars.length, 'variable')}{modes.length > 1 ? (manyModes ? `, in ${plural(modes.length, 'mode')} — one at a time` : `, ${varies ? 'in' : 'the same in'} ${list(modes)}`) : ''}.{source.extends ? ` Extends ${source.extends.replace(/^\s*\d+[.)]\s*/, '')}.` : ''} Click a code name or value to copy it.</p>
+  <Filter placeholder="Filter by name, alias or value" searchLabel="Filter variables">
+    {(hasRamps || varies) && (
+      <div class="toolbar__filters">
+        {hasRamps && <ViewToggle key="colour" label="Show scales as" options={[{ value: 'swatches', label: 'Swatches' }, { value: 'table', label: 'Table' }]} />}
+        {varies && <ViewToggle key="mode" label="Show values in" options={modeOptions} />}
+      </div>
+    )}
+  </Filter>
+  {varies && <style is:inline set:html={modeCss}></style>}
+
+  {/* a group with a heading is a region named by it; one without is only a box */}
+  {[...tree].map(([h2, groups]) => { const Group = h2 ? 'section' : 'div'; return (
+      <Group class="section" aria-labelledby={h2 ? id(h2) : undefined} data-filter-part data-views={varies ? 'mode' : undefined}>
+        {h2 && <h2 id={id(h2)}>{h2}</h2>}
+        {[...groups].map(([h3, vars]) => (
+          <div data-filter-part data-views={isRamp(vars) ? 'colour' : undefined}>
+            {h3 && <h3 id={id(h2, h3)}>{h3}</h3>}
+            {isRamp(vars) && <div data-view="swatches">{cols.map((m) => (
+              <div class:list={['ramp', ground(m) && `ramp--${ground(m)}`]} data-mode={varies ? m : undefined}>
+                <p class="ramp__head">{varies && <span>{m}</span>}<code>{cssName(c.name, vars[0].name).replace(/-[^-]+$/, '-*')}</code></p>
+                <ol class="ramp__steps" style={`--steps: ${vars.length}`}>
+                  {vars.map((v) => {
+                    const code = cssName(c.name, v.name);
+                    return (
+                      <li data-name={`${v.name} ${code} ${Object.values(v.values).map(fmt).join(' ')} ${Object.values(v.aliases).join(' ')}`}>
+                        <button type="button" class="ramp__chip" style={`--swatch: ${v.values[m]}`} data-copy={`var(${code})`} aria-label={`Copy ${code}`} title={descriptions[v.name] || v.name}></button>
+                        <span class="ramp__step" title={leaf(v.name)}>{leaf(v.name)}</span>
+                        <span class="ramp__hex">{fmt(v.values[m])}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            ))}</div>}
+            {isCurves(vars) ? (
+              <ul class="cards cards--fill">
+                {vars.map((v) => {
+                  const val = v.values[cols[0]];
+                  return (
+                    <li class="curve" style={`--ease: ${easing(val)}`} data-name={`${v.name} ${fmt(val)} ${Object.values(v.aliases).join(' ')}`}>
+                      <p class="curve__name" title={descriptions[v.name] || v.name}>{leaf(v.name)}</p>
+                      <svg class="curve__plot" viewBox="-0.05 -0.05 1.1 1.1" aria-hidden="true">
+                        <rect class="curve__box" width="1" height="1" />
+                        <path class="curve__line" d={curvePath(val)} />
+                      </svg>
+                      <span class="curve__stage" data-job={job(v.name)} aria-hidden="true"><span class="curve__panel"></span></span>
+                      {v.aliases[cols[0]] && <span class="value__alias" title={v.aliases[cols[0]]}>{short(v.aliases[cols[0]])}</span>}
+                      <button type="button" class="value__raw" data-copy={fmt(val)} aria-label={`Copy ${fmt(val)}`}>{fmt(val)}</button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+            <div class="table-wrap" data-scrolls data-view={isRamp(vars) ? 'table' : undefined}>
+              {/* The width counts the columns SHOWN: with one mode at a time
+                  every other mode's column is display:none. */}
+              <table class:list={['table', 'table--tokens', isDurations(vars) && 'table--durations']} style={`--cols: ${(manyModes ? 1 : cols.length) + 2 + (isDurations(vars) ? 1 : 0)}`}>
+                <caption class="visually-hidden">{[c.label, h2, h3].filter(Boolean).join(' / ')}</caption>
+                <thead><tr><th scope="col">Name</th><th scope="col">Code</th>{cols.map((m) => <th scope="col" class:list={[numeric(vars, m) && 'num']} data-mode={varies ? m : undefined}>{varies ? m : 'Value'}</th>)}{isDurations(vars) && <th scope="col">Preview</th>}</tr></thead>
+                <tbody>
+                  {vars.map((v) => {
+                    const sass = sassName(c.name, v.name);
+                    const code = codeOf(v);
+                    const desc = descriptions[v.name];
+                    return (
+                      <tr data-name={`${v.name} ${code || ''} ${Object.values(v.values).map(fmt).join(' ')} ${Object.values(v.aliases).join(' ')}`}>
+                        <th scope="row">
+                          <span class="token-name" title={v.name}>{leaf(v.name)}</span>
+                          {desc && <span class="token-desc" title={desc}>{firstLine(desc)}</span>}
+                        </th>
+                        <td class="token-code">
+                          {code
+                            ? <button type="button" class="code-chip" data-copy={sass ? `@include from(${code}) { }` : `var(${code})`} aria-label={`Copy ${code}`}>{code}</button>
+                            : <span class="muted" title={bezier(v.values[cols[0]]) ? 'The token build has no easing type yet, so it writes no property for them' : 'Text variables have no token type, so the build writes no property for them'}>no CSS property</span>}
+                        </td>
+                        {cols.map((m) => {
+                          const val = v.values[m];
+                          // A breakpoint is a width in px in Figma (the build writes it
+                          // in rem); a bare 768 named no unit.
+                          const unit = sass && typeof val === 'number' ? 'px' : '';
+                          return (
+                            <td class:list={[numeric(vars, m) && 'num']} data-mode={varies ? m : undefined}>
+                              <span class:list={['value', isColour(val) && ground(m) && `value--${ground(m)}`]}>
+                                {isColour(val) && <span class="value__swatch" style={`--swatch: ${val}`}></span>}
+                                <span class="value__text">
+                                  {v.aliases[m] && <span class="value__alias" title={v.aliases[m]}>{short(v.aliases[m])}</span>}
+                                  <button type="button" class="value__raw" data-copy={fmt(val) + unit} aria-label={`Copy ${fmt(val)}${unit}`}>{fmt(val)}{unit}</button>
+                                </span>
+                              </span>
+                            </td>
+                          );
+                        })}
+                        {isDurations(vars) && <td><span class="duration" style={`--t: ${v.values[cols[0]]}s; --share: ${longest ? v.values[cols[0]] / longest : 0}`}></span></td>}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            )}
+          </div>
+        ))}
+      </Group>
+    ); })}
+</Base>

@@ -1,0 +1,43 @@
+# History — snapshot-standard
+
+- 2.20.1 (2026-10-30): rule 23's *Checked:* names its test-router case by its test name; it named the file alone, which passed unchecked. No rule changed.
+- 2.20.0 (2026-10-30): rules 6 and 26: each routed library file is pinned to, and checked against, its own release, and an MCP collect names its file; Figma reads time out and a named version is found past the first page.
+- 2.19.0 (2026-10-30): rule 2: the plugin sends the file key on every run and a payload with one is routed by it alone, so a duplicate is never written as its original; a copied id is dropped; an id-only entry needs its key.
+- 2.18.0 (2026-10-30): rule 26: a library snapshot through the Figma MCP runs the plugin's own code, is proved equal to the plugin's and names what differs; the store writes icon attributes sorted.
+- 2.17.1 (2026-10-30): no post to the router is read past 256 MB, nor more than that held across posts; the sender is told (413, 503).
+- 2.17.0 (2026-10-30): the router keeps a library snapshot no project claims under a one-time code; the contract editor makes a project from it by a name, the library's address and that code, and delivers it; the editor started on no project starts the router.
+- 2.16.3 (2026-10-29): how a project joins names `projects.create`, which the contract editor calls to write a design-only project's first document; no rule changed.
+- 2.16.2 (2026-10-23): release pinning names every place the Figma token is read from, the machine's token file among them, as the code already did; behaviour unchanged.
+- 2.16.1 (2026-10-14): names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.
+- 2.16.0 (2026-10-14): rule 18: an optional `port` in the project block; the figma-audit service started with --all serves every project that has one.
+- 2.15.4 (2026-10-14): tool paths follow the move of the toolkit's own checks to tools/toolkit-check and of the project registry to tools/snapshot/projects.cjs; no rule or behaviour changed.
+- 2.15.3 (2026-10-14): tool paths follow the renames (tools/snapshot, tools/component-contract, tools/docs-site, tools/css-lint, tools/ui-check, tools/project-check, tools/claude-hooks, tools/skill-evals); no rule changed.
+- 2.15.2 (2026-10-14): `tools/figma-audit` is the dashboard service's new path (was `tools/figma-dashboard`); no rule changed.
+- 2.15.1 (2026-10-14): paths say `<project home>` (`~/Projects/<label>/figma-design-system/`) where they said `projects/<name>/`; no rule changed.
+- 2.15.0 (2026-10-14): rule 18: an optional `publish` in the project block; the dashboard service redeploys the docs site after every build.
+- 2.14.0 (2026-10-13): rule 25: a layer's Dev Mode annotations travel as `notes` (plugin 0.58.0), and each screens run lists the new and changed ones.
+- 2.13.0 (2026-10-13): rule 24: screens are named `<Section> <flow>-<step> - <Screen>[ - <State>]` and addressed by section, page and name; a misnamed frame or a clash refuses the snapshot. Plugin 0.57.0 sends the section.
+- 2.12.0 (2026-10-12): rule 17: the `icons` role is the library of icons, illustrations and other assets; the docs site shows it as its own section, and a project with none keeps icons under Foundations.
+- 2.11.0 (2026-10-11): rule 17: each routed library names its `roles` (tokens, components, icons), the one place that says what a project audits and which file holds its tokens; rule 21: every library with a role has a record.
+- 2.10.4 (2026-10-08): *Checked:* markers open with their pairs (toolkit-standard §C clause D).
+- 2.10.3 (2026-10-08): a *Checked:* names its file before every string.
+- 2.10.2 (2026-10-08): rule 16's check names each string with its file.
+- 2.10.1 (2026-10-08): rules 1–13 gain their reasons; *Checked:* markers name a file and a string.
+- 2.10.0 (2026-10-08): rule 20 split into rules 20 (grading), 21 (filing), 22 (regrading) and 23 (one detector).
+- 2.9.0 (2026-10-08): history moved to its own file; enforcement lines take the shared form (*Checked:* with repo paths); "Adding a project" corrected; the ownership, pinning and grading facts behind rules 5, 6 and 20 moved out of history into the text.
+- 2.8.0 (2026-10-03): rules 11, 12 and 13 gain router tests; every rule now has a check.
+- 2.7.2 (2026-10-03): every rule names what checks it; three say *No check yet*, counted by `check.sh` `[R]`.
+- 2.7.1 (2026-10-03): rule 20: every field counts when both snapshots share a plugin release; "values moved" read from the notes; writer's `rekey` and `close` pinned by tests.
+- 2.7.0 (2026-10-02): rule 20: `--regrade` rewrites lists and notes; former file keys fold; tokens logged once per window; breaking-row keys drop the worded list.
+- 2.6.0 (2026-10-02): rule 20: sibling pairing for instances only; set and single component pair by folder; `--regrade` added; filed rows checked against stored grades; notes stamped.
+- 2.5.0 (2026-10-02): rule 20: pairing by node id, respelled token names and instance key; breaking rows found by key; after-the-fact grades and unaudited files not filed.
+- 2.4.1 (2026-10-01): rule 20: component and layer renames are minor for code, matching `GRADE_RULES`; Deprecated detection stated.
+- 2.4.0 (2026-10-01): rule 20 adds the Deprecated change type, minor for both audiences.
+- 2.3.1 (2026-10-01): rule 20 splits "Changed" into Renamed and Restyled.
+- 2.3.0 (2026-10-01): rule 20: one detector feeds the change log notes and the grade; `GRADE_RULES` gains change types.
+- 2.2.0 (2026-10-01): rule 20 added: changes graded per audience, grade stored, majors filed as rows to decide.
+- 2.1.1 (2026-09-24): rule 19's evidence names the project Project A; no rule changed.
+- 2.1.0 (2026-09-23): rule 19 added: records store a file's identity; readers resolve its name.
+- 2.0.0 (2026-09-19): one writer for every project; rules 5, 6, 9, 10, 16 and 17 rewritten; repo receivers and `--handle` removed.
+- 1.1.0 (2026-09-18): rules 14 to 18 added: payload schema, shared spec module, layout, design-only projects, phase; scope line rewritten.
+- 1.0.0 (2026-09-16): first version.

@@ -1,0 +1,104 @@
+---
+import { compareNames } from '../../../../shared/output.mjs';
+// Every component, its level on the ladder (lib/ladder.js) and the checks
+// holding it there, filterable by level and by blocker. It replaces the
+// separate lists of what needs attention: Draft with "Errors open" is that
+// list, one filter away. The overview carries the headline; this is its detail.
+import ComponentCell from '../../components/ComponentCell.astro';
+import Base from '../../layouts/Base.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import KpiStrip from '../../components/KpiStrip.astro';
+import Ladder from '../../components/Ladder.astro';
+import Filter from '../../components/Filter.astro';
+import Modal from '../../components/Modal.astro';
+import DoneTable from '../../components/DoneTable.astro';
+import { ladder, levelCount, blockers, LEVEL_LABEL, LEVEL_GUIDE } from '../../lib/ladder.js';
+import { base, num } from '../../lib/format.js';
+
+const total = ladder.length;
+const groups = [['all', 'All components', total], ...['draft', 'ready', 'stable', 'deprecated'].map((l) => [l, LEVEL_LABEL[l], levelCount(l)])].filter(([k, , n]) => k === 'all' || n);
+const RANK = { draft: 0, ready: 1, stable: 2, deprecated: 3 };
+// The table's columns. Errors and warnings are counts, every component has
+// a number; the rest are the other checks holding components back, a quiet
+// mark each under one "Missing" head, with a short name (the tiles above and
+// the checks dialog carry the long one). A check that every component fails
+// singles nothing out, so it is said once under the table, not marked on
+// every row.
+const live = ladder.filter((r) => r.level !== 'deprecated').length;
+const SHORT = {
+  'Not finished in Figma': 'Finished', 'No description': 'Description', "Usage or Don't missing": 'Usage', 'Code gen notes missing': 'Notes',
+  'Frames without auto layout': 'Layout', 'Automatic layer names': 'Names', 'No status marker': 'Marker', 'Not audited': 'Audit',
+  'Not in code': 'Code', 'Differs from the design': 'Match',
+};
+const COUNTED = ['Errors open', 'Warnings open'];
+const markable = blockers.filter(([b]) => !COUNTED.includes(b));
+const marks = markable.filter(([, n]) => n < live).map(([b]) => b);
+const everyRow = markable.filter(([, n]) => n >= live).map(([b]) => b);
+const sorted = [...ladder].sort((a, b) => RANK[a.level] - RANK[b.level] || b.blocks.length - a.blocks.length || compareNames(a.page.title, b.page.title));
+---
+<Base title="Component levels">
+  <h1>Component levels</h1>
+  <UpdatedBy from={['snapshot', 'audit']} />
+  <>
+    <p class="lede">Each component's level: Draft until every Ready check passes, Ready until every Stable check passes. A level is computed, never set by hand.</p>
+    <Ladder />
+    {/* What holds the components that are not Stable, most common first:
+        each tile filters the table below to the components it holds. */}
+    {blockers.length > 0 && (
+      <section aria-labelledby="blockers">
+        <h2 id="blockers" class="visually-hidden">What blocks the rest</h2>
+        <KpiStrip label="What blocks the rest" perRow={4} items={blockers.map(([label, n]) => ({ label, value: n, note: n === 1 ? 'component' : 'components', tone: 'plain', href: `?q=${encodeURIComponent(label.toLowerCase())}` }))} />
+        <button type="button" class="link-button explain-link" popovertarget="checks-dialog">What each check means</button>
+        <Modal id="checks-dialog" title="What each check means">
+          <p class="muted">A component reaches a level when every check of that level passes, and every check of the levels below it.</p>
+          <div class="table-wrap" data-scrolls>
+          <table class="table checks-table">
+            <caption class="visually-hidden">Each check, its level and what it means</caption>
+            <thead><tr><th scope="col">Check</th><th scope="col">Level</th><th scope="col">What it means</th></tr></thead>
+            <tbody>{LEVEL_GUIDE.flatMap((g) => g.checks.map((c) => <tr><th scope="row">{c.label}</th><td><span class={`status ladder__item--${g.level}`}>{LEVEL_LABEL[g.level]}</span></td><td class="muted">{c.means}</td></tr>))}</tbody>
+          </table>
+          </div>
+        </Modal>
+      </section>
+    )}
+
+    <section class="panel panel--plain components-table" aria-labelledby="tracker-components">
+      <header class="panel__head"><h2 id="tracker-components">By component</h2></header>
+      <Filter groups={groups} label="Show components that are" placeholder="Filter by name or check" />
+      {/* Errors and warnings as counts, then one column per other check
+          holding a component back, most common first, the order of the tiles
+          above: a list of checks in one cell had to be read row by row
+          (design-standard rule 8). The level opens the component's checks. */}
+      <div class:list={['table-wrap', sorted.length > 20 && 'table-wrap--long']} data-scrolls>
+        <table class="table table--checks">
+          <caption class="visually-hidden">Components, their level, their open errors and warnings, and the checks they miss</caption>
+          <thead>
+            <tr><th scope="col">Component</th><th scope="col">Level</th><th scope="col" class="num">Errors</th><th scope="col" class="num">Warnings</th>{marks.map((b) => <th scope="col" class="checks-head__mark"><span aria-hidden="true">{SHORT[b] || b}</span><span class="visually-hidden">{b}</span></th>)}</tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr data-name={`${r.page.title} ${r.todo.join(' ')}`.toLowerCase()} data-kind={r.level}>
+                <ComponentCell page={r.page} />
+                <td>{r.todo.length
+                  ? <button type="button" class={`link-button status ladder__item--${r.level}`} popovertarget={`done-${r.page.slug.replace(/\//g, '-')}`}>{LEVEL_LABEL[r.level]}<span class="visually-hidden">: {r.page.title} level checks</span></button>
+                  : <span class={`status ladder__item--${r.level}`}>{LEVEL_LABEL[r.level]}</span>}</td>
+                <td class:list={['num', !r.errors && 'muted']}>{num(r.errors || 0)}</td>
+                <td class:list={['num', !r.warnings && 'muted']}>{num(r.warnings || 0)}</td>
+                {marks.map((b) => (
+                  <td class="checks-head__mark">{r.todo.includes(b) ? <span class="check-mark" role="img" aria-label={b}>✕</span> : <span class="visually-hidden">Present</span>}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {everyRow.length > 0 && <p class="section__note">Every component: {everyRow.map((b) => b.toLowerCase()).join(', ')}.</p>}
+      {/* Each blocked component's level checks, opened from its row. */}
+      {sorted.filter((r) => r.todo.length).map((r) => (
+        <Modal id={`done-${r.page.slug.replace(/\//g, '-')}`} title={`${r.page.title}: level checks`} action={{ href: `${base}/components/${r.page.slug}`, label: `Open ${r.page.title}` }}>
+          <DoneTable rung={r} />
+        </Modal>
+      ))}
+    </section>
+  </>
+</Base>

@@ -1,0 +1,8 @@
+{
+  "name": "theme-switcher",
+  "version": "3.11.0",
+  "private": true,
+  "devDependencies": {
+    "@figma/plugin-typings": "*"
+  }
+}

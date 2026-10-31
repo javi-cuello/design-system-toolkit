@@ -1,0 +1,365 @@
+{
+  "contract": 1,
+  "component": "Button",
+  "figma": {
+    "name": "Button",
+    "key": "06d53ac2d27b3f9664b8e23a4ab8f35ce8579416",
+    "id": "1:20"
+  },
+  "props": {
+    "label": {
+      "type": "string",
+      "default": "Label",
+      "figma": "Label",
+      "sets": [
+        "content/label"
+      ]
+    },
+    "showIcon": {
+      "type": "boolean",
+      "default": false,
+      "figma": "Show icon",
+      "shows": [
+        "content/icon",
+        "content/icon/glyph"
+      ]
+    },
+    "size": {
+      "type": "enum",
+      "values": [
+        "sm",
+        "md"
+      ],
+      "default": "md",
+      "figmaValues": [
+        "sm",
+        "md"
+      ],
+      "figma": "Size"
+    },
+    "role": {
+      "type": "enum",
+      "values": [
+        "primary",
+        "secondary"
+      ],
+      "default": "primary",
+      "figmaValues": [
+        "Primary",
+        "Secondary"
+      ],
+      "figma": "Role"
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false,
+      "axis": true,
+      "figma": "Disabled"
+    },
+    "state": {
+      "type": "enum",
+      "values": [
+        "rest",
+        "hover",
+        "focus",
+        "loading"
+      ],
+      "default": "rest",
+      "figmaValues": [
+        "Rest",
+        "Hover",
+        "Focus",
+        "Loading"
+      ],
+      "role": "interaction",
+      "pointer": [
+        "hover",
+        "focus"
+      ],
+      "figma": "State"
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "hug",
+      "height": "hug",
+      "radius": "Radius/8",
+      "background": "Color/Background/primary",
+      "border": {
+        "color": "Color/Border/primary",
+        "width": [
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1"
+        ],
+        "sides": {
+          "top": 1,
+          "end": 1,
+          "bottom": 1,
+          "start": 1
+        }
+      },
+      "overflow": "hidden"
+    },
+    "content": {
+      "kind": "container",
+      "parent": "root",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/8",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/8",
+          "end": "Spacing/16",
+          "bottom": "Spacing/8",
+          "start": "Spacing/16"
+        }
+      },
+      "width": "hug",
+      "height": "hug",
+      "minHeight": 40,
+      "order": 0
+    },
+    "content/label": {
+      "kind": "text",
+      "parent": "content",
+      "width": "hug",
+      "height": "hug",
+      "color": "Color/Text/on-primary",
+      "typography": "Label/md",
+      "autoResize": "width",
+      "content": "{label}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "size": "sm"
+      },
+      "set": {
+        "content.layout": {
+          "direction": "row",
+          "gap": "Spacing/4",
+          "align": "start",
+          "crossAlign": "center",
+          "padding": {
+            "top": "Spacing/4",
+            "end": "Spacing/12",
+            "bottom": "Spacing/4",
+            "start": "Spacing/12"
+          }
+        },
+        "content.minHeight": 32,
+        "content/label.typography": "Label/sm"
+      }
+    },
+    {
+      "when": {
+        "role": "secondary"
+      },
+      "set": {
+        "root.background": "Color/Background/surface",
+        "root.border": {
+          "color": "Color/Border/default",
+          "width": [
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1"
+          ],
+          "sides": {
+            "top": 1,
+            "end": 1,
+            "bottom": 1,
+            "start": 1
+          }
+        },
+        "content/label.color": "Color/Text/primary"
+      }
+    },
+    {
+      "when": {
+        "state": "hover"
+      },
+      "set": {
+        "root.background": "Color/Background/primary-hover"
+      }
+    },
+    {
+      "when": {
+        "state": "focus"
+      },
+      "add": {
+        "focusRing": {
+          "kind": "graphic",
+          "parent": "root",
+          "position": "absolute",
+          "absolute": {
+            "x": -4,
+            "y": -4,
+            "end": -4,
+            "bottom": -4
+          },
+          "constraints": {
+            "horizontal": "stretch",
+            "vertical": "stretch"
+          },
+          "radius": "Radius/8",
+          "border": {
+            "color": "Color/Border/focus",
+            "width": [
+              "Stroke/1",
+              "Stroke/1",
+              "Stroke/1",
+              "Stroke/1"
+            ],
+            "sides": {
+              "top": 1,
+              "end": 1,
+              "bottom": 1,
+              "start": 1
+            }
+          },
+          "shape": "rectangle",
+          "order": 2
+        }
+      }
+    },
+    {
+      "when": {
+        "state": "loading"
+      },
+      "set": {
+        "content/label.opacity": "Effect/Loading/opacity"
+      },
+      "add": {
+        "content/spinner": {
+          "kind": "instance",
+          "parent": "content",
+          "component": "Icon container",
+          "with": {
+            "Icon": "loader-circle",
+            "Size": "16"
+          },
+          "layout": {
+            "direction": "row",
+            "gap": "Spacing/0",
+            "align": "start",
+            "crossAlign": "center",
+            "padding": {
+              "top": "Spacing/0",
+              "end": "Spacing/0",
+              "bottom": "Spacing/0",
+              "start": "Spacing/0"
+            }
+          },
+          "width": "hug",
+          "height": "hug",
+          "order": 0
+        },
+        "content/spinner/glyph": {
+          "kind": "instance",
+          "parent": "content/spinner",
+          "component": "loader-circle",
+          "width": 16,
+          "height": 16,
+          "overflow": "hidden",
+          "order": 0
+        }
+      }
+    },
+    {
+      "when": {
+        "disabled": true
+      },
+      "set": {
+        "root.opacity": "Effect/Disabled/opacity"
+      }
+    },
+    {
+      "when": {
+        "showIcon": true
+      },
+      "add": {
+        "content/icon": {
+          "kind": "instance",
+          "parent": "content",
+          "component": "Icon container",
+          "with": {
+            "Icon": "star",
+            "Size": "16"
+          },
+          "layout": {
+            "direction": "row",
+            "gap": "Spacing/0",
+            "align": "start",
+            "crossAlign": "center",
+            "padding": {
+              "top": "Spacing/0",
+              "end": "Spacing/0",
+              "bottom": "Spacing/0",
+              "start": "Spacing/0"
+            }
+          },
+          "width": "hug",
+          "height": "hug",
+          "order": 0
+        },
+        "content/icon/glyph": {
+          "kind": "instance",
+          "parent": "content/icon",
+          "component": "star",
+          "width": 16,
+          "height": 16,
+          "overflow": "hidden",
+          "order": 0
+        }
+      }
+    },
+    {
+      "when": {
+        "role": "secondary",
+        "state": "hover"
+      },
+      "set": {
+        "root.background": "Color/Background/hover"
+      }
+    },
+    {
+      "when": {
+        "showIcon": true,
+        "state": "loading"
+      },
+      "remove": [
+        "content/icon",
+        "content/icon/glyph"
+      ]
+    }
+  ],
+  "invalid": [
+    {
+      "disabled": true,
+      "state": [
+        "hover",
+        "focus",
+        "loading"
+      ]
+    }
+  ]
+}

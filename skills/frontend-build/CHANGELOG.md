@@ -1,0 +1,35 @@
+# Changelog — frontend-build
+
+- 2.7.1 (2026-10-30): `sass-entry.mjs` runs through a symlink (the main-module check resolves argv[1]); the scaffold's `bin/css` warns and compiles when snapshot.config.json names a toolkit path with no `sass-entry.mjs`, and `--check` still fails. T12.
+- 2.7.0 (2026-10-30): the Sass entry's components list is generated from the component folders (`scripts/sass-entry.mjs`, run by the scaffold's `bin/css`, `--check` diffing it; T12), and in a Kirby repo to-markup writes the snippet and the gallery's story file (T11).
+- 2.6.1 (2026-10-30): the closing note saying this skill has no model-routing row is gone; ds-model-routing's table has had its row since it was written.
+- 2.6.0 (2026-10-30): in a React or web-component repo the markup is generated too (component-contract's `to-markup.mjs`), and filling its `frontend-build:` gaps is the Components step (T11).
+- 2.5.0 (2026-10-22): a component's stylesheet is generated from its contract by component-contract's `to-code.mjs`; the build writes the markup to its hooks and keeps an own sheet only for what it cannot say (T10).
+- 2.4.5 (2026-10-22): `build-tokens.mjs` exports `textStyleFields`, which the `text-style` mixin and component-contract's `to-code.mjs` both write from; output unchanged.
+- 2.4.4 (2026-10-14): names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.
+- 2.4.3 (2026-10-14): the toolkit's tools are renamed (snapshot, component-contract, docs-site, css-lint, ui-check, project-check, claude-hooks, skill-evals); paths in prose and code only, behaviour unchanged.
+- 2.4.2 (2026-10-12): the `[data-theme]` block is `screen` only too: a reader who chose dark with the toggle printed near-white text as well. The audit runs `tools/ui/axe.mjs`, new: axe-core's WCAG A/AA rules in the parity engine's Chrome.
+- 2.4.1 (2026-10-12): the system-preference theme block is `screen` only, so a page printed from a dark system prints the light tier (found auditing one project's site: near-white text on paper).
+- 2.4.0 (2026-10-12): the knowledge that applies is the default a screen is held to; an audit of a site walks every applicable knowledge page, not only its findings list.
+- 2.3.0 (2026-10-11): look before you ship: no interface change ships before its screenshots (desktop, dark, phone; `tools/ui/check.mjs --shots`) are looked at.
+- 2.2.0 (2026-10-11): the build references moved to knowledge/code, which now holds the front-end practices; the skill keeps the procedure and the audit pass.
+- 2.1.0 (2026-10-11): consults the toolkit's knowledge/ for fundamentals and patterns; references sorted into build/ and audit/.
+- 2.0.0 (2026-10-11): audits as well as builds, a design or a page, against design-standard and code-standard; review-pass becomes audit-pass; restated code rules become citations.
+- 1.4.7 (2026-10-08): build-tokens names what runs it (`@runs:`).
+- 1.4.6 (2026-10-08): citations follow naming-standard into figma-standard.
+- 1.4.5 (2026-10-08): citations name the standard that owns each rule.
+- 1.4.4 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.4.3 (2026-10-08): citations name the standard that owns each rule after the split. No behaviour changed.
+- 1.4.2 (2026-10-03): the Components step decides in the same change whether a mismatch, workaround, trap or ruling is a project fact or a toolkit lesson. Case T9.
+- 1.4.1 (2026-10-02): rule 62 has one account, cited from `SKILL.md`; the mixins' project copies are `scaffoldOwn`, checked by `twins.mjs`. Case T8.
+- 1.4.0 (2026-10-02): scaffold gains `base/_focus.sass` and `base/_hairline.sass`; the button dims its host per `code-standard` 62; starter tokens gain State names. Case T8.
+- 1.3.6 (2026-09-20): citations point at `standards/toolkit-standard.md` §A after the four part standards merged. No rule changed.
+- 1.3.5 (2026-09-19): a bound shadow names each member's own variable, written by position; Style Dictionary's reference pass is off for composites.
+- 1.3.4 (2026-09-19): `build-tokens.mjs`: spread stays px, and `px()` reads a rem string as rem.
+- 1.3.3 (2026-09-19): `build-tokens.mjs` exports `shadowCss(value)` for the docs site. No output changes.
+- 1.3.2 (2026-09-19): `build-tokens.mjs` exports `breakpointName(path)`; a dead collision map removed. No output changes.
+- 1.3.1 (2026-09-19): a mode with nothing CSS can carry writes no block; a breakpoints-named collection is Sass. Cases B10–B11.
+- 1.3.0 (2026-09-19): one token build: `scripts/build-tokens.mjs` over Style Dictionary replaces `tokens-to-css.mjs`. Cases B1–B8 replace E1–E5.
+- 1.2.0 (2026-08-27): ships the component-library scaffold, `scripts/scaffold-design-system.mjs` and `assets/design-system-scaffold/`. Cases T6–T7.
+- 1.1.0 (2026-08-21): names `standards/code-standard.md` as the source of cross-project code rules, cited by handle.
+- 1.0.0 (2026-08-14): initial skill, with `scripts/tokens-to-css.mjs` (DTCG to custom properties, alias-preserving).

@@ -1,0 +1,53 @@
+[
+  {
+    "generatedBy": "skills/figma-component-descriptions/scripts/sections.mjs",
+    "id": "1:1",
+    "name": "Button",
+    "behaviour": [
+      "The `Size` axis offers `Small` and `Large`",
+      "The `Show icon` boolean shows or hides `Icon`",
+      "Interactive states on the `State` axis (`Hover`, `Focus`) and `Disabled` are managed by code and not applied in static designs"
+    ],
+    "composition": [
+      "Contains `Icon`, revealed by the `Show icon` prop, swapped through the `Icon swap` prop",
+      "Contains `Label`",
+      "Contains `Badge` in 3 of 8 variants",
+      "Contains `Spinner` where `Size` is `Large`",
+      "The `Trailing` prop swaps a nested instance",
+      "The `Content` slot takes any custom content, passed in rather than hardcoded"
+    ],
+    "markdown": "## Behaviour\n- The `Size` axis offers `Small` and `Large`\n- The `Show icon` boolean shows or hides `Icon`\n- Interactive states on the `State` axis (`Hover`, `Focus`) and `Disabled` are managed by code and not applied in static designs\n\n## Composition\n- Contains `Icon`, revealed by the `Show icon` prop, swapped through the `Icon swap` prop\n- Contains `Label`\n- Contains `Badge` in 3 of 8 variants\n- Contains `Spinner` where `Size` is `Large`\n- The `Trailing` prop swaps a nested instance\n- The `Content` slot takes any custom content, passed in rather than hardcoded",
+    "gaps": [
+      "the `Theme` axis has one option: an interface defect, reported rather than documented",
+      "Behaviour: what the `Inverted` boolean shows or hides (no nested component carries it)",
+      "Behaviour: runtime behaviour the code owns (opening, animation, focus, sorting), if any",
+      "Composition: which variants show `Badge` (no axis condition selects exactly its 3)",
+      "Composition: what the `Trailing` prop swaps (no nested component is bound to it)",
+      "a broken nested instance `Ghost` in `Size=Small, Disabled=False, State=Rest`: reported, never documented"
+    ]
+  },
+  {
+    "generatedBy": "skills/figma-component-descriptions/scripts/sections.mjs",
+    "id": "7:1",
+    "name": "Card",
+    "behaviour": [],
+    "composition": [
+      "Contains `Label`"
+    ],
+    "markdown": "## Composition\n- Contains `Label`",
+    "gaps": [
+      "Behaviour: runtime behaviour the code owns (opening, animation, focus, sorting), if any"
+    ]
+  },
+  {
+    "generatedBy": "skills/figma-component-descriptions/scripts/sections.mjs",
+    "id": "8:8",
+    "name": null,
+    "behaviour": [],
+    "composition": [],
+    "markdown": "",
+    "gaps": [
+      "not found"
+    ]
+  }
+]

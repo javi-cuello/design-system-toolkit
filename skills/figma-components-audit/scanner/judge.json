@@ -1,0 +1,6 @@
+{
+  "_note": "The model and effort every project's audit judges with. The judgement pass is this skill's, so its settings are too; the dashboard service applies them to each judge call and reads nothing else for it. Fix this and Ask are not judgement and keep the service's default.",
+  "model": "claude-sonnet-5",
+  "effort": "low",
+  "_why": "Measured 2026-09-24 on one project's live scan, 3 runs each: Sonnet 5 at low effort kept all 6 findings every run at $0.017 and 7 s a pass; at its default (high) it cost $0.028, took 18 s and flipped one finding between runs; Opus 5.5 cost $0.041 and kept the same 6; Haiku 4.5 kept 3. Six candidates is a small sample: re-measure on a library with borderline rows before trusting it further."
+}

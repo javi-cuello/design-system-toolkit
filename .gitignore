@@ -1,0 +1,24 @@
+.DS_Store
+
+# Defensive — nothing here matches today, but plugins/ is where a build step
+# would appear first.
+node_modules/
+dist/
+build/
+.env
+.env.*
+
+# Per-library caches a skill may write beside itself. They are project data
+# inside the shareable unit: every skill that creates one already promises it is
+# "never packaged or shared with the skill itself".
+skills/*/systems/
+
+
+# Astro's generated types, written wherever a docs build runs; rebuilt every time.
+.astro/
+# subagents' git worktrees
+.claude/worktrees/
+
+# Links to node the services run through, made by install.sh for this machine.
+tools/figma-audit/figma-audit
+tools/snapshot/figma-snapshot

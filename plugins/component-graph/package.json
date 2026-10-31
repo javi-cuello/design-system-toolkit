@@ -1,0 +1,8 @@
+{
+  "name": "component-graph",
+  "version": "3.6.2",
+  "private": true,
+  "devDependencies": {
+    "@figma/plugin-typings": "*"
+  }
+}

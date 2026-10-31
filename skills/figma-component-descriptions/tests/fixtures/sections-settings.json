@@ -1,0 +1,16 @@
+{
+  "LIBKEY": {
+    "name": "Library",
+    "TOKENS": {
+      "stateAxis": "State",
+      "disabledAxis": "Disabled"
+    },
+    "SCALES": {
+      "State": [
+        "Rest",
+        "Focus",
+        "Hover"
+      ]
+    }
+  }
+}

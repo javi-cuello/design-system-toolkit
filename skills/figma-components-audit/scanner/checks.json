@@ -1,0 +1,406 @@
+{
+ "_note": "The audit's check catalogue. The SKILL owns this; the dashboard renders it and must not restate it. `status` is the honest coverage position, and it is the single home of the porting backlog.",
+ "_status": {
+  "scanner": "Implemented in scanner/audit.js. Runs identically from a session and from the dashboard.",
+  "session": "Agent-layer. Only a full session run originates it — the dashboard's judgement pass FILTERS scanner candidates and never raises its own, so these do not run from the page.",
+  "backlog": "Documented here, implemented nowhere. Does not run from a session or the dashboard unless written by hand.",
+  "rule": "Not a check — a rule about how findings are ordered or scored."
+ },
+ "dimensions": [
+  {
+   "dimension": "Tokens",
+   "weight": 25,
+   "why": "A raw value is a decision that cannot be changed centrally. It survives every rebrand untouched, and nothing about it announces that it was meant to be a token.",
+   "checks": [
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Every non-zero padding, gap and per-corner radius is bound to a variable",
+     "status": "scanner",
+     "note": "audit.js notes each raw padding and gap as on or off the <code>spacing</code> scale, and each radius against <code>radius</code>, naming the nearest step when off. An off-scale padding of 80 or more is filed as review — usually a progress or slider fill, which is a question, not a defect."
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Every visible fill and stroke colour is bound",
+     "status": "scanner"
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Stroke weight is bound — read on the four per-side properties where a node has them, since the shorthand carries no binding there and reading it flags correct strokes; on the shorthand only where a node has no per-side weights (vectors, lines, ellipses)",
+     "status": "scanner"
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Every text layer carries a text style and bound font family, size and weight",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Every bound fill resolves to the collection the settings name as <code>semantic</code>, matched by <b>name</b>",
+     "status": "scanner",
+     "note": "audit.js matches this collection by NAME (`t.collection !== COLL`): it states which collection a project intends fills to come from. Which LIBRARY a binding came from is the key check below, since two libraries can publish the same collection name."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Every binding comes from a collection whose key the settings allow as <code>allowedKeys</code>",
+     "status": "scanner",
+     "note": "audit.js resolves every bound property's collection and compares its KEY. Skipped when the settings carry no <code>allowedKeys</code>. Not yet control-passed live: that a teamLibrary collection key equals the imported collection's key is assumed."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "A text layer's fill comes from the text role the settings name as <code>textRole</code>, and a non-text layer's does not",
+     "status": "scanner",
+     "note": "audit.js: a TEXT node bound to a colour whose path has no <code>&lt;textRole&gt;/</code> segment, and any other node bound to one that has. No other role is inferred from node type. Skipped when the settings carry no <code>textRole</code>."
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "A raw value serving a mechanism — a negative overlap, a fill driven by padding — is a question, not a defect",
+     "status": "session"
+    },
+    {
+     "tier": "hygiene",
+     "who": "scanner",
+     "text": "An unbound gap on a single-child frame: inert today, a defect the moment a second child arrives",
+     "status": "scanner"
+    }
+   ]
+  },
+  {
+   "dimension": "Properties and API",
+   "weight": 20,
+   "why": "The variant grid is the component's public surface. A defect here is copied into every instance and cannot be fixed without breaking them.",
+   "checks": [
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "<b>No unused component property.</b> Figma ignores the whole component at publication when one is declared but applied to no layer — consumers never receive it, and the publish reports success",
+     "status": "scanner"
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "<b>A layer's twins agree.</b> Within one set, a layer wired to a text, instance-swap or boolean property in some variants and to nothing in others — the other direction of the unused-property check, which passes the moment one layer uses a property. Keyed by path and by what the layer is — its type, an instance's contents, and for a boolean whether it stands alone — with an ordinal for same-named siblings, never by name.",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Axis order follows the project's grammar, with state-like axes last",
+     "status": "scanner",
+     "note": "audit.js schema|axis-order|: the state axis last, the disabled axis before it, a project's firstAxis first (figma-standard rule 1). The order of the other axes is read by the reader."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Boolean axes carry exactly two options, ordered default-first",
+     "status": "scanner",
+     "note": "audit.js schema|bool-default|: a True/False axis with no recorded order lists its default first (figma-standard rule 1). That a boolean carries exactly two options is not checked."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "No stray options left behind by a rename",
+     "status": "backlog",
+     "note": "Deliberately not checked yet: membership is a coverage question, not an ordering one, and needs its own ruling."
+    },
+    {
+     "tier": "preference",
+     "who": "scanner",
+     "text": "Property names follow the project's pattern — text props, swap props, casing",
+     "status": "scanner",
+     "note": "audit.js, from the settings, each skipped when its key is absent: a boolean property starts with <code>booleanPrefix</code>, and where it is set no variant starts with Is and no style boolean with Is or Has; a text property does not end with <code>textPropertyAvoid</code> unless <code>textPropertyExceptions</code> names it; a swap property does not end with <code>swapAvoid</code>; every name is in <code>propertyCase</code>."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "A size property is named, valued and drawn the way the settings say",
+     "status": "scanner",
+     "note": "audit.js, from the settings: a size-like property (<code>sizeAxisMatch</code>) is named <code>sizeAxis</code>; its options sit on the recorded <code>Size</code> scale in its order; the options a component uses are one unbroken run of the scale; where <code>sizeShared</code>, one size name draws one height across components (a question, not a defect); a size value that draws nothing distinct is filed. Absent keys skip their part."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "No Figma default names anywhere: <code>Frame 12</code>, <code>Rectangle 4</code>, <code>Component 1</code>",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "An axis with a single option — no choice offered, usually a remnant, but removing one is breaking",
+     "status": "backlog"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "An axis whose only effect is toggling one subtree's visibility should be a boolean",
+     "status": "backlog"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "A sparse variant grid — only a finding when it breaks the file's own pattern",
+     "status": "session"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "A layer name that is legal but misleading; only a reader can catch that",
+     "status": "session"
+    }
+   ]
+  },
+  {
+   "dimension": "States",
+   "weight": 20,
+   "why": "The part users experience and the part least visible while designing, because the canvas shows every state at once and the product shows one at a time.",
+   "checks": [
+    {
+     "tier": "error",
+     "who": "agent",
+     "text": "<b>Every non-rest state renders.</b> A Press or Disabled variant identical to Rest is a product bug and leads the queue ahead of anything cosmetic",
+     "status": "scanner",
+     "note": "Implemented in the scanner, though catalogued as agent-layer — the resting-state comparison is fully deterministic once the rulebook names the axis."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Each state variant binds its own state's tokens",
+     "status": "scanner",
+     "note": "audit.js states|token|: a Hover token in Press, or a resting token the Rest sibling does not carry on the same layer (figma-standard rule 48). Layers pair by name path; a state no token in the set names is skipped."
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Focus is indicated, and visibly differs from rest",
+     "status": "backlog"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "The state axis uses the project's vocabulary, in the project's order",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "Coverage against the archetype — a state missing library-wide is conformance, missing on one component is a question",
+     "status": "backlog"
+    }
+   ]
+  },
+  {
+   "dimension": "Structure and hygiene",
+   "weight": 15,
+   "why": "What decides whether a component survives contact with real content. Invisible while it holds the placeholder text it was drawn with.",
+   "checks": [
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "<b>Text hugs vertically.</b> A fixed-height text node clips instead of reflowing — invisible at rest, and it fails in the locale nobody tested",
+     "status": "backlog"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "No <code>GROUP</code> nodes inside a component: a group ignores the auto-layout everything around it obeys",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "A frame holding layers uses auto layout: without it an agent gets absolute positions it can only copy",
+     "status": "scanner",
+     "note": "audit.js structure|no-autolayout (figma-standard rule 33); an overlay or illustration may be absolute by design, so it is a question."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "An overlay part such as a state layer is locked, stretched both ways, at 0,0 and its parent's size",
+     "status": "scanner",
+     "note": "audit.js structure|overlay, from overlayComponents, a project's own rule; absent, not checked."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "An instance whose main component no longer exists — it keeps looking correct while it stops receiving updates",
+     "status": "backlog"
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "No name carries leading or trailing whitespace — a page, a component or a layer. It is invisible in the layers panel, so it survives indefinitely, and an exporter comparing names untrimmed turns one into a component the consuming repo cannot account for",
+     "status": "scanner"
+    },
+    {
+     "tier": "hygiene",
+     "who": "scanner",
+     "text": "No name carries a double space between words",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "Text a consumer would legitimately set is exposed as a text property",
+     "status": "session"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "Detached frames on documentation pages that duplicate a real component",
+     "status": "session",
+     "note": "probes.js FCA.detachedScan lists candidates by name; the reader confirms each by ancestry (figma-standard rule 27)."
+    },
+    {
+     "tier": "preference",
+     "who": "agent",
+     "text": "Names follow the project's case convention — which case is the project's to state, never this skill's",
+     "status": "scanner",
+     "note": "audit.js naming|layer-case|, naming|component-case and naming|value-case|, where <code>propertyCase</code> is sentence (figma-standard rule 18); a part's layer still carrying its whole name is naming|part-layer| (figma-standard rule 9)."
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "Open content uses the slot mechanism consistently; one responsibility per component set",
+     "status": "session"
+    },
+    {
+     "tier": "hygiene",
+     "who": "scanner",
+     "text": "Layers hidden without a property controlling them — dead weight, or a conditional the property model never captured",
+     "status": "scanner"
+    },
+    {
+     "tier": "hygiene",
+     "who": "scanner",
+     "text": "Disabled paints, strokes and effects: switched off in the panel, still in the array carrying a colour and a binding",
+     "status": "backlog"
+    }
+   ]
+  },
+  {
+   "dimension": "Metadata",
+   "weight": 10,
+   "why": "Raised from FigmaLint's 3 deliberately. The description is the only channel reaching someone who never opens the file, and the line naming what a component is built from is what stops it being reimplemented.",
+   "checks": [
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Public components carry a non-empty, non-placeholder description",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "A public component's description carries Usage and Don't sections, and Code gen notes (a review); a slot part owes none",
+     "status": "scanner",
+     "note": "audit.js metadata|guidance and metadata|guidance-code (figma-standard rule 25); runs only where the project names its internalPrefix. A variant whose description differs from its set's is metadata|variant-description."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Private components carry one too — a compact sentence or two, not the full structure",
+     "status": "scanner",
+     "note": "audit.js metadata|description raises a missing one as hygiene on a private part (figma-standard rule 25); whether it is compact rather than the full structure is the reader's."
+    },
+    {
+     "tier": "warning",
+     "who": "agent",
+     "text": "<b>Composition is named.</b> A composite component whose description omits what it contains is incomplete, whatever the project calls its headings",
+     "status": "session"
+    },
+    {
+     "tier": "warning",
+     "who": "agent",
+     "text": "A description is not stale — checked against the current axes and properties, not just against emptiness",
+     "status": "session"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "Property descriptions where the name alone does not carry the meaning",
+     "status": "backlog"
+    },
+    {
+     "tier": "review",
+     "who": "agent",
+     "text": "Dev Mode annotations on variants carrying spec detail prose cannot hold — a cursor rule, a timing, an ARIA role",
+     "status": "backlog"
+    }
+   ]
+  },
+  {
+   "dimension": "Accessibility",
+   "weight": 10,
+   "why": "Structural checks only — the defects present or absent in the file itself. Never a substitute for a specialist audit, and the page says so rather than implying coverage it does not have.",
+   "checks": [
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Focus indication exists on focusable components and differs visibly from rest",
+     "status": "scanner",
+     "note": "audit.js accessibility|focus raises a state axis with no focusState option (figma-standard rule 39); states|… raises one that renders like Rest."
+    },
+    {
+     "tier": "error",
+     "who": "scanner",
+     "text": "Text-on-surface contrast against the project's floor, resolved in every mode — a pairing that passes in light and fails in dark is the finding",
+     "status": "scanner",
+     "note": "audit.js accessibility|contrast: opaque surfaces in the mode each variant resolves to; other modes and translucent surfaces stay reviewed (figma-standard rule 32)."
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "Interactive target size against the project's minimum, or WCAG 2.2 AA's 24×24 where none is stated",
+     "status": "scanner",
+     "note": "audit.js accessibility|target raises variants under minTarget as a review (figma-standard rule 26); probes.js FCA.sizes still lists them for the reader."
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "Text size against the smallest step of the type scale",
+     "status": "session",
+     "note": "probes.js FCA.sizes lists them; the reader drops disabled text (figma-standard rule 26)."
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "An interactive component with no text of its own carries its accessible name, as a text property or a Dev Mode annotation",
+     "status": "scanner",
+     "note": "audit.js accessibility|name (figma-standard rule 40, WCAG 4.1.2)."
+    }
+   ]
+  },
+  {
+   "dimension": "Three rules that outrank the tiers",
+   "weight": null,
+   "why": null,
+   "checks": [
+    {
+     "tier": "error",
+     "who": "always",
+     "text": "A defect a user can see — a state that does not render, a missing focus ring, text that will clip — leads the queue whatever its dimension",
+     "status": "rule"
+    },
+    {
+     "tier": "error",
+     "who": "scoring",
+     "text": "An unused property caps its component at 25 out of 100. Averaging it against good token coverage would report a healthy number for a component consumers never receive",
+     "status": "rule"
+    },
+    {
+     "tier": "review",
+     "who": "always",
+     "text": "A finding on <b>every</b> instance of something is evidence the check is wrong or the pattern is a house rule. It is investigated, not reported",
+     "status": "rule"
+    }
+   ]
+  }
+ ]
+}

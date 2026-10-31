@@ -1,0 +1,17 @@
+---
+// Audits: what the library audit found and what is left to fix, the score
+// per component, the run history, and how it all is measured.
+//
+// The dashboard renders whether or not a run exists. A project with none is
+// the normal case — it is the state every project starts in — and it needs
+// the surface more than a project that has one: the same shell, empty, with
+// the Audit button that fills it.
+import Base from '../layouts/Base.astro';
+import UpdatedBy from '../components/UpdatedBy.astro';
+import Dashboard from '../dashboard/Dashboard.astro';
+---
+<Base title="Audits">
+  <h1>Audits</h1>
+  <UpdatedBy from={['snapshot', 'audit']} />
+  <Dashboard />
+</Base>

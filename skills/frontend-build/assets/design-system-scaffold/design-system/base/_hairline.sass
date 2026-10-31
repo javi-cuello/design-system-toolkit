@@ -1,0 +1,23 @@
+// The hairline under a row or a bar, once.
+//
+// The design draws it as a 1px OUTSIDE stroke on the bottom edge: past the
+// box, taking no room, so a row of 48 is 48 with its line and five of them
+// stack 48 apart. So it is an outer shadow offset down by its width. A border
+// adds its pixel to the box and pushes every row below it down one; an inset
+// shadow draws the line over the box's own last pixel instead of under it.
+//
+// An outer shadow paints under the next sibling's background and is cut off
+// by an ancestor that clips (`overflow: hidden`); where either happens, the
+// line belongs to that sibling's top edge or to the clipping ancestor's own
+// stroke instead.
+//
+// `$width` is a row's list knob where it has one: a list turns the line off
+// on its last row, because the design draws the line BETWEEN rows and a row
+// cannot see where it sits.
+//
+//     @include hairline.below(var(--__PREFIX__-list-divider, var(--stroke-1)))
+//
+// Silent comments on purpose: a loud one is copied into every compiled sheet
+// that uses this.
+@mixin below($width: var(--stroke-1))
+  box-shadow: 0 $width 0 0 var(--color-border)

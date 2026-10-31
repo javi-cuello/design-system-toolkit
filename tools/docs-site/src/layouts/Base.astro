@@ -1,0 +1,516 @@
+---
+import * as sass from 'sass';
+import '../styles/system.css';
+import '../styles/site.scss';
+import { project, shows, language, codeAudit } from '../lib/project.js';
+
+import { meta, icons, iconLibrary, assetGroups, snapshot, componentGroups, collectionPages, slug } from '../lib/snapshot.js';
+import { base, date } from '../lib/format.js';
+import { platformLabel } from '../dashboard/labels.js';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const here = Astro.url.pathname.replace(/\/$/, '') || '/';
+
+// The project's own stylesheets (its @font-face rules, typically), so
+// specimens render in the faces the product ships. Compiled here because they
+// live in the project repo, outside this build's module graph.
+const projectCss = project.stylesheets.map((file) => sass.compile(file).css).join('\n');
+
+// The library's own structure: its variable collections, then its styles.
+const foundations = [
+  ...collectionPages.map((c) => [c.label, `/foundations/${c.slug}`, c.vars.length, !!c.extends]),
+  ['Text styles', '/foundations/typography', snapshot.textStyles?.length],
+  // Two kinds of style in Figma, so two pages: an effect is a shadow or a
+  // blur, a paint is a fill.
+  ['Effect styles', '/foundations/effects', snapshot.effects?.length],
+  ['Paint styles', '/foundations/paints', snapshot.paintStyles?.length],
+  // Icons are a foundation only where the project routes no icon library.
+  ['Icons', '/foundations/icons', iconLibrary ? 0 : icons.length],
+].filter(([, , n]) => n);
+
+const link = (href: string) => ({ href: base + href, 'aria-current': here === base + href ? 'page' : undefined });
+// Five sections, one home each. The sidebar belongs to the sections that are
+// lists (foundations, components, the audit's views); every other page is one
+// centred column.
+const rel = here.slice(base.length) || '/';
+// A project with more than one platform shows one platform's components in
+// the sidebar at a time, its index included: the current page's, else the first.
+const platformKey = (p) => slug(p || 'web');
+const platformShown = componentGroups.length > 1
+  ? platformKey((componentGroups.find(({ platform }) => `${rel}/`.startsWith(`/components/${platformKey(platform)}/`)) || componentGroups[0]).platform)
+  : null;
+// The overview's detail pages (`/overview/…`, one per question it asks) are
+// part of the overview: its sidebar lists them, and its tab stays marked.
+const section = rel === '/' || rel.split('/')[1] === 'overview' ? 'overview' : rel.split('/')[1];
+const sections = [
+  ['overview', '/', 'Overview'],
+  foundations.length > 0 && ['foundations', foundations[0][1], 'Foundations'],
+  ['components', '/components', 'Components'],
+  // The library of icons, illustrations and other assets, where the project
+  // routes one (the `icons` role): a library of its own, not a foundation, so
+  // its own section, named as Figma names it.
+  iconLibrary && ['icons', '/icons', iconLibrary.name],
+  // How the code stands against the design: which components each side has,
+  // and, for code built elsewhere, what differs (the code audit). It lands on
+  // the scorecard once a code audit exists, else on which components each
+  // side has. Always shown, code or not, as Audits is: each page's empty
+  // state says what to set up, and a section reached by no link is lost.
+  ['parity', codeAudit ? '/parity/overview' : '/parity', 'Parity'],
+  // Always, audit or not: the page says "none recorded yet" and how to run
+  // one, which a project with no record needs more than one that has it.
+  ['audits', '/audits', 'Audits'],
+  // What each snapshot changed, all of it; the overview shows the last few.
+  ['changes', '/changes', 'Changes'],
+].filter(Boolean) as string[][];
+const sidebar = (section === 'icons' && assetGroups.length > 0) || section === 'foundations' || section === 'components' || section === 'audits' || section === 'parity' || section === 'overview';
+// The Tracker: how far along, then what is holding something.
+// The overview and a page per question it asks: Components (the ladder),
+// Progress (Complete, in design only), AI readiness (Understandable); Correct
+// opens the Audits page. Safe to use and Moving have their homes already:
+// Changes, and the Audits page's history.
+const overviewPages = [['Overview', '/'], ['Component levels', '/overview/components'], shows.progress && ['Progress', '/overview/progress'], ['AI readiness', '/overview/ai-readiness']].filter(Boolean) as string[][];
+// How far code is from it: which components each side has, then what differs.
+// Every page, built or not; each says what it waits for.
+const parityPages = [['Overview', '/parity/overview'], ['Coverage', '/parity'], ['Tokens', '/parity/tokens'], ['Properties', '/parity/properties'], ['Visual', '/parity/visual']];
+// "On this page", drawn by the script from the page's own headings: on the
+// list sections and on Changes (a section per day, long enough that the list
+// is how a day is reached). Not on the home page: its cards are the page.
+const pageNav = (sidebar || section === 'changes') && rel !== '/';
+// The Audits page's views, addressed by hash (the dashboard routes them).
+const auditViews = [['Queue', '#queue'], ['History', '#history'], ['About', '#about']];
+// A repo stamps the moment (snapshotAt); the toolkit's store keeps the day.
+const taken = meta.snapshotAt || meta.snapshot;
+const stamp = date(taken) || 'none yet';
+// The tab icon: the project's initial on the site's accent (system.css
+// --accent), both themes, inlined so there is no file to serve.
+const favicon = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#8f4100}@media (prefers-color-scheme:dark){rect{fill:#f17300}}</style><rect width="32" height="32" rx="7"/><text x="16" y="22.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" font-weight="600" fill="#fff">${project.name.trim().charAt(0).toUpperCase().replace(/[<&]/g, '')}</text></svg>`);
+import themeScript from '../scripts/theme.js?raw';
+---
+<!doctype html>
+<html lang={language || "en"}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · {project.name}</title>
+    <link rel="icon" href={favicon} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <script is:inline>
+      try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
+    </script>
+    {projectCss && <style is:global set:html={projectCss} />}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <div class:list={['shell', sidebar && 'shell--sidebar']}>
+      <header class="masthead" data-masthead>
+        <a class="masthead__brand" href={base + '/'}>{project.name}</a>
+        {/* The section the page is in, not the page itself: "true", so a
+            sidebar link can be the one "page" (menus.md *States*). Below 40rem
+            the list sits behind a Menu button (menus.md *Hamburger and mobile
+            menus*); the button stays hidden until the script beside it runs,
+            so with no script the links show. */}
+        <nav class="topnav" aria-label="Sections" data-menu>
+          <button type="button" class="button topnav__toggle" aria-expanded="false" aria-controls="topnav-list" hidden>Menu</button>
+          <ul id="topnav-list">{sections.map(([key, href, label]) => <li><a href={base + href} aria-current={section === key ? 'true' : undefined}>{label}</a></li>)}</ul>
+        </nav>
+        <script is:inline>document.querySelector('[data-menu] > button').hidden = false;</script>
+        <div class="segmented theme" role="group" aria-label="Theme">
+          {[['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([value, label]) => <button type="button" class="seg" data-theme-choice={value} aria-pressed={value === 'system' ? 'true' : 'false'}>{label}</button>)}
+        </div>
+      </header>
+
+      {sidebar && (
+        <aside class="sidebar" aria-label={`${section[0].toUpperCase() + section.slice(1)} pages`}>
+          <div class="sidebar__inner" data-sidebar>
+            <details class="nav" open data-nav="(min-width: 60rem)">
+              <summary>{section[0].toUpperCase() + section.slice(1)}</summary>
+              <nav class="sidenav" aria-label={section[0].toUpperCase() + section.slice(1)}>
+                {section === 'audits' ? (
+                  <ul data-hash-nav>{auditViews.map(([label, hash]) => <li><a href={`${base}/audits/${hash}`} data-hash={hash}>{label}</a></li>)}</ul>
+                ) : section === 'foundations' ? (
+                  <ul>{foundations.map(([label, href, , child]) => <li class:list={[child && 'nav__child']}><a {...link(href as string)}>{label}</a></li>)}</ul>
+                ) : section === 'icons' ? (
+                  <ul>{[['Icons', '/icons'], ...assetGroups.map((g) => [g.title, `/icons/${g.slug}`])].map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
+                ) : section === 'overview' ? (
+                  <ul>{overviewPages.map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
+                ) : section === 'parity' ? (
+                  <ul>{parityPages.map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
+                ) : (
+                  <div>
+                    {platformShown && (
+                      <div class="segmented nav__platforms" role="group" aria-label="Platform">
+                        {componentGroups.map(({ platform }) => (
+                          <button type="button" class="seg" data-platform-choice={platformKey(platform)} aria-pressed={String(platformKey(platform) === platformShown)}>{platformLabel(platform)}</button>
+                        ))}
+                      </div>
+                    )}
+                    {componentGroups.map(({ platform, groups }) => (
+                      <div class="nav__platform" data-platform={platformKey(platform)} hidden={platformShown !== null && platformKey(platform) !== platformShown}>
+                        <ul><li><a {...link(platformShown ? `/components/${platformKey(platform)}` : '/components')}>All components</a></li></ul>
+                        {groups.map((g) => (
+                          <div class="nav__group">
+                            {g.label && <p class="sidenav__heading">{g.label}</p>}
+                            <ul>{g.pages.map((p) => <li><a href={base + `/components/${p.slug}`} aria-current={here === base + `/components/${p.slug}` || here.startsWith(base + `/components/${p.slug}/`) ? 'page' : undefined}>{p.title}</a></li>)}</ul>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </nav>
+            </details>
+            {/* Closed on a narrow screen before anything below it is drawn: the
+                end-of-page script closing it moved the whole page up a screen
+                (performance.md *Layout stability in code*). */}
+            <script is:inline>{ const d = document.currentScript.previousElementSibling; d.open = matchMedia(d.dataset.nav).matches; }</script>
+          </div>
+        </aside>
+      )}
+
+      <main class="content" id="main" tabindex="-1">
+        {/* A page's own band above its content, edge to edge (a component's title and description). */}
+        {Astro.slots.has('hero') && <div class="hero-band"><div class="container"><slot name="hero" /></div></div>}
+        <div class="container page-body" data-page-nav={pageNav ? '' : undefined}><slot /></div>
+      </main>
+
+      <footer class="site-foot">Figma snapshot {stamp}{meta.hash && <> · <code>{meta.hash}</code></>}</footer>
+    </div>
+    <p class="visually-hidden" aria-live="polite" data-announce></p>
+    <script is:inline set:html={themeScript} />
+
+    <script is:inline>
+    // In a block, so nothing here becomes a global a page's own script (the
+    // dashboard's, which is classic and top-level) could collide with.
+    {
+      const root = document.documentElement;
+      const announce = document.querySelector('[data-announce]');
+
+      /*
+       * The view toggles (see components/ViewToggle.astro). One wiring for
+       * every one of them, here rather than three copies on three pages.
+       *
+       * The choice is written onto each group that declares the same key, not
+       * onto <html>: a rule that reads it is then a local one, and cannot be
+       * defeated by the `@scope (body)` the page's own styles compile inside.
+       */
+      for (const group of document.querySelectorAll('[data-view-toggle]')) {
+        const key = group.dataset.viewToggle;
+        const buttons = [...group.querySelectorAll('button')];
+        const panels = [...document.querySelectorAll('[data-views="' + key + '"]')];
+        if (!buttons.length || !panels.length) continue;
+        const set = (v) => {
+          for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.view === v));
+          for (const p of panels) p.dataset.viewShown = v;
+        };
+        // The first button is the default; a remembered choice wins only if
+        // it is still one of the options this page offers.
+        let saved = buttons[0].dataset.view;
+        try {
+          const s = localStorage.getItem('view:' + key);
+          if (s && buttons.some((b) => b.dataset.view === s)) saved = s;
+        } catch {}
+        set(saved);
+        for (const b of buttons) b.addEventListener('click', () => {
+          set(b.dataset.view);
+          try { localStorage.setItem('view:' + key, b.dataset.view); } catch {}
+        });
+      }
+
+      // The sections' Menu button (below 40rem; site.scss hides it wider).
+      // It opens the list under the masthead; Escape, a click outside or
+      // focus leaving close it, Escape returning focus to the button
+      // (menus.md *Hamburger and mobile menus*).
+      const menu = document.querySelector('[data-menu]');
+      const toggle = menu.querySelector('button');
+      const openMenu = (open) => toggle.setAttribute('aria-expanded', String(open));
+      toggle.addEventListener('click', () => openMenu(toggle.getAttribute('aria-expanded') !== 'true'));
+      menu.addEventListener('keydown', (e) => { if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') { openMenu(false); toggle.focus(); } });
+      menu.addEventListener('focusout', (e) => { if (!menu.contains(e.relatedTarget)) openMenu(false); });
+      document.addEventListener('click', (e) => { if (!menu.contains(e.target)) openMenu(false); });
+      matchMedia('(min-width: 40rem)').addEventListener('change', () => openMenu(false));
+
+      // A list that is a disclosure on a narrow screen (data-nav, the width
+      // at which it opens): open on a wide one, where its summary is hidden
+      // and could not reopen it, and closed on a narrow one, so the page
+      // comes first. It follows the width both ways. Rendered open, so with
+      // no script nothing is folded away.
+      const followWidth = (d) => {
+        const wide = matchMedia(d.dataset.nav);
+        const fit = () => { d.open = wide.matches; };
+        wide.addEventListener('change', fit);
+        fit();
+      };
+      for (const d of document.querySelectorAll('details[data-nav]')) followWidth(d);
+
+      // The masthead's real height, for everything that sits below it (anchors,
+      // the sticky sidebar, the Ask drawer): it wraps differently with the
+      // width, the fonts and the reader's text size.
+      const masthead = document.querySelector('[data-masthead]');
+      new ResizeObserver(() => root.style.setProperty('--masthead', masthead.offsetHeight + 'px')).observe(masthead);
+
+      // Theme: System follows the system; Light and Dark are remembered.
+      // Platform: a choice shows that platform's components in the sidebar.
+      for (const b of document.querySelectorAll('[data-platform-choice]')) {
+        b.addEventListener('click', () => {
+          const want = b.dataset.platformChoice;
+          for (const x of document.querySelectorAll('[data-platform-choice]')) x.setAttribute('aria-pressed', String(x === b));
+          for (const list of document.querySelectorAll('[data-platform]')) list.hidden = list.dataset.platform !== want;
+        });
+      }
+      // A sidebar of views addressed by hash marks the one showing.
+      const hashNav = document.querySelector('[data-hash-nav]');
+      if (hashNav) {
+        const mark = () => {
+          // The view may carry state after a `?` — the audit queue puts its
+          // owner filter there — and that is still the same view.
+          const h = (location.hash || '#queue').split('?')[0];
+          for (const a of hashNav.querySelectorAll('a')) a.dataset.hash === h ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
+        };
+        addEventListener('hashchange', mark); mark();
+      }
+
+      // The sidebar opens at the current page, wherever it sits in a long
+      // list; only the sidebar scrolls, never the page.
+      const inner = document.querySelector('[data-sidebar]');
+      const current = inner?.querySelector('a[aria-current="page"]');
+      if (current && inner.scrollHeight > inner.clientHeight) {
+        inner.scrollTop += current.getBoundingClientRect().top - inner.getBoundingClientRect().top - inner.clientHeight / 3;
+      }
+
+      // On this page: the page's headings, once there are four of them
+      // (navigation.md *In-page navigation*), read from the page itself
+      // (every visible h2 in the part of the page showing), so a new section
+      // or group appears here with nothing else
+      // to change. A heading with no anchor gets one from its text. It sits
+      // after the page's intro (its h1 and opening paragraphs): a disclosure
+      // there on a narrow screen, the rail beside the column on a wide one.
+      const body = document.querySelector('[data-page-nav]');
+      if (body) {
+        const nav = document.createElement('nav');
+        nav.className = 'page-nav';
+        nav.setAttribute('aria-label', 'On this page');
+        nav.innerHTML = '<details open data-nav="(min-width: 80rem)"><summary>On this page</summary><ul></ul></details>';
+        const list = nav.querySelector('ul');
+        followWidth(nav.firstElementChild);
+        const anchor = (h) => {
+          const owner = h.closest('section[id]');
+          if (owner && owner.querySelector('h2') === h) return owner;
+          if (!h.id) {
+            // unique: two headings can share their words
+            const stem = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
+            let id = stem, n = 2;
+            while (document.getElementById(id)) id = stem + '-' + n++;
+            h.id = id;
+          }
+          return h;
+        };
+        // A heading's own words, without what sits inside it (a count).
+        const label = (h) => [...h.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim() || h.textContent.trim();
+        let targets = [];
+        // The section whose heading has passed a line a quarter down the
+        // screen. At the foot of the page the last sections can never reach
+        // that line, so there it is the one the address names (the link just
+        // followed), else the last one in view.
+        const mark = () => {
+          const top = (t) => t.getBoundingClientRect().top;
+          let at = 0;
+          targets.forEach((t, i) => { if (top(t) <= innerHeight / 4) at = i; });
+          if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) {
+            const seen = targets.map((t, i) => (top(t) < innerHeight ? i : -1)).filter((i) => i >= 0);
+            const named = targets.findIndex((t) => '#' + t.id === location.hash);
+            at = seen.includes(named) ? named : seen.at(-1) ?? at;
+          }
+          list.querySelectorAll('a').forEach((a, i) => (i === at ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current')));
+        };
+        let drawn = '';
+        const build = () => {
+          const seen = (sel) => [...document.querySelectorAll(sel)]
+            .filter((h) => !h.closest('[hidden], aside') && !h.classList.contains('visually-hidden') && h.getClientRects().length);
+          const heads = seen('main h2');
+          const pairs = heads.map((h) => [anchor(h), h]);
+          // Redrawn only when the headings change: redrawing on every jump
+          // would take keyboard focus off the link just followed.
+          const key = pairs.map(([t]) => t.id).join('|');
+          if (key === drawn) return;
+          drawn = key;
+          targets = pairs.map(([t]) => t);
+          if (heads.length < 4) { nav.remove(); return; }
+          list.replaceChildren(...pairs.map(([target, h]) => {
+            const li = document.createElement('li'), a = document.createElement('a');
+            a.href = '#' + target.id; a.textContent = label(h); li.append(a); return li;
+          }));
+          if (!nav.isConnected) {
+            let at = body.firstElementChild;
+            while (at && (at.tagName === 'H1' || at.tagName === 'P')) at = at.nextElementSibling;
+            body.insertBefore(nav, at);
+          }
+          mark();
+        };
+        build();
+        // Tabs, dashboard views and filters change what shows; each says so
+        // with a contentchange event, and the list follows.
+        addEventListener('contentchange', build);
+        addEventListener('hashchange', () => requestAnimationFrame(() => { build(); mark(); }));
+        let queued = false;
+        addEventListener('scroll', () => {
+          if (queued) return;
+          queued = true;
+          requestAnimationFrame(() => { queued = false; mark(); });
+        }, { passive: true });
+      }
+
+      // A table wider than its column scrolls in its wrap (site.scss
+      // .table-wrap, found by data-scrolls); a keyboard reader must be able to scroll it too, so a
+      // wrap that overflows is a focusable region named by its table's
+      // caption, and one that fits is left out of the tab order (tables.md
+      // *Responsive tables*). Rechecked as the width changes.
+      const wraps = [...document.querySelectorAll('[data-scrolls]')];
+      const fitWraps = () => {
+        for (const w of wraps) {
+          // sideways, or down for a long table's wrap (site.scss .table-wrap--long)
+          const over = w.scrollWidth > w.clientWidth + 1 || w.scrollHeight > w.clientHeight + 1;
+          if (over === w.hasAttribute('tabindex')) continue;
+          if (over) {
+            // its caption, else the heading the table sits under
+            let head = w.querySelector('caption') || w.previousElementSibling;
+            while (head && head.tagName !== 'CAPTION' && !/^H[1-6]$/.test(head.tagName)) head = head.previousElementSibling;
+            w.tabIndex = 0;
+            w.setAttribute('role', 'region');
+            w.setAttribute('aria-label', (head ? head.textContent.trim() + ', ' : '') + 'table, scrolls');
+          } else {
+            w.removeAttribute('tabindex'); w.removeAttribute('role'); w.removeAttribute('aria-label');
+          }
+        }
+      };
+      if (wraps.length) { new ResizeObserver(fitWraps).observe(document.body); addEventListener('contentchange', fitWraps); }
+
+      // Copy: any element with data-copy puts that text on the clipboard and
+      // says so to screen readers as well as on screen.
+      document.addEventListener('click', async (e) => {
+        const el = e.target.closest('[data-copy]');
+        if (!el) return;
+        try {
+          await navigator.clipboard.writeText(el.dataset.copy);
+          announce.textContent = `Copied ${el.dataset.copyLabel || el.dataset.copy}`;
+          el.dataset.copied = '';
+          setTimeout(() => delete el.dataset.copied, 1200);
+        } catch {
+          // A browser that refuses the clipboard (no permission, not https).
+          announce.textContent = "Couldn't copy; select the text instead";
+        }
+      });
+
+      // Filter (components/Filter.astro): each bar hides the [data-name]
+      // (or [data-keywords], an item's other words)
+      // items in its scope that the words typed or the group chosen leave
+      // out, and any [data-filter-part] left empty, and says how many are
+      // left, on screen and to screen readers. Each group's count is recounted
+      // within the words typed, so it says what choosing it shows
+      // (filtering.md, faceted counts). Its state is in the address: a group
+      // is a new view, so Back undoes it; the words go in once typing
+      // settles, one entry per search, not one per key.
+      for (const bar of document.querySelectorAll('[data-filter]')) {
+        const scope = document.querySelector(bar.dataset.filter);
+        if (!scope) continue;
+        const search = bar.querySelector('[data-filter-q]');
+        const status = bar.querySelector('[data-filter-status]');
+        const empty = bar.querySelector('[data-filter-empty]');
+        const items = [...scope.querySelectorAll('[data-name]')];
+        const parts = [...scope.querySelectorAll('[data-filter-part]')].reverse();
+        // A short facet is buttons and the menu a narrow bar shows instead;
+        // a long one is the menu alone. Both are kept to one choice.
+        const buttons = [...bar.querySelectorAll('[data-filter-show] button')];
+        const select = bar.querySelector('select[data-filter-show]');
+        const options = select ? [...select.options] : [];
+        const choices = options.map((o) => o.value);
+        const all = choices[0];
+        // Its own names in the address when the page has more than one bar.
+        const Q = bar.dataset.filterKey ? bar.dataset.filterKey + '-q' : 'q';
+        const SHOW = bar.dataset.filterKey ? bar.dataset.filterKey + '-show' : 'show';
+        let group = all, timer, settle;
+        const choose = (g) => {
+          group = choices.includes(g) ? g : all;
+          for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.show === group));
+          if (select) select.value = group;
+        };
+        // The address for these words and this group.
+        const address = (words, g) => {
+          const url = new URL(location.href);
+          if (words) url.searchParams.set(Q, words); else url.searchParams.delete(Q);
+          if (g !== all) url.searchParams.set(SHOW, g); else url.searchParams.delete(SHOW);
+          return url;
+        };
+        const write = (entry) => {
+          const url = address(search ? search.value.trim() : '', group);
+          if (url.href !== location.href) history[entry](null, '', url);
+        };
+        const apply = (entry) => {
+          const words = search ? search.value.trim() : '';
+          const q = words.toLowerCase();
+          // Counted by name: a page can show one item twice (a colour scale as
+          // swatches and as a table), and the count is of things, not of rows.
+          const shown = new Set(), every = new Set(), found = new Map(choices.map((c) => [c, new Set()]));
+          for (const item of items) {
+            const name = item.dataset.name, match = !q || name.toLowerCase().includes(q) || (item.dataset.keywords || '').toLowerCase().includes(q);
+            item.hidden = (group !== all && item.dataset.kind !== group) || !match;
+            every.add(name);
+            if (!item.hidden) shown.add(name);
+            if (match) { found.get(all)?.add(name); found.get(item.dataset.kind)?.add(name); }
+          }
+          for (const part of parts) part.hidden = !part.querySelector('[data-name]:not([hidden])');
+          for (const b of buttons) b.textContent = `${b.dataset.label} (${found.get(b.dataset.show)?.size ?? 0})`;
+          for (const o of options) o.textContent = `${o.dataset.label} (${found.get(o.value)?.size ?? 0})`;
+          // Nothing left: say what was asked, and offer the way back.
+          const none = !shown.size && (group !== all || q);
+          const choice = options.find((o) => o.value === group)?.dataset.label;
+          const text = none
+            ? `Nothing matches${words ? ` “${words}”` : ''}${group !== all ? ` in ${choice}` : ''}`
+            : group === all && !q ? '' : `${shown.size} of ${every.size} shown`;
+          status.textContent = none ? '' : text;
+          empty.hidden = !none;
+          if (none) {
+            empty.querySelector('[data-filter-empty-text]').textContent = text + '.';
+            const [clearQ, clearAll] = empty.querySelectorAll('[data-filter-clear]');
+            clearQ.hidden = !words;
+            clearQ.href = address('', group);
+            clearAll.hidden = group === all;
+            clearAll.href = address('', all);
+          }
+          clearTimeout(timer);
+          timer = setTimeout(() => { announce.textContent = text; }, 400);
+          if (entry) write(entry);
+          dispatchEvent(new Event('contentchange'));
+        };
+        // Every control set from the address: on load, and on Back and Forward.
+        const restore = () => {
+          const params = new URLSearchParams(location.search);
+          if (search) search.value = params.get(Q) || '';
+          choose(params.get(SHOW));
+          apply();
+        };
+        search?.addEventListener('input', () => {
+          apply();
+          clearTimeout(settle);
+          settle = setTimeout(() => write('pushState'), 800);
+        });
+        for (const b of buttons) b.addEventListener('click', () => { choose(b.dataset.show); apply('pushState'); });
+        select?.addEventListener('change', () => { choose(select.value); apply('pushState'); });
+        for (const a of empty.querySelectorAll('[data-filter-clear]')) a.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (search) search.value = '';
+          if (a.dataset.filterClear === 'all') choose(all);
+          apply('pushState');
+          (search || select || buttons[0])?.focus();
+        });
+        addEventListener('popstate', restore);
+        if (location.search) restore();
+      }
+    }
+    </script>
+  </body>
+</html>

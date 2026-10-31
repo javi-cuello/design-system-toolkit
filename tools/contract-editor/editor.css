@@ -1,0 +1,691 @@
+/* The contract editor's own components, over the toolkit's UI system (system.css). */
+@layer components {
+  body { margin: 0; background: var(--bg); color: var(--fg); }
+
+  .ce-field { display: grid; gap: var(--space-4); min-inline-size: 0; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg); }
+  .ce-field .filter { inline-size: 100%; }
+  /* the name and the heading start where the cards do, past the handles' gutter */
+  .ce-field--component { inline-size: 18rem; max-inline-size: 100%; }
+
+  /* the window's bar over every pane, its height the one the sticky panes leave it */
+  :root { --bar: 3.5rem; }
+  .ce-bar { position: sticky; inset-block-start: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--space-8);
+    block-size: var(--bar); box-sizing: border-box; padding: 0 var(--space-16); background: var(--bg); border-block-end: var(--stroke-1) solid var(--line); }
+  .ce-bar__side { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+  .ce-bar .button svg { inline-size: var(--space-16); block-size: var(--space-16); }
+  /* a sidebar's toggle looks as every other button does, open or not: the sidebar shows it, aria-expanded says it */
+  /* the panes: the bar and the sidebars are chrome docked to the page, on its level with a hairline against the work,
+     the cards in them a level up (visual.md *Surfaces and elevation levels*); the component's bar over the
+     palette and the work, so its name and tabs stay put whichever tab is open, and a tab sets the columns under it
+     (Variants takes the palette's room for its grid) */
+  .ce {
+    display: grid; align-items: start; min-block-size: calc(100vh - var(--bar));
+    grid-template: "head head out" auto "palette work out" 1fr / minmax(14rem, 17rem) minmax(0, 1fr) var(--out-column, minmax(18rem, 26rem));
+  }
+  .ce[data-nav-open] { grid-template: "nav head head out" auto "nav palette work out" 1fr / minmax(10rem, 13rem) minmax(14rem, 17rem) minmax(0, 1fr) var(--out-column, minmax(18rem, 26rem)); }
+  /* read, not edited: no palette to add from */
+  .ce[data-read-only] { grid-template: "head out" auto "work out" 1fr / minmax(0, 1fr) var(--out-column, minmax(18rem, 26rem)); }
+  .ce[data-nav-open][data-read-only] { grid-template: "nav head out" auto "nav work out" 1fr / minmax(10rem, 13rem) minmax(0, 1fr) var(--out-column, minmax(18rem, 26rem)); }
+  .ce[data-read-only] .ce-palette, .ce[data-read-only] [data-suggest] { display: none; }
+  .ce[data-wide], .ce[data-wide][data-read-only] { grid-template: "head out" auto "work out" 1fr / minmax(0, 1fr) var(--out-column, minmax(18rem, 26rem)); }
+  .ce[data-nav-open][data-wide], .ce[data-nav-open][data-wide][data-read-only] { grid-template: "nav head out" auto "nav work out" 1fr / minmax(10rem, 13rem) minmax(0, 1fr) var(--out-column, minmax(18rem, 26rem)); }
+  .ce[data-no-json] { --out-column: 0; }
+  .ce[data-wide] .ce-palette { display: none; }
+  .ce-nav { grid-area: nav; align-self: stretch; }
+  .ce-head { grid-area: head; }
+  .ce-palette { grid-area: palette; align-self: stretch; }
+  .ce-props { grid-area: work; }
+  .ce-out { grid-area: out; grid-row: 1 / -1; align-self: stretch; }
+  .ce-nav, .ce-palette, .ce-out {
+    position: sticky; inset-block-start: var(--bar); max-block-size: calc(100vh - var(--bar)); overflow: auto; box-sizing: border-box;
+    padding: var(--space-16); background: var(--bg);
+  }
+  .ce-nav { block-size: calc(100vh - var(--bar)); }
+  .ce-nav, .ce-palette { border-inline-end: var(--stroke-1) solid var(--line); }
+  .ce-head { padding: var(--space-16) var(--space-24) 0; border-block-end: var(--stroke-1) solid var(--line); }
+  /* the list is the toolkit's one sidebar list (system.css .sidenav), the docs site's too; here a long name is
+     one line ending in an ellipsis, said whole in its title */
+  .ce-nav__list li > button:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  /* the preview and JSON: docked beside the work, as a preview compared with the work is (sidebars.md: object header
+     over a tool layout); a region of the layout, so it pushes, and Escape does not close it */
+  .ce-out { display: flex; flex-direction: column; gap: var(--space-12); border-inline-start: var(--stroke-1) solid var(--line); }
+  .ce-out[hidden] { display: none; }
+  /* the props read as one column of cards, centred in the grey between the sidebars */
+  /* the handles hang in a gutter on the left, mirrored on the right, so what sits between them is centred */
+  /* Variants: the grid and its panel fill the work's height, with the gap between them all round them too */
+  .ce[data-wide] .ce-props { max-inline-size: none; justify-self: stretch; align-self: stretch; display: flex; flex-direction: column; padding: var(--space-16); }
+  .ce[data-wide] [data-panel="variants"] { display: flex; flex-direction: column; flex: 1; }
+  .ce[data-wide] [data-panel="variants"][hidden] { display: none; }
+  .ce-props { justify-self: center; inline-size: 100%; max-inline-size: 50rem; box-sizing: border-box; padding: var(--space-24) calc(var(--space-24) + var(--space-32)) var(--space-48); }
+  .ce h2 { margin: 0 0 var(--space-12); font-size: var(--text-md); line-height: var(--leading-lg); }
+  .ce-hint { margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
+  .ce-count { font-weight: normal; color: var(--fg-soft); }
+
+  /* the palette: a tile per block, an icon over its name, two to a row, as a builder's insert panel */
+  /* the shared tab bar fades its scrolled edges into the ground it sits on: here, the sidebar's white */
+  .ce-blocks-switch { display: flex; margin-block-end: var(--space-16); }
+  .ce-blocks-switch .seg { flex: 1; justify-content: center; }
+  /* a panel's section heading: sentence case at the label size, heavier, no tracked capitals (visual.md, typography) */
+  .ce-palette h3 { margin: var(--space-20) 0 var(--space-8); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-muted); }
+  .ce-palette h3:first-child { margin-block-start: 0; }
+  .ce-blocks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+  .ce-block {
+    display: grid; justify-items: center; align-content: center; gap: var(--space-8);
+    inline-size: 100%; block-size: calc(var(--control-height) * 2); padding: var(--space-4) var(--space-8); text-align: center;
+    border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8);
+    background: var(--surface); color: var(--fg); font: inherit; font-size: var(--text-xs); cursor: grab;
+    overflow-wrap: anywhere; line-height: var(--leading-xl);
+  }
+  /* a tile two rows tall, its icon at the inspector's 16 and its name at the label size (visual.md: one size scale) */
+  .ce-block { gap: var(--space-4); }
+  .ce-block svg { inline-size: var(--space-16); block-size: var(--space-16); color: var(--fg-muted); }
+  @media (hover: hover) { .ce-block:hover { border-color: var(--accent); } .ce-block:hover svg { color: var(--accent); } }
+
+  .ce-list { display: grid; gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+  /* a prop seen only behind an on/off, under it: a line down from under its icon and a tick to each, as the parts tree draws */
+  .ce-list > .ce-row--under { position: relative; margin-inline-start: calc(2 * var(--space-20)); }
+  .ce-list > .ce-row--under::before { content: ""; position: absolute; inset-inline-start: calc(-1 * var(--space-20)); inset-block-start: calc(-1 * var(--space-8)); block-size: calc(var(--space-8) + 1.75rem); border-inline-start: var(--stroke-1) solid var(--line-strong); }
+  .ce-list > .ce-row--under:has(+ .ce-row--under)::before { block-size: auto; inset-block-end: 0; }
+  .ce-list > .ce-row--under::after { content: ""; position: absolute; inset-inline-start: calc(-1 * var(--space-20)); inset-block-start: 1.75rem; inline-size: var(--space-16); border-block-start: var(--stroke-1) solid var(--line-strong); }
+  .ce-list:not(:empty) + .ce-empty { display: none; }
+  /* the first-use state is the drop target too: a first row's place, dashed; a dragged block's slot takes its place */
+  .ce-suggest { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); margin-block-start: var(--space-12); }
+  .ce-suggest__title { flex-basis: 100%; font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-soft); }
+  /* the part pointed at in the tree, as a browser's inspector draws it: its edge, its padding shaded */
+  .ce-pv[data-inspect] { outline: var(--stroke-2) solid var(--accent); background:
+    linear-gradient(color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent) 12%, transparent)) content-box,
+    linear-gradient(color-mix(in srgb, var(--accent) 35%, transparent), color-mix(in srgb, var(--accent) 35%, transparent)) padding-box; }
+  /* an empty state centred in the region it stands for; outlined dashed only where a block can be dropped */
+  .ce-empty { display: grid; place-content: center; justify-items: center; gap: var(--space-4); padding: var(--space-32) var(--space-24); text-align: center; }
+  .ce-empty > .button { margin-block-start: var(--space-12); }
+  .ce:not([data-read-only]) [data-empty] { border: var(--stroke-1) dashed var(--control); border-radius: var(--radius-12); }
+  .ce-empty h3 { margin: 0; font-size: var(--text-md); }
+  .ce-empty p { margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
+  [data-panel] > .ce-list:not(:empty) { margin-block-end: var(--space-16); }
+  .ce-handle, .ce-more {
+    display: grid; place-items: center; inline-size: var(--space-24); block-size: var(--space-24);
+    padding: 0; border: 0; border-radius: var(--radius-4); background: none; color: var(--fg-soft); cursor: pointer;
+  }
+  .ce-handle { block-size: var(--control-height); cursor: grab; touch-action: none; }
+  .ce-handle svg, .ce-more svg { inline-size: var(--space-16); block-size: var(--space-16); }
+  @media (hover: hover) { .ce-handle:hover, .ce-more:hover { background: var(--hover); color: var(--fg); } }
+  .ce-handle:active { cursor: grabbing; }
+
+  /* quiet by default: a selected pill is a filled grey, an unselected one plain text; the accent stays for focus and the one primary action */
+  /* a choice of two or three: radio buttons (or, for where a prop exists, checkboxes), a control and its words, stacked */
+  .ce-choice { display: grid; gap: var(--space-8); margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+  .ce-choice legend { float: left; padding: 0; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg); }
+  .ce-choice.ce-box legend { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+  .ce-choice__options { clear: both; display: grid; gap: var(--space-8); }
+  .ce-pill { display: flex; align-items: center; gap: var(--space-8); font-size: var(--text-sm); color: var(--fg); cursor: pointer; }
+  /* drawn as Material draws them: an 18px box with a 2px edge and a tick, a 20px ring with a 10px dot; the edge is a control's (WCAG 1.4.11) */
+  .ce-pill input { appearance: none; flex: none; display: grid; place-content: center; margin: 0; border: 2px solid var(--control); background: var(--surface-sunken); cursor: pointer; }
+  .ce-pill input[type=radio] { inline-size: 20px; block-size: 20px; border-radius: 50%; }
+  .ce-pill input:checked { border-color: var(--accent); }
+  .ce-pill input[type=radio]:checked::before { content: ""; inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--accent); }
+  .ce-pill input:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  .ce-pill input:disabled { opacity: var(--disabled-opacity); cursor: default; }
+
+  /* an enum's options: chips in a field-like box, the default filled, an input at the end that adds */
+  .ce-chips {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin: 0; padding: var(--space-4);
+    min-block-size: var(--control-height); box-sizing: border-box; list-style: none;
+    border: var(--stroke-1) solid var(--control); border-radius: var(--radius-8); background: var(--surface-sunken);
+  }
+  .ce-chips:focus-within { border-color: var(--accent); }
+  .ce-chip { display: inline-flex; align-items: center; border-radius: var(--radius-full); background: var(--surface-2); }
+  /* the chip is what is focused, its name or the field renaming it: the ring goes round the whole chip, × included */
+  .ce-chip:has(.ce-chip__value:focus-visible, .ce-chip__edit:focus) { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  .ce-chip__value:focus-visible, .ce-chip__edit:focus-visible { outline: 0; }
+  /* renaming: as wide as the name being typed, at the chip's own padding, so the chip does not change size */
+  .ce-chip__edit { field-sizing: content; min-inline-size: 2ch; padding: var(--space-2) var(--space-4) var(--space-2) var(--space-12); border: 0; border-radius: var(--radius-full); background: none; color: var(--fg); font: inherit; font-size: var(--text-sm); }
+  .ce-chip__edit[aria-invalid] { color: var(--bad); }
+  .ce-chip__value, .ce-chip__remove { border: 0; background: none; color: var(--fg); font: inherit; font-size: var(--text-sm); cursor: pointer; }
+  .ce-chip__value { padding: var(--space-2) var(--space-4) var(--space-2) var(--space-12); border-radius: var(--radius-full); }
+  /* the remove target stays 24px square (WCAG 2.5.8) though the glyph is small */
+  .ce-chip__remove { display: grid; place-items: center; inline-size: var(--space-24); block-size: var(--space-24); margin-inline-end: var(--space-2); border-radius: 50%; color: var(--fg-muted); }
+  @media (hover: hover) { .ce-chip__remove:hover { background: var(--hover); color: var(--fg); } }
+  .ce-chips__add { flex: 1 1 6rem; }
+  .ce-chips__input { inline-size: 100%; min-block-size: calc(var(--control-height) - var(--space-8) - 2px); border: 0; background: none; color: var(--fg); font: inherit; font-size: var(--text-sm); }
+  .ce-chips__input:focus-visible { outline: 0; }
+  .ce-chips__input[aria-invalid] { color: var(--bad); }
+
+  .ce-views { margin: 0; --tabs-ground: var(--bg); border-block-end: 0; }
+
+  /* the lists: one quiet row per prop or part; the detail is in the dialog */
+  /* the component's name, and beside it what syncs it: Figma and Code */
+  .ce-top { display: flex; align-items: flex-end; gap: var(--space-8); margin: 0 0 var(--space-12); }
+  /* the name gives way before the buttons wrap under it */
+  .ce-top .ce-field--component { flex: 0 1 18rem; margin: 0; }
+  .ce-top .button { flex: none; }
+  /* a draft made from a library component says which, beside its name */
+  .ce-linked { align-self: center; color: var(--fg-muted); font-size: var(--text-sm); }
+  /* a draft whose library component changed under it: said above the tabs, with the way to Figma's version */
+  .ce-stale { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-8) var(--space-16); margin: 0 0 var(--space-16); padding: var(--space-12) var(--space-16);
+    border: var(--stroke-1) solid var(--warn); border-radius: var(--radius-8); background: var(--warn-soft); font-size: var(--text-sm); }
+  .ce-stale p { margin: 0; flex: 1 1 20rem; }
+  /* the component's actions at the end: Edit as draft, or Save as official, first where it shows */
+  .ce-top [data-edit-draft]:not([hidden]), .ce-top [data-edit-draft][hidden] ~ [data-save-official]:not([hidden]),
+    .ce-top [data-edit-draft][hidden] ~ [data-save-official][hidden] + [data-figma-menu] { margin-inline-start: auto; }
+  .ce-row { position: relative; display: flex; align-items: center; gap: var(--space-4); padding-inline-end: var(--space-8);
+    border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface); }
+  [data-invalid] .ce-row__summary { color: var(--bad); }
+  .ce-row > .ce-handle { position: absolute; inset-inline-start: calc(-1 * var(--space-32)); inset-block-start: 50%; translate: 0 -50%; block-size: var(--space-24); }
+  .ce-row__main {
+    flex: 1; min-inline-size: 0; display: grid; grid-template-columns: var(--space-20) minmax(6rem, 10rem) 6rem minmax(0, 1fr); align-items: center; gap: var(--space-12);
+    padding: var(--space-12) var(--space-12); border: 0; border-radius: var(--radius-8); background: none; color: var(--fg); font: inherit; font-size: var(--text-sm); text-align: start; cursor: pointer;
+  }
+  .ce-row__main svg { inline-size: var(--space-20); block-size: var(--space-20); color: var(--fg-muted); }
+  /* the whole row takes the hover, so it reaches the edge whether or not the row has a menu at its end */
+  @media (hover: hover) { .ce-row:has(.ce-row__main:hover) { background: var(--hover); } }
+  .ce-row__name { font-weight: var(--weight-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ce-row__kind { color: var(--fg-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .ce-row__summary { color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ce-row__about { display: flex; align-items: center; gap: var(--space-8); min-inline-size: 0; }
+  /* the on/off a prop is seen behind: a chip before its summary */
+  .ce-cond { display: inline-flex; align-items: center; gap: var(--space-4); flex: none; padding: 0 var(--space-8) 0 var(--space-4); white-space: nowrap; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-full); color: var(--fg-soft); font-size: var(--text-xs); vertical-align: middle; }
+  /* a glyph inside a chip, a step under the 16 its text sits with; the system has no 14 */
+  .ce-cond .ce-glyph { inline-size: 14px; block-size: 14px; }
+  /* in a part's row, the grid's last column: as wide as its words, not the column */
+  .ce-row__main > .ce-cond--gone { justify-self: start; max-inline-size: 100%; padding-inline: var(--space-8); overflow: hidden; text-overflow: ellipsis; }
+  .ce-row__sides { display: flex; gap: var(--space-4); color: var(--fg-soft); }
+  .ce-row__sides svg { inline-size: var(--space-16); block-size: var(--space-16); }
+  /* the parts tree: a container's line runs down from under its icon, and a tick joins each part to it */
+  .ce-parts, .ce-subtree { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-8); }
+  .ce-subtree { margin-block-start: var(--space-8); margin-inline-start: calc(var(--space-12) + var(--space-8)); padding-inline-start: var(--space-20); }
+  .ce-subtree > .ce-node { position: relative; }
+  .ce-subtree > .ce-node::before { content: ""; position: absolute; inset-inline-start: calc(-1 * var(--space-20)); inset-block: calc(-1 * var(--space-8)) 0; border-inline-start: var(--stroke-1) solid var(--line-strong); }
+  .ce-subtree > .ce-node:last-child::before { block-size: calc(var(--space-8) + 1.75rem); inset-block-end: auto; }
+  .ce-subtree > .ce-node::after { content: ""; position: absolute; inset-inline-start: calc(-1 * var(--space-20)); inset-block-start: 1.75rem; inline-size: var(--space-16); border-block-start: var(--stroke-1) solid var(--line-strong); }
+  .ce-tree-tools { display: flex; justify-content: flex-end; margin-block-end: var(--space-8); }
+  /* the grip inside the row, in the props list as in the parts tree */
+  :is(.ce-row--part, .ce-list > .ce-row, .ce-lift) > .ce-handle { position: static; translate: none; flex: none; margin-inline-start: var(--space-4); }
+  /* where a carried row will land: the row itself, dashed and faded, at the depth it will take (knowledge: interaction,
+     gestures and drag) */
+  .ce-row--slot { border-style: dashed; border-color: var(--control); background: transparent; box-shadow: none; animation: ce-slot-in 120ms ease-out; }
+  /* an empty space the row's size: the carried copy is the row, and a second, faded one under it read as a glitch */
+  .ce-row--slot > * { visibility: hidden; }
+  @media (prefers-reduced-motion: reduce) { .ce-row--slot { animation: none; } }
+  .ce-library-empty { margin-block-start: var(--space-24); }
+
+  /* the dialog is the toolkit's one modal (system.css .modal); its form only lays out the fields */
+  .ce-dialog-form { display: contents; }
+  /* a form reads top to bottom, one idea per box: a box's title, then its fields, stacked */
+  [data-dialog] { --modal-width: 32rem; }
+  [data-dialog][data-tall] { block-size: min(46rem, calc(100svh - 2 * var(--space-32))); }
+  /* only the body scrolls: the dialog itself never does, so its footer stays at its foot */
+  [data-dialog] { overflow: hidden; }
+  [data-dialog] .modal__body { min-block-size: 0; }
+  .ce-form { display: grid; gap: var(--space-20); }
+  /* one idea of a form: its label over its fields, set apart by space, not a box (knowledge: visual, quiet chrome) */
+  .ce-box { display: grid; gap: var(--space-8); margin: 0; padding: 0; min-inline-size: 0; border: 0; }
+  .ce-box > legend { float: left; inline-size: 100%; padding: 0; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--fg); }
+  /* a choice in a form spans the column as its fields do, its segments one width */
+  .ce-form .ce-choice > .segmented { display: flex; justify-self: stretch; }
+  .ce-form .ce-choice > .segmented .seg { flex: 1 1 0; justify-content: center; }
+  .ce-segmented .seg:has(input:disabled) { cursor: default; }
+  .ce-segmented .seg:has(input:disabled:not(:checked)) { opacity: var(--disabled-opacity); }
+  .ce-box > legend + * { clear: both; }
+  /* Delete sits apart from Cancel and the action, at the start of the foot */
+  .ce-delete { margin-inline-end: auto; border-color: var(--bad); color: var(--bad); }
+
+  /* the library's bar: the kind first, then the search (design-standard rule 3) */
+  .ce-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-8); margin-block-end: var(--space-12); }
+
+  /* the token picker: a field-like button, and a searchable list with a swatch or value on every option */
+  .ce-picker__wrap { position: relative; }
+  .ce-picker { display: flex; align-items: center; gap: var(--space-8); text-align: start; cursor: pointer; padding-inline-end: calc(var(--space-12) + 2 * var(--space-24)); }
+  .ce-picker__chevron { position: absolute; inset-block: 0; inset-inline-end: var(--space-12); margin-block: auto; block-size: var(--space-16); inline-size: var(--space-16); color: var(--fg-soft); pointer-events: none; }
+  .ce-picker__chevron svg { display: block; inline-size: 100%; block-size: 100%; rotate: 90deg; }
+  .ce-picker__name--none { color: var(--fg-soft); }
+  .ce-picker__clear { position: absolute; inset-block: 0; inset-inline-end: calc(var(--space-12) + var(--space-20)); margin-block: auto; display: grid; place-items: center; inline-size: var(--space-24); block-size: var(--space-24);
+    border: 0; border-radius: 50%; background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
+  @media (hover: hover) { .ce-picker__clear:hover { background: var(--hover); color: var(--fg); } }
+  .ce-picker__name { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ce-picker__value { color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+  /* a value Figma cannot bind outside the library: said in the warning colour, why on hover */
+  .ce-picker__name--private { color: var(--warn); text-decoration: underline dotted; }
+  .ce-swatch { flex: none; inline-size: var(--space-16); block-size: var(--space-16); border-radius: var(--radius-4); box-shadow: inset 0 0 0 var(--stroke-1) rgb(0 0 0 / 0.15); }
+  .ce-picker__pop {
+    position: fixed; inset: auto; margin: 0; padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-8); max-block-size: 22rem; box-sizing: border-box;
+    /* floating: the overlay level, over whatever it opens from */
+    border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8); background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); color: var(--fg); box-shadow: var(--shadow-overlay);
+  }
+  .ce-picker__pop:not(:popover-open) { display: none; }
+  /* a popover is placed a task after it opens (its toggle event): unseen until then, so it never flashes where it first lands */
+  :is(.ce-picker__pop, .ce-menu):popover-open:not([data-placed]) { visibility: hidden; }
+  .ce-picker__list:focus-visible { outline: 0; }
+  .ce-picker__list, .ce-picker__list ul { margin: 0; padding: 0; list-style: none; }
+  /* the search stays, the list takes the rest and scrolls */
+  .ce-picker__list { flex: 1 1 auto; overflow: auto; min-block-size: 0; overscroll-behavior: contain; }
+  /* a line between groups */
+  .ce-picker__list > li[role=presentation] + li[role=presentation] { margin-block-start: var(--space-4); padding-block-start: var(--space-4); border-block-start: var(--stroke-1) solid var(--line); }
+  .ce-picker__group { display: block; padding: var(--space-8) var(--space-8) var(--space-4); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-soft); }
+  .ce-picker__icon { inline-size: var(--space-16); block-size: var(--space-16); color: var(--fg-soft); }
+  .ce-picker__list [role=option] { display: flex; align-items: center; gap: var(--space-8); min-block-size: var(--space-32); padding: var(--space-4) var(--space-8); border-radius: var(--radius-4); font-size: var(--text-sm); cursor: pointer; }
+  .ce-picker__list [role=option]:hover, .ce-picker__list [role=option][data-active] { background: var(--overlay-hover); }
+  .ce-picker__list [role=option][aria-selected="true"] { font-weight: var(--weight-semibold); }
+
+  /* a kind chosen in a dialog: every kind, four to a row, all one size; the chosen one outlined */
+  /* filter chips: a quiet row, the chosen one filled (knowledge: chips, filter chips) */
+  .ce-filter-chip { block-size: 1.75rem; padding: 0 var(--space-12); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-full);
+    background: var(--surface); color: var(--fg-muted); font: inherit; font-size: var(--text-sm); cursor: pointer; }
+  /* one look for whatever is chosen, a tile, a segment or a chip: the accent's soft fill, its ring, its colour, a heavier weight */
+  .ce-filter-chip[aria-pressed="true"], .ce-tile input:checked + span, .ce-segmented .seg:has(input:checked) {
+    border-color: transparent; background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-semibold); box-shadow: inset 0 0 0 1px var(--accent); }
+  @media (hover: hover) { .ce-filter-chip:hover:not([aria-pressed="true"]) { border-color: var(--control); color: var(--fg); } }
+  .ce-tiles__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-8); }
+  .ce-tile { position: relative; display: grid; }
+  .ce-tile input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+  .ce-tile > span { display: grid; justify-items: center; gap: var(--space-4); padding: var(--space-8) var(--space-4); line-height: var(--leading-xl);
+    border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); font-size: var(--text-xs); color: var(--fg); text-align: center; }
+  .ce-tile svg { inline-size: var(--space-20); block-size: var(--space-20); color: var(--fg-muted); }
+  .ce-tile input:checked + span svg { color: var(--accent); }
+  /* forced colours drop backgrounds and shadows: whatever is chosen, the radio dot and a changed value's dot drawn in
+     system colours */
+  @media (forced-colors: active) {
+    .ce-tile input:checked + span, .ce-segmented .seg:has(input:checked), .ce-filter-chip[aria-pressed="true"], .ce-vgrid__cell[aria-pressed="true"] { outline: 3px solid Highlight; outline-offset: -3px; }
+    .ce-vgrid__dot { forced-color-adjust: none; background: CanvasText; }
+    .ce-dot::before { forced-color-adjust: none; background: Highlight; }
+    .ce-dot--under::before { background: Canvas; box-shadow: inset 0 0 0 1.5px Highlight; }
+    .ce-pill input[type=radio]:checked::before { forced-color-adjust: none; background: Highlight; }
+  }
+  .ce-tile input:focus-visible + span { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  @media (hover: hover) { .ce-tile:hover input:not(:checked) + span { border-color: var(--accent); } }
+
+  .ce-menu {
+    position: fixed; inset: auto; margin: 0; padding: var(--space-4); min-inline-size: 10rem;
+    border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8); background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); color: var(--fg);
+    box-shadow: var(--shadow-overlay);
+  }
+  .ce-menu button {
+    display: block; inline-size: 100%; padding: var(--space-8) var(--space-12); border: 0; border-radius: var(--radius-4);
+    background: none; color: inherit; font: inherit; font-size: var(--text-sm); text-align: start; cursor: pointer;
+  }
+  .ce-menu button:hover:not(:disabled), .ce-menu button:focus-visible { background: var(--overlay-hover); }
+  .ce-menu button:disabled { color: var(--fg-soft); cursor: default; }
+  .ce-menu__why { display: block; font-size: var(--text-xs); color: var(--fg-soft); }
+  .ce-menu [data-destructive] { color: var(--bad); }
+
+
+  .ce-error { display: flex; align-items: flex-start; gap: var(--space-4); margin: var(--space-4) 0 0; font-size: var(--text-sm); color: var(--bad); }
+  .ce-error:empty { display: none; }
+  .ce-error > svg { flex: none; inline-size: 1em; block-size: 1em; margin-block-start: 0.2em; }
+  /* a field in error: its border and, focused, its ring in the error colour, the icon and words under it beyond colour */
+  [aria-invalid="true"]:focus-visible, .ce-chips:has([aria-invalid="true"]) { outline-color: var(--bad); border-color: var(--bad); }
+  [aria-invalid] { border-color: var(--bad); }
+
+  /* while something is carried: no text selected under the pointer, and the grab shown everywhere */
+  :root[data-dragging], :root[data-dragging] * { user-select: none; cursor: grabbing; }
+  /* the carried row: a copy under the pointer, lifted by its shadow */
+  /* carried outside its list, so it takes the list's rules itself: its handle inside it; its columns are copied from a
+     row in the list (editor.js lift) */
+  .ce-lift { position: fixed; z-index: 10; margin: 0; pointer-events: none; box-shadow: var(--shadow-overlay); }
+
+  /* the tabs keep their height however tall the pane below them grows */
+  .ce-out__tabs { flex: none; --tabs-ground: var(--bg); }
+  .ce-json-panel { flex: 1; min-block-size: 0; display: flex; flex-direction: column; gap: var(--space-12); }
+  .ce-out__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+  .ce-json-panel .ce-error:empty { display: none; }
+  .ce-json-problem { display: block; }
+  /* the preview: the component on a quiet ground, drawn from its tokens; a slot is a dashed place for content */
+  .ce-preview { display: grid; gap: var(--space-8); }
+  .ce-preview__stage { display: grid; place-items: center; min-block-size: 12rem; padding: var(--space-24); overflow: auto;
+    border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface-sunken); }
+  .ce-preview__empty { display: grid; justify-items: center; gap: var(--space-8); max-inline-size: 16rem; margin: 0; text-align: center; font-size: var(--text-sm); color: var(--fg-muted); }
+  .ce-preview__empty svg { inline-size: var(--space-32); block-size: var(--space-32); color: var(--fg-soft); }
+  /* a box with nothing in it yet still shows its fill and corners */
+  .ce-preview__stage > .ce-pv:empty { min-inline-size: 2rem; min-block-size: 2rem; }
+  /* a container's fold: a chevron that turns down while its parts show, with their count while they are folded */
+  .ce-fold { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); block-size: var(--space-24); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-4); background: none; color: var(--fg-soft); font: inherit; font-size: var(--text-xs); cursor: pointer; }
+  .ce-fold svg { inline-size: var(--space-16); block-size: var(--space-16); transition: rotate 0.15s; }
+  .ce-fold[aria-expanded=true] svg { rotate: 90deg; }
+  @media (prefers-reduced-motion: reduce) { .ce-fold svg { transition: none; } }
+  @media (hover: hover) { .ce-fold:hover { background: var(--hover); color: var(--fg); } }
+  .ce-fold:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  /* a component the library has no contract for: a quiet box with its name */
+  .ce-pv--instance { display: inline-flex; align-items: center; padding: var(--space-2) var(--space-8); border: var(--stroke-1) dashed var(--line); border-radius: var(--radius-4); font-size: var(--text-xs); color: var(--fg-soft); white-space: nowrap; }
+  .ce-preview__sketch { display: grid; gap: var(--space-8); margin: 0 0 var(--space-16); }
+  .ce-preview__sketch figcaption { font-size: var(--text-xs); color: var(--fg-soft); text-align: center; }
+  .ce-pv--icon { display: inline-block; flex: none; }
+  /* a block, not inline: on the line's baseline, a 12px icon's glyph sat under a line as tall as the text around it */
+  .ce-pv--glyph { display: block; flex: none; background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; }
+  /* words in a box of fixed width end in an ellipsis rather than run over what is beside them */
+  .ce-pv--clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* a part only some variants draw: a row as the others are, its chip saying where; no handle, its room kept where the others have one */
+  [data-parts]:has([data-part-handle]) .ce-row--ghost { padding-inline-start: calc(var(--space-20) + var(--space-12)); }
+  /* the matrix and what the cell chosen changes: two columns of one width, under each other on a narrow screen;
+     a matrix larger than its box scrolls inside it, its headers kept in sight */
+  /* the grid takes what the changes beside it leave, so fewer grids scroll sideways */
+  [data-variants] { flex: 1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(20rem, 1fr); gap: var(--space-16); }
+  [data-variants] > .ce-empty { grid-column: 1 / -1; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface); }
+  .ce-vcard { display: flex; flex-direction: column; }
+  .ce-vcard > .ce-empty { flex: 1; }
+  @media (max-width: 48rem) { [data-variants] { grid-template-columns: minmax(0, 1fr); } }
+  .ce-vgrid, .ce-vchanges { min-inline-size: 0; }
+  .ce-vgrid .ce-vgrid__scroll { overflow: auto; max-block-size: calc(100vh - var(--bar) - 14rem); }
+  /* both headers frozen (tables: a matrix's headers sticky): the column headers at the top, the row headers at the start
+     (each one's place, a row or a column of headers under or beside another, set as the grid is drawn), the corner over both */
+  .ce-vgrid__table thead th { position: sticky; z-index: 2; background: var(--surface); }
+  .ce-vgrid__table tbody th { position: sticky; z-index: 1; background: var(--surface); }
+  .ce-vgrid__table thead tr:first-child td:first-child { position: sticky; inset-block-start: 0; inset-inline-start: 0; z-index: 3; background: var(--surface); }
+  /* every combination, as a reference sheet lays them out: headers nested, a dot or a cross a cell, the one chosen ringed */
+  /* a margin, not a padding, off the card's edges: a frozen header sticks at the box's inner edge, and cells would show
+     through a padding above it */
+  .ce-vgrid__scroll { overflow-x: auto; margin: var(--space-4) var(--space-16) var(--space-16); }
+  /* borders kept by each cell (separate, not collapsed): a collapsed border is the table's, and stays put while a frozen
+     header moves over it */
+  /* as wide as its cells, never squeezed below them nor stretched to the page's tables' full width: the box scrolls instead */
+  .ce-vgrid__table { inline-size: max-content; border-collapse: separate; border-spacing: 0; font-size: var(--text-xs); }
+  .ce-vgrid__table th { padding: var(--space-4) var(--space-8); font-weight: normal; color: var(--fg-soft); white-space: nowrap; }
+  /* the values across given room, as their columns are one width; the ones down stay close, so the cells start near */
+  .ce-vgrid__table thead th { padding: var(--space-8) var(--space-12); text-align: center; border-block-end: var(--stroke-1) solid var(--line); }
+  .ce-vgrid__table tbody th { text-align: start; vertical-align: top; border-inline-end: var(--stroke-1) solid var(--line); border-block-end: var(--stroke-1) solid var(--line); }
+  .ce-vgrid__table td { padding: 0; text-align: center; border-inline-end: var(--stroke-1) dashed var(--line); border-block-end: var(--stroke-1) dashed var(--line); }
+  .ce-vgrid__table thead td { border: 0; }
+  /* a grid with no row headers: its first column's cells closed at the start too */
+  .ce-vgrid__table tbody td:first-child { border-inline-start: var(--stroke-1) dashed var(--line); }
+  .ce-vgrid__not { block-size: var(--space-32); min-inline-size: var(--space-32); color: var(--fg-soft); }
+  @media (hover: hover) {
+    /* mixed with the surface, not see-through: a header frozen over the cells scrolling under it hides them */
+    .ce-vgrid__table td:hover, .ce-vgrid__table tbody tr:has(td:hover) th:last-of-type, .ce-vgrid__table th.ce-vgrid--col { background: color-mix(in srgb, var(--hover) 50%, var(--surface)); }
+    .ce-vgrid__table tbody tr:has(td:hover) th:last-of-type, .ce-vgrid__table th.ce-vgrid--col { color: var(--fg); }
+  }
+  .ce-vgrid__cell { display: grid; place-items: center; inline-size: 100%; min-inline-size: var(--space-32); block-size: var(--space-32); padding: 0; border: 0; background: none; cursor: pointer; }
+  .ce-vgrid__dot { inline-size: var(--space-8); block-size: var(--space-8); border-radius: 50%; background: var(--fg-muted); }
+  .ce-vgrid__cell[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .ce-vgrid__cell[aria-pressed="true"] .ce-vgrid__dot { background: var(--accent); box-shadow: 0 0 0 var(--space-4) color-mix(in srgb, var(--accent) 30%, transparent); }
+  .ce-vgrid__cell:focus-visible { outline: var(--focus-ring); outline-offset: calc(-1 * var(--stroke-2)); }
+  @media (hover: hover) { .ce-vgrid__cell:hover:not([aria-pressed="true"]) .ce-vgrid__dot { background: var(--fg); } }
+  .ce-vcard { border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface); overflow: hidden; }
+  .ce-vgrid__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); }
+  .ce-vcard .ce-vgrid__head h3 { border-block-end: 0; }
+  .ce-vgrid__toggle { display: flex; align-items: center; gap: var(--space-8); padding-inline-end: var(--space-12); font-size: var(--text-sm); color: var(--fg-muted); cursor: pointer; }
+  .ce-vcard h3 { margin: 0; padding: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); font-size: var(--text-md); font-weight: var(--weight-semibold); }
+  /* a fact a row: Part | Default | Here, the default faded; wider than its pane, it scrolls */
+  .ce-vtable__scroll { overflow-x: auto; }
+  /* three equal columns, not as wide as their words, so they stay put from one cell chosen to the next */
+  .ce-vtable { inline-size: 100%; min-inline-size: 20rem; table-layout: fixed; border-collapse: collapse; font-size: var(--text-sm); }
+  .ce-vtable__was { color: var(--fg-muted); }
+  .ce-vtable th, .ce-vtable td { padding: var(--space-8) var(--space-12); text-align: start; vertical-align: top; border: 0; }
+  .ce-vtable thead th { font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg-soft); border-block-end: var(--stroke-1) solid var(--line); white-space: nowrap; }
+  .ce-vtable tbody tr + tr td { border-block-start: var(--stroke-1) solid var(--line); }
+  .ce-vtable :is(th, td) { color: var(--fg); overflow-wrap: break-word; }
+  .ce-vtable thead th { color: var(--fg-soft); }
+  .ce-vtable .ce-swatch { display: inline-block; vertical-align: -0.2em; inline-size: 0.875em; block-size: 0.875em; margin-inline-end: var(--space-4); }
+  .ce-vtable__soft, .ce-vtable__key { color: var(--fg-soft); }
+  /* Added and Removed, Figma's words, as a quiet tag in the line's colour */
+  .ce-vtable__tag { display: inline-block; padding: 0 var(--space-8); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: var(--weight-medium); }
+  .ce-vtable__added .ce-vtable__tag { background: var(--good-soft); color: var(--good); }
+  /* the grids: a cell per combination, a check where Figma draws it, a cross tinted where it does not */
+  /* the grid's row names a fixed column, so the cells line up from table to table; the design has no table */
+  /* a prop named as a pill, over its values or beside them */
+  .ce-vtable__removed .ce-vtable__tag { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+  .ce-output { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-muted); }
+  .ce-nav__draft { display: flex; align-items: center; gap: var(--space-2); }
+  .ce-nav__draft > button:first-child { flex: 1; min-inline-size: 0; }
+  .ce-nav__list .ce-nav__delete { flex: none; display: grid; place-items: center; inline-size: var(--space-24); block-size: var(--space-24); padding: 0; border: 0; border-radius: var(--radius-4); background: none; color: var(--fg-soft); cursor: pointer; }
+  .ce-nav__list .ce-nav__delete svg { inline-size: var(--space-16); block-size: var(--space-16); }
+  @media (hover: hover) { .ce-nav__delete:hover { background: var(--hover); color: var(--fg); } }
+  .ce-nav__delete:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  /* a deletion's Undo, at the foot of the page, out of the way of the work */
+  .ce-undo { position: fixed; inset-inline-start: 50%; inset-block-end: var(--space-24); translate: -50% 0; z-index: 3; display: flex; align-items: center; gap: var(--space-12);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-16); border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8); background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); color: var(--fg); font-size: var(--text-sm); box-shadow: var(--shadow-overlay); }
+  .ce-dialog-close { flex: none; display: grid; place-items: center; inline-size: var(--space-32); block-size: var(--space-32); padding: 0; border: 0; border-radius: var(--radius-4); background: none; color: var(--fg-soft); cursor: pointer; }
+  .ce-dialog-close svg { inline-size: var(--space-16); block-size: var(--space-16); }
+  /* in an overlay (a dialog, the Undo bar): its hover is the overlay's */
+  @media (hover: hover) { .ce-dialog-close:hover { background: var(--overlay-hover); color: var(--fg); } }
+  .ce-dialog-close:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  /* a focused row scrolls clear of the Undo bar at the foot (WCAG 2.4.11) */
+  html { scroll-padding-block-end: 5rem; }
+  /* the list narrower than its rows: the kind column goes before a row runs under the pane beside it */
+  .ce-props { container-type: inline-size; }
+  @container (width < 40rem) {
+    .ce-row__main { grid-template-columns: var(--space-20) minmax(4rem, 10rem) minmax(0, 1fr); }
+    .ce-row__kind { display: none; }
+  }
+  /* a tree nested deeper than the column is wide scrolls sideways inside it, never under the pane beside it */
+  .ce-parts { overflow-x: auto; padding-block-end: var(--space-4); }
+  .ce-pv--vector { display: inline-block; flex: none; }
+  /* a side's size: the choice wide, its number narrow beside it, each with its label over it */
+  .ce-size { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: end; gap: var(--space-16); }
+  .ce-size + .ce-size { margin-block-start: var(--space-8); }
+  .ce-size .ce-field { gap: var(--space-8); }
+  /* the unit inside the field, at its end */
+  .ce-size__px { position: relative; display: block; }
+  .ce-size__px input { inline-size: 100%; padding-inline-end: var(--space-32); }
+  .ce-size__px > span { position: absolute; inset-inline-end: var(--space-12); inset-block: 0; display: flex; align-items: center; color: var(--fg-soft); font-size: var(--text-sm); pointer-events: none; }
+  /* a size's choice spans its column, its options shared equally; other choices keep their own width */
+  /* alignment: two groups of icon buttons side by side, as Figma's */
+  .ce-align { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+  .ce-icon-choice .seg { display: inline-flex; align-items: center; justify-content: center; padding-inline: var(--space-8); }
+  .ce-icon-choice svg { inline-size: 1rem; block-size: 1rem; display: block; }
+  /* padding: a side per picker, left and right over top and bottom, as Figma's */
+  .ce-pad { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--space-8) var(--space-12); }
+  .ce-size .ce-segmented { display: flex; inline-size: 100%; box-sizing: border-box; }
+  .ce-size .ce-segmented .seg { flex: 1; justify-content: center; text-align: center; }
+  /* the segmented choice: its pressed state is its checked radio's; the focus ring is the radio's, on its label */
+  .ce-segmented .seg { cursor: pointer; }
+  /* the ring inside the segment: the row scrolls (system .segmented), which clips anything drawn outside it */
+  .ce-segmented .seg:has(input:focus-visible) { outline: var(--focus-ring); outline-offset: calc(-1 * var(--focus-offset)); position: relative; }
+  .ce-choice > .segmented { clear: both; justify-self: start; }
+  .ce-pv--slot { display: inline-grid; place-items: center; min-inline-size: 4rem; min-block-size: 2rem; padding: 0 var(--space-8);
+    border: var(--stroke-1) dashed var(--control); border-radius: var(--radius-4); font-size: var(--text-xs); color: var(--fg-muted); }
+  /* an on/off's label takes the row, its switch at the end */
+  .ce-views-at .ce-field:has(> .ce-switch) { grid-template-columns: minmax(0, 1fr) auto; }
+  .ce-pad:disabled { cursor: default; color: var(--fg-muted); }
+  .ce-pv--image { background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='%23888'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm40-160h480L570-480 450-320l-90-120-120 160Z'/%3E%3C/svg%3E") center / 40% no-repeat; color: transparent; }
+  /* wrapping inside its column, as the columns are a set width: a long token goes to the next line, never over the next column */
+  .ce-vtable__line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+  .ce-vtable__line > span { min-inline-size: 0; overflow-wrap: break-word; }
+  .ce-vtable__line + .ce-vtable__line { margin-block-start: var(--space-4); }
+  .ce-pv--slotted { outline: var(--stroke-1) dashed var(--control); outline-offset: calc(-1 * var(--stroke-1)); }
+  /* the JSON fills what the sidebar has left, and scrolls inside it */
+  .ce-json {
+    flex: 1; min-block-size: 16rem; resize: none; overflow: auto; margin: 0; padding: var(--space-12); color: var(--fg); font-family: var(--font-mono); line-height: var(--leading-body);
+    border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface-sunken);
+    font-size: var(--text-sm); line-height: var(--leading-body);
+  }
+
+  /* below three columns' worth: the palette above, then props and output stacked */
+  @media (width < 64rem) {
+    .ce, .ce[data-nav-open], .ce[data-wide], .ce[data-nav-open][data-wide], .ce[data-read-only], .ce[data-nav-open][data-read-only], .ce[data-wide][data-read-only], .ce[data-nav-open][data-wide][data-read-only] { grid-template: "nav" auto "head" auto "palette" auto "work" 1fr / minmax(0, 1fr); }
+    .ce-bar { position: static; block-size: auto; flex-wrap: wrap; padding-block: var(--space-8); }
+    .ce-palette { position: static; block-size: auto; max-block-size: none; border-inline: 0; }
+    /* the components list over the page, not above it: opened, it covers the page's start rather than push it down */
+    .ce { position: relative; }
+    .ce-nav { position: absolute; inset-block-start: 0; inset-inline-start: 0; z-index: 3; inline-size: min(18rem, 85vw); block-size: auto; max-block-size: calc(100vh - var(--space-64)); overflow: auto;
+      background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); border-inline-end: var(--stroke-1) solid var(--line-overlay); box-shadow: var(--shadow-overlay); }
+    .ce-out { position: static; block-size: auto; max-block-size: none; border-inline: 0; }
+    .ce-json { max-block-size: 28rem; }
+    .ce-blocks { grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); }
+  }
+  /* a card too narrow for one row: name and kind, then where it exists and its menu */
+  @media (width < 40rem) {
+    .ce-form { grid-template-columns: minmax(0, 1fr); }
+    .ce-row__main { grid-template-columns: var(--space-20) minmax(0, 1fr); }
+    .ce-row__kind, .ce-row__summary { display: none; }
+    [data-invalid] .ce-row__summary { display: block; grid-column: 2; }
+  }
+}
+
+@layer components {
+  /* Anatomy: the parts' tree in the panel under the parts to add; the component on a stage, the part chosen listed beside */
+  .ce-row[data-selected] { border-color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); }
+  /* the stage's overlays in a design tool's colours, which the system has no value for: the selection blue, the gap
+     orange, and their darker shades under white words, 5.2:1 (WCAG 1.4.3), one set for both themes, as a design tool keeps them */
+  :root { --sel: #3b82f6; --gap-tint: #f08a3c; --sel-ink: #2563eb; --gap-ink: #c2410c; --on-ink: #fff; }
+  /* a column may shrink below its content, so a long name never pushes the stage out of the page */
+  .ce-anatomy > * { min-inline-size: 0; }
+  /* the part's modal: the variant's props, the drawing and the part's list side by side, each scrolling on its own, the drawing
+     as tall as the modal; where there is no room, one under another */
+  /* one height whatever the part, so moving between parts never moves the modal (dialogs: centred without jumping); the list scrolls */
+  .ce-part-modal { --modal-width: 80rem; container-type: inline-size; block-size: min(54rem, calc(100svh - 2 * var(--space-32))); overflow: hidden; }
+  .ce-part-modal__adds { display: flex; align-items: center; gap: var(--space-4); margin-inline-end: auto; }
+  .ce-part-modal__add-label { margin-inline-end: var(--space-4); color: var(--fg-muted); }
+  .ce-part-modal__add { padding-inline: var(--space-8); }
+  .ce-part-modal__delete { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+  /* why the footer's actions are off, on a line of its own above them; the footer's buttons keep their height */
+  .ce-part-modal .modal__foot { align-items: end; }
+  .ce-part-modal__delete .ce-delete { margin-inline-end: var(--space-8); }
+  .ce-part-modal :is(.ce-delete, .ce-part-modal__add):disabled { opacity: var(--disabled-opacity); cursor: default; }
+  .ce-pads { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)) var(--control-height); gap: var(--space-4); }
+  .ce-pad--each[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .ce-pad { display: flex; align-items: center; justify-content: center; gap: var(--space-4); min-block-size: var(--control-height); padding: 0 var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface); color: var(--fg); font: inherit; cursor: pointer; }
+  .ce-pad:hover:not(:disabled) { border-color: var(--fg-soft); }
+  .ce-pad__side { color: var(--fg-muted); }
+  .ce-part-modal__add svg { inline-size: var(--space-16); block-size: var(--space-16); }
+  .ce-part-modal .modal__body { min-block-size: 0; overflow: auto; }
+  /* the rows keep room before them for a changed value's dot; side by side, that room is taken from the gap */
+  .ce-part-modal .ce-inspector { padding-inline-start: var(--space-24); }
+  @container (width >= 60rem) {
+    .ce-part-modal .modal__body { overflow: hidden; }
+    .ce-part-modal .modal__body > * { overflow: auto; margin: 0; }
+    /* a column that scrolls clips what it holds at its edge: room for a field's focus ring, taken back from around it */
+    .ce-part-modal .modal__body > :not(.ce-stage) { padding: var(--space-4); margin: calc(-1 * var(--space-4)); }
+    .ce-part-modal .modal__body > .ce-inspector { padding-inline-start: var(--space-24); margin-inline-start: calc(-1 * var(--space-24)); }
+  }
+  .ce-part-modal .modal__head .ce-crumbs { font-size: inherit; }
+  .ce-anatomy { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-24); }
+  /* the columns' widths the design does not draw: the props' menus and the rows each as wide as their longest */
+  @container (width >= 60rem) { .ce-anatomy { grid-template-columns: 17rem minmax(0, 1fr) 22rem; gap: var(--space-24); } }
+  @container (width >= 60rem) { .ce-anatomy:has(> [data-views][hidden]) { grid-template-columns: minmax(0, 1fr) 22rem; } }
+  .ce-stage { position: relative; display: grid; grid-template-rows: minmax(22rem, 1fr) auto; border-radius: var(--radius-12); background: var(--surface-sunken); overflow: hidden; }
+  .ce-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); font-size: var(--text-sm); color: var(--fg-muted); }
+  .ce-crumbs button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+  .ce-crumbs [aria-current] { color: var(--fg); font-weight: var(--weight-semibold); cursor: default; }
+  /* the variant drawn, as Figma's instance panel lists it: a name and its control a row */
+  .ce-views-at { display: grid; align-content: start; gap: var(--space-8); }
+  .ce-views-at__head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; min-block-size: var(--control-height); }
+  /* titled as the panel's other sections are: small capitals */
+  .ce-views-at__head h3, .ce-palette .ce-views-at__head h3 { margin: 0; font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-muted); }
+  .ce-views-at__reset { padding-inline: var(--space-8); }
+  .ce-views-at .ce-field { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: center; gap: var(--space-12); min-block-size: var(--control-height); font-weight: normal; }
+  .ce-views-at .ce-field > span:first-child { color: var(--fg-muted); }
+  /* nothing to clear: the words take the clear button's room */
+  .ce-views-at .ce-picker { padding-inline-end: calc(var(--space-12) + var(--space-24)); }
+  /* an on/off as a switch, as Figma's panel draws one: a 36 by 20 track, its thumb 14 travelling 16, whatever the
+     density; off, the track's edge and the thumb in the control colour, which hold 3:1 against the page (WCAG 1.4.11) */
+  .ce-switch { appearance: none; margin: 0; position: relative; flex: none; justify-self: start; box-sizing: border-box; cursor: pointer;
+    inline-size: calc(var(--space-20) + var(--space-16)); block-size: var(--space-20); border-radius: var(--radius-full);
+    border: var(--stroke-1) solid var(--control); background: var(--surface); transition: background-color .15s, border-color .15s; }
+  .ce-switch::before { content: ""; position: absolute; inset-block-start: 50%; inset-inline-start: var(--space-2); inline-size: 0.875rem; block-size: 0.875rem;
+    translate: 0 -50%; border-radius: 50%; background: var(--control); transition: translate .15s; }
+  .ce-switch:checked { background: var(--accent); border-color: var(--accent); }
+  .ce-switch:checked::before { translate: var(--space-16) -50%; background: var(--on-accent); }
+  @media (hover: hover) { .ce-switch:hover:not(:checked) { border-color: var(--fg-muted); } .ce-switch:hover:not(:checked)::before { background: var(--fg-muted); } }
+  @media (prefers-reduced-motion: reduce) { .ce-switch, .ce-switch::before { transition: none; } }
+  @media (forced-colors: active) { .ce-switch { border-color: CanvasText; } .ce-switch::before { forced-color-adjust: none; background: CanvasText; } .ce-switch:checked { background: Highlight; border-color: Highlight; } .ce-switch:checked::before { background: HighlightText; } }
+  .ce-switch:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  .ce-stage__canvas { display: grid; place-items: center; overflow: hidden; }
+  .ce-stage__canvas[data-zoom-at="100"] { overflow: auto; }
+  /* at Fit a component wider than the stage keeps the track the stage's size, so it is centred, then scaled about its centre */
+  .ce-stage__canvas[data-zoom-at="fit"] { grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+  .ce-stage__zooms { position: absolute; inset-block-start: var(--space-12); inset-inline-end: var(--space-12); z-index: 1; }
+  .ce-stage__zoom { position: relative; transform-origin: center; }
+  /* the stage's own marks keep their screen size at any zoom: sizes divided by its scale */
+  .ce-stage [data-pv] { cursor: pointer; }
+  /* a container with nothing in it yet keeps a box to choose and add into */
+  /* an empty box drawn hatched at a size to see and click, which it has none of its own */
+  .ce-stage .ce-pv--empty { min-inline-size: var(--space-48); min-block-size: var(--space-32); background-image: repeating-linear-gradient(45deg, transparent 0 4px, color-mix(in srgb, var(--fg-muted) 25%, transparent) 4px 5px); }
+  .ce-stage [data-pv][data-selected] { background-image: none; }
+  .ce-ring { position: absolute; z-index: 1; outline: calc(2px / var(--z)) solid var(--sel); pointer-events: none; }
+  /* the part a click would choose, pointed at: thinner than the chosen part's, shown on a bare stage too */
+  .ce-ring--hover { outline-width: calc(1px / var(--z)); }
+  /* the component's name above its outer box, as Figma labels a frame, at its screen size whatever the zoom */
+  .ce-stage__name { position: absolute; inset-block-end: 100%; inset-inline-start: 0; padding-block-end: calc(4px / var(--z)); color: var(--fg-muted);
+    font: calc(var(--text-xs) / var(--z)) / 1.2 var(--font-sans); white-space: nowrap; cursor: pointer; }
+  .ce-stage [data-pv][data-inspect]:not([data-selected]) { outline: calc(1px / var(--z)) dashed var(--sel); background-image: none; }
+  /* the chosen container's padding and gap, tinted as dev tools tint them, a number on each to set it */
+  .ce-stage[data-bare] :is(.ce-tag, .ce-bands) { display: none; }
+  .ce-stage[data-bare] .ce-ring:not(.ce-ring--hover) { display: none; }
+  .ce-bands { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+  .ce-band { position: absolute; background: color-mix(in srgb, var(--sel) 25%, transparent); }
+  .ce-band--gap { background: color-mix(in srgb, var(--gap-tint) 50%, transparent); }
+  /* a tag keeps its screen size at any zoom: its sizes are divided by the stage's scale */
+  .ce-tag { position: absolute; z-index: 1; translate: -50% -50%; padding: calc(2px / var(--z)) calc(6px / var(--z)); border: 0; border-radius: calc(5px / var(--z));
+    background: var(--sel-ink); color: var(--on-ink); font: var(--weight-semibold) calc(var(--text-xs) / var(--z)) / 1.2 var(--font-sans); white-space: nowrap; pointer-events: none; }
+  .ce-tag--gap { background: var(--gap-ink); }
+  /* the part chosen: a row a property, each the same shape: its name, then a control as wide as the list */
+  .ce-inspector, .ce-look { display: grid; align-content: start; margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+  /* the rows' names a fixed column, Figma's panel's, so every value starts at one line */
+  .ce-inspector .ce-field { position: relative; grid-template-columns: 6rem minmax(0, 1fr); align-items: center; gap: var(--space-16);
+    padding-block: var(--space-8); border-block-end: var(--stroke-1) solid var(--line); font-size: var(--text-sm); font-weight: normal; }
+  .ce-inspector .ce-field:has(> .ce-num) { grid-template-columns: 6rem minmax(0, 1fr) var(--space-64); }
+  .ce-inspector .ce-field > span:first-child { color: var(--fg-muted); text-box: trim-both cap alphabetic; }
+  .ce-inspector .segmented { display: flex; inline-size: 100%; block-size: var(--control-height); box-sizing: border-box; }
+  .ce-inspector .seg { flex: 1 1 0; display: grid; place-items: center; padding: 0; }
+  .ce-inspector .ce-num { inline-size: 100%; text-align: end; }
+  /* where a part sits out of the flow: its box dashed, the part inside, an offset on each side (CSS's inset) */
+  .ce-inset { display: grid; grid-template-areas: ". top ." "left part right" ". bottom ."; grid-template-columns: 1fr auto 1fr; align-items: center; justify-items: center;
+    gap: var(--space-4); padding: var(--space-8); border: var(--stroke-1) dashed var(--line); border-radius: var(--radius-8); }
+  .ce-inset__part { grid-area: part; inline-size: var(--space-64); block-size: var(--space-32); border: var(--stroke-1) solid var(--fg-muted); border-radius: var(--radius-4); }
+  .ce-inset .ce-num { inline-size: var(--space-56); text-align: center; }
+  .ce-inset .ce-num:placeholder-shown::placeholder { color: var(--fg-muted); }
+  .ce-inset__auto { color: var(--fg-muted); }
+  /* a value not set yet: the same shape, dashed, saying what a click does */
+  .ce-inspector .ce-picker:has(.ce-picker__name--none) { border-style: dashed; background: none; }
+  .ce-inspector .ce-picker__wrap:has(.ce-picker__name--none) .ce-picker__chevron { display: none; }
+  .ce-inspector .seg .ce-glyph, .ce-glyph { display: block; inline-size: var(--space-20); block-size: var(--space-20); fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .ce-inspector .seg .ce-glyph--fill, .ce-glyph.ce-glyph--fill { fill: currentColor; stroke: none; }
+  /* a value this variant changes: a dot before its name; hollow where a layer of fewer props changes it */
+  /* the dot drawn small, its target the 24 px WCAG 2.5.8 asks for */
+  .ce-dot { position: absolute; inset-inline-start: calc(-1 * var(--space-24)); inset-block-start: 50%; translate: 0 -50%; display: grid; place-items: center;
+    inline-size: var(--space-24); block-size: var(--space-24); padding: 0; border: 0; background: none; cursor: pointer; }
+  .ce-dot::before { content: ""; inline-size: var(--space-8); block-size: var(--space-8); border-radius: 50%; background: var(--sel); }
+  span.ce-dot { cursor: default; }
+  .ce-dot--under::before { background: none; box-shadow: inset 0 0 0 1.5px var(--sel); }
+  /* a mini banner: why the rows below cannot be changed here, a lock beside it */
+  .ce-look__note { float: left; inline-size: 100%; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-8); margin-block-end: var(--space-8);
+    padding: var(--space-8) var(--space-12); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-8); background: var(--surface);
+    font-size: var(--text-sm); color: var(--fg-soft); }
+  .ce-look__note .ce-glyph { flex: none; inline-size: var(--space-16); block-size: var(--space-16); color: var(--fg-muted); }
+  .ce-look__note + * { clear: both; }
+  /* a part Figma drew reads as Dev Mode's inspect list: each property's label and its value as text, no control
+     chrome, and nothing unset (knowledge: property-editors, read-only inspect list) */
+  .ce-look[disabled] :is(.ce-picker, .segmented, .seg, .seg:has(input:checked), .ce-num, .ce-pad, input.filter) { border-color: transparent; background: none; box-shadow: none; color: var(--fg); font-weight: normal; opacity: 1; cursor: default; }
+  .ce-look[disabled] :is(.ce-picker, .ce-num, .seg, .ce-pad, input.filter) { justify-content: start; padding-inline: 0; text-align: start; }
+  .ce-look[disabled] :is(.segmented, .ce-pads) { display: flex; gap: var(--space-12); }
+  .ce-look[disabled] .seg:not(:has(input:checked)), .ce-look[disabled] :is(.ce-picker__chevron, .ce-picker svg, .ce-picker__clear, .ce-pad--each, .ce-num:placeholder-shown),
+    .ce-look[disabled] .ce-field:has(.ce-picker__name--none) { display: none; }
+  /* a choice drawn as an icon says its name instead */
+  .ce-look[disabled] .seg[title] > span { display: none; }
+  .ce-look[disabled] .seg[title]::after { content: attr(title); }
+  .ce-look[disabled] .ce-picker__name { flex: none; }
+  .ce-look[disabled] .ce-picker__value { margin-inline-start: 0; color: var(--fg-muted); }
+  /* a prop read says its whole value: it wraps, never ends in an ellipsis */
+  .ce[data-read-only] :is(.ce-row__kind, .ce-row__summary) { white-space: normal; overflow: visible; }
+  /* the name of a component read, not edited, is its title, not a field */
+  /* a prop read: a label and its value a row, as a part's look reads */
+  .ce-inspect { display: grid; grid-template-columns: 8rem minmax(0, 1fr); margin: 0; font-size: var(--text-sm); }
+  .ce-inspect :is(dt, dd) { margin: 0; padding-block: var(--space-8); border-block-end: var(--stroke-1) solid var(--line); overflow-wrap: anywhere; }
+  .ce-inspect dt { color: var(--fg-muted); }
+  /* read, the component's name is the page's title: larger, no field around it, nothing to type into */
+  .ce[data-read-only] [data-component] { block-size: auto; border-color: transparent; background: none; padding-inline: 0; outline: 0; box-shadow: none; caret-color: transparent;
+    font-size: var(--text-lg); line-height: var(--leading-lg); font-weight: var(--weight-semibold); color: var(--fg); pointer-events: none; }
+  .ce-inspector > .ce-error { padding-block: var(--space-8); }
+  /* a run in progress, above the undo bar's place; with reduced motion the reset stills the ring and the seconds count on */
+  .ce-busy { inset-block-end: calc(var(--space-24) + var(--space-64)); padding-inline-end: var(--space-16); }
+  .ce-busy__spin { inline-size: var(--space-16); block-size: var(--space-16); border: var(--stroke-2) solid var(--line); border-block-start-color: var(--fg); border-radius: 50%; animation: ce-spin 0.8s linear infinite; }
+
+  /* the grid's headers as buttons, a value alone; a diamond where a cell's values change each other, a shape and not only a
+     colour, so it reads without one (accessibility: WCAG 1.4.1) */
+  .ce-vgrid__value { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: var(--space-4); }
+  .ce-vgrid__value:focus-visible { outline: var(--focus-ring); outline-offset: var(--stroke-2); }
+  @media (hover: hover) { .ce-vgrid__value:hover { color: var(--fg); text-decoration-style: solid; } }
+  .ce-vgrid--crossed .ce-vgrid__dot, .ce-vgrid__dot--crossed { border-radius: 0; transform: rotate(45deg); }
+  .ce-vgrid__key { display: flex; align-items: center; gap: var(--space-8); margin: 0; padding: var(--space-12) var(--space-16) 0; color: var(--fg-muted); font-size: var(--text-xs); }
+  .ce-vgrid__key .ce-vgrid__dot { flex: none; }
+  .ce-vtable__group th { padding-block-start: var(--space-12); text-align: start; font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-muted); }
+  /* a part carried on the stage: itself, under the pointer, over the parts it passes, which the pointer passes through to
+     (knowledge: interaction, gestures and drag) */
+  .ce-stage__zoom [data-carried] { z-index: 3; pointer-events: none; }
+}
+
+@keyframes ce-spin { to { rotate: 1turn; } }
+@keyframes ce-slot-in { from { opacity: 0; } to { opacity: 1; } }
+
+@layer utilities {
+  .visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  [hidden] { display: none; }
+}

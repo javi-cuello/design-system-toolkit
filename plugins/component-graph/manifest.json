@@ -1,0 +1,22 @@
+{
+  "name": "Component Graph",
+  "id": "1666041422909265264",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  },
+  "relaunchButtons": [
+    {
+      "command": "open",
+      "name": "Open Component Graph"
+    }
+  ]
+}

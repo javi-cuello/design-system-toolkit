@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The snapshot router. install.sh writes it to ~/Library/LaunchAgents with
+     TOOLKIT and NODE_DIR replaced. launchd starts with a bare PATH, and a
+     project's own after-snapshot steps call node, sass and pnpm, so node's
+     folder and Homebrew's are on it. `figma-snapshot` is a link to node, so
+     Login Items names the service rather than "node". -->
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>NODE_DIR:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.toolkit.figma-snapshot</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>TOOLKIT/tools/snapshot/figma-snapshot</string>
+		<string>TOOLKIT/tools/snapshot/router.mjs</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/tmp/figma-snapshot.err</string>
+	<key>StandardOutPath</key>
+	<string>/tmp/figma-snapshot.log</string>
+</dict>
+</plist>

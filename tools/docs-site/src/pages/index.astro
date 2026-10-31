@@ -1,0 +1,184 @@
+---
+// The overview, organised by the questions a design-system owner has to
+// answer (Goal-Question-Metric: a figure no question asks for is not shown).
+// The headline is the component ladder (lib/ladder.js): how many components
+// are Stable and what blocks the rest. Then one card per question, each with
+// the few figures that answer it, every one with its target, and a link to
+// where its detail lives. Figma alone answers every question; a codebase adds
+// its side to the same cards (the ladder's code checks).
+import ChangeLevel from '../components/ChangeLevel.astro';
+import Base from '../layouts/Base.astro';
+import Ladder from '../components/Ladder.astro';
+import KpiStrip from '../components/KpiStrip.astro';
+import UpdatedBy from '../components/UpdatedBy.astro';
+import AttentionTable from '../components/AttentionTable.astro';
+import Activity from '../components/Activity.astro';
+import Time from '../components/Time.astro';
+import { project, shows, codeAudit, statusMarker } from '../lib/project.js';
+import { mapped, parityRows, inStep } from '../lib/parity.js';
+import { hasSnapshot } from '../lib/snapshot.js';
+import { hasAudit, openFindings, openErrors, openBreaking, auditedAt, attention, rows, unplacedBy, fileFindings, GROUP_LABEL } from '../lib/tracker.js';
+import { health } from '../lib/measures.js';
+import { dashboardStatic } from '../dashboard/data.js';
+import { changeRows, title, link, cap } from '../lib/changes.js';
+import { tokensPublished, tokensDescribed, tokenCollections, deprecated, deprecatedClear } from '../lib/readiness.js';
+import { base, day, num, plural } from '../lib/format.js';
+
+const PHASE = { design: 'In design', build: 'In build', maintenance: 'In maintenance' };
+
+// A library measure as a cell, from the skill's measures (lib/measures.js),
+// one per library where there are several. A measure the last audit did not
+// record yet says so, rather than showing a number it does not have.
+const defs = dashboardStatic.scripts.measures?.measures || [];
+const cells = (key) => {
+  const found = health.flatMap((h) => h.tiles.filter((t) => t.key === key).map((t) => ({ label: health.length > 1 ? `${h.name} ${t.label.toLowerCase()}` : t.label, value: t.figure, note: t.why || t.detail, ok: t.state === 'warn' ? false : t.state ? true : undefined })));
+  if (found.length || !hasAudit) return found;
+  const d = defs.find((m) => m.key === key);
+  return d && d.status === 'scanner' ? [{ label: d.label, value: '–', note: 'Measured at the next audit', ok: undefined }] : [];
+};
+const count = (g) => rows.filter((r) => r.group === g).length;
+
+// 1. Complete: where each component stands in design, by its marker.
+const complete = Object.keys(GROUP_LABEL).map((g) => ({ g, n: count(g) })).filter(({ g, n }) => n > 0 || g === 'finished')
+  // Only Finished carries a verdict: waiting or in progress is where work
+  // is, not a fault, and amber is kept for warnings.
+  // What a reader acts on (waiting, blocked) is drawn larger.
+  .map(({ g, n }) => ({ label: GROUP_LABEL[g], value: n, of: g === 'finished' ? rows.length : undefined, ok: g === 'finished' ? n === rows.length : g === 'blocked' ? n === 0 : undefined, href: `/overview/progress?show=${g}`, lead: (g === 'waiting' || g === 'blocked') && n > 0 }));
+// 2. Correct: what the audit has open, and the measures of correctness.
+const unplacedTotal = unplacedBy.reduce((n, [, c]) => n + c, 0);
+const correct = [
+  // Findings, not components: the Components page counts the components
+  // they sit on, under its own name.
+  hasAudit && { label: 'Error findings open', value: openErrors, ok: openErrors === 0, note: `Of ${plural(openFindings, 'finding')} open in all`, href: '/audits/', lead: true },
+  ...cells('coverage'), ...cells('contrast'), ...cells('structure'),
+  // Findings about the library rather than one component (page order,
+  // variable links, styles): no component's ladder carries them.
+  hasAudit && { label: 'Library findings', value: unplacedTotal, ok: unplacedTotal === 0, note: unplacedTotal ? `On ${unplacedBy.slice(0, 2).map(([w]) => w).join(', ')}${unplacedBy.length > 2 ? ' and more' : ''}` : 'None open', href: '/audits/' },
+].filter(Boolean);
+// The tokens and icon libraries, checked from the snapshot: a row each in a
+// small table under the strip, not tiles beside the library's measures.
+// 2b. In step with the code: the code audit's verdicts, as Parity › Overview
+// counts them, and the token values it compared. Only where a code audit ran.
+const parity = codeAudit ? parityRows(mapped(codeAudit, statusMarker)) : [];
+const tokenKinds = Object.values((codeAudit && codeAudit.tokens) || {});
+const tokensChecked = tokenKinds.reduce((n, k) => n + (k.checked || 0), 0);
+const tokensOff = tokenKinds.reduce((n, k) => n + (k.differs || 0) + (k.missing || 0), 0);
+const code = parity.length ? [
+  { label: 'In step with the design', value: parity.filter(inStep).length, of: parity.length, ok: parity.every(inStep), note: parity.every(inStep) ? 'Every component measured' : `${plural(parity.filter((x) => !inStep(x)).length, 'component')} with something to act on`, href: '/parity/overview', lead: true },
+  { label: 'Properties differ', value: parity.filter((x) => x.cells[0].tone === 'error').length, ok: !parity.some((x) => x.cells[0].tone === 'error'), note: 'A design prop or value the code lacks', href: '/parity/properties' },
+  { label: 'Draw differently', value: parity.filter((x) => x.cells[2].tone === 'error').length, ok: !parity.some((x) => x.cells[2].tone === 'error'), note: 'What the code renders differs from Figma', href: '/parity/visual' },
+  tokensChecked > 0 && { label: 'Token values off', value: tokensOff, ok: tokensOff === 0, note: `Of ${tokensChecked} compared with the code`, href: '/parity/tokens' },
+].filter(Boolean) : [];
+// 3. Understandable: what a person or an agent can learn from the library.
+const understandable = [
+  // Missing guidance is the gap a reader writes to close: the lead.
+  ...cells('described'), ...cells('guidance').map((c) => ({ ...c, lead: c.value !== '–' })),
+  tokensPublished > 0 && { label: 'Tokens described', value: tokensDescribed, of: tokensPublished, ok: tokensDescribed === tokensPublished, note: tokensDescribed === tokensPublished ? 'Every published token' : `${plural(tokenCollections.filter((c) => c.missing.length).length, 'collection')} with gaps`, href: '/overview/ai-readiness#tokens' },
+  ...cells('named'), ...cells('autoLayout'),
+].filter(Boolean);
+// 4. Safe to use: what the latest snapshot broke, and whether retired parts
+// say what replaces them.
+const latestEntry = changeRows[0];
+const latestItems = latestEntry ? latestEntry.items : [];
+const breaking = latestItems.filter((it) => it.figma === 'major').length;
+const safe = [
+  // The audit files each breaking change as a decision (Audits › Queue ›
+  // Decide): intended and said in the release note, or reverted. This counts
+  // the ones still waiting, so deciding them clears it.
+  hasAudit && { label: 'Breaking changes to decide', value: openBreaking, ok: openBreaking === 0, note: openBreaking ? 'From every snapshot audited: release note, or revert' : 'All decided', href: '/audits/#queue?breaking-changes', lead: true },
+  latestEntry && { label: 'Breaking for Figma files, last snapshot', value: breaking, ok: undefined, note: `On ${day(latestEntry.at)}`, href: '/changes' },
+  { label: 'Deprecations clear', value: deprecated.length ? deprecatedClear : 'None', of: deprecated.length ? deprecated.length : undefined, ok: deprecatedClear === deprecated.length, note: deprecated.length === 0 ? 'Nothing deprecated' : `${deprecated.length - deprecatedClear} name no replacement`, href: '/overview/ai-readiness#deprecated' },
+].filter(Boolean);
+// 5. Activity: what the snapshots and audits changed over the past year,
+// three charts behind one control (Activity.astro), after the cards.
+const latest = changeRows.flatMap((r) => r.items.map((it) => ({ ...it, at: r.at }))).slice(0, 5);
+// A column whose every row says the same thing singles nothing out: it is
+// dropped and said once above the table.
+const LEVEL = (l) => (l === 'major' ? 'Breaking' : l ? cap(l) : 'Not graded');
+const COLS = [['type', 'Type', (v) => v || 'No type', 'type'], ['figma', 'Figma files', LEVEL, 'Figma files'], ['code', 'Code', LEVEL, 'code']];
+const uniform = latest.length > 1 ? COLS.filter(([k]) => latest.every((it) => it[k] === latest[0][k])) : [];
+const varied = COLS.filter((c) => !uniform.includes(c));
+const uniformNote = uniform.length ? `The same for all ${latest.length} — ${uniform.map(([k, , say, phrase]) => `${phrase}: ${say(latest[0][k])}`).join('; ')}.` : '';
+// One card per question the overview answers, titled as the answer it gives
+// (a statement, not a question); its link names the page it opens.
+const QUESTIONS = [
+  shows.progress && ['complete', 'Complete', 'Where each component stands in design', complete, '/overview/progress', 'Progress'],
+  ['correct', 'Correct', 'What the audit has open, and how the library measures', correct, '/audits/', 'Audits'],
+  ['code', 'Figma and code parity', 'How far the coded library is from the design', code, '/parity/overview', 'Parity'],
+  ['understandable', 'Understandable', 'What a person or an agent can learn from the library', understandable, '/overview/ai-readiness', 'AI readiness'],
+  ['safe', 'Safe to use', 'What the latest snapshot broke, and how retired parts are marked', safe, '/changes', 'Changes'],
+].filter((q) => q && q[3].length);
+---
+<Base title="Overview">
+  <p class="eyebrow">{project.name} · {PHASE[project.phase]}</p>
+  <h1>Overview</h1>
+  <UpdatedBy from={codeAudit ? ['snapshot', 'audit', 'code'] : ['snapshot', 'audit']} />
+  <p class="lede">Where the library stands: how many components are Stable, then one card for each question an owner asks of it, each linked to the page that holds the detail.</p>
+
+  {!hasSnapshot ? (
+    <p class="notice">No snapshot yet. Run the Design system snapshot plugin in each of this project's Figma files, with the router running, and rebuild.</p>
+  ) : (
+    <div class="overview-cards">
+      <section class="panel" aria-labelledby="components">
+        <header class="panel__head"><h2 id="components">Components</h2><a href={`${base}/overview/components`}>Component levels →</a><p class="panel__caption">Draft, Ready, Stable: every check of a level must pass</p></header>
+        <Ladder />
+      </section>
+
+      {QUESTIONS.map(([id, heading, caption, list, href, linkText]) => (
+        <section class="panel" aria-labelledby={id}>
+          <header class="panel__head"><h2 id={id}>{heading}</h2><a href={`${base}${href}`}>{linkText} →</a><p class="panel__caption">{caption}</p></header>
+          <KpiStrip items={list.map((k) => ({ ...k, tone: k.ok === true ? 'good' : k.ok === false ? 'warn' : 'plain' }))} />
+          {id === 'correct' && fileFindings.length > 0 && <>
+            <h3 class="panel__sub" id="other-libraries">Other libraries</h3>
+            <div class="table-wrap" data-scrolls>
+              <table class="table">
+                <caption class="visually-hidden">Findings open in the tokens and icon libraries</caption>
+                <thead><tr><th scope="col">Library</th><th scope="col">Checks</th><th scope="col" class="num">Findings open</th></tr></thead>
+                <tbody>
+                  {fileFindings.map((f) => (
+                    <tr>
+                      <th scope="row">{f.name}</th>
+                      <td class="muted">{f.checked ? (f.roles.includes('tokens') ? 'Tokens' : 'Icons') : 'Checked at its next snapshot'}</td>
+                      <td class="num">{!f.checked ? <span class="muted">Not checked</span> : f.open ? <a href={`${base}/audits/#queue?lib=${f.key}`}>{num(f.open)}</a> : <span class="muted">None</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>}
+          {id === 'correct' && attention.length > 0 && <>
+            <h3 class="panel__sub">Most errors</h3>
+            <AttentionTable limit={5} />
+          </>}
+          {id === 'safe' && latest.length > 0 && <>
+            <h3 class="panel__sub" id="latest-changes">Latest changes</h3>
+            {uniformNote && <p class="section__note">{uniformNote}</p>}
+            <div class="table-wrap" data-scrolls>
+              <table class="table changes">
+                <caption class="visually-hidden">The five latest changes, as the Changes page lists them</caption>
+                <thead><tr><th scope="col">Date</th><th scope="col" class="changes__what">Change</th>{varied.map(([, l]) => <th scope="col">{l}</th>)}</tr></thead>
+                <tbody>
+                  {latest.map((it) => (
+                    <tr>
+                      <td class="muted changes__date"><Time at={it.at} short /></td>
+                      <td class="changes__what">
+                        <span class="changes__subject">{it.folder ? (link(it.folder) ? <a href={link(it.folder)}>{title(it.folder)}</a> : title(it.folder)) : 'Tokens'}</span>
+                        {it.label && <span class="changes__label">{it.label}</span>}
+                      </td>
+                      {varied.map(([k, label]) => k === 'type' ? <td>{it.type ? <span class="pill">{it.type}</span> : <span class="muted">No type</span>}</td> : <ChangeLevel level={it[k]} label={label} />)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>}
+        </section>
+      ))}
+
+      <section class="panel" aria-labelledby="activity">
+        <header class="panel__head"><h2 id="activity">Activity</h2><a href={`${base}/audits/#history`}>Audit history →</a><p class="panel__caption">What the snapshots and audits changed over the past year</p></header>
+        <Activity />
+      </section>
+    </div>
+  )}
+</Base>

@@ -1,0 +1,284 @@
+---
+// The audit dashboard: its markup here, its styles in dashboard.css, its
+// behaviour in the modules main.js starts (one per concern: the record and
+// its API, the queue, audits, Ask, scores, measures, views), its baked
+// record in data.js. Served by the
+// dashboard service, the page talks to the live API; anywhere else it finds
+// no service and shows the record baked in at build, read-only.
+import './dashboard.css';
+import Modal from '../components/Modal.astro';
+import { dashboardStatic } from './data.js';
+// This page's own prose is rendered into the PROJECT's site, so it follows
+// that project's dialect. The comments above and below do not — they are the
+// toolkit's source, which keeps its own spelling.
+import { ours } from '../lib/project.js';
+import { rows, hasAudit, openFindings, auditedAt } from '../lib/tracker.js';
+import { base, date, plural } from '../lib/format.js';
+import { freshness } from '../lib/readiness.js';
+
+// Each component page's open findings, matched the way the Tracker counts
+// them, so its "12 open" link lands on those 12: `#queue?component=<slug>`.
+// A page's rows sit in the library holding most of them.
+const pages = Object.fromEntries(rows.filter((r) => r.keys.length).map((r) => {
+  const by = {};
+  for (const k of r.keys) { const i = k.indexOf('/'); (by[k.slice(0, i)] ||= []).push(k.slice(i + 1)); }
+  const [lib, ids] = Object.entries(by).sort((a, b) => b[1].length - a[1].length)[0];
+  return [r.page.slug, { title: r.page.title, lib, ids }];
+}));
+
+// An empty record rather than none: a project that has never been audited has
+// no `audit.json`, and the globals below were baked only where one existed —
+// so that project's page carried no record, no settings and no check
+// catalogue, and rendered as a shell with nothing in it. The empty record is
+// what the first run will fill, and the settings name the library before any
+// run does, which is what the first-run panel needs to say anything useful.
+const baked = `window.DASH_LIBS=${JSON.stringify(dashboardStatic.libraries)};window.DASH_CONTEXT=${JSON.stringify(dashboardStatic.context)};window.DASH_SCRIPTS=${JSON.stringify(dashboardStatic.scripts)};window.DASH_PAGES=${JSON.stringify(pages)};window.DASH_SNAPSHOT=${JSON.stringify(freshness.takenAt || null)};`.replace(/</g, '\\u003c');
+// One record per library file. The switch that chooses between them sits
+// above the queue's filters: which file a finding comes from, then which
+// check raised it. Links, because the file is in the address
+// (`#queue?lib=<key>`): Back and a shared link restore it.
+const files = dashboardStatic.libraries;
+---
+<!-- Without script the dashboard has nothing to draw: its queue, history
+     and measures are read from the live record by main.js. Said, with the
+     figure the build already knows and the page that needs no script. -->
+<noscript>
+  <p>This page draws its queue, run history and measures with JavaScript, which is off in this browser.{hasAudit && <> At the last build {plural(openFindings, 'finding')} {openFindings === 1 ? 'was' : 'were'} open{auditedAt && <>, as of the audit of {date(auditedAt)}</>}.</>} What changed in the library is listed on <a href={`${base}/changes/`}>Changes</a>, which needs no script.</p>
+</noscript>
+<div class="dash" data-dash>
+<script is:inline>
+  // Before first paint: the Ask drawer's state as the page will settle it,
+  // so nothing moves when the service answers. Whether Ask is available is
+  // only known after that answer, so the last visit's is used until then.
+  // It starts collapsed until someone opens it: open, it lies over the page.
+  {
+    const dash = document.currentScript.parentElement;
+    let available = null, collapsed = true;
+    try {
+      available = localStorage.getItem("askAvailable");
+      const stored = localStorage.getItem("askCollapsed");
+      if (stored !== null) collapsed = stored === "1";
+    } catch (e) {}
+    dash.dataset.ask = available === "0" ? "off" : collapsed ? "collapsed" : "open";
+  }
+</script>
+  <header class="top">
+    <div class="measured">
+      <span class="freshness" id="freshness">—</span>
+      <span id="measuredLine">No audit of this file yet.</span>
+      <a class="file-link" id="fileLink" href="#" target="_blank" rel="noopener" hidden>Open in Figma<span class="visually-hidden"> (opens in new tab)</span></a>
+      <!-- Every file this project's audit reads, always — its libraries and
+           the source library the link stage needs open beside them. It used
+           to be one line under the button saying whether the library in view
+           was connected, which answered the question only for that one file
+           and only after you had chosen it: a run that needs two files open
+           failed at the stage that needed the second. The list also carries
+           each file's progress while a run is talking to it. -->
+      <ul class="files" id="fileList" aria-label="Files this project audits"></ul>
+    </div>
+    <p class="readonly-note">A read-only copy, as of the last build. Run the dashboard service to audit, fix or rule.</p>
+    <div class="head-actions">
+      <p class="sweep-state" id="sweepState" role="status" aria-live="polite"></p>
+      <div class="action-row">
+      <button class="button measured-only" id="sweepBtn" type="button">Check changes</button>
+      <div class="audit-wrap">
+        <button class="button" id="auditBtn" type="button" aria-expanded="false" aria-controls="auditMenu">Audit</button>
+        <div class="audit-menu" id="auditMenu" role="group" aria-label="Audit scope" hidden>
+          <button type="button" id="auditChangedBtn">Audit changes<small id="auditChangedCount"></small></button>
+          <button type="button" id="auditAllBtn">Audit all</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Words every row's controls share in their names; the row's number and
+       component follow them (aria-labelledby), so 500 boxes are 500 names:
+       "Mark done 1.3 Button", "Note for Claude on 1.3 Button". -->
+  <span id="markDoneLabel" hidden>Mark done</span>
+  <span id="noteOn" hidden>on</span>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <div id="dash-main">
+
+
+  <div class="view" id="view-queue" hidden>
+
+  <section class="first-run-only" aria-labelledby="firstRunH">
+    <div class="sec-head"><h2 id="firstRunH">Nothing measured yet</h2></div>
+    <p class="sec-note">This project has a record and settings in its context document, but no run behind it. Open the library in Figma with the Desktop Bridge plugin running, then <b>Audit</b> — the first run walks every component, writes the measures, and files what it finds as a queue.</p>
+    <p class="sec-note"><b>Check changes</b> needs a previous run to compare against, so it will have nothing to say until then.</p>
+  </section>
+
+  <div class="measured-only">
+
+    <div id="pane-queue">
+      <!-- What a "Check changes" run found moved; hidden when nothing did. -->
+      <section id="changedSection" aria-labelledby="changedH" hidden>
+        <div class="sec-head"><h2 id="changedH">Changed since the last audit</h2></div>
+        <div id="changed"></div>
+      </section>
+      <!-- What narrows comes FIRST, then the figures it narrows. The tiles
+           count only the rows the filters show, so reading them before the
+           chips is reading an answer before its question: "Open 386" above
+           "Web build 236" invites the two to be read as unrelated totals. -->
+      {files.length > 1 && (
+        <nav aria-label="File">
+          <ul class="tabs tabs--scope">
+            {files.map(({ key, name }) => <li><a class="tab" href={`#queue?lib=${key}`} data-lib-choice={key}>{name}</a></li>)}
+          </ul>
+        </nav>
+      )}
+      <div class="toolbar">
+        <select class="filter filter--select" id="componentFilter" aria-label="Show rows on"></select>
+        <select class="filter filter--select" id="ownerFilter" aria-label="Show rows raised by"></select>
+        <div class="toolbar__end"><button class="button button--primary verify-btn" id="verifyBtn" type="button" hidden>Verify done</button></div>
+      </div>
+      <ul class="kpis kpis--fill" id="queueTiles" aria-label="Findings"></ul>
+      <!-- A file with nothing recorded: one empty state in place of the
+           tiles, the filters and three empty sections. -->
+      <section class="empty-file" id="emptyFile" aria-labelledby="emptyFileH" hidden>
+        <h2 id="emptyFileH">Nothing recorded for this file yet</h2>
+        <p class="sec-note" id="emptyFileWhy"></p>
+      </section>
+      <div id="queuePane">
+      <p class="sec-note filter-note" id="filterNote" role="status" hidden><span id="filterNoteText"></span> <button class="link-button" id="filterShowAll" type="button">Show all</button></p>
+  <section class="bucket" aria-labelledby="b1H">
+    <div class="bucket-head"><span class="bucket-num">1</span><h2 id="b1H">Fix on approval</h2></div>
+    <p class="bucket-note">Safe, programmatic, non-breaking. All three actions read the row's note first. <b>Fix this</b> does one; <b>Fix all</b> appears only when the same check raised other rows, and applies this row's note to every one of them after you confirm the count; <b>Record as ruling</b> writes the note into the context document's rulings log so the audit stops raising it. Each fix is re-scanned on its own component and stamps itself.</p>
+    <ul class="rows" id="b1"></ul>
+    <details class="cleared" id="cleared-b1" hidden>
+      <summary class="cleared-summary"><span class="cleared-count" id="clearedCount-b1">0</span><span>closed here</span></summary>
+      <ul class="rows" id="clearedRows-b1"></ul>
+    </details>
+  </section>
+
+  <section class="bucket" aria-labelledby="b2H">
+    <div class="bucket-head"><span class="bucket-num">2</span><h2 id="b2H">Quick manual fixes</h2></div>
+    <p class="bucket-note">Axis and option order can't be written through the plugin API — confirmed by reordering a set's children and watching the option list stay put. These are drags in Figma's variants panel.</p>
+    <ul class="rows" id="b2"></ul>
+    <details class="cleared" id="cleared-b2" hidden>
+      <summary class="cleared-summary"><span class="cleared-count" id="clearedCount-b2">0</span><span>closed here</span></summary>
+      <ul class="rows" id="clearedRows-b2"></ul>
+    </details>
+  </section>
+
+  <section class="bucket" aria-labelledby="b3H">
+    <div class="bucket-head"><span class="bucket-num">3</span><h2 id="b3H">Decide</h2></div>
+    <p class="bucket-note">Each is a question with two legitimate answers. The answer goes in the row's note: <b>Record as ruling</b> writes it into the context document, and the next audit acts on it.</p>
+    <ul class="rows" id="b3"></ul>
+    <details class="cleared" id="cleared-b3" hidden>
+      <summary class="cleared-summary"><span class="cleared-count" id="clearedCount-b3">0</span><span>closed here</span></summary>
+      <ul class="rows" id="clearedRows-b3"></ul>
+    </details>
+  </section>
+
+      </div>
+      <p id="queueSave" role="status" aria-live="polite"></p>
+
+    </div>
+
+    <div id="pane-history" hidden>
+      <div class="table-scroll">
+        <table>
+          <caption class="visually-hidden">Audit runs, newest first</caption>
+          <thead>
+            <tr><th scope="col">When</th><th scope="col">Run</th><th scope="col">Scope</th><th scope="col" class="num">Found</th><th scope="col" class="num">Cleared</th><th scope="col" class="num">Left open</th><th scope="col" class="num">Coverage</th><th scope="col" class="num">Cost</th><th scope="col">What happened</th></tr>
+          </thead>
+          <tbody id="runs"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="runsEmpty" hidden>No runs recorded yet.</p>
+      <Modal id="runDialog" title="Run">
+        <ul class="run-notes" id="runDialogList"></ul>
+      </Modal>
+    </div>
+  </div>
+
+  </div><!-- /view-queue -->
+
+  <div class="view about" id="view-about" hidden>
+
+  <section aria-labelledby="about1H">
+    <div class="sec-head"><h2 id="about1H">What this page is</h2></div>
+    <p class="lead">A standing record of one design system library, written by an audit run. It answers two questions a fix queue cannot: how is the library doing, and which run found what.</p>
+    <p>The queue is the working surface — findings, ticks, notes, rulings. This is the reading surface. Nothing here updates on its own: a run recomputes every figure, refreshes the measures and appends one row to the registry. That is why the age of the last run sits beside the title rather than in a corner — an unchecked green number invites more trust than it has earned.</p>
+    <p>Every measure is recomputed from scratch on each run, never carried forward from the last one. <b>A measure this run did not recompute renders no tile at all</b>, rather than showing a stale figure. That rule exists because it was broken once: a contrast figure kept asserting a defect for hours after the defect was fixed, in a document that had just been re-run.</p>
+  </section>
+
+  <section aria-labelledby="about2H">
+    <div class="sec-head"><h2 id="about2H">How a tile is classified</h2></div>
+    <ul class="states">
+      <li><span class="swatch good">Good</span><span>The measure is at or above its threshold. Silence here is meaningful: it means the scan ran and found nothing.</span></li>
+      <li><span class="swatch warn">Attention</span><span>Genuinely outstanding — something is unbound, unwritten or failing a floor. Amber is spent carefully, because a reader who learns to ignore it stops reading the page.</span></li>
+      <li><span class="swatch idle">Deferred</span><span>Parked by a recorded ruling, with the reason shown on the tile. Not a fault. Which measures are parked is the project's decision, stored beside the measures rather than known by this page.</span></li>
+      <li><span class="swatch none">Absent</span><span>No tile. The run did not record this measure, so the page makes no claim about it.</span></li>
+    </ul>
+    <p class="spaced">There is deliberately <b>no composite score</b>. A single number hides which part moved, and a library at 82 tells you nothing about what to do next. Where a per-component score is genuinely wanted, the audit skill produces one on explicit request, decomposed into its dimensions.</p>
+  </section>
+
+  <section class="ruled" aria-labelledby="about3H">
+    <div class="sec-head"><h2 id="about3H">The measures</h2></div>
+    <p id="measuresIntro"></p>
+    <div id="measuresAbout"></div>
+  </section>
+
+  <section aria-labelledby="about4H">
+    <div class="sec-head"><h2 id="about4H">Everything that is checked</h2></div>
+    <p>Grouped by the six dimensions the audit weights, heaviest first. The weights are not house opinion — they follow FigmaLint's measured category weights, with two deliberate departures: descriptions are raised from 3 to 10 because a description is the prompt anything reads before generating from a component, and accessibility is split out rather than folded into hygiene.</p>
+    <p>Two markers on every check. <b>Tier</b> is what a hit costs: <code>error</code> breaks something a user or a consumer meets, <code>warning</code> is a defect with a workaround, <code>review</code> needs a ruling before it is either, <code>preference</code> is a name that departs from the naming preferences (<code>standards/naming-preferences.json</code>, or the project's own): it works, it reads unlike the rest, and it holds nothing back, <code>hygiene</code> is tracked but kept out of the report unless asked. <b>Who</b> says whether a script decides it or a person must: a <code>scanner</code> check is fully decidable from node data, an <code>agent</code> check needs to know why something was built that way. Scanner output is never reported directly — every hit is re-read against raw data, tested for whether it fires on everything, and compared to a correct sibling before it reaches you.</p>
+
+    <div id="checkCatalogue"></div>
+  </section>
+
+  <section aria-labelledby="about5H">
+    <div class="sec-head"><h2 id="about5H">The trends</h2></div>
+    <p>Coverage sits on a near-100 baseline so a fraction of a point is visible; the counts start at zero, where the bar height is the quantity. They are read together: a run that added components without moving coverage is the healthy shape, and a rising set count beside a falling percentage is the one to catch.</p>
+    <p>A <b>dashed column</b> is a run that did not take that count — not a run where it fell to zero. Columns are one per run in every row, so the same run sits in the same position and the rows can be read down a column.</p>
+  </section>
+
+  <section aria-labelledby="about6H">
+    <div class="sec-head"><h2 id="about6H">What this page does not do</h2></div>
+    <p><b>It is not an accessibility audit.</b> The checks here are structural — present or absent in the file — not perceptual. Contrast and focus indication are measured; visual design judgement, motion, cognitive load and real assistive-technology {ours('behaviour')} are not.</p>
+    <p><b>It does not measure what the components are for.</b> Nothing here can tell whether a component is well designed, correctly named for its domain, or worth existing. Those are the questions the queue's decide items ask, and they are settled by a person.</p>
+    <p><b>Silence only counts where the scan ran.</b> A measure with no tile was not checked. That is why nothing here is inferred from the absence of a finding.</p>
+  </section>
+
+  <section aria-labelledby="about7H">
+    <div class="sec-head"><h2 id="about7H">Updating it</h2></div>
+    <p>Ask a session with the Figma bridge to <b>update the audit</b>. It re-scans the library, reconciles the queue against what it measured, recomputes every figure here and appends one row to the registry. Both this record and its queue are updated in place and keep their URLs, so a run has to find them before publishing anything — a second copy does not overwrite the first, it abandons it.</p>
+  </section>
+
+  </div><!-- /view-about -->
+
+  </div>
+
+  <footer class="foot">
+    The record is <code>audit.json</code> in the toolkit repo. This page reads and writes it, and reaches Figma through the Desktop Bridge plugin. A figure with no run behind it is a claim nobody checked. So each file's date sits under the title, and a measure the last run did not recompute shows no tile.
+  </footer>
+  <aside class="ask" id="askPanel" aria-label="Ask about this library" hidden>
+    <button class="ask-rail" id="askRail" type="button" aria-label="Open the ask panel"><span>Ask</span></button>
+    <div class="ask-inner">
+      <div class="ask-top">
+        <h2>Ask about this library</h2>
+        <button class="ask-toggle" id="askToggle" type="button" aria-expanded="true" aria-label="Collapse the ask panel">&rsaquo;&rsaquo;</button>
+      </div>
+      <div class="ask-thread" id="askThread"></div>
+      <div class="ask-composer">
+        <div class="ask-form">
+          <label class="visually-hidden" for="askInput">Your question</label>
+          <textarea class="ask-input" id="askInput" rows="1" placeholder="Ask about a finding, or what&rsquo;s left"></textarea>
+          <div class="ask-row-actions">
+            <button class="button button--primary ask-send" id="askSend" type="button">Ask</button>
+            <span class="ask-keys">Enter to send &middot; Shift+Enter for a new line</span>
+          </div>
+        </div>
+        <p class="ask-foot">Runs on your Claude account. Kept here and readable by Claude in a session. <button class="ask-clear" id="askClear" type="button" hidden>Delete history</button></p>
+      </div>
+    </div>
+  </aside>
+
+</div>
+<script is:inline set:html={baked}></script>
+<script>import './main.js';</script>

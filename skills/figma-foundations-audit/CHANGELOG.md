@@ -1,0 +1,47 @@
+# Changelog — figma-foundations-audit
+
+- 1.24.0 (2026-10-26): a bare slash and a part without its parent's name are filed as `preference`, read from standards/naming-preferences.json; case collisions and a misplaced private prefix keep their tier. Case F23.
+- 1.23.0 (2026-10-14): iconSetNames takes the icon set's version from its caller (the figma-audit service reads the importer plugin's pin), so the skill reads nothing outside its folder.
+- 1.22.3 (2026-10-14): tool paths follow the move of the toolkit's own checks to tools/toolkit-check and of the project registry to tools/snapshot/projects.cjs; no rule or behaviour changed.
+- 1.22.2 (2026-10-14): the toolkit's tools are renamed (snapshot, component-contract, docs-site, css-lint, ui-check, project-check, claude-hooks, skill-evals); paths in prose and code only, behaviour unchanged.
+- 1.22.1 (2026-10-14): the dashboard service is `tools/figma-audit` (was `tools/figma-dashboard`); paths in prose and comments only, behaviour unchanged.
+- 1.22.0 (2026-10-11): every finding leads with what goes wrong and what it costs, and its advice is the fix alone (design-standard rule 10); a tokens or icon row states the problem before the names it covers. Keys unchanged. Case F22.
+- 1.21.0 (2026-10-11): the tokens library and the icon library, checked from the stored snapshot (`scripts/library.mjs`): descriptions, unused tokens, styles' bindings, names and shape; icon sizes, bound paint and the source set's names. Cases F20, F21.
+- 1.20.3 (2026-10-08): the script names what runs it (`@runs:`).
+- 1.20.2 (2026-10-08): the check table cites figma-standard rules and the keys a project sets.
+- 1.20.1 (2026-10-08): reads its settings as `contract.cjs settings` prints them.
+- 1.20.0 (2026-10-08): a private part with the 🚧 or deprecation marker before its _ is an error: Figma publishes it. Case F19.
+- 1.19.0 (2026-10-08): checks figma-standard rule 13 (the marker on every component of an in-progress page); the rule 9 rename proposes family plus last word. Case F18.
+- 1.18.0 (2026-10-08): checks figma-standard rule 15 (the component-page template) from three settings. Case F17.
+- 1.17.3 (2026-10-08): citations name the standard that owns each rule.
+- 1.17.2 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.17.1 (2026-10-08): citations name the standard that owns each rule after the split. No behaviour changed.
+- 1.17.0 (2026-10-07): no value of its own left in the script; every convention read from a setting, pinned categories checked in recorded order, findings cite no rule numbers. Case F16.
+- 1.16.0 (2026-10-07): deprecation checked against house rule 26 from the three deprecation settings. Case F15.
+- 1.15.0 (2026-10-07): part naming follows rewritten rule 23: `familySeparator` joins family and part, and a family with its own category may drop the family word. Case F14.
+- 1.14.0 (2026-10-07): part naming sets a leading status marker aside before comparing names. Case F13.
+- 1.13.2 (2026-10-01): mode-pin example names no project's collection; script comment carries the live counts.
+- 1.13.1 (2026-09-25): generations finding graded: error inside a component, question when shadowed by a nearer pin, warning otherwise.
+- 1.13.0 (2026-09-25): mode-pin checks: several generations of one collection pinned, and a brand pinned without a theme. Live-only.
+- 1.12.2 (2026-09-22): every finding carries a stable `key` naming its subject.
+- 1.12.1 (2026-09-22): a full run sends `scope` and `ran`, or the writer files findings and closes nothing.
+- 1.12.0 (2026-09-22): a misplaced category names where it belongs; a part may extend its parent's name with either separator. Cases F10, F11.
+- 1.11.0 (2026-09-22): a part's proposed name drops the family it already shares with its parent. Case F9.
+- 1.10.0 (2026-09-22): a misplaced page names the first page it sorts before, not the page it trails. Case F8.
+- 1.9.0 (2026-09-22): result reports `notApplicable` separately from `notRun`.
+- 1.8.1 (2026-09-22): corrected the figures and example the 1.8.0 entry cited. No behaviour changed.
+- 1.8.0 (2026-09-22): snapshot adapter takes the parent relation as input (`--parents`); the name walk stays as fallback, reported in `parentsFrom`.
+- 1.7.0 (2026-09-22): result carries `reach`, `ran` and `notRun`, so a run says what it read and what it skipped.
+- 1.6.1 (2026-09-22): `push` takes the advice argument it was being passed; all four checks emit text and advice.
+- 1.6.0 (2026-09-22): every finding emits `text` and `advice` as two strings.
+- 1.5.0 (2026-09-22): snapshot path resolves instances by the longest stored name, and a name two specs claim resolves to neither.
+- 1.4.1 (2026-09-20): a part named for its parent with only the privacy mark is not flagged.
+- 1.4.0 (2026-09-20): icons visible to the snapshot path via plugin 0.35.0's icon page, addressed by both names.
+- 1.3.1 (2026-09-20): snapshot path diffed against a live run; page-namespaced names fixed with `figmaName`; two store limits documented.
+- 1.3.0 (2026-09-20): facts can come from the stored snapshot (`scripts/from-snapshot.mjs`).
+- 1.2.3 (2026-09-10): the dashboard judges only the part-rule questions, against rulings alone.
+- 1.2.2 (2026-09-10): step 4 says only a ruling may suppress a candidate.
+- 1.2.1 (2026-09-10): the dashboard's Audit runs this skill's script as a stage. Wording only.
+- 1.2.0 (2026-09-10): first live run; page-order entries keyed per set and page. Case F7.
+- 1.1.0 (2026-09-11): rows filed through `POST /rows` or `rows.mjs`, never by hand.
+- 1.0.0 (2026-09-10): first version: four file-level checks, settings from the context document, findings in the shared audit record. Cases F1–F6.

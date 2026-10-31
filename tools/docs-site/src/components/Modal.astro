@@ -1,0 +1,43 @@
+---
+// The site's one modal: a native <dialog>, one width, centred, with a header
+// (its title and Close over a hairline) and a body. A modal that leads
+// somewhere adds a footer with that one action; one that only informs has
+// none, since a Done beside Close was a second button doing the same thing.
+// Every dialog on the site is this component.
+//
+// A trigger is `<button type="button" popovertarget="<id>">`. With no script
+// that opens the dialog as a popover, and Close, Escape and a click outside
+// shut it. The script below takes the same click and opens it with
+// showModal() instead, so the page behind is inert and does not scroll.
+// Code that opens one itself calls showModal() on it and nothing else.
+interface Props { id: string; title: string; action?: { href: string; label: string } }
+const { id, title, action } = Astro.props;
+const close = { type: 'button', popovertarget: id, popovertargetaction: 'hide' };
+---
+<dialog class="modal" id={id} popover aria-labelledby={`${id}-title`} data-modal>
+  <header class="modal__head">
+    <h2 id={`${id}-title`}>{title}</h2>
+    <button class="button" {...close}>Close</button>
+  </header>
+  <div class="modal__body"><slot /></div>
+  {action && <footer class="modal__foot"><a class="button button--primary" href={action.href}>{action.label}</a></footer>}
+</dialog>
+
+<script>
+  // One listener for every modal on the page. Cancelling the click stops the
+  // popover opening, so the dialog opens once, as a modal.
+  document.addEventListener('click', (e) => {
+    const target = e.target as Element;
+    const trigger = target.closest('[popovertarget]');
+    const dialog = trigger && document.getElementById(trigger.getAttribute('popovertarget') || '');
+    if (dialog instanceof HTMLDialogElement && dialog.matches('[data-modal]')) {
+      e.preventDefault();
+      if (trigger.getAttribute('popovertargetaction') !== 'hide') { if (!dialog.open) dialog.showModal(); }
+      else if (dialog.open) dialog.close();
+      else dialog.hidePopover();
+      return;
+    }
+    // a click on the backdrop lands on the dialog itself
+    if (target instanceof HTMLDialogElement && target.matches('[data-modal][open]')) target.close();
+  });
+</script>

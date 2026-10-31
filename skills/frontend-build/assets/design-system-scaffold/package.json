@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "devDependencies": {
+    "sass": "^1.80.0"
+  },
+  "scripts": {
+    "css": "sass --no-source-map --style=compressed assets/design-system/index.sass assets/css/main.css",
+    "css:watch": "sass --watch --no-source-map assets/design-system/index.sass assets/css/main.css"
+  }
+}

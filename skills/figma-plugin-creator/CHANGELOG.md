@@ -1,0 +1,26 @@
+# Changelog — figma-plugin-creator
+
+- 1.12.0 (2026-10-30): `scripts/scaffold.mjs` writes the seven templates with every placeholder filled, where step 2 had the agent copy them by hand; `tests/test-scaffold.mjs` executes P1.
+- 1.11.1 (2026-10-29): `assets/ui.html.tpl` inlined ui-base v1 while the base was at v2; it is now written by `plugins/_shared/sync.mjs` with the plugins' copies, and the checklist reads any marker version.
+- 1.11.0 (2026-10-26): checklist §5b gains nine traps from rebuilding a screens file through the bridge and reworking a plugin window.
+- 1.10.4 (2026-10-08): citations name the standard that owns each rule.
+- 1.10.3 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.10.2 (2026-10-08): citations name the standard that owns each rule after the split. No behaviour changed.
+- 1.10.1 (2026-10-03): `assets/fetch-queue.js`'s `retryOrFail` waits 500ms × the retry number before re-observing. P6 extended.
+- 1.10.0 (2026-10-03): the fetch pattern becomes `assets/fetch-queue.js`, executed by `tests/test-fetch-queue.mjs`; fixes a leaked slot on a synchronous throw and a no-op re-observe. P6 extended.
+- 1.9.0 (2026-09-25): checklist §5b gains three traps: clear an extension's pin through its parent, prefer `page.loadAsync()`, count leftovers afterwards.
+- 1.8.0 (2026-09-25): checklist gains §5b, five runtime traps that produce no error.
+- 1.7.0 (2026-09-25): checklist §1 gains the permissions grep.
+- 1.6.1 (2026-09-20): citations point at `standards/toolkit-standard.md` §A after the four part standards merged. No rule changed.
+- 1.6.0 (2026-08-21): the manifest carries an `id` from the scaffold on; checklist and P1 follow.
+- 1.5.4 (2026-08-09): the scaffold emits the `· standard vX.Y.Z` header stamp and the checklist verifies it.
+- 1.5.3 (2026-08-09): changelog only; same-session supersessions compressed. No rule changed.
+- 1.5.2 (2026-08-09): step 6 cites `toolkit-standard.md` §1 for the `tsconfig` + `@ts-check` rule.
+- 1.5.1 (2026-08-09): corrected step 6's citation and recorded the rule as this skill's own. Superseded by 1.5.2.
+- 1.5.0 (2026-08-09): first live walk, 6/6; templates gain `@ts-check`, `README.md.tpl` and canonical ui-base; checklist §5 says ui-base is mandatory.
+- 1.4.1 (2026-08-07): formatting only; prose reflowed to one line per paragraph.
+- 1.4.0 (2026-08-06): `references/network-fetch-patterns.md` added; conformance checks tsconfig and settings hygiene; new stuck-UI diagnosis section.
+- 1.3.0 (2026-08-06): collision check extended to state styling (disabled, hover, focus).
+- 1.2.0 (2026-08-06): ui-base/bespoke-control collision check added.
+- 1.1.0 (2026-08-05): ui-base inlining mandatory in conformance; reconcile-and-retest procedure added.
+- 1.0.0 (2026-08-05): initial release.

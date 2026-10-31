@@ -1,0 +1,10 @@
+---
+// A date as the page shows it: in the project's dialect through format.js,
+// inside <time> with the machine-readable instant, so every date on the site
+// is written one way. `short` drops the year (a day heading in a dated list).
+import { date, day } from '../lib/format.js';
+interface Props { at: string | null | undefined; short?: boolean }
+const { at, short = false } = Astro.props;
+const text = short ? day(at) : date(at);
+---
+{text && <time datetime={new Date(at).toISOString()}>{text}</time>}

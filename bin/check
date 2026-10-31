@@ -1,0 +1,249 @@
+#!/bin/sh
+# The toolkit's own check: the standards, the scanners, and every executable
+# test a skill or tool ships. One command, so "check before, check after" is
+# a thing anybody can do rather than a list to remember — and the pre-push
+# hook runs it, so a push cannot carry a red toolkit.
+#
+#   bin/check            everything
+#   bin/check --quick    the standards and the scanners, no test suites
+#   bin/check --no-fix   heal nothing (the scheduled pass reads, it never writes)
+#
+# Green is the floor, not the answer: bin/closing's questions are what
+# catch what no script can see.
+set -u
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO"
+FAIL=0
+QUICK=0
+case " $* " in *" --quick "*) QUICK=1 ;; esac
+FIX=--fix
+case " $* " in *" --no-fix "*) FIX= ;; esac
+
+# Each step says how long it took: a step that got slow is then visible
+# without anyone looking for it (toolkit-standard §D 0's third question).
+# Printed, never gated.
+# The helpers and the closing summary live in check-lib.sh, so the summary has
+# a test of its own (tools/toolkit-check/test-check-summary.mjs).
+. "$REPO/bin/check-lib.sh"
+
+step "standards, skills and plugins are well formed"
+# Judged by exit code, never by the words a step prints: a crash prints no "FAIL".
+if OUT=$(./standards/tests/check.sh 2>&1); then ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; else bad "$OUT"; fi
+
+step "standards: rules enforced, citations resolve, settings registered"
+if OUT=$(node tools/toolkit-check/check-standards.mjs $FIX 2>&1); then ok; printf '%s\n' "$OUT" | grep -E "healed|clean|skipped" | sed 's/^/  /'; else bad "$OUT"; fi
+
+# Advisory by design: the scanner cannot tell a real file key from a
+# plausible-looking placeholder, so it raises candidates and a person reads
+# them. Counted here, never failed — a gate that cries wolf is a gate nobody
+# reads (it exits non-zero whenever it has candidates).
+step "project data in skills (candidates to read)"
+OUT=$(python3 standards/tests/scan-clause-d.py 2>&1)
+ok
+printf '%s\n' "$OUT" | grep -E "candidate|clean" | head -1 | sed 's/^/  /'
+
+# The one gate for "one job, one owner" (toolkit-standard §D 1) ran in every
+# project repo and never here — where the owners live. First run against this
+# repo it found two third copies of a colour parser under a name two other
+# implementations already had.
+# Nothing floats. A change left uncommitted for more than a day belongs to a
+# session that has moved on: on 2026-10-01 a snapshot-plugin fix, a whole
+# colour-scale skill release and a packaged zip had sat uncommitted for six
+# days, invisible to every check because none looks at the working tree's
+# age. Warned, never failed: the change is usually another session's, and the
+# answer is to review it and commit it or discard it, not to block a push.
+#
+# Age is the inode's change time, not mtime: `cp -p` or an unpacked archive
+# keeps an old mtime on a file written a minute ago, and mtime read it as days
+# old. ctime cannot be set back; its limit runs the safe way — a chmod or an
+# xattr write makes an old change read younger, so the check can miss, never
+# invent. A rename entry in `-z` output is followed by its source path as a
+# separate field; it is skipped, not read as a second change.
+step "nothing left uncommitted for over a day"
+OUT=$(python3 - <<'PY'
+import os, subprocess, time
+out = iter(subprocess.run(['git', 'status', '--porcelain', '-z'], capture_output=True, text=True).stdout.split('\0'))
+old = []
+for e in out:
+    if len(e) < 4: continue
+    if 'R' in e[:2] or 'C' in e[:2]: next(out, None)
+    f = e[3:]
+    try: age = time.time() - os.stat(f).st_ctime
+    except OSError: continue
+    if age > 86400: old.append((age, f"{int(age // 86400)}d  {f}"))
+print('\n'.join(line for _, line in sorted(old, reverse=True)))
+PY
+)
+if [ -z "$OUT" ]; then ok; else echo "warn $(took)"; printf '%s\n' "$OUT" | head -12 | sed 's/^/  /'; N=$(printf '%s\n' "$OUT" | wc -l | tr -d ' '); [ "$N" -gt 12 ] && echo "  … and $((N - 12)) more"; fi
+
+step "no job the toolkit owns is written twice"
+OUT=$(node tools/toolkit-check/owned-check.mjs --repo . 2>&1)
+[ $? -eq 0 ] && ok || bad "$OUT"
+
+# Where a project lives is the contract's one answer (contract.homeOf,
+# contract.homes): 32 files once built `toolkit/projects/<label>` themselves,
+# and each would have broken when the projects moved out. Code only; tests
+# and comments may name the folder, and a line saying why carries
+# `projects-path:` (a test's fixture tree).
+step "no tool builds a project's path itself"
+OUT=$(git ls-files 'tools/*.mjs' 'tools/*.cjs' 'tools/*.js' 'tools/*.sh' 'tools/*.py' 'bin/*' 'skills/*.mjs' 'skills/*.cjs' 'skills/*.js' 'skills/*.sh' 'skills/*.py' 'plugins/*.js' 'plugins/*.mjs' '*.sh' \
+  | grep -vE '(^|/)test-|/contract\.cjs$|/node_modules/|^bin/check$' \
+  | xargs grep -nE "['\"]projects['\"] *[,)]|\.\./\.\./projects|/projects/\\\$|\\\$REPO/projects" 2>/dev/null \
+  | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|projects-path:')
+[ -z "$OUT" ] && ok || bad "$OUT"
+
+# toolkit-standard §D 22: every folder a newcomer opens says what it is.
+step "every folder a newcomer opens has a README"
+OUT=$(node tools/toolkit-check/readmes.mjs 2>&1)
+[ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
+
+# A script's main guard compared argv[1] as typed: run through ~/.claude/skills
+# (a symlink) it did nothing and exited 0, and a --check passed every
+# description that way. Twelve scripts did it on 2026-10-30.
+step "every script knows it is the one being run"
+OUT=$(node tools/toolkit-check/main-guards.mjs 2>&1)
+[ $? -eq 0 ] && ok || bad "$OUT"
+
+# toolkit-standard §D 6: the repo is shareable only if no file in it names a
+# project. 232 mentions sat in walk records and comments on 2026-10-14; each
+# became "one project" or a stand-in ("Project A"). Labels from the contract,
+
+step "no project is named in the toolkit"
+# the names, and why a crash is a failure of its own: tools/toolkit-check/project-names.sh
+OUT=""
+NAMES=$(tools/toolkit-check/project-names.sh 2>&1) || { OUT="nothing was searched: $NAMES"; NAMES=""; }
+[ -n "$NAMES" ] && OUT="$OUT$(git ls-files | xargs grep -inE "\b($NAMES)\b" 2>/dev/null | cut -c1-200)"
+# a compressed fixture is read through gzip: grep sees only its bytes
+# (no projects on this machine, as in a fresh clone: nothing to look for)
+[ -n "$NAMES" ] && for gz in $(git ls-files '*.gz'); do
+    gzip -dc "$gz" 2>/dev/null | grep -qiE "\b($NAMES)\b" && OUT="$OUT
+$gz: names a project inside the compressed file"
+done
+[ -z "$OUT" ] && ok || bad "$OUT"
+
+# The half check.mjs cannot see: a job no one has moved here yet, written in
+# two projects. Warned, not failed — a twin is a decision (toolkit-standard
+# §D 2). Fired first on two parity engines, 2026-10-01.
+step "no job written in two projects"
+OUT=$(node tools/toolkit-check/twins.mjs 2>&1)
+[ $? -eq 0 ] && ok || { echo "warn $(took)"; printf '%s\n' "$OUT" | sed 's/^/  /'; }
+
+# A launch agent keeps its arguments until it is reloaded from DISK, and
+# `kickstart` restarts the definition launchd already holds — so a change to
+# `--data` can be right in the repo, right in the plist, and wrong in every
+# running service. It was: four dashboards went on serving a record filename
+# that no longer existed, and the page showed an audited project as never
+# audited with nothing anywhere saying so.
+step "the running dashboards serve what the projects have"
+OUT=$(node tools/figma-audit/check-services.mjs 2>&1)
+[ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
+
+step "the docs engine resolves"
+if [ -d tools/docs-site/node_modules ]; then OUT=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); else OUT="the docs site's packages are not installed: run (cd tools/docs-site && pnpm install)"; false; fi
+[ $? -eq 0 ] && ok || bad "$OUT"
+
+# The docs site is the toolkit's own front end, and nothing held it to
+# code-standard's stylesheet gates: a one-off run on 2026-10-11 found 219
+# literals with no reason and four `!important`, one of which hid tab panels
+# from a reader with no JavaScript. It has no snapshot, so its sheets are
+# named in a config of their own.
+step "the docs site's sheets hold the style gates"
+OUT=$(node tools/css-lint/check.mjs --config tools/docs-site/styles.config.json 2>&1)
+[ $? -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | grep -v '^ok\|^note')"
+
+step "the audit record's writer holds its rules"
+OUT=$(node tools/figma-audit/test-rows.mjs 2>&1)
+[ $? -eq 0 ] && ok || bad "$OUT"
+
+[ "$QUICK" = "1" ] && { [ "$FAIL" = "0" ] && echo "green (quick)" || summary; exit $FAIL; }
+
+# code-standard rule 3 on the docs site's own pages: a one-off probe on
+# 2026-10-11 found unnamed sections on four page types, and nothing ran it
+# again. One page of each of the 18 types of the built Project A site; no
+# built site is said, never passed.
+# Every project's built site, so no project's pages escape the contract.
+HOMES=$(node tools/snapshot/projects.cjs homes) || { step "the project list reads"; bad "projects.cjs homes failed: no project's site or specs were checked"; }
+TAB=$(printf '\t')
+while IFS="$TAB" read -r label home; do
+    d="$home/site"
+    [ -f "$d/index.html" ] || continue
+    step "page structure: $label"
+    OUT=$(node tools/docs-site/check-structure.mjs "$d" 2>&1)
+    [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | tail -20)"
+done <<EOF
+$HOMES
+EOF
+
+# The specs of the projects stored here (a design-only project has no repo
+# and no bin/check of its own): each round-trips and carries the contract it
+# derives. A project with a repo runs the same check from tools/project-check.
+# Nothing ran it on these until 2026-10-05, when contracts were added and the
+# question "who checks Project B's 207 specs?" had no answer.
+while IFS="$TAB" read -r label home; do
+    d="$home/snapshot/components"
+    [ -d "$d" ] || continue
+    step "stored specs: $label"
+    OUT=$(node tools/snapshot/check-specs.cjs "$d" 2>&1)
+    [ $? -eq 0 ] && ok || bad "$(printf '%s' "$OUT" | tail -8)"
+done <<EOF
+$HOMES
+EOF
+
+# The contract editor on the toolkit's own sample library (tools/contract-editor/sample/), with every check that names
+# a component: those ran on one project's library until 2026-10-30, and failed as soon as that library changed.
+# It runs where a newcomer would: a sparse clone holding only what bin/get takes for the editor, this tree's
+# version of each of those files, and no projects (test-serve runs its stranger with an empty HOME; Chrome
+# under an empty HOME stalls now and then, so the editor's browser keeps this one's). A file the editor uses that bin/get does not
+# follow, or one not yet committed, fails it here rather than in someone else's checkout. bin/get follows
+# HEAD's code: an uncommitted new import is followed once it is committed.
+step "contract editor: the sample library, from bin/get"
+SP=$(mktemp -d)
+OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git sparse-checkout set bin && cp "$REPO/bin/get" bin/get \
+  && node bin/get tools/contract-editor > /dev/null \
+  && git -c core.quotePath=off ls-files -t | sed -n 's/^H //p' | while IFS= read -r f; do [ ! -f "$REPO/$f" ] || cp "$REPO/$f" "$f" || exit 1; done \
+  && TOOLKIT_PROJECTS_ROOT="$SP/projects" node tools/contract-editor/test-editor.mjs --fixtures \
+  && TOOLKIT_PROJECTS_ROOT="$SP/projects" node tools/contract-editor/test-serve.mjs; } 2>&1)
+RC=$?
+rm -rf "$SP"
+[ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E ' passed|SKIPPED' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -B1 -A3 -E 'Error|FAIL|fatal|not checked out' | head -10)"
+
+# The contract editor on every project's library: the discovery walk below
+# runs it with none, and it was run on one library by hand until 2026-10-19,
+# when three others failed it on what only that one had.
+while IFS="$TAB" read -r label home; do
+    step "contract editor: $label"
+    OUT=$(node tools/contract-editor/test-editor.mjs --project "$label" 2>&1)
+    [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E 'passed|SKIPPED' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -A3 -E 'Error' | head -8)"
+done <<EOF
+$HOMES
+EOF
+
+# Every test a skill or tool ships, by discovery: a new suite is covered by
+# existing here, not by being added to a list somebody forgets.
+#
+# The glob is the list. It read .mjs/.cjs/.js only, so `humanizer`'s
+# `test-scan-tells.py` — 23 assertions, shipped, green — was run by nothing
+# for as long as it existed, while this comment claimed discovery. A suite
+# nothing runs is the same as no suite, which is the whole point of the walk
+# markers this was found by.
+# The same gap again, two directories over: `plugins/` and `standards/` each
+# hold a suite this glob did not name — 29 checks and 15, both green, both run
+# by nobody for as long as they have existed. Found by asking what the glob
+# does NOT match rather than by reading it, which is the only way this kind of
+# hole is ever found.
+for t in tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.py \
+         skills/*/tests/test-*.mjs skills/*/tests/test-*.js skills/*/tests/test-*.py \
+         plugins/*/tests/test-*.mjs plugins/*/tests/test-*.js plugins/*/tests/test-*.py \
+         standards/tests/test-*.sh; do
+    [ -e "$t" ] || continue
+    step "$(printf '%s' "$t" | sed 's|^\(tools\|skills\|plugins\|standards\)/||; s|/tests/|/|')"
+    case "$t" in *.py) OUT=$(python3 "$t" 2>&1) ;; *.sh) OUT=$(sh "$t" 2>&1) ;; *) OUT=$(node "$t" 2>&1) ;; esac
+    if [ $? -eq 0 ]; then
+        ok
+    else
+        bad "$(printf '%s' "$OUT" | tail -20)"
+    fi
+done
+
+[ "$FAIL" = "0" ] && echo "green" || summary
+exit $FAIL

@@ -1,0 +1,344 @@
+{
+  "_about": "Values the toolkit's tools read, kept out of the standards' prose (toolkit-standard §C clause F), grouped by the figma-standard section they serve. Naming is not here: the house's naming preferences are standards/naming-preferences.json, which every tool reads and the audit only checks against. audit-defaults: the house's answer for each setting; a project's audit-settings block overrides it section by section. Tools read one flat object per library, which tools/snapshot/projects.cjs auditContext builds by merging the sections and deriving the values under audit-keys.derived, so each fact is stated once. audit-keys: every key, what it means and the rule it serves. tools/toolkit-check/check-standards.mjs refuses a key that is unregistered or read by nothing, and heals a project value that restates a house default.",
+  "audit-defaults": {
+    "optionOrder": {
+      "State": [
+        "Rest",
+        "Focus",
+        "Hover",
+        "Press",
+        "Loading"
+      ],
+      "Disabled": [
+        "False",
+        "True"
+      ],
+      "Size": [
+        "2xl",
+        "xl",
+        "lg",
+        "md",
+        "sm",
+        "xs",
+        "2xs"
+      ],
+      "Validation": [
+        "None",
+        "Error"
+      ]
+    },
+    "variants": {
+      "stateAxis": "State",
+      "pointerStates": [
+        "Focus",
+        "Hover",
+        "Press"
+      ],
+      "disabledAxis": "Disabled",
+      "focusState": "Focus",
+      "sizeAxis": "Size",
+      "sizeAxisMatch": "[Ss]ize",
+      "sizeShared": true,
+      "emphasisAxes": [
+        "Role",
+        "Feedback"
+      ]
+    },
+    "pages": {
+      "statusMarker": "🚧",
+      "finishedMarker": "❖",
+      "categoryMarker": "🔷",
+      "deprecatedMarker": "🚫",
+      "deprecatedCategory": "DEPRECATED",
+      "pinnedCategories": [
+        "AUXILIARY"
+      ],
+      "dividerPage": "^\\s*-+\\s*$",
+      "pageMarker": "^[^A-Za-z0-9_]+",
+      "pageSections": [
+        "Examples",
+        "Component",
+        "Parts",
+        "Properties",
+        "Matrix"
+      ],
+      "pageSectionComponent": "Section header",
+      "matrixSection": "Matrix",
+      "exemptPages": [
+        "Cover"
+      ]
+    },
+    "tokens": {
+      "textRole": "Text"
+    },
+    "components": {
+      "descriptionPlaceholder": "^(todo|tbd|wip|lorem)",
+      "minDescription": 12,
+      "minTarget": 24,
+      "minText": 12
+    },
+    "interface": {
+      "maxSegments": 4,
+      "shiftTolerance": 1,
+      "settleMs": 1500,
+      "viewportWidth": 1280,
+      "viewportHeight": 900,
+      "phoneWidth": 390,
+      "shotMaxHeight": 6000
+    },
+    "codeProps": {
+      "inherited": [
+        "children",
+        "title",
+        "id",
+        "className",
+        "style",
+        "role",
+        "tabIndex",
+        "hidden",
+        "lang",
+        "dir",
+        "disabled",
+        "required",
+        "value",
+        "placeholder",
+        "checked",
+        "name",
+        "readOnly",
+        "autoFocus"
+      ],
+      "sameJob": {
+        "label text": [
+          "label",
+          "children"
+        ],
+        "title text": [
+          "title"
+        ],
+        "description text": [
+          "description",
+          "children"
+        ],
+        "error text": [
+          "errorText"
+        ],
+        "placeholder text": [
+          "placeholder"
+        ],
+        "value text": [
+          "value"
+        ],
+        "selected": [
+          "selected",
+          "checked",
+          "active"
+        ],
+        "left icon": [
+          "leftIcon"
+        ],
+        "right icon": [
+          "rightIcon"
+        ],
+        "icon": [
+          "icon"
+        ],
+        "counter": [
+          "badge",
+          "count",
+          "counter"
+        ],
+        "role": [
+          "variant"
+        ],
+        "validation": [
+          "error"
+        ],
+        "type": [
+          "variant",
+          "type"
+        ],
+        "initial text": [
+          "initials"
+        ],
+        "initials text": [
+          "initials"
+        ],
+        "prefix": [
+          "prefix"
+        ],
+        "prefix text": [
+          "prefix"
+        ],
+        "suffix": [
+          "suffix"
+        ],
+        "suffix text": [
+          "suffix"
+        ],
+        "menu": [
+          "open"
+        ]
+      },
+      "notDesign": "^on[A-Z]|^(className|style|ref|key|children)$|TestId$"
+    },
+    "frameworks": {
+      "mui": {
+        "instance": "Mui{Name}-root",
+        "partClass": "^Mui[A-Za-z]+-([a-z][A-Za-z]*)$",
+        "partModifiers": "^(size|color|variant|filled|outlined|focus|disabled|clickable|deletable)",
+        "name": "MUI",
+        "types": "node_modules/@mui/material/{Name}/{Name}.d.ts",
+        "modules": "@mui/material/",
+        "wrappers": [
+          "StandardProps",
+          "InternalStandardProps"
+        ],
+        "unionWrapper": "OverridableStringUnion",
+        "sameJob": {
+          "error text": [
+            "helperText"
+          ],
+          "helper text": [
+            "helperText"
+          ],
+          "left icon": [
+            "startIcon"
+          ],
+          "right icon": [
+            "endIcon"
+          ],
+          "icon": [
+            "startIcon",
+            "startAdornment"
+          ],
+          "feedback": [
+            "severity",
+            "color"
+          ],
+          "prefix": [
+            "startAdornment"
+          ],
+          "prefix text": [
+            "startAdornment"
+          ],
+          "suffix": [
+            "endAdornment"
+          ],
+          "suffix text": [
+            "endAdornment"
+          ]
+        },
+        "notDesign": "^(sx|component|slots|slotProps|classes)$|Props$"
+      }
+    }
+  },
+  "audit-keys": {
+    "project": {
+      "libraries": "overrides for a components library the snapshot-routing block routes, keyed by its Figma file key; which libraries exist, and their roles, is the routing block's to say",
+      "language": "the dialect of the words the toolkit writes for this project (en-US, en-GB); absent means en-GB, the toolkit's own, and by the maintainer's ruling it is never a house default (toolkit-standard §D 20)",
+      "interface": "a project's own interface limits, over the house's (design-standard; read by tools/ui-check/check.mjs)"
+    },
+    "library": {
+      "name": "the library's display name",
+      "codeTarget": "platform the component validator judges against",
+      "framework": "component framework the code is built on",
+      "code": "where the code lives: `repo` and `components` folder; how its markup names things where its framework profile does not (`partClass`, a regular expression whose group names an element's part; `iconClass`, one whose group names an icon); for a library built elsewhere, `parity`, the parity engine's facts about it (host and how to build it, its one tier, where its mappings are relative to the project's home, its generated token files), read by tools/parity/project.mjs loadParity",
+      "source": "which is the components' source of truth: absent, Figma (the official contract is the snapshot's reading); \"contract\", the official contracts in the project's home (contracts/<component key>.json), which a snapshot never overwrites and Figma's reading is compared with. Set and cleared by tools/component-contract/official.mjs --switch",
+      "draw": "how a contract is drawn into this library in Figma (tools/component-contract/to-figma.mjs): `iconContainer`, the name of the component an icon sits in; `scratch`, the key of the file a new component is drawn into, never the library (set in the contract editor's Settings)",
+      "frameworkComponents": "Figma component name to framework component name",
+      "descriptionStructure": "the description format, in words",
+      "_notes": "free-text notes for people; no check reads them",
+      "optionOrder": "the optionOrder section",
+      "variants": "the variants section",
+      "pages": "the pages section",
+      "tokens": "the tokens section",
+      "components": "the components section",
+      "icons": "the icons section, for an icon library"
+    },
+    "icons": {
+      "names": "the icon set an icon library takes its names from (lucide); absent, names are not checked"
+    },
+    "optionOrder": {
+      "<axis name>": "the authored option order of that variant property (figma-standard rule 1; figma-standard rule 4; figma-standard rule 6)"
+    },
+    "variants": {
+      "stateAxis": "name of the interaction-state variant property (figma-standard rule 4)",
+      "pointerStates": "the state-axis options a browser or platform supplies (focus, hover, press), which code forces rather than takes as a prop (figma-standard rule 4)",
+      "disabledAxis": "the variant axis that sits immediately before the state axis (figma-standard rule 1)",
+      "focusState": "the state-axis option for keyboard focus, which every interactive component has (figma-standard rule 39)",
+      "firstAxis": "the axis every component set leads with, where a project fixes one (project)",
+      "sizeAxis": "name of the size variant property (figma-standard rule 6)",
+      "sizeAxisMatch": "regular expression for property names that are size properties under another name (figma-standard rule 6)",
+      "sizeShared": "true to ask where one size name is drawn at different heights across components (figma-standard rule 6)",
+      "emphasisAxes": "the axes that sit between the size axis and the disabled axis, in order (figma-standard rule 1's Role → Feedback/…)"
+    },
+    "pages": {
+      "statusMarker": "leading page and component marker of work in progress, stripped from generated text (figma-standard rule 13)",
+      "finishedMarker": "leading page marker of a finished component page (figma-standard rule 11)",
+      "categoryMarker": "the mark a category header page starts with, before the category in capitals (figma-standard rule 11)",
+      "deprecatedMarker": "the mark a deprecated component's page and name carry (figma-standard rule 14)",
+      "deprecatedCategory": "category that holds deprecated pages (figma-standard rule 14)",
+      "pinnedCategories": "categories pinned last, in this order, before the deprecated one, which is always last (figma-standard rule 11; figma-standard rule 14)",
+      "excludeCategories": "categories left out of the audit (project)",
+      "componentPages": "regular expression for the pages an audit reads; absent, the pages carrying the finished or in-progress marker (figma-standard rule 11)",
+      "familyCategories": "categories whose members drop the family word, beyond those the data pairs by plural (`TABLES` holding `Table`); figma-standard rule 9, project",
+      "dividerPage": "regular expression for divider pages (figma-standard rule 11)",
+      "pageMarker": "regular expression for the leading marker stripped from page names when they are compared (figma-standard rule 11)",
+      "pageSections": "the component page's section cards, in order (figma-standard rule 15)",
+      "pageSectionComponent": "the doc component whose instances are a page's section cards (figma-standard rule 15)",
+      "matrixSection": "the section present exactly when the page's primary component has variant axes or booleans (figma-standard rule 15)",
+      "exemptPages": "page names the detached-instance scan skips (figma-standard rule 27)"
+    },
+    "tokens": {
+      "semantic": "name of the semantic variable collection, or a list of names (project)",
+      "spacing": "spacing scale values (project)",
+      "radius": "radius scale values (project)",
+      "allowedKeys": "variable collection keys a binding may come from (project)",
+      "brandGroup": "path group in the source library whose child names the brand, `<brandGroup>/<brand>/...`; the extension check reads it (project)",
+      "textRole": "the token path segment a text layer's fill binds to (figma-standard rule 28)",
+      "local": "variable collections the file keeps for itself (layout values one file needs), outside the system: no Foundations page, no findings (project)"
+    },
+    "components": {
+      "descriptionPlaceholder": "regular expression for a description that is a placeholder (figma-standard rule 25)",
+      "minDescription": "fewest characters a real description has (figma-standard rule 25)",
+      "minTarget": "smallest interactive target in px; 24 is WCAG 2.2 SC 2.5.8, level AA (figma-standard rule 26)",
+      "minText": "smallest text size in px (figma-standard rule 26)",
+      "overlayComponents": "components whose instances cover the layer they sit in, such as a state layer: each is locked, stretched both ways, at 0,0 and its parent's size (a project's own rule, stated in its context document); absent, not checked"
+    },
+    "derived": {
+      "componentPages": "from finishedMarker and statusMarker, where a library sets none",
+      "sectionHeader": "from categoryMarker: the header page of a category",
+      "pinnedLast": "from categoryMarker, pinnedCategories and deprecatedCategory: the header pages kept last",
+      "excludeSections": "from categoryMarker and excludeCategories",
+      "deprecatedPagePrefix": "deprecatedMarker",
+      "deprecatedNamePrefix": "from deprecatedMarker and deprecatedCategory: `[🚫 DEPRECATED] - `",
+      "axisOrder": "from sizeAxis, emphasisAxes, disabledAxis and stateAxis: the order a component's axes take (figma-standard rule 1), which a contract read from code and a drawing both follow"
+    },
+    "interface": {
+      "maxSegments": "the most choices a facet shows as segmented buttons; past it the facet is a menu (design-standard rule 4)",
+      "shiftTolerance": "CSS pixels a tab bar may move when its tabs are switched before the layout counts as jumping (design-standard rule 2)",
+      "settleMs": "milliseconds a page is given to settle after a tab is chosen before the layout is measured (design-standard rule 2)",
+      "viewportWidth": "the CSS width a page is measured at unless the run names one (design-standard)",
+      "viewportHeight": "the CSS height a page is measured at (design-standard)",
+      "phoneWidth": "the CSS width a page's phone screenshot is taken at (frontend-build: look before you ship)",
+      "shotMaxHeight": "the tallest a full-page screenshot is taken, in CSS pixels, so a page of thousands of rows still produces an image (frontend-build: look before you ship)"
+    },
+    "codeProps": {
+      "inherited": "the props every component takes from the platform (children, the global attributes), which no library's own types declare",
+      "sameJob": "the code props that do a design prop's job in the words code libraries share, keyed by the design prop's words: a join the rule cannot make by name. A framework's profile adds its own words after these",
+      "notDesign": "a regular expression for code props no design draws (handlers, styling escapes, test hooks), left out of the code's own API. A framework's profile adds its own"
+    },
+    "frameworks": {
+      "instance": "the class a component framework gives a component's root element, {Name} its own name for the component (tools/component-contract/from-code.mjs, where a library's `framework` names the profile)",
+      "partClass": "a regular expression whose group names the part an element is, from a class the framework gives it (tools/component-contract/from-code.mjs)",
+      "partModifiers": "a regular expression for the part names partClass catches that are a modifier, not a part (a size, a colour, a state)",
+      "name": "the framework's name as a reader knows it, for the pages and labels that name the other side of a comparison",
+      "types": "where the framework's own definition of a component is, relative to the code repo, `{Name}` its name for the component (the code audit reads each prop's values there)",
+      "modules": "the module path the framework's components are imported from, followed into the repo's node_modules when a type is read",
+      "wrappers": "the framework's type wrappers that take keys away like Omit and add members of their own",
+      "unionWrapper": "the framework's wrapper around a union of strings that a library may extend (its values are the union's)",
+      "sameJob": "the framework's own words for a design prop's job, added after codeProps.sameJob's",
+      "notDesign": "a regular expression for the framework's own props no design draws (slot plumbing, its styling escapes), added to codeProps.notDesign"
+    }
+  }
+}

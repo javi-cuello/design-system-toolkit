@@ -1,0 +1,8 @@
+{
+  "name": "component-guidelines",
+  "version": "2.0.4",
+  "private": true,
+  "devDependencies": {
+    "@figma/plugin-typings": "*"
+  }
+}

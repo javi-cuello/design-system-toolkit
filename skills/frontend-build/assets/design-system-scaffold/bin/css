@@ -1,0 +1,32 @@
+#!/bin/sh
+# Compile assets/design-system/index.sass → assets/css/main.css.
+# The compiled file is committed, so a deploy needs no build step; this is a
+# development convenience. `bin/css --watch` recompiles on save.
+#
+# The entry's components list is generated from the component folders by the
+# toolkit's sass-entry.mjs, found where snapshot.config.json names the toolkit;
+# `bin/css --check` diffs the list and compiles nothing.
+set -e
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO"
+ENTRY=assets/design-system/index.sass
+TOOLKIT=""
+if [ -f snapshot.config.json ]; then
+  TOOLKIT="$(node -e "console.log((require('$REPO/snapshot.config.json').toolkit || '').replace(/^~/, require('os').homedir()))")"
+fi
+SASS_ENTRY="$TOOLKIT/skills/frontend-build/scripts/sass-entry.mjs"
+if [ -z "$TOOLKIT" ] || [ ! -f "$SASS_ENTRY" ]; then
+  if [ -z "$TOOLKIT" ]; then
+    echo "bin/css: no snapshot.config.json names the toolkit, so $ENTRY's components list is not generated: connect the repo with the toolkit's tools/project-check/init.mjs" >&2
+  else
+    echo "bin/css: snapshot.config.json names the toolkit at $TOOLKIT, which has no $SASS_ENTRY, so $ENTRY's components list is not generated: fix the toolkit path" >&2
+  fi
+  if [ "$1" = "--check" ]; then exit 1; fi
+elif [ "$1" = "--check" ]; then
+  exec node "$SASS_ENTRY" "$ENTRY" --check
+else
+  node "$SASS_ENTRY" "$ENTRY"
+fi
+[ -d node_modules/sass ] || npm install
+if [ "$1" = "--watch" ]; then exec npm run css:watch; fi
+exec npm run css

@@ -1,0 +1,23 @@
+You are pairing components of a design library in Figma with the components in the code built from it.
+
+Two lists follow. FIGMA holds Figma components the code has no component of the same name for. CODE holds code components Figma has no component of the same name for. A few are one component under two names. Most are not.
+
+Propose a pair only where a designer and an engineer would agree it is the same component: the same job in the interface, not a shared word. "Text area input" and TextArea are a pair. "Scroll bar" and BulkActionBar are not. Neither is a component and one of its parts, nor a component and the primitive it is built from (Button and ButtonBase).
+
+A CODE entry with `in` sits inside that folder, which says what it belongs to: ContextualPanel in Table is the table's contextual panel.
+
+A FIGMA entry with `builtAs` is already accounted for: the project records it as that component of its framework, and the code has one of that name. Propose a pair for it only where a CODE component is plainly the closer match, as TextArea is for a "Text area input" recorded as TextField.
+
+A Figma component appears in at most one pair, and so does a code component. Leave out anything you are unsure of: a missing suggestion costs nothing, and a wrong one costs the reader's trust in the rest.
+
+Decisions this project has already made. Do not propose a pair one of them rejects:
+{{RULINGS}}
+
+FIGMA
+{{FIGMA}}
+
+CODE
+{{CODE}}
+
+Answer with JSON only, in this shape:
+{"pairs":[{"figma":"<its name, exactly as listed>","code":"<its name, exactly as listed>","why":"<one plain sentence a designer can check, 25 words at most>"}]}

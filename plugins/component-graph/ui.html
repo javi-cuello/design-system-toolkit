@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<style>
+/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v2 end */
+
+  /* Figma injects --figma-color-* tokens (themeColors:true), so the plugin
+     follows the editor's light/dark theme. Fallbacks keep it usable elsewhere.
+     Every colour below resolves to an injected token — nothing is hardcoded
+     except the fallbacks, per skill-standard §B 4. */
+  :root {
+    --bg:          var(--figma-color-bg-secondary, #f2f2f2);
+    --panel:       var(--figma-color-bg, #ffffff);
+    --inset:       var(--figma-color-bg-tertiary, #ebebeb);
+    --text:        var(--figma-color-text, #1e1e1e);
+    --muted:       var(--figma-color-text-secondary, #8c8c8c);
+    --faint:       var(--figma-color-text-tertiary, #b3b3b3);
+    --disabled:    var(--figma-color-text-disabled, #b3b3b3);
+    --border:      var(--figma-color-border, #e0e0e0);
+    --accent:      var(--figma-color-bg-brand, #0d99ff);
+    --accent-text: var(--figma-color-text-brand, #0d99ff);
+    --accent-tint: var(--figma-color-bg-selected, #e8f3ff);
+    --hover:       var(--figma-color-bg-hover, #f0f0f0);
+    --warn-bg:     var(--figma-color-bg-warning-tertiary, #fdf3e0);
+    --warn-bg-2:   var(--figma-color-bg-warning-secondary, #ffe8c2);
+    --warn-text:   var(--figma-color-text-warning, #8a5a1f);
+    --danger-bg:   var(--figma-color-bg-danger-tertiary, #fde8e8);
+    --danger-text: var(--figma-color-text-danger, #b3261e);
+    --knob:        var(--figma-color-icon-onbrand, #ffffff);
+    /* A dense inspector toolbar sits below ui-base's 32px --control-h; declared
+       once here so every small control states its height rather than inheriting
+       the baseline's by accident (skill-standard §B 4, collision safety). */
+    --control-h-sm: 26px;
+    --control-h-xs: 22px;
+  }
+  * { box-sizing: border-box; }
+  /* One focus color everywhere: the browser's default ring follows the OS
+     accent (hence stray orange rings); replace it with the plugin accent,
+     shown only for keyboard focus. */
+  button:focus, input:focus, [tabindex]:focus { outline: none; }
+  button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  #search:focus-visible { outline: none; } /* uses its border highlight instead */
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden;
+    font-size: 11px;
+  }
+  button { font-family: inherit; }
+  #app { display: flex; height: 100%; }
+
+  /* ── Sidebar ─────────────────────────────────────────── */
+  #sidebar {
+    width: 248px; min-width: 248px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  #app.sidebar-hidden #sidebar { display: none; }
+  #sidebar-head { padding: 12px 12px 10px; border-bottom: 1px solid var(--border); }
+  #sidebar-head .row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin-bottom: 10px;
+  }
+  #file-name {
+    font-weight: 600; font-size: 13px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #component-total { color: var(--faint); flex: none; }
+
+  .segmented {
+    display: none; padding: 2px; margin-bottom: 8px;
+    background: var(--inset); border-radius: 8px;
+  }
+  .segmented.visible { display: flex; }
+  /* Tabs are <button>s, so they must restate height AND :hover — otherwise
+     ui-base's bare `button:hover{background:brand-hover}` paints them blue. */
+  .segment {
+    flex: 1; height: var(--control-h-sm); box-sizing: border-box;
+    padding: 0; text-align: center;
+    border: none; background: transparent; border-radius: 6px;
+    color: var(--muted); cursor: default; font-size: 11px;
+  }
+  .segment:hover { background: transparent; color: var(--text); }
+  .segment.active, .segment.active:hover {
+    background: var(--panel); color: var(--text); font-weight: 500;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  #search {
+    width: 100%; height: var(--input-h); box-sizing: border-box;
+    padding: 0 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text);
+    font-size: 12px; outline: none;
+  }
+  #search:focus { border-color: var(--figma-color-border-selected, #0d99ff); }
+
+  #pub-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px; color: var(--muted); user-select: none;
+  }
+  #pub-row.hidden { display: none; }
+  /* Hover is restated on both states: without it ui-base's `button:hover`
+     turns the OFF switch brand-blue, which reads as ON. */
+  .switch {
+    width: 30px; height: 18px; flex: none; box-sizing: border-box;
+    border: none; padding: 0; border-radius: 9px;
+    background: var(--figma-color-bg-disabled, #d0d0d0);
+    position: relative; cursor: default; transition: background 0.15s;
+  }
+  .switch:hover { background: var(--figma-color-bg-disabled, #d0d0d0); }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--knob); transition: left 0.15s;
+  }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]:hover { background: var(--figma-color-bg-brand-hover, #007be5); }
+  .switch[aria-checked="true"]::after { left: 14px; }
+  @media (prefers-reduced-motion: reduce) {
+    .switch, .switch::after { transition: none; }
+  }
+
+  /* External tab only: the library check is a network round-trip per component,
+     so it is always an explicit action, never part of a scan. */
+  #libcheck-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-top: 10px; color: var(--muted); user-select: none;
+  }
+  #libcheck-row.hidden { display: none; }
+  #libcheck-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #libcheck-status.bad { color: var(--danger-text); }
+  #libcheck-btn {
+    height: var(--control-h-xs); box-sizing: border-box; flex: none;
+    padding: 0 8px; font-size: 10px; border-radius: 5px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: default;
+  }
+  #libcheck-btn:hover:not(:disabled) { background: var(--hover); }
+  #libcheck-btn:disabled {
+    background: var(--panel); color: var(--disabled); border-color: var(--border);
+  }
+
+  #sidebar-status {
+    display: none; padding: 5px 12px 6px;
+    font-size: 10px; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  #sidebar-status-text {
+    display: block; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #sidebar-progress {
+    margin-top: 4px; height: 2px; border-radius: 1px;
+    background: var(--inset); overflow: hidden;
+  }
+  #sidebar-progress-fill {
+    height: 100%; width: 0%; border-radius: 1px;
+    background: var(--accent); transition: width 0.15s linear;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #sidebar-progress-fill { transition: none; }
+  }
+
+  #component-list { flex: 1; overflow-y: auto; padding: 6px 6px 14px; outline: none; }
+  .group-head {
+    display: flex; align-items: center; gap: 5px;
+    padding: 10px 6px 4px; cursor: default; user-select: none;
+    font-size: 11px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden;
+  }
+  .group-head .chev {
+    flex: none; width: 10px; color: var(--faint); font-size: 9px;
+    transition: transform 0.1s;
+  }
+  .group-head.collapsed .chev { transform: rotate(-90deg); }
+  .group-head .g-name { overflow: hidden; text-overflow: ellipsis; }
+  .group-head .g-count { color: var(--faint); font-weight: 400; }
+
+  .comp-item {
+    display: flex; align-items: center; gap: 8px;
+    height: 30px; padding: 0 8px 0 21px;
+    border-radius: 6px; cursor: default; white-space: nowrap;
+    font-size: 12px;
+  }
+  .comp-item:hover { background: var(--hover); }
+  .comp-item.active { background: var(--accent-tint); }
+  .comp-item.focused { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .comp-icon { flex: none; font-size: 9px; color: var(--accent); width: 11px; text-align: center; }
+  .comp-item.is-remote .comp-icon, .comp-item.is-unpublished .comp-icon { color: var(--faint); }
+  .comp-item.is-gone .comp-icon { color: var(--danger-text); }
+  .comp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .comp-usage { flex: none; color: var(--faint); font-variant-numeric: tabular-nums; font-size: 11px; }
+  .comp-usage.unused {
+    color: var(--warn-text); background: var(--warn-bg);
+    padding: 1px 6px; border-radius: 8px; font-size: 9px;
+  }
+  .comp-usage.gone {
+    color: var(--danger-text); background: var(--danger-bg);
+    padding: 1px 6px; border-radius: 8px; font-size: 9px;
+  }
+  #list-empty { display: none; padding: 24px 16px; color: var(--muted); text-align: center; }
+  .list-hint {
+    padding: 12px 12px 4px; font-size: 10px; line-height: 1.5;
+    color: var(--faint);
+  }
+
+  /* ── Main area ───────────────────────────────────────── */
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; gap: 8px;
+    border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  #toolbar .left-controls { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #toolbar .right-controls { display: flex; align-items: center; gap: 8px; flex: none; }
+  #toolbar .title {
+    font-weight: 600; font-size: 12px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #toolbar .title .lib-tag { font-weight: 500; color: var(--muted); font-size: 10px; margin-left: 6px; }
+  #toolbar .title .lib-tag.danger { color: var(--danger-text); }
+  #toolbar button {
+    height: var(--control-h-sm); box-sizing: border-box;
+    font-size: 11px; padding: 0 10px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: default; flex: none;
+  }
+  #toolbar button:hover:not(:disabled) { background: var(--hover); }
+  /* Figma greys disabled controls with its own tokens; dimming the whole
+     button with opacity is the anti-pattern skill-standard §B 4 calls out. */
+  #toolbar button:disabled {
+    background: var(--panel); color: var(--disabled);
+    border-color: var(--border); cursor: default;
+  }
+  #toolbar button.nav-btn { padding: 0 9px; font-size: 13px; line-height: 1; }
+
+  .strip {
+    display: none; align-items: center; gap: 8px;
+    padding: 6px 12px; font-size: 10.5px; border-bottom: 1px solid var(--border);
+  }
+  .strip.visible { display: flex; }
+  #stale-strip, #unresolved-strip { background: var(--warn-bg); color: var(--warn-text); }
+  .strip button {
+    height: var(--control-h-xs); box-sizing: border-box; flex: none;
+    font-size: 10px; padding: 0 8px;
+    border: 1px solid currentColor; border-radius: 5px;
+    background: transparent; color: inherit; cursor: default;
+  }
+  #stale-strip button:hover { background: var(--warn-bg-2); }
+  #stale-strip .strip-text { flex: 1; }
+
+  #content { flex: 1; display: flex; min-height: 0; }
+  #canvas-wrap { flex: 1; overflow: auto; background: var(--bg); display: flex; }
+  #svg { margin: auto; flex-shrink: 0; }
+  #empty-state, #loading-state {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    align-self: stretch; margin: 0 auto; gap: 10px;
+    color: var(--muted); font-size: 13px; text-align: center; padding: 0 40px;
+  }
+  .spinner {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2.5px solid var(--border); border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; border-top-color: var(--border); }
+  }
+
+  /* ── Details panel ───────────────────────────────────── */
+  #details {
+    width: 252px; min-width: 252px; display: none;
+    background: var(--panel); border-left: 1px solid var(--border);
+    flex-direction: column;
+  }
+  #details.open { display: flex; }
+  #details-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 12px; border-bottom: 1px solid var(--border);
+  }
+  #details-title { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #details-close {
+    flex: none; width: 24px; height: 24px; box-sizing: border-box;
+    border: none; background: transparent; color: var(--muted);
+    font-size: 13px; cursor: default; padding: 0; border-radius: 4px;
+  }
+  #details-close:hover { background: var(--hover); color: var(--text); }
+  #details-body { flex: 1; overflow-y: auto; padding: 4px 12px 16px; }
+  .d-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .d-row:last-child { border-bottom: none; }
+  .d-label {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 3px;
+  }
+  .d-value { font-size: 12px; line-height: 1.45; overflow-wrap: break-word; }
+  .d-value .sub { color: var(--muted); }
+  .d-value.muted { color: var(--muted); font-style: italic; }
+  .d-desc.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .read-more {
+    display: none; height: auto; margin-top: 3px; padding: 0;
+    border: none; background: transparent; box-sizing: border-box;
+    color: var(--accent-text); font-size: 11px; cursor: default;
+  }
+  .read-more:hover { background: transparent; text-decoration: underline; }
+  .read-more.visible { display: block; }
+  /* Row hover is a background wash, the way Figma's own lists behave —
+     recolouring the label blue was the plugin inventing its own idiom. */
+  .d-line {
+    display: flex; justify-content: space-between; gap: 8px;
+    margin: 0 -6px; padding: 2px 6px; border-radius: 4px;
+    cursor: default;
+  }
+  .d-line:hover { background: var(--hover); }
+  .d-line .l-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .d-key { font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--muted); }
+  .d-badge {
+    display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10px;
+    background: var(--inset); color: var(--muted);
+  }
+  .d-badge.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .d-badge.danger { background: var(--danger-bg); color: var(--danger-text); }
+
+  /* ── Graph SVG ───────────────────────────────────────── */
+  .col-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    fill: var(--muted); font-weight: 600;
+  }
+  .node-rect { stroke: var(--border); stroke-width: 1; cursor: default; fill: var(--panel); }
+  .node-rect.selected { stroke: var(--accent); stroke-width: 2; fill: var(--accent-tint); }
+  .node-rect.remote { stroke-dasharray: 4 3; }
+  .node-rect.gone { stroke: var(--danger-text); stroke-dasharray: 4 3; }
+  .node-rect.more { stroke-dasharray: 3 3; fill: transparent; }
+  .node-label { font-size: 11px; fill: var(--text); pointer-events: none; }
+  .node-sub.gone { fill: var(--danger-text); }
+  .node-label.more { fill: var(--muted); font-style: italic; }
+  .node-sub { font-size: 8.5px; fill: var(--faint); pointer-events: none; }
+  .node-count { font-size: 9px; fill: var(--muted); pointer-events: none; }
+  .empty-col-label { font-size: 11px; fill: var(--muted); font-style: italic; }
+  .empty-col-label.action { cursor: default; }
+  .empty-col-label.action:hover { fill: var(--accent-text); }
+  .edge-path { fill: none; stroke-width: 1.75; opacity: 0.85; }
+  /* A token fill, not a brightness filter — darkening is the wrong direction
+     in dark theme, where a hover should lift rather than sink. */
+  .node-group:hover .node-rect:not(.selected) { fill: var(--hover); }
+  .node-group { cursor: default; }
+  /* Hover is a real fill now, so it would be read back by the canvas
+     serializer if the pointer happened to rest on a node. */
+  #svg.exporting .node-group { pointer-events: none; }
+  .g-info { cursor: default; }
+  .g-info circle { fill: var(--panel); stroke: var(--faint); stroke-width: 1; }
+  .g-info text {
+    font-size: 8px; font-style: italic; font-family: Georgia, serif;
+    fill: var(--muted); pointer-events: none;
+  }
+  .g-info:hover circle { stroke: var(--accent); }
+  .g-info:hover text { fill: var(--accent-text); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <aside id="sidebar">
+    <div id="sidebar-head">
+      <div class="row">
+        <span id="file-name">Components</span>
+        <span id="component-total"></span>
+      </div>
+      <div class="segmented" id="scope-segmented" role="tablist">
+        <button class="segment active" data-scope="local" role="tab">Local</button>
+        <button class="segment" data-scope="external" role="tab">External</button>
+      </div>
+      <input id="search" type="text" placeholder="Search components" spellcheck="false" />
+      <div id="pub-row">
+        <span>Show unpublished</span>
+        <button class="switch" id="pub-switch" role="switch" aria-checked="false" aria-label="Show unpublished components"></button>
+      </div>
+      <div id="libcheck-row" class="hidden">
+        <span id="libcheck-status">Library links not checked</span>
+        <button id="libcheck-btn" title="Ask each library whether these components still exist there">Check</button>
+      </div>
+    </div>
+    <div id="sidebar-status">
+      <span id="sidebar-status-text"></span>
+      <div id="sidebar-progress"><div id="sidebar-progress-fill"></div></div>
+    </div>
+    <div id="component-list" tabindex="0"></div>
+    <div id="list-empty">No components match.</div>
+  </aside>
+
+  <div id="main">
+    <div id="toolbar">
+      <div class="left-controls">
+        <button id="sidebar-toggle" title="Show or hide the sidebar">☰</button>
+        <button id="back-btn" class="nav-btn" disabled title="Back">‹</button>
+        <button id="forward-btn" class="nav-btn" disabled title="Forward">›</button>
+        <span class="title" id="toolbar-title">Component Graph</span>
+      </div>
+      <div class="right-controls">
+        <button id="canvas-btn" disabled title="Insert this graph as an editable frame on the canvas">Add to canvas</button>
+        <button id="refresh-btn" title="Rescan the file, including recent edits">Refresh</button>
+      </div>
+    </div>
+    <div id="stale-strip" class="strip">
+      <span class="strip-text">The file changed since the last scan — counts may be outdated.</span>
+      <button id="stale-refresh">Refresh</button>
+    </div>
+    <div id="unresolved-strip" class="strip"></div>
+    <div id="content">
+      <div id="canvas-wrap">
+        <div id="empty-state" style="display:flex;">Loading…</div>
+        <div id="loading-state">
+          <div class="spinner"></div>
+          <span id="loading-text">Building graph…</span>
+        </div>
+        <svg id="svg" xmlns="http://www.w3.org/2000/svg" style="display:none;"></svg>
+      </div>
+      <aside id="details">
+        <div id="details-head">
+          <span id="details-title"></span>
+          <button id="details-close" title="Close details">✕</button>
+        </div>
+        <div id="details-body"></div>
+      </aside>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const svg = $('svg'), svgNS = "http://www.w3.org/2000/svg";
+  const emptyState = $('empty-state'), loadingState = $('loading-state'), loadingText = $('loading-text');
+  const staleStrip = $('stale-strip'), unresolvedStrip = $('unresolved-strip');
+  const showStrip = (el, on) => el.classList.toggle('visible', !!on);
+  const toolbarTitle = $('toolbar-title');
+  const listEl = $('component-list'), listEmpty = $('list-empty');
+  const detailsEl = $('details');
+
+  const FAN_OUT_THRESHOLD = 18;
+  const QUALITY = { none: 0, partial: 1, cached: 2, final: 3 };
+  const EXTERNAL_FALLBACK_GROUP = 'From libraries'; // externals whose names carry no "Library /" prefix
+  const MISSING_GROUP = 'Not found in any library';  // pinned first in the External tab
+  const ORPHAN_GROUP = 'Deleted from this file';     // pinned first in the Local tab
+
+  let expanded = { left: false, right: false }; // per-column "+N more" state
+  let lastGraph = null;
+  let components = [];
+  let catalogQuality = QUALITY.none;
+  let activeId = null;             // component shown in the graph
+  let focusedId = null;            // keyboard cursor in the sidebar
+  let currentDetailsId = null;     // component shown in the details panel
+  let scope = 'local';             // 'local' | 'external'
+  let showUnpublished = false;
+  let collapsedGroups = new Set();
+  let flatVisible = [];            // visible rows, in order, for keyboard nav
+  let indexing = true;
+  let lastProgress = null;
+  let libStatus = new Map();       // componentId → 'present' | 'missing'
+  let libCheckState = 'idle';      // 'idle' | 'running' | 'done' | 'inconclusive'
+  let libCheckProgress = '';
+
+  const post = (msg) => parent.postMessage({ pluginMessage: msg }, '*');
+  // Refresh carries the open details component so the panel is rebuilt from
+  // the fresh index too.
+  const requestRefresh = () => {
+    // The main thread drops its verdicts on refresh — they were probed against
+    // the old index — so the UI must forget them too, not show stale badges.
+    libStatus = new Map();
+    libCheckState = 'idle';
+    libCheckProgress = '';
+    post({
+      type: 'refresh',
+      detailsId: detailsEl.classList.contains('open') ? currentDetailsId : null
+    });
+  };
+  const openDetails = (id) => post({ type: 'get-details', id });
+
+  // ── Add to canvas: serialize the rendered SVG into a primitive display
+  // list with all CSS-variable colors resolved, so the main thread can
+  // materialize native nodes that match the on-screen graph exactly. ─────────
+  function parseCssColor(s) {
+    if (!s || s === 'none') return null;
+    const m = s.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)/);
+    if (!m) return null;
+    return { r: +m[1] / 255, g: +m[2] / 255, b: +m[3] / 255, a: m[4] === undefined ? 1 : +m[4] };
+  }
+
+  function svgToSpec(name) {
+    const items = [];
+    svg.classList.add('exporting'); // freeze out :hover before reading styles
+    for (const node of svg.querySelectorAll('path, rect, text')) {
+      if (node.closest('.g-info')) continue;                 // UI affordance, not content
+      if (node.classList.contains('action')) continue;       // "See details →" hint
+      const cs = getComputedStyle(node);
+
+      if (node.tagName === 'path') {
+        const stroke = parseCssColor(cs.stroke);
+        if (!stroke) continue;
+        // Figma normalizes vectorPaths into the node's local space (bounding
+        // box at origin), so absolute coordinates don't survive assignment.
+        // Rebase the path to its own bbox min here and carry the offset as the
+        // node position — then normalization is a no-op. Exact for these
+        // curves: control points sit at the endpoints' extremes, so the
+        // point-hull min equals the true curve bbox min.
+        const nums = (node.getAttribute('d').match(/-?[\d.]+(?:e-?\d+)?/gi) || []).map(Number);
+        if (nums.length !== 8) continue; // M x y C x1 y1 x2 y2 x y
+        const xs = [nums[0], nums[2], nums[4], nums[6]];
+        const ys = [nums[1], nums[3], nums[5], nums[7]];
+        const minX = Math.min.apply(null, xs);
+        const minY = Math.min.apply(null, ys);
+        const p = nums.map((v, i) => v - (i % 2 === 0 ? minX : minY));
+        items.push({
+          t: 'path',
+          d: `M ${p[0]} ${p[1]} C ${p[2]} ${p[3]} ${p[4]} ${p[5]} ${p[6]} ${p[7]}`,
+          x: minX,
+          y: minY,
+          stroke,
+          sw: parseFloat(cs.strokeWidth) || 1,
+          opacity: parseFloat(cs.opacity) || 1
+        });
+
+      } else if (node.tagName === 'rect') {
+        const stroke = parseCssColor(cs.stroke);
+        const dashRaw = cs.strokeDasharray;
+        const dash = dashRaw && dashRaw !== 'none'
+          ? dashRaw.split(/[,\s]+/).map(parseFloat).filter((n) => !isNaN(n))
+          : null;
+        items.push({
+          t: 'rect',
+          x: +node.getAttribute('x'), y: +node.getAttribute('y'),
+          w: +node.getAttribute('width'), h: +node.getAttribute('height'),
+          r: +(node.getAttribute('rx') || 0),
+          fill: parseCssColor(cs.fill),
+          stroke,
+          sw: stroke ? (parseFloat(cs.strokeWidth) || 1) : 0,
+          dash: dash && dash.length ? dash : null
+        });
+
+      } else {
+        const fill = parseCssColor(cs.fill);
+        if (!fill || !node.textContent) continue;
+        const ls = parseFloat(cs.letterSpacing);
+        items.push({
+          t: 'text',
+          x: +node.getAttribute('x'),
+          baseline: +node.getAttribute('y'),
+          text: node.textContent,
+          size: parseFloat(cs.fontSize) || 11,
+          semibold: (parseInt(cs.fontWeight, 10) || 400) >= 600,
+          italic: cs.fontStyle === 'italic',
+          fill,
+          ls: isNaN(ls) ? 0 : ls
+        });
+      }
+    }
+    const spec = {
+      name,
+      width: +svg.getAttribute('width'),
+      height: +svg.getAttribute('height'),
+      bg: parseCssColor(getComputedStyle($('canvas-wrap')).backgroundColor),
+      items
+    };
+    svg.classList.remove('exporting');
+    return spec;
+  }
+
+  $('canvas-btn').onclick = () => {
+    if (!lastGraph || svg.style.display === 'none') return;
+    post({ type: 'insert-graph', spec: svgToSpec(lastGraph.selected.name) });
+  };
+
+  // ── Toolbar & strips ─────────────────────────────────────────────────────
+  $('refresh-btn').onclick = requestRefresh;
+  $('stale-refresh').onclick = requestRefresh;
+  $('back-btn').onclick = () => post({ type: 'go-back' });
+  $('forward-btn').onclick = () => post({ type: 'go-forward' });
+  $('sidebar-toggle').onclick = () => $('app').classList.toggle('sidebar-hidden');
+  $('details-close').onclick = () => {
+    detailsEl.classList.remove('open');
+    currentDetailsId = null;
+  };
+
+  // ── Sidebar controls ─────────────────────────────────────────────────────
+  $('search').oninput = () => { focusedId = null; renderSidebar(); };
+  $('pub-switch').onclick = () => {
+    showUnpublished = !showUnpublished;
+    $('pub-switch').setAttribute('aria-checked', String(showUnpublished));
+    renderSidebar();
+  };
+  for (const seg of document.querySelectorAll('.segment')) {
+    seg.onclick = () => {
+      scope = seg.dataset.scope;
+      focusedId = null;
+      for (const s of document.querySelectorAll('.segment')) {
+        s.classList.toggle('active', s === seg);
+      }
+      renderSidebar();
+    };
+  }
+
+  // ── Library check ────────────────────────────────────────────────────────
+  // Explicit, never automatic: one round-trip per external component.
+  $('libcheck-btn').onclick = () => {
+    if (libCheckState === 'running') return;
+    libCheckState = 'running';
+    libStatus = new Map();
+    renderSidebar();
+    post({
+      type: 'check-libraries',
+      detailsId: detailsEl.classList.contains('open') ? currentDetailsId : null
+    });
+  };
+
+  function isMissing(c) { return libStatus.get(c.id) === 'missing'; }
+
+  // A component whose main is gone — from its library, or from this file.
+  function isGone(c) { return c.remote ? isMissing(c) : !!c.orphan; }
+
+  function isPublished(c) {
+    return c.remote || (c.publishStatus && c.publishStatus !== 'UNPUBLISHED');
+  }
+
+  // Local components group by page (file order). Externals group by the exact
+  // seeded library name when the plugin has been opened in that library file,
+  // else by the derived "Library / Name" prefix, else a fallback group.
+  // Components whose main no longer exists lead their tab: whatever library or
+  // page they nominally belong to is no longer the useful fact about them.
+  function groupKeyOf(c) {
+    if (c.remote) {
+      if (isMissing(c)) return MISSING_GROUP;
+      return c.libraryName || c.libraryGroup || EXTERNAL_FALLBACK_GROUP;
+    }
+    if (c.orphan) return ORPHAN_GROUP;
+    return c.pageName || 'No page';
+  }
+
+  // Drop a redundant "Library /" prefix from the row label, but only when the
+  // prefix is what the row is grouped under (a seeded name may differ from it).
+  function displayNameOf(c, groupKey) {
+    const i = c.remote ? c.name.indexOf('/') : -1;
+    if (i > 0 && c.name.slice(0, i).trim() === groupKey) {
+      return c.name.slice(i + 1).trim();
+    }
+    return c.name;
+  }
+
+  function renderSidebar() {
+    const query = $('search').value.trim().toLowerCase();
+
+    const locals = components.filter((c) => !c.remote);
+    const externals = components.filter((c) => c.remote);
+    const both = locals.length > 0 && externals.length > 0;
+
+    // Local | External only exists when there is something on both sides.
+    $('scope-segmented').classList.toggle('visible', both);
+    let effectiveScope = scope;
+    if (!both) effectiveScope = locals.length ? 'local' : 'external';
+
+    const pool = effectiveScope === 'local' ? locals : externals;
+    const publishedCount = locals.filter(isPublished).length;
+
+    // The publish filter only makes sense for local components, and only when
+    // the file actually publishes something — otherwise it would empty the list.
+    const pubApplies = effectiveScope === 'local' && publishedCount > 0;
+    $('pub-row').classList.toggle('hidden', !pubApplies);
+
+    // The library check only concerns external components, and only once the
+    // scan has actually found some.
+    $('libcheck-row').classList.toggle('hidden', effectiveScope !== 'external' || !externals.length);
+    renderLibCheckRow(externals);
+
+    const visible = pool.filter((c) => {
+      if (pubApplies && !showUnpublished && !isPublished(c)) return false;
+      if (query && c.name.toLowerCase().indexOf(query) === -1) return false;
+      return true;
+    });
+
+    $('component-total').textContent = components.length ? String(components.length) : '';
+    listEl.innerHTML = '';
+    flatVisible = [];
+    listEmpty.style.display = visible.length ? 'none' : 'block';
+    listEmpty.textContent = (components.length === 0 && catalogQuality >= QUALITY.final)
+      ? 'No components in this file yet.'
+      : 'No components match your search or filters.';
+    if (!visible.length) return;
+
+    const groups = new Map();
+    for (const c of visible) {
+      const key = groupKeyOf(c);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
+    }
+
+    // Local groups keep file/page order (scan order); external library groups
+    // sort alphabetically with the un-prefixed fallback last. Either way the
+    // "gone" group is pinned to the top.
+    let groupKeys = Array.from(groups.keys());
+    if (effectiveScope === 'external') {
+      groupKeys.sort((a, b) => {
+        if (a === MISSING_GROUP) return -1;
+        if (b === MISSING_GROUP) return 1;
+        if (a === EXTERNAL_FALLBACK_GROUP) return 1;
+        if (b === EXTERNAL_FALLBACK_GROUP) return -1;
+        return a.localeCompare(b);
+      });
+    } else if (groups.has(ORPHAN_GROUP)) {
+      groupKeys = [ORPHAN_GROUP].concat(groupKeys.filter((k) => k !== ORPHAN_GROUP));
+    }
+
+    for (const key of groupKeys) {
+      const items = groups.get(key);
+      const collapsed = collapsedGroups.has(key);
+
+      const head = document.createElement('div');
+      head.className = 'group-head' + (collapsed ? ' collapsed' : '');
+      head.innerHTML = '<span class="chev">▾</span>';
+      const gName = document.createElement('span');
+      gName.className = 'g-name';
+      gName.textContent = key;
+      head.appendChild(gName);
+      const gCount = document.createElement('span');
+      gCount.className = 'g-count';
+      gCount.textContent = String(items.length);
+      head.appendChild(gCount);
+      head.onclick = () => {
+        collapsed ? collapsedGroups.delete(key) : collapsedGroups.add(key);
+        renderSidebar();
+      };
+      listEl.appendChild(head);
+
+      if (collapsed) continue;
+
+      items.sort((a, b) => a.name.localeCompare(b.name));
+      for (const c of items) {
+        flatVisible.push(c);
+        const row = document.createElement('div');
+        const gone = isGone(c);
+        row.className = 'comp-item'
+          + (c.remote ? ' is-remote' : '')
+          + (!c.remote && !isPublished(c) ? ' is-unpublished' : '')
+          + (gone ? ' is-gone' : '')
+          + (c.id === activeId ? ' active' : '')
+          + (c.id === focusedId ? ' focused' : '');
+        row.dataset.id = c.id;
+        row.title = gone
+          ? c.name + (c.remote
+              ? ' — not found in any enabled library'
+              : ' — deleted from this file; instances can still be restored')
+          : c.name;
+
+        const icon = document.createElement('span');
+        icon.className = 'comp-icon';
+        icon.textContent = c.type === 'COMPONENT_SET' ? '❖' : '◇';
+        row.appendChild(icon);
+
+        const name = document.createElement('span');
+        name.className = 'comp-name';
+        name.textContent = displayNameOf(c, key);
+        row.appendChild(name);
+
+        const usage = document.createElement('span');
+        if (gone && c.usage) {
+          // The instance count is the actionable number for a gone component:
+          // it is how much work a fix costs.
+          usage.className = 'comp-usage gone';
+          usage.textContent = '×' + c.usage;
+        } else if (c.usage === null || c.usage === undefined) {
+          usage.className = 'comp-usage';
+          usage.textContent = '·';
+        } else if (!c.remote && c.usage === 0 && catalogQuality >= QUALITY.final) {
+          usage.className = 'comp-usage unused';
+          usage.textContent = 'unused';
+        } else {
+          usage.className = 'comp-usage';
+          usage.textContent = '×' + c.usage;
+        }
+        row.appendChild(usage);
+
+        row.onclick = () => post({ type: 'open-component', id: c.id });
+        listEl.appendChild(row);
+      }
+    }
+
+    // Teach the provenance mechanism where the gap is visible: components in
+    // the fallback group get real library names once their library file has
+    // been opened with this plugin (their names carry no derivable prefix).
+    if (effectiveScope === 'external' && groups.has(EXTERNAL_FALLBACK_GROUP)) {
+      const hint = document.createElement('div');
+      hint.className = 'list-hint';
+      hint.textContent = '“From libraries” components get their real library name once you open that library file with this plugin.';
+      listEl.appendChild(hint);
+    }
+
+    // Both "gone" groups need their caveat spelled out where they appear —
+    // one is a verdict that has an innocent explanation, the other is reversible.
+    if (effectiveScope === 'external' && groups.has(MISSING_GROUP)) {
+      const hint = document.createElement('div');
+      hint.className = 'list-hint';
+      hint.textContent = 'Their instances still render from a local copy. “Not found” also covers a library that isn’t enabled in this file, or one you don’t have access to — confirm before deleting anything.';
+      listEl.appendChild(hint);
+    }
+    if (effectiveScope === 'local' && groups.has(ORPHAN_GROUP)) {
+      const hint = document.createElement('div');
+      hint.className = 'list-hint';
+      hint.textContent = 'These mains were deleted from this file. Figma keeps them so their instances keep working — select an instance and use “Restore component” to bring one back.';
+      listEl.appendChild(hint);
+    }
+  }
+
+  function renderLibCheckRow(externals) {
+    const status = $('libcheck-status');
+    const btn = $('libcheck-btn');
+    const missing = externals.filter(isMissing).length;
+
+    btn.disabled = libCheckState === 'running';
+    btn.textContent = libCheckState === 'running' ? 'Checking…'
+      : libCheckState === 'idle' ? 'Check' : 'Recheck';
+
+    status.classList.toggle('bad', libCheckState === 'done' && missing > 0);
+    if (libCheckState === 'running') {
+      status.textContent = libCheckProgress || 'Checking libraries…';
+      status.title = '';
+    } else if (libCheckState === 'inconclusive') {
+      status.textContent = 'Couldn’t reach the libraries';
+      status.title = 'Every check failed, which points at the connection or library access rather than at the components — so nothing was flagged.';
+    } else if (libCheckState === 'done') {
+      status.textContent = missing
+        ? pluralize(missing, 'component') + ' not found'
+        : 'All ' + externals.length + ' found in their libraries';
+      status.title = '';
+    } else {
+      status.textContent = 'Library links not checked';
+      status.title = 'One network request per external component, so this is never automatic.';
+    }
+  }
+
+  function markActive(id) {
+    activeId = id;
+    for (const row of listEl.querySelectorAll('.comp-item')) {
+      row.classList.toggle('active', row.dataset.id === id);
+    }
+    const active = listEl.querySelector('.comp-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  // ── Keyboard: arrows move the cursor through the list, Enter opens ───────
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (detailsEl.classList.contains('open')) {
+        detailsEl.classList.remove('open');
+        currentDetailsId = null;
+        return;
+      }
+      if ($('search').value) { $('search').value = ''; focusedId = null; renderSidebar(); }
+      return;
+    }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+    if (!flatVisible.length) return;
+
+    if (e.key === 'Enter') {
+      if (focusedId) { e.preventDefault(); post({ type: 'open-component', id: focusedId }); }
+      return;
+    }
+
+    e.preventDefault(); // arrows navigate the list, never scroll the page
+    const ids = flatVisible.map((c) => c.id);
+    let idx = ids.indexOf(focusedId !== null ? focusedId : activeId);
+    idx = e.key === 'ArrowDown'
+      ? Math.min(idx + 1, ids.length - 1)
+      : Math.max(idx <= 0 ? 0 : idx - 1, 0);
+    focusedId = ids[idx];
+    for (const row of listEl.querySelectorAll('.comp-item')) {
+      row.classList.toggle('focused', row.dataset.id === focusedId);
+    }
+    const focused = listEl.querySelector('.comp-item.focused');
+    if (focused) focused.scrollIntoView({ block: 'nearest' });
+  });
+
+  // ── Details panel ────────────────────────────────────────────────────────
+  function pluralize(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  function renderDetails(d) {
+    currentDetailsId = d.id;
+    $('details-title').textContent = d.name;
+    const body = $('details-body');
+    body.innerHTML = '';
+
+    const row = (label, build) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'd-row';
+      const l = document.createElement('div');
+      l.className = 'd-label';
+      l.textContent = label;
+      wrap.appendChild(l);
+      const v = document.createElement('div');
+      v.className = 'd-value';
+      build(v);
+      wrap.appendChild(v);
+      body.appendChild(wrap);
+    };
+
+    // A clickable name×count line; components open their graph + details,
+    // pages select the instances on canvas.
+    const line = (name, count, title, onClick) => {
+      const el = document.createElement('div');
+      el.className = 'd-line';
+      el.title = title;
+      const n = document.createElement('span');
+      n.className = 'l-name';
+      n.textContent = name;
+      const c = document.createElement('span');
+      c.className = 'sub';
+      c.textContent = '×' + count;
+      el.appendChild(n); el.appendChild(c);
+      el.onclick = onClick;
+      return el;
+    };
+    const componentLine = (e) => line(
+      e.name + (e.remote ? ' ⌥' : ''), e.count, 'Open ' + e.name,
+      () => { post({ type: 'open-component', id: e.id }); openDetails(e.id); }
+    );
+
+    row('Type', (v) => {
+      v.textContent = d.kind === 'COMPONENT_SET' ? 'Component set' : 'Component';
+      if (d.remote) {
+        const b = document.createElement('span');
+        b.className = 'd-badge';
+        b.style.marginLeft = '6px';
+        b.textContent = 'library';
+        v.appendChild(b);
+      }
+    });
+
+    if (d.remote) {
+      // Only ever shown once the check has actually run for this component —
+      // silence here means "unknown", never "fine".
+      row('Library link', (v) => {
+        const b = document.createElement('span');
+        b.className = 'd-badge' + (d.libraryStatus === 'missing' ? ' danger' : '');
+        b.textContent = d.libraryStatus === 'missing' ? 'Not found'
+          : d.libraryStatus === 'present' ? 'Found' : 'Not checked';
+        v.appendChild(b);
+        const s = document.createElement('div');
+        s.className = 'sub';
+        s.textContent = d.libraryStatus === 'missing'
+          ? 'No enabled library publishes this key any more — deleted upstream, or the library isn’t enabled here. Instances keep rendering from a local copy.'
+          : d.libraryStatus === 'present'
+            ? 'Its library still publishes this component.'
+            : 'Press Check in the External tab to ask the libraries.';
+        v.appendChild(s);
+      });
+    }
+
+    if (d.orphan) {
+      row('Main component', (v) => {
+        const b = document.createElement('span');
+        b.className = 'd-badge danger';
+        b.textContent = 'Deleted from this file';
+        v.appendChild(b);
+        const s = document.createElement('div');
+        s.className = 'sub';
+        s.textContent = 'Figma keeps it so the instances below still work. Select one and use “Restore component” to bring it back.';
+        v.appendChild(s);
+      });
+    }
+
+    if (d.remote) {
+      // Exact name when this key was seeded by opening the source library with
+      // the plugin; else derived from the "Library / Name" convention; else
+      // honest about the API gap.
+      row('Library', (v) => {
+        const sub = (text) => {
+          const s = document.createElement('div');
+          s.className = 'sub';
+          s.textContent = text;
+          v.appendChild(s);
+        };
+        if (d.libraryName) {
+          v.textContent = d.libraryName;
+          sub('Learned by opening that library file');
+        } else if (d.libraryGroup) {
+          v.textContent = d.libraryGroup;
+          sub('Derived from the component name \u2014 open the library file with this plugin to confirm');
+        } else {
+          v.classList.add('muted');
+          v.textContent = 'Unknown \u2014 open the library file with this plugin to learn it';
+        }
+      });
+    } else {
+      row('Page', (v) => { v.textContent = d.pageName || '—'; });
+      row('Publish status', (v) => {
+        const b = document.createElement('span');
+        b.className = 'd-badge' + (d.publishStatus === 'UNPUBLISHED' ? ' warn' : '');
+        b.textContent = d.publishStatus === 'CURRENT' ? 'Published'
+          : d.publishStatus === 'CHANGED' ? 'Published — unpublished changes'
+          : d.publishStatus === 'UNPUBLISHED' ? 'Unpublished' : 'Unknown';
+        v.appendChild(b);
+      });
+    }
+
+    if (d.description) {
+      row('Description', (v) => {
+        const desc = document.createElement('div');
+        desc.className = 'd-desc clamped';
+        desc.textContent = d.description;
+        v.appendChild(desc);
+        const toggle = document.createElement('button');
+        toggle.className = 'read-more';
+        toggle.textContent = 'Read more';
+        toggle.onclick = () => {
+          const nowClamped = desc.classList.toggle('clamped');
+          toggle.textContent = nowClamped ? 'Read more' : 'Show less';
+        };
+        v.appendChild(toggle);
+        // Only offer the toggle when the clamp actually hides something.
+        requestAnimationFrame(() => {
+          if (desc.scrollHeight > desc.clientHeight + 1) toggle.classList.add('visible');
+        });
+      });
+    }
+
+    row('Instances in file', (v) => {
+      v.textContent = String(d.usage);
+      if (d.usage === 0 && !d.remote) {
+        const b = document.createElement('span');
+        b.className = 'd-badge warn';
+        b.style.marginLeft = '6px';
+        b.textContent = 'unused';
+        v.appendChild(b);
+      }
+    });
+
+    row('Inside components', (v) => {
+      if (!d.insideComponents.list.length) { v.classList.add('muted'); v.textContent = 'None'; return; }
+      for (const e of d.insideComponents.list) v.appendChild(componentLine(e));
+    });
+
+    row('On pages', (v) => {
+      if (!d.pages.length) { v.classList.add('muted'); v.textContent = 'None'; return; }
+      for (const p of d.pages) {
+        v.appendChild(line(
+          p.pageName, p.count, 'Select these instances on the canvas',
+          () => post({ type: 'select-instances-on-page', componentId: d.id, pageId: p.pageId })
+        ));
+      }
+    });
+
+    row('Contains', (v) => {
+      if (!d.contains.list.length) { v.classList.add('muted'); v.textContent = 'No nested components'; return; }
+      for (const e of d.contains.list) v.appendChild(componentLine(e));
+    });
+
+    if (d.variants) {
+      row('Variants', (v) => {
+        v.textContent = String(d.variants.count);
+        if (d.variants.props.length) {
+          const s = document.createElement('div');
+          s.className = 'sub';
+          s.textContent = d.variants.props.join(' · ');
+          v.appendChild(s);
+        }
+      });
+    }
+
+    if (d.key) {
+      row('Key', (v) => { v.className = 'd-value d-key'; v.textContent = d.key; });
+    }
+
+    detailsEl.classList.add('open');
+  }
+
+  // ── Messages from the main thread ────────────────────────────────────────
+  window.onmessage = (event) => {
+    const msg = event.data.pluginMessage;
+    if (!msg) return;
+
+    if (msg.type === 'file-info') {
+      $('file-name').textContent = msg.fileName || 'Components';
+      $('file-name').title = msg.fileName || '';
+
+    } else if (msg.type === 'progress') {
+      indexing = msg.done < msg.total;
+      lastProgress = msg;
+      const status = $('sidebar-status');
+      if (indexing) {
+        status.style.display = 'block';
+        // Single fixed-height line — no page name, so long names can't wrap
+        // and bounce the list. The bar spans both phases: A → 0–50%, B → 50–100%.
+        $('sidebar-status-text').textContent =
+          (msg.phase === 'components' ? 'Reading pages' : 'Counting instances')
+          + '… ' + (msg.done + 1) + '/' + msg.total;
+        const pct = msg.phase === 'components'
+          ? (msg.done / msg.total) * 50
+          : 50 + (msg.done / msg.total) * 50;
+        $('sidebar-progress-fill').style.width = pct.toFixed(1) + '%';
+        if (loadingState.style.display === 'flex' || emptyState.style.display === 'flex') {
+          loadingText.textContent = 'Scanning file (' + (msg.done + 1) + '/' + msg.total + ' pages)…';
+        }
+      } else {
+        status.style.display = 'none';
+      }
+
+    } else if (msg.type === 'index') {
+      const q = QUALITY[msg.quality] || QUALITY.partial;
+      if (q < catalogQuality) return; // never downgrade (e.g. partial after cached)
+      catalogQuality = q;
+      if (q === QUALITY.final) {
+        indexing = false;
+        $('sidebar-status').style.display = 'none';
+        showStrip(staleStrip, false);
+      }
+      components = msg.components;
+      renderSidebar();
+
+    } else if (msg.type === 'index-error') {
+      indexing = false;
+      const status = $('sidebar-status');
+      status.style.display = 'block';
+      $('sidebar-status-text').textContent = 'Scan failed — press Refresh to retry';
+      $('sidebar-progress-fill').style.width = '0%';
+      if (emptyState.style.display === 'flex' || loadingState.style.display === 'flex') {
+        showEmpty('The file scan failed. Press Refresh to retry.');
+      }
+
+    } else if (msg.type === 'library-check') {
+      if (!msg.done) {
+        // Only the status line changes while probing — re-rendering the whole
+        // list every chunk would churn it for no visible gain.
+        libCheckProgress = 'Checking libraries… ' + msg.checked + '/' + msg.total;
+        renderLibCheckRow(components.filter((c) => c.remote));
+        return;
+      }
+      libCheckProgress = '';
+      libCheckState = msg.inconclusive ? 'inconclusive' : 'done';
+      libStatus = new Map();
+      for (const r of msg.results) libStatus.set(r.id, r.status);
+      renderSidebar();
+
+    } else if (msg.type === 'details') {
+      renderDetails(msg.d);
+
+    } else if (msg.type === 'stale') {
+      showStrip(staleStrip, true);
+      catalogQuality = Math.min(catalogQuality, QUALITY.cached); // allow next final to land
+
+    } else if (msg.type === 'empty') {
+      showEmpty(msg.message);
+      setUnresolved(0);
+      toolbarTitle.textContent = 'Component Graph';
+      $('canvas-btn').disabled = true;
+
+    } else if (msg.type === 'loading') {
+      showLoading();
+
+    } else if (msg.type === 'graph') {
+      lastGraph = msg;
+      expanded = { left: false, right: false };
+      renderGraph(msg.selected, msg.upstream, msg.downstream);
+      $('back-btn').disabled = !msg.canGoBack;
+      $('forward-btn').disabled = !msg.canGoForward;
+      $('canvas-btn').disabled = false;
+      setUnresolved(msg.unresolvedCount || 0);
+      showStrip(staleStrip, msg.stale);
+      toolbarTitle.innerHTML = '';
+      toolbarTitle.appendChild(document.createTextNode(msg.selected.name));
+      const selGone = msg.selected.libraryStatus === 'missing' || msg.selected.orphan;
+      if (msg.selected.remote || selGone) {
+        const tag = document.createElement('span');
+        tag.className = 'lib-tag' + (selGone ? ' danger' : '');
+        tag.textContent = selGone
+          ? (msg.selected.remote ? 'not found in any library' : 'main deleted from this file')
+          : 'library';
+        toolbarTitle.appendChild(tag);
+      }
+      toolbarTitle.title = msg.selected.name;
+      markActive(msg.selected.id);
+    }
+  };
+
+  function setUnresolved(count) {
+    if (count > 0) {
+      showStrip(unresolvedStrip, true);
+      unresolvedStrip.textContent = count === 1
+        ? '1 instance could not be resolved (missing library or detached component) and was skipped.'
+        : count + ' instances could not be resolved (missing library or detached components) and were skipped.';
+    } else {
+      showStrip(unresolvedStrip, false);
+    }
+  }
+
+  function showEmpty(text) {
+    svg.style.display = 'none';
+    loadingState.style.display = 'none';
+    emptyState.style.display = 'flex';
+    emptyState.textContent = text;
+  }
+
+  function showLoading() {
+    svg.style.display = 'none';
+    emptyState.style.display = 'none';
+    loadingState.style.display = 'flex';
+    loadingText.textContent = indexing && lastProgress
+      ? 'Scanning file (' + Math.min(lastProgress.done + 1, lastProgress.total) + '/' + lastProgress.total + ' pages)…'
+      : 'Building graph…';
+  }
+
+  // ── Graph rendering ──────────────────────────────────────────────────────
+  function clearSvg() { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+  function el(tag, attrs) {
+    const node = document.createElementNS(svgNS, tag);
+    for (const k in attrs) node.setAttribute(k, attrs[k]);
+    return node;
+  }
+
+  function truncate(str, max) {
+    return str.length > max ? str.slice(0, max - 1) + '…' : str;
+  }
+
+  function getDisplayList(list, isExpanded) {
+    if (isExpanded || list.length <= FAN_OUT_THRESHOLD) {
+      return { display: list, moreCount: 0 };
+    }
+    return {
+      display: list.slice(0, FAN_OUT_THRESHOLD - 1),
+      moreCount: list.length - (FAN_OUT_THRESHOLD - 1)
+    };
+  }
+
+  function renderGraph(selected, upstream, downstream) {
+    emptyState.style.display = 'none';
+    loadingState.style.display = 'none';
+    svg.style.display = 'block';
+    clearSvg();
+
+    const nodeW = 190, nodeH = 34, rowGap = 12, colGapX = 280;
+
+    const { display: leftList, moreCount: leftMore } = getDisplayList(downstream, expanded.left);
+    const { display: rightList, moreCount: rightMore } = getDisplayList(upstream, expanded.right);
+    const leftRowCount = leftList.length + (leftMore > 0 ? 1 : 0);
+    const rightRowCount = rightList.length + (rightMore > 0 ? 1 : 0);
+
+    const rows = Math.max(leftRowCount, rightRowCount, 1);
+    const totalHeight = Math.max(rows * (nodeH + rowGap) + 80, 300);
+    const totalWidth = colGapX * 2 + nodeW + 80;
+
+    svg.setAttribute('width', totalWidth);
+    svg.setAttribute('height', totalHeight);
+    svg.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+
+    // The one loud element in an otherwise native-quiet UI: each column sweeps
+    // red→violet down its rows, so edges stay traceable in dense graphs.
+    function rainbowColor(index, total) {
+      const hue = total <= 1 ? 210 : Math.round((index * 300) / (total - 1));
+      return `hsl(${hue}, 75%, 52%)`;
+    }
+
+    const colX = { left: 20, selected: 20 + colGapX, right: 20 + colGapX * 2 };
+    const centerY = totalHeight / 2;
+
+    addColLabel(colX.left, 'NESTED IN THIS (' + downstream.length + ')');
+    addColLabel(colX.selected, 'SELECTED' + (selected.viaInstance ? ' (via instance)' : ''));
+    addColLabel(colX.right, 'USED BY (' + upstream.length + ')');
+
+    const selY = centerY - nodeH / 2;
+    drawNode(colX.selected, selY, nodeW, nodeH, selected, true);
+
+    // Left: components this one directly contains.
+    if (leftList.length === 0 && leftMore === 0) {
+      addEmptyPlaceholder(colX.left, centerY, 'None');
+    } else {
+      const pos = layoutColumn(leftRowCount, totalHeight, nodeH, rowGap);
+      leftList.forEach((n, i) => {
+        drawNode(colX.left, pos[i], nodeW, nodeH, n, false);
+        drawEdge(colX.left + nodeW, pos[i] + nodeH / 2, colX.selected, selY + nodeH / 2,
+                 rainbowColor(i, leftList.length));
+      });
+      if (leftMore > 0) {
+        drawMoreNode(colX.left, pos[pos.length - 1], nodeW, nodeH, leftMore, downstream.length, () => {
+          expanded.left = true;
+          renderGraph(lastGraph.selected, lastGraph.upstream, lastGraph.downstream);
+        });
+      }
+    }
+
+    // Right: components that directly contain this one. Instances placed
+    // straight on pages/frames are not shown here — the placeholder explains
+    // them and links to the details panel's "On pages" breakdown.
+    if (rightList.length === 0 && rightMore === 0) {
+      if (selected.pagePlacementCount > 0) {
+        addEmptyPlaceholder(colX.right, centerY - 8,
+          selected.pagePlacementCount + ' on pages, none in components');
+        const hint = el('text', { x: colX.right + 12, y: centerY + 10, class: 'empty-col-label action' });
+        hint.textContent = 'See details →';
+        hint.addEventListener('click', () => openDetails(selected.id));
+        svg.appendChild(hint);
+      } else {
+        addEmptyPlaceholder(colX.right, centerY, 'None');
+      }
+    } else {
+      const pos = layoutColumn(rightRowCount, totalHeight, nodeH, rowGap);
+      rightList.forEach((n, i) => {
+        drawNode(colX.right, pos[i], nodeW, nodeH, n, false);
+        drawEdge(colX.selected + nodeW, selY + nodeH / 2, colX.right, pos[i] + nodeH / 2,
+                 rainbowColor(i, rightList.length));
+      });
+      if (rightMore > 0) {
+        drawMoreNode(colX.right, pos[pos.length - 1], nodeW, nodeH, rightMore, upstream.length, () => {
+          expanded.right = true;
+          renderGraph(lastGraph.selected, lastGraph.upstream, lastGraph.downstream);
+        });
+      }
+    }
+
+    function layoutColumn(count, totalH, h, gap) {
+      if (count === 0) return [];
+      const blockHeight = count * h + (count - 1) * gap;
+      const startY = (totalH - blockHeight) / 2;
+      const positions = [];
+      for (let i = 0; i < count; i++) positions.push(startY + i * (h + gap));
+      return positions;
+    }
+
+    function addColLabel(x, text) {
+      const t = el('text', { x, y: 24, class: 'col-label' });
+      t.textContent = text;
+      svg.appendChild(t);
+    }
+
+    function addEmptyPlaceholder(x, y, text) {
+      const t = el('text', { x: x + 12, y: y + 4, class: 'empty-col-label' });
+      t.textContent = text;
+      svg.appendChild(t);
+    }
+
+    // node: { id, name, count?, remote?, usage? }
+    function drawNode(x, y, w, h, node, isSelected) {
+      const g = el('g', { class: 'node-group', 'data-id': node.id });
+      // "Gone" outranks "library" on the node: it is the fact that changes
+      // what you would do about it.
+      const gone = node.libraryStatus === 'missing' || node.orphan;
+      const subText = gone ? (node.remote ? 'not in library' : 'deleted main')
+        : node.remote ? 'library' : null;
+
+      g.appendChild(el('rect', {
+        x, y, width: w, height: h, rx: 6,
+        class: 'node-rect'
+          + (isSelected ? ' selected' : '')
+          + (node.remote ? ' remote' : '')
+          + (gone ? ' gone' : '')
+      }));
+
+      const title = el('title', {});
+      title.textContent = node.name; // full name for truncated labels
+      g.appendChild(title);
+
+      const label = el('text', {
+        x: x + 12,
+        y: subText ? y + h / 2 : y + h / 2 + 4,
+        class: 'node-label'
+      });
+      label.textContent = truncate(node.name, 20);
+      g.appendChild(label);
+
+      if (subText) {
+        const sub = el('text', {
+          x: x + 12, y: y + h / 2 + 11,
+          class: 'node-sub' + (gone ? ' gone' : '')
+        });
+        sub.textContent = subText;
+        g.appendChild(sub);
+      }
+
+      if (node.count && node.count > 1) {
+        const badge = el('text', { x: x + w - 42, y: y + h / 2 + 4, class: 'node-count' });
+        badge.textContent = '×' + node.count;
+        g.appendChild(badge);
+      }
+
+      g.addEventListener('click', () => post({ type: 'open-component', id: node.id }));
+
+      // Info circle → details panel.
+      const info = el('g', { class: 'g-info' });
+      info.appendChild(el('circle', { cx: x + w - 16, cy: y + h / 2, r: 7 }));
+      const it = el('text', { x: x + w - 17.5, y: y + h / 2 + 3 });
+      it.textContent = 'i';
+      info.appendChild(it);
+      info.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDetails(node.id);
+      });
+      g.appendChild(info);
+
+      svg.appendChild(g);
+    }
+
+    function drawMoreNode(x, y, w, h, moreCount, totalCount, onClick) {
+      const g = el('g', { class: 'node-group' });
+      g.appendChild(el('rect', { x, y, width: w, height: h, rx: 6, class: 'node-rect more' }));
+      const title = el('title', {});
+      title.textContent = 'Show all ' + totalCount + ' items';
+      g.appendChild(title);
+      const label = el('text', { x: x + 12, y: y + h / 2 + 4, class: 'node-label more' });
+      label.textContent = '+ ' + moreCount + ' more';
+      g.appendChild(label);
+      g.addEventListener('click', onClick);
+      svg.appendChild(g);
+    }
+
+    function drawEdge(x1, y1, x2, y2, color) {
+      const midX = (x1 + x2) / 2;
+      const d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+      svg.insertBefore(el('path', { d, class: 'edge-path', stroke: color }), svg.firstChild);
+    }
+  }
+</script>
+</body>
+</html>

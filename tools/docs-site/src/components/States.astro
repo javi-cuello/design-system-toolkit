@@ -1,0 +1,26 @@
+---
+// A set's states, a row each: what sets it. The interaction states are the
+// contract's (`statesOf`, component-contract's layers.mjs, the rule the
+// contract editor uses): the browser sets a pointer state, the product the
+// rest of that axis (Loading). A True/False axis named for a condition is a
+// property the product sets. Interaction first, so the column reads in runs.
+interface Props { props: any[]; states?: any[]; id?: string }
+const { props, states = [], id = 'states' } = Astro.props;
+const CONDITION = /^(disabled|selected|checked|error|invalid|loading|active|expanded|open|read[- ]?only|pressed|current)$/i;
+const rows = [
+  ...states.filter((s) => s.pointer).map((s) => ({ name: s.name, by: 'Interaction' })),
+  ...states.filter((s) => !s.pointer).map((s) => ({ name: s.name, by: `The ${s.axis} property` })),
+  ...props.filter((p) => CONDITION.test(p.name)).map((p) => ({ name: p.name, by: `The ${p.name} property` })),
+];
+---
+{rows.length > 0 && (
+  <section class="section" id={id} aria-labelledby={`${id}-h`}>
+    <h2 id={`${id}-h`}>States</h2>
+    <div class="table-wrap" data-scrolls>
+      <table class="table">
+        <thead><tr><th scope="col">State</th><th scope="col">Set by</th></tr></thead>
+        <tbody>{rows.map((r) => <tr><th scope="row">{r.name}</th><td class="muted">{r.by}</td></tr>)}</tbody>
+      </table>
+    </div>
+  </section>
+)}

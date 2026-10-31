@@ -1,0 +1,12 @@
+---
+// A multi-platform project's index per platform: /components/web,
+// /components/mobile. A single-platform project has none; /components is it.
+import ComponentIndex from '../../../components/ComponentIndex.astro';
+import { componentGroups, slug } from '../../../lib/snapshot.js';
+
+export function getStaticPaths() {
+  if (componentGroups.length < 2) return [];
+  return componentGroups.map((g) => ({ params: { platform: slug(g.platform) }, props: g }));
+}
+---
+<ComponentIndex platform={Astro.props.platform} groups={Astro.props.groups} />

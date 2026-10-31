@@ -1,0 +1,60 @@
+{
+  "skills/figma-components-audit/scanner/audit.js": [
+    {
+      "literal": "TOK.propertyCase===\"sentence\"",
+      "reason": "an allowed value of the propertyCase key, compared against the setting, not a preference"
+    },
+    {
+      "literal": "/^(Frame|Rectangle|Group|Ellipse|Vector|Component|Line|Polygon|Star|Union|Subtract|Intersect|Exclude|Image|Section|Slot|Text) \\d+$/",
+      "reason": "Figma's default layer names (a node type and a number), not house values: not the page template's Component section, not a text style"
+    }
+  ],
+  "skills/figma-components-audit/scripts/probes.js": [
+    {
+      "literal": "/^(Instance|Component)\\b/i",
+      "reason": "a swap property named for its type, not the page template's Component section"
+    }
+  ],
+  "skills/component-validator/scripts/validate.mjs": [
+    {
+      "literal": "['Text', 'Outlined', 'Contained']",
+      "reason": "MUI Button's own variant values, a fact of the framework"
+    },
+    {
+      "literal": "add('MU3', 'Loading'",
+      "reason": "MUI's loading prop, a fact of the framework; the row names the concept, not a project axis"
+    },
+    {
+      "literal": "(Minimum and Maximum layers are both None)",
+      "reason": "Figma's own label in a slot's settings panel, quoted so the designer finds it"
+    }
+  ],
+  "skills/figma-doc-generator/scripts/recipes.js": [
+    {
+      "literal": "\"Text\"",
+      "reason": "a variant value of the documentation library's own cell component (Text, Alias, Status), not a design rule"
+    },
+    {
+      "literal": "\"Size\"",
+      "reason": "a column label in the generated documentation table, not an axis the skill applies"
+    }
+  ],
+  "skills/figma-tokens-examples/scripts/tokens-mapping.js": [
+    {
+      "literal": "\"Text\"",
+      "reason": "a token category name the skill maps to a sample layer by convention; a library with other category names maps through its own config"
+    }
+  ],
+  "skills/oklch-color-scale-system/scripts/generate.js": [
+    {
+      "literal": "⚠",
+      "reason": "a warning glyph in the generator's console report, not a marker it writes into a file"
+    }
+  ],
+  "skills/figma-doc-generator/scripts/figma-helpers.js": [
+    {
+      "literal": "[\"Section header\",\"Table\"",
+      "reason": "the doc-generator's default name contract, replaced by the caller's list; the doc library's own component name"
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+[
+  {
+    "id": "1:1",
+    "name": "Button",
+    "variantCount": 8,
+    "variantNames": [
+      "Size=Small, Disabled=False, State=Rest",
+      "Size=Small, Disabled=False, State=Hover",
+      "Size=Small, Disabled=False, State=Focus",
+      "Size=Small, Disabled=True, State=Rest",
+      "Size=Large, Disabled=False, State=Rest",
+      "Size=Large, Disabled=False, State=Hover",
+      "Size=Large, Disabled=False, State=Focus",
+      "Size=Large, Disabled=True, State=Rest"
+    ],
+    "parts": [
+      {
+        "name": "Spinner",
+        "inEvery": false,
+        "variants": [
+          "Size=Large, Disabled=False, State=Rest",
+          "Size=Large, Disabled=False, State=Hover",
+          "Size=Large, Disabled=False, State=Focus",
+          "Size=Large, Disabled=True, State=Rest"
+        ]
+      },
+      {
+        "name": "Label",
+        "inEvery": true
+      },
+      {
+        "name": "Badge",
+        "inEvery": false,
+        "variants": [
+          "Size=Small, Disabled=False, State=Rest",
+          "Size=Small, Disabled=False, State=Focus",
+          "Size=Large, Disabled=False, State=Hover"
+        ]
+      },
+      {
+        "name": "Icon",
+        "inEvery": true,
+        "toggledBy": [
+          "Show icon"
+        ],
+        "swappedBy": [
+          "Icon swap"
+        ]
+      }
+    ],
+    "broken": [
+      {
+        "variant": "Size=Small, Disabled=False, State=Rest",
+        "instance": "Ghost"
+      }
+    ],
+    "properties": [
+      {
+        "name": "Size",
+        "type": "VARIANT",
+        "options": [
+          "Small",
+          "Large"
+        ]
+      },
+      {
+        "name": "Disabled",
+        "type": "VARIANT",
+        "options": [
+          "False",
+          "True"
+        ]
+      },
+      {
+        "name": "State",
+        "type": "VARIANT",
+        "options": [
+          "Rest",
+          "Hover",
+          "Focus"
+        ]
+      },
+      {
+        "name": "Theme",
+        "type": "VARIANT",
+        "options": [
+          "Light"
+        ]
+      },
+      {
+        "name": "Show icon",
+        "type": "BOOLEAN"
+      },
+      {
+        "name": "Inverted",
+        "type": "BOOLEAN"
+      },
+      {
+        "name": "Icon swap",
+        "type": "INSTANCE_SWAP"
+      },
+      {
+        "name": "Trailing",
+        "type": "INSTANCE_SWAP"
+      },
+      {
+        "name": "Content",
+        "type": "SLOT"
+      },
+      {
+        "name": "Label",
+        "type": "TEXT"
+      }
+    ]
+  },
+  {
+    "id": "7:1",
+    "name": "Card",
+    "variantCount": 1,
+    "variantNames": [
+      "Card"
+    ],
+    "parts": [
+      {
+        "name": "Label",
+        "inEvery": true
+      }
+    ],
+    "broken": [],
+    "properties": []
+  },
+  {
+    "id": "8:8",
+    "error": "not found"
+  }
+]

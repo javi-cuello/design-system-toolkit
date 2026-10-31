@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v2 end */
+
+
+/* ---- Theme Switcher's own, on top of the baseline ---------------------- */
+/* Every bespoke control sets height + box-sizing explicitly: ui-base's rules
+   use bare element selectors, so anything that does not state its own box
+   inherits the baseline's (skill-standard §B 4). */
+body { overflow: hidden; }
+/* No 100vh: the window is sized to the content (see fit() below), so the
+   content cannot be sized to the window without the two chasing each other. */
+.wrap { display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3); box-sizing: border-box; }
+.row { display: flex; flex-direction: column; gap: var(--space-1); }
+.label { font-weight: var(--fw-medium); color: var(--figma-color-text-secondary); }
+.seg { display: flex; gap: var(--space-1); }
+.seg button { height: 30px; box-sizing: border-box; flex: 1; min-width: 0;
+  padding: 0 var(--space-2); border-radius: var(--radius-lg);
+  border: 1px solid var(--figma-color-border); background: var(--figma-color-bg);
+  color: var(--figma-color-text); font: var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seg button:hover { background: var(--figma-color-bg-hover); color: var(--figma-color-text); }
+.seg button[aria-pressed="true"] { background: var(--figma-color-bg-brand);
+  color: var(--figma-color-text-onbrand); border-color: transparent; }
+.go { margin-top: var(--space-1); }
+.buttons { display: flex; flex-direction: column; gap: var(--space-2); }
+.buttons button { width: 100%; }
+/* ui-base drops a secondary button's border when it is disabled, which left
+   Clear as a second filled block beside Apply — no hierarchy at all in the
+   state the plugin opens in. Keep it outlined and quiet in both states. */
+.buttons .btn-secondary { height: var(--control-h); box-sizing: border-box;
+  background: transparent; color: var(--figma-color-text-secondary);
+  border: 1px solid var(--figma-color-border); }
+.buttons .btn-secondary:hover:not(:disabled) { background: var(--figma-color-bg-secondary);
+  color: var(--figma-color-text); }
+.buttons .btn-secondary:disabled { background: transparent;
+  border: 1px solid var(--figma-color-border);
+  color: var(--figma-color-text-disabled); }
+.note { margin-top: var(--space-2); text-align: center;
+  color: var(--figma-color-text-secondary); }
+.empty { padding: var(--space-4) var(--space-2); text-align: center;
+  color: var(--figma-color-text-secondary); }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <!-- Static, so the window is never blank while the plugin reads the file:
+       resolving remote collections takes seconds and an empty white panel
+       for that long reads as a plugin that failed to start. -->
+  <div class="empty">Reading collections…</div>
+</div>
+<script>
+var state = { themes: [], brands: [], choices: [], theme: "", brandId: "", picks: {}, count: 0 };
+var wrap = document.getElementById("wrap");
+
+function seg(labelText, items, activeId, onPick) {
+  var row = document.createElement("div"); row.className = "row";
+  var label = document.createElement("div"); label.className = "label";
+  label.textContent = labelText; row.appendChild(label);
+  var seg = document.createElement("div"); seg.className = "seg";
+  items.forEach(function (it) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = it.name;
+    b.title = it.name;
+    b.setAttribute("aria-pressed", String(it.id === activeId));
+    b.onclick = function () {
+      // Paint the press here rather than re-rendering the panel for it: a
+      // full render also re-measures and asks the main thread to resize, and
+      // the round trip is long enough to read as a button that lags.
+      for (var s = 0; s < seg.children.length; s++) {
+        seg.children[s].setAttribute("aria-pressed", String(seg.children[s] === b));
+      }
+      onPick(it.id);
+    };
+    seg.appendChild(b);
+  });
+  row.appendChild(seg);
+  return row;
+}
+
+/**
+ * Same row, different control: segmented buttons up to three options, a
+ * select beyond that. Four segments in a 300px panel each get about 65px,
+ * which truncates any real brand name — and a brand list is the one here
+ * that grows.
+ */
+function picker(labelText, items, activeId, onPick) {
+  if (items.length <= 3) { return seg(labelText, items, activeId, onPick); }
+  var row = document.createElement("div"); row.className = "row";
+  var label = document.createElement("div"); label.className = "label";
+  label.textContent = labelText; row.appendChild(label);
+  var sel = document.createElement("select");
+  items.forEach(function (it) {
+    var o = document.createElement("option");
+    o.value = it.id; o.textContent = it.name;
+    if (it.id === activeId) { o.selected = true; }
+    sel.appendChild(o);
+  });
+  sel.onchange = function () { onPick(sel.value); };
+  row.appendChild(sel);
+  return row;
+}
+
+function render() {
+  wrap.innerHTML = "";
+  if (!state.themes.length && !state.brands.length && !state.choices.length) {
+    var e = document.createElement("div"); e.className = "empty";
+    e.textContent = "This file offers no theme or brand to switch.";
+    wrap.appendChild(e);
+    return;
+  }
+  if (state.themes.length) {
+    wrap.appendChild(picker("Theme", state.themes.map(function (n) { return { id: n, name: n }; }),
+      state.theme, function (id) { state.theme = id; }));
+  }
+  if (state.brands.length) {
+    wrap.appendChild(picker("Brand", state.brands, state.brandId,
+      function (id) { state.brandId = id; }));
+  }
+  state.choices.forEach(function (c) {
+    wrap.appendChild(picker(c.name, c.modes, state.picks[c.id], function (id) { state.picks[c.id] = id; }));
+  });
+  var go = document.createElement("div"); go.className = "go";
+  var buttons = document.createElement("div"); buttons.className = "buttons";
+  var clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "btn-secondary";
+  clear.textContent = "Clear";
+  // Not the opposite of Apply: this takes every pin off, including ones this
+  // plugin never set — a stale pin from a library that reorganised its modes
+  // is the reason anybody needs it.
+  clear.title = "Remove every mode pin on this page";
+  clear.onclick = function () {
+    // The next model is the truth, not what was picked before it.
+    state.theme = ""; state.brandId = ""; state.picks = {};
+    parent.postMessage({ pluginMessage: { type: "CLEAR" } }, "*");
+  };
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "Apply";
+  btn.onclick = function () {
+    parent.postMessage({ pluginMessage: { type: "APPLY", theme: state.theme, brandId: state.brandId, picks: state.picks } }, "*");
+  };
+  buttons.appendChild(btn);
+  buttons.appendChild(clear);
+  go.appendChild(buttons);
+  // Nothing selected means nothing to do: see targets() in code.js for why
+  // the page is not a silent fallback.
+  btn.disabled = !state.count;
+  var note = document.createElement("div"); note.className = "note";
+  note.textContent = !state.count ? "Apply needs a layer · Clear covers the page"
+    : (state.count === 1 ? "1 selected layer" : state.count + " selected layers");
+  go.appendChild(note);
+  wrap.appendChild(go);
+  fit();
+}
+
+/* The window has no resize handle and its height is a function of how many
+   rows the file offers — one theme row, or a brand row too. Asking for a
+   fixed height cut the buttons off the bottom, so the UI measures itself and
+   asks for the height it needs. */
+var lastHeight = 0;
+function fit() {
+  var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+  if (h === lastHeight) { return; }   // render runs on every click; the size rarely changes
+  lastHeight = h;
+  parent.postMessage({ pluginMessage: { type: "RESIZE", width: 300, height: h } }, "*");
+}
+
+onmessage = function (event) {
+  var m = event.data.pluginMessage;
+  if (!m || m.type !== "MODEL") { return; }
+  // The first message is sent before the team library has answered, so a
+  // second one arrives with more in it. Keep whatever the reader has picked
+  // in between, as long as it is still on offer.
+  var had = !!(state.themes.length || state.brands.length || state.choices.length);
+  var theme = state.theme, brand = state.brandId, picks = state.picks;
+  state = m;
+  state.picks = {};
+  m.choices.forEach(function (c) {
+    var kept = had && picks[c.id] && c.modes.some(function (x) { return x.id === picks[c.id]; });
+    state.picks[c.id] = kept ? picks[c.id] : c.modeId;
+  });
+  if (had && theme && m.themes.indexOf(theme) !== -1) { state.theme = theme; }
+  if (had && m.brands.some(function (b) { return b.id === brand; })) { state.brandId = brand; }
+  render();
+};
+
+parent.postMessage({ pluginMessage: { type: "MODEL" } }, "*");
+</script>
+</body>
+</html>

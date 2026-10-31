@@ -1,0 +1,97 @@
+# Changelog — design-code-parity
+
+- 1.62.7 (2026-10-30): a dev plugin gets the file key when its manifest sets `enablePrivatePluginApi`, as the snapshot plugin now does. Prose only; cases unaffected.
+- 1.62.6 (2026-10-23): a project's `bin/parity` is its own few lines, which init does not write, not something every project has. Prose only; cases unaffected.
+- 1.62.5 (2026-10-19): tests for what had met no real input: the refusal tag, a build folder's lockfile, .git out of the inputs, a percentage radius. Case T97.
+- 1.62.4 (2026-10-19): the contract from code says a prop whose variants move two args, and prints its notes. Case T95.
+- 1.62.3 (2026-10-19): a declared default that names no comparable value (null, an object, a union) is no default; its reader is tested. Case T97.
+- 1.62.2 (2026-10-19): a story's declared default is read as a value ('medium' is medium), so no default is a false finding; a refusal makes the mapping suspect. Case T97.
+- 1.62.1 (2026-10-19): the property check reads an unset option as the code's default; only an arg the story dropped is a refusal, reported as not compared. Case T97.
+- 1.62.0 (2026-10-19): the platform's props and shared prop words are the house's (audit-defaults `codeProps`); an option that sets no arg leaves it unset; a host's refusal is reported. Case T97.
+- 1.61.0 (2026-10-19): no framework in the engine's code (its facts are a profile in audit-defaults `frameworks`); every story opened through the host. Cases T95, T96.
+- 1.60.0 (2026-10-19): one mapping format for both modes; a compared library's facts in its context document (`code.parity`); one Storybook builder. Cases T93, T94.
+- 1.59.9 (2026-10-14): the Chrome client is tools/shared/cdp.mjs (moved from tools/parity); paths only.
+- 1.59.8 (2026-10-14): the toolkit's tools are renamed (snapshot, component-contract, docs-site, css-lint, ui-check, project-check, claude-hooks, skill-evals); paths in prose and code only, behaviour unchanged.
+- 1.59.7 (2026-10-14): an example names its project by a stand-in (toolkit-standard §D 6); behaviour unchanged.
+- 1.59.6 (2026-10-13): the description is quoted; its unquoted `: ` failed YAML, so a strict loader dropped it.
+- 1.59.5 (2026-10-08): citations follow naming-standard into figma-standard.
+- 1.59.4 (2026-10-08): cites snapshot-standard rule 21 for filing a major change.
+- 1.59.3 (2026-10-08): citations name the standard that owns each rule.
+- 1.59.2 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.59.1 (2026-10-08): citations name the standard that owns each rule after the standards split. No behaviour changed.
+- 1.59.0 (2026-10-06): Parity pages use one wording with Figma the reference; the page test refuses the retired words. Case T92.
+- 1.58.0 (2026-10-06): the code audit pairs contract elements with rendered elements by rule (`pair.mjs`); `parity/map.json` keeps only rulings. Case T91.
+- 1.57.0 (2026-10-06): comparison mode names the code audit (`external.mjs`) for a library built elsewhere, with a mapping self-check. Case T90.
+- 1.56.4 (2026-10-03): `PARITY_HOST_BASE` points a fragments host at a second checkout's server, as `PARITY_APP_PORT` moves the app.
+- 1.56.3 (2026-10-03): a checkbox name's count is also read as "(354)" or a trailing aria-label number; a comment's lesson is keyed by all its words.
+- 1.56.2 (2026-10-03): the structure gate's count is a number alone in its own element; the swap probe finds a nameless box by place.
+- 1.56.1 (2026-10-03): a stylesheet comment's lesson is keyed by its words, not its line; `--triaged` accepts only a file inside the toolkit.
+- 1.56.0 (2026-10-03): check windows pin time zone, locale and colour scheme; the structure gate holds code-standard 14, 15 and 19. Case T89.
+- 1.55.0 (2026-10-03): the page gates reach an app behind a sign-in through the run's session; `--triaged` must name a real file or a reasoned none. Case T88.
+- 1.54.0 (2026-10-03): an accept with new lessons is refused until `--triaged` names where they went. Case T86.
+- 1.53.4 (2026-10-03): a link's selected state reads `aria-current` or `aria-selected="true"`. Case T85.
+- 1.53.3 (2026-10-03): the settle's reach for a lazy picture is Chrome's fast-connection 1,250 px below the fold.
+- 1.53.2 (2026-10-03): an accept keeps the faster of its held time and its own.
+- 1.53.1 (2026-10-03): the lessons list reads stylesheet comments too (`lessons.mjs`); the time summary separates wall clock from summed phases.
+- 1.53.0 (2026-10-03): fast by default: per-phase timing saved and warned on, settle waits only on loading pictures, eight windows, pictures opt-in. Case T87.
+- 1.52.2 (2026-10-03): `--accept` lists new waivers, decisions and 'unset' rulings as lessons to triage, naming toolkit candidates. Case T86.
+- 1.52.1 (2026-10-03): gate 13 reads a set's props for slot names; a ring width is compared as snapped only where drawn as an outline. Case T85.
+- 1.52.0 (2026-10-02): a slot is `type: 'SLOT'`; fractional strokes compared as snapped; text placed by its lines; frames measured over their own rows.
+- 1.51.0 (2026-10-02): a bound is the declaring target's own; one owner per waiver; `decision: 'unset'`; radius and rotate are numbers. Case T84.
+- 1.50.0 (2026-10-02): a waiver has an owner and a bound; the waivers gate refuses bad shapes at load; hug slack capped at 3; `shots.mjs`, `pages.mjs`. Case T83.
+- 1.49.0 (2026-10-02): the run and the gates are the toolkit's (`run.mjs`, `gates.mjs`, `project.mjs`, `session.mjs`, `serve.mjs`); every gate runs on both projects.
+- 1.48.0 (2026-10-01): one adapter (`adapt.mjs`) under 22 rulings, each pinned by a fixture; an unresolvable value is an `unresolved` row. Cases T80, T81.
+- 1.47.0 (2026-10-01): one probe, one host layer and exact mapping paths (`probe.mjs`, `hosts.mjs`, `layers.mjs`). Cases T78, T79.
+- 1.46.0 (2026-10-01): the differ and schema are the toolkit's; tolerances per assertion kind; gap asserted on the layout's axis. Case T77.
+- 1.45.0 (2026-10-01): the engine moves to `tools/parity/`; `figmaWeight` and the DevTools driver join it. Case T76.
+- 1.44.0 (2026-10-01): `figmaWeight` and the DevTools driver joined the engine (one account with 1.45.0).
+- 1.43.0 (2026-10-01): the saved verdict's dates mean "verdict last changed"; a run that changes nothing does not write. Case T72.
+- 1.42.1 (2026-10-01): the grading sentence says a grade per audience, stored on the change log entry (snapshot-standard rule 20). No rule changed.
+- 1.42.0 (2026-09-30): which components exist on each side, by name only; resemblance goes to the judge as a row to confirm. Case T75.
+- 1.41.0 (2026-09-19): `scripts/measurements.mjs` — two passes of one render compared once, naming layer, property and both values.
+- 1.40.0 (2026-09-19): the value parsers are `scripts/values.mjs`, shared by both projects; tolerances stay per project.
+- 1.39.0 (2026-09-19): gate 12 ships as `scripts/baseline.mjs`; the spec round-trip is the toolkit's `check-specs.cjs`.
+- 1.38.0 (2026-09-19): the snapshot is written by the toolkit, not a receiver per project (snapshot-standard 2.0.0).
+- 1.37.0 (2026-09-19): gate 6 ships as `scripts/waivers.mjs` (`asWaiver`, `excuses`, `stale`). Case T74.
+- 1.36.0 (2026-09-19): gate 10 ships as `scripts/spec-keys.mjs`, replacing two projects' gates. Case T73.
+- 1.35.0 (2026-09-19): first script, `scripts/parity-report.mjs`, the one writer for the saved verdict. Case T72.
+- 1.34.0 (2026-09-17): traps for a collapsed pair and a dialog's scrim; read the frame before styling a reported defect. Cases T70–T71.
+- 1.33.0 (2026-09-17): a slot's contents are the screen's; gate 8's walk carries the owning instance. Case T69.
+- 1.32.0 (2026-09-15): rules 27 (props on nested instances are overrides) and 28 (workers on windows, cache on, build reused). Cases T67–T68.
+- 1.31.0 (2026-09-15): rule 21 holds the driven suite's probes to the mapping's bar; traps for cleanup under `set -e` and driven routes. Case T66.
+- 1.30.0 (2026-09-15): rules 25 (measure the route beside the story) and 26 (the gate's server and readiness probe); story tree mirrors pages. Cases T64–T65.
+- 1.29.0 (2026-09-11): gate 8 requires a left-out layer to be named with a reason that goes stale. Case T63.
+- 1.28.0 (2026-09-11): rule 24: a screen is excused only by a capability from a closed list. Case T62.
+- 1.27.1 (2026-09-10): the audit skill is named `figma-components-audit`. Wording only.
+- 1.27.0 (2026-09-10): rules 21–23: a driven suite, stylesheet source gates, and green is not done. Cases T59–T61.
+- 1.26.0 (2026-09-09): rules 18–20: overrides inside placed instances, rounded clips, and the frame-height canvas. Cases T56–T58.
+- 1.25.0 (2026-09-09): rules 16 (clipped text probe) and 17 (wait for the DOM to stop moving).
+- 1.24.0 (2026-09-09): rule 10 takes reason codes from a closed list; rules 14 (layout translated, free space computed) and 15 (the probe must parse).
+- 1.23.0 (2026-09-09): address layers by name, publish component knobs, and a build step must not fail silently.
+- 1.22.0 (2026-09-08): seven rules swept in, led by "a resolver that cannot read a value must not answer no difference". Cases T40–T44.
+- 1.21.0 (2026-09-08): story and app load one stylesheet list; legacy styles in `@layer legacy`; screens at the frame's viewport. Cases T37–T38.
+- 1.20.0 (2026-09-08): generated foundations reference beside the components; hug tolerance per text run; root height carried. Case T36.
+- 1.19.0 (2026-09-08): waivers bounded by size; args read back; repeated sibling names suffixed; FILL root at recorded width. Cases T32–T35.
+- 1.18.0 (2026-09-08): dependency order (part 3b), fonts self-hosted, coverage by axis, states driven, hug axes asserted. Cases T27–T31.
+- 1.17.0 (2026-09-08): Figma's first mode is not the base; weights mapped from names; two receiver traps.
+- 1.16.0 (2026-09-08): a repo states which library it accepts and refuses others; a refused payload skips downstream steps.
+- 1.15.0 (2026-09-08): every collection carried under the file's own name; the named-collections trap.
+- 1.14.0 (2026-09-06): text styles carry paragraph and list spacing; screen frames diffed and reported first. Case T24.
+- 1.13.0 (2026-09-01): "The loop to work in": verify narrow then once; render every mapped state to look at.
+- 1.12.0 (2026-09-01): "Read a snapshot before building from it": diff, report to the designer, separate design from export changes.
+- 1.11.0 (2026-09-01): four traps: flapping measurements, full-run baseline, missing assets reported, hidden elements with `display`.
+- 1.10.0 (2026-08-26): gate 13, component-layer coverage, the mirror of gate 8.
+- 1.9.1 (2026-08-26): a dropped property owes an explicit none; content-owned waivers survive coincidence; baseline diffs reviewed for the unexpected.
+- 1.9.0 (2026-08-25): adapter → schema → differ; gate 12, the measurement baseline; library payloads graded; pixels demoted to eye-pointers.
+- 1.8.0 (2026-08-25): gates 10 and 11; the map is proposed rather than typed.
+- 1.7.2 (2026-08-25): traps for instance swaps and rotated layers.
+- 1.7.1 (2026-08-25): traps for scrolled screenshots, wrong click selectors, and ready-for-dev on top-level frames only.
+- 1.7.0 (2026-08-25): gate 9 — only frames marked Ready for dev count, gated both ways; each scenario its own frame.
+- 1.6.0 (2026-08-25): coverage becomes gate 8, with credit rules and exclusions; page state by click; three traps.
+- 1.5.0 (2026-08-22): environment pinned and both colour tiers measured (code-standard rule 35); screenshots named for what they hold.
+- 1.4.0 (2026-08-22): measurement reads what a frame says — positions, props, copy, page state (code-standard rule 34); two candidates.
+- 1.3.1 (2026-08-22): the validate step names the target platform and carries the validator's `silent` list. Wording only.
+- 1.3.0 (2026-08-21): validation step (`component-validator`) between snapshot and build.
+- 1.2.0 (2026-08-21): every render runs twice; reverse coverage via `codeOnly`. Gates renumbered 1–7.
+- 1.1.0 (2026-08-21): comparison mode — the measurement alone as a report, Figma canonical.
+- 1.0.0 (2026-08-21): first version: the contract, decisions and traps; cites code-standard rules 24, 31, 32 and 33.

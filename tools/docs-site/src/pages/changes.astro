@@ -1,0 +1,80 @@
+---
+import { compareNames } from '../../../shared/output.mjs';
+// What each snapshot changed against the one before it, from the store's own
+// log (`changes.json`, written by store.cjs on every library write): ONE ROW
+// PER CHANGE, each with its type and its level for the two audiences the
+// store grades for — the designers' files that use the library, and the code
+// built from it (snapshot-standard rule 20). A token change opens to its
+// values, before and after, per mode. The component links to the change log
+// on its own page, which carries every value. An entry from before grades
+// were stored shows what it recorded, one row per component, ungraded. It
+// answers "what changed since the last audit?", which explains an audit row
+// gone stale behind a rename.
+import ChangeLevel from '../components/ChangeLevel.astro';
+import Base from '../layouts/Base.astro';
+import UpdatedBy from '../components/UpdatedBy.astro';
+import ValuesDialog from '../components/ValuesDialog.astro';
+import Filter from '../components/Filter.astro';
+import { changeRows as rows, title, link } from '../lib/changes.js';
+import Time from '../components/Time.astro';
+import { day } from '../lib/format.js';
+
+const shown = (v) => (v === undefined || v === null || v === '' ? 'None' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+// The files the log names, in name order (their numbers order them), each
+// with how many changes it has: the filter's groups.
+const files = [];
+for (const r of rows) { const f = files.find((x) => x.name === r.file); if (f) f.n += r.items.length; else files.push({ name: r.file, n: r.items.length }); }
+files.sort((a, b) => compareNames(a.name, b.name, { numeric: true }));
+const total = files.reduce((n, f) => n + f.n, 0);
+// One section per day, newest first; its heading is what the side nav lists.
+const days = [];
+for (const r of rows) { const key = new Date(r.at).toISOString().slice(0, 10); const d = days.find((x) => x.key === key); if (d) d.entries.push(r); else days.push({ key, at: r.at, entries: [r] }); }
+// Within a day, one table per file under its own heading, the file's entries merged.
+for (const d of days) {
+  d.files = [];
+  for (const e of d.entries) {
+    const g = d.files.find((x) => x.file === e.file) || (d.files.push({ file: e.file, items: [], graded: false, backfill: false }), d.files.at(-1));
+    g.items.push(...e.items); g.graded = g.graded || e.graded; g.backfill = g.backfill || e.via === 'backfill';
+  }
+}
+---
+<Base title="Changes">
+  <h1>Changes</h1>
+  <UpdatedBy from={['snapshot']} />
+  <p class="lede">What each snapshot changed against the one before it, newest first, one row per change. Each change is graded twice, as a version number is: for the <strong>Figma files</strong> that use the library, and for the <strong>code</strong> built from it. Breaking means instances lose work, or a name the code uses changes.</p>
+  {files.length > 1 && <Filter label="Show changes in" groups={[['all', 'All files', total], ...files.map((f) => [f.name, f.name, f.n])]} />}
+  {days.length === 0 ? <p class="muted">Nothing recorded yet: the log starts with the next snapshot.</p> : days.map((d) => (
+    <section class="section" id={`day-${d.key}`} aria-labelledby={`day-${d.key}-h`} data-filter-part>
+      <h2 id={`day-${d.key}-h`}><Time at={d.at} short /></h2>
+      {d.files.map((g) => (
+        <div class="changes__file" data-filter-part>
+          <h3>{g.file}{g.backfill && <span class="muted"> · from git</span>}{!g.graded && <span class="muted"> · recorded before changes were graded</span>}</h3>
+          <div class:list={['table-wrap', g.items.length > 20 && 'table-wrap--long']} data-scrolls>
+            <table class="table changes">
+              <caption class="visually-hidden">Changes to {g.file} on {day(d.at)}</caption>
+              <thead><tr><th scope="col" class="changes__what">Change</th><th scope="col">Type</th><th scope="col">Figma files</th><th scope="col">Code</th></tr></thead>
+              <tbody>
+                {g.items.map((it) => (
+                  <tr data-kind={g.file} data-name={it.key}>
+                    <td class="changes__what">
+                      {/* What changed and on which component, then what it does to
+                          the people who use it (design-standard rule 10). */}
+                      <span class="changes__subject">{it.folder ? (link(it.folder) ? <a href={link(it.folder)}>{title(it.folder)}</a> : title(it.folder)) : 'Tokens'}</span>
+                      {it.label && <span class="changes__label">{it.label}</span>}
+                      {it.consequence && <span class="changes__consequence">{it.consequence}</span>}
+                      {/* Only a token change has values to show; the rest are on the component's own page. */}
+                      {it.values && <div><ValuesDialog id={`v-${it.key}`} title={it.label} rows={it.values.map((v) => ({ what: v.name, mode: v.mode, before: v.before ? (v.before.alias ? `${shown(v.before.value)} (${v.before.alias})` : shown(v.before.value)) : '', after: v.after ? (v.after.alias ? `${shown(v.after.value)} (${v.after.alias})` : shown(v.after.value)) : '' }))} /></div>}
+                    </td>
+                    <td>{it.type ? <span class="pill">{it.type}</span> : <span class="muted">No type</span>}</td>
+                    {/* A level as a tag: Breaking is the one a reader acts on, so it is the one that stands out. */}
+                    {[[it.figma, 'Figma files'], [it.code, 'Code']].map(([l, label]) => <ChangeLevel level={l} label={label} />)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </section>
+  ))}
+</Base>

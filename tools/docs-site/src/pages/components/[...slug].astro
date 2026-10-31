@@ -1,0 +1,303 @@
+---
+// One component page, Material's shape: a band with the name and its
+// description, then four tabs, from understanding it to building it.
+// Overview: the facts, the preview, usage, behaviour, composition,
+// accessibility, then dependencies and the level checks (documentation.md
+// *The component page*: when to use it comes right after what it looks like). Specs: anatomy, properties, states.
+// Development: implementation notes and design-code parity. Change log. Each
+// other set the page holds (a part, a second public set) has a sub-page of its
+// own under this one, built the same way, and the sidebar nests them.
+import Base from '../../layouts/Base.astro';
+import StoryPreview from '../../components/StoryPreview.astro';
+import Anatomy from '../../components/Anatomy.astro';
+import Dependencies from '../../components/Dependencies.astro';
+import DesignShot from '../../components/DesignShot.astro';
+import Guidance from '../../components/Guidance.astro';
+import PropsTable from '../../components/PropsTable.astro';
+import States from '../../components/States.astro';
+import Parity from '../../components/Parity.astro';
+import ChangeLog from '../../components/ChangeLog.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import Time from '../../components/Time.astro';
+import { componentPages, hasStorybook, parity, figmaBehind } from '../../lib/snapshot.js';
+import { ladder, LEVEL_LABEL } from '../../lib/ladder.js';
+import DoneTable from '../../components/DoneTable.astro';
+import { shows, project, ours } from '../../lib/project.js';
+import { rows as trackerRows, hasAudit, statusGroup, auditedAt, GROUP_LABEL } from '../../lib/tracker.js';
+import { base, md, date, plural, partName, mainSet } from '../../lib/format.js';
+
+// A page for each component, and under it a sub-page for each of its parts
+// (`/components/tabs/tab-item`): the sidebar nests them, and each stands on
+// its own, with its own header, tabs and change log.
+export function getStaticPaths() {
+  return componentPages.flatMap((page) => {
+    const main = mainSet(page);
+    // a part is every set whose address is not the page's own (snapshot.js gives the main set the page's)
+    return [{ params: { slug: page.slug }, props: { page } },
+      ...page.components.filter((c) => c !== main && c.path !== page.slug).map((part) => ({ params: { slug: part.path }, props: { page, part } }))];
+  });
+}
+const { page, part } = Astro.props;
+
+// The set this page documents: the page's own, or the part this sub-page is.
+const lead = part || mainSet(page);
+const setName = (name) => partName(name, page.title);
+const title = part ? setName(part.name) : page.title;
+// where the project takes the contract as its source and Figma differs from this component's official contract
+const late = figmaBehind.find((d) => d.folder === lead.folder);
+
+const g = lead.guidance;
+const hasUsage = g.usage.length > 0 || g.dont.length > 0;
+// What the description guide asks of every public component and this one
+// lacks: Usage and Don't are its minimum; every other section is left out
+// when it has nothing to say, so its absence is no gap. A private part takes
+// the compact form, which has neither. An empty description is already said
+// at the top.
+const gaps = g.empty || g.unknown || lead.private ? [] : [['Usage', g.usage.length], ["Don't", g.dont.length]].filter(([, n]) => !n).map(([l]) => l);
+
+
+// The WAI-ARIA pattern a component follows, where the name says which.
+const APG = { accordion: 'accordion', alert: 'alert', 'alert dialog': 'alertdialog', breadcrumb: 'breadcrumb', button: 'button', 'icon button': 'button', 'compact button': 'button', carousel: 'carousel', checkbox: 'checkbox', 'checkbox group': 'checkbox', combobox: 'combobox', 'autocomplete input': 'combobox', select: 'combobox', 'dropdown input': 'combobox', dialog: 'dialog-modal', modal: 'dialog-modal', disclosure: 'disclosure', link: 'link', 'back link': 'link', listbox: 'listbox', menu: 'menu-button', 'dropdown menu': 'menu-button', 'context menu': 'menu-button', meter: 'meter', 'progress bar': 'meter', radio: 'radio', 'radio group': 'radio', slider: 'slider', 'numerical input': 'spinbutton', switch: 'switch', 'button switch': 'switch', toggle: 'switch', table: 'table', tabs: 'tabs', toolbar: 'toolbar', tooltip: 'tooltip', tree: 'treeview' };
+const apg = APG[title.toLowerCase()];
+const hasA11y = g.accessibility.length > 0 || Boolean(apg);
+// What code builds differently from the drawing, as the component-validator
+// engine reads it: Figma, code, why.
+const hasImplementation = lead.implementation.length > 0;
+
+const done = page.status && (project.done || []).includes(page.status.marker);
+// The audit's view of this page: its score and what is still open.
+const auditRow = hasAudit ? trackerRows.find((r) => r.page === page) : null;
+// The audit's open findings on the page; its level (the ladder) is the fact beside it.
+const auditFact = auditRow ? (auditRow.open ? plural(auditRow.open, 'open finding') : 'Nothing open') : null;
+const inCode = page.components.some((c) => c.stories.length);
+const PARITY = { match: 'matches the design', drift: 'differs from the design', unmeasured: 'not measured against the design' };
+// Every set on the page, as the overview counts it: one that differs makes
+// the page differ, whichever set it is.
+const measuredSets = page.components.map((c) => c.parity).filter(Boolean);
+const drifts = measuredSets.filter((r) => r.status === 'drift');
+const pageParity = !measuredSets.length ? null : drifts.length ? 'drift' : measuredSets.every((r) => r.status === 'unmeasured') ? 'unmeasured' : 'match';
+const failed = drifts.reduce((n, r) => n + (r.failed || 0), 0);
+const codeFact = !hasStorybook ? null : !inCode ? 'Not built yet' : parity && pageParity ? `Built, ${pageParity === 'drift' ? `${plural(failed, 'difference')} from the design` : PARITY[pageParity]}` : 'Built';
+const storybook = hasStorybook && lead.stories[0] ? `${base}/storybook/?path=/story/${lead.stories[0].id}` : null;
+const preview = (c) => c.stories.length > 0 || Boolean(c.preview);
+// Where the audit holds this page's findings: the queue, narrowed to them.
+const queueLink = `${base}/audits/#queue?component=${page.slug}`;
+
+// Quality: this page's place on the ladder (lib/ladder.js) and every check
+// behind it, passed or not, so a component page never disagrees with the
+// overview and the Tracker that count it.
+const rung = ladder.find((r) => r.page === page) || null;
+// The tab's title says what the page is, so it never matches a token
+// collection or an overview page of the same name (a "Progress" component
+// beside the Progress overview), and in a multi-platform project which
+// platform's page it is.
+const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.platform ? ` · ${page.platform[0].toUpperCase()}${page.platform.slice(1)}` : ''}`;
+---
+<Base title={docTitle}>
+  {/* The band at the top: the name, what it is, its parts. Then the page in
+      four tabs, so each reader opens the part that is theirs. */}
+  <div class="hero" slot="hero">
+    <h1>{title}{page.platform && <span class="h1__platform"> · {page.platform[0].toUpperCase() + page.platform.slice(1)}</span>}</h1>
+    <UpdatedBy from={hasAudit ? ['snapshot', 'audit'] : ['snapshot']} />
+    {g.unknown ? null : g.empty
+      ? <p class="lede lede--empty">No purpose or usage written yet: the component's Figma description is empty.</p>
+      : g.purpose && <p class="lede" set:html={md(g.purpose)} />}
+    {late && (
+      <p class="hero__behind">
+        {late.kind === 'new' ? 'In Figma, with no official contract yet.' : 'Figma is behind the official contract: the props here are the official ones, the specs what Figma draws.'}
+        {' '}<button type="button" class="button button--ghost" data-copy={late.brief} data-copy-label={`the brief for ${title} in Figma`}>Copy brief for Figma</button>
+      </p>
+    )}
+    {/* The component and its parts, each a page of its own: listed here, under
+        the description, rather than nested in the sidebar. */}
+    {page.components.length > 1 && (
+      <nav class="hero__parts" aria-label={`${page.title} and its parts`}>
+        <ul>{[mainSet(page), ...page.components.filter((c) => c !== mainSet(page))].map((c) => (
+          <li><a href={`${base}/components/${c.path}`} aria-current={c === lead ? 'page' : undefined}>{c === mainSet(page) ? page.title : setName(c.name)}</a></li>
+        ))}</ul>
+      </nav>
+    )}
+  </div>
+
+  {/* Hidden until the script below wires it: with no script there are no
+      tabs, and the four panels read one after another. */}
+  <div class="tabs tabs--sections" role="tablist" aria-label={`${title} documentation`} data-tabs hidden>
+    {[['overview', 'Overview'], ['specs', 'Specs'], ['development', 'Development'], ['change-log', 'Change log']].map(([idp, label], i) => (
+      <button type="button" class="tab" role="tab" id={`tab-${idp}`} aria-controls={idp} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{label}</button>
+    ))}
+  </div>
+
+  <div class="tabpanel" id="overview" role="tabpanel" aria-labelledby="tab-overview">
+    <dl class="facts">
+      {/* The site's one name for the state (the Progress page's), then the
+          designers' own marker as Figma shows it. */}
+      {page.status && <div class:list={['fact', done && 'fact--done']}><dt>Design</dt><dd><span class={`status status--${statusGroup(page.status)}`}>{GROUP_LABEL[statusGroup(page.status)]}</span>{page.status.label !== GROUP_LABEL[statusGroup(page.status)] && <span class="fact__when">Figma marker: {page.status.label}</span>}</dd></div>}
+      {rung && <div class="fact"><dt>Level</dt><dd><a class={`status ladder__item--${rung.level}`} href="#quality">{LEVEL_LABEL[rung.level]}</a></dd></div>}
+      {codeFact && <div class:list={['fact', pageParity === 'drift' && 'fact--warn']}><dt>Code</dt><dd>{codeFact}</dd></div>}
+      {auditFact && <div class:list={['fact', auditRow.open ? 'fact--warn' : 'fact--done']}><dt>Audit</dt><dd><a href={auditRow.open ? queueLink : `${base}/audits`}>{auditFact}</a>{auditedAt && <span class="fact__when">at the audit of <Time at={auditedAt} /></span>}</dd></div>}
+      {date(page.changedAt) && <div class="fact fact--note"><dt>{page.changeKind === 'changed' ? 'Last changed' : 'First recorded'}</dt><dd><Time at={page.changedAt} /></dd></div>}
+      {(lead.figma || storybook || lead.editor) && (
+        <div class="fact"><dt>Resources</dt><dd class="fact__links">
+          {lead.figma && <a href={lead.figma}>Figma <span aria-hidden="true">↗</span></a>}
+          {storybook && <a href={storybook}>Storybook <span aria-hidden="true">↗</span></a>}
+          {/* the contract editor runs on this machine (serve.mjs): offered where the site is served from it too, never on a published copy */}
+          {lead.editor && <a href={lead.editor} data-editor hidden>Propose a change <span aria-hidden="true">↗</span></a>}
+        </dd></div>
+      )}
+      {lead.editor && <script is:inline>if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) for (const a of document.querySelectorAll('[data-editor]')) a.hidden = false;</script>}
+    </dl>
+    {preview(lead) && (
+      <section class="section" id="preview" aria-labelledby="preview-h">
+        <h2 id="preview-h" class="visually-hidden">Preview</h2>
+        {lead.stories.length > 0
+          ? <StoryPreview name={lead.name} stories={lead.stories} />
+          : (
+            <figure class="preview preview--design">
+              <div class="preview__canvas"><DesignShot preview={lead.preview} alt={`${title}, default variant as designed`} /></div>
+              <figcaption class="preview__caption"><span>Default variant as designed{lead.preview.dark && <>, <span class="when-light">light mode</span><span class="when-dark">dark mode</span></>}{shows.stories ? ' · not in code yet' : ''}</span>{lead.figma && <a href={lead.figma}>Open in Figma</a>}</figcaption>
+            </figure>
+          )}
+      </section>
+    )}
+    {hasUsage && (
+      <section class="section" id="usage" aria-labelledby="usage-h">
+        <h2 id="usage-h">Usage</h2>
+        <Guidance g={g} self={title} platform={page.platform} />
+      </section>
+    )}
+    {gaps.length > 0 && <p class="section__note">Not written in Figma yet: {gaps.join(' and ')}. Both belong in the component's description.</p>}
+    {g.behaviour.length > 0 && (
+      <section class="section prose" id="behaviour" aria-labelledby="behaviour-h">
+        <h2 id="behaviour-h">{ours('Behaviour')}</h2>
+        <ul>{g.behaviour.map((b) => <li set:html={md(b)} />)}</ul>
+      </section>
+    )}
+    {g.composition.length > 0 && (
+      <section class="section prose" id="composition" aria-labelledby="composition-h">
+        <h2 id="composition-h">Composition</h2>
+        <ul>{g.composition.map((b) => <li set:html={md(b)} />)}</ul>
+      </section>
+    )}
+    {hasA11y && (
+      <section class="section prose" id="accessibility" aria-labelledby="accessibility-h">
+        <h2 id="accessibility-h">Accessibility</h2>
+        {g.accessibility.length > 0 && <ul>{g.accessibility.map((a) => <li set:html={md(a)} />)}</ul>}
+        {apg && <p>Follows the <a href={`https://www.w3.org/WAI/ARIA/apg/patterns/${apg}/`}>WAI-ARIA {apg.replace(/-/g, ' ')} pattern</a>: roles, keyboard and focus {ours('behaviour')}.</p>}
+      </section>
+    )}
+    {(lead.related.uses.length > 0 || lead.related.usedBy.length > 0 || lead.related.unresolved.length > 0) && (
+      <section class="section" id="dependencies" aria-labelledby="dependencies-h">
+        <h2 id="dependencies-h">Dependencies in Figma</h2>
+        <Dependencies related={lead.related} name={lead.name} base={base} />
+        {lead.related.unresolved.length > 0 && (
+          <p class="deps-note">
+            Places {plural(lead.related.unresolved.length, 'component')} from another library: {lead.related.unresolved.slice(0, 3).join(', ')}{lead.related.unresolved.length > 3 ? ` and ${lead.related.unresolved.length - 3} more` : ''}.
+            This snapshot does not hold them, so this page cannot link to them or describe them.
+          </p>
+        )}
+      </section>
+    )}
+    {rung && rung.checks.length > 0 && (
+      <section class="section" id="quality" aria-labelledby="quality-h">
+        <h2 id="quality-h">Level checks</h2>
+        <DoneTable rung={rung} />
+      </section>
+    )}
+  </div>
+
+  <div class="tabpanel" id="specs" role="tabpanel" aria-labelledby="tab-specs">
+      {lead.anatomy && <Anatomy anatomy={lead.anatomy} name={title} id="anatomy" />}
+      {lead.props.length > 0 && (
+        <section class="section" id="properties" aria-labelledby="properties-h">
+          <h2 id="properties-h">Properties</h2>
+          <PropsTable props={lead.props} name={title} />
+        </section>
+      )}
+      {lead.noContract && (
+        <section class="section" id="properties" aria-labelledby="properties-h">
+          <h2 id="properties-h">Properties</h2>
+          <p class="muted">No contract is stored for this component, so its properties cannot be listed. Take a snapshot.</p>
+        </section>
+      )}
+      <States props={lead.props} states={lead.states} id="states" />
+  </div>
+
+  <div class="tabpanel" id="development" role="tabpanel" aria-labelledby="tab-development">
+    {hasImplementation && (
+      <section class="section prose" id="implementation" aria-labelledby="implementation-h">
+        <h2 id="implementation-h">Implementation</h2>
+        <div class="table-wrap" data-scrolls>
+          <table class="table table--equal">
+            <caption class="visually-hidden">What code builds differently from the drawing, and why</caption>
+            <thead><tr><th scope="col">Figma</th><th scope="col">Code</th><th scope="col">Why</th></tr></thead>
+            <tbody>
+              {lead.implementation.map((r) => <tr><th scope="row" set:html={md(r.figma.replace(/\*\*/g, ''))} /><td set:html={md(r.code)} /><td set:html={md(r.why)} /></tr>)}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+    {parity && lead.parity && lead.parity.status !== 'match' && (
+      <section class="section" id="parity" aria-labelledby="parity-h">
+        <h2 id="parity-h">Design and code</h2>
+        <Parity result={lead.parity} />
+      </section>
+    )}
+    {!hasImplementation && !(parity && lead.parity && lead.parity.status !== 'match') && <><h2 class="visually-hidden">Development</h2><p class="muted">Nothing for development yet: no implementation notes from the validator, and no difference from the code measured.</p></>}
+  </div>
+
+  <div class="tabpanel" id="change-log" role="tabpanel" aria-labelledby="tab-change-log">
+    <ChangeLog folders={[lead.folder]} id="changelog" />
+  </div>
+
+  <script is:inline>
+    {
+      // The ARIA tabs pattern: arrow keys, Home and End move between tabs,
+      // and a panel's id, or the id of anything inside it, in the address
+      // opens it. The panels render open; this hides all but the first.
+      const lists = [...document.querySelectorAll('[data-tabs]')].map((list) => {
+        list.hidden = false;
+        const tabs = [...list.querySelectorAll(':scope > [role="tab"]')];
+        const panels = tabs.map((t) => document.getElementById(t.getAttribute('aria-controls')));
+        const show = (n, focus) => {
+          tabs.forEach((t, j) => { t.setAttribute('aria-selected', String(j === n)); t.tabIndex = j === n ? 0 : -1; panels[j].hidden = j !== n; });
+          if (focus) tabs[n].focus();
+          dispatchEvent(new Event('contentchange'));
+        };
+        // A choice, by click or by key, goes in the address, so a reload or a
+        // shared link opens the same tab, and Back returns to the tab before.
+        const choose = (n, focus) => {
+          if (!panels[n].hidden) return;
+          show(n, focus);
+          history.pushState(null, '', n ? '#' + panels[n].id : location.pathname + location.search);
+        };
+        tabs.forEach((t, i) => {
+          t.addEventListener('click', () => choose(i));
+          t.addEventListener('keydown', (e) => {
+            const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+            const n = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : step ? (i + step + tabs.length) % tabs.length : -1;
+            if (n < 0) return;
+            e.preventDefault();
+            choose(n, true);
+          });
+        });
+        show(0);
+        return { panels, show };
+      });
+      const fromHash = () => {
+        const target = location.hash && document.getElementById(location.hash.slice(1));
+        // Back to the address with no tab named: the first tab.
+        if (!location.hash) { for (const { panels, show } of lists) if (panels[0].hidden) show(0); return; }
+        if (!target) return;
+        for (const { panels, show } of lists) {
+          const at = panels.findIndex((p) => p === target || p.contains(target));
+          if (at >= 0 && panels[at].hidden) show(at);
+        }
+        target.scrollIntoView();
+      };
+      addEventListener('hashchange', fromHash);
+      fromHash();
+    }
+  </script>
+
+</Base>

@@ -1,0 +1,122 @@
+---
+import { compareNames } from '../../../../shared/output.mjs';
+// How far the code is from the design. The first thing it can say is the
+// plainest: which components exist on one side and not on the other. Read at
+// build time from the snapshot's component pages and from the folder the
+// project names as its code, so there is no list to keep.
+import { join } from 'node:path';
+import Base from '../../layouts/Base.astro';
+import ParityEmpty from '../../components/ParityEmpty.astro';
+import KpiStrip from '../../components/KpiStrip.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import Filter from '../../components/Filter.astro';
+import { statusMarkerOf, codeOf, frameworks, inventory } from '../../lib/project.js';
+import { audit } from '../../lib/tracker.js';
+import { isOpen } from '../../dashboard/labels.js';
+import { componentPages, libraryOf } from '../../lib/snapshot.js';
+import { base } from '../../lib/format.js';
+import { displayName } from '../../../../shared/names.js';
+
+const libraries = [...codeOf].map(([key, code]) => {
+  const found = inventory.codeComponents(join(code.repo, code.components));
+  const pages = componentPages.filter((p) => p.components.some((c) => libraryOf(c.folder) === key));
+  // What the project says each component is in the library it is built with
+  // (a framework's `TextField` for "Text input"): the name the code was written to.
+  const built = frameworks.get(key);
+  const libraryName = (name) => built?.frameworkMap?.[name];
+  const lists = inventory.compare(pages, found || [], libraryName);
+  const framework = built ? built.framework.toUpperCase() : null;
+  // One list, by name: a Figma page under its title, a component only the
+  // code has under its own.
+  const rows = [...lists.both, ...lists.figmaOnly.map((page) => ({ page })), ...lists.codeOnly.map((c) => ({ code: c }))]
+    .map((r) => ({ ...r, name: r.page ? r.page.title : r.code.name, kind: r.page && r.code ? 'both' : r.page ? 'figma' : 'code' }))
+    .sort((a, b) => compareNames(a.name, b.name));
+  // the row's component as a page shows it: this library's own marker left out, then any folder
+  const marker = statusMarkerOf(key);
+  const unmark = (w) => displayName(marker && String(w).startsWith(marker) ? String(w).slice(marker.length) : w);
+  // Where a Figma component with no code of its own name might be in code
+  // under another: the audit's open suggestions (its Code parity stage,
+  // design-code-parity's rows), read from the record. Not worked out here —
+  // the audit proposes, a person confirms, and this page only shows.
+  const possible = Object.entries(audit?.rows || {})
+    .filter(([id, r]) => id.startsWith(`${key}/`) && r.owner === 'design-code-parity' && isOpen(r))
+    .map(([, r]) => ({
+      figma: unmark(r.where), code: String(r.key || '').replace(/^pair\|/, ''),
+      why: String((r.rec || [])[0] || '').replace(/^Possibly the same component:?\s*/, ''),
+      page: componentPages.find((p) => p.components.some((c) => libraryOf(c.folder) === key && (c.name === r.where || displayName(c.name) === unmark(r.where)))) }))
+    .sort((a, b) => compareNames(a.figma, b.figma));
+  return { key, ...code, found, ...lists, rows, framework, libraryName, possible };
+});
+---
+<Base title="Coverage">
+  <h1>Coverage</h1>
+  {libraries.length > 0 && <UpdatedBy from={['snapshot', 'audit']} />}
+  {libraries.length === 0 ? (
+    <ParityEmpty needs="code" shows="which components exist in Figma, in code, or in both" />
+  ) : libraries.map((l) => (<>
+    {libraries.length > 1 && <h2>{l.name || l.key}</h2>}
+    {!l.found ? (
+      <p class="lede">The code for {l.name || 'this library'} is stated as <code>{l.components}</code> in <code>{l.stated}</code>, and that folder was not there when this site was built, so nothing is compared.</p>
+    ) : (<>
+    <p class="lede">Which components exist in Figma and in code: the component pages of {l.name || 'the library'} against <code>{l.components}</code> in <code>{l.stated}</code>.</p>
+    {/* The match is by name and nothing else, and the page has to say so: a
+        component called one thing in Figma and another in code is counted
+        once on each side, which reads as two gaps where there is one name. */}
+    <p class="note">A component is in code when the code has one of its name, written any way (<em>Autocomplete input</em> is <code>AutocompleteInput</code>){l.framework && <>, or of its {l.framework} name, which the project records and the code is written to</>}. A similar name is not the same component, and each keeps its own row.</p>
+
+    <KpiStrip label="Components in Figma and in code" items={[
+      { label: 'In both', value: l.both.length, of: l.both.length + l.figmaOnly.length, note: 'Of the Figma components' },
+      { label: 'Only in Figma', value: l.figmaOnly.length, note: l.figmaOnly.length ? 'No code of that name' : 'None', tone: l.figmaOnly.length ? 'warn' : 'good' },
+      { label: 'Only in code', value: l.codeOnly.length, note: l.codeOnly.length ? 'No Figma page of that name' : 'None', tone: l.codeOnly.length ? 'warn' : 'good' },
+    ]} />
+
+    <section class="panel panel--plain" id={`library-${l.key}`} aria-labelledby={`parity-${l.key}`}>
+      <header class="panel__head"><h2 id={`parity-${l.key}`}>Components</h2></header>
+      <Filter scope={`[id="library-${l.key}"]`} param={libraries.length > 1 ? l.key : undefined} label="Show components that are" placeholder={`Filter ${l.rows.length} components`} groups={[['all', 'All components', l.rows.length], ['both', 'In both', l.both.length], ['figma', 'Only in Figma', l.figmaOnly.length], ['code', 'Only in code', l.codeOnly.length]]} />
+      <div class:list={['table-wrap', l.rows.length > 20 && 'table-wrap--long']} data-scrolls>
+        <table class="table">
+          <caption class="visually-hidden">Every component, and whether it exists in Figma and in code</caption>
+          <thead><tr><th scope="col">Component</th>{l.framework && <th scope="col">{l.framework} name</th>}<th scope="col">Figma</th><th scope="col">Code</th></tr></thead>
+          <tbody>
+            {l.rows.map((r) => (
+              <tr data-name={`${r.name} ${(r.page && l.libraryName(r.name)) || ''}`.toLowerCase()} data-kind={r.kind}>
+                <th scope="row">{r.page ? <a href={`${base}/components/${r.page.slug}`}>{r.name}</a> : <code>{r.name}</code>}</th>
+                {/* What the project records for a Figma component: its name in
+                    the framework, or that it has none. "Not recorded" is all
+                    that can be said of a component only the code has. */}
+                {l.framework && <td>{r.page && l.libraryName(r.name) ? <code>{l.libraryName(r.name)}</code> : r.page && l.libraryName(r.name) === null ? <span class="muted">None</span> : <span class="muted">Not recorded</span>}</td>}
+                {[r.page, r.code].map((there) => <td>{there ? <span class="mark mark--yes" aria-label="Yes">✓</span> : <span class="mark mark--no" aria-label="No">✕</span>}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel panel--plain" aria-labelledby={`possible-${l.key}`}>
+      <header class="panel__head"><h2 id={`possible-${l.key}`}>Possibly the same</h2><a href={`${base}/audits`}>Audit queue →</a></header>
+      <p class="section__note">Figma components with no code of their own name that the audit thinks the code has under another. Suggestions to confirm in the audit queue, not pairs: nothing above counts them.</p>
+      {l.possible.length === 0 ? (
+        <p class="muted">None open. The audit's Code parity stage proposes them each time it runs.</p>
+      ) : (
+        <div class="table-wrap" data-scrolls>
+          <table class="table">
+            <caption class="visually-hidden">Figma components that may exist in code under another name</caption>
+            <thead><tr><th scope="col">Figma</th><th scope="col">Possibly in code as</th><th scope="col">Why</th></tr></thead>
+            <tbody>
+              {l.possible.map((s) => (
+                <tr>
+                  <th scope="row">{s.page ? <a href={`${base}/components/${s.page.slug}`}>{s.figma}</a> : s.figma}</th>
+                  <td><code>{s.code}</code></td>
+                  <td>{s.why}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+    </>)}
+  </>))}
+</Base>
+

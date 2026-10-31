@@ -1,0 +1,43 @@
+---
+// When to use a component and what to use instead, from its Figma
+// description: Do and Don't, side by side. Behaviour, Composition and the
+// implementation notes are sections of their own on the page.
+import { componentPages } from '../lib/snapshot.js';
+import { guidance } from '../lib/project.js';
+import { base, md } from '../lib/format.js';
+
+interface Props { g: ReturnType<typeof guidance.parse>; self?: string; platform?: string | null }
+// platform: the page's own, so a mobile page's links go to mobile pages.
+const { g, self, platform = null } = Astro.props;
+const names = componentPages.map((p) => p.title);
+const pageOf = (name) => componentPages.find((p) => p.title === name && p.platform === platform) || componentPages.find((p) => p.title === name);
+---
+{(g.usage.length > 0 || g.dont.length > 0) && (
+  <div class="dodont">
+    {g.usage.length > 0 && (
+      <div class="dodont__col--do">
+        <p class="sev good dodont__label"><span aria-hidden="true">✓</span> Do</p>
+        <ul>{g.usage.map((u) => <li set:html={md(u)} />)}</ul>
+      </div>
+    )}
+    {g.dont.length > 0 && (
+      <div class="dodont__col--dont">
+        <p class="sev error dodont__label"><span aria-hidden="true">✕</span> Don't</p>
+        <ul>
+          {g.dont.map((d) => {
+            // The alternative's own name, after the colon, becomes the
+            // link; a name written as `code` is linked whole, backticks
+            // and all, so the code span is not split.
+            const alt = guidance.alternative(d, names, self);
+            const page = alt && pageOf(alt);
+            let at = page ? d.toLowerCase().indexOf(alt.toLowerCase(), d.indexOf(':')) : -1;
+            let end = at + (alt?.length || 0);
+            const ticked = at > 0 && d[at - 1] === '`' && d[end] === '`';
+            if (ticked) { at -= 1; end += 1; }
+            return at < 0 ? <li set:html={md(d)} /> : <li><Fragment set:html={md(d.slice(0, at))} /><a href={`${base}/components/${page.slug}`}>{ticked ? <code>{alt}</code> : d.slice(at, end)}</a><Fragment set:html={md(d.slice(end))} /></li>;
+          })}
+        </ul>
+      </div>
+    )}
+  </div>
+)}

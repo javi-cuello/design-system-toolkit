@@ -1,0 +1,64 @@
+---
+/*
+ * Paint styles — a gradient or a solid fill saved as a style. Its own page,
+ * because a paint style is not an effect style (Figma has four style types:
+ * paint, text, effect, grid).
+ *
+ * `Name | Code | Value`, the same shape as every other foundations table, the
+ * paint drawn in the value cell beside the value. The stops are in the value,
+ * in the order CSS states them, and the value is the string a builder copies.
+ */
+import Base from '../../layouts/Base.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import { snapshot, resolve } from '../../lib/snapshot.js';
+import { gradientAngle, cssName } from '../../lib/project.js';
+import { plural } from '../../lib/format.js';
+
+const paints = snapshot.paintStyles || [];
+const TYPE = { GRADIENT_LINEAR: 'Linear gradient', GRADIENT_RADIAL: 'Radial gradient', GRADIENT_ANGULAR: 'Angular gradient', GRADIENT_DIAMOND: 'Diamond gradient', SOLID: 'Solid' };
+
+const css = (p) => {
+  const stops = (p.stops || []).map((s) => `${resolve(s.color)} ${s.position * 100}%`).join(', ');
+  // The angle the token build ships, not a second reading of it.
+  if (p.type === 'GRADIENT_LINEAR') return `linear-gradient(${gradientAngle(p.angle)}, ${stops})`;
+  if (p.type === 'GRADIENT_RADIAL') return `radial-gradient(${stops})`;
+  if (p.type === 'SOLID') return resolve(p.color);
+  return null;
+};
+const value = (p) => p.paints.map(css).filter(Boolean).join(', ');
+const kinds = (p) => [...new Set(p.paints.map((x) => TYPE[x.type] || x.type))].join(', ');
+const code = (name) => cssName('paint-style', name);
+---
+<Base title="Paint styles">
+  <h1>Paint styles</h1>
+  <UpdatedBy from={['snapshot']} />
+  <p class="lede">{plural(paints.length, 'paint style')} — a gradient or a fill saved whole. Click a code name or value to copy it.</p>
+
+  {paints.length === 0 && <p class="note">This library defines none.</p>}
+
+  {paints.length > 0 && (
+    <div class="table-wrap" data-scrolls>
+      <table class="table table--stack">
+        <caption class="visually-hidden">Paint styles and their values</caption>
+        <thead><tr><th scope="col">Name and code</th><th scope="col">Value</th></tr></thead>
+        <tbody>
+          {paints.map((p) => (
+            <tr>
+              <th scope="row">
+                <span class="token-name">{p.name.split('/').map((seg, k) => <>{k > 0 && <>/<wbr /></>}{seg}</>)}</span>
+                <span class="token-desc">{kinds(p)}</span>
+                <button type="button" class="code-chip" data-copy={`var(${code(p.name)})`} aria-label={`Copy ${code(p.name)}`}>{code(p.name)}</button>
+              </th>
+              <td data-label="Value">
+                <span class="effect-cell">
+                  <span class="paint-chip" style={`--gradient: ${value(p)}`}></span>
+                  <button type="button" class="value__raw" data-copy={value(p)} aria-label="Copy the paint value">{value(p)}</button>
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</Base>

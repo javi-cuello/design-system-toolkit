@@ -1,0 +1,8 @@
+{
+  "name": "lucide-icon-importer",
+  "version": "1.11.4",
+  "private": true,
+  "devDependencies": {
+    "@figma/plugin-typings": "*"
+  }
+}

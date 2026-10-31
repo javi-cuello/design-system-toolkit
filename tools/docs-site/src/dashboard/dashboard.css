@@ -1,0 +1,793 @@
+/*
+ * The audit dashboard's own components: the queue, its rows and badges, the
+ * history, the About view and the Ask drawer. Tokens, reset and
+ * plain elements are the site's (styles/system.css); nothing here restates
+ * them.
+ *
+ * Scoped to .dash, and the site's own component rules stop at .dash (their
+ * @scope names it as the lower boundary), so neither restyles the other by a
+ * shared class name. State lives on the .dash element (data-ask,
+ * data-first-run, data-readonly), set by its modules.
+ */
+@layer tokens, reset, base, layout, components, utilities;
+
+/* A keyframes rule cannot sit inside @scope. */
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
+
+@layer components {
+@scope (.dash) {
+
+  /* The site's rhythm stops at .dash (its rules are scoped to end here), so
+     the gap under the page's title is set from this side. */
+  /* --drawer-open: on a phone the open drawer is a sheet the screen's width;
+     from 45rem a panel of its own (below). */
+  :scope { --drawer-open: 100vw; --drawer-w: var(--drawer-open); display: block; margin-block-start: var(--space-24); }
+  /* Unseen until its first render (main.js sets data-ready), so the
+     queue appears whole rather than filling in and pushing itself around. */
+  :scope:not([data-ready]) :is(header.top, #dash-main, footer.foot) { visibility: hidden; }
+
+  /* A read-only copy: the actions go (the rule is at the end of this scope,
+     so it outranks the drawer's own display rules by order), and the boxes
+     and notes are disabled and readonly by the script (queue.js paint). An
+     empty note is an invitation to type, which a read-only copy cannot take;
+     a written one is kept, as text the reader cannot change. */
+  :scope[data-readonly="yes"] textarea.note:placeholder-shown { display: none; }
+  .readonly-note { display: none; margin: 0; color: var(--fg-muted); font-size: var(--text-sm); }
+  :scope[data-readonly="yes"] .readonly-note { display: block; }
+  /* A tokens or icon library: checked from the snapshot, nothing to run. */
+  /* Kept in the layout, so switching files never moves the page under you. */
+  :scope[data-scanned="no"] .head-actions { visibility: hidden; }
+  /* First run: a library recorded, nothing measured. Hide what has no content
+     rather than rendering headings above empty space. */
+  :scope[data-first-run="yes"] .measured-only,
+  :scope:not([data-first-run="yes"]) .first-run-only { display: none; }
+  /* The head: the record's freshness on the left, the actions on the right,
+     one row while they fit. The actions stack three right-aligned lines (the
+     result, the controls, the connection): as one wrapping row they broke into
+     a ragged L, a button stranded below its pair. */
+  header.top {
+    display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-16) var(--space-32);
+    padding-block-end: var(--space-24); border-block-end: var(--stroke-1) solid var(--line);
+  }
+  header.top .measured { flex: 1 1 18rem; } /* the figures' narrowest before they wrap under the title */
+  .head-actions { display: grid; justify-items: end; align-content: start; gap: var(--space-8); }
+  .action-row { display: flex; gap: var(--space-8); align-items: center; }
+  /* The status is the flexible part. Left to size itself it widened the whole
+     column and wrapped the page title, so it shrinks first and wraps within
+     its own box — the buttons never move. */
+  /* One short line, aligned with the buttons it belongs to. Right-aligned and
+     46 characters wide it wrapped into a centred paragraph floating above
+     them, which is what a header full of prose looks like. */
+  .head-actions .sweep-state { margin: 0; text-align: end; max-inline-size: 34ch; }
+  .audit-wrap { position: relative; }
+  .audit-menu {
+    position: absolute; inset-inline-end: 0; inset-block-start: calc(100% + 6px); z-index: 5; min-inline-size: 190px;
+    /* a menu floats over content: the overlay level (visual.md *Surfaces and elevation levels*) */
+    background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8);
+    padding: var(--space-4); display: grid; gap: var(--space-4);
+    box-shadow: var(--shadow-overlay);
+  }
+  .audit-menu button {
+    font: inherit; font-size: var(--text-sm); text-align: start; inline-size: 100%;
+    background: none; border: 0; border-radius: var(--radius-4); color: var(--fg);
+    padding: var(--space-8) var(--space-12); cursor: pointer;
+    display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-12);
+  }
+  @media (hover: hover) { .audit-menu button:hover { background: var(--overlay-hover); } }
+  .audit-menu button[disabled] { color: var(--fg-soft); cursor: default; background: none; }
+  .audit-menu small { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-soft); }
+  .measured {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-8) var(--space-12);
+    font-size: var(--text-sm); color: var(--fg-muted);
+  }
+  /* The freshness, weights and counts are the site's one badge (system.css
+     .sev). Its padding and border hang into the row gap, so the head is one
+     height with the badge or without it (a file never run has none). */
+  .freshness { margin-block: calc(-2px - 1px); }
+  .freshness.fresh { color: var(--good); background: var(--good-soft); }
+  .freshness.aging { color: var(--warn); background: var(--warn-soft); }
+  .file-link { color: var(--fg); text-decoration: underline dotted var(--fg-soft); text-underline-offset: 4px; } /* a dotted line sits lower, so its dots clear descenders */
+  @media (hover: hover) { .file-link:hover { color: var(--accent); text-decoration-color: var(--accent); } }
+
+
+  /* Bucket 1 is defined as "one approval applies the batch" — the per-row
+     button is the exception, not the rule. A maintainer who writes "do this for
+     all of them" in a note and presses Do it is asking for this button. */
+  .row-failed {
+    grid-column: 1 / -1; margin: 0; margin-block-start: var(--space-4); font-size: var(--text-sm);
+    color: var(--warn);
+  }
+
+
+  /* Where a row's fix lands, on the row. A quiet outline, not
+     a severity: it says which pile the row belongs to, and the severity chip
+     beside it already carries the alarm. */
+  .lands-tag {
+    font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 500;
+    padding: 1px var(--space-8); border-radius: var(--radius-4); /* 1px: a badge one line of xs text tall */
+    border: var(--stroke-1) solid var(--line-strong); color: var(--fg-muted); white-space: nowrap;
+  }
+  .lands-tag[data-lands="figma"], .lands-tag[data-lands="both"] { color: var(--fg); border-color: var(--fg-soft); }
+
+  /* The file switch: links, the one in view marked as the site marks a
+     selected tab (styles/system.css .tab[aria-selected]). */
+  .tabs--scope { margin-block-start: 0; padding: 0; list-style: none; }
+  a.tab { text-decoration: none; }
+  .tab[aria-current] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--fg); } /* the heavier stroke as an underline drawn in a shadow, taking no room */
+  /* What the filters are doing, and the way back to everything. */
+  .filter-note[hidden] { display: none; }
+  .link-button {
+    font: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+    color: var(--accent); text-decoration: underline; text-underline-offset: var(--underline-offset);
+  }
+  /* A file with nothing recorded: the empty state replaces the figures, the
+     filters and the sections, which would all be empty. */
+  :scope[data-nothing="yes"] :is(.toolbar, #queueTiles, #queuePane, #verifyBtn) { display: none; }
+  .empty-file { margin-block-start: var(--space-24); }
+  .empty-file[hidden] { display: none; }
+  .empty-file h2 { font-size: var(--text-lg); line-height: var(--leading-lg); margin: 0; margin-block-end: var(--space-8); }
+
+  /* .segmented and .seg come from the UI system (styles/system.css). */
+  /* In the queue toolbar, aligned with its button: no margins of its own. */
+  .view[hidden] { display: none; }
+
+  /* about */
+  .about p { color: var(--fg-muted); font-size: var(--text-md); line-height: 1.6; max-inline-size: 66ch; }
+  .about p.lead { color: var(--fg); font-size: var(--text-md); }
+  /* The site's rhythm stops at .dash, so paragraphs in a row are spaced here. */
+  :where(.about) p { margin: 0; }
+  :where(.about) p + p { margin-block-start: var(--space-12); }
+  .measure {
+    display: grid; gap: var(--space-4) var(--space-32);
+    padding-block: var(--space-24); border-block-start: var(--stroke-1) solid var(--line-soft);
+  }
+  .measure:first-of-type { border-block-start: var(--stroke-1) solid var(--line); }
+  .measure h3 {
+    font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
+    color: var(--fg); margin: 0;
+  }
+  .measure .grade {
+    grid-column: 1; font-family: var(--font-mono); font-size: var(--text-sm);
+    color: var(--fg-soft); margin-block-start: var(--space-4); line-height: 1.5;
+  }
+  .measure .body { grid-column: 1; }
+  .measure .body p { margin: 0; margin-block-end: var(--space-12); max-inline-size: 66ch; font-size: var(--text-sm); }
+  .measure .body p:last-child { margin-block-end: 0; }
+  .measure .body b { color: var(--fg); font-weight: 600; }
+  .measure .body code, .about code {
+    font-family: var(--font-mono); font-size: .88em; color: var(--fg); /* in em, so code follows the text it sits in */
+  }
+  .states { display: grid; gap: 10px; margin: 0; margin-block-start: var(--space-16); padding: 0; list-style: none; }
+  .states li { display: grid; gap: var(--space-4); grid-column: 1 / -1; font-size: var(--text-sm); color: var(--fg-muted); }
+  .swatch {
+    font-size: var(--text-sm); font-weight: 600;
+    border-inline-start: var(--stroke-2) solid currentColor; padding-inline-start: var(--space-8); align-self: start;
+  }
+  .swatch.good { color: var(--good); }
+  .swatch.warn { color: var(--warn); }
+  .swatch.idle { color: var(--idle); }
+  .swatch.none { color: var(--fg-soft); }
+  section { margin-block-start: var(--space-64); }
+  /* A rule where the subject changes — the sections above are about what moved,
+     this one is about how everything is built. */
+  section.ruled { border-block-start: var(--stroke-1) solid var(--line); padding-block-start: var(--space-48); }
+  /* A rule separates two things. When the section before it is hidden, this one
+     leads the view and the rule separates it from nothing — which is what the
+     "Changed since the last audit" section leaves behind every time nothing has
+     moved, which is most of the time. */
+  /* The rule and its padding go; the section's own top margin stays. */
+  [hidden] + section.ruled { border-block-start: 0; padding-block-start: 0; }
+  /* A view's first section follows the page's head directly; the queue's
+     leads after the first-run notice, which is hidden once anything is
+     measured. */
+  .view > section:first-child, .view > .first-run-only + .measured-only { margin-block-start: var(--space-24); }
+  .sec-head { display: flex; align-items: baseline; gap: var(--space-12); flex-wrap: wrap; margin-block-end: var(--space-4); }
+  .sec-note { color: var(--fg-muted); font-size: var(--text-sm); margin: 0; margin-block-end: var(--space-16); max-inline-size: 66ch; }
+
+  /* the full check inventory */
+  .dim { margin-block-start: var(--space-48); }
+  .dim-head { display: flex; align-items: baseline; gap: var(--space-8); flex-wrap: wrap; }
+  .dim-head h3 {
+    font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
+    color: var(--fg); margin: 0;
+  }
+  .weight { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft); }
+  .dim-why { font-size: var(--text-sm); color: var(--fg-soft); margin: 0; margin-block-start: var(--space-8); max-inline-size: 66ch; }
+  /* Columns sized by their widest entry across the whole list: the items are
+     subgrids of the list's grid, so a longer badge widens its column for
+     every row rather than overflowing a width fitted to today's labels. */
+  .checks { list-style: none; margin: 0; margin-block-start: var(--space-12); padding: 0; display: grid; }
+  .checks li {
+    display: grid; gap: var(--space-16); grid-column: 1 / -1;
+    padding-block: var(--space-12); border-block-start: var(--stroke-1) solid var(--line-soft);
+    font-size: var(--text-sm); color: var(--fg-muted); align-items: baseline;
+  }
+  .checks li:first-child { border-block-start: 0; }
+  .checks li > span:last-child { max-inline-size: 66ch; }
+  /* The check's tier is the queue's severity badge (styles/system.css .sev);
+     hygiene, which the queue never files, is its quiet ink. */
+  .checks .sev { justify-self: start; }
+  .checks .sev.hygiene { color: var(--fg-soft); }
+  .who {
+    font-family: var(--font-mono); font-size: var(--text-sm);
+    color: var(--fg-soft); white-space: nowrap;
+  }
+  .checks b { color: var(--fg); font-weight: 600; }
+
+  /* The files this project audits, and which of them Figma has open. The list
+     is the project's own settings, so it is there at rest; the dot is the one
+     thing the page cannot infer from its record, and is refreshed on a timer. */
+  .files {
+    list-style: none; margin: 0; margin-block-start: var(--space-8); padding: 0;
+    /* One row per file, never a wrapped inline flow: read down the dots to
+       see what is open, which is the question the list exists to answer. */
+    display: flex; flex-direction: column; gap: var(--space-4);
+    flex-basis: 100%;
+  }
+  /* A note that does not fit beside its file's name moves under it whole,
+     rather than wrapping a word a line in what room is left, and lines up
+     with the name: the row is inset by the dot and its gap, and the dot
+     hangs in the inset. */
+  .file {
+    display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-8); row-gap: 0;
+    padding-inline-start: calc(12px + var(--space-8)); /* the dot's 12px box, below */
+    font-size: var(--text-sm); color: var(--fg-soft);
+  }
+  .file > .file-dot { margin-inline-start: calc(-12px - var(--space-8)); } /* hangs in the row's inset */
+  /* Green says "in this run", not "open": a file that is open and not part of
+     the run is a fact worth stating quietly, not a success to colour.
+     `:not([data-busy])` on every colour rule, because a row that is being
+     read replaces its dot with a spinner — and a later, more specific colour
+     rule beat the spinner's `background: none` and filled the ring, which is
+     a green blob with a rotating edge. Specificity is not a place to be
+     clever; the rules that paint a dot simply stop applying to one that has
+     become something else. */
+  /* One box, one size, always. The dot is drawn INSIDE it, so a row does not
+     move when its dot becomes a spinner: at 8px at rest and 12px while busy,
+     every row shifted sideways the moment a run reached it, and back again
+     when it left. */
+  .file-dot {
+    inline-size: 12px; block-size: 12px; flex: none; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .file-dot::before {
+    content: ""; inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--fg-soft); /* a status dot, drawn */
+  }
+  .file[data-on="true"][data-current="yes"]:not([data-busy]) .file-dot::before { background: var(--good); }
+  .file[data-on="true"][data-current="yes"]:not([data-busy]) .file-note { color: var(--good); }
+  .file-what { color: var(--fg-muted); }
+  /* The library the buttons act on. Weight rather than a second colour: the
+     colour in this row already means "connected". */
+  .file[data-current="yes"] .file-what { color: var(--fg); font-weight: 600; }
+  .file-note { font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; }
+  /* Reading a file: the dot becomes a spinner on that row, and the note says
+     the stage and how far through the run it is. */
+  .file[data-busy] .file-note { color: var(--fg); }
+  /* Busy: the inner dot goes and the box becomes the ring. Same footprint. */
+  .file[data-busy] .file-dot::before { display: none; }
+  .file[data-busy] .file-dot {
+    border: var(--stroke-2) solid var(--line);
+    border-block-start-color: var(--fg); animation: file-spin 0.7s linear infinite;
+  }
+  @keyframes file-spin { to { transform: rotate(360deg); } }
+  /* An empty status line keeps its place in the accessibility tree but no
+     height. */
+  .sweep-state { font-size: var(--text-sm); color: var(--fg-soft); margin: 0; }
+  .sweep-state[data-tone="warn"] { color: var(--warn); }
+  .sweep-state[data-tone="ok"] { color: var(--good); }
+  /* The run's status line carries NO motion and no position: it names what is
+     in flight, in words. Every moving part belongs to the file list, which
+     shows the spinner, the percentage and the seconds on the row for the file
+     being read. Two progress readouts running at once is worse than one —
+     they are read as two things happening, and a reader checks both to find
+     out they say the same thing. */
+  .state-link {
+    font: inherit; font-size: var(--text-sm); font-weight: 600; background: none; border: 0;
+    color: var(--accent); padding: 0; cursor: pointer; text-decoration: underline;
+    text-underline-offset: var(--underline-offset);
+  }
+  .changed-group { padding-block: var(--space-12); border-block-start: var(--stroke-1) solid var(--line-soft); }
+  .changed-group:first-child { border-block-start: 0; }
+  .changed-group h3 {
+    font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
+    color: var(--fg); margin: 0; margin-block-end: var(--space-8); display: flex; align-items: baseline; gap: var(--space-8);
+  }
+  .changed-group[data-kind="changed"] h3 .changed-count { color: var(--warn); background: var(--warn-soft); }
+  .changed-group[data-kind="added"] h3 .changed-count { color: var(--accent); background: var(--accent-soft); }
+  .changed-group[data-kind="gone"] h3 .changed-count { color: var(--fg-soft); }
+  .name-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .name-list li {
+    font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg);
+    background: var(--line-soft); border-radius: var(--radius-4); padding: 1px var(--space-8); /* 1px: a chip one line of xs text tall */
+  }
+  .baseline-note { color: var(--fg-muted); font-size: var(--text-sm); margin: 0; max-inline-size: 70ch; }
+
+
+  /* The queue's figures and its toolbar. The figures are the site's KPI
+     strip (styles/system.css .kpis). */
+  #queueTiles { margin-block-end: var(--space-16); }
+  #metrics { margin-block-start: var(--space-16); }
+
+
+  /* registry */
+  .table-scroll { overflow-x: auto; }
+  /* Tables take the UI system's look; a cell of prose reads muted and from
+     the top. */
+  td { color: var(--fg-muted); vertical-align: top; }
+  tbody tr:last-child :is(td, th) { border-block-end: 0; }
+  /* The run's date heads its row: a row header, read in the table's own ink
+     and weight rather than a heading's. */
+  th.when { color: var(--fg); font-weight: inherit; text-align: start; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  th.when small { display: block; font-size: var(--text-xs); color: var(--fg-soft); margin-block-start: var(--space-4); }
+  /* Found and cleared, in the colours the queue gives them. */
+  td[data-delta="up"] { color: var(--accent); }
+  td[data-delta="down"] { color: var(--good); }
+  td.what { color: var(--fg-muted); max-inline-size: 62ch; }
+  td.what .what-scope { color: var(--fg); margin-block-end: var(--space-8); }
+  table { table-layout: auto; }
+  th:last-child, td.what { inline-size: 45%; }
+  /* History: the six short columns share one width and the account takes the
+     rest — only where the pane is wide enough for both. Narrower, the table
+     sizes columns to content as before, or the account column would vanish. */
+  /* 100rem: the short columns at their width beside an account column still
+     wide enough to read. */
+  @media (min-width: 100rem) {
+    #pane-history table { table-layout: fixed; }
+    #pane-history thead th:not(:last-child) { inline-size: 7.5rem; } /* a date and a person's name fit; the change takes the rest */
+    #pane-history thead th:last-child { inline-size: auto; }
+  }
+  td.what .what-open {
+    font: inherit; color: var(--fg-muted); background: none; border: 0; padding: 0; margin-block-start: var(--space-4);
+    text-decoration: underline; text-underline-offset: var(--underline-offset); cursor: pointer;
+  }
+  .run-notes { margin: 0; padding-inline-start: 1.2em; color: var(--fg-muted); line-height: 1.6; }
+  .run-notes li + li { margin-block-start: var(--space-4); }
+  td.num { font-family: var(--font-mono); white-space: nowrap; }
+  td .kind {
+    display: inline-block; font-size: var(--text-xs);
+    font-weight: 600; padding: 2px 7px; border-radius: var(--radius-4); border: var(--stroke-1) solid currentColor; /* a badge's padding, off the space scale like the dashboard's own */
+    color: var(--fg-soft); white-space: nowrap;
+  }
+  td .kind[data-kind="first"] { color: var(--accent); }
+  .empty { color: var(--fg-soft); font-size: var(--text-sm); padding-block: var(--space-20); }
+
+  footer.foot {
+    margin-block-start: var(--space-48); padding-block-start: var(--space-16); border-block-start: var(--stroke-1) solid var(--line);
+    color: var(--fg-soft); font-size: var(--text-sm); line-height: 1.6; max-inline-size: 78ch;
+  }
+  footer.foot code { font-family: var(--font-mono); }
+
+  /* A check the scanner does not run is shown, but shown as not running —
+     hiding it would misrepresent the audit's reach, and so would listing it
+     as though it fired. */
+  .checks li[data-off], .measure[data-off] { opacity: .62; }
+  .runs-tag {
+    display: inline-block; margin-inline-start: var(--space-4); padding: 0 var(--space-4); border-radius: var(--radius-full);
+    border: var(--stroke-1) solid var(--line); color: var(--fg-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap; vertical-align: 1px; /* optical: sits the pill on the text's x-height */
+  }
+
+  td[data-tone="warn"] { color: var(--warn); }
+  .spaced { margin-block-start: var(--space-24); }
+
+  /* What a run DID. The rows it changed move themselves — a verified row folds
+     into "cleared here", a fixed one ticks and leaves the bucket — so without
+     this the only evidence of a minute's work is a list that got shorter. The
+     inline status line was carrying these, next to "Saving as you go", which is
+     where a reader stops looking. */
+  .toasts {
+    /* Clear of the ask drawer, which is also fixed to this edge. --drawer-w is
+       the drawer's own width in each of its states, so this tracks it rather
+       than guessing: 46px collapsed, its full width open. */
+    position: fixed; inset-inline-end: calc(var(--space-24) + var(--drawer-w)); inset-block-end: var(--space-24); z-index: 40;
+    display: flex; flex-direction: column; gap: var(--space-12);
+    inline-size: min(30rem, calc(100vw - var(--drawer-w) - var(--space-24) * 2)); pointer-events: none;
+  }
+  :scope[data-ask="off"] .toasts {
+    inset-inline-end: var(--space-24); inline-size: min(30rem, calc(100vw - var(--space-24) * 2)); /* a toast's measure, and never wider than the screen less its insets */
+  }
+  .toast {
+    pointer-events: auto; display: flex; gap: var(--space-12); align-items: flex-start;
+    background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover); color: var(--fg);
+    border: var(--stroke-1) solid var(--line-overlay); border-inline-start: 3px solid var(--fg-soft); /* a status edge, heavier than --stroke-2 so it reads at a glance */
+    border-radius: var(--radius-8); padding: var(--space-16) var(--space-16);
+    box-shadow: var(--shadow-overlay); font-size: var(--text-sm); line-height: 1.5;
+  }
+  .toast[data-tone="ok"]   { border-inline-start-color: var(--good); }
+  .toast[data-tone="warn"] { border-inline-start-color: var(--warn); }
+  .toast[data-tone="error"]{ border-inline-start-color: var(--bad); }
+  .toast-body { flex: 1; min-inline-size: 0; }
+  .toast-title { font-weight: 600; }
+  .toast-detail { color: var(--fg-muted); margin-block-start: var(--space-4); }
+  .toast-link {
+    display: inline-block; margin-block-start: 5px; font: inherit; font-size: var(--text-sm);
+    background: none; border: 0; padding: 0; cursor: pointer;
+    color: var(--accent); text-decoration: underline; text-underline-offset: 2px; /* closer, in a toast's small text */
+  }
+  .toast-close {
+    font: inherit; line-height: 1; background: none; border: 0; cursor: pointer;
+    color: var(--fg-soft); padding: 0 var(--space-4);
+  }
+  @media (hover: hover) { .toast-close:hover { color: var(--fg); } }
+  /* Stilled by system.css's one reduced-motion block. */
+  .toast { animation: toast-in .18s ease-out; }
+
+  /* ---- fix queue ---- */
+
+  .cleared-summary {
+    display: flex; align-items: baseline; gap: var(--space-8); cursor: pointer;
+    font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
+    color: var(--fg-muted); list-style: none;
+  }
+  .cleared-summary::-webkit-details-marker { display: none; }
+  .cleared-summary::after {
+    content: "▸"; margin-inline-start: var(--space-4); color: var(--fg-soft); font-size: var(--text-sm);
+  }
+  details[open] .cleared-summary::after { content: "▾"; }
+  details.cleared { margin-block-start: var(--space-20); }
+  details.cleared[hidden] { display: none; }
+  details.cleared .rows { border-block-start: var(--stroke-1) solid var(--line); margin-block-start: var(--space-12); }
+  .stamp[data-state="pending"] { color: var(--fg-soft); }
+  .stamp[data-state="failed"] { color: var(--warn); }
+  .verify-note {
+    margin: 0; margin-block-start: var(--space-12); padding-inline-start: var(--space-12);
+    border-inline-start: var(--stroke-2) solid var(--warn);
+    list-style: none; display: grid; gap: var(--space-8);
+    max-inline-size: 66ch;   /* Bringhurst's measure; WCAG 1.4.8 caps at 80 */
+  }
+  .verify-note:empty { display: none; }
+  .verify-note li {
+    position: relative; padding-inline-start: var(--space-12);
+    font-size: var(--text-sm); line-height: 1.55; color: var(--fg-muted);
+  }
+  .verify-note li::before {
+    content: ""; position: absolute; inset-inline-start: 2px; inset-block-start: .62em; /* a bullet, drawn: .62em centres it on the first line */
+    inline-size: 4px; block-size: 4px; border-radius: 50%; background: var(--fg-soft); /* (the bullet's size) */
+  }
+  /* ---- buckets ---- */
+  section.bucket { margin-block-start: var(--space-64); }
+  .bucket-head { display: flex; align-items: baseline; gap: var(--space-12); flex-wrap: wrap; }
+  .bucket-num {
+    font-family: var(--font-mono); font-size: var(--text-sm); color: var(--accent);
+    border: var(--stroke-1) solid var(--accent-soft); background: var(--accent-soft);
+    border-radius: var(--radius-4); padding: 2px 7px; /* a badge's padding, off the space scale like the dashboard's own */
+  }
+  .bucket-note { color: var(--fg-muted); font-size: var(--text-sm); margin: 0; margin-block-start: var(--space-8); max-inline-size: 66ch; }
+
+  .rows { margin: 0; margin-block-start: var(--space-24); padding: 0; list-style: none; border-block-start: var(--stroke-1) solid var(--line); }
+  .rows:empty { border-block-start: 0; margin-block-start: 0; }
+  .bucket-empty {
+    margin: 0; margin-block-start: var(--space-16); padding: 0; padding-block-start: var(--space-12); border-block-start: var(--stroke-1) solid var(--line);
+    color: var(--good); font-size: var(--text-sm); font-weight: 600;
+  }
+
+  /* ---- one row ---- */
+  .row {
+    display: grid;
+    grid-template-columns: 26px 1fr; /* the checkbox's column: its 24px box and a little air */
+    gap: 0 var(--space-12);
+    padding-block: var(--space-24); padding-inline: var(--space-12);
+    border-block-end: var(--stroke-1) solid var(--line-soft);
+    border-inline-start: var(--stroke-2) solid transparent;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .row[data-done="true"] { border-inline-start-color: var(--good); background: var(--good-soft); }
+  /* No opacity dim on a done row: at 55% the body text fell to 1.98:1. The done
+     state reads from the green rail, the tint and the ticked box instead. */
+  .row[data-done="true"] .rid { color: var(--good); }
+
+  .tick {
+    grid-row: 1 / span 2;
+    appearance: none; -webkit-appearance: none;
+    /* 24px: the minimum target (WCAG 2.5.8). */
+    inline-size: 24px; block-size: 24px; margin: 0;
+    border: 1.5px solid var(--control); border-radius: var(--radius-4);
+    background: var(--surface); cursor: pointer;
+    display: grid; place-items: center;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  @media (hover: hover) { .tick:hover { border-color: var(--fg-muted); } }
+  .tick:checked { background: var(--good); border-color: var(--good); }
+  .tick:checked::after {
+    content: ""; inline-size: 10px; block-size: 5.5px; /* the tick drawn as two strokes of an L, turned */
+    border-inline-start: var(--stroke-2) solid var(--on-solid); border-block-end: var(--stroke-2) solid var(--on-solid);
+    transform: rotate(-45deg) translate(1px, -1px); /* (nudged to the box's optical centre) */
+  }
+
+  .row-body { min-inline-size: 0; }
+  .row-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-12); }
+  .rid {
+    font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 500;
+    color: var(--fg-soft); font-variant-numeric: tabular-nums;
+  }
+  /* The chip itself (.sev and its kin) is in styles/system.css: Parity's Properties and Visual pages draw it too. */
+  .visible-flag { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft); }
+  /* Who owns the row: quiet, because it is context rather than a call to act. */
+  .owner-tag { color: var(--fg-soft); border-color: var(--line); }
+  .where {
+    font-family: var(--font-mono); font-size: var(--text-sm);
+    color: var(--fg); text-decoration: none;
+    border-block-end: var(--stroke-1) dotted var(--fg-soft);
+    overflow-wrap: anywhere;
+  }
+  @media (hover: hover) { .where:hover { color: var(--accent); border-block-end-color: var(--accent); } }
+  /* problem | how to solve it */
+  /* Each cell may shrink below its longest word (a token path, a URL) and
+     wraps it instead, so a 320px screen never scrolls sideways (WCAG 1.4.10). */
+  .pair { margin-block-start: var(--space-16); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12); }
+  .pair > .cell { min-inline-size: 0; overflow-wrap: anywhere; padding-inline-end: 0; }
+  .cell + .cell { padding-block: var(--space-12) var(--space-4); padding-inline: 0; border-block-start: var(--stroke-1) solid var(--line-soft); }
+  .cell-label {
+    display: block; margin-block-end: var(--space-4);
+    font-size: var(--text-sm); font-weight: 600; color: var(--fg);
+  }
+  .finding-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-8); }
+  .finding-list li {
+    position: relative; padding-inline-start: var(--space-12);
+    color: var(--fg-muted); font-size: var(--text-sm); line-height: 1.5;
+  }
+  .finding-list li::before {
+    content: ""; position: absolute; inset-inline-start: 2px; inset-block-start: .62em; /* a bullet, drawn: .62em centres it on the first line */
+    inline-size: 4px; block-size: 4px; border-radius: 50%; background: var(--fg-soft); /* (the bullet's size) */
+  }
+  /* A contrast row: what the file has against what the target takes, then the
+     options. Both drop the bullet — a two-line comparison and a pick-one list
+     are not prose, and a dot in front of each half made them read as more
+     findings. */
+  .finding-list.contrast li, .finding-list.options li { padding-inline-start: 0; }
+  .finding-list.contrast li::before, .finding-list.options li::before { content: none; }
+  /* `max-content`, never a fixed width: a label longer than the column does
+     not overflow into the next one, it widens its own. A 7.5rem column held a
+     side that ran the width of the row, and the two painted over each other. */
+  .finding-list.contrast li { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-8); align-items: baseline; }
+  .finding-list.contrast li.opt-note { display: block; }
+  .finding-list .side {
+    font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-soft);
+    text-transform: none; white-space: nowrap;
+  }
+  /* The label is a column of its own, which is why the sentence carries no
+     colon: written inline with nothing between them it read "In FigmaRename
+     the values…". */
+  .finding-list.options .opt { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-8); align-items: baseline; }
+  .finding-list .opt-where {
+    font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg);
+    border: var(--stroke-1) solid var(--line-strong); border-radius: var(--radius-4);
+    padding: 1px var(--space-8); text-align: center; white-space: nowrap; /* 1px: a badge one line of xs text tall */
+  }
+  .finding-list .opt-note { color: var(--fg-soft); font-size: var(--text-xs); }
+  /* A reply to the maintainer's note, distinct from the check's own verdict
+     above it: the check says whether the finding reproduces, this says what
+     the project's record has to say about the question they asked. */
+  .verify-note .note-answer { color: var(--fg); }
+  /* A LABEL, not a bullet — so it has to undo the bullet it is replacing.
+     `.verify-note li::before` is a 4px absolutely-positioned dot, and setting
+     only `content` on top of it laid this sentence out inside that 4px box:
+     "Answering / your / note:" ran down the left edge in three lines, on top
+     of the text it belongs to. Every property the dot sets is reset here. */
+  .verify-note .note-answer::before {
+    content: "Answering your note: ";
+    position: static; inline-size: auto; block-size: auto;
+    border-radius: 0; background: none;
+    color: var(--fg-soft); font-weight: 600;
+  }
+  /* No room for a bullet that is no longer drawn. */
+  .verify-note .note-answer { padding-inline-start: 0; }
+
+  .finding-list li strong { color: var(--fg); font-weight: 600; }
+  .finding-list li b { color: var(--accent); font-weight: 600; }
+  .finding-list li code {
+    font-family: var(--font-mono); font-size: .86em; /* in em, so code follows the text it sits in */
+    color: var(--fg); background: var(--surface-2);
+    padding: 1px 5px; border-radius: var(--radius-4); /* a code chip's padding, off the space scale */
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- note field ---- */
+  .note-wrap { margin-block-start: 10px; display: flex; flex-direction: column; align-items: stretch; gap: 9px; }
+  /* One line, in the order they are reached for: fix this, fix the rest like
+     it, or rule that it is not a defect. All three read the note above them. */
+  .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+  /* Every row action is the plain .button: they are peers, and a heavier one
+     would answer for the reader which to reach for. */
+
+  .note {
+    /* Height is set from scrollHeight as you type — no jump on focus, and no
+       manual resize handle to fight the autosize. */
+    inline-size: 100%; resize: none; overflow: hidden;
+    font: inherit; font-size: var(--text-sm); line-height: 1.5;
+    color: var(--fg); background: transparent;
+    border: var(--stroke-1) solid var(--control); border-radius: var(--radius-8);
+    padding: 7px 10px;
+    /* One line, before any script measures anything. box-sizing is border-box,
+       so this covers the padding and both borders. */
+    min-block-size: calc(1.5em + 16px);
+    transition: border-color .15s ease, background .15s ease;
+  }
+  /* The note's own name, shown: a placeholder is not a label, and goes the
+     moment someone types. */
+  .note-label { font-size: var(--text-sm); font-weight: 600; color: var(--fg-muted); }
+  /* A read-only copy hides an empty note, and its label with it. */
+  :scope[data-readonly="yes"] .note-label:has(+ textarea.note:placeholder-shown) { display: none; }
+  .note::placeholder { color: var(--fg-soft); }
+  @media (hover: hover) { .note:hover { border-color: var(--fg-soft); } }
+  .note:focus-visible { border-color: var(--accent); background: var(--surface); }
+  .note[data-filled="true"] { background: var(--surface); border-color: var(--control); }
+  .note:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
+
+
+
+  /* ---- ask drawer, rebuilt here after the merge ---- */
+
+  /* On a phone the drawer is a sheet, not a strip: open, it takes the whole
+     width rather than leaving 70px of page beside 360px of panel, and has no
+     edge to draw. From 45rem it is a panel of its own width, edged. */
+  :scope[data-ask="open"] .ask { border-inline-start: 0; }
+  /* 45rem: the drawer's own width beside a page still worth reading. */
+  @media (min-width: 45rem) {
+    :scope { --drawer-open: var(--ask-drawer); }
+    :scope[data-ask="open"] .ask { border-inline-start: var(--stroke-1) solid var(--line); }
+  }
+  /* One width in both states, slid rather than resized: a width transition
+     reflowed every line inside it on each open and close. Collapsed, only
+     its first --ask-rail of it shows, which is where the rail is. */
+  .ask {
+    position: fixed; inset-block: 0; inset-inline-end: 0;
+    inline-size: var(--drawer-open);
+    transform: translateX(calc(var(--drawer-open) - var(--drawer-w)));
+    display: flex; flex-direction: column;
+    /* a drawer over the page: the overlay level */
+    background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover);
+    border-inline-start: var(--stroke-1) solid var(--line-overlay);
+    z-index: 20;
+    transition: transform .2s ease;
+  }
+  .ask-inner { display: flex; flex-direction: column; block-size: 100%; min-block-size: 0; padding: 0; padding-block-start: var(--space-20); }
+  :scope[data-ask="collapsed"] .ask-inner { display: none; }
+  :scope[data-ask="collapsed"] .ask-rail { display: flex; }
+  .ask-top { display: flex; align-items: center; gap: var(--space-8); padding-block: 0 var(--space-12); padding-inline: var(--space-20); }
+  .ask h2 { font-size: var(--text-lg); line-height: var(--leading-lg); margin: 0; margin-inline-end: auto; }
+  .ask-toggle {
+    background: none; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-4);
+    color: var(--fg-soft); font: inherit; font-size: var(--text-sm); line-height: 1;
+    padding: var(--space-4) var(--space-8); cursor: pointer;
+  }
+  @media (hover: hover) { .ask-toggle:hover { color: var(--accent); border-color: var(--accent); } }
+  /* On a phone the rail is a button in the corner (below); from 40rem a
+     strip down the screen's edge. */
+  .ask-rail {
+    display: none; flex-direction: column; align-items: center; gap: var(--space-12);
+    padding-block: var(--space-8); padding-inline: var(--space-16);
+    background: none; border: 0; cursor: pointer;
+    font: inherit; font-size: var(--text-xs); font-weight: 600; color: var(--fg-soft);
+  }
+  @media (hover: hover) { .ask-rail:hover { color: var(--accent); } }
+  .ask-thread {
+    flex: 1 1 auto; min-block-size: 0; overflow-y: auto;
+    padding-block: 0 var(--space-16); padding-inline: var(--space-20); display: grid; gap: var(--space-16); align-content: start;
+  }
+  .ask-thread:has(.ask-empty) { align-content: center; }
+  /* An empty thread used to collapse, which moved the composer to the top of
+     the panel and then back down on the first answer. It keeps its height and
+     carries an empty state instead. */
+  .ask-empty {
+    margin-block: auto; padding-block: var(--space-24); text-align: center;
+    color: var(--fg-soft); font-size: var(--text-sm); line-height: 1.6;
+    display: grid; gap: var(--space-8); justify-items: center;
+  }
+  .ask-empty b {
+    display: block; color: var(--fg-muted); font-weight: 600;
+    font-family: var(--font-display); font-size: var(--text-lg); letter-spacing: -.01em; /* display type tightens as it grows */
+  }
+  .ask-empty ul { list-style: none; margin: 0; margin-block-start: var(--space-8); padding: 0; display: grid; gap: var(--space-4); }
+  .ask-empty button {
+    font: inherit; font-size: var(--text-sm); background: none; border: 0; padding: 0;
+    color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: var(--underline-offset);
+  }
+  .ask-composer {
+    flex: 0 0 auto; padding-block: var(--space-12) var(--space-16); padding-inline: var(--space-20);
+    border-block-start: var(--stroke-1) solid var(--line); background: var(--surface-overlay);
+  }
+  /* Always a column: this lives in a fixed-width drawer, so viewport width is
+     irrelevant to it. A media query here sized it against the wrong box. */
+  .ask-form { display: flex; flex-direction: column; gap: var(--space-8); align-items: stretch; }
+  .ask-input {
+    inline-size: 100%; min-block-size: 42px; max-block-size: 40vh; resize: none; overflow-y: auto;
+    font: inherit; font-size: var(--text-md); line-height: 1.5;
+    color: var(--fg); background: var(--surface-sunken);
+    border: var(--stroke-1) solid var(--control); border-radius: var(--radius-8); padding: var(--space-8) var(--space-12);
+  }
+  .ask-input::placeholder { color: var(--fg-soft); }
+  .ask-input:focus-visible { border-color: var(--accent); }
+  .ask-row-actions { display: grid; gap: var(--space-8); justify-items: center; }
+  .ask-send { inline-size: 100%; justify-content: center; }
+  .ask-keys { font-size: var(--text-sm); color: var(--fg-soft); }
+  .ask-thread .ask-turn { display: grid; gap: var(--space-8); }
+  .ask-q {
+    font-size: var(--text-sm); font-weight: 600; color: var(--fg);
+    padding-inline-start: var(--space-8); border-inline-start: var(--stroke-2) solid var(--control);
+  }
+  .ask-answer {
+    padding: var(--space-12) var(--space-16);
+    background: var(--surface-sunken); border: var(--stroke-1) solid var(--line-soft);
+    border-inline-start: var(--stroke-2) solid var(--accent);
+    /* 6px: between the radius scale's steps, kept from the dashboard's sheet; square on the accent's side */
+    border-start-start-radius: 0; border-end-start-radius: 0; border-start-end-radius: 6px; border-end-end-radius: 6px;
+    color: var(--fg-muted); font-size: var(--text-sm); line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .ask-foot { margin: 0; margin-block-start: var(--space-8); font-size: var(--text-sm); color: var(--fg-soft); line-height: 1.5; }
+  .ask-clear {
+    background: none; border: 0; padding: 0; margin-inline-start: 2px; cursor: pointer;
+    font: inherit; font-size: var(--text-sm); color: var(--fg-soft); text-decoration: underline;
+  }
+  /* Destructive, so in the danger ink with its words saying so; undoable
+     from the toast it raises. */
+  .ask-clear { color: var(--bad); }
+  @media (hover: hover) { .ask-clear:hover { text-decoration-thickness: var(--stroke-2); } }
+
+  /* The drawer is fixed below the site's masthead. Below 90rem, open, it
+     lies over the page and the site's column keeps clear of its rail only
+     (site.scss, --aside); from 90rem the open drawer takes its width from
+     the column, so opening it pushes the content aside (--ask-mode below). */
+  .ask { inset-block-start: var(--site-header); box-shadow: var(--shadow-overlay); }
+  :scope[data-ask="collapsed"] .ask { box-shadow: none; }
+  /* Wide enough for two columns of prose side by side. */
+  @media (min-width: 45rem) {
+    /* Two columns only where a row has both: a row whose advice was only the
+       stock line shows its problem across the width. */
+    .pair:has(.cell + .cell) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; }
+    .pair > .cell { padding-block: var(--space-4); padding-inline: 0 var(--space-24); }
+    /* 2px: the rule's ends clear the text a little */
+    .pair > .cell + .cell { padding-block: 2px; padding-inline: var(--space-24) 0; border-inline-start: var(--stroke-1) solid var(--line-soft); border-block-start: 0; }
+    /* Content-sized columns shared down each list (subgrid), never a width
+       fitted to today's labels. */
+    #measuresAbout { display: grid; grid-template-columns: auto 1fr; column-gap: var(--space-32); }
+    .measure { grid-column: 1 / -1; grid-template-columns: subgrid; }
+    .measure .body { grid-column: 2; grid-row: 1 / span 2; }
+    .checks { grid-template-columns: auto auto 1fr; }
+    .checks li { grid-template-columns: subgrid; }
+    .states { grid-template-columns: auto 1fr; column-gap: var(--space-16); }
+    .states li { grid-template-columns: subgrid; }
+  }
+
+  /* How the open drawer meets the page, decided here and read by ask.js
+     (inertBehind) so the breakpoint is stated once. Wide, it takes its width
+     from the page's column (--aside, below) and covers nothing; narrower, it
+     is a sheet over the page, and the page behind is inert while it is open. */
+  /* 90rem: the side navigation, the page's own contents column, a reading
+     column and the drawer side by side; narrower, pushing squeezed the
+     column to a third of its width. */
+  :scope { --ask-mode: sheet; }
+  @media (min-width: 90rem) { /* site.scss's $xxl: plain CSS cannot read it */
+    :scope { --ask-mode: push; }
+    :scope[data-ask="open"] .ask { box-shadow: none; }
+  }
+  /* A phone has no room for a permanent strip: collapsed, the drawer is one
+     small button in the corner, and the page takes the whole width. */
+  :scope[data-ask="collapsed"] { --drawer-w: 0px; } /* a length, not 0, so the calc() that reads it stays valid */
+  :scope[data-ask="collapsed"] .ask {
+    inset-block: auto var(--space-16); inset-inline-end: var(--space-16); inline-size: auto; transform: none;
+    border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8); box-shadow: var(--shadow-overlay);
+  }
+  /* 40rem: site.scss's $sm, where the site's column keeps the rail clear.
+     From there, collapsed, the drawer is the strip at the screen's edge: the
+     drawer's own box, slid out but for its rail. */
+  @media (min-width: 40rem) {
+    :scope[data-ask="collapsed"] { --drawer-w: var(--ask-rail); }
+    :scope[data-ask="collapsed"] .ask {
+      inset-block: var(--site-header) 0; inset-inline-end: 0; inline-size: var(--drawer-open);
+      transform: translateX(calc(var(--drawer-open) - var(--drawer-w)));
+      border: 0; border-inline-start: var(--stroke-1) solid var(--line); border-radius: 0; box-shadow: none;
+    }
+    .ask-rail { inline-size: var(--ask-rail); block-size: 100%; padding-block: var(--space-20); padding-inline: 0; }
+    .ask-rail span { writing-mode: vertical-rl; }
+  }
+
+  /* Last, so it outranks the drawer's display rules above by order. */
+  :scope[data-readonly="yes"] :is(.head-actions, .ask, .ask-rail, .verify-btn, .do-row, .do-all, .rule-row) { display: none; }
+
+}
+
+}

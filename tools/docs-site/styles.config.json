@@ -1,0 +1,9 @@
+{
+  "styles": {
+    "sources": ["src/styles", "src/dashboard"],
+    "compile": { "loadPaths": ["src/styles"] },
+    "naming": { "kind": "class" },
+    "markup": ["src"],
+    "markupExt": ".astro"
+  }
+}

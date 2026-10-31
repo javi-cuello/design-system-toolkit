@@ -1,0 +1,59 @@
+# Changelog — figma-doc-generator
+
+- 1.21.2 (2026-10-30): a comment ending in "import" over a `//` line made Figma's sandbox refuse the whole of `docgen.js` ("possible import expression") since 1.19; reworded, and `tools/toolkit-check/test-sandbox-paste.mjs` refuses the shape.
+- 1.21.1 (2026-10-30): `verifyDoc` reads the generator's own translucent label (`#RRGGBB / 50.00%`) as hex, a fallback in an OKLCH run; `verifyPage` loads the page before reading it. Case D47. Source hash changes.
+- 1.21.0 (2026-10-30): Step 5's verification queries are `scripts/verify.js` (`verifyPage`), reading the page back, and `DOCGEN.verifyDoc`, checking it against the expectation each recipe now stores on the page (`dg.expect`); tested in node. Case D47. Source hash changes.
+- 1.20.3 (2026-10-23): the paste hash strips comments as figma-components-audit's probes.js does (a regex after `return`, a template in a template) and is eight hex digits; tools/toolkit-check/test-paste-hash.mjs holds the copies equal. Source hash changes.
+- 1.20.2 (2026-10-20): `weightRank` reads the parity engine's one weight table (copied for the sandbox, held to it by `tests/test-docgen.js`): `Extra Bold` and `Semi-Bold` ranked as unknown, so a weight scale fell back to name order. No case changed.
+- 1.20.1 (2026-10-18): two bridge workarounds from a real run: background work advances only inside a call (chunk long passes from a globalThis queue), and hanging imports fall back to sets taken from instances on the doc pages. Guidance only; cases unaffected.
+- 1.20.0 (2026-10-16): an alias cell pins every collection its alias chain passes through to the column's mode (`pinAliasChain`); new `clipsCell` detector for an alias pill running past its cell. Cases D45, D46.
+- 1.19.2 (2026-10-11): two dead contents links in references/ repointed or unlinked. Link-only; cases unaffected.
+- 1.19.1 (2026-10-08): every recipe builds the new page before removing the old one; a build that throws discards its page and leaves the original intact. Case D44.
+- 1.19.0 (2026-10-08): extended collections generate with their own values (`valuesByModeForCollectionAsync`; local only). TIMING and EASING render as `70ms` and `cubic-bezier()` via `DOCGEN.literalLabel`. Cases D42, D43.
+- 1.18.6 (2026-10-08): citations name the standard that owns each rule.
+- 1.18.5 (2026-10-08): the ES5 note says nothing requires it, matching 1.10.0.
+- 1.18.4 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.18.3 (2026-10-08): citations name the standard that owns each rule after the split. No behaviour changed.
+- 1.18.2 (2026-10-03): metric-table rerun removes any badged table of the title; `metricRows` keys include the unit; `letterSpacingLabel` guard tested. Case D41.
+- 1.18.1 (2026-10-03): `generateMetricTables` keeps unbadged variable tables on rerun and refuses `PIXELS` values under `unitless` or `em`. Case D41.
+- 1.18.0 (2026-10-03): last code fences become engines or pointers (`probeComponent`, `columnMap`, `docFrame`, `generateMetricTables`, two detectors); five defects fixed. Case D40.
+- 1.17.1 (2026-09-22): `ours()` never wraps a name the skill looks up. No behaviour change.
+- 1.17.0 (2026-09-22): the generator's own words follow the project's dialect through `DOCGEN.ours()` and a prepended `LANGUAGE`.
+- 1.16.2 (2026-09-20): `parseColour` renamed `figmaRgba` and no longer exported. Behaviour unchanged.
+- 1.16.1 (2026-09-20): citation only, the toolkit standards merged into `toolkit-standard.md`.
+- 1.16.0 (2026-09-19): Shadows and Text styles pages read the project's snapshot via `DOCGEN.stylesFromSnapshot`; snapshots older than plugin 0.27.0 refused. Case D39.
+- 1.15.7 (2026-09-11): `sourceIndex`'s cache expires after an hour and re-imports renamed variables; `generate()` reads `opts.index`. Case D38.
+- 1.15.6 (2026-09-01): `figma-helpers.js` header corrected on `eval`; description no longer claims web styles always convert to `em`.
+- 1.15.5 (2026-09-01): a regenerated page returns to its old index via `restorePagePosition`. Case D37.
+- 1.15.4 (2026-09-01): three style-recipe defects: effect key sets per type, inherited swatch bindings dropped, web letter-spacing unit an argument. Cases D34–D36.
+- 1.15.3 (2026-08-19): description trimmed under the 1024-character cap. No behaviour change.
+- 1.15.2 (2026-08-17): bridge notes name both causes of a timeout and how to tell them apart. Case D33.
+- 1.15.1 (2026-08-17): `sourceIndex` caches key to id per library and collection, so each resume pass moves forward. Case D32.
+- 1.15.0 (2026-08-17): `generate()` verified end to end against a live file; `normaliseFontList()` and `loadDocFonts()` accept both persisted font shapes. Case D31.
+- 1.14.2 (2026-08-17): tests for five helpers that shipped without coverage. Case D30.
+- 1.14.1 (2026-08-17): `sourceIndex` takes a library name and a time budget, refusing ambiguous matches and returning `partial`. Case D29.
+- 1.14.0 (2026-08-17): Shadows and Text styles scripted as `generateShadows()` and `generateTextStyles()`. Case D28.
+- 1.13.0 (2026-08-17): `generate()` fills every value cell and works across files through `sourceIndex()`; `warmImports()` and `stepRowCounts()` added. Case D27.
+- 1.12.0 (2026-08-17): alias rule points at `setAliasCell`; verification reads rendered text; slot mutation budget documented. Cases D24–D26.
+- 1.11.2 (2026-08-08): the integrity hash covers code, not comments.
+- 1.11.1 (2026-08-08): the integrity hash gates each cache write via `globalThis.__DG_EXPECT`.
+- 1.11.0 (2026-08-08): the three scripts cache their own source in plugin data; a three-line bootstrap replaces the per-call paste.
+- 1.10.0 (2026-08-08): the ES5-only rule removed; the sandbox runs modern JavaScript.
+- 1.9.0 (2026-08-08): the references hold no code; remaining functions moved into the scripts and `scripts/recipes.js` added.
+- 1.8.0 (2026-08-08): node-touching code moved to `scripts/figma-helpers.js`; `helpers.md` becomes reasoning.
+- 1.7.1 (2026-08-08): duplicated function bodies deleted from `helpers.md`; call sites namespaced to `DOCGEN.*`.
+- 1.7.0 (2026-08-08): the pure logic extracted to `scripts/docgen.js` with `tests/test-docgen.js`.
+- 1.6.0 (2026-08-08): honours the authored-versus-generated page split recorded in the context document. Case D23.
+- 1.5.1 (2026-08-08): the refills rule cites the owning standard instead of restating it. Documentation only.
+- 1.5.0 (2026-08-08): Step 1.2 probes how a slot renders; ruled deviations become standing exceptions in configuration. Cases D21–D22.
+- 1.4.2 (2026-08-08): project property-key suffixes in examples replaced with placeholders. Documentation only.
+- 1.4.1 (2026-08-07): hard-wrapped prose reflowed to one line per paragraph. Formatting only.
+- 1.4.0 (2026-08-07): first-time imports warmed and retried; remote indexes persisted; `hiddenFromPublishing` decides swatch binding; explicit file key per call. F12 added.
+- 1.3.0 (2026-08-07): frame normalisation pass after the width ladder. Defect 20 added.
+- 1.2.0 (2026-08-07): Step 2.2, opt-in badged tables for type metrics that are not variables. Defect 19 and F11 added.
+- 1.1.0 (2026-08-05): context document first; roles, doc keys, anatomy, formats and rungs hydrate by file key; version and cases added.
+- 1.0.x, revision 6: text styles get one page per parent tier, decided by depth; defects 17 and 18, F10 added.
+- 1.0.x, revision 5: single-file mode, doc components discovered by key, formatting questions deferred; reader and skeleton defects fixed.
+- 1.0.x, revision 4: Step 2.1 web unit conversion for text styles, per frame group. Defect 16 and F9 added.
+- 1.0.x, revision 3: namespace strip, per-mode description reading, exact alpha; generation skeleton added. Defects 13–15 and F8 added.
+- 1.0.x, revision 2: label-addressed columns, value and library ordering, width ladder, reflow rule. Defects 9–12 and F5–F7 added.

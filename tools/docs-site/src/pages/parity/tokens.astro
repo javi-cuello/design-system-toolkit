@@ -1,0 +1,77 @@
+---
+// Parity › Tokens: the design's variables, text styles and effects against
+// the token files the library generates, matched by name (effects by what
+// they draw, since the two sides name them differently). Written by the code
+// audit (tools/parity/external.mjs, `code.parity.tokens` in the context document).
+import Base from '../../layouts/Base.astro';
+import ParityEmpty from '../../components/ParityEmpty.astro';
+import KpiStrip from '../../components/KpiStrip.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import { codeAudit } from '../../lib/project.js';
+import { num } from '../../lib/format.js';
+
+const r = codeAudit;
+const t = r && r.tokens;
+const GROUP = { colour: 'Colours', size: 'Sizes', type: 'Text styles', effect: 'Effects' };
+const groups = t ? Object.entries(t) : [];
+const sum = (k) => groups.reduce((n, [, g]) => n + g[k], 0);
+// every finding in one list, its kind beside it
+const rows = groups.flatMap(([key, g]) => g.rows.map((x) => [key, x]));
+const kpis = [
+  ['Code differs', String(sum('differs')), sum('differs') ? 'To fix or rule' : 'None', sum('differs') ? 'warn' : 'good'],
+  ['Only in Figma', String(sum('missing')), sum('missing') ? 'To fix or rule' : 'None', sum('missing') ? 'warn' : 'good'],
+  ['Only in code', String(sum('onlyInCode')), sum('onlyInCode') ? 'To confirm' : 'None', sum('onlyInCode') ? 'warn' : 'good'],
+  ['Checked', String(sum('checked')), null],
+];
+const VERDICT = { differs: ['error', 'Code differs'], 'looks-same': ['rule', 'Code looks the same'], missing: ['error', 'Only in Figma'], 'only-in-code': ['warn', 'Only in code'] };
+const shown = (v) => (v == null ? 'None' : typeof v === 'object' ? Object.entries(v).map(([k, x]) => `${k.replace(/([A-Z])/g, ' $1').toLowerCase()} ${x}`).join(', ') : String(v));
+---
+<Base title="Tokens">
+  <h1>Tokens</h1>
+  {t && <UpdatedBy from={['code']} />}
+  {!t ? (
+    <ParityEmpty needs="tokens" shows="each design variable, text style and effect beside the token the code generates for it" />
+  ) : (
+    <>
+      <p class="lede">The design's variables, text styles and effects against the token files <code>{r.repo}</code> generates, name by name, both modes. Effects are matched by what they draw, since the two sides name them differently.</p>
+      <KpiStrip items={kpis.map(([label, value, note, tone]) => ({ label, value, note, tone: tone || 'plain' }))} />
+      <div class="table-wrap" data-scrolls>
+        <table class="table sums">
+          <caption class="visually-hidden">Tokens checked and how they compare, by kind</caption>
+          <thead><tr><th scope="col">Kind</th><th scope="col" class="num">Checked</th><th scope="col" class="num">Matches Figma</th><th scope="col" class="num">Code differs</th><th scope="col" class="num">Only in Figma</th><th scope="col" class="num">Only in code</th></tr></thead>
+          <tbody>
+            {groups.map(([key, g]) => (
+              <tr>
+                <th scope="row">{GROUP[key] || key}</th><td class="num">{num(g.checked)}</td><td class="num">{num(g.same)}</td>
+                {[g.differs, g.missing, g.onlyInCode].map((n) => <td class="num">{n ? <strong>{num(n)}</strong> : <span class="muted">0</span>}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length > 0 && (
+        <section id="findings" aria-labelledby="findings-h">
+          <h2 id="findings-h">What differs</h2>
+          <div class:list={['table-wrap', rows.length > 20 && 'table-wrap--long']} data-scrolls>
+            <table class="table toks">
+              <caption class="visually-hidden">Each token whose code differs from the design, or that only one side has</caption>
+              <colgroup><col class="toks__kind" /><col class="toks__name" /><col class="toks__value" /><col class="toks__verdict" /></colgroup>
+              <thead><tr><th scope="col">Kind</th><th scope="col">Token</th><th scope="col">Value</th><th scope="col">Verdict</th></tr></thead>
+              <tbody>
+                {rows.map(([key, x]) => (
+                  <tr>
+                    <td>{GROUP[key] || key}</td>
+                    <td>{x.name && <div>{x.name}</div>}{x.code && <code>{x.code}</code>}</td>
+                    <td>{x.verdict === 'differs' || x.verdict === 'looks-same' ? <>Design <code>{shown(x.design)}</code><br />Code <code>{shown(x.got)}</code></> : <code>{shown(x.verdict === 'missing' ? x.design : x.got)}</code>}</td>
+                    <td><span class:list={['sev', VERDICT[x.verdict][0]]}>{VERDICT[x.verdict][1]}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </>
+  )}
+</Base>
+

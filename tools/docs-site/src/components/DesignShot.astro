@@ -1,0 +1,13 @@
+---
+// A design preview at the size it was drawn, and its dark render beside it
+// when the library has one; the stylesheet shows the one the theme asks for.
+// Each is sized from its own file.
+import { base } from '../lib/format.js';
+
+type Shot = { src: string; w: number | null; h: number | null };
+interface Props { preview: Shot & { dark: Shot | null }; alt: string; lazy?: boolean }
+const { preview: p, alt, lazy = false } = Astro.props;
+const attrs = (s: Shot) => ({ src: `${base}/previews/${s.src}`, width: s.w, height: s.h, style: `inline-size: ${s.w}px`, loading: lazy ? 'lazy' as const : undefined });
+---
+<img class:list={[p.dark && 'when-light']} alt={alt} {...attrs(p)} />
+{p.dark && <img class="when-dark" alt={alt} {...attrs(p.dark)} />}

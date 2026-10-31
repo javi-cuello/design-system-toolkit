@@ -1,0 +1,67 @@
+{
+  "_note": "The on-request 0-100 component score, exactly as SKILL.md 'Scoring — on request only' specifies it. The SKILL owns this model; the dashboard applies it and must not hold its own. Weights anchor to FigmaLint's measured category weights with two deviations argued in Grounding: descriptions 3->10, accessibility split out at 10.",
+  "dimensions": {
+    "Tokens": {
+      "weight": 25,
+      "rules": [
+        "tokens"
+      ],
+      "catalogue": "Tokens"
+    },
+    "Properties": {
+      "weight": 20,
+      "rules": [
+        "schema",
+        "properties"
+      ],
+      "catalogue": "Properties and API"
+    },
+    "States": {
+      "weight": 20,
+      "rules": [
+        "states"
+      ],
+      "catalogue": "States"
+    },
+    "Structure": {
+      "weight": 15,
+      "rules": [
+        "structure",
+        "naming"
+      ],
+      "catalogue": "Structure and hygiene"
+    },
+    "Metadata": {
+      "weight": 10,
+      "rules": [
+        "metadata"
+      ],
+      "catalogue": "Metadata"
+    },
+    "Accessibility": {
+      "weight": 10,
+      "rules": [
+        "accessibility"
+      ],
+      "catalogue": "Accessibility"
+    }
+  },
+  "_penalties": "Fraction of the dimension's own weight lost per verified finding in it, floored at zero.",
+  "penalties": {
+    "error": 0.25,
+    "warn": 0.1,
+    "warning": 0.1,
+    "review": 0.05
+  },
+  "_gate": "A publication-blocking defect caps the component at 25/100 whatever the other dimensions earn: an unused property means consumers never receive the component at all, and averaging that against good token coverage reports a healthy number for something that does not exist downstream.",
+  "gate": {
+    "rules": [
+      "properties"
+    ],
+    "cap": 25,
+    "reason": "unused property blocks publication"
+  },
+  "_unscanned": "A dimension no implemented check feeds is EXCLUDED and reweighted pro-rata, never scored 100 — 'unscanned is not 100', the silence rule applied to arithmetic. The score is then marked partial and the exclusion named. Which dimensions those are is not listed here: it is derived from checks.json, so porting a check closes the gap in one place.",
+  "partialNote": "no automated check feeds this dimension yet",
+  "_catalogue": "`catalogue` names this dimension's entry in checks.json. It is how 'is any check running for this dimension?' is answered from data rather than from a list someone remembers to update."
+}

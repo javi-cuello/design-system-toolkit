@@ -1,0 +1,215 @@
+{
+  "contract": 1,
+  "component": "Option row",
+  "figma": {
+    "name": "Option row",
+    "key": "95d29b889465cbbae0a39ecbc9fd9c398c8ff61f",
+    "id": "1:100"
+  },
+  "props": {
+    "label": {
+      "type": "string",
+      "default": "Option",
+      "figma": "Label",
+      "sets": [
+        "label"
+      ]
+    },
+    "control": {
+      "type": "enum",
+      "values": [
+        "checkbox",
+        "radio"
+      ],
+      "default": "checkbox",
+      "figmaValues": [
+        "Checkbox",
+        "Radio"
+      ],
+      "figma": "Control"
+    },
+    "selected": {
+      "type": "boolean",
+      "default": false,
+      "axis": true,
+      "figma": "Selected"
+    },
+    "size": {
+      "type": "enum",
+      "values": [
+        "sm",
+        "md"
+      ],
+      "default": "md",
+      "figmaValues": [
+        "sm",
+        "md"
+      ],
+      "figma": "Size"
+    },
+    "state": {
+      "type": "enum",
+      "values": [
+        "rest",
+        "hover",
+        "focus"
+      ],
+      "default": "rest",
+      "figmaValues": [
+        "Rest",
+        "Hover",
+        "Focus"
+      ],
+      "role": "interaction",
+      "pointer": [
+        "hover",
+        "focus"
+      ],
+      "figma": "State"
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/8",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/8",
+          "end": "Spacing/8",
+          "bottom": "Spacing/8",
+          "start": "Spacing/8"
+        }
+      },
+      "width": 240,
+      "height": "hug",
+      "radius": "Radius/4"
+    },
+    "box": {
+      "kind": "graphic",
+      "parent": "root",
+      "width": 16,
+      "height": 16,
+      "radius": "Radius/4",
+      "border": {
+        "color": "Color/Border/default",
+        "width": [
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1"
+        ],
+        "sides": {
+          "top": 1,
+          "end": 1,
+          "bottom": 1,
+          "start": 1
+        }
+      },
+      "shape": "rectangle",
+      "order": 0
+    },
+    "label": {
+      "kind": "text",
+      "parent": "root",
+      "width": "fill",
+      "height": "hug",
+      "color": "Color/Text/primary",
+      "typography": "Body/md",
+      "autoResize": "width",
+      "content": "{label}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "control": "radio"
+      },
+      "set": {
+        "box.radius": "Radius/full"
+      }
+    },
+    {
+      "when": {
+        "selected": true
+      },
+      "set": {
+        "box.background": "Color/Background/primary",
+        "box.border": {
+          "color": "Color/Border/primary",
+          "width": [
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1"
+          ],
+          "sides": {
+            "top": 1,
+            "end": 1,
+            "bottom": 1,
+            "start": 1
+          }
+        }
+      }
+    },
+    {
+      "when": {
+        "size": "sm"
+      },
+      "set": {
+        "root.layout": {
+          "direction": "row",
+          "gap": "Spacing/4",
+          "align": "start",
+          "crossAlign": "center",
+          "padding": {
+            "top": "Spacing/4",
+            "end": "Spacing/4",
+            "bottom": "Spacing/4",
+            "start": "Spacing/4"
+          }
+        },
+        "label.typography": "Label/sm"
+      }
+    },
+    {
+      "when": {
+        "state": "hover"
+      },
+      "set": {
+        "root.background": "Color/Background/hover"
+      }
+    },
+    {
+      "when": {
+        "state": "focus"
+      },
+      "set": {
+        "root.border": {
+          "color": "Color/Border/focus",
+          "width": [
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1"
+          ],
+          "sides": {
+            "top": 1,
+            "end": 1,
+            "bottom": 1,
+            "start": 1
+          }
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "control": "radio",
+      "size": "sm"
+    }
+  ]
+}

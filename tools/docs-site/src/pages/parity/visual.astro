@@ -1,0 +1,149 @@
+---
+// Parity › Visual, the code audit's drawing half: a component library someone else
+// built, rendered in its own Storybook and measured against the design's
+// component contracts (tools/parity/external.mjs writes the report this page
+// reads). Coverage says which components each side has; this says, for the
+// ones both have, where the code does not draw what the design says.
+import Base from '../../layouts/Base.astro';
+import ParityEmpty from '../../components/ParityEmpty.astro';
+import KpiStrip from '../../components/KpiStrip.astro';
+import UpdatedBy from '../../components/UpdatedBy.astro';
+import ValuesDialog from '../../components/ValuesDialog.astro';
+import Filter from '../../components/Filter.astro';
+import { statusMarker, codeAudit } from '../../lib/project.js';
+import { shown, props, componentTitle, mapped, draftedOf, part, brief } from '../../lib/parity.js';
+
+const r = codeAudit;
+const components = mapped(r, statusMarker);
+const drafted = draftedOf(r);
+const sum = (k) => components.reduce((n, [, c]) => n + (c[k] || 0), 0);
+const real = (c) => c.groups.filter((g) => g.verdict === 'differs');
+// a mapping the self-check doubts is shown with why, and its differences are not counted
+const differences = components.filter(([, c]) => !c.suspect).reduce((n, [, c]) => n + real(c).length, 0);
+const propFindings = (c) => (c.props || []).flatMap((p) => p.findings);
+const count = (kinds) => components.reduce((n, [, c]) => n + propFindings(c).filter((f) => kinds.includes(f.kind)).length, 0);
+const kpis = [
+  ['Differences', String(differences), differences ? 'To fix or rule' : 'None', differences ? 'warn' : 'good'],
+  ['Prop combinations', String(sum('combinations')), null],
+  ['Checks', String(sum('assertions')), null],
+  ['Components checked', String(components.length), null],
+];
+// gaps that read the same (one part repeated: three items' labels) are one row, counted
+const merged = (xs = []) => Object.values(xs.reduce((acc, x) => { const k = `${part(x.element.replace(/_\d+$/, ''))}|${x.fields.join()}|${x.why}`; (acc[k] = acc[k] || { ...x, element: x.element.replace(/_\d+$/, ''), times: 0 }).times++; return acc; }, {}));
+// where a difference shows: every combination, or what its combinations share, and how many of all
+const place = (g) => (g.where.every ? 'Every combination' : Object.entries(g.where.shared).map(([k, v]) => (v === true ? k : v === false ? `not ${k}` : `${k} ${v}`)).join(', ') || 'Some combinations');
+const title = (name) => componentTitle(name, r && r.components[name], statusMarker);
+// the filter's chips: every row the tables draw, by verdict, counted as drawn
+const rowsOf = (c) => [...(c.groups.length ? [] : c.checked || []).map(() => 'matches'), ...c.groups.map((g) => (g.verdict === 'differs' ? 'differs' : 'same')), ...(c.suspect || []).map(() => 'suspect'), ...merged(c.notCompared).map(() => 'not-compared')];
+const drawn = r ? components.flatMap(([, c]) => rowsOf(c)) : [];
+const filters = [['all', 'All values', drawn.length], ['differs', 'Code differs'], ['matches', 'Matches Figma'], ['same', 'Code looks the same'], ['suspect', 'Mapping suspect'], ['not-compared', 'Not compared']]
+  .map(([k, t, n]) => [k, t, n ?? drawn.filter((x) => x === k).length]).filter(([k, , n]) => k === 'all' || n);
+---
+<Base title="Visual">
+  <h1>Visual</h1>
+  {r && <UpdatedBy from={['code']} />}
+  {!r ? (
+    <ParityEmpty shows="each component as the code renders it, compared value by value with what the design draws" />
+  ) : (
+    <>
+      <p class="lede">Each component as <code>{r.repo}</code> builds it, rendered in its own Storybook and compared with what the design draws, prop combination by prop combination, in a run of {r.seconds} seconds.</p>
+      <KpiStrip items={kpis.map(([label, value, note, tone]) => ({ label, value, note, tone: tone || 'plain' }))} />
+
+
+      <Filter groups={filters} label="Show values that" placeholder="Filter by component or part" />
+      {components.map(([name, c]) => (
+        <section class="parity-section" id={name} aria-labelledby={`${name}-h`} data-filter-part>
+          <h2 id={`${name}-h`}>{title(name)}{c.framework && r.framework && <span class="muted heading-note"> · {r.framework} {c.framework}</span>}</h2>
+          {/* what to hand the developer: its props and values that differ, as one text */}
+          {brief(title(name), c) && <button type="button" class="button button--ghost" data-copy={brief(title(name), c)} data-copy-label={`the brief for ${title(name)}`}>Copy brief for the code</button>}
+
+          {c.groups.length === 0 ? (
+            <div class="table-wrap" data-scrolls>
+              <table class="table diffs">
+                <caption class="visually-hidden">{title(name)}: each value the design defines, as the code draws it</caption>
+                <colgroup><col class="diffs__what" /><col class="diffs__where" /><col class="diffs__design" /><col class="diffs__code" /><col class="diffs__verdict" /><col class="diffs__details" /></colgroup>
+                <thead><tr><th scope="col">What</th><th scope="col">Where</th><th scope="col">Figma</th><th scope="col">Code</th><th scope="col">Verdict</th><th scope="col"><span class="visually-hidden">Details</span></th></tr></thead>
+                <tbody>
+                  {(c.checked || []).map((x) => (
+                    <tr data-kind="matches" data-name={`${title(name)} ${part(x.element)} ${x.field}`.toLowerCase()}>
+                      <th scope="row">{part(x.element)} {x.field.replace(/-/g, ' ')}</th>
+                      <td>Every combination<br /><span class="muted text-xs">{x.of} of {x.of}</span></td>
+                      <td>{x.tokens.length ? <span class="muted text-xs">{x.tokens.join(', ').split('/').map((seg, k) => <>{k > 0 && <>/<wbr /></>}{seg}</>)}</span> : <span class="muted">No token</span>}</td>
+                      <td><span class="muted">The same</span></td>
+                      <td><span class="sev good">Matches Figma</span></td>
+                      <td></td>
+                    </tr>
+                  ))}
+                  {(c.suspect || []).map((x) => (
+                    <tr data-kind="suspect" data-name={`${title(name)} ${x}`.toLowerCase()}>
+                      <th scope="row">{part(x.split(': ')[0].replace(/ \(its spacing\)$/, ''))}</th>
+                      <td>Every combination</td>
+                      <td><span class="muted">Not recorded</span></td>
+                      <td><span class="muted text-xs">{x.split(': ').slice(1).join(': ').replace(/^./, (ch) => ch.toUpperCase())}</span></td>
+                      <td><span class="sev warn">Mapping suspect</span></td>
+                      <td></td>
+                    </tr>
+                  ))}
+                  {merged(c.notCompared).map((x) => (
+                    <tr data-kind="not-compared" data-name={`${title(name)} ${part(x.element)} ${x.fields.join(' ')}`.toLowerCase()}>
+                      <th scope="row">{part(x.element)} {x.fields.length ? x.fields.join(', ') : 'all'}{x.times > 1 && <span class="muted"> ×{x.times}</span>}</th>
+                      <td>Every combination</td>
+                      <td><span class="muted">Not recorded</span></td>
+                      <td><span class="muted text-xs">{x.why}</span></td>
+                      <td><span class="sev rule">Not compared</span></td>
+                      <td></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div class="table-wrap" data-scrolls>
+              <table class="table diffs">
+                <caption class="visually-hidden">{title(name)}: each value the design defines, as the code draws it</caption>
+                <colgroup><col class="diffs__what" /><col class="diffs__where" /><col class="diffs__design" /><col class="diffs__code" /><col class="diffs__verdict" /><col class="diffs__details" /></colgroup>
+                <thead><tr><th scope="col">What</th><th scope="col">Where</th><th scope="col">Figma</th><th scope="col">Code</th><th scope="col">Verdict</th><th scope="col"><span class="visually-hidden">Details</span></th></tr></thead>
+                <tbody>
+                  {c.groups.map((g, i) => (
+                    <tr data-kind={g.verdict === 'differs' ? 'differs' : 'same'} data-name={`${title(name)} ${part(g.element)} ${g.field}`.toLowerCase()}>
+                      <th scope="row">{part(g.element)} {g.field.replace(/-/g, ' ')}</th>
+                      <td>{place(g)}<br /><span class="muted text-xs">{g.count} of {g.of}</span></td>
+                      <td><code>{shown(g.field, g.seen[0].want)}</code>{g.token && <><br /><span class="muted text-xs">{g.token.split('/').map((seg, k) => <>{k > 0 && <>/<wbr /></>}{seg}</>)}</span></>}</td>
+                      <td><code>{shown(g.field, g.seen[0].got)}</code>{g.gotTokens?.length === 0 && <><br /><span class="muted text-xs">Not a library token</span></>}{g.gotTokens === null && <><br /><span class="muted text-xs">{g.gotStyle ? <>{g.gotStyle}, its own {g.field.replace(/-/g, ' ')}</> : `The library has no ${g.field.replace(/-/g, ' ')} tokens`}</span></>}{g.gotTokens?.length > 0 && <><br /><span class="muted text-xs" title="The library token that holds this value; code's own token names are gone once it renders">{g.gotTokens[0].split('/').map((seg, k) => <>{k > 0 && <>/<wbr /></>}{seg}</>)}{g.gotTokens.length > 1 && ` or ${g.gotTokens.length - 1} more`}</span></>}</td>
+                      <td>{g.verdict === 'differs' ? <span class="sev error">Code differs</span> : <span class="sev rule">Code looks the same</span>}</td>
+                      <td><ValuesDialog id={`d-${name}-${i}`} title={`${title(name)}: ${part(g.element).toLowerCase()} ${g.field.replace(/-/g, ' ')}`} heads={['Combination', 'Figma', 'Code']} mark={false}
+                        rows={g.seen.map((x) => ({ what: props(x.when, c.defaults), before: `${shown(g.field, x.want)}${x.token ? ` (${x.token})` : ''}`, after: `${shown(g.field, x.got)}${x.gotToken ? ` (${x.gotToken})` : ''}` }))} /></td>
+                    </tr>
+                  ))}
+                  {(c.suspect || []).map((x) => (
+                    <tr data-kind="suspect" data-name={`${title(name)} ${x}`.toLowerCase()}>
+                      <th scope="row">{part(x.split(': ')[0].replace(/ \(its spacing\)$/, ''))}</th>
+                      <td>Every combination</td>
+                      <td><span class="muted">Not recorded</span></td>
+                      <td><span class="muted text-xs">{x.split(': ').slice(1).join(': ').replace(/^./, (ch) => ch.toUpperCase())}</span></td>
+                      <td><span class="sev warn">Mapping suspect</span></td>
+                      <td></td>
+                    </tr>
+                  ))}
+                  {merged(c.notCompared).map((x) => (
+                    <tr data-kind="not-compared" data-name={`${title(name)} ${part(x.element)} ${x.fields.join(' ')}`.toLowerCase()}>
+                      <th scope="row">{part(x.element)} {x.fields.length ? x.fields.join(', ') : 'all'}{x.times > 1 && <span class="muted"> ×{x.times}</span>}</th>
+                      <td>Every combination</td>
+                      <td><span class="muted">Not recorded</span></td>
+                      <td><span class="muted text-xs">{x.why}</span></td>
+                      <td><span class="sev rule">Not compared</span></td>
+                      <td></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))}
+      <p class="muted">Under a code value, the library token that holds it, matched by value: the code's own token names are gone once it renders, so this is the token with that value, not certainly the one the code named. "Mapping suspect" is an element whose pairing looks wrong (it matches nothing, nothing visible, or almost none of its values); the component's differences are not counted until it is checked. "Not compared" is a value the design defines that no element in the story shows, or that a ruling in the parity map leaves out, with its reason. "Code looks the same" is a colour the code writes differently that draws the same over what is behind it, translucent in one and opaque in the other, so it would part on another background; or a border the code draws in a colour that cannot be seen over its own fill.</p>
+      {drafted.length > 0 && <p class="muted">Not yet mapped, so not checked: {drafted.map(title).join(', ')}. Each needs its story in the parity mappings; its elements are paired by rule.</p>}
+    </>
+  )}
+</Base>
+

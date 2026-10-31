@@ -1,0 +1,35 @@
+---
+// A set's properties: what a builder sets. Instance swaps (how Figma plugs in
+// icons) sit behind a disclosure; nobody building the component sets them.
+import { plural } from '../lib/format.js';
+interface Props { props: any[]; name?: string }
+const { props, name } = Astro.props;
+const TYPES = { VARIANT: 'Variant', BOOLEAN: 'Boolean', TEXT: 'Text', INSTANCE_SWAP: 'Instance swap', SLOT: 'Slot' };
+const ANY = { BOOLEAN: 'true, false', TEXT: 'any text', SLOT: 'any content' };
+const swaps = props.filter((p) => p.type === 'INSTANCE_SWAP');
+const settable = props.filter((p) => p.type !== 'INSTANCE_SWAP');
+---
+{settable.length > 0 && (
+  <div class="table-wrap" data-scrolls>
+    <table class="table">
+      <caption class="visually-hidden">{name ? `${name}: each` : 'Each'} property, its type, values and default</caption>
+      <thead><tr><th scope="col">Property</th><th scope="col">Type</th><th scope="col">Values</th><th scope="col">Default</th></tr></thead>
+      <tbody>
+        {settable.map((p) => (
+          <tr>
+            <th scope="row">{p.name}</th>
+            <td class="muted">{TYPES[p.type] || p.type}</td>
+            <td>{p.values.length ? <div class="pills">{p.values.map((v) => <span class:list={['pill', v === p.default && 'pill--default']}>{v}</span>)}</div> : <span class="muted">{ANY[p.type] || ''}</span>}</td>
+            <td>{p.default ? <code>{p.default}</code> : <span class="muted">None</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
+{swaps.length > 0 && (
+  <details class="more">
+    <summary>{plural(swaps.length, 'instance swap')} (icons and parts a designer can replace)</summary>
+    <ul class="token-list">{swaps.map((p) => <li>{p.name}{p.default && <span class="muted"> · default {p.default}</span>}</li>)}</ul>
+  </details>
+)}

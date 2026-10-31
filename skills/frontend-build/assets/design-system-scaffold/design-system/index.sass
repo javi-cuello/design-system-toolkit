@@ -1,0 +1,29 @@
+// Entry point. Compiled to assets/css/main.css by bin/css.
+// Later layers win outright, so no rule needs !important; nothing is
+// unlayered, because an unlayered rule beats every layer.
+
+@use "sass:meta"
+
+@layer tokens, reset, layout, components, utilities
+
+@layer tokens
+  // Hand-written until a token pipeline replaces it. Once tokens are
+  // generated from the design source, load one file per collection here
+  // under the source's own names and delete the starter.
+  @include meta.load-css("tokens/tokens")
+
+@layer reset
+  @include meta.load-css("base/reset")
+
+@layer layout
+  @include meta.load-css("base/layout")
+
+@layer components
+  // One line per component folder. Sass cannot glob, so bin/css writes the
+  // list from the folders, as the plugin finds the markup on its own.
+  // Generated from the component folders by the toolkit's sass-entry.mjs: add or remove a folder and run it, never edit these lines.
+  @include meta.load-css("components/button/button")
+  // End of the generated components list.
+
+@layer utilities
+  @include meta.load-css("base/utilities")

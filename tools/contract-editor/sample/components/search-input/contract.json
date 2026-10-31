@@ -1,0 +1,181 @@
+{
+  "contract": 1,
+  "component": "Search input",
+  "figma": {
+    "name": "Search input",
+    "key": "550c0646335842da2856c512709146ef575648c9",
+    "id": "1:60"
+  },
+  "props": {
+    "placeholder": {
+      "type": "string",
+      "default": "Search",
+      "figma": "Placeholder",
+      "sets": [
+        "field/placeholder"
+      ]
+    },
+    "state": {
+      "type": "enum",
+      "values": [
+        "rest",
+        "focus"
+      ],
+      "default": "rest",
+      "figmaValues": [
+        "Rest",
+        "Focus"
+      ],
+      "role": "interaction",
+      "pointer": [
+        "focus"
+      ],
+      "figma": "State"
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false,
+      "axis": true,
+      "figma": "Disabled"
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": 280,
+      "height": "hug"
+    },
+    "field": {
+      "kind": "container",
+      "parent": "root",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/8",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/8",
+          "end": "Spacing/12",
+          "bottom": "Spacing/8",
+          "start": "Spacing/12"
+        }
+      },
+      "width": "fill",
+      "height": "hug",
+      "radius": "Radius/8",
+      "background": "Color/Background/surface",
+      "border": {
+        "color": "Color/Border/default",
+        "width": [
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1"
+        ],
+        "sides": {
+          "top": 1,
+          "end": 1,
+          "bottom": 1,
+          "start": 1
+        }
+      },
+      "order": 0
+    },
+    "field/searchIcon": {
+      "kind": "instance",
+      "parent": "field",
+      "component": "Icon container",
+      "with": {
+        "Icon": "search",
+        "Size": "16"
+      },
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/0",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "hug",
+      "height": "hug",
+      "order": 0
+    },
+    "field/searchIcon/glyph": {
+      "kind": "instance",
+      "parent": "field/searchIcon",
+      "component": "search",
+      "width": 16,
+      "height": 16,
+      "overflow": "hidden",
+      "order": 0
+    },
+    "field/placeholder": {
+      "kind": "text",
+      "parent": "field",
+      "width": "fill",
+      "height": "hug",
+      "color": "Color/Text/secondary",
+      "typography": "Body/md",
+      "autoResize": "width",
+      "content": "{placeholder}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "state": "focus"
+      },
+      "set": {
+        "field.border": {
+          "color": "Color/Border/focus",
+          "width": [
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1",
+            "Stroke/1"
+          ],
+          "sides": {
+            "top": 1,
+            "end": 1,
+            "bottom": 1,
+            "start": 1
+          }
+        }
+      }
+    },
+    {
+      "when": {
+        "disabled": true
+      },
+      "set": {
+        "root.opacity": "Effect/Disabled/opacity"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "disabled": true,
+      "state": [
+        "focus"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "_ILLUSTRATIVE": "EXAMPLE ONLY — every ID below is fabricated. This file documents the SHAPE that --node-map expects; it will not address any real component. Generate the real map with scripts/discover-node-map.js against the file you are working in, and keep it per project (context document, or a local cache outside this repo). Never commit a real map here: node IDs and property keys are specific to one file, and a skill carrying them applies one project's addressing to another.",
+
+  "_addressing": "Suffixes are local node IDs, read from a LIVE INSTANCE's own children (never from a separately-resolved main-component node — see discover-node-map.js's header comment for why those two can disagree). For any instance, prefix each with 'I<instanceNodeId>;' to get the real node ID — instance 0:100 with suffix 0:200 gives 'I0:100;0:200'. This holds through plain (non-instance) frame nesting; Figma only adds another ';<suffix>' segment when crossing into a nested component instance.",
+
+  "_structure": "The component's top level is [Title, Content]. 'Title' is a plain text layer holding the instance's own label (e.g. the colour or scale name). 'Content' is a plain frame wrapping [Spacer, 12 column headers, then 12 rows of (row header + 12 blocks)] — 169 children in total. 'Spacer' occupies the old top-left corner slot, needs no styling, and should not be touched.",
+
+  "_propertyKeys": "The '#0:0' portion of a property key is generated per component and differs between files — read it from a real instance rather than assuming it. discover-node-map.js does this by matching the key prefix 'Label text#' and the property whose type is VARIANT. The header's variant is OPTIONAL and only used when isLightDarkPair is true — some libraries have no readability-toggle property at all and rely solely on the direct fill overrides build-matrix-script.py always applies.",
+
+  "mainComponentName": "_Ratios grid",
+  "discoveredFromInstanceId": "0:99",
+  "titleSuffix": "0:2",
+  "contentWrapperSuffix": "0:3",
+  "spacerSuffix": "0:4",
+  "columnHeaderSuffixes": [
+    "0:101", "0:102", "0:103", "0:104", "0:105", "0:106",
+    "0:107", "0:108", "0:109", "0:110", "0:111", "0:112"
+  ],
+  "rows": [
+    { "headerSuffix": "0:201", "blockSuffixes": ["0:1001","0:1002","0:1003","0:1004","0:1005","0:1006","0:1007","0:1008","0:1009","0:1010","0:1011","0:1012"] },
+    { "headerSuffix": "0:202", "blockSuffixes": ["0:1101","0:1102","0:1103","0:1104","0:1105","0:1106","0:1107","0:1108","0:1109","0:1110","0:1111","0:1112"] },
+    { "headerSuffix": "0:203", "blockSuffixes": ["0:1201","0:1202","0:1203","0:1204","0:1205","0:1206","0:1207","0:1208","0:1209","0:1210","0:1211","0:1212"] },
+    { "headerSuffix": "0:204", "blockSuffixes": ["0:1301","0:1302","0:1303","0:1304","0:1305","0:1306","0:1307","0:1308","0:1309","0:1310","0:1311","0:1312"] },
+    { "headerSuffix": "0:205", "blockSuffixes": ["0:1401","0:1402","0:1403","0:1404","0:1405","0:1406","0:1407","0:1408","0:1409","0:1410","0:1411","0:1412"] },
+    { "headerSuffix": "0:206", "blockSuffixes": ["0:1501","0:1502","0:1503","0:1504","0:1505","0:1506","0:1507","0:1508","0:1509","0:1510","0:1511","0:1512"] },
+    { "headerSuffix": "0:207", "blockSuffixes": ["0:1601","0:1602","0:1603","0:1604","0:1605","0:1606","0:1607","0:1608","0:1609","0:1610","0:1611","0:1612"] },
+    { "headerSuffix": "0:208", "blockSuffixes": ["0:1701","0:1702","0:1703","0:1704","0:1705","0:1706","0:1707","0:1708","0:1709","0:1710","0:1711","0:1712"] },
+    { "headerSuffix": "0:209", "blockSuffixes": ["0:1801","0:1802","0:1803","0:1804","0:1805","0:1806","0:1807","0:1808","0:1809","0:1810","0:1811","0:1812"] },
+    { "headerSuffix": "0:210", "blockSuffixes": ["0:1901","0:1902","0:1903","0:1904","0:1905","0:1906","0:1907","0:1908","0:1909","0:1910","0:1911","0:1912"] },
+    { "headerSuffix": "0:211", "blockSuffixes": ["0:2001","0:2002","0:2003","0:2004","0:2005","0:2006","0:2007","0:2008","0:2009","0:2010","0:2011","0:2012"] },
+    { "headerSuffix": "0:212", "blockSuffixes": ["0:2101","0:2102","0:2103","0:2104","0:2105","0:2106","0:2107","0:2108","0:2109","0:2110","0:2111","0:2112"] }
+  ],
+  "componentPropertyKeys": {
+    "header": { "labelText": "Label text#0:0", "variant": "Contrast", "variantOptions": ["Light", "Dark"], "isLightDarkPair": true },
+    "block": { "labelText": "Label text#0:0", "variant": "Pass", "variantOptions": ["N/A", "4.5", "3.1", "No"] }
+  }
+}

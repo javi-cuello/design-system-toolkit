@@ -1,0 +1,56 @@
+---
+import { compareNames } from '../../../shared/output.mjs';
+// One platform's components, as the Figma file groups its pages: by category
+// where the file draws them (🔷 header pages), else one alphabetical grid.
+// Status is the Tracker's to show; a card notes only what is exceptional.
+import Base from '../layouts/Base.astro';
+import UpdatedBy from './UpdatedBy.astro';
+import DesignShot from './DesignShot.astro';
+import Filter from './Filter.astro';
+import { componentPages, hasStorybook, categories, slug } from '../lib/snapshot.js';
+import { base } from '../lib/format.js';
+
+interface Props { platform: string | null; groups: { label: string | null; pages: any[] }[] }
+const { platform, groups } = Astro.props;
+
+const inCode = (p) => p.components.some((c) => c.stories.length);
+// A snapshot with no previews (taken before the plugin exported them) gets
+// plain cards, not a grid of placeholder letters.
+const thumbs = componentPages.some((p) => p.components[0].preview);
+const name = platform && platform[0].toUpperCase() + platform.slice(1);
+const count = groups.reduce((n, g) => n + g.pages.length, 0);
+const sections = groups.map((g) => ({
+  label: g.label,
+  id: slug(g.label || 'all'),
+  pages: [...g.pages].sort((a, b) => compareNames(a.title, b.title)),
+}));
+---
+<Base title={name ? `Components · ${name}` : 'Components'}>
+  <h1>Components{name && <span class="h1__platform"> · {name}</span>}</h1>
+  <UpdatedBy from={['snapshot']} />
+  <p class="lede">{count} components{categories.length ? ', grouped as the Figma file groups them' : ''}.</p>
+  <Filter placeholder={`Filter ${count} components`} searchLabel="Filter components" />
+    {sections.map((g) => (
+      <section class="group" data-filter-part id={g.id} aria-labelledby={g.label ? `${g.id}-h` : undefined}>
+        {g.label && <h2 id={`${g.id}-h`}>{g.label} <span class="group__count">{g.pages.length}<span class="visually-hidden"> {g.pages.length === 1 ? 'component' : 'components'}</span></span></h2>}
+        <ul class="cards">
+          {g.pages.map((p) => (
+            <li data-name={`${p.title} ${p.components.map((c) => c.name).join(' ')}`}>
+              <a class="card" href={`${base}/components/${p.slug}`}>
+                {thumbs && <span class="card__thumb">
+                  {p.components[0].preview
+                    ? <DesignShot preview={p.components[0].preview} alt="" lazy />
+                    : <span class="card__initial" aria-hidden="true">{p.title[0]}</span>}
+                </span>}
+                <span class="card__body">
+                  <span class="card__title">{p.title}</span>
+                  {p.components[0].guidance.purpose && <span class="card__text">{p.components[0].guidance.purpose.replace(/`|\*\*/g, '')}</span>}
+                  {hasStorybook && !inCode(p) && <span class="card__note">Not built yet</span>}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+</Base>

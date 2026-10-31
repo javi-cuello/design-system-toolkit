@@ -1,0 +1,53 @@
+---
+// The site's one filter bar: a page's own toggles (the slot), then its groups
+// with a count each (buttons up to four, a menu past that), then a search
+// box, and a line saying what is left. Either half may be left out.
+//
+// It filters the `[data-name]` items inside `scope`: the words typed match
+// `data-name`, the group pressed matches `data-kind`, and a
+// `[data-filter-part]` around them goes when nothing in it is left. The
+// behaviour is Base.astro's, once for every bar; the address carries the
+// state as `?q=` and `?show=`, so a link, reload and Back keep it. A page
+// with two bars gives each a `param`, and its state is `?<param>-q=` and
+// `?<param>-show=`, so one bar's words never filter the other's list.
+//
+// Every control here needs the script, so the bar renders hidden and the
+// script beside it shows it: with no script the whole list shows and no dead
+// control is offered (filtering.md, code-standard rule 20). Shown at once,
+// before anything below it is drawn, so nothing moves.
+interface Props {
+  scope?: string;
+  groups?: [string, string, number][];
+  label?: string;
+  placeholder?: string;
+  searchLabel?: string;
+  param?: string;
+}
+const { scope = '#main', groups = [], label, placeholder, searchLabel = placeholder, param } = Astro.props;
+// Up to four choices are buttons, all in sight; a longer list is a menu. The
+// buttons carry their menu too, which a bar too narrow for them shows
+// instead (site.scss .filter-bar).
+const short = groups.length <= 4;
+---
+<div class="filter-bar" data-filter={scope} data-filter-key={param} hidden>
+  <div class="toolbar">
+    <slot />
+    {groups.length > 1 && short && (
+      <div class="segmented filter-bar__buttons" role="group" aria-label={label} data-filter-show>
+        {groups.map(([k, text, n], i) => <button type="button" class="seg" data-show={k} data-label={i === 0 ? 'All' : text} aria-pressed={String(i === 0)}>{i === 0 ? 'All' : text} ({n})</button>)}
+      </div>
+    )}
+    {groups.length > 1 && (
+      <select class:list={['filter filter--select', short && 'filter-bar__menu']} aria-label={label} data-filter-show>
+        {groups.map(([k, text, n]) => <option value={k} data-label={text}>{text} ({n})</option>)}
+      </select>
+    )}
+    {placeholder && <search><input class="filter" type="search" placeholder={placeholder} aria-label={searchLabel} data-filter-q /></search>}
+  </div>
+  <p class="filter-status" data-filter-status></p>
+  <div class="filter-empty" data-filter-empty hidden>
+    <p data-filter-empty-text></p>
+    <p class="filter-empty__actions"><a href="?" data-filter-clear="q">Clear search</a><a href="?" data-filter-clear="all">Show all</a></p>
+  </div>
+</div>
+<script is:inline>document.currentScript.previousElementSibling.hidden = false;</script>

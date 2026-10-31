@@ -1,0 +1,3 @@
+#!/bin/sh
+# A project audit judged in session, no API key (tools/figma-audit/audit-session.mjs).
+exec node "$(dirname "$0")/../tools/figma-audit/audit-session.mjs" "$@"

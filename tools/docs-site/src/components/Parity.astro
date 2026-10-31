@@ -1,0 +1,25 @@
+---
+// What the parity run measured for a component: whether the build matches the
+// Figma design, and if not, the first differences in the run's own words.
+// "Not measured" is said out loud; a blank would read as agreement.
+import { plural } from '../lib/format.js';
+import Time from './Time.astro';
+interface Props { result: { status: string; matched: number; failed: number; diffs: string[]; reason?: string; measuredAt: string; lastMatchedAt?: string } | null }
+const { result } = Astro.props;
+const LABEL = { match: 'Matches the design', drift: 'Differs from the design', unmeasured: 'Not measured' };
+---
+{result && (
+  <div class="prose">
+    <p>
+      <strong>{LABEL[result.status]}</strong>
+      <span class="muted"> · last run <Time at={result.measuredAt} />{result.lastMatchedAt && result.status !== 'match' && <>, last matched <Time at={result.lastMatchedAt} /></>}</span>
+    </p>
+    {result.status === 'unmeasured' && <p class="muted">{result.reason || 'No parity mapping yet, and no reason recorded.'}</p>}
+    {result.diffs.length > 0 && (
+      <>
+        <p>{plural(result.failed, 'difference')}{result.failed > result.diffs.length ? `, first ${result.diffs.length} shown` : ''}</p>
+        <ul>{result.diffs.map((d) => <li><code>{d}</code></li>)}</ul>
+      </>
+    )}
+  </div>
+)}

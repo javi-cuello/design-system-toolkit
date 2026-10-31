@@ -1,0 +1,26 @@
+# Changelog — figma-properties-table
+
+- 1.8.3 (2026-10-30): the same comment, reworded: Figma's sandbox refused the whole script since 1.8.2 ("possible import expression"); `tools/toolkit-check/test-sandbox-paste.mjs` refuses the shape.
+- 1.8.2 (2026-10-23): the paste hash strips comments as figma-components-audit's probes.js does and is eight hex digits (tools/toolkit-check/test-paste-hash.mjs); SKILL.md's version line said 1.8.0. Source hash unchanged.
+- 1.8.1 (2026-10-22): `scripts/contract-rows.mjs` run through the installed skill's symlink runs (it compared a resolved path with an unresolved one, and did nothing). Source hash unchanged.
+- 1.8.0 (2026-10-22): rows come from the component's contract in the stored snapshot (`scripts/contract-rows.mjs`, loaded with `PT.rows()`), the docs site's source too; no contract means take a snapshot, never a live read. Source hash changes. Cases A10, A11.
+- 1.7.1 (2026-10-20): one variant-name reader, the toolkit's own (`tools/shared/names.js` `variantValues`), written out for the sandbox and held to it by the test; it was parsed three ways in this file. Source hash changes.
+- 1.7.0 (2026-10-08): a status marker after a private part's _ stays out of the title (figma-standard rule 13). Case A8.
+- 1.6.2 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 1.6.1 (2026-10-08): citations name the standard that owns each rule after the split. No behaviour changed.
+- 1.6.0 (2026-10-07): `PT.audit()` compares each table's rows with the component's properties, reporting missing and stale names. Source hash changes. Case A9.
+- 1.5.0 (2026-10-07): the status marker is `statusMarker` in the table config, kept across a re-profile; none set strips nothing. Source hash changes. Case A8 extended.
+- 1.4.0 (2026-10-07): a table's title drops a leading status marker; `audit()` reports one that keeps it. Case A8.
+- 1.3.4 (2026-10-02): the containment scan's main read counts only "does not exist" as `unreadable`; anything else ends the call. Source hash changes. Case A7.
+- 1.3.3 (2026-10-02): the node-read guard and its three fallbacks catch "does not exist" only and rethrow anything else. Source hash changes. Case A7.
+- 1.3.2 (2026-10-02): one broken instance layer no longer ends `PT.audit()`; reads go through one guard and calls return `unreadable`. Case A7.
+- 1.3.1 (2026-09-20): citations point at `standards/toolkit-standard.md` §A after the four part standards merged. No rule changed.
+- 1.3.0 (2026-09-11): a timed-out call is still running: wait, read what it left, keep the default budget, fall back to one page per call. Case A6.
+- 1.2.2 (2026-08-08): the integrity hash covers code, not prose; comments stripped by a state machine on both sides.
+- 1.2.1 (2026-08-08): the integrity hash gates the cache write via `globalThis.__PT_EXPECT` instead of being reported after it.
+- 1.2.0 (2026-08-08): the script caches itself in plugin data; pasted once per file, verified by `sourceHash`. Adds `tests/test-properties-table.js`.
+- 1.1.3 (2026-08-08): moved to `scripts/properties-table.js`. No behaviour change.
+- 1.1.2 (2026-08-08): the `#id`-suffix example renumbered to the `0:` prefix. Documentation only.
+- 1.1.1 (2026-08-07): formatting only; prose reflowed to one line per paragraph.
+- 1.1.0 (2026-08-05): context-document-first (env-aware), component authoritative over content; version and eval cases added.
+- 1.0.x: pre-standard.

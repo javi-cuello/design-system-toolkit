@@ -1,0 +1,8 @@
+{ "compilerOptions": { "allowJs": true, "checkJs": true, "noEmit": true,
+    "strict": true, "target": "es2017",
+    // the plugin sandbox is not a browser: lib.dom redeclares the console and
+    // fetch that plugin-typings already declares, and every check began with
+    // two errors from the config rather than the code
+    "lib": ["ES2017"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/@figma"] },
+  "include": ["code.js"] }

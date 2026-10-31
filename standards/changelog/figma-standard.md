@@ -1,0 +1,33 @@
+# History — figma-standard
+
+- 2.20.2 (2026-10-30): rule 44's *Checked:* joins its two pairs under one marker; no rule changed.
+- 2.20.1 (2026-10-29): rule 15's *Why:* cites toolkit-standard §D 23: the page header is generated from the description; no rule changed.
+- 2.20.0 (2026-10-26): the Naming section's values are preferences, kept in standards/naming-preferences.json and overridden in a project's `naming-preferences` block; a departure is filed as a preference, a name that breaks something keeps its tier.
+- 2.19.0 (2026-10-25): rule 25 adds that a variant holds no description but its set's; rules 18 and 9 are checked on layers, component names, options and a part's layer.
+- 2.18.0 (2026-10-25): rule 21 says outright that a state is never `Is …` and that `Has` is for a content variant, never a boolean; checked as `naming|prop-state|`.
+- 2.17.0 (2026-10-25): rule 25's slot part is decided by where it is used, as figma-component-descriptions decides it, not by a family name; the name test asked a project's real parts for sections.
+- 2.16.0 (2026-10-15): rule 49 adopts the published order: element, then property, then the variant and state as modifiers on the leaf; a variant is no longer a path segment.
+- 2.15.2 (2026-10-15): rule 49 states the order when a token needs both a variant value and a layer: the variant first.
+- 2.15.1 (2026-10-15): rule 49 links a worked component, Figma path to stylesheet, in knowledge/code/tokens.md; rule unchanged.
+- 2.15.0 (2026-10-15): rule 49 — a component token is named `Component/<Component>/<Element>/<property>` in the component's own words, with worked cases, and a brand override binds a semantic token where one matches.
+- 2.14.0 (2026-10-15): rule 48 — a state variant binds its own state's tokens; the components audit checks it (`states|token|`).
+- 2.13.0 (2026-10-15): rule 47 — a brand whose solid moves to another step moves its inverse text and icon with it, mapped per mode.
+- 2.12.2 (2026-10-14): names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.
+- 2.12.1 (2026-10-14): tool paths follow the move of the toolkit's own checks to tools/toolkit-check and of the project registry to tools/snapshot/projects.cjs; no rule or behaviour changed.
+- 2.12.0 (2026-10-13): rule 46 withdrawn: one project asks for it, so it is that project's rule, kept in its context document; the audit check stays, driven by `overlayComponents`.
+- 2.11.0 (2026-10-13): rule 46 — an overlay part (a state layer) is locked, stretched both ways, at 0,0 and its parent's size; the components audit checks it from `overlayComponents`.
+- 2.10.0 (2026-10-12): rule 21 — a boolean that switches a style and reveals no element is a bare word; `Show` stays for one that reveals text, an instance or a slot.
+- 2.9.0 (2026-10-11): rules 41–44 for the tokens library (descriptions, unused tokens, styles' bindings, one shape for parallel groups) and 45 for the icon library (sizes, bound paint, the source's names), checked from the snapshot.
+- 2.8.0 (2026-10-10): rules 39 (a focus state) and 40 (an accessible name for an icon-only component); rule 26 gains a scanner check.
+- 2.7.0 (2026-10-10): rule 25 asks a public description for Usage, Don't and Code gen notes, a slot part owing none; rules 32 and 33 gain scanner checks (contrast in the mode on screen, frames without auto layout).
+- 2.6.0 (2026-10-08): rule 38 keeps per-item text in a slot only; 34 exempts a layer a sibling variant shows; 35 keeps a `Has` axis; 37 moves to Components; 29 cites tests.
+- 2.5.0 (2026-10-08): rule 38, per-item text in a slot or property, never an override on a nested instance with variants; rule 10 names layers in the component.
+- 2.4.0 (2026-10-08): rules 29–37 for audit checks that ran with no rule (bound values, properties, states, contrast, structure, hidden layers, axes, state sets, text exposure); rule 27 covers a missing main.
+- 2.3.2 (2026-10-08): rule 13 cites the tests that read a name without its marker.
+- 2.3.1 (2026-10-08): rules 1 and 25 cite the scanner; 26 and 27 are reviewed through the session probes; 26 says it is stricter than SC 2.5.8.
+- 2.3.0 (2026-10-08): rules 25–28 for checks that ran without a rule: descriptions, target and text size, detached copies, token role.
+- 2.2.0 (2026-10-08): a private part's `_` comes before the 🚧 and deprecation markers; True/False axes list their default first; rule 23 moved to toolkit-standard §D 20.
+- 2.1.0 (2026-10-08): whole-document review: rule 18 carve-outs scoped, rule 19 covers components, rule 1 states the validation order, checks cited for what they test.
+- 2.0.0 (2026-10-08): naming-standard folded in as rules 18–24, one Naming section; rule 8 restated; every rule checked or prompted.
+- 1.0.1 (2026-10-08): precedence and values point at the root instead of restating it.
+- 1.0.0 (2026-10-08): split from house-standards 1.28.0, rules renumbered (old numbers mapped in `house-standards.md` here); every rule carries its enforcement marker.

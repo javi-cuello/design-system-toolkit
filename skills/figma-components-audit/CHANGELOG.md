@@ -1,0 +1,184 @@
+# Changelog — figma-components-audit
+
+- 2.33.0 (2026-10-30): the fix queue's chat report and `.md` mirror are generated from the record by `tools/figma-audit/fix-queue.mjs`, never assembled by hand. Case A128.
+- 2.32.0 (2026-10-26): naming checks against a naming preference file a departure as `preference`, which holds nothing back; their values come from standards/naming-preferences.json. Case A127.
+- 2.31.0 (2026-10-25): sentence case is checked on layers, component names and variant options; a part's layer still carrying its whole name is told its last word; a variant whose description differs from its set's is a warning (figma-standard rules 18, 9, 25). Cases A125, A126.
+- 2.30.0 (2026-10-25): `naming|prop-state|` raises an `Is …` variant or boolean and a style boolean named `Has …`; a revealing `Has` boolean is told `Show` without the `Has` (figma-standard rule 21). Case A124.
+- 2.29.0 (2026-10-25): `metadata|guidance` finds slot parts by where they are used, not by a family name (figma-standard rule 25). Case A123; A116's fixture moved to Chip's page.
+- 2.28.0 (2026-10-15): `states|token|` raises a state variant that binds another state's token, or a resting token its Rest sibling lacks on the same layer (figma-standard rule 48). Case A122.
+- 2.27.6 (2026-10-14): names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.
+- 2.27.5 (2026-10-14): tool paths follow the move of the toolkit's own checks to tools/toolkit-check and of the project registry to tools/snapshot/projects.cjs; no rule or behaviour changed.
+- 2.27.4 (2026-10-14): the toolkit's tools are renamed (snapshot, component-contract, docs-site, css-lint, ui-check, project-check, claude-hooks, skill-evals); paths in prose and code only, behaviour unchanged.
+- 2.27.3 (2026-10-14): the dashboard service is `tools/figma-audit` (was `tools/figma-dashboard`); paths in prose and comments only, behaviour unchanged.
+- 2.27.2 (2026-10-14): the dashboard command points at the project's own folder (`~/Projects/<project>/figma-design-system/audit`); behaviour unchanged.
+- 2.27.1 (2026-10-13): the overlay check cites the project's own rule, not a figma-standard rule; behaviour unchanged.
+- 2.27.0 (2026-10-13): `structure|overlay` raises an overlay part (`overlayComponents`, a state layer) that is unlocked, not stretched both ways, off 0,0 or not its parent's size (a project rule). Case A121.
+- 2.26.0 (2026-10-12): a bare boolean is raised only when it reveals text, an instance or a slot; one that switches a style stays bare (figma-standard rule 21). Case A120.
+- 2.25.0 (2026-10-11): each finding leads with what goes wrong and its cost, and carries its fix in `advice` (design-standard rule 10); coverage counts raw values by key; keys unchanged. Case A119.
+- 2.24.2 (2026-10-11): the fix-queue template's Where links show the Figma URL shape instead of a dead relative `deep-link`. Link-only; cases unaffected.
+- 2.24.1 (2026-10-10): contrast and the accessible-name check read text inside nested instances; Named layers counts the layers the check reads; a disabled axis matches in any case. Case A118.
+- 2.24.0 (2026-10-10): the scanner checks a focus state, target size and an accessible name on interactive components (figma-standard rules 39, 26, 40). Case A117.
+- 2.23.0 (2026-10-10): the scanner checks contrast in the mode on screen, frames without auto layout, every automatic layer name, and Usage, Don't and Code gen notes on public non-slot components; each feeds a measure. Cases A113 to A116.
+- 2.22.1 (2026-10-08): the nested-text finding says the text may be set by override or the item's own property.
+- 2.22.0 (2026-10-08): a hidden layer a sibling variant shows is not raised; the nested-text override is a question; the fix recipe for per-item text points to a slot. Case A112.
+- 2.21.1 (2026-10-08): step 6 files a keyless audit through bin/audit; the tool table names the service bridge for when figma-console has no file.
+- 2.21.0 (2026-10-08): the scanner raises a text override on a nested instance with variants (figma-standard rule 38); the probes drop their duplicate case check; fix notes for sublayer binding and cloned references. Case A111.
+- 2.20.1 (2026-10-08): the scanner and sweep name what runs them (`@runs:`); the reference and catalogue say what each check leaves to the reader.
+- 2.20.0 (2026-10-08): the scanner checks axis order and a boolean default-first, and raises a private part missing a description as hygiene; probes are session-only. Cases A109, A110.
+- 2.19.2 (2026-10-08): binding one side of a uniform stroke binds all four, since Figma zeroes the unbound sides. Case A108.
+- 2.19.1 (2026-10-08): the property-case check lets an acronym keep its capitals (`Show AM-PM`). Case A107.
+- 2.19.0 (2026-10-08): settings come grouped by section; `contract.cjs settings` prints the flat TOKENS and SCALES; the probes drop their duplicate text-suffix check (the scanner owns figma-standard rule 21).
+- 2.18.0 (2026-10-08): checks figma-standard rule 3 (Disabled beside Rest); a workflow step reads the judgement rules. Cases A105, A106.
+- 2.17.6 (2026-10-08): page organisation points at figma-standard rule 11 and figma-foundations-audit instead of restating it.
+- 2.17.5 (2026-10-08): the figma_get_file_data depth trap, which lived only in history, is in the tool reference.
+- 2.17.4 (2026-10-08): citations name the standard that owns each rule.
+- 2.17.3 (2026-10-08): a row's identity is its key, as the writer has matched since 2.9.7.
+- 2.17.2 (2026-10-08): history moved to CHANGELOG.md, one line per version; reasons it carried moved into the skill.
+- 2.17.1 (2026-10-08): citations name the standard that owns each rule after the split. No behaviour changed.
+- 2.17.0 (2026-10-07): a component's sizes that skip a step on the recorded size scale are raised (`schema|size-gap|`). Case A104.
+- 2.16.0 (2026-10-07): every preference the scanner and probes apply is read from the settings, and a check whose key is absent does not run. Case A103.
+- 2.15.0 (2026-10-07): sizes checked against house rule 27: property name, values on `SCALES.Size`, numeric sizes, and off-majority heights for review. Case A102.
+- 2.14.0 (2026-10-06): the queue's Consistency rows, computed by `tools/contract/analyze.mjs` from stored contracts, are described. Case CN1.
+- 2.13.2 (2026-10-03): `FCA.discover()` lists a default-named collection without allowing it, and skips remote collections. Case A101.
+- 2.13.1 (2026-10-03): review fixes: local collection keys in `allowedKeys`, orphan key import retried once, fixture keys added, three probe tests made able to fail. Case A101.
+- 2.13.0 (2026-10-03): scanner names the nearest scale step, files large off-scale padding as review, checks text-role colour on non-text and stroke shorthand, and off-library keys. Case A100.
+- 2.12.0 (2026-10-03): probes and fix recipes moved from prose into `scripts/probes.js`, hash-gated and self-caching, with `tests/test-probes.mjs`; six defects fixed. Case A99.
+- 2.11.2 (2026-10-02): changelog form only: the invented `1.60.0+1` label folded back into 1.60.0.
+- 2.11.1 (2026-10-01): clause D and table hygiene in scanner comments and references; no behaviour change.
+- 2.11.0 (2026-10-01): breaking changes re-sorted by test into two kinds, loses consumers' work and breaks the API; layer renames set-wide only. Case A98.
+- 2.10.0 (2026-09-24): `semantic` takes a list of collections. Case A97.
+- 2.9.18 (2026-09-24): a ruling covers a candidate only when it accepts it; a non-JSON judge answer is retried once. Case A95.
+- 2.9.17 (2026-09-24): the project cited as evidence is renamed; no rule changed.
+- 2.9.16 (2026-09-24): a timeout says the code may still be running and its writes may land. Case A94.
+- 2.9.15 (2026-09-24): the judge's model and effort live in `scanner/judge.json`, one default for every project. Case A93.
+- 2.9.14 (2026-09-24): Audit changes restored beside Audit all; every run records its trigger and cost. Case A92.
+- 2.9.13 (2026-09-22): the Broken tokens stage walks 60 variants a batch, not 120.
+- 2.9.12 (2026-09-22): the validator stage's live walk selects pages by the project's rule; the service asks the contract for snapshot paths.
+- 2.9.11 (2026-09-22): `checkFacts` returns `ran`, and a full run without it is refused, so ungated checks do not close rows.
+- 2.9.10 (2026-09-22): `plugin_timeout` and a judge limit get their own messages instead of "Figma refused the code".
+- 2.9.9 (2026-09-22): `checks.json` lists the fill-collection and text-role checks as running.
+- 2.9.8 (2026-09-22): the docs build mounts audit records beside the dashboard page; an unparsable record is that library's null. Case A90.
+- 2.9.7 (2026-09-22): every finding carries a `key` (rule, subject, layer path) that the row writer matches before wording. Case A89.
+- 2.9.6 (2026-09-22): every stage of a page audit reads the live file; `check.mjs` refuses another source. Case A88.
+- 2.9.5 (2026-09-22): the dashboard audits the whole library every time; the components stage claims `exhaustive`. Case A87.
+- 2.9.4 (2026-09-22): the dashboard files every stage through one `fileStage` function. Case A86.
+- 2.9.3 (2026-09-22): `temperature: 0` removed from judge calls; the model rejects it.
+- 2.9.2 (2026-09-22): a whole-library dashboard audit scopes the scan to nothing, never to stored fingerprint names. Case A84.
+- 2.9.1 (2026-09-22): §3.10cc keys a layer by path and what it is, plus only-child for `visible`. Case A83.
+- 2.9.0 (2026-09-22): `scanner/audit.js` judges gathered facts in the pure `checkFacts`, runnable in node. Case A81.
+- 2.8.0 (2026-09-22): `coverage` counts bindings and raw values over the same nodes, raw values as events. Expect the figure to move.
+- 2.7.4 (2026-09-22): changelog order only: one inverted entry put back newest first.
+- 2.7.3 (2026-09-22): three self-contradicting numbers corrected; `displayTitle` and `connector` marked unread.
+- 2.7.2 (2026-09-22): row identity and the porting backlog's location corrected against `rows.mjs` and `checks.json`.
+- 2.7.1 (2026-09-20): the audit record is `<project>/audit/<fileKey>.json`, one per library. Wording only.
+- 2.7.0 (2026-09-20): §4e stops writing descriptions and names `figma-component-descriptions`.
+- 2.6.0 (2026-09-20): page filters in `scanner-checks.md` and conventions use the project's component-page rule, not one library's marker.
+- 2.5.6 (2026-09-20): six real node and variable ids replaced by placeholders or roles.
+- 2.5.5 (2026-09-20): citations point at `standards/toolkit-standard.md` §A. No rule changed.
+- 2.5.4 (2026-09-19): the REST scanner (`assets/rest-scan.js`, `references/rest-scanner.md`, fixture) removed.
+- 2.5.3 (2026-09-19): the dashboard page moved into `tools/docs/src/dashboard/`; `tools/figma-dashboard` is the service alone.
+- 2.5.2 (2026-09-19): the docs engine moved into `tools/docs` and builds into `projects/<project>/site/`; `--site` gone.
+- 2.5.1 (2026-09-19): the service is reached through the project's docs site; the command gains `--site`.
+- 2.5.0 (2026-09-13): new check §3.10cc: a layer wired to a property in some variants and not others, keyed by path with sibling ordinals. Case A80.
+- 2.4.0 (2026-09-10): the judge returns `dropped` with a why for each, carried on the closed row. Case A79.
+- 2.3.0 (2026-09-10): file-level checks (page order, naming case) leave for `figma-foundations-audit`. Case A78.
+- 2.2.1 (2026-09-10): the page's Audit description names the foundations and validator stages. Wording only.
+- 2.2.0 (2026-09-11): rows are filed through `POST /rows` or `rows.mjs`, the one writer. Case A77.
+- 2.1.0 (2026-09-10): settings and rulings leave the record and live only in the context document; rows carry `owner`. Case A76.
+- 2.0.0 (2026-09-10): renamed from `figma-library-audit` to `figma-components-audit`. Behaviour unchanged.
+- 1.62.2 (2026-09-10): the dashboard's audit toast and open count agree with the queue; close before measuring. Case A75.
+- 1.62.1 (2026-09-10): a grid-layout frame is checked by its grid gaps, not its inert `itemSpacing`. Case A74.
+- 1.62.0 (2026-09-10): `sectionHeader` and `excludeSections` keep a section out of scan and sweep. Case A73.
+- 1.61.1 (2026-09-10): an unused property is emitted as `error` with its consequence. Case A72.
+- 1.61.0 (2026-09-08): leading or trailing whitespace in a page, component or layer name is flagged; a double space as hygiene. Case A71.
+- 1.60.8 (2026-09-08): the dashboard's ask drawer collapses by default on narrow screens and opens full width.
+- 1.60.7 (2026-09-08): the dashboard's first section keeps its top margin when the one before it is hidden.
+- 1.60.6 (2026-09-08): an audit consumes the "changed since the last audit" list for its scope. Case A70.
+- 1.60.5 (2026-09-08): a closed row the scan raises again is reopened and counted. Case A69.
+- 1.60.4 (2026-09-08): the state signature includes the variant root's paints under `(root)`. Case A68.
+- 1.60.3 (2026-09-08): dashboard deep links resolved at render, not at row build.
+- 1.60.2 (2026-09-08): the dashboard's `autosize` skips hidden elements; notes get a `min-height`.
+- 1.60.1 (2026-09-07): "Ask about this row" opens the drawer first.
+- 1.60.0 (2026-09-07): §3.8b reads `🔷` headers and excludes a pinned catch-all; a run that changes rows reports it in a toast. Case A67.
+- 1.59.0 (2026-09-06): review pass: WebSocket Origin check, `measures.json`, `check.mjs` cross-validates scanner files, schema docs updated. Case A66.
+- 1.58.0 (2026-09-06): one project's backwards state order corrected; `fix.txt` specifies node lookup step by step; rows refresh `node`. Case A65.
+- 1.57.0 (2026-09-06): row actions Fix this, Fix all (scoped by check) and Record as ruling; fixes run sequentially. Case A64.
+- 1.56.0 (2026-09-06): Record as ruling; verify compares against `check`; a full scan closes rows it no longer raises. Case A63.
+- 1.55.0 (2026-09-06): a truncated judgement batch is split and retried instead of estimating the token budget. Case A62.
+- 1.54.0 (2026-09-06): the scoring model moves into `scanner/scoring.json`; the dashboard renders, never invents. Case A61.
+- 1.53.0 (2026-09-06): first end-to-end page audit; measures gated on no skipped set; runs record per-run measures. Case A60.
+- 1.52.0 (2026-09-06): fix prompt, bucket map and check catalogue move into `scanner/` (`fix.txt`, `buckets.json`, `checks.json`). Case A59.
+- 1.51.0 (2026-09-06): `scanner/audit.js`, `sweep.js` and `judge.txt` live in the skill; step 3 runs the executable; step 3a added. Case A58.
+- 1.50.0 (2026-09-05): project constants leave the shared scanner as rules; a missing rule skips its check; scanner returns measures on full scans. Case A57.
+- 1.49.0 (2026-09-05): a truncated judge reply now throws instead of reading as an empty verdict. Case A56.
+- 1.48.0 (2026-09-05): the dashboard's artifact-runtime shim and its dead error codes removed. Case A54.
+- 1.47.0 (2026-09-05): portability proven on a second project; an axis with no recorded ruling is not checked. Case A54.
+- 1.46.0 (2026-09-05): delivery moves from artifacts to a version-controlled record and local service; shipped page deleted. Case A53.
+- 1.45.0 (2026-09-05): actions move back to a session while the page stays the record; pairing optional. Case A52.
+- 1.44.0 (2026-09-05): the variable map is cached for REST audits. Case A51.
+- 1.43.0 (2026-09-05): the template rebuilt from the live page; file key and connector read from the record. Case A50.
+- 1.42.0 (2026-09-05): REST read route proven; a sibling token-consistency check tried and withdrawn. Case A49.
+- 1.41.0 (2026-09-05): a dashboard swept and audited a library with no session; sweep returns file identity. Case A48.
+- 1.40.0 (2026-09-05): the dashboard can launch a sweep through a hosted connector. Case A47.
+- 1.39.0 (2026-09-05): trap: a nested instance's own `opacity: 0.5` is usually the disabled treatment. Case A46.
+- 1.38.0 (2026-09-05): type and measure pass over the shipped pages: 14px floor, 12px caps exception, 66ch reading column. Case A45.
+- 1.37.0 (2026-09-05): one claim per line in both tracker columns, stored as arrays.
+- 1.36.0 (2026-09-05): a run that reads the queue clears the request flag; trap for exposed nested instances. Case A43.
+- 1.35.0 (2026-09-05): sweep mode added.
+- 1.34.0 (2026-09-05): fingerprints and scores are written by the run.
+- 1.33.1 (2026-09-05): design pass over `assets/health-record.html`.
+- 1.33.0 (2026-09-05): the health record gains an About view.
+- 1.32.0 (2026-09-04): the health record page ships as `assets/health-record.html`.
+- 1.31.1 (2026-09-04): portability sweep; one record per project, one `libraries/` document per library. Wording only.
+- 1.31.0 (2026-09-04): step 2b: look for an existing tracker and health record before publishing either.
+- 1.30.0 (2026-09-04): the tracker and health record are registered in the project's context document.
+- 1.29.1 (2026-09-04): runs carry `sets`, `variants` and `variables` beside `coverage`.
+- 1.29.0 (2026-09-04): the health record added: current measures, coverage trend, run registry. Case A38.
+- 1.28.0 (2026-09-04): a re-run's delta goes in the record, one line in chat. Case A37.
+- 1.27.0 (2026-09-04): Re-audit section added; re-run triggers in frontmatter. Case A36.
+- 1.26.0 (2026-09-04): step 2b asks conversation or tracker; Delivery section added. Case A35.
+- 1.25.0 (2026-08-25): the rulebook loads from the context document; `systems/` is an optional cache everywhere; "system file" renamed rulebook.
+- 1.24.1 (2026-08-22): step 6b follows `component-validator` 2.0.0.
+- 1.24.0 (2026-08-21): step 6b names `component-validator` as an optional stage.
+- 1.23.0 (2026-08-20): report cells budgeted at ~120 characters. Case A34.
+- 1.22.0 (2026-08-20): §3.8c naming case check added. Case A33.
+- 1.21.1 (2026-08-19): description trimmed under the 1024-character cap. No behaviour change.
+- 1.21.0 (2026-08-14): §3.8b page and category ordering check added. Case A32.
+- 1.20.0 (2026-08-14): §3.8 and §3.8a merged into one walk; A30 rewritten; §4b-2 property fix recipe added.
+- 1.19.1 (2026-08-14): §3.8a walked both directions and promoted to a check. Case A31.
+- 1.19.0 (2026-08-14): §3.8a: text with no text property, as a candidate. Case A31.
+- 1.18.0 (2026-08-14): no pipe characters inside a report cell. Case A30.
+- 1.17.1 (2026-08-13): trap: a resolved colour variable is rgba. Case A29.
+- 1.17.0 (2026-08-13): text directly inside a `SLOT` is excluded from the text-property rule. Case A28.
+- 1.16.0 (2026-08-13): bucket 1 renders as a table in chat. Case A27.
+- 1.15.0 (2026-08-13): the chat report matches its rendering surface; no inline URLs in a terminal. Case A26.
+- 1.14.0 (2026-08-13): the state-render diff includes the variant root's visual properties. Cases A23–A25.
+- 1.13.0 (2026-08-13): on-request 0–100 component score and score report. Case A24.
+- 1.12.0 (2026-08-13): candidate check: a variant axis with a single option. Case A23.
+- 1.11.1 (2026-08-10): trap recorded for token-consumer searches. Case A22.
+- 1.11.0 (2026-08-10): unused-property filter excludes `SLOT`; fixed text decided by `textAutoResize`; `MIN_TARGET` 24. Cases A19–A21.
+- 1.10.1 (2026-08-10): orphan check gated on `main.key`; fix-queue rows numbered `N.M`. Cases A17–A18.
+- 1.9.1 (2026-08-09): a real token name replaced with a description. Wording only.
+- 1.9.0 (2026-08-09): A1–A4, A14, A15 walked; two traps indexed; composites exclude swapped icon payloads.
+- 1.8.0 (2026-08-08): step 3 says to use the scans in `scanner-checks.md` as written.
+- 1.7.7 (2026-08-08): the state-rendering diff includes node `opacity`.
+- 1.7.6 (2026-08-08): the six changed checks executed verbatim from the file.
+- 1.7.5 (2026-08-08): contrast aliases followed by mode name. Case A10.
+- 1.7.4 (2026-08-08): orphan test fixed to `!main || !main.parent`. Case A16.
+- 1.7.3 (2026-08-08): 3.10e skips the variant root so it can fire.
+- 1.7.2 (2026-08-08): 3.10f gates `layoutSizingVertical` on an auto-layout parent.
+- 1.7.1 (2026-08-08): A8 walked and its wording corrected.
+- 1.7.0 (2026-08-08): an unused property drops the whole component at publication; check validated both ways. Case A12.
+- 1.6.3 (2026-08-08): frontmatter drops a removed check from the triggers.
+- 1.6.2 (2026-08-08): first control pass; the per-variant property-set comparison removed. Case A7.
+- 1.6.1 (2026-08-08): `judgment-protocol.md` aligned with 1.5.0 and 1.3.0; cross-reference grep rule added.
+- 1.6.0 (2026-08-08): five traps indexed; "Adding a check — the four things" added. Case A15.
+- 1.5.0 (2026-08-08): description structure comes from the project document; Composition stays the one content check. Case A14.
+- 1.4.1 (2026-08-08): the closing metrics block cites house-standards rule 9. Documentation only.
+- 1.4.0 (2026-08-08): unused properties raised to `error`; fixed-height text check added. Cases A12–A13.
+- 1.3.0 (2026-08-08): six new checks; every conventions section states its why. Cases A7–A11.
+- 1.2.0 (2026-08-08): usage counts obey the scan scope; distribution diagnostic added.
+- 1.1.2 (2026-08-08): clause D sweep of `scanner-checks.md` examples. Documentation only.
+- 1.1.1 (2026-08-07): hard-wrapped prose reflowed. Formatting only.
+- 1.1.0 (2026-08-05): context-document-first (env-aware); embedded per-project systems file removed; mandatory closing metrics block (coverage %, scope, date); project vocabulary.
+- 1.0.x: pre-refactor.

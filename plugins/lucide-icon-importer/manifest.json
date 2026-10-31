@@ -1,0 +1,31 @@
+{
+  "name": "Lucide Icon Importer",
+  "id": "lucide-icon-importer",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://unpkg.com",
+      "https://lucide.dev",
+      "https://cdn.jsdelivr.net"
+    ]
+  },
+  "permissions": [
+    "teamlibrary"
+  ],
+  "relaunchButtons": [
+    {
+      "command": "import-lucide-icon",
+      "name": "Import Lucide icon"
+    },
+    {
+      "command": "update-icon",
+      "name": "Update icon"
+    }
+  ]
+}

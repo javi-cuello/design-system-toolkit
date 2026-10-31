@@ -1,0 +1,419 @@
+{
+  "_note": "Jobs the toolkit owns, and how a repo proves it is not doing them itself. A project calls these; it does not write its own. `names` are distinctive enough that a repo defining one means it has re-implemented the job \u2014 a generic name (resolve, diff, paths) is deliberately not listed, because a check that cries wolf is a check nobody reads. `owners` are the paths allowed to define those names: the implementation itself is not a duplicate of itself, and without this the check could never be pointed at the toolkit, which is where the owners live. `files` must not exist at all. Read by tools/toolkit-check/owned-check.mjs, which every repo's own check runs and the toolkit's `bin/check` runs over itself; the rule is code-standard 59 and toolkit-standard \u00a7D 1. `projectOwn` and `scaffoldOwn` are read by tools/toolkit-check/twins.mjs, keyed as it prints a name (family included): `projectOwn` rules a file name two project repos both carry genuinely project-own, each with why; `scaffoldOwn` names a sanctioned copy of a scaffold file (toolkit-standard \u00a7D 2), its `source` in the toolkit and its `copies` as repo-relative paths, which twins.mjs compares with the source.",
+  "owned": [
+    {
+      "job": "writing a snapshot",
+      "module": "tools/snapshot/deliver.cjs (through store.cjs)",
+      "files": [
+        "bin/figma-snapshot"
+      ],
+      "names": [
+        "writeLibrary",
+        "writeScreens",
+        "pruneSpecs",
+        "mergeTokens",
+        "recordChanges",
+        "gradeLines",
+        "GRADE_RULES",
+        "gradeOf",
+        "storedGrade",
+        "tokenFacts",
+        "propFacts",
+        "layerFacts",
+        "componentFacts",
+        "pairComponents"
+      ],
+      "evidence": "two repos each wrote one, in two token shapes and three screen layouts, each with fixes the other lacked (snapshot-standard 2.0.0)",
+      "owners": [
+        "tools/snapshot/"
+      ]
+    },
+    {
+      "job": "reading a stored snapshot",
+      "module": "tools/snapshot/store.cjs, spec.cjs, tokens.cjs",
+      "names": [
+        "readScreen",
+        "readScreens",
+        "screenIds",
+        "layerPaths",
+        "repeatOf",
+        "checkSpecs",
+        "readSpec",
+        "readSpecs"
+      ],
+      "evidence": "three conventions for naming a repeated layer, one of them disagreeing with itself; two spec round-trips, each checking half",
+      "owners": [
+        "tools/snapshot/"
+      ]
+    },
+    {
+      "job": "pinning a snapshot to a release",
+      "module": "tools/snapshot/version.cjs",
+      "files": [
+        "ops/figma/version.js"
+      ],
+      "names": [
+        "released",
+        "tokenFor"
+      ],
+      "evidence": "one project read the version history; the other recorded version: null for want of the same forty lines",
+      "owners": [
+        "tools/snapshot/"
+      ]
+    },
+    {
+      "job": "the design-to-code parity engine",
+      "module": "tools/parity/*.mjs",
+      "names": [
+        "parseColour",
+        "parseGradient",
+        "parseShadow",
+        "saveReport",
+        "checkContract",
+        "checkDeclarations",
+        "asWaiver",
+        "unstable",
+        "figmaWeight",
+        "pageTarget",
+        "paintReady",
+        "canonColour",
+        "canonShadow",
+        "canonGradient",
+        "layerAt",
+        "layerIndex",
+        "forceState",
+        "probeSource",
+        "staleAcross",
+        "staleExcuses",
+        "checkWaiver",
+        "pixelDiff",
+        "frameCells",
+        "assertionsFor",
+        "unreadRules",
+        "SPEC_KEYS",
+        "unnamedOverrides",
+        "screenCoverage",
+        "componentCoverage",
+        "copyMissing",
+        "staleMappings",
+        "loadProject",
+        "resolveBases",
+        "screenWindow",
+        "drivePage",
+        "staleContent",
+        "DOM_COVERAGE",
+        "PAGE_TEXT",
+        "sizeSlack",
+        "structureProbe",
+        "overflowProbe",
+        "insetStroke"
+      ],
+      "evidence": "the value parsers were written twice, each missing spellings the other read; one loop never flagged a stale waiver (109 of them), the other could not bound one by size. These live in tools/parity because projects call them (toolkit-standard \u00a7D 2); where two skills genuinely need the same small converter they each carry one, and the name says which output it returns (`figmaRgba` for Figma's 0\u20131 object, `parseColour` for the browser's 0\u2013255 tuple) \u2014 three implementations sat under the one name until this check was first run against the toolkit itself; the font-weight table was kept twice, each missing names the other had, and one project's CDP client was the hardened one the other lacked (2026-10-01); each project's differ and schema were one job twice, and one judged every number within \u00b11, which passed a disabled control's opacity of 0.5 against 1 on 64 rows (2026-10-01); each project read elements its own way (one any CSS property a plan asked for, the other a fixed record with positions, the border box and the ring) and put pages on screen its own way, one rewriting its stylesheet's state selectors into attributes; one resolved a mapped path by searching at any depth, which bound 1,799 of 2,016 names to a layer other than the one the path spelled (2026-10-01); each project translated Figma into expectations with its own adapter, and they disagreed on 22 points \u2014 one read per-side stroke weights as on/off flags, asserted 1px and never looked at OUTSIDE strokes; the other accepted a border or any ring whatever strokesInLayout said, never compared a border's colour, judged hug widths not at all, and passed a missing 1px border under its \u00b11 on lengths; both dropped a token they could not resolve (2026-10-01); each project ran its own loop over the engine \u2014 one a 662-line run.mjs with its own Storybook build, server and app start in shell, the other components.js, screens.js and a lib.js that loaded screens from file:// \u2014 and its own gates under different names, so one judged copy, overrides and the backlog's closed list and the other component and DOM coverage, and neither project had the other's (2026-10-02); the screenshot was taken three ways \u2014 the run's own, one project's fixed 900\u00d7600@2x story shot, the other's every-state pictures \u2014 and that project alone could read a PNG, diff it against the kept set or put a screen beside its frame, in two more files (2026-10-02, review item 7); one project held two page gates, the markup contract and boxes escaping their parent, each with its own copy of the browser launch the engine already owned (2026-10-02, review item 43)",
+      "owners": [
+        "tools/parity/",
+        "tools/shared/cdp.mjs"
+      ],
+      "files": [
+        "design/parity/cdp.mjs",
+        "design/parity/diff.js",
+        "design/parity/schema.js",
+        "tests/parity/diff.js",
+        "tests/parity/schema.js",
+        "design/parity/measure.js",
+        "design/spec.js",
+        "design/parity/adapt.js",
+        "design/parity/adapt.test.js",
+        "design/parity/tokens.js",
+        "tests/parity/adapt.js",
+        "tests/parity/adapt.test.js",
+        "tests/parity/unify.js",
+        "design/parity/run.mjs",
+        "design/parity/overrides.js",
+        "design/parity/overrides.test.js",
+        "design/parity/consumed.test.js",
+        "design/parity/serve.mjs",
+        "design/coverage.test.js",
+        "design/backlog.test.js",
+        "tests/parity/components.js",
+        "tests/parity/screens.js",
+        "tests/parity/lib.js",
+        "tests/parity/spec.js",
+        "tests/parity/screens-map.js",
+        "tests/parity/tree.js",
+        "tests/parity/coverage.js",
+        "tests/parity/component-coverage.js",
+        "tests/parity/screen-coverage.js",
+        "tests/parity/consumed.js",
+        "tests/parity/baseline.js",
+        "tests/parity/shots.js",
+        "design/parity/shot.mjs",
+        "bin/shot",
+        "bin/states",
+        "bin/frame-diff",
+        "tests/overflow.js",
+        "tests/structure.js"
+      ]
+    },
+    {
+      "job": "the font-weight table",
+      "module": "tools/parity/values.mjs (WEIGHTS, weightName)",
+      "files": [],
+      "names": [
+        "WEIGHTS",
+        "weightName"
+      ],
+      "evidence": "the table was kept twice, each missing names the other had (2026-10-01). The token export's dtcg.js runs in Figma's sandbox, which imports nothing, so it keeps a copy, held name for name to this one by skills/figma-token-export/tests/test-dtcg.js",
+      "owners": [
+        "tools/parity/values.mjs",
+        "skills/figma-token-export/scripts/dtcg.js"
+      ]
+    },
+    {
+      "job": "the stylesheet gates a parity run cannot see",
+      "module": "tools/css-lint/lint.mjs, check.mjs",
+      "names": [
+        "unlayered",
+        "reaching",
+        "descendantCombinators",
+        "unexplained",
+        "unexplainedIndented",
+        "literalTokens",
+        "boundFamilies",
+        "hiddenByScript",
+        "unhidden",
+        "emptyLabels",
+        "anchorResets"
+      ],
+      "evidence": "one project wrote nine gates in a Node test over its own compiled sheets, the other two PHP scripts; code-standard rule 5 was written two ways and code-standard rule 22 as two different halves, and the PHP literal gate's glob never recursed, so it read no component sheet while reporting green (2026-10-03)",
+      "owners": [
+        "tools/css-lint/"
+      ],
+      "files": [
+        "design/css.test.js",
+        "tests/no-descendant-selectors.php",
+        "tests/literals-that-are-tokens.php"
+      ]
+    },
+    {
+      "job": "validating the stored design for the code target",
+      "module": "tools/project-check/validate.mjs (component-validator's engine, run by the router after every library snapshot)",
+      "files": [
+        "bin/validate"
+      ],
+      "names": [],
+      "owners": [
+        "tools/project-check/validate.mjs"
+      ]
+    },
+    {
+      "job": "deriving a component contract from its stored spec",
+      "module": "tools/component-contract/derive.cjs",
+      "files": [],
+      "names": [
+        "alignFlip"
+      ],
+      "evidence": "written 2026-10-05 as the layer above the snapshot; a project deriving its own would answer what a component means in a second way, and the router already writes one beside every spec",
+      "owners": [
+        "tools/component-contract/"
+      ]
+    },
+    {
+      "job": "comparing a library built elsewhere with the design (the code audit)",
+      "module": "tools/parity/external.mjs",
+      "files": [],
+      "names": [
+        "readApi",
+        "joinProp",
+        "effectiveProps",
+        "compareProps",
+        "compareTokens",
+        "cssShadows",
+        "shadowKey",
+        "suspectMappings",
+        "elementIn",
+        "openLibrary",
+        "authoredWidth",
+        "propsSide",
+        "winning"
+      ],
+      "evidence": "written 2026-10-05 for one project's MUI library; every rule in it (prop joining, API reading, colour judging) is the kind two projects would otherwise each write and diverge on",
+      "owners": [
+        "tools/parity/"
+      ]
+    },
+    {
+      "job": "pairing a contract's elements with the elements code renders",
+      "module": "tools/parity/pair.mjs",
+      "files": [],
+      "names": [
+        "pairElements",
+        "selectorFor"
+      ],
+      "evidence": "written 2026-10-06: it replaced 18 of 22 hand-mapped elements on one project; a second pairer would place one element two ways",
+      "owners": [
+        "tools/parity/"
+      ]
+    },
+    {
+      "job": "reading a component's contract from code",
+      "module": "tools/component-contract/from-code.mjs",
+      "files": [],
+      "names": [
+        "designTokenFor",
+        "styleFor",
+        "asFigma"
+      ],
+      "evidence": "written 2026-10-06 as a trial on one project's Chip; the contract is one shape whatever it was read from, so a second reader of code into contracts would be a second shape",
+      "owners": [
+        "tools/component-contract/"
+      ]
+    },
+    {
+      "job": "drawing a component contract in Figma",
+      "module": "tools/component-contract/to-figma.mjs",
+      "files": [],
+      "names": [
+        "pluginCode"
+      ],
+      "evidence": "written 2026-10-06 as a trial that drew one project's Chip from its code contract; a second drawer would split which conventions a generated component follows",
+      "owners": [
+        "tools/component-contract/"
+      ]
+    },
+    {
+      "job": "writing a component's stylesheet from its contract",
+      "module": "tools/component-contract/to-code.mjs (the translation in css.mjs)",
+      "files": [],
+      "names": [
+        "toCss"
+      ],
+      "evidence": "written 2026-10-22: every stored contract (450, four projects) generates a stylesheet whose cascade rebuilds every variant it draws, and one project's Badge, swapped for its generated sheet, matched all 230 of its parity assertions; a second generator would split which conventions a generated stylesheet follows",
+      "owners": [
+        "tools/component-contract/"
+      ]
+    },
+    {
+      "job": "checking a library against itself (consistency)",
+      "module": "tools/component-contract/analyze.mjs",
+      "files": [],
+      "names": [
+        "consistency"
+      ],
+      "evidence": "written 2026-10-05; filed into every library's audit queue by the docs service, so a project check of its own would raise the same rows twice",
+      "owners": [
+        "tools/component-contract/"
+      ]
+    },
+    {
+      "job": "editing a component contract",
+      "module": "tools/contract-editor/ (served by serve.mjs for every project, as the docs site is)",
+      "names": [
+        "toAnatomy",
+        "fromAnatomy",
+        "libraryBlocks",
+        "variantParts",
+        "partProblems",
+        "forField",
+        "usedGroups",
+        "tokenLists"
+      ],
+      "evidence": "the editor is centralised and each project consumes it; a project carrying its own copy of the contract and anatomy model would drift from the one every other project edits with; which tokens a field offers (forField over usedGroups, Figma's scopes first) is one answer the editor's menus and the code reader both ask, so it is defined here once and imported",
+      "owners": [
+        "tools/contract-editor/"
+      ]
+    },
+    {
+      "job": "running code in a Figma file through the bridge",
+      "module": "tools/figma-audit/services.mjs",
+      "files": [],
+      "names": [
+        "figmaExec"
+      ],
+      "evidence": "to-figma and bin/audit each kept their own client, which unwrapped the bridge's answer two ways",
+      "owners": [
+        "tools/figma-audit/services.mjs"
+      ]
+    },
+    {
+      "job": "naming a token's custom property",
+      "module": "tools/tokens/names.mjs",
+      "files": [],
+      "names": [
+        "cssName"
+      ],
+      "evidence": "the docs site, the docs MCP's validator, the parity engine's hints and the stylesheet lint each kept their own; one lowercased before splitting camel case, so `textStrong` became `--textstrong` against the build's `--text-strong`",
+      "owners": [
+        "tools/tokens/"
+      ]
+    },
+    {
+      "job": "reading a variant's name into its values",
+      "module": "tools/shared/names.js",
+      "files": [],
+      "names": [
+        "variantValues"
+      ],
+      "evidence": "derive, the parity engine, the contract tools and the docs site each split a variant's name their own way, one on a bare `,`, one keeping a part with no `=` as a key. The properties table runs in Figma's sandbox, which imports nothing, so it keeps a copy that its test holds character for character to this one; the contract editor's `variantValues` is a different function under the same name (the values its view shows), not a copy",
+      "owners": [
+        "tools/shared/names.js",
+        "skills/figma-properties-table/",
+        "tools/contract-editor/editor.js"
+      ]
+    },
+    {
+      "job": "expanding a component contract into the layers each variant draws",
+      "module": "tools/component-contract/layers.mjs",
+      "files": [],
+      "names": [
+        "variantDefaults",
+        "interactionStates"
+      ],
+      "evidence": "the contract editor, the Figma drawer and the stylesheet generator all draw a variant from one contract; a second expansion would draw one variant two ways",
+      "owners": [
+        "tools/component-contract/"
+      ]
+    }
+  ],
+  "projectOwn": [
+    {
+      "file": "check (bin)",
+      "reason": "each repo's own check command; what it runs is the toolkit's (tools/toolkit-check/owned-check.mjs, the token and spec gates)"
+    },
+    {
+      "file": "tokens (bin)",
+      "reason": "a twelve-line entry point that execs tools/tokens/build.mjs with the repo's path"
+    },
+    {
+      "file": "parity (bin)",
+      "reason": "each repo's entry point for its parity run: a few lines that exec the toolkit's tools/parity/run.mjs with the repo's path, as bin/tokens execs tools/tokens/build.mjs"
+    },
+    {
+      "file": "graphics (bin)",
+      "reason": "two jobs under one name: one generates a TypeScript index of the snapshot's PNGs for a React build, the other resamples designer originals to WebP for a PHP site"
+    },
+    {
+      "file": "fonts (style)",
+      "reason": "two jobs under one name: one project generates five per-weight @font-face rules from the snapshot's text styles (bin/fonts, which fails on a face it has no file for); Project C declares two variable files by hand, whose weight ranges cover every weight a style can name and whose Inter Display face pins its optical size, so it has no per-weight face to miss (a new family is a hand edit there). A shared generator would carry one project's file layout as an option for the other. The release both serve, and the signal to change it, is in each project's context document"
+    }
+  ],
+  "scaffoldOwn": [
+    {
+      "file": "hairline (style)",
+      "source": "skills/frontend-build/assets/design-system-scaffold/design-system/base/_hairline.sass",
+      "copies": [
+        "src/styles/_hairline.scss",
+        "assets/design-system/base/_hairline.sass"
+      ],
+      "reason": "one job, whose source is frontend-build's scaffold (assets/design-system-scaffold/design-system/base/). The scaffold writes a file into a project once, as it writes every file, because a stylesheet compiles inside the project's own build and deploy, where the toolkit is not; so each project keeps a copy, in its own syntax and under its own token names for the same roles (the scaffold's starter tokens are generic). A change is made in the scaffold first, then copied; twins.mjs lists a copy whose mixins differ from the source's, bodies and defaults included, with comments, syntax and custom property names set aside"
+    },
+    {
+      "file": "focus (style)",
+      "source": "skills/frontend-build/assets/design-system-scaffold/design-system/base/_focus.sass",
+      "copies": [
+        "src/styles/_focus.scss",
+        "assets/design-system/base/_focus.sass"
+      ],
+      "reason": "one job, whose source is frontend-build's scaffold (assets/design-system-scaffold/design-system/base/). The scaffold writes a file into a project once, as it writes every file, because a stylesheet compiles inside the project's own build and deploy, where the toolkit is not; so each project keeps a copy, in its own syntax and under its own token names for the same roles (the scaffold's starter tokens are generic). A change is made in the scaffold first, then copied; twins.mjs lists a copy whose mixins differ from the source's, bodies and defaults included, with comments, syntax and custom property names set aside"
+    }
+  ]
+}

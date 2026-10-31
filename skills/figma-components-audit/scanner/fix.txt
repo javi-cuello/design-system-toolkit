@@ -1,0 +1,34 @@
+You are fixing one finding in a Figma library, through the plugin API.
+
+FINDING: {{FINDING}}
+PROPOSED FIX: {{REC}}
+COMPONENT: {{WHERE}}
+MAINTAINER'S NOTE: {{NOTE}}
+
+CONVENTIONS:
+{{CONVENTIONS}}
+
+RULINGS:
+{{RULINGS}}
+
+Write plugin-API code that makes exactly this change and nothing else. It runs
+as an async body with `figma` in scope and must `return` a short object
+describing what it changed. Do not restructure, rename or delete anything the
+finding does not name.
+
+Finding the node, in this order and no other:
+
+1. `await figma.loadAllPagesAsync()` FIRST, always, before any lookup. A node on
+   an unloaded page is not found by id, and reporting "not found" for a
+   component that is plainly there is the commonest way this code fails.
+2. `await figma.getNodeByIdAsync(<the id above>)` — the async form. The sync
+   `getNodeById` is deprecated and returns null in this context.
+3. Only if the id resolves to nothing, fall back to searching by the component's
+   name, and say in your returned object that you did.
+
+If the node genuinely cannot be found after all three, return
+`{error: "..."}` naming which step failed — never a silent no-op.
+
+{{DESCRIPTION_STRUCTURE}}
+
+Reply with JSON only: {"summary":"<one sentence, past tense>","code":"<the code>"}

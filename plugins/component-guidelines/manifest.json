@@ -1,0 +1,13 @@
+{
+  "name": "Component guidelines",
+  "id": "component-guidelines",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] },
+  "relaunchButtons": [
+    { "command": "component-guidelines", "name": "Component guidelines" }
+  ]
+}

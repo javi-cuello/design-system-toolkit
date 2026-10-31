@@ -1,0 +1,147 @@
+{
+  "contract": 1,
+  "component": "Contact card",
+  "figma": {
+    "name": "Contact card",
+    "key": "7a0f8aae58beb2a9db9bd365224387fd32a94cdc",
+    "id": "1:90"
+  },
+  "props": {
+    "name": {
+      "type": "string",
+      "default": "Ada Park",
+      "figma": "Name",
+      "sets": [
+        "body/name"
+      ]
+    },
+    "showExtra": {
+      "type": "boolean",
+      "default": false,
+      "figma": "Show extra",
+      "shows": [
+        "extraContentSlot",
+        "extraContentSlot/note"
+      ]
+    }
+  },
+  "anatomy": {
+    "root": {
+      "kind": "container",
+      "layout": {
+        "direction": "column",
+        "gap": "Spacing/12",
+        "align": "start",
+        "crossAlign": "start",
+        "padding": {
+          "top": "Spacing/16",
+          "end": "Spacing/16",
+          "bottom": "Spacing/16",
+          "start": "Spacing/16"
+        }
+      },
+      "width": 280,
+      "height": "hug",
+      "radius": "Radius/8",
+      "background": "Color/Background/surface",
+      "border": {
+        "color": "Color/Border/default",
+        "width": [
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1",
+          "Stroke/1"
+        ],
+        "sides": {
+          "top": 1,
+          "end": 1,
+          "bottom": 1,
+          "start": 1
+        }
+      }
+    },
+    "body": {
+      "kind": "container",
+      "parent": "root",
+      "layout": {
+        "direction": "row",
+        "gap": "Spacing/12",
+        "align": "start",
+        "crossAlign": "center",
+        "padding": {
+          "top": "Spacing/0",
+          "end": "Spacing/0",
+          "bottom": "Spacing/0",
+          "start": "Spacing/0"
+        }
+      },
+      "width": "fill",
+      "height": "hug",
+      "order": 0
+    },
+    "body/avatar": {
+      "kind": "instance",
+      "parent": "body",
+      "component": "Avatar",
+      "with": {
+        "Initial": "A",
+        "Size": "40"
+      },
+      "width": 40,
+      "height": 40,
+      "order": 0
+    },
+    "body/name": {
+      "kind": "text",
+      "parent": "body",
+      "width": "hug",
+      "height": "hug",
+      "color": "Color/Text/primary",
+      "typography": "Label/md",
+      "autoResize": "width",
+      "content": "{name}",
+      "order": 1
+    }
+  },
+  "variants": [
+    {
+      "when": {
+        "showExtra": true
+      },
+      "add": {
+        "extraContentSlot": {
+          "kind": "container",
+          "parent": "root",
+          "layout": {
+            "direction": "column",
+            "gap": "Spacing/4",
+            "align": "start",
+            "crossAlign": "start",
+            "padding": {
+              "top": "Spacing/8",
+              "end": "Spacing/8",
+              "bottom": "Spacing/8",
+              "start": "Spacing/8"
+            }
+          },
+          "width": "fill",
+          "height": "hug",
+          "radius": "Radius/4",
+          "background": "Color/Background/subtle",
+          "order": 1
+        },
+        "extraContentSlot/note": {
+          "kind": "text",
+          "parent": "extraContentSlot",
+          "width": "hug",
+          "height": "hug",
+          "color": "Color/Text/secondary",
+          "typography": "Body/md",
+          "autoResize": "width",
+          "content": "Anything a caller puts here",
+          "order": 0
+        }
+      }
+    }
+  ]
+}

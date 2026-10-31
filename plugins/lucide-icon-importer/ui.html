@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lucide Icon Importer</title>
+<style>
+/* ui-base v2 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v2 end */
+
+  *, *::before, *::after { margin: 0; padding: 0; } /* box-sizing already set by ui-base above */
+
+  :root {
+    --bg:        var(--figma-color-bg);
+    --surface:   var(--figma-color-bg-secondary);
+    --border:    var(--figma-color-border);
+    --text:      var(--figma-color-text);
+    --muted:     var(--figma-color-text-secondary);
+    --accent:    var(--figma-color-bg-brand);
+    --accent-dk: var(--figma-color-bg-brand-hover);
+    --on-accent: var(--figma-color-text-onbrand, #ffffff);
+    --accent-tint: var(--figma-color-bg-brand-tertiary, rgba(24,160,251,0.12));
+    --success:   var(--figma-color-icon-success, #1bc47d);
+    --danger:    var(--figma-color-bg-danger, #eb5757);
+    --danger-text: var(--figma-color-text-danger, #eb5757);
+    --radius:    6px;
+    --font:      var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  }
+
+  body {
+    font-family: var(--font);
+    font-size: 12px;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab {
+    height: auto; background: none; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 12px; color: var(--muted);
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  .tab.active { color: var(--text); font-weight: 600; background: var(--surface); }
+  .tab:hover:not(.active) { color: var(--text); background: var(--figma-color-bg-hover); }
+  .tab:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--figma-color-border-selected); }
+
+  .tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .tab-panel.active { display: flex; }
+
+  /* ── Search (Icons tab) ── */
+  .search-area { padding: 10px 12px 0; flex-shrink: 0; }
+  .search-wrap { position: relative; display: flex; align-items: center; }
+  .search-icon { position: absolute; left: 9px; color: var(--muted); pointer-events: none; display: flex; }
+  #searchInput {
+    height: var(--input-h); box-sizing: border-box;
+    width: 100%;
+    padding: 0 28px 0 30px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #searchInput:focus { border-color: var(--accent); }
+  #searchInput::placeholder { color: var(--muted); }
+
+  .clear-btn {
+    height: auto; position: absolute; right: 7px; background: none; border: none; cursor: pointer;
+    color: var(--muted); display: none; align-items: center; padding: 2px; border-radius: 3px;
+  }
+  .clear-btn:hover { color: var(--text); background: var(--surface); }
+  .clear-btn.visible { display: flex; }
+
+  .paste-block { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+  .paste-block summary { cursor: pointer; user-select: none; padding: 2px 0; }
+  .paste-block textarea { width: 100%; margin: 6px 0; padding: 6px 8px; font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; line-height: 1.5;
+    color: var(--figma-color-text); background: var(--figma-color-bg); resize: vertical;
+    border: 1px solid var(--figma-color-border); border-radius: var(--radius-sm); }
+  .paste-block textarea:focus { outline: none; border-color: var(--figma-color-border-selected); }
+  .status-bar { padding: 6px 12px; font-size: 10px; color: var(--muted); flex-shrink: 0; min-height: 20px; }
+
+  .results-wrap { flex: 1; overflow-y: auto; padding: 0 10px 8px; }
+  .results-wrap::-webkit-scrollbar { width: 5px; }
+  .results-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .results-wrap::-webkit-scrollbar-track { background: transparent; }
+
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+
+  .icon-card {
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid transparent; transition: background 0.1s, border-color 0.1s;
+    position: relative;
+  }
+  .icon-card:hover:not(.exists) { background: var(--surface); border-color: var(--border); }
+  .icon-card.selected { background: var(--accent-tint); border-color: var(--accent); }
+
+  .card-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .card-icon svg { width: 20px; height: 20px; stroke: var(--text); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-card.exists .card-icon svg { stroke: var(--muted); opacity: 0.5; }
+
+  .exists-badge {
+    display: none; position: absolute; top: 3px; right: 3px; width: 11px; height: 11px;
+    background: var(--success); border-radius: 50%; align-items: center; justify-content: center;
+  }
+  .icon-card.exists .exists-badge { display: flex; }
+  .exists-badge svg { stroke: #fff; }
+
+  @keyframes icon-placeholder-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.85; } }
+  .card-placeholder {
+    width: 20px; height: 20px; background: var(--surface); border-radius: 3px;
+    animation: icon-placeholder-pulse 1.4s ease-in-out infinite;
+  }
+  /* Failed (retries exhausted) is a terminal, non-loading state -- no pulse,
+     so it reads as "stopped, click to retry" rather than "still working". */
+  .card-placeholder-failed { background: var(--danger-text); opacity: 0.15; animation: none; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 36px 20px; color: var(--muted); text-align: center;
+  }
+  .empty-title { font-size: 12px; font-weight: 500; color: var(--text); }
+  .empty-sub { font-size: 10px; line-height: 1.5; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--text);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+
+  .preview-panel {
+    flex-shrink: 0; border-top: 1px solid var(--border); padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .preview-box {
+    width: 36px; height: 36px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .preview-box svg { width: 20px; height: 20px; stroke: var(--text); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .preview-box.empty { color: var(--muted); }
+  .preview-info { flex: 1; min-width: 0; }
+  .preview-name { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-meta { font-size: 10px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .btn {
+    height: var(--control-h); box-sizing: border-box; border: none; border-radius: var(--radius); padding: 0 16px;
+    font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dk); }
+  .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--figma-color-bg-disabled);
+    color: var(--figma-color-text-ondisabled); cursor: not-allowed; transform: none; }
+  .btn-primary.loading .btn-label { display: none; }
+  .btn-primary.loading .spinner { display: block; border-top-color: var(--on-accent); }
+  .btn-primary .spinner { display: none; width: 12px; height: 12px; }
+
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+  /* ── Settings tab ── */
+  .settings-scroll { flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; }
+  .settings-group { display: flex; flex-direction: column; }
+  .settings-group + .settings-group { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 4px; }
+  .settings-group-title { font-size: 12px; font-weight: 700; padding: 8px 14px 4px; }
+
+  .field-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 14px;
+  }
+  .field-row > label { font-size: 12px; color: var(--muted); width: 108px; flex-shrink: 0; }
+  .field-row-control { flex: 1; min-width: 0; position: relative; }
+
+  .field-row-control input[type="text"], .field-row-control input[type="number"], .field-row-control select {
+    height: var(--input-h); box-sizing: border-box;
+    width: 100%;
+    font-family: var(--font); font-size: 12px; color: var(--text);
+    border: 1px solid transparent; border-radius: 5px; padding: 0 8px;
+    outline: none; background: var(--surface);
+  }
+  .field-row-control select { cursor: pointer; }
+  .field-row-control input:focus, .field-row-control select:focus { border-color: var(--accent); }
+  .field-row-control input.invalid { border-color: var(--danger-text); }
+  .field-error { font-size: 10px; color: var(--danger-text); display: none; padding: 0 14px; }
+  .field-error.visible { display: block; }
+
+  .radio-row { display: flex; gap: 16px; }
+  .radio-option { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text); }
+  .radio-option input[type="radio"] {
+    appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    position: relative; flex-shrink: 0;
+    transition: border-color 0.1s;
+  }
+  .radio-option input[type="radio"]:hover { border-color: var(--muted); }
+  .radio-option input[type="radio"]:checked { border-color: var(--accent); }
+  .radio-option input[type="radio"]:checked::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    transform: translate(-50%, -50%);
+  }
+
+  /* Color chip + opacity chip side by side, both filled/borderless */
+  .color-opacity-row { display: flex; gap: 6px; }
+  .color-chip {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border-radius: 5px; padding: 0 8px;
+    height: 30px; box-sizing: border-box;
+  }
+  .color-swatch-input { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); padding: 0; cursor: pointer; flex-shrink: 0; background: none; display: block; }
+  .color-chip input[type="text"] {
+    flex: 1; min-width: 0; border: none; background: none; outline: none;
+    font-family: var(--font); font-size: 12px; color: var(--text); padding: 2px 0;
+  }
+  .opacity-chip {
+    width: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 2px;
+    background: var(--surface); border-radius: 5px; padding: 0 8px;
+    height: 30px; box-sizing: border-box;
+  }
+  .opacity-chip input[type="number"] {
+    width: 100%; border: none; background: none; outline: none; -moz-appearance: textfield;
+    font-family: var(--font); font-size: 12px; color: var(--text); padding: 2px 0;
+  }
+  .opacity-chip input[type="number"]::-webkit-outer-spin-button,
+  .opacity-chip input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .opacity-chip span { font-size: 12px; color: var(--muted); }
+
+  /* Compact trigger (same height as a color-chip row) that opens an
+     overlaid dropdown — keeps the row height identical to the Color mode's
+     row, so switching Fill mode doesn't jump the layout. */
+  .variable-picker-trigger {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border-radius: 5px; padding: 0 8px;
+    height: 30px; box-sizing: border-box;
+    cursor: pointer;
+  }
+  .variable-picker-trigger .placeholder { color: var(--muted); }
+  .variable-picker-trigger span:not(.variable-swatch):not(.chev) {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1;
+  }
+  .variable-picker-trigger .chev { flex: none; }
+  .variable-picker-trigger .chev { margin-left: auto; color: var(--muted); font-size: 10px; }
+
+  .variable-dropdown {
+    display: none; position: fixed;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .variable-dropdown.open { display: flex; }
+  .variable-search-wrap { padding: 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .variable-search-wrap input {
+    width: 100%; font-family: var(--font); font-size: 12px; color: var(--text);
+    border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px;
+    outline: none; background: var(--surface);
+  }
+  .variable-search-wrap input:focus { border-color: var(--accent); }
+  .variable-option-list { overflow-y: auto; min-height: 0; flex: 1; }
+  .variable-group-label {
+    font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.03em; padding: 8px 8px 4px; position: sticky; top: 0; background: var(--bg);
+  }
+  .variable-option {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; font-size: 11px;
+  }
+  .variable-option:hover { background: var(--surface); }
+  .variable-option.selected { background: var(--accent-tint); }
+  .variable-option-name {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  .variable-swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--border); flex-shrink: 0; }
+  .variable-option .check { margin-left: auto; color: var(--accent); font-weight: 700; visibility: hidden; flex-shrink: 0; }
+  .variable-option.selected .check { visibility: visible; }
+  .variable-option-empty { padding: 12px 8px; color: var(--muted); font-size: 11px; text-align: center; }
+
+  .no-variables-note { font-size: 10px; color: var(--muted); padding: 4px 14px 0; }
+
+  .settings-footer { padding: 12px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .autosave-hint { font-size: 10px; color: var(--muted); flex: 1; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: #1a1a1a; color: #fff; padding: 6px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none; white-space: nowrap; z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab active" data-tab="icons">Icons</button>
+  <button class="tab" data-tab="settings">Settings</button>
+</div>
+
+<!-- ── Icons tab ── -->
+<div class="tab-panel active" id="panel-icons">
+  <div class="search-area">
+    <div class="search-wrap">
+      <span class="search-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+      </span>
+      <input id="searchInput" type="text" placeholder="Search" autocomplete="off" spellcheck="false">
+      <button class="clear-btn" id="clearBtn">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <details class="paste-block" id="pasteBlock">
+      <summary>Paste a list</summary>
+      <textarea id="pasteInput" rows="3" spellcheck="false"
+        placeholder="chevrons-up-down, circle-check, folder-open&#10;or one name per line — PascalCase (ChevronsUpDown) is accepted too"></textarea>
+      <button class="btn btn-secondary" id="pasteBtn">Select these</button>
+    </details>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+
+  <div class="results-wrap" id="resultsWrap"></div>
+
+  <div class="preview-panel">
+    <div class="preview-box empty" id="previewBox">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+    </div>
+    <div class="preview-info">
+      <div class="preview-name" id="previewName">No icon selected</div>
+      <div class="preview-meta" id="previewMeta">Choose an icon above</div>
+    </div>
+    <button class="btn btn-primary" id="addBtn" disabled>
+      <div class="spinner"></div>
+      <span class="btn-label">Add icon</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Settings tab ── -->
+<div class="tab-panel" id="panel-settings">
+  <div class="settings-scroll">
+    <div class="settings-group">
+      <div class="settings-group-title">General</div>
+
+      <div class="field-row">
+        <label>Frame name</label>
+        <div class="field-row-control"><input type="text" id="setFrameName" placeholder="Icons"></div>
+      </div>
+
+      <div class="field-row">
+        <label>Icon sizes</label>
+        <div class="field-row-control"><input type="text" id="setSizes" placeholder="24"></div>
+      </div>
+
+      <div class="field-row">
+        <label>Border thickness</label>
+        <div class="field-row-control"><input type="number" id="setStrokeWeight" min="0.25" step="0.25"></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Color</div>
+
+      <div class="field-row">
+        <label>Fill mode</label>
+        <div class="field-row-control">
+          <div class="radio-row">
+            <label class="radio-option"><input type="radio" name="fillMode" value="literal" id="fillModeLiteralRadio" checked> Color</label>
+            <label class="radio-option"><input type="radio" name="fillMode" value="variable" id="fillModeVariableRadio"> Variable</label>
+          </div>
+        </div>
+      </div>
+
+      <div id="literalColorSection">
+        <div class="field-row">
+          <label>Icon color</label>
+          <div class="field-row-control">
+            <div class="color-opacity-row">
+              <div class="color-chip">
+                <input type="color" class="color-swatch-input" id="fillColorSwatch" value="#000000">
+                <input type="text" id="fillColorHex" value="#000000" placeholder="#000000">
+              </div>
+              <div class="opacity-chip">
+                <input type="number" id="fillOpacityInput" min="0" max="100" step="1" value="100">
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="field-error" id="fillColorError">Enter a valid hex color, e.g. #1a1a1a</div>
+      </div>
+
+      <div id="variableSection" style="display:none;">
+        <div class="field-row">
+          <label>Variable</label>
+          <div class="field-row-control">
+            <div class="variable-picker-trigger" id="variablePickerToggle">
+              <span class="variable-swatch" id="variableCurrentSwatch" style="background:#ccc;"></span>
+              <span class="placeholder" id="variableCurrentLabel">Choose a color variable…</span>
+              <span class="chev">▾</span>
+            </div>
+            <div class="variable-dropdown" id="variableDropdown">
+              <div class="variable-search-wrap">
+                <input type="text" id="variableSearchInput" placeholder="Search variables" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="variable-option-list" id="variableList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="no-variables-note" id="noVariablesNote" style="display:none;">No color variables found in this file or any enabled library.</div>
+      </div>
+
+      <div class="field-row">
+        <label>Background</label>
+        <div class="field-row-control">
+          <div class="color-opacity-row">
+            <div class="color-chip">
+              <input type="color" class="color-swatch-input" id="bgColorSwatch" value="#f5f5f5">
+              <input type="text" id="bgColorHex" value="#f5f5f5" placeholder="#f5f5f5">
+            </div>
+            <div class="opacity-chip">
+              <input type="number" id="bgOpacityInput" min="0" max="100" step="1" value="100">
+              <span>%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field-error" id="bgColorError">Enter a valid hex color, e.g. #f5f5f5</div>
+    </div>
+  </div>
+
+  <div class="settings-footer">
+    <span class="autosave-hint">Saved automatically</span>
+    <button class="btn btn-secondary" id="resetSettingsBtn" style="width:auto;">Reset</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var allIcons      = [];
+var filteredIcons = [];
+var selectedIcons = new Map(); // name -> { name, tags, svgString, loading, error }
+var existingNames = {};
+var searchTimer   = null;
+var isAdding      = false;
+var svgCache      = {};
+var currentSettings = null;
+var colorVariables = [];
+var saveTimer = null;
+
+var searchInput  = document.getElementById('searchInput');
+var clearBtn     = document.getElementById('clearBtn');
+var resultsWrap  = document.getElementById('resultsWrap');
+var statusBar    = document.getElementById('statusBar');
+var previewBox   = document.getElementById('previewBox');
+var previewName  = document.getElementById('previewName');
+var previewMeta  = document.getElementById('previewMeta');
+var addBtn       = document.getElementById('addBtn');
+var toast        = document.getElementById('toast');
+
+var HEX_RE = /^#?[0-9a-fA-F]{6}$/;
+
+// ── Tabs ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+var toastTimer;
+function showToast(msg, isError) {
+  toast.textContent = msg;
+  toast.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { toast.className = 'toast'; }, 2800);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+parent.postMessage({ pluginMessage: { type: 'GET_EXISTING' } }, '*');
+parent.postMessage({ pluginMessage: { type: 'GET_SETTINGS' } }, '*');
+parent.postMessage({ pluginMessage: { type: 'GET_COLOR_VARIABLES' } }, '*');
+
+// Served via jsdelivr, not unpkg: unpkg.com rejects fetches from a null
+// origin (which is exactly what a Figma plugin UI sandboxed iframe sends)
+// with a CORS failure + 500, regardless of redirects -- pinning the version
+// alone (removing the @latest redirect) was NOT enough, confirmed via a
+// live console log showing the direct, non-redirected request still
+// blocked. jsdelivr documents unconditional `Access-Control-Allow-Origin: *`
+// on every response specifically for cross-origin cases like this. Pinned
+// (not @latest) regardless, for the same reasons as before -- predictable,
+// and avoids depending on whichever CDN's redirect/CORS behavior for
+// @latest specifically. Bump this string for a newer Lucide version.
+var LUCIDE_STATIC_VERSION = '1.28.0';
+
+async function loadIconList() {
+  statusBar.textContent = 'Loading icons…';
+  try {
+    var res = await fetch('https://cdn.jsdelivr.net/npm/lucide-static@' + LUCIDE_STATIC_VERSION + '/tags.json');
+    if (!res.ok) throw new Error('fetch failed');
+    var tagsMap = await res.json();
+    allIcons = Object.keys(tagsMap).sort().map(function(name) {
+      return { name: name, tags: tagsMap[name] || [] };
+    });
+    statusBar.textContent = allIcons.length + ' icons available';
+    showDefaultIcons();
+  } catch(e) {
+    statusBar.textContent = 'Failed to load icon list';
+    showToast('Network error loading icons', true);
+  }
+}
+loadIconList();
+
+function showDefaultIcons() {
+  if (searchInput.value.trim()) return;
+  filteredIcons = allIcons; // full scrollable browse, not capped
+  renderGrid(filteredIcons);
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+searchInput.addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(function() { doSearch(searchInput.value); }, 180);
+});
+
+clearBtn.addEventListener('click', function() {
+  searchInput.value = '';
+  doSearch('');
+  searchInput.focus();
+});
+
+// Icon names are kebab-case ("alert-circle"), but people naturally type a
+// search with spaces ("alert circle") -- normalize both sides to spaces so
+// hyphens/underscores/spaces are interchangeable in the query and the name.
+function normalizeForSearch(s) {
+  return s.replace(/[-_]/g, ' ').toLowerCase();
+}
+
+function doSearch(query) {
+  var qRaw = query.trim();
+  var q = normalizeForSearch(qRaw);
+  clearBtn.className = qRaw ? 'clear-btn visible' : 'clear-btn';
+
+  if (!q) {
+    showDefaultIcons();
+    statusBar.textContent = allIcons.length ? allIcons.length + ' icons available' : '';
+    return;
+  }
+
+  filteredIcons = allIcons.filter(function(icon) {
+    if (normalizeForSearch(icon.name).indexOf(q) !== -1) return true;
+    for (var i = 0; i < icon.tags.length; i++) {
+      if (normalizeForSearch(icon.tags[i]).indexOf(q) !== -1) return true;
+    }
+    return false;
+  }).slice(0, 80);
+
+  if (filteredIcons.length === 0) {
+    renderEmpty();
+    statusBar.textContent = 'No icons found for "' + qRaw + '"';
+  } else {
+    renderGrid(filteredIcons);
+    var existCount = filteredIcons.filter(function(i) { return existingNames[i.name]; }).length;
+    var msg = filteredIcons.length + ' result' + (filteredIcons.length === 1 ? '' : 's');
+    if (existCount > 0) msg += ' · ' + existCount + ' already in library';
+    statusBar.textContent = msg;
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+// A "no results for this query" state must NOT clear selections made from
+// a DIFFERENT, earlier search -- multi-select is designed to persist across
+// searches, so a temporary zero-results query shouldn't wipe it out.
+function renderEmpty() {
+  resultsWrap.innerHTML = '<div class="empty-state"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><div class="empty-title">No icons found</div><div class="empty-sub">Try a different search term</div></div>';
+}
+
+function renderGrid(icons) {
+  var grid = document.createElement('div');
+  grid.className = 'grid';
+
+  icons.forEach(function(icon) {
+    var isExisting = !!existingNames[icon.name];
+    var isSelected = selectedIcons.has(icon.name);
+    var card = document.createElement('div');
+    card.className = 'icon-card' + (isExisting ? ' exists' : '') + (isSelected ? ' selected' : '');
+    card.dataset.name = icon.name;
+    card.title = icon.name;
+
+    card.innerHTML =
+      '<div class="card-icon"><div class="card-placeholder"></div></div>' +
+      '<div class="exists-badge"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>';
+
+    if (!isExisting) {
+      (function(ic) { card.addEventListener('click', function() { toggleIconSelection(ic, card); }); })(icon);
+    }
+    grid.appendChild(card);
+  });
+
+  resultsWrap.innerHTML = '';
+  resultsWrap.appendChild(grid);
+
+  var MAX_ICON_LOAD_RETRIES = 3;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      var card = entry.target;
+      if (card.dataset.loaded) return;
+      card.dataset.loaded = '1';
+      var name = card.dataset.name;
+      queuedFetchSvg(name).then(function(svgText) {
+        var iconEl = card.querySelector('.card-icon');
+        if (iconEl) {
+          iconEl.innerHTML = '<svg viewBox="0 0 24 24">' + extractInner(svgText) + '</svg>';
+        }
+        obs.unobserve(card);
+      }).catch(function() {
+        // Transient network/CDN hiccups happen, especially with many icons
+        // loading at once as the grid scrolls into view. Retry a few times
+        // (re-observing an already-intersecting element re-fires this
+        // callback) before giving up with an HONEST failed state, rather
+        // than leaving the card blank forever with no indication why.
+        if (!retryOrFail(card, obs, MAX_ICON_LOAD_RETRIES)) {
+          var iconEl = card.querySelector('.card-icon');
+          if (iconEl) {
+            iconEl.innerHTML = '<div class="card-placeholder card-placeholder-failed" title="Failed to load — click to retry"></div>';
+            iconEl.style.cursor = 'pointer';
+            iconEl.onclick = function(e) {
+              e.stopPropagation();
+              card.dataset.retries = '0';
+              card.dataset.loaded = '';
+              iconEl.innerHTML = '<div class="card-placeholder"></div>';
+              iconEl.style.cursor = '';
+              iconEl.onclick = null;
+              obs.observe(card);
+            };
+          }
+        }
+      });
+    });
+  }, { rootMargin: '80px' });
+
+  grid.querySelectorAll('.icon-card').forEach(function(card) { obs.observe(card); });
+}
+
+// fetch-queue — copied from skills/figma-plugin-creator/assets/fetch-queue.js,
+// which is the source: change it there first, then copy. tests/test-ui-fetch.mjs
+// holds this copy to it. Until 1.11.1 this file had its own queue and retry,
+// which leaked a slot on a fetch that threw at once and re-observed a card that
+// was still observed, so a visible card never retried.
+// Bounded concurrency: a large grid can have dozens of cards enter the viewport
+// near-simultaneously; firing that many fetch() calls at once risks connection
+// and rate limits. 6 is the conventional safe per-host concurrent-connection
+// count. Returns queuedFetch(job), where job is a function returning a promise;
+// queuedFetch resolves or rejects with the job's own outcome. A job that throws
+// synchronously rejects like any other — it must not leak its slot, or the
+// queue stalls for good once `max` of them have thrown.
+function createFetchQueue(max) {
+  var active = 0;
+  var queue = [];
+  function next() {
+    while (active < max && queue.length > 0) {
+      var item = queue.shift();
+      active++;
+      Promise.resolve().then(item.job).then(
+        function (item) { return function (v) { active--; item.resolve(v); next(); }; }(item),
+        function (item) { return function (e) { active--; item.reject(e); next(); }; }(item)
+      );
+    }
+  }
+  return function queuedFetch(job) {
+    return new Promise(function (resolve, reject) {
+      queue.push({ job: job, resolve: resolve, reject: reject });
+      next();
+    });
+  };
+}
+
+// Bounded retry with an honest terminal state, for an IntersectionObserver
+// callback's failure branch. Returns true when a retry was scheduled, false when
+// retries are exhausted — the caller then shows a distinguishable "failed, click
+// to retry" state (no pulse), never a blank box. The card is unobserved before
+// it is observed again: observe() on a target already being observed is a no-op
+// per the IntersectionObserver spec, so without the unobserve a still-visible
+// card would not retry until it was scrolled out of view and back. The
+// re-observe waits 500ms per retry so far (500, 1000, ...): re-observing at
+// once spends every retry within milliseconds against a rate-limited source.
+// Bounded by maxRetries, so the longest wait is 500ms x maxRetries.
+function retryOrFail(card, observer, maxRetries) {
+  var retries = Number(card.dataset.retries || '0') + 1;
+  card.dataset.retries = String(retries);
+  observer.unobserve(card);
+  if (retries > maxRetries) return false;
+  card.dataset.loaded = '';
+  setTimeout(function () { observer.observe(card); }, 500 * retries);
+  return true;
+}
+
+var MAX_CONCURRENT_ICON_FETCHES = 6;
+var queuedFetch = createFetchQueue(MAX_CONCURRENT_ICON_FETCHES);
+function queuedFetchSvg(name) { return queuedFetch(function () { return fetchSvg(name); }); }
+
+function fetchSvg(name) {
+  if (svgCache[name]) return Promise.resolve(svgCache[name]);
+  return fetch('https://cdn.jsdelivr.net/npm/lucide-static@' + LUCIDE_STATIC_VERSION + '/icons/' + name + '.svg')
+    .then(function(res) {
+      if (!res.ok) throw new Error('not found');
+      return res.text();
+    })
+    .then(function(text) {
+      svgCache[name] = text;
+      return text;
+    });
+}
+
+function extractInner(svgText) {
+  var match = svgText.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+  return match ? match[1] : '';
+}
+
+function resetPreview() {
+  previewBox.className = 'preview-box empty';
+  previewBox.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>';
+  previewName.textContent = 'No icon selected';
+  previewMeta.textContent = 'Choose an icon above';
+  addBtn.disabled = true;
+  addBtn.querySelector('.btn-label').textContent = 'Add icon';
+  selectedIcons.clear();
+}
+
+// Click toggles membership in the selection set -- no modifier key needed.
+// Selections persist across searches (search "arrow", pick 2, search
+// "circle", pick 2 more, Add all 4) since selectedIcons is keyed by name,
+// independent of whatever's currently filtered/rendered.
+function toggleIconSelection(icon, card) {
+  var name = icon.name;
+  if (selectedIcons.has(name)) {
+    selectedIcons.delete(name);
+    card.classList.remove('selected');
+    updatePreviewPanel();
+    return;
+  }
+
+  card.classList.add('selected');
+  var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false };
+  selectedIcons.set(name, entry);
+  updatePreviewPanel();
+
+  fetchSvg(name).then(function(svgText) {
+    entry.svgString = svgText;
+    entry.loading = false;
+    updatePreviewPanel();
+  }).catch(function() {
+    entry.loading = false;
+    entry.error = true;
+    updatePreviewPanel();
+  });
+}
+
+// ── Paste a list ─────────────────────────────────────────────────────────
+// Selecting 150 icons by clicking 150 cards is the only part of a large
+// import that does not scale, and a real one (155 icons for a library's
+// second pass) is what put this here. The parser is deliberately forgiving
+// about what a person can paste: commas, spaces or newlines separate names,
+// and a React import name (ChevronsUpDown, Loader2) converts to the kebab
+// name the CDN serves, because that is what someone copying from code has.
+// Names the set does not carry, and names the library already holds, are
+// REPORTED rather than silently dropped -- a paste that half-worked with no
+// account of the other half is how a library ends up missing icons nobody
+// notices are missing.
+function toKebab(raw) {
+  var n = String(raw || '').trim().replace(/^["'`]|["'`,]+$/g, '');
+  if (!n) return '';
+  if (/^[a-z0-9][a-z0-9-]*$/.test(n)) return n;                 // already kebab
+  return n
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')                      // ChevronDown -> Chevron-Down
+    .replace(/([A-Za-z])([0-9])/g, '$1-$2')                      // Loader2 -> Loader-2
+    .toLowerCase();
+}
+
+function selectFromList(text) {
+  var wanted = String(text || '').split(/[\s,]+/).map(toKebab).filter(Boolean);
+  var unique = [];
+  wanted.forEach(function(n) { if (unique.indexOf(n) === -1) unique.push(n); });
+
+  var byName = {};
+  allIcons.forEach(function(i) { byName[i.name] = i; });
+
+  var added = 0, already = [], unknown = [];
+  unique.forEach(function(name) {
+    if (existingNames[name]) { already.push(name); return; }
+    var icon = byName[name];
+    if (!icon) { unknown.push(name); return; }
+    if (selectedIcons.has(name)) return;
+    var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false };
+    selectedIcons.set(name, entry);
+    added++;
+    queuedFetchSvg(name).then(function(svgText) {
+      entry.svgString = svgText; entry.loading = false; updatePreviewPanel();
+    }).catch(function() {
+      entry.loading = false; entry.error = true; updatePreviewPanel();
+    });
+  });
+
+  if (filteredIcons.length > 0) renderGrid(filteredIcons);
+  updatePreviewPanel();
+
+  var parts = [added + ' selected'];
+  if (already.length) parts.push(already.length + ' already in the library');
+  if (unknown.length) parts.push(unknown.length + ' not in Lucide: ' + unknown.slice(0, 6).join(', ') + (unknown.length > 6 ? '…' : ''));
+  statusBar.textContent = parts.join(' · ');
+  if (unknown.length) showToast(unknown.length + ' name(s) not in Lucide — see the status line', true);
+}
+
+// Renders 0/1/many selected state into the preview panel + Add button.
+// A single selection keeps the original full single-icon preview (no
+// regression for the common case); 2+ shows a count instead of trying to
+// cram multiple glyphs into a 36px box.
+function updatePreviewPanel() {
+  var count = selectedIcons.size;
+  var anyLoading = false;
+  selectedIcons.forEach(function(e) { if (e.loading) anyLoading = true; });
+
+  if (count === 0) {
+    resetPreview();
+    return;
+  }
+
+  if (count === 1) {
+    var entry = selectedIcons.values().next().value;
+    previewName.textContent = entry.name;
+    if (entry.loading) {
+      previewMeta.textContent = 'Loading preview…';
+      previewBox.className = 'preview-box';
+      previewBox.innerHTML = '<div class="spinner"></div>';
+    } else if (entry.error) {
+      previewMeta.textContent = 'Failed to load SVG';
+      previewBox.className = 'preview-box';
+      previewBox.innerHTML = '';
+    } else {
+      previewBox.className = 'preview-box';
+      previewBox.innerHTML = '<svg viewBox="0 0 24 24">' + extractInner(entry.svgString) + '</svg>';
+      previewMeta.textContent = 'lucide.dev · ' + entry.name;
+    }
+    addBtn.querySelector('.btn-label').textContent = 'Add icon';
+  } else {
+    previewBox.className = 'preview-box';
+    previewBox.innerHTML = '<span style="font-size:13px;font-weight:600;">' + count + '</span>';
+    previewName.textContent = count + ' icons selected';
+    var loadingCount = 0;
+    selectedIcons.forEach(function(e) { if (e.loading) loadingCount++; });
+    previewMeta.textContent = loadingCount > 0 ? (loadingCount + ' loading…') : 'Ready to add';
+    addBtn.querySelector('.btn-label').textContent = 'Add ' + count + ' icons';
+  }
+
+  addBtn.disabled = anyLoading;
+}
+
+document.getElementById('pasteBtn').addEventListener('click', function() {
+  selectFromList(document.getElementById('pasteInput').value);
+});
+
+addBtn.addEventListener('click', function() {
+  if (isAdding || selectedIcons.size === 0) return;
+
+  var ready = [];
+  selectedIcons.forEach(function(entry) {
+    if (!entry.loading && !entry.error && entry.svgString) ready.push(entry);
+  });
+  if (ready.length === 0) {
+    showToast('Selected icon(s) failed to load — nothing to add', true);
+    return;
+  }
+
+  isAdding = true;
+  addBtn.disabled = true;
+  addBtn.classList.add('loading');
+  parent.postMessage({
+    pluginMessage: {
+      type: 'ADD_ICONS',
+      icons: ready.map(function(e) { return { iconName: e.name, svgString: e.svgString, tags: e.tags }; })
+    }
+  }, '*');
+});
+
+// ── Settings tab ─────────────────────────────────────────────────────────
+var setFrameName    = document.getElementById('setFrameName');
+var setSizes        = document.getElementById('setSizes');
+var setStrokeWeight = document.getElementById('setStrokeWeight');
+var fillModeLiteralRadio  = document.getElementById('fillModeLiteralRadio');
+var fillModeVariableRadio = document.getElementById('fillModeVariableRadio');
+
+var literalColorSection = document.getElementById('literalColorSection');
+var fillColorSwatch = document.getElementById('fillColorSwatch');
+var fillColorHex    = document.getElementById('fillColorHex');
+var fillColorError  = document.getElementById('fillColorError');
+
+var variableSection  = document.getElementById('variableSection');
+var variablePickerToggle  = document.getElementById('variablePickerToggle');
+var variableCurrentSwatch = document.getElementById('variableCurrentSwatch');
+var variableCurrentLabel  = document.getElementById('variableCurrentLabel');
+var variableDropdown = document.getElementById('variableDropdown');
+var variableSearchInput = document.getElementById('variableSearchInput');
+var variableList     = document.getElementById('variableList');
+var noVariablesNote  = document.getElementById('noVariablesNote');
+
+var bgColorSwatch = document.getElementById('bgColorSwatch');
+var bgColorHex    = document.getElementById('bgColorHex');
+var bgColorError  = document.getElementById('bgColorError');
+var fillOpacityInput = document.getElementById('fillOpacityInput');
+var bgOpacityInput   = document.getElementById('bgOpacityInput');
+
+var fillMode = 'literal';
+var selectedVariableId = null;
+var suppressAutosave = false;
+
+function hexToRgb01(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(function(c) { return c + c; }).join('');
+  var num = parseInt(hex, 16);
+  return { r: ((num >> 16) & 255) / 255, g: ((num >> 8) & 255) / 255, b: (num & 255) / 255 };
+}
+function rgb01ToHex(color) {
+  function ch(v) { return Math.round(v * 255).toString(16).padStart(2, '0'); }
+  return '#' + ch(color.r) + ch(color.g) + ch(color.b);
+}
+
+function validateHex(inputEl, errorEl) {
+  var v = inputEl.value.trim();
+  var valid = HEX_RE.test(v);
+  inputEl.classList.toggle('invalid', v.length > 0 && !valid);
+  errorEl.classList.toggle('visible', v.length > 0 && !valid);
+  return valid;
+}
+
+function clampOpacityInput(inputEl) {
+  var n = Number(inputEl.value);
+  if (!isFinite(n)) return 1;
+  return Math.min(100, Math.max(0, n)) / 100;
+}
+
+// ── Fill mode: plain Color/Variable select, variable list shown directly ──
+fillModeLiteralRadio.addEventListener('change', function() {
+  if (fillModeLiteralRadio.checked) setFillMode('literal', true);
+});
+fillModeVariableRadio.addEventListener('change', function() {
+  if (fillModeVariableRadio.checked) setFillMode('variable', true);
+});
+
+function setFillMode(mode, fromUser) {
+  fillMode = mode;
+  fillModeLiteralRadio.checked = mode === 'literal';
+  fillModeVariableRadio.checked = mode === 'variable';
+  literalColorSection.style.display = mode === 'literal' ? 'block' : 'none';
+  variableSection.style.display = mode === 'variable' ? 'block' : 'none';
+  if (mode === 'literal') fillColorError.classList.remove('visible');
+  if (fromUser) queueAutosave();
+}
+
+function updateVariableTrigger() {
+  var match = colorVariables.find(function(v) { return v.id === selectedVariableId; });
+  if (match) {
+    variableCurrentSwatch.style.background = rgb01ToHex(match.color);
+    variableCurrentLabel.textContent = match.collection + ' / ' + match.name;
+    variableCurrentLabel.title = match.collection + ' / ' + match.name;
+    variableCurrentLabel.classList.remove('placeholder');
+  } else if (selectedVariableId) {
+    variableCurrentSwatch.style.background = '#ccc';
+    variableCurrentLabel.textContent = selectedVariableId;
+    variableCurrentLabel.classList.remove('placeholder');
+  } else {
+    variableCurrentSwatch.style.background = '#ccc';
+    variableCurrentLabel.textContent = 'Choose a color variable…';
+    variableCurrentLabel.classList.add('placeholder');
+  }
+}
+
+variablePickerToggle.addEventListener('click', function(e) {
+  e.stopPropagation();
+  var willOpen = !variableDropdown.classList.contains('open');
+  variableDropdown.classList.remove('open');
+  if (willOpen) {
+    positionVariableDropdown();
+    variableDropdown.classList.add('open');
+    variableSearchInput.value = '';
+    renderVariableOptions('');
+    setTimeout(function() { variableSearchInput.focus(); }, 0);
+  }
+});
+document.addEventListener('click', function() {
+  variableDropdown.classList.remove('open');
+});
+document.addEventListener('scroll', function(e) {
+  if (variableDropdown.contains(e.target)) return; // internal scroll — don't close
+  variableDropdown.classList.remove('open');
+}, true);
+variableDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+variableSearchInput.addEventListener('input', function() {
+  renderVariableOptions(variableSearchInput.value);
+});
+
+// Fixed positioning means this never affects any ancestor's scroll height —
+// position/size are computed against the actual viewport instead.
+function positionVariableDropdown() {
+  var rect = variablePickerToggle.getBoundingClientRect();
+  var margin = 8;
+  var spaceBelow = window.innerHeight - rect.bottom - margin;
+  var spaceAbove = rect.top - margin;
+  var desiredHeight = 240;
+
+  variableDropdown.style.left = rect.left + 'px';
+  variableDropdown.style.width = rect.width + 'px';
+
+  if (spaceBelow >= 120 || spaceBelow >= spaceAbove) {
+    variableDropdown.style.top = (rect.bottom + 4) + 'px';
+    variableDropdown.style.bottom = 'auto';
+    variableDropdown.style.maxHeight = Math.max(80, Math.min(desiredHeight, spaceBelow)) + 'px';
+  } else {
+    variableDropdown.style.top = 'auto';
+    variableDropdown.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    variableDropdown.style.maxHeight = Math.max(80, Math.min(desiredHeight, spaceAbove)) + 'px';
+  }
+}
+
+function renderVariableList() {
+  var hasVars = colorVariables.length > 0;
+  variablePickerToggle.style.display = hasVars ? 'flex' : 'none';
+  noVariablesNote.style.display = hasVars ? 'none' : 'block';
+  updateVariableTrigger();
+  if (hasVars) renderVariableOptions('');
+}
+
+// Grouped-by-collection, search-filtered option list — mirrors Figma's own
+// native variable picker rather than one long flat, wrapped-text list.
+// Figma-style fuzzy match: split the query into space-separated tokens,
+// split the target into words (on /, -, _, spaces, and camelCase
+// boundaries), and require every query token to prefix-match SOME word.
+// So "ic neu prim" matches "Icon/Neutral/primary" — each token just needs
+// to be a prefix of a corresponding segment, not a literal substring.
+function splitIntoWords(str) {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split(/[\/\-_\s]+/)
+    .filter(Boolean)
+    .map(function(w) { return w.toLowerCase(); });
+}
+function fuzzyMatch(query, target) {
+  var qTokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (qTokens.length === 0) return true;
+  var targetWords = splitIntoWords(target);
+  return qTokens.every(function(qt) {
+    return targetWords.some(function(tw) { return tw.indexOf(qt) === 0; });
+  });
+}
+
+function renderVariableOptions(query) {
+  var q = query.trim();
+  var filtered = colorVariables.filter(function(v) {
+    if (!q) return true;
+    return fuzzyMatch(q, v.collection + ' ' + v.name);
+  });
+
+  variableList.innerHTML = '';
+
+  if (filtered.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'variable-option-empty';
+    empty.textContent = 'No matching variables';
+    variableList.appendChild(empty);
+    return;
+  }
+
+  var lastGroup = null;
+  filtered.forEach(function(v) {
+    if (v.collection !== lastGroup) {
+      var label = document.createElement('div');
+      label.className = 'variable-group-label';
+      label.textContent = v.collection;
+      variableList.appendChild(label);
+      lastGroup = v.collection;
+    }
+
+    var opt = document.createElement('div');
+    var isSelected = selectedVariableId === v.id;
+    opt.className = 'variable-option' + (isSelected ? ' selected' : '');
+    var hex = rgb01ToHex(v.color);
+    opt.title = v.name;
+
+    var swatchEl = document.createElement('span');
+    swatchEl.className = 'variable-swatch';
+    swatchEl.style.background = hex;
+    var nameEl = document.createElement('span');
+    nameEl.className = 'variable-option-name';
+    nameEl.textContent = v.name;
+    var checkEl = document.createElement('span');
+    checkEl.className = 'check';
+    checkEl.textContent = '✓';
+    opt.appendChild(swatchEl);
+    opt.appendChild(nameEl);
+    opt.appendChild(checkEl);
+
+    opt.addEventListener('click', function(e) {
+      e.stopPropagation();
+      selectedVariableId = v.id;
+      renderVariableList();
+      variableDropdown.classList.remove('open');
+      queueAutosave();
+    });
+    variableList.appendChild(opt);
+  });
+}
+
+fillColorSwatch.addEventListener('input', function() {
+  fillColorHex.value = fillColorSwatch.value;
+  validateHex(fillColorHex, fillColorError);
+  queueAutosave();
+});
+fillColorHex.addEventListener('input', function() {
+  var valid = validateHex(fillColorHex, fillColorError);
+  if (valid) {
+    var v = fillColorHex.value.trim();
+    if (v[0] !== '#') v = '#' + v;
+    fillColorSwatch.value = v;
+    queueAutosave();
+  }
+});
+
+bgColorSwatch.addEventListener('input', function() {
+  bgColorHex.value = bgColorSwatch.value;
+  validateHex(bgColorHex, bgColorError);
+  queueAutosave();
+});
+bgColorHex.addEventListener('input', function() {
+  var valid = validateHex(bgColorHex, bgColorError);
+  if (valid) {
+    var v = bgColorHex.value.trim();
+    if (v[0] !== '#') v = '#' + v;
+    bgColorSwatch.value = v;
+    queueAutosave();
+  }
+});
+
+setFrameName.addEventListener('input', queueAutosave);
+setSizes.addEventListener('input', queueAutosave);
+setStrokeWeight.addEventListener('input', queueAutosave);
+fillOpacityInput.addEventListener('input', queueAutosave);
+bgOpacityInput.addEventListener('input', queueAutosave);
+
+function queueAutosave() {
+  if (suppressAutosave) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 500);
+}
+
+function doSave() {
+  var fillHexValid = validateHex(fillColorHex, fillColorError);
+  var bgHexValid = validateHex(bgColorHex, bgColorError);
+
+  var settings = {
+    frameName: setFrameName.value,
+    sizes: setSizes.value,
+    fillMode: fillMode,
+    fillColor: fillHexValid ? hexToRgb01(fillColorHex.value) : (currentSettings ? currentSettings.fillColor : { r: 0, g: 0, b: 0 }),
+    fillOpacity: clampOpacityInput(fillOpacityInput),
+    fillVariableId: fillMode === 'variable' ? selectedVariableId : null,
+    bgColor: bgHexValid ? hexToRgb01(bgColorHex.value) : (currentSettings ? currentSettings.bgColor : { r: 0.96, g: 0.96, b: 0.96 }),
+    bgOpacity: clampOpacityInput(bgOpacityInput),
+    strokeWeight: setStrokeWeight.value
+  };
+  parent.postMessage({ pluginMessage: { type: 'SAVE_SETTINGS', settings: settings } }, '*');
+}
+
+document.getElementById('resetSettingsBtn').addEventListener('click', function() {
+  parent.postMessage({ pluginMessage: { type: 'RESET_SETTINGS' } }, '*');
+});
+
+function applySettingsToFields(settings) {
+  suppressAutosave = true;
+  currentSettings = settings;
+  setFrameName.value = settings.frameName;
+  setSizes.value = settings.sizes.join(', ');
+  setStrokeWeight.value = settings.strokeWeight;
+
+  var hex = rgb01ToHex(settings.fillColor);
+  fillColorHex.value = hex;
+  fillColorSwatch.value = hex;
+  fillColorError.classList.remove('visible');
+  fillColorHex.classList.remove('invalid');
+  fillOpacityInput.value = Math.round((typeof settings.fillOpacity === 'number' ? settings.fillOpacity : 1) * 100);
+
+  var bgHex = rgb01ToHex(settings.bgColor);
+  bgColorHex.value = bgHex;
+  bgColorSwatch.value = bgHex;
+  bgColorError.classList.remove('visible');
+  bgColorHex.classList.remove('invalid');
+  bgOpacityInput.value = Math.round((typeof settings.bgOpacity === 'number' ? settings.bgOpacity : 1) * 100);
+
+  selectedVariableId = settings.fillVariableId;
+  setFillMode(settings.fillMode, false);
+  renderVariableList();
+
+  setTimeout(function() { suppressAutosave = false; }, 0);
+}
+
+// ── Messages from plugin ───────────────────────────────────────────────────
+window.onmessage = function(event) {
+  var msg = event.data.pluginMessage;
+  if (!msg) return;
+
+  if (msg.type === 'EXISTING_ICONS') {
+    existingNames = msg.names || {};
+    if (filteredIcons.length > 0) renderGrid(filteredIcons);
+  }
+
+  if (msg.type === 'SETTINGS') {
+    applySettingsToFields(msg.settings);
+  }
+
+  if (msg.type === 'SETTINGS_SAVED') {
+    applySettingsToFields(msg.settings);
+  }
+
+  if (msg.type === 'COLOR_VARIABLES') {
+    colorVariables = msg.variables || [];
+    if (currentSettings) applySettingsToFields(currentSettings);
+    else renderVariableList();
+  }
+
+  if (msg.type === 'ADD_ICONS_RESULT') {
+    isAdding = false;
+    addBtn.classList.remove('loading');
+
+    var results = msg.results || [];
+    var succeeded = results.filter(function(r) { return r.success; });
+    var failed = results.filter(function(r) { return !r.success; });
+
+    succeeded.forEach(function(r) { existingNames[r.iconName] = true; });
+
+    if (succeeded.length > 0 && failed.length === 0) {
+      showToast('✓ ' + succeeded.length + ' icon' + (succeeded.length === 1 ? '' : 's') + ' added to library');
+    } else if (succeeded.length > 0 && failed.length > 0) {
+      showToast('✓ ' + succeeded.length + ' added, ' + failed.length + ' failed (' +
+        failed.map(function(r) { return r.iconName; }).join(', ') + ')', true);
+    } else {
+      showToast(failed[0] && failed[0].error ? failed[0].error : 'Something went wrong', true);
+    }
+
+    document.querySelectorAll('.icon-card.selected').forEach(function(c) { c.classList.remove('selected'); });
+    resetPreview();
+    if (filteredIcons.length > 0) renderGrid(filteredIcons);
+    addBtn.disabled = failed.length > 0 && succeeded.length === 0 ? false : addBtn.disabled;
+  }
+};
+</script>
+</body>
+</html>

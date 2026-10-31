@@ -1,0 +1,24 @@
+// node tools/toolkit-check/test-cadence.mjs — bin/closing's cadence items (toolkit-standard §D 11).
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { cadence } from "./closing.mjs";
+let pass = 0, fail = 0;
+const ok = (name, c) => { if (c) pass++; else { fail++; console.log("FAIL " + name); } };
+const repo = mkdtempSync(join(tmpdir(), "cadence-"));
+const git = (...a) => execFileSync("git", ["-C", repo, ...a], { encoding: "utf8" });
+git("init", "-q"); git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "work");
+const now = Date.now();
+let r = cadence(repo, now);
+ok("no Review: commit means a review is owed", r.some((l) => /review is owed \(last never/.test(l)));
+git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a change\n\nReview: two Explore reviewers on this diff");
+r = cadence(repo, now);
+ok("a change's own Review: trailer is not the independent review", r.some((l) => /review is owed \(last never/.test(l)));
+git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "a review\n\nReview: independent, the whole toolkit");
+r = cadence(repo, now);
+ok("a recent Review: commit leaves nothing open", r.length === 0);
+r = cadence(repo, now + 15 * 864e5);
+ok("fifteen days after the last review, one is owed again", r.length === 1 && /review is owed/.test(r[0]));
+console.log(pass + " passed, " + fail + " failed");
+process.exit(fail ? 1 : 0);

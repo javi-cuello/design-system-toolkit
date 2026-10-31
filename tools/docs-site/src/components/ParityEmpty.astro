@@ -1,0 +1,21 @@
+---
+// What a Parity page says before it has anything to compare: one message
+// for all five pages, so Coverage and the code-audit pages never disagree
+// about what is missing (feedback.md *Empty states*). It names what the
+// page will show and what fills it; the command to run appears only once
+// the project names its code, with the project filled in, never a
+// placeholder for the reader to complete.
+import { codeOf, project } from '../lib/project.js';
+
+interface Props { shows: string; needs?: 'code' | 'audit' | 'tokens' }
+const { shows, needs = 'audit' } = Astro.props;
+const named = codeOf.size > 0;
+---
+{!named ? (
+  <p class="lede lede--empty">Nothing to compare yet: this project names no code. Once its audit settings name the repository and the folder that holds its components, this page shows {shows}.</p>
+) : needs === 'code' ? null : (
+  <>
+    <p class="lede lede--empty">Nothing to compare yet: no code audit has run. Once it has, this page shows {shows}.</p>
+    <p class="section__note">{needs === 'tokens' ? <>Name the code's token files under <code>code.parity.tokens</code> in the context document, then run </> : <>Map the code's stories in the parity mappings (where <code>code.parity.mappings</code> says), then run </>}<code>node tools/parity/external.mjs --project {project.id}</code>.</p>
+  </>
+)}

@@ -1,0 +1,25 @@
+{
+  "_about": "The house's naming preferences: how a library's components, parts and properties are named (figma-standard rules 8, 9, 18, 20, 21). They are preferences, not defects: a name that departs from one works, it only reads unlike the rest, so an audit files it in the preference tier. Every tool that writes or reads a name takes them from here (merged by tools/snapshot/projects.cjs auditContext); a project overrides any of them in its context document's `naming-preferences` block. keys: what each means and the rule it serves; tools/toolkit-check/check-standards.mjs refuses one unregistered or read by nothing.",
+  "preferences": {
+    "groupSeparator": " / ",
+    "familySeparator": " ",
+    "internalPrefix": "_",
+    "propertyCase": "sentence",
+    "booleanPrefix": "Show ",
+    "textPropertyAvoid": " text",
+    "textPropertyExceptions": [
+      "Helper text"
+    ],
+    "swapAvoid": " swap"
+  },
+  "keys": {
+    "groupSeparator": "separator between equivalent siblings of one part (figma-standard rule 20)",
+    "familySeparator": "separator between a family and its part (figma-standard rule 9)",
+    "internalPrefix": "prefix of a part that does not publish (figma-standard rule 8)",
+    "propertyCase": "case every property name is written in: sentence (figma-standard rule 18)",
+    "booleanPrefix": "prefix every boolean property starts with (figma-standard rule 21)",
+    "textPropertyAvoid": "suffix a text property does not end with (figma-standard rule 21)",
+    "textPropertyExceptions": "text property names allowed to end with textPropertyAvoid, matching a code prop (figma-standard rule 21)",
+    "swapAvoid": "suffix an instance swap does not end with (figma-standard rule 21)"
+  }
+}

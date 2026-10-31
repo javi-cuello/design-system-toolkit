@@ -1,0 +1,127 @@
+---
+/*
+ * What a component is built from, and what places it — as a graph.
+ *
+ * One level in each direction, which is what the stored file actually says:
+ * an instance inside an instance belongs to the component it is in, and
+ * crediting a grandchild to its grandparent is the defect every walk of this
+ * kind has had. Each dependency names what IT brings, so the next level is
+ * visible without the picture claiming it.
+ *
+ * Drawn as inline SVG at build time: no script, no library, no layout engine.
+ * A dependency graph of one component is two fans from a centre, and the
+ * arithmetic for that is a few lines — reaching for a graph library here
+ * would add a dependency to draw a picture of dependencies.
+ *
+ * Text is not measurable at build time, so a node is a fixed width and a long
+ * name wraps onto more lines at its spaces, every node as tall as the most
+ * lines any needs; a name cut short with an ellipsis could only be read from
+ * its tooltip. The alternative is measuring in the browser, which means
+ * script, which means the page cannot be read without it.
+ *
+ * No caption. It restated the two column headings as a sentence and named
+ * what each dependency brings a second time — the columns say the first and
+ * a node's `<title>` says the second, so the line under the picture was the
+ * picture explained to someone who had just looked at it.
+ */
+import { displayName, fullName } from '../../../shared/names.js';
+// every name as a page shows it: no folder, no status marker (figma-standard rule 13)
+const { related, base } = Astro.props;
+const name = displayName(Astro.props.name);
+// The node shows the short name; its tooltip keeps the folder, so `Toast/Rest` is not a bare `Rest`.
+const named = (u) => ({ ...u, name: displayName(u.name), full: fullName(u.name), brings: (u.brings || []).map(displayName) });
+
+// Sized so the whole drawing (W below) fits the reading column at about its
+// own size: drawn wider, it was scaled down to fit and its 13px names came
+// out at 10px, and at 5px on a phone. Below 40rem the same parts are lists.
+const NODE_W = 150, GAP_Y = 12, GAP_X = 52, PAD = 8;
+const CHARS = 20;                       // fits NODE_W at the site's body size
+const LINE = 16;                        // a line of the nodes' 13px text
+// A name in lines of at most CHARS, broken at spaces; a word longer than a
+// line is broken where the line ends.
+const wrap = (s) => {
+  const out = [];
+  for (const word of String(s).split(' ')) {
+    const last = out.at(-1);
+    if (last !== undefined && last.length + 1 + word.length <= CHARS) out[out.length - 1] = last + ' ' + word;
+    else for (let i = 0; i < Math.max(word.length, 1); i += CHARS) out.push(word.slice(i, i + CHARS));
+  }
+  return out;
+};
+
+// Built from on the LEFT, used by on the RIGHT, which is the order the
+// component-graph plugin uses and the one a reader asked for: the parts a
+// component is made of sit beside it where you would look for them, and the
+// places it turns up read as the consequence. The arrows still run from the
+// part, through this component, to the thing that places it.
+const left = related.uses.map(named);   // what this component is built from
+const right = related.usedBy.map(named); // what places this component
+const rows = Math.max(left.length, right.length, 1);
+// Every node as tall as the name with the most lines needs: 34 for one line.
+const NODE_H = 18 + LINE * Math.max(...[name, ...left.map((u) => u.name), ...right.map((u) => u.name)].map((n) => wrap(n).length));
+// A name's lines, centred on the node's middle.
+const label = (n) => { const ls = wrap(n); return ls.map((text, i) => ({ text, y: NODE_H / 2 + (i - (ls.length - 1) / 2) * LINE })); };
+const HEAD = 26;                        // room for the column headings
+const H = rows * NODE_H + (rows - 1) * GAP_Y + PAD * 2 + HEAD;
+const W = NODE_W * 3 + GAP_X * 2 + PAD * 2;
+
+// A column's nodes are centred against the tallest column, so the middle node
+// sits level with both fans however lopsided they are.
+const colY = (n, i) => PAD + HEAD + (H - PAD * 2 - HEAD - (n * NODE_H + (n - 1) * GAP_Y)) / 2 + i * (NODE_H + GAP_Y);
+const midY = PAD + HEAD + (H - PAD * 2 - HEAD - NODE_H) / 2;
+
+const X = { left: PAD, mid: PAD + NODE_W + GAP_X, right: PAD + (NODE_W + GAP_X) * 2 };
+// A curve, not an elbow: an edge that leaves and arrives horizontally reads as
+// a connection at a glance, and a straight diagonal through a label does not.
+const edge = (x1, y1, x2, y2) => `M ${x1} ${y1} C ${x1 + GAP_X / 2} ${y1}, ${x2 - GAP_X / 2} ${y2}, ${x2} ${y2}`;
+---
+{(left.length > 0 || right.length > 0) && (
+  <figure class="depgraph">
+    {/* No image role: its nodes are links, and an image's children are
+        hidden from assistive technology while still taking Tab. Named as a
+        group, so the links are met under what they are. */}
+    <svg viewBox={`0 0 ${W} ${H}`} role="group"
+         aria-label={`${name} is built from ${left.length} component${left.length === 1 ? '' : 's'} and used by ${right.length}`}>
+      {/* Column headings, drawn in the picture so they travel with it. */}
+      <g class="depgraph-heads">
+        {left.length > 0 && <text x={X.left + NODE_W / 2} y={PAD + 4}>Built from</text>}
+        {right.length > 0 && <text x={X.right + NODE_W / 2} y={PAD + 4}>Used by</text>}
+      </g>
+      <g class="depgraph-edges">
+        {left.map((u, i) => <path d={edge(X.left + NODE_W, colY(left.length, i) + NODE_H / 2, X.mid, midY + NODE_H / 2)} />)}
+        {right.map((u, i) => <path d={edge(X.mid + NODE_W, midY + NODE_H / 2, X.right, colY(right.length, i) + NODE_H / 2)} />)}
+      </g>
+
+      {left.map((u, i) => (
+        <g class="depnode" data-node={u.kind === 'icon' ? 'icon' : undefined} transform={`translate(${X.left} ${colY(left.length, i)})`}>
+          <title>{u.brings && u.brings.length ? `${u.full} — brings ${u.brings.join(', ')}` : u.full}</title>
+          {u.slug
+            ? <a href={`${base}/components/${u.slug}`}><rect width={NODE_W} height={NODE_H} rx="6" /><text>{label(u.name).map((l) => <tspan x={NODE_W / 2} y={l.y}>{l.text}</tspan>)}</text></a>
+            : <><rect width={NODE_W} height={NODE_H} rx="6" /><text>{label(u.name).map((l) => <tspan x={NODE_W / 2} y={l.y}>{l.text}</tspan>)}</text></>}
+        </g>
+      ))}
+
+      <g class="depnode" data-node="self" transform={`translate(${X.mid} ${midY})`}>
+        <title>{name}</title>
+        <rect width={NODE_W} height={NODE_H} rx="6" />
+        <text>{label(name).map((l) => <tspan x={NODE_W / 2} y={l.y}>{l.text}</tspan>)}</text>
+      </g>
+
+      {right.map((u, i) => (
+        <g class="depnode" transform={`translate(${X.right} ${colY(right.length, i)})`}>
+          <title>{u.full}</title>
+          {u.slug
+            ? <a href={`${base}/components/${u.slug}`}><rect width={NODE_W} height={NODE_H} rx="6" /><text>{label(u.name).map((l) => <tspan x={NODE_W / 2} y={l.y}>{l.text}</tspan>)}</text></a>
+            : <><rect width={NODE_W} height={NODE_H} rx="6" /><text>{label(u.name).map((l) => <tspan x={NODE_W / 2} y={l.y}>{l.text}</tspan>)}</text></>}
+        </g>
+      ))}
+    </svg>
+
+    {/* The phone's form of the picture: two lists, at the page's own type
+        size, where the drawing would be scaled to unreadable. */}
+    <div class="deplist">
+      {left.length > 0 && <div><h3 class="deplist__head">Built from</h3><ul>{left.map((u) => <li>{u.slug ? <a href={`${base}/components/${u.slug}`}>{u.name}</a> : u.name}{u.brings.length > 0 && <span class="muted"> · brings {u.brings.join(', ')}</span>}</li>)}</ul></div>}
+      {right.length > 0 && <div><h3 class="deplist__head">Used by</h3><ul>{right.map((u) => <li>{u.slug ? <a href={`${base}/components/${u.slug}`}>{u.name}</a> : u.name}</li>)}</ul></div>}
+    </div>
+  </figure>
+)}

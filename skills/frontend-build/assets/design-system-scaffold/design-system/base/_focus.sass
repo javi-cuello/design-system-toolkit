@@ -1,0 +1,27 @@
+// The focus ring, once.
+//
+// The ring is not a component's to decide: the design publishes it as a
+// state (a stroke width and a colour) and every pressable thing takes it. An
+// outline rather than a border or a shadow, because an outline takes no
+// layout room: a border would move everything beside it the moment
+// something was tabbed to.
+//
+// `$clear` is how far past the box the ring's outer edge sits, the one fact a
+// component states for itself, from its frame (0px: the ring inside the
+// box's edge). The offset follows from it, so a new ring width moves every
+// ring together; the geometry is knowledge/code/figma-handoff.md's:
+//
+//     > button:focus-visible
+//       @include focus.ring(var(--space-4))
+//
+// `--__PREFIX__-ring: 0` is the knob a component sets on a part when the ring
+// is the component's own and not the part's (a row rings itself, and the
+// control inside it stays at rest). `0`, never `none`: `outline: none`
+// leaves the width at the browser's default, and a check reading computed
+// styles still reads a ring.
+//
+// Silent comments on purpose: a loud one is copied into every compiled sheet
+// that uses this.
+@mixin ring($clear)
+  outline: var(--__PREFIX__-ring, var(--state-focus-stroke-width) solid var(--state-focus-stroke-colour))
+  outline-offset: calc(#{$clear} - var(--state-focus-stroke-width))

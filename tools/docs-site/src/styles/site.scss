@@ -1,0 +1,1708 @@
+// The docs site's own layout and components, over its UI system
+// (system.css: tokens, reset, plain elements and the components the dashboard
+// shares). The site documents any project, so it wears none of them: a
+// project's colours and type appear only in the content being shown.
+//
+// Mobile first, min-width only (a max-height query lets the masthead scroll
+// away on a short screen). Every component rule sits in
+// `@scope (body) to (.dash)`, so no class name here can reach the audit
+// dashboard, which has its own stylesheet (dashboard/dashboard.css), except
+// the modal's, which both draw.
+//
+// Classes, argued (code-standard rule 6 asks for none). This site's pages
+// carry markup it does not write: guidance rendered from Figma descriptions,
+// tables of a project's values, a Storybook frame, the dashboard's rows. A
+// stylesheet that selected on elements and landmarks alone would style every
+// `ul`, `table` and `h3` in that content too, and the site draws many unlike
+// things from the same elements (a ramp, a card grid, an icon grid are all
+// lists). So the stylesheet selects on classes, one convention throughout:
+//   block           a thing the site draws (.ramp, .modal, .facts)
+//   block__part     a part of it, named by its block (.ramp__chip)
+//   block--variant  a fixed variant chosen when the page is built
+//                   (.status--finished, .lede--empty)
+// What changes while the page is open is never a class: it is an attribute
+// (aria-pressed, aria-current, hidden, data-view-shown, data-lifted) or a
+// pseudo-class (:popover-open, :has()). Scripts never find an element by its
+// class; they find it by a data attribute (data-filter, data-nav, data-modal),
+// so a class can be renamed without breaking behaviour (a table's scrolling
+// wrap is data-scrolls, a queue row data-row). visually-hidden is the one
+// class whose absence changes what is read, and the one a script reads: the
+// "On this page" list leaves out a heading that wears it.
+
+// The site's breakpoints, written once (code-standard rule 54). No design file
+// publishes them: they are where this site's own layouts run out of room.
+// system.css and dashboard.css are plain CSS and cannot read these, so they
+// write the same values with a comment naming the one here.
+$sm: 40rem;
+$md: 48rem;
+$lg: 60rem;
+$xl: 80rem;
+$xxl: 90rem;
+@mixin from($bp) { @media (min-width: $bp) { @content; } }
+// Hover only where the pointer hovers, so a tap on a touch screen leaves no
+// hover behind (css-architecture.md *States*); written once, used at every hover.
+@mixin hover { @media (hover: hover) { &:hover { @content; } } }
+
+// Same order as system.css: whichever the browser meets first sets it.
+@layer tokens, reset, base, layout, components, utilities;
+
+@layer tokens {
+  :root {
+    // A preview's stage: a quiet dot grid. Light unless the preview has a dark
+    // render to show, because a light render's greys vanish on a dark ground.
+    --stage-bg: light-dark(#ffffff, #141414);
+    --stage-dot: light-dark(#d9dbe3, #2c2f38);
+    // Grounds for a value shown in its own mode, whatever the page's theme.
+    --mode-light-bg: #ffffff;
+    --mode-light-fg: #161616;
+    --mode-light-soft: #5f6577;
+    --mode-dark-bg: #141414;
+    --mode-dark-fg: #f2f2f2;
+    --mode-dark-soft: #a7adbd;
+    // The masthead's height, which anchors, the sticky sidebar and the Ask
+    // drawer start below. Measured by Base.astro's script (--masthead); the
+    // fallbacks are its two rows on a phone and its one from 40rem.
+    --site-header: var(--masthead, 6rem);
+    // The "On this page" rail, in the reading column's left gutter.
+    --page-nav: 15rem;
+    // The reading column, and the line length prose keeps inside it: in ch,
+    // so it holds about 70 characters whatever the text's size (visual.md
+    // *Typography*: 65–75, never above 80); a rem cap let 14px notes run to
+    // 89. A ch is Inter's zero, much wider than its average letter: measured,
+    // 60ch let a line reach 83 characters, 55ch holds the longest near 75.
+    --column: 60rem;
+    --measure: 55ch;
+  }
+  @include from($sm) {
+    :root { --site-header: var(--masthead, 3.5rem); }
+  }
+  // On a short screen the masthead scrolls away (see .masthead), so nothing
+  // need keep clear of it.
+  @media (max-height: 30rem) {
+    :root { --site-header: 0px; }
+  }
+}
+
+@layer base {
+  // A target scrolled to, or a control focused, is never under the masthead.
+  html { scroll-padding-block-start: calc(var(--site-header) + var(--space-16)); }
+
+  .visually-hidden {
+    position: absolute;
+    // 1px, not 0: some screen readers skip an element with no size.
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@layer layout {
+  // The Audits page's Ask drawer takes its room from the page grid here,
+  // where the grid is set, outside the scope below because the drawer's
+  // state is on the dashboard's own element. Below 40rem it takes nothing:
+  // folded it is a button in the corner, open a sheet over the page. From
+  // 40rem its rail is kept clear, open or not, and the open drawer lies over
+  // the page; from 90rem there is room for it beside the column, so the open
+  // drawer pushes the content aside rather than covering it (dashboard.css
+  // --ask-mode reads the same widths).
+  @include from($sm) {
+    :root:has(.dash:is([data-ask="collapsed"], [data-ask="open"])) { --aside: var(--ask-rail); }
+  }
+  @include from($xxl) {
+    :root:has(.dash[data-ask="open"]) { --aside: var(--ask-drawer); }
+  }
+
+
+  // Content drawn for one theme, shown only in it: a design preview's light
+  // and dark renders. The theme is <html>'s, or the system's under Auto.
+  :root[data-theme="dark"] .when-light,
+  :root:not([data-theme="dark"]) .when-dark { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .when-light { display: none; }
+    :root:not([data-theme]) .when-dark { display: revert; }
+  }
+
+  @scope (body) to (.dash) {
+    .shell {
+      display: flex;
+      flex-direction: column;
+      min-block-size: 100svh;
+    }
+    .shell > main { flex: 1; }
+
+    // On a phone the sections and the theme share the second row, in source
+    // order, so what is read and tabbed through is what is seen.
+    .masthead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "brand brand" "nav theme";
+      align-items: center;
+      column-gap: var(--space-12);
+      min-block-size: var(--site-header);
+      padding-inline: var(--space-16);
+      border-block-end: var(--stroke-1) solid var(--line);
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
+      backdrop-filter: blur(8px); // keeps text under the bar unreadable; no design value
+    }
+    // Sticky only where it costs little of the screen: at 320 by 256 two
+    // rows of it were over a third of the height.
+    // Relative, not static, so the open Menu list still hangs from it.
+    @media (max-height: 30rem) { .masthead { position: relative; } }
+    .masthead__brand { grid-area: brand; }
+    .topnav { grid-area: nav; min-inline-size: 0; }
+    .theme { grid-area: theme; }
+
+    // The page grid, stated once: the reading column centred in the space
+    // it has, never nearer the edge than --gutter-min. Every band's content
+    // (the hero's, the page's) sits in this one container. --aside is what a
+    // fixed panel takes from the right edge (the Audits page's Ask drawer),
+    // so the column centres beside it instead of shrinking under it. --rail
+    // is what the page's own sections take on the left: when the space is
+    // tight only the left gutter grows for it, so the column loses one rail's
+    // width, not two.
+    .container {
+      --gutter: max(var(--gutter-min), (100% - var(--aside, 0px) - var(--column)) / 2);
+      margin-inline: max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px));
+    }
+    main { --gutter-min: var(--space-16); }
+    .page-body { padding-block: var(--space-32) var(--space-80); }
+
+
+    .site-foot {
+      padding: var(--space-16);
+      border-block-start: var(--stroke-1) solid var(--line);
+      font-size: var(--text-xs);
+      color: var(--fg-soft);
+    }
+
+    @include from($sm) {
+      .masthead {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "brand nav theme";
+        padding-inline: var(--space-24);
+      }
+      .site-foot { padding-inline: var(--space-24); }
+    }
+
+    @include from($lg) {
+      .shell--sidebar {
+        display: grid;
+        // The sidebar's width: the longest section label, at the site's type.
+        grid-template-columns: 16rem minmax(0, 1fr);
+        grid-template-rows: auto 1fr auto;
+      }
+      .shell--sidebar > :is(.masthead, .site-foot) { grid-column: 1 / -1; }
+      main { --gutter-min: var(--space-48); }
+      .page-body { padding-block-start: var(--space-48); }
+    }
+    // The page's own sections (HIG's section rail, on the left). It sits in
+    // the column's left gutter rather than a column of its own, so the
+    // reading column stays centred while there is room; when there is not,
+    // only the left gutter makes way for it (--rail, above). It is
+    // placed against the page body, which is as tall as the page, so it can
+    // stick for the whole length. Below 80rem it is a disclosure in the
+    // page's flow, after its intro (Base.astro).
+    @include from($xl) {
+      main:has(> [data-page-nav]) { --rail: calc(var(--page-nav) + var(--space-24)); }
+      [data-page-nav] { position: relative; }
+    }
+  }
+
+  // A component page's hero band runs side to side, from the sidebar to the
+  // window's edge (Material's component pages). Its text is in the page's
+  // container, so it lines up with the reading column below.
+  .hero-band { background: var(--accent-soft); }
+  .hero-band .hero { padding-block: var(--space-80) var(--space-64); }
+  .hero-band h1 { font-size: var(--text-3xl); line-height: var(--leading-2xl); margin: 0 0 var(--space-24); }
+  .hero-band .lede { max-inline-size: 40rem; margin: 0; }
+  // The provenance caption tucks under the title, and the lede keeps the
+  // title's gap below it.
+  .hero-band h1:has(+ .byline) { margin-block-end: var(--space-8); }
+  .hero-band .byline { max-inline-size: 40rem; margin: 0 0 var(--space-24); }
+  /* Figma behind the project's official contract (component-contract's official.mjs), said under the description */
+  .hero__behind { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-12); margin: var(--space-16) 0 0; padding: var(--space-8) var(--space-12);
+    border: var(--stroke-1) solid var(--warn); border-radius: var(--radius-8); background: var(--warn-soft); font-size: var(--text-sm); }
+  .hero__parts ul { display: flex; flex-wrap: wrap; gap: var(--space-8); list-style: none; margin: var(--space-24) 0 0; padding: 0; }
+  .hero__parts a { display: inline-block; padding: var(--space-4) var(--space-12); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-full); background: var(--bg); color: var(--fg); text-decoration: none; font-size: var(--text-sm); }
+  .hero__parts a { @include hover { border-color: var(--accent); } }
+  .hero__parts a[aria-current="page"] { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+  .tabs--sections { margin-block-end: var(--space-24); }
+  // A panel never shorter than the screen, once the tabs are wired: a short
+  // tab after a long one would shorten the page under the reader, and the
+  // browser would pull the scroll position up.
+  .tabs--sections:not([hidden]) ~ .tabpanel { min-block-size: 100svh; }
+}
+
+@layer components {
+  @scope (body) to (.dash) {
+    // ---- Masthead ------------------------------------------------------------
+
+    .skip-link {
+      position: absolute;
+      inset-inline-start: var(--space-16);
+      inset-block-start: calc(-1 * var(--space-80));
+      z-index: 40;
+      padding: var(--space-8) var(--space-12);
+      border-radius: var(--radius-8);
+      background: var(--fg);
+      color: var(--bg);
+      &:focus { inset-block-start: var(--space-8); }
+    }
+    // The skip link's target takes focus (tabindex -1) so the next Tab starts
+    // in the content; it is not a control, so it draws no ring.
+    main[tabindex="-1"]:focus { outline: 0; }
+
+    .masthead__brand {
+      padding-block: var(--space-12);
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: var(--weight-semibold);
+      text-decoration: none;
+    }
+
+    // On a phone the sections sit behind a Menu button (Base.astro), and
+    // open as a list hanging under the masthead, over the page (menus.md
+    // *Hamburger and mobile menus*). With no script the button never shows
+    // and the sections scroll in their own row, fading at the edge so it is
+    // plain there are more.
+    .topnav { padding-block-end: var(--space-8); }
+    .topnav ul {
+      display: flex;
+      gap: var(--space-4);
+      margin: 0;
+      padding: 0;
+      overflow-x: auto;
+      list-style: none;
+      scrollbar-width: none;
+      // The fade that says the row scrolls; #000 is the mask's opaque, not a colour.
+      mask-image: linear-gradient(to right, #000 calc(100% - var(--space-32)), transparent);
+    }
+    // The theme switch's compact height, so the row keeps its height.
+    .topnav__toggle { min-block-size: 1.75rem; padding-inline: var(--space-8); font-size: var(--text-xs); }
+    .topnav:has(> [aria-expanded="false"]:not([hidden])) ul { display: none; }
+    .topnav:has(> [aria-expanded="true"]) ul {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-start: 100%;
+      flex-direction: column;
+      padding: var(--space-8) var(--space-16);
+      // over the page's content: an overlay (visual.md *Surfaces and elevation levels*)
+      border-block-end: var(--stroke-1) solid var(--line-overlay);
+      background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover);
+      box-shadow: var(--shadow-overlay);
+      mask-image: none;
+      // A list read down: the current section marked by a bar at its start.
+      a[aria-current] { box-shadow: inset var(--stroke-2) 0 0 var(--accent); }
+    }
+    .topnav a {
+      display: block;
+      padding: var(--space-8) var(--space-12);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      color: var(--fg-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      @include hover { color: var(--fg); }
+      // The heavier stroke as an underline drawn in a shadow, so it takes no room.
+      &[aria-current] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+    }
+    @include from($sm) {
+      .topnav { padding-block-end: 0; }
+      .topnav ul { mask-image: none; }
+      // Wide, the sections are always in sight and the button goes.
+      .topnav__toggle { display: none; }
+      .topnav:has(> [aria-expanded]:not([hidden])) ul { display: flex; }
+      // Fills the one-row masthead (3.5rem) from a link's own line box.
+      .topnav a { padding-block: 1.125rem; }
+    }
+
+    // Theme: System, Light, Dark. System removes the choice, so a toggle can
+    // always go back to following the reader's setting.
+    // Compact: the masthead's one control, not part of a toolbar.
+    .theme .seg { min-block-size: 1.75rem; padding-inline: var(--space-8); font-size: var(--text-xs); }
+
+    // ---- Sidebar -------------------------------------------------------------
+
+    .sidebar {
+      padding: var(--space-12) var(--space-16);
+      border-block-end: var(--stroke-1) solid var(--line);
+      font-size: var(--text-sm);
+    }
+    // A 24px target at least (WCAG 2.5.8): the line alone was 21.
+    .nav > summary, .page-nav > details > summary { padding-block: var(--space-4); }
+    .nav > summary {
+      cursor: pointer;
+      font-weight: var(--weight-medium);
+    }
+    .nav[open] > summary { margin-block-end: var(--space-12); }
+    // The list itself is the toolkit's one sidebar list (system.css .sidenav), the editor's too.
+    // An extended collection under its parent, on a guide line, as Figma draws it.
+    .nav__child { margin-inline-start: var(--space-16); border-inline-start: var(--stroke-1) solid var(--line); padding-inline-start: var(--space-4); }
+    // On this page: the page's sections on a guide line, a step quieter than
+    // the content, the one in view marked by ink on the line.
+    // The rail runs beside the links, not the label above them.
+    .page-nav > details > summary {
+      cursor: pointer;
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+    }
+    .page-nav > details[open] > summary { margin-block-end: var(--space-8); }
+    .page-nav ul { margin: 0; padding: 0; list-style: none; }
+    .page-nav li { border-inline-start: var(--stroke-1) solid var(--line); }
+    .page-nav a {
+      display: block;
+      margin-inline-start: -1px; // over the list's hairline, so the current mark replaces it
+      padding: var(--space-4) var(--space-12);
+      border-inline-start: var(--stroke-2) solid transparent;
+      font-size: var(--text-sm);
+      color: var(--fg-muted);
+      text-decoration: none;
+      @include hover { color: var(--fg); }
+      &[aria-current] { color: var(--fg); border-inline-start-color: var(--fg); }
+    }
+    /* A short rule above each category, aligned with its heading. */
+    .nav__group:has(.sidenav__heading) {
+      margin-block-start: var(--space-16);
+      &::before {
+        content: "";
+        display: block;
+        inline-size: var(--space-16);
+        margin: 0 0 var(--space-16) var(--space-8);
+        border-block-start: var(--stroke-1) solid var(--line-strong);
+      }
+    }
+    // The platform toggle spans the sidebar, its halves equal.
+    .nav__platforms { display: flex; inline-size: 100%; margin-block-end: var(--space-12); .seg { flex: 1; justify-content: center; } }
+
+    @include from($lg) {
+      .sidebar {
+        padding: var(--space-24) var(--space-16);
+        border-block-end: 0;
+        border-inline-end: var(--stroke-1) solid var(--line);
+      }
+      // Wide, the list is always there; its disclosure is a phone's.
+      .nav > summary { display: none; }
+      .sidebar__inner {
+        position: sticky;
+        inset-block-start: calc(var(--site-header) + var(--space-24));
+        max-block-size: calc(100svh - var(--site-header) - var(--space-48));
+        overflow-y: auto;
+        scrollbar-width: thin;
+      }
+    }
+    // The rail (see the layout layer): here, in the layer the page's flow
+    // margins are set in, so it can take itself out of that flow.
+    @include from($xl) {
+      .page-nav {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 100%;
+        inline-size: var(--page-nav);
+        margin: 0;
+        padding: var(--space-48) var(--space-24) 0 var(--space-24);
+      }
+      .page-body > .page-nav:first-child + * { margin-block-start: 0; }
+      // A long list (one entry per component) scrolls on its own, as the
+      // sidebar does; pinned without it, the end ran off the screen.
+      .page-nav > details {
+        position: sticky;
+        inset-block-start: calc(var(--site-header) + var(--space-48));
+        max-block-size: calc(100svh - var(--site-header) - var(--space-48) - var(--space-24));
+        overflow-y: auto;
+        scrollbar-width: thin;
+      }
+      // It cannot be folded, so its summary goes and a label takes its
+      // place; the nav's own aria-label already says it, so the label is not
+      // read out twice.
+      .page-nav > details > summary { display: none; }
+      .page-nav ul::before { content: "On this page" / ""; display: block; margin-block-end: var(--space-8); padding-inline-start: var(--space-12); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--fg-soft); }
+    }
+
+    // ---- Filters -------------------------------------------------------------
+
+    .sidebar .filter { margin-block-end: var(--space-12); }
+
+    // A filter bar (Filter.astro) measures itself, so a facet's buttons show
+    // only where the bar has room for them; narrower, the same choices are
+    // its menu (filtering.md *Small screens*).
+    .filter-bar { container-type: inline-size; }
+    .filter-bar .filter-bar__buttons { display: none; }
+    // 30rem: over a phone's column (/changes' three file names overflowed 390px), under a sidebar page's narrowest (31rem), where four short labels fit.
+    @container (min-width: 30rem) {
+      .filter-bar .filter-bar__buttons { display: inline-flex; }
+      .filter-bar .filter-bar__menu { display: none; }
+    }
+    // The search box sits in a <search> landmark, which takes the place in
+    // the bar the field had (system.css .toolbar input.filter).
+    .toolbar > search { inline-size: 100%; }
+    .toolbar search input.filter { inline-size: 100%; max-inline-size: none; }
+    @include from($sm) {
+      // system.css's search width, now on the landmark around the field.
+      .toolbar > search { inline-size: auto; flex: 1 1 12rem; max-inline-size: 18rem; }
+    }
+    // Nothing left: what was asked and the way back, where the list was.
+    .filter-empty {
+      padding: var(--space-32) var(--space-16);
+      border: var(--stroke-1) dashed var(--line);
+      border-radius: var(--radius-8);
+      text-align: center;
+      > p { margin: 0; }
+      > p + p { margin-block-start: var(--space-8); }
+    }
+    .filter-empty__actions { display: flex; justify-content: center; gap: var(--space-16); }
+
+    // ---- Content rhythm ------------------------------------------------------
+
+    // One rule owns the space between a page's blocks, so no component can
+    // zero it by resetting its own margin: 24 between blocks, 32 from a page's intro to its
+    // first section, 56 between sections. A block says which it is through
+    // --flow; nothing else sets a top-level block's margin.
+    // A tab panel is a page within the page, and flows the same way.
+    :is(.page-body, .tabpanel) > :not(:first-child) { margin-block-start: var(--flow, var(--space-24)); }
+    :is(.page-body, .tabpanel) > .section { --flow: var(--space-48); }
+    :is(.page-body, .tabpanel) > .group { --flow: var(--space-48); }
+    @include from($sm) { :is(.page-body, .tabpanel) > .section { --flow: var(--space-64); } }
+    :is(.page-body, .tabpanel) > :not(.section, .group) + :is(.section, .group) { --flow: var(--space-32); }
+    .page-body > .tabpanel { --flow: var(--space-32); }
+    .page-body > .tabs + .tabpanel { --flow: var(--space-24); }
+    // The dependency graph. Vector, drawn at build time, no script: the page
+    // is readable with JavaScript off and the text in it is real text.
+    // A panel, and the graph centred in it. The diagram is a figure rather
+    // than prose, so it gets its own ground to sit on instead of floating at
+    // the page's left edge with the paragraphs.
+    .depgraph {
+      margin: 0;
+      background: var(--surface);
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-12);
+      padding: var(--space-16);
+      display: flex; flex-direction: column; align-items: center;
+      // At its drawn size, never larger: scaled up, a two-node graph read
+      // as a poster.
+      svg { display: none; inline-size: 100%; block-size: auto; max-inline-size: 36rem; }
+    }
+    .deplist { display: grid; gap: var(--space-16); inline-size: 100%; font-size: var(--text-sm); ul { margin: 0; padding-inline-start: var(--space-20); } }
+    .deplist .deplist__head { margin-block: 0 var(--space-4); font-size: var(--text-sm); color: var(--fg-muted); }
+    @include from($sm) {
+      .depgraph svg { display: block; }
+      .deplist { display: none; }
+    }
+    .depgraph-heads text {
+      fill: var(--fg-soft); font-size: var(--text-xs); font-weight: var(--weight-semibold);
+      text-anchor: middle; font-family: var(--font-sans);
+      letter-spacing: .04em; text-transform: uppercase; // capitals need the air
+    }
+    .depgraph-edges path {
+      fill: none; stroke: var(--line-strong); stroke-width: 1.5;
+    }
+    .depnode {
+      rect { fill: var(--bg); stroke: var(--line-strong); }
+      text {
+        // SVG text in user units: the graph's viewBox scales it, so not rem.
+        fill: var(--fg-muted); font-size: 13px; text-anchor: middle;
+        dominant-baseline: middle; font-family: var(--font-sans);
+      }
+      // The component the page is about: filled, so the eye starts there.
+      &[data-node="self"] rect { fill: var(--surface-2); stroke: var(--fg-soft); stroke-width: 1.5; }
+      &[data-node="self"] text { fill: var(--fg); font-weight: var(--weight-semibold); }
+      // An icon has no page of its own, so it reads as a leaf rather than a
+      // link that goes nowhere.
+      &[data-node="icon"] rect { stroke-dasharray: 3 3; }
+      a:hover rect { stroke: var(--fg); }
+      a:hover text { fill: var(--fg); }
+      a:focus-visible rect { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+    }
+    .deps-note { font-size: var(--text-sm); color: var(--fg-soft); }
+
+    // The reading measure binds prose: a page's own paragraphs and lists, and
+    // a section's. A list inside a panel or a figure is not prose, and was
+    // held to 45rem inside wider panels.
+    .content :where(.page-body, .tabpanel, .section, .report-section, .panel, .prose) > :where(p, ul > li, ol > li) { max-inline-size: var(--measure); }
+
+    .lede {
+      max-inline-size: var(--measure);
+      font-size: var(--text-lg);
+      color: var(--fg-muted);
+    }
+    // What wrote the page and when (components/UpdatedBy.astro): close under
+    // the title it belongs to, quieter than the lede.
+    .byline { font-size: var(--text-sm); color: var(--fg-soft); }
+    .page-body > h1 + .byline { --flow: var(--space-8); }
+    .lede--empty { font-size: var(--text-md); font-style: italic; color: var(--fg-soft); }
+    .eyebrow { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--accent); }
+    .page-body > .eyebrow + h1 { --flow: var(--space-8); }
+    .muted { color: var(--fg-muted); }
+    .text-warn { color: var(--warn); }
+    .text-bad { color: var(--bad); }
+    .notice {
+      padding: var(--space-16);
+      border: var(--stroke-1) dashed var(--control);
+      border-radius: var(--radius-8);
+    }
+
+    // A documentation section: a heading over a hairline, as Primer and GOV.UK
+    // separate theirs. Boxes are kept for what is a box: stages, tables, code.
+    // Sections are told apart by the size of their heading and the space
+    // before it, as HIG and Carbon do (h2 at 1.5x the 16px body, 80px apart);
+    // a rule under every heading added a line per section and separated less.
+    // Inside a section, each step up the gap says less related (visual.md
+    // *Spacing scale and proximity*): a heading to its own content 16, one
+    // block to the next 24, a subheading 32 above, a section 64.
+    .section > * + * { margin-block-start: var(--space-24); }
+    .section h3 { margin-block-start: var(--space-32); }
+    .section > :is(h2, h3) + * { margin-block-start: var(--space-16); }
+    // A subgroup's heading straight under its section's: the section's own
+    // gap already separates them, so the subgroup's 32 does not double it
+    // and leave the heading further from its content than from the controls
+    // above it (design-standard rule 7).
+    .section > h2 + * > h3:first-child { margin-block-start: 0; }
+    .section__note { font-size: var(--text-sm); color: var(--fg-muted); }
+    // A section folded for one audience: its heading stays a heading, and
+    // the summary says what is inside without opening it.
+    .content :is(h2, h3) + :is(.table-wrap, .ramp, [data-view]) { margin-block-start: var(--space-16); }
+
+    // ---- Page head -----------------------------------------------------------
+
+    .h1__platform { font-weight: 400; color: var(--fg-muted); }
+    // The page's facts: one framed strip, each a label over a value.
+    // Ruled like the KPI strip, by gaps over the line colour, so it wraps to
+    // rows on a phone instead of squeezing into a column.
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      // Shares the row with the title block, and wraps under it below 28rem.
+      flex: 1 1 28rem;
+      gap: var(--stroke-1);
+      margin: 0;
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--line);
+      overflow: clip;
+    }
+    .fact {
+      display: grid;
+      // A fact's narrowest: its label on one line.
+      flex: 1 1 8rem;
+      align-content: start;
+      gap: var(--space-4);
+      padding: var(--space-12) var(--space-20);
+      background: var(--surface);
+      // Inside the cell, so the strip's clip cannot cut the ring.
+      dd a:focus-visible { outline-offset: -2px; }
+      dt { font-size: var(--text-xs); color: var(--fg-soft); }
+      dd { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-medium); }
+      dd a { text-decoration: none; @include hover { text-decoration: underline; } }
+    }
+    // When the figure was true: the audit's date under its count.
+    .fact__when { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--fg-soft); }
+    .fact__links { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-16); a { text-underline-offset: var(--underline-offset); } }
+    .fact--done dd { color: var(--good); }
+    .fact--warn dd { color: var(--warn); }
+    .fact--note dd { font-weight: 400; color: var(--fg-muted); }
+
+
+    // ---- Preview -------------------------------------------------------------
+
+    .preview {
+      margin: 0;
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--surface);
+      overflow: clip;
+    }
+    .preview--design .preview__canvas, .preview__stage, .card__thumb {
+      color-scheme: light;
+      background-color: var(--stage-bg);
+      // The stage's dot grid: a 1px dot every 16px, drawn, not read.
+      background-image: radial-gradient(var(--stage-dot) 1px, transparent 1px);
+      background-size: 16px 16px;
+      &:has(.when-dark) { color-scheme: inherit; }
+    }
+    // A story drawn in the site's theme (the project names its theme global)
+    // sits on a stage in that theme too. The schemes must match: a browser
+    // paints an opaque backdrop behind a frame whose document's colour scheme
+    // differs from the element around it.
+    .preview:not([data-theme-global=""]) > .preview__stage { color-scheme: inherit; }
+    // At the size it was drawn (width set from the export, half its 2x), never
+    // stretched; only a component taller than the stage is scaled, in shape.
+    .preview--design .preview__canvas {
+      display: grid;
+      place-items: center;
+      // A floor for a small component and a cap for a tall one; the design
+      // draws no stage.
+      min-block-size: 12rem;
+      padding: var(--space-40) var(--space-24);
+      // (the cap)
+      img { max-inline-size: 100%; max-block-size: 28rem; block-size: auto; object-fit: contain; }
+    }
+    // The frame takes its story's own height (StoryPreview); the stage adds
+    // the room around it and a floor for a story smaller than a card.
+    // Floors and a default frame height, as above: the design draws no stage.
+    .preview__stage { display: grid; align-content: center; min-block-size: 16rem; padding-block: var(--space-32); }
+    // (the frame's height before its story reports its own)
+    .preview__frame { display: block; inline-size: 100%; block-size: 12rem; border: 0; }
+    // (a lifted story's floor, the stage's)
+    .preview__frame[data-lifted] { min-block-size: 16rem; }
+    .preview__stories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      padding: var(--space-8);
+      border-block-end: var(--stroke-1) solid var(--line);
+    }
+    .preview__story {
+      padding: var(--space-4) var(--space-12);
+      border: var(--stroke-1) solid transparent;
+      border-radius: var(--radius-full);
+      background: none;
+      color: var(--fg-muted);
+      font: inherit;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      @include hover { background: var(--hover); color: var(--fg); }
+      &[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+    }
+    .preview__caption {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-4) var(--space-12);
+      padding: var(--space-8) var(--space-12);
+      border-block-start: var(--stroke-1) solid var(--line);
+      font-size: var(--text-xs);
+      color: var(--fg-muted);
+      a { color: var(--fg); }
+    }
+
+    // ---- Guidance ------------------------------------------------------------
+
+    // Running text in a section: one body size, list items apart, as every
+    // system measured sets it (Material, Primer, Atlassian, Carbon).
+    .prose ul { display: grid; gap: var(--space-8); margin: 0; padding-inline-start: var(--space-20); }
+    .dodont {
+      display: grid;
+      // A do and a don't side by side once each has 18rem, stacked below.
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      gap: var(--space-24) var(--space-48);
+    }
+    // Do and don't are told apart by a labelled pill, the colour confirming
+    // the word (Primer). A coloured rule over each column doubled the
+    // section's own hairline.
+    .dodont ul { display: grid; gap: var(--space-8); margin: 0; padding-inline-start: var(--space-20); }
+    // The site's one badge (system.css .sev): green Do, red Don't.
+    .dodont__label { margin-block-end: var(--space-12); }
+
+    // Code in running text sits on a quiet chip, as Primer, Atlassian and
+    // Carbon set it, so a property name reads as one.
+    :is(.prose, .dodont, .lede, .section__note) code {
+      padding: 0.1em 0.35em; // in em, so the chip follows the text it sits in
+      border-radius: var(--radius-4);
+      background: color-mix(in srgb, currentColor 8%, transparent);
+    }
+
+    .more > summary { cursor: pointer; font-size: var(--text-sm); color: var(--fg-muted); }
+    .more[open] > summary { margin-block-end: var(--space-8); }
+    .token-list { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); }
+
+    // ---- Tables --------------------------------------------------------------
+    // Element styles come from the UI system; these are the docs' additions.
+
+    // A table wider than its column scrolls inside this wrap, never the page
+    // (tables.md *Responsive tables*). A shadow at the cut edge says there is
+    // more: the two cover gradients scroll with the content (local) and hide
+    // the shadows (scroll) once that edge is reached. The covers are the
+    // ground the table sits on, --wrap-ground. Base.astro makes a wrap that
+    // overflows focusable and names it by its table's caption.
+    .table-wrap {
+      --wrap-ground: var(--bg);
+      // The containing block for a visually hidden span in a cell, which is
+      // absolutely placed: without it the span escaped the scroller and
+      // widened the page on a phone.
+      position: relative;
+      overflow-x: auto;
+      background:
+        linear-gradient(to right, var(--wrap-ground) 30%, transparent) left / var(--space-32) 100% no-repeat local,
+        linear-gradient(to left, var(--wrap-ground) 30%, transparent) right / var(--space-32) 100% no-repeat local,
+        radial-gradient(farthest-side at 0 50%, var(--shadow), transparent) left / var(--space-12) 100% no-repeat scroll,
+        radial-gradient(farthest-side at 100% 50%, var(--shadow), transparent) right / var(--space-12) 100% no-repeat scroll;
+      &:focus-visible { outline-offset: var(--focus-offset); }
+    }
+    .panel .table-wrap { --wrap-ground: var(--surface); }
+    .panel--plain .table-wrap { --wrap-ground: var(--bg); }
+    // A dialog opened from a plain panel sits on its own surface.
+    .modal .table-wrap { --wrap-ground: var(--surface); }
+    // A long table scrolls in its wrap both ways, so its head can stay in
+    // sight: the wrap is a scroll container either way, which is why a head
+    // sticky to the page never stuck. Base.astro makes it a focusable region.
+    .table-wrap--long {
+      // Most of a phone's screen, so the head and a dozen rows show together.
+      max-block-size: 75svh;
+      overflow-y: auto;
+      thead th { position: sticky; inset-block-start: 0; z-index: 1; background: var(--wrap-ground); }
+    }
+    .table code { font-size: var(--text-xs); }
+    .table .muted { color: var(--fg-muted); }
+    // Top-aligned, so a row whose cells wrap to different heights reads from
+    // its first line.
+    .table :is(th, td) { vertical-align: top; }
+    // Every column one width, whatever each cell holds.
+    .table--equal { table-layout: fixed; inline-size: 100%; }
+    // A style table (text, effect, paint styles): columns sized by their
+    // content, the name with its code beneath it. On a phone each row is a
+    // block, as the variable tables stack theirs: the name and code across
+    // the top, then each value under its own label, since the header row is
+    // out of sight; a scrolling table hid the values, which are the point.
+    .table--stack {
+      // Visually hidden (1px, not 0: some screen readers skip a sizeless one).
+      thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+      // A stacked cell's narrowest: a short label and its value.
+      tr { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 7rem), 1fr)); column-gap: var(--space-16); padding-block: var(--space-8); border-block-end: var(--stroke-1) solid var(--line); }
+      :is(th, td) { padding: var(--space-4) 0; border: 0; }
+      th[scope="row"], .table__group > th, .table__cell--wide { grid-column: 1 / -1; }
+      td[data-label]::before { content: attr(data-label); display: block; font-size: var(--text-xs); color: var(--fg-soft); }
+      td.num { text-align: start; }
+      .token-name + .code-chip, .token-desc + .code-chip { display: inline-block; margin-block-start: var(--space-4); overflow-wrap: break-word; }
+    }
+    // A group's header row inside one table (Headline, Title…), as a
+    // subheading of the section, ruled above.
+    .table__group > th { padding-block-start: var(--space-24); font-family: var(--font-display); font-size: var(--text-md); font-weight: var(--weight-semibold); }
+    .table__group:first-child > th { padding-block-start: var(--space-8); }
+    @include from($sm) {
+      .table--stack {
+        thead { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
+        tr { display: table-row; }
+        :is(th, td) { padding: var(--space-8) var(--space-16) var(--space-8) 0; border-block-end: var(--stroke-1) solid var(--line); }
+        thead th { border-block-end-color: var(--line-strong); }
+        td[data-label]::before { content: none; }
+        td.num { text-align: end; }
+      }
+      // The name and its code take two fifths, so a code name wraps at its
+      // hyphens rather than letter by letter; the values share the rest. A
+      // head of two words ("Letter spacing") may take two lines, so the
+      // column under it is not held wider than its values and the name keeps
+      // its share.
+      .table--stack > thead th:first-child { inline-size: 40%; }
+      .table--stack > thead th { white-space: normal; }
+    }
+    .table tbody + tbody > tr:first-child > * { border-block-start: var(--stroke-1) solid var(--line-strong); }
+    // A change log's date is one short column that never breaks its date in
+    // two; the change takes the rest of the width.
+    .changelog { inline-size: 100%; }
+    // (a date's width at the table's type)
+    .changelog :is(th, td):first-child { inline-size: 7rem; white-space: nowrap; }
+    // A change row: the change takes the width, its type and levels keep
+    // to the size of their badges (equal columns wrapped it over four lines).
+    // On a phone three badge columns left the change a hundred pixels and
+    // six lines a row, so each row is a block: the date and the change across
+    // the top, then the type and the two levels in one line beneath, each
+    // level named, since the header row is out of sight.
+    .changes {
+      // Visually hidden (1px, not 0: some screen readers skip a sizeless one).
+      thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+      tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-4) var(--space-12); padding-block: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); }
+      :is(th, td) { padding: 0; border: 0; }
+      :is(.changes__date, .changes__what) { flex-basis: 100%; }
+      td[data-label]::before { content: attr(data-label) " "; font-size: var(--text-xs); color: var(--fg-soft); }
+    }
+    @include from($sm) {
+      .changes {
+        thead { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
+        tr { display: table-row; }
+        :is(th, td) { padding: var(--space-8) var(--space-16) var(--space-8) 0; border-block-end: var(--stroke-1) solid var(--line); }
+        thead th { border-block-end-color: var(--line-strong); }
+        td[data-label]::before { content: none; }
+        :is(th, td):not(.changes__what) { inline-size: 1%; white-space: nowrap; }
+      }
+    }
+    .changes__what > span { display: block; }
+    .changes__subject { font-weight: var(--weight-medium); }
+    .changes__consequence { font-size: var(--text-xs); color: var(--fg-muted); }
+
+    // Code a builder copies: a quiet chip that wraps rather than being cut.
+    // A column of names in a table reads as a list, not sixty underlines; the
+    // underline comes back under the pointer and on focus.
+    .table a:not(.button) { text-decoration: none; &:focus-visible { text-decoration: underline; } @include hover { text-decoration: underline; } }
+    .code-chip {
+      display: inline;
+      padding: 0.0625rem var(--space-4); // 1px: room for a descender, off the space scale
+      border: 0;
+      border-radius: var(--radius-4);
+      background: var(--hover);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-align: start;
+      overflow-wrap: anywhere;
+      box-decoration-break: clone;
+    }
+    button.code-chip {
+      cursor: copy;
+      @include hover { color: var(--accent); }
+      &[data-copied]::after { content: " ✓"; color: var(--accent); }
+    }
+
+    .pills { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+    // The badge's shape is the UI system's (.pill in system.css); a default
+    // value is marked by its edge.
+    .pill--default { background: var(--accent-soft); border-color: var(--accent); }
+
+    .chip {
+      display: inline-block;
+      flex: none;
+      // A swatch one line of table text tall.
+      inline-size: 1.25rem;
+      block-size: 1.25rem;
+      border-radius: var(--radius-4);
+      background: var(--swatch);
+      box-shadow: inset 0 0 0 var(--stroke-1) color-mix(in srgb, var(--fg) 20%, transparent);
+    }
+
+
+
+    // A variable collection, one row per variable as the type table does:
+    // its name (and description), the property it becomes, then a value per
+    // mode, each drawn on its own mode's ground, as Atlassian shows light and
+    // dark (a dark value on a light page cannot be judged). On a phone each
+    // variable is a block: name and code across the top, the values side by
+    // side beneath, each labelled with its mode, since the header row is out
+    // of reach. A scrolling table hid the values, which are the point.
+    .table--tokens {
+      // Visually hidden (1px, not 0: some screen readers skip a sizeless one).
+      thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+      tr {
+        display: grid;
+        // A stacked cell's narrowest: a token name and its value.
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr));
+        border-block-end: var(--stroke-1) solid var(--line);
+      }
+      th[scope="row"], .token-code { grid-column: 1 / -1; border: 0; }
+      // A code name breaks only at its hyphens, never inside a word.
+      .token-code .code-chip { overflow-wrap: break-word; }
+      th[scope="row"] { padding-block-end: 0; font-weight: 400; }
+      td { border: 0; padding-block-start: var(--space-8); }
+      td[data-mode]::before { content: attr(data-mode); display: block; margin-block-end: var(--space-4); font-size: var(--text-xs); opacity: 0.75; }
+      td.num { text-align: start; }
+    }
+    // Wider, a table again, its columns all one width (fixed layout with no
+    // widths set), so every table on every page puts name, code and each mode
+    // at the same place. Each column keeps a floor, so a collection with eight
+    // brand modes scrolls rather than squeezes; a long code wraps at its
+    // hyphens.
+    @include from($sm) {
+      .table--tokens {
+        table-layout: fixed;
+        // (A table ignores min-width, so the floor goes into its width.)
+        inline-size: max(100%, var(--cols, 3) * 9rem);
+        thead { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
+        tr { display: table-row; }
+        // Top-aligned: a name with a description is a tall block, and centring
+        // left its first line far above the code and values beside it. The
+        // phone block drops the name's bottom padding; a row puts it back.
+        th[scope="row"] { padding-block-end: var(--space-8); }
+        th, td { border-block-end: var(--stroke-1) solid var(--line); vertical-align: top; }
+        // The head keeps the firm rule every other table's has.
+        thead th { border-block-end-color: var(--line-strong); }
+        td[data-mode]::before { content: none; }
+        // The code name is the longest thing in a row, so its column takes
+        // a quarter share more than the others, which split what is left (a
+        // half share squeezed the value cards under their own aliases).
+        thead th:nth-child(2) { inline-size: calc(125% / (var(--cols, 3) + 0.25)); }
+        // A column of quantities ends at the column's end edge, so place
+        // values line up (tables.md *Alignment and figures*); stacked on a
+        // phone, a value stays under its label.
+        td.num { text-align: end; }
+        td.num .value { justify-items: end; margin-inline-start: auto; }
+        td.num .value__raw { text-align: end; }
+      }
+      // A duration's name and value are short numbers; the room goes to the
+      // code, which must not wrap, and the preview, whose line is the point.
+      .table--durations :is(thead th:first-child, thead th:nth-child(3)) { inline-size: 6rem; }
+    }
+    .token-name { display: block; font-weight: var(--weight-medium); }
+    // Anatomy: markers filled for a part that is always there, hollow for one
+    // a boolean shows; the same keys in the list beneath.
+    /*
+     * The whole diagram, always, fitted to the column: a wide component (a
+     * table toolbar is twice the column) scrolled at real size would hide
+     * half its numbered markers off-screen.
+     *
+     * An anatomy drawing is a diagram — its job is "these are the parts and
+     * here is what each is called" — so fitting it beats keeping it to scale.
+     * A wide component does come out small; the parts table under it carries
+     * the same numbers at full size.
+     */
+    .anatomy__figure { display: block; max-inline-size: 100%; block-size: auto; overflow: visible; }
+    .anatomy .preview__canvas { justify-items: center; }
+    .anatomy__leader { stroke: var(--accent); fill: none; }
+    .anatomy__marker circle { fill: var(--accent); stroke: var(--accent); }
+    .anatomy__marker text { fill: var(--on-accent); font-family: var(--font-sans, inherit); font-weight: var(--weight-semibold); }
+    .anatomy__marker--optional circle { fill: var(--stage-bg); }
+    .anatomy__marker--optional text { fill: var(--accent); }
+    .anatomy__key {
+      // The key matches the drawing's marker: a circle round a two-digit
+      // number, its ring a stroke and a half so it reads at that size.
+      display: inline-grid; place-items: center; inline-size: 1.375rem; block-size: 1.375rem;
+      border: 1.5px solid var(--accent); border-radius: 50%; background: var(--accent); color: var(--on-accent);
+      font-size: var(--text-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums;
+    }
+    .anatomy__key--optional { background: transparent; color: var(--accent); }
+    // (the key's column: a key and its padding)
+    .anatomy__parts td:first-child { inline-size: 3rem; }
+    .token-desc { display: block; margin-block-start: var(--space-4); font-size: var(--text-xs); color: var(--fg-muted); }
+    // A code name under a name in a table cell: on its own line, wrapping
+    // only where a word ends (the hyphens), never inside one.
+    .token-name + .code-chip { display: inline-block; margin-block-start: var(--space-4); overflow-wrap: break-word; }
+    .table td > code { overflow-wrap: break-word; }
+    // A colour value is a bar big enough to judge, its alias and value
+    // beneath (Atlassian's per-mode cards). A Light or Dark value sits on a
+    // card of its own mode's ground; the column around it stays the page's.
+    .value { display: grid; gap: var(--space-8); max-inline-size: 12rem; }
+    .value--on-light, .value--on-dark { padding: var(--space-8); border-radius: var(--radius-8); }
+    .value--on-light { background: var(--mode-light-bg); color: var(--mode-light-fg); --value-soft: var(--mode-light-soft); box-shadow: inset 0 0 0 var(--stroke-1) var(--line); }
+    .value--on-dark { background: var(--mode-dark-bg); color: var(--mode-dark-fg); --value-soft: var(--mode-dark-soft); }
+    // On a card of a fixed mode the page's accent ring can fall under 3:1
+    // (the dark theme's orange on the white Light card was 2.9:1, the light
+    // theme's brown on the Dark card 2.6:1), so there it is drawn in the
+    // card's own ink, which holds against its ground in either theme.
+    :is(.value--on-light, .value--on-dark, .ramp--on-light, .ramp--on-dark) :focus-visible { outline-color: currentColor; }
+    .value__swatch {
+      // A swatch's size is what reads as a colour at a glance; no design value.
+      block-size: 2rem;
+      border-radius: var(--radius-8);
+      background: var(--swatch);
+      box-shadow: inset 0 0 0 var(--stroke-1) color-mix(in srgb, currentColor 15%, transparent);
+    }
+    .value__text { display: grid; gap: var(--space-2); min-inline-size: 0; }
+    .value__alias { font-size: var(--text-sm); overflow-wrap: anywhere; }
+    // One shadow layer a line, never broken inside: a value wraps between
+    // its layers, and a layer wider than its column scrolls with the table.
+    .value__layer { display: block; white-space: nowrap; }
+    .value__raw {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--value-soft, var(--fg-muted));
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-align: start;
+      overflow-wrap: anywhere;
+      cursor: copy;
+      @include hover { text-decoration: underline; }
+      &[data-copied]::after { content: " ✓"; }
+      // Under an alias it is the footnote; alone (a primitive) it is the value.
+      &:first-child { color: inherit; font-size: var(--text-sm); }
+    }
+
+    // A ramp: one strip per mode, each chip copies its property, the step and
+    // value beneath. Six to a row on a phone, the whole scale in one row wider.
+    .ramp { padding: var(--space-12); border-radius: var(--radius-12); }
+    .ramp + .ramp { margin-block-start: var(--space-8); }
+    .ramp--on-light { background: var(--mode-light-bg); color: var(--mode-light-fg); --value-soft: var(--mode-light-soft); box-shadow: inset 0 0 0 var(--stroke-1) var(--line); }
+    .ramp--on-dark { background: var(--mode-dark-bg); color: var(--mode-dark-fg); --value-soft: var(--mode-dark-soft); }
+    .ramp__head {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-12);
+      margin-block-end: var(--space-8);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      code { font-size: var(--text-xs); font-weight: 400; color: var(--value-soft, var(--fg-muted)); }
+    }
+    .ramp__steps {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: var(--space-12) var(--space-4);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .ramp__steps > li { display: grid; gap: var(--space-2); min-inline-size: 0; }
+    .ramp__chip {
+      // A swatch's size is what reads as a colour at a glance; no design value.
+      block-size: 3.5rem;
+      margin-block-end: var(--space-4);
+      border: 0;
+      border-radius: var(--radius-4);
+      background: var(--swatch);
+      box-shadow: inset 0 0 0 var(--stroke-1) color-mix(in srgb, currentColor 12%, transparent);
+      cursor: copy;
+      &[data-copied] { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+    }
+    // One line per step label: "8-anchor" wrapped and dropped its column's
+    // value below the rest. The full label is in the title.
+    .ramp__step { font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    // 11px: a seven-character hex fits a narrow step's column; below the type scale.
+    .ramp__hex { font-family: var(--font-mono); font-size: 0.6875rem; color: var(--value-soft, var(--fg-muted)); overflow-wrap: anywhere; }
+    @include from($md) {
+      .ramp__steps { grid-template-columns: repeat(var(--steps), minmax(0, 1fr)); }
+    }
+
+    // An easing, in the site's card grid: its curve, and a mark that runs it
+    // over 800ms on hover or focus, so every card is timed alike.
+    // Easings fill the row: an empty slot beside three cards read as a
+    // missing fourth. Capped, so a lone easing stays a card.
+    .cards.cards--fill { grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+    // (the cap: a card no wider than it reads well)
+    .cards--fill > li { max-inline-size: 24rem; }
+    .curve {
+      display: grid;
+      gap: var(--space-8);
+      align-content: start;
+      padding: var(--space-12);
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--surface);
+      &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+    }
+    .curve__name { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    // The curve's plot, a thumbnail: a shape to compare, not to read off.
+    .curve__plot { inline-size: 100%; max-inline-size: 7rem; block-size: auto; margin-inline: auto; overflow: visible; }
+    .curve__box { fill: none; stroke: var(--line-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .curve__line { fill: none; stroke: var(--fg); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    // The stage: a baseline and a small mark doing the easing's job over
+    // 800ms on hover or focus. At rest it shows where the job ends.
+    .curve__stage { position: relative; block-size: 1rem; border-block-end: var(--stroke-1) solid var(--line); }
+    .curve__panel {
+      // The moving mark: its size, and its lift off the baseline, drawn.
+      --mark: 0.625rem;
+      position: absolute;
+      inset-block-end: 3px;
+      inline-size: var(--mark);
+      block-size: var(--mark);
+      border-radius: 50%;
+      background: var(--fg-soft);
+    }
+    [data-job="enter"] .curve__panel { inset-inline-end: 0; }
+    :is([data-job="exit"], [data-job="move"]) .curve__panel { inset-inline-start: 0; }
+    .curve:is(:hover, :has(:focus-visible)) .curve__panel { animation: 800ms var(--ease) both; background: var(--accent); }
+    .curve:is(:hover, :has(:focus-visible)) [data-job="enter"] .curve__panel { animation-name: curve-enter; }
+    .curve:is(:hover, :has(:focus-visible)) [data-job="exit"] .curve__panel { animation-name: curve-exit; }
+    .curve:is(:hover, :has(:focus-visible)) [data-job="move"] .curve__panel { animation-name: curve-move; }
+    // Measured in the stage's width via a container unit, so the mark travels
+    // the whole baseline at any card size.
+    .curve__stage { container-type: inline-size; }
+    @keyframes curve-enter { from { translate: calc(-100cqi + var(--mark)) 0; opacity: 0; } }
+    @keyframes curve-exit { to { translate: calc(100cqi - var(--mark)) 0; opacity: 0; } }
+    @keyframes curve-move { to { translate: calc(100cqi - var(--mark)) 0; } }
+
+    // A duration's Preview cell carries a hairline on one scale across the
+    // collection, which fills over its own duration when the row is hovered.
+    .duration {
+      display: block;
+      // A bar one heavier stroke thick, and never shorter than it is thick.
+      block-size: 2px;
+      inline-size: calc(var(--share) * 100%);
+      min-inline-size: 2px;
+      margin-block-start: 0.6lh;
+      background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 0 / 0 100%, var(--line-strong);
+    }
+    @media (hover: hover) { tr:hover .duration { animation: duration-fill var(--t) linear both; } }
+    @keyframes duration-fill { to { background-size: 100% 100%, auto; } }
+
+
+    // A specimen: the style's name and what it is, then a line actually set
+    // in it. The line is the point, so it gets the room — a 32px heading and
+    // a 12px caption need the same left edge to be comparable at a glance.
+    // A group is a block: its heading, then its styles, then air before the
+    // next one. Without it "Headline" sat on top of its first label and the
+    // page read as one unbroken column of text at changing sizes.
+    // A statement about what the page can and cannot show. Quiet, and above
+    // the content it qualifies rather than buried under it.
+    .note {
+      font-size: var(--text-sm); color: var(--fg-soft);
+      border-inline-start: var(--stroke-2) solid var(--line-strong);
+      padding-inline-start: var(--space-12);
+      margin-block: var(--space-16) 0;
+    }
+    .type-group + .type-group { margin-block-start: var(--space-48); }
+    .type-group > h3 { margin-block-end: var(--space-16); }
+    .specimens { list-style: none; margin: 0; padding: 0; }
+    // A rule between specimens, so a 32px heading and the 24px one under it
+    // read as two entries rather than one paragraph that changes size.
+    .specimen {
+      display: grid; gap: var(--space-8); max-inline-size: none;
+      padding-block-start: var(--space-16);
+      border-block-start: var(--stroke-1) solid var(--line-soft);
+    }
+    .specimen:first-child { padding-block-start: 0; border-block-start: 0; }
+    .specimen__label {
+      margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-8);
+      max-inline-size: none;
+    }
+    .specimen__meta { font-size: var(--text-xs); color: var(--fg-soft); }
+    // Set in the style itself, so its own line height and letter spacing are
+    // what you are looking at. `overflow-wrap` because a long word at 32px
+    // must not widen the page.
+    // The specimen on a ground of its own. Set in the library's own style, a
+    // line of sample text sits at the same size and weight as the page's own
+    // headings and reads as one of them — a heading a reader tries to follow
+    // rather than a swatch they look at. The box says "this is the material".
+    .specimen__text {
+      margin: 0; color: var(--fg); overflow-wrap: anywhere;
+      // The BOX is the page's width, every one of them, so a column of
+      // specimens has one left and one right edge.
+      max-inline-size: none;
+      padding: var(--space-16);
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-8);
+      background: var(--surface);
+    }
+    // The TEXT's measure, in `em`, so it is the style's own size that decides
+    // the column: every specimen then wraps at about the same character count
+    // whatever its size, which is what lets one paragraph serve a 32px
+    // heading and a 12px caption — and what makes two line heights at the
+    // same size visibly differ. A single line shows the face and the weight
+    // and says nothing at all about the leading.
+    .specimen__text > span { display: block; max-inline-size: 34em; }
+    // The name and its code name on ONE line. `.token-name` is display:block
+    // for the variable tables, where the code name belongs underneath; here
+    // they are a pair and the row is one line, so both are reset.
+    .name-cell { white-space: nowrap; }
+    .name-cell .token-name { display: inline; margin-inline-end: var(--space-8); }
+    .name-cell .token-name + .code-chip { margin-block-start: 0; }
+    .specimen__label .token-name { display: inline; }
+    .specimen__label .token-name + .code-chip { margin-block-start: 0; }
+
+    // A colour swatch and its value on one line, centred on each other.
+    // A preview beside the value it previews. The value is a long CSS string
+    // (four shadow layers, a gradient with three stops), so it is allowed to
+    // wrap and the preview is not allowed to shrink under it.
+    .effect-cell {
+      display: flex; align-items: center; gap: var(--space-16);
+      > :first-child { flex: none; }
+      > .value__raw { min-inline-size: 0; overflow-wrap: anywhere; text-align: start; }
+    }
+    /*
+     * Shadows at the size they are used. A light ground whatever the theme:
+     * these were drawn for one.
+     * Generous gaps, because a shadow needs room around it to be seen at all
+     * and two cards close together read as one shadow shared between them.
+     */
+    .shadow-grid {
+      list-style: none; margin: 0;
+      padding: var(--space-32) var(--space-24);
+      display: grid; gap: var(--space-48);
+      // A card's narrowest; the wide gap is room for a shadow's spread.
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+      border-radius: var(--radius-8);
+      background: var(--mode-light-bg);
+      color: var(--mode-light-fg);
+      box-shadow: inset 0 0 0 var(--stroke-1) var(--line);
+    }
+    .shadow-card {
+      display: grid; align-content: center; justify-items: start;
+      gap: var(--space-4);
+      // A floor, so a card with no shadow still reads as a card.
+      min-block-size: 6rem;
+      padding: var(--space-16);
+      border-radius: var(--radius-8);
+      background: var(--mode-light-bg);
+      box-shadow: var(--effect, none);
+    }
+    .shadow-card__label { margin: 0; display: grid; gap: var(--space-4); justify-items: start; }
+    .paint-chip {
+      display: block;
+      // A swatch's size is what reads as a gradient at a glance; no design value.
+      inline-size: 6rem;
+      block-size: 2.5rem;
+      border-radius: var(--radius-8);
+      background: var(--gradient);
+      box-shadow: inset 0 0 0 var(--stroke-1) var(--line);
+    }
+
+    // ---- Component page: tabs for its sets ----------------------------------
+    // ---- Components index ----------------------------------------------------
+
+    .group > h2 { margin-block-end: var(--space-16); }
+    .group__count { margin-inline-start: var(--space-8); font-size: var(--text-md); font-weight: 400; color: var(--fg-soft); }
+    .cards {
+      display: grid;
+      // A card's narrowest: a component's name on one line.
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+      gap: var(--space-16);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .card {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      block-size: 100%;
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--surface);
+      overflow: clip;
+      text-decoration: none;
+      @include hover { border-color: var(--accent); .card__title { color: var(--accent); } }
+    }
+    .card__thumb {
+      display: grid;
+      place-items: center;
+      // A thumbnail's height and its dot grid (12px, finer than the stage's).
+      block-size: 8rem;
+      padding: var(--space-16);
+      border-block-end: var(--stroke-1) solid var(--line);
+      background-size: 12px 12px;
+      // (the thumbnail's height less its padding)
+      img { max-inline-size: 100%; max-block-size: 6rem; block-size: auto; object-fit: contain; }
+    }
+    // A placeholder initial, sized to fill the thumbnail; the design draws none.
+    .card__initial { font-family: var(--font-display); font-size: 2.5rem; font-weight: var(--weight-semibold); color: var(--stage-dot); }
+    .card__body { display: grid; align-content: start; gap: var(--space-4); padding: var(--space-12) var(--space-16) var(--space-16); }
+    .card__title { font-weight: var(--weight-semibold); }
+    .card__text {
+      font-size: var(--text-sm);
+      color: var(--fg-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card__note { font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg-muted); }
+
+    // ---- Dashboards: overview and tracker ------------------------------------
+    // A KPI strip, then titled sections (Plausible, GitHub Pulse): a figure is
+    // always read inside the question it answers, and next to its context.
+
+    .overview-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      justify-content: space-between;
+      gap: var(--space-8) var(--space-24);
+      p { font-size: var(--text-sm); color: var(--fg-muted); }
+    }
+
+    .panel {
+      min-inline-size: 0;
+      padding: var(--space-20) var(--space-24);
+      border: var(--stroke-1) solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--surface);
+    }
+    .panel__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-8) var(--space-16);
+      margin-block-end: var(--space-16);
+      h2 { font-size: var(--text-lg); line-height: var(--leading-lg); }
+      a { font-size: var(--text-sm); color: var(--fg-muted); }
+    }
+    // The last BODY row: `tr:last-child` alone is also a head's only row, and
+    // took the rule from under every table head that sits in a panel.
+    .panel > .table-wrap:last-child tbody tr:last-child > * { border-block-end: 0; }
+    // A panel's parts keep one gap, as a section's do; its head brings its own.
+    .panel > * + * { margin-block-start: var(--space-16); }
+    .panel > .panel__head + * { margin-block-start: 0; }
+    // The overview's cards: one per question, its title inside and its
+    // figures as open cells on the card (no box inside the box).
+    .overview-cards { display: grid; gap: var(--space-24); }
+    // A button that reads as a link (it opens a modal, it goes nowhere).
+    .link-button { background: none; border: 0; padding: 0; font: inherit; text-align: start; color: var(--accent); text-decoration: underline; text-underline-offset: var(--underline-offset); cursor: pointer; }
+    // "What … mean": the one style for a link that opens an explanation.
+    // A tooltip on a name: shown on hover and focus, kept while the pointer
+    // is over it, so its text can be read and selected (WCAG 1.4.13). It
+    // wears the chart tooltip's box (.chart__tip).
+    .legend__item { position: relative; }
+    // a dotted underline says there is more to read, the help cursor that it is a hint
+    .tip { inline-size: fit-content; text-decoration: underline dotted; text-underline-offset: 0.2em; cursor: help; }
+    .tip__text { inset-block-start: 100%; inset-inline-start: 0; display: none; color: var(--fg); }
+    .tip:is(:hover, :focus-visible):not([data-tip-hidden]) + .tip__text, .tip__text:hover { display: block; }
+    .link-button.explain-link { justify-self: start; display: inline-block; margin-block-start: var(--space-12); font-size: var(--text-sm); color: var(--fg-muted); }
+    // Inside the ladder block its own gap spaces it.
+    .progress-block > .explain-link { margin-block-start: 0; }
+    .nowrap { white-space: nowrap; }
+    // The two check tables: what each check means gives the meaning the
+    // room; a component's level checks hold three short values, so its
+    // columns are equal. A level badge never wraps.
+    .checks-table { inline-size: 100%; }
+    .checks-table th:first-child { inline-size: 34%; }
+    .checks-table :is(th, td):nth-child(2) { white-space: nowrap; }
+    .checks-table--even { table-layout: fixed; }
+    .checks-table--even th:first-child { inline-size: auto; }
+    // The Components page: the ladder, its blockers, then the table, a
+    // section's gap before the table so the summary reads as one block.
+    .page-body > .components-table { --flow: var(--space-48); }
+    // Its check columns are named by one word, the full name for screen
+    // readers, so every head stays on one line.
+    .table--checks thead th { white-space: nowrap; vertical-align: bottom; }
+    .table--checks .link-button.status { color: inherit; }
+    // The marks are centred and set in the text colour, quiet beside the
+    // counts. The component's name takes a fixed share and the other columns
+    // share the rest, so the marks are not crowded at the edge.
+    .table--checks .checks-head__mark { text-align: center; }
+    // about two words of a component name a line, so long names wrap and the marks get the room
+    .table--checks :is(th, td):first-child { inline-size: 12rem; }
+    .table--checks tbody td:nth-child(2) { white-space: nowrap; }
+    .table--checks :is(th, td) { padding-inline: var(--space-4); }
+    .table--checks thead th { line-height: 1.25; }
+    .table--checks :is(th, td):first-child { padding-inline-start: 0; }
+    .check-mark { color: var(--fg); font-size: var(--text-xs); }
+    // Every card's head the same: title and link on one row, an optional line
+    // under the title, the card's own padding all round, and a hairline
+    // between it and the body. The body then starts a padding below it, or,
+    // for a strip of figures, right on the hairline.
+    .overview-cards .panel > .panel__head {
+      margin: calc(-1 * var(--space-20)) calc(-1 * var(--space-24)) 0;
+      padding: var(--space-20) var(--space-24);
+      row-gap: var(--space-4);
+      border-block-end: var(--stroke-1) solid var(--line);
+    }
+    .overview-cards .panel > .panel__head + * { margin-block-start: var(--space-20); }
+    .overview-cards .panel > .panel__head + .kpis { margin-block-start: 0; border-block-start: 0; }
+    // A strip with more of the card after it closes with a hairline, as it
+    // opens with one; the card's edge closes the last.
+    .panel > .kpis:not(:last-child) { border-block-end: var(--stroke-1) solid var(--line); }
+    .panel > .kpis:not(:last-child) + * { margin-block-start: var(--space-20); }
+    .panel__caption { flex-basis: 100%; order: 3; margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
+    // The one figure a card answers with, above its detail.
+    .panel__figure { font-size: var(--text-md); color: var(--fg-muted); }
+    .panel__figure strong { font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: var(--weight-semibold); color: var(--fg); }
+    // Twice the gap above as below (16, from the heading-to-table rule), so a
+    // subheading sits with its table, not the strip above (design-standard rule 7).
+    .panel__sub { font-size: var(--text-sm); color: var(--fg-muted); margin-block-start: var(--space-32); }
+    // A strip of figures inside a card (KpiStrip, system.css `.kpis`) runs to
+    // the card's edges: a hairline under the card's head, hairlines between
+    // the columns, reaching the card's bottom edge when it ends it. The card
+    // is the strip's frame, so there is no box inside the box.
+    .panel > .kpis {
+      margin: 0 calc(-1 * var(--space-24)); border: 0; border-radius: 0;
+      border-block-start: var(--stroke-1) solid var(--line);
+    }
+    .panel > .kpis:last-child { margin-block-end: calc(-1 * var(--space-20)); border-end-start-radius: inherit; border-end-end-radius: inherit; }
+    .panel > .kpis .kpi { padding-inline: var(--space-24); }
+    // The Activity card (Activity.astro): a segmented control over three
+    // charts, each drawn at build time as SVG at its own pixel size, so its
+    // text is never scaled; wider than the card, it scrolls in its region.
+    .activity { position: relative; display: grid; gap: var(--space-16); justify-items: start; }
+    .activity > [data-views], .chart { inline-size: 100%; min-inline-size: 0; }
+    .chart { display: grid; gap: var(--space-12); }
+    .chart__summary { font-size: var(--text-sm); }
+    // The value axis stays put beside a plot that scrolls under it.
+    .chart__plot { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+    .chart__axis { overflow: visible; margin-block: var(--space-4); }
+    .chart__scroll { overflow-x: auto; padding-block: var(--space-4); &:focus-visible { outline-offset: var(--focus-offset); } }
+    // The reset caps an svg at its container; a chart keeps its size and scrolls.
+    .chart__svg { max-inline-size: none; overflow: visible; }
+    .chart__tick { font-size: var(--text-xs); fill: var(--fg-muted); font-variant-numeric: tabular-nums; }
+    .chart__tick--y { text-anchor: end; }
+    .chart__tick--x { text-anchor: middle; }
+    .chart__title { fill: var(--fg); font-weight: var(--weight-medium); }
+    .chart__grid { stroke: var(--line-soft); stroke-width: 1; }
+    .chart__grid--zero { stroke: var(--line-strong); }
+    .chart__mark--l0 { fill: var(--viz-0); }
+    .chart__mark--l1 { fill: var(--viz-1); }
+    .chart__mark--l2 { fill: var(--viz-2); }
+    .chart__mark--l3 { fill: var(--viz-3); }
+    .chart__mark--l4 { fill: var(--viz-4); }
+    // Two-series charts: the series that matters in the accent, the rest in a grey
+    // that still clears 3:1 against the surface (WCAG 1.4.11).
+    .chart__mark--accent { fill: var(--viz-4); }
+    .chart__mark--muted { fill: var(--fg-soft); }
+    .chart__line { fill: none; stroke: var(--viz-4); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    // A 2px ring in the card's colour, so a dot stays clear of the line.
+    .chart__dot { fill: var(--viz-4); stroke: var(--surface); stroke-width: 2; }
+    .chart__hit { fill: transparent; }
+    .chart__cell, .chart__bar { outline: 0; cursor: default; }
+    .chart__cell:is(:hover, :focus-visible) { stroke: var(--fg); stroke-width: 1.5; }
+    // Hover and focus mark the point itself, never a band over the chart: a thin
+    // guide line, a larger dot, a hairline round a bar.
+    .chart__guide { stroke: var(--line-strong); stroke-width: var(--stroke-1); opacity: 0; }
+    .chart__bar:is(:hover, :focus-visible) .chart__guide { opacity: 1; }
+    .chart__bar:focus-visible .chart__guide { stroke: var(--accent); stroke-width: var(--stroke-2); }
+    .chart__bar:is(:hover, :focus-visible) .chart__dot { r: 6; }
+    .chart__bar:is(:hover, :focus-visible) path { stroke: var(--fg); stroke-width: var(--stroke-1); }
+    .chart__anchor { fill: none; }
+    .chart__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-8) var(--space-16); }
+    .chart__source { font-size: var(--text-xs); color: var(--fg-muted); }
+    .chart__legend {
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-16);
+      margin: 0; padding: 0; list-style: none; font-size: var(--text-xs); color: var(--fg-muted);
+      li { display: inline-flex; align-items: center; gap: var(--space-8); }
+    }
+    .chart__legend--scale { gap: var(--space-4); }
+    // Legend keys: a 12px square (2px corners, under the radius scale) and a
+    // line the plot's own stroke thick.
+    .chart__key { inline-size: 0.75rem; block-size: 0.75rem; border-radius: 2px; }
+    // (the line key)
+    .chart__key--line { block-size: 2px; border-radius: 1px; background: var(--viz-4); }
+    .chart__key.chart__mark--l0 { background: var(--viz-0); }
+    .chart__key.chart__mark--l1 { background: var(--viz-1); }
+    .chart__key.chart__mark--l2 { background: var(--viz-2); }
+    .chart__key.chart__mark--l3 { background: var(--viz-3); }
+    .chart__key.chart__mark--accent { background: var(--viz-4); }
+    .chart__key.chart__mark--muted { background: var(--fg-soft); }
+    .chart__key.chart__mark--l4 { background: var(--viz-4); }
+    .chart__data > summary { font-size: var(--text-sm); color: var(--fg-muted); cursor: pointer; inline-size: fit-content; }
+    .chart__data[open] > summary { margin-block-end: var(--space-8); }
+    .chart__tip, .tip__text {
+      // A tooltip's measure: a short sentence per line.
+      position: absolute; z-index: 2; max-inline-size: 16rem; padding: var(--space-8) var(--space-12);
+      border: var(--stroke-1) solid var(--line-overlay); border-radius: var(--radius-8); background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover);
+      box-shadow: var(--shadow-overlay); font-size: var(--text-xs); white-space: pre-line; pointer-events: none;
+      &::first-line { font-weight: var(--weight-semibold); }
+    }
+    // A name's tooltip is one sentence, and the pointer can rest on it.
+    .tip__text { white-space: normal; pointer-events: auto; &::first-line { font-weight: inherit; } }
+    // A strip with a lead figure ranks the rest below it: smaller values,
+    // so the figures a reader acts on are the ones that stand out.
+    .kpis:has(> .kpis__lead) > li:not(.kpis__lead) .kpi__value { font-size: var(--text-lg); line-height: var(--leading-lg); }
+    // A progress bar's groups, one row each, its square in the group's colour.
+    .legend { display: grid; margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); }
+    .legend__item {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-8);
+      padding-block: var(--space-4);
+      & + & { border-block-start: var(--stroke-1) solid var(--line-soft); }
+      // A series key, smaller than the legend's to sit in a line of text.
+      &::before { content: ""; inline-size: 0.625rem; block-size: 0.625rem; border-radius: 2px; background: var(--line-strong); }
+      strong { font-variant-numeric: tabular-nums; }
+    }
+    // The ladder's levels: Stable is the good end, Ready is on its way, Draft
+    // and Deprecated sit quiet. Amber is kept for warnings: Draft is where
+    // every component starts, not something wrong.
+    .progress__seg.ladder__seg--stable, .legend__item.ladder__item--stable::before, .status.ladder__item--stable::before { background: var(--good); }
+    .progress__seg.ladder__seg--ready, .legend__item.ladder__item--ready::before, .status.ladder__item--ready::before { background: var(--idle); }
+    .progress__seg.ladder__seg--draft, .legend__item.ladder__item--draft::before, .status.ladder__item--draft::before { background: var(--fg-soft); }
+    .progress__seg.ladder__seg--deprecated, .legend__item.ladder__item--deprecated::before, .status.ladder__item--deprecated::before { background: var(--line-strong); }
+    // A report page's section (AI readiness): its line, then its table.
+    .report-section > * + * { margin-block-start: var(--space-24); }
+    // A heading sits with the text it introduces, as a .section's does.
+    .report-section > h2 + * { margin-block-start: var(--space-16); }
+    .page-body > .report-section + .report-section { --flow: var(--space-56); }
+    // A section holding one long table reads as the page, not as a box on it.
+    .panel--plain { padding: 0; border: 0; border-radius: 0; background: none; }
+
+    // The toggles together on the left of the bar (system.css .toolbar).
+    .toolbar__filters { display: flex; flex-wrap: wrap; gap: var(--space-12); }
+
+    // Progress: one bar of at most five groups (Primer's limit); the filter
+    // menu under it carries the counts.
+    .progress-block { display: grid; gap: var(--space-12); }
+    // A bar 12px tall, its groups parted by a hairline gap; no design value.
+    .progress { display: flex; gap: 2px; block-size: 0.75rem; }
+    .progress__seg {
+      inline-size: var(--w);
+      background: var(--line-strong);
+      &:first-child { border-start-start-radius: var(--radius-full); border-end-start-radius: var(--radius-full); }
+      &:last-child { border-start-end-radius: var(--radius-full); border-end-end-radius: var(--radius-full); }
+    }
+    // A status as the site colours it: the group's square, then the label.
+    // Figma's page-marker emoji are not repeated: their colours are the
+    // file's, and they contradicted the groups here (a blue marker in the
+    // waiting group).
+    .status { display: inline-flex; align-items: center; gap: var(--space-8); }
+    .status::before { content: ""; flex: none; inline-size: 0.625rem; block-size: 0.625rem; border-radius: 2px; background: var(--line-strong); }
+    // One colour per group, in the bar and every status. Waiting is a state,
+    // not a warning, so it is neutral; amber is for warnings only.
+    .progress__seg--finished, .status--finished::before { background: var(--good); }
+    .progress__seg--waiting, .status--waiting::before { background: var(--fg-soft); }
+    .progress__seg--blocked, .status--blocked::before { background: var(--bad); }
+    .progress__seg--working, .status--working::before { background: var(--idle); }
+    .progress__seg--deprecated, .status--deprecated::before { background: var(--line-strong); }
+
+
+
+    // ---- Icons ---------------------------------------------------------------
+    // A hairline grid, one glyph per tile, its name small beneath (Lucide,
+    // Primer, Carbon).
+
+    .icon-grid {
+      display: grid;
+      // A tile's narrowest: an icon's name on one or two lines.
+      grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-block-start: var(--stroke-1) solid var(--line);
+      border-inline-start: var(--stroke-1) solid var(--line);
+    }
+    // A cell is a grid so its tile fills the row's height, hover and all.
+    .icon-grid > li { display: grid; border-inline-end: var(--stroke-1) solid var(--line); border-block-end: var(--stroke-1) solid var(--line); }
+    .icon-tile {
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: var(--space-12);
+      inline-size: 100%;
+      padding: var(--space-24) var(--space-8) var(--space-12);
+      border: 0;
+      background: none;
+      color: var(--fg);
+      font: inherit;
+      cursor: pointer;
+      @include hover { background: var(--hover); }
+      // the icon open in the dialog
+      &[aria-current] { outline: var(--stroke-2) solid var(--accent); outline-offset: calc(-1 * var(--stroke-2)); }
+    }
+    // A group's heading sits nearer its own grid than the one above.
+    .icon-group + .icon-group { margin-block-start: var(--space-48); }
+    .icon-group > h2 { margin-block-end: var(--space-16); }
+    // The icon dialog (Lucide's panel): the glyph large on its drawing grid
+    // beside each size at the size it was drawn, and the two copies.
+    .icon-detail {
+      display: grid;
+      // The glyph box, then the rest; stacked where the two will not fit.
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+      gap: var(--space-24);
+      align-items: start;
+    }
+    .icon-detail__glyph {
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1;
+      border: var(--stroke-1) solid var(--line);
+      // A 24-cell drawing grid, one cell per pixel of the 24px glyph.
+      background-image: linear-gradient(var(--line) var(--stroke-1), transparent var(--stroke-1)), linear-gradient(90deg, var(--line) var(--stroke-1), transparent var(--stroke-1));
+      background-size: calc(100% / 24) calc(100% / 24);
+      color: var(--fg);
+      // The glyph at two thirds of the box, as the grid's 16 of 24 cells.
+      svg { inline-size: 66.667%; block-size: 66.667%; }
+    }
+    // Three blocks, the gap between them a step larger than the gap inside
+    // one (visual.md, spacing and proximity): the words, the sizes, the copies.
+    .icon-detail__about { display: grid; gap: var(--space-24); justify-items: start; }
+    .icon-detail__words { display: grid; gap: var(--space-8); justify-items: start; }
+    .icon-detail__group, .icon-detail__keywords { margin: 0; }
+    .icon-detail__keywords { color: var(--fg-muted); &:empty { display: none; } }
+    .icon-detail__group:has(:empty) { display: none; }
+    .icon-detail__sizes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-24);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      li { display: grid; justify-items: center; align-content: end; gap: var(--space-8); }
+    }
+    .icon-detail__at { color: var(--fg); line-height: 0; }
+    .icon-detail__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); margin: 0; }
+    // 24px, the size the icon libraries draw at.
+    .icon-tile__glyph, .icon-tile__glyph svg { inline-size: 1.5rem; block-size: 1.5rem; }
+    // A long name wraps, at a word or a hyphen where it can: cut with an
+    // ellipsis it could only be read from a tooltip, which touch and zoom
+    // readers do not get.
+    .icon-tile__name {
+      max-inline-size: 100%;
+      font-size: var(--text-xs);
+      color: var(--fg-muted);
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+    // Illustrations and other assets: the icons' grid with larger tiles, each
+    // image at up to the size it was drawn, never wider than its tile.
+    .asset-grid {
+      // A tile's narrowest: an illustration still legible as one.
+      grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+      margin-block-end: var(--space-32);
+    }
+    .asset-tile {
+      display: grid;
+      justify-items: center;
+      align-content: space-between;
+      gap: var(--space-12);
+      block-size: 100%;
+      margin: 0;
+      padding: var(--space-24) var(--space-12) var(--space-12);
+      img { max-inline-size: 100%; block-size: auto; }
+    }
+    .asset-tile__none { font-size: var(--text-xs); color: var(--fg-soft); }
+  }
+
+  // A note after a heading's text: the code component beside a parity heading.
+  .heading-note { font-size: var(--text-md); font-weight: 400; }
+  // Small print under a cell's value: a count, a token name.
+  .text-xs { font-size: var(--text-xs); }
+
+  // Parity tables: one set of column widths per kind, so every component's
+  // table reads as one list.
+  .props, .toks, .diffs { table-layout: fixed; inline-size: 100%; }
+  .props__design, .props__framework { inline-size: 24%; }
+  .props__code { inline-size: 26%; }
+  .props__verdict { inline-size: 26%; }
+  .added { font-size: var(--text-xs); font-weight: 400; color: var(--fg-muted); }
+  .vals { list-style: none; margin: var(--space-4) 0 0; padding: 0; color: var(--fg-muted); }
+  .vals li { margin: 0; }
+  .vals--renamed { color: var(--fg); font-weight: var(--weight-semibold); }
+  .vals-extra { margin: var(--space-4) 0 0; font-size: var(--text-sm); }
+  .toks__kind { inline-size: 16%; }
+  .toks__name { inline-size: 32%; }
+  .toks__value { inline-size: 34%; }
+  .toks__verdict { inline-size: 18%; }
+  .toks td { overflow-wrap: anywhere; }
+  .sums td:not(:first-child), .sums th:not(:first-child) { text-align: end; font-variant-numeric: tabular-nums; }
+  // five columns of one width; Details is one word
+  .diffs__what, .diffs__where, .diffs__design, .diffs__code, .diffs__verdict { inline-size: 18%; }
+  .diffs__details { inline-size: 10%; }
+  .diffs td { overflow-wrap: break-word; }
+  .page-body > .parity-section + .parity-section { --flow: var(--space-32); }
+  .scorecard { inline-size: 100%; }
+  .scorecard .cell { text-decoration: none; }
+  // A tick or a cross read down a column of a hundred rows: a filled disc in
+  // the site's good and bad, the glyph in the page's own surface colour.
+  .mark {
+    display: inline-grid; place-items: center;
+    inline-size: 1.25rem; block-size: 1.25rem; border-radius: var(--radius-full);
+    font-size: var(--text-xs); font-weight: var(--weight-semibold); line-height: 1;
+    color: var(--surface);
+  }
+  .mark--yes { background: var(--good); }
+  .mark--no { background: var(--bad); }
+
+  // The ladder's levels, each with what it means.
+
+  // The one dialog's rules (Modal.astro) are system.css's `.modal`, shared with the toolkit's other pages.
+  // A swatch in running text: one em, set on the text's baseline.
+  .values-swatch { display: inline-block; inline-size: 1em; block-size: 1em; vertical-align: -0.15em; margin-inline-end: 0.4em; border-radius: var(--radius-4); box-shadow: inset 0 0 0 var(--stroke-1) rgb(0 0 0 / 0.2); }
+
+  // Windows high contrast and other forced palettes drop backgrounds and
+  // shadows, which is how the current page, a pressed filter and a default
+  // value are marked; each gets an outline the palette keeps.
+  @media (forced-colors: active) {
+    [aria-current="page"], .topnav [aria-current], [aria-pressed="true"], .pill--default { outline: var(--stroke-2) solid Highlight; outline-offset: -2px; }
+    .chip, .value__swatch, .progress__seg, .legend__item::before, .status::before { forced-color-adjust: none; }
+    :focus-visible { outline: 3px solid Highlight; }
+  }
+}
+
+@layer utilities {
+  /*
+   * Alternative views of one thing, one shown at a time (ViewToggle.astro).
+   *
+   * The state is on the group, so these selectors are local: a rule reading
+   * a state on <html> cannot match from inside `@scope (body)` (code-standard
+   * rule 60).
+   *
+   * The values are enumerated because CSS cannot compare an ancestor's
+   * attribute with a descendant's. A new one is one line.
+   *
+   * In `utilities`, the last layer, so a view's own `display` (the shadow
+   * grid's `grid`, in `components`) cannot show a hidden view.
+   */
+  [data-views][data-view-shown="table"] > [data-view]:not([data-view="table"]),
+  [data-views][data-view-shown="preview"] > [data-view]:not([data-view="preview"]),
+  [data-views][data-view-shown="swatches"] > [data-view]:not([data-view="swatches"]),
+  [data-views][data-view-shown="activity"] > [data-view]:not([data-view="activity"]),
+  [data-views][data-view-shown="changes"] > [data-view]:not([data-view="changes"]),
+  [data-views][data-view-shown="findings"] > [data-view]:not([data-view="findings"]) { display: none; }
+  // Before the script runs: the first view, which is the one the control
+  // draws as pressed. The page is readable with no JavaScript at all.
+  [data-views]:not([data-view-shown]) > [data-view] ~ [data-view] { display: none; }
+  // Views of one card that share a frame (the activity charts) stack in one cell
+  // and the hidden ones keep their room, so the box is as tall as its tallest view
+  // and switching never moves the page below (design-standard rule 2).
+  // visibility: hidden also takes a hidden view out of the tab order and the
+  // accessibility tree, as display: none did.
+  [data-views][data-views-stack] { display: grid; }
+  [data-views][data-views-stack] > [data-view] { grid-area: 1 / 1; align-self: start; align-content: start; }
+  [data-views][data-views-stack][data-view-shown] > [data-view] { display: grid; }
+  [data-views][data-views-stack][data-view-shown="activity"] > [data-view]:not([data-view="activity"]),
+  [data-views][data-views-stack][data-view-shown="changes"] > [data-view]:not([data-view="changes"]),
+  [data-views][data-views-stack][data-view-shown="findings"] > [data-view]:not([data-view="findings"]) { visibility: hidden; }
+}

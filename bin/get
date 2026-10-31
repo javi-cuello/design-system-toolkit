@@ -1,0 +1,122 @@
+#!/usr/bin/env node
+/*
+ * One tool from the toolkit, with every toolkit folder it uses, and nothing else.
+ *
+ *   git clone --filter=blob:none --sparse <toolkit url> toolkit && cd toolkit
+ *   git sparse-checkout set --cone bin
+ *   bin/get tools/contract-editor            # or plugins/<name>, skills/<name>; several at once
+ *   bin/get --list tools/contract-editor     # the folders, the checkout left as it is
+ *
+ * It is git's own sparse checkout (cone mode), so the code is never copied:
+ * `git pull` updates it, and `bin/get` again takes what a newer version uses
+ * and drops what it no longer does (name every tool you want, each time).
+ * From the tool's folder it follows each code file's relative imports, and
+ * every quoted name that is a toolkit folder (`path.join(HERE, '..',
+ * 'snapshot', 'deliver.cjs')` names tools/snapshot), checks those out, and
+ * reads them in turn until nothing new is named. A name taken by mistake only
+ * checks out more; one it misses fails bin/check, which runs the contract
+ * editor's tests from a checkout this made.
+ */
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+
+const ROOT = path.resolve(__dirname, '..');
+const git = (...a) => execFileSync('git', ['-C', ROOT, ...a], { encoding: 'utf8' });
+const CODE = /\.(mjs|cjs|js|sh|html)$/;
+
+const TEST = /(^|\/)test-[^/]*$|\/tests?\//;
+// what HEAD holds, read from git, so a sparse checkout knows the files it has not checked out
+const TRACKED = new Set(git('ls-tree', '-r', '--name-only', 'HEAD').split('\n').filter(Boolean));
+const FOLDERS = new Set([...TRACKED].flatMap((f) => f.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'))));
+const rel = (p) => path.relative(ROOT, p);
+const isFile = (p) => TRACKED.has(rel(p));
+const isDir = (p) => FOLDERS.has(rel(p));
+const inside = (p) => { const r = rel(p); return r && !r.startsWith('..') && !path.isAbsolute(r); };
+
+// a folder's files, its tests left out where the folder is not the one asked for
+const filesIn = (dir, tests) => [...TRACKED].filter((f) => f.startsWith(rel(dir) + '/') && (tests || !TEST.test(f))).map((f) => path.join(ROOT, f));
+
+// a call's arguments, split at its own commas
+const argsOf = (inner) => { const out = []; let depth = 0, q = null, esc = false, cur = '';
+  for (const ch of inner) {
+    if (q) { cur += ch; if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === q) q = null; continue; }
+    if (ch === "'" || ch === '"' || ch === '`') q = ch;
+    if (ch === '(') depth++; if (ch === ')') depth--;
+    if (ch === ',' && !depth) { out.push(cur.trim()); cur = ''; } else cur += ch;
+  }
+  return cur.trim() ? out.concat(cur.trim()) : out; };
+const literal = (a) => /^(['"])(?:[^'"\\]|\\.)*\1$/.test(a) ? a.slice(1, -1).replace(/\\(.)/g, '$1') : null;
+// a path that names something: at least one segment past `.` and `..` (`join(HERE, '..')` names no file)
+const names = (segs) => segs.join('/').split('/').some((x) => x && x !== '.' && x !== '..');
+
+// a file's text: the checked-out copy, or HEAD's where the checkout has none (a --list in a sparse clone)
+const read = (f) => fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : git('show', `HEAD:${rel(f)}`);
+
+// what one file names: its relative imports and URLs, each path-shaped string, a
+// template string's path after its first ${…}, and the quoted segments that end a
+// path.join or path.resolve, read from the file's folder, the two above it and the
+// toolkit's root. A join whose last part is a variable names no file.
+function named(file) {
+  if (!CODE.test(file) && !(path.basename(path.dirname(file)) === 'bin' && !path.extname(file))) return [];
+  const src = read(file);
+  const here = path.dirname(file);
+  const bases = [here, path.dirname(here), path.dirname(path.dirname(here)), ROOT];
+  const out = new Set();
+  const take = (segs) => { if (!names(segs)) return; for (const b of bases) { const p = path.resolve(b, ...segs); if (inside(p) && (isFile(p) || isDir(p))) { out.add(p); return; } } };
+  for (const m of src.matchAll(/(?:require\(|from\s+|import\(|new URL\()\s*['"](\.{1,2}\/[^'"]+)['"]/g)) take([m[1]]);
+  for (const m of src.matchAll(/['"`]\/?((?:\.{1,2}\/)*[\w.-]+(?:\/[\w.-]+)+)['"`]/g)) take([m[1]]);
+  for (const m of src.matchAll(/`\$\{\w+\}\/((?:\.{1,2}\/)*[\w.-]+(?:\/[\w.-]+)*)`/g)) take([m[1]]);
+  for (const m of src.matchAll(/(?:join|resolve)\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)/g)) {
+    const parts = argsOf(m[1]);
+    const tail = [];
+    for (let i = parts.length - 1; i >= 0 && literal(parts[i]) !== null; i--) tail.unshift(literal(parts[i]));
+    if (tail.length) take(tail);
+  }
+  out.delete(file);
+  return [...out];
+}
+
+const args = process.argv.slice(2);
+const list = args.includes('--list');
+const targets = args.filter((a) => !a.startsWith('--'));
+const unknown = args.filter((a) => a.startsWith('--') && a !== '--list');
+if (unknown.length) { console.error(`no such option: ${unknown.join(', ')} (the one option is --list)`); process.exit(2); }
+if (!targets.length) { console.error('usage: bin/get [--list] <tools/x | skills/x | plugins/x> …'); process.exit(2); }
+const starts = targets.map((t) => path.resolve(ROOT, t));
+for (const [i, s] of starts.entries()) if (!inside(s) || !isDir(s)) { console.error(`${targets[i]}: no such folder in the toolkit`); process.exit(2); }
+// a full checkout is the toolkit's own working copy: made sparse, it would lose every other folder
+const on = (k) => { try { return git('config', '--bool', k).trim() === 'true'; } catch { return false; } };
+if (!list && !(on('core.sparseCheckout') && on('core.sparseCheckoutCone'))) { console.error('bin/get makes the checkout hold only the tools named, and this one is whole (or not in cone mode): run it in a clone made with --sparse (see README), or use --list'); process.exit(2); }
+
+// every file reached from the tools' own, followed until nothing new is named. A file not checked
+// out waits while its folder is checked out with the rest, a batch at a time; one directly in a
+// top-level folder (tools/README.md), or one its folder's checkout did not bring (a list, a file
+// deleted from the working tree), is read from HEAD instead, so the loop never fetches a whole
+// tools/ for it (a top-level folder whose own files are used, like standards/, is taken whole)
+const reached = new Set();
+const queue = starts.flatMap((s) => filesIn(s, true));
+const folderOf = (f) => rel(path.dirname(f));
+const cone = new Set(['bin', ...starts.map(rel)]);
+let waiting = [];
+for (;;) {
+  while (queue.length) {
+    const f = queue.pop();
+    if (reached.has(f)) continue;
+    if (!fs.existsSync(f) && !list && folderOf(f).includes('/') && !cone.has(folderOf(f))) { waiting.push(f); continue; }
+    reached.add(f);
+    for (const p of named(f)) isDir(p) ? queue.push(...filesIn(p, false)) : queue.push(p);
+  }
+  if (!waiting.length) break;
+  for (const f of waiting) cone.add(folderOf(f));
+  git('sparse-checkout', 'set', '--cone', ...cone);
+  queue.push(...waiting); waiting = [];
+}
+// the folders that hold them, none inside another. A top-level folder (tools, skills) is never
+// taken for the files beside its subfolders: cone mode brings those with any subfolder. The set
+// replaces the last one, so a folder a newer version stopped using goes; name every tool you want
+const dirs = [...new Set([...reached].map(folderOf).filter(Boolean))].sort();
+const kept = dirs.filter((d) => !(!d.includes('/') && dirs.some((o) => o.startsWith(d + '/'))));
+const top = [...new Set(['bin', ...kept])].filter((d) => !kept.some((o) => o !== d && d.startsWith(o + '/'))).sort();
+if (!list) git('sparse-checkout', 'set', '--cone', ...top);
+console.log(top.join('\n'));
