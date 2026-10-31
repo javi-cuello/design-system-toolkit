@@ -1,83 +1,139 @@
 #!/bin/sh
-# Every key on this machine lives in one folder, ~/.config/keys/, one file per key, and this is the one command that
-# writes them: from the clipboard, tested first, so a key never passes through a chat. keys.conf in the same folder
-# says, per key, its prefix and who else must hear about it. A path something already reads (~/.config/figma/token,
-# ~/.figma-dashboard-key) is a symlink into the folder, so it keeps working.
+# The toolkit's keys live in one folder, ~/.config/keys/, one file per key, and this is the one command that writes
+# them: from the clipboard, tested first, so a key never passes through a chat. keys.conf in the same folder says, per
+# key, its prefix and who else must hear about it; with none, the toolkit's keys.conf.example is copied there.
+# macOS only: it reads the clipboard with pbpaste and restarts the audit service with launchctl.
 #
 #   bin/set-key                 every key in keys.conf, and whether it still works
 #   bin/set-key <name>          wait for a new key on the clipboard, test it, save it, hand it on
 #   bin/set-key <name> --again  hand the saved key on again, after a hand-on that failed
 #
 # keys.conf, one key a line:   <name> <prefix> [then …]
+#   link <path>                 make <path> a link to the key, for a tool that reads it there
+#                               (~/.config/figma/token, ~/.figma-dashboard-key)
 #   figma-console               figma-console's copy in ~/.claude.json
 #   audit-service               restart the audit service
-#   ssh <host> <config path>    copy the key to <host>:~/.config/keys/<name>, and make the config at <config path>
-#                               (from the host's home) read it from there instead of holding it
+#   run <command…>              the rest of the line, run by sh with the key on stdin (KEY_NAME and KEY_PREFIX set):
+#                               a hand-on of your own, kept in your keys.conf, never here
+# and, for a prefix this script cannot test, one line:
+#   test <prefix> <command…>    the rest of the line, run by sh with the key on stdin: exit 0 when the key works
+# The toolkit tests its own two, Figma (figd_) and Anthropic (sk-ant-). A key whose prefix has no test is saved and
+# said to be untested, never reported as working.
 set -eu
+command -v pbpaste >/dev/null 2>&1 || { echo "bin/set-key runs on macOS only: it reads the key from the clipboard with pbpaste" >&2; exit 2; }
+# readlink -f: run through a link, the toolkit is where the script is, not where the link is
+here=$(dirname "$(readlink -f "$0")")
 dir="$HOME/.config/keys"
 conf="$dir/keys.conf"
-[ -f "$conf" ] || { echo "no $conf: one line per key, <name> <prefix> [then …]" >&2; exit 2; }
+if [ ! -f "$conf" ]; then
+  mkdir -p "$dir" && chmod 700 "$dir"
+  (umask 077; cp "$here/keys.conf.example" "$conf")
+  echo "no $conf: wrote one from the toolkit's keys.conf.example (figma, audit)"
+fi
+lines() { grep -v '^[[:space:]]*\(#\|$\)' "$conf"; }
 
-# 0 when the key works; why not, on stderr. No answer at all is a failure: offline,
-# every key would pass and a good one be replaced by a typo.
+# Until 2026-10-31 this script also tested three personal services' keys itself and had an `ssh` step. A keys.conf
+# written for that version keeps working: each piece it relied on is named, with the exact line that replaces it.
+old_test() {
+  case "$1" in
+    BSA) cat <<'EOF' ;;
+test BSA  printf 'X-Subscription-Token: %s\n' "$(cat)" | curl -s -m 20 -o /dev/null -w '%{http_code}' -H @- 'https://api.search.brave.com/res/v1/web/search?q=test&count=1' | grep -qE '^(200|429)$'
+EOF
+    sk_) cat <<'EOF' ;;
+test sk_  r=$(printf 'xi-api-key: %s\n' "$(cat)" | curl -s -m 20 -H @- https://api.elevenlabs.io/v1/user); [ -n "$r" ] && ! printf '%s' "$r" | grep -q invalid_api_key
+EOF
+    re_) cat <<'EOF' ;;
+test re_  r=$(printf 'Authorization: Bearer %s\n' "$(cat)" | curl -s -m 20 -H @- https://api.resend.com/domains); [ -n "$r" ] && ! printf '%s' "$r" | grep -q 'is invalid'
+EOF
+  esac
+}
+old_test_hint() {
+  t=$(old_test "$1")
+  [ -n "$t" ] || return 0
+  echo "  bin/set-key no longer tests $1 keys itself; to keep the test it ran, add this line to $conf:" >&2
+  printf '    %s\n' "$t" >&2
+}
+
+# 0 when the key works, 1 when it does not (why on stderr), 3 when nothing can test it, 4 with no network.
+# No answer at all is never a pass: offline, every key would pass and a good one be replaced by a typo.
+# The key goes to curl on stdin (-H @-), never on its command line, where any process on the machine can read it.
 works() {
+  has=$(lines | awk -v p="$1" '$1 == "test" && $2 == p { print "y"; exit }')
+  test=$(lines | awk -v p="$1" '$1 == "test" && $2 == p { sub(/^[[:space:]]*test[[:space:]]+[^[:space:]]+[[:space:]]*/, ""); print; exit }')
+  # a test line with no command would run as an empty command and pass every key
+  [ -z "$has" ] || [ -n "$test" ] || { echo "the test line for $1 in $conf names no command" >&2; return 1; }
+  case "$1" in figd_|sk-ant-) ;; *) [ -n "$test" ] || return 3 ;; esac
   curl -s -o /dev/null -m 10 https://api.github.com >/dev/null 2>&1 || curl -s -o /dev/null -m 10 https://www.figma.com \
-    || { echo "no network, so the key cannot be tested: nothing saved" >&2; return 1; }
+    || { echo "no network, so the key cannot be tested" >&2; return 4; }
   case "$1" in
     figd_)
       # /v1/me needs a scope file tokens lack: 403 is a working token, 401 a bad one
-      case "$(curl -s -o /dev/null -w '%{http_code}' https://api.figma.com/v1/me -H "X-Figma-Token: $2")" in
+      case "$(printf 'X-Figma-Token: %s\n' "$2" | curl -s -m 20 -o /dev/null -w '%{http_code}' -H @- https://api.figma.com/v1/me)" in
         200|403) ;;
         401) echo "Figma rejected the token" >&2; return 1 ;;
-        *) echo "Figma did not answer, so the token is untested: nothing saved" >&2; return 1 ;;
-      esac ;;
-    BSA)
-      # one search, one call of the month's budget: the API has no free endpoint to ask
-      # 429 is a good key over its rate or month: refusing it would replace a working key
-      case "$(curl -s -o /dev/null -w '%{http_code}' 'https://api.search.brave.com/res/v1/web/search?q=test&count=1' -H "X-Subscription-Token: $2")" in
-        200|429) ;;
-        *) echo "Brave rejected the key" >&2; return 1 ;;
+        *) echo "Figma did not answer, so the token is untested" >&2; return 1 ;;
       esac ;;
     sk-ant-)
-      said=$(curl -s https://api.anthropic.com/v1/models -H "x-api-key: $2" -H 'anthropic-version: 2023-06-01')
+      said=$(printf 'x-api-key: %s\nanthropic-version: 2023-06-01\n' "$2" | curl -s -m 20 -H @- https://api.anthropic.com/v1/models)
       case "$said" in
-        '') echo "Anthropic did not answer, so the key is untested: nothing saved" >&2; return 1 ;;
+        '') echo "Anthropic did not answer, so the key is untested" >&2; return 1 ;;
         *workspace*) echo "the key is not scoped to a workspace: create it again with Workspace: Default" >&2; return 1 ;;
         *'"error"'*) echo "Anthropic rejected the key" >&2; return 1 ;;
       esac ;;
-    sk_)
-      # a key scoped to text to speech is refused /v1/user for a missing permission, not as invalid
-      case "$(curl -s https://api.elevenlabs.io/v1/user -H "xi-api-key: $2")" in
-        '') echo "ElevenLabs did not answer, so the key is untested: nothing saved" >&2; return 1 ;;
-        *invalid_api_key*) echo "ElevenLabs rejected the key" >&2; return 1 ;;
-      esac ;;
-    re_)
-      # a sending-only key is refused /domains as restricted, not as invalid
-      case "$(curl -s https://api.resend.com/domains -H "Authorization: Bearer $2")" in
-        '') echo "Resend did not answer, so the key is untested: nothing saved" >&2; return 1 ;;
-        *'is invalid'*) echo "Resend rejected the key" >&2; return 1 ;;
-      esac ;;
+    *)
+      printf '%s' "$2" | sh -c "$test" >/dev/null 2>&1 || { echo "the test in $conf for $1 rejected the key" >&2; return 1; } ;;
   esac
 }
 
 name=${1:-}
 again=${2:-}
 if [ -z "$name" ]; then
-  grep -v '^[[:space:]]*\(#\|$\)' "$conf" | while read -r n p rest; do
+  lines | while read -r n p rest; do
+    [ "$n" = test ] && continue
     if [ ! -s "$dir/$n" ]; then echo "$n: missing"
-    elif works "$p" "$(cat "$dir/$n")" 2>/dev/null; then echo "$n: works"
-    else echo "$n: REJECTED — bin/set-key $n"; fi
+    else
+      r=0; works "$p" "$(cat "$dir/$n")" 2>/dev/null || r=$?
+      case $r in
+        0) echo "$n: works" ;;
+        3) echo "$n: saved, untested (no test for $p in $conf)"; old_test_hint "$p" ;;
+        4) echo "$n: saved, untested (no network)" ;;
+        *) echo "$n: REJECTED — bin/set-key $n" ;;
+      esac
+    fi
   done
   exit 0
 fi
 
-line=$(grep "^$name[[:space:]]" "$conf" || true)
+[ "$name" != test ] || { echo "'test' names a test line in $conf, not a key" >&2; exit 2; }
+line=$(lines | grep "^$name[[:space:]]" || true)
 [ -n "$line" ] || { echo "no key '$name' in $conf" >&2; exit 2; }
-set -- $line
-prefix=$2
-shift 2
+prefix=$(printf '%s\n' "$line" | awk '{ print $2 }')
 file="$dir/$name"
 old=$(cat "$file" 2>/dev/null || true)
+
+# Every step is read before a key is asked for, so a step this version does not have stops nothing half-done.
+set -f
+set -- $(printf '%s\n' "$line" | awk '{ $1 = ""; $2 = ""; print }')
+set +f
+while [ $# -gt 0 ]; do
+  case "$1" in
+    link) shift; [ $# -gt 0 ] || { echo "link in $conf for $name names no path" >&2; exit 2; }; shift ;;
+    figma-console|audit-service) shift ;;
+    run) break ;;
+    ssh)
+      hook="$HOME/.config/keys/hooks/ssh-php-config"
+      {
+        echo "$conf gives $name the ssh step, which bin/set-key no longer has (since 2026-10-31): it is a hook of yours now."
+        echo "Replace the line with:"
+        echo "  $name $prefix run ~/.config/keys/hooks/ssh-php-config ${2:-<host>} ${3:-<config path>}"
+        if [ -x "$hook" ]; then echo "($hook is there already.)"
+        else echo "and write $hook from the old step (git -C '$(dirname "$here")' show 219d22f3:bin/set-key, its ssh branch), then chmod 700 it."; fi
+        echo "Nothing was asked for or written: run bin/set-key $name again once the line is changed."
+      } >&2
+      exit 2 ;;
+    *) echo "unknown step '$1' in $conf for $name: nothing was asked for or written" >&2; exit 2 ;;
+  esac
+done
 
 if [ "$again" = --again ]; then
   [ -n "$old" ] || { echo "no saved $name to hand on" >&2; exit 1; }
@@ -94,49 +150,50 @@ while :; do
 done
 
 # tested before it replaces anything: a key that does not work leaves the old one in place
-works "$prefix" "$key" || { echo "nothing written" >&2; exit 1; }
+r=0; works "$prefix" "$key" || r=$?
+[ $r = 0 ] || [ $r = 3 ] || { echo "nothing written" >&2; exit 1; }
 mkdir -p "$dir"
 (umask 077; printf '%s' "$key" > "$file")
+# umask sets the mode of a new file only: one made by hand keeps its own
+chmod 600 "$file"
 printf '' | pbcopy
-echo "written to $file, tested; clipboard cleared"
+if [ $r = 0 ]; then echo "written to $file, tested; clipboard cleared"
+else
+  echo "written to $file, UNTESTED: nothing here can test a $prefix key (add a test line to $conf); clipboard cleared"
+  old_test_hint "$prefix"
+fi
 fi
 
-case "${1:-}" in
-  '') ;;
-  figma-console)
-    grep -q FIGMA_ACCESS_TOKEN "$HOME/.claude.json" 2>/dev/null && K="$key" node -e '
-      const fs = require("fs"), f = process.env.HOME + "/.claude.json", j = JSON.parse(fs.readFileSync(f, "utf8"));
-      const env = j.mcpServers && j.mcpServers["figma-console"] && j.mcpServers["figma-console"].env;
-      if (env && "FIGMA_ACCESS_TOKEN" in env) { env.FIGMA_ACCESS_TOKEN = process.env.K; fs.writeFileSync(f, JSON.stringify(j, null, 2)); }' \
-      && echo "figma-console's copy updated: reconnect it in /mcp" ;;
-  audit-service)
-    launchctl list com.toolkit.figma-audit >/dev/null 2>&1 \
-      && launchctl kickstart -k "gui/$(id -u)/com.toolkit.figma-audit" && echo "audit service restarted" ;;
-  ssh)
-    host=$2 target=$3
-    printf '%s' "$key" | ssh "$host" "umask 077; mkdir -p ~/.config/keys && cat > ~/.config/keys/$name"
-    # A config edit that lands on the wrong line is invisible until something fails a day later (a Brandfetch id once
-    # replaced the Brave key), so: the file named, exactly one value with this prefix, a backup, a lint, and a diff
-    # of exactly one line — or the backup goes back.
-    ssh "$host" bash -s -- "$name" "$prefix" "$target" <<'EOF'
-set -eu
-name=$1 prefix=$2 target=$3
-key="$HOME/.config/keys/$name"
-[ -s "$key" ] || { echo "the key did not arrive at $key" >&2; exit 1; }
-# a path, never a search: a host can hold an old copy of the site beside the live one
-found="$HOME/$target"
-[ -f "$found" ] || { echo "no $found on the server; nothing changed" >&2; exit 1; }
-grep -qF "file_get_contents('$key')" "$found" && { echo "server key replaced; $found already reads it"; exit 0; }
-n=$(grep -c "=> *'$prefix" "$found" || true)
-[ "$n" = 1 ] || { echo "expected one '$prefix…' value in $found, found $n; the config is unchanged" >&2; exit 1; }
-backup="$found.bak-$(date +%Y%m%d%H%M%S)"
-cp -p "$found" "$backup"
-sed -i "s#=> *'$prefix[^']*'#=> trim((string)file_get_contents('$key'))#" "$found"
-if ! php -l "$found" >/dev/null 2>&1 || [ "$(diff "$backup" "$found" | grep -c '^>')" != 1 ]; then
-  cp -p "$backup" "$found"; echo "the edit did not come out as one clean line; $found restored" >&2; exit 1
-fi
-echo "server key written; $found now reads it from $key (backup $backup)"
-EOF
-    ;;
-  *) echo "unknown step '$1' in $conf for $name" >&2; exit 2 ;;
-esac
+# the steps after the prefix, in order; run takes the rest of the line
+unlinked=0
+set -f
+set -- $(printf '%s\n' "$line" | awk '{ $1 = ""; $2 = ""; print }')
+set +f
+while [ $# -gt 0 ]; do
+  step=$1; shift
+  case "$step" in
+    link)
+      to=$(printf '%s' "$1" | sed "s#^~#$HOME#"); shift
+      if [ -L "$to" ] && [ "$(readlink "$to")" = "$file" ]; then :
+      elif [ -e "$to" ] || [ -L "$to" ]; then echo "$to is not a link to $file, so it was left alone and its readers still see the old key: move it aside and run bin/set-key $name --again" >&2; unlinked=1
+      else mkdir -p "$(dirname "$to")" && ln -s "$file" "$to" && echo "$to now links to $file"; fi ;;
+    figma-console)
+      grep -q FIGMA_ACCESS_TOKEN "$HOME/.claude.json" 2>/dev/null && K="$key" node -e '
+        const fs = require("fs"), f = process.env.HOME + "/.claude.json", j = JSON.parse(fs.readFileSync(f, "utf8"));
+        const env = j.mcpServers && j.mcpServers["figma-console"] && j.mcpServers["figma-console"].env;
+        if (env && "FIGMA_ACCESS_TOKEN" in env) { env.FIGMA_ACCESS_TOKEN = process.env.K; fs.writeFileSync(f, JSON.stringify(j, null, 2)); }' \
+        && echo "figma-console's copy updated: reconnect it in /mcp" || true ;;
+    audit-service)
+      launchctl list com.toolkit.figma-audit >/dev/null 2>&1 \
+        && launchctl kickstart -k "gui/$(id -u)/com.toolkit.figma-audit" && echo "audit service restarted" || true ;;
+    run)
+      # the line after its first `run`, as written: word splitting would lose the command's quoting
+      cmd=$(printf '%s\n' "$line" | awk '{ for (i = 3; i <= NF; i++) if ($i == "run") { s = $0
+        for (j = 1; j <= i; j++) sub(/^[[:space:]]*[^[:space:]]+/, "", s)
+        sub(/^[[:space:]]+/, "", s); print s; exit } }')
+      printf '%s' "$key" | KEY_NAME="$name" KEY_PREFIX="$prefix" sh -c "$cmd" || { echo "the run step for $name failed; bin/set-key $name --again retries it" >&2; exit 1; }
+      break ;;
+  esac
+done
+# a reader that cannot find the key is a step that failed
+exit $unlinked
