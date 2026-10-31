@@ -171,11 +171,14 @@ ok("a later log write closes nothing", r.closed === 0 && Object.values(record.ro
   const contract = createRequire(import.meta.url)("../snapshot/projects.cjs");
   const problems = [];
   let read = 0, compared = 0;
+  const noLog = [];
   // no project at all (a fresh clone, CI): nothing to compare, said as a skip, never a pass
   if (!contract.projects().list.length) console.log("skip: no project is registered, so no filed rows were compared with stored grades");
   else for (const p of contract.projects().list) {
     const where = contract.layout(null, p.name);
-    if (!where || where.error || !where.paths || !existsSync(where.paths.changes)) continue;
+    // a layout that does not resolve is a failure; a project with no change log yet is said, and not counted
+    if (!where || where.error || !where.paths) { problems.push(`${p.name}: its layout does not resolve${where && where.error ? ` (${where.error})` : ""}`); continue; }
+    if (!existsSync(where.paths.changes)) { noLog.push(p.name); continue; }
     const records = new Map();
     for (const r of contract.auditRecords(where)) if (existsSync(r.path)) records.set(r.key, JSON.parse(readFileSync(r.path, "utf8")));
     // A project whose records were not read compares nothing and passes:
@@ -191,7 +194,8 @@ ok("a later log write closes nothing", r.closed === 0 && Object.values(record.ro
     problems.push(...unmatched(log, records, { libOf: lo }).map((m) => `${p.name}: ${m}`));
     read++;
   }
-  if (contract.projects().list.length) ok(`every project's filed rows match its stored grades (${read} logs read, ${compared} rows and raised majors compared)${problems.length ? "\n  " + problems.join("\n  ") : ""}`, read >= 4 && compared > 0 && problems.length === 0);
+  if (contract.projects().list.length) ok(`every project's filed rows match its stored grades (${read} logs read, ${compared} rows and raised majors compared)${problems.length ? "\n  " + problems.join("\n  ") : ""}`, read > 0 && read === contract.projects().list.length - noLog.length && compared > 0 && problems.length === 0);
+  if (noLog.length) console.log(`skip: no change log yet in ${noLog.join(", ")}, so its rows were not compared`);
 }
 
 // A row the router closed as no longer raised, while a live grade raises it,
