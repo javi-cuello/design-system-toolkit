@@ -1,5 +1,7 @@
 # Eval cases — oklch-color-scale-system (v2.1.5)
 
+**Walked: 2026-10-31 for 2.1.5, tests only** — `node tests/test-oklch.js` 651/651: the yellow row of the family-escape table no longer counts as a pass (it is not checked), and the two "skipped this run" branches are failures now (the generator is deterministic; both always run).
+
 **Walked: 2026-10-31 for 2.1.5** — `node tests/test-oklch.js` 652/652, every pinned hex unchanged.
 
 **Reviewed against v2.1.4 on 2026-10-14** — no case changed: names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.

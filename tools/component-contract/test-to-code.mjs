@@ -127,24 +127,23 @@ ok('a stroke with no paint draws nothing', !('box-shadow' in decl({ border: { wi
 
 // every contract stored on this machine: each stylesheet rebuilds every variant its contract draws (skipped with none)
 const require = createRequire(import.meta.url);
+// No catch: a contract that crashes the rebuild is a failure, never "not read" and then a skip (review, 2026-10-31).
 let stored = 0, off = 0;
-try {
-  const projects = require('../snapshot/projects.cjs');
-  for (const { name: label } of projects.projects().list) {
-    const w = projects.layout(null, label);
-    const dir = w && w.paths && w.paths.components;
-    if (!dir || !fs.existsSync(dir)) continue;
-    for (const f of fs.readdirSync(dir)) {
-      const file = path.join(dir, f, 'contract.json');
-      if (!fs.existsSync(file)) continue;
-      const c = JSON.parse(fs.readFileSync(file, 'utf8'));
-      stored++;
-      if (selfCheck(c, rulesOf(c).rules).length) { off++; console.log('  not rebuilt:', label, f); }
-    }
+const projects = require('../snapshot/projects.cjs');
+for (const { name: label } of projects.projects().list) {
+  const w = projects.layout(null, label);
+  const dir = w && w.paths && w.paths.components;
+  if (!dir || !fs.existsSync(dir)) continue;
+  for (const f of fs.readdirSync(dir)) {
+    const file = path.join(dir, f, 'contract.json');
+    if (!fs.existsSync(file)) continue;
+    const c = JSON.parse(fs.readFileSync(file, 'utf8'));
+    stored++;
+    if (selfCheck(c, rulesOf(c).rules).length) { off++; console.log('  not rebuilt:', label, f); }
   }
-} catch (e) { console.log('  stored contracts not read:', e.message); }
+}
 if (stored) ok(`every stored contract's stylesheet rebuilds every variant it draws (${stored} contracts)`, off === 0);
-else console.log('skip  no stored contracts on this machine');
+else console.log('skip: no stored contracts on this machine');
 
 // a contract not stored yet (the contract editor's Push to code): its own stylesheet, under the folder name the store
 // would give it, in the repo's styles folder by its naming, and nothing else there touched

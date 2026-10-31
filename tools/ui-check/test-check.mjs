@@ -29,7 +29,7 @@ ok('…and none within the tolerance', !hit({}, [424, 424 + L.shiftTolerance]).s
 
 // The browser half: the survey and the tab switch read a real page.
 const CHROME = (await import('../shared/cdp.mjs')).findChrome();
-if (!fs.existsSync(CHROME)) { console.log(`skip: no Chrome at ${CHROME}; the browser half did not run`); console.log(`${n}/${n} passed`); process.exit(0); }
+if (!fs.existsSync(CHROME)) { console.log(`skip: no Chrome at ${CHROME}; the browser half did not run`); console.log(`${n}/${n} passed`); process.exit(77); } // a skip: bin/check says "skip", never "ok"
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-check-'));
 const write = (name, body) => { const f = path.join(dir, name); fs.writeFileSync(f, `<!doctype html><title>t</title><main><h1>Page</h1>${body}</main>`); return 'file://' + f; };
 // Breaks each rule: the second tab grows the header 800ms after the click (late content)

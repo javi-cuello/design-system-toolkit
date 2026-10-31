@@ -438,7 +438,8 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
       const noNegativeInDescription = drifted.steps.every(s => !s.figmaDescription.includes('-') || s.figmaDescription.match(/-\d/) === null || !/oklch\([\d.]+ [\d.]+ -/.test(s.figmaDescription));
       check('drift: no negative H leaks into figmaDescription', noNegativeInDescription);
     } else {
-      check('drift H-range test skipped (did not land on anchorIdx=0 this run)', true);
+      // generateScale is deterministic: this input always anchors at step 1, so landing elsewhere is a failure, never a skip
+      check('drift: the near-white source anchors at step 1, so the H-range check ran', false, `anchorIdx ${scale.anchorIdx}`);
     }
   }
 }
@@ -474,7 +475,8 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
     }
     check('every non-anchor step matches the absolute schedule exactly', scheduleMatches);
   } else {
-    check('mid-ramp jump test skipped (anchor at an end this run)', true);
+    // deterministic, as above: #CA8A04 anchors mid-ramp, so an end anchor is a failure, never a skip
+    check('mid-ramp: #CA8A04 anchors mid-ramp, so the schedule check ran', false, `anchorIdx ${anchorIdx}`);
   }
 }
 
@@ -1111,7 +1113,7 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
     // Yellow is excluded: its continuous drift crosses into orange by design (see the
     // exemption in generate.js), so "no escapes" is not the right invariant for it.
     Object.entries(FAMILY_AVOID).forEach(([family, bound]) => {
-      if (family === 'yellow') { pass++; return; }
+      if (family === 'yellow') return;   // not checked, so not counted: a skip is never a pass
       const offenders = [];
       for (let H = bound.lo; H <= bound.hi; H += 0.25) {
         for (const C of [0.10, 0.15, 0.20]) {

@@ -160,7 +160,7 @@ step "the audit record's writer holds its rules"
 OUT=$(node tools/figma-audit/test-rows.mjs 2>&1)
 [ $? -eq 0 ] && ok || bad "$OUT"
 
-[ "$QUICK" = "1" ] && { [ "$FAIL" = "0" ] && echo "green (quick)" || summary; exit $FAIL; }
+[ "$QUICK" = "1" ] && { [ "$FAIL" = "0" ] && green " (quick)" || summary; exit $FAIL; }
 
 # code-standard rule 3 on the docs site's own pages: a one-off probe on
 # 2026-10-11 found unnamed sections on four page types, and nothing ran it
@@ -175,6 +175,12 @@ while IFS="$TAB" read -r label home; do
     step "page structure: $label"
     OUT=$(node tools/docs-site/check-structure.mjs "$d" 2>&1)
     [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | tail -20)"
+    # the docs MCP over the same built site, every tool called as a client would (tools/docs-mcp/smoke.mjs); run by
+    # nothing until 2026-10-31. Its packages are its own install: without them a skip, never a pass.
+    step "docs MCP: $label"
+    OUT=$(node tools/docs-mcp/smoke.mjs "$d" 2>&1)
+    RC=$?
+    if [ $RC -eq 0 ]; then ok; elif [ $RC -eq 77 ]; then skip "$OUT"; else bad "$(printf '%s' "$OUT" | tail -8)"; fi
 done <<EOF
 $HOMES
 EOF
@@ -206,11 +212,13 @@ SP=$(mktemp -d)
 OUT=$( { git clone -q --sparse "file://$REPO" "$SP/t" && cd "$SP/t" && git sparse-checkout set bin && cp "$REPO/bin/get" bin/get \
   && node bin/get tools/contract-editor > /dev/null \
   && git -c core.quotePath=off ls-files -t | sed -n 's/^H //p' | while IFS= read -r f; do [ ! -f "$REPO/$f" ] || cp "$REPO/$f" "$f" || exit 1; done \
-  && TOOLKIT_PROJECTS_ROOT="$SP/projects" node tools/contract-editor/test-editor.mjs --fixtures \
+  && { TOOLKIT_PROJECTS_ROOT="$SP/projects" node tools/contract-editor/test-editor.mjs --fixtures; E=$?; [ $E -eq 0 ] || [ $E -eq 77 ]; } \
   && TOOLKIT_PROJECTS_ROOT="$SP/projects" node tools/contract-editor/test-serve.mjs; } 2>&1)
 RC=$?
 rm -rf "$SP"
-[ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E ' passed|SKIPPED' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -B1 -A3 -E 'Error|FAIL|fatal|not checked out' | head -10)"
+# the editor's browser half exits 77 with no Chrome: the step is then a skip, though test-serve ran
+if [ $RC -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^skip:'; then skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"
+else [ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E ' passed' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -B1 -A3 -E 'Error|FAIL|fatal|not checked out' | head -10)"; fi
 
 # Skills alone, the way someone takes them: bin/get them into a sparse clone and run install.sh under an empty
 # HOME. install.sh stopped there on the standards guard until 2026-10-30. figma-plugin-creator brings standards/
@@ -258,7 +266,9 @@ while IFS="$TAB" read -r label home; do
     [ -n "$label" ] || continue
     step "contract editor: $label"
     OUT=$(node tools/contract-editor/test-editor.mjs --project "$label" 2>&1)
-    [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E 'passed|SKIPPED' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -A3 -E 'Error' | head -8)"
+    RC=$?
+    [ $RC -eq 77 ] && { skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"; continue; }
+    [ $RC -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E 'passed' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -A3 -E 'Error' | head -8)"
 done <<EOF
 $HOMES
 EOF
@@ -283,14 +293,18 @@ for t in tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.
     [ -e "$t" ] || continue
     step "$(printf '%s' "$t" | sed 's|^\(tools\|skills\|plugins\|standards\)/||; s|/tests/|/|')"
     case "$t" in *.py) OUT=$(python3 "$t" 2>&1) ;; *.sh) OUT=$(sh "$t" 2>&1) ;; *) OUT=$(node "$t" 2>&1) ;; esac
-    if [ $? -eq 0 ]; then
+    RC=$?
+    if [ $RC -eq 0 ]; then
         ok
-        # a suite that could not run here (no project, no browser) says so on a `skip:` line, shown, never hidden
+        # a suite that ran with part of its input absent (no project) says so on a `skip:` line, shown, never hidden
         printf '%s\n' "$OUT" | grep -m1 '^skip:' | sed 's/^/  /'
+    elif [ $RC -eq 77 ]; then
+        # a suite that could not run here at all (no browser): exit 77, said as a skip, never as ok
+        skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"
     else
         bad "$(printf '%s' "$OUT" | tail -20)"
     fi
 done
 
-[ "$FAIL" = "0" ] && echo "green" || summary
+[ "$FAIL" = "0" ] && green || summary
 exit $FAIL
