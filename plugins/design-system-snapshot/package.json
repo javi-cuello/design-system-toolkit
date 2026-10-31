@@ -1,6 +1,6 @@
 {
   "name": "design-system-snapshot",
-  "version": "0.68.2",
+  "version": "0.68.3",
   "private": true,
   "devDependencies": {
     "@figma/plugin-typings": "1.142.0"

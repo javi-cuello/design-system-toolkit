@@ -1,4 +1,4 @@
-# Eval cases — figma-doc-generator (v1.22.2)
+# Eval cases — figma-doc-generator (v1.22.3)
 
 **Walked: 2026-10-31 for 1.22.3** — D48 added and executed: `node tools/shared/test-text-units.mjs` 11/11 (the three copies character for character; the page and the tokens give 1.3333 for a 16px line on 12px text); `node tests/test-docgen.js` 168/168, `node tests/test-recipes.js` 144/144, `node tests/test-load-protocol.js` passing. A2's recorded values (`1`, `1.1`, `1.46`) read the same at four places. Not regenerated on a live docs page.
 
