@@ -274,7 +274,7 @@
   .ce-filter-chip[aria-pressed="true"], .ce-tile input:checked + span, .ce-segmented .seg:has(input:checked) {
     border-color: transparent; background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-semibold); box-shadow: inset 0 0 0 1px var(--accent); }
   @media (hover: hover) { .ce-filter-chip:hover:not([aria-pressed="true"]) { border-color: var(--control); color: var(--fg); } }
-  .ce-tiles__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-8); }
+  .ce-tiles__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: var(--space-8); }
   .ce-tile { position: relative; display: grid; }
   .ce-tile input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
   .ce-tile > span { display: grid; justify-items: center; gap: var(--space-4); padding: var(--space-8) var(--space-4); line-height: var(--leading-xl);

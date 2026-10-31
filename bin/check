@@ -11,6 +11,11 @@
 # Green is the floor, not the answer: bin/closing's questions are what
 # catch what no script can see.
 set -u
+# Run from a git hook, git exports where this repo is (GIT_DIR and the rest; a
+# linked worktree always does), and every test that makes a scratch repo would
+# write into this one instead: one set core.bare and a test user in the real
+# config (2026-10-31). Each git call below finds its repo from its own folder.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX GIT_NAMESPACE
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 FAIL=0

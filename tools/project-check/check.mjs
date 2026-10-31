@@ -35,6 +35,10 @@ import { fileURLToPath } from 'node:url';
 import { undeclared, renderChanged, pipedVerdicts, trailerReport, unread, knowledgeReport } from './loop.mjs';
 import { realPath } from '../shared/real-path.mjs';
 
+// run from a git hook, git exports where the repo is, and a step that makes a scratch
+// repo would write into the project's instead (toolkit's bin/check clears the same)
+for (const v of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY', 'GIT_PREFIX', 'GIT_NAMESPACE']) delete process.env[v];
+
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const argv = process.argv.slice(2);
 const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };

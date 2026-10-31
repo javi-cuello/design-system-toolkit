@@ -341,6 +341,7 @@ test("the plan gate lets a subagent write its own worktree, and holds the sessio
   const s = session([user('build it')]);
   assert.equal(planGate(s.id, s.file, REPOS, big('w1'), TOOLKIT, true), null);
   assert.match(String(planGate(s.id, s.file, REPOS, big('w2'), TOOLKIT)), /plan/i);
+  assert.match(String(planGate(s.id, s.file, REPOS, { id: 'w3', name: 'Write', input: { file_path: path.join(TOOLKIT, 'big.mjs'), content: Array(900).fill('b').join('\n') } }, TOOLKIT, true)), /plan/i, 'a subagent outside a worktree is held');
   s.clean();
 });
 
