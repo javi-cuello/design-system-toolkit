@@ -51,7 +51,10 @@ const downloads = mkdtempSync(join(tmpdir(), 'contract-editor-downloads-'));
 await tab.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: false });
 process.on('exit', () => rmSync(downloads, { recursive: true, force: true }));
 const theirs = join(process.env.HOME || tmpdir(), 'Downloads');
-const theirsBefore = existsSync(theirs) ? readdirSync(theirs).length : 0;
+// only what the editor names (editor.js download()): a file the person saves meanwhile is theirs, not a leak
+const ours = (f) => /\.(?:contract|proposal)(?: \(\d+\))?\.json$|\.build(?: \(\d+\))?\.md$/.test(f);
+const listed = () => (existsSync(theirs) ? readdirSync(theirs) : []);
+const theirsBefore = new Set(listed());
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok  ' + name); };
 const shot = async (name) => { if (process.env.SHOTS) writeFileSync(join(process.env.SHOTS, name + '.png'), Buffer.from(await screenshot(tab), 'base64')); };
@@ -1597,7 +1600,8 @@ try {
   console.log(`${n} passed`);
 } finally {
   tab.close();
-  ok('nothing the run downloads reaches the person\'s Downloads', (existsSync(theirs) ? readdirSync(theirs).length : 0) === theirsBefore);
+  const leaked = listed().filter((f) => !theirsBefore.has(f) && ours(f));
+  ok('nothing the run downloads reaches the person\'s Downloads' + (leaked.length ? ': ' + leaked.join(', ') : ''), !leaked.length);
   await browser.close();
   server.kill();
 }
