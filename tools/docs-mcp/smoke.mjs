@@ -6,6 +6,7 @@
 // test-server.mjs holds each tool's exact answers over a committed fixture site.
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { serveFolder } from "./serve-folder.mjs";
 
 if (!existsSync(new URL("./node_modules/@modelcontextprotocol/sdk", import.meta.url))) {
@@ -26,7 +27,7 @@ if (!/^https?:/.test(arg)) {
   url = site.url;
 }
 const c = new Client({ name: "docs-mcp-test", version: "0" });
-await c.connect(new StdioClientTransport({ command: process.execPath, args: [new URL("./server.mjs", import.meta.url).pathname], env: { ...process.env, DOCS_URL: url } }));
+await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: url } }));
 
 const fails = [];
 const names = (await c.listTools()).tools.map((t) => t.name);

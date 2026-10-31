@@ -22,7 +22,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const free = (port) => new Promise((done) => { const s = net.createServer(); s.once("error", () => done(false)); s.listen(port, "127.0.0.1", () => s.close(() => done(true))); });
 let PORT = 0;
 for (const p of [9227, 9228, 9226, 9229, 9225, 9230]) if (!PORT && (await free(p))) PORT = p;
-if (!PORT) { console.log("the middle ports the bridge scans are taken, so the session path cannot be tested here"); process.exit(1); }
+if (!PORT) { console.log("skip: the middle ports the bridge scans (9225–9230) are taken, so the session path cannot be tested here"); process.exit(77); }
 
 // a scratch project: its context document routes one library, and its record holds one open row
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "audit-session-")));

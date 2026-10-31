@@ -36,7 +36,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, voided } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided } from './eval.mjs';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from '../component-contract/official.mjs';
 
@@ -95,7 +95,7 @@ for (const t of tasks) {
     }
     const before = inputs(copy, gradingPaths(config), gradingOutputs(config));
     // read-only for the agent: the gates it may run mid-work import some of these (eval.mjs, agentTools)
-    if (!NO_AGENT) lock(copy, Object.keys(before));
+    const modes = NO_AGENT ? new Map() : lock(copy, Object.keys(before));
 
     let agent = { turns: 0, costUsd: 0, durationMs: 0, result: '(no agent: graded as prepared)' };
     if (!NO_AGENT) {
@@ -133,6 +133,8 @@ for (const t of tasks) {
       const after = inputs(copy, gradingPaths(config), gradingOutputs(config));
       agent.tampered = changed(before, after);
     }
+    // writable again once the agent is done and its changes are read: the build and serve below may rewrite them
+    unlock(copy, modes);
 
     // the grade, by the project's own gates, over the copy — never over a void
     // one: a gate run over a changed mapping would run the changed code

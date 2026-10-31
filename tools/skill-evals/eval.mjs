@@ -149,10 +149,15 @@ export function inputs(root, extra = [], outputs = []) {
 }
 /* The grade's inputs made read-only in the copy before the agent starts, so
    its Edit and Write fail on them rather than change what the gates import;
-   it has no chmod. Returns the files locked. */
+   it has no chmod. Returns each file's mode before, for unlock: the project's
+   own build and serve, after the agent, may rewrite them as they always have. */
 export function lock(root, rels) {
+  const modes = new Map(rels.map((rel) => [rel, fs.statSync(path.join(root, rel)).mode & 0o7777]));
   for (const rel of rels) fs.chmodSync(path.join(root, rel), 0o444);
-  return rels.length;
+  return modes;
+}
+export function unlock(root, modes) {
+  for (const [rel, mode] of modes) if (fs.existsSync(path.join(root, rel))) fs.chmodSync(path.join(root, rel), mode);
 }
 /* A run that read the answer or changed the grade's inputs scores 0 before
    anything is graded: a gate run over a changed mapping would run the

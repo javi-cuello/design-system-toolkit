@@ -4,6 +4,7 @@
 // client would, each answer held to what the fixture says. Run by bin/check
 // always, so the server is tested where no project has a built site (CI).
 // Without its packages it says so and exits 77, a skip.
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { serveFolder } from "./serve-folder.mjs";
@@ -17,9 +18,9 @@ const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/
 
 let n = 0;
 const ok = (name, cond, why = "") => { n++; assert.ok(cond, `${name}${why ? `\n${why}` : ""}`); console.log("ok", name); };
-const site = await serveFolder(new URL("./fixtures/site", import.meta.url).pathname);
+const site = await serveFolder(fileURLToPath(new URL("./fixtures/site", import.meta.url)));
 const c = new Client({ name: "docs-mcp-test", version: "0" });
-await c.connect(new StdioClientTransport({ command: process.execPath, args: [new URL("./server.mjs", import.meta.url).pathname], env: { ...process.env, DOCS_URL: site.url }, stderr: "ignore" }));
+await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site.url }, stderr: "ignore" }));
 const raw = async (name, args = {}) => { const r = await c.callTool({ name, arguments: args }); return { isError: !!r.isError, data: JSON.parse(r.content[0].text) }; };
 const call = async (name, args) => (await raw(name, args)).data;
 
