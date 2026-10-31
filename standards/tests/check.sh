@@ -392,7 +392,7 @@ fi
 # It lives with the page it checks, in the docs engine (tools/docs-site/src/dashboard).
 if [ -f tools/docs-site/src/dashboard/check.mjs ] && [ ! -d tools/docs-site/node_modules ]; then
     # a fresh clone: the docs engine's packages are not installed yet
-    echo "ERROR  [TOOLS] the docs site's packages are not installed: run (cd tools/docs-site && pnpm install), then check again"
+    echo "ERROR  [TOOLS] the docs site's packages are not installed: run (cd tools/docs-site && pnpm install --frozen-lockfile), then check again"
     errors=$((errors + 1))
 elif [ -f tools/docs-site/src/dashboard/check.mjs ]; then
     if ! out=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); then

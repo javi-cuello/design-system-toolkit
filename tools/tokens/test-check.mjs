@@ -26,7 +26,13 @@ const donor = contract.repos()
   .map((r) => join(r.dir, 'node_modules'))
   .find((d) => existsSync(join(d, 'style-dictionary')));
 
-// A donor that is not there is a finding about this suite, not a pass.
+// A donor that is not there is a finding about this suite, not a pass, on a
+// machine with projects. With none registered (a fresh clone, CI) there is
+// nothing to borrow: the suite says it skipped, and bin/check shows the line.
+if (!donor && !contract.repos().length) {
+  console.log('skip: no project repo is registered, so there is no style-dictionary to borrow and the checker was not run');
+  process.exit(0);
+}
 if (!donor) {
   console.error('no registered project repo has style-dictionary installed: run `pnpm install` in one of them, or register a repo that has it.');
   process.exit(1);

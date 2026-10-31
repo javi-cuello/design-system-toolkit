@@ -9,10 +9,10 @@ importers:
   .:
     dependencies:
       astro:
-        specifier: ^7.3.3
+        specifier: 7.3.3
         version: 7.3.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(sass@1.104.1)
       sass:
-        specifier: ^1.104.1
+        specifier: 1.104.1
         version: 1.104.1
     devDependencies:
       '@babel/parser':

@@ -8,6 +8,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { axePages } from './axe.mjs';
 
+// The vendored file is the version vendor/package.json names, the one Dependabot reads: a bump
+// there with the old file still here fails, until the file is fetched again (README, "Vendored axe").
+const pinned = JSON.parse(fs.readFileSync(new URL('./vendor/package.json', import.meta.url), 'utf8')).devDependencies['axe-core'];
+const header = fs.readFileSync(new URL('./vendor/axe.min.js', import.meta.url), 'utf8').slice(0, 40).match(/axe v(\S+)/);
+assert.equal(header && header[1], pinned, `vendor/axe.min.js is axe ${header && header[1]}, vendor/package.json names ${pinned}`);
+console.log(`ok the vendored axe is ${pinned}, the version vendor/package.json names`);
+
 const CHROME = (await import('../shared/cdp.mjs')).findChrome();
 if (!fs.existsSync(CHROME)) { console.log(`skip: no Chrome at ${CHROME}; nothing ran`); process.exit(0); }
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-axe-'));

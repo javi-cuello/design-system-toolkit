@@ -171,7 +171,9 @@ names another file; the environment wins over either). Prefer the file: a
 launch agent's plist is world-readable and gets committed by accident, a 600 file
 in the home directory does not.
 
-    bin/set-key audit      # then copy the key: tested, written 600, the service restarted
+    bin/set-key audit      # macOS; then copy the key: tested, written 600, linked from ~/.figma-dashboard-key, the service restarted
+
+On another system, write the key to `~/.figma-dashboard-key` yourself and `chmod 600` it. A `~/.figma-dashboard-key` you wrote by hand before is left alone by set-key, which says so: move it aside and run `bin/set-key audit --again`.
 
 The key must be scoped to a workspace (Default will do): an unscoped one is
 refused by the API for want of an `anthropic-workspace-id` header, which this

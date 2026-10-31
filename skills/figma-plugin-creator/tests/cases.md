@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.13.0)
+# Eval cases — figma-plugin-creator (v1.13.1)
+
+**Walked: 2026-10-31 against v1.13.1 — P1 executed (`node tests/test-scaffold.mjs`, 9/9).** `package.json.tpl` pins `@figma/plugin-typings` to an exact version where it read `*`; the scaffold's files are otherwise unchanged. P2–P6 untouched.
 
 **Walked: 2026-10-31 against v1.13.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

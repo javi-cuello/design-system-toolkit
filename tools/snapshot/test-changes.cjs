@@ -315,7 +315,9 @@ test('tokens a live entry logged in a window are not logged again by the backfil
  * first made from the notes' wording, and 1,468 of them named a change the
  * detector does not give (round 3, S2). Read across every project.
  */
-test('every stamped note in every project\'s change log has a graded change of its rule on its subject', () => {
+test('every stamped note in every project\'s change log has a graded change of its rule on its subject', (t) => {
+  // no project at all (a fresh clone, CI): nothing to read, said as a skip, never a pass
+  if (!contract.projects().list.length) { console.log('skip: no project is registered, so no change log was read'); return t.skip('no project is registered'); }
   const bad = [];
   let logs = 0, stamped = 0;
   for (const p of contract.projects().list) {

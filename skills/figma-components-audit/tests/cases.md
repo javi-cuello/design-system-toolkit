@@ -1551,7 +1551,7 @@ Walked live: 2026-09-22 — one 120-set library through `/exec` on the project's
 
 ## A82 · The scanner has a corpus, and every finding site is reached — RUNS
 
-Fixture: `tests/fixtures/library-slice.json.gz` — eight sets of one real 120-set web library (183 variants, 1,124 walked nodes, 77 bound variables), dumped through the bridge on 2026-09-22 with only the properties the rules read, node ids, property keys and variable ids renumbered to the illustrative `0:` prefix and descriptions replaced by a placeholder. Names and structure are as found: the fixture is a slice of a library, not a sketch of one.
+Fixture: `tests/fixtures/library-slice.json` (plain JSON, one value a line, so a diff and the project-name scan read it; it was gzipped until 2026-10-31) — eight sets of one real 120-set web library (183 variants, 1,124 walked nodes, 77 bound variables), dumped through the bridge on 2026-09-22 with only the properties the rules read, node ids, property keys and variable ids renumbered to the illustrative `0:` prefix and descriptions replaced by a placeholder. Names and structure are as found: the fixture is a slice of a library, not a sketch of one.
 
 Assert the corpus is real. The six findings the suite pins on the slice are, word for word, the ones the scanner raised live on that file the same day; the measures are the walk's own counts and the file facts passed through.
 

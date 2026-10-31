@@ -35,7 +35,7 @@ drawn by script, and its data is `get_audit`.
 
 ## Use it
 
-    cd tools/docs-mcp && pnpm install
+    cd tools/docs-mcp && pnpm install --frozen-lockfile
     DOCS_URL=http://localhost:9232 node server.mjs      # one project's port
 
 In the Claude app, `~/Library/Application Support/Claude/claude_desktop_config.json`:

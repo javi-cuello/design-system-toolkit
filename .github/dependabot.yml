@@ -1,0 +1,26 @@
+# Version updates for every folder with a package.json, and for the workflow's actions (pinned by SHA,
+# which Dependabot updates along with the version comment). Security updates are a repository setting.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /tools/docs-site
+      - /tools/docs-mcp
+      - /plugins/component-graph
+      - /plugins/component-guidelines
+      - /plugins/design-system-snapshot
+      - /plugins/lucide-icon-importer
+      - /plugins/organize-layers
+      - /plugins/theme-switcher
+      - /tools/ui-check/vendor
+      - /skills/frontend-build/assets/design-system-scaffold
+    schedule:
+      interval: weekly
+    versioning-strategy: increase
+    groups:
+      npm:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

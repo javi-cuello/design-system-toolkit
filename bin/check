@@ -139,7 +139,7 @@ OUT=$(node tools/figma-audit/check-services.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
 
 step "the docs engine resolves"
-if [ -d tools/docs-site/node_modules ]; then OUT=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); else OUT="the docs site's packages are not installed: run (cd tools/docs-site && pnpm install)"; false; fi
+if [ -d tools/docs-site/node_modules ]; then OUT=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); else OUT="the docs site's packages are not installed: run (cd tools/docs-site && pnpm install --frozen-lockfile)"; false; fi
 [ $? -eq 0 ] && ok || bad "$OUT"
 
 # The docs site is the toolkit's own front end, and nothing held it to
@@ -249,6 +249,8 @@ rm -rf "$SP"
 # runs it with none, and it was run on one library by hand until 2026-10-19,
 # when three others failed it on what only that one had.
 while IFS="$TAB" read -r label home; do
+    # no project: the list is empty, and the here-document still gives one empty line
+    [ -n "$label" ] || continue
     step "contract editor: $label"
     OUT=$(node tools/contract-editor/test-editor.mjs --project "$label" 2>&1)
     [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | grep -E 'passed|SKIPPED' | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | grep -A3 -E 'Error' | head -8)"
@@ -278,6 +280,8 @@ for t in tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.
     case "$t" in *.py) OUT=$(python3 "$t" 2>&1) ;; *.sh) OUT=$(sh "$t" 2>&1) ;; *) OUT=$(node "$t" 2>&1) ;; esac
     if [ $? -eq 0 ]; then
         ok
+        # a suite that could not run here (no project, no browser) says so on a `skip:` line, shown, never hidden
+        printf '%s\n' "$OUT" | grep -m1 '^skip:' | sed 's/^/  /'
     else
         bad "$(printf '%s' "$OUT" | tail -20)"
     fi

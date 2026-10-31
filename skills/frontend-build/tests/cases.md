@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.8.0)
+# Eval cases — frontend-build (v2.8.1)
+
+**Walked: 2026-10-31 for 2.8.1** — T6 re-run: the scaffold into a scratch root wrote 16 files, and `bin/css` installed sass 1.104.1 exactly, wrote `package-lock.json` and compiled `main.css`. Other cases unchanged.
 
 **Walked: 2026-10-31 against v2.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

@@ -1,0 +1,14 @@
+# bin/set-key's list of keys: copied to ~/.config/keys/keys.conf the first time set-key runs without one.
+# One key a line: <name> <prefix> [then …]. The keys are the files beside keys.conf, one per name, written 600.
+#
+# The toolkit's own two. A link puts the key where its readers look for it:
+#   ~/.config/figma/token      the snapshot's release pinning and project-check (tools/snapshot/version.cjs)
+#   ~/.figma-dashboard-key     the audit service's chat and judgement pass (tools/figma-audit)
+figma   figd_    link ~/.config/figma/token figma-console
+audit   sk-ant-  link ~/.figma-dashboard-key audit-service
+#
+# A key of your own goes on a line of its own. set-key tests Figma and Anthropic keys; for any other prefix,
+# a `test` line does (the key on stdin, exit 0 when it works), or the key is saved and said to be untested:
+#   test <prefix> <command…>
+# and a `run` step hands it on (the key on stdin; KEY_NAME and KEY_PREFIX set), last on its line:
+#   <name> <prefix> run <command…>
