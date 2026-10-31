@@ -160,8 +160,8 @@ const fileFor = (url) => {
   if (url === '/system.css') return SYSTEM;
   if (url === '/theme.js') return path.join(HERE, '..', 'docs-site', 'src', 'scripts', 'theme.js');
   // the toolkit's own modules the page imports beside its own, each the one owner of what it does: the variants drawn as
-  // the contract says (component-contract), and a value read as the parity engine reads it (a font weight)
-  if (['/component-contract/layers.mjs', '/component-contract/css.mjs', '/parity/values.mjs'].includes(url)) return path.join(HERE, '..', url.slice(1));
+  // the contract says (component-contract), and a value read as the parity engine reads it (a font weight, a colour, through shared/colour.js)
+  if (['/component-contract/layers.mjs', '/component-contract/css.mjs', '/parity/values.mjs', '/shared/colour.js'].includes(url)) return path.join(HERE, '..', url.slice(1));
   const name = url.slice(1);
   // one name in this folder, never a path out of it, and never the tests
   return /^[a-z-]+\.(html|js|mjs|css)$/.test(name) && !name.startsWith('test-') ? path.join(HERE, name) : null;

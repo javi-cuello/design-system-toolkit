@@ -3,8 +3,8 @@
  * a token in CSS: the custom property (`Color/Text/Neutral/primary` →
  * `--color-text-neutral-primary`) and the family its name starts
  * (`--color-`). The build's own two steps, composed once: the export's slug
- * per segment (figma-token-export's dtcg.js `pathFor`) and the house name over
- * that path (frontend-build's build-tokens `nameOf`, which drops the
+ * per segment (dtcg.js `pathFor`) and the house name over
+ * that path (build-tokens.mjs `nameOf`, which drops the
  * collection). The docs site, the docs MCP's validator, the parity engine's
  * hints and the stylesheet lint each kept their own (one lowercased before
  * splitting camel case, so `textStrong` became `--textstrong` against the

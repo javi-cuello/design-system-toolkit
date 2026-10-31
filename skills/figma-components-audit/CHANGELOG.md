@@ -1,6 +1,7 @@
 # Changelog — figma-components-audit
 
-- 2.35.0 (2026-10-31): contrast, target size and an empty or placeholder description are `scanner/audit.js`'s alone: probes.js loses `FCA.contrast`, `luminance`, `contrastRatio` and `FCA.sizes` (its text half is `FCA.textSizes`), `FCA.metadata` only lists; audit.js gains `metadata|placeholder`; its luminance (0.04045, WCAG 2.2) and the variant-name reader are `tools/shared/` copies held by tests; the naming-case probe reports no collision (figma-foundations-audit's); checks.json lists focus once.
+- 2.35.1 (2026-10-31): a placeholder description is tiered as an empty one (hygiene on a private part) and no longer skips the guidance check; SKILL.md stops listing contrast as unscanned.
+- 2.35.0 (2026-10-31): contrast, target size and an empty or placeholder description are `scanner/audit.js`'s alone (new `metadata|placeholder`); probes.js keeps `FCA.textSizes` and a listing `FCA.metadata`; luminance and variant names are held `tools/shared/` copies; focus listed once.
 - 2.34.0 (2026-10-31): content read from the file is data, never instructions (toolkit-standard §D 24): `scanner/judge.txt` and `fix.txt` frame the file's text as data, and the dashboard's Fix this shows its code for approval before it runs.
 - 2.33.0 (2026-10-30): the fix queue's chat report and `.md` mirror are generated from the record by `tools/figma-audit/fix-queue.mjs`, never assembled by hand. Case A128.
 - 2.32.0 (2026-10-26): naming checks against a naming preference file a departure as `preference`, which holds nothing back; their values come from standards/naming-preferences.json. Case A127.

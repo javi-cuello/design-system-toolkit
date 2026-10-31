@@ -22,7 +22,8 @@
 //                every subject the file has no description for.
 //
 // Prints JSON: [{ id, name, behaviour[], composition[], markdown, gaps[] }].
-// Plain node, no dependencies; tests/test-sections.mjs runs it on a fixture.
+// Plain node; its one import is the toolkit's variant-name reader (tools/shared/names.js,
+// skill-standard §A clause H), which bin/get takes with it. tests/test-sections.mjs runs it on a fixture.
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { variantValues } from '../../../tools/shared/names.js';

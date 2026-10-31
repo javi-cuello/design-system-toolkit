@@ -1013,7 +1013,7 @@ async function main() {
   // tokens and the engine itself; unchanged, the last result stands and nothing is rendered (--rebuild redoes all)
   const { createHash } = await import('node:crypto');
   const sha = (...xs) => createHash('sha1').update(xs.join('\0')).digest('hex').slice(0, 16);
-  const engine = sha(...['external.mjs', 'pair.mjs', 'probe.mjs', 'values.mjs', 'project.mjs', 'session.mjs', 'hosts.mjs', '../shared/cdp.mjs', '../shared/names.js', '../component-contract/derive.cjs', '../component-contract/layers.mjs', '../component-contract/from-code.mjs', '../component-contract/official.mjs', '../snapshot/tokens.cjs', '../snapshot/projects.cjs', '../snapshot/store.cjs'].map((f) => fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), f), 'utf8')));
+  const engine = sha(...['external.mjs', 'pair.mjs', 'probe.mjs', 'values.mjs', 'project.mjs', 'session.mjs', 'hosts.mjs', '../shared/cdp.mjs', '../shared/names.js', '../shared/colour.js', '../component-contract/derive.cjs', '../component-contract/layers.mjs', '../component-contract/from-code.mjs', '../component-contract/official.mjs', '../snapshot/tokens.cjs', '../snapshot/projects.cjs', '../snapshot/store.cjs'].map((f) => fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), f), 'utf8')));
   // every contract (they name the tokens a code value is matched to), the code's installed packages
   // (a library upgrade moves neither the build stamp nor its sources), the mode, and how the run pairs
   const contracts = sha(...allContracts.map((c) => JSON.stringify(c)));

@@ -1,4 +1,6 @@
-# Eval cases — figma-token-export (v2.10.0)
+# Eval cases — figma-token-export (v2.10.1)
+
+**Walked: 2026-10-31 for 2.10.1** — no case changed; `node tools/toolkit-check/check-runs.mjs` clean.
 
 **Walked: 2026-10-31 for 2.10.0** — every case's `Runs:` line re-aimed at `tools/tokens/`: `node tools/tokens/test-dtcg.js` 107 passed, `node --test tools/tokens/test-from-snapshot.mjs` 12/12, `node tools/toolkit-check/check-runs.mjs` clean; the old `scripts/from-snapshot.mjs` with no arguments forwards and prints the usage, exit 2 (A22).
 
@@ -22,7 +24,7 @@
 
 **Walked: 2026-09-19 for 2.2.1** — A27 and A28 added and executed (`node --test tests/test-from-snapshot.mjs`, 6/6); A27 fails against 2.2.0's lookup, which sent the alias home to its own collection. The rest unchanged: `test-dtcg.js` 105/105.
 
-The mapping layer is pure, so most of this is executable without Figma. A1–A8 and A12 run against `scripts/dtcg.js`; A9–A11 describe live behaviour and were observed against a real library.
+The mapping layer is pure, so most of this is executable without Figma. A1–A8 and A12 run against `tools/tokens/dtcg.js`; A9–A11 describe live behaviour and were observed against a real library.
 
 **Walked: 2026-08-18 — pass (77/77), re-walked for 1.1.2.** 1.1.2 adds guidance about how many bundles to ship, which no case asserts and the exporter does not implement, so no case moved and none was added. The guidance was walked by doing it: the sixteen-bundle build was diffed (one declaration differed out of 593), rebuilt as three files, and checked by the project's own `verify.mjs` — 69 checks, each of which was then shown to fail against a deliberately broken output rather than merely passing against a good one.
 

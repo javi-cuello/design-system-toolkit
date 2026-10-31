@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.17.0)
+# Eval cases — figma-component-descriptions (v1.17.1)
+
+**Walked: 2026-10-31 for 1.17.1** — no case changed; `node tests/test-sections.mjs` 18 passed.
 
 **Walked: 2026-10-31 for 1.17.0** — `node tests/test-sections.mjs` 18 passed, `test-engines.mjs` 32/32, `test-verify.mjs` 13/13; no case asserts the removed trigger.
 

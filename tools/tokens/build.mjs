@@ -5,8 +5,8 @@
  *   node <toolkit>/tools/tokens/build.mjs --repo <root>           # write
  *   node <toolkit>/tools/tokens/build.mjs --repo <root> --check   # regenerate beside, diff
  *
- * snapshot → DTCG (figma-token-export's from-snapshot, over its tested
- * dtcg.js), stored in `dtcg/` beside the snapshot → Style Dictionary (frontend-build's build-tokens, with the house
+ * snapshot → DTCG (from-snapshot.mjs here, over its tested
+ * dtcg.js), stored in `dtcg/` beside the snapshot → Style Dictionary (build-tokens.mjs here, with the house
  * conventions) → the repo's `paths.styles`. A repo states where things live
  * and nothing else: code-standard rules 51–55 decide what is written, so two
  * projects cannot drift into two conventions again.

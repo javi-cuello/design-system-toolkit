@@ -531,16 +531,19 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         }
       // figma-standard rule 25: a public component's missing description is an error, a private part's is hygiene.
       const isPrivate=!!(TOK.internalPrefix&&set.name.replace(/^[^\p{L}\p{N}_]+/u,"").startsWith(TOK.internalPrefix));
+      // figma-standard rule 25: a placeholder is no description — one matching the project's
+      // descriptionPlaceholder, shorter than its minDescription, or only the component's own name —
+      // and tiered as an empty one is. Each setting skips its half when absent; a description that
+      // repeats the name is one anywhere. It does not stand in for the guidance sections below,
+      // which a placeholder lacks as well.
+      const d0=(set.description||"").trim();
+      if(d0&&((TOK.descriptionPlaceholder&&new RegExp(TOK.descriptionPlaceholder,"i").test(d0))||d0.toLowerCase()===set.name.toLowerCase()||(TOK.minDescription&&d0.length<TOK.minDescription)))
+        F.push({sev:isPrivate?"hygiene":"error",rule:"metadata",key:"metadata|placeholder",
+          text:'The description is a placeholder ("'+d0+'"), so people and agents reading the library cannot tell what the component is for',
+          advice:isPrivate?"Replace it with a sentence or two saying what the part is and which component it belongs to.":"Replace it with the description: what it is, when to use it and when not to, and how to build it."});
       if(!(set.description||"").trim()) F.push({sev:isPrivate?"hygiene":"error",rule:"metadata",key:"metadata|description",
         text:"No description, so people and agents reading the library cannot tell what the component is for",
         advice:isPrivate?"Write a sentence or two saying what the part is and which component it belongs to.":"Write the description: what it is, when to use it and when not to, and how to build it."});
-      // figma-standard rule 25: a placeholder is no description — one matching the project's
-      // descriptionPlaceholder, shorter than its minDescription, or only the component's own name.
-      // Each setting skips its half when absent; a description that repeats the name is one anywhere.
-      else if((d0=>(TOK.descriptionPlaceholder&&new RegExp(TOK.descriptionPlaceholder,"i").test(d0))||d0.toLowerCase()===set.name.toLowerCase()||(TOK.minDescription&&d0.length<TOK.minDescription))((set.description||"").trim()))
-        F.push({sev:"error",rule:"metadata",key:"metadata|placeholder",
-          text:'The description is a placeholder ("'+(set.description||"").trim()+'"), so people and agents reading the library cannot tell what the component is for',
-          advice:"Replace it with the description: what it is, when to use it and when not to, and how to build it."});
       // figma-standard rule 25: a public component's description says when to
       // use it (Usage), when not to and what instead (Don't), and how to build
       // it (Code gen notes) — the parts that steer a person's or an agent's

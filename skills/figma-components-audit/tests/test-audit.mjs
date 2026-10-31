@@ -493,6 +493,14 @@ expect("a layer that is the same in every variant still fires when some forget i
     [await desc("TODO later", META), await desc("A small tag", META), await desc("Button - CTA", {}), await desc("", META)], [[0, 1], [0, 1], [0, 1], [1, 0]]);
   expect("without the settings, a placeholder word and a short description pass (negative)",
     [await desc("TODO later", {}), await desc("A small tag", {})], [[0, 0], [0, 0]]);
+  const fx = fresh(); const s = find(fx, "Button - CTA"); s.description = s.descriptionMarkdown = "TODO later";
+  const r = await run(fx, { tokens: Object.assign({ internalPrefix: "_" }, fx.settings.tokens, META) });
+  expect("a placeholder still owes the guidance sections, so the component stays in the guidance count",
+    keyed(r, "Button - CTA", /^metadata\|guidance$/).length, 1);
+  const p = fresh(); const ps = find(p, "Button - CTA"); ps.name = "_Button - CTA"; ps.description = ps.descriptionMarkdown = "TODO later";
+  const pr = await run(p, { tokens: Object.assign({}, p.settings.tokens, META, { internalPrefix: "_" }) });
+  expect("a private part's placeholder is hygiene, as its empty description is",
+    pr.audited.filter((e) => e.set === "_Button - CTA").flatMap((e) => e.candidates).filter((c) => c.key === "metadata|placeholder").map((c) => c.sev), ["hygiene"]);
 }
 // ---- figma-standard rules 39, 26 and 40: focus, target size, accessible name --
 {

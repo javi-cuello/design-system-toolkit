@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.20.3** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.20.4** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -62,9 +62,9 @@ Cite a rule as `figma-standard rule N`.
 
     *Why:* the description is what a designer reads in the assets panel and what Dev Mode and any generated documentation show, so an empty one leaves every consumer to guess the component's job from its name. A placeholder is worse than nothing, because it looks like documentation.
 
-    *Evidence:* (Mechanism, not an incident.) The probe's three tests are the three shapes a non-description takes: empty, the name again, or a stub shorter than any real sentence (`minDescription`, `descriptionPlaceholder`). The variant clause was found on 2026-10-25: after a project's descriptions were rewritten, five sets still held older variant copies, one of them another component's text, and no check saw them.
+    *Evidence:* (Mechanism, not an incident.) The scanner's three tests are the three shapes a non-description takes: empty, the name again, or a stub shorter than any real sentence (`minDescription`, `descriptionPlaceholder`). The variant clause was found on 2026-10-25: after a project's descriptions were rewritten, five sets still held older variant copies, one of them another component's text, and no check saw them.
 
-   *Checked:* `skills/figma-components-audit/scanner/audit.js` "metadata|description" — an empty description, an error on a public component and hygiene on a private part.
+   *Checked:* `skills/figma-components-audit/scanner/audit.js` "metadata|description" — an empty description, an error on a public component and hygiene on a private part; `skills/figma-components-audit/scanner/audit.js` "metadata|placeholder" — the name again, a placeholder word or a stub, tiered the same.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "metadata|variant-description" — variants whose description differs from the set's, a warning.
 
@@ -226,7 +226,7 @@ Cite a rule as `figma-standard rule N`.
 
 19. **One case per name space: no two component, variable, style or token names may differ only in case.** Rule 18 fixes which case; this rule binds even where a project departs from it.
 
-    *Why:* the two halves of a split are both valid and one of them silently loses. DTCG makes token names case-sensitive, so `Feedback/Danger/soft` and `Feedback/danger/soft` are two legitimate tokens, and the spec's own non-normative note is that tools *may* warn when names differ only by case ([Design Tokens Format Module](https://www.designtokens.org/tr/drafts/format/)). Every export path in this toolkit then lowercases: `figma-token-export`'s `scripts/dtcg.js` lowercases and hyphenates every segment, so the pair collapses to one path — and it is only because `setDeep` refuses to overwrite an occupied path that the second one is reported instead of overwriting the first. A pipeline without that guard ships one token and drops the other, while both still look present in the design tool.
+    *Why:* the two halves of a split are both valid and one of them silently loses. DTCG makes token names case-sensitive, so `Feedback/Danger/soft` and `Feedback/danger/soft` are two legitimate tokens, and the spec's own non-normative note is that tools *may* warn when names differ only by case ([Design Tokens Format Module](https://www.designtokens.org/tr/drafts/format/)). Every export path in this toolkit then lowercases: the token export's `tools/tokens/dtcg.js` lowercases and hyphenates every segment, so the pair collapses to one path — and it is only because `setDeep` refuses to overwrite an occupied path that the second one is reported instead of overwriting the first. A pipeline without that guard ships one token and drops the other, while both still look present in the design tool.
 
     Admitted 2026-08-20 from a real split: one project's `Semantic` collection spelled the Role slot capitalised in its `Icon/*` and `Text/*` tokens and lowercase in every `Background/*` one, unnoticed across several library versions because nothing measured it and both forms render correctly in the picker. Checked against the two other registered projects the same day: both are internally consistent, so the rule holds 3/3 and the failure is a defect rather than a convention anywhere.
 

@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.20.4 (2026-10-31): rule 25's *Checked:* adds the scanner's placeholder check, which replaced the probe; rule 19's *Why:* names the export at its new path. No rule changed.
 - 2.20.3 (2026-10-31): rule 19's *Checked:* names its engines as they are: figma-foundations-audit's two (components, and a tokens library's variables) and the export's refusals at `tools/tokens/dtcg.js`; the components audit's second collision check is gone. No rule changed.
 - 2.20.2 (2026-10-30): rule 44's *Checked:* joins its two pairs under one marker; no rule changed.
 - 2.20.1 (2026-10-29): rule 15's *Why:* cites toolkit-standard §D 23: the page header is generated from the description; no rule changed.

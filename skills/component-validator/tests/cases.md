@@ -1,4 +1,6 @@
-# Eval cases — component-validator (v2.32.0)
+# Eval cases — component-validator (v2.32.1)
+
+**Walked: 2026-10-31 for 2.32.1** — no case changed; `node bin/get --list skills/component-validator` names nothing missing.
 
 **Walked: 2026-10-31 for 2.32.0** — every `Runs:` line re-aimed: `node tools/validator/test-validate.mjs` 157/157, `node tests/test-walk-figma.mjs` 3/3 (WF1); the dashboard service refuses to start without the engine, and `tools/figma-audit/test-paths.mjs` fails on the service's old default.
 
