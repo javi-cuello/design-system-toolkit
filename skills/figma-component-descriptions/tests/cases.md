@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.17.1)
+# Eval cases — figma-component-descriptions (v1.17.2)
+
+**Walked: 2026-10-31 against v1.17.2** — D19 added and executed: `node tools/toolkit-check/test-missing-input.mjs` 12/12; `node tests/test-sections.mjs` unchanged.
 
 **Walked: 2026-10-31 for 1.17.1** — no case changed; `node tests/test-sections.mjs` 18 passed.
 
@@ -230,3 +232,8 @@ Runs: node tests/test-verify.mjs — "D17: a private part marked after its _ is 
 Fixture: `tests/fixtures/sections-composition.json`, a `composition.js` result: a set with size, disabled and state axes, a single-option axis, a boolean bound to a nested icon and one bound to nothing, a bound and an unbound swap prop, a slot, a part one axis value selects, a part no condition selects and a broken instance; a component with no axes; an id not found. `tests/fixtures/sections-settings.json` is what `projects.cjs settings` prints.
 Assert: the output equals `tests/fixtures/sections-expected.json`; the state line lists the state axis's options in its own order without the resting state (`SCALES[stateAxis][0]`) and names the axis; a part one axis value selects is said as that condition, one no condition selects keeps its count and is a gap; a single-option axis and a broken instance are gaps, never lines; part order does not move a line; en-US changes the heading only. `composition.js` returns the interface with `#id` suffixes stripped, `toggledBy` and `swappedBy` per part, and never a nested component's own prop. Assert the negative: another language is refused; with no settings no state line is guessed; `--check` names a reworded generated line and a subject the descriptions file lacks (exit 1); run through a symlink, the CLI still prints its output; a part swapped by two props names them as props.
 Runs: node tests/test-sections.mjs — all 18; node tests/test-engines.mjs — "composition: the interface is returned…", "composition: a part under a boolean-bound layer…", "composition: a prop of a nested component is not read as the subject's".
+
+## D19 · A missing or broken input to `scripts/sections.mjs` is one line naming it — *executed* 2026-10-31
+Fixture: the script's input flag given a path that is not there, then a file that is not JSON.
+Assert: each exits non-zero with one stderr line naming the path and saying `no such file` or `not JSON (…)`, never a Node stack.
+Runs: node tools/toolkit-check/test-missing-input.mjs

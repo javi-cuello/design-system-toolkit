@@ -156,7 +156,8 @@ export function settingsFrom(printed, fileKey) {
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
-  const json = (f) => JSON.parse(readFileSync(f, 'utf8'));
+  // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
+  const json = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
   if (!arg('--composition')) { console.error('usage: sections.mjs --composition <file> [--settings <file>] [--file-key <key>] [--language en-GB|en-US] [--check <file>]'); process.exit(2); }
   const opts = Object.assign(arg('--settings') ? settingsFrom(json(arg('--settings')), arg('--file-key')) : {}, { language: arg('--language') || 'en-GB' });
   const subjects = [].concat(json(arg('--composition')));

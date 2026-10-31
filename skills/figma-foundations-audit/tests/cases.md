@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.25.2)
+# Eval cases — figma-foundations-audit (v1.25.3)
+
+**Walked: 2026-10-31 against v1.25.3** — F24 added and executed: `node tools/toolkit-check/test-missing-input.mjs` 12/12; `node tests/test-foundations.mjs` unchanged.
 
 **Walked: 2026-10-31 for 1.25.2** — `node tests/test-foundations.mjs` 87/87; the new assertion fails on the old ASCII marker ("Mono comes after tats").
 
@@ -166,3 +168,8 @@ Runs: node tests/test-foundations.mjs — "and a row states the problem before t
 Fixture: `Card/Header`, a bare slash, and `_Bit`, used only inside `Parent`.
 Assert: the separator and parent-name findings carry severity `preference` (figma-standard, Naming). Asked by the maintainer on 2026-10-26.
 Runs: node tests/test-foundations.mjs — "a bare slash and a part without its parent's name are preferences"
+
+## F24 · A missing or broken input to `scripts/from-snapshot.mjs` is one line naming it — *executed* 2026-10-31
+Fixture: the script's input flag given a path that is not there, then a file that is not JSON.
+Assert: each exits non-zero with one stderr line naming the path and saying `no such file` or `not JSON (…)`, never a Node stack.
+Runs: node tools/toolkit-check/test-missing-input.mjs

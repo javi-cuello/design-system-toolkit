@@ -205,7 +205,9 @@ export function tokensOf(json) {
 if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))) {
   const [src, dir] = process.argv.slice(2);
   if (!src || !dir) { console.error('usage: from-snapshot.mjs <tokens.json | downloaded snapshot.json> <out-dir>'); process.exit(2); }
-  const built = writeDtcg(tokensOf(JSON.parse(readFileSync(src, 'utf8'))), dir);
+  // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
+  const readJson = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
+  const built = writeDtcg(tokensOf(readJson(src)), dir);
   const r = built.report;
   console.log(`${built.files.length} files → ${dir}`);
   for (const k of ['skipped', 'warnings', 'renamed']) if ((r[k] || []).length) console.log(`  ${k}: ${r[k].length} (${r[k].slice(0, 3).map((x) => x.name).join(', ')}${r[k].length > 3 ? ', …' : ''})`);
