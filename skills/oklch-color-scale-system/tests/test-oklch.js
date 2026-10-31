@@ -1981,6 +1981,24 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
 }
 
 // ============================================================
+// 2.2 — the checks SKILL.md once left to the reader
+// ============================================================
+{
+  const g = require('../scripts/generate.js');
+  let worst = 0;
+  for (const hex of ['#E07000', '#D4A017', '#0E8D00', '#1E6FD9', '#BD00BE', '#6A6A6A', '#F5C400', '#C94F9F'])
+    for (const mode of ['free', 'anchored', 'grey']) for (const dark of [false, true])
+      for (const st of g.generateScale(hex, mode, { dark }).steps) worst = Math.max(worst, Math.abs(g.linearToOKLCH(...g.hexToLinear(st.hex))[0] - st.L));
+  check('2.2 round-trip: every step\'s hex converts back to its L within 0.01, light and dark, in every mode', worst < 0.01, `worst ${worst}`);
+  const orange = g.generateScale('#E07000', 'free');
+  const hit = g.hueCollisions(g.generateScale('#AC731A', 'free'), orange);
+  check('2.2 collision: a low-H yellow names each of steps 9-12 within 3° of orange, with both hues', JSON.stringify(hit.map(c => c.step)) === '[11,12]' && hit.every(c => c.delta < 3 && typeof c.otherH === 'number'), JSON.stringify(hit));
+  check('2.2 collision: a yellow well clear of orange names none', g.hueCollisions(g.generateScale('#D5BF36', 'free'), orange).length === 0);
+  const table = require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), '#AC731A', '--collide-with', '#E07000', '--table'], { encoding: 'utf8' });
+  check('2.2 collision: --collide-with --table prints the steps and both hues', /⚠ hue within 3° of #E07000 at step 11 \(55\.75° vs 53\.16°\), step 12/.test(table), table.split('\n')[1]);
+}
+
+// ============================================================
 // Report
 // ============================================================
 

@@ -109,3 +109,10 @@ Fixture: `#BD00BE` and `#D93025` in free mode, and `#6A6A6A` in grey mode.
 
 Assert: violet's `contrastDriftWarning` names step 8 at 4.50:1 where a neutral at its L gives 4.12:1, across 4.5:1. Red's step 8 is 4.496:1 raw, so red gets no warning even though `contrastVsWhite` reads `4.5`. A grey ramp never gets one. `--table` prints it. No generated hex changes.
 Runs: node tests/test-oklch.js — "2.1 drift: violet step 8 crosses 4.5:1 where a neutral does not, and is named", "2.1 drift: a neutral ramp never drifts", "2.1 drift: --table prints the warning"
+
+## A13 · The collision and the round-trip are computed, never done by hand
+
+Fixture: `#AC731A` and `#D5BF36` in free mode against `#E07000`; eight sources across every mode, light and dark.
+
+Assert: `#AC731A` names steps 11 and 12 within 3° of the orange, each with both hues; `#D5BF36` names none; `--collide-with --table` prints the warning. Every step's hex converts back to its L within 0.01.
+Runs: node tests/test-oklch.js — "2.2 collision: a low-H yellow names each of steps 9-12 within 3° of orange, with both hues", "2.2 collision: a yellow well clear of orange names none", "2.2 collision: --collide-with --table prints the steps and both hues", "2.2 round-trip: every step's hex converts back to its L within 0.01, light and dark, in every mode"

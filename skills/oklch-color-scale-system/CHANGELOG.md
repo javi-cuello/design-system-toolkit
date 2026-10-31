@@ -1,5 +1,6 @@
 # Changelog — oklch-color-scale-system
 
+- 2.2.0 (2026-10-31): `--collide-with` and `hueCollisions()` report steps 9–12 within 3° of another scale; the hex-to-L round-trip is a suite check, no longer a step done by hand. Output unchanged without the flag. Case A13.
 - 2.1.5 (2026-10-31): the sRGB transfer and OKLab conversion are copies of `tools/shared/colour.js`, held by `tools/shared/test-colour.mjs`; the three hand-written linearisations are one. Output unchanged.
 - 2.1.4 (2026-10-14): names that could identify a project are replaced in a fixture, an example or a comment; behaviour unchanged.
 - 2.1.3 (2026-10-08): a closed deprecation watch removed from the open questions.

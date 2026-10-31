@@ -21,6 +21,8 @@
 //   --alpha                     also compute the alpha (transparent) scale
 //   --table                     human-readable table instead of JSON
 //   --name <label>              label for output (default: "scale")
+//   --collide-with <hex>        generate that colour's scale with the same options and
+//                               report the steps 9-12 whose hue sits within 3° of it
 //
 // Examples:
 //   node scripts/generate.js '#1A6FBF'
@@ -1236,6 +1238,20 @@ function driftTowardReference(scale, referenceHex) {
   return { ...scale, steps, solidForeground, driftedToward: { hex: referenceHex, oklch: `oklch(${refL.toFixed(4)} ${refC.toFixed(4)} ${refH.toFixed(2)})` } };
 }
 
+// Cross-family collision (SKILL.md, Yellow): the steps whose hue sits within
+// `within` degrees of another scale's at the same step, steps 9-12 by default.
+// Detection only: whether to lower the tail's rate is the reader's call.
+function hueCollisions(scale, other, opts) {
+  const { steps = [9, 10, 11, 12], within = 3 } = opts || {};
+  const out = [];
+  for (const n of steps) {
+    const a = scale.steps[n - 1], b = other.steps[n - 1];
+    let d = Math.abs(a.H - b.H); if (d > 180) d = 360 - d;
+    if (d < within) out.push({ step: n, H: +a.H.toFixed(2), otherH: +b.H.toFixed(2), delta: +d.toFixed(2) });
+  }
+  return out;
+}
+
 // ============================================================
 // CLI
 // ============================================================
@@ -1256,6 +1272,7 @@ function parseArgs(argv) {
     else if (a === '--table') args.table = true;
     else if (a === '--name') args.name = argv[++i];
     else if (a === '--drift-toward') args.driftToward = argv[++i];
+    else if (a === '--collide-with') args.collideWith = argv[++i];
     else positional.push(a);
   }
   args.hex = positional[0];
@@ -1273,6 +1290,9 @@ function buildTable(scale, alphaSteps) {
   }
   if (scale.contrastDriftWarning) {
     lines.push(`⚠ ${scale.contrastDriftWarning}`);
+  }
+  if (scale.collisions && scale.collisions.length) {
+    lines.push(`⚠ hue within 3° of ${scale.collidesWith} at ${scale.collisions.map(c => `step ${c.step} (${c.H}° vs ${c.otherH}°)`).join(', ')}: lower the tail's rate as a whole (SKILL.md, Yellow), never one step.`);
   }
   lines.push('');
   const header = alphaSteps
@@ -1299,7 +1319,7 @@ function printTable(scale, alphaSteps) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.hex) {
-    console.error('Usage: node scripts/generate.js <hex> [--mode free|anchored|grey|gray] [--dark] [--no-ceiling] [--ease-hue] [--oklch-text] [--peak <1-12>] [--saturation <0-1>] [--alpha] [--drift-toward <hex>] [--table] [--name <label>]');
+    console.error('Usage: node scripts/generate.js <hex> [--mode free|anchored|grey|gray] [--dark] [--no-ceiling] [--ease-hue] [--oklch-text] [--peak <1-12>] [--saturation <0-1>] [--alpha] [--drift-toward <hex>] [--collide-with <hex>] [--table] [--name <label>]');
     process.exit(1);
   }
 
@@ -1311,6 +1331,10 @@ function main() {
     if (args.saturation !== null) hex = sourceAtSaturation(hex, args.saturation, args.noCeiling);
     scale = generateScale(hex, args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText, peakStep: args.peak });
     if (args.driftToward) scale = driftTowardReference(scale, args.driftToward);
+    if (args.collideWith) {
+      const other = generateScale(args.collideWith, args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText });
+      scale = { ...scale, collidesWith: args.collideWith, collisions: hueCollisions(scale, other) };
+    }
     alphaSteps = args.alpha ? generateAlphaScale(scale, args.name) : null;
   } catch (e) {
     console.error(e.message);
@@ -1350,7 +1374,7 @@ function composeModeDescription(byMode) {
 module.exports = {
   composeModeDescription,
   generateScale, generateNeutralAlpha, generateChromaticAlpha, generateAlphaScale,
-  driftTowardReference, buildTable,
+  driftTowardReference, buildTable, hueCollisions,
   detectFamily, maxChromaAt, usableChromaAt, sourceAtSaturation,
   parseHex, hexToLinear, linearToOKLCH, oklchToHex, oklchToRgb01, isOutOfGamut,
   wcagLuminance, contrastRatio, apcaLc,
