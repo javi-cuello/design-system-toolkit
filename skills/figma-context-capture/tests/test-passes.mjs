@@ -134,6 +134,8 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   ok('pass B: a leading mark is counted with its pages, recordable at three', us.count === 3 && us.recordable && JSON.stringify(us.pages) === '["Inputs"]');
   ok('pass B: a lone mark is listed but not recordable', out.prefixes.find((p) => p.prefix === '.').recordable === false);
   const slash = out.separators.find((s) => s.separator === ' / ');
+  const spaced = naming({ pages: [{ name: 'A', names: ['🔒 Button', '_ Chip'] }, { name: 'B', names: ['Button', 'Chip'] }] });
+  ok('pass B: a mark followed by a space still names the bare component it contradicts', JSON.stringify(spaced.contradictions.map((c) => c.name)) === '["Button","Chip"]');
   ok('pass B: a separator needs two siblings on one stem; a lone slash-name is no evidence', slash.groups === 1 && slash.stems[0].stem === 'Top bar' && !slash.stems.some((g) => g.stem === 'Lone'));
   ok('pass B: " / " is not also counted as a bare "/"', !out.separators.some((s) => s.separator === '/'));
   ok('pass B: a name prefixed on one page and bare on another is a contradiction, with both pages', JSON.stringify(out.contradictions) === JSON.stringify([{ name: 'Label', prefixed: '_Label', prefixedOn: 'Inputs', bareOn: ['Forms'] }]));
@@ -159,6 +161,11 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   ok('pass E: headings as written, bullets and those ending in a full stop', JSON.stringify(chip.headings) === '["## Usage","## Behaviour"]' && chip.bullets === 2 && chip.bulletsWithStop === 1);
   ok('pass E: spelling pairs are counted, both sides', out.spelling.colour === 1 && out.spelling.color === 1 && out.spelling.behaviour === 1 && out.spelling.behavior === 0);
   ok('pass E: a header instance outside any component is a candidate, with its text layers; one inside a component is not', out.headerCandidates.length === 1 && out.headerCandidates[0].component === 'Doc header' && JSON.stringify(out.headerCandidates[0].textLayers) === '["Title","Body"]' && out.headerPage === 'Chip');
+  // ids mode loads no page itself: the header scan must load the page it reads, as dynamic-page requires
+  let loaded = false;
+  const walk = page.findAllWithCriteria;
+  page.loadAsync = async () => { loaded = true; };
+  page.findAllWithCriteria = function (c) { if (!loaded) throw new Error('page not loaded'); return walk.call(this, c); };
   const byIds = await run(read('pass-e-descriptions.js').replace(/ids: \[\]/, 'ids: ["5:3", "9:9"]'), f2);
   ok('pass E: given ids are read as given, a missing one reported', byIds.samples[0].name === 'Plain' && byIds.samples[0].headings.length === 0 && byIds.samples[1].error === 'not found');
 }

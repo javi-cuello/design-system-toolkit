@@ -264,6 +264,17 @@ if node_bin:
         clean = json.loads(subprocess.run([node_bin, "-e", STATEFUL, files], capture_output=True, text=True).stdout or "[]")
         chk("after every batch, the read-back finds every cell as meant",
             sum(p["read"] for p in clean) == 1 + 24 + 144 and all(p["read"] == p["expected"] and p["mismatches"] == [] for p in clean), str(clean)[:300])
+        with tempfile.TemporaryDirectory() as tmp2:
+            stem2 = os.path.join(tmp2, "apply_matrix.js")
+            subprocess.run([sys.executable, os.path.join(SKILL, "scripts", "build-matrix-script.py"),
+                "--node-map", os.path.join(SKILL, "references", "node-map.example.json"), "--instance", "9:1",
+                "--color-a", ",".join(h.lstrip("#") for h in A), "--color-a-name", "Blue", "--color-b", ",".join(B), "--color-b-name", "Green",
+                "--title", "Blue vs Green", "--out", stem2], capture_output=True, text=True)
+            ap2 = sorted([os.path.join(tmp2, f) for f in os.listdir(tmp2) if f.startswith("apply_matrix.") and ".verify." not in f], key=lambda f: int(f.split(".")[-2]))
+            ve2 = sorted([os.path.join(tmp2, f) for f in os.listdir(tmp2) if ".verify." in f])
+            bare = json.loads(subprocess.run([node_bin, "-e", STATEFUL, json.dumps({"apply": ap2, "verify": ve2})], capture_output=True, text=True).stdout or "[]")
+            chk("colours given without their # read back clean (reviewed: every header was a false mismatch)",
+                bool(bare) and all(p["mismatches"] == [] for p in bare), str([m for p in bare for m in p["mismatches"]][:2]))
         p2b = bm.build_payload(NODE_MAP, "9:1", A, "Blue", B, "Green", title="Blue vs Green")
         cell = next(b for b in p2b["blocks"] if b["pass"] == "4.5")
         target = f"I9:1;{cell['suffix']}"

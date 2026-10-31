@@ -20,7 +20,9 @@ const BLOCK = /\/\* ui-base v\d+ start[\s\S]*?\/\* ui-base v\d+ end \*\//;
 
 // §2: each sync API dynamic-page makes throw. `.instances` and `.consumers` are left to the read: a plugin's own
 // arrays and maps carry those names as often as Figma's nodes do, so a hit is not a finding without one.
-export const BANNED = /getNodeById\(|getStyleById\(|getFileThumbnailNode\(|getLocalTextStyles\(|getLocalPaintStyles\(|getLocalEffectStyles\(|getLocalGridStyles\(|getVariableById\(|getVariableCollectionById\(|getLocalVariables\(|getLocalVariableCollections\(|\.mainComponent\b|currentPage\s*=[^=]|figma\.root\.findAll\b|\.masterComponent\b/;
+export const BANNED = /getNodeById\(|getStyleById\(|getFileThumbnailNode\(|getLocalTextStyles\(|getLocalPaintStyles\(|getLocalEffectStyles\(|getLocalGridStyles\(|getVariableById\(|getVariableCollectionById\(|getLocalVariables\(|getLocalVariableCollections\(|\.mainComponent\b|figma\.currentPage\s*=[^=]|\.masterComponent\b/;
+// `figma.root.findAll` is sync-safe once every page is loaded, which is the checklist's own fix for it.
+export const ROOT_WALK = /figma\.root\.findAll\b/;
 // §1: a gated API and the permission it needs; without it every call throws at runtime.
 export const GATED = { teamlibrary: /figma\.teamLibrary\b/, payments: /figma\.payments\b/, currentuser: /figma\.currentUser\b/, activeusers: /figma\.activeUsers\b/ };
 const NETWORK = /\bfetch\(|XMLHttpRequest|WebSocket/;
@@ -101,6 +103,8 @@ export function checkPlugin(dir, opts = {}) {
 
   // §2 banned sync APIs: dynamic-page makes each throw
   const banned = hits(codeJs, BANNED);
+  if (codeJs != null && !/loadAllPagesAsync\(/.test(codeJs)) banned.push(...hits(codeJs, ROOT_WALK));
+  banned.sort((a, b) => a - b);
   if (banned.length) add(m.documentAccess === "dynamic-page" ? "error" : "warn", "2", `a sync API dynamic-page refuses, at code.js:${banned.join(", ")}: convert each to its …Async form${m.documentAccess === "dynamic-page" ? "" : " BEFORE documentAccess is added"}`, "manual");
 
   // §3 network truth

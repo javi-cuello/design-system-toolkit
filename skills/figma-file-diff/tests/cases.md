@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.0)
+# Eval cases — figma-file-diff (v1.4.1)
+
+**Walked: 2026-10-31 for 1.4.1** — A8 re-run: 25 passed, the printed `COMPONENT_PATH` line run as printed; a serialise run against a manifest run is refused.
 
 **Walked: 2026-10-31 against v1.4.0** — A8 added and executed: `node tests/test-report.mjs` 24 passed, `--next`'s printed lines run as printed and `--stable` over real `serialise.js`/`manifest.js` output. A6 retraced to Step 6's `--stable`; A1–A5 and A7 unchanged.
 

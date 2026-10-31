@@ -63,7 +63,7 @@ export function naming(passA, passD = []) {
   for (const { name, page } of all) {
     const pre = leading(name);
     if (!pre) continue;
-    const rest = name.slice(pre.length);
+    const rest = name.slice(pre.length).trimStart();   // `🔒 Button` and `_ Chip` name Button and Chip
     if (bare.has(rest)) contradictions.push({ name: rest, prefixed: name, prefixedOn: page, bareOn: [...new Set(bare.get(rest))] });
   }
 

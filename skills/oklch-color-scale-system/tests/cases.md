@@ -1,4 +1,6 @@
-# Eval cases — oklch-color-scale-system (v2.2.0)
+# Eval cases — oklch-color-scale-system (v2.2.1)
+
+**Walked: 2026-10-31 for 2.2.1** — A13 re-run: `node tests/test-oklch.js` all pass, `--collide-mode anchored` equal to the API's answer.
 
 **Walked: 2026-10-31 for 2.2.0** — A13 added and executed: `node tests/test-oklch.js` 655/655, every pinned hex unchanged; `--collide-with` is additive, so A1–A12 hold as written.
 

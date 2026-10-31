@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.11.1)
+# Eval cases — figma-context-capture (v2.11.2)
+
+**Walked: 2026-10-31 for 2.11.2** — C16 re-run: `node tests/test-passes.mjs` 47/47, the ids-mode page now refuses an unloaded walk.
 
 **Walked: 2026-10-31 for 2.11.1** — C16 rerun: `node tests/test-passes.mjs` 46/46, pass F given the house settings from `standards/audit-settings.json` as `TOKENS`, and refusing with none prepended. Other cases unchanged.
 

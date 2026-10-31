@@ -5,7 +5,7 @@ description: Generates perceptually consistent 12-step OKLCH color scales for UI
 
 # OKLCH Color Scale System
 
-**Version 2.2.0** — history in CHANGELOG.md.
+**Version 2.2.1** — history in CHANGELOG.md.
 
 A principled system for generating perceptually consistent 12-step color scales for UI design systems, built on the OKLCH color space.
 
@@ -550,7 +550,7 @@ Cross-scale consistency note: since 2.0.0 the text steps are luminance-targeted,
 | 94 | 1% |
 | ≥96 | 0% |
 
-The risk isn't confined to the low edge of the family boundary — it persists deep into what this skill recommends as a clean yellow source range (75–115), with roughly half of sources in H 75–84 colliding at default settings. **For any yellow source with H < 96, run the collision check; don't assume "H is inside the recommended range" is sufficient.** `generate.js <yellow> --collide-with <the project's orange source>` generates the orange with the same options and returns `collisions`, each of steps 9–12 within 3° with both hues (`hueCollisions(scale, other)` in the API; `--table` prints it as a warning). Pass the mode the project's orange is generated in. If they collide or sit within a few degrees, don't patch the single colliding step in isolation — that creates a visible kink. Instead reduce the rate for the whole affected tail (steps 9–12) uniformly (a rate around 58 typically restores several degrees of separation for a borderline source) and recompute those steps together, keeping L and C exactly as generated and only adjusting H.
+The risk isn't confined to the low edge of the family boundary — it persists deep into what this skill recommends as a clean yellow source range (75–115), with roughly half of sources in H 75–84 colliding at default settings. **For any yellow source with H < 96, run the collision check; don't assume "H is inside the recommended range" is sufficient.** `generate.js <yellow> --collide-with <the project's orange source>` generates the orange with the same `--dark`, ceiling, hue-easing and text schedule (never the yellow's `--peak` or `--saturation`) and returns `collisions`, each of steps 9–12 within 3° with both hues (`hueCollisions(scale, other)` in the API; `--table` prints it as a warning). Where the orange is generated in another mode than the yellow, pass it as `--collide-mode <mode>`. If they collide or sit within a few degrees, don't patch the single colliding step in isolation — that creates a visible kink. Instead reduce the rate for the whole affected tail (steps 9–12) uniformly (a rate around 58 typically restores several degrees of separation for a borderline source) and recompute those steps together, keeping L and C exactly as generated and only adjusting H.
 
 **No single global rate eliminates the collision risk.** Swept rate values 20–70 against the H 72–95 collision zone: even `rate=20` — far too flat to still serve the rule's purpose of avoiding the olive dead-zone — only reduces collision to 10.6%, not zero. There's no rate that both eliminates orange-collision risk for low-H yellow sources and corrects the olive drift the rule exists to fix. The per-source check-and-adjust approach above is the actual fix, not a missing default value.
 

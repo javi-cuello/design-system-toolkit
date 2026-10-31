@@ -138,13 +138,11 @@ ok("a dump path is a code span, so a layer named <slot> or _private_ survives ma
   const rb = await bare(fileOf()), tb = await bare(fileOf(true));
   const todo = next(rb, tb);
   ok("--next: the differing variable whose fields are unread is listed, and only it", () => assert.deepEqual(todo.vars, ["Space/Space/2"]));
-  ok("--next: the differing component not drilled is listed with dump-node.js's name and parent", () =>
-    assert.deepEqual(todo.dumps, [{ path: "❖ Table / Row - Effects", name: "Row - Effects", parent: "❖ Table" }]));
+  ok("--next: the differing component not drilled is listed by its full path", () => assert.deepEqual(todo.dumps, ["❖ Table / Row - Effects"]));
   const printed = renderNext(rb, tb);
   const varsLine = printed.split("\n").find((l) => l.startsWith("const VARS = "));
-  const nameLine = printed.split("\n").find((l) => l.startsWith("const COMPONENT_NAME = "));
-  const parentLine = printed.split("\n").find((l) => l.startsWith("const PARENT_NAME = "));
-  const dumpSrc = read("dump-node.js").replace(/^const COMPONENT_NAME = .*$/m, nameLine).replace(/^const PARENT_NAME = .*$/m, parentLine);
+  const pathLine = printed.split("\n").find((l) => l.startsWith("const COMPONENT_PATH = "));
+  const dumpSrc = read("dump-node.js").replace(/^const COMPONENT_PATH = .*$/m, pathLine);
   const dumpOf = (file) => new Async("figma", dumpSrc)(file);
   const fill = async (side, file) => ({ ...side, manifest: await run("manifest.js", file, varsLine), dumps: [await dumpOf(file)] });
   const rf = await fill(rb, fileOf()), tf = await fill(tb, fileOf(true));
@@ -162,7 +160,9 @@ ok("a dump path is a code span, so a layer named <slot> or _private_ survives ma
   ok("--stable: a file that moved between runs names each hash and total that moved", () =>
     assert.ok(moved.some((m) => m.startsWith("serialise deepHash")) && moved.some((m) => m.startsWith("serialise totalNodes")) && moved.some((m) => m.startsWith("manifest fileHash")), moved.join("; ")));
   ok("--stable: runs naming different files are refused", () => assert.throws(() => stable(first, { serialise: tgt.serialise }), /different files/));
-  ok("--stable: a run with neither hash is refused, never called stable", () => assert.throws(() => stable(first, { inventory: ref.inventory }), /needs serialise/));
+  ok("--stable: a run with neither hash is refused, never called stable", () => assert.throws(() => stable(first, { inventory: ref.inventory }), /same script/));
+  ok("--stable: a serialise run against a manifest run compares nothing, so is refused", () =>
+    assert.throws(() => stable({ serialise: first.serialise }, { manifest: again.manifest }), /same script/));
 }
 
 console.log(`${n} passed` + (failed ? `, ${failed} failed` : ""));

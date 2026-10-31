@@ -23,6 +23,7 @@
 //   --name <label>              label for output (default: "scale")
 //   --collide-with <hex>        generate that colour's scale with the same options and
 //                               report the steps 9-12 whose hue sits within 3° of it
+//   --collide-mode <mode>       the mode that colour is generated in (default: --mode)
 //
 // Examples:
 //   node scripts/generate.js '#1A6FBF'
@@ -1273,6 +1274,7 @@ function parseArgs(argv) {
     else if (a === '--name') args.name = argv[++i];
     else if (a === '--drift-toward') args.driftToward = argv[++i];
     else if (a === '--collide-with') args.collideWith = argv[++i];
+    else if (a === '--collide-mode') args.collideMode = argv[++i];
     else positional.push(a);
   }
   args.hex = positional[0];
@@ -1319,7 +1321,7 @@ function printTable(scale, alphaSteps) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.hex) {
-    console.error('Usage: node scripts/generate.js <hex> [--mode free|anchored|grey|gray] [--dark] [--no-ceiling] [--ease-hue] [--oklch-text] [--peak <1-12>] [--saturation <0-1>] [--alpha] [--drift-toward <hex>] [--collide-with <hex>] [--table] [--name <label>]');
+    console.error('Usage: node scripts/generate.js <hex> [--mode free|anchored|grey|gray] [--dark] [--no-ceiling] [--ease-hue] [--oklch-text] [--peak <1-12>] [--saturation <0-1>] [--alpha] [--drift-toward <hex>] [--collide-with <hex> [--collide-mode <mode>]] [--table] [--name <label>]');
     process.exit(1);
   }
 
@@ -1332,7 +1334,8 @@ function main() {
     scale = generateScale(hex, args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText, peakStep: args.peak });
     if (args.driftToward) scale = driftTowardReference(scale, args.driftToward);
     if (args.collideWith) {
-      const other = generateScale(args.collideWith, args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText });
+      // the other colour in its own mode where it is generated in another; peak and saturation are this source's, not its
+      const other = generateScale(args.collideWith, args.collideMode || args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText });
       scale = { ...scale, collidesWith: args.collideWith, collisions: hueCollisions(scale, other) };
     }
     alphaSteps = args.alpha ? generateAlphaScale(scale, args.name) : null;

@@ -45,6 +45,13 @@ try {
     assert.equal(sync.length, 1); assert.equal(sync[0].level, "error");
   });
 
+  ok("P2, reviewed: a root walk is sync-unsafe only where the pages are not loaded first; a local named currentPage is no write", () => {
+    const unloaded = plant("walk-unloaded", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\nconst all = figma.root.findAll(() => true);\n"); return out; });
+    assert.equal(said(checkPlugin(unloaded), /sync API/)[0].level, "error");
+    const loaded = plant("walk-loaded", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\nawait figma.loadAllPagesAsync();\nconst all = figma.root.findAll(() => true);\nconst currentPage = figma.currentPage;\n"); return out; });
+    assert.deepEqual(said(checkPlugin(loaded), /sync API/), []);
+  });
+
   ok("P3: a fetch under [\"none\"] is blocked, unpkg with no fallback and @latest are needs-decision", () => {
     const dir = plant("data-puller", (out) => {
       out["ui.html"] = out["ui.html"].replace("</script>", "fetch('https://api.example.com/x'); fetch('https://unpkg.com/lucide-static@latest/icons/a.svg');\n</script>");

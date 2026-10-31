@@ -226,12 +226,13 @@ export function render(ref, tgt) {
 }
 
 // Steps 3 and 5's next reads, from the hashes: the VARS line for manifest.js, and the
-// COMPONENT_NAME / PARENT_NAME pair dump-node.js takes for each differing component not drilled.
+// COMPONENT_PATH dump-node.js takes for each differing component not drilled. A path, never a
+// name and parent split from it: a component's own name may hold " / " (`Top bar / Default`).
 export function next(ref, tgt) {
   const { vars, dumps } = build(ref, tgt).pending;
   return {
     vars,
-    dumps: dumps.map((path) => { const parts = path.split(" / "); return { path, name: parts[parts.length - 1], parent: parts.length > 1 ? parts[parts.length - 2] : null }; }),
+    dumps,
   };
 }
 
@@ -239,7 +240,7 @@ export function renderNext(ref, tgt) {
   const { vars, dumps } = next(ref, tgt);
   const lines = [];
   if (vars.length) lines.push("manifest.js, in both files, with:", "const VARS = " + JSON.stringify(vars) + ";", "");
-  for (const d of dumps) lines.push("dump-node.js, in both files, for " + d.path + ":", "const COMPONENT_NAME = " + JSON.stringify(d.name) + ";", "const PARENT_NAME = " + JSON.stringify(d.parent) + ";", "");
+  for (const d of dumps) lines.push("dump-node.js, in both files, with:", "const COMPONENT_PATH = " + JSON.stringify(d) + ";", "");
   return lines.length ? lines.join("\n") : "Nothing left to read: render the report.\n";
 }
 
@@ -251,7 +252,8 @@ export function stable(first, again) {
   const moved = [];
   const cmp = (label, x, y) => { if (x !== undefined && y !== undefined && x !== y) moved.push(label + " " + x + " → " + y); };
   const fs = first.serialise || {}, as = again.serialise || {}, fm = first.manifest || {}, am = again.manifest || {};
-  if (!(fs.deepHash || fm.fileHash) || !(as.deepHash || am.fileHash)) throw new Error("each run needs serialise.js or manifest.js results to compare");
+  // a hash on both sides, never one on each: a serialise run against a manifest run compares nothing
+  if (!((fs.deepHash && as.deepHash) || (fm.fileHash && am.fileHash))) throw new Error("both runs need the same script's results, serialise.js or manifest.js, to compare");
   cmp("serialise deepHash", fs.deepHash, as.deepHash);
   cmp("serialise totalNodes", fs.totalNodes, as.totalNodes);
   cmp("serialise count", fs.count, as.count);

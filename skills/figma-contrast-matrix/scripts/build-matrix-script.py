@@ -269,6 +269,8 @@ function fillHex(node) {{
   const f = node && Array.isArray(node.fills) && node.fills[0];
   return f && f.type === 'SOLID' ? toHex(f.color) : null;
 }}
+// the hex as toHex writes it: the CLI takes a colour with or without its '#'
+const hexOf = (x) => '#' + String(x).trim().replace(/^#/, '').toUpperCase();
 const prop = (inst, key) => (inst.componentProperties && inst.componentProperties[key] ? inst.componentProperties[key].value : undefined);
 const mismatches = [];
 const differs = (nodeId, field, want, got) => {{ if (String(want) !== String(got)) mismatches.push({{ nodeId, field, want, got: got === undefined ? null : got }}); }};
@@ -285,8 +287,8 @@ for (const h of DATA.headers) {{
   read++;
   differs(nodeId, 'label', String(h.step), prop(inst, DATA.headerLabelKey));
   if (DATA.headerVariantKey) differs(nodeId, 'variant', h.variant, prop(inst, DATA.headerVariantKey));
-  differs(nodeId, 'Content fill', h.hex.toUpperCase(), fillHex(inst.findOne((n) => n.name === 'Content')));
-  differs(nodeId, 'Label fill', h.textHex.toUpperCase(), fillHex(inst.findOne((n) => n.name === 'Label')));
+  differs(nodeId, 'Content fill', hexOf(h.hex), fillHex(inst.findOne((n) => n.name === 'Content')));
+  differs(nodeId, 'Label fill', hexOf(h.textHex), fillHex(inst.findOne((n) => n.name === 'Label')));
 }}
 for (const b of DATA.blocks) {{
   const nodeId = `I${{DATA.instanceId}};${{b.suffix}}`;

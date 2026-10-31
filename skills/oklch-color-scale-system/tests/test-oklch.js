@@ -1995,6 +1995,8 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   check('2.2 collision: a low-H yellow names each of steps 9-12 within 3° of orange, with both hues', JSON.stringify(hit.map(c => c.step)) === '[11,12]' && hit.every(c => c.delta < 3 && typeof c.otherH === 'number'), JSON.stringify(hit));
   check('2.2 collision: a yellow well clear of orange names none', g.hueCollisions(g.generateScale('#D5BF36', 'free'), orange).length === 0);
   const table = require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), '#AC731A', '--collide-with', '#E07000', '--table'], { encoding: 'utf8' });
+  const viaCli = JSON.parse(require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), '#AC731A', '--collide-with', '#E07000', '--collide-mode', 'anchored'], { encoding: 'utf8' }));
+  check('2.2 collision: --collide-mode generates the other colour in its own mode', JSON.stringify(viaCli.collisions) === JSON.stringify(g.hueCollisions(g.generateScale('#AC731A', 'free'), g.generateScale('#E07000', 'anchored'))), JSON.stringify(viaCli.collisions));
   check('2.2 collision: --collide-with --table prints the steps and both hues', /⚠ hue within 3° of #E07000 at step 11 \(55\.75° vs 53\.16°\), step 12/.test(table), table.split('\n')[1]);
 }
 

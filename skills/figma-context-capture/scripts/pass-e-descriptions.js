@@ -62,6 +62,7 @@ var headers = [];
 var first = null;
 for (var f = 0; f < picked.length && !first; f++) if (!picked[f].missing) first = pageOf(picked[f]);
 if (first) {
+  if (first.loadAsync) await first.loadAsync();   // ids mode loads no page, and dynamic-page throws on an unloaded one
   var inst = first.findAllWithCriteria({ types: ['INSTANCE'] });
   for (var h = 0; h < inst.length && headers.length < 5; h++) {
     if (!/header/i.test(inst[h].name) || insideComponent(inst[h])) continue;

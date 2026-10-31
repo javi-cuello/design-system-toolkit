@@ -1,4 +1,6 @@
-# Eval cases — figma-contrast-matrix (v3.7.0)
+# Eval cases — figma-contrast-matrix (v3.7.1)
+
+**Walked: 2026-10-31 for 3.7.1** — A16 re-run: `python3 tests/test-matrix.py` 49 passed, colours given without `#` read back clean.
 
 **Walked: 2026-10-31 for 3.7.0** — A16 added and executed: `python3 tests/test-matrix.py` 48 passed, the build writing two read-back parts for a full grid, every one of 169 cells read back as meant after the eight batches ran against a stateful stand-in, and a block whose `Pass` was changed after the write named with what was meant and what is there. A10's assertion now names the read-back; its 2026-08-10 live walk did the same re-read by hand. Not walked live: the read-back parts have met only the stand-in, and their size (84 cells) is not yet measured on a real file.
 
