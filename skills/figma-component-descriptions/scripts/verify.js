@@ -33,7 +33,20 @@ const CONFIG = {
 
 // A claim that the component cannot be changed (SKILL.md step 4, false fixity). English
 // only: a description in another language is read for it by hand.
-const FIXITY = /\b(?:is|are) (?:fixed|static|fully composed)\b|\bnot (?:customi[sz]able|configurable)\b|\bcannot be (?:customi[sz]ed|configured|changed)\b|\bfully composed\b|\bhas no (?:props|properties|options)\b/i;
+const FIXITY = /\b(?:is|are) (?:fixed|static|fully composed)\b|\bnot (?:customi[sz]able|configurable)\b|\bcannot be (?:customi[sz]ed|configured|changed)\b|\bfully composed\b|\bhas no (?:props|properties|options)\b/gi;
+// The claim must be about the component, not a part of it: "The icon is fixed"
+// says nothing of the interface. Its subject, the words before it in the
+// clause, holds nothing but articles, its verb and the component's own name,
+// singular or plural.
+const SUBJECT_ONLY = new Set(["a", "an", "the", "this", "these", "it", "its", "component", "components", "is", "are"]);
+const fixityOf = (md, name) => {
+  const own = new Set(name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).flatMap((w) => [w, w.replace(/s$/, ""), w.replace(/es$/, "")]));
+  for (const m of md.matchAll(FIXITY)) {
+    const subject = md.slice(0, m.index).split(/[.!?:;,\n]/).pop().toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    if (subject.every((w) => SUBJECT_ONLY.has(w) || own.has(w) || own.has(w.replace(/s$/, "")) || own.has(w.replace(/es$/, "")))) return m;
+  }
+  return null;
+};
 
 const CONTENT = ['TEXT','INSTANCE','VECTOR','RECTANGLE','ELLIPSE','LINE','POLYGON','STAR','BOOLEAN_OPERATION'];
 
@@ -236,7 +249,7 @@ for (const page of figma.root.children) {
       if (!texts.has(norm)) texts.set(norm, []);
       texts.get(norm).push({ page: page.name, name: n.name, id: n.id, axes: Object.keys(defsOf(n) || {}).map(k => k.split("#")[0]) });
       const d = defsOf(n);
-      const claim = FIXITY.exec(md);
+      const claim = fixityOf(md, n.name);
       if (claim && d && Object.keys(d).length)
         falseFixity.push({ page: page.name, name: n.name, claim: claim[0], interface: Object.keys(d).map(k => k.split("#")[0] + " (" + d[k].type + ")") });
     }

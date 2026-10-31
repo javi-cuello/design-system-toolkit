@@ -113,7 +113,7 @@ badge.name = 'Badge';
   const defs = { 'Size': { type: 'VARIANT', variantOptions: ['S', 'L'] } };
   const chip = node({ id: '5:1', type: 'COMPONENT_SET', name: 'Chip', descriptionMarkdown: text, componentPropertyDefinitions: defs });
   const tag = node({ id: '5:2', type: 'COMPONENT', name: 'Tag', descriptionMarkdown: text.replace('filters', 'filters ') + '\n', componentPropertyDefinitions: {} });
-  const shared = 'A top bar sits at the top of a screen. It is fixed.\n\n## Usage\n\n- On every screen\n\n## Don\'t\n\n- Stack two';
+  const shared = 'A top bar sits at the top of a screen. The icon is static per state. It is fixed.\n\n## Usage\n\n- On every screen\n\n## Don\'t\n\n- Stack two';
   const barA = node({ id: '5:3', type: 'COMPONENT', name: 'Top bar / Default', descriptionMarkdown: shared, componentPropertyDefinitions: { 'Back#1:0': { type: 'BOOLEAN' } } });
   const barB = node({ id: '5:4', type: 'COMPONENT', name: 'Top bar / Main', descriptionMarkdown: shared, componentPropertyDefinitions: {} });
   const still = node({ id: '5:5', type: 'COMPONENT', name: 'Divider', descriptionMarkdown: 'A divider is fixed: it has no props.\n\n## Usage\n\n- Between groups', componentPropertyDefinitions: {} });
@@ -126,7 +126,14 @@ badge.name = 'Badge';
     o.duplicates.length === 1 && JSON.stringify(o.duplicates[0].components.map((c) => [c.name, c.axes])) === '[["Chip",["Size"]],["Tag",[]]]');
   ok('step 4: a virtual set\'s members sharing their text are not duplicates', !o.duplicates.some((d) => d.components.some((c) => c.name.startsWith('Top bar'))));
   ok('step 4: a claim of fixity on a component with an interface is false fixity; on one with none it is not',
-    o.falseFixity.length === 1 && o.falseFixity[0].name === 'Top bar / Default' && /is fixed/.test(o.falseFixity[0].claim) && o.falseFixity[0].interface[0] === 'Back (BOOLEAN)');
+    o.falseFixity.length === 1 && o.falseFixity[0].name === 'Top bar / Default' && o.falseFixity[0].claim === 'is fixed' && o.falseFixity[0].interface[0] === 'Back (BOOLEAN)');
+  const part = node({ id: '5:7', type: 'COMPONENT', name: 'Toast', descriptionMarkdown: 'A toast confirms an action. The icon is fixed per Feedback value and is not swappable.', componentPropertyDefinitions: { 'Label#2:0': { type: 'TEXT' } } });
+  const pg7 = node({ id: '0:7', type: 'PAGE', name: 'Toast' }, [part, node({ id: '5:8', type: 'TEXT', name: 'Notes' })]);
+  const o7 = await new AsyncFunction('figma', src)({ root: node({ id: '0:0', type: 'DOCUMENT' }, [pg7]), loadAllPagesAsync: async () => {} });
+  ok('step 4: a part said to be fixed is no claim about the component', o7.falseFixity.length === 0);
+  const says = async (text) => (await new AsyncFunction('figma', src)({ root: node({ id: '0:0', type: 'DOCUMENT' }, [node({ id: '0:8', type: 'PAGE', name: 'Button' }, [node({ id: '5:9', type: 'COMPONENT', name: 'Button', descriptionMarkdown: text, componentPropertyDefinitions: { 'Label#3:0': { type: 'TEXT' } } }), node({ id: '5:10', type: 'TEXT', name: 'Notes' })])]), loadAllPagesAsync: async () => {} })).falseFixity.map((f) => f.claim.toLowerCase());
+  ok('step 4: "is not customisable", a plural and a claim after a lead-in clause are claims about the component',
+    JSON.stringify([await says('A button submits. It is not customisable.'), await says('A button submits. Buttons are fixed.'), await says('A button submits. When disabled, the button is fixed.')]) === JSON.stringify([['not customisable'], ['are fixed'], ['is fixed']]));
   const noSep = await new AsyncFunction('figma', src)(f5);
   ok('step 4: with no separator setting, the shared text is a duplicate like any other', noSep.duplicates.length === 2);
 }

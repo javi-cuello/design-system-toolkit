@@ -244,6 +244,32 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     const l2 = await factory().audit({ labels: true });
     ok(!l2.problems.some(p => /labelled/.test(p)) && Array.isArray(l2.labelsUnchecked) && !l2.labelsUnchecked.length, 'A13: labels that follow containment raise nothing');
   }
+  // A14: detect reads the slot it measured. A table holding an earlier slot of
+  // the same name with no cells used to be re-found by name and throw.
+  {
+    const cell = (id, v) => node({ id, type: 'INSTANCE', name: 'Cell', componentProperties: { 'Text#9:0': { type: 'TEXT', value: v } }, getMainComponentAsync: async () => null });
+    const row = (id) => node({ id, type: 'INSTANCE', name: 'Row', componentProperties: {} }, [cell(id + 'a', 'Size'), cell(id + 'b', 'Variant'), cell(id + 'c', 'md')]);
+    const bare = (id) => node({ id, type: 'INSTANCE', name: 'Tab', componentProperties: {} });
+    const early = node({ id: '10:1', type: 'SLOT', name: 'Rows' }, [bare('10:2'), bare('10:3'), bare('10:7')]);
+    const rows = node({ id: '10:4', type: 'SLOT', name: 'Rows' }, [row('10:5'), row('10:6')]);
+    const dTable = node({ id: '10:0', type: 'INSTANCE', name: 'Properties table', componentProperties: {}, getMainComponentAsync: async () => null }, [early, rows]);
+    const dPage = node({ id: '0:4', type: 'PAGE', name: 'Size', loadAsync: async () => {} }, [dTable]);
+    for (const n of [dPage, ...all(dPage)]) n.findAll = (fn) => all(n).filter(fn);
+    dPage.findAllWithCriteria = ({ types }) => all(dPage).filter(n => types.includes(n.type));
+    globalThis.figma = { root: Object.assign({ children: [dPage] }, pluginData(null)) };
+    delete globalThis.PT;
+    let found, threw14 = null;
+    try { found = await factory().detect(); } catch (e) { threw14 = e.message; }
+    ok(!threw14 && found && found.tableName === 'Properties table' && found.columns === 3, 'A14: detect reads the slot it measured, not an earlier one of the same name (' + threw14 + ')');
+    globalThis.figma = { root: Object.assign({ children: [dPage] }, pluginData(Object.assign({ schema: 4 }, found))) };
+    delete globalThis.PT;
+    const counted = await factory().audit();
+    eq(counted.rows, 2, 'A14: the audit counts the rows slot with cells, not an earlier one of the same name');
+    rows.children.length = 0;
+    delete globalThis.PT;
+    const emptied = await factory().audit();
+    ok(emptied.problems.some(p => /empty table not using the empty variant/.test(p)), 'A14: with its rows gone, the empty rows slot is the one read, not the earlier one of the name');
+  }
   delete globalThis.figma; delete globalThis.PT;
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (failures.length) { console.log(failures.join('\n')); process.exit(1); }

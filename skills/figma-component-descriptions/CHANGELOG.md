@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.18.3 (2026-10-31): `falseFixity` holds a claim only when its subject, in its clause, is the component (by its name, singular or plural, or "it"): "The icon is fixed" is about a part. A real library raised five such hits, all false. Case D21.
 - 1.18.2 (2026-10-31): `scripts/sections.mjs` says a missing or broken input in one line naming it, never a stack. Case D20.
 - 1.18.1 (2026-10-31): reviewed: step 8 says `virtualSets` lists every virtual set, `shared: false` where members differ, as `verify.js` returns it. Prose only.
 - 1.18.0 (2026-10-31): `verify.js` returns step 4's `duplicates` and `falseFixity`; `sections.mjs --separator` writes a virtual set's union, each line only some members have naming its subpart, and `--check` holds every member to it. Case D19.

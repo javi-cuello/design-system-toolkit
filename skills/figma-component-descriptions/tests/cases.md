@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.18.2)
+# Eval cases — figma-component-descriptions (v1.18.3)
+
+**Walked: 2026-10-31 for 1.18.3** — D21 added and executed: `node tests/test-verify.mjs` 19/19, the part assertion failing with 1.18.2's check. D19's `verify.js` half Walked live 2026-10-31 on a real component library (64 pages) through the Desktop Bridge, read-only: `verify.js` returned 43 full and 14 compact descriptions passing, one duplicate (two icons sharing one text, a real one) and no virtual sets (the file has none); 1.18.2 listed five false-fixity hits, every one a part's ("The icon is fixed per Feedback value"), and 1.18.3 lists none.
 
 **Walked: 2026-10-31 for 1.18.2** — D20 added and executed: `node tools/toolkit-check/test-missing-input.mjs` 12/12; `node tests/test-sections.mjs` unchanged.
 
@@ -243,9 +245,14 @@ Assert: `verify.js` lists Chip and Tag as one duplicate with each one's axes, ne
 Assert the negative: neither script decides that a duplicate is an artefact or a claim false, and the purpose paragraph for the group stays the writer's (named in `gaps`).
 Recorded under toolkit-standard §D 23: duplicates, false fixity and the union were done by hand each run.
 
-Runs: node tests/test-verify.mjs — "step 4: one text on two differently named components is a duplicate, whitespace aside, with each one's axes"; node tests/test-sections.mjs — "virtual sets: a line one member has says which subpart, and no axis is claimed for the set". Not walked live.
+Runs: node tests/test-verify.mjs — "step 4: one text on two differently named components is a duplicate, whitespace aside, with each one's axes"; node tests/test-sections.mjs — "virtual sets: a line one member has says which subpart, and no axis is claimed for the set". `verify.js` walked live 2026-10-31 (the 1.18.3 line above); `sections.mjs`'s union and `--check` not walked live: that file has no virtual set.
 
 ## D20 · A missing or broken input to `scripts/sections.mjs` is one line naming it — *executed* 2026-10-31
 Fixture: the script's input flag given a path that is not there, then a file that is not JSON.
 Assert: each exits non-zero with one stderr line naming the path and saying `no such file` or `not JSON (…)`, never a Node stack.
 Runs: node tools/toolkit-check/test-missing-input.mjs
+
+## D21 · A part said to be fixed is no false fixity — *executed* 2026-10-31
+Fixture: `Toast`, with a `Label` text property, described "The icon is fixed per Feedback value and is not swappable"; and D19's top bar, whose text now says a part is static before it says the bar is fixed.
+Assert: `verify.js` lists no false fixity on Toast, and still lists Top bar / Default with the claim `is fixed` (the bar's, after its icon's `is static`). On `Button` with a text property, "It is not customisable", "Buttons are fixed" and "When disabled, the button is fixed" are each a claim. Production finding: on a real library every hit was about a part.
+Runs: node tests/test-verify.mjs — "step 4: a part said to be fixed is no claim about the component", "step 4: \"is not customisable\", a plural and a claim after a lead-in clause are claims about the component", "step 4: a claim of fixity on a component with an interface is false fixity; on one with none it is not"

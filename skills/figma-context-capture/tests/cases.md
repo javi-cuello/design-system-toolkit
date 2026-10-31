@@ -1,5 +1,7 @@
 # Eval cases — figma-context-capture (v2.11.2)
 
+**Walked live: 2026-10-31 for 2.11.2, tests only (skill-standard §A clause A)** — C16's bodies on a real component library (64 pages) through the Desktop Bridge, read-only: pass E sampled three described sets (five headings each, British spelling counted), pass F listed the pages and found no `_Ratios grid`, pass S2 read the colour primitives as 14 ramps (13 of 12 steps, one of 7), the marker on each brand ramp found (`-anchor` on six, `-source` on six; the alpha ramp and the utilities carry none).
+
 **Walked: 2026-10-31 for 2.11.2** — C16 re-run: `node tests/test-passes.mjs` 47/47, the ids-mode page now refuses an unloaded walk.
 
 **Walked: 2026-10-31 for 2.11.1** — C16 rerun: `node tests/test-passes.mjs` 46/46, pass F given the house settings from `standards/audit-settings.json` as `TOKENS`, and refusing with none prepended. Other cases unchanged.
@@ -143,4 +145,4 @@ Assert: pass B marks `_` recordable and `.` not, records the `Top bar` stem and 
 Assert the negative: none of these scripts decides a convention; each contradiction stays an open question for step 2.
 Recorded under toolkit-standard §D 23: passes B, E, F, S2, S4 and the registry were done by hand each run.
 
-Runs: node tests/test-passes.mjs — "pass B: a name prefixed on one page and bare on another is a contradiction, with both pages", "pass S2: a ramp is its parent path, its steps in library order, with a marker found", "registry: the dependency line names each library and the collection keys behind the edge". Not walked live: the three new `figma_execute` bodies have met only the fake file.
+Runs: node tests/test-passes.mjs — "pass B: a name prefixed on one page and bare on another is a contradiction, with both pages", "pass S2: a ramp is its parent path, its steps in library order, with a marker found", "registry: the dependency line names each library and the collection keys behind the edge". Walked live 2026-10-31 (the line at the top).

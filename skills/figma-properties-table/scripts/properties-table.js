@@ -85,6 +85,15 @@ globalThis.__PT_FACTORY = function () {
   };
   const firstSlot = (node, slotName) =>
     descendants(node, n => n.type === 'SLOT').find(n => !slotName || n.name === slotName);
+  // The table's rows slot: of the slots with its name, the first whose rows
+  // carry cells. A table can hold another slot of that name with none, and
+  // writing or counting rows there is wrong. With no rows anywhere, an empty
+  // slot of the name is the rows slot before one holding something else.
+  const rowsSlot = (table, cfg) => {
+    const named = descendants(table, n => n.type === 'SLOT' && n.name === cfg.rowsSlotName);
+    return named.find(sl => kids(sl).some(r => safe(() => r.type, null) === 'INSTANCE' && cellsOf(r, cfg.cellTextProp).length))
+      || named.find(sl => !kids(sl).length) || named[0];
+  };
 
   // ---------------------------------------------------------------- discovery
 
@@ -149,7 +158,7 @@ globalThis.__PT_FACTORY = function () {
         if (cells.length < 3) continue;
         seenHere.add(outer.name);
         const rec = candidates.get(outer.name)
-          || { name: outer.name, pages: new Set(), sample: outer, slotName: slot.name, cells: cells.length };
+          || { name: outer.name, pages: new Set(), sample: outer, sampleSlot: slot, slotName: slot.name, cells: cells.length };
         rec.pages.add(page.name);
         candidates.set(outer.name, rec);
       }
@@ -164,7 +173,9 @@ globalThis.__PT_FACTORY = function () {
 
     const best = scored[0].rec;
     const inst = best.sample;
-    const slot = firstSlot(inst, best.slotName);
+    // The slot the scan measured, not the first of its name: a table can hold
+    // another slot of that name with no cells in it.
+    const slot = best.sampleSlot;
     const rows = slot.children.filter(r => r.type === 'INSTANCE');
     const cells = cellsOf(rows[0]);
     const textProp = Object.entries(cells[0].componentProperties).find(([, v]) => v.type === 'TEXT');
@@ -459,7 +470,7 @@ globalThis.__PT_FACTORY = function () {
     // Named only. A table's header row can itself be built on a slot, and the
     // header sits above the rows, so an unnamed fallback finds the wrong one
     // and writes property rows over the column headings.
-    const slot = firstSlot(table, cfg.rowsSlotName);
+    const slot = rowsSlot(table, cfg);
     if (!slot) return writes;
 
     if (slot.children.length !== rows.length) {
@@ -588,7 +599,7 @@ globalThis.__PT_FACTORY = function () {
     // without a donor from elsewhere the page would silently gain a filled
     // table with no rows in it.
     let donor = tables
-      .map(t => firstSlot(t, cfg.rowsSlotName))
+      .map(t => rowsSlot(t, cfg))
       .filter(s => s && s.children.length)
       .map(s => s.children[0])[0];
 
@@ -597,7 +608,7 @@ globalThis.__PT_FACTORY = function () {
         if (other.id === page.id) continue;
         await other.loadAsync();
         donor = tablesOn(other, cfg)
-          .map(t => firstSlot(t, cfg.rowsSlotName))
+          .map(t => rowsSlot(t, cfg))
           .filter(s => s && s.children.length)
           .map(s => s.children[0])[0];
         if (donor) break;
@@ -714,7 +725,7 @@ globalThis.__PT_FACTORY = function () {
 
         const ek = cfg.emptyProp && pid(t, cfg.emptyProp);
         const isEmpty = ek ? t.componentProperties[ek].value === cfg.emptyValue : false;
-        const slot = firstSlot(t, cfg.rowsSlotName);
+        const slot = rowsSlot(t, cfg);
         const n = isEmpty ? 0 : (slot ? kids(slot).length : -1);
         rows += Math.max(0, n);
         if (!isEmpty && n === 0) problems.push(page.name + '/' + title + ': empty table not using the empty variant');
