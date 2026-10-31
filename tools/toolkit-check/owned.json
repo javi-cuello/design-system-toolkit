@@ -376,6 +376,21 @@
       ]
     },
     {
+      "job": "a text style's line height and letter spacing as a fraction of its font size, the web's unitless and em",
+      "module": "tools/shared/text-units.js",
+      "files": [],
+      "names": [
+        "perFontSize"
+      ],
+      "evidence": "the snapshot plugin, the token build and the doc generator each converted a percentage or pixel line height and letter spacing themselves, by toFixed(4), Math.round to 4 and trimTo 3, so one 133.33% line height was 1.3333 in the tokens and 1.333 on the docs page (the review of 2026-10-31); all three run in Figma's sandbox, which imports nothing, so each keeps a copy that tools/shared/test-text-units.mjs holds character for character",
+      "owners": [
+        "tools/shared/text-units.js",
+        "plugins/design-system-snapshot/",
+        "tools/tokens/dtcg.js",
+        "skills/figma-doc-generator/"
+      ]
+    },
+    {
       "job": "reading a variant's name into its values",
       "module": "tools/shared/names.js",
       "files": [],

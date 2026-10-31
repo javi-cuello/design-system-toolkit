@@ -597,18 +597,22 @@ globalThis.__DOCGEN_FACTORY = function () {
     return String(Math.round(v * f) / f);
   }
 
+  // a line height or letter spacing as a fraction of the font size, to four places, as the snapshot and the token
+  // build write it: tools/shared/text-units.js's, which tools/shared/test-text-units.mjs holds this copy to
+  const perFontSize = (o, fontSize) => (!o ? null : o.unit === 'PERCENT' ? +(o.value / 100).toFixed(4) : o.unit === 'PIXELS' && fontSize ? +(o.value / fontSize).toFixed(4) : null);
+
   function cssLineHeight(o, fontSize) {
     if (!o || o.unit === 'AUTO') return 'Auto';
-    if (o.unit === 'PERCENT') return trimTo(o.value / 100, 3);
-    if (o.unit === 'PIXELS') return fontSize ? trimTo(o.value / fontSize, 3) : round2(o.value) + 'px';
-    return 'Auto';
+    if (o.unit === 'PIXELS' && !fontSize) return round2(o.value) + 'px';
+    var f = perFontSize(o, fontSize);
+    return f === null ? 'Auto' : String(f);
   }
 
   function cssLetterSpacing(o, fontSize) {
     if (!o) return '0em';
-    if (o.unit === 'PERCENT') return trimTo(o.value / 100, 4) + 'em';
-    if (o.unit === 'PIXELS') return fontSize ? trimTo(o.value / fontSize, 4) + 'em' : round2(o.value) + 'px';
-    return '0em';
+    if (o.unit === 'PIXELS' && !fontSize) return round2(o.value) + 'px';
+    var f = perFontSize(o, fontSize);
+    return f === null ? '0em' : String(f) + 'em';
   }
 
   // UNLIKE em, rem is NOT scale-invariant: Figma's percent is relative to the
@@ -674,7 +678,8 @@ globalThis.__DOCGEN_FACTORY = function () {
   // it (24px read as 24% renders 0.24): null, and the caller refuses the table.
   function lineHeightLabel(row, unit) {
     if (unit === 'unitless' && row.unit === 'PIXELS' && row.value !== 0) return null;
-    return (unit === 'unitless') ? trimTo(row.value / 100, 3)
+    // a zero pixel row is zero at any size, so it reads as a percentage of none
+    return (unit === 'unitless') ? String(perFontSize({ unit: 'PERCENT', value: row.value }))
                                  : unitText({ unit: row.unit, value: row.value });
   }
   function letterSpacingLabel(row, unit, rootSize) {

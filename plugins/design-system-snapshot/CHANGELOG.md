@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.68.2] - 2026-10-31
+### Changed
+- A text style's line height and letter spacing become a fraction of the font size through one function, `perFontSize`, a copy of `tools/shared/text-units.js` that `tools/shared/test-text-units.mjs` holds character for character, as the token build's and the doc generator's copies are. The numbers are the same: four places, by `toFixed`.
+
 ## [0.68.1] - 2026-10-31
 ### Changed
 - The window's language is set (`lang="en"`), so a screen reader reads it in English. README: the requests are two GETs on open and two GETs and a POST per run, and only the kind GET and the POST carry the pairing code (it said one GET and one POST, each with the code).

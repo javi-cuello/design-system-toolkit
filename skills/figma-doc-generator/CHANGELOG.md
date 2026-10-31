@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.22.2 (2026-10-31): a web line height is shown to four places, as the snapshot and the token build write it (`1.3333`, it was `1.333`), and letter spacing in em by the same function: `perFontSize`, a copy of `tools/shared/text-units.js` held by `tools/shared/test-text-units.mjs`. Case D48.
 - 1.22.1 (2026-10-31): `docgen.js`'s en-US words are `tools/shared/dialect.cjs`'s again (Organisation and Licence had been added there only), and its pattern is built from its map; `tools/shared/test-dialect.mjs` holds the copy to the owner word for word.
 - 1.22.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).
 - 1.21.2 (2026-10-30): a comment ending in "import" over a `//` line made Figma's sandbox refuse the whole of `docgen.js` ("possible import expression") since 1.19; reworded, and `tools/toolkit-check/test-sandbox-paste.mjs` refuses the shape.
