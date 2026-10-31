@@ -165,7 +165,7 @@ export function cadence(repo, now = Date.now()) {
   const out = [];
   const last = git(repo, ['log', '-1', '--format=%cI', '-i', '--grep=^Review:.*independent']);
   const days = last ? (now - Date.parse(last)) / 864e5 : Infinity;
-  if (days > REVIEW_DAYS) out.push(`an independent review is owed (last ${last ? last.slice(0, 10) : 'never'}; every ${REVIEW_DAYS} days, §D 11): fresh agents read the toolkit end to end; the commit closing it carries a Review: trailer naming it independent`);
+  if (days > REVIEW_DAYS) out.push(`an independent review is owed (last ${last ? last.slice(0, 10) : 'never'}; every ${REVIEW_DAYS} days, §D 11): fresh agents read the toolkit end to end against tools/toolkit-check/review.md; the commit closing it carries a Review: trailer naming it independent`);
   return out;
 }
 

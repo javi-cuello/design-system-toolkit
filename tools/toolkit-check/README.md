@@ -23,6 +23,7 @@ bin/closing                                            # what is open across the
 | `main-guards.mjs` | Every script's "am I the one being run" guard compares `realpathSync(process.argv[1])`, so a run through the skills symlink is not silently a no-op. |
 | `project-names.sh` | The project names the toolkit may never carry, as one regex: bin/check searches the files for them and `.githooks/pre-push` the messages of the commits a push sends (`test-pre-push-names.mjs`). A names read that fails is a failure, never no projects. |
 | `test-sandbox-paste.mjs` | Every script pasted into Figma's sandbox holds nothing the sandbox refuses whole (`import` before `(`, `//` or `/*`, comments included). |
+| `review.md` | What the fourteen-day independent review checks (§D 11), point by point. |
 | `closing.mjs` | The end-of-work pass: uncommitted and unpushed work, changed pages to look at, new rulings, and the questions no script answers (§D 13). The Claude Code hooks read it ([claude-hooks](../claude-hooks/README.md)). |
 
 ## Test

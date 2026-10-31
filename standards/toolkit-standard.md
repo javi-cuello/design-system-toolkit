@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.19.1** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.19.2** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -490,7 +490,8 @@ someone to notice drift:
   `| Was | Now |` map; everything else it refuses, naming the file.
 - **Every session starts with what is open.** `bin/closing`, read by the
   SessionStart and Stop hooks, names what is open and an independent review
-  owed every fourteen days: fresh agents read the toolkit end to end, and the
+  owed every fourteen days: fresh agents read the toolkit end to end against
+  what `tools/toolkit-check/review.md` lists, and the
   commit that closes the review carries a `Review:` trailer naming it
   independent, which is the only record kept (a change's own review may carry
   a `Review:` trailer too, and does not close it).
