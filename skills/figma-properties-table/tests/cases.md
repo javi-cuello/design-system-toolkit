@@ -1,4 +1,6 @@
-# Eval cases — figma-properties-table (v1.11.1)
+# Eval cases — figma-properties-table (v1.12.0)
+
+**Walked: 2026-10-31 for 1.12.0** — A15 added and executed: `node tests/test-properties-table.js` 51 passed, both A15 assertions failing with 1.11.1's `profile()`. Walked live on the same library as 1.11.1, writes kept in memory: `profile()` returned the error naming the side panel it found, and stored nothing.
 
 **Walked: 2026-10-31 for 1.11.1** — A14 added and executed: `node tests/test-properties-table.js` 48 passed; with 1.11.0's script the detect assertion fails with the error the live run hit, and with only the audit's slot read put back, the audit counts 3 rows, not 2. Walked live 2026-10-31 on a real component library (64 pages) through the Desktop Bridge, read-only, plugin-data writes kept in memory so nothing reached the document: `profile()` threw in 1.11.0 (the A14 bug) and runs in 1.11.1; `PT.rows()` loaded 63 contracts; `PT.audit({ labels: true })` returned, naming one variant-order disagreement. That file has no properties table, so `profile()` learned a component's own instance as one (`seenOnPages: 1`) and the audit said so ("matches no component"); A13's label check has still met no hand-built table.
 
@@ -136,3 +138,8 @@ Runs: node tests/test-properties-table.js — "A13: a contained component's tabl
 Fixture: a stand-in page whose table instance holds two slots named `Rows`: the first with three instances and no cells, the second with two rows of three cells.
 Assert: `PT.detect()` returns a config learned from the second slot (`columns: 3`) and does not throw; `PT.audit()` with that config counts 2 rows, and with the second slot emptied reads the empty one (an empty table not using the empty variant), never the earlier slot. `apply()` reads the slot through the same function (its row writes and its donor search); only the audit runs here. Production bug: it re-found the slot by name, took the first, and threw reading a cell that is not there.
 Runs: node tests/test-properties-table.js — "A14: detect reads the slot it measured, not an earlier one of the same name", "A14: the audit counts the rows slot with cells, not an earlier one of the same name", "A14: with its rows gone, the empty rows slot is the one read, not the earlier one of the name"
+
+## A15 · A one-page find titled with no component is not stored — *executed* 2026-10-31
+Fixture: a stand-in page holding the `Pill` set and a `Side panel` instance whose slot holds two rows of three cells, its heading's text `Title`; then the same with the heading reading `Pill`.
+Assert: `PT.profile()` returns an `error` saying it is probably not a properties table, with the config, and stores no config; titled `Pill`, it stores one, `titleResolvedBy: 'value match'`. Production finding: on a library with no properties table, `profile()` stored a component's own instance as the table.
+Runs: node tests/test-properties-table.js — "A15: a one-page table titled with no component on its page is not stored, and its config is returned", "A15: a one-page table titled with a component on its page is stored"

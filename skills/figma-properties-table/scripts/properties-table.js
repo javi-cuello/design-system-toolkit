@@ -281,6 +281,13 @@ globalThis.__PT_FACTORY = function () {
     const cfg = await PT.detect();
     if (!cfg) return { error: 'No properties table found. Detection needs one table whose rows slot holds at least two row instances, each with at least three cells. Build one by hand, then re-profile.' };
     cfg.schema = SCHEMA;
+    // Seen on one page, its title naming no component there: what was found is
+    // a component's own instance, not a documentation table. A file with no
+    // properties table produced exactly this. Nothing is stored; PT.setConfig
+    // stores it when a person has read it and says it is the table.
+    if (cfg.seenOnPages === 1 && cfg.titleResolvedBy !== 'value match') {
+      return { error: 'What was found on ' + cfg.learnedFrom + ' (' + cfg.tableName + ') is on one page and its title names no component there, so it is probably not a properties table; nothing was stored. Build one by hand and re-profile, or, if it is the table, PT.setConfig(config).', config: cfg };
+    }
     // A re-profile re-detects the scaffolding and keeps what the project set:
     // the status marker is a project setting, not something detection finds.
     const prev = (() => { try { return JSON.parse(figma.root.getPluginData(CFG_KEY) || '{}'); } catch (e) { return {}; } })();

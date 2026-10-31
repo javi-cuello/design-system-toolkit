@@ -270,6 +270,27 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     const emptied = await factory().audit();
     ok(emptied.problems.some(p => /empty table not using the empty variant/.test(p)), 'A14: with its rows gone, the empty rows slot is the one read, not the earlier one of the name');
   }
+  // A15: a table seen on one page whose title names no component there is not
+  // stored; one titled with a component on its page is.
+  {
+    const cell = (id, v) => node({ id, type: 'INSTANCE', name: 'Cell', componentProperties: { 'Text#9:0': { type: 'TEXT', value: v } }, getMainComponentAsync: async () => null });
+    const row = (id) => node({ id, type: 'INSTANCE', name: 'Row', componentProperties: {} }, [cell(id + 'a', 'Size'), cell(id + 'b', 'Variant'), cell(id + 'c', 'md')]);
+    const head = node({ id: '11:1', type: 'INSTANCE', name: 'Heading', componentProperties: { 'Text#0:1': { type: 'TEXT', value: 'Title' } } });
+    const pTable = node({ id: '11:0', type: 'INSTANCE', name: 'Side panel', componentProperties: {}, getMainComponentAsync: async () => null }, [head, node({ id: '11:2', type: 'SLOT', name: 'Content' }, [row('11:3'), row('11:4')])]);
+    const pSet = node({ id: '11:9', type: 'COMPONENT_SET', name: 'Pill', componentPropertyDefinitions: {} }, [node({ id: '11:10', type: 'COMPONENT', name: 'Size=md' })]);
+    const pPage = node({ id: '0:5', type: 'PAGE', name: 'Pill', loadAsync: async () => {} }, [pSet, pTable]);
+    for (const n of [pPage, ...all(pPage)]) n.findAll = (fn) => all(n).filter(fn);
+    pPage.findAllWithCriteria = ({ types }) => all(pPage).filter(n => types.includes(n.type));
+    const stored = {};
+    globalThis.figma = { root: { children: [pPage], getPluginData: (k) => stored[k] || '', setPluginData: (k, v) => { stored[k] = v; } } };
+    delete globalThis.PT;
+    const refused = await factory().profile();
+    ok(refused.error && /probably not a properties table/.test(refused.error) && refused.config && !stored['pt.config.v2'], 'A15: a one-page table titled with no component on its page is not stored, and its config is returned');
+    head.componentProperties['Text#0:1'].value = 'Pill';
+    delete globalThis.PT;
+    const kept = await factory().profile();
+    ok(!kept.error && kept.config.titleResolvedBy === 'value match' && !!stored['pt.config.v2'], 'A15: a one-page table titled with a component on its page is stored');
+  }
   delete globalThis.figma; delete globalThis.PT;
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (failures.length) { console.log(failures.join('\n')); process.exit(1); }
