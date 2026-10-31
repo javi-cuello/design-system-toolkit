@@ -1,6 +1,6 @@
-# Eval cases — figma-project-audit (v1.3.0)
+# Eval cases — figma-project-audit (v1.4.0)
 
-**Walked: 2026-10-31 for 1.4.0** — O6 added and traced; O1 to O5 re-read against the new paragraph, none changed (a missing stage is a skip, as O2's missing setting is).
+**Walked: 2026-10-31 against v1.4.0** — O6 added and traced; O1 to O5 re-read against the new paragraph, none changed (a missing stage is a skip, as O2's missing setting is).
 
 **Walked: 2026-10-31 against v1.3.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

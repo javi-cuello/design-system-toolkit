@@ -62,6 +62,8 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
     if ! cmp -s "$plist.new" "$plist" 2>/dev/null; then
       mv "$plist.new" "$plist"
       launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true  # not loaded yet is fine; set -e would stop here
+      # bootout returns before the service is gone: wait, or the check below sees it and never loads the new one
+      for _ in 1 2 3 4 5 6 7 8 9 10; do launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 || break; sleep 0.5; done
     else rm -f "$plist.new"; fi
     # loaded whenever it is not, so a failed first load does not stick
     launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 ||

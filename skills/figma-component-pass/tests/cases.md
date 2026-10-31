@@ -1,6 +1,6 @@
-# Eval cases — figma-component-pass (v1.8.0)
+# Eval cases — figma-component-pass (v1.9.0)
 
-**Walked: 2026-10-31 for 1.9.0** — Stage 0 now decides scope only and each stage does its own discovery (toolkit-standard §D 4); A5's provenance line and P10's fixture wording follow it, no assertion changed. A11 added and traced. A1 to A10 and P10 re-read against the new Stage 0: none relied on stage 0 doing a stage's reading except A5, whose cross-check this skill still owns.
+**Walked: 2026-10-31 against v1.9.0** — Stage 0 now decides scope only and each stage does its own discovery (toolkit-standard §D 4); A5's provenance line and P10's fixture wording follow it, no assertion changed. A11 added and traced. A1 to A10 and P10 re-read against the new Stage 0: none relied on stage 0 doing a stage's reading except A5, whose cross-check this skill still owns.
 
 **Walked: 2026-10-31 against v1.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
