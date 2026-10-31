@@ -1,5 +1,11 @@
 # Changelog — component-graph
 
+## [3.7.1] - 2026-10-31
+### Changed
+- **The scan skips what is hidden inside an instance** (`figma.skipInvisibleInstanceChildren`, skill-standard §B 3), so a large file's walk reads less. The counts do not change: an instance nested in another is a mirrored copy, which the graph already discarded.
+- The audit stamp names the standard it was audited against, `plugin-standard v1.4.0`, the retired file whose numbering it is (skill-standard §B 8).
+- Merged with the keyboard release below; nothing of either changed.
+
 ## [3.7.0] - 2026-10-31
 ### Changed
 - **Works from the keyboard, and says what each control is.** The sidebar's group heads and rows, the details panel's lines and the graph's nodes, ⓘ circles, "+ N more" and "See details" were click-only: the heads and rows are buttons (a head says whether it is open), and each graph shape is a named tab stop that Enter or Space presses; the ⓘ sits beside its node rather than inside it. Arrow keys move focus with the list cursor, and a redraw (a group collapsed, a node opened, a scan landing) keeps focus on the same item. The search field and the icon-only toolbar buttons are labelled, `lang` is set, and Local and External are toggle buttons that say which is on, not tabs with no panels. An unpublished component is said by an italic name and in words, not by a fainter icon alone; `tests/test-ui-keyboard.mjs` holds it, in Chrome. README: the import step and test, no `COMMUNITY.md` (it never existed here), and a roadmap item that shipped in v3 removed.

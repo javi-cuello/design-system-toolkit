@@ -38,6 +38,9 @@ import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { layerAt } from './layers.mjs';
+/* What a project's facts lack is said to its user, never thrown as a stack: an error made here carries `usage`, and each
+   command that loads a project prints its message and exits 2 (from-code, run, gates, pages). */
+const said = (message) => Object.assign(new Error(message), { usage: true });
 import { variantValues } from '../shared/names.js';
 
 const require = createRequire(import.meta.url);
@@ -70,8 +73,8 @@ export function resolveBases(raw, unused = []) {
   const one = (key, seen = new Set()) => {
     if (out[key]) return out[key];
     const s = raw[key];
-    if (!s) throw new Error(`parity: "${key}" names a base that is not in the screens file`);
-    if (seen.has(key)) throw new Error(`parity: "${key}" is its own base, through a cycle`);
+    if (!s) throw said(`parity: "${key}" names a base that is not in the screens file`);
+    if (seen.has(key)) throw said(`parity: "${key}" is its own base, through a cycle`);
     seen.add(key);
     const b = s.base ? one(s.base, seen) : null;
     const merged = { ...(b || {}), ...s };
@@ -290,12 +293,13 @@ export function scopeTargets(all, words) {
 /** The project at `repo`, read once. */
 export async function loadProject(repo) {
   repo = path.resolve(repo);
-  const config = readJson(path.join(repo, 'snapshot.config.json'), null);
-  if (!config) throw new Error(`parity: no snapshot.config.json in ${repo}`);
+  const read = require('../shared/repo-config.cjs').readRepoConfig(repo);
+  if (read.error) throw said(`parity: ${read.error}`);
+  const config = read.config;
   const P = config.parity || {};
   const paths = store.paths(repo, config.paths || {});
   const snapshot = readJson(paths.tokens, null);
-  if (!snapshot) throw new Error(`parity: no token snapshot at ${paths.tokens}`);
+  if (!snapshot) throw said(`parity: no token snapshot at ${paths.tokens}`);
 
   // The library this repo builds, resolved: what a frame's instances are
   // compared against when it changes something inside one (gate 18).
@@ -321,7 +325,7 @@ export async function loadProject(repo) {
       if (!s) { orphans.push(`${m.name}: a mapping for "${m.folder}", which no component spec holds`); continue; }
       t.spec = s;
     } else {
-      if (claims.has(m.folder)) throw new Error(`parity: two screen mappings claim the frame "${m.folder}"`);
+      if (claims.has(m.folder)) throw said(`parity: two screen mappings claim the frame "${m.folder}"`);
       claims.set(m.folder, m.name);
       const frame = frames.get(m.folder);
       if (!frame) { orphans.push(`a screen mapping claims the frame "${m.folder}", which no snapshot holds — renamed, or its Ready for dev mark taken off`); continue; }
@@ -343,9 +347,11 @@ export async function loadProject(repo) {
     targets.push(t);
   }
   const missing = checkFacts(config, targets.some((t) => t.mapping.route), targets.filter((t) => !t.mapping.route).map((t) => t.name));
-  if (missing.length) throw new Error(`parity: ${path.join(repo, 'snapshot.config.json')} is missing what a run needs:\n  ${missing.join('\n  ')}`);
+  if (missing.length) throw said(`parity: ${path.join(repo, 'snapshot.config.json')} is missing what a run needs:\n  ${missing.join('\n  ')}`);
   const backlogFile = P.backlog ? path.join(repo, P.backlog) : null;
   return {
+    // the window a page and a component are measured in, where the parity facts name none: the interface settings'
+    limits: require('../snapshot/projects.cjs').interfaceLimits(config.project || null),
     repo, config, parity: P, paths, snapshot, library, specs, frames, targets, orphans, unusedFalse,
     backlog: backlogFile ? readJson(backlogFile, {}) : {},
   };
@@ -397,16 +403,16 @@ export function parityMode(label) {
 export async function loadParity(label) {
   const projects = require('../snapshot/projects.cjs');
   const found = parityMode(label);
-  if (found.error) throw new Error(`${label}: ${found.error}`);
+  if (found.error) throw said(`${label}: ${found.error}`);
   const { where, libKey, lib } = found;
   if (found.mode === 'governed') return { ...(await loadProject(where.repo)), mode: 'governed', label, where, lib, libKey };
-  if (!lib) throw new Error(`${label}: no parity facts — a repo's snapshot.config.json \`parity\` block, or a library's \`code.parity\` in the context document`);
+  if (!lib) throw said(`${label}: no parity facts — a repo's snapshot.config.json \`parity\` block, or a library's \`code.parity\` in the context document`);
   const P = lib.code.parity;
   const config = { project: label, parity: P, compared: true };
   const missing = checkFacts(config);
-  if (missing.length) throw new Error(`${label}: the context document's code.parity is missing what a run needs:\n  ${missing.join('\n  ')}`);
-  if (!found.mappings) throw new Error(`${label}: code.parity.mappings.components.json (the mappings, relative to the project's home)`);
-  if (!lib.code.repo) throw new Error(`${label}: code.repo (where the library's code is)`);
+  if (missing.length) throw said(`${label}: the context document's code.parity is missing what a run needs:\n  ${missing.join('\n  ')}`);
+  if (!found.mappings) throw said(`${label}: code.parity.mappings.components.json (the mappings, relative to the project's home)`);
+  if (!lib.code.repo) throw said(`${label}: code.repo (where the library's code is)`);
   const file = found.mappings;
   const specs = new Map();
   const targets = [];
@@ -418,7 +424,7 @@ export async function loadParity(label) {
     targets.push({ name: folder, kind: 'component', folder, family: folder, file, mapping, spec: onDisk });
   }
   return {
-    mode: 'compared', label, where, lib, libKey, repo: projects.expand(lib.code.repo), config, parity: P, paths: where.paths,
+    mode: 'compared', label, where, lib, libKey, repo: projects.expand(lib.code.repo), config, parity: P, paths: where.paths, limits: projects.interfaceLimits(label),
     storybookOut: where.storybook, snapshot: readJson(where.paths.tokens, null), specs, targets, orphans, file,
   };
 }

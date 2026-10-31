@@ -35,7 +35,7 @@ const at = argv.indexOf('--repo');
 const repo = resolve(at >= 0 && argv[at + 1] ? argv[at + 1] : '.');
 const check = argv.includes('--check');
 
-const config = JSON.parse(readFileSync(join(repo, 'snapshot.config.json'), 'utf8'));
+const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(repo, 'tokens build');
 const { paths } = await import(pathToFileURL(join(TOOLKIT, 'tools/snapshot/store.cjs')).href).then((m) => m.default || m);
 const P = paths(repo, config.paths);
 if (!P.styles) { console.error(`  ${repo}/snapshot.config.json names no paths.styles — where the token stylesheets go`); process.exit(2); }

@@ -585,5 +585,9 @@ expect("and checkFacts reads the adapter's facts unchanged",
     iconChecks({ tokens: { _meta: { sources: { I: { owns: { iconSizes: { plus: [16] } } } } } }, source: "I" }).ran, ["icons-sizes"]);
 }
 
+// The house pageMarker is Unicode: "❖ États" sorts as États, not as "tats" (an ASCII class ate the É).
+expect("the house page marker keeps an accented first letter",
+  texts(checkFacts({ pages: pages("❖ INPUTS", "❖ États", "❖ Mono"), components: [] }, Object.assign({}, T, { pageMarker: "^[^\\p{L}\\p{N}_]+" }))).filter((x) => x.startsWith("page-order")), []);
+
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");
 process.exit(failed ? 1 : 0);

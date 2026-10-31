@@ -1,4 +1,6 @@
-# Eval cases — kirby-cms (v1.9.0)
+# Eval cases — kirby-cms (v1.9.1)
+
+**Walked: 2026-10-31 for 1.9.1** — every case read against the reworded example and records: none asserts on the names changed, so all hold; K10's fixture names `event.yml`.
 
 **Walked: 2026-10-31 against v1.9.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -8,11 +10,11 @@
 
 **Reviewed against v1.7.1 on 2026-09-20** — citation only: the four standards governing the toolkit's parts became `standards/toolkit-standard.md`, and this skill's references point at its §A. No rule and no case changed.
 
-**Walked: 2026-09-19 — pass.** Re-walked for 1.7.0 on the reference board. K20 observed before it was written: a dry run of the batch route with a limit too large to finish returned 503 at 120.7s on production against `set_time_limit(900)`, and the same route with a 45s start budget returned 200 in 49s locally with `limit=120`. K1–K19 unchanged; K9's pattern gains the budget and still meets its asserts.
+**Walked: 2026-09-19 — pass.** Re-walked for 1.7.0 on the reference site. K20 observed before it was written: a dry run of the batch route with a limit too large to finish returned 503 at 120.7s on production against `set_time_limit(900)`, and the same route with a 45s start budget returned 200 in 49s locally with `limit=120`. K1–K19 unchanged; K9's pattern gains the budget and still meets its asserts.
 
-**Walked: 2026-09-19 — pass.** Re-walked for 1.6.0 on the reference board (Kirby 5.5.3). K19 observed before it was written: the same in-memory subscriber page run through `Form::toStoredValues()` lost `confirmed`, `subscribed` and a submitted `lastweekly` under the blueprint with same-named `info` fields, and kept all three once they were renamed. K1–K18 unchanged; K10's "undeclared fields pass through" still holds, since the dropped keys were declared.
+**Walked: 2026-09-19 — pass.** Re-walked for 1.6.0 on the reference site (Kirby 5.5.3). K19 observed before it was written: the same in-memory subscriber page run through `Form::toStoredValues()` lost `confirmed`, `subscribed` and a submitted `lastweekly` under the blueprint with same-named `info` fields, and kept all three once they were renamed. K1–K18 unchanged; K10's "undeclared fields pass through" still holds, since the dropped keys were declared.
 
-**Walked: 2026-09-05 — pass.** Re-walked for 1.5.0 on the reference board (Kirby 5.5.3). K18 added and observed before it was written: with `content.salt` fixed to a string, the old id-less call returned equal tokens for two subscriber pages and the id-carrying call did not, measured with `php -r` against the installed source. The clone-serving trap was measured on production with curl (200 on `bin/`, `ops/`, `tests/*.php`, `README.md`; 404 after the rewrite rules). K1–K17 unchanged.
+**Walked: 2026-09-05 — pass.** Re-walked for 1.5.0 on the reference site (Kirby 5.5.3). K18 added and observed before it was written: with `content.salt` fixed to a string, the old id-less call returned equal tokens for two subscriber pages and the id-carrying call did not, measured with `php -r` against the installed source. The clone-serving trap was measured on production with curl (200 on `bin/`, `ops/`, `tests/*.php`, `README.md`; 404 after the rewrite rules). K1–K17 unchanged.
 
 **Walked: 2026-08-27 — pass.** Re-walked for 1.4.0 on a second live Kirby 5.5.3 build (a design studio site). K15–K17 added: the SVG crop no-op and the `SERVER_NAME` config selection were each measured on that project before the case was written, and K17 exists because the 1.3.1 caching text asserted something `Page::isCacheable()` does not do. K1–K14 unchanged and re-read against the edited references.
 
@@ -80,7 +82,7 @@ Assert: batch selection is oldest-stamped-first and every visited item is stampe
 Walked live: 2026-08-12 — written from that build's production failures, not from the docs.
 
 ## K10 · Option fields are part of the writing contract
-Fixture: "classify() can now return a new role; make the sync store it" in a project whose `job.yml` has a `role` select whose `options` do not include that value.
+Fixture: "classify() can now return a new role; make the sync store it" in a project whose `event.yml` has a `role` select whose `options` do not include that value.
 Assert: the skill extends the blueprint's `options` in the same change as the code that produces the value, rather than only writing the value — it names `update()`'s silent drop as the reason, not merely tidiness.
 Assert: asked why the field is empty after an apparently successful `update()`, it identifies the blueprint options as the filter and does **not** send the run to file permissions, caching or `impersonate()`.
 Assert: it states the drop is destructive on a populated field and that other fields in the same call still apply, so "my other writes worked" is not evidence.

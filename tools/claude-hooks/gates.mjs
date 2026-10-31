@@ -24,6 +24,10 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { written } from './stop-items.mjs';
 import { realPath, expandHome } from '../shared/real-path.mjs';
+import { fileURLToPath } from 'node:url';
+// the toolkit as a message names it: this checkout, ~ for the home folder
+const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const SHOWN = HERE.startsWith(os.homedir() + path.sep) ? '~' + HERE.slice(os.homedir().length) : HERE;
 
 // Full-size work: more files or lines than this, or a standard or shared tool
 // changed by more than WIDE_LINES (a typo there is small work). Drawn from the
@@ -485,7 +489,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   const files = Object.keys(pending.total.files);
   return `This work is full-size (${s.why.join(', ')}), so it is planned before it is built (toolkit-standard §D 13). ${gaps ? `The plan at ${plan} lacks ${gaps.join(' and ')}; complete it` : `Write the plan to ${plan}`}, then retry this call. Sections, each a heading:\n`
     + `  ## Goal — what done means\n`
-    + `  ## Impact — the output of: node ~/Projects/toolkit/tools/claude-hooks/impact.mjs ${files.map((f) => JSON.stringify(f)).join(' ')} <and the files still to come>; what each reader needs\n`
+    + `  ## Impact — the output of: node ${SHOWN}/tools/claude-hooks/impact.mjs ${files.map((f) => JSON.stringify(f)).join(' ')} <and the files still to come>; what each reader needs\n`
     + `  ## Claims — each claim the output's correctness or the work's scope rests on (a tool's limit, an API's behaviour, a file's state, what a test proves): checked (the probe run or the primary source read) or only believed, what being wrong would cost, and the check that settles a believed one before work rests on it; a "cannot" that would drop or shrink the work is probed first\n`
     + `  ## Beyond scope — what nearby is broken, missing or stale, and whether this change fixes it (no loose ends: what is not fixed is named and why)\n`
     + `  ## Budget — agent time, review rounds\n`

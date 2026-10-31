@@ -36,6 +36,11 @@
       ],
       "disabledAxis": "Disabled",
       "focusState": "Focus",
+      "pseudoClasses": {
+        "Focus": ":focus-visible",
+        "Hover": ":hover",
+        "Press": ":active"
+      },
       "sizeAxis": "Size",
       "sizeAxisMatch": "[Ss]ize",
       "sizeShared": true,
@@ -54,7 +59,7 @@
         "AUXILIARY"
       ],
       "dividerPage": "^\\s*-+\\s*$",
-      "pageMarker": "^[^A-Za-z0-9_]+",
+      "pageMarker": "^[^\\p{L}\\p{N}_]+",
       "pageSections": [
         "Examples",
         "Component",
@@ -69,13 +74,15 @@
       ]
     },
     "tokens": {
-      "textRole": "Text"
+      "textRole": "Text",
+      "ratiosGrid": "_Ratios grid"
     },
     "components": {
       "descriptionPlaceholder": "^(todo|tbd|wip|lorem)",
       "minDescription": 12,
       "minTarget": 24,
-      "minText": 12
+      "minText": 12,
+      "mechanismPadding": 80
     },
     "interface": {
       "maxSegments": 4,
@@ -83,6 +90,7 @@
       "settleMs": 1500,
       "viewportWidth": 1280,
       "viewportHeight": 900,
+      "componentWindowHeight": 1400,
       "phoneWidth": 390,
       "shotMaxHeight": 6000
     },
@@ -236,7 +244,7 @@
     "project": {
       "libraries": "overrides for a components library the snapshot-routing block routes, keyed by its Figma file key; which libraries exist, and their roles, is the routing block's to say",
       "language": "the dialect of the words the toolkit writes for this project (en-US, en-GB); absent means en-GB, the toolkit's own, and by the maintainer's ruling it is never a house default (toolkit-standard §D 20)",
-      "interface": "a project's own interface limits, over the house's (design-standard; read by tools/ui-check/check.mjs)"
+      "interface": "a project's own interface limits, over the house's (design-standard; read by tools/snapshot/projects.cjs interfaceLimits for ui-check, the parity engine and the docs site's structure check)"
     },
     "library": {
       "name": "the library's display name",
@@ -266,6 +274,7 @@
       "pointerStates": "the state-axis options a browser or platform supplies (focus, hover, press), which code forces rather than takes as a prop (figma-standard rule 4)",
       "disabledAxis": "the variant axis that sits immediately before the state axis (figma-standard rule 1)",
       "focusState": "the state-axis option for keyboard focus, which every interactive component has (figma-standard rule 39)",
+      "pseudoClasses": "the CSS pseudo-class that draws each pointer state, keyed by its state-axis option: code takes these states from the browser, never as a prop (figma-standard rule 4; read by tools/component-contract/to-code.mjs for the stylesheet and to-markup.mjs for the parity mapping)",
       "firstAxis": "the axis every component set leads with, where a project fixes one (project)",
       "sizeAxis": "name of the size variant property (figma-standard rule 6)",
       "sizeAxisMatch": "regular expression for property names that are size properties under another name (figma-standard rule 6)",
@@ -283,7 +292,7 @@
       "componentPages": "regular expression for the pages an audit reads; absent, the pages carrying the finished or in-progress marker (figma-standard rule 11)",
       "familyCategories": "categories whose members drop the family word, beyond those the data pairs by plural (`TABLES` holding `Table`); figma-standard rule 9, project",
       "dividerPage": "regular expression for divider pages (figma-standard rule 11)",
-      "pageMarker": "regular expression for the leading marker stripped from page names when they are compared (figma-standard rule 11)",
+      "pageMarker": "regular expression for the leading marker stripped from page names when they are compared (figma-standard rule 11); compiled with the u flag where it allows, so \\p{L} keeps a page name's accented first letter",
       "pageSections": "the component page's section cards, in order (figma-standard rule 15)",
       "pageSectionComponent": "the doc component whose instances are a page's section cards (figma-standard rule 15)",
       "matrixSection": "the section present exactly when the page's primary component has variant axes or booleans (figma-standard rule 15)",
@@ -296,6 +305,7 @@
       "allowedKeys": "variable collection keys a binding may come from (project)",
       "brandGroup": "path group in the source library whose child names the brand, `<brandGroup>/<brand>/...`; the extension check reads it (project)",
       "textRole": "the token path segment a text layer's fill binds to (figma-standard rule 28)",
+      "ratiosGrid": "the documentation component a contrast matrix is drawn in, matched by name on the Foundations pages (figma-contrast-matrix)",
       "local": "variable collections the file keeps for itself (layout values one file needs), outside the system: no Foundations page, no findings (project)"
     },
     "components": {
@@ -303,6 +313,7 @@
       "minDescription": "fewest characters a real description has (figma-standard rule 25)",
       "minTarget": "smallest interactive target in px; 24 is WCAG 2.2 SC 2.5.8, level AA (figma-standard rule 26)",
       "minText": "smallest text size in px (figma-standard rule 26)",
+      "mechanismPadding": "the smallest off-scale padding, in px, read as a mechanism (a progress or slider fill driven by padding) and raised as a question rather than a defect; absent, every off-scale padding is a defect (figma-standard rule 29)",
       "overlayComponents": "components whose instances cover the layer they sit in, such as a state layer: each is locked, stretched both ways, at 0,0 and its parent's size (a project's own rule, stated in its context document); absent, not checked"
     },
     "derived": {
@@ -320,6 +331,7 @@
       "settleMs": "milliseconds a page is given to settle after a tab is chosen before the layout is measured (design-standard rule 2)",
       "viewportWidth": "the CSS width a page is measured at unless the run names one (design-standard)",
       "viewportHeight": "the CSS height a page is measured at (design-standard)",
+      "componentWindowHeight": "the CSS height of the window a component is measured in, at viewportWidth, where the project's parity facts name no `window`: taller than a page's, so a tall component is measured whole (design-code-parity)",
       "phoneWidth": "the CSS width a page's phone screenshot is taken at (frontend-build: look before you ship)",
       "shotMaxHeight": "the tallest a full-page screenshot is taken, in CSS pixels, so a page of thousands of rows still produces an image (frontend-build: look before you ship)"
     },

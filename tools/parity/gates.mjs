@@ -735,6 +735,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   const i = process.argv.indexOf('--repo');
   if (i < 0) { console.error('usage: node tools/parity/gates.mjs --repo <dir>'); process.exit(2); }
   const { loadProject } = await import('./project.mjs');
-  const project = await loadProject(process.argv[i + 1]);
+  const project = await loadProject(process.argv[i + 1]).catch((e) => { if (!e.usage) throw e; console.error(e.message); process.exit(2); });
   process.exit(printGates(staticGates(project)) ? 1 : 0);
 }

@@ -35,7 +35,7 @@ const ci = argv.indexOf('--context');
 // The project's context document, for the library's state vocabulary.
 const CONTEXT = ci >= 0 ? path.resolve(expand(argv.splice(ci, 2)[1])) : null;
 const only = argv[0] || null;
-const config = JSON.parse(fs.readFileSync(path.join(REPO, 'snapshot.config.json'), 'utf8'));
+const config = req('../shared/repo-config.cjs').repoConfig(REPO, 'validate');
 // where the snapshot stored them, the canonical layout where `paths` is silent
 const where = req('../snapshot/store.cjs').paths(REPO, config.paths || {});
 const ENGINE = path.join(TOOLKIT, 'tools/validator/validate.mjs');

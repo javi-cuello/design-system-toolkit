@@ -5,7 +5,8 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | File | What it gives |
 |---|---|
 | `walk.mjs` | One walk of a repo's files, skipping what every check skips (`node_modules`, build output, dot-folders). |
-| `dialect.cjs` | Which English spelling the toolkit's own words use for a project (its `language` setting), so generated text follows the project. |
+| `dialect.cjs` | Which English spelling the toolkit's own words use for a project (its `language` setting), so generated text follows the project; the doc generator's sandbox copy is held to it by `test-dialect.mjs`. |
+| `repo-config.cjs` | A repo's `snapshot.config.json`, read one way: `readRepoConfig` tells a missing file from a malformed one, `repoConfig` says which under the tool's name and exits 2. Every command that needs the file reads it here. |
 | `cdp.mjs` | The Chrome DevTools client every browser run uses (parity, ui-check, the docs checks, the contract tools): `findChrome` (`$CHROME`, else the usual macOS and Linux places), `launch` (its own profile, killed at exit), `newPage`, `navigate`, `viewport`, `media`, `screenshot`, `pool`. |
 | `origin.mjs` | `isFigmaOrigin`: whether a request comes from Figma itself (figma.com or a subdomain, by hostname), for the two local services the Figma plugin talks to. |
 | `names.js` | How a component's Figma name is shown to a reader (`displayName`, `fullName`), and a variant's name read as its prop values (`variantValues`): one definition for the docs site, the parity engine, the contract tools and the sandbox scripts that copy it, each held to it by `test-names.mjs`. |
@@ -18,6 +19,7 @@ Small libraries more than one tool imports, kept in one place so each has one de
 ```sh
 node tools/shared/test-code-inventory.mjs
 node tools/shared/test-real-path.mjs
+node tools/shared/test-dialect.mjs
 node tools/shared/test-output.mjs
 node tools/shared/test-knowledge.mjs
 node tools/shared/test-cdp.mjs    # needs Chrome

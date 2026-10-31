@@ -1,4 +1,4 @@
-// Design system snapshot — v0.68.1 · skill-standard §B v1.1.0
+// Design system snapshot — v0.68.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever

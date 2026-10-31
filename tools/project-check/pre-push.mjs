@@ -16,10 +16,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 
 const REPO = path.resolve(process.argv[2] || '.');
 const git = (args) => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-const config = JSON.parse(fs.readFileSync(path.join(REPO, 'snapshot.config.json'), 'utf8'));
+const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(REPO, 'pre-push');
 const exempt = (config.check && config.check.exempt) || [];
 const ZERO = /^0+$/;
 const GREEN = path.join(REPO, git(['rev-parse', '--git-dir']).trim(), 'last-check-green');

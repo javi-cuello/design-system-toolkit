@@ -1,4 +1,8 @@
-# Eval cases — figma-components-audit (v2.35.2)
+# Eval cases — figma-components-audit (v2.36.1)
+
+**Walked: 2026-10-31 for 2.36.1** — the merge of 2.35.2 (the Files table, wording only) with 2.36.0 (mechanismPadding): `node tests/test-audit.mjs` and `node tests/test-sweep.mjs` rerun on the merged tree; every case holds.
+
+**Walked: 2026-10-31 for 2.36.0** — `node tests/test-audit.mjs` 84/84, the new assertion (no mechanismPadding: the 96 padding is an error) failing before the fixture's settings named it; other cases unchanged.
 
 **Walked: 2026-10-31 for 2.35.2** — the Files table names `scanner/scoring.json` and `scanner/measures.json`, which it left out; wording only, no case reads the table, so every case holds unchanged.
 

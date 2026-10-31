@@ -478,14 +478,16 @@ globalThis.__DOCGEN_FACTORY = function () {
    * found. A general dictionary would respell the project's own words the
    * first time one slipped through.
    */
+  // held word for word to dialect.cjs's by tools/shared/test-dialect.mjs; the pattern is built from the map, so the two never part
   var US_WORDS = { Colour: 'Color', colour: 'color', Colours: 'Colors', colours: 'colors',
                    Behaviour: 'Behavior', behaviour: 'behavior', Grey: 'Gray', grey: 'gray',
-                   Centre: 'Center', centre: 'center' };
+                   Centre: 'Center', centre: 'center', Organisation: 'Organization', organisation: 'organization',
+                   Licence: 'License', licence: 'license' };
+  var US_RE = new RegExp('\\b(' + Object.keys(US_WORDS).join('|') + ')\\b', 'g');
   function ours(text) {
     var lang = (typeof LANGUAGE === 'string' && LANGUAGE) || 'en-GB';
     if (!text || String(lang).toLowerCase() !== 'en-us') return text;
-    return String(text).replace(/\b(Colour|colour|Colours|colours|Behaviour|behaviour|Grey|grey|Centre|centre)\b/g,
-      function (w) { return US_WORDS[w] || w; });
+    return String(text).replace(US_RE, function (w) { return US_WORDS[w] || w; });
   }
 
   // A literal that is not a colour. String(val) was the whole rule, and Figma's

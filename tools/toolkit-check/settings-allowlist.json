@@ -56,5 +56,105 @@
       "literal": "[\"Section header\",\"Table\"",
       "reason": "the doc-generator's default name contract, replaced by the caller's list; the doc library's own component name"
     }
+  ],
+  "plugins/component-graph/ui.html": [
+    {
+      "literal": "'Component'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (the kind a node is, beside 'Component set')"
+    },
+    {
+      "literal": "'None'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (an empty list)"
+    }
+  ],
+  "plugins/design-system-snapshot/code.js": [
+    {
+      "literal": "/Size=(\\d+)/",
+      "reason": "an icon's pixel size read from its variant name where it has one; the frame's width stands in otherwise, so a library whose icon axis is named another way still records the right size, and the plugin runs in Figma with no settings to read"
+    }
+  ],
+  "plugins/lucide-icon-importer/code.js": [
+    {
+      "literal": "'Size=' + size",
+      "reason": "the importer's own variant name for the icon components it builds from Lucide; it reads no project's library"
+    }
+  ],
+  "tools/component-contract/to-figma.mjs": [
+    {
+      "literal": "? e.content : 'Text');",
+      "reason": "the placeholder characters a new text layer is drawn with when the contract gives it no words, not the text-role token segment"
+    }
+  ],
+  "tools/contract-editor/anatomy.mjs": [
+    {
+      "literal": "['text', 'Text']",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (the label of the text part kind)"
+    },
+    {
+      "literal": "p.name || 'Text');",
+      "reason": "the placeholder a text part previews with before it has words"
+    }
+  ],
+  "tools/contract-editor/props.mjs": [
+    {
+      "literal": "label: 'Text'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (the label of the string prop kind)"
+    }
+  ],
+  "tools/contract-editor/editor.js": [
+    {
+      "literal": "'Parts'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (a summary row)"
+    },
+    {
+      "literal": "'Component'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (the stage's name before one is typed, and a picker's label)"
+    },
+    {
+      "literal": "'Properties'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (a panel heading)"
+    },
+    {
+      "literal": "'None'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (a picker's empty choice)"
+    },
+    {
+      "literal": "p.text = 'Text'",
+      "reason": "the placeholder a new text part is given"
+    },
+    {
+      "literal": "seg('Size'",
+      "reason": "a word of the tool's own interface, in its own voice, not the house's value it shares a spelling with (the icon size control's label; the value it writes goes to the settings' sizeAxis)"
+    },
+    {
+      "literal": "'↔'",
+      "reason": "a glyph of the padding control, not a marker"
+    },
+    {
+      "literal": "'↕'",
+      "reason": "a glyph of the padding control, not a marker"
+    }
+  ],
+  "tools/docs-site/src/dashboard/queue.js": [
+    {
+      "literal": "error: \"Error\"",
+      "reason": "the dashboard's label for a finding's severity, not the Validation axis option"
+    }
+  ],
+  "tools/docs-site/src/lib/facts.js": [
+    {
+      "literal": "what: 'Component'",
+      "reason": "the kind of fact a change row describes, not the page template's Component section"
+    }
+  ],
+  "tools/figma-audit/fix-queue.mjs": [
+    {
+      "literal": "\"**Key:** 🔴 error · 🟡 warning · 🔵 needs ruling · ◽ preference · ⚠️ = user-visible impact, leads the queue\"",
+      "reason": "the fix queue's own severity key, a marker of the report it writes, not a library's"
+    },
+    {
+      "literal": "(r.sev === \"error\" ? \"🔴\" : r.sev === \"pref\" ? \"◽\" : r.bucket === \"b3\" ? \"🔵\" : \"🟡\") + (r.visible ? \"⚠️\" : \"\")",
+      "reason": "the same key's glyphs, as each row takes one"
+    }
   ]
 }

@@ -8,7 +8,11 @@
 // another. Each result carries the instance's Title text so the agent can match
 // the user's colour name against it without a second read.
 
-const GRID_NAME = "_Ratios grid";  // per the context document, if it differs
+// The component's name is the library's setting (`ratiosGrid`), prepended by the session as `const TOKENS = …;`
+// (`node tools/snapshot/projects.cjs settings <project>` prints it), the way the audit scanner receives its
+// settings; never edited into this file, so no project's name for it lands in the toolkit.
+if (typeof TOKENS === "undefined" || !TOKENS || !TOKENS.ratiosGrid) throw new Error("prepend the library's settings, `const TOKENS = …;` with ratiosGrid: node tools/snapshot/projects.cjs settings <project>");
+const GRID_NAME = TOKENS.ratiosGrid;
 
 async function findGridInstances(page, gridName) {
   const found = [];

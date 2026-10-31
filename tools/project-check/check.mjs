@@ -45,7 +45,7 @@ const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : nu
 // the on-disk spelling, so a shell that entered through ~/projects still matches the registry
 const REPO = realPath(arg('--repo') || '.');
 const PLAN = argv.includes('--plan');
-const config = JSON.parse(fs.readFileSync(path.join(REPO, 'snapshot.config.json'), 'utf8'));
+const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(REPO, 'check');
 const C = config.check || {};
 const req = createRequire(import.meta.url);
 const contract = req('../snapshot/projects.cjs');

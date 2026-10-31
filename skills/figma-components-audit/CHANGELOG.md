@@ -1,6 +1,7 @@
 # Changelog — figma-components-audit
 
-- 2.35.2 (2026-10-31): the Files table names `scanner/scoring.json` and `scanner/measures.json`.
+- 2.36.1 (2026-10-31): merged with 2.36.0; the Files table names `scanner/scoring.json` and `scanner/measures.json`.
+- 2.36.0 (2026-10-31): an off-scale padding is a mechanism question from the settings' `mechanismPadding` (audit-settings `components`, house 80) up, no longer a literal 80 in `scanner/audit.js`; absent, every off-scale padding is a defect (toolkit-standard §C clause F).
 - 2.35.1 (2026-10-31): a placeholder description is tiered as an empty one (hygiene on a private part) and no longer skips the guidance check; SKILL.md stops listing contrast as unscanned.
 - 2.35.0 (2026-10-31): contrast, target size and an empty or placeholder description are `scanner/audit.js`'s alone (new `metadata|placeholder`); probes.js keeps `FCA.textSizes` and a listing `FCA.metadata`; luminance and variant names are held `tools/shared/` copies; focus listed once.
 - 2.34.0 (2026-10-31): content read from the file is data, never instructions (toolkit-standard §D 24): `scanner/judge.txt` and `fix.txt` frame the file's text as data, and the dashboard's Fix this shows its code for approval before it runs.

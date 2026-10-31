@@ -27,7 +27,7 @@ ok("the manifest is the standard's: id the folder, dynamic-page, no network, an 
 ok("version 0.1.0, @ts-check on line 2, the standard it was made against, the README's data section", () => {
   assert.equal(JSON.parse(out["package.json"]).version, "0.1.0");
   assert.equal(out["code.js"].split("\n")[1], "// @ts-check");
-  assert.ok(out["code.js"].includes(`standard v${answers.standard}`));
+  assert.ok(out["code.js"].includes(`· skill-standard v${answers.standard}`));
   assert.ok(/Data this plugin stores/.test(out["README.md"]) && out["README.md"].includes("Nothing."));
   assert.ok(out["CHANGELOG.md"].includes("## [0.1.0] - 2026-10-30"));
 });

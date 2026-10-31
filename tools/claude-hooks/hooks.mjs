@@ -35,6 +35,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+// the toolkit as a message names it: where this checkout is, never a folder assumed (~ for the home folder)
+const SHOWN = TOOLKIT.startsWith(os.homedir() + path.sep) ? '~' + TOOLKIT.slice(os.homedir().length) : TOOLKIT;
 const mode = process.argv[2];
 let payload = {};
 try { payload = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
@@ -96,8 +98,8 @@ if (mode === 'edit') {
   for (const p of read) seen.add(`knowledge:${p}`);
   fs.writeFileSync(seenFile, [...seen].join('\n'));
   const lists = fresh.map(([, a]) => `standards/${a.standard} — ${[].concat(a.part).join(', ')}:\n${ruleIndex(TOOLKIT, a).map((t) => `  ${t}`).join('\n')}`).join('\n\n');
-  const kb = read.length ? `Interface work (toolkit-standard §D 21): read these knowledge pages before the first line, and name the ones you followed in the commit's "Knowledge:" trailer (checked at push):\n${read.map((p) => `  ~/Projects/toolkit/${p}`).join('\n')}` : '';
-  const rules = fresh.length ? `First change in this area this session. These are the rules that govern it (~/Projects/toolkit; open a rule's section when it bears on the change, and revisit the change if one does).\n\n${lists}` : '';
+  const kb = read.length ? `Interface work (toolkit-standard §D 21): read these knowledge pages before the first line, and name the ones you followed in the commit's "Knowledge:" trailer (checked at push):\n${read.map((p) => `  ${SHOWN}/${p}`).join('\n')}` : '';
+  const rules = fresh.length ? `First change in this area this session. These are the rules that govern it (${SHOWN}; open a rule's section when it bears on the change, and revisit the change if one does).\n\n${lists}` : '';
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse',
     additionalContext: [rules, kb].filter(Boolean).join('\n\n') } }));
   process.exit(0);

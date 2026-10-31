@@ -210,6 +210,15 @@ if [ -d plugins ]; then
         # and code.js's header line, which drifted the same way (1.11.0 against 1.11.2, 2026-10-03)
         cv=$(sed -n 1p "${d}code.js" 2>/dev/null | grep -m1 -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 | tr -d v)
         [ -n "$cv" ] && [ "$cv" != "$pv" ] && warn "[8] $p — code.js header says v$cv, package.json v${pv:-none} (skill-standard §B 8)"
+        # and the audit stamp names the standard it was audited against, at a version that standard had: four
+        # plugins said "standard v1.7.0" and the like, versions of the retired plugin-standard that skill-standard never had
+        stamp=$(sed -n 1p "${d}code.js" 2>/dev/null | grep -oE '· [a-z-]*standard( §B)? v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        sf=$(printf '%s' "$stamp" | sed -E 's/^· ([a-z-]*standard).*/\1/'); sv=$(printf '%s' "$stamp" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$')
+        case "$sf" in
+          skill-standard) grep -qE "^- $sv \(" standards/changelog/skill-standard.md 2>/dev/null || warn "[8] $p — code.js audit stamp names skill-standard v$sv, a version it never had (skill-standard §B 8)" ;;
+          plugin-standard) awk '/^### Part B/{b=1;next} /^### /{b=0} b' standards/changelog/toolkit-standard.md 2>/dev/null | grep -qE "^- $sv \(" || warn "[8] $p — code.js audit stamp names plugin-standard v$sv, a version it never had (skill-standard §B 8)" ;;
+          *) [ -f "${d}code.js" ] && warn "[8] $p — code.js audit stamp names no standard it was audited against: \` · skill-standard vX.Y.Z\` (skill-standard §B 8)" ;;
+        esac
         m="${d}manifest.json"; [ -f "$m" ] || continue
 
         if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$m" 2>/dev/null; then

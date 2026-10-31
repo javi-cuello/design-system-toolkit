@@ -1,4 +1,10 @@
 # Changelog — lucide-icon-importer
+## [1.13.1] - 2026-10-31
+### Changed
+- **The manifest allows only the domain the plugin fetches from.** `allowedDomains` listed `unpkg.com` and `lucide.dev` beside `cdn.jsdelivr.net`; the icons and their tags come from jsdelivr alone (unpkg refuses a plugin window's null origin), and `lucide.dev` is only a documentation link written onto a component, which Figma opens itself. A domain the code never fetches is access nobody needs (skill-standard §B 2).
+- The audit stamp names the standard it was audited against, `plugin-standard v1.4.0`, the retired file whose numbering it is (skill-standard §B 8).
+- Merged with the keyboard release below; nothing of either changed.
+
 ## [1.13.0] - 2026-10-31
 ### Changed
 - **Works from the keyboard, and says what each control is.** The icon cards and the variable picker's rows were click-only `div`s: they are buttons now, each card named by its icon and saying whether it is picked (`aria-pressed`) or already in the file (disabled); a card whose icon failed to load retries on its own press, from the keyboard too. The tabs follow the APG tabs pattern (one stop, Left and Right). The variable picker is a button that says whether it is open and closes on Escape, giving focus back. The search fields, the paste box, the colour pickers and the opacity fields are labelled, each Settings label is tied to its field, and the status line and toast are announced. `tests/test-ui-keyboard.mjs` holds it, in Chrome.

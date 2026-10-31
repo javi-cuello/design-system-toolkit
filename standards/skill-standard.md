@@ -1,6 +1,6 @@
 # Skill standard — definition of done for a skill and a plugin
 
-**Version 1.5.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
+**Version 1.6.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
 
 What a skill (`skills/`) and a plugin (`plugins/`) must be before they are committed. What every standard shares, including how these clauses are enforced and changed, is [`toolkit-standard.md`](toolkit-standard.md)'s; this file adds only what is particular to a skill or a plugin.
 
@@ -310,13 +310,13 @@ try/catch around async work; user-facing failures via `figma.notify(msg, { error
 ### 8 · Versioning
 SemVer in package.json (source of truth) mirrored in the code.js header comment; CHANGELOG.md entry per release. The manifest has no version field, and a README states no version of its own.
 
-The header also carries **` · standard vX.Y.Z`** — the version of *this* standard the plugin was last audited against, updated only when an audit actually happens. **It is expected to lag, and the lag is the signal**, not a defect to tidy: a plugin stamped three minor versions back is telling you which rules have never been applied to it. Do not bump every stamp when this file is revised; that would erase the only record of which plugins have been re-checked.
+The header also carries **` · skill-standard vX.Y.Z`** — the version of *this* standard the plugin was last audited against, updated only when an audit actually happens. A stamp from before the standards merged (2026-10-08) names **` · plugin-standard vX.Y.Z`**, the retired file it was audited against, whose versions are Part B of `changelog/toolkit-standard.md`; a stamp is never renamed to this file's numbering without an audit, since the two count differently. **It is expected to lag, and the lag is the signal**, not a defect to tidy: a plugin stamped three minor versions back is telling you which rules have never been applied to it. Do not bump every stamp when this file is revised; that would erase the only record of which plugins have been re-checked.
 
 *Why:* rules arrive in this standard because a real plugin failed, and the plugins that already existed do not get re-audited automatically. Without the stamp there is nothing at all distinguishing "checked and clean under the current rules" from "never looked at since".
 
 *Evidence:* one plugin sat stamped at v1.1.0 while the collision-safety rule arrived in 1.2.0 and its state half in 1.3.0. Read on 2026-08-09, the stamp was exactly right — an audit against those two rules found its segmented control inheriting `height` from ui-base's bare `button` selector, and its `:hover` declaring `color` alone so that ui-base's `button:hover` supplied a brand background to the inactive half. A second plugin stamped at the same version was audited the same day and was **clean**, because it declares no control elements for those rules to bite on. Both outcomes were only visible because the stamp said where to look `[4/4 plugins carry it]`.
 
-*Checked:* `standards/tests/check.sh` "README says v".
+*Checked:* `standards/tests/check.sh` "README says v"; `standards/tests/check.sh` "audit stamp names".
 
 ### 9 · Network fetch from plugin UI — CORS and the null origin
 A Figma plugin UI (`ui.html`) runs inside a **sandboxed `data:` URL iframe**, which has origin `'null'` by spec. This has a real, confirmed consequence: **some CDNs reject fetches from a null origin outright** — `unpkg.com` does, returning a CORS block *and* a 500, independent of whether the URL involves a redirect (`@latest` redirects to a pinned version; pinning the version alone did NOT fix it — the direct, non-redirected request was rejected identically). **`cdn.jsdelivr.net`** is confirmed to work: it documents unconditional `Access-Control-Allow-Origin: *` on every response, specifically for cross-origin cases like this.

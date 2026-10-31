@@ -10,7 +10,7 @@ import { resolve, join, dirname } from 'node:path';
 const require = createRequire(import.meta.url);
 
 const label = process.env.DOCS_PROJECT;
-if (!label) throw new Error('Set DOCS_PROJECT to a project\'s label (its repo under ~/Projects/, holding figma-design-system/), e.g. DOCS_PROJECT=<label> pnpm dev');
+if (!label) throw new Error('Set DOCS_PROJECT to a project\'s label (its repo beside the toolkit, or under TOOLKIT_PROJECTS_ROOT, holding figma-design-system/), e.g. DOCS_PROJECT=<label> pnpm dev');
 // The engine lives in the toolkit (tools/docs-site): found by walking up from where
 // it runs to the folder that holds the snapshot router. Not from this file's
 // own address, which in a build is a bundled chunk somewhere else.
@@ -141,6 +141,15 @@ export const statusMarkerOf = (key) => libraryTokens(key).statusMarker || null;
 // so the Foundations pages leave them out.
 export const localCollections = new Set(Object.keys(contract.auditContext(project.doc).libraries || {}).flatMap((k) => [].concat(libraryTokens(k).local || [])));
 export const statusMarker = statusMarkerOf(Object.keys(contract.auditContext(project.doc).libraries || {})[0]);
+// How a deprecated component is marked (figma-standard rule 14): its marker, its category and the name prefix the
+// settings derive from both (`deprecatedNamePrefix`), the first library's like `statusMarker`; null where absent.
+const firstKey = Object.keys(contract.auditContext(project.doc).libraries || {})[0];
+// a project with no components library yet reads the house's, as every library does under its own
+const firstTokens = firstKey ? libraryTokens(firstKey) : contract.flatSettings(JSON.parse(readFileSync(join(TOOLKIT, 'standards/audit-settings.json'), 'utf8'))['audit-defaults'], {});
+// The leading marker a page name drops when it is shown (figma-standard rule 11's `pageMarker`), compiled as Unicode so a
+// project's own may name letters of any script; null where the settings give none, and then nothing is dropped.
+export const pageMarker = firstTokens.pageMarker ? (() => { try { return new RegExp(firstTokens.pageMarker, 'u'); } catch { return new RegExp(firstTokens.pageMarker); } })() : null;
+export const deprecation = { marker: firstTokens.deprecatedMarker || null, category: firstTokens.deprecatedCategory || null, namePrefix: firstTokens.deprecatedNamePrefix || null };
 // For format.js, which cannot import this module (see there).
 globalThis.__docsLanguage = language;
 /** `ours('Behaviour')` → `'Behavior'` on an en-US project. */

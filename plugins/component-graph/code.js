@@ -1,4 +1,4 @@
-// Component Graph — v3.7.0 · standard v1.4.0
+// Component Graph — v3.7.1 · plugin-standard v1.4.0
 // @ts-check
 //
 // One file-wide scan produces everything the plugin knows:
@@ -33,6 +33,9 @@ const LIBCHECK_BATCH = 8;    // concurrent library probes (each is a round-trip)
 const LIBCHECK_RETRIES = 1;  // extra attempts before a rejection counts as missing
 
 figma.showUI(__html__, { width: UI_SIZE.width, height: UI_SIZE.height, themeColors: true });
+// A read-only walk (skill-standard §B 3): Figma skips what is hidden inside an instance. Nothing is lost, since an
+// instance nested in another is a mirrored copy the graph already discards (resolveInstance).
+figma.skipInvisibleInstanceChildren = true;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Node helpers
