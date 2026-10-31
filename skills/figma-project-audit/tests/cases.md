@@ -1,5 +1,7 @@
 # Eval cases — figma-project-audit (v1.3.0)
 
+**Walked: 2026-10-31 for 1.4.0** — O6 added and traced; O1 to O5 re-read against the new paragraph, none changed (a missing stage is a skip, as O2's missing setting is).
+
 **Walked: 2026-10-31 against v1.3.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Reviewed against v1.2.5 on 2026-10-14** — no case changed: the dashboard service is `tools/figma-audit` (was `tools/figma-dashboard`); paths in prose and comments only, behaviour unchanged.
@@ -40,3 +42,9 @@ Assert: the report's first line says two breaking changes are undecided and name
 Assert also (negative): the audit does not read the change log as a stage; a stage reads the live file (toolkit-standard §D 5).
 
 Traced: 2026-10-01 — to step 8. The service half is executed in `test-breaking.mjs`.
+
+## O6 · A stage skill that is not installed is named, and the rest run
+Fixture: a full run in a session where `component-validator` is not among the installed skills, on a library whose settings name a code target.
+Assert: the report's code-target line says the stage was skipped because `component-validator` is not installed, and how to get it (`bin/get skills/figma-project-audit`, then `./install.sh`). Every other stage runs. This skill performs none of the validator's checks in its place.
+
+Traced: 2026-10-31 — to *A stage whose skill is not installed*. That `bin/get skills/figma-project-audit` takes `component-validator` with it is executed by `bin/check`'s "every skill, from bin/get, has what it names".

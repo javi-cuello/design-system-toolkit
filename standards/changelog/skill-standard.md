@@ -1,5 +1,6 @@
 # History — skill-standard
 
+- 1.5.0 (2026-10-31): §A clause H: a skill may run toolkit tools, standards and knowledge pages by repo path, which bin/get takes with it; never another skill's files.
 - 1.4.5 (2026-10-30): *Verifying a skill*: the ds-model-routing row is read when a skill is added; `check.sh` never warned on a missing one, as the line claimed.
 - 1.4.4 (2026-10-29): §B 4's ui-base copies are written by `plugins/_shared/sync.mjs`, whose `--check` `standards/tests/check.sh` runs; the marker names it. A missing block and a stale plugin-creator asset now error, as any differing copy does (they warned).
 - 1.4.3 (2026-10-29): §A clause G cites toolkit-standard §D 23, the root principle it applies to a skill; no rule changed.

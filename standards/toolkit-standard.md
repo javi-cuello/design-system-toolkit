@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.20.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.20.1** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -311,7 +311,7 @@ lent to a project that needs just that part.
 copy, and the validator still runs alone on a file with no project; the snapshot
 router calls the store, and the store is what a replay calls by hand.
 
-*Checked:* `standards/tests/check.sh` "reads outside its folder" (skill-standard §A clause H) and `standards/tests/check.sh` "clause G says an engine in scripts/" (§A clause G). *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — §D 0's
+*Checked:* `standards/tests/check.sh` "reads another skill's files" (skill-standard §A clause H), `bin/check` "every skill, from bin/get, has what it names" and `standards/tests/check.sh` "clause G says an engine in scripts/" (§A clause G). *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — §D 0's
 first question — an orchestrator that owns logic is a second owner of it.
 
 ### 5 · Figma is the source of truth; the snapshot is its representation

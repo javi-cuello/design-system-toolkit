@@ -1,5 +1,7 @@
 # Eval cases — figma-component-pass (v1.8.0)
 
+**Walked: 2026-10-31 for 1.9.0** — Stage 0 now decides scope only and each stage does its own discovery (toolkit-standard §D 4); A5's provenance line and P10's fixture wording follow it, no assertion changed. A11 added and traced. A1 to A10 and P10 re-read against the new Stage 0: none relied on stage 0 doing a stage's reading except A5, whose cross-check this skill still owns.
+
 **Walked: 2026-10-31 against v1.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
 **Reviewed against v1.7.0 on 2026-10-02** — A2's rename assertion corrected to the tested behaviour: a rename breaks the API, not the overrides. Traced to *The checkpoint*; no other case changed.
@@ -79,7 +81,7 @@ Not walked.
 Fixture: a stepper component set with a `Layout` axis, whose slot children are all named `Step item` but resolve to `Step item / Horizontal` under one Layout value and `Step item / Vertical` under the other.
 Assert: both mains appear in the composition list. A dedupe keyed on instance name alone across the whole set keeps only whichever variant was scanned first, and fails this case.
 Assert also: the resulting count is cross-checked against the number of distinct mains the variant axes predict, and a shortfall is raised rather than accepted.
-This is a recorded production failure, not a hypothetical — stage 0 carries the keying code and the warning that "the failure is quiet and plausible-looking", because the short list is correct as far as it goes and nothing downstream flags it.
+This is a recorded production failure, not a hypothetical — the stages' walks carry the keying, and Stage 0 states it with the cross-check this skill owns, because the short list is correct as far as it goes and nothing downstream flags it.
 
 **Walked 2026-08-09 — passes, and the fixture exists in this library with the exact shape the case describes.** Both keyings were run side by side across all **56** component sets: the shipped `variant.name + '::' + i.name`, and the broken `i.name` alone. Exactly **one** set diverges.
 
@@ -141,10 +143,17 @@ Per *Partial and repeat runs*: per-component ordering is what keeps the interfac
 Not walked.
 
 ## P10 · The interface can change mid-pass, and only a fresh read catches it — WALKED 2026-08-14 (twice in one session, on a live shared file)
-Fixture: two components in one session of a file the maintainer was editing at the same time. A `Sheet` gained a sixth property (`Tabs`) between the stage 0 interface read and the stage 3 write. A `Message card` gained the `Message text` property whose *absence* had just been reported as a finding and carefully written around, so the description said less than the component now supported.
+Fixture: two components in one session of a file the maintainer was editing at the same time. A `Sheet` gained a sixth property (`Tabs`) between the first interface read and the stage 3 write. A `Message card` gained the `Message text` property whose *absence* had just been reported as a finding and carefully written around, so the description said less than the component now supported.
 Assert the detection: both were caught by the stage 3 cross-check comparing the written description against a **re-read** `componentPropertyDefinitions`, not against the stage 2 plan captured minutes earlier. A cross-check against the cached plan agrees with itself and reports clean.
 Assert the response: **stages 2 and 3 re-run together**, never the description alone. On `Sheet` the table was already applied from the pre-change interface, so patching only the prose would have left a 5-row table and a 6-property description — the exact half-updated state the ordering exists to prevent, and one that looks well-formed from either side.
 Assert the negative, because it is what stops this becoming ceremony: this is not a licence to re-read continuously. One fresh read at the verification step caught both; polling between every write would have cost calls and caught nothing extra.
 Assert why it is a skill rule and not a note: neither change announced itself, and both would have shipped as correct-looking documentation of a component that had moved on. A shared file is the normal case, not the exception.
 
 Walked live: 2026-08-14 — two components in a shared file the maintainer was editing during the session.
+
+## A11 · A stage skill that is not installed is named before anything runs (negative case)
+Fixture: a "full pass" on one component in a session where `figma-properties-table` is not among the installed skills.
+Assert: before stage 1 the run says `figma-properties-table` is not installed, and how to get it (`bin/get skills/figma-component-pass`, then `./install.sh`). Stages 1 and 3 run in order; the report's Properties section says the stage was skipped and why.
+Assert also (negative): no table is built by hand here, and stage 3 is not told a plan exists. Doing a missing stage's work in the orchestrator is the second owner toolkit-standard §D 4 forbids.
+
+Traced: 2026-10-31 — to Stage 0 step 3. That `bin/get skills/figma-component-pass` takes the three stage skills is executed by `bin/check`'s "every skill, from bin/get, has what it names".

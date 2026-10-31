@@ -36,7 +36,7 @@ git sparse-checkout set --cone bin
 bin/get tools/contract-editor        # or plugins/<name>, skills/<name>; --list prints the folders and changes nothing
 ```
 
-A folder with packages of its own (the docs site) is named with its `pnpm install`; a skill goes into Claude Code with `./install.sh`. Then follow that tool's README.
+A skill comes with the tools, standards and knowledge pages it names, and an orchestrating skill with the skills it runs. A folder with packages of its own (the docs site) is named with its `pnpm install --frozen-lockfile`; a skill goes into Claude Code with `./install.sh`, which says which services it left out and how to start each. Then follow that tool's README.
 
 **The whole toolkit**, with the skills in Claude Code, the services and a first project: [docs/setup.md](docs/setup.md). How the parts connect, and the words used across them: [docs/how-it-fits.md](docs/how-it-fits.md). To change the toolkit: [CONTRIBUTING.md](CONTRIBUTING.md).
 

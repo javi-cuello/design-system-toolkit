@@ -13,9 +13,12 @@
  * From the tool's folder it follows each code file's relative imports, and
  * every quoted name that is a toolkit folder (`path.join(HERE, '..',
  * 'snapshot', 'deliver.cjs')` names tools/snapshot), checks those out, and
- * reads them in turn until nothing new is named. A name taken by mistake only
- * checks out more; one it misses fails bin/check, which runs the contract
- * editor's tests from a checkout this made.
+ * reads them in turn until nothing new is named. A skill taken whole is read
+ * for its prose too: the toolkit paths its SKILL.md and references name, and
+ * the skills it says to run (skill-standard §A clause H). A name taken by
+ * mistake only checks out more; one it misses fails bin/check, which runs the
+ * contract editor's tests and takes every skill from a checkout this made. It
+ * fails itself when a file it reached is not in the checkout.
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -53,20 +56,67 @@ const names = (segs) => segs.join('/').split('/').some((x) => x && x !== '.' && 
 // a file's text: the checked-out copy, or HEAD's where the checkout has none (a --list in a sparse clone)
 const read = (f) => fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : git('show', `HEAD:${rel(f)}`);
 
+// What a skill's own prose (its SKILL.md and references/*.md) names: a toolkit path from the
+// repo root under tools/, bin/, standards/ or knowledge/, in a `code span`, a fenced block or
+// after `node `, and each skill it says to run (run `figma-components-audit`), taken whole.
+// A bare top folder (`tools/`) names nothing, and a placeholder (`knowledge/ui/<page>.md`)
+// names the folder before it. A bin/ path the toolkit lacks is a project's own (`bin/tokens`);
+// any other it lacks is kept in MISSING, said on stderr, and warned by standards/tests/check.sh.
+// Only a skill taken whole is read so: a tool that reads a SKILL.md as data takes no more for it.
+const PROSE = /^skills\/[^/]+\/(SKILL\.md|references\/[^/]+\.md)$/;
+const MISSING = [];
+const WHOLE = new Set();
+const skillOf = (f) => rel(f).split('/').slice(0, 2).join('/');
+function prose(file) {
+  const out = new Set();
+  const self = rel(file).split('/')[1];
+  let fenced = false;
+  read(file).split('\n').forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) { fenced = !fenced; return; }
+    const code = fenced ? [line] : [...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    code.push(...[...line.matchAll(/\bnode\s+(\S+)/g)].map((m) => m[1]));
+    for (const c of code) for (const m of c.matchAll(/(?:^|[\s"'(=])((?:tools|bin|standards|knowledge)\/[\w./-]*)(.?)/g)) {
+      let p = m[1].replace(/[.,:;]+$/, '');
+      if (/[<*{$]/.test(m[2])) p = p.slice(0, p.lastIndexOf('/') + 1);
+      p = p.replace(/\/+$/, '');
+      // the toolkit's own check is the repo's, never a skill's run: prose naming it says what guards the
+      // toolkit, and following it took every skill (its standards check reads them all)
+      if (!p.includes('/') || /^(bin\/check|tools\/toolkit-check\/check-standards\.mjs)$/.test(p)) continue;
+      const abs = path.join(ROOT, p);
+      if (isFile(abs) || isDir(abs)) out.add(abs);
+      else if (!p.startsWith('bin/')) MISSING.push(`${rel(file)}:${i + 1}: names ${p}, which the toolkit does not have`);
+    }
+    if (!fenced) for (const m of line.matchAll(/\brun `([a-z0-9-]+)`/gi)) {
+      const s = path.join(ROOT, 'skills', m[1]);
+      if (m[1] === self || !isFile(path.join(s, 'SKILL.md'))) continue;
+      out.add(s);
+      // taken whole now: its prose is read, though a tool may have reached it as data first
+      if (!WHOLE.has(rel(s))) { WHOLE.add(rel(s)); for (const f of reached) if (PROSE.test(rel(f)) && skillOf(f) === rel(s)) reached.delete(f); }
+    }
+  });
+  return [...out];
+}
+
 // what one file names: its relative imports and URLs, each path-shaped string, a
 // template string's path after its first ${…}, and the quoted segments that end a
 // path.join or path.resolve, read from the file's folder, the two above it and the
 // toolkit's root. A join whose last part is a variable names no file.
 function named(file) {
+  if (PROSE.test(rel(file)) && WHOLE.has(skillOf(file))) return prose(file);
   if (!CODE.test(file) && !(path.basename(path.dirname(file)) === 'bin' && !path.extname(file))) return [];
   const src = read(file);
   const here = path.dirname(file);
   const bases = [here, path.dirname(here), path.dirname(path.dirname(here)), ROOT];
   const out = new Set();
-  const take = (segs) => { if (!names(segs)) return; for (const b of bases) { const p = path.resolve(b, ...segs); if (inside(p) && (isFile(p) || isDir(p))) { out.add(p); return; } } };
+  const take = (segs) => { if (!names(segs)) return true; for (const b of bases) { const p = path.resolve(b, ...segs); if (inside(p) && (isFile(p) || isDir(p))) { out.add(p); return true; } } return false; };
   for (const m of src.matchAll(/(?:require\(|from\s+|import\(|new URL\()\s*['"](\.{1,2}\/[^'"]+)['"]/g)) take([m[1]]);
   for (const m of src.matchAll(/['"`]\/?((?:\.{1,2}\/)*[\w.-]+(?:\/[\w.-]+)+)['"`]/g)) take([m[1]]);
   for (const m of src.matchAll(/`\$\{\w+\}\/((?:\.{1,2}\/)*[\w.-]+(?:\/[\w.-]+)*)`/g)) take([m[1]]);
+  // a shell script's target after its own folder or the repo's: "$REPO/tools/…", "$(dirname "$0")/../tools/…"
+  // (one into a toolkit folder that resolves nowhere is a script that cannot find what it runs: said)
+  if (/\.sh$/.test(file) || /^#!.*\b(ba|z)?sh\b/.test(src)) for (const m of src.matchAll(/(?:\$\{?\w+\}?|\$\(dirname "\$0"\))\/((?:\.{1,2}\/)*[\w.-]+(?:\/[\w.-]+)+)/g)) {
+    if (!take([m[1]]) && /^(tools|bin|standards|knowledge|skills|plugins)\//.test(m[1].replace(/^(\.\.\/)+/, ''))) MISSING.push(`${rel(file)}: runs ${m[1]}, which the toolkit does not have`);
+  }
   for (const m of src.matchAll(/(?:join|resolve)\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)/g)) {
     const parts = argsOf(m[1]);
     const tail = [];
@@ -95,8 +145,10 @@ if (!list && !(on('core.sparseCheckout') && on('core.sparseCheckoutCone'))) { co
 // deleted from the working tree), is read from HEAD instead, so the loop never fetches a whole
 // tools/ for it (a top-level folder whose own files are used, like standards/, is taken whole)
 const reached = new Set();
+for (const s of starts) if (/^skills\/[^/]+$/.test(rel(s))) WHOLE.add(rel(s));
 const queue = starts.flatMap((s) => filesIn(s, true));
-const folderOf = (f) => rel(path.dirname(f));
+// cone mode refuses a folder named like a pattern (an Astro route, `[platform]`): its parent stands for it
+const folderOf = (f) => rel(path.dirname(f)).replace(/\/[^/]*[[\]*?\\].*$/, '');
 const cone = new Set(['bin', ...starts.map(rel)]);
 let waiting = [];
 for (;;) {
@@ -120,10 +172,15 @@ const kept = dirs.filter((d) => !(!d.includes('/') && dirs.some((o) => o.startsW
 const top = [...new Set(['bin', ...kept])].filter((d) => !kept.some((o) => o !== d && d.startsWith(o + '/'))).sort();
 if (!list) git('sparse-checkout', 'set', '--cone', ...top);
 console.log(top.join('\n'));
+for (const m of [...new Set(MISSING)]) console.error(m);
+// what it reached is on disk, or the folders above are wrong: said, never left for a run to find
+const absent = list ? [] : [...reached].filter((f) => !fs.existsSync(f));
+if (absent.length) { console.error(`not checked out, though used:\n  ${absent.map(rel).join('\n  ')}`); process.exitCode = 1; }
 // a folder with packages of its own (the docs site's Astro) names the one install it needs, on stderr so the list stays a list
 for (const d of top) {
   const pkg = path.join(d, 'package.json');
   if (!TRACKED.has(pkg)) continue;
   let deps = {}; try { deps = JSON.parse(read(path.join(ROOT, pkg))).dependencies || {}; } catch { console.error(`${pkg}: not readable as JSON`); }
-  if (Object.keys(deps).length) console.error(`then: (cd '${d}' && pnpm install)`);
+  // the lockfile's versions, never newer ones a range allows
+  if (Object.keys(deps).length) console.error(`then: (cd '${d}' && pnpm install${TRACKED.has(path.join(d, 'pnpm-lock.yaml')) ? ' --frozen-lockfile' : ''})`);
 }
