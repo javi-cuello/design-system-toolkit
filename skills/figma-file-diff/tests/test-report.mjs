@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { render } from "../scripts/report.mjs";
+import { render, next, renderNext, stable } from "../scripts/report.mjs";
 
 const read = (f) => fs.readFileSync(fileURLToPath(new URL("../scripts/" + f, import.meta.url)), "utf8");
 const Async = Object.getPrototypeOf(async function () {}).constructor;
@@ -132,6 +132,39 @@ ok("a dump path is a code span, so a layer named <slot> or _private_ survives ma
   const t = { serialise: ser("T", ["P / C = bb (2)"]), dumps: [{ ...dump(2), file: "T" }] };
   assert.ok(render(r, t).split("\n").includes("| `P / C` → `_private_` | w 1 | w 2 |  |"));
 });
+// --next: what Steps 3 and 5 read next, from the hashes alone, and fed back in it completes the report
+{
+  const bare = async (file) => ({ inventory: await run("inventory.js", file), manifest: await run("manifest.js", file), serialise: await run("serialise.js", file) });
+  const rb = await bare(fileOf()), tb = await bare(fileOf(true));
+  const todo = next(rb, tb);
+  ok("--next: the differing variable whose fields are unread is listed, and only it", () => assert.deepEqual(todo.vars, ["Space/Space/2"]));
+  ok("--next: the differing component not drilled is listed with dump-node.js's name and parent", () =>
+    assert.deepEqual(todo.dumps, [{ path: "❖ Table / Row - Effects", name: "Row - Effects", parent: "❖ Table" }]));
+  const printed = renderNext(rb, tb);
+  const varsLine = printed.split("\n").find((l) => l.startsWith("const VARS = "));
+  const nameLine = printed.split("\n").find((l) => l.startsWith("const COMPONENT_NAME = "));
+  const parentLine = printed.split("\n").find((l) => l.startsWith("const PARENT_NAME = "));
+  const dumpSrc = read("dump-node.js").replace(/^const COMPONENT_NAME = .*$/m, nameLine).replace(/^const PARENT_NAME = .*$/m, parentLine);
+  const dumpOf = (file) => new Async("figma", dumpSrc)(file);
+  const fill = async (side, file) => ({ ...side, manifest: await run("manifest.js", file, varsLine), dumps: [await dumpOf(file)] });
+  const rf = await fill(rb, fileOf()), tf = await fill(tb, fileOf(true));
+  ok("--next: its printed lines, run as printed, leave nothing to read", () => assert.equal(renderNext(rf, tf), "Nothing left to read: render the report.\n"));
+  ok("--next: and the report then has no undone row", () => assert.doesNotMatch(render(rf, tf), /not drilled|fields not read/));
+}
+
+// --stable: Step 6, one side's first run against its re-run
+{
+  const first = { serialise: await run("serialise.js", fileOf()), manifest: await run("manifest.js", fileOf()) };
+  const again = { serialise: await run("serialise.js", fileOf()), manifest: await run("manifest.js", fileOf()) };
+  ok("--stable: two runs of an unchanged file agree", () => assert.deepEqual(stable(first, again).moved, []));
+  const live = fileOf(true); live.root.name = "Library";
+  const moved = stable(first, { serialise: await run("serialise.js", live), manifest: await run("manifest.js", live) }).moved;
+  ok("--stable: a file that moved between runs names each hash and total that moved", () =>
+    assert.ok(moved.some((m) => m.startsWith("serialise deepHash")) && moved.some((m) => m.startsWith("serialise totalNodes")) && moved.some((m) => m.startsWith("manifest fileHash")), moved.join("; ")));
+  ok("--stable: runs naming different files are refused", () => assert.throws(() => stable(first, { serialise: tgt.serialise }), /different files/));
+  ok("--stable: a run with neither hash is refused, never called stable", () => assert.throws(() => stable(first, { inventory: ref.inventory }), /needs serialise/));
+}
+
 console.log(`${n} passed` + (failed ? `, ${failed} failed` : ""));
 if (failed) process.exit(1);
 

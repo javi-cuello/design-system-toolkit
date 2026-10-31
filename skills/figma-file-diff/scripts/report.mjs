@@ -1,6 +1,8 @@
 // Step 7's two tables, rendered from what the scripts returned, never assembled by hand.
 //
 //   node scripts/report.mjs <reference.json> <target.json>
+//   node scripts/report.mjs --next <reference.json> <target.json>   what Steps 3 and 5 read next
+//   node scripts/report.mjs --stable <first.json> <re-run.json>     Step 6, one side's two runs
 //
 // Each side is one JSON file holding that file's script results, saved verbatim:
 //   { "inventory": <inventory.js>, "manifest": <manifest.js>, "serialise": <serialise.js>,
@@ -75,9 +77,10 @@ function dumpProps(a, b) {
 
 const side = (has, here) => (has ? here : "absent");
 
-export function render(ref, tgt) {
+// The tables' rows, and what is left to read before they are whole (`pending`).
+function build(ref, tgt) {
   const rName = fileOf(ref, "reference"), tName = fileOf(tgt, "target");
-  const summary = [], detail = [];
+  const summary = [], detail = [], pending = { vars: [], dumps: [] };
   const row = (where, a, b) => detail.push([where, a, b]);
   const ri = ref.inventory, ti = tgt.inventory, rm = ref.manifest, tm = tgt.manifest;
   const rc = comps(ref), tc = comps(tgt);
@@ -143,7 +146,7 @@ export function render(ref, tgt) {
         differ++;
         if (!(k in rv) || !(k in tv)) { row(code(k), side(k in rv, "present"), side(k in tv, "present")); continue; }
         const x = rm.bodies && rm.bodies[k], y = tm.bodies && tm.bodies[k];
-        if (!x || !y) { row(code(k) + " (fields not read: run manifest.js with VARS)", "differs", "differs"); continue; }
+        if (!x || !y) { pending.vars.push(k); row(code(k) + " (fields not read: run manifest.js with VARS)", "differs", "differs"); continue; }
         const show = (v) => code(typeof v === "string" ? v : JSON.stringify(v));
         for (const f of VAR_FIELDS) if (JSON.stringify(x[f]) !== JSON.stringify(y[f])) row(code(k) + " → " + f, show(x[f]), show(y[f]));
       }
@@ -189,7 +192,7 @@ export function render(ref, tgt) {
       if (!a || !b) { row(code(k), side(a, a && "present, " + num(a.n) + " nodes"), side(b, b && "present, " + num(b.n) + " nodes")); continue; }
       differing.push(k);
       const x = rd.get(k), y = td.get(k);
-      if (!x || !y) { row(code(k) + " (not drilled: run dump-node.js in both)", num(a.n) + " nodes", num(b.n) + " nodes"); continue; }
+      if (!x || !y) { pending.dumps.push(k); row(code(k) + " (not drilled: run dump-node.js in both)", num(a.n) + " nodes", num(b.n) + " nodes"); continue; }
       const xr = dumpRows(x), yr = dumpRows(y);
       let found = 0;
       for (const p of union(xr.keys(), yr.keys())) {
@@ -204,6 +207,11 @@ export function render(ref, tgt) {
       (differing.length > 5 ? ", and " + num(differing.length - 5) + " more" : "");
     summary.push(["Components that differ", num(differing.length), num(differing.length), names || "none"]);
   }
+  return { rName, tName, summary, detail, pending };
+}
+
+export function render(ref, tgt) {
+  const { rName, tName, summary, detail } = build(ref, tgt);
 
   const table = (head, rows) => [
     "| " + head.join(" | ") + " |", "|" + head.map(() => "---").join("|") + "|",
@@ -217,13 +225,54 @@ export function render(ref, tgt) {
   ].join("\n");
 }
 
+// Steps 3 and 5's next reads, from the hashes: the VARS line for manifest.js, and the
+// COMPONENT_NAME / PARENT_NAME pair dump-node.js takes for each differing component not drilled.
+export function next(ref, tgt) {
+  const { vars, dumps } = build(ref, tgt).pending;
+  return {
+    vars,
+    dumps: dumps.map((path) => { const parts = path.split(" / "); return { path, name: parts[parts.length - 1], parent: parts.length > 1 ? parts[parts.length - 2] : null }; }),
+  };
+}
+
+export function renderNext(ref, tgt) {
+  const { vars, dumps } = next(ref, tgt);
+  const lines = [];
+  if (vars.length) lines.push("manifest.js, in both files, with:", "const VARS = " + JSON.stringify(vars) + ";", "");
+  for (const d of dumps) lines.push("dump-node.js, in both files, for " + d.path + ":", "const COMPONENT_NAME = " + JSON.stringify(d.name) + ";", "const PARENT_NAME = " + JSON.stringify(d.parent) + ";", "");
+  return lines.length ? lines.join("\n") : "Nothing left to read: render the report.\n";
+}
+
+// Step 6: one side's first run against its re-run. The file hash, the component hash and the
+// node total must all hold; anything else means the file moved under the session.
+export function stable(first, again) {
+  const a = fileOf(first, "first run"), b = fileOf(again, "re-run");
+  if (a !== b) throw new Error("the runs name different files (" + a + ", " + b + ")");
+  const moved = [];
+  const cmp = (label, x, y) => { if (x !== undefined && y !== undefined && x !== y) moved.push(label + " " + x + " → " + y); };
+  const fs = first.serialise || {}, as = again.serialise || {}, fm = first.manifest || {}, am = again.manifest || {};
+  if (!(fs.deepHash || fm.fileHash) || !(as.deepHash || am.fileHash)) throw new Error("each run needs serialise.js or manifest.js results to compare");
+  cmp("serialise deepHash", fs.deepHash, as.deepHash);
+  cmp("serialise totalNodes", fs.totalNodes, as.totalNodes);
+  cmp("serialise count", fs.count, as.count);
+  cmp("manifest fileHash", fm.fileHash, am.fileHash);
+  return { file: a, moved };
+}
+
 // through the real path: run from ~/.claude/skills, argv[1] is the symlink and never equals this module
 if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
-  const [a, b] = process.argv.slice(2);
-  if (!a || !b) { console.error("usage: node report.mjs <reference.json> <target.json>"); process.exit(2); }
+  const args = process.argv.slice(2), mode = args[0] === "--next" || args[0] === "--stable" ? args.shift() : null;
+  const [a, b] = args;
+  if (!a || !b) { console.error("usage: node report.mjs [--next | --stable] <reference.json | first.json> <target.json | re-run.json>"); process.exit(2); }
   try {
-    const ref = JSON.parse(readFileSync(a, "utf8")), tgt = JSON.parse(readFileSync(b, "utf8"));
-    if (fileOf(ref, "reference") === fileOf(tgt, "target")) console.error("warning: both sides name the same file; confirm by file key that two files were read");
-    process.stdout.write(render(ref, tgt));
+    const x = JSON.parse(readFileSync(a, "utf8")), y = JSON.parse(readFileSync(b, "utf8"));
+    if (mode === "--stable") {
+      const { file, moved } = stable(x, y);
+      if (moved.length) { console.log(code(file) + " moved between runs: " + moved.join("; ") + ". Re-run every read in it and report the later one."); process.exit(1); }
+      console.log(code(file) + " stable: both runs agree.");
+    } else {
+      if (fileOf(x, "reference") === fileOf(y, "target")) console.error("warning: both sides name the same file; confirm by file key that two files were read");
+      process.stdout.write(mode === "--next" ? renderNext(x, y) : render(x, y));
+    }
   } catch (e) { console.error(e.message); process.exit(1); }
 }
