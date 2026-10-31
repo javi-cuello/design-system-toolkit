@@ -1,4 +1,6 @@
-# Eval cases — figma-contrast-matrix (v3.6.0)
+# Eval cases — figma-contrast-matrix (v3.7.0)
+
+**Walked: 2026-10-31 for 3.7.0** — A16 added and executed: `python3 tests/test-matrix.py` 48 passed, the build writing two read-back parts for a full grid, every one of 169 cells read back as meant after the eight batches ran against a stateful stand-in, and a block whose `Pass` was changed after the write named with what was meant and what is there. A10's assertion now names the read-back; its 2026-08-10 live walk did the same re-read by hand. Not walked live: the read-back parts have met only the stand-in, and their size (84 cells) is not yet measured on a real file.
 
 **Walked: 2026-10-31 for 3.6.0** — `node tests/test-find-grid-instances.mjs` 5/5 (two new: the name is the settings', and a run with no settings says what to prepend; both failing on 3.5.0, whose script carried its own name), `python3 tests/test-matrix.py` 45/45 and `node tests/test-read-ramp-hexes.mjs` unchanged. Cases read against the change: none names `GRID_NAME`; A-cases that run the scripts through the bridge now prepend the settings, as Workflow step 1 says.
 
@@ -84,7 +86,7 @@ Walked live: 2026-08-10 — a real ~170-node contrast-matrix instance, with the 
 
 ## A10 · A run is not reported as done until it is verified
 Fixture: a completed `figma_execute` call returning `{ titleUpdated, headersUpdated, blocksUpdated, errors }`.
-Assert: `errors` is checked as empty, and the instance is screenshotted and sanity-checked — title correct, header swatches right, header text legible, diagonal `N/A` when self-comparing, and spot-checked ratios such as step 1 vs step 12 reading as a high-contrast pass.
+Assert: `errors` is checked as empty, and every cell is read back by step 3's `apply_matrix.verify.*.js` (since 3.7.0) with no mismatch and `read` equal to `expected`; the screenshot that follows is for header legibility and clipping only.
 Assert also: reporting success on the strength of the return value alone fails this case. The call can succeed against the wrong instance.
 Observed live, 2026-08-10 (`projects/project-b/`): verification went beyond the return value alone — a full re-read counted every header's label against its expected step (each 1–12 appearing exactly twice) and every block's `Pass` value against expectation (the self-comparison diagonal reading exactly 12 `N/A`, matching the ramp's 12 steps, with the remaining split — most-fail, some-pass-at-3:1, some-pass-at-4.5:1 — internally consistent with a real ramp's own contrast profile), before the screenshot. The return value alone (all populated, zero errors) would have looked identical whether the underlying map was right or wrong; the independent re-read is what this case actually requires.
 
@@ -124,3 +126,10 @@ Fixture: a fake frame holding a note instance and a `_Colour ramp` instance whos
 Assert: both rows come back as 12 `#RRGGBB` values in step order, the ramp found as a child by its main component's name whether the frame is given by id or by name, and the list is one `build-matrix-script.py` accepts for `--color-a` (it writes the batches). Assert (negative): 11 columns, a translucent or non-solid step, a lookalike component and an empty or missing frame each throw with the step and row named — never a short or guessed list, which the builder would fill a grid from in the wrong place. Recorded under toolkit-standard §D 23: the hexes were read by an agent-written walk each run.
 
 Runs: node tests/test-read-ramp-hexes.mjs — "reads both rows of all 12 steps, in step order, as #RRGGBB", "a ramp without 12 Swatches columns throws, never returns a short list"
+
+## A16 · The run is verified by reading every cell back, not by a screenshot
+Fixture: the two-colour grid from A14, built with `--title`, its eight batches run in order against a stand-in `figma` that keeps what each write set; then the same with one block's `Pass` changed after the write.
+Assert: the build writes two read-back parts beside the batches; after the batches, the read-back reads all 169 cells (title, 24 headers, 144 blocks), `read` equal to `expected` and no mismatch; with the block changed, exactly that block is named, field `pass`, with what was meant and what is there.
+Recorded under toolkit-standard §D 23: step 5 checked the values by screenshot and spot check, which reads a wrong `Pass` on a cell nobody spot-checked as right.
+
+Runs: python3 tests/test-matrix.py — "after every batch, the read-back finds every cell as meant", "a block whose Pass reads otherwise is named, with what was meant and what is there". Not walked live.

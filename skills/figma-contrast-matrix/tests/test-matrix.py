@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executable half of tests/cases.md, cases A1-A8, A11 and A14.
+"""Executable half of tests/cases.md, cases A1-A8, A11, A14 and A16.
 
 The core of this skill is arithmetic, so most of it is testable without Figma.
 Run from the skill directory:
@@ -222,6 +222,55 @@ else:
             and r["errors"][0]["nodeId"].endswith(bad), out.stderr.strip()[-200:] or str(r.get("errors")))
         chk("the other 23 blocks of that batch are still written",
             r.get("blocksUpdated") == 23 and res.get("written") == 23, str(r))
+
+
+# --- A16: the read-back, not a screenshot -----------------------------------
+case("A16 · Step 5 reads every cell back and names each that differs")
+STATEFUL = r"""
+const fs = require('fs');
+const files = JSON.parse(process.argv[1]);
+const corrupt = process.argv[2] || '';
+const nodes = new Map();
+const node = (id) => {
+  if (!nodes.has(id)) {
+    const content = { name: 'Content', fills: [] }, label = { name: 'Label', fills: [] };
+    nodes.set(id, { id, fills: [], fontName: {}, characters: '', componentProperties: {},
+      findOne: (fn) => [content, label].find(fn) || null,
+      setProperties(p) { for (const [k, v] of Object.entries(p)) this.componentProperties[k] = { type: 'TEXT', value: v }; } });
+  }
+  return nodes.get(id);
+};
+globalThis.figma = { getNodeByIdAsync: async (id) => node(id), loadFontAsync: async () => {} };
+const run = (f) => (new Function('return (async () => {' + fs.readFileSync(f, 'utf8') + '})()'))();
+(async () => {
+  for (const f of files.apply) await run(f);
+  if (corrupt) { const [id, key, v] = corrupt.split('|'); node(id).componentProperties[key] = { value: v }; }
+  const out = [];
+  for (const f of files.verify) out.push(await run(f));
+  console.log(JSON.stringify(out));
+})();
+"""
+if node_bin:
+    with tempfile.TemporaryDirectory() as tmp:
+        stem = os.path.join(tmp, "apply_matrix.js")
+        subprocess.run([sys.executable, os.path.join(SKILL, "scripts", "build-matrix-script.py"),
+            "--node-map", os.path.join(SKILL, "references", "node-map.example.json"), "--instance", "9:1",
+            "--color-a", ",".join(A), "--color-a-name", "Blue", "--color-b", ",".join(B), "--color-b-name", "Green",
+            "--title", "Blue vs Green", "--out", stem], capture_output=True, text=True)
+        apply = sorted([os.path.join(tmp, f) for f in os.listdir(tmp) if f.startswith("apply_matrix.") and ".verify." not in f], key=lambda f: int(f.split(".")[-2]))
+        verify = sorted([os.path.join(tmp, f) for f in os.listdir(tmp) if ".verify." in f])
+        chk("the build writes the read-back beside the batches, two parts for a full grid", len(apply) == 8 and len(verify) == 2, str(os.listdir(tmp)))
+        files = json.dumps({"apply": apply, "verify": verify})
+        clean = json.loads(subprocess.run([node_bin, "-e", STATEFUL, files], capture_output=True, text=True).stdout or "[]")
+        chk("after every batch, the read-back finds every cell as meant",
+            sum(p["read"] for p in clean) == 1 + 24 + 144 and all(p["read"] == p["expected"] and p["mismatches"] == [] for p in clean), str(clean)[:300])
+        p2b = bm.build_payload(NODE_MAP, "9:1", A, "Blue", B, "Green", title="Blue vs Green")
+        cell = next(b for b in p2b["blocks"] if b["pass"] == "4.5")
+        target = f"I9:1;{cell['suffix']}"
+        bad = json.loads(subprocess.run([node_bin, "-e", STATEFUL, files, f"{target}|{p2b['blockVariantKey']}|No"], capture_output=True, text=True).stdout or "[]")
+        found = [m for part in bad for m in part["mismatches"]]
+        chk("a block whose Pass reads otherwise is named, with what was meant and what is there",
+            len(found) == 1 and found[0]["nodeId"] == target and found[0]["field"] == "pass" and found[0]["want"] == cell["pass"] and found[0]["got"] == "No", str(found))
 
 print(f"\n{_ok} passed, {_fail} failed")
 sys.exit(1 if _fail else 0)
