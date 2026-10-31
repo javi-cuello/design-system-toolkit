@@ -176,75 +176,22 @@ if [ -d standards ]; then
 fi
 
 # ─── plugins ───────────────────────────────────────────────────────────────
-# Only what stops a plugin running, plus the ui-base duplication that cannot be
-# removed. Field-by-field manifest checking was dropped: skill-standard §B is a
-# read, and it never fired.
+# The conformance checklist's mechanical half is figma-plugin-creator's
+# scripts/conformance.mjs (toolkit-standard §D 23): what stops a plugin loading,
+# or throws or is blocked at runtime, errors (an unparseable manifest, a wrong
+# documentAccess, a top-level return, a gated API without its permission, a
+# sync API under dynamic-page, a fetch under ["none"]); the rest is debt and
+# warns (@ts-check, version drift, the audit stamp, the README's data section).
 if [ -d plugins ]; then
-
-    for d in plugins/*/; do
-        p=$(basename "$d"); [ "$p" = "_shared" ] && continue
-        for f in manifest.json code.js ui.html; do
-            [ -f "$d$f" ] || warn "[1] $p — missing $f"
-        done
-        # §1 also mandates the no-build type-check pair. Warns rather than errors:
-        # a missing pragma is conformance debt, not a plugin Figma refuses to load.
-        [ -f "${d}tsconfig.json" ] || warn "[1] $p — missing tsconfig.json (skill-standard §B 1)"
-        if [ -f "${d}code.js" ] && [ "$(sed -n 2p "${d}code.js")" != "// @ts-check" ]; then
-            if grep -q '@ts-check' "${d}code.js"; then
-                warn "[1] $p — // @ts-check present but not on code.js line 2 (skill-standard §B 1)"
-            else
-                warn "[1] $p — code.js has no // @ts-check (skill-standard §B 1)"
-            fi
-        fi
-        # Figma evaluates code.js as a script; `node --check` reads it as
-        # CommonJS, where a top-level `return` is legal, so it missed the one
-        # that killed the snapshot plugin for a day.
-        if [ -f "${d}code.js" ] && ! node -e 'new (require("vm").Script)(require("fs").readFileSync(process.argv[1], "utf8"), { filename: process.argv[1] })' "${d}code.js" 2>/dev/null; then
-            err "[1] $p — code.js does not parse as a script (a top-level return?): $(node -e 'try { new (require("vm").Script)(require("fs").readFileSync(process.argv[1], "utf8")) } catch (e) { console.log(e.message) }' "${d}code.js")"
-        fi
-        # §B 8: package.json is the version's one source. A README stating its
-        # own drifted on two plugins (2.0.0 against 2.0.3, 1.0.0 against 1.11.0).
-        rv=$(grep -m1 -oE '\*\*Version [0-9]+\.[0-9]+\.[0-9]+\*\*' "${d}README.md" 2>/dev/null | grep -oE '[0-9.]+[0-9]')
-        pv=$(grep -m1 -oE '"version": *"[^"]+"' "${d}package.json" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-        [ -n "$rv" ] && [ "$rv" != "$pv" ] && warn "[8] $p — README says v$rv, package.json v${pv:-none} (skill-standard §B 8)"
-        # and code.js's header line, which drifted the same way (1.11.0 against 1.11.2, 2026-10-03)
-        cv=$(sed -n 1p "${d}code.js" 2>/dev/null | grep -m1 -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 | tr -d v)
-        [ -n "$cv" ] && [ "$cv" != "$pv" ] && warn "[8] $p — code.js header says v$cv, package.json v${pv:-none} (skill-standard §B 8)"
-        # and the audit stamp names the standard it was audited against, at a version that standard had: four
-        # plugins said "standard v1.7.0" and the like, versions of the retired plugin-standard that skill-standard never had
-        stamp=$(sed -n 1p "${d}code.js" 2>/dev/null | grep -oE '· [a-z-]*standard( §B)? v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-        sf=$(printf '%s' "$stamp" | sed -E 's/^· ([a-z-]*standard).*/\1/'); sv=$(printf '%s' "$stamp" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$')
-        case "$sf" in
-          skill-standard) grep -qE "^- $sv \(" standards/changelog/skill-standard.md 2>/dev/null || warn "[8] $p — code.js audit stamp names skill-standard v$sv, a version it never had (skill-standard §B 8)" ;;
-          plugin-standard) awk '/^### Part B/{b=1;next} /^### /{b=0} b' standards/changelog/toolkit-standard.md 2>/dev/null | grep -qE "^- $sv \(" || warn "[8] $p — code.js audit stamp names plugin-standard v$sv, a version it never had (skill-standard §B 8)" ;;
-          *) [ -f "${d}code.js" ] && warn "[8] $p — code.js audit stamp names no standard it was audited against: \` · skill-standard vX.Y.Z\` (skill-standard §B 8)" ;;
+    while IFS= read -r l; do
+        case "$l" in
+          "error  "*) err "${l#error  }" ;;
+          "warn   [5] "*) ;;   # ui-base drift: sync.mjs --check below owns it here, as an error
+          "warn   "*) warn "${l#warn   }" ;;
+          *" plugin(s): "*) ;;
+          ?*) err "plugin conformance: $l" ;;
         esac
-        m="${d}manifest.json"; [ -f "$m" ] || continue
-
-        if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$m" 2>/dev/null; then
-            err "[2] $p — manifest.json does not parse; Figma cannot load it"
-            continue
-        fi
-        python3 - "$m" <<'PY' || err "[2] $p — documentAccess must be \"dynamic-page\""
-import json, sys
-sys.exit(0 if json.load(open(sys.argv[1])).get("documentAccess") == "dynamic-page" else 1)
-PY
-        python3 - "$m" <<'PY' || err "[2] $p — ships enableProposedApi, which must never be published"
-import json, sys
-sys.exit(1 if "enableProposedApi" in json.load(open(sys.argv[1])) else 0)
-PY
-        # A gated API without its permission throws on every call, at runtime,
-        # in the file — and a plugin that guards those calls turns the throw
-        # into an empty list and reports nothing. theme-switcher shipped three
-        # versions and passed two live tests that way. §B 2.
-        if [ -f "${d}code.js" ] && grep -q 'figma\.teamLibrary' "${d}code.js"; then
-            python3 - "$m" <<'PY' || err "[2] $p — calls figma.teamLibrary without the \"teamlibrary\" permission in manifest.json (skill-standard §B 2)"
-import json, sys
-sys.exit(0 if "teamlibrary" in (json.load(open(sys.argv[1])).get("permissions") or []) else 1)
-PY
-        fi
-
-    done
+    done < <(node skills/figma-plugin-creator/scripts/conformance.mjs plugins 2>&1)
 
     # Every copy of ui-base (each plugin's block, the plugin creator's template
     # and asset) is written by plugins/_shared/sync.mjs, never pasted

@@ -5,7 +5,7 @@ description: Generates perceptually consistent 12-step OKLCH color scales for UI
 
 # OKLCH Color Scale System
 
-**Version 2.1.5** — history in CHANGELOG.md.
+**Version 2.2.1** — history in CHANGELOG.md.
 
 A principled system for generating perceptually consistent 12-step color scales for UI design systems, built on the OKLCH color space.
 
@@ -67,7 +67,7 @@ node scripts/generate.js '#6A6A6A' --mode grey --table                 # grey mo
 node scripts/generate.js '#1A6FBF' --drift-toward '#8040FF'            # anchor untouched, rest leans toward reference
 ```
 
-Flags: `--mode free|anchored|grey|gray` (default `free`; `gray` is `grey` spelled en-US — see Dialect), `--dark`, `--no-ceiling`, `--peak <1-12>` (free-mode vividness-peak placement — see Versioned generation options), `--saturation <0-1>` (re-chroma the source to a fraction of its own hue's ceiling — see Calibrating a multi-ramp palette), `--ease-hue` (versioned opt-in schedule) and `--oklch-text` (reproduces a ramp generated before 2.0.0) — see Versioned generation options below, `--alpha` (also compute the alpha/transparent scale), `--drift-toward <hex>` (apply the secondary-reference technique on top of the base scale), `--table` (readable output instead of JSON), `--name <label>`.
+Flags: `--mode free|anchored|grey|gray` (default `free`; `gray` is `grey` spelled en-US — see Dialect), `--dark`, `--no-ceiling`, `--peak <1-12>` (free-mode vividness-peak placement — see Versioned generation options), `--saturation <0-1>` (re-chroma the source to a fraction of its own hue's ceiling — see Calibrating a multi-ramp palette), `--ease-hue` (versioned opt-in schedule) and `--oklch-text` (reproduces a ramp generated before 2.0.0) — see Versioned generation options below, `--alpha` (also compute the alpha/transparent scale), `--drift-toward <hex>` (apply the secondary-reference technique on top of the base scale), `--collide-with <hex>` (steps 9–12 within 3° of that colour's scale — see Yellow), `--table` (readable output instead of JSON), `--name <label>`.
 
 Inputs are validated at the boundary: hex must be 6-digit (`#RRGGBB`, `#` optional; `#RGB` shorthand expands), and mode must be one of the three above — anything else exits with a clear error. Before this guard existed, an invalid hex sailed through into a NaN cascade (`#NANNANNAN` steps), and an unknown mode silently behaved as free mode while stamping the bogus mode name into `figmaDescription` provenance.
 
@@ -344,7 +344,7 @@ The step-8/9 boundary sits at L 0.555 (midpoint of 0.59 and 0.52); the step-9/10
 
 Same anchored-mode logic as light, built on the dark L scale instead. One extra input consideration: the dark-mode source is a separate color from the light anchor — brand colors typically have distinct, independently-chosen light and dark anchor hexes, not a mechanical inversion of one from the other. Exact implementation in `generate.js` → `generateScale(hex, 'anchored', { dark: true })`.
 
-**Always verify:** convert every generated step's hex back to OKLCH and confirm its L matches the dark L scale at that index (within ~0.01). Cheap, catches silent drift immediately — do it every time.
+**The round-trip is the suite's, not yours:** `tests/test-oklch.js` converts every step's hex back to OKLCH and holds its L to the step's own within 0.01, light and dark, in every mode ("2.2 round-trip"). Run the suite after touching `generate.js`; a generated scale needs no hand check.
 
 **Anchor position migrates between light and dark, sometimes dramatically.** Because the dark L scale is inverted relative to light, the same source hue anchoring at, say, step 10 in light can anchor at step 3 in dark, or vice versa — there's no fixed relationship, it depends entirely on where that specific source's L falls in each scale's own ordering. Don't assume the anchor lands at a similar step number in both modes; always check `scale.anchorIdx` for each mode independently. This is also why `driftTowardReference` uses step-index distance rather than any cross-mode assumption about anchor position (see Advanced technique above).
 
@@ -550,7 +550,7 @@ Cross-scale consistency note: since 2.0.0 the text steps are luminance-targeted,
 | 94 | 1% |
 | ≥96 | 0% |
 
-The risk isn't confined to the low edge of the family boundary — it persists deep into what this skill recommends as a clean yellow source range (75–115), with roughly half of sources in H 75–84 colliding at default settings. **For any yellow source with H < 96, run the collision check; don't assume "H is inside the recommended range" is sufficient.** After generating, diff steps 9–12 against the project's orange scale. If they collide or sit within a few degrees, don't patch the single colliding step in isolation — that creates a visible kink. Instead reduce the rate for the whole affected tail (steps 9–12) uniformly (a rate around 58 typically restores several degrees of separation for a borderline source) and recompute those steps together, keeping L and C exactly as generated and only adjusting H.
+The risk isn't confined to the low edge of the family boundary — it persists deep into what this skill recommends as a clean yellow source range (75–115), with roughly half of sources in H 75–84 colliding at default settings. **For any yellow source with H < 96, run the collision check; don't assume "H is inside the recommended range" is sufficient.** `generate.js <yellow> --collide-with <the project's orange source>` generates the orange with the same `--dark`, ceiling, hue-easing and text schedule (never the yellow's `--peak` or `--saturation`) and returns `collisions`, each of steps 9–12 within 3° with both hues (`hueCollisions(scale, other)` in the API; `--table` prints it as a warning). Where the orange is generated in another mode than the yellow, pass it as `--collide-mode <mode>`. If they collide or sit within a few degrees, don't patch the single colliding step in isolation — that creates a visible kink. Instead reduce the rate for the whole affected tail (steps 9–12) uniformly (a rate around 58 typically restores several degrees of separation for a borderline source) and recompute those steps together, keeping L and C exactly as generated and only adjusting H.
 
 **No single global rate eliminates the collision risk.** Swept rate values 20–70 against the H 72–95 collision zone: even `rate=20` — far too flat to still serve the rule's purpose of avoiding the olive dead-zone — only reduces collision to 10.6%, not zero. There's no rate that both eliminates orange-collision risk for low-H yellow sources and corrects the olive drift the rule exists to fix. The per-source check-and-adjust approach above is the actual fix, not a missing default value.
 

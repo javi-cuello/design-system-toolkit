@@ -1,4 +1,6 @@
-# Eval cases — figma-variable-audit (v1.26.0)
+# Eval cases — figma-variable-audit (v1.27.0)
+
+**Walked: 2026-10-31 against v1.27.0** — A14 added and executed: `node tests/test-report.mjs` 15 passed; `test-links.mjs` 30/30 with `keysRead` in the scan's answer. A13's bytes are unchanged with `--keys`; every other case untouched.
 
 **Walked: 2026-10-31 against v1.26.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -178,3 +180,8 @@ Runs: node tests/test-extensions.mjs — "no recorded brand group means nothing 
 Fixture: two scan batches from `checkFacts` — one with a removed variable on two layers and a clean component sharing a variable with the other batch, one with a superseded key and a dangling text style.
 Assert: `node scripts/report.mjs` prints the counts summed across batches with distinct tokens as the union of `seen`; "not checked" once however many batches said it; one row per finding sorted by page and component, errors before reviews, carrying the scanner's own `text`, `layers` and `advice`; the same bytes in either batch order; "No broken links." for a clean scan; batches naming two files refused; a pipe in a name escaped. `--scope <property>,…` leaves out a finding whose layer lines name none of them before the broken-link counts are taken, and says how many; a batch passed twice is counted once, and two different batches that audited one component are refused; the component and each layer path are code spans. The dangling style's advice says "The style", not "The variable".
 Runs: node tests/test-report.mjs
+
+## A14 · A trimmed key set is refused by the report, not caught by eye
+Fixture: the two batches of A13, handed the whole key set, and a third batch handed one of its two variables; a batch with no `keysRead`.
+Assert: `render(…, { keys })` over the whole-set batches prints the same bytes as without `--keys`; the trimmed batch is refused naming its counts and the saved answer's; a batch from before `keysRead` is refused, never trusted. SKILL.md Step 2 and Step 6 send every report through `--keys keys.json`.
+Runs: node tests/test-report.mjs — "--keys: batches handed the whole keys answer render as without it", "--keys: a batch handed a trimmed set is refused, naming both counts", "--keys: a batch from before keysRead is refused, never trusted"

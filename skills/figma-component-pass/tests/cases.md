@@ -1,4 +1,6 @@
-# Eval cases — figma-component-pass (v1.9.0)
+# Eval cases — figma-component-pass (v1.10.0)
+
+**Walked: 2026-10-31 for 1.10.0** — A5 executed in the stage that owns it: `node skills/figma-component-descriptions/tests/test-engines.mjs` holds a stepper whose `Step item` resolves to a different main per `Layout` value, both mains kept, and the planted name-only key failing; its "cross-checked against the distinct mains" half is now that suite, not a recount here. P10's detection is `verify.js` re-reading the interface at verify time (D19's walk). A1–A4, A6–A9, A11 unchanged.
 
 **Walked: 2026-10-31 against v1.9.0** — Stage 0 now decides scope only and each stage does its own discovery (toolkit-standard §D 4); A5's provenance line and P10's fixture wording follow it, no assertion changed. A11 added and traced. A1 to A10 and P10 re-read against the new Stage 0: none relied on stage 0 doing a stage's reading except A5, whose cross-check this skill still owns.
 
@@ -80,7 +82,7 @@ Not walked.
 ## A5 · Instance dedupe is keyed per variant, not per set
 Fixture: a stepper component set with a `Layout` axis, whose slot children are all named `Step item` but resolve to `Step item / Horizontal` under one Layout value and `Step item / Vertical` under the other.
 Assert: both mains appear in the composition list. A dedupe keyed on instance name alone across the whole set keeps only whichever variant was scanned first, and fails this case.
-Assert also: the resulting count is cross-checked against the number of distinct mains the variant axes predict, and a shortfall is raised rather than accepted.
+Assert also: the resulting count is cross-checked against the number of distinct mains the variant axes predict, and a shortfall is raised rather than accepted — since 1.10.0 by the descriptions stage's suite (`composition.js` keyed per variant), never recounted by this skill.
 This is a recorded production failure, not a hypothetical — the stages' walks carry the keying, and Stage 0 states it with the cross-check this skill owns, because the short list is correct as far as it goes and nothing downstream flags it.
 
 **Walked 2026-08-09 — passes, and the fixture exists in this library with the exact shape the case describes.** Both keyings were run side by side across all **56** component sets: the shipped `variant.name + '::' + i.name`, and the broken `i.name` alone. Exactly **one** set diverges.

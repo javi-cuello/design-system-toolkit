@@ -1,4 +1,8 @@
-# Eval cases — figma-file-diff (v1.3.0)
+# Eval cases — figma-file-diff (v1.4.1)
+
+**Walked: 2026-10-31 for 1.4.1** — A8 re-run: 25 passed, the printed `COMPONENT_PATH` line run as printed; a serialise run against a manifest run is refused.
+
+**Walked: 2026-10-31 against v1.4.0** — A8 added and executed: `node tests/test-report.mjs` 24 passed, `--next`'s printed lines run as printed and `--stable` over real `serialise.js`/`manifest.js` output. A6 retraced to Step 6's `--stable`; A1–A5 and A7 unchanged.
 
 **Walked: 2026-10-31 against v1.3.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -54,10 +58,14 @@ Fixture: a live file whose properties moved mid-session between the first Tier 2
 Assert: the Tier 2 hashes are re-run on both files before reporting, and if the totals moved against the first run the skill says so plainly and re-runs — it does not quietly report the later number. The final report leads with a summary table and details each difference as property, value on each side, and what it means; a bare hash is never presented as a finding.
 Trace: Step 6 (including the observed mid-session property change that invalidated a finding), Step 7's two-table shape, and failure mode 9.
 
-Traced: 2026-08-12 — to Step 6 (including the observed mid-session property change), Step 7's two-table shape, and failure mode 9.
+Traced: 2026-10-31 — to Step 6, whose comparison is now `report.mjs --stable` (executed in A8), Step 7's two-table shape, and failure mode 9.
 
 ## A7 · The two tables are generated from the scripts' results, never written
 Fixture: two stub files, the target carrying an extra page with a component, an extra variable, a changed variable value, a changed text style, a cell whose `maxWidth` moved, and a `FILL` width that differs; their four read scripts' results saved as one JSON per side.
 Assert: `node scripts/report.mjs reference.json target.json` prints the summary and detail tables; every planted difference has exactly one row with the value on each side (the page as one counted row, its component not listed again; the variable's changed field with both values; the cell by full path and property), the `FILL` width has none, the meaning column is empty for the agent, the same input prints the same bytes, two equal files print "No differences.", a side whose results name two files is refused, and an undrilled differing component says to drill it. Also: a page whose ID has no partner is paired by name, and only a page name absent from the other file hides its components; a variable in a collection named with a slash is folded into that collection's row; scopes and code syntax in another order are no difference; a dump path is a code span. SKILL.md Step 7 tells the agent to run it and write only the meaning cells.
 Runs: node tests/test-report.mjs
 
+## A8 · What to read next, and whether the file held still, come from the hashes
+Fixture: the two stub files of A7, read first without `VARS` or dumps; the reference read twice, and once more after the fork's changes under the reference's name.
+Assert: `report.mjs --next` lists the one differing variable whose fields are unread and the one undrilled differing component, with dump-node.js's name and parent; its printed lines, run as printed, leave nothing to read and the report has no undone row. `--stable` agrees on two unchanged runs, names the deep hash, node total and file hash that moved, and refuses runs from two files or a run with no hash.
+Runs: node tests/test-report.mjs

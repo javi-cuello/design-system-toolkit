@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.22.1)
+# Eval cases — figma-doc-generator (v1.22.2)
+
+**Walked: 2026-10-31 for 1.22.2** — D47 reread against the shortened checklist: each of the nine items dropped is one of `references/failures.md`'s *Verification queries* that `verifyPage` runs (placeholders, alias integrity, alias coverage, row order, column mapping, widths, structure, colour format, every row); `node tests/test-docgen.js` 168/168. No case asserted on a checklist item, so all hold.
 
 **Walked: 2026-10-31 for 1.22.1** — `node tests/test-docgen.js` 168/168; `node tools/shared/test-dialect.mjs` 6/6, failing on 1.22.0 (the copy lacked four words). No case asserts on the word list; all hold.
 

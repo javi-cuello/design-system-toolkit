@@ -1,4 +1,10 @@
-# Eval cases — figma-context-capture (v2.10.0)
+# Eval cases — figma-context-capture (v2.11.2)
+
+**Walked: 2026-10-31 for 2.11.2** — C16 re-run: `node tests/test-passes.mjs` 47/47, the ids-mode page now refuses an unloaded walk.
+
+**Walked: 2026-10-31 for 2.11.1** — C16 rerun: `node tests/test-passes.mjs` 46/46, pass F given the house settings from `standards/audit-settings.json` as `TOKENS`, and refusing with none prepended. Other cases unchanged.
+
+**Walked: 2026-10-31 for 2.11.0** — C16 added and executed: `node tests/test-passes.mjs` 45/45, the new pass B, E, F/S4, S2 and registry assertions among them; with the stem filter in `pass-b-naming.mjs` dropped to one sibling, the separator assertion fails, and with pass E's variant skip removed, its sampling assertion fails. C14 rerun with pass D's new `layers`. Not walked live: the three new bodies have met only the fake file. Other cases unchanged.
 
 **Walked: 2026-10-31 for 2.10.0, by inspection** — C3's assertion (a) moves from "the working folder" to the project's home, `<project home>/design-system-context.md`, and adds that the report names where it is and asks no paste into project knowledge; read against SKILL.md's Write and Close steps and the template's Deployment line, which now say the same. C10's §5 citation and C7–C9's template shape are unchanged by the edit (only the preamble's Deployment line and the project block's example port moved). `node tests/test-passes.mjs` passes. Not walked live: no capture run has met the new path since the 2026-08-08 live C3 run, which wrote to its working folder.
 
@@ -130,3 +136,11 @@ Assert: S1 returns mode names in order, tells hiding on every variable apart fro
 Recorded under toolkit-standard §D 23: S1 and S3 were snippets the agent completed each run.
 
 Runs: node tests/test-passes.mjs — "pass S1: hiding on every variable is told apart from hiding on the collection", "pass S3: text-style groups verbatim, in first-seen order"
+
+## C16 · Passes B, E, F/S4, S2 and the registry run from scripts; what the counts mean stays the agent's — 2026-10-31
+Fixture: fake files (`tests/test-passes.mjs`): a pass A output with three `_` names, a lone `.` name, a two-sibling `Top bar / …` stem and a lone slash-name, and `Label` bare on one page while `_Label` is on another; pass D layers from two sets sharing `-icon` and `-label`; a described set beside an undescribed component, a header instance outside any component and one inside; remote doc cells, a local table and a `_Ratios grid`; a primitives collection of every variable hidden with a 12-step ramp carrying `8-anchor` and an alpha ramp, beside a published one; and two files' pass A with one pass C.
+Assert: pass B marks `_` recordable and `.` not, records the `Top bar` stem and not the lone one, does not count ` / ` as a bare `/`, reports the `Label` contradiction with both pages, lists only suffixes found in two sets, and says suffixes are unread with no pass D. Pass E samples the described set and never a variant, returns headings as written, bullets and stops, both spellings counted, and the header candidate outside a component only. Pass F counts local, instance and remote furniture with the set's key, and `_Ratios grid` per page. Pass S2 reads only hidden collections by default, groups the ramp with its marker and the alpha ramp, tallies step lengths, and reads a named collection whatever its hiding. The registry tags each role `[inferred]` and audience `[TBD]`, and draws the dependency from collection keys, `[TBD]` with no pass C.
+Assert the negative: none of these scripts decides a convention; each contradiction stays an open question for step 2.
+Recorded under toolkit-standard §D 23: passes B, E, F, S2, S4 and the registry were done by hand each run.
+
+Runs: node tests/test-passes.mjs — "pass B: a name prefixed on one page and bare on another is a contradiction, with both pages", "pass S2: a ramp is its parent path, its steps in library order, with a marker found", "registry: the dependency line names each library and the collection keys behind the edge". Not walked live: the three new `figma_execute` bodies have met only the fake file.

@@ -6,6 +6,7 @@ var CONFIG = {
   ids: []   // component-set ids picked from pass A's setIds
 };
 
+var LAYER_CAP = 60;   // layer names returned per set, for pass B's suffixes
 var out = [];
 for (var i = 0; i < CONFIG.ids.length; i++) {
   var s = await figma.getNodeByIdAsync(CONFIG.ids[i]);
@@ -22,7 +23,11 @@ for (var i = 0; i < CONFIG.ids.length; i++) {
     axes.push({ name: p.split('#')[0], type: defs[p].type, options: options });
     if (defs[p].type === 'VARIANT' && options) grid *= options.length;
   }
+  // layers: the first variant's layer names (capped), the sample pass B reads suffixes from
+  var first = s.children[0], layers = [];
+  var walk = first && first.findAll ? first.findAll(function () { return true; }) : [];
+  for (var k = 0; k < walk.length && layers.length < LAYER_CAP; k++) layers.push(walk[k].name);
   // variantCount below fullGrid is a sparse set; whether that is a house stance is the agent's call.
-  out.push({ name: s.name, axes: axes, variantCount: s.children.length, fullGrid: grid });
+  out.push({ name: s.name, axes: axes, variantCount: s.children.length, fullGrid: grid, layers: layers });
 }
 return out;

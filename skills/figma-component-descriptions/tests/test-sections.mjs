@@ -10,7 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sections, check, settingsFrom } from '../scripts/sections.mjs';
+import { sections, check, settingsFrom, union, virtualGroups } from '../scripts/sections.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = (f) => join(HERE, 'fixtures', f);
@@ -81,4 +81,27 @@ const absent = spawnSync('node', [link, '--composition', FIX('sections-compositi
 ok('check: (negative) a subject missing from the descriptions file is reported missing and exits 1',
   absent.status === 1 && /missing: Button \(1:1\) has no description/.test(absent.stdout));
 rmSync(tmp, { recursive: true, force: true });
+
+// A virtual set (step 2c): the members' lines as one union, a line only some have saying which subpart.
+const barSubject = (id, name, props, parts) => ({ id, name, variantCount: 1, variantNames: ['Size=M'], broken: [], properties: props, parts });
+const barA = barSubject('8:1', 'Top bar / Default', [{ name: 'Back', type: 'BOOLEAN' }], [{ name: 'Title', inEvery: true }, { name: 'Back button', inEvery: true, toggledBy: ['Back'] }]);
+const barB = barSubject('8:2', 'Top bar / Main', [], [{ name: 'Title', inEvery: true }]);
+const solo = barSubject('8:3', 'Lone / One', [], []);
+const groups = virtualGroups([barA, barB, solo], ' / ');
+ok('virtual sets: two members sharing a stem group; a lone slash-name does not', groups.length === 1 && groups[0].map((x) => x.id).join() === '8:1,8:2');
+const u = union([barA, barB].map((x) => sections(x, settings)), ' / ');
+ok('virtual sets: a line every member has stands as it is', u.composition.includes('Contains `Title`'));
+ok('virtual sets: a line one member has says which subpart, and no axis is claimed for the set',
+  u.behaviour.includes('The `Back` boolean shows or hides `Back button` (in the `Default` subpart)') && u.composition.includes('Contains `Back button`, revealed by the `Back` prop (in the `Default` subpart)'));
+ok('virtual sets: one entry for the group, every member\'s id beside it, and the purpose paragraph named as the writer\'s',
+  u.name === 'Top bar' && JSON.stringify(u.ids) === '["8:1","8:2"]' && u.gaps.some((x) => /opens with the group/.test(x)));
+const tmp2 = mkdtempSync(join(tmpdir(), 'sections-'));
+const comp = join(tmp2, 'composition.json'), desc = join(tmp2, 'descriptions.json');
+writeFileSync(comp, JSON.stringify([barA, barB]));
+const vcli = JSON.parse(execFileSync('node', [join(HERE, '../scripts/sections.mjs'), '--composition', comp, '--settings', FIX('sections-settings.json'), '--separator', ' / '], { encoding: 'utf8' }));
+ok('virtual sets: --separator prints the group once, as union() does', vcli.length === 1 && vcli[0].markdown === union([barA, barB].map((x) => sections(x, settingsFrom(json('sections-settings.json')))), ' / ').markdown);
+writeFileSync(desc, JSON.stringify({ '8:1': 'A top bar.\n\n' + vcli[0].markdown, '8:2': 'A top bar.\n\n' + sections(barB, settings).markdown }));
+const partial = spawnSync('node', [join(HERE, '../scripts/sections.mjs'), '--composition', comp, '--settings', FIX('sections-settings.json'), '--separator', ' / ', '--check', desc], { encoding: 'utf8' });
+ok('virtual sets: --check holds every member to the union; one written from its own lines alone fails', partial.status === 1 && /Top bar \(8:2\)/.test(partial.stdout) && !/Top bar \(8:1\)/.test(partial.stdout));
+rmSync(tmp2, { recursive: true, force: true });
 console.log(`\n${n} assertions passed`);

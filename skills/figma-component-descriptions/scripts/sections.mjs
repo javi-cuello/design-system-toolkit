@@ -7,6 +7,7 @@
 //
 //   node scripts/sections.mjs --composition <composition.js result>.json
 //        [--settings <settings>.json] [--file-key <key>] [--language en-GB|en-US]
+//   node scripts/sections.mjs ... --separator " / "     (virtual sets, step 2c)
 //   node scripts/sections.mjs ... --check <descriptions>.json
 //
 // --composition  composition.js's return value: an array of subjects, each with
@@ -17,6 +18,9 @@
 //                no state line is generated and `gaps` says so.
 // --language     `language` from the context document's audit-settings; absent
 //                means en-GB. Only the heading differs between the two.
+// --separator    the library's group separator: members of a virtual set (two or more
+//                sharing the stem before it) come back as one entry, `ids` and `members`
+//                beside it, the union of their lines, each line only some have saying which
 // --check        { "<id>": "<descriptionMarkdown>" }: exits 1 naming every
 //                generated line a written description lacks or reworded, and
 //                every subject the file has no description for.
@@ -129,6 +133,45 @@ export function sections(subject, { stateAxis = null, disabledAxis = null, restS
   return { id: subject.id, name: subject.name, behaviour, composition, markdown: md.join('\n').trim(), gaps };
 }
 
+/*
+ * A virtual set (SKILL.md step 2c): one description for every member, built from the union of
+ * their generated lines. A line every member has stands as it is; a line only some have says
+ * which subparts, by the name after the stem ("in the `Default` subpart"), so no axis one member
+ * has is claimed for the set. Lines keep the order they first appear in, member by member.
+ */
+export function union(results, separator, language = 'en-GB') {
+  const sep = String(separator);
+  const sub = (r) => r.name.slice(r.name.indexOf(sep) + sep.length).trim();
+  const stem = results[0].name.slice(0, results[0].name.indexOf(sep)).trim();
+  const merge = (key) => {
+    const seen = new Map();
+    for (const r of results) for (const l of r[key]) (seen.get(l) || seen.set(l, []).get(l)).push(sub(r));
+    return [...seen].map(([l, who]) => who.length === results.length ? l
+      : l + ' (in the ' + list(who) + (who.length > 1 ? ' subparts' : ' subpart') + ')');
+  };
+  const behaviour = merge('behaviour'), composition = merge('composition');
+  const gaps = [];
+  for (const r of results) for (const g of r.gaps) if (!gaps.includes(g) && results.every((x) => x.gaps.includes(g))) gaps.push(g);
+  for (const r of results) for (const g of r.gaps) if (!results.every((x) => x.gaps.includes(g))) gaps.push(sub(r) + ': ' + g);
+  gaps.push('the purpose paragraph opens with the group, not a member, and names each subpart and what it is for (guide, "Writing for a virtual set")');
+  const md = [];
+  if (behaviour.length) md.push('## ' + HEADINGS[language], ...behaviour.map((l) => '- ' + l), '');
+  if (composition.length) md.push('## Composition', ...composition.map((l) => '- ' + l), '');
+  return { id: results[0].id, ids: results.map((r) => r.id), name: stem, members: results.map((r) => r.name), behaviour, composition, markdown: md.join('\n').trim(), gaps };
+}
+
+// Subjects whose names share a stem before the separator, two or more of them: the virtual sets.
+export function virtualGroups(subjects, separator) {
+  const by = new Map();
+  for (const s of subjects) {
+    const i = s.name ? s.name.indexOf(separator) : -1;
+    if (i < 1 || s.error) continue;
+    const stem = s.name.slice(0, i).trim();
+    (by.get(stem) || by.set(stem, []).get(stem)).push(s);
+  }
+  return [...by.values()].filter((g) => g.length > 1);
+}
+
 // Every generated line a written description lacks under its heading, verbatim.
 export function check(markdown, generated, language = 'en-GB') {
   const section = (h) => {
@@ -160,11 +203,20 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
   if (!arg('--composition')) { console.error('usage: sections.mjs --composition <file> [--settings <file>] [--file-key <key>] [--language en-GB|en-US] [--check <file>]'); process.exit(2); }
   const opts = Object.assign(arg('--settings') ? settingsFrom(json(arg('--settings')), arg('--file-key')) : {}, { language: arg('--language') || 'en-GB' });
   const subjects = [].concat(json(arg('--composition')));
-  const out = subjects.map((s) => Object.assign({ generatedBy: GENERATED_BY }, sections(s, opts)));
+  let out = subjects.map((s) => Object.assign({ generatedBy: GENERATED_BY }, sections(s, opts)));
+  // --separator: each virtual set's members become one entry, their union (step 2c)
+  if (arg('--separator')) {
+    const groups = virtualGroups(subjects, arg('--separator'));
+    const grouped = new Set(groups.flat().map((s) => s.id));
+    out = out.filter((g) => !grouped.has(g.id)).concat(groups.map((g) => Object.assign({ generatedBy: GENERATED_BY },
+      union(g.map((s) => out.find((o) => o.id === s.id)), arg('--separator'), opts.language))));
+  }
   if (arg('--check')) {
     const written = json(arg('--check'));
-    const absent = out.filter((g) => !(g.id in written));
-    const bad = out.flatMap((g) => g.id in written ? check(written[g.id], g, opts.language).map((m) => g.name + ' — ' + m) : []);
+    // a virtual set's text is checked on every member, each of which carries it
+    const each = out.flatMap((g) => (g.ids || [g.id]).map((id) => Object.assign({}, g, { id, name: g.ids ? g.name + ' (' + id + ')' : g.name })));
+    const absent = each.filter((g) => !(g.id in written));
+    const bad = each.flatMap((g) => g.id in written ? check(written[g.id], g, opts.language).map((m) => g.name + ' — ' + m) : []);
     for (const g of absent) console.log('missing: ' + (g.name || g.id) + ' (' + g.id + ') has no description in ' + arg('--check'));
     for (const b of bad) console.log('missing or reworded: ' + b);
     if (absent.length) console.log(absent.length + ' subject(s) with no description');

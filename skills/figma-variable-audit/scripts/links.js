@@ -21,7 +21,7 @@
 //       COMPONENT, never instances), resolve each bound variable and style id
 //       once, and report the ones whose key the source no longer has. Returns
 //       the components scanner's shape, so the same writer files the rows:
-//       { audited: [{ set, id, page, candidates }], measures, fileKey, fileName }.
+//       { audited: [{ set, id, page, candidates }], measures, keysRead, fileKey, fileName }.
 //
 // A whole library in one scan is one plugin call with no way to show progress
 // and no way to finish late: 121 sets and 1013 variants overran a four-minute
@@ -274,7 +274,10 @@ function checkFacts(facts, keys) {
   const notChecked = [];
   if (!pubVars) notChecked.push("published-visibility (variables) \u2014 the consumer returned no published list, so a token that exists but is not published reads as fine");
   if (!pubStyles) notChecked.push("published-visibility (styles) \u2014 no published style list was available, so a style the source holds but does not publish cannot be told from one it publishes");
-  return { audited: out, measures, seen: { variables: [...seenVar], styles: [...seenStyle] }, notChecked };
+  // How many keys the scan was handed, so report.mjs --keys can hold them to the source's
+  // answer: a reference set trimmed between calls reads every dropped key as broken.
+  const keysRead = keys ? { variables: (keys.variables || []).length, styles: (keys.styles || []).length } : null;
+  return { audited: out, measures, seen: { variables: [...seenVar], styles: [...seenStyle] }, notChecked, keysRead };
 }
 
 if (typeof figma === "undefined") { checkFacts.probePublished = probePublished; return checkFacts; }

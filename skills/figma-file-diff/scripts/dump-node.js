@@ -6,6 +6,8 @@
 
 const COMPONENT_NAME = 'Row - Effects';
 const PARENT_NAME = null; // e.g. '❖ Effects' to disambiguate
+// Or the component's full path as serialise.js writes it, which report.mjs --next prints: a name may hold ' / '.
+const COMPONENT_PATH = null;
 
 // The full ancestor path, as serialise.js writes it, so report.mjs pairs the dump with its component.
 function pathOf(n){ const p=[]; let c=n; while(c&&c.type!=='DOCUMENT'){ p.unshift(c.name); c=c.parent; } return p.join(' / '); }
@@ -16,12 +18,12 @@ let target = null;
 const candidates = [];
 for (const page of figma.root.children){
   for (const n of page.findAllWithCriteria({ types:['COMPONENT','COMPONENT_SET'] })){
-    if (n.name !== COMPONENT_NAME) continue;
+    if (COMPONENT_PATH ? pathOf(n) !== COMPONENT_PATH : n.name !== COMPONENT_NAME) continue;
     if (PARENT_NAME && (!n.parent || n.parent.name !== PARENT_NAME)) continue;
     candidates.push(n);
   }
 }
-if (candidates.length === 0) return { file: figma.root.name, error: 'not found: ' + COMPONENT_NAME };
+if (candidates.length === 0) return { file: figma.root.name, error: 'not found: ' + (COMPONENT_PATH || COMPONENT_NAME) };
 if (candidates.length > 1) return {
   file: figma.root.name,
   error: 'ambiguous, set PARENT_NAME',

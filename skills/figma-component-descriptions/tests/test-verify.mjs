@@ -106,4 +106,28 @@ card.descriptionMarkdown = 'A card groups one record beside a `_Badge`.\n\n## Us
 const privateMarked = await new AsyncFunction('figma', withMarker)(figma);
 ok('D17: a private part marked after its _ is cited without the marker', privateMarked.unknownNames.length === 0);
 badge.name = 'Badge';
+
+// Step 4: duplicates and false fixity, on a file of their own.
+{
+  const text = 'A chip filters a list.\n\n## Usage\n\n- Above a list\n\n## Don\'t\n\n- Use for navigation';
+  const defs = { 'Size': { type: 'VARIANT', variantOptions: ['S', 'L'] } };
+  const chip = node({ id: '5:1', type: 'COMPONENT_SET', name: 'Chip', descriptionMarkdown: text, componentPropertyDefinitions: defs });
+  const tag = node({ id: '5:2', type: 'COMPONENT', name: 'Tag', descriptionMarkdown: text.replace('filters', 'filters ') + '\n', componentPropertyDefinitions: {} });
+  const shared = 'A top bar sits at the top of a screen. It is fixed.\n\n## Usage\n\n- On every screen\n\n## Don\'t\n\n- Stack two';
+  const barA = node({ id: '5:3', type: 'COMPONENT', name: 'Top bar / Default', descriptionMarkdown: shared, componentPropertyDefinitions: { 'Back#1:0': { type: 'BOOLEAN' } } });
+  const barB = node({ id: '5:4', type: 'COMPONENT', name: 'Top bar / Main', descriptionMarkdown: shared, componentPropertyDefinitions: {} });
+  const still = node({ id: '5:5', type: 'COMPONENT', name: 'Divider', descriptionMarkdown: 'A divider is fixed: it has no props.\n\n## Usage\n\n- Between groups', componentPropertyDefinitions: {} });
+  const loose = node({ id: '5:6', type: 'TEXT', name: 'Notes' });
+  const pg = node({ id: '0:5', type: 'PAGE', name: 'Chips' }, [chip, tag, barA, barB, still, loose]);
+  const f5 = { root: node({ id: '0:0', type: 'DOCUMENT' }, [pg]), loadAllPagesAsync: async () => {} };
+  const withSep = src.replace('separator: null,', 'separator: " / ",');
+  const o = await new AsyncFunction('figma', withSep)(f5);
+  ok('step 4: one text on two differently named components is a duplicate, whitespace aside, with each one\'s axes',
+    o.duplicates.length === 1 && JSON.stringify(o.duplicates[0].components.map((c) => [c.name, c.axes])) === '[["Chip",["Size"]],["Tag",[]]]');
+  ok('step 4: a virtual set\'s members sharing their text are not duplicates', !o.duplicates.some((d) => d.components.some((c) => c.name.startsWith('Top bar'))));
+  ok('step 4: a claim of fixity on a component with an interface is false fixity; on one with none it is not',
+    o.falseFixity.length === 1 && o.falseFixity[0].name === 'Top bar / Default' && /is fixed/.test(o.falseFixity[0].claim) && o.falseFixity[0].interface[0] === 'Back (BOOLEAN)');
+  const noSep = await new AsyncFunction('figma', src)(f5);
+  ok('step 4: with no separator setting, the shared text is a duplicate like any other', noSep.duplicates.length === 2);
+}
 console.log(`${n}/${n} passed`);

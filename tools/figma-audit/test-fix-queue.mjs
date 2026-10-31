@@ -88,5 +88,22 @@ expect("an escaped tag inside code is unescaped once", text("<code>&lt;slot&gt;<
 const shuffled = record(); shuffled.rows = Object.fromEntries(Object.entries(shuffled.rows).reverse());
 expect("the order rows sit in the record does not move a line", renderQueue(shuffled).markdown, mirror);
 
+// A one-off run with no record files its findings into a scratch one and renders from it, the same
+// two commands a project with a record runs: rows.mjs makes the record, fix-queue.mjs prints it.
+{
+  const scratch = mkdtempSync(join(tmpdir(), "oneoff-")), data = join(scratch, "audit", "ABCDEFGHIJKLMNOPQRSTUV.json");
+  const payload = JSON.stringify({ owner: "figma-components-audit", fileKey: "ABCDEFGHIJKLMNOPQRSTUV", ran: ["tokens", "states"], scope: ["Button"], findings: [
+    { where: "Button › Label", check: "Fill is a raw hex, not a variable", key: "tokens:fill:Label", rule: "tokens", sev: "error", bucket: 1, rec: ["Bind the fill to text/primary"] },
+    { where: "Button", check: "State axis has no Disabled value", key: "states:disabled", rule: "states", sev: "ruling", bucket: 3, fix: ["Add Disabled, or record why not"], rec: ["Add it"] }] });
+  execFileSync("node", [join(HERE, "rows.mjs"), "--data", data], { input: payload, encoding: "utf8" });
+  const chat = execFileSync("node", [join(HERE, "fix-queue.mjs"), "--data", data, "--chat", "--held-back", "none", "--not-scanned", "none"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  writeFileSync(join(scratch, "sets.json"), JSON.stringify([{ set: "Button" }]));
+  const scored = execFileSync("node", [join(HERE, "scores.mjs"), "--data", data, "--sets", join(scratch, "sets.json")], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  rmSync(scratch, { recursive: true, force: true });
+  expect("the score report runs over the same scratch record, its deductions those findings'", /\| 92 \| 75 \| 100 \| 90 \| 100 \| 100 \| 100 \| `Button` \|/.test(scored), true);
+  expect("a run with no record renders from a scratch one: each finding a numbered row in its bucket",
+    [/\| 1\.1 \| 🔴 \| `Button › Label` \| Bind the fill to text\/primary \|/.test(chat), /\| 3\.1 \| 🔵 \| `Button` \| Add Disabled, or record why not \| Add it \|/.test(chat)], [true, true]);
+}
+
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed ? 1 : 0);
