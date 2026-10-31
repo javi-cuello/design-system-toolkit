@@ -218,8 +218,10 @@ if (require.main === module) {
   const arg = (f) => { const i = process.argv.indexOf(f); return i > -1 ? process.argv[i + 1] : null; };
   const label = arg('--project');
   if (!label) { console.error('usage: graph.cjs --project <label>'); process.exit(2); }
-  const dir = require('./projects.cjs').layout(null, label).paths.components;
-  if (!dir || !fs.existsSync(dir)) { console.error('no stored components at ' + dir); process.exit(2); }
+  const where = require('./projects.cjs').layout(null, label);
+  if (where.error) { console.error('graph.cjs: ' + where.error); process.exit(2); }
+  const dir = where.paths && where.paths.components;
+  if (!dir || !fs.existsSync(dir)) { console.error('graph.cjs: ' + label + ' has no stored components' + (dir ? ' at ' + dir : '') + ': take a snapshot first'); process.exit(2); }
   // the store's one reader, resolved; each spec keyed by its folder
   const specs = require('./store.cjs').readSpecs(dir).map(({ folder, spec: s }) => Object.assign(s, { folder }));
   const g = graphOf({ specs });

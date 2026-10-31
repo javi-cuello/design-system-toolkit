@@ -52,7 +52,7 @@ if (!['on', 'off'].includes(RULES)) { console.log('evals: --rules is on or off')
 const BRIEF = opt('--brief');
 if (BRIEF && !['snapshot', 'contract'].includes(BRIEF)) { console.log('evals: --brief is snapshot or contract'); process.exit(2); }
 const only = argv[0] || null;
-const config = JSON.parse(fs.readFileSync(path.join(REPO, 'snapshot.config.json'), 'utf8'));
+const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(REPO, 'evals');
 const E = config.evals;
 if (!E || !Array.isArray(E.tasks) || !E.tasks.length) { console.log('evals: no `evals.tasks` in snapshot.config.json — nothing to run, and that is not a pass'); process.exit(1); }
 for (const t of E.tasks) { const p = taskProblems(t); if (p.length) { console.log(`evals: task ${t.id || '?'}: ${p.join('; ')}`); process.exit(1); } }

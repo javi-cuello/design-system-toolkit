@@ -180,8 +180,8 @@ const nestedCache = new Map();
 let icons = new Set();
 // the page's scheme: the theme chosen in the bar (theme.js), else the reader's setting
 const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-// the icon set's size axis, as the library names it (its settings' sizeAxis)
-let sizeAxis = 'Size';
+// the icon set's size axis, as the library names it (its settings' sizeAxis); none named, an icon is sized by its width alone
+let sizeAxis = null;
 function nestedContract(name, values = {}) {
   if (!nestedCache.has(name)) {
     const c = libraryContracts.find((x) => x.component === name);
@@ -1637,8 +1637,8 @@ function renderInspector() {
     look.push(...(p && !varied ? instanceProps(p) : []),
       g || sizes.length ? mark(picker('Colour', tokensFor('colours', 'fill'), tok(colour), (v) => write([g && varied ? [g, 'background', v] : [at, 'color', v]], '[data-picker="Colour"]'), { none: none(colour) }), g && varied ? 'background' : 'color', g && varied ? g : at) : null);
     if (sizes.length) {
-      const now = e.with && e.with[sizeAxis] ? String(e.with[sizeAxis]) : typeof e.width === 'number' ? String(e.width) : '';
-      look.push(mark(seg('Size', 'icon-size', sizes.map((z) => [String(z), `${z}`]), now, (v) => write([[at, 'with', { ...(e.with || {}), [sizeAxis]: v }], [at, 'width', Number(v)], [at, 'height', Number(v)]], `[data-choice="icon-size-${v}"]`)), 'with'));
+      const now = sizeAxis && e.with && e.with[sizeAxis] ? String(e.with[sizeAxis]) : typeof e.width === 'number' ? String(e.width) : '';
+      look.push(mark(seg('Size', 'icon-size', sizes.map((z) => [String(z), `${z}`]), now, (v) => write([[at, 'with', { ...(e.with || {}), ...(sizeAxis ? { [sizeAxis]: v } : {}) }], [at, 'width', Number(v)], [at, 'height', Number(v)]], `[data-choice="icon-size-${v}"]`)), 'with'));
     } else look.push(size('Width', 'width'), size('Height', 'height'));
   }
   // a shape: a rectangle or an ellipse, its fill, border and corners (a rectangle's); a library's drawn vector, its fill
@@ -3091,7 +3091,7 @@ async function connect(label) {
   nestedCache.clear();
   icons = new Set(facts.icons || []);
   previews = facts.previews || {};
-  sizeAxis = (facts.settings && facts.settings.sizeAxis) || 'Size';
+  sizeAxis = (facts.settings && facts.settings.sizeAxis) || null;
   libraryContracts = [...(facts.contracts || [])].filter((c) => c && c.component).sort((a, b) => a.component.localeCompare(b.component));
   renderNav();
   connected = label || '';

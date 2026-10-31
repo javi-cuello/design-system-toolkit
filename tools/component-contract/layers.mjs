@@ -82,9 +82,10 @@ export const figmaWord = (v) => (typeof v === 'boolean' ? (v ? 'True' : 'False')
 export const interactionStates = (s = {}) => {
   const order = s.optionOrder || {};
   const t = s.settings || {};
-  const pointer = t.pointerStates || ['Focus', 'Hover', 'Press'];
+  // the settings' words only (§C F): no state axis, or no options recorded for it, is no states, never the house's
+  const pointer = t.pointerStates || [];
   // the rest state (the axis's first option) and those a pointer sets; a state the product sets (a loading) is a prop's
-  const axis = order[t.stateAxis || 'State'] || ['Rest', ...pointer];
+  const axis = (t.stateAxis && order[t.stateAxis]) || [];
   return { pointer, states: axis.filter((v, i) => i === 0 || pointer.includes(v)) };
 };
 // each state but the default (Rest), as Figma spells it: `pointer` where the browser sets it, else the product sets it through the axis

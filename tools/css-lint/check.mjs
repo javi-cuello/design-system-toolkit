@@ -35,7 +35,7 @@ const { expand: home } = req('../snapshot/projects.cjs');
 const CONFIG = arg('--config') ? path.resolve(home(arg('--config'))) : null;
 const REPO = path.resolve(home(arg('--repo') || (CONFIG ? path.dirname(CONFIG) : '.')));
 const configFile = CONFIG || path.join(REPO, 'snapshot.config.json');
-const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+const config = CONFIG ? JSON.parse(fs.readFileSync(configFile, 'utf8')) : req('../shared/repo-config.cjs').repoConfig(REPO, 'css-lint');
 const S = config.styles;
 if (!S) { console.log(`styles: no \`styles\` block in ${path.basename(configFile)} — nothing checked`); process.exit(1); }
 

@@ -82,7 +82,7 @@ export async function drivePage(tab, t, { pseudo, on } = {}) {
   if (m.page) await hosts.drive(tab, { ...m.page, scroll: scrollFor(t, m.page.scroll), scroller });
   const held = [];
   if (pseudo) {
-    if (!on) throw new Error(`State=${pseudo} needs the element that takes it — the mapping declares no \`state\` selector`);
+    if (!on) throw new Error(`the :${pseudo} state needs the element that takes it — the mapping declares no \`state\` selector`);
     held.push({ selector: on, pseudo });
   }
   if (m.page && m.page.focus) held.push({ selector: m.page.focus, pseudo: 'focus-visible' });

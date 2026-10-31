@@ -38,6 +38,7 @@ import { displayName } from '../shared/names.js';
 import { writeReport } from '../shared/output.mjs';
 import { parseColour, figmaWeight, insetStroke } from './values.mjs';
 import { probeSource } from './probe.mjs';
+import { pseudoClasses } from '../component-contract/to-code.mjs';
 
 import { realpathSync } from 'node:fs';
 const req = createRequire(import.meta.url);
@@ -563,11 +564,13 @@ export function draftEntry(contract, argTypes, story) {
    API has no counterpart for is marked missing: a finding, not a gap in
    the mapping. */
 export function effectiveProps(contract, overrides, api, story, fw = {}) {
+  // each pointer state by the pseudo-class the settings give it (to-code's pseudoClasses); focus is forced elsewhere
+  const PS = pseudoClasses();
   const out = {};
   for (const [k, p] of Object.entries(contract.props)) {
     if (overrides && k in overrides) { out[k] = overrides[k]; continue; }
     const at = 'default' in p && p.type !== 'string' ? p.default : undefined;
-    if (p.role === 'interaction') { out[k] = { pseudo: Object.fromEntries((p.pointer || []).filter((v) => v !== 'focus').map((v) => [v, v === 'press' ? 'active' : v])), skip: p.values.filter((v) => v !== p.default && (v === 'focus' || !(p.pointer || []).includes(v))) }; continue; }
+    if (p.role === 'interaction') { out[k] = { pseudo: Object.fromEntries((p.pointer || []).filter((v) => PS[v] && PS[v] !== ':focus-visible').map((v) => [v, PS[v].slice(1)])), skip: p.values.filter((v) => v !== p.default && (v === 'focus' || !(p.pointer || []).includes(v))) }; continue; }
     const arg = joinProp(p.figma || k, p, api, fw);
     if (!arg) { out[k] = { fixed: at, missing: true }; continue; }
     const s = story && story[arg];

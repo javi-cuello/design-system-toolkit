@@ -37,4 +37,4 @@ function say(text, language) {
   return String(text).replace(RE, (w) => US[w] || w);
 }
 
-module.exports = { say };
+module.exports = { say, US };

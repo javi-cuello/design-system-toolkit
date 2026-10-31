@@ -82,9 +82,9 @@ function repos() {
  * that drifts is the one that lets a stranger in.
  */
 function locate(repo) {
-  const file = path.join(repo, 'snapshot.config.json');
-  const config = readJson(file);
-  if (!config) return { error: `no ${path.relative(repo, file)} in ${repo}` };
+  // missing and malformed told apart (tools/shared/repo-config.cjs, the one reader of the file)
+  const { config, error, file } = require('../shared/repo-config.cjs').readRepoConfig(repo);
+  if (error) return { error };
   if (!config.toolkit || !config.project) {
     return { error: `${file} must name a "toolkit" and a "project"` };
   }
@@ -778,6 +778,21 @@ function auditContext(contextDoc, settingsPath = SETTINGS) {
   return { ok: errors.length === 0, file: contextDoc, errors, libraries, icons, rulings: rulingsOf(md), language };
 }
 
+/*
+ * A project's interface limits (design-standard; audit-settings `interface`): the house's, under the project's own
+ * `interface` in its context document. One reader for every tool that measures a page or a component in a window
+ * (tools/ui-check, the parity engine, the docs site's structure check). No project, or none of its own: the house's.
+ */
+function interfaceLimits(label, settingsPath = SETTINGS) {
+  const house = (JSON.parse(fs.readFileSync(settingsPath, 'utf8'))['audit-defaults'] || {}).interface || {};
+  if (!label) return { ...house };
+  const doc = path.join(homeOf(label), CONTEXT);
+  const raw = fs.existsSync(doc) ? fenced(fs.readFileSync(doc, 'utf8'), 'audit-settings') : null;
+  let own = {};
+  if (raw) { try { own = JSON.parse(raw).interface || {}; } catch (e) { throw Object.assign(new Error(`the audit-settings block in ${doc} is not valid JSON: ${e.message}`), { usage: true }); } }
+  return Object.assign({}, house, own);
+}
+
 /**
  * The validator's state vocabulary for one library: the axis named by
  * `variants.stateAxis` and that axis's recorded options. With no file key, the
@@ -812,6 +827,11 @@ function deriveOptions(ctx, fileKey) {
  * project stores derives under the house defaults.
  */
 function deriveOptionsFor(componentsDir, projectsDir) {
+  const of = storeLibraries(componentsDir, projectsDir);
+  return of ? (folder) => deriveOptions(of.ctx, of.fileOf(folder)) : () => ({});
+}
+/* The project whose store a components folder is, and each folder's library file key from the store's index. */
+function storeLibraries(componentsDir, projectsDir) {
   const dir = path.resolve(componentsDir);
   for (const p of projects(projectsDir).list) {
     const w = layout(projectsDir, p.name);
@@ -819,9 +839,20 @@ function deriveOptionsFor(componentsDir, projectsDir) {
     const ctx = auditContext(w.doc);
     let index = {};
     try { index = JSON.parse(fs.readFileSync(w.paths.index, 'utf8')).components || {}; } catch { /* no index: every folder under the defaults */ }
-    return (folder) => deriveOptions(ctx, (index[folder] || {}).file);
+    return { ctx, fileOf: (folder) => (index[folder] || {}).file };
   }
-  return () => ({});
+  return null;
+}
+/**
+ * Each folder's merged settings (the flat object every tool reads), for a tool handed a components folder that
+ * writes code from its contracts (to-code, to-markup): its library's, else the house's.
+ */
+function librarySettingsFor(componentsDir, projectsDir) {
+  const house = flatSettings(JSON.parse(fs.readFileSync(SETTINGS, 'utf8'))['audit-defaults'] || {}, {});
+  const of = storeLibraries(componentsDir, projectsDir);
+  // a folder the index does not hold yet (a draft) takes the project's library where it has only one
+  const only = of && Object.keys(of.ctx.libraries || {}).length === 1 ? Object.values(of.ctx.libraries)[0].tokens : null;
+  return (folder) => (of && (((of.ctx.libraries || {})[of.fileOf(folder)] || {}).tokens || only)) || house;
 }
 
 /** The rulings log of a context document, newest last. */
@@ -925,7 +956,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { EDITOR_PORT, HOME, homeOf, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { EDITOR_PORT, HOME, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>
@@ -963,11 +994,19 @@ if (require.main === module && process.argv[2] === 'names') {
 //   node tools/snapshot/projects.cjs settings <project> [fileKey]
 if (require.main === module && process.argv[2] === 'settings') {
   const [label, key] = process.argv.slice(3);
-  const where = label && layout(null, label);
-  if (!where || !where.doc) { console.error('usage: projects.cjs settings <project> [fileKey]'); process.exit(2); }
+  if (!label) { console.error('usage: projects.cjs settings <project> [fileKey]'); process.exit(2); }
+  const where = layout(null, label);
+  // a project that is not there, or whose routing is broken, says which, rather than the usage line
+  if (where.error || !where.doc) { console.error(`projects.cjs settings: ${where.error || `no context document for ${label}`}`); process.exit(2); }
   const ctx = auditContext(where.doc);
   if (!ctx.ok) { console.error(ctx.errors.join('\n')); process.exit(1); }
   const libs = key ? { [key]: ctx.libraries[key] } : ctx.libraries;
   if (key && !libs[key]) { console.error(`no library ${key} in ${where.doc}`); process.exit(1); }
   console.log(JSON.stringify(Object.fromEntries(Object.entries(libs).map(([k, l]) => [k, { name: l.name, TOKENS: l.tokens, SCALES: l.optionOrder }])), null, 2));
+}
+
+// No subcommand, or one this file does not know: the usage, never a silent exit 0.
+if (require.main === module && !['homes', 'names', 'settings'].includes(process.argv[2])) {
+  console.error('usage: node tools/snapshot/projects.cjs homes | names | settings <project> [fileKey]');
+  process.exit(2);
 }

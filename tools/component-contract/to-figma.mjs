@@ -282,30 +282,30 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
         if (e.textCase) n.textCase = e.textCase.toUpperCase();
         if (e.textDecoration) n.textDecoration = e.textDecoration.toUpperCase();
       } else if (e.kind === 'graphic' && container && e.asset) {
-        n = (container.children.find((c) => c.name === `Size=${e.width}`) || container.defaultVariant).createInstance();
+        n = (container.children.find((c) => P.sizeAxis && c.name === `${P.sizeAxis}=${e.width}`) || container.defaultVariant).createInstance();
         if (e.asset && K.icons && K.icons[e.asset]) {
           const swapKey = Object.keys(n.componentProperties).find((k) => n.componentProperties[k].type === 'INSTANCE_SWAP');
           if (swapKey && icons[e.asset]) n.setProperties({ [swapKey]: icons[e.asset].id });
         } else if (e.asset) missing.add(`icon ${e.asset}`);
         if (e.background) recolour(n, await solid(e.background));
       } else if (e.kind === 'instance' && e.component) {
-        // another component of the library: its instance, at the size nearest the code's (a Size variant
-        // valued in pixels), a photo where the code shows an image; not in the library, a plain frame
+        // another component of the library: its instance, at the size nearest the code's (the settings' size axis,
+        // valued in pixels), a photo where the code shows an image (a Content axis whose options name one); not in the library, a plain frame
         const set = sets[e.component];
         if (set) {
           const opts = set.componentPropertyDefinitions;
           const pick = (v) => Object.entries(opts).filter(([, d]) => d.type === 'VARIANT').every(([k, d]) => {
             const val = v.variantProperties[k];
-            if (/^size$/i.test(k) && d.variantOptions.every((o) => /^\d+$/.test(o))) return val === d.variantOptions.reduce((a, b) => (Math.abs(+b - e.width) < Math.abs(+a - e.width) ? b : a));
+            if (P.sizeAxis && k.toLowerCase() === P.sizeAxis.toLowerCase() && d.variantOptions.every((o) => /^\d+$/.test(o))) return val === d.variantOptions.reduce((a, b) => (Math.abs(+b - e.width) < Math.abs(+a - e.width) ? b : a));
             if (/^content$/i.test(k) && d.variantOptions.some((o) => /photo|image/i.test(o))) return /photo|image/i.test(val) === !!e.image;
             return val === d.defaultValue || val === set.defaultVariant.variantProperties[k];
           });
           n = (set.children.find(pick) || set.defaultVariant).createInstance();
           if (e.width && Math.round(n.width) !== Math.round(e.width)) missing.add(`${e.component} at ${e.width}px (the library's nearest is ${Math.round(n.width)})`);
         } else if (Object.keys((K.variants || {})[e.component] || {}).length) {
-          // a variant the snapshot met: the one whose pixel Size is nearest the part's, else the first
+          // a variant the snapshot met: the one whose pixel size (on the settings' size axis) is nearest the part's, else the first
           const vs = K.variants[e.component];
-          const sizeOf = (name) => { const m = /(?:^|, )Size=(\d+)(?:,|$)/.exec(name); return m ? +m[1] : null; };
+          const sizeOf = (name) => { const m = P.sizeAxis && new RegExp(`(?:^|, )${P.sizeAxis.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=(\\d+)(?:,|$)`).exec(name); return m ? +m[1] : null; };
           const sized = Object.keys(vs).filter((x) => sizeOf(x) !== null);
           const name = px(e.width) && sized.length ? sized.reduce((a, b) => (Math.abs(sizeOf(b) - e.width) < Math.abs(sizeOf(a) - e.width) ? b : a)) : Object.keys(vs)[0];
           // the key is the component set's when the main is a variant, the component's when it stands alone
@@ -524,10 +524,11 @@ export function variantKeys(dir, names, tails = []) {
 }
 
 /* The plan as the plugin gets it: each distinct element once, a variant's anatomy its indices. */
-export function pluginCode(contract, keys, { before = '', after = '', failed = '', axisOrder = [] } = {}) {
+export function pluginCode(contract, keys, { before = '', after = '', failed = '', axisOrder = [], sizeAxis = null } = {}) {
   const p = plan(contract, { axisOrder }), table = [], at = new Map();
   const ref = (e) => { const j = JSON.stringify(e); if (!at.has(j)) { at.set(j, table.length); table.push(e); } return at.get(j); };
-  const packed = { ...p, elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
+  // the size axis by the library's settings' name (sizeAxis), carried to the drawing; none named, no variant is picked by size
+  const packed = { ...p, sizeAxis, elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
   // a layer hidden inside an instance is one to draw and match too: the snapshot's walk, run in the same plugin
   // before (the update's live read, the audit), leaves Figma skipping them
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};
@@ -924,7 +925,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   const c = r.asFigma || r;
   // with no project, the house's own axis order (audit-defaults, derived as for a library)
   const house = () => req('../snapshot/projects.cjs').flatSettings(JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../standards/audit-settings.json'), 'utf8'))['audit-defaults'], {});
-  if (!run && !check) { process.stdout.write(pluginCode(c, JSON.parse(fs.readFileSync(keysFile, 'utf8')), { axisOrder: house().axisOrder || [] })); process.exit(0); }
+  if (!run && !check) { process.stdout.write(pluginCode(c, JSON.parse(fs.readFileSync(keysFile, 'utf8')), { axisOrder: house().axisOrder || [], sizeAxis: house().sizeAxis || null })); process.exit(0); }
   // through the project's own docs service, which holds the Figma bridge
   const contractRouter = req('../snapshot/projects.cjs');
   const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -942,6 +943,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   const map = { draw: lib.draw, mode: lib.code && lib.code.parity && lib.code.parity.tiers && lib.code.parity.tiers[0] };
   // the house's axis order, as that library's settings derive it (figma-standard rule 1)
   const axisOrder = (lib.tokens || {}).axisOrder || [];
+  const sizeAxis = (lib.tokens || {}).sizeAxis || null;
   const p = plan(c, { axisOrder }), want = needs(p);
   if (check) {
     // the drawing read back and held to the contract it was drawn from; with the code contract held to
@@ -1017,7 +1019,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   // for a minute, and advanced only while another call ran. A no-op every 2 s keeps it going
   let drawing = true;
   const awake = (async () => { while (drawing) { await exec('return 1', into, 5000).catch(() => {}); await new Promise((r) => setTimeout(r, 2000)); } })();
-  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder }) : pluginCode(c, keys, { before: BEFORE(p.name), after: AFTER(p.name), failed: FAILED, axisOrder });
+  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis }) : pluginCode(c, keys, { before: BEFORE(p.name), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis });
   // an update in place given longer than a drawing: one that times out here may still be changing the library
   const res = await exec(code, into, target ? 540000 : 120000).catch((e) => {
     if (!target) throw e;

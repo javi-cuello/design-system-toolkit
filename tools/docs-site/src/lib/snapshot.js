@@ -2,7 +2,7 @@
 // knows a token or component name: groups come from the paths in the file.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { layout, project, shows, status, guidance, contract, spec as specModule, codeTargets, frameworks, statesOf, tokens, ours, TOOLKIT, localCollections } from './project.js';
+import { layout, project, shows, status, guidance, contract, spec as specModule, codeTargets, frameworks, statesOf, tokens, ours, TOOLKIT, localCollections, pageMarker } from './project.js';
 // What code builds differently from the drawing is the component-validator
 // skill's to say: the page renders its engine's output, never its own rules.
 import { validate, translations, fromSnapshot } from '../../../validator/validate.mjs';
@@ -109,8 +109,8 @@ export const resolve = (nameOrValue, mode) => {
 // Weights and shadows as the token pipeline writes them, never re-derived here.
 export { fontWeight as weight } from './project.js';
 
-// A page's own name, without whatever marker leads it (❖, 🚧, a review dot).
-const pageTitle = (page) => page.replace(/^[^\p{L}\p{N}_]+/u, '').trim();
+// A page's own name, without whatever marker leads it (❖, 🚧, a review dot): the settings' pageMarker.
+const pageTitle = (page) => (pageMarker ? page.replace(pageMarker, '') : page).trim();
 export const slug = specModule.slug;
 
 // Foundations as the Figma library organises them: one page per variable

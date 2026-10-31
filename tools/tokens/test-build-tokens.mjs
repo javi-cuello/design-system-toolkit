@@ -5,18 +5,24 @@
 // Run: node --test tools/tokens/test-build-tokens.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
-import { tmpdir, homedir } from 'node:os';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { buildTokens, shadowCss } from './build-tokens.mjs';
 
-// any repo beside this one that has Style Dictionary installed lends it
-const projectsDir = join(homedir(), 'Projects');
-const donor = (existsSync(projectsDir) ? readdirSync(projectsDir) : []).map((r) => join(projectsDir, r, 'package.json')).find((p) => existsSync(join(p, '..', 'node_modules', 'style-dictionary')));
+// A registered project repo with Style Dictionary installed lends it, read from the projects the toolkit knows
+// (as test-check.mjs does): this read ~/Projects, a folder only one machine has, and skipped silently elsewhere.
+// With no project registered (a fresh clone, CI) the cases skip and say so; with projects and no donor, it fails.
+const repos = createRequire(import.meta.url)('../snapshot/projects.cjs').repos();
+const donor = repos.map((r) => join(r.dir, 'package.json')).find((p) => existsSync(join(p, '..', 'node_modules', 'style-dictionary')));
+if (!donor && repos.length) {
+  console.error('no registered project repo has style-dictionary installed: run `pnpm install` in one of them, or register a repo that has it.');
+  process.exit(1);
+}
 const SD = donor && (await import(pathToFileURL(createRequire(donor).resolve('style-dictionary')).href)).default;
-const skip = !SD && 'no repo with style-dictionary installed';
+const skip = !SD && 'no project repo is registered, so there is no style-dictionary to borrow';
 
 const colour = (hex) => ({ $type: 'color', $value: hex });
 const dim = (n) => ({ $type: 'dimension', $value: { value: n, unit: 'px' } });

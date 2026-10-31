@@ -31,7 +31,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, variantDefaults, kebab } from './layers.mjs';
+import { expand, variantDefaults, kebab, camel } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -47,7 +47,18 @@ const TAKEN = new Set(['role', 'align', 'valign', 'hidden', 'disabled', 'title',
   'style', 'class', 'id', 'slot', 'dir', 'name', 'is', 'part', 'tabindex', 'inert', 'popover', 'draggable', 'translate', 'autofocus', 'nonce', 'accesskey', 'spellcheck', 'contenteditable', 'enterkeyhint', 'inputmode', 'autocapitalize', 'exportparts', 'itemprop']);
 // a prop's key as an attribute name: showIcon → show-icon
 const words = (key) => kebab(String(key).replace(/([a-z0-9])([A-Z])/g, '$1-$2'));
-const PSEUDO = { focus: ':focus-visible', hover: ':hover', press: ':active' };
+/* The settings a sheet is written under: a CLI passes its library's (librarySettingsFor), a caller that names none
+   (a test, the contract editor's draft) gets the house's from audit-settings, never a literal of its own (§C F). */
+export const HOUSE = require('../snapshot/projects.cjs').flatSettings(require('../../standards/audit-settings.json')['audit-defaults'], {});
+/* What draws each pointer state in CSS, keyed by the contract's value (the state option, kebab-cased): the settings'
+   `pseudoClasses`, one owner for the stylesheet and the parity mapping (to-markup). A state with none is a prop's. */
+export const pseudoClasses = (t = HOUSE) => Object.fromEntries(Object.entries(t.pseudoClasses || {}).map(([state, ps]) => [kebab(state), ps]));
+/* The contract key of the disabled axis, read by its setting (`disabledAxis`), not by the word, in any letter case
+   (a library's `dIsabled` is still its disabled axis): null where the settings name none or the contract has no such boolean. */
+export const disabledKey = (c, t = HOUSE) => {
+  const want = t.disabledAxis && camel(t.disabledAxis).toLowerCase();
+  return (want && Object.keys((c && c.props) || {}).find((k) => k.toLowerCase() === want && c.props[k].type === 'boolean')) || null;
+};
 // what a component placing another says of it: its place and size, nothing of its look
 const PLACED = /^(flex|align-self|order|(min-|max-)?(inline|block)-size|position|inset.*|translate|rotate|opacity|z-index|margin.*)$/;
 
@@ -153,7 +164,7 @@ function controlsOf(c) {
 }
 
 /* The selector a prop's value is chosen by, on the root. */
-export function condition(c, n, key, value) {
+export function condition(c, n, key, value, t = HOUSE) {
   const p = c.props[key] || {};
   const entry = entryOf(c);
   // the input's own state, reached down the anatomy by child combinators (code-standard rules 5 and 62)
@@ -164,13 +175,15 @@ export function condition(c, n, key, value) {
   const placed = controlsOf(c).map((id) => chain(c, n, id, '').slice(n.root.length + 3));
   // a box that names its control is that control's alone: a button beside it in the box is not it
   const reach = (x) => [...(control || placed.length ? [] : [`:has(> ${x})`]), ...(control ? [`:has(> ${control}${x})`] : []), ...placed.flatMap((k) => [`:has(> ${k}${x})`, `:has(> ${k} ${x})`])];
-  const dis = Object.keys(c.props).find((k) => /^disabled$/i.test(k) && c.props[k].type === 'boolean');
+  const dis = disabledKey(c, t);
   // disabled: the control's own, or the attribute where the box has no control to disable (code-standard rule 9)
   const disabled = `:is(${[...(dis ? [`[${n.attr(dis)}]:not([${n.attr(dis)}="false"])`] : []), ':disabled', ...reach(':disabled')].join(', ')})`;
   if (p.role === 'interaction') {
     // a box that names no control is focused when what it holds is (a card's own button or link stands for it)
     const focused = control || placed.length ? reach(':focus-visible') : [':has(:focus-visible)'];
-    const PS = { focus: `:is(:focus-visible, ${focused.join(', ')})`, hover: ':hover', press: control ? `:is(:active, :has(> ${control}:active))` : ':active' };
+    // each pointer state by the pseudo-class the settings give it: focus reaches what the box holds, a press its control
+    const PS = Object.fromEntries(Object.entries(pseudoClasses(t)).map(([v, ps]) => [v, ps === ':focus-visible' ? `:is(:focus-visible, ${focused.join(', ')})`
+      : ps === ':active' && control ? `:is(:active, :has(> ${control}:active))` : ps]));
     // a state the contract draws no disabled variant of does not reach a disabled control: there, a disabled box
     // hovered or focused is still drawn at rest
     const notDrawn = (v) => dis && (c.invalid || []).some((w) => w[dis] === true && [].concat(w[key]).includes(v) && Object.keys(w).length === 2);
@@ -179,7 +192,7 @@ export function condition(c, n, key, value) {
     if (value === p.default) return Object.keys(PS).map((v) => `:not(${live(v)})`).join('');
   }
   if (entry && key === entry.flag) return (value === entry.on) ? `:has(> ${control}:not(:placeholder-shown))` : `:has(> ${control}:placeholder-shown)`;
-  if (p.type === 'boolean' && /^disabled$/i.test(key)) return value ? disabled : `:not(${disabled})`;
+  if (key === dis) return value ? disabled : `:not(${disabled})`;
   const a = n.attr(key);
   // a box holding a native checkbox or radio, directly or as the control it places, is checked as the control is
   // (code-standard rule 9: the control's own)
@@ -199,8 +212,10 @@ export function condition(c, n, key, value) {
  * offset by how far its outer edge clears the box less its width (knowledge/code/figma-handoff.md, Focus rings).
  * Null for any other part.
  */
-export function ringOf(c, when, id, e, a) {
-  const focus = Object.entries(c.props).some(([k, p]) => p.role === 'interaction' && when[k] === 'focus');
+export function ringOf(c, when, id, e, a, t = HOUSE) {
+  // the focus state is the one the settings draw with :focus-visible
+  const ps = pseudoClasses(t);
+  const focus = Object.entries(c.props).some(([k, p]) => p.role === 'interaction' && ps[when[k]] === ':focus-visible');
   const b = e.border, x = e.absolute;
   if (!focus || c.anatomy[id] || !e.parent || e.position !== 'absolute' || !x || e.background || !b || typeof b.color !== 'string') return null;
   if (!e.constraints || e.constraints.horizontal !== 'stretch' || e.constraints.vertical !== 'stretch' || Object.values(a).some((k) => k.parent === id)) return null;
@@ -371,16 +386,16 @@ export function partSeg(c, id) {
 }
 
 /* The stylesheet. */
-export function toCss(c, folder, { naming, layer = 'components' } = {}) {
+export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE } = {}) {
   const n = namer(folder, naming);
   const { rules, unread } = rulesOf(c);
   const lines = [`/* ${BANNER} */`];
   const keys = [...new Set(rules.flatMap((r) => Object.keys(r.when)))];
   const hooks = keys.map((k) => {
     const p = c.props[k] || {};
-    if (p.role === 'interaction') return `${k}: ${Object.keys(PSEUDO).filter((x) => (p.pointer || []).includes(x)).map((x) => PSEUDO[x]).join(', ')}`;
+    if (p.role === 'interaction') return `${k}: ${Object.entries(pseudoClasses(settings)).filter(([x]) => (p.pointer || []).includes(x)).map(([, ps]) => ps).join(', ')}`;
     if (entryOf(c) && k === entryOf(c).flag) return `${k}: the input's own :placeholder-shown`;
-    if (p.type === 'boolean' && /^disabled$/i.test(k)) return `${k}: the control's disabled`;
+    if (k === disabledKey(c, settings)) return `${k}: the control's disabled`;
     return `${k}: ${n.attr(k)}${p.type === 'boolean' ? '' : `="${(p.values || []).join('|')}" (default ${p.default}, or none)`}`;
   });
   if (hooks.length) lines.push(`/* Chosen by: ${said(hooks.join('; '))}. */`);
@@ -393,11 +408,11 @@ export function toCss(c, folder, { naming, layer = 'components' } = {}) {
   // a knob is read before the value it stands in for: the ring a part gives way to its holder's, and the disabled dim a
   // holder sets to 1 on what it holds so it dims once (code-standard rule 62), named as the scaffold names them
   const knob = (k, v) => `var(--${(naming && naming.prefix) || ''}${k}, ${v})`;
-  const dis = Object.keys(c.props).find((k) => /^disabled$/i.test(k) && c.props[k].type === 'boolean');
+  const dis = disabledKey(c, settings);
   for (const r of rules) {
     // each condition weighs nothing (:where), so rules meet by source order alone, the order selfCheck replays: a
     // condition reaching a control two boxes down would otherwise outweigh an attribute and reorder the cascade
-    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v)})`).join('');
+    const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings)})`).join('');
     for (const [id, decls] of Object.entries(r.parts)) {
       lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond)} {`);
       let dimmed = false, undimmed = false;
@@ -434,7 +449,7 @@ if (isMain) {
   let where;
   if (repoFlag) {
     const repo = path.resolve(repoFlag);
-    where = { repo, paths: require('../snapshot/store.cjs').paths(repo, JSON.parse(fs.readFileSync(path.join(repo, 'snapshot.config.json'), 'utf8')).paths || {}) };
+    where = { repo, paths: require('../snapshot/store.cjs').paths(repo, require('../shared/repo-config.cjs').repoConfig(repo, 'to-code').paths || {}) };
     // its project's home, for its official contracts
     Object.assign(where, homeIn(repo));
   } else {
@@ -442,7 +457,7 @@ if (isMain) {
     if (where.error) { console.error(`to-code: ${where.error}`); process.exit(2); }
     if (!where.repo) { console.error(`to-code: ${label} has no code repo to write a stylesheet for`); process.exit(2); }
   }
-  const config = JSON.parse(fs.readFileSync(path.join(where.repo, 'snapshot.config.json'), 'utf8'));
+  const config = require('../shared/repo-config.cjs').repoConfig(where.repo, 'to-code');
   const styles = config.styles || {};
   const out = outFlag ? path.resolve(outFlag) : where.paths.componentStyles;
   if (!out) { console.error(`to-code: no paths.componentStyles in ${path.join(where.repo, 'snapshot.config.json')}, and no --out`); process.exit(2); }
@@ -452,12 +467,14 @@ if (isMain) {
   let broken = 0;
   // the official contract: Figma's reading, or the project's own where it takes the contract as its source
   const { of } = officials(where);
+  // each sheet under its library's settings (its state names, its disabled axis), the house's where none
+  const settingsOf = require('../snapshot/projects.cjs').librarySettingsFor(dir);
   for (const f of folders) {
     const c = draft || of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8')));
     const { rules } = rulesOf(c);
     const off = selfCheck(c, rules);
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
-    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components' });
+    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f) });
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);
   }
   // a write replaces only what it wrote (code-standard rule 58): its own files, known by the banner

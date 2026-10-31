@@ -224,7 +224,7 @@ expect("a layer that is the same in every variant still fires when some forget i
     ] });
   const set = { id: "0:1", type: "COMPONENT_SET", name: "Probe", description: "A probe set for new token rules.", componentPropertyDefinitions: { Size: { type: "VARIANT", variantOptions: ["md"] } }, children: [v] };
   const vars = { good: { name: "Colour/Text/strong", collection: "Semantic", key: "k-good" }, bad: { name: "Colour/Background/x", collection: "Other", key: "k-bad" } };
-  const T = { spacing: [0, 4, 8, 16, 32], radius: [0, 4, 8], textRole: "Text", allowedKeys: ["k-good"] };
+  const T = { spacing: [0, 4, 8, 16, 32], radius: [0, 4, 8], textRole: "Text", allowedKeys: ["k-good"], mechanismPadding: 80 };
   const go = (t) => checkFacts({ pages: [{ name: "Page", id: "0:0", sets: [set] }] }, t, {}, [], async (id) => vars[id] || null, FX.file);
   const tok = async (t) => rows(await go(t)).filter((x) => x.includes(" tokens | "));
   expect("the scale note names the nearest step, a big off-scale padding is a review, a shape on a text role and a shorthand-only stroke weight fire, and a foreign collection key fires", await tok(T), [
@@ -239,6 +239,9 @@ expect("a layer that is the same in every variant still fires when some forget i
     (await go(T)).audited[0].candidates.filter((c) => /^tokens\|padding/.test(c.key)).map((c) => c.advice), [
     "If the padding drives a fill, record it as a mechanism; if it spaces content, bind it to a spacing variable.",
     "Bind the bottom padding to the nearest spacing step, 8, or record why it is 12."]);
+  expect("the mechanism question is the settings' threshold: without mechanismPadding a big off-scale padding is a defect",
+    (await tok({ ...T, mechanismPadding: undefined })).filter((x) => / top padding /.test(x)),
+    ["Probe | error tokens | Size=md has a raw top padding of 96 (off the spacing scale; nearest step 32), so a change to the spacing tokens never reaches it"]);
   expect("without the settings, none of the new notes or checks runs (negative)", await tok({}), [
     "Probe | error tokens | Size=md has a raw top padding of 96, so a change to the spacing tokens never reaches it",
     "Probe | error tokens | Size=md has a raw bottom padding of 12, so a change to the spacing tokens never reaches it",

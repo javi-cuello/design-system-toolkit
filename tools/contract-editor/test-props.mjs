@@ -101,8 +101,9 @@ ok('seven kinds, each starting unnamed; a number and an event are code only; int
   assert.equal(num.only, 'code');
   const st = interactionStates({ settings: { stateAxis: 'Interaction', pointerStates: ['Hover'] }, optionOrder: { Interaction: ['Idle', 'Hover', 'Loading'] } });
   assert.deepEqual(st, { pointer: ['Hover'], states: ['Idle', 'Hover'] }, 'Loading is a code prop, not a state');
-  const busy = interactionStates({ settings: { pointerStates: ['Hover'] }, optionOrder: { State: ['Rest', 'Hover', 'Busy'] } });
+  const busy = interactionStates({ settings: { stateAxis: 'State', pointerStates: ['Hover'] }, optionOrder: { State: ['Rest', 'Hover', 'Busy'] } });
   assert.deepEqual(busy.states, ['Rest', 'Hover'], 'so is any state the product sets, by whatever name the library gives it');
+  assert.deepEqual(interactionStates({ settings: {}, optionOrder: { State: ['Rest', 'Hover'] } }), { pointer: [], states: [] }, 'settings that name no state axis give no states: the house\'s words never stand in');
   assert.notEqual(blocks()[0].make().uid, blocks()[0].make().uid, 'each made block is its own prop');
 });
 

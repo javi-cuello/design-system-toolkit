@@ -429,7 +429,7 @@ async function governedSource(project, name) {
     async render(all) {
       const { __state, ...args } = all;
       if (host === 'storybook') await S.PAGE.open(tab, { storyId: t.mapping.storyId, args, tier });
-      else await S.PAGE.open(tab, [{ key: 'c', html: await S.PAGE.fragment(t.name, Object.fromEntries(Object.entries(args).filter(([, v]) => v !== undefined))) }], { tier, viewport: [1280, 800] });
+      else await S.PAGE.open(tab, [{ key: 'c', html: await S.PAGE.fragment(t.name, Object.fromEntries(Object.entries(args).filter(([, v]) => v !== undefined))) }], { tier, viewport: [project.limits.viewportWidth, project.limits.componentWindowHeight] });
       await forceAt(tab, src.pseudoOf[__state]);
     },
     api: async () => api || S.PAGE.api(tab),
@@ -882,4 +882,4 @@ async function pairUp(L, m, read, call, defaults) {
   })), m.elements);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) main().catch((e) => { console.error(e); process.exit(1); });
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) main().catch((e) => { if (!e.usage) { console.error(e); process.exit(1); } console.error(e.message); process.exit(2); });

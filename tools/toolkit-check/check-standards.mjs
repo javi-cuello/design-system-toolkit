@@ -387,10 +387,13 @@ for (const { label, doc } of projectDocs) {
   for (const e of empty) healed.push(e.replace("an empty", "removed an empty"));
 }
 
-// Every skill script and scanner reads settings, found from the tree so a new one
-// is covered the day it lands; tests are fixtures, not readers.
+// Every skill script and scanner, and every tool and plugin, applies values that belong in the settings
+// (§C F), found from the tree so a new one is covered the day it lands; tests, fixtures and vendored code
+// are not readers. A tool's own words (a column label, a severity glyph) are allowlisted with the reason.
 const SCANNERS = process.env.STANDARDS_SCANNERS ? process.env.STANDARDS_SCANNERS.split(",")
-  : git(["ls-files", "skills/*/scripts/*.js", "skills/*/scripts/*.mjs", "skills/*/scripts/*.cjs", "skills/*/scanner/*.js"]).split("\n").filter((f) => f && !/\/test[-.]/.test(f) && has(f));
+  : git(["ls-files", "skills/*/scripts/*.js", "skills/*/scripts/*.mjs", "skills/*/scripts/*.cjs", "skills/*/scanner/*.js",
+    "tools/*.js", "tools/*.mjs", "tools/*.cjs", "plugins/*/code.js", "plugins/*/ui.html"]).split("\n")
+    .filter((f) => f && !/\/test[-.]|\/tests?\/|\/fixtures?\/|\/vendor\/|\.min\.js$/.test(f) && has(f));
 // Files whose settings arrive as `opts`, with the arguments derived from settings or evidence rather than keys.
 const OPTS = process.env.STANDARDS_OPTS ? JSON.parse(process.env.STANDARDS_OPTS) : {
   "skills/figma-components-audit/scripts/probes.js": ["states", "focus", "rest", "slotName", "parts"],
@@ -420,10 +423,15 @@ for (const v of SECTIONS.flatMap((sec) => Object.values(defaults[sec] || {}))) f
 for (const [k, v] of Object.entries(defaults.optionOrder || {})) { if (!k.startsWith("(")) houseValues.add(k); for (const x of v) if (!/^(True|False)$/.test(x) && x.length >= 3) houseValues.add(x); }
 const houseEmoji = [...new Set([...houseValues].flatMap((x) => [...x].filter((ch) => /\p{Extended_Pictographic}/u.test(ch)).map((ch) => ch.codePointAt(0).toString(16))))];
 const words = [...houseValues].filter((x) => /^[A-Z][A-Za-z]{2,}$/.test(x));
+// Numbers: a house value that is a measuring width (`interface.viewportWidth`, `phoneWidth`) is distinctive
+// enough that a literal of it in code is that setting copied; smaller ones (12, 24) are ordinary arithmetic.
+const houseNumbers = Object.entries(defaults.interface || {}).filter(([k, v]) => /Width$/.test(k) && typeof v === "number").map(([k, v]) => [k, v]);
 for (const rel of SCANNERS) {
   if (!has(rel)) { problems.push(`${rel}: listed scanner is missing`); continue; }
+  // the audit's own scripts: settings arrive as TOKENS, and a finding they write names the setting (below)
+  const scanner = !/^(tools|plugins)\//.test(rel);
   let src = code(read(rel));
-  for (const m of src.matchAll(/\b(?:T|TOK|TOKENS)(?:\.([A-Za-z_]\w*)|\[["'`]([^"'`]+)["'`]\])/g))
+  if (scanner) for (const m of src.matchAll(/\b(?:T|TOK|TOKENS)(?:\.([A-Za-z_]\w*)|\[["'`]([^"'`]+)["'`]\])/g))
     if (!((m[1] || m[2]) in flatKeys)) problems.push(`${rel}: reads settings key ${m[1] || m[2]}, which is not in audit-keys`);
   if (OPTS[rel]) for (const m of src.matchAll(/\bopts\.([A-Za-z_]\w*)/g))
     if (!(m[1] in flatKeys) && !OPTS[rel].includes(m[1])) problems.push(`${rel}: reads opts.${m[1]}, which is neither in audit-keys nor a derived argument`);
@@ -438,6 +446,9 @@ for (const rel of SCANNERS) {
   for (const body of strings.filter((x) => !houseValues.has(x))) for (const w of words) if (new RegExp("(^|[^A-Za-z])" + w + "=").test(body)) quoted.push(w);
   for (const e of houseEmoji) if (new RegExp("\\\\u\\{?" + e + "\\b", "i").test(src)) quoted.push("an escaped " + String.fromCodePoint(parseInt(e, 16)));
   if (quoted.length) problems.push(`${rel}: quotes the house value${quoted.length > 1 ? "s" : ""} ${[...new Set(quoted)].map((x) => JSON.stringify(x)).join(", ")} in code; read it from the settings (or allowlist it, with a reason)`);
+  const numbers = houseNumbers.filter(([, v]) => new RegExp("(?<![\\w.])" + v + "(?![\\w.])").test(src.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '""')));
+  if (numbers.length) problems.push(`${rel}: writes the house ${numbers.map(([k, v]) => `${k} (${v})`).join(", ")} as a number in code; read it from the settings (or allowlist it, with a reason)`);
+  if (!scanner) continue;
   const cite = src.match(new RegExp("\\b(?:" + names.join("|") + ") rule \\d+" + (stems.length ? "|" + stems.map(esc).join("|") + " \\d+" : "")));
   if (cite) problems.push(`${rel}: writes "${cite[0]}" into what it outputs; a finding names the setting, not a standard's numbering`);
 }

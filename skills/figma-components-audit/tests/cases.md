@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.35.1)
+# Eval cases — figma-components-audit (v2.36.0)
+
+**Walked: 2026-10-31 for 2.36.0** — `node tests/test-audit.mjs` 84/84, the new assertion (no mechanismPadding: the 96 padding is an error) failing before the fixture's settings named it; other cases unchanged.
 
 **Walked: 2026-10-31 for 2.35.1** — `node tests/test-audit.mjs` 83/83, the two new assertions (guidance still owed, a private placeholder is hygiene) failing on 2.35.0.
 

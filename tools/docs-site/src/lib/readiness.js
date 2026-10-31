@@ -6,6 +6,7 @@
 // Documentation page. What each component lacks is the audit's. The method
 // and why these three: Research/ai-ready-design-systems.md, sections 8 to 10.
 import { snapshot, meta, componentPages, collectionPages, isPrivateName } from './snapshot.js';
+import { deprecation } from './project.js';
 
 // How current the reference is. Every other figure describes the library as
 // it was when the snapshot was taken; Figma's own last edit, where the plugin
@@ -35,12 +36,17 @@ export const tokensDescribed = tokensPublished - tokenCollections.reduce((n, c) 
 // Deprecated components whose description names what replaces them
 // (figma-standard rule 14: "Deprecated: use List instead." first). Without
 // the replacement an agent that meets the old name has nowhere to go.
-const names = componentPages.flatMap((p) => p.components.map((c) => c.name.replace(/^_?\[🚫 DEPRECATED\]\s*-\s*/, '')));
-const isDeprecated = (p, c) => /deprecat/i.test(p.category || '') || /🚫|DEPRECATED/.test(c.name);
+// The marks are the settings' (deprecatedMarker, deprecatedCategory, deprecatedNamePrefix), never the house's spelled here.
+const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const prefix = deprecation.namePrefix ? new RegExp('^_?' + esc(deprecation.namePrefix.trim()).replace(/ /g, '\\s*') + '\\s*') : null;
+const bare = (name) => (prefix ? name.replace(prefix, '') : name);
+const names = componentPages.flatMap((p) => p.components.map((c) => bare(c.name)));
+const isDeprecated = (p, c) => Boolean((deprecation.category && (p.category || '').toLowerCase().includes(deprecation.category.toLowerCase()))
+  || (deprecation.marker && c.name.includes(deprecation.marker)) || (deprecation.category && c.name.includes(deprecation.category)));
 const replacement = (c) => {
   const text = c.guidance.purpose || '';
   if (!/\b(use|replaced by)\b/i.test(text)) return null;
-  const self = c.name.replace(/^_?\[🚫 DEPRECATED\]\s*-\s*/, '');
+  const self = bare(c.name);
   return names.filter((n) => n !== self && !isPrivateName(n) && new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)).sort((a, b) => b.length - a.length)[0] || null;
 };
 export const deprecated = componentPages.flatMap((p) => p.components.filter((c) => isDeprecated(p, c)).map((c) => ({ page: p, name: c.name, unknown: Boolean(c.guidance.unknown), replacement: replacement(c) })));

@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, entryOf, controlOf, selectorOf, ringOf, placedIn, PREFIX, said } from './to-code.mjs';
+import { namer, partSeg, copyOf, entryOf, controlOf, selectorOf, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel } from './layers.mjs';
 
@@ -77,8 +77,8 @@ export const titleOf = (c, platform = null) => `Design system/${c.component}${pl
 /* What the markup knows of each prop: its name in code, how it reaches the element (an attribute the sheet keys on,
    the control's own disabled, a part's text, an input's placeholder, a placed component's prop) and its type. A
    pointer state is the browser's (a pseudo-class), so only the values the product sets (a Loading) are a prop. */
-export function propsOf(c, library = {}, lang = JS) {
-  const control = controlOf(c.component, placedIn(c)), entry = entryOf(c);
+export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
+  const control = controlOf(c.component, placedIn(c)), entry = entryOf(c), dis = disabledKey(c, settings);
   const out = [];
   for (const [key, p] of Object.entries(c.props || {})) {
     if (!IDENT.test(key)) throw new Error(`${c.component}: ${str(key)} is not a name code can use`);
@@ -92,7 +92,7 @@ export function propsOf(c, library = {}, lang = JS) {
     if (entry && (p.sets || []).includes(entry.value)) { out.push({ ...base, type: 'value', default: p.default ?? '' }); continue; }
     if (entry && (p.sets || []).includes(entry.placeholder)) { out.push({ ...base, type: 'string', default: p.default ?? '', input: 'placeholder' }); continue; }
     if (p.type === 'enum') out.push({ ...base, type: 'enum', values: p.values || [], default: p.default, attr: true });
-    else if (p.type === 'boolean') out.push({ ...base, type: 'boolean', default: p.default === true, native: /^disabled$/i.test(key) && !!(control || entry), attr: !(/^disabled$/i.test(key) && (control || entry)) });
+    else if (p.type === 'boolean') out.push({ ...base, type: 'boolean', default: p.default === true, native: key === dis && !!(control || entry), attr: !(key === dis && (control || entry)) });
     else if (p.type === 'string') out.push({ ...base, type: 'string', default: p.default ?? '' });
     else if (p.type === 'number') out.push({ ...base, type: 'number', default: Number.isFinite(Number(p.default)) ? Number(p.default) : 0 });
     else if (p.type === 'instance') out.push({ ...base, ...swapOf(c, p, library, lang) });
@@ -220,9 +220,9 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
 
 /* The tree, built once for both frameworks: each element as a tag, its attributes (a literal, or code) and its
    children, printed as JSX or as `h()` calls. */
-function build(c, folder, { naming, library = {}, jsx, lang = JS }) {
+function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOUSE }) {
   const n = namer(folder, naming);
-  const props = propsOf(c, library, lang), ref = lang.ref;
+  const props = propsOf(c, library, lang, settings), ref = lang.ref;
   const parts = partsOf(c);
   const entry = entryOf(c);
   const control = controlOf(c.component, placedIn(c));
@@ -258,7 +258,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS }) {
     } else if (slot) {
       out = { tag, attrs: hook(id), children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
     } else if (e.kind === 'instance') {
-      const placed = library[e.component], theirs = propsOf(placed, library, lang);
+      const placed = library[e.component], theirs = propsOf(placed, library, lang, settings);
       const given = Object.entries(e.with || {}).map(([fig, v]) => {
         const x = theirs.find((y) => (y.figmas || [y.p.figma]).includes(fig));
         if (!x) return null;
@@ -348,9 +348,9 @@ function jsxOf(item, depth) {
 
 /* The React component: its own props typed and documented, the root element's other props, its ref and its events
    passed through, the root's hooks, the parts, the generated sheet imported. */
-export function toReact(c, folder, { naming, library = {}, stylesheet = null } = {}) {
+export function toReact(c, folder, { naming, library = {}, stylesheet = null, settings = HOUSE } = {}) {
   const name = pascal(c.component);
-  const t = build(c, folder, { naming, library, jsx: true });
+  const t = build(c, folder, { naming, library, jsx: true, settings });
   const own = t.props.filter((x) => x.type !== 'value');
   // the element the rest of the props reach: the control, the field's input, else the root
   const target = t.entry ? 'input' : t.control || (t.inline ? 'span' : 'div');
@@ -412,8 +412,8 @@ function hOf(item, depth) {
    it the behaviour (code-standard rule 8), the rest of the props given it reach the control, and every value is an
    attribute's text or a text node (dom.js `h`), never parsed as HTML. No class is registered: a visual or native
    interactive component is markup and its stylesheet (knowledge/code/web-components.md). */
-export function toElement(c, folder, { naming, library = {} } = {}) {
-  const t = build(c, folder, { naming, library, jsx: false });
+export function toElement(c, folder, { naming, library = {}, settings = HOUSE } = {}) {
+  const t = build(c, folder, { naming, library, jsx: false, settings });
   const tag = t.n.root;
   const own = t.props.filter((x) => x.type !== 'value');
   const placed = t.placed;
@@ -496,8 +496,8 @@ function phpOf(item, depth, base) {
   return `${pad}${open}\n${item.children.map((x) => phpOf(x, depth + 1, base)).join('\n')}\n${pad}</${item.tag}>`;
 }
 
-export function toSnippet(c, folder, { naming, library = {} } = {}) {
-  const t = build(c, folder, { naming, library, jsx: false, lang: PHP });
+export function toSnippet(c, folder, { naming, library = {}, settings = HOUSE } = {}) {
+  const t = build(c, folder, { naming, library, jsx: false, lang: PHP, settings });
   const base = snippetBase(naming), tag = t.n.root;
   // a slot is Kirby's ($slots), an event no server's: the rest are the snippet's variables
   const own = t.props.filter((x) => x.type !== 'event' && x.type !== 'node');
@@ -559,24 +559,25 @@ export function partSelector(c, n, id, part = partsOf(c).get(id)) {
 /* The parity mapping (tools/parity/README.md, The mapping format), keyed by Figma's own names: every axis and its every
    option, so the run measures the whole set (code-standard rule 33), each by the args its story takes; every layer by
    the selector the sheet styles it by (to-code's). */
-export function toParity(c, folder, { naming, library = {}, platform = null, framework = 'react' } = {}) {
+export function toParity(c, folder, { naming, library = {}, platform = null, framework = 'react', settings = HOUSE } = {}) {
   const n = namer(folder, naming);
   // each variant's args by the names its markup takes: a snippet's variables, where those differ
-  const props = propsOf(c, library, framework === 'kirby' ? PHP : JS);
+  const props = propsOf(c, library, framework === 'kirby' ? PHP : JS, settings);
   const byKey = new Map(props.map((x) => [x.key, x]));
   const entry = entryOf(c);
-  const PSEUDO = { hover: 'hover', focus: 'focus-visible', press: 'active' };
+  // the mapping's `pseudo` is the class without its colon (tools/parity/README.md, The mapping format)
+  const PSEUDO = Object.fromEntries(Object.entries(pseudoClasses(settings)).map(([v, ps]) => [v, ps.replace(/^:/, '')]));
   const axes = {};
   for (const [key, p] of Object.entries(c.props || {})) {
     const fig = p.figma || key, x = byKey.get(key), name = x ? x.name : key;
     const word = (v, i) => (p.figmaValues || [])[i] ?? figmaWord(v);
-    if (p.role === 'interaction') axes[fig] = Object.fromEntries((p.values || []).map((v, i) => [word(v, i), v === p.default ? {} : (p.pointer || []).includes(v) ? { pseudo: PSEUDO[v] || v } : { [name]: v }]));
+    if (p.role === 'interaction') axes[fig] = Object.fromEntries((p.values || []).map((v, i) => [word(v, i), v === p.default ? {} : (p.pointer || []).includes(v) && PSEUDO[v] ? { pseudo: PSEUDO[v] } : { [name]: v }]));
     else if (p.type === 'enum') axes[fig] = Object.fromEntries((p.values || []).map((v, i) => [word(v, i), v === p.default ? {} : { [name]: v }]));
     else if (entry && key === entry.flag) {
       // has a value: the input holds the Value's sample text
       const value = props.find((y) => y.type === 'value'), arg = framework === 'react' ? 'defaultValue' : 'value';
       axes[fig] = { [figmaWord(entry.on)]: { [arg]: (value && value.default) || 'Value' }, [figmaWord(!entry.on)]: {} };
-    } else if (p.type === 'boolean' && (p.axis || (p.shows || []).length || /^disabled$/i.test(key))) axes[fig] = { False: p.default === true ? { [name]: false } : {}, True: p.default === true ? {} : { [name]: true } };
+    } else if (p.type === 'boolean' && (p.axis || (p.shows || []).length || key === disabledKey(c, settings))) axes[fig] = { False: p.default === true ? { [name]: false } : {}, True: p.default === true ? {} : { [name]: true } };
   }
   const parts = partsOf(c);
   const root = selectorOf(c, n, 'root');
@@ -596,9 +597,9 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
 
 /* The stories: the component at its defaults, and one for each value and each yes-or-no the contract draws, the
    accessibility check failing the run (knowledge/code/react.md, *Stories in CSF3*). */
-export function toStories(c, folder, framework, { library = {}, platform = null, storybook = '@storybook/react' } = {}) {
+export function toStories(c, folder, framework, { library = {}, platform = null, storybook = '@storybook/react', settings = HOUSE } = {}) {
   const name = pascal(c.component);
-  const props = propsOf(c, library);
+  const props = propsOf(c, library, JS, settings);
   const shown = props.filter((x) => !['node', 'event', 'value'].includes(x.type));
   const args = Object.fromEntries(shown.map((x) => [x.name, x.default]));
   if (iconOnlyOf(c)) args['aria-label'] = c.component;
@@ -637,16 +638,16 @@ export function storybookOf(pkg = {}) {
   return STORYBOOK.find((x) => deps[x]) || '@storybook/react';
 }
 
-export function filesFor(c, folder, { framework, naming, library = {}, stylesheet = null, platform = null, storybook }) {
+export function filesFor(c, folder, { framework, naming, library = {}, stylesheet = null, platform = null, storybook, settings = HOUSE }) {
   const fault = namingFault(framework, naming);
   if (fault) throw new Error(fault);
-  const parity = `/* ${BANNER} */\nexport const parity = ${JSON.stringify(toParity(c, folder, { naming, library, platform, framework }), null, 2)};\nexport default parity;\n`;
-  if (framework === 'kirby') return { [`${folder}.php`]: toSnippet(c, folder, { naming, library }), 'parity.mjs': parity, [`${folder}.stories.php`]: toGallery(c, { library }) };
+  const parity = `/* ${BANNER} */\nexport const parity = ${JSON.stringify(toParity(c, folder, { naming, library, platform, framework, settings }), null, 2)};\nexport default parity;\n`;
+  if (framework === 'kirby') return { [`${folder}.php`]: toSnippet(c, folder, { naming, library, settings }), 'parity.mjs': parity, [`${folder}.stories.php`]: toGallery(c, { library }) };
   const ext = framework === 'react' ? 'tsx' : 'js';
   return {
-    [`${folder}.${ext}`]: framework === 'react' ? toReact(c, folder, { naming, library, stylesheet }) : toElement(c, folder, { naming, library }),
+    [`${folder}.${ext}`]: framework === 'react' ? toReact(c, folder, { naming, library, stylesheet, settings }) : toElement(c, folder, { naming, library, settings }),
     'parity.mjs': parity,
-    [`${folder}.stories.${ext}`]: toStories(c, folder, framework, { library, platform, storybook }),
+    [`${folder}.stories.${ext}`]: toStories(c, folder, framework, { library, platform, storybook, settings }),
   };
 }
 
@@ -659,13 +660,13 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
   let where;
   if (repoFlag) {
     const repo = path.resolve(repoFlag);
-    where = { repo, paths: require('../snapshot/store.cjs').paths(repo, JSON.parse(fs.readFileSync(path.join(repo, 'snapshot.config.json'), 'utf8')).paths || {}), ...homeIn(repo) };
+    where = { repo, paths: require('../snapshot/store.cjs').paths(repo, require('../shared/repo-config.cjs').repoConfig(repo, 'to-markup').paths || {}), ...homeIn(repo) };
   } else {
     where = require('../snapshot/projects.cjs').layout(null, label);
     if (where.error) fail(where.error);
     if (!where.repo) fail(`${label} has no code repo to write components into`);
   }
-  const config = JSON.parse(fs.readFileSync(path.join(require('../snapshot/projects.cjs').expand(where.repo), 'snapshot.config.json'), 'utf8'));
+  const config = require('../shared/repo-config.cjs').repoConfig(require('../snapshot/projects.cjs').expand(where.repo), 'to-markup');
   const framework = fwFlag || config.framework;
   if (!FRAMEWORKS.includes(framework)) fail(`name the framework: --framework ${FRAMEWORKS.join('|')}, or "framework" in snapshot.config.json`);
   const naming = config.styles && config.styles.naming;
@@ -673,6 +674,7 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
   const storybook = storybookOf(fs.existsSync(pkg) ? JSON.parse(fs.readFileSync(pkg, 'utf8')) : {});
   const dir = where.paths.components;
   const { of } = officials(where);
+  const settingsOf = require('../snapshot/projects.cjs').librarySettingsFor(dir);
   const stored = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => fs.existsSync(path.join(dir, f, 'contract.json'))).sort() : [];
   const library = {}, folderOf = {};
   for (const f of stored) { const x = of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8'))); library[x.component] = x; folderOf[f] = x; }
@@ -691,7 +693,7 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
       if (!folder) fail(`${c.component}: its name makes no folder`);
       const into = path.join(dir, folder);
       const sheet = where.paths.componentStyles && path.relative(into, path.join(where.paths.componentStyles, `${folder}.css`));
-      const files = filesFor(c, folder, { framework, naming, library, platform: c.platform || platform, stylesheet: sheet && (sheet.startsWith('.') ? sheet : `./${sheet}`), storybook });
+      const files = filesFor(c, folder, { framework, naming, library, platform: c.platform || platform, stylesheet: sheet && (sheet.startsWith('.') ? sheet : `./${sheet}`), storybook, settings: settingsOf(folder) });
       fs.mkdirSync(into, { recursive: true });
       for (const [f, body] of Object.entries(files)) write(path.join(into, f), body);
     }

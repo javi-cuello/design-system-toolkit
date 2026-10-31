@@ -201,11 +201,11 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             advice:"Delete the layer, or wire its visibility to a boolean property if people should be able to show it."});
         if(n.type!=="INSTANCE"){
           if("layoutMode" in n&&n.layoutMode!=="NONE"){
-            // An off-scale padding of 80 or more is usually a mechanism — a
-            // progress or slider fill driven by padding — so it is a question
-            // (review), not a defect; judgement decides which it is.
+            // An off-scale padding of the settings' mechanismPadding or more is
+            // usually a mechanism — a progress or slider fill driven by padding —
+            // so it is a question (review), not a defect; judgement decides which it is.
             for(const k of ["paddingTop","paddingRight","paddingBottom","paddingLeft"])
-              if(!b(n,k)&&n[k]!==0){const mech=SPACING&&!SPACING.includes(n[k])&&n[k]>=80;
+              if(!b(n,k)&&n[k]!==0){const mech=SPACING&&TOK.mechanismPadding&&!SPACING.includes(n[k])&&n[k]>=TOK.mechanismPadding;
                 F.push({sev:mech?"review":"error",rule:"tokens",key:"tokens|"+k+"|"+at,
                   text:n.name+" has a raw "+SAY[k]+" of "+n[k]+onScale(n[k],SPACING,"spacing")+(mech?", which may drive a fill (a progress bar or slider) rather than space anything":", "+RAW.spacing),
                   advice:mech?"If the padding drives a fill, record it as a mechanism; if it spaces content, bind it to a spacing variable.":bindTo(SAY[k],n[k],SPACING,"spacing")});}

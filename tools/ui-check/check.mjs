@@ -32,20 +32,12 @@ import { createRequire } from 'node:module';
 import { launch, newPage, attach, navigate, viewport, call, media, screenshot, findChrome } from '../shared/cdp.mjs';
 
 import { realpathSync } from 'node:fs';
-const { fenced, homeOf } = createRequire(import.meta.url)('../snapshot/projects.cjs');
+const { interfaceLimits } = createRequire(import.meta.url)('../snapshot/projects.cjs');
 
-const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CHROME = findChrome();
 
-/** The limits: the house's, under a project's own when one is named. */
-export function limits(project) {
-  const house = JSON.parse(fs.readFileSync(path.join(TOOLKIT, 'standards/audit-settings.json'), 'utf8'))['audit-defaults'].interface;
-  if (!project) return house;
-  const doc = path.join(homeOf(project), 'design-system-context.md');
-  const raw = fs.existsSync(doc) ? fenced(fs.readFileSync(doc, 'utf8'), 'audit-settings') : null;
-  const own = raw ? (JSON.parse(raw).interface || {}) : {};
-  return Object.assign({}, house, own);
-}
+/** The limits: the house's, under a project's own when one is named (projects.cjs interfaceLimits, their one reader). */
+export const limits = (project) => interfaceLimits(project || null);
 
 /* Read in the page: each control the rules speak about, as plain data. */
 function survey() {

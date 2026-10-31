@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { toCss, rulesOf, selfCheck, namer, condition, controlOf } from './to-code.mjs';
+import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE } from './to-code.mjs';
 import { declarations } from './css.mjs';
 
 let n = 0;
@@ -169,6 +169,16 @@ else console.log('skip  no stored contracts on this machine');
     fs.writeFileSync(path.join(repo, 'draft.json'), JSON.stringify({ ...draft, component: 'Kept' }));
     ok('a draft never replaces a sheet it did not write', run('--contract', path.join(repo, 'draft.json')) === 1 && fs.readFileSync(path.join(repo, 'styles', 'kept.css'), 'utf8') === '/* by hand */\n');
   } finally { fs.rmSync(repo, { recursive: true, force: true }); }
+}
+
+/* The states and the disabled axis are read through the settings (§C F), never by the house's words. */
+{
+  const own = { ...HOUSE, pseudoClasses: { Hovered: ':hover', Pressed: ':active' }, disabledAxis: 'Inactive' };
+  const lib = { ...chip, props: { state: { type: 'enum', values: ['idle', 'hovered', 'pressed'], default: 'idle', role: 'interaction', pointer: ['hovered', 'pressed'] }, inactive: { type: 'boolean', default: false, axis: true } },
+    variants: [{ when: {}, set: { 'root.background': 'C/rest' } }, { when: { state: 'pressed' }, set: { 'root.background': 'C/press' } }, { when: { inactive: true }, set: { 'root.opacity': 'State/Disabled/opacity' } }] };
+  ok('a library that names its states its own way is drawn by the pseudo-classes its settings give them', /:active/.test(condition(lib, namer('chip'), 'state', 'pressed', own)) && /:hover/.test(condition(lib, namer('chip'), 'state', 'idle', own)));
+  ok('and its disabled axis, by the name its settings give it, is the control\'s disabled', /:disabled/.test(condition(lib, namer('chip'), 'inactive', true, own)) && !/:disabled/.test(condition(lib, namer('chip'), 'inactive', true, HOUSE)));
+  ok('a state the settings give no pseudo-class is none: no house word stands in', !/:hover/.test(condition(lib, namer('chip'), 'state', 'hovered', { ...own, pseudoClasses: {} })));
 }
 
 console.log(`${n} passed`);

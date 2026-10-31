@@ -12,6 +12,16 @@ export function code(src) {
     if (q) { out += ch; if (ch === "\\") { out += src[++i] || ""; } else if (ch === q || (ch === "\n" && q !== "`")) q = null; continue; }
     if (two === "/*") { const e = src.indexOf("*/", i + 2); const end = e < 0 ? src.length : e + 2; out += src.slice(i, end).replace(/[^\n]/g, ""); i = end - 1; continue; }
     if (two === "//" && src[i - 1] !== ":") { const e = src.indexOf("\n", i); i = (e < 0 ? src.length : e) - 1; continue; }
+    // A regex literal is code, copied whole: a quote inside one (/`([^`]+)`/) opened a string that swallowed
+    // the comments after it. A `/` starts one where a value may begin, not after a value (a division).
+    if (ch === "/" && !/(\+\+|--)\s*$/.test(out.slice(-40)) && /(^|[(,=:[!&|?{};+\-*%<>~^]|\b(?:return|typeof|case|in|of|delete|void|throw|new|else|do))\s*$/.test(out.slice(-40))) {
+      let j = i + 1, cls = false;
+      for (; j < src.length && src[j] !== "\n"; j++) {
+        if (src[j] === "\\") { j++; continue; }
+        if (src[j] === "[") cls = true; else if (src[j] === "]") cls = false; else if (src[j] === "/" && !cls) break;
+      }
+      if (src[j] === "/") { out += src.slice(i, j + 1); i = j; continue; }
+    }
     if (ch === '"' || ch === "'" || ch === "`") q = ch;
     out += ch;
   }

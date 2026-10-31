@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { launch, newPage, attach, navigate, viewport, call, findChrome } from '../shared/cdp.mjs';
 import { structureProbe } from '../parity/pages.mjs';
 
@@ -63,7 +64,9 @@ export async function check(site, pages = PAGES) {
   const browser = await launch({ chrome: CHROME });
   try {
     const tab = await attach(await newPage(browser.endpoint));
-    await viewport(tab, 1280, 900);
+    // a page's window, the interface settings' (projects.cjs interfaceLimits)
+    const L = createRequire(import.meta.url)('../snapshot/projects.cjs').interfaceLimits(null);
+    await viewport(tab, L.viewportWidth, L.viewportHeight);
     for (const p of todo) {
       // load, not network idle: the probe reads the DOM and computed styles, and a
       // page of a few thousand components never goes idle within the bound.

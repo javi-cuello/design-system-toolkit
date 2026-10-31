@@ -41,6 +41,11 @@ import * as cdp from '../shared/cdp.mjs';
 
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+/* The window a page is measured in where the caller's tabs name none: the house's interface settings (a project's
+   own come in on its tabs, below). */
+const HOUSE = createRequire(import.meta.url)('../snapshot/projects.cjs').interfaceLimits(null);
+const widthOf = (tabs) => tabs.width || HOUSE.viewportWidth;
 /* In the page: the structural contract's breaches, as sentences. */
 export function structureProbe() {
   const out = [];
@@ -197,7 +202,7 @@ async function onPage(tabs, url, width, fn) {
   try {
     if (tabs.go) await tabs.go(tab, url, width);
     else {
-      await cdp.viewport(tab, width, 1400);
+      await cdp.viewport(tab, width, tabs.height || HOUSE.componentWindowHeight);
       // code-standard 35: the scheme is the check's (the project's drawn tier), never the machine's
       if (tabs.scheme) await cdp.media(tab, { 'prefers-color-scheme': tabs.scheme });
       await cdp.navigate(tab, url, { until: 'load', timeout: 45_000 });
@@ -216,7 +221,7 @@ export async function structure(tabs, F, only) {
   // one load per page: the contract first, then the live swap, which changes the page
   const both = `async () => ({ found: (${structureProbe})(), swap: await (${swapProbe})() })`;
   for (const p of pages) {
-    const r = await onPage(tabs, F.base + p, 1280, both);
+    const r = await onPage(tabs, F.base + p, widthOf(tabs), both);
     if (r.failed) { problems.push(`${p}: did not report (${r.failed})`); continue; }
     for (const f of r.found) problems.push(`${p}: ${f}`);
     swaps += r.swap.examined;
@@ -231,7 +236,7 @@ export async function axe(tabs, F, only) {
   const pages = await pagesOf(tabs, F, only);
   const problems = [];
   for (const p of pages) {
-    const r = await onPage(tabs, F.base + p, 1280, probe);
+    const r = await onPage(tabs, F.base + p, widthOf(tabs), probe);
     if (r.failed) { problems.push(`${p}: did not report (${r.failed})`); continue; }
     for (const v of r) problems.push(`${p}: ${v.id} (${v.impact}) ${v.help} — ${v.targets.slice(0, 3).join(', ')}${v.targets.length > 3 ? ` and ${v.targets.length - 3} more` : ''}`);
   }
@@ -241,7 +246,7 @@ export async function axe(tabs, F, only) {
 export async function overflow(tabs, F, only) {
   const O = F.overflow || {};
   const pages = await pagesOf(tabs, F, only);
-  const widths = O.widths || [1280];
+  const widths = O.widths || [widthOf(tabs)];
   const waivers = (O.waivers || []).map((w) => ({ child: new RegExp(w.child), parent: new RegExp(w.parent) }));
   const runs = pages.flatMap((p) => widths.map((width) => ({ p, width })));
   const done = new Array(runs.length);
@@ -267,7 +272,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   const repo = i >= 0 ? argv.splice(i, 2)[1] : process.cwd();
   const [gate, only] = argv;
   if (!['structure', 'overflow', 'axe'].includes(gate)) { console.log('usage: pages.mjs --repo <dir> structure|overflow|axe [path]'); process.exit(2); }
-  const project = await loadProject(repo);
+  const project = await loadProject(repo).catch((e) => { if (!e.usage) throw e; console.error(e.message); process.exit(2); });
   const F = project.parity.pages;
   /* A project whose pages are an app behind a sign-in has no plain base to
      serve them from: its pages are the routes its screen targets open, through
@@ -278,8 +283,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   if (!(F && F.base) && !viaApp) { console.log('neither parity.pages.base nor an app with screen routes: no pages to check, and that is not a pass'); process.exit(1); }
   const S = await session(project, { page: false, app: Boolean(viaApp), say: () => {} });
   const G = viaApp
-    ? { acquire: S.acquire, release: S.release, discard: S.discard, go: (tab, route, width) => S.ROUTES.open(tab, { route, tier: project.parity.tiers[0], viewport: [width, 1400] }) }
+    ? { acquire: S.acquire, release: S.release, discard: S.discard, go: (tab, route, width) => S.ROUTES.open(tab, { route, tier: project.parity.tiers[0], viewport: [width, project.limits.componentWindowHeight] }) }
     : { acquire: S.acquire, release: S.release, discard: S.discard, scheme: String(project.parity.tiers[0]).toLowerCase() };
+  // the window each page is measured in: the interface settings' width, the parity engine's window height
+  Object.assign(G, { width: project.limits.viewportWidth, height: project.limits.componentWindowHeight });
   const pagesF = viaApp ? { ...(F || {}), base: '', paths: routes, find: null } : F;
   const r = gate === 'structure' ? await structure(G, pagesF, only) : gate === 'axe' ? await axe(G, pagesF, only) : await overflow(G, pagesF, only);
   for (const p of r.problems.slice(0, 40)) console.log(`  ${p}`);

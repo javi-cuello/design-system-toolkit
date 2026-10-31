@@ -15,6 +15,12 @@
 // checks run in node against fixture facts with no Figma at all: run this body
 // with no `figma` in scope and it returns checkFacts itself.
 
+// The page marker compiles as Unicode, so `\p{L}` keeps "États" whole; a
+// pattern the u flag refuses compiles as written.
+function markerRe(src) {
+  try { return new RegExp(src, "u"); } catch (e) { return new RegExp(src); }
+}
+
 function checkFacts(facts, T) {
   T = T || {};
   const out = [];
@@ -45,7 +51,7 @@ function checkFacts(facts, T) {
     if (!e) { e = { set, id, page, variants: 0, axes: [], described: true, candidates: [] }; out.push(e); }
     e.candidates.push({ sev, rule, text, advice, key });
   };
-  const marker = T.pageMarker ? new RegExp(T.pageMarker) : null;
+  const marker = T.pageMarker ? markerRe(T.pageMarker) : null;
   const bare = (name) => (marker ? name.replace(marker, "") : name).trim();
   // localeCompare, never `<`: code-point order sorts every capital before every
   // lowercase letter and puts accented names last.
@@ -519,7 +525,7 @@ if (TOK.pageSections && TOK.pageSectionComponent) {
       const t = n.findOne((x) => x.type === "TEXT" && TOK.pageSections.indexOf(x.characters.trim()) > -1);
       if (t) sections.push(t.characters.trim());
     }
-    const bareName = p.name.replace(TOK.pageMarker ? new RegExp(TOK.pageMarker) : /^$/, "").trim();
+    const bareName = p.name.replace(TOK.pageMarker ? markerRe(TOK.pageMarker) : /^$/, "").trim();
     const primary = own.find((c) => c.name.replace(TOK.statusMarker || "\u0000", "").replace(/\s+/g, " ").trim() === bareName) || own[0];
     const node = await figma.getNodeByIdAsync(primary.id);
     const defs = (node && node.type === "COMPONENT_SET" && node.componentPropertyDefinitions) || (node && node.componentPropertyDefinitions) || {};

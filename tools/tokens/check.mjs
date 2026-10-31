@@ -50,7 +50,7 @@ const ALLOWED = new Set(['toolkit', 'project', 'paths', 'after', 'figmaToken', '
 // From the store, which defines the layout: this file held its own copy and
 // the two had already diverged in both directions.
 const PATHS = new Set(store.PATH_KEYS);
-const config = JSON.parse(readFileSync(join(repo, 'snapshot.config.json'), 'utf8'));
+const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(repo, 'tokens check');
 for (const k of Object.keys(config)) if (!ALLOWED.has(k)) say('code-standard rule 55', `snapshot.config.json carries "${k}": a repo states where its files live and what it builds after a snapshot, and nothing about how CSS is written`);
 for (const k of Object.keys(config.paths || {})) if (!PATHS.has(k)) say('code-standard rule 55', `snapshot.config.json paths carries "${k}", which is not a location the toolkit knows`);
 

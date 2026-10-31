@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.22.0)
+# Eval cases — figma-doc-generator (v1.22.1)
+
+**Walked: 2026-10-31 for 1.22.1** — `node tests/test-docgen.js` 168/168; `node tools/shared/test-dialect.mjs` 6/6, failing on 1.22.0 (the copy lacked four words). No case asserts on the word list; all hold.
 
 **Walked: 2026-10-31 against v1.22.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

@@ -316,7 +316,7 @@ export function forField(all, groups, field) {
  * with that prop's name. A value with no token stays unset, so
  * the preview shows what the contract says and nothing it does not.
  */
-export function preview(parts, drafts, tokens = {}, { dark = false, nested = () => null, iconOf = () => null, imageOf = () => null, sizeAxis = 'Size', name: drawn = null, depth = 0 } = {}) {
+export function preview(parts, drafts, tokens = {}, { dark = false, nested = () => null, iconOf = () => null, imageOf = () => null, sizeAxis = null, name: drawn = null, depth = 0 } = {}) {
   // a colour in the page's scheme: its dark mode's value where the page is dark and the token has one
   const value = (list, name) => { const t = (tokens[list] || []).find((x) => x.name === name); return t ? (dark && t.dark) || t.value : undefined; };
   const px = (name) => { const v = value('lengths', name); return v == null ? undefined : `${v}px`; };
@@ -389,7 +389,7 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
       // given none, an icon is drawn in its own colour, as Figma places it
       const ownColour = name && (tokens.iconColours || {})[name.split('/').pop()];
       if (!style.color && !glyph && ownColour && value('colours', ownColour)) style.color = value('colours', ownColour);
-      const size = e.with && e.with[sizeAxis] ? Number(e.with[sizeAxis]) : typeof e.width === 'number' ? e.width : null;
+      const size = sizeAxis && e.with && e.with[sizeAxis] ? Number(e.with[sizeAxis]) : typeof e.width === 'number' ? e.width : null;
       out.icon = name ? iconOf(name, size) : null;
       // drawn from the layers the contract recorded for this very instance (its own values resolved, a swapped icon swapped),
       // or else from its component's contract at this instance's values, a few levels down; the rest is a box saying what it is

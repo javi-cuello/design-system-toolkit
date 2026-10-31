@@ -31,8 +31,12 @@
 // children sidesteps the question entirely, because that is the address space
 // the instance is really keyed under, by construction.
 
-const GRID_NAME = "_Ratios grid";  // change to the library's real component name
-const TARGET_INSTANCE_ID = "";     // fill with the instance ID found in Workflow step 1
+// Both are prepended by the session, never edited in: `const TOKENS = …;` (the library's settings, whose ratiosGrid
+// names the component; node tools/snapshot/projects.cjs settings <project>) and `const TARGET_INSTANCE_ID = "…";`
+// (an instance find-grid-instances.js returned, Workflow step 1).
+if (typeof TOKENS === "undefined" || !TOKENS || !TOKENS.ratiosGrid) throw new Error("prepend the library's settings, `const TOKENS = …;` with ratiosGrid: node tools/snapshot/projects.cjs settings <project>");
+if (typeof TARGET_INSTANCE_ID === "undefined" || !TARGET_INSTANCE_ID) throw new Error('prepend `const TARGET_INSTANCE_ID = "…";`, an instance find-grid-instances.js returned');
+const GRID_NAME = TOKENS.ratiosGrid;
 const STEPS = 12;
 
 await figma.loadAllPagesAsync();
@@ -49,7 +53,7 @@ expect(instance.type === "INSTANCE", `node ${TARGET_INSTANCE_ID} is a ${instance
 
 const main = await instance.getMainComponentAsync();
 expect(main, `instance ${TARGET_INSTANCE_ID} has no resolvable main component (source library not connected?)`);
-expect(main.name === GRID_NAME, `instance's main component is named "${main.name}", expected "${GRID_NAME}" — update GRID_NAME or fix TARGET_INSTANCE_ID`);
+expect(main.name === GRID_NAME, `instance's main component is named "${main.name}", expected "${GRID_NAME}" — set ratiosGrid in the library's settings or prepend another TARGET_INSTANCE_ID`);
 
 expect(instance.children.length === 2, `top level has ${instance.children.length} children, expected 2 [Title, Content]`);
 const [title, content] = instance.children;

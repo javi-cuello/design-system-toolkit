@@ -67,7 +67,8 @@ const wanted = argv;
 
 const TIME = timer();
 const T_LOAD = performance.now();
-const project = await loadProject(REPO);
+// a fact the project lacks is said, never a stack (project.mjs `said`)
+const project = await loadProject(REPO).catch((e) => { if (!e.usage) throw e; console.error(e.message); process.exit(2); });
 const P = project.parity;
 const fullRun = wanted.length === 0;
 /* toolkit-standard §D 8: an accept with untriaged lessons is refused before a
@@ -107,8 +108,9 @@ const T_ADAPT = performance.now();
 const TIERS = P.tiers;   // required (project.mjs checkFacts); the first is the tier the frames are drawn in
 const WINDOW = P.window || null;
 /* A desktop window, for a project that names none and a variant whose design
-   carries no width of its own: the engine's default, not any project's. */
-const DEFAULT_WINDOW = [1280, 1400];
+   carries no width of its own: the interface settings' page width, and a component's window height (taller than a
+   page's, so a tall component is measured whole), the project's own over the house's. */
+const DEFAULT_WINDOW = [project.limits.viewportWidth, project.limits.componentWindowHeight];
 /* The window a variant is drawn in: a Breakpoint variant's own frame width,
    bounded by what the project says each breakpoint's window is. */
 const windowFor = (t, tree) => {
@@ -289,7 +291,7 @@ async function measureMany(tab, group, tier, win) {
   await TIME.timed('fragments', async () => { for (const j of group) sections.push({ key: j.key, html: await PAGE.fragment(j.t.name, j.r.args), width: j.frame && j.frame.w }); });
   await TIME.timed('open', () => PAGE.open(tab, sections, { tier: tier.toLowerCase(), viewport: win })); // one page for many targets: not attributed
   const held = group.filter((j) => j.r.pseudo).map((j) => {
-    if (!j.on) throw new Error(`${j.t.name} ${j.name}: State=${j.r.pseudo} needs the element that takes it — the mapping declares no \`state\` selector`);
+    if (!j.on) throw new Error(`${j.t.name} ${j.name}: the :${j.r.pseudo} state needs the element that takes it — the mapping declares no \`state\` selector`);
     return { selector: j.on, pseudo: j.r.pseudo, within: PAGE.scope(j.key) };
   });
   if (held.length) await TIME.timed('state', () => forceState(tab, held));

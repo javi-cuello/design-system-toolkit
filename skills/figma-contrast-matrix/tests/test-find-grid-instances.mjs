@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 
 const src = readFileSync(fileURLToPath(new URL("../scripts/find-grid-instances.js", import.meta.url)), "utf8");
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-const run = (figma) => new AsyncFunction("figma", src)(figma);
+// the session prepends the library's settings, as the bridge call does (`const TOKENS = …;`)
+const run = (figma, TOKENS = { ratiosGrid: "_Ratios grid" }) => new AsyncFunction("figma", "TOKENS", src)(figma, TOKENS);
 
 const inst = (id, name, mainName, children = []) => ({
   id, name, type: "INSTANCE", children,
@@ -43,6 +44,14 @@ await check("returns the Title text, or null when there is none", async () => {
 await check("an instance with no resolvable main component is skipped, not thrown on", async () => {
   const r = await run({ currentPage: { findAllWithCriteria: () => [inst("9:9", "x", null)] } });
   assert.deepEqual(r, []);
+});
+
+await check("the component's name is the settings', never one written in the script", async () => {
+  const r = await run({ currentPage: page }, { ratiosGrid: "_Ratios grid copy" });
+  assert.deepEqual(r.map((x) => x.id), ["1:5"]);
+});
+await check("without the settings it says what to prepend, rather than matching a name of its own", async () => {
+  await assert.rejects(run({ currentPage: page }, {}), /prepend the library's settings/);
 });
 
 console.log(failures ? `\n${failures} failed` : "\nall passed");

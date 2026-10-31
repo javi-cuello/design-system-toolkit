@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.25.1)
+# Eval cases — figma-foundations-audit (v1.25.2)
+
+**Walked: 2026-10-31 for 1.25.2** — `node tests/test-foundations.mjs` 87/87; the new assertion fails on the old ASCII marker ("Mono comes after tats").
 
 **Walked: 2026-10-31 for 1.25.1** — `node tests/test-foundations.mjs` 86/86.
 
