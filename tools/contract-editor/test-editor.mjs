@@ -52,7 +52,7 @@ await tab.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath:
 process.on('exit', () => rmSync(downloads, { recursive: true, force: true }));
 const theirs = join(process.env.HOME || tmpdir(), 'Downloads');
 // only what the editor names (editor.js download()), finished or still arriving (.crdownload): a file the person saves meanwhile is theirs, not a leak
-const ours = (f) => /(?:\.(?:contract|proposal)(?: \(\d+\))?\.json|\.build(?: \(\d+\))?\.md|^Unconfirmed \d+)(?:\.crdownload)?$/.test(f);
+const ours = (f) => /(?:\.(?:contract|proposal)(?: \(\d+\))?\.json|\.build(?: \(\d+\))?\.md)(?:\.crdownload)?$/.test(f);
 const listed = () => (existsSync(theirs) ? readdirSync(theirs) : []);
 const theirsBefore = new Set(listed());
 let n = 0;

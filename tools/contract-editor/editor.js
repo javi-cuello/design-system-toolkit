@@ -1344,7 +1344,8 @@ function stageDrag(e, key) {
     document.documentElement.removeAttribute('data-dragging');
     const owed = stageOwed;
     stageHeld = stageOwed = false;
-    if (!moving) { if (owed) renderStage(); return; }
+    // after the click this press becomes, which reads the part under it
+    if (!moving) { if (owed) setTimeout(renderStage); return; }
     const moved = source.parentElement !== home.box || source.nextElementSibling !== home.next;
     if (!commit || !moved) { slide(() => home.box.insertBefore(source, home.next)); land(() => renderParts()); return; }
     const box = source.parentElement, after = kids(box).filter((n) => n.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).pop() || null;
