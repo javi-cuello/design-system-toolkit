@@ -1,4 +1,6 @@
-# Eval cases — figma-variable-audit (v1.26.0)
+# Eval cases — figma-variable-audit (v1.27.0)
+
+**Walked: 2026-10-31 against v1.27.0** — A14 added and executed: `node tests/test-report.mjs` 15 passed; `test-links.mjs` 30/30 with `keysRead` in the scan's answer. A13's bytes are unchanged with `--keys`; every other case untouched.
 
 **Walked: 2026-10-31 against v1.26.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

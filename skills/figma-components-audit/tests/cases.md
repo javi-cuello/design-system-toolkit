@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.37.0)
+# Eval cases — figma-components-audit (v2.38.0)
+
+**Walked: 2026-10-31 for 2.38.0** — A129 added and executed: `node tools/figma-audit/test-fix-queue.mjs` 24/24 files a payload into a scratch record with `rows.mjs` and renders the queue and the scores from it. A128's assertions unchanged; every other case untouched by Steps 6's no-record path.
 
 **Walked: 2026-10-31 for 2.37.0** — A24 executed: `node tools/figma-audit/test-scores.mjs` 18/18 runs the model over the real `scanner/scoring.json` and `checks.json` and the report over the fix queue's fixture record: the gate capping at 25 with its reason, a settled row costing nothing, an unscanned dimension excluded and named partial, the per-dimension delta against the record's last scores, worst first. Its trigger boundary (no score unless asked) is unchanged prose and not re-walked. Other cases unchanged.
 

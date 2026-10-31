@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.3.0)
+# Eval cases — figma-file-diff (v1.4.0)
+
+**Walked: 2026-10-31 against v1.4.0** — A8 added and executed: `node tests/test-report.mjs` 24 passed, `--next`'s printed lines run as printed and `--stable` over real `serialise.js`/`manifest.js` output. A6 retraced to Step 6's `--stable`; A1–A5 and A7 unchanged.
 
 **Walked: 2026-10-31 against v1.3.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
