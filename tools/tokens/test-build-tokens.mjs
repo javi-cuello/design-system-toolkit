@@ -23,6 +23,8 @@ if (!donor && repos.length) {
 }
 const SD = donor && (await import(pathToFileURL(createRequire(donor).resolve('style-dictionary')).href)).default;
 const skip = !SD && 'no project repo is registered, so there is no style-dictionary to borrow';
+// said where bin/check reads it, so the run shows as a skip, not a bare ok (node:test's own # SKIP is not read)
+if (skip) console.log(`skip: ${skip}`);
 
 const colour = (hex) => ({ $type: 'color', $value: hex });
 const dim = (n) => ({ $type: 'dimension', $value: { value: n, unit: 'px' } });
