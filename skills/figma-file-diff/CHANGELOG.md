@@ -1,5 +1,6 @@
 # Changelog — figma-file-diff
 
+- 1.4.0 (2026-10-31): the coverage test's body is generated, `scripts/coverage-body.mjs` (serialise.js's serialiser, then `coverage-test.js`): nothing is pasted or kept in sync by hand, and the test file alone fails at once. Case A8.
 - 1.3.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).
 - 1.2.2 (2026-10-30): pages pair by id and name, then name, then id, so the shared first page id 0:1 never pairs two pages whose names each have a partner; the CLI runs through the skills symlink. Case A7.
 - 1.2.1 (2026-10-30): `report.mjs` pairs a page with no ID partner by name and hides components only under a page name missing from the other file; slash-named collections; dump paths in code spans. `manifest.js` sorts scopes and code syntax. Case A7.

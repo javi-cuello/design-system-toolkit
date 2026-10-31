@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.3.0)
+# Eval cases — figma-file-diff (v1.4.0)
+
+**Walked: 2026-10-31 against v1.4.0** — A8 added and executed: `node tests/test-coverage-body.mjs` 5/5, its blind-spot assertion shown failing the other way by the dropped `maxWidth` line it plants. A1–A7 read against the change, which touches only the coverage test's delivery: they hold; `test-serialise.mjs` and `test-report.mjs` pass under `bin/check`. Not run in a live scratch file.
 
 **Walked: 2026-10-31 against v1.3.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -61,3 +63,8 @@ Fixture: two stub files, the target carrying an extra page with a component, an 
 Assert: `node scripts/report.mjs reference.json target.json` prints the summary and detail tables; every planted difference has exactly one row with the value on each side (the page as one counted row, its component not listed again; the variable's changed field with both values; the cell by full path and property), the `FILL` width has none, the meaning column is empty for the agent, the same input prints the same bytes, two equal files print "No differences.", a side whose results name two files is refused, and an undrilled differing component says to drill it. Also: a page whose ID has no partner is paired by name, and only a page name absent from the other file hides its components; a variable in a collection named with a slash is folded into that collection's row; scopes and code syntax in another order are no difference; a dump path is a code span. SKILL.md Step 7 tells the agent to run it and write only the meaning cells.
 Runs: node tests/test-report.mjs
 
+
+## A8 · The coverage test hashes with the serialiser it certifies
+Fixture: a stand-in `figma` whose nodes hold their properties as plain fields, with the defaults a new frame and text node have; `serialise.js` as shipped, and a copy with its `maxWidth` line dropped.
+Assert: `node scripts/coverage-body.mjs` prints `serialise.js` up to its walk, verbatim, then `coverage-test.js` whole, and says it is generated; `coverage-test.js` alone fails at once (no `h`, no `ser`) and asks no one to paste; the body over today's serialiser reports every check, no blind spot and every scratch node removed; over the copy it reports `maxWidth` blind and does not pass; a `serialise.js` with no walk is refused by name. SKILL.md's *Validating the serialiser* sends the printed body to `figma_execute`.
+Runs: node tests/test-coverage-body.mjs

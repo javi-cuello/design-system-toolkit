@@ -11,15 +11,12 @@
 //
 // Any row with moved:false is a blind spot. Fix serialise.js and re-run.
 //
-// Keep the ser() below in sync with scripts/serialise.js. If they drift, this
-// test certifies the wrong thing. Paste serialise.js's ser() in place of the
-// import-style comment below when running.
+// It hashes with serialise.js's own ser() and h(), which it does not hold:
+// never run this file alone, and never paste them in. Run the body
+// `node scripts/coverage-body.mjs` prints, which is serialise.js's serialiser
+// followed by this file, so the test always certifies the serialiser as it is.
 
 await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
-
-// --- paste ser() and h() from serialise.js here ---
-// function h(s){ ... }
-// function ser(n){ ... }
 
 const results = [];
 const scratch = [];
