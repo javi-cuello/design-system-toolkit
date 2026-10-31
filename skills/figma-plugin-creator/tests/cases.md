@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.13.2)
+# Eval cases — figma-plugin-creator (v1.14.0)
+
+**Walked: 2026-10-31 for 1.14.0 — P2 and P3 executed** (`node tests/test-conformance.mjs`, 12/12): planted beside a fresh scaffold, which raises nothing. P2: the three sync calls are found at their lines, classed manual, and the missing `documentAccess` is its own finding; with dynamic-page the same call is an error. P3: the fetch under `["none"]` is an error, unpkg with no jsdelivr fallback and `@latest` needs-decision. Every plugin in `plugins/` passes with no error, as `standards/tests/check.sh` (which now runs it) does, and a planted static `documentAccess` makes check.sh error. P1 rerun (`node tests/test-scaffold.mjs` 9/9); P4–P6 untouched.
 
 **Walked: 2026-10-31 for 1.13.2** — `node tests/test-scaffold.mjs` 9/9, its header assertion now on `· skill-standard v`; `check.sh`'s new stamp warning is silent over every plugin. Other cases unchanged.
 

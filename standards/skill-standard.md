@@ -248,7 +248,7 @@ manifest.json · code.js (hand-written vanilla JS, `// Plugin Name — vX.Y.Z` h
 
 *Evidence:* both files were already present in **every plugin in the repo** and enforced by the creating skill's conformance checklist, while this standard's file list stopped at README and mentioned neither — so a universal, enforced practice had no home in the standard that governs it, and the skill compensated by citing a section of this file that does not exist. Admitted 2026-08-09 after a conformance sweep read the citation against its target `[4/4 plugins]`. One plugin carried the pragma on line 5 behind a three-line rationale comment, which is the deviation the fixed position exists to make visible.
 
-*Checked:* `standards/tests/check.sh` "missing tsconfig.json".
+*Checked:* `skills/figma-plugin-creator/scripts/conformance.mjs` "missing tsconfig.json"; `skills/figma-plugin-creator/scripts/conformance.mjs` "has no // @ts-check" (both run over `plugins/` by `standards/tests/check.sh`).
 
 ### 2 · manifest.json — required fields
 `name` · `editorType` (array) · `documentAccess: "dynamic-page"` · `main` · `ui` · `networkAccess` (default `{ "allowedDomains": ["none"] }`; enumerate real domains otherwise; `"*"` requires `reasoning`; use `devAllowedDomains` for localhost). Keep `api` pinned. `id`: **always**, published or not — a development plugin without one is assigned a fresh id on every import, so relaunch data and `pluginData` written by earlier runs point at a plugin that no longer exists; and **never change an id once storage exists** (clientStorage/pluginData are keyed to it). `permissions`: **required whenever code.js touches an API that is gated by one** — `figma.teamLibrary` needs `["teamlibrary"]`, and without it every call throws `"teamlibrary" permission not specified in manifest.json`, at runtime, in the file, where a plugin that swallows its errors reports nothing at all. Optional per need: `relaunchButtons` (only with matching `setRelaunchData` in code), `capabilities`, `menu`, `parameters`. Never ship `enableProposedApi`.
@@ -257,7 +257,7 @@ manifest.json · code.js (hand-written vanilla JS, `// Plugin Name — vX.Y.Z` h
 
 *Evidence:* one plugin's manifest never declared `teamlibrary`, so every library call threw and its timeout guard turned each rejection into an empty list; it reported "this file has no library collections" through three shipped versions and two live test runs, until Figma put the error on screen in a third file (2026-09-25).
 
-*Checked:* `standards/tests/check.sh` "manifest.json does not parse".
+*Checked:* `skills/figma-plugin-creator/scripts/conformance.mjs` "manifest.json does not parse"; `skills/figma-plugin-creator/scripts/conformance.mjs` "permission: every call throws at runtime"; `skills/figma-plugin-creator/scripts/conformance.mjs` "a sync API dynamic-page refuses"; `skills/figma-plugin-creator/scripts/conformance.mjs` "while allowedDomains is" (run over `plugins/` by `standards/tests/check.sh`).
 
 ### 3 · dynamic-page discipline
 No sync document APIs — the banned list and grep regex live in the skill's `references/conformance-checklist.md`. `figma.skipInvisibleInstanceChildren = true` before read-only traversal; scope `find*` to the smallest subtree; `loadAllPagesAsync()` only when cross-page data is genuinely needed.
@@ -316,7 +316,7 @@ The header also carries **` · skill-standard vX.Y.Z`** — the version of *this
 
 *Evidence:* one plugin sat stamped at v1.1.0 while the collision-safety rule arrived in 1.2.0 and its state half in 1.3.0. Read on 2026-08-09, the stamp was exactly right — an audit against those two rules found its segmented control inheriting `height` from ui-base's bare `button` selector, and its `:hover` declaring `color` alone so that ui-base's `button:hover` supplied a brand background to the inactive half. A second plugin stamped at the same version was audited the same day and was **clean**, because it declares no control elements for those rules to bite on. Both outcomes were only visible because the stamp said where to look `[4/4 plugins carry it]`.
 
-*Checked:* `standards/tests/check.sh` "README says v"; `standards/tests/check.sh` "audit stamp names".
+*Checked:* `skills/figma-plugin-creator/scripts/conformance.mjs` "README says v"; `skills/figma-plugin-creator/scripts/conformance.mjs` "audit stamp names" (run over `plugins/` by `standards/tests/check.sh`).
 
 ### 9 · Network fetch from plugin UI — CORS and the null origin
 A Figma plugin UI (`ui.html`) runs inside a **sandboxed `data:` URL iframe**, which has origin `'null'` by spec. This has a real, confirmed consequence: **some CDNs reject fetches from a null origin outright** — `unpkg.com` does, returning a CORS block *and* a 500, independent of whether the URL involves a redirect (`@latest` redirects to a pinned version; pinning the version alone did NOT fix it — the direct, non-redirected request was rejected identically). **`cdn.jsdelivr.net`** is confirmed to work: it documents unconditional `Access-Control-Allow-Origin: *` on every response, specifically for cross-origin cases like this.
