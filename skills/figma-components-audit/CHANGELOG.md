@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.38.0 (2026-10-31): a one-off run with no record files its findings into a scratch record and renders the fix queue and score report from it, as a run with a record does; neither is written by hand. Case A129.
 - 2.37.0 (2026-10-31): the score report is computed by `tools/figma-audit/scores.mjs` from the record, through `tools/figma-audit/score-model.mjs`, the one copy of the arithmetic the dashboard also loads; the session adds it up by hand only with no record (toolkit-standard §D 23).
 - 2.36.1 (2026-10-31): 2.35.2 merged with 2.36.0; nothing of either changed.
 - 2.36.0 (2026-10-31): an off-scale padding is a mechanism question from the settings' `mechanismPadding` (audit-settings `components`, house 80) up, no longer a literal 80 in `scanner/audit.js`; absent, every off-scale padding is a defect (toolkit-standard §C clause F).
