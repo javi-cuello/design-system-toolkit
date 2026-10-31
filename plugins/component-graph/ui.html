@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <style>
@@ -212,12 +212,15 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   }
 
   #component-list { flex: 1; overflow-y: auto; padding: 6px 6px 14px; outline: none; }
+  /* group heads and rows are <button>s, so each restates ui-base's height, background, font and hover (skill-standard §B 4) */
   .group-head {
-    display: flex; align-items: center; gap: 5px;
+    display: flex; align-items: center; gap: 5px; width: 100%; height: auto;
     padding: 10px 6px 4px; cursor: default; user-select: none;
-    font-size: 11px; font-weight: 600; color: var(--text);
+    border: none; border-radius: 4px; background: none; text-align: left;
+    font-family: inherit; font-size: 11px; font-weight: 600; line-height: 16px; color: var(--text);
     white-space: nowrap; overflow: hidden;
   }
+  .group-head:hover { background: none; }
   .group-head .chev {
     flex: none; width: 10px; color: var(--faint); font-size: 9px;
     transition: transform 0.1s;
@@ -227,13 +230,20 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   .group-head .g-count { color: var(--faint); font-weight: 400; }
 
   .comp-item {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
     height: 30px; padding: 0 8px 0 21px;
-    border-radius: 6px; cursor: default; white-space: nowrap;
-    font-size: 12px;
+    border: none; border-radius: 6px; background: none; color: var(--text); text-align: left;
+    cursor: default; white-space: nowrap;
+    font-family: inherit; font-size: 12px; font-weight: 400; line-height: 16px;
   }
   .comp-item:hover { background: var(--hover); }
-  .comp-item.active { background: var(--accent-tint); }
+  .comp-item.active, .comp-item.active:hover { background: var(--accent-tint); }
+  /* unpublished is said by the italic name and in words (title, and the hidden text a screen reader reads), not by colour alone */
+  .comp-item.is-unpublished .comp-name { font-style: italic; }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
   .comp-item.focused { box-shadow: inset 0 0 0 1.5px var(--accent); }
   .comp-icon { flex: none; font-size: 9px; color: var(--accent); width: 11px; text-align: center; }
   .comp-item.is-remote .comp-icon, .comp-item.is-unpublished .comp-icon { color: var(--faint); }
@@ -362,10 +372,18 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
      recolouring the label blue was the plugin inventing its own idiom. */
   .d-line {
     display: flex; justify-content: space-between; gap: 8px;
-    margin: 0 -6px; padding: 2px 6px; border-radius: 4px;
+    width: calc(100% + 12px); height: auto; box-sizing: border-box;
+    margin: 0 -6px; padding: 2px 6px; border: none; border-radius: 4px;
+    background: none; color: inherit; text-align: left;
+    font-family: inherit; font-size: inherit; font-weight: inherit; line-height: inherit;
     cursor: default;
   }
   .d-line:hover { background: var(--hover); }
+  /* a graph node is focusable: its ring is drawn on its rectangle, since an SVG group takes no outline */
+  .node-group:focus, .g-info:focus, .empty-col-label.action:focus { outline: none; }
+  .node-group:focus-visible .node-rect { stroke: var(--accent); stroke-width: 2; }
+  .g-info:focus-visible circle { stroke: var(--accent); stroke-width: 2; }
+  .empty-col-label.action:focus-visible { fill: var(--accent-text); text-decoration: underline; }
   .d-line .l-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .d-key { font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--muted); }
   .d-badge {
@@ -420,11 +438,12 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
         <span id="file-name">Components</span>
         <span id="component-total"></span>
       </div>
-      <div class="segmented" id="scope-segmented" role="tablist">
-        <button class="segment active" data-scope="local" role="tab">Local</button>
-        <button class="segment" data-scope="external" role="tab">External</button>
+      <!-- two filters, not tabs: there is no panel per button, so they are toggles that say which is on -->
+      <div class="segmented" id="scope-segmented" role="group" aria-label="Which components">
+        <button type="button" class="segment active" data-scope="local" aria-pressed="true">Local</button>
+        <button type="button" class="segment" data-scope="external" aria-pressed="false">External</button>
       </div>
-      <input id="search" type="text" placeholder="Search components" spellcheck="false" />
+      <input id="search" type="text" placeholder="Search components" aria-label="Search components" spellcheck="false" />
       <div id="pub-row">
         <span>Show unpublished</span>
         <button class="switch" id="pub-switch" role="switch" aria-checked="false" aria-label="Show unpublished components"></button>
@@ -445,9 +464,9 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   <div id="main">
     <div id="toolbar">
       <div class="left-controls">
-        <button id="sidebar-toggle" title="Show or hide the sidebar">☰</button>
-        <button id="back-btn" class="nav-btn" disabled title="Back">‹</button>
-        <button id="forward-btn" class="nav-btn" disabled title="Forward">›</button>
+        <button id="sidebar-toggle" title="Show or hide the sidebar" aria-label="Show or hide the sidebar">☰</button>
+        <button id="back-btn" class="nav-btn" disabled title="Back" aria-label="Back">‹</button>
+        <button id="forward-btn" class="nav-btn" disabled title="Forward" aria-label="Forward">›</button>
         <span class="title" id="toolbar-title">Component Graph</span>
       </div>
       <div class="right-controls">
@@ -472,7 +491,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       <aside id="details">
         <div id="details-head">
           <span id="details-title"></span>
-          <button id="details-close" title="Close details">✕</button>
+          <button id="details-close" title="Close details" aria-label="Close details">✕</button>
         </div>
         <div id="details-body"></div>
       </aside>
@@ -648,6 +667,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       focusedId = null;
       for (const s of document.querySelectorAll('.segment')) {
         s.classList.toggle('active', s === seg);
+        s.setAttribute('aria-pressed', String(s === seg));
       }
       renderSidebar();
     };
@@ -699,7 +719,22 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     return c.name;
   }
 
-  function renderSidebar() {
+  // A redraw replaces the element that had focus; keep the reader's place on its replacement, matched by its
+  // component id, group or name, else on the first stop in the container (code-standard rule 14).
+  const focusKey = (n) => (n.dataset && (n.dataset.id || n.dataset.group)) || n.getAttribute('aria-label');
+  function keepFocus(container, draw) {
+    const had = document.activeElement;
+    const key = had && had !== container && container.contains(had) ? focusKey(had) : null;
+    draw();
+    if (key === null || container.contains(document.activeElement)) return;
+    const stops = [...container.querySelectorAll('button, [tabindex="0"]')];
+    const next = stops.find((n) => focusKey(n) === key) || stops[0];
+    if (next) next.focus();
+  }
+
+  function renderSidebar() { keepFocus(listEl, drawSidebar); }
+
+  function drawSidebar() {
     const query = $('search').value.trim().toLowerCase();
 
     const locals = components.filter((c) => !c.remote);
@@ -766,9 +801,12 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       const items = groups.get(key);
       const collapsed = collapsedGroups.has(key);
 
-      const head = document.createElement('div');
+      const head = document.createElement('button');
+      head.type = 'button';
       head.className = 'group-head' + (collapsed ? ' collapsed' : '');
-      head.innerHTML = '<span class="chev">▾</span>';
+      head.setAttribute('aria-expanded', String(!collapsed));
+      head.dataset.group = key;
+      head.innerHTML = '<span class="chev" aria-hidden="true">▾</span>';
       const gName = document.createElement('span');
       gName.className = 'g-name';
       gName.textContent = key;
@@ -788,11 +826,13 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       items.sort((a, b) => a.name.localeCompare(b.name));
       for (const c of items) {
         flatVisible.push(c);
-        const row = document.createElement('div');
+        const row = document.createElement('button');
+        row.type = 'button';
         const gone = isGone(c);
+        const unpublished = !c.remote && !isPublished(c);
         row.className = 'comp-item'
           + (c.remote ? ' is-remote' : '')
-          + (!c.remote && !isPublished(c) ? ' is-unpublished' : '')
+          + (unpublished ? ' is-unpublished' : '')
           + (gone ? ' is-gone' : '')
           + (c.id === activeId ? ' active' : '')
           + (c.id === focusedId ? ' focused' : '');
@@ -801,10 +841,12 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
           ? c.name + (c.remote
               ? ' — not found in any enabled library'
               : ' — deleted from this file; instances can still be restored')
-          : c.name;
+          : c.name + (unpublished ? ' — unpublished' : '');
+        if (c.id === activeId) row.setAttribute('aria-current', 'true');
 
         const icon = document.createElement('span');
         icon.className = 'comp-icon';
+        icon.setAttribute('aria-hidden', 'true');
         icon.textContent = c.type === 'COMPONENT_SET' ? '❖' : '◇';
         row.appendChild(icon);
 
@@ -812,6 +854,12 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
         name.className = 'comp-name';
         name.textContent = displayNameOf(c, key);
         row.appendChild(name);
+        if (unpublished || gone) {
+          const state = document.createElement('span');
+          state.className = 'visually-hidden';
+          state.textContent = gone ? (c.remote ? ', not found in any enabled library' : ', deleted from this file') : ', unpublished';
+          row.appendChild(state);
+        }
 
         const usage = document.createElement('span');
         if (gone && c.usage) {
@@ -893,6 +941,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     activeId = id;
     for (const row of listEl.querySelectorAll('.comp-item')) {
       row.classList.toggle('active', row.dataset.id === id);
+      if (row.dataset.id === id) row.setAttribute('aria-current', 'true'); else row.removeAttribute('aria-current');
     }
     const active = listEl.querySelector('.comp-item.active');
     if (active) active.scrollIntoView({ block: 'nearest' });
@@ -913,13 +962,17 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     if (!flatVisible.length) return;
 
     if (e.key === 'Enter') {
+      // a focused button, a row included, presses itself; the cursor's Enter is for focus anywhere else (the search field)
+      if (e.target.closest && e.target.closest('button, [role="button"]')) return;
       if (focusedId) { e.preventDefault(); post({ type: 'open-component', id: focusedId }); }
       return;
     }
 
     e.preventDefault(); // arrows navigate the list, never scroll the page
     const ids = flatVisible.map((c) => c.id);
-    let idx = ids.indexOf(focusedId !== null ? focusedId : activeId);
+    // a row that has focus (reached by Tab) is where the cursor starts
+    const onRow = e.target.closest && e.target.closest('.comp-item');
+    let idx = ids.indexOf(onRow ? onRow.dataset.id : focusedId !== null ? focusedId : activeId);
     idx = e.key === 'ArrowDown'
       ? Math.min(idx + 1, ids.length - 1)
       : Math.max(idx <= 0 ? 0 : idx - 1, 0);
@@ -929,6 +982,8 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     }
     const focused = listEl.querySelector('.comp-item.focused');
     if (focused) focused.scrollIntoView({ block: 'nearest' });
+    // with focus already in the list, it moves with the cursor, so Enter and a screen reader follow it
+    if (focused && listEl.contains(document.activeElement)) focused.focus({ preventScroll: true });
   });
 
   // ── Details panel ────────────────────────────────────────────────────────
@@ -957,7 +1012,8 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     // A clickable name×count line; components open their graph + details,
     // pages select the instances on canvas.
     const line = (name, count, title, onClick) => {
-      const el = document.createElement('div');
+      const el = document.createElement('button');
+      el.type = 'button';
       el.className = 'd-line';
       el.title = title;
       const n = document.createElement('span');
@@ -1268,6 +1324,20 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     return node;
   }
 
+  // An SVG shape the pointer can press is a button to the keyboard too: a tab stop, named, Enter and Space press it.
+  function pressable(node, label, onPress) {
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('role', 'button');
+    node.setAttribute('aria-label', label);
+    node.addEventListener('click', onPress);
+    node.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      onPress(e);
+    });
+  }
+
   function truncate(str, max) {
     return str.length > max ? str.slice(0, max - 1) + '…' : str;
   }
@@ -1282,7 +1352,9 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     };
   }
 
-  function renderGraph(selected, upstream, downstream) {
+  function renderGraph(selected, upstream, downstream) { keepFocus(svg, () => drawGraph(selected, upstream, downstream)); }
+
+  function drawGraph(selected, upstream, downstream) {
     emptyState.style.display = 'none';
     loadingState.style.display = 'none';
     svg.style.display = 'block';
@@ -1347,7 +1419,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
           selected.pagePlacementCount + ' on pages, none in components');
         const hint = el('text', { x: colX.right + 12, y: centerY + 10, class: 'empty-col-label action' });
         hint.textContent = 'See details →';
-        hint.addEventListener('click', () => openDetails(selected.id));
+        pressable(hint, 'See details of ' + selected.name, () => openDetails(selected.id));
         svg.appendChild(hint);
       } else {
         addEmptyPlaceholder(colX.right, centerY, 'None');
@@ -1432,7 +1504,8 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
         g.appendChild(badge);
       }
 
-      g.addEventListener('click', () => post({ type: 'open-component', id: node.id }));
+      pressable(g, 'Open ' + node.name + (subText ? ', ' + subText : '') + (node.count > 1 ? ', ' + node.count + ' instances' : ''),
+        () => post({ type: 'open-component', id: node.id }));
 
       // Info circle → details panel.
       const info = el('g', { class: 'g-info' });
@@ -1440,13 +1513,13 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       const it = el('text', { x: x + w - 17.5, y: y + h / 2 + 3 });
       it.textContent = 'i';
       info.appendChild(it);
-      info.addEventListener('click', (e) => {
+      pressable(info, 'Details of ' + node.name, (e) => {
         e.stopPropagation();
         openDetails(node.id);
       });
-      g.appendChild(info);
-
+      // beside the node, never inside it: a button inside a button is hidden from a screen reader
       svg.appendChild(g);
+      svg.appendChild(info);
     }
 
     function drawMoreNode(x, y, w, h, moreCount, totalCount, onClick) {
@@ -1458,7 +1531,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       const label = el('text', { x: x + 12, y: y + h / 2 + 4, class: 'node-label more' });
       label.textContent = '+ ' + moreCount + ' more';
       g.appendChild(label);
-      g.addEventListener('click', onClick);
+      pressable(g, 'Show all ' + totalCount + ' items', onClick);
       svg.appendChild(g);
     }
 

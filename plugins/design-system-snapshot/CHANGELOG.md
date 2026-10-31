@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.68.1] - 2026-10-31
+### Changed
+- The window's language is set (`lang="en"`), so a screen reader reads it in English. README: the requests are two GETs on open and two GETs and a POST per run, and only the kind GET and the POST carry the pairing code (it said one GET and one POST, each with the code).
+
 ## [0.68.0] - 2026-10-31
 ### Added
 - Pairing with the router. The router now refuses a snapshot, and the question of which kind a file is, without this machine's pairing code, because any web page can reach localhost and send the same `Origin: null` as the plugin. The window asks for the code once (a field, with the router's own words on the command that prints it), keeps it in clientStorage, and sends it with every request as a `code=` query parameter. With no router listening the snapshot still downloads as a file.

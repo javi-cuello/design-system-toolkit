@@ -1,5 +1,9 @@
 # Changelog — component-graph
 
+## [3.7.0] - 2026-10-31
+### Changed
+- **Works from the keyboard, and says what each control is.** The sidebar's group heads and rows, the details panel's lines and the graph's nodes, ⓘ circles, "+ N more" and "See details" were click-only: the heads and rows are buttons (a head says whether it is open), and each graph shape is a named tab stop that Enter or Space presses; the ⓘ sits beside its node rather than inside it. Arrow keys move focus with the list cursor, and a redraw (a group collapsed, a node opened, a scan landing) keeps focus on the same item. The search field and the icon-only toolbar buttons are labelled, `lang` is set, and Local and External are toggle buttons that say which is on, not tabs with no panels. An unpublished component is said by an italic name and in words, not by a fainter icon alone; `tests/test-ui-keyboard.mjs` holds it, in Chrome. README: the import step and test, no `COMMUNITY.md` (it never existed here), and a roadmap item that shipped in v3 removed.
+
 ## [3.6.2] - 2026-10-08
 ### Changed
 - Comments cite the standard that owns each rule (skill-standard §B 4 for the ui-base block).

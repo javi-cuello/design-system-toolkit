@@ -127,6 +127,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     color: var(--muted); display: none; align-items: center; padding: 2px; border-radius: 3px;
   }
   .clear-btn:hover { color: var(--text); background: var(--surface); }
+  .clear-btn:focus-visible { outline: 2px solid var(--figma-color-border-selected); }
   .clear-btn.visible { display: flex; }
 
   .paste-block { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
@@ -145,14 +146,19 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 
   .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
 
+  /* a <button>: it restates ui-base's height, padding, colours, hover and disabled (skill-standard §B 4) */
   .icon-card {
     display: flex; align-items: center; justify-content: center;
-    aspect-ratio: 1; border-radius: var(--radius); cursor: pointer;
+    width: 100%; height: auto; padding: 0; box-sizing: border-box; font: inherit; color: inherit;
+    aspect-ratio: 1; border-radius: var(--radius); cursor: pointer; background: none;
     border: 1px solid transparent; transition: background 0.1s, border-color 0.1s;
     position: relative;
   }
+  .icon-card:hover { background: none; }
   .icon-card:hover:not(.exists) { background: var(--surface); border-color: var(--border); }
-  .icon-card.selected { background: var(--accent-tint); border-color: var(--accent); }
+  .icon-card.selected, .icon-card.selected:hover { background: var(--accent-tint); border-color: var(--accent); }
+  .icon-card:disabled { background: none; color: inherit; cursor: default; }
+  .icon-card:focus-visible { outline: 2px solid var(--figma-color-border-selected); outline-offset: -2px; }
 
   .card-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .card-icon svg { width: 20px; height: 20px; stroke: var(--text); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -293,11 +299,13 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
      overlaid dropdown — keeps the row height identical to the Color mode's
      row, so switching Fill mode doesn't jump the layout. */
   .variable-picker-trigger {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface); border-radius: 5px; padding: 0 8px;
-    height: 30px; box-sizing: border-box;
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: var(--surface); border-radius: 5px; padding: 0 8px; border: none;
+    height: 30px; box-sizing: border-box; font: inherit; color: var(--text); text-align: left;
     cursor: pointer;
   }
+  .variable-picker-trigger:hover { background: var(--surface); }
+  .variable-picker-trigger:focus-visible { outline: 2px solid var(--figma-color-border-selected); }
   .variable-picker-trigger .placeholder { color: var(--muted); }
   .variable-picker-trigger span:not(.variable-swatch):not(.chev) {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1;
@@ -329,9 +337,12 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   }
   .variable-option {
     display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; font-size: 11px;
+    width: 100%; height: auto; border: none; border-radius: 0; background: none; color: var(--text);
+    font-family: var(--font); font-weight: 400; line-height: 16px; text-align: left; box-sizing: border-box;
   }
   .variable-option:hover { background: var(--surface); }
-  .variable-option.selected { background: var(--accent-tint); }
+  .variable-option.selected, .variable-option.selected:hover { background: var(--accent-tint); }
+  .variable-option:focus-visible { outline: 2px solid var(--figma-color-border-selected); outline-offset: -2px; }
   .variable-option-name {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
@@ -358,13 +369,13 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 </head>
 <body>
 
-<div class="tabs">
-  <button class="tab active" data-tab="icons">Icons</button>
-  <button class="tab" data-tab="settings">Settings</button>
+<div class="tabs" role="tablist" aria-label="Lucide Icon Importer">
+  <button type="button" class="tab active" data-tab="icons" role="tab" id="tab-icons" aria-selected="true" aria-controls="panel-icons">Icons</button>
+  <button type="button" class="tab" data-tab="settings" role="tab" id="tab-settings" aria-selected="false" aria-controls="panel-settings" tabindex="-1">Settings</button>
 </div>
 
 <!-- ── Icons tab ── -->
-<div class="tab-panel active" id="panel-icons">
+<div class="tab-panel active" id="panel-icons" role="tabpanel" aria-labelledby="tab-icons">
   <div class="search-area">
     <div class="search-wrap">
       <span class="search-icon">
@@ -372,8 +383,8 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
         </svg>
       </span>
-      <input id="searchInput" type="text" placeholder="Search" autocomplete="off" spellcheck="false">
-      <button class="clear-btn" id="clearBtn">
+      <input id="searchInput" type="text" placeholder="Search" aria-label="Search icons" autocomplete="off" spellcheck="false">
+      <button type="button" class="clear-btn" id="clearBtn" aria-label="Clear search">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 6 6 18M6 6l12 12"/>
         </svg>
@@ -381,13 +392,13 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     </div>
     <details class="paste-block" id="pasteBlock">
       <summary>Paste a list</summary>
-      <textarea id="pasteInput" rows="3" spellcheck="false"
+      <textarea id="pasteInput" rows="3" spellcheck="false" aria-label="Icon names to select"
         placeholder="chevrons-up-down, circle-check, folder-open&#10;or one name per line — PascalCase (ChevronsUpDown) is accepted too"></textarea>
       <button class="btn btn-secondary" id="pasteBtn">Select these</button>
     </details>
   </div>
 
-  <div class="status-bar" id="statusBar"></div>
+  <div class="status-bar" id="statusBar" role="status"></div>
 
   <div class="results-wrap" id="resultsWrap"></div>
 
@@ -407,23 +418,23 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 </div>
 
 <!-- ── Settings tab ── -->
-<div class="tab-panel" id="panel-settings">
+<div class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
   <div class="settings-scroll">
     <div class="settings-group">
       <div class="settings-group-title">General</div>
 
       <div class="field-row">
-        <label>Frame name</label>
+        <label for="setFrameName">Frame name</label>
         <div class="field-row-control"><input type="text" id="setFrameName" placeholder="Icons"></div>
       </div>
 
       <div class="field-row">
-        <label>Icon sizes</label>
+        <label for="setSizes">Icon sizes</label>
         <div class="field-row-control"><input type="text" id="setSizes" placeholder="24"></div>
       </div>
 
       <div class="field-row">
-        <label>Border thickness</label>
+        <label for="setStrokeWeight">Border thickness</label>
         <div class="field-row-control"><input type="number" id="setStrokeWeight" min="0.25" step="0.25"></div>
       </div>
     </div>
@@ -432,9 +443,9 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       <div class="settings-group-title">Color</div>
 
       <div class="field-row">
-        <label>Fill mode</label>
+        <label id="fillModeLabel">Fill mode</label>
         <div class="field-row-control">
-          <div class="radio-row">
+          <div class="radio-row" role="radiogroup" aria-labelledby="fillModeLabel">
             <label class="radio-option"><input type="radio" name="fillMode" value="literal" id="fillModeLiteralRadio" checked> Color</label>
             <label class="radio-option"><input type="radio" name="fillMode" value="variable" id="fillModeVariableRadio"> Variable</label>
           </div>
@@ -443,35 +454,35 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 
       <div id="literalColorSection">
         <div class="field-row">
-          <label>Icon color</label>
+          <label for="fillColorHex">Icon color</label>
           <div class="field-row-control">
             <div class="color-opacity-row">
               <div class="color-chip">
-                <input type="color" class="color-swatch-input" id="fillColorSwatch" value="#000000">
+                <input type="color" class="color-swatch-input" id="fillColorSwatch" value="#000000" aria-label="Icon color picker">
                 <input type="text" id="fillColorHex" value="#000000" placeholder="#000000">
               </div>
               <div class="opacity-chip">
-                <input type="number" id="fillOpacityInput" min="0" max="100" step="1" value="100">
+                <input type="number" id="fillOpacityInput" min="0" max="100" step="1" value="100" aria-label="Icon opacity, percent">
                 <span>%</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="field-error" id="fillColorError">Enter a valid hex color, e.g. #1a1a1a</div>
+        <div class="field-error" id="fillColorError" role="alert">Enter a valid hex color, e.g. #1a1a1a</div>
       </div>
 
       <div id="variableSection" style="display:none;">
         <div class="field-row">
-          <label>Variable</label>
+          <label id="variableLabel">Variable</label>
           <div class="field-row-control">
-            <div class="variable-picker-trigger" id="variablePickerToggle">
+            <button type="button" class="variable-picker-trigger" id="variablePickerToggle" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="variableLabel variableCurrentLabel">
               <span class="variable-swatch" id="variableCurrentSwatch" style="background:#ccc;"></span>
               <span class="placeholder" id="variableCurrentLabel">Choose a color variable…</span>
-              <span class="chev">▾</span>
-            </div>
-            <div class="variable-dropdown" id="variableDropdown">
+              <span class="chev" aria-hidden="true">▾</span>
+            </button>
+            <div class="variable-dropdown" id="variableDropdown" role="dialog" aria-label="Color variables">
               <div class="variable-search-wrap">
-                <input type="text" id="variableSearchInput" placeholder="Search variables" autocomplete="off" spellcheck="false">
+                <input type="text" id="variableSearchInput" placeholder="Search variables" aria-label="Search variables" autocomplete="off" spellcheck="false">
               </div>
               <div class="variable-option-list" id="variableList"></div>
             </div>
@@ -481,21 +492,21 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       </div>
 
       <div class="field-row">
-        <label>Background</label>
+        <label for="bgColorHex">Background</label>
         <div class="field-row-control">
           <div class="color-opacity-row">
             <div class="color-chip">
-              <input type="color" class="color-swatch-input" id="bgColorSwatch" value="#f5f5f5">
+              <input type="color" class="color-swatch-input" id="bgColorSwatch" value="#f5f5f5" aria-label="Background color picker">
               <input type="text" id="bgColorHex" value="#f5f5f5" placeholder="#f5f5f5">
             </div>
             <div class="opacity-chip">
-              <input type="number" id="bgOpacityInput" min="0" max="100" step="1" value="100">
+              <input type="number" id="bgOpacityInput" min="0" max="100" step="1" value="100" aria-label="Background opacity, percent">
               <span>%</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="field-error" id="bgColorError">Enter a valid hex color, e.g. #f5f5f5</div>
+      <div class="field-error" id="bgColorError" role="alert">Enter a valid hex color, e.g. #f5f5f5</div>
     </div>
   </div>
 
@@ -505,7 +516,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 var allIcons      = [];
@@ -532,12 +543,27 @@ var toast        = document.getElementById('toast');
 var HEX_RE = /^#?[0-9a-fA-F]{6}$/;
 
 // ── Tabs ─────────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(function(tab) {
-  tab.addEventListener('click', function() {
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-    tab.classList.add('active');
-    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+// The APG tabs pattern: one tab stop, Left and Right move between the tabs and show each.
+var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+function selectTab(tab) {
+  tabs.forEach(function(t) {
+    var on = t === tab;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', String(on));
+    t.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+}
+tabs.forEach(function(tab, i) {
+  tab.addEventListener('click', function() { selectTab(tab); });
+  tab.addEventListener('keydown', function(e) {
+    var step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    var next = tabs[(i + step + tabs.length) % tabs.length];
+    selectTab(next);
+    next.focus();
   });
 });
 
@@ -656,18 +682,27 @@ function renderGrid(icons) {
   icons.forEach(function(icon) {
     var isExisting = !!existingNames[icon.name];
     var isSelected = selectedIcons.has(icon.name);
-    var card = document.createElement('div');
+    var card = document.createElement('button');
+    card.type = 'button';
     card.className = 'icon-card' + (isExisting ? ' exists' : '') + (isSelected ? ' selected' : '');
     card.dataset.name = icon.name;
     card.title = icon.name;
+    // named by its icon, its state said in words: an icon already in the file cannot be picked again
+    card.setAttribute('aria-label', isExisting ? icon.name + ', already in this file' : icon.name);
+    if (isExisting) card.disabled = true;
+    else card.setAttribute('aria-pressed', String(isSelected));
 
     card.innerHTML =
       '<div class="card-icon"><div class="card-placeholder"></div></div>' +
       '<div class="exists-badge"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>';
 
-    if (!isExisting) {
-      (function(ic) { card.addEventListener('click', function() { toggleIconSelection(ic, card); }); })(icon);
-    }
+    // a card whose icon failed to load retries on its own press, so the retry is a key press too
+    (function(ic, existing) {
+      card.addEventListener('click', function() {
+        if (card.retryLoad) card.retryLoad();
+        else if (!existing) toggleIconSelection(ic, card);
+      });
+    })(icon, isExisting);
     grid.appendChild(card);
   });
 
@@ -696,14 +731,19 @@ function renderGrid(icons) {
           var iconEl = card.querySelector('.card-icon');
           if (iconEl) {
             iconEl.innerHTML = '<div class="card-placeholder card-placeholder-failed" title="Failed to load — click to retry"></div>';
-            iconEl.style.cursor = 'pointer';
-            iconEl.onclick = function(e) {
-              e.stopPropagation();
+            // an icon already in the file is a disabled card; it takes the press while it offers the retry
+            var wasDisabled = card.disabled, label = card.getAttribute('aria-label');
+            card.disabled = false;
+            card.style.cursor = 'pointer';
+            card.setAttribute('aria-label', name + ', failed to load: press to retry');
+            card.retryLoad = function() {
+              card.retryLoad = null;
+              card.disabled = wasDisabled;
+              card.style.cursor = '';
+              card.setAttribute('aria-label', label);
               card.dataset.retries = '0';
               card.dataset.loaded = '';
               iconEl.innerHTML = '<div class="card-placeholder"></div>';
-              iconEl.style.cursor = '';
-              iconEl.onclick = null;
               obs.observe(card);
             };
           }
@@ -841,11 +881,13 @@ function toggleIconSelection(icon, card) {
   if (selectedIcons.has(name)) {
     selectedIcons.delete(name);
     card.classList.remove('selected');
+    card.setAttribute('aria-pressed', 'false');
     updatePreviewPanel();
     return;
   }
 
   card.classList.add('selected');
+  card.setAttribute('aria-pressed', 'true');
   var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false };
   selectedIcons.set(name, entry);
   updatePreviewPanel();
@@ -1079,24 +1121,36 @@ function updateVariableTrigger() {
   }
 }
 
+// aria-expanded changes wherever the dropdown opens or closes, in this one function
+function closeVariableDropdown(refocus) {
+  if (!variableDropdown.classList.contains('open')) return;
+  variableDropdown.classList.remove('open');
+  variablePickerToggle.setAttribute('aria-expanded', 'false');
+  if (refocus) variablePickerToggle.focus();
+}
 variablePickerToggle.addEventListener('click', function(e) {
   e.stopPropagation();
   var willOpen = !variableDropdown.classList.contains('open');
-  variableDropdown.classList.remove('open');
+  closeVariableDropdown(false);
   if (willOpen) {
     positionVariableDropdown();
     variableDropdown.classList.add('open');
+    variablePickerToggle.setAttribute('aria-expanded', 'true');
     variableSearchInput.value = '';
     renderVariableOptions('');
     setTimeout(function() { variableSearchInput.focus(); }, 0);
   }
 });
 document.addEventListener('click', function() {
-  variableDropdown.classList.remove('open');
+  closeVariableDropdown(false);
+});
+// Escape closes it and gives focus back to the button that opened it
+variableDropdown.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { e.preventDefault(); closeVariableDropdown(true); }
 });
 document.addEventListener('scroll', function(e) {
   if (variableDropdown.contains(e.target)) return; // internal scroll — don't close
-  variableDropdown.classList.remove('open');
+  closeVariableDropdown(false);
 }, true);
 variableDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
 variableSearchInput.addEventListener('input', function() {
@@ -1184,9 +1238,11 @@ function renderVariableOptions(query) {
       lastGroup = v.collection;
     }
 
-    var opt = document.createElement('div');
+    var opt = document.createElement('button');
+    opt.type = 'button';
     var isSelected = selectedVariableId === v.id;
     opt.className = 'variable-option' + (isSelected ? ' selected' : '');
+    opt.setAttribute('aria-pressed', String(isSelected));
     var hex = rgb01ToHex(v.color);
     opt.title = v.name;
 
@@ -1198,6 +1254,7 @@ function renderVariableOptions(query) {
     nameEl.textContent = v.name;
     var checkEl = document.createElement('span');
     checkEl.className = 'check';
+    checkEl.setAttribute('aria-hidden', 'true');
     checkEl.textContent = '✓';
     opt.appendChild(swatchEl);
     opt.appendChild(nameEl);
@@ -1207,7 +1264,7 @@ function renderVariableOptions(query) {
       e.stopPropagation();
       selectedVariableId = v.id;
       renderVariableList();
-      variableDropdown.classList.remove('open');
+      closeVariableDropdown(true);
       queueAutosave();
     });
     variableList.appendChild(opt);
