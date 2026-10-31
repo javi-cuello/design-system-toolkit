@@ -1,7 +1,8 @@
 /* figma-token-export — layer 2: everything that needs the `figma` global.
  *
  * Prepend the toolkit's `tools/tokens/dtcg.js` before this file; it calls DTCG at runtime.
- * `node --check` is the only gate this layer can have — it needs a live file.
+ * It needs a live file, so its gate is a stand-in `figma` global:
+ * `node skills/figma-token-export/tests/test-collect.mjs`.
  *
  * Runs in the SOURCE library file: styles have no library API that enumerates
  * them, and local variables are the only ones whose hidden tier is reachable.
