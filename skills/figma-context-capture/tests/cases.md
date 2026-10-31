@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.11.0)
+# Eval cases — figma-context-capture (v2.11.1)
+
+**Walked: 2026-10-31 for 2.11.1** — C16 rerun: `node tests/test-passes.mjs` 46/46, pass F given the house settings from `standards/audit-settings.json` as `TOKENS`, and refusing with none prepended. Other cases unchanged.
 
 **Walked: 2026-10-31 for 2.11.0** — C16 added and executed: `node tests/test-passes.mjs` 45/45, the new pass B, E, F/S4, S2 and registry assertions among them; with the stem filter in `pass-b-naming.mjs` dropped to one sibling, the separator assertion fails, and with pass E's variant skip removed, its sampling assertion fails. C14 rerun with pass D's new `layers`. Not walked live: the three new bodies have met only the fake file. Other cases unchanged.
 

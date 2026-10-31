@@ -1,6 +1,6 @@
 # Eval cases — figma-component-descriptions (v1.18.0)
 
-**Walked: 2026-10-31 for 1.18.0** — D19 added and executed: `node tests/test-verify.mjs` 17/17 and `node tests/test-sections.mjs` 24 passed, the new duplicate, false-fixity and virtual-set assertions among them; `node tests/test-engines.mjs` 32/32. D18 holds: a single subject's lines are unchanged. Not walked live: the new `verify.js` fields have met only the fake file.
+**Walked: 2026-10-31 for 1.18.0** — D19 added and executed: `node tests/test-verify.mjs` 17/17 and `node tests/test-sections.mjs` 24 passed, the new duplicate, false-fixity and virtual-set assertions among them; `node tests/test-engines.mjs` 34/34, now holding figma-component-pass A5's per-variant keying (and failing with the key on the instance name alone). D18 holds: a single subject's lines are unchanged. Not walked live: the new `verify.js` fields have met only the fake file.
 
 **Walked: 2026-10-31 for 1.17.1** — no case changed; `node tests/test-sections.mjs` 18 passed.
 

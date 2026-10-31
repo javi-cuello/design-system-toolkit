@@ -173,7 +173,10 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   const p1 = node({ id: '0:7', type: 'PAGE', name: '1 - Colour - Primitives' }, [inst('7:2', remoteCell), inst('7:3', remoteCell), inst('7:4', ratios), inst('7:5', localTable)]);
   const p2 = node({ id: '0:8', type: 'PAGE', name: 'Components' }, [localTable, inst('7:6', { type: 'COMPONENT', name: 'Button' })]);
   const root3 = node({ id: '0:0', type: 'DOCUMENT', name: 'Docs' }, [p1, p2]);
-  const out = await run(read('pass-f-doc-apparatus.js'), { root: root3, fileKey: 'F', loadAllPagesAsync: async () => {} });
+  const settings = JSON.parse(readFileSync(join(HERE, '../../../standards/audit-settings.json'), 'utf8'));
+  const TOKENS = 'const TOKENS = ' + JSON.stringify({ ratiosGrid: settings['audit-defaults'].tokens.ratiosGrid, pageSectionComponent: settings['audit-defaults'].pages.pageSectionComponent }) + ';\n';
+  const out = await run(TOKENS + read('pass-f-doc-apparatus.js'), { root: root3, fileKey: 'F', loadAllPagesAsync: async () => {} });
+  ok('pass F: with no settings prepended it refuses, never a house name of its own', await run(read('pass-f-doc-apparatus.js'), { root: root3 }).then(() => false, (e) => /prepend the library's settings/.test(e.message)));
   ok('pass F: a contract name is counted local and as instances, and remote furniture keeps its set\'s key', out.furniture['Table - '].local === 1 && out.furniture['Table - '].instances === 1 && out.furniture['Table - '].remote === 0 && out.furniture['Cell - '].instances === 2 && out.furniture['Cell - '].remote === 2 && JSON.stringify(out.furniture['Cell - '].keys) === '["remoteSetKey"]');
   ok('pass S4: _Ratios grid instances per page, and a page with none is absent', JSON.stringify(out.ratiosGrid) === '{"1 - Colour - Primitives":1}');
   ok('pass F: the page names, in order, for the page contract', JSON.stringify(out.pages) === '["1 - Colour - Primitives","Components"]');

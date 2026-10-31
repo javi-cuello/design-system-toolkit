@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.11.1 (2026-10-31): `pass-f-doc-apparatus.js` takes the section header's and the contrast matrix's names from the library's settings (`pageSectionComponent`, `ratiosGrid`), prepended as `TOKENS`, and refuses without them.
 - 2.11.0 (2026-10-31): passes B, E, F with S4, S2 and the registry are scripts (`pass-b-naming.mjs`, `registry.mjs`, `pass-e-descriptions.js`, `pass-f-doc-apparatus.js`, `pass-s2-primitives.js`); pass D returns layer names for B. Case C16.
 - 2.10.0 (2026-10-31): the document goes to `<project home>/design-system-context.md`, claude.ai the fallback; template's Deployment line and example port 9232 match; C3 asserts the home path.
 - 2.9.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).

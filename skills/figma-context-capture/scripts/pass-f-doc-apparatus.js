@@ -1,6 +1,6 @@
 // pass-f-doc-apparatus.js - discovery passes F and S4 (references/discovery-passes.md):
 // the documentation furniture a file holds, counted. Read-only. Send this file's
-// body as the code of one figma_execute call with an explicit fileKey.
+// body, after `const TOKENS = …;`, as the code of one figma_execute call with an explicit fileKey.
 //
 // For each name of the doc-generator's contract (CONFIG.prefixes): how many local
 // components carry it, how many instances use one, and of those how many come
@@ -8,9 +8,14 @@
 // names, and per page the `_Ratios grid` instances (the contrast matrix; 0 is
 // "not built yet"). Whether the file is a doc library, a generation target or a
 // refill, and which library the remote furniture names, are the agent's reading.
+// The section header's and the contrast matrix's component names are the library's settings
+// (`pageSectionComponent`, `ratiosGrid`), prepended by the session as `const TOKENS = …;` from
+// `node tools/snapshot/projects.cjs settings <project>`; the house values stand where it has none.
+if (typeof TOKENS === 'undefined' || !TOKENS || !TOKENS.ratiosGrid || !TOKENS.pageSectionComponent)
+  throw new Error("prepend the library's settings, `const TOKENS = …;` with ratiosGrid and pageSectionComponent: node tools/snapshot/projects.cjs settings <project>");
 var CONFIG = {
-  prefixes: ['Table - ', 'Section header', 'Row - ', 'Cell - ', 'Preview - '],
-  ratios: '_Ratios grid',
+  prefixes: ['Table - ', TOKENS.pageSectionComponent, 'Row - ', 'Cell - ', 'Preview - '],
+  ratios: TOKENS.ratiosGrid,
   keys: 10        // remote component keys kept per prefix
 };
 function prefixOf(name) {

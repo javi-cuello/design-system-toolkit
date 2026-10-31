@@ -114,6 +114,20 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   const firstOnly = plant(src, "n.type === 'COMPONENT_SET' ? n.children : [n]", "n.type === 'COMPONENT_SET' ? [n.children[0]] : [n]");
   ok('composition: (planted) reading children[0] alone loses the Icon', !(await run(firstOnly, figma))[0].parts.some((p) => p.name === 'Icon'));
 
+  // figma-component-pass A5: one instance name resolving to a different main under each variant
+  // (a stepper's `Step item`) yields both mains; a dedupe keyed on the name alone keeps the first.
+  const horiz = node({ id: '6:3', type: 'COMPONENT', name: 'Step item / Horizontal' });
+  const vert = node({ id: '6:4', type: 'COMPONENT', name: 'Step item / Vertical' });
+  const h = node({ id: '6:6', type: 'COMPONENT', name: 'Layout=Horizontal' }, [instanceOf('6:8', 'Step item', horiz)]);
+  const vv = node({ id: '6:7', type: 'COMPONENT', name: 'Layout=Vertical' }, [instanceOf('6:9', 'Step item', vert)]);
+  const stepper = node({ id: '6:5', type: 'COMPONENT_SET', name: 'Stepper' }, [h, vv]);
+  const fs = fakeFigma([node({ id: '0:6', type: 'PAGE', name: 'Stepper' }, [stepper])]);
+  const srcS = config(read('composition.js'), { ids: ['6:5'] });
+  const [st] = await run(srcS, fs);
+  ok('composition: an instance name that resolves to a different main per variant keeps every main (component-pass A5)', JSON.stringify(st.parts) === JSON.stringify([{ name: 'Step item / Horizontal', inEvery: false, variants: ['Layout=Horizontal'] }, { name: 'Step item / Vertical', inEvery: false, variants: ['Layout=Vertical'] }]));
+  const byName = plant(srcS, "const key = v.name + '::' + i.name;", "const key = i.name;");
+  ok('composition: (planted) a dedupe keyed on the instance name alone keeps only the first main', (await run(byName, fs))[0].parts.length === 1);
+
   // A broken nested instance throws "does not exist": reported per instance, the rest still read.
   const ghost = node({ id: '7:5', type: 'INSTANCE', name: 'Ghost' });
   ghost.getMainComponentAsync = async () => { throw new Error('The node with id "7:9" does not exist'); };
