@@ -1,6 +1,16 @@
 # Design System Toolkit
 
-Tools, Claude skills and standards for running a design system from Figma to code. A plugin takes a snapshot of a Figma library; from that one reading the toolkit generates the design tokens, a documentation site, an audit of how the library is built, and a measurement of how far the coded components are from the design. Claude skills do the work that needs judgement (auditing components, writing descriptions, building an interface) and the standards say what good looks like, each rule with its reason and its check.
+Claude skills, tools, Figma plugins and standards for building, documenting and checking a design system, in Figma and in code:
+
+- **Audit a Figma library**: how each component is built, the file's structure and naming, broken variable links, the differences between two files, and what a platform (web, iOS, Android) cannot build as drawn.
+- **Document it**: component descriptions, properties tables and token pages in Figma, and a documentation site generated from the library.
+- **Colour and tokens**: perceptual OKLCH colour scales, WCAG contrast matrices, and design tokens exported and built for code.
+- **Write a component's contract**: its props and parts, agreed by design and code before anyone draws or builds it, in a browser editor that can also push it to Figma.
+- **Build and check the code**: an accessible, token-driven front end from a design, a measurement of how far coded components are from Figma, and checks for markup, styles and accessibility.
+- **Figma plugins**: library snapshots, icon import, theme switching, layer tidying, component graphs and guidelines.
+- **Standards and knowledge**: what good looks like, each rule with its reason and the check that enforces it, sourced guidance on UI and code, and research into how real design systems handle a topic.
+
+The tools read a Figma library through one snapshot, taken by a plugin and stored with the project, so every output agrees with the others.
 
 The toolkit holds no project. Each project keeps its design-system files in its own repo, in a `figma-design-system/` folder, and the tools find every project by that one rule.
 
