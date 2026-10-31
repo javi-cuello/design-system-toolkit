@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.11.2)
+# Eval cases — figma-context-capture (v2.11.3)
+
+**Walked: 2026-10-31 for 2.11.3** — no case changed: one sentence in `references/discovery-passes.md` on reading `PT.profile()`'s error, which figma-properties-table's A15 holds.
 
 **Walked live: 2026-10-31 for 2.11.2, tests only (skill-standard §A clause A)** — C16's bodies on a real component library (64 pages) through the Desktop Bridge, read-only: pass E sampled three described sets (five headings each, British spelling counted), pass F listed the pages and found no `_Ratios grid`, pass S2 read the colour primitives as 14 ramps (13 of 12 steps, one of 7), the marker on each brand ramp found (`-anchor` on six, `-source` on six; the alpha ramp and the utilities carry none).
 

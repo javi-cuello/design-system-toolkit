@@ -249,7 +249,9 @@ globalThis.__PT_FACTORY = function () {
       const texts = Object.entries(props).filter(([, v]) => v.type === 'TEXT');
       const page = figma.root.children.find(p => p.name === cfg.learnedFrom);
       await page.loadAsync();
-      const names = componentsOn(page).flatMap(c => [c.name, shown(c.name)]);
+      // Before a first profile no status marker is set, so a leading one (an
+      // emoji, a symbol) is also read past here: `Time input` titles `🚧 Time input`.
+      const names = componentsOn(page).flatMap(c => [c.name, shown(c.name), c.name.replace(/^[^\p{L}\p{N}_\[]+/u, '')]);
       const boolName = cfg.labelBoolProp ? cfg.labelBoolProp.toLowerCase() : null;
       let chosen = texts.find(([, v]) => names.includes(String(v.value)));
       if (!chosen && boolName) chosen = texts.find(([k]) => !nameOf(k).toLowerCase().startsWith(boolName));
@@ -286,7 +288,8 @@ globalThis.__PT_FACTORY = function () {
     // properties table produced exactly this. Nothing is stored; PT.setConfig
     // stores it when a person has read it and says it is the table.
     if (cfg.seenOnPages === 1 && cfg.titleResolvedBy !== 'value match') {
-      return { error: 'What was found on ' + cfg.learnedFrom + ' (' + cfg.tableName + ') is on one page and its title names no component there, so it is probably not a properties table; nothing was stored. Build one by hand and re-profile, or, if it is the table, PT.setConfig(config).', config: cfg };
+      const kept = PT.config() ? 'the stored config is unchanged' : 'nothing was stored';
+      return { error: 'What was found on ' + cfg.learnedFrom + ' (' + cfg.tableName + ') is on one page and its title names no component there (a placeholder title, or none, reads the same), so it is probably not a properties table; ' + kept + '. Build one by hand and re-profile, or, if it is the table, PT.setConfig(config).', config: cfg };
     }
     // A re-profile re-detects the scaffolding and keeps what the project set:
     // the status marker is a project setting, not something detection finds.

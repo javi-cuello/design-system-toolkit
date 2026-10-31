@@ -290,6 +290,14 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     delete globalThis.PT;
     const kept = await factory().profile();
     ok(!kept.error && kept.config.titleResolvedBy === 'value match' && !!stored['pt.config.v2'], 'A15: a one-page table titled with a component on its page is stored');
+    pSet.name = '🚧 Pill';
+    delete stored['pt.config.v2']; delete globalThis.PT;
+    const marked15 = await factory().profile();
+    ok(!marked15.error && !!stored['pt.config.v2'], 'A15: before any status marker is set, a title matches its component past a leading marker');
+    head.componentProperties['Text#0:1'].value = 'Title';
+    delete globalThis.PT;
+    const again = await factory().profile({ force: true });
+    ok(again.error && /the stored config is unchanged/.test(again.error), 'A15: a forced re-profile refused says the stored config is unchanged');
   }
   delete globalThis.figma; delete globalThis.PT;
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

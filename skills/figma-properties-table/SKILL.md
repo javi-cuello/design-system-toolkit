@@ -76,7 +76,7 @@ The config carries a `schema` number. A config written by an older version of th
 
 `columns` and `labelTextProp` are the only two fields the script never reads back. They exist to be looked at here, which is why detection records them at all.
 
-Detection needs one table with structure to learn from, not a filled-in one: a rows slot holding at least two row instances, each holding at least three cells. Placeholder rows straight from the library are enough. In a file where no such table exists, build one by hand first, then profile.
+Detection needs one table with structure to learn from, not a filled-in one: a rows slot holding at least two row instances, each holding at least three cells. Placeholder rows straight from the library are enough. In a file where no such table exists, build one by hand first, then profile. A table on one page only must be titled with its component's name, or `profile()` stores nothing (above); with a placeholder title, read the returned config and store it with `PT.setConfig(config)`.
 
 ## What the scripts decide, and why
 
