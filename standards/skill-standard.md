@@ -1,6 +1,6 @@
 # Skill standard — definition of done for a skill and a plugin
 
-**Version 1.6.0** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
+**Version 1.6.1** — history in [`changelog/skill-standard.md`](changelog/skill-standard.md).
 
 What a skill (`skills/`) and a plugin (`plugins/`) must be before they are committed. What every standard shares, including how these clauses are enforced and changed, is [`toolkit-standard.md`](toolkit-standard.md)'s; this file adds only what is particular to a skill or a plugin.
 
