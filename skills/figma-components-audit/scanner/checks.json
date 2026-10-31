@@ -176,12 +176,6 @@
      "note": "audit.js states|token|: a Hover token in Press, or a resting token the Rest sibling does not carry on the same layer (figma-standard rule 48). Layers pair by name path; a state no token in the set names is skipped."
     },
     {
-     "tier": "error",
-     "who": "scanner",
-     "text": "Focus is indicated, and visibly differs from rest",
-     "status": "backlog"
-    },
-    {
      "tier": "warning",
      "who": "scanner",
      "text": "The state axis uses the project's vocabulary, in the project's order",
@@ -359,14 +353,14 @@
      "who": "scanner",
      "text": "Interactive target size against the project's minimum, or WCAG 2.2 AA's 24×24 where none is stated",
      "status": "scanner",
-     "note": "audit.js accessibility|target raises variants under minTarget as a review (figma-standard rule 26); probes.js FCA.sizes still lists them for the reader."
+     "note": "audit.js accessibility|target raises variants under minTarget as a review (figma-standard rule 26)."
     },
     {
      "tier": "review",
      "who": "scanner",
      "text": "Text size against the smallest step of the type scale",
      "status": "session",
-     "note": "probes.js FCA.sizes lists them; the reader drops disabled text (figma-standard rule 26)."
+     "note": "probes.js FCA.textSizes lists them; the reader drops disabled text (figma-standard rule 26)."
     },
     {
      "tier": "review",

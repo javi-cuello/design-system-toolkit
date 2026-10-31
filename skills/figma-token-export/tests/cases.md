@@ -1,4 +1,6 @@
-# Eval cases — figma-token-export (v2.9.0)
+# Eval cases — figma-token-export (v2.10.0)
+
+**Walked: 2026-10-31 for 2.10.0** — every case's `Runs:` line re-aimed at `tools/tokens/`: `node tools/tokens/test-dtcg.js` 107 passed, `node --test tools/tokens/test-from-snapshot.mjs` 12/12, `node tools/toolkit-check/check-runs.mjs` clean; the old `scripts/from-snapshot.mjs` with no arguments forwards and prints the usage, exit 2 (A22).
 
 **Walked: 2026-10-31 against v2.9.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -43,56 +45,56 @@ Fixture: a FLOAT variable of 8, exported with `unit: 'px'`; the same at `unit: '
 Assert: `$value` is `{value: 8, unit: 'px'}`, `{value: 1.5, unit: 'rem'}` for 24px at root 16, and `{value: 2, unit: 'rem'}` for 20px at root 10.
 Assert also: `$type` is `dimension`. An export that emitted `8` would validate as a `number` token and lose the unit with no error anywhere in the chain.
 
-Runs: node tests/test-dtcg.js — "dimension is an object, not a number"
+Runs: node tools/tokens/test-dtcg.js — "dimension is an object, not a number"
 
 ## A2 · Colour follows the 2025.10 object form, and hex never carries alpha
 Fixture: opaque red, and red at 50% alpha, in both `object` and `hex` formats.
 Assert: object form is `{colorSpace: 'srgb', components: [1,0,0], alpha: 1, hex: '#ff0000'}`; the 50% colour's `hex` is still six digits, with the alpha in `alpha`.
 Assert also: `hex` format yields `#ff000080` at 50% and `#ff0000` when opaque. An eight-digit `hex` inside the object form is a spec violation that renders correctly everywhere, which is why it is asserted rather than eyeballed.
 
-Runs: node tests/test-dtcg.js — "object colour is the 2025.10 shape"
+Runs: node tools/tokens/test-dtcg.js — "object colour is the 2025.10 shape"
 
 ## A3 · A display font weight becomes a number, and an unknown one is rejected
 Fixture: `"Semi Bold"`, `"SemiBold"`, `"semibold"`, `"Regular"`, `"700"`, `"1400"`, `"Chonky"`.
 Assert: 600, 600, 600, 400, 700, `null`, `null`. The first two are the same weight spelled two ways by the same file — one as a variable value, one as `fontName.style`.
 Assert also (negative): an unknown weight is skipped and reported, never defaulted to 400 in a variable export. A wrong weight renders, so nobody finds it.
 
-Runs: node tests/test-dtcg.js — "unknown weight is rejected, not guessed"
+Runs: node tools/tokens/test-dtcg.js — "unknown weight is rejected, not guessed"
 
 ## A4 · A string that is not a font family or weight is skipped and reported
 Fixture: a STRING variable outside `Font/`, e.g. a currency symbol.
 Assert: no token is emitted for it, and `report.skipped` names it with a reason.
 Assert also (negative): the exporter does not invent a `$type` for it, and does not fall back to `fontFamily`. There is no DTCG string type; producing one would make an invalid file that validates in no tool and is discovered only downstream.
 
-Runs: node tests/test-dtcg.js — "the untyped string was skipped, not invented"
+Runs: node tools/tokens/test-dtcg.js — "the untyped string was skipped, not invented"
 
 ## A5 · Aliases export as references, identical across modes
 Fixture: a semantic colour aliasing a primitive, in Light and Dark.
 Assert: `$value` is `{primitive-scale.palette.blue.4}` in both files — the same string, because the mode lives in the file and not in the path.
 Assert also: the value is never resolved to a colour. A flattened export builds fine and throws away the tier structure the library exists for.
 
-Runs: node tests/test-dtcg.js — "an alias exports as a DTCG reference"
+Runs: node tools/tokens/test-dtcg.js — "an alias exports as a DTCG reference"
 
 ## A6 · Percent typography converts, and AUTO is omitted rather than faked  *(since 2.1.0 an AUTO the collector measured is exported — A24; the clause binds the unmeasured case)*
 Fixture: a style at 32px with 115% line height and -2% letter spacing; a second style with `AUTO` line height.
 Assert: `lineHeight` is `1.15` (unitless multiplier) and `letterSpacing` is `{value: -0.64, unit: 'px'}` — percent resolved against that style's own font size, which is known at conversion time.
 Assert also (negative): the `AUTO` style has **no** `lineHeight` key, and `report.warnings` names it. Inventing a multiplier would ship a value nobody authored.
 
-Runs: node tests/test-dtcg.js — "percent line height becomes a unitless multiplier"
+Runs: node tools/tokens/test-dtcg.js — "percent line height becomes a unitless multiplier"
 
 ## A7 · Bound properties export as references, unbound as literals
 Fixture: a text style binding `fontFamily` but not `fontSize`.
 Assert: `$value.fontFamily` is a reference, `$value.fontSize` is a dimension object.
 Assert also: the weight bound through Figma's `fontStyle` lands on DTCG's `fontWeight`. The two names differ, and mapping by name rather than by meaning drops every bound weight.
 
-Runs: node tests/test-dtcg.js — "a bound family exports as a reference"
+Runs: node tools/tokens/test-dtcg.js — "a bound family exports as a reference"
 
 ## A8 · Opacity scale is decided per group, from the data
 Fixture: a group of `[0, 4, 50]`; a group of `[0, 0.04, 0.5]`; the first with an explicit `unit` override.
 Assert: divisors 100, 1, and 1. A group whose maximum exceeds 1 is authored 0–100.
 Assert also: the explicit setting wins over the detection, so a library that mixes both can still be exported correctly while the mix is fixed in Figma.
 
-Runs: node tests/test-dtcg.js — "a 0-100 group is detected as percent"
+Runs: node tools/tokens/test-dtcg.js — "a 0-100 group is detected as percent"
 
 ## A9 · The export refuses to be run from the wrong file
 Fixture: a consuming file that subscribes to the library rather than owning it.
@@ -113,32 +115,32 @@ Fixture: three multi-mode collections — two carrying Light/Dark, one carrying 
 Assert: the manifest produces 2 × N builds, not 2 × 2 × N; each Light build carries the Light file of **both** Light/Dark collections; no build mixes Light from one tier with Dark from another.
 Assert also (negative): a build named `light-dark-…` must never appear. This is the defect the first live run produced — 32 builds where 16 are correct — and it is invisible in a fixture with only one multi-mode collection.
 
-Runs: node tests/test-dtcg.js — "collections sharing a mode set share an axis — 2x2, not 2x2x2"
+Runs: node tools/tokens/test-dtcg.js — "collections sharing a mode set share an axis — 2x2, not 2x2x2"
 
 ## A12 · What is not exported is reported with a count  *(superseded by A19 for effect styles; the clause still binds anything else the export cannot carry)*
 Fixture: a library containing effect styles.
 Assert: `report.notExported` names effect styles with the correct count and a reason.
 Assert also (negative): the export does not silently drop inner shadow layers. (Until 2.7.0 this also forbade an invented `inset` field; DTCG 2025.10 defines `inset`, so the clause is retired.)
 
-Runs: node tests/test-dtcg.js — "the effect styles this version does not export are reported"
+Runs: node tools/tokens/test-dtcg.js — "the effect styles this version does not export are reported"
 
 ## A13 · A leading minus is preserved, and a real collision is reported
 Fixture: a group holding `Offset/1`, `Offset/-1` and `Offset/_1`.
 Assert: `-1` lands at `offset.minus-1` with value -1, `1` lands at `offset.1` with value 1, and the third — which slugs onto an occupied path — is skipped with a collision reason.
 Assert also (negative): the surviving token is never overwritten. The original defect exported `-1` as a token named `1`, which counts correctly, validates correctly, and is wrong in the only way that matters. It was found by reading the JSON; no count could have shown it.
 
-Runs: node tests/test-dtcg.js — "a genuine collision is skipped, not written over"
+Runs: node tools/tokens/test-dtcg.js — "a genuine collision is skipped, not written over"
 
 ## A14 · Lossy renames are reported; ordinary casing is not
 Fixture: the segments `Semi Bold`, `Blue`, `8-anchor`, `primary-translucent`, `1_5`, `-1`; and a two-mode collection holding `Stroke/1_5` beside `Spacing/8`.
 Assert: only `1_5` and `-1` are lossy; the report names the Figma name and the path it became (`Stroke/1_5 -> scale.stroke.1-5`), and lists it **once**, not once per mode.
 Assert also (negative): an existing hyphen is never a rename, because it maps to itself. The first version of this check flagged every hyphen and returned 42 hits on a 565-variable library where the true answer was two — a detector that fires on everything fails the same way as one that fires on nothing, and both look like results.
 
-Runs: node tests/test-dtcg.js — "the report names the Figma name and the path it became"
+Runs: node tools/tokens/test-dtcg.js — "the report names the Figma name and the path it became"
 
 ## A15 · The downstream scripts know no collection, mode or brand names
 Fixture: any tokens directory, passed as an argument.
-Assert: `generate-ts.mjs` and `verify-ts.mjs` discover collections from `<slug>.<mode>.json` filenames, emit one module per collection, and never mention a collection slug, mode name or brand in their source. `grep -iE 'light|dark|semantic|brand' scripts/*.mjs` returns only generic prose and pattern matching, never a lookup keyed by one.
+Assert: `generate-ts.mjs` and `verify-ts.mjs` discover collections from `<slug>.<mode>.json` filenames, emit one module per collection, and never mention a collection slug, mode name or brand in their source. `grep -iE 'light|dark|semantic|brand' tools/tokens/{generate-ts,verify-ts,discover}.mjs` returns only generic prose and pattern matching, never a lookup keyed by one.
 Assert also (negative): a library with different collection and mode names produces modules without editing the scripts. The project-shaped originals had a `MODULE_OF` table of slugs, `startsWith('light-')` comparisons, and assertions on a brand count — all three are gone.
 
 Walked live: 2026-09-19 — a grep over `scripts/*.mjs`, which found only prose in `from-snapshot.mjs`.
@@ -162,52 +164,52 @@ Fixture: a two-mode collection and a single-mode one.
 Assert: `fileName` returns `semantic/light.json` and `primitive-scale/value.json`; the manifest's sources use those same paths; a single-mode collection still gets a folder rather than a bare file.
 Assert also (negative): the mode never appears in a token path. Every mode file of a collection declares the identical set of paths, and an alias reads `{primitive-scale.palette.blue.4}` in both — never `{primitive-scale.light.palette.blue.4}`. Folding modes into one document is legal DTCG and would break exactly this: a theme stops being a file swap and every consumer needs a preprocessor to strip the mode segment.
 
-Runs: node tests/test-dtcg.js — "a mode is a file inside its collection folder"
+Runs: node tools/tokens/test-dtcg.js — "a mode is a file inside its collection folder"
 
 ## A19 · Effect styles export, inner shadows and layer order included
 Fixture: a drop shadow, an inner shadow, a two-layer composite, a hidden layer, and a background-blur layer.
 Assert: each becomes a `shadow` token; bound colours and offsets stay references; the inner shadow carries `inset: true` with no `$extensions` mirror; the composite is an array listed top first, so the inner shadow that is Figma's second (topmost) effect is the token's first layer.
 Assert also (negative): the hidden layer and the background blur are omitted **with a warning naming the type**, never approximated into a shadow; a style with nothing expressible is skipped rather than emitted empty. The order clause exists because Figma paints its last effect on top and CSS its first: a composite copied through in Figma's order renders reversed, which a single-colour fixture cannot show.
 
-Runs: node tests/test-dtcg.js — "an inner shadow carries inset"
+Runs: node tools/tokens/test-dtcg.js — "an inner shadow carries inset"
 
 ## A23 · The kind of a variable is read from any segment of its name
 Fixture: STRING variables `Label/md/family` and `Label/md/weight`; FLOAT variables `State/Disabled/opacity` (50) and `State/Focus/stroke-width` (2).
 Assert: the strings classify as `fontFamily` and `fontWeight`; the opacity is a `number` at `0.5`; its neighbour stays a `dimension` of `{value: 2, unit: 'px'}`. Reading only the first segment skipped the strings and exported the opacity as `50px` — found on a real library whose naming put the kind last.
 
-Runs: node tests/test-dtcg.js — "a trailing family segment is fontFamily"
+Runs: node tools/tokens/test-dtcg.js — "a trailing family segment is fontFamily"
 
 ## A24 · A measured AUTO line height is exported; an unmeasured one is omitted
 Fixture: a 16px style whose collector measured AUTO at 19px (`{unit: 'MEASURED', value: 19}`); the same style with `AUTO` unmeasured.
 Assert: the first exports `lineHeight: 1.1875` with no warning; the second has no `lineHeight` and a warning saying it could not be measured. A6's rule stands: nothing is invented, the measured value is what Figma rendered.
 
-Runs: node tests/test-dtcg.js — "a measured AUTO becomes the multiplier the render used"
+Runs: node tools/tokens/test-dtcg.js — "a measured AUTO becomes the multiplier the render used"
 
 ## A25 · Colour styles export as color and gradient; what DTCG cannot carry is reported
 Fixture: a bound solid, a two-stop linear gradient with one bound stop and one literal, a radial gradient, an image paint.
 Assert: the solid is a `color` reference; the gradient is `[{color, position}]` with the reference kept and the literal converted, angle in `$extensions`; radial and image are skipped **by name**; colour styles get `color-style/value.json` and a single-mode axis; `paintStyles: false` lands in `report.notExported` with the count.
 Assert also (downstream): Style Dictionary renders the gradient as `linear-gradient(…)` with references as `var()` and a 135° angle as `to bottom right` — probed, not read.
 
-Runs: node tests/test-dtcg.js — "a linear gradient is DTCG gradient stops, bound where bound, literal where not"
+Runs: node tools/tokens/test-dtcg.js — "a linear gradient is DTCG gradient stops, bound where bound, literal where not"
 
 ## A26 · A stored snapshot exports without Figma, and keeps what the snapshot only names — *executed*
-Fixture: a snapshot tokens file (`tests/test-from-snapshot.mjs`): values resolved, aliases recorded by name only, colours as CSS strings, text styles with no bindings, one inner shadow, one gradient with a bound stop.
+Fixture: a snapshot tokens file (`tools/tokens/test-from-snapshot.mjs`): values resolved, aliases recorded by name only, colours as CSS strings, text styles with no bindings, one inner shadow, one gradient with a bound stop.
 Assert: `#ff0000` and `rgb(0 0 0 / 0.5)` parse back to channels and a variable name does not parse as a colour; the alias `Palette/Grey/12`, recorded by name in `Semantic`, becomes `{primitives-colour.palette.grey.12}` — the collection found by looking the name up — with its description kept and an opacity authored 0–100 divided to 0–1; the text style `Heading/lg` binds its size to `Heading/lg/size` in `Responsive type`, exported as `{responsive-type.heading.lg.size}`; the inner shadow keeps `inset: true`, the gradient keeps its bound stop as a reference and its 180° angle.
 Assert also: the files and manifest come from `dtcg.js`, the same converter a live export uses, so no type decision lives in two places.
 
-Runs: node --test tests/test-from-snapshot.mjs — "an alias recorded by name stays a reference into the collection that defines it"
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "an alias recorded by name stays a reference into the collection that defines it"
 
 ## A27 · An alias never points at its own collection *(regression)* — *executed*
 Fixture: `Brand` defines `Palette/Grey/12` as an alias to `Palette/Grey/12`, listed before `Primitives - Colour`, which defines the same name.
 Assert: the alias resolves to `Primitives - Colour`. Looked up by first definer, it pointed at `Brand` itself, a reference to itself.
 
-Runs: node --test tests/test-from-snapshot.mjs — "an alias to a same-named variable points at the other collection, never itself"
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "an alias to a same-named variable points at the other collection, never itself"
 
 ## A28 · An export refuses to clear a folder it did not write *(regression)* — *executed*
 Fixture: a non-empty folder with no `manifest.json`; then a folder a previous export wrote.
 Assert: the first throws and leaves its file in place; the second is replaced without complaint.
 
-Runs: node --test tests/test-from-snapshot.mjs — "an export refuses to clear a non-empty folder it did not write"
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "an export refuses to clear a non-empty folder it did not write"
 
 ## A20 · *retired in 2.5.0* — a refresh is one call, and it writes to disk itself
 The refresh server this case walked is gone: it read the library live beside the snapshot every other output reads. Its guarantees moved: the TypeScript generate-and-verify step runs in `from-snapshot.mjs`'s CLI (A29), a vanished collection is handled by the owned-only replacement (A29), and the multi-byte chunk lesson lives in the snapshot router, which buffers and decodes a body once.
@@ -222,25 +224,25 @@ Assert also (negative): `verify-ts` fails when any leaf is still a `{a.b.c}` str
 Not walked.
 
 ## A22 · A required argument has no default *(since 2.5.0 for `from-snapshot.mjs`; the refresh server's write endpoint is retired with it)*
-Fixture: `node scripts/from-snapshot.mjs` with no output directory.
+Fixture: `node tools/tokens/from-snapshot.mjs` with no output directory.
 Assert: it exits 2 and names both arguments. The directory must never default to the cwd: when the retired server did, a project's whole token export landed inside this skill, 816KB, committed, past two checkers that do not look at `.json` under `scripts/`.
 
 Not walked.
 
 ## A29 · A refresh replaces only what the export owns — *executed*
-Fixture: an export folder holding a README, `dist/ts/index.ts` and a collection folder the snapshot no longer has (`tests/test-from-snapshot.mjs`).
+Fixture: an export folder holding a README, `dist/ts/index.ts` and a collection folder the snapshot no longer has (`tools/tokens/test-from-snapshot.mjs`).
 Assert: the README and `dist/` stay, the vanished collection goes, the new files are written. Before 2.5.0 the folder was replaced whole, so a project's README and TypeScript went with every refresh. The CLI then runs `generate-ts.mjs` and `verify-ts.mjs`, and a failure in either exits 1 saying the JSON is written and the TypeScript is not trustworthy.
 
-Runs: node --test tests/test-from-snapshot.mjs — "a refresh replaces only what the export owns: a README and dist/ stay, a vanished collection goes"
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "a refresh replaces only what the export owns: a README and dist/ stay, a vanished collection goes"
 
 ## A30 · Bindings and hidden tiers survive a snapshot export — *executed*
 Fixture: a snapshot whose text style is bound to variables outside the `<style>/<field>` convention, a shadow layer bound to a semantic colour and to a variable from another library, and a primitive listed in its collection's `hidden`.
 Assert: the recorded bindings become references and the foreign ones keep their literals; a snapshot that records bindings is never second-guessed by the convention; the hidden primitive exports with `hiddenFromPublishing: true` and a public one with `false`. Walked on real input for the bindings: Project B's Foundations snapshot against its live export of August, 990 tokens identical, no reference turned literal, the remaining differences the library's own changes since. The hidden half walked the same day on Project B's snapshot from plugin 0.26.0: all 316 primitives of the hidden tier exported `hiddenFromPublishing: true`, none flipped to public.
 
-Runs: node --test tests/test-from-snapshot.mjs — "a text style takes the bindings the snapshot records, over the naming convention, and drops a foreign one"
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "a text style takes the bindings the snapshot records, over the naming convention, and drops a foreign one"
 
 ## A31 · A downloaded snapshot exports like a stored one — *executed*
 Fixture: the whole file the snapshot plugin saves when no receiver listens (0.59.0), `{ kind, tokens, components, … }`, and a stored `tokens.json`.
 Assert: both give the same tokens to the converter, so someone without the toolkit's router can export DTCG from the plugin's download.
 
-Runs: node --test tests/test-from-snapshot.mjs — "a file the plugin downloaded reads as its tokens, a stored tokens.json as itself"
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "a file the plugin downloaded reads as its tokens, a stored tokens.json as itself"

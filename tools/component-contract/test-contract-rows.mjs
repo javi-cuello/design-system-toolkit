@@ -1,6 +1,6 @@
-// Tests for the rows read from a contract — run: node tests/test-contract-rows.mjs
+// Tests for the rows read from a contract — run: node tools/component-contract/test-contract-rows.mjs
 // A fixture contract in contract 1's shape (tools/component-contract/README.md).
-import { rowsOf, propsOf } from '../scripts/contract-rows.mjs';
+import { rowsOf, propsOf } from './contract-rows.mjs';
 
 let pass = 0, fail = 0; const failures = [];
 const eq = (a, e, label) => { if (JSON.stringify(a) === JSON.stringify(e)) pass++; else { fail++; failures.push(`${label}\n    expected ${JSON.stringify(e)}\n    actual   ${JSON.stringify(a)}`); } };
@@ -50,14 +50,14 @@ eq(props.find((p) => p.name === 'Left icon'), { name: 'Left icon', type: 'BOOLEA
 eq(props.find((p) => p.name === 'Icon swap'), { name: 'Icon swap', type: 'INSTANCE_SWAP', values: [], default: undefined }, 'propsOf: a swap has no default in the contract');
 eq(props.map((p) => p.name), Object.keys(spec.props), 'propsOf keeps the declared order');
 
-// run through a symlink, as the installed skill is: it runs, and asks for its folder
+// run through a symlink, as an installed toolkit is: it runs, and asks for its folder
 {
   const { spawnSync } = await import('node:child_process');
   const os = await import('node:os'); const fsm = await import('node:fs'); const pth = await import('node:path');
   const dir = fsm.mkdtempSync(pth.join(os.tmpdir(), 'rows-link-'));
-  const link = pth.join(dir, 'skill');
-  fsm.symlinkSync(pth.resolve(pth.dirname(new URL(import.meta.url).pathname), '..'), link);
-  const r = spawnSync(process.execPath, [pth.join(link, 'scripts', 'contract-rows.mjs')], { encoding: 'utf8' });
+  const link = pth.join(dir, 'tool');
+  fsm.symlinkSync(pth.dirname(new URL(import.meta.url).pathname), link);
+  const r = spawnSync(process.execPath, [pth.join(link, 'contract-rows.mjs')], { encoding: 'utf8' });
   eq([r.status, /usage/.test(r.stderr)], [2, true], 'A12: run through a symlink, the script runs');
   fsm.rmSync(dir, { recursive: true, force: true });
 }

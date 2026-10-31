@@ -27,8 +27,12 @@ export const date = (iso) => (valid(iso) ? new Date(iso).toLocaleDateString(lang
 // ("31,381"), so a figure of five digits reads at a glance.
 export const num = (n) => (typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString(lang()) : String(n));
 // A percentage to one decimal everywhere, so two figures side by side carry
-// the same precision; a whole 0 or 100 is said whole.
-export const percent = (n) => (n === 0 || n === 100 ? `${n}%` : `${(Math.round(n * 10) / 10).toLocaleString(lang(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`);
+// the same precision; a whole 0 or 100 is said whole. Rounded down, never to
+// nearest: 99.97% coverage is not 100%, and a rounded 100.0% read as done
+// beside a measure that was not. The one formatter: the dashboard's own,
+// which floored, and this one, which rounded, disagreed on exactly that case.
+// The epsilon keeps a float like 0.29 * 100 (28.999…) from flooring a step low.
+export const percent = (n) => (n === 0 || n === 100 ? `${n}%` : `${(Math.floor(n * 10 + 1e-9) / 10).toLocaleString(lang(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`);
 
 // A count and its noun: "1 token", "12 tokens".
 export const plural = (n, word) => `${num(n)} ${word}${n === 1 ? '' : 's'}`;

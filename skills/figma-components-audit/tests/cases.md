@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.34.0)
+# Eval cases — figma-components-audit (v2.35.0)
+
+**Walked: 2026-10-31 for 2.35.0** — `node tests/test-audit.mjs` 81/81 (the placeholder assertions new), `node tests/test-probes.mjs` 48/48, `node tools/shared/test-colour.mjs` 13 and `test-names.mjs` 7 passed, `node tools/toolkit-check/test-paste-hash.mjs` 9/9; with audit.js's old `0.03928` back the colour test fails at the copy.
 
 **Walked: 2026-10-31 against v2.34.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 

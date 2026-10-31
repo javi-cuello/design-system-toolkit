@@ -1,5 +1,6 @@
 # Changelog — figma-properties-table
 
+- 1.10.0 (2026-10-31): `contract-rows.mjs` and its test move to `tools/component-contract/` (the docs site reads the same rows; toolkit-standard §D 1); SKILL.md and the table's comments name the new path.
 - 1.9.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).
 - 1.8.3 (2026-10-30): the same comment, reworded: Figma's sandbox refused the whole script since 1.8.2 ("possible import expression"); `tools/toolkit-check/test-sandbox-paste.mjs` refuses the shape.
 - 1.8.2 (2026-10-23): the paste hash strips comments as figma-components-audit's probes.js does and is eight hex digits (tools/toolkit-check/test-paste-hash.mjs); SKILL.md's version line said 1.8.0. Source hash unchanged.

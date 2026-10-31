@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.20.2** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.20.3** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -232,7 +232,7 @@ Cite a rule as `figma-standard rule N`.
 
     **Which case is now rule 18.** This rule stayed silent on it for one revision, when the evidence was two projects capitalising against one lowercase; a third project's realignment the same day made the pattern unanimous and rule 18 states it. Rule 19 survives separately because it is the stronger claim: it holds whatever case a project picks, and a project that later diverges from rule 18 still owes rule 19.
 
-   *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "differ only in case" — components; `skills/figma-token-export/scripts/dtcg.js` "name collides with another token at"; `skills/figma-token-export/scripts/dtcg.js` "name collides with another style at" — variables and styles, refused when exported.
+   *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "differ only in case" — components; `skills/figma-foundations-audit/scripts/library.mjs` "differ only in case or separator" — a tokens library's variables, from the snapshot; `tools/tokens/dtcg.js` "name collides with another token at"; `tools/tokens/dtcg.js` "name collides with another style at" — variables and styles, refused when exported. figma-foundations-audit owns the check; the components audit classifies case for rule 18 and reports no collision.
 
 20. **In a component name, ` / ` separates equivalent siblings only; a family and its part are joined by a space.** ` / ` marks a virtual set: one part split into interchangeable alternatives a designer picks between, which share one byte-identical description (`Cell / Fill` and `Cell / Hug`, `FAB button / Default` and `/ Open`). Anything that is not an alternative, such as a level or a sub-part, is a word in the name (rule 9). A component that relates to another but is built separately, a flavour of it, takes the other's name, ` - ` and the flavour: `Button - CTA`, `FAB - AI`, never `FAB (AI)`; its parts follow rule 9 from that name (`_FAB - AI button`). Token and style paths group with an unspaced `/` (rule 18).
 

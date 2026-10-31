@@ -1,11 +1,11 @@
 // The snapshot → DTCG converter, walked on a small snapshot shaped like the
-// plugin's. Run: node --test tests/test-from-snapshot.mjs
+// plugin's. Run: node --test tools/tokens/test-from-snapshot.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { figmaRgba, toDtcgSnapshot, writeDtcg, tokensOf } from '../scripts/from-snapshot.mjs';
+import { figmaRgba, toDtcgSnapshot, writeDtcg, tokensOf } from './from-snapshot.mjs';
 
 const snapshot = () => ({
   _meta: { file: 'UI library', fileId: 'x' },

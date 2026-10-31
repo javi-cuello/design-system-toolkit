@@ -481,6 +481,19 @@ expect("a layer that is the same in every variant still fires when some forget i
     [r.audited.some((e) => e.set === "Chip preview item"), keyed(r, "Chip preview item", /^metadata\|guidance/)], [true, []]);
   expect("a part also used on another page is a component of its own and owes them", keyed(r, "Chip badge", /^metadata\|guidance$/).length, 1);
 }
+// ---- figma-standard rule 25: a placeholder description (moved from probes.js FCA.metadata) --
+{
+  const META = { descriptionPlaceholder: "^(todo|tbd|wip|lorem)", minDescription: 12 };
+  const desc = async (text, extra) => {
+    const fx = fresh(); const s = find(fx, "Button - CTA"); s.description = text; s.descriptionMarkdown = text;
+    const r = await run(fx, { tokens: Object.assign({}, fx.settings.tokens, extra) });
+    return ["metadata|description", "metadata|placeholder"].map((k) => keyed(r, "Button - CTA", new RegExp("^" + k.replace("|", "\\|") + "$")).length);
+  };
+  expect("a placeholder word, a description under the minimum and the bare name are each a placeholder; an empty one is the empty finding",
+    [await desc("TODO later", META), await desc("A small tag", META), await desc("Button - CTA", {}), await desc("", META)], [[0, 1], [0, 1], [0, 1], [1, 0]]);
+  expect("without the settings, a placeholder word and a short description pass (negative)",
+    [await desc("TODO later", {}), await desc("A small tag", {})], [[0, 0], [0, 0]]);
+}
 // ---- figma-standard rules 39, 26 and 40: focus, target size, accessible name --
 {
   const fx = fresh(); const s = find(fx, "Button - CTA");

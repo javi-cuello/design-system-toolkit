@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
  * component-validator engine. Reads component trees (the shape
- * scripts/walk-figma.js returns: `{ name, props, variants: [tree] }`) and
+ * component-validator's scripts/walk-figma.js returns: `{ name, props, variants: [tree] }`) and
  * reports, for one target, the places that target cannot reproduce as
  * drawn. Each finding names the class from references/<target>.md.
  *
- *   node scripts/validate.mjs --target web|ios|android components.json
+ *   node tools/validator/validate.mjs --target web|ios|android components.json
  *   import { validate } from './validate.mjs'   // validate(components, target)
  *
  * Exit 1 when anything is found. Output: one JSON array of

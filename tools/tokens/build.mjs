@@ -50,8 +50,8 @@ try {
   process.exit(2);
 }
 
-const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'skills/figma-token-export/scripts/from-snapshot.mjs')).href);
-const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'skills/frontend-build/scripts/build-tokens.mjs')).href);
+const { writeDtcg } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/from-snapshot.mjs')).href);
+const { buildTokens } = await import(pathToFileURL(join(TOOLKIT, 'tools/tokens/build-tokens.mjs')).href);
 
 // written in place, or, for --check, beside it and compared
 const STORED = join(dirname(P.tokens), 'dtcg');

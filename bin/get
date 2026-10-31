@@ -86,6 +86,11 @@ function prose(file) {
       if (isFile(abs) || isDir(abs)) out.add(abs);
       else if (!p.startsWith('bin/')) MISSING.push(`${rel(file)}:${i + 1}: names ${p}, which the toolkit does not have`);
     }
+    // its own files, by the skill-relative path (`scripts/x.mjs`): one moved out with its prose
+    // left behind is a step that fails the first time it runs
+    for (const c of code) for (const m of c.matchAll(/(?:^|[\s"'(=])((?:scripts|references|tests|assets)\/[\w.-]+\.[a-z]+)\b/g)) {
+      if (!isFile(path.join(ROOT, 'skills', self, m[1]))) MISSING.push(`${rel(file)}:${i + 1}: names ${m[1]}, which the toolkit does not have`);
+    }
     if (!fenced) for (const m of line.matchAll(/\brun `([a-z0-9-]+)`/gi)) {
       const s = path.join(ROOT, 'skills', m[1]);
       if (m[1] === self || !isFile(path.join(s, 'SKILL.md'))) continue;

@@ -11,9 +11,9 @@
  * build's `--text-strong`, and `-1` lost its minus).
  */
 import { createRequire } from 'node:module';
-import { nameOf } from '../../skills/frontend-build/scripts/build-tokens.mjs';
+import { nameOf } from './build-tokens.mjs';
 
-const DTCG = createRequire(import.meta.url)('../../skills/figma-token-export/scripts/dtcg.js');
+const DTCG = createRequire(import.meta.url)('./dtcg.js');
 
 /** The custom property a variable becomes: `--colour-background-ghost`. */
 export const cssName = (collection, name) => '--' + nameOf(DTCG.pathFor(collection || '', name));

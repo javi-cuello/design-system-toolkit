@@ -13,9 +13,9 @@
  *                             (property, type, options, notes) plus the evidence for each note
  *
  * Run as a script on the project's stored components folder, it prints the
- * call that loads the rows into the file, for scripts/properties-table.js to draw:
+ * call that loads the rows into the file, for figma-properties-table's scripts/properties-table.js to draw:
  *
- *   node scripts/contract-rows.mjs <components folder> [component name…]
+ *   node tools/component-contract/contract-rows.mjs <components folder> [component name…]
  */
 import { readFileSync, existsSync, readdirSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
@@ -144,7 +144,7 @@ export function rowsOf(contract, spec) {
 const isMain = !!process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
 if (isMain) {
   const [dir, ...names] = process.argv.slice(2);
-  if (!dir) { console.error('usage: node scripts/contract-rows.mjs <components folder> [component name…]'); process.exit(2); }
+  if (!dir) { console.error('usage: node tools/component-contract/contract-rows.mjs <components folder> [component name…]'); process.exit(2); }
   if (!existsSync(dir)) { console.error(`${dir}: no stored snapshot there. Take a snapshot first; the table is drawn from it.`); process.exit(1); }
   const read = (f) => JSON.parse(readFileSync(f, 'utf8'));
   const out = {}, missing = [];

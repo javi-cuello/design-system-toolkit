@@ -5,7 +5,7 @@ description: Generates perceptually consistent 12-step OKLCH color scales for UI
 
 # OKLCH Color Scale System
 
-**Version 2.1.4** — history in CHANGELOG.md.
+**Version 2.1.5** — history in CHANGELOG.md.
 
 A principled system for generating perceptually consistent 12-step color scales for UI design systems, built on the OKLCH color space.
 

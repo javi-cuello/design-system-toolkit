@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-/* Executable checks for scripts/dtcg.js — the whole pure layer.
- * Run: node tests/test-dtcg.js   (exits non-zero on any failure)
+/* Executable checks for tools/tokens/dtcg.js — the whole pure layer.
+ * Run: node tools/tokens/test-dtcg.js   (exits non-zero on any failure)
  * Fixture is generic and invented; no project data. */
 
 var path = require('path');
-var DTCG = require(path.join(__dirname, '..', 'scripts', 'dtcg.js'));
+var DTCG = require(path.join(__dirname, 'dtcg.js'));
 
 var pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -328,7 +328,7 @@ eq('colour styles get their own folder and a single-mode axis', withPaints.files
 var optedOut = DTCG.buildFiles({ collections: [], paintStyles: [], paintStyleCount: 4 }, {});
 ok('opting out is reported with the count', optedOut.report.notExported.some(function (n) { return /colour styles/.test(n.what) && n.count === 4; }), optedOut.report);
 
-ok('the sandbox copy of the weight table is the parity engine\'s one table, name for name', JSON.stringify(DTCG.WEIGHTS) === JSON.stringify(require('../../../tools/parity/values.mjs').WEIGHTS));
+ok('the sandbox copy of the weight table is the parity engine\'s one table, name for name', JSON.stringify(DTCG.WEIGHTS) === JSON.stringify(require('../parity/values.mjs').WEIGHTS));
 ok('a weight reads hyphenated, spaced or run together', DTCG.fontWeight('Demi-Bold') === 600 && DTCG.fontWeight('Extra Black') === 950 && DTCG.fontWeight('toString') === null);
 
 console.log((fail ? 'FAILED' : 'ok') + ' — ' + pass + ' passed, ' + fail + ' failed');

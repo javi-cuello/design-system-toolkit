@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.20.3 (2026-10-31): rule 19's *Checked:* names its engines as they are: figma-foundations-audit's two (components, and a tokens library's variables) and the export's refusals at `tools/tokens/dtcg.js`; the components audit's second collision check is gone. No rule changed.
 - 2.20.2 (2026-10-30): rule 44's *Checked:* joins its two pairs under one marker; no rule changed.
 - 2.20.1 (2026-10-29): rule 15's *Why:* cites toolkit-standard §D 23: the page header is generated from the description; no rule changed.
 - 2.20.0 (2026-10-26): the Naming section's values are preferences, kept in standards/naming-preferences.json and overridden in a project's `naming-preferences` block; a departure is filed as a preference, a name that breaks something keeps its tier.

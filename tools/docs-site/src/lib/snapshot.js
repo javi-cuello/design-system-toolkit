@@ -5,13 +5,14 @@ import { join } from 'node:path';
 import { layout, project, shows, status, guidance, contract, spec as specModule, codeTargets, frameworks, statesOf, tokens, ours, TOOLKIT, localCollections } from './project.js';
 // What code builds differently from the drawing is the component-validator
 // skill's to say: the page renders its engine's output, never its own rules.
-import { validate, translations, fromSnapshot } from '../../../../skills/component-validator/scripts/validate.mjs';
+import { validate, translations, fromSnapshot } from '../../../validator/validate.mjs';
 // The store's own reader for what a component is built from.
 import graph from '../../../snapshot/graph.cjs';
 import storeTool from '../../../snapshot/store.cjs';
 import { partName, mainSet } from './format.js';
+import { variantValues } from '../../../shared/names.js';
 // A component's props come from its contract, read as the properties-table skill reads it.
-import { propsOf } from '../../../../skills/figma-properties-table/scripts/contract-rows.mjs';
+import { propsOf } from '../../../component-contract/contract-rows.mjs';
 // Its interaction states from the contract too, by the rule the contract editor uses (component-contract's layers.mjs).
 import { statesOf as contractStates } from '../../../component-contract/layers.mjs';
 import { pathToFileURL } from 'node:url';
@@ -326,7 +327,7 @@ export const assetGroups = [...new Set(assetSpecs.map((s) => s.page))].sort((a, 
   // shows each variant, its default included, as an asset of its own, named
   // by its values.
   assets: assetSpecs.filter((s) => s.page === page).flatMap((s) => {
-    const own = [s.default, ...(s.variants || [])].filter(Boolean).map((v) => ({ name: v.name.split(', ').map((x) => x.split('=').pop()).join(', '), preview: variantShot(s.folder, v.name) })).filter((v) => v.preview);
+    const own = [s.default, ...(s.variants || [])].filter(Boolean).map((v) => ({ name: Object.values(variantValues(v.name)).join(', '), preview: variantShot(s.folder, v.name) })).filter((v) => v.preview);
     return own.length ? own : [{ name: s.figmaName || leaf(s.name), preview: previewOf(s.folder) }];
   }).sort((a, b) => compareNames(a.name, b.name)),
 }));

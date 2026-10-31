@@ -1,4 +1,6 @@
-# Eval cases — figma-properties-table (v1.9.0)
+# Eval cases — figma-properties-table (v1.10.0)
+
+**Walked: 2026-10-31 for 1.10.0** — A11/A12 re-aimed: `node tools/component-contract/test-contract-rows.mjs` 13 passed (A12 through a symlink to the tool's folder), `node tests/test-properties-table.js` 43 passed; the paste hash is comment-stripped, so the comment edits move nothing.
 
 **Walked: 2026-10-31 against v1.9.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -112,9 +114,9 @@ Runs: node tests/test-properties-table.js — "A10: PT.plan skips a page whose c
 ## A11 · The rows mirror the contract: order, options verbatim, notes from its parts
 Fixture: a Button contract with a False/True axis declared True first, an enum spelled `Large` / `Icon only`, a boolean that shows an icon whose swap it gates, a text drawn only at one size (`when`), a slot, and a boolean that drives no part.
 Assert: axes first in declared order, the rest in layer order, the boolean that drives nothing last; the True/False axis keeps True first (never reordered); the enum in Figma's spelling; the swap noted `Only for left icon=true` and the text `Only for size=icon only`. The docs site's reader (`propsOf`) gives the same names, options and defaults.
-Runs: node tests/test-contract-rows.mjs — "variant axes first in declared order, then the rest in layer order, then those driving no layer", "a boolean property is False then True, its default marked", "a slot found through its part", "propsOf: a False/True axis as Figma has it", "propsOf keeps the declared order"
+Runs: node tools/component-contract/test-contract-rows.mjs — "variant axes first in declared order, then the rest in layer order, then those driving no layer", "a boolean property is False then True, its default marked", "a slot found through its part", "propsOf: a False/True axis as Figma has it", "propsOf keeps the declared order"
 
 ## A12 · The script runs through the installed symlink — WALKED 2026-10-22
-Fixture: `scripts/contract-rows.mjs` run by a path through a symlink to the skill folder, as `~/.claude/skills/` installs it, with no arguments.
+Fixture: `tools/component-contract/contract-rows.mjs` run by a path through a symlink to its folder, as a linked toolkit runs it, with no arguments.
 Assert: it runs and prints its usage (exit 2). Doing nothing and exiting 0 is the failure (production bug: its main-module check compared a resolved path with an unresolved one).
-Runs: node tests/test-contract-rows.mjs — "A12: run through a symlink, the script runs"
+Runs: node tools/component-contract/test-contract-rows.mjs — "A12: run through a symlink, the script runs"

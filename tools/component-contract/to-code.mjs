@@ -34,7 +34,7 @@ import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { cssName } from '../tokens/names.mjs';
-import { textStyleFields } from '../../skills/frontend-build/scripts/build-tokens.mjs';
+import { textStyleFields } from '../tokens/build-tokens.mjs';
 
 const require = createRequire(import.meta.url);
 const BANNER = "Generated from the component's contract by the toolkit's to-code. Do not edit: change Figma, snapshot, and this regenerates.";
