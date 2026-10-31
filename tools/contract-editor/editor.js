@@ -1155,7 +1155,12 @@ function seg(label, name, options, value, set) {
 }
 
 /* ── the stage ── */
+// A part being dragged on the stage is the stage's own node: drawn again under
+// the pointer, the drag would carry a node no longer on the page. A draw asked
+// for meanwhile waits for the drag's end.
+let stageHeld = false, stageOwed = false;
 function renderStage() {
+  if (stageHeld) { stageOwed = true; return; }
   const host = $('[data-stage]');
   syncSelection();
   const c = contractNow();
@@ -1337,7 +1342,9 @@ function stageDrag(e, key) {
     if (dragging === end) dragging = null;
     off();
     document.documentElement.removeAttribute('data-dragging');
-    if (!moving) return;
+    const owed = stageOwed;
+    stageHeld = stageOwed = false;
+    if (!moving) { if (owed) renderStage(); return; }
     const moved = source.parentElement !== home.box || source.nextElementSibling !== home.next;
     if (!commit || !moved) { slide(() => home.box.insertBefore(source, home.next)); land(() => renderParts()); return; }
     const box = source.parentElement, after = kids(box).filter((n) => n.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).pop() || null;
@@ -1365,6 +1372,7 @@ function stageDrag(e, key) {
   const onKey = (k) => { if (k.key === 'Escape' && moving) { k.preventDefault(); k.stopPropagation(); end(false); status('Drag cancelled.'); } };
   dragging?.(false);
   dragging = end;
+  stageHeld = true;
   const off = listen({ pointermove: onMove, pointerup: onUp, pointercancel: onCancel, keydown: onKey, blur: onCancel });
 }
 
