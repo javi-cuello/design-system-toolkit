@@ -32,8 +32,19 @@ const propsOf = (l) => {
 const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const plural = (n, one, many) => n.toLocaleString("en-US") + " " + (n === 1 ? one : many);
 
-export function render(scans, { scope } = {}) {
+export function render(scans, { scope, keys } = {}) {
   if (!scans.length) throw new Error("no scan given");
+  // --keys: every batch must have been handed the whole of the source's keys answer
+  if (keys) {
+    const want = { variables: (keys.variables || []).length, styles: (keys.styles || []).length };
+    scans.forEach((s, i) => {
+      const got = s.keysRead;
+      if (!got) throw new Error("batch " + (i + 1) + " carries no keysRead: re-run it with the current links.js");
+      if (got.variables !== want.variables || got.styles !== want.styles)
+        throw new Error("batch " + (i + 1) + " was handed " + got.variables + " variables and " + got.styles + " styles; the source's keys hold " +
+          want.variables + " and " + want.styles + ". Prepend the saved keys file whole and re-run it");
+    });
+  }
   const files = new Set(scans.map((s) => s.fileName));
   if (files.size > 1) throw new Error("the batches name different files (" + [...files].sort().join(", ") + "); re-run them in the intended file");
   const batches = [...new Map(scans.map((s) => [JSON.stringify(s), s])).values()];
@@ -83,7 +94,8 @@ export function render(scans, { scope } = {}) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
   const args = process.argv.slice(2), at = args.indexOf("--scope");
   const scope = at < 0 ? undefined : (args.splice(at, 2)[1] || "").split(",").map((p) => p.trim()).filter(Boolean);
-  if (!args.length || (scope && !scope.length)) { console.error("usage: node report.mjs [--scope <property>,…] <scan.json> [<scan.json> …]"); process.exit(2); }
-  try { process.stdout.write(render(args.map((p) => JSON.parse(readFileSync(p, "utf8"))), { scope })); }
+  const kat = args.indexOf("--keys"), keysFile = kat < 0 ? null : args.splice(kat, 2)[1];
+  if (!args.length || (scope && !scope.length) || (kat >= 0 && !keysFile)) { console.error("usage: node report.mjs [--keys <keys.json>] [--scope <property>,…] <scan.json> [<scan.json> …]"); process.exit(2); }
+  try { process.stdout.write(render(args.map((p) => JSON.parse(readFileSync(p, "utf8"))), { scope, keys: keysFile ? JSON.parse(readFileSync(keysFile, "utf8")) : undefined })); }
   catch (e) { console.error(e.message); process.exit(1); }
 }

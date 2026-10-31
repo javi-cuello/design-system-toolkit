@@ -82,6 +82,15 @@ ok("layer paths and the component are code spans, so <slot> or _private_ survive
   const row = render([p]).split("\n").find((l) => l.startsWith("| `p"));
   assert.match(row, /^\| `p › _Item_` \| review \| .* \| `<slot> › _private_` — fills \|/);
 });
+ok("--keys: batches handed the whole keys answer render as without it", () => assert.equal(render([b1, b2], { keys: KEYS }), out));
+ok("--keys: a batch handed a trimmed set is refused, naming both counts", () => {
+  const trimmed = scan([{ name: "Tag", id: "0:9", page: "❖ Tag", refs: [] }], { variables: KEYS.variables.slice(0, 1), styles: KEYS.styles });
+  assert.throws(() => render([b1, trimmed], { keys: KEYS }), /batch 2 was handed 1 variables and 1 styles; the source's keys hold 2 and 1/);
+});
+ok("--keys: a batch from before keysRead is refused, never trusted", () => {
+  const old = Object.assign({}, b1); delete old.keysRead;
+  assert.throws(() => render([old], { keys: KEYS }), /carries no keysRead/);
+});
 console.log(`${n} passed` + (failed ? `, ${failed} failed` : ""));
 if (failed) process.exit(1);
 
