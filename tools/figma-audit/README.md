@@ -277,7 +277,8 @@ connected, the project's service may still hold them: `GET /status` lists them, 
 `origin: http://localhost:<port>` runs the code in the file named; the value comes
 back at `result.result`. Each project's service has its own port (see its plist).
 `bin/audit` (`audit-session.mjs`) is that path for an audit with no API key, its components and foundations stages: the
-scanners through `/exec`, the session's judgement, then `/rows`, dry-run first.
+scanners through `/exec`, the session's judgement, then `/rows`, dry-run first. Its filing half (`--file`) is held by
+`test-session.mjs` on a real service over a scratch project; the scanning half needs a file open in Figma and is not run.
 
 ## Shared vs per-project — the thing to get right
 
