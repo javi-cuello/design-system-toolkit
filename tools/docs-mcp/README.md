@@ -61,9 +61,10 @@ It exits 1 on a finding. `test-validate.mjs` holds its rules.
 ## Test
 
     node smoke.mjs http://localhost:9232
+    node smoke.mjs <project home>/site      # a built site, served on a free port
 
 Starts the server as a client would, calls every tool, and fails on any error
-or empty answer, or when the page list misses the foundations or changes pages. Run it after changing the server or the API.
+or empty answer, or when the page list misses the foundations or changes pages. `bin/check` runs it on every project's built site; without this folder's packages it is a skip (exit 77), never a pass.
 
 ## Limits
 

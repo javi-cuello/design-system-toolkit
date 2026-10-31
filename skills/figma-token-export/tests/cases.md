@@ -1,5 +1,7 @@
 # Eval cases — figma-token-export (v2.10.1)
 
+**Walked: 2026-10-31 for 2.10.1, tests only** — A21 executed: `node tools/tokens/test-ts.mjs` 12/12; it found `verify-ts` blind inside a shadow's layers, fixed in `tools/tokens/verify-ts.mjs` (a tool, not this skill's files).
+
 **Walked: 2026-10-31 for 2.10.1** — no case changed; `node tools/toolkit-check/check-runs.mjs` clean.
 
 **Walked: 2026-10-31 for 2.10.0** — every case's `Runs:` line re-aimed at `tools/tokens/`: `node tools/tokens/test-dtcg.js` 107 passed, `node --test tools/tokens/test-from-snapshot.mjs` 12/12, `node tools/toolkit-check/check-runs.mjs` clean; the old `scripts/from-snapshot.mjs` with no arguments forwards and prints the usage, exit 2 (A22).
@@ -218,12 +220,12 @@ The refresh server this case walked is gone: it read the library live beside the
 
 Not walked.
 
-## A21 · A reference must never survive as a literal string
-Fixture: a layered shadow whose `$value` is an array of objects, each holding `{…}` references.
+## A21 · A reference must never survive as a literal string — *executed*
+Fixture: a layered shadow whose `$value` is an array of objects, each holding `{…}` references (`tools/tokens/test-ts.mjs`, written by `writeDtcg` from a snapshot shaped like the plugin's).
 Assert: every reference inside every layer is emitted as an expression into the owning module. The generator walks arrays, objects and scalars with one recursive function rather than special-casing composites.
-Assert also (negative): `verify-ts` fails when any leaf is still a `{a.b.c}` string, and fails when a whole token is missing — it resolves each token path from the JSON rather than counting leaves. Counting leaves with `>=` is unfalsifiable wherever composites exist: a shadow expands into several leaves, so deleting whole tokens still passes. Both checks were shown to fail against the defect that actually shipped under "51/51 passed".
+Assert also (negative): `verify-ts` fails when any leaf is still a `{a.b.c}` string, and fails when a whole token is missing — it resolves each token path from the JSON rather than counting leaves. Counting leaves with `>=` is unfalsifiable wherever composites exist: a shadow expands into several leaves, so deleting whole tokens still passes. Both checks were shown to fail against the defect that actually shipped under "51/51 passed". Run for the first time on 2026-10-31, the brace-text half did not fail: `verify-ts`'s leaf walk stopped at arrays, so a shadow layer's brace text and a layer's reference to nothing both passed. It walks arrays now.
 
-Not walked.
+Runs: node tools/tokens/test-ts.mjs — "a reference left as a literal string", "a reference inside a shadow layer pointed at nothing", "a whole token missing"
 
 ## A22 · A required argument has no default *(since 2.5.0 for `from-snapshot.mjs`; the refresh server's write endpoint is retired with it)*
 Fixture: `node tools/tokens/from-snapshot.mjs` with no output directory.

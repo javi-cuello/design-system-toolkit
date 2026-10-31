@@ -112,8 +112,12 @@ registered anywhere.
   and the service (`record.js`, `api.js`), the queue, audits, Ask, scores,
   measures, views, owner labels (`labels.js`, shared with the overview).
   `check.mjs` proves every name each module uses is declared, imported or a
-  browser global, and every import is exported.
+  browser global, and every import is exported. `test-dashboard-logic.mjs`
+  runs its pure parts on their own source (the score model, an audit's
+  closing words, the sweep's diff, a queue row's markup with a Figma name in
+  every field) and `test-dashboard-safety.mjs` what it does with text a file wrote.
 - `src/lib/` — reading the snapshot, the audit record and the project.
+  `test-lib.mjs` runs `format.js` (escaping, names on a page, dates).
 
 ## Not here yet
 

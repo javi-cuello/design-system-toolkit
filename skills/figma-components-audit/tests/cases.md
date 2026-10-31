@@ -1,5 +1,7 @@
 # Eval cases — figma-components-audit (v2.35.1)
 
+**Walked: 2026-10-31 for 2.35.1, tests only** — the sweep (`scanner/sweep.js`) had no test: `node tests/test-sweep.mjs` 10/10 runs it on the library slice through a stand-in `figma`, every set printed once and stably, a print moved by a binding, a rename, an option or a hidden layer and not by an unbound colour, and the project's page and section rules applied.
+
 **Walked: 2026-10-31 for 2.35.1** — `node tests/test-audit.mjs` 83/83, the two new assertions (guidance still owed, a private placeholder is hygiene) failing on 2.35.0.
 
 **Walked: 2026-10-31 for 2.35.0** — `node tests/test-audit.mjs` 81/81 (the placeholder assertions new), `node tests/test-probes.mjs` 48/48, `node tools/shared/test-colour.mjs` 13 and `test-names.mjs` 7 passed, `node tools/toolkit-check/test-paste-hash.mjs` 9/9; with audit.js's old `0.03928` back the colour test fails at the copy.

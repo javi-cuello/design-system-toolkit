@@ -1,5 +1,7 @@
 # Eval cases — frontend-build (v2.9.0)
 
+**Walked: 2026-10-31 for 2.9.0, tests only** — T6's writing half executable: `node tests/test-scaffold.mjs` 12/12 (every file written with its placeholders filled, a second run keeps all and overwrites a changed file never, a dry run writes nothing, a bad vendor or a folder with no `site/` refused). Compiling with `bin/css` and the gallery's 404 stay walks: they need the network and PHP.
+
 **Walked: 2026-10-31 for 2.9.0** — B1–B11's `Runs:` lines re-aimed: `node --test tools/tokens/test-build-tokens.mjs` 14/14; the forwarder exports the same six names; `node --test tests/test-sass-entry.mjs` 7/7.
 
 **Walked: 2026-10-31 for 2.8.1** — T6 re-run: the scaffold into a scratch root wrote 16 files, and `bin/css` installed sass 1.104.1 exactly, wrote `package-lock.json` and compiled `main.css`. Other cases unchanged.
@@ -146,6 +148,7 @@ Assert: a component is registered from its folder name alone; nothing in the plu
 Assert: a second run **writes nothing and reports what it kept**. It must never overwrite a file the project already has.
 Assert: `/design-system` serves the gallery only where the project's config sets `<vendor>.designsystem.gallery`; without it the routes are not registered at all and the URL 404s. A gallery that reflects query strings into snippets must not be reachable because someone forgot a flag.
 Walked live: 2026-08-27 — the scaffold run into a second Kirby site: the gallery served its component through the real snippet, a second run overwrote nothing, and removing the host config took `/design-system` to 404.
+Runs: node tests/test-scaffold.mjs — "the first run writes every file of the scaffold", "a second run writes nothing and names what it kept", "every placeholder is filled: no __PREFIX__ or __VENDOR__ is left in any file"
 
 ## T8 · The scaffold's components inherit the ring, the hairline and the dim — *executed*
 Fixture: a Kirby root with `site/`. Run `node scripts/scaffold-design-system.mjs --root <project> --vendor acme --prefix ds`, then compile `assets/design-system/index.sass` with Sass.

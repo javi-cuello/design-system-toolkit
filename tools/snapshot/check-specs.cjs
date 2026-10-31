@@ -66,5 +66,7 @@ if (require.main === module) {
   if (!dir) { console.error('usage: check-specs.cjs <components dir>'); process.exit(2); }
   const { specs, variants, full, bad } = checkSpecs(path.resolve(dir));
   console.log(`${specs} specs, ${variants} variants, ${full} full trees, the rest deltas`);
+  // nothing read is not clean (code-standard 30): an empty or missing folder passed as "0 specs" (2026-10-31)
+  if (!specs) { console.log(`  no spec in ${path.resolve(dir)}: nothing was checked`); process.exit(1); }
   if (bad.length) { console.log('  ' + bad.join('\n  ')); process.exit(1); }
 }

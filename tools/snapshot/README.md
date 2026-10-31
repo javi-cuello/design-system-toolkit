@@ -175,6 +175,7 @@ the project's legend.
 
     node --test test-payload.mjs test-spec.cjs test-router.mjs test-guidance.cjs test-changes.cjs
     node test-graph.cjs
+    node test-check-specs.cjs    # check-specs on a folder the store writes, each defect planted, and an empty folder failed
 
 ## What it writes, and what a project writes
 

@@ -46,9 +46,12 @@ for (const f of fs.readdirSync(TS).filter(f => f.endsWith('.ts')))
     .replace(/from '(\.[^']*?)'/g, (m, spec) => `from '${spec}.ts'`));
 const mod = await import(path.join(tmp, 'index.ts'));
 
+// Arrays are walked too: a layered shadow is an array of layers, and stopping at
+// it made the two leaf checks below pass a layer's brace text and a layer's
+// reference to nothing (A21's own fixture; tools/tokens/test-ts.mjs, 2026-10-31).
 const leaves = (o, into = []) => {
   for (const v of Object.values(o)) {
-    if (v !== null && typeof v === 'object' && !Array.isArray(v)) leaves(v, into); else into.push(v);
+    if (v !== null && typeof v === 'object') leaves(v, into); else into.push(v);
   }
   return into;
 };

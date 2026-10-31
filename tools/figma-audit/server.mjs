@@ -984,7 +984,7 @@ const server = createServer(async (req, res) => {
        * is `applyRows`'s job, and a stricter check here would reject the
        * migrations this route exists to allow.
        */
-      if (!next || typeof next !== "object" || Array.isArray(next) || !next.rows || typeof next.rows !== "object")
+      if (!next || typeof next !== "object" || Array.isArray(next) || !next.rows || typeof next.rows !== "object" || Array.isArray(next.rows))
         return json(res, 400, { ok: false, error: "that is not a record: a record is an object with a `rows` object" });
       await writeData(next, url.searchParams.get("lib"));
       return json(res, 200, { ok: true });
@@ -1403,6 +1403,10 @@ server.listen(PORT, "127.0.0.1", () => {
   let timer = null, building = false, again = false, retried = 0;
   const build = () => {
     if (building) { again = true; return; }
+    // The build reads this same layout: a project that does not resolve crashed every build, retried
+    // forever (test-routes, 2026-10-31). Said on /status, and tried again on the next change.
+    let now; try { now = contract.layout(null, label); } catch (e) { now = { error: e.message }; }
+    if (now.error) { lastBuildError = `not built: ${now.error}`; return; }
     building = true;
     const started = Date.now();
     const env = { ...process.env, DOCS_PROJECT: label };
