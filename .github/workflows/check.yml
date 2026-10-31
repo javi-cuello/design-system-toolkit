@@ -1,0 +1,52 @@
+# bin/check on every push and pull request, the way a stranger's clone runs it: Linux, no projects, no services.
+# It reports and never gates: main takes no required check, so the maintainer's direct pushes are not blocked,
+# and the pre-push hook stays the gate on the maintainer's machine.
+name: check
+
+# push on main only: a pull request's branch is checked once, by its pull_request run
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # bin/check clones this repo sparsely to run bin/get: it needs the history, not a shallow tip
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: pnpm, through corepack
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@12.16.1 --activate
+      - name: the docs site's packages, from its lockfile
+        run: |
+          cd tools/docs-site && pnpm install --frozen-lockfile
+      - name: let Chrome use its sandbox
+        # Ubuntu 24.04's AppArmor refuses the unprivileged user namespaces Chrome's sandbox needs
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: bin/check
+        env:
+          # an empty folder: every step of the toolkit has to run with no project in it
+          TOOLKIT_PROJECTS_ROOT: ${{ runner.temp }}/projects
+        run: |
+          mkdir -p "$TOOLKIT_PROJECTS_ROOT"
+          git config --global user.name check
+          git config --global user.email check@localhost
+          bin/check --no-fix

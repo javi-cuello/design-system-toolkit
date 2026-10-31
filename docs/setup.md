@@ -7,13 +7,13 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
 - Node 22.12 or later, pnpm, Google Chrome, and python3 (the Xcode Command Line Tools provide it);
 - the Figma desktop app;
 - Claude Code with the [figma-console MCP server](https://github.com/southleft/figma-console-mcp) and its Desktop Bridge plugin, for the skills that read or change a Figma file;
-- optionally, an Anthropic API key in `~/.figma-dashboard-key` (for the audit page's chat and judgement pass; see [tools/figma-audit](../tools/figma-audit/README.md)) and a Cloudflare account with `npx wrangler login` (to publish a docs site).
+- optionally, an Anthropic API key in `~/.figma-dashboard-key`, put there by `bin/set-key audit` on macOS (for the audit page's chat and judgement pass; see [tools/figma-audit](../tools/figma-audit/README.md)) and a Cloudflare account with `npx wrangler login` (to publish a docs site).
 
 1. **Clone and install.** Put the repo at `~/Projects/toolkit` (projects are found beside it, in `~/Projects/`), then:
 
    ```sh
    git clone https://github.com/javi-cuello/design-system-toolkit.git ~/Projects/toolkit && cd ~/Projects/toolkit
-   (cd tools/docs-site && pnpm install)    # the docs site's engine
+   (cd tools/docs-site && pnpm install --frozen-lockfile)  # the docs site's engine
    ./install.sh                            # checks the repo, links the skills into Claude Code, installs the services and the push hook
    ```
 
