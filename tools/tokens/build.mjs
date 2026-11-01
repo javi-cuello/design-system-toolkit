@@ -63,7 +63,7 @@ const tree = (root) => {
   if (existsSync(root)) walk(root);
   return out;
 };
-let built, files, dtcgBad = [];
+let built, files, dtcgBad = [], refused = false;
 try {
   built = writeDtcg(JSON.parse(readFileSync(P.tokens, 'utf8')), dtcg);
   files = await buildTokens(SD, { tokens: dtcg, out: P.styles, write: !check });
@@ -72,9 +72,14 @@ try {
     for (const [f, body] of want) if (have.get(f) !== body) dtcgBad.push(`${at}/${f} differs from what the token build writes`);
     for (const f of have.keys()) if (!want.has(f)) dtcgBad.push(`${at}/${f} is generated and nothing generates it any more`);
   }
+} catch (e) {
+  // writeDtcg's refusal (a reference no build resolves, a folder that is not an export) is one line, as from-snapshot.mjs prints it
+  if (!e?.refused) throw e;
+  console.error(e.message); refused = true;
 } finally {
   if (check) rmSync(dtcg, { recursive: true, force: true });
 }
+if (refused) process.exit(1);
 
 // A generated stylesheet the build no longer writes is stale; one it never
 // wrote (another generator's, a hand-written partial) is left alone.

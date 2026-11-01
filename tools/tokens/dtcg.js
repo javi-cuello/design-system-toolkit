@@ -574,6 +574,56 @@
     return { builds: builds };
   }
 
+  /* ---------- verification ---------- */
+
+  /* Every reference must resolve inside each manifest build that uses it,
+   * not merely somewhere in the export: a build is the set of files one Style
+   * Dictionary run reads, and a reference that resolves only in another
+   * build's sources is silent in Figma and fatal there. `files` maps a file
+   * name to its parsed tokens; a source the map does not hold is skipped.
+   * Returns { builds, dangling: [{ build, reference }], ok }. */
+  function tokenPaths(node, prefix, into) {
+    for (var k in node) {
+      if (k.charAt(0) === '$') continue;
+      var child = node[k];
+      if (!child || typeof child !== 'object') continue;
+      var p = prefix ? prefix + '.' + k : k;
+      if (child.$value !== undefined) into[p] = true; else tokenPaths(child, p, into);
+    }
+    return into;
+  }
+  function tokenRefs(node, into) {
+    for (var k in node) {
+      var child = node[k];
+      if (k === '$value') {
+        var stack = [child];
+        while (stack.length) {
+          var cur = stack.pop();
+          if (typeof cur === 'string') { var m = /^\{(.+)\}$/.exec(cur); if (m) into.push(m[1]); }
+          else if (cur && typeof cur === 'object') for (var j in cur) stack.push(cur[j]);
+        }
+      } else if (child && typeof child === 'object' && k.charAt(0) !== '$') tokenRefs(child, into);
+    }
+    return into;
+  }
+  function verifyReferences(files, manifest) {
+    var bad = [], seen = {};
+    for (var b = 0; b < manifest.builds.length; b++) {
+      var build = manifest.builds[b];
+      var defined = {}, used = [];
+      for (var s = 0; s < build.sources.length; s++) {
+        var f = files[build.sources[s]];
+        if (!f) continue;
+        tokenPaths(f, '', defined);
+        tokenRefs(f, used);
+      }
+      for (var u = 0; u < used.length; u++)
+        // one line per build and reference, however many tokens use it
+        if (!defined[used[u]] && !seen[build.name + '\u0000' + used[u]]) { seen[build.name + '\u0000' + used[u]] = true; bad.push({ build: build.name, reference: used[u] }); }
+    }
+    return { builds: manifest.builds.length, dangling: bad, ok: bad.length === 0 };
+  }
+
   var DTCG = {
     slug: slug, pathFor: pathFor, refFor: refFor,
     colorValue: colorValue, hexOf: hexOf, dimension: dimension,
@@ -583,7 +633,8 @@
     paintToken: paintToken, buildPaintStyles: buildPaintStyles, isOpacity: isOpacity,
     isLossy: isLossy, renamedSegments: renamedSegments,
     buildTextStyles: buildTextStyles, fileName: fileName,
-    buildFiles: buildFiles, buildManifest: buildManifest
+    buildFiles: buildFiles, buildManifest: buildManifest,
+    verifyReferences: verifyReferences
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = DTCG;

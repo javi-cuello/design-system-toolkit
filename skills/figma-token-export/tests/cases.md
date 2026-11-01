@@ -1,4 +1,6 @@
-# Eval cases — figma-token-export (v2.10.2)
+# Eval cases — figma-token-export (v2.11.0)
+
+**Walked: 2026-11-01 against v2.11.0** — A10 re-aimed at each build and executed; A32 added and executed. `node tools/tokens/test-dtcg.js` 109/109, `node --test tools/tokens/test-from-snapshot.mjs` 13/13 (A32 fails against 2.10.2, which wrote the files), `node tests/test-collect.mjs` 10/10 through the shared check. No other case's assertion changed.
 
 **Walked: 2026-10-31 against v2.10.2** — `node tests/test-collect.mjs` 10/10 on a stand-in library: aliases by collection and name, an unresolved alias recorded, `only`, bound text styles, an AUTO line height measured and its node removed, a font that does not load left AUTO, effect and paint bindings, a gradient's angle, the export handed over file by file with every reference resolved, and the errors before an export. No case's assertion changed; the SKILL's gate line now names the test.
 
@@ -17,6 +19,12 @@
 **Walked: 2026-10-01 for 2.7.0** — `test-dtcg.js` 105/105, with A19's two changed assertions (layer order, no `$extensions` mirror) shown failing against 2.6.2 first; `test-from-snapshot.mjs` 11/11.
 
 **Reviewed against v2.6.2 on 2026-09-30** — no case changed in substance; the project named in their evidence is Project B.
+
+## A32 · The snapshot export refuses a reference one build cannot resolve — *executed*
+Fixture: a primitive with a value in Light only, aliased by a single-mode collection that sits in every build (`tools/tokens/test-from-snapshot.mjs`).
+Assert: `writeDtcg` throws naming the count and each build and reference (`dark-desktop: {primitives-colour.palette.accent.9}`), and the folder stays empty. Across all files together the reference resolves, which is why a check over every module at once is not this one; on this fixture `verify-ts` does fail too, but as a TypeError stack after the files are written.
+
+Runs: node --test tools/tokens/test-from-snapshot.mjs — "a reference that resolves only in another manifest build is refused, nothing written"
 
 **Walked: 2026-09-19 for 2.6.0** — `test-from-snapshot.mjs` 11/11: the fixture now records its bindings, and a snapshot without them is refused (new). Real input: all four projects' snapshots carry `bound`; both repos regenerate byte-identical, Project B's export is identical, all four docs sites build.
 
@@ -109,12 +117,14 @@ Assert also (negative): an empty snapshot is reported as a wrong-file finding, n
 
 Walked live: 2026-08-18 — a four-collection, 12-mode, 565-variable library (fixture: `projects/project-b/`).
 
-## A10 · Every reference resolves in at least one build
-Fixture: a real multi-collection library with cross-collection aliases.
-Assert: `verifyReferences()` returns `dangling: []` and a build count matching the manifest. Observed clean over 1103 tokens.
-Assert also: the check runs over the **built files**, not the snapshot. A dangling reference is silent in Figma and fatal in Style Dictionary, so verifying intent rather than output would prove nothing.
+## A10 · Every reference resolves inside each build that reads it
+Fixture: a real multi-collection library with cross-collection aliases; executable, two builds whose shared file references a token only one build defines, nested in a shadow layer.
+Assert: `verifyReferences()` returns `dangling: []` and a build count matching the manifest. Observed clean over 1103 tokens. Executable: the reference missing from one build is reported against that build alone.
+Assert also: the check runs over the **built files**, not the snapshot. A dangling reference is silent in Figma and fatal in Style Dictionary, so verifying intent rather than output would prove nothing. The live path and the snapshot path run the same function, `DTCG.verifyReferences`.
 
 Walked live: 2026-08-18 — the same library: `verifyReferences()` clean over 1103 tokens in 14 files.
+
+Runs: node tools/tokens/test-dtcg.js — "a reference resolving only in another build is dangling in this one, nested values included"; node tests/test-collect.mjs — "every reference resolves"
 
 ## A11 · Collections sharing a mode-name set share one axis
 Fixture: three multi-mode collections — two carrying Light/Dark, one carrying an unrelated set.

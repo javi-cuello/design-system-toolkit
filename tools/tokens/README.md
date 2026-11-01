@@ -20,7 +20,7 @@ node ~/Projects/toolkit/tools/tokens/check.mjs --repo .            # the token g
 
 ## How it fits
 
-Both conversion steps live here, because every project's build runs them: snapshot → DTCG is `from-snapshot.mjs` over `dtcg.js` (which [figma-token-export](../../skills/figma-token-export/SKILL.md) also pastes into Figma for a live export), with `generate-ts.mjs` and `verify-ts.mjs` mirroring the result as TypeScript; DTCG → CSS and Sass is `build-tokens.mjs` ([frontend-build](../../skills/frontend-build/SKILL.md) explains it). Until 2026-10-31 they were those skills' scripts; the old `from-snapshot.mjs` and `build-tokens.mjs` paths forward here for one release. The snapshot router runs a project's `bin/tokens` after every snapshot ([tools/snapshot](../snapshot/README.md)).
+Both conversion steps live here, because every project's build runs them: snapshot → DTCG is `from-snapshot.mjs` over `dtcg.js` (which [figma-token-export](../../skills/figma-token-export/SKILL.md) also pastes into Figma for a live export), with `generate-ts.mjs` and `verify-ts.mjs` mirroring the result as TypeScript. `from-snapshot.mjs` writes nothing unless every reference resolves inside each manifest build: `dtcg.js`'s `verifyReferences(files, manifest)`, which the live export's `verifyReferences()` calls too. `verify-ts.mjs` loads every module at once, so it cannot see a reference that resolves only in another build's sources; DTCG → CSS and Sass is `build-tokens.mjs` ([frontend-build](../../skills/frontend-build/SKILL.md) explains it). Until 2026-10-31 they were those skills' scripts; the old `from-snapshot.mjs` and `build-tokens.mjs` paths forward here for one release. The snapshot router runs a project's `bin/tokens` after every snapshot ([tools/snapshot](../snapshot/README.md)).
 
 ## Test
 
@@ -28,6 +28,6 @@ Both conversion steps live here, because every project's build runs them: snapsh
 node --test tools/tokens/test-check.mjs        # needs a project repo beside the toolkit with Style Dictionary installed
 node --test tools/tokens/test-build-tokens.mjs # the CSS and Sass build
 node tools/tokens/test-dtcg.js                 # snapshot names and values → DTCG
-node --test tools/tokens/test-from-snapshot.mjs
+node --test tools/tokens/test-from-snapshot.mjs # the converter, and the per-build reference check
 node tools/tokens/test-ts.mjs                  # generate-ts and verify-ts, each defect verify-ts exists for
 ```

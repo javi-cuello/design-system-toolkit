@@ -328,6 +328,22 @@ eq('colour styles get their own folder and a single-mode axis', withPaints.files
 var optedOut = DTCG.buildFiles({ collections: [], paintStyles: [], paintStyleCount: 4 }, {});
 ok('opting out is reported with the count', optedOut.report.notExported.some(function (n) { return /colour styles/.test(n.what) && n.count === 4; }), optedOut.report);
 
+/* ---- verifyReferences: each reference resolves inside each build that reads it ---- */
+var vfiles = {
+  'prim/light.json': { prim: { a: { $type: 'color', $value: '#000000' }, b: { $type: 'color', $value: '#111111' } } },
+  'prim/dark.json': { prim: { a: { $type: 'color', $value: '#ffffff' } } },
+  'sem/value.json': { sem: { x: { $type: 'color', $value: '{prim.a}' }, y: { $type: 'shadow', $value: [{ color: '{prim.b}' }] } } }
+};
+var vman = { builds: [{ name: 'light', sources: ['prim/light.json', 'sem/value.json'] }, { name: 'dark', sources: ['prim/dark.json', 'sem/value.json'] }] };
+var vr = DTCG.verifyReferences(vfiles, vman);
+eq('a reference resolving only in another build is dangling in this one, nested values included', vr,
+  { builds: 2, dangling: [{ build: 'dark', reference: 'prim.b' }], ok: false });
+vfiles['prim/dark.json'].prim.b = { $type: 'color', $value: '#eeeeee' };
+eq('resolved in every build is ok', DTCG.verifyReferences(vfiles, vman), { builds: 2, dangling: [], ok: true });
+var twice = { 'p/value.json': { p: { a: { $type: 'color', $value: '#000000' } } }, 's/value.json': { s: { x: { $type: 'color', $value: '{p.z}' }, y: { $type: 'color', $value: '{p.z}' } } } };
+eq('a reference used by many tokens is one line per build', DTCG.verifyReferences(twice, { builds: [{ name: 'one', sources: ['p/value.json', 's/value.json'] }, { name: 'two', sources: ['p/value.json', 's/value.json'] }] }).dangling,
+  [{ build: 'one', reference: 'p.z' }, { build: 'two', reference: 'p.z' }]);
+
 ok('the sandbox copy of the weight table is the parity engine\'s one table, name for name', JSON.stringify(DTCG.WEIGHTS) === JSON.stringify(require('../parity/values.mjs').WEIGHTS));
 ok('a weight reads hyphenated, spaced or run together', DTCG.fontWeight('Demi-Bold') === 600 && DTCG.fontWeight('Extra Black') === 950 && DTCG.fontWeight('toString') === null);
 

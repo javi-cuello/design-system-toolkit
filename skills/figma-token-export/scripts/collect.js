@@ -250,52 +250,16 @@
   }
 
   /* Verification, run against the built files rather than the intent: every
-   * reference must resolve inside at least one manifest build. A dangling
-   * reference is silent in Figma and fatal in Style Dictionary. */
+   * reference must resolve inside each manifest build. The check itself is
+   * DTCG.verifyReferences (tools/tokens/dtcg.js), the one the snapshot path
+   * runs too; this reads the export's cache into it. */
   function verifyReferences() {
+    need();
     var cache = globalThis.__TOKEN_EXPORT__;
     if (!cache) throw new Error('Run exportTokens() first');
     var parsed = {};
     for (var name in cache.index) parsed[name] = JSON.parse(cache.index[name]);
-
-    function paths(node, prefix, into) {
-      for (var k in node) {
-        if (k.charAt(0) === '$') continue;
-        var child = node[k];
-        if (!child || typeof child !== 'object') continue;
-        var p = prefix ? prefix + '.' + k : k;
-        if (child.$value !== undefined) into[p] = true; else paths(child, p, into);
-      }
-      return into;
-    }
-    function refs(node, into) {
-      for (var k in node) {
-        var child = node[k];
-        if (k === '$value') {
-          var stack = [child];
-          while (stack.length) {
-            var cur = stack.pop();
-            if (typeof cur === 'string') { var m = /^\{(.+)\}$/.exec(cur); if (m) into.push(m[1]); }
-            else if (cur && typeof cur === 'object') for (var j in cur) stack.push(cur[j]);
-          }
-        } else if (child && typeof child === 'object' && k.charAt(0) !== '$') refs(child, into);
-      }
-      return into;
-    }
-
-    var bad = [];
-    for (var b = 0; b < cache.manifest.builds.length; b++) {
-      var build = cache.manifest.builds[b];
-      var defined = {}, used = [];
-      for (var s = 0; s < build.sources.length; s++) {
-        if (!parsed[build.sources[s]]) continue;
-        paths(parsed[build.sources[s]], '', defined);
-        refs(parsed[build.sources[s]], used);
-      }
-      for (var u = 0; u < used.length; u++)
-        if (!defined[used[u]]) bad.push({ build: build.name, reference: used[u] });
-    }
-    return { builds: cache.manifest.builds.length, dangling: bad, ok: bad.length === 0 };
+    return DTCG.verifyReferences(parsed, cache.manifest);
   }
 
   globalThis.snapshotVariables = snapshotVariables;

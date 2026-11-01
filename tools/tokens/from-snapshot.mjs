@@ -4,8 +4,10 @@
  *
  *   node tools/tokens/from-snapshot.mjs <tokens.json | downloaded snapshot.json> <out-dir>
  *
- * Writes the collection folders and manifest, then the TypeScript modules
- * (generate-ts, into <out-dir>/dist/ts) and checks them (verify-ts). This is
+ * Checks that every reference resolves inside each manifest build (refusing
+ * to write otherwise), writes the collection folders and manifest, then the
+ * TypeScript modules (generate-ts, into <out-dir>/dist/ts) and checks them
+ * (verify-ts). This is
  * the export's one refresh: a live refresh server was retired in 2.5.0 because
  * it read the library a second time, beside the snapshot every other output
  * reads.
@@ -173,12 +175,21 @@ export function writeDtcg(tokens, dir, opts = {}) {
     };
     walk(f.tokens, []);
   }
+  // Every reference must resolve inside each manifest build, checked before a
+  // file is written: verify-ts resolves across every module at once, so a
+  // reference that resolves only in another build's sources passed it and
+  // failed in Style Dictionary. A refused export leaves the last one in place.
+  const refs = DTCG.verifyReferences(Object.fromEntries(built.files.map((f) => [f.name, f.tokens])), built.manifest);
+  if (!refs.ok) {
+    const list = refs.dangling.slice(0, 10).map((d) => `${d.build}: {${d.reference}}`).join('; ');
+    throw Object.assign(new Error(`${refs.dangling.length} reference(s) do not resolve inside their manifest build, nothing written: ${list}${refs.dangling.length > 10 ? '; …' : ''}`), { refused: true });
+  }
   // Refuse a folder this export did not write: a wrong --out would otherwise
   // delete whatever it names. In one it did write, only what an export owns is
   // replaced (the manifest and the collection folders, which hold nothing but
   // mode files); a README, a .gitignore and dist/ beside them stay.
   if (existsSync(dir) && readdirSync(dir).length && !existsSync(join(dir, 'manifest.json')))
-    throw new Error(`${dir} is not empty and holds no manifest.json: not a token export, not deleting it`);
+    throw Object.assign(new Error(`${dir} is not empty and holds no manifest.json: not a token export, not deleting it`), { refused: true });
   if (existsSync(dir)) {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const at = join(dir, e.name);
@@ -207,7 +218,9 @@ if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.m
   if (!src || !dir) { console.error('usage: from-snapshot.mjs <tokens.json | downloaded snapshot.json> <out-dir>'); process.exit(2); }
   // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
   const readJson = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
-  const built = writeDtcg(tokensOf(readJson(src)), dir);
+  let built;
+  // a refusal is one line; anything else is a bug and keeps its stack
+  try { built = writeDtcg(tokensOf(readJson(src)), dir); } catch (e) { if (!e?.refused) throw e; console.error(e.message); process.exit(1); }
   const r = built.report;
   console.log(`${built.files.length} files → ${dir}`);
   for (const k of ['skipped', 'warnings', 'renamed']) if ((r[k] || []).length) console.log(`  ${k}: ${r[k].length} (${r[k].slice(0, 3).map((x) => x.name).join(', ')}${r[k].length > 3 ? ', …' : ''})`);

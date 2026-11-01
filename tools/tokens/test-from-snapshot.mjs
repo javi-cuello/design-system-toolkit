@@ -2,7 +2,7 @@
 // plugin's. Run: node --test tools/tokens/test-from-snapshot.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { figmaRgba, toDtcgSnapshot, writeDtcg, tokensOf } from './from-snapshot.mjs';
@@ -144,4 +144,16 @@ test('a file the plugin downloaded reads as its tokens, a stored tokens.json as 
   const tokens = { _meta: { file: 'Library' }, collections: {} };
   assert.equal(tokensOf({ kind: 'library', tokens, components: [] }), tokens);
   assert.equal(tokensOf(tokens), tokens);
+});
+
+test('a reference that resolves only in another manifest build is refused, nothing written', () => {
+  const s = snapshot();
+  // The primitive exists in Light only; a single-mode collection aliasing it
+  // sits in every build, so the dark builds cannot resolve it. Across all files
+  // together it resolves, which is what verify-ts sees.
+  s.collections['Primitives - Colour'].values.Light['Palette/Accent/9'] = '#0055ff';
+  s.collections.Brand = { modes: ['Value'], values: { Value: { 'Accent/base': '#0055ff' } }, alias: { Value: { 'Accent/base': 'Palette/Accent/9' } } };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  assert.throws(() => writeDtcg(s, dir), /2 reference\(s\) do not resolve inside their manifest build, nothing written: dark-desktop: \{primitives-colour\.palette\.accent\.9\}; dark-mobile: /);
+  assert.deepEqual(readdirSync(dir), [], 'a refused export writes nothing');
 });
