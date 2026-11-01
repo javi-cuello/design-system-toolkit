@@ -947,11 +947,14 @@ test('tokens: a same-named collection or style from another source is warned of,
   const said = clashes(store.writeLibrary(own('Y', 'Shared', styles), P));
   for (const [noun, name] of [['collection', 'Shared'], ['text style', 'Body'], ['paint style', 'Brand'], ['effect style', 'Raised']])
     assert.ok(said.some((l) => new RegExp(noun).test(l.text) && l.detail.some((d) => d.startsWith(name + ' — also owned by '))), `a ${noun} another source owns under the same name is warned of`);
-  // Y wrote Shared last, so the one copy is Y's. Y drops it: it goes, though X still lists it,
-  // since keeping it would serve Y's deleted values as X's; X's next write restores X's own.
-  store.writeLibrary(own('Y', 'Mine'), P);
+  // Y wrote Shared last, so the shown copy is Y's and X's is kept under `shared`.
   let t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
-  assert.ok(!('Shared' in t.collections) && 'Mine' in t.collections, 'a name the last writer drops goes, even while another source lists it');
+  assert.ok(t.shared && t.shared.Shared && t.shared.Shared.X, "the other source's copy of a shared name is kept under shared, by source");
+  assert.deepEqual(Object.keys(t.shared.Shared), ['X'], "and the last writer's own copy is not kept twice");
+  // Y drops it: X's copy takes its place, never Y's deleted values served as X's.
+  store.writeLibrary(own('Y', 'Mine'), P);
+  t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.ok('Shared' in t.collections && 'Mine' in t.collections && !t.shared, "a name the last writer drops shows the other source's kept copy, and shared empties");
   const back = own('X', 'Shared'); back.tokens.collections.Shared.values['Mode 1'] = { x: 2 };
   store.writeLibrary(back, P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
@@ -966,6 +969,38 @@ test('tokens: a same-named collection or style from another source is warned of,
   store.writeLibrary(at(own('X', 'Mine'), '2026-09-18'), P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
   assert.equal(t.collections.Shared && t.collections.Shared.values['Mode 1'].x, 7, "a file that did not write a shared name last dropping it leaves the other's copy");
+  // Each copy is its own source's values, and a rewrite of the same content moves nothing.
+  P = fresh();
+  const v = (l, x) => ((l.tokens.collections.Shared.values['Mode 1'] = { x }), l);
+  store.writeLibrary(v(own('X', 'Shared'), 3), P);
+  store.writeLibrary(v(own('Y', 'Shared'), 4), P);
+  t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.equal(t.collections.Shared.values['Mode 1'].x, 4, "the shown copy is the last writer's values");
+  assert.equal(t.shared.Shared.X.values['Mode 1'].x, 3, "and the kept copy is the other source's own values");
+  const raw = fs.readFileSync(P.tokens, 'utf8');
+  store.writeLibrary(v(own('Y', 'Shared'), 4), P);
+  assert.equal(fs.readFileSync(P.tokens, 'utf8'), raw, 'the same content written again leaves the file byte for byte');
+  store.writeLibrary(v(own('X', 'Shared'), 3), P);
+  t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.equal(t.collections.Shared.values['Mode 1'].x, 3, 'the other source writing again shows its copy');
+  assert.equal(t.shared.Shared.Y.values['Mode 1'].x, 4, "and keeps the one it replaced as that source's");
+  // A writer that moved (no routed file claims it) gives way to the live source's copy.
+  P = fresh();
+  store.writeLibrary(v(own('X', 'Shared'), 3), P, { ids: ['X'], files: [['X'], ['OLD']] });
+  store.writeLibrary(v(own('OLD', 'Shared'), 9), P, { ids: ['OLD'], files: [['X'], ['OLD']] });
+  store.writeLibrary(own('NEW', 'Other'), P, { ids: ['NEW'], files: [['X'], ['NEW']] });
+  t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.equal(t.collections.Shared.values['Mode 1'].x, 3, "a moved file's copy of a shared name is replaced by the live source's kept one");
+  assert.ok(!t.shared, 'and nothing of the moved file is kept');
+  // A moved writer with no live copy kept (a store from before `shared`): its copy goes,
+  // never shown, nor later kept, as the live owner's (2026-11-01 review).
+  const coll = (x) => ({ Colors: { modes: ['Mode 1'], values: { 'Mode 1': { x } }, alias: {} } });
+  const inc = (file, collections) => ({ _meta: { file, fileId: file, snapshot: '2026-11-01' }, collections, textStyles: [], paintStyles: [], effects: [] });
+  const legacy = { _meta: { sources: { A: { file: 'FA', owns: { collections: ['Colors'] } }, X: { file: 'FX', seq: 5, owns: { collections: ['Colors'] } } } }, collections: coll('X'), textStyles: [], paintStyles: [], effects: [] };
+  let m = store.mergeTokens(legacy, inc('C', { Other: coll('C').Colors }), { ref: 'C', orphan: (k) => k === 'X' });
+  assert.ok(!('Colors' in m.collections), "a moved writer's copy with none kept for the live owner goes");
+  m = store.mergeTokens(m, inc('D', coll('D')), { ref: 'D' });
+  assert.ok(!m.shared, "so a later write never keeps the moved file's values as the live owner's");
 });
 
 test('tokens: the canonical shape, and a style a file deletes is gone from the store, while another file\'s stays', async () => {

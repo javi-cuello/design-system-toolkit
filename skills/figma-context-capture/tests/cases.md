@@ -1,6 +1,6 @@
 # Eval cases — figma-context-capture (v2.12.0)
 
-**Walked: 2026-11-01 for 2.12.1** — C17 re-executed after its first live run: `node tests/test-passes.mjs` 75/75. Over a project's library (its own source, four local collections, no library collection) pass C had returned an empty audit block with exit 0; it now reads the locals as the library named `file` and derives spacing 0–88 (48 missing) and radius 0–24 and 999, and an output with nothing read is null with the reason. Before that, **Walked: 2026-11-01 for 2.12.0** — C17 added and executed: `node tests/test-passes.mjs` 73/73, its 26 assertions among them. With the sort dropped from `pass-c-scales.mjs`, the gap assertion fails; with the audit block fed name steps, the px one; with the first snapshot source taken for any library, the own-library one; with an empty kind kept, the `[]` one. Not walked live: the script has met only the fixture's pass C output. Other cases unchanged.
+**Walked: 2026-11-01 for 2.12.2** — C17 re-executed: `node tests/test-passes.mjs` 78/78; its three new assertions read a shared name from the library's kept copy, from the shown one, and from the latest of two entries for one file. Before that, **Walked: 2026-11-01 for 2.12.1** — C17 re-executed after its first live run: `node tests/test-passes.mjs` 75/75. Over a project's library (its own source, four local collections, no library collection) pass C had returned an empty audit block with exit 0; it now reads the locals as the library named `file` and derives spacing 0–88 (48 missing) and radius 0–24 and 999, and an output with nothing read is null with the reason. Before that, **Walked: 2026-11-01 for 2.12.0** — C17 added and executed: `node tests/test-passes.mjs` 73/73, its 26 assertions among them. With the sort dropped from `pass-c-scales.mjs`, the gap assertion fails; with the audit block fed name steps, the px one; with the first snapshot source taken for any library, the own-library one; with an empty kind kept, the `[]` one. Not walked live: the script has met only the fixture's pass C output. Other cases unchanged.
 
 **Walked: 2026-11-01 for 2.11.4** — no case changed: pass F no longer profiles the properties table (it wrote plugin data; the skill is read-only); no case asserts the profile, and A15 of figma-properties-table still holds the error half.
 
@@ -193,6 +193,6 @@ Recorded under toolkit-standard §D 23: pass C's scales, grammar and spelling we
 - read a value from any collection of that name;
 - read one mode only;
 - wrote `[]`, which ended the components audit (its case A130);
-- trusted a collection two sources own, of which the store keeps one copy, and gave an empty block for the wrong store.
+- trusted a collection two sources own, of which the store then kept one copy, and gave an empty block for the wrong store (now each library's own copy is read, `shared`).
 
 Runs: node tests/test-passes.mjs — "pass C scales: a step named late among many is in the scale, not a gap", "pass C scales: a name is looked up only in its own collection of its own library", "pass C scales: a kind with no values is left out of the audit block, never []".

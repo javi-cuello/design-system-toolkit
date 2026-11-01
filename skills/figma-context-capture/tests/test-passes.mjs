@@ -114,10 +114,18 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   ok('pass C scales: a name is looked up only in its own collection of its own library', JSON.stringify(t2.audit.spacing) === '[16,32]' && JSON.stringify(t2.notInSnapshot.map((x) => [x.key, /not of/.test(x.why) ? 'library' : 'collection'])) === '[["kb","library"],["kx","collection"]]');
   ok('pass C scales: a kind with no values is left out of the audit block, never []', !('radius' in t2.audit));
 
-  // the store keeps one copy of a name two sources own: which library's is unknowable, so neither is read
+  // a store from before `shared` (no seq, no kept copy): which library's the one copy is is unknowable, so neither is read
   const both = { _meta: { sources: { A: { file: 'Foundations', owns: { collections: ['Core'] } }, B: { file: 'Brand kit', owns: { collections: ['Core'] } } } }, collections: { Core: one({ 'Spacing/4': 4, 'Spacing/8': 8 }) } };
   const t3 = scales({ collections: [{ key: 'kc', name: 'Core', library: 'Foundations', names: [] }] }, both);
   ok('pass C scales: a collection more than one source owns is not read, and says why', t3.scales.length === 0 && /more than one source/.test(t3.notInSnapshot[0].why) && /shared ownership/.test(t3.auditWhy));
+  // with `seq` and `shared` (the store from snapshot's shared copies): each library reads its own copy
+  const kept = { _meta: { sources: { A: { file: 'Foundations', seq: 1, owns: { collections: ['Core'] } }, B: { file: 'Brand kit', seq: 2, owns: { collections: ['Core'] } } } }, collections: { Core: one({ 'Spacing/4': 40, 'Spacing/8': 80 }) }, shared: { Core: { A: one({ 'Spacing/4': 4, 'Spacing/8': 8 }) } } };
+  const read = (library) => scales({ collections: [{ key: 'kc', name: 'Core', library, names: [] }] }, kept).audit;
+  ok('pass C scales: a shared name is read from the library\'s own kept copy', JSON.stringify(read('Foundations').spacing) === '[4,8]');
+  ok('pass C scales: and from the shown copy when the library wrote it last', JSON.stringify(read('Brand kit').spacing) === '[40,80]');
+  // one file name under two entries (a moved file before routing settles): the latest entry's copy, not the older kept one
+  const moved = { _meta: { sources: { OLD: { file: 'Lib', seq: 1, owns: { collections: ['Core'] } }, NEW: { file: 'Lib', seq: 2, owns: { collections: ['Core'] } } } }, collections: { Core: one({ 'Spacing/4': 4, 'Spacing/8': 8 }) }, shared: { Core: { OLD: one({ 'Spacing/4': 99, 'Spacing/8': 98 }) } } };
+  ok('pass C scales: of two entries for one library, the last writer\'s shown copy wins over an older kept one', JSON.stringify(scales({ collections: [{ key: 'kc', name: 'Core', library: 'Lib', names: [] }] }, moved).audit.spacing) === '[4,8]');
   const split = { _meta: { sources: { A: { file: 'Foundations', owns: { collections: ['Other'] } }, B: { file: 'Foundations', owns: { collections: ['Core'] } } } }, collections: { Core: one({ 'Spacing/4': 4, 'Spacing/8': 8 }), Other: one({}) } };
   ok('pass C scales: every source with the library\'s file name is considered, not the first', JSON.stringify(scales({ collections: [{ key: 'kc', name: 'Core', library: 'Foundations', names: [] }] }, split).audit.spacing) === '[4,8]');
   const wrong = scales({ collections: [{ key: 'kc', name: 'Core', library: 'Renamed library', names: [] }] }, src({ Core: one({ 'Spacing/4': 4 }) }));

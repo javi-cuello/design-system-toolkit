@@ -186,8 +186,41 @@ function mergeTokens(before, incoming, { iconSets = [], iconPage = null, iconGro
   const laterOwner = (k, name) => Object.entries(sources).some(([s, v]) => s !== id && v && v.owns && (v.owns[k] || []).includes(name) && (v.seq || 0) > ((earlier && earlier.seq) || 0));
   const dropped = (k, name) => (was && (was[k] || []).includes(name) && !owns[k].includes(name) && !laterOwner(k, name))
     || (moved.length > 0 && ownedBy(moved.map((m) => stored[m]), k).has(name) && !live(k).has(name));
-  const collections = Object.fromEntries(Object.entries(before.collections || {}).filter(([c]) => !dropped('collections', c)));
+  // A collection name two sources own has two copies. `collections` holds the
+  // last writer's, the name-keyed view every reader takes; `shared[name][source]`
+  // holds each other source's, so pass C can read a library's own values and a
+  // copy the last writer drops is replaced by another's, not lost. The stored
+  // copy's writer is the owner with the highest `seq`; a tie (entries from before
+  // `seq`) names no one, and that copy is kept nowhere else: another source writing
+  // the name replaces it, as before `shared`.
+  const self = (k) => k === id || alias.has(k);
+  const writerOf = (name) => {
+    const owners = Object.entries(stored).filter(([, v]) => v && v.owns && (v.owns.collections || []).includes(name));
+    const top = Math.max(-1, ...owners.map(([, v]) => v.seq || 0));
+    const at = owners.filter(([, v]) => (v.seq || 0) === top);
+    return at.length === 1 ? at[0][0] : null;
+  };
+  const owner = (s, name) => !self(s) && sources[s] && !moved.includes(s) && ((sources[s].owns && sources[s].owns.collections) || []).includes(name);
+  const shared = {};
+  for (const [name, copies] of Object.entries(before.shared || {}))
+    for (const [s, c] of Object.entries(copies)) if (owner(s, name)) (shared[name] = shared[name] || {})[s] = c;
+  for (const name of Object.keys(incoming.collections || {})) {
+    const w = (before.collections || {})[name] && writerOf(name);
+    if (w && owner(w, name)) (shared[name] = shared[name] || {})[w] = before.collections[name];
+  }
+  // The copy shown for a name whose stored one is going: the latest other source's.
+  const heir = (name) => Object.keys(shared[name] || {}).sort((a, b) => (sources[b].seq || 0) - (sources[a].seq || 0))[0];
+  const collections = {};
+  for (const [c, v] of Object.entries(before.collections || {})) {
+    const w = writerOf(c);
+    const going = dropped('collections', c) || (w && moved.includes(w));
+    const h = going && heir(c);
+    // a moved writer's copy with no live one kept goes: kept, a later write would file it as the live owner's
+    if (h) { collections[c] = shared[c][h]; delete shared[c][h]; } else if (!going) collections[c] = v;
+  }
   const merged = { ...canonical(before), collections: { ...collections, ...(incoming.collections || {}) } };
+  const kept = Object.keys(shared).filter((n) => n in merged.collections && Object.keys(shared[n]).length).sort();
+  if (kept.length) merged.shared = Object.fromEntries(kept.map((n) => [n, Object.fromEntries(Object.keys(shared[n]).sort().map((s) => [s, sortCollection(shared[n][s])]))]));
   for (const key of OWNED) {
     const m = byName((before[key] || []).filter((x) => !dropped(key, x.name)));
     for (const x of incoming[key] || []) m.set(x.name, x);
@@ -1075,8 +1108,9 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   // Tokens, with what the rest of the loop reads off them: the components and
   // icon sets the library names, and a stamp that moves only with content.
   // Collections and styles merge by name, so one another source file already
-  // owns under this name is replaced by this file's: the store keeps one copy,
-  // and both sources still list it in `owns`. Said, never silent. "Another"
+  // owns under this name is replaced by this file's in the name-keyed view
+  // (a collection's other copy is kept under `shared`; a style's is not), and
+  // both sources still list it in `owns`. Said, never silent. "Another"
   // is judged as mergeTokens judges it: every identity this file answers to is
   // this file, and a source no routed file claims (a moved file, before routing
   // has settled too) is not another file: the warning deletes nothing, so it need not wait.
@@ -1085,7 +1119,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const KINDS = [['collections', 'collection', Object.keys(p.tokens.collections || {})], ...OWNED.map((k) => [k, { textStyles: 'text style', paintStyles: 'paint style', effects: 'effect style' }[k], (p.tokens[k] || []).map((x) => x.name)])];
   for (const [k, noun, names] of KINDS) {
     const shared = names.map((c) => [c, otherSources.filter(([, s]) => s && s.owns && (s.owns[k] || []).includes(c)).map(([id, s]) => s.file || id)]).filter(([, by]) => by.length);
-    if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store keeps one copy, this file's`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
+    if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store shows this file's copy${k === 'collections' ? " and keeps the other's under shared" : ', the other\'s is not kept'}`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
   }
   const tokens = mergeTokens(tokensBefore, p.tokens, { iconSets: p.iconSets || [...new Set(p.icons.map((i) => i.name))], iconPage: p.iconPage || null, iconGroups: p.iconGroups || null, iconDescriptions: p.iconDescriptions || null, icons: p.icons, ref: fileRef, ids: [...thisFile], orphan });
   const { _meta: m, ...content } = tokens;

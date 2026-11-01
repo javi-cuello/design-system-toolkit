@@ -85,7 +85,9 @@ const kindOf = (family) => {
 // The snapshot collection pass C's collection is, or why there is none. The join is by file name: pass C's
 // library read gives only `libraryName`, the library file's name, never its key, so the source whose `file`
 // equals it is the library's (a renamed library file breaks the join until it is snapshotted again). The store
-// merges every source's collections by name and keeps one copy, so a name two sources own may hold either's.
+// merges every source's collections by name: `collections` shows the last writer's copy of a name two sources
+// own (the owner with the highest `seq`), and `shared[name][source]` keeps each other source's. A store from
+// before `shared`, or a tie on `seq`, names no copy as the library's, and the name is reported, not guessed.
 const filesOf = (tokens) => { const m = tokens._meta || {}; return m.sources ? Object.values(m.sources).map((s) => s && s.file).filter(Boolean) : m.file ? [m.file] : []; };
 function snapshotOf(tokens, c) {
   const meta = tokens._meta || {}, entry = (tokens.collections || {})[c.name];
@@ -94,8 +96,17 @@ function snapshotOf(tokens, c) {
   const owners = sources ? sources.filter((s) => s.file === c.library) : meta.file === c.library ? [{ owns: { collections: Object.keys(tokens.collections || {}) } }] : [];
   if (!owners.length) return { why: "the snapshot is not of " + JSON.stringify(c.library) + "; its source files are " + (filesOf(tokens).map((f) => JSON.stringify(f)).join(", ") || "unnamed") };
   if (!entry || !owners.some((o) => ((o.owns && o.owns.collections) || []).includes(c.name))) return { why: JSON.stringify(c.library) + "'s snapshot holds no collection " + JSON.stringify(c.name) };
-  if (sources && sources.filter((s) => s.owns && (s.owns.collections || []).includes(c.name)).length > 1)
-    return { shared: true, why: JSON.stringify(c.name) + " is owned by more than one source; the store keeps one copy, which may be another library's" };
+  const named = meta.sources ? Object.entries(meta.sources).filter(([, s]) => s && s.owns && (s.owns.collections || []).includes(c.name)) : [];
+  if (named.length > 1) {
+    // the library's latest source first: two entries of one file name (a moved file before routing settles)
+    const mine = named.filter(([, s]) => s.file === c.library).sort(([, a], [, b]) => (b.seq || 0) - (a.seq || 0)).map(([k]) => k);
+    const top = Math.max(...named.map(([, s]) => s.seq || 0)), last = named.filter(([, s]) => (s.seq || 0) === top);
+    if (last.length === 1 && mine.includes(last[0][0])) return { entry };
+    const kept = ((tokens.shared || {})[c.name]) || {};
+    const own = mine.find((k) => kept[k]);
+    if (own) return { entry: kept[own] };
+    return { shared: true, why: JSON.stringify(c.name) + " is owned by more than one source and the store names no copy as " + JSON.stringify(c.library) + "'s (a snapshot from before `shared`: snapshot the library again)" };
+  }
   return { entry };
 }
 
@@ -165,7 +176,7 @@ export function scales(passC, tokens = null) {
     // nothing matched: the wrong store, or a renamed library. An empty block would read as "no scale found".
     out.audit = null;
     out.auditWhy = out.notInSnapshot.every((x) => x.shared)
-      ? "every collection of pass C is in shared ownership: more than one source owns its name, and the store keeps one copy"
+      ? "every collection of pass C is in shared ownership: more than one source owns its name, and the store names no copy as the library's"
       : "no collection of pass C is in this snapshot; its source files are " + (filesOf(tokens).map((f) => JSON.stringify(f)).join(", ") || "unnamed");
   } else if (tokens) {
     out.audit = {};
