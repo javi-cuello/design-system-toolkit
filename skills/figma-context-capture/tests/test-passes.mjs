@@ -54,15 +54,16 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
 // ── pass C ───────────────────────────────────────────────────────────────────
 {
   const big = Array.from({ length: 401 }, (_, i) => ({ name: 'Spacing/' + i }));
-  const lib = { teamLibrary: {
+  const lib = { root: { name: 'Web Components' }, teamLibrary: {
     getAvailableLibraryVariableCollectionsAsync: async () => [{ key: 'k1', name: 'Spacing', libraryName: 'Foundations' }, { key: 'k2', name: 'Colour', libraryName: 'Foundations' }],
     getVariablesInLibraryCollectionAsync: async (key) => key === 'k1' ? big : [{ name: 'Background/Primary' }]
-  }, variables: { getLocalVariableCollectionsAsync: async () => [{ id: 'VariableCollectionId:1', name: 'Collection 1', modes: [{}, {}] }] } };
+  }, variables: { getLocalVariableCollectionsAsync: async () => [{ id: 'VariableCollectionId:1', name: 'Collection 1', modes: [{}, {}] }],
+    getLocalVariablesAsync: async () => [{ name: 'Spacing/4', variableCollectionId: 'VariableCollectionId:1' }, { name: 'Other/1', variableCollectionId: 'VariableCollectionId:9' }] } };
   const out = await run(read('pass-c-libraries.js'), lib);
   const [spacing, colour] = out.collections;
   ok('pass C: collections are identified by key, with their library', spacing.key === 'k1' && spacing.library === 'Foundations' && colour.key === 'k2');
   ok('pass C: a collection over the name cap says it was truncated, with its full count', spacing.count === 401 && spacing.names.length === 400 && spacing.truncated === true && colour.truncated === false);
-  ok('pass C: local collections are listed with their mode count', JSON.stringify(out.localCollections) === JSON.stringify([{ id: 'VariableCollectionId:1', name: 'Collection 1', modes: 2 }]));
+  ok('pass C: local collections are listed with their mode count and their own names, and the file is named', JSON.stringify(out.localCollections) === JSON.stringify([{ id: 'VariableCollectionId:1', name: 'Collection 1', modes: 2, count: 1, truncated: false, names: ['Spacing/4'] }]) && out.file === 'Web Components');
 }
 
 // ── pass C scales (node, over pass C's output and the source's snapshot tokens) ─
@@ -121,6 +122,11 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   ok('pass C scales: every source with the library\'s file name is considered, not the first', JSON.stringify(scales({ collections: [{ key: 'kc', name: 'Core', library: 'Foundations', names: [] }] }, split).audit.spacing) === '[4,8]');
   const wrong = scales({ collections: [{ key: 'kc', name: 'Core', library: 'Renamed library', names: [] }] }, src({ Core: one({ 'Spacing/4': 4 }) }));
   ok('pass C scales: when nothing matches, audit is null with the reason, naming the snapshot\'s source files', wrong.audit === null && /"Foundations"/.test(wrong.auditWhy) && /"Foundations"/.test(wrong.notInSnapshot[0].why));
+  // a library that is its own source: no library collection, its scales in its own locals, named by `file`
+  const self = scales({ file: 'Foundations', collections: [], localCollections: [{ id: 'L1', name: 'Core', names: ['Spacing/4', 'Spacing/8'] }] }, src({ Core: one({ 'Spacing/4': 4, 'Spacing/8': 8 }) }));
+  ok("pass C scales: a library that is its own source reads its local collections as that library's", JSON.stringify(self.audit.spacing) === '[4,8]' && self.scales[0].local === true);
+  const none = scales({ collections: [], localCollections: [{ id: 'L1', name: 'Core' }] }, src({ Core: one({ 'Spacing/4': 4 }) }));
+  ok('pass C scales: an output that read nothing (an older one, with no `file`) is null with the reason, never an empty block', none.audit === null && /read no collection/.test(none.auditWhy));
   const dir = mkdtempSync(join(tmpdir(), 'pass-c-'));
   writeFileSync(join(dir, 'c.json'), JSON.stringify({ collections: [{ key: 'kc', name: 'Core', library: 'Renamed library', names: [] }] }));
   writeFileSync(join(dir, 't.json'), JSON.stringify(src({ Core: one({ 'Spacing/4': 4 }) })));

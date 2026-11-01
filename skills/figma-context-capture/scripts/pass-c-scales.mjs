@@ -99,17 +99,24 @@ function snapshotOf(tokens, c) {
   return { entry };
 }
 
+// The collections pass C read: the libraries' and, named by the file's own name (pass C's `file`), the file's
+// local ones. A library that is its own source has no library collection at all, and read without its locals
+// it returned an empty audit block on a live library whose scales were all local (2026-11-01).
+const readOf = (passC) => [...(passC.collections || []),
+  ...(passC.file ? (passC.localCollections || []).map((l) => ({ key: l.id, name: l.name, library: passC.file, local: true, names: l.names || [], truncated: !!l.truncated })) : [])];
+
 export function scales(passC, tokens = null) {
+  const read = readOf(passC);
   const out = { scales: [], skipped: [], ...(tokens ? { notInSnapshot: [] } : {}), grammar: [], spelling: { colour: 0, color: 0, tag: null }, audit: null,
     note: "nameSteps are numbers read from names, not px; the end steps of a scale cannot be seen to be missing" };
-  for (const c of passC.collections || []) {
+  for (const c of read) {
     let names = c.names || [], entry = null;
     if (tokens) {
       const s = snapshotOf(tokens, c);
       if (s.entry) { entry = s.entry; names = [...new Set(Object.values(entry.values || {}).flatMap((v) => Object.keys(v || {})))]; }
       else out.notInSnapshot.push({ key: c.key, collection: c.name, library: c.library, why: s.why, ...(s.shared ? { shared: true } : {}) });
     }
-    const id = { key: c.key, collection: c.name, library: c.library, complete: entry ? true : !c.truncated };
+    const id = { key: c.key, collection: c.name, library: c.library, ...(c.local ? { local: true } : {}), complete: entry ? true : !c.truncated };
     for (const f of families(names)) {
       const byMode = {}, notNumeric = [];
       if (entry) for (const mode of entry.modes || Object.keys(entry.values || {})) {
@@ -150,7 +157,11 @@ export function scales(passC, tokens = null) {
   const { colour, color } = out.spelling;
   if (colour || color) out.spelling.tag = colour === color ? "[TBD — tied: ask]"
     : (colour && color ? "[inferred] " : "[confirmed] ") + (colour > color ? "colour" : "color");
-  if (tokens && (passC.collections || []).length && out.notInSnapshot.length === (passC.collections || []).length) {
+  if (tokens && !read.length) {
+    // nothing read: an older pass C output (no `file`) over a library that is its own source
+    out.audit = null;
+    out.auditWhy = "pass C read no collection: no library collection, and no local ones (re-run pass-c-libraries.js, which names the file and its locals)";
+  } else if (tokens && out.notInSnapshot.length === read.length) {
     // nothing matched: the wrong store, or a renamed library. An empty block would read as "no scale found".
     out.audit = null;
     out.auditWhy = out.notInSnapshot.every((x) => x.shared)

@@ -1,6 +1,6 @@
 # Eval cases — figma-context-capture (v2.12.0)
 
-**Walked: 2026-11-01 for 2.12.0** — C17 added and executed: `node tests/test-passes.mjs` 73/73, its 26 assertions among them. With the sort dropped from `pass-c-scales.mjs`, the gap assertion fails; with the audit block fed name steps, the px one; with the first snapshot source taken for any library, the own-library one; with an empty kind kept, the `[]` one. Not walked live: the script has met only the fixture's pass C output. Other cases unchanged.
+**Walked: 2026-11-01 for 2.12.1** — C17 re-executed after its first live run: `node tests/test-passes.mjs` 75/75. Over a project's library (its own source, four local collections, no library collection) pass C had returned an empty audit block with exit 0; it now reads the locals as the library named `file` and derives spacing 0–88 (48 missing) and radius 0–24 and 999, and an output with nothing read is null with the reason. Before that, **Walked: 2026-11-01 for 2.12.0** — C17 added and executed: `node tests/test-passes.mjs` 73/73, its 26 assertions among them. With the sort dropped from `pass-c-scales.mjs`, the gap assertion fails; with the audit block fed name steps, the px one; with the first snapshot source taken for any library, the own-library one; with an empty kind kept, the `[]` one. Not walked live: the script has met only the fixture's pass C output. Other cases unchanged.
 
 **Walked: 2026-11-01 for 2.11.4** — no case changed: pass F no longer profiles the properties table (it wrote plugin data; the skill is read-only); no case asserts the profile, and A15 of figma-properties-table still holds the error half.
 
@@ -161,7 +161,8 @@ Fixture: pass C outputs and snapshot tokens (`tests/test-passes.mjs`):
 - `Spacing/4` held by both `Primitives` (999) and `Core` (16), a second library's same-named `Core`, and a collection its library does not own;
 - a store whose two sources both own `Core`, and a pass C from a library the snapshot does not hold (renamed);
 - a Compact/Comfortable density collection;
-- names with `4px`, `-4`, `Paddings`, `Insets`, `Spacer`, `Radiuses`, and a word-named `Radius` with no snapshot.
+- names with `4px`, `-4`, `Paddings`, `Insets`, `Spacer`, `Radiuses`, and a word-named `Radius` with no snapshot;
+- a library that is its own source (`file`, no library collection, one local `Core`), and an older output with no `file`.
 
 Assert:
 - The spacing name steps hold 10, and the only gap is 28, between 26 and 30.
@@ -181,7 +182,9 @@ Assert:
   - the density collection gives px per mode and their union;
   - a collection two sources own is not read, and says so (`shared: true`), and when every rejection is shared, `auditWhy` says shared ownership;
   - every source with the library's file name is considered, not the first;
-  - with nothing matched, `audit` is null with `auditWhy` naming the snapshot's source files, said on stderr, exit 1.
+  - with nothing matched, `audit` is null with `auditWhy` naming the snapshot's source files, said on stderr, exit 1;
+  - a library that is its own source reads its locals as the library named `file`, and an output that read nothing is null with the reason.
+- `pass-c-libraries.js` names the file and lists each local collection's own names.
 - `4px` reads 4 and `-4` reads −4; the word-named radius with no snapshot is skipped, never lost.
 
 Assert the negative: no number read from a name reaches `audit`; the script names no slot and its `kind` is confirmed at step 2.

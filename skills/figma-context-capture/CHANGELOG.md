@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.12.1 (2026-11-01): pass C reads a library's own collections: `pass-c-libraries.js` returns the file's name and each local collection's names, and `pass-c-scales.mjs` reads those locals as that library's. A live library that is its own source had returned an empty audit block. Case C17.
 - 2.12.0 (2026-11-01): pass C's counting is a script, `pass-c-scales.mjs`: name steps; px per mode from the library's own, singly owned snapshot collection, joined by file name; unmatched listed; the audit's spacing/radius block; grammar; colour/color. Case C17.
 - 2.11.4 (2026-11-01): pass F no longer profiles the properties table: that called another skill's script (skill-standard §A H) and stored plugin data, though this skill never writes; `figma-properties-table` profiles on its own first run. Prose only; cases unaffected.
 - 2.11.3 (2026-10-31): pass F records a `PT.profile()` error as no table confirmed, never its config (figma-properties-table 1.12.0 returns one beside the error). Prose only.
