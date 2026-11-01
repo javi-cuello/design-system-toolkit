@@ -1,6 +1,6 @@
 # Eval cases — figma-context-capture (v2.11.4)
 
-**Walked: 2026-11-01 for 2.11.4** — no case changed: pass F names the skill it runs instead of its script; no case asserts how the profile is invoked, and A15 of figma-properties-table still holds the error half.
+**Walked: 2026-11-01 for 2.11.4** — no case changed: pass F no longer profiles the properties table (it wrote plugin data; the skill is read-only); no case asserts the profile, and A15 of figma-properties-table still holds the error half.
 
 **Walked: 2026-10-31 for 2.11.3** — no case changed: one sentence in `references/discovery-passes.md` on reading `PT.profile()`'s error, which figma-properties-table's A15 holds.
 

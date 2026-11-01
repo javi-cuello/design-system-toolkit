@@ -11,7 +11,7 @@ node tools/figma-audit/server.mjs --all                                   # ever
 node tools/figma-audit/server.mjs --data ~/Projects/acme/figma-design-system/audit --port 9231   # one project
 ```
 
-**Needs:** Node 22.12+, the docs engine's packages (`(cd tools/docs-site && pnpm install --frozen-lockfile)` once; `corepack enable pnpm` first if pnpm is not installed), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see *Running it* below).
+**Needs:** Node 22.12+, the docs engine's packages (`(cd tools/docs-site && pnpm install --frozen-lockfile)` once; pnpm 12 first if it is not installed, as `docs/setup.md` says), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see *Running it* below).
 
 ## Add a project
 

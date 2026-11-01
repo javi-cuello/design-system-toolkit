@@ -2,13 +2,13 @@
 // build-tokens, run through the real Style Dictionary over a small DTCG folder.
 // Style Dictionary is injected, so this borrows the copy a registered repo has
 // installed, and skips (saying so) where none has.
-// Run: node --test tools/tokens/test-build-tokens.mjs
+// Run: node tools/tokens/test-build-tokens.mjs   (as bin/check does: under --test, its exit 77 reads as a failure)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { buildTokens, shadowCss } from './build-tokens.mjs';
 
@@ -17,7 +17,7 @@ import { buildTokens, shadowCss } from './build-tokens.mjs';
 // With no project registered (a fresh clone, CI) the cases skip and say so; with projects and no donor, it fails.
 const repos = createRequire(import.meta.url)('../snapshot/projects.cjs').repos();
 // the toolkit's own copy first (tools/tokens/package.json), so this runs with no project, as in CI
-const donor = [new URL('./package.json', import.meta.url).pathname, ...repos.map((r) => join(r.dir, 'package.json'))].find((p) => existsSync(join(p, '..', 'node_modules', 'style-dictionary')));
+const donor = [fileURLToPath(new URL('./package.json', import.meta.url)), ...repos.map((r) => join(r.dir, 'package.json'))].find((p) => existsSync(join(p, '..', 'node_modules', 'style-dictionary')));
 if (!donor && repos.length) {
   console.error('no registered project repo has style-dictionary installed: run `pnpm install` in one of them, or register a repo that has it.');
   process.exit(1);

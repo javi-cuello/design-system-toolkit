@@ -24,9 +24,11 @@ ok("a recent Review: commit leaves nothing open", r.length === 0);
 r = cadence(repo, now + 15 * 864e5);
 ok("fifteen days after the last review, one is owed again", r.length === 1 && /review is owed/.test(r[0]));
 // the security alerts: counted by severity, and a gh that cannot answer is "not read", never none
-let a = alerts(repo, () => JSON.stringify(["high", "medium", "high"]));
+let asked = [];
+let a = alerts(repo, (args) => { asked = args; return "high\nmedium\nhigh\n"; });
+ok("every page of alerts is read", asked.includes("--paginate"));
 ok("open alerts are counted by severity", a.open === 3 && a.by.high === 2 && a.by.medium === 1);
-a = alerts(repo, () => "[]");
+a = alerts(repo, () => "");
 ok("no open alert is zero, not unread", a.open === 0 && !a.unread);
 a = alerts(repo, () => { const e = new Error("gh failed"); e.stderr = "To get started with GitHub CLI, please run:  gh auth login\n"; throw e; });
 ok("a gh signed out is unread, with what it said", a.open === undefined && /gh auth login/.test(a.unread));

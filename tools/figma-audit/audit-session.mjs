@@ -25,7 +25,7 @@ const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.
 const contract = createRequire(import.meta.url)('../snapshot/projects.cjs');
 const die = (m) => { console.error(m); process.exit(2); };
 // a refused call (a file to reopen, a service gone) is its message, not a stack trace
-process.on('unhandledRejection', (e) => die(e && e.message || e));
+process.on('uncaughtException', (e) => die(e && e.message || e));
 const args = process.argv.slice(2);
 
 function serviceOf(project) {

@@ -40,6 +40,15 @@ git('rm', '-q', '-r', 'screens/old'); git('commit', '-q', '-m', 'gone too');
 assert.deepEqual(stillNamed(repo, 'up'), [], 'a shared file name ("figma.json") is not a reference to the folder that went');
 fs.writeFileSync(path.join(repo, 'map.mjs'), "screen: 'screens/old'"); git('add', '-A'); git('commit', '-q', '-m', 'five');
 assert.deepEqual(stillNamed(repo, 'up'), ['screens/old/ is deleted and still named in map.mjs'], 'and the folder still named is');
+// one file of a shared name deleted from a folder that lives on is not the folder deleted
+fs.writeFileSync(path.join(repo, 'screens/kept/extra.txt'), 'x'); fs.mkdirSync(path.join(repo, 'screens/other'));
+fs.writeFileSync(path.join(repo, 'screens/other/figma.json'), '{}');
+fs.writeFileSync(path.join(repo, 'map.mjs'), "screen: 'screens/kept'");
+git('add', '-A'); git('commit', '-q', '-m', 'six'); git('branch', '-f', 'up');
+git('rm', '-q', 'screens/kept/figma.json'); git('commit', '-q', '-m', 'one file');
+assert.deepEqual(stillNamed(repo, 'up'), [], 'a folder that keeps files is not said deleted for the shared-name file it lost');
+fs.writeFileSync(path.join(repo, 'map.mjs'), "read('screens/kept/figma.json')"); git('add', '-A'); git('commit', '-q', '-m', 'seven');
+assert.deepEqual(stillNamed(repo, 'up'), ['screens/kept/figma.json is deleted and still named in map.mjs'], 'and its own path still named is');
 fs.rmSync(repo, { recursive: true, force: true });
 assert.deepEqual(pluginsChanged(['plugins/design-system-snapshot/code.js', 'plugins/design-system-snapshot/CHANGELOG.md', 'plugins/_shared/ui-base.css', 'tools/x.mjs']), ['design-system-snapshot'], 'a changed plugin is named once; the shared base is not a plugin');
-console.log('test-closing: 8 assertions passed');
+console.log('test-closing: 10 assertions passed');

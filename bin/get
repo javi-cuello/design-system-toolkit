@@ -120,9 +120,10 @@ function named(file) {
   // a shell script's target after its own folder or the repo's: "$REPO/tools/…", "$(dirname "$0")/../tools/…"
   // (one into a toolkit folder that resolves nowhere is a script that cannot find what it runs: said; a link the
   // script makes there, `ln -s … "$repo/tools/…"`, is its own output, not a file it needs)
-  const linked = new Set([...src.matchAll(/\bln\s+(?:-\w+\s+)*\S+\s+"?\$\{?\w+\}?\/([\w./-]+)"?/g)].map((m) => m[1]));
+  const linked = new Set([...src.matchAll(/\bln\s+(?:--?[\w-]+\s+)*(?!-)\S+\s+"?\$\{?\w+\}?\/([\w./-]+)"?[ \t]*(?:$|[;&|])/gm)].map((m) => m[1]));
   if (/\.sh$/.test(file) || /^#!.*\b(ba|z)?sh\b/.test(src)) for (const m of src.matchAll(/(?:\$\{?\w+\}?|\$\(dirname "\$0"\))\/((?:\.{1,2}\/)*[\w.-]+(?:\/[\w.-]+)+)/g)) {
-    if (!take([m[1]]) && !linked.has(m[1]) && /^(tools|bin|standards|knowledge|skills|plugins)\//.test(m[1].replace(/^(\.\.\/)+/, ''))) MISSING.push(`${rel(file)}: runs ${m[1]}, which the toolkit does not have`);
+    if (linked.has(m[1])) continue;
+    if (!take([m[1]]) && /^(tools|bin|standards|knowledge|skills|plugins)\//.test(m[1].replace(/^(\.\.\/)+/, ''))) MISSING.push(`${rel(file)}: runs ${m[1]}, which the toolkit does not have`);
   }
   for (const m of src.matchAll(/(?:join|resolve)\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)/g)) {
     const parts = argsOf(m[1]);

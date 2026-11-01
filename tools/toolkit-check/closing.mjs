@@ -97,7 +97,10 @@ export function stillNamed(repo, upstream) {
   const shared = (name) => tracked.some((t) => path.basename(t) === name);
   const out = [], said = new Set();
   for (const f of gone) {
-    const needle = shared(path.basename(f)) ? path.dirname(f) : path.basename(f);
+    // a shared name (README.md) is searched by its folder, unless the folder lives on: then by the file's own path
+    // (a folder named everywhere would flag every mention; code joining the folder to the name is not seen)
+    const lives = tracked.some((t) => t.startsWith(path.dirname(f) + '/'));
+    const needle = shared(path.basename(f)) ? (lives ? f : path.dirname(f)) : path.basename(f);
     if (needle === '.' || said.has(needle)) continue;
     said.add(needle);
     const hits = gitRaw(repo, ['grep', '-l', '-F', needle, '--', '.', ':!content', ':!*.lock', ':!**/CHANGELOG.md']).split('\n').filter(Boolean).filter((h) => !/changes\.json$/.test(h));
@@ -176,7 +179,7 @@ export function cadence(repo, now = Date.now()) {
    gh call, given by the test. */
 export function alerts(repo, ask = (args) => execFileSync('gh', args, { cwd: repo, encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'] })) {
   let rows;
-  try { rows = JSON.parse(ask(['api', 'repos/{owner}/{repo}/dependabot/alerts?state=open&per_page=100', '--jq', '[.[] | .security_advisory.severity]'])); }
+  try { rows = ask(['api', '--paginate', 'repos/{owner}/{repo}/dependabot/alerts?state=open&per_page=100', '--jq', '.[] | .security_advisory.severity']).split('\n').filter(Boolean); }
   catch (e) { return { unread: String((e && (e.stderr || e.message)) || e).trim().split('\n')[0].slice(0, 120) }; }
   const by = {};
   for (const sev of rows) by[sev] = (by[sev] || 0) + 1;
@@ -244,7 +247,8 @@ if ((process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(impor
       } else if (p && p.lessons && p.lessons.error) say(`  (the parity facts could not be read: ${p.lessons.error.split('\n')[0]})`);
     }
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
-    if (name === 'toolkit') {
+    // not on the Stop hook's brief pass, which has 20 s and runs every turn: a network call there can cost 5 of them
+    if (name === 'toolkit' && !BRIEF) {
       const a = alerts(repo);
       if (a.unread) say(`  (security alerts not read: ${a.unread})`);
       else if (a.open) flag(`${a.open} open security alert(s) (${Object.entries(a.by).map(([k, n]) => `${n} ${k}`).join(', ')}): update the lockfile that pins each (gh api repos/{owner}/{repo}/dependabot/alerts)`);
