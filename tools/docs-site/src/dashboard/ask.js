@@ -14,7 +14,7 @@ function auditFacts() {
   const m = ctx.lastMetrics || {};
   const rules = ctx.lastRules || {};
   const lines = [];
-  lines.push("File: " + (ctx.libName || "this library") + ", Figma key " + (ctx.libKey || "unknown") + ".");
+  lines.push("File: " + (ctx.libName ? JSON.stringify(ctx.libName) : "this library") + ", Figma key " + (ctx.libKey || "unknown") + ".");
   if (m.sets) lines.push("Scope: " + m.sets + " component sets, " + (m.variants || "?") + " variants, " + (m.nodes || "?") + " nodes across " + (m.pages || "?") + " pages.");
   if (typeof m.coverage === "number") lines.push("Token coverage " + m.coverage + "% (" + (m.bound || "?") + " of " + ((m.bound || 0) + (m.unbound || 0)) + " bindable properties bound).");
   if (m.contrastTotal) lines.push("Contrast: " + m.contrastPass + " of " + m.contrastTotal + " text-on-surface token pairs pass, resolved in " + (m.modes || "every mode") + ".");
@@ -27,7 +27,9 @@ function auditFacts() {
   if (rules.rulings) lines.push("\nRecorded rulings, which outrank fresh file evidence:\n" + rules.rulings.map((r) => "- " + r).join("\n"));
   return lines.join("\n");
 }
-// A cell is an array of claims, so joining comes before stripping. Passing the
+// A cell is an array of claims, so joining comes before stripping. What the file
+// wrote (its name, a layer path, a finding's text) goes in quoted, one line each,
+// so a name cannot open a line that reads as the prompt's own (§D 24). Passing the
 // array straight to .replace() is what made every ask fail with no error code.
 const strip = (v) => (Array.isArray(v) ? v.join(" ") : String(v == null ? "" : v))
   .replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -39,9 +41,9 @@ function queueDigest() {
     for (const r of rowsIn(bucket).map((id) => Object.assign({ id: id }, state[id]))) {
       const s = state[r.id] || { done: false, note: "" };
       lines.push(
-        "- [" + r.n + "] " + (s.done ? "DONE" : "OPEN") + " · " + SEV_LABEL[r.sev] + " · " + r.where +
-        "\n  Problem: " + strip(r.fix) +
-        "\n  Recommendation: " + strip(r.rec) +
+        "- [" + r.n + "] " + (s.done ? "DONE" : "OPEN") + " · " + SEV_LABEL[r.sev] + " · " + JSON.stringify(strip(r.where)) +
+        "\n  Problem: " + JSON.stringify(strip(r.fix)) +
+        "\n  Recommendation: " + JSON.stringify(strip(r.rec)) +
         (s.note ? "\n  Maintainer's note: " + s.note : "")
       );
     }

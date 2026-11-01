@@ -7,11 +7,12 @@
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { check } from './check-structure.mjs';
+import { check, serve } from './check-structure.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const site = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-structure-'));
@@ -29,4 +30,15 @@ try {
   const out = execFileSync('node', [path.join(HERE, 'check-structure.mjs'), path.join(site, 'nothing')], { encoding: 'utf8' });
   assert.match(out, /^not run: no built site/);
   console.log('ok no built site is "not run", never "clean"');
+  // the folder's server reads nothing beside it: a sibling sharing its name's start is outside, and so is another Host
+  fs.mkdirSync(path.join(site, 'in')); fs.mkdirSync(path.join(site, 'in-old'));
+  fs.writeFileSync(path.join(site, 'in', 'a.txt'), 'in'); fs.writeFileSync(path.join(site, 'in-old', 'b.txt'), 'out');
+  const srv = await serve(path.join(site, 'in'));
+  const get = (p, host) => new Promise((done) => http.get(srv.base + p, host ? { headers: { host } } : {}, (r) => { r.resume(); done(r.statusCode); }));
+  try {
+    assert.equal(await get('a.txt'), 200);
+    assert.equal(await get('..%2Fin-old%2Fb.txt'), 403);
+    assert.equal(await get('a.txt', 'attacker.example'), 421);
+  } finally { srv.close(); }
+  console.log('ok the site server keeps to its folder (a sibling named like it is outside) and to its own Host');
 } finally { fs.rmSync(site, { recursive: true, force: true }); }

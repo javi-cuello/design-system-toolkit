@@ -27,6 +27,10 @@ const hostile = 'names differ <img src=x onerror=alert(1)>';
 const cells = ctx.problem({ where: 'Page list', check: hostile, fix: ['Page list: a, b'] });
 ok('a row\'s check, quoting the file, reaches the markup cell escaped', cells[0].includes('&lt;img') && !cells[0].includes('<img'), cells[0]);
 
+// Ask: what the file wrote reaches the prompt quoted, so a layer named like a line of the prompt stays data (§D 24)
+const ask = read('./src/dashboard/ask.js');
+ok('Ask quotes the library name and each row\'s where, problem and recommendation', /JSON\.stringify\(ctx\.libName\)/.test(ask) && ['r.where', 'r.fix', 'r.rec'].every((f) => ask.includes(`JSON.stringify(strip(${f}))`)));
+
 // Fix this: the model's code is shown and approved before the bridge runs it, and stored only then
 const doRow = fnBody(queue, 'doRow');
 const approve = doRow.indexOf('await approveFix(r, plan)'), stored = doRow.indexOf('appliedCode: plan.code'), run = doRow.indexOf('bridge.exec(plan.code)');

@@ -38,10 +38,12 @@ export const PAGES = ['', 'audits/', 'changes/', 'components/', 'components/butt
 
 const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 
-function serve(root) {
+export function serve(root) {
   const server = http.createServer((req, res) => {
-    let f = path.join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname));
-    if (!f.startsWith(root)) { res.writeHead(403).end(); return; }
+    // only this machine's own name, and never a path out of the folder: `<root>-old/` starts with `<root>` too
+    if (!/^127\.0\.0\.1:\d+$/.test(req.headers.host || '')) { res.writeHead(421).end(); return; }
+    let f; try { f = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://x').pathname)); } catch { res.writeHead(400).end(); return; }
+    if (f !== root && !f.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
     if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
     if (!fs.existsSync(f)) { res.writeHead(404).end(); return; }
     res.writeHead(200, { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' });
