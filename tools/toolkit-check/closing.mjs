@@ -171,6 +171,18 @@ export function cadence(repo, now = Date.now()) {
   return out;
 }
 
+/* The repo's open security alerts (Dependabot), read through gh: nineteen sat unread for a day because nothing
+   here said them (2026-11-01). gh absent, signed out or offline is said as not read, never as none. `ask` is the
+   gh call, given by the test. */
+export function alerts(repo, ask = (args) => execFileSync('gh', args, { cwd: repo, encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'] })) {
+  let rows;
+  try { rows = JSON.parse(ask(['api', 'repos/{owner}/{repo}/dependabot/alerts?state=open&per_page=100', '--jq', '[.[] | .security_advisory.severity]'])); }
+  catch (e) { return { unread: String((e && (e.stderr || e.message)) || e).trim().split('\n')[0].slice(0, 120) }; }
+  const by = {};
+  for (const sev of rows) by[sev] = (by[sev] || 0) + 1;
+  return { open: rows.length, by };
+}
+
 if ((process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) && process.argv.includes('--judgement')) {
   const args = process.argv.slice(process.argv.indexOf('--judgement') + 1);
   const pi = args.indexOf('--prompt'), prompt = pi >= 0 ? args[pi + 1] : null;
@@ -232,6 +244,11 @@ if ((process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(impor
       } else if (p && p.lessons && p.lessons.error) say(`  (the parity facts could not be read: ${p.lessons.error.split('\n')[0]})`);
     }
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
+    if (name === 'toolkit') {
+      const a = alerts(repo);
+      if (a.unread) say(`  (security alerts not read: ${a.unread})`);
+      else if (a.open) flag(`${a.open} open security alert(s) (${Object.entries(a.by).map(([k, n]) => `${n} ${k}`).join(', ')}): update the lockfile that pins each (gh api repos/{owner}/{repo}/dependabot/alerts)`);
+    }
     if (!s.dirty.length && s.upstream && !s.unpushed.length && !s.facing.length && !traced.length) say('  clean, shipped');
   }
   say(`\nwhat no script answers (toolkit-standard §D 0):\n${questions().map((q, i) => `  ${i + 1}. ${q}`).join('\n')}`);
