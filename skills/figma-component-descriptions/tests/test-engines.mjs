@@ -81,16 +81,16 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   node({ id: '1:1', type: 'COMPONENT_SET', name: 'Button' }, [variant]);
   const badge = node({ id: '2:1', type: 'COMPONENT', name: 'Badge' });
   const screen = (id, name, kids) => node({ id, type: 'FRAME', name }, kids);
-  const p1 = node({ id: '0:1', type: 'PAGE', name: 'Talent' }, [
-    screen('5:1', 'Pool', [screen('5:2', 'Row', [instanceOf('5:3', 'b', variant), instanceOf('5:4', 'c', badge)])]),
+  const p1 = node({ id: '0:1', type: 'PAGE', name: 'Orders' }, [
+    screen('5:1', 'Inbox', [screen('5:2', 'Row', [instanceOf('5:3', 'b', variant), instanceOf('5:4', 'c', badge)])]),
     screen('6:1', 'Detail', [instanceOf('6:2', 'b', variant)])
   ]);
   const gone = instanceOf('7:2', 'x', null);
   gone.getMainComponentAsync = async () => { throw new Error('The node with id "7:2" does not exist'); };
-  const p2 = node({ id: '0:2', type: 'PAGE', name: 'Jobs' }, [screen('7:1', 'List', [instanceOf('7:3', 'b', variant), gone])]);
+  const p2 = node({ id: '0:2', type: 'PAGE', name: 'Reports' }, [screen('7:1', 'List', [instanceOf('7:3', 'b', variant), gone])]);
   const figma = fakeFigma([p1, p2]);
   const out = await run(read('consumer-usage.js'), figma);
-  ok('consumer-usage: a variant counts as its set, most used first, with its screens', JSON.stringify(out.components[0]) === JSON.stringify({ name: 'Button', count: 3, screens: ['Jobs › List', 'Talent › Detail', 'Talent › Pool'] }));
+  ok('consumer-usage: a variant counts as its set, most used first, with its screens', JSON.stringify(out.components[0]) === JSON.stringify({ name: 'Button', count: 3, screens: ['Orders › Detail', 'Orders › Inbox', 'Reports › List'] }));
   ok('consumer-usage: the result survives JSON, the bridge\'s only channel', JSON.stringify(JSON.parse(JSON.stringify(out))) === JSON.stringify(out) && out.components[1].screens.length === 1);
   ok('consumer-usage: an instance whose main does not exist is counted, not fatal', out.broken === 1);
   gone.getMainComponentAsync = async () => { throw new TypeError('something else'); };
