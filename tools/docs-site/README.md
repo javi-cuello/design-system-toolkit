@@ -118,6 +118,7 @@ registered anywhere.
   every field) and `test-dashboard-safety.mjs` what it does with text a file wrote.
 - `src/lib/` — reading the snapshot, the audit record and the project.
   `test-lib.mjs` runs `format.js` (escaping, names on a page, dates).
+- A project with no component specs yet builds, its Components page saying there are none: `test-empty-build.mjs`, over a made-up project in a temp root. Every page's accessibility is `tools/ui-check/test-own-pages.mjs`'s.
 
 ## Publishing
 

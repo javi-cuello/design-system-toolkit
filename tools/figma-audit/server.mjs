@@ -1429,7 +1429,9 @@ server.listen(PORT, "127.0.0.1", () => {
   const files = [CONTEXT, P.tokens, P.changes, P.index, P.parity, P.storybook && join(P.storybook.dir, "index.json")].filter((f) => typeof f === "string");
   // The engine's source holds the dashboard too (src/dashboard), so one tree covers both.
   // the project's parity folder: the code audit's report, which the Parity pages read
-  const trees = [AUDIT_DIR, where.parity, P.components, P.previews, P.icons, join(docs, "src")].filter((d) => typeof d === "string");
+  // DOCS_WATCH_ENGINE=0 leaves the engine out: a test serving a site of its own, which another session's edit to the
+  // engine would rebuild and swap mid-run (tools/ui-check/test-own-pages.mjs, 2026-11-01)
+  const trees = [AUDIT_DIR, where.parity, P.components, P.previews, P.icons, process.env.DOCS_WATCH_ENGINE !== "0" && join(docs, "src")].filter((d) => typeof d === "string");
 
   // The engine's own build (tools/docs-site/build.mjs) holds the lock that keeps two builds of any project
   // apart, hand builds included, and swaps the finished site in; this only says when to build.
@@ -1526,6 +1528,7 @@ server.listen(PORT, "127.0.0.1", () => {
     // from the home, so a folder a switch makes while the service runs is seen without a restart
     if (where.projectDir && existsSync(where.projectDir)) watch(where.projectDir, { recursive: true }, (_, name) => { if (/^contracts([\\/]|$)/.test(String(name || ""))) soon(); });
     console.log(`docs site      ${label}: built now, and again on change to ${files.length} files and ${trees.length} folders`);
+    if (process.env.DOCS_WATCH_ENGINE === "0") console.log(`docs site      ${label}: DOCS_WATCH_ENGINE=0, so a change to the docs engine (tools/docs-site/src) does not rebuild it`);
     build();
   }
 }

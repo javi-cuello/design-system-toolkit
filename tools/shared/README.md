@@ -16,16 +16,19 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | `output.mjs` | What keeps a written file the same for the same input (toolkit-standard §D 23): `compareNames`, one sort order whatever the machine's locale, and `writeReport`, which leaves a run's report alone when only its date and seconds moved (the snapshot store, the contract and parity tools). |
 | `prop-attr.mjs` | A component prop's name as the HTML attribute its value is written in (`propAttr`, `attrWords`): the one rule to-code styles by, to-markup writes and parity's `-attr` check reads, held by `test-prop-attr.mjs`. |
 | `text-units.js` | A text style's line height or letter spacing as a fraction of its font size (`perFontSize`), the unitless and em values the web takes, to four places: copied by the snapshot plugin, the token build's `dtcg.js` and the doc generator, each copy held to it by `test-text-units.mjs`. |
+| `free-port.mjs` | The one free-port probe the tests use: `freePort([ports])`, the first of the list free on every interface (all, 127.0.0.1 and ::1), or 0; `freePort()`, a port the system picks, held to the same rule; `isFree(port)`; `onFreePort([ports], start)`, a server started on the first port it can bind, the next tried when the bind is refused as in use. A 127.0.0.1-only probe passed a port figma-console's bridge held on ::1, and `localhost` reached the bridge (2026-11-01). Used by figma-audit's and ui-check's service tests and parity's `test-propose.mjs`. |
 | `code-inventory.mjs` | What a code library contains, read from its folders, and how its components line up with the ones in Figma (used by the docs site and the audit). |
 
 ```sh
 node tools/shared/test-code-inventory.mjs
+node tools/shared/test-free-port.mjs
 node tools/shared/test-real-path.mjs
 node tools/shared/test-dialect.mjs
 node tools/shared/test-output.mjs
 node tools/shared/test-knowledge.mjs
 node tools/shared/test-prop-attr.mjs
 node tools/shared/test-text-units.mjs
+node tools/shared/test-mode-description.mjs   # the OKLCH generator's two-mode description read back by the doc generator
 node tools/shared/test-cdp.mjs    # needs Chrome
 ```
 

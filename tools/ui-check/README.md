@@ -26,4 +26,7 @@ npm pack axe-core@$(node -p "require('./package.json').devDependencies['axe-core
 ```sh
 node tools/ui-check/test-check.mjs
 node tools/ui-check/test-axe.mjs
+node tools/ui-check/test-own-pages.mjs
 ```
+
+`test-own-pages.mjs` runs axe over the toolkit's own pages: every page of the docs site, the dashboard among them (its Audits page), as `tools/figma-audit/server.mjs` builds and serves it, and the contract editor empty and on a component's three tabs. The project is the contract editor's made-up sample library in a temp projects root, so no project's data is read. It fails on a serious or critical violation and lists the rest as `note:` lines; light mode at desktop width only. Without Chrome, or without the docs site's packages, it exits 77.

@@ -6,7 +6,7 @@
 // file open in Figma and is not run here. Run: node tools/figma-audit/test-session.mjs
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import net from "node:net";
+import { onFreePort } from "../shared/free-port.mjs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -19,10 +19,7 @@ const ok = (name, cond, why = "") => { n++; assert.ok(cond, `${name}${why ? `\n$
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // a free port in the bridge's range, which the service insists on (from the middle: test-routes counts down, test-socket up)
-const free = (port) => new Promise((done) => { const s = net.createServer(); s.once("error", () => done(false)); s.listen(port, "127.0.0.1", () => s.close(() => done(true))); });
-let PORT = 0;
-for (const p of [9227, 9228, 9226, 9229, 9225, 9230]) if (!PORT && (await free(p))) PORT = p;
-if (!PORT) { console.log("skip: the middle ports the bridge scans (9225–9230) are taken, so the session path cannot be tested here"); process.exit(77); }
+const PORTS = [9227, 9228, 9226, 9229, 9225, 9230];
 
 // a scratch project: its context document routes one library, and its record holds one open row
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "audit-session-")));
@@ -39,13 +36,19 @@ const env = { ...process.env, ANTHROPIC_API_KEY: "", TOOLKIT_PROJECTS_ROOT: ROOT
 // the service is given an empty project list, so it builds no docs site for the scratch project (where Astro is
 // installed, as in CI, it would); it files rows by its audit folder, which is the one bin/audit finds it by
 fs.mkdirSync(path.join(dir, "none"));
-const server = spawn("node", [path.join(HERE, "server.mjs"), "--data", audit, "--port", String(PORT), "--key-file", path.join(dir, "no-key")], { stdio: ["ignore", "pipe", "pipe"], env: { ...env, TOOLKIT_PROJECTS_ROOT: path.join(dir, "none") } });
-let log = "";
-server.stdout.on("data", (c) => { log += c; });
-server.stderr.on("data", (c) => { log += c; });
-process.on("exit", () => { server.kill(); fs.rmSync(dir, { recursive: true, force: true }); });
-for (let i = 0; i < 80 && !log.includes("figma audit"); i++) await sleep(100);
-if (!log.includes("figma audit")) { console.log(`the service never started:\n${log}`); process.exit(1); }
+let server = null, log = "";
+process.on("exit", () => { if (server) server.kill(); fs.rmSync(dir, { recursive: true, force: true }); });
+// started on the first port of PORTS it can bind: one taken between the probe and the bind moves to the next
+const up = await onFreePort(PORTS, async (port) => {
+  log = "";
+  const s = server = spawn("node", [path.join(HERE, "server.mjs"), "--data", audit, "--port", String(port), "--key-file", path.join(dir, "no-key")], { stdio: ["ignore", "pipe", "pipe"], env: { ...env, TOOLKIT_PROJECTS_ROOT: path.join(dir, "none") } });
+  s.stdout.on("data", (c) => { log += c; });
+  s.stderr.on("data", (c) => { log += c; });
+  for (let i = 0; i < 80 && !log.includes("figma audit") && s.exitCode === null; i++) await sleep(100);
+  if (!log.includes("figma audit")) { s.kill(); throw new Error(`the service never started:\n${log}`); }
+});
+if (!up) { console.log("skip: the middle ports the bridge scans (9225–9230) are taken, so the session path cannot be tested here"); process.exit(77); }
+const PORT = up.port;
 
 const session = (...args) => spawnSync("node", [path.join(HERE, "audit-session.mjs"), ...args], { encoding: "utf8", env });
 const payload = (at = new Date().toISOString()) => {

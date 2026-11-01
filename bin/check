@@ -290,12 +290,14 @@ EOF
 # by nobody for as long as they have existed. Found by asking what the glob
 # does NOT match rather than by reading it, which is the only way this kind of
 # hole is ever found.
-for t in tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.py \
+# bin/ joined it when its own commands got suites (set-key, deploy: 2026-11-01).
+for t in bin/test-*.mjs tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js tools/*/test-*.py \
          skills/*/tests/test-*.mjs skills/*/tests/test-*.js skills/*/tests/test-*.py \
          plugins/*/tests/test-*.mjs plugins/*/tests/test-*.js plugins/*/tests/test-*.py \
          standards/tests/test-*.sh; do
     [ -e "$t" ] || continue
-    step "$(printf '%s' "$t" | sed 's|^\(tools\|skills\|plugins\|standards\)/||; s|/tests/|/|')"
+    # -E: a basic regex's \| is GNU's alone, so on macOS no prefix was ever stripped
+    step "$(printf '%s' "$t" | sed -E 's#^(bin|tools|skills|plugins|standards)/##; s#/tests/#/#')"
     case "$t" in *.py) OUT=$(python3 "$t" 2>&1) ;; *.sh) OUT=$(sh "$t" 2>&1) ;; *) OUT=$(node "$t" 2>&1) ;; esac
     RC=$?
     if [ $RC -eq 0 ]; then

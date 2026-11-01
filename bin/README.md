@@ -20,6 +20,8 @@ bin/check --quick    # the standards and the scanners only: under a minute
 
 Each step prints how long it took. The full run is long because it runs every test suite, several in Chrome, and takes the contract editor and every skill from a fresh `bin/get` checkout; `--quick` is the one to run while working, the full one before a push (the push hook runs it anyway).
 
+Tests sit beside the commands as `test-<command>.mjs`, run by `bin/check` by discovery: `test-set-key.mjs` in a temp `HOME` with fake keys and `pbpaste`, `pbcopy`, `curl`, `launchctl` and `sleep` stubbed (a key its test rejects, or with no network, is never saved; the steps' refusals), and `test-deploy.mjs` with `npx` stubbed (its refusals, both flags at once and an unknown flag beside a valid one among them, and the wrangler call it would make; nothing is published).
+
 Every command needs Node 22.12 or later. `bin/deploy` also needs `npx wrangler login` once.
 
 ## Moving a keys.conf from the old set-key

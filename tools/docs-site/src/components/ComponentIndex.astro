@@ -28,8 +28,10 @@ const sections = groups.map((g) => ({
 <Base title={name ? `Components · ${name}` : 'Components'}>
   <h1>Components{name && <span class="h1__platform"> · {name}</span>}</h1>
   <UpdatedBy from={['snapshot']} />
+  {count === 0 ? <p class="lede">No components yet: the snapshot holds no component specs. Take a snapshot of the components library and they appear here.</p> : <>
   <p class="lede">{count} components{categories.length ? ', grouped as the Figma file groups them' : ''}.</p>
   <Filter placeholder={`Filter ${count} components`} searchLabel="Filter components" />
+  </>}
     {sections.map((g) => (
       <section class="group" data-filter-part id={g.id} aria-labelledby={g.label ? `${g.id}-h` : undefined}>
         {g.label && <h2 id={`${g.id}-h`}>{g.label} <span class="group__count">{g.pages.length}<span class="visually-hidden"> {g.pages.length === 1 ? 'component' : 'components'}</span></span></h2>}

@@ -225,7 +225,21 @@ the legacy `audit.json` while its folder holds other records (the shim's only
 case — a `--data` naming a missing `<fileKey>.json` still starts), and
 `node tools/figma-audit/check-services.mjs` (run by the toolkit's
 `bin/check`) compares every running `--data` against what the projects
-actually have.
+actually have. With no service running it passes on nothing, so its verdicts
+are held by `test-check-services.mjs`, fed a list in place of the process
+table (`judge`): healthy, none running, the supervisor's duplicate pair, a
+process older than its source, `--data` pinned to a record, and a path no
+project claims. A service is only a process whose program runs this toolkit's
+`server.mjs` with `--data` (`services.mjs` `parse`): its script is its first
+argument that is not a flag (`node --watch server.mjs` counts), and a relative
+one is read against that process's own folder (`/proc`, else `lsof`), else
+matched as a path ending in `tools/figma-audit/server.mjs`. A shell or an
+editor whose command line names both is not one. One whose `--data` is under the temp folder
+is a test's (`test: true`): the check leaves it out, so another session's test
+server does not turn it red, while `serviceFor` still finds it by its folder.
+`DOCS_WATCH_ENGINE=0` leaves the docs engine's source out of what a service
+rebuilds its site on, for a test serving a site of its own
+(`tools/ui-check/test-own-pages.mjs`).
 
 
 ## The record contract
