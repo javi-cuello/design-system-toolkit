@@ -101,6 +101,100 @@ try {
     assert.ok(said(checkPlugin(none), /no ui-base block/).length);
   });
 
+  ok("§5a: a bespoke class that sizes a control must set height and box-sizing itself; a ui-base class, a state rule, a non-box input and a class that does not size are not it", () => {
+    const dir = plant("bespoke", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", `/* plugin-specific styles below */
+.chip { padding: 0 8px; border: 1px solid var(--figma-color-border); }
+.chip:hover { height: 20px; }
+.half { height: 24px; font-size: 12px; }
+.ok { height: 24px; box-sizing: border-box; padding: 0 6px; }
+.spaced { margin-top: 8px; }
+.chip-like { padding: 0 2px; }
+.field { height: 28px; border: 0; }`)
+        .replace('<button id="run">Run</button>', `<button id="run">Run</button>
+  <button class="chip">A</button><button class="half">B</button><button class="ok">C</button>
+  <button class="spaced">D</button><button class="btn chip-like">E</button>
+  <input type="checkbox" class="field">`);
+      return out;
+    });
+    const found = said(checkPlugin(dir), /sizes a control/);
+    assert.deepEqual(found.map((x) => x.text.split(" ")[0]), [".chip", ".half"], JSON.stringify(found));
+    assert.match(found[0].text, /does not set height or box-sizing: border-box/);
+    assert.match(found[1].text, /does not set box-sizing: border-box:/);
+    assert.equal(found[0].sec, "5a"); assert.equal(found[0].level, "warn"); assert.equal(found[0].kind, "auto-fixable");
+  });
+  ok("§5a: the plugin's own rule on the tag (`#bar button`) sets the box as much as the class does", () => {
+    const dir = plant("tag-rule", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\n#bar button { height: 24px; box-sizing: border-box; }\n.tool { padding: 0 4px; }")
+        .replace('<button id="run">Run</button>', '<button id="run">Run</button><div id="bar"><button class="tool">F</button></div>');
+      return out;
+    });
+    assert.deepEqual(said(checkPlugin(dir), /sizes a control/), []);
+  });
+  ok("§5a: a compound on another element, and a border's colour or radius, size no control", () => {
+    const dir = plant("compound", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\n.tab { height: 24px; box-sizing: border-box; padding: 0 4px; }\n.tab-panel.active { min-height: 0; }\n.chip { border-radius: 4px; border-color: red; }")
+        .replace('<button id="run">Run</button>', '<button id="run">Run</button><button class="tab active">A</button><div class="tab-panel active"></div><button class="chip">C</button>');
+      return out;
+    });
+    assert.deepEqual(said(checkPlugin(dir), /sizes a control/), []);
+  });
+  ok("§5a: each control is judged on its own rules — a compound's fix does not reach a control with one of its classes", () => {
+    const dir = plant("per-control", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\n.big { padding: 4px; }\n.big.small { height: 20px; box-sizing: border-box; }\n.t { font: 12px/16px sans-serif; }\ninput[type=text] { height: 24px; box-sizing: border-box; }\n.field { padding: 0 4px; }")
+        .replace('<button id="run">Run</button>', '<button id="run">Run</button><button class="big">A</button><button class="big small">B</button><button class="t">T</button><input type="text" class="field">');
+      return out;
+    });
+    const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
+    assert.match(got, /^\.big sizes/m, "the plain .big button");
+    assert.doesNotMatch(got, /\.big\.small sizes/, "the button carrying the compound is fixed");
+    assert.match(got, /^\.t sizes/m, "the font shorthand sizes the control");
+    assert.doesNotMatch(got, /\.field sizes/, "a tag rule with an attribute sets the box");
+  });
+  ok("§5a: a tag rule for a state does not set the box; one under :not() does; property names are case-insensitive", () => {
+    const dir = plant("tag-state", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\ninput[type=text]:focus { height: 24px; box-sizing: border-box; }\n.a { padding: 1px; }\nselect:not([multiple]) { height: 24px; box-sizing: border-box; }\n.s { padding: 2px; }\n.u { PADDING: 2px; HEIGHT: 20px; }\n.w { font-weight: 600; }")
+        .replace('<button id="run">Run</button>', '<button id="run">Run</button><input type="text" class="a"><select class="s"></select><button class="u">U</button><button class="w">W</button>');
+      return out;
+    });
+    const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
+    assert.match(got, /^\.a sizes/m, "only the focus state set the box");
+    assert.doesNotMatch(got, /^\.s sizes/m, "select:not([multiple]) sets it");
+    assert.match(got, /^\.u sizes[^\n]*does not set box-sizing/m, "HEIGHT is height");
+    assert.doesNotMatch(got, /^\.w sizes/m, "font-weight sizes nothing");
+  });
+  ok("§5a: a tag rule for one input type reaches only that type; :not(:disabled) is no state; data-class is not class", () => {
+    const dir = plant("tag-type", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\ninput[type=checkbox] { height: 16px; box-sizing: border-box; }\n.f { padding: 2px; }\nbutton:not(:disabled) { height: 24px; box-sizing: border-box; }\n.x { padding: 2px; }\n.y { padding: 2px; }\n.v { padding: 2px; }")
+        .replace('<button id="run">Run</button>', '<button id="run">Run</button><input type="text" class="f"><button class="x">X</button><select data-class="z" class="y"></select><textarea class=v></textarea>');
+      return out;
+    });
+    const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
+    assert.match(got, /^\.f sizes/m, "the checkbox rule does not set a text input's box");
+    assert.doesNotMatch(got, /^\.x sizes/m, "button:not(:disabled) sets the box");
+    assert.match(got, /^\.y sizes/m, "the real class is read past data-class");
+    assert.match(got, /^\.v sizes/m, "an unquoted class is read");
+  });
+  ok("§5a: a control with no type is its default type; a comma inside :not() keeps the rule whole", () => {
+    const dir = plant("tag-default", (out) => {
+      out["ui.html"] = out["ui.html"]
+        .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\ninput[type=text] { height: 24px; box-sizing: border-box; }\n.g { padding: 2px; }\nbutton:not(.a, .b) { height: 24px; box-sizing: border-box; }\n.h { padding: 2px; }\ntextarea:not([type=x]) { height: 24px; box-sizing: border-box; }\n.i { padding: 2px; }\n.k:not(.x) { padding: 2px; }")
+        .replace('<button id="run">Run</button>', '<button id="run">Run</button><input class="g"><button class="h">H</button><textarea class="i"></textarea><select class="k"></select>');
+      return out;
+    });
+    const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
+    assert.doesNotMatch(got, /^\.g sizes/m, "an untyped input is a text input");
+    assert.doesNotMatch(got, /^\.h sizes/m, "button:not(.a, .b) is one tag rule");
+    assert.doesNotMatch(got, /^\.i sizes/m, "a type inside :not() is not the rule's type");
+    assert.match(got, /^\.k sizes/m, "a class rule with :not() still sizes its control");
+  });
+
   ok("every plugin in the toolkit: found, and none with an error", () => {
     const dirs = pluginsUnder(PLUGINS);
     assert.ok(dirs.length >= 6 && !dirs.some((d) => d.endsWith("_shared")), dirs.join());

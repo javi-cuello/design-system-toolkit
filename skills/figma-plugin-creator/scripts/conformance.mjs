@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // @runs: standards/tests/check.sh, over plugins/ (bin/check runs it), as well as a session.
-// The conformance checklist's mechanical half (references/conformance-checklist.md §1–§5), over a plugin folder
+// The conformance checklist's mechanical half (references/conformance-checklist.md §1–§5a), over a plugin folder
 // or a folder of plugins, so no item a grep can answer is answered by hand (toolkit-standard §D 23). What stays a
-// read is named in the reference: settings hygiene (§4b), the ui-base collision check, the runtime traps (§5b)
-// and the retest (§6).
+// read is named in the reference: settings hygiene (§4b), the ui-base collision check's state rules, the runtime
+// traps (§5b) and the retest (§6).
 //   node scripts/conformance.mjs <plugin-folder | folder of plugins>...  [--json]
 // Each finding is one line: `error|warn  [§] <plugin> — <what>  (<class>)`, class auto-fixable, needs-decision or
 // manual (SKILL.md "Conformance check"). An error is a plugin Figma refuses to load, or one that throws or is
@@ -124,6 +124,73 @@ export function checkPlugin(dir, opts = {}) {
     const block = BLOCK.exec(ui);
     if (!block) add("warn", "5", "ui.html has no ui-base block: inline it (mandatory)", "auto-fixable");
     else if (base != null && block[0] !== base.trimEnd()) add("warn", "5", "ui.html's ui-base block differs from the shared base: re-inline it (node plugins/_shared/sync.mjs in the toolkit)", "auto-fixable");
+    for (const b of bespokeControls(ui)) add("warn", "5a", `.${b.cls} sizes a control but does not set ${b.missing.join(" or ")}: ui-base supplies it by accident (references/conformance-checklist.md §5a); set it on the class`, "auto-fixable");
+  }
+  return out;
+}
+
+// §5a ui-base collision: a class on a <button>, <input>, <select> or <textarea> in the markup whose own rules size
+// the control (padding, a border's width, font or font-size, line-height, a height or block-size) and that does not itself set `height` and
+// `box-sizing: border-box`. ui-base sets both on the bare elements, so such a class renders right by accident and
+// breaks when the base moves. A control that carries a ui-base class is skipped. State rules (:hover, :disabled, …)
+// are the read's: they are not where the box is set. Each control is judged on the rules that reach it, a compound
+// (`.big.small`) only when it carries every class in it.
+// Only markup is read: a class code assigns at runtime is outside it, and so is a stylesheet ui.html links.
+// a border's width moves the box; its colour, style or radius does not
+const SIZES = /(^|;)\s*(padding(-[a-z]+)*|border(-(top|right|bottom|left|block|inline)(-(start|end))?)?(-width)?|font|font-size|line-height|(min-|max-)?(height|block-size))\s*:/;
+const NOT_A_BOX = /^(checkbox|radio|range|color|file|hidden)$/i;
+// a tag rule for a state (`input:focus`, `button[disabled]`) is not where the box is set; `input:not([type=…])` is
+const STATE = /:(hover|focus|focus-visible|focus-within|active|disabled|enabled|checked|invalid|valid|placeholder-shown)\b|\[(disabled|aria-[\w-]+)/i;
+export function bespokeControls(ui) {
+  const html = ui.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<!--[\s\S]*?-->/g, "");
+  // A control carrying a class ui-base defines (.btn, .input, …) takes its box from that class on purpose.
+  const block = BLOCK.exec(ui);
+  const base = new Set(block ? [...block[0].replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]) : []);
+  const controls = []; // each control's tag and own class list
+  for (const [, tag, attrs] of html.matchAll(/<(button|input|select|textarea)\b([^>]*)>/gi)) {
+    // `data-type=` and `data-class=` are not the attribute
+    const type = (/(?<![\w-])type\s*=\s*["']?([\w-]+)/i.exec(attrs) || [])[1];
+    if (tag.toLowerCase() === "input" && type && NOT_A_BOX.test(type)) continue;
+    const list = ((/(?<![\w-])class\s*=\s*(?:["']([^"']*)["']|([\w-]+))/i.exec(attrs) || []).slice(1).find((x) => x != null) || "").split(/\s+/).filter(Boolean);
+    if (!list.length || list.some((c) => base.has(c))) continue;
+    // no type is the element's default: an input is a text input, a button submits
+    controls.push({ tag: tag.toLowerCase(), type: (type || { input: "text", button: "submit" }[tag.toLowerCase()] || "").toLowerCase(), list });
+  }
+  const css = [...ui.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join("\n").replace(BLOCK, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  // The plugin's own rules on the tag itself (`#toolbar button`, `input[type=text]`) own the box as much as the class
+  // does. Which elements such a rule reaches is not worked out: one scoped rule on `button` counts for every button.
+  // A rule with a state or an attribute on the class (`.tab:hover`, `.tab[aria-selected]`) is a state, not the box.
+  const rules = [], tagRules = [];
+  for (const [, sel, raw] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const body = raw.toLowerCase(); // property names are case-insensitive
+    for (const one of sel.split(/,(?![^()]*\))/)) { // a comma inside :not(.a, .b) does not split the selector
+      const NOT = /:not\((?:[^()]|\([^()]*\))*\)/g;
+      const last = one.trim().replace(NOT, (m) => m.replace(/\s+/g, "")).split(/[\s>+~]+/).pop() || "";
+      // what is inside :not() is the rule's exception, not its condition (`button:not(:disabled)`, `button:not(.a, .b)`)
+      const own = last.replace(NOT, "");
+      const tag = (/^[a-z]+(?=$|#|\[|:not\()/i.exec(last) || [])[0];
+      if (tag && !own.includes(".")) {
+        if (STATE.test(own)) continue;
+        // a tag rule for one input type (`input[type=checkbox]`) reaches only inputs of that type
+        const only = (/\[type\s*=\s*["']?([\w-]+)/i.exec(own) || [])[1]; // `input:not([type=checkbox])` is every other input
+        tagRules.push({ tag: tag.toLowerCase(), type: only ? only.toLowerCase() : null, body }); continue;
+      }
+      if (/[:[]/.test(own)) continue;
+      const compound = [...own.matchAll(/\.([\w-]+)/g)].map((m) => m[1]);
+      if (compound.length) rules.push({ compound, body });
+    }
+  }
+  // Each control is judged on the rules that reach it: a compound (`.big.small`) only when it carries every class in it.
+  const out = [], said = new Set();
+  for (const { tag, type, list } of controls) {
+    const own = rules.filter((r) => r.compound.every((c) => list.includes(c))).map((r) => ";" + r.body).join("");
+    if (!SIZES.test(own)) continue;
+    const body = own + tagRules.filter((r) => r.tag === tag && (!r.type || r.type === type)).map((r) => ";" + r.body).join("");
+    const missing = [];
+    if (!/(^|;)\s*height\s*:/.test(body)) missing.push("height");
+    if (!/(^|;)\s*box-sizing\s*:\s*border-box/.test(body)) missing.push("box-sizing: border-box");
+    const cls = list.join(".");
+    if (missing.length && !said.has(cls)) { said.add(cls); out.push({ cls, missing }); }
   }
   return out;
 }

@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.14.2)
+# Eval cases — figma-plugin-creator (v1.15.0)
+
+**Walked: 2026-11-01 for 1.15.0 — P5's sizing half executed** (`node tests/test-conformance.mjs`, 20 passed): a class that sizes a button with no height, and one with a height and no box-sizing, warn under §5a; a ui-base class, a state rule, a checkbox, a class that sizes nothing and a plugin rule on the tag raise nothing. Over `plugins/`: `lucide-icon-importer`'s `.tab` and `.clear-btn` warn (explicit `height: auto`, no `box-sizing`), which P5's 2026-08-09 walk read past; both now set it (lucide-icon-importer 1.13.3) and `plugins/` raises nothing. A compound on another element (`.tab-panel.active` beside `button.tab.active`) and a border's colour or radius size no control. Each control is judged on the rules that reach it: a compound's fix (`.big.small`) does not cover a control carrying only `.big`, the `font` shorthand sizes, and a tag rule with an attribute (`input[type=text]`) sets the box. A tag rule for a state (`input[type=text]:focus`) does not; `select:not([multiple])` does; `HEIGHT` is height, and `font-weight` sizes nothing. A tag rule for one input type (`input[type=checkbox]`) reaches only that type; `button:not(:disabled)` sets the box; `data-class` is not the class, and an unquoted class is read; an untyped input is a text input, and `button:not(.a, .b)` is one tag rule; a type inside `:not()` is not the rule's type, and `.k:not(.x)` still sizes its control. P1–P4, P6 unchanged (`test-scaffold.mjs` 9/9, `test-fetch-queue.mjs` passes).
 
 **Walked: 2026-10-31 for 1.14.2** — the ui-base asset and template take v3 (a focus ring): `node plugins/_shared/sync.mjs --check` clean, `node tests/test-conformance.mjs` 13 passed; no case reads the baseline's focus rule, so every case holds.
 
@@ -82,7 +84,11 @@ Assert the state half specifically, because 1.2.0 shipped the sizing check alone
 
 Planted fixture proves the check still fires; the real plugin proves the fix shape is what this case describes. Neither alone would have shown both.
 
-Walked live: 2026-08-09 — the planted P4 fixture pre-fix, and the real `plugins/lucide-icon-importer` post-fix.
+Walked live: 2026-08-09 — the planted P4 fixture pre-fix, and the real `plugins/lucide-icon-importer` post-fix. That read missed that `.clear-btn` sets no `box-sizing`; the script, from 1.15.0, does not.
+
+The sizing half is executed (§5a); the state half stays a read.
+
+Runs: node tests/test-conformance.mjs — "§5a: a bespoke class that sizes a control must set height and box-sizing itself", "§5a: the plugin's own rule on the tag (`#bar button`) sets the box as much as the class does", "§5a: a compound on another element, and a border's colour or radius, size no control", "§5a: each control is judged on its own rules — a compound's fix does not reach a control with one of its classes", "§5a: a tag rule for a state does not set the box; one under :not() does; property names are case-insensitive", "§5a: a tag rule for one input type reaches only that type; :not(:disabled) is no state; data-class is not class"
 
 ## P6 · Network fetches follow the house pattern, and fail honestly
 Fixture: a plugin fetching a third-party asset list from a CDN.

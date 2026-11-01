@@ -1,4 +1,8 @@
 # Changelog — lucide-icon-importer
+## [1.13.3] - 2026-11-01
+### Fixed
+- The tab and clear buttons set `box-sizing: border-box` beside their own height, so neither leans on the shared baseline's box (conformance §5a).
+
 ## [1.13.2] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
