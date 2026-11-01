@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.23.0 (2026-11-01): §D 6: bin/check's "no test needs this machine's home"; a test naming `~/Projects` passed on the owner's Mac and turned CI red once pushed.
 - 2.22.0 (2026-11-01): §D 0 and §D 13: full-size work needs a `bin/check` run in its transcript (after the first edit: said as `late:`) and a plan Before with its closing line and the §D 1, §D 2, §D 5 answers; two sessions skipped the check.
 - 2.21.0 (2026-10-31): §D 11: the trailer closing the periodic review names `review.md` as well as "independent"; a change's review that called itself independent closed the owed review in silence, and `closing.mjs` now counts only the trailer naming the list.
 - 2.20.1 (2026-10-31): §D 4 cites check.sh's "reads another skill's files" and bin/check's per-skill bin/get step for clause H; no rule changed.

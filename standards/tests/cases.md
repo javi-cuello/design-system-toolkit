@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-01, for toolkit-standard 2.23.0** — S21: the fixture in a throwaway clone, each assertion observed; `bin/check`'s step passes on the repo.
+
 **Walked: 2026-10-31, for toolkit-standard 2.21.0** — §D 11's record: `node tools/toolkit-check/test-cadence.mjs` 5 passed, the new case (a merge's trailer saying "independent" leaves the review owed) failing against the old grep; the repo's own closing commit still counts.
 
 **Walked: 2026-10-31, for skill-standard 1.6.2** — §B 4's example markers read `vN`; wording only, `standards/tests/check.sh` passes, no case reads the example.
@@ -259,6 +261,11 @@ Walked 2026-10-31: `node tools/toolkit-check/test-content-is-data.mjs` 7 pass, a
 Fixture: a skill whose `SKILL.md` names `node tools/nope/x.mjs`, `bin/tokens` and its own `scripts/gone.mjs`; a skill test that requires `../../figma-components-audit/scripts/probes.js` and its own `../scripts/own.js`; a `bin/audit` whose exec target was renamed; `figma-project-audit` taken alone.
 Assert: check.sh warns `[H] … names what the toolkit does not have: SKILL.md:<n>: names tools/nope/x.mjs` and `… names scripts/gone.mjs` (an engine moved out with its prose left behind), and `[H] … reads another skill's files: tests/<file>:1`; `bin/tokens` (a project's own command) and the skill's own `../scripts/` are silent; a test that requires `../../../tools/…` is silent (skill-standard §A clause H, 1.5.0). In a sparse clone, `bin/get` says `bin/audit: runs ../tools/figma-audit/<missing>, which the toolkit does not have`, and `bin/get skills/figma-project-audit` checks out the five stage skills it runs.
 Walked 2026-10-31 for skill-standard 1.5.0: the fixtures above, made by hand in the repo and in a throwaway clone and removed after; each assertion observed, the three `../../../tools/` warnings check.sh gave before are gone. bin/check's "every skill, from bin/get, has what it names" passes over all 22 skills in about 5s. Re-walked 2026-10-31 for the skill-own paths: on first run the reader named two stale ones (components-audit's `scripts/foundations.js`, another skill's file, and an `assets/` page it no longer ships), both reworded; with the moves of phase 4 it names every root path not yet committed, and none once they are.
+
+## S21 · No test needs this machine's home — WALKED 2026-11-01
+Fixture: in a throwaway clone, a tracked `test-*` file holding `command: 'cd ~/Projects/toolkit && bin/check'` (the line that reached CI red), `/Users/me/Projects/y`, `/Users/first.last/Projects/y`, `$HOME/Projects/z`, `${HOME}/Projects/z`, `"$HOME"/Projects/z` and `~/projects/toolkit`, a comment naming `~/Projects`, a line carrying `machine-path:`; and `~/Projects` in a tracked file not named `test-*`.
+Assert: bin/check's "no test needs this machine's home" fails on those seven lines and no others; on the repo itself it passes.
+Walked 2026-11-01 for toolkit-standard 2.23.0: the fixture above, each assertion observed, then removed with the clone.
 
 ## R1 · Every rule says how it is enforced, and a named check exists — WALKED 2026-10-08
 Fixture: throwaway trees in which a rule has no marker; a `*Checked:*` pair names a file that no longer holds its string, or a path that does not exist; a path names a project's own file; a standard has no handle pattern; a rule is marked *No check yet.*

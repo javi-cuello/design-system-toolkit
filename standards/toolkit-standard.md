@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.22.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.23.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -370,7 +370,8 @@ live.
 
 *Checked:* `standards/tests/scan-clause-d.py` "no ID-shaped candidates" (no project data in `skills/`);
 `bin/check` "no project is named in the toolkit" (every label, every tracked
-file); `bin/check` "no tool builds a
+file); `bin/check` "no test needs this machine's home" (a test takes the repo's
+path from where it runs, so it passes off the owner's Mac); `bin/check` "no tool builds a
 project's path itself" — the snapshot contract's `homeOf()` / `layout()` is the
 only path resolver. *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — §D 7's
 moment, a shared tool's first run over a second project — an option only one

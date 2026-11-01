@@ -58,7 +58,7 @@ ok('a lesson is a toolkit file: a directory, a path outside the toolkit and git\
 
 ok('a Knowledge: value names pages under knowledge/, or "none" with its reason; anything else is refused',
   pages('knowledge/ui/patterns/dialogs.md, knowledge/ui/design/visual.md', TOOLKIT) === null
-  && pages('~/Projects/toolkit/knowledge/code/tokens.md', TOOLKIT) === null
+  && pages('~/Projects/toolkit/knowledge/code/tokens.md', TOOLKIT) === null // machine-path: a trailer's text, resolved by pages()
   && pages('knowledge/ui/patterns/forms.md (Keeping input), knowledge/ui/patterns/settings.md', TOOLKIT) === null
   && pages('none — a token renamed, nothing drawn', TOOLKIT) === null
   && /three words/.test(pages('none — tiny', TOOLKIT))

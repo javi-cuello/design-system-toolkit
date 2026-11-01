@@ -25,7 +25,7 @@ mkdirSync(stranger);
 const repo = join(dir, 'repo');
 mkdirSync(join(repo, 'design', 'parts', 'chip'), { recursive: true });
 writeFileSync(join(repo, 'design', 'parts', 'chip', 'contract.json'), contract('Chip'));
-writeFileSync(join(repo, 'snapshot.config.json'), JSON.stringify({ toolkit: '~/Projects/toolkit', project: 'sample', paths: { components: 'design/parts' } }));
+writeFileSync(join(repo, 'snapshot.config.json'), JSON.stringify({ toolkit: '~/Projects/toolkit', project: 'sample', paths: { components: 'design/parts' } })); // machine-path: the config's text, never read as a path here
 
 // a registered project whose library takes the contract as its source: its official Chip says sm, Figma's reading md
 const KEY = 'a'.repeat(40);

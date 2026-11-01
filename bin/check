@@ -101,6 +101,15 @@ OUT=$(git ls-files 'tools/*.mjs' 'tools/*.cjs' 'tools/*.js' 'tools/*.sh' 'tools/
   | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|projects-path:')
 [ -z "$OUT" ] && ok || bad "$OUT"
 
+# toolkit-standard §D 6: a test that names the owner's home passes here and fails
+# everywhere else; one reached CI red on 2026-11-01. A test takes the repo's path
+# from where it runs. A line where the text is only data carries `machine-path:`.
+step "no test needs this machine's home"
+OUT=$(git ls-files | grep -E '(^|/)test-[^/]*\.(mjs|cjs|js|py|sh)$' \
+  | xargs grep -niE '~/Projects|\$\{?HOME\}?"?/Projects|/Users/[^/ '"'"'"]+/Projects' 2>/dev/null \
+  | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|machine-path:')
+[ -z "$OUT" ] && ok || bad "$OUT"
+
 # toolkit-standard §D 22: every folder a newcomer opens says what it is.
 step "every folder a newcomer opens has a README"
 OUT=$(node tools/toolkit-check/readmes.mjs 2>&1)
