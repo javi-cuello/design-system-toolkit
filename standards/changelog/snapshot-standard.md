@@ -1,5 +1,6 @@
 # History — snapshot-standard
 
+- 2.23.0 (2026-11-01): rule 17: styles two files name alike keep the other's copy too; `shared` is keyed by kind first, `shared[kind][name][source]`. No store was written in 2.22.0's shape, so none is migrated.
 - 2.22.0 (2026-11-01): rule 17: a collection two files name alike keeps every other source's copy under `shared[name][source]`; a name the last writer drops, or a writer that moved, shows the other's kept copy instead of going.
 - 2.21.0 (2026-11-01): rule 17: a collection or style two files name alike is kept once, the last writer's, and the write warns naming the other source; a name the last writer drops goes, and the other source's next write restores it; one another source wrote later stays.
 - 2.20.1 (2026-10-30): rule 23's *Checked:* names its test-router case by its test name; it named the file alone, which passed unchecked. No rule changed.

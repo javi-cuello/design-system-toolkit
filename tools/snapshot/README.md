@@ -147,9 +147,9 @@ A project whose routing block has **no repo** is design-only: the router
 writes its snapshot itself, into `<project home>/snapshot/`. Such a project
 may list several library files; each write merges into what the others
 contributed, by name: a collection or style two files both name is shown once,
-the last writer's, and the write warns naming the other source; a collection's
-other copies are kept under `shared[name][source]`, and one of them takes the
-place of a name the last writer drops (with none kept — a style, a store from before `shared`, a tie on `seq` — the name
+the last writer's, and the write warns naming the other source; the other
+copies are kept under `shared[kind][name][source]`, and one of them takes the
+place of a name the last writer drops (with none kept — a store from before `shared`, a tie on `seq` — the name
 goes until the other file's next snapshot restores it; one the other wrote later stays). A file that moves to a new key (duplicated, its stamped id
 carried along) leaves records under the old one: once every routed file has
 reported under its current identity, what only a key nobody routes owned —

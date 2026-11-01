@@ -949,12 +949,15 @@ test('tokens: a same-named collection or style from another source is warned of,
     assert.ok(said.some((l) => new RegExp(noun).test(l.text) && l.detail.some((d) => d.startsWith(name + ' — also owned by '))), `a ${noun} another source owns under the same name is warned of`);
   // Y wrote Shared last, so the shown copy is Y's and X's is kept under `shared`.
   let t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
-  assert.ok(t.shared && t.shared.Shared && t.shared.Shared.X, "the other source's copy of a shared name is kept under shared, by source");
-  assert.deepEqual(Object.keys(t.shared.Shared), ['X'], "and the last writer's own copy is not kept twice");
+  assert.ok(t.shared && t.shared.collections.Shared && t.shared.collections.Shared.X, "the other source's copy of a shared name is kept under shared, by source");
+  assert.deepEqual(Object.keys(t.shared.collections.Shared), ['X'], "and the last writer's own copy is not kept twice");
+  for (const [k, name] of [['textStyles', 'Body'], ['paintStyles', 'Brand'], ['effects', 'Raised']])
+    assert.ok(t.shared[k] && t.shared[k][name] && t.shared[k][name].X, `a ${k} entry two sources name alike keeps the other's copy too`);
   // Y drops it: X's copy takes its place, never Y's deleted values served as X's.
   store.writeLibrary(own('Y', 'Mine'), P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
   assert.ok('Shared' in t.collections && 'Mine' in t.collections && !t.shared, "a name the last writer drops shows the other source's kept copy, and shared empties");
+  assert.deepEqual([t.textStyles, t.paintStyles, t.effects].map((l) => l.map((x) => x.name)), [['Body'], ['Brand'], ['Raised']], "and a style the last writer drops shows the other's kept copy, not nothing");
   const back = own('X', 'Shared'); back.tokens.collections.Shared.values['Mode 1'] = { x: 2 };
   store.writeLibrary(back, P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
@@ -976,14 +979,14 @@ test('tokens: a same-named collection or style from another source is warned of,
   store.writeLibrary(v(own('Y', 'Shared'), 4), P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
   assert.equal(t.collections.Shared.values['Mode 1'].x, 4, "the shown copy is the last writer's values");
-  assert.equal(t.shared.Shared.X.values['Mode 1'].x, 3, "and the kept copy is the other source's own values");
+  assert.equal(t.shared.collections.Shared.X.values['Mode 1'].x, 3, "and the kept copy is the other source's own values");
   const raw = fs.readFileSync(P.tokens, 'utf8');
   store.writeLibrary(v(own('Y', 'Shared'), 4), P);
   assert.equal(fs.readFileSync(P.tokens, 'utf8'), raw, 'the same content written again leaves the file byte for byte');
   store.writeLibrary(v(own('X', 'Shared'), 3), P);
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
   assert.equal(t.collections.Shared.values['Mode 1'].x, 3, 'the other source writing again shows its copy');
-  assert.equal(t.shared.Shared.Y.values['Mode 1'].x, 4, "and keeps the one it replaced as that source's");
+  assert.equal(t.shared.collections.Shared.Y.values['Mode 1'].x, 4, "and keeps the one it replaced as that source's");
   // A writer that moved (no routed file claims it) gives way to the live source's copy.
   P = fresh();
   store.writeLibrary(v(own('X', 'Shared'), 3), P, { ids: ['X'], files: [['X'], ['OLD']] });

@@ -86,7 +86,7 @@ const kindOf = (family) => {
 // library read gives only `libraryName`, the library file's name, never its key, so the source whose `file`
 // equals it is the library's (a renamed library file breaks the join until it is snapshotted again). The store
 // merges every source's collections by name: `collections` shows the last writer's copy of a name two sources
-// own (the owner with the highest `seq`), and `shared[name][source]` keeps each other source's. A store from
+// own (the owner with the highest `seq`), and `shared.collections[name][source]` keeps each other source's. A store from
 // before `shared`, or a tie on `seq`, names no copy as the library's, and the name is reported, not guessed.
 const filesOf = (tokens) => { const m = tokens._meta || {}; return m.sources ? Object.values(m.sources).map((s) => s && s.file).filter(Boolean) : m.file ? [m.file] : []; };
 function snapshotOf(tokens, c) {
@@ -102,7 +102,7 @@ function snapshotOf(tokens, c) {
     const mine = named.filter(([, s]) => s.file === c.library).sort(([, a], [, b]) => (b.seq || 0) - (a.seq || 0)).map(([k]) => k);
     const top = Math.max(...named.map(([, s]) => s.seq || 0)), last = named.filter(([, s]) => (s.seq || 0) === top);
     if (last.length === 1 && mine.includes(last[0][0])) return { entry };
-    const kept = ((tokens.shared || {})[c.name]) || {};
+    const kept = (((tokens.shared || {}).collections || {})[c.name]) || {};
     const own = mine.find((k) => kept[k]);
     if (own) return { entry: kept[own] };
     return { shared: true, why: JSON.stringify(c.name) + " is owned by more than one source and the store names no copy as " + JSON.stringify(c.library) + "'s (a snapshot from before `shared`: snapshot the library again)" };

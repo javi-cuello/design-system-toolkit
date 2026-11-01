@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.22.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.23.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -269,7 +269,7 @@ A `snapshot-routing` block with no `repo` stores the snapshot in
 repo's, with nothing after it. A kind may list
 several files (`"library": [{…}, {…}]`), and each write merges: collections
 and styles by name, components tracked by the file they came from, so
-snapshotting one file never erases what another contributed. A name two files share is shown once, the last writer's (the owner with the highest `seq`), and the write warns naming the other source; a collection's other copies are kept under `shared[name][source]`, so `pass-c-scales.mjs` reads each library's own, and a style's are not. A name the last writer drops shows the other's kept copy; with none kept (a store from before `shared`, a tie on `seq` among entries from before it, a style) it goes, though the other still lists it, and the other's next write restores it: the dropper's values served as the other's would be wrong where missing is only missing. A writer that moved gives way to a live source's kept copy the same way, and with none kept its copy goes. A name the other wrote later (each source entry's `seq`, the store's write order; a day ties) is the other's copy, and a file dropping it leaves it. (Mechanism, not an incident.) A file entry may
+snapshotting one file never erases what another contributed. A name two files share is shown once, the last writer's (the owner with the highest `seq`), and the write warns naming the other source; the other copies are kept under `shared[kind][name][source]` (`kind` the store's key: `collections`, `textStyles`, `paintStyles`, `effects`), so `pass-c-scales.mjs` reads each library's own collection. A name the last writer drops shows the other's kept copy; with none kept (a store from before `shared`, a tie on `seq` among entries from before it) it goes, though the other still lists it, and the other's next write restores it: the dropper's values served as the other's would be wrong where missing is only missing. A writer that moved gives way to a live source's kept copy the same way, and with none kept its copy goes. A name the other wrote later (each source entry's `seq`, the store's write order; a day ties) is the other's copy, and a file dropping it leaves it. (Mechanism, not an incident.) A file entry may
 name a `platform` (`"platform": "mobile"`): its components are stored as
 `<platform>-<name>` and carry the platform, so a mobile library's Button lands
 beside the web one instead of over it. A library entry names its `roles`:

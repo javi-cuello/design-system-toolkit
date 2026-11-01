@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.12.3 (2026-11-01): pass C reads a kept copy at `shared.collections`, the store's shape from snapshot-standard 2.23.0. Case C17.
 - 2.12.2 (2026-11-01): a collection two sources own is read from the library's own copy, the shown one or the one the store keeps under `shared` (snapshot-standard 2.22.0); a store that names none is reported, as before. Case C17.
 - 2.12.1 (2026-11-01): pass C reads a library's own collections: `pass-c-libraries.js` returns the file's name and each local collection's names, and `pass-c-scales.mjs` reads those locals as that library's. A live library that is its own source had returned an empty audit block. Case C17.
 - 2.12.0 (2026-11-01): pass C's counting is a script, `pass-c-scales.mjs`: name steps; px per mode from the library's own, singly owned snapshot collection, joined by file name; unmatched listed; the audit's spacing/radius block; grammar; colour/color. Case C17.
