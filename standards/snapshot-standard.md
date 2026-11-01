@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.20.1** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.21.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -269,7 +269,7 @@ A `snapshot-routing` block with no `repo` stores the snapshot in
 repo's, with nothing after it. A kind may list
 several files (`"library": [{…}, {…}]`), and each write merges: collections
 and styles by name, components tracked by the file they came from, so
-snapshotting one file never erases what another contributed. A file entry may
+snapshotting one file never erases what another contributed. The exception is a name two files share: a collection or style of the same name is kept once, the last writer's, and the write warns naming the other source (`pass-c-scales.mjs` reads neither copy as one library's scale). A name the last writer drops goes, though the other still lists it, and the other's next write restores it: the one copy held the dropper's values, and served as the other's it would be wrong where missing is only missing. A name the other wrote later (each source entry's `seq`, the store's write order; a day ties) is the other's copy, and a file dropping it leaves it. (Mechanism, not an incident.) A file entry may
 name a `platform` (`"platform": "mobile"`): its components are stored as
 `<platform>-<name>` and carry the platform, so a mobile library's Button lands
 beside the web one instead of over it. A library entry names its `roles`:
@@ -289,7 +289,7 @@ for variables and a components file, so a single-file snapshot could not hold
 it. The roles replaced a list of audited libraries kept by hand in the audit
 settings, which named one of one project's three files: its tokens and icon
 libraries were checked by nothing, and each components library repeated the
-tokens file's key. *Checked:* `tools/snapshot/test-router.mjs` "DESIGN-ONLY: a project with no repo is stored in its own toolkit folder"; `tools/snapshot/test-router.mjs` "the routing block gives each library its roles"
+tokens file's key. *Checked:* `tools/snapshot/test-router.mjs` "DESIGN-ONLY: a project with no repo is stored in its own toolkit folder"; `tools/snapshot/test-router.mjs` "the routing block gives each library its roles"; `tools/snapshot/test-router.mjs` "tokens: a same-named collection or style from another source is warned of"
 
 **18 · The phase is stated once, in the project block.**
 ```json project

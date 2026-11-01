@@ -171,12 +171,20 @@ function mergeTokens(before, incoming, { iconSets = [], iconPage = null, iconGro
   // Each icon's description (plugin 0.56.0), its search keywords, kept the same way.
   const described = iconDescriptions || (earlier && earlier.owns && earlier.owns.iconDescriptions);
   if (described) owns.iconDescriptions = described;
+  source[id].seq = 1 + Math.max(0, ...Object.values(stored || {}).map((v) => (v && v.seq) || 0)); // this store's write order
   if (!sources) return { _meta: { ...metaOf(incoming._meta), collections: Object.keys(incoming.collections || {}), sources: source }, ...canonical(incoming) };
   // What this file owned last time and no longer carries is gone from Figma.
   const was = (earlier && earlier.owns) || null;
   const ownedBy = (list, k) => new Set(list.flatMap((s) => (s.owns && s.owns[k]) || []));
   const live = (k) => ownedBy([{ owns }, ...Object.entries(sources).filter(([s]) => s !== id).map(([, v]) => v)], k);
-  const dropped = (k, name) => (was && (was[k] || []).includes(name) && !owns[k].includes(name))
+  // A name this file dropped goes even if another source also lists it, when
+  // the one stored copy is this file's (it wrote the name last): keeping it
+  // would serve deleted values as the other's. Missing is safer than wrong; the
+  // other's next write restores it. A copy another source wrote later is that
+  // source's, and stays.
+  // Write order is each entry's `seq`, not its day: two files snapshotted the same day tie on `at`.
+  const laterOwner = (k, name) => Object.entries(sources).some(([s, v]) => s !== id && v && v.owns && (v.owns[k] || []).includes(name) && (v.seq || 0) > ((earlier && earlier.seq) || 0));
+  const dropped = (k, name) => (was && (was[k] || []).includes(name) && !owns[k].includes(name) && !laterOwner(k, name))
     || (moved.length > 0 && ownedBy(moved.map((m) => stored[m]), k).has(name) && !live(k).has(name));
   const collections = Object.fromEntries(Object.entries(before.collections || {}).filter(([c]) => !dropped('collections', c)));
   const merged = { ...canonical(before), collections: { ...collections, ...(incoming.collections || {}) } };
@@ -1066,12 +1074,25 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
 
   // Tokens, with what the rest of the loop reads off them: the components and
   // icon sets the library names, and a stamp that moves only with content.
+  // Collections and styles merge by name, so one another source file already
+  // owns under this name is replaced by this file's: the store keeps one copy,
+  // and both sources still list it in `owns`. Said, never silent. "Another"
+  // is judged as mergeTokens judges it: every identity this file answers to is
+  // this file, and a source no routed file claims (a moved file, before routing
+  // has settled too) is not another file: the warning deletes nothing, so it need not wait.
+  const selfIds = new Set([fileRef, p.tokens._meta.fileKey, p.tokens._meta.fileId, ...thisFile].filter(Boolean));
+  const otherSources = Object.entries(reported).filter(([k]) => !selfIds.has(k) && !(claimed.size && !claimed.has(k)));
+  const KINDS = [['collections', 'collection', Object.keys(p.tokens.collections || {})], ...OWNED.map((k) => [k, { textStyles: 'text style', paintStyles: 'paint style', effects: 'effect style' }[k], (p.tokens[k] || []).map((x) => x.name)])];
+  for (const [k, noun, names] of KINDS) {
+    const shared = names.map((c) => [c, otherSources.filter(([, s]) => s && s.owns && (s.owns[k] || []).includes(c)).map(([id, s]) => s.file || id)]).filter(([, by]) => by.length);
+    if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store keeps one copy, this file's`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
+  }
   const tokens = mergeTokens(tokensBefore, p.tokens, { iconSets: p.iconSets || [...new Set(p.icons.map((i) => i.name))], iconPage: p.iconPage || null, iconGroups: p.iconGroups || null, iconDescriptions: p.iconDescriptions || null, icons: p.icons, ref: fileRef, ids: [...thisFile], orphan });
   const { _meta: m, ...content } = tokens;
   const hash = hashOf(JSON.stringify({ t: content, c: p.components, i: p.icons.map((x) => [x.name, x.size, attrsOrdered(x.svg)]), is: p.iconSets, ip: p.iconPage || null, ig: p.iconGroups || null, id: p.iconDescriptions || null }));
   // nothing moved, so neither does the day each file was taken (toolkit-standard §D 23)
   const was = tokensBefore && tokensBefore._meta && tokensBefore._meta.hash === hash && tokensBefore._meta.sources;
-  if (was) for (const [k, x] of Object.entries(m.sources || {})) if (was[k] && was[k].at) x.at = was[k].at;
+  if (was) for (const [k, x] of Object.entries(m.sources || {})) { if (was[k] && was[k].at) x.at = was[k].at; if (was[k] && was[k].seq) x.seq = was[k].seq; }
   // Each file's own release beside its entry: a project routes several library
   // files, and the top-level stamp is only the last writer's (deliver.cjs pinned).
   if (m.sources && m.sources[fileRef]) m.sources[fileRef].version = version || null;

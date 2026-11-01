@@ -1,5 +1,6 @@
 # History — snapshot-standard
 
+- 2.21.0 (2026-11-01): rule 17: a collection or style two files name alike is kept once, the last writer's, and the write warns naming the other source; a name the last writer drops goes, and the other source's next write restores it; one another source wrote later stays.
 - 2.20.1 (2026-10-30): rule 23's *Checked:* names its test-router case by its test name; it named the file alone, which passed unchecked. No rule changed.
 - 2.20.0 (2026-10-30): rules 6 and 26: each routed library file is pinned to, and checked against, its own release, and an MCP collect names its file; Figma reads time out and a named version is found past the first page.
 - 2.19.0 (2026-10-30): rule 2: the plugin sends the file key on every run and a payload with one is routed by it alone, so a duplicate is never written as its original; a copied id is dropped; an id-only entry needs its key.

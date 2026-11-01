@@ -924,6 +924,50 @@ test('screens: a bound name the library no longer has is warned of; a raw colour
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('tokens: a same-named collection or style from another source is warned of, never one from this file under another identity', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const fresh = () => store.paths(fs.mkdtempSync(path.join(os.tmpdir(), 'clash-')));
+  const own = (id, coll, extra = {}) => { const l = lib(id, { tokens: extra }); l.tokens.collections = { [coll]: { modes: ['Mode 1'], values: { 'Mode 1': { x: 1 } }, alias: {} } }; return l; };
+  const clashes = (r) => r.lines.filter((l) => l.label === 'warning' && /share a name/.test(l.text));
+  let P = fresh();
+  store.writeLibrary(own('A', 'Core'), P);
+  assert.equal(clashes(store.writeLibrary(own('A', 'Core'), P)).length, 0, 'a re-snapshot of the same file is no clash with itself');
+  P = fresh();
+  store.writeLibrary(own('DOC', 'Core'), P);
+  const keyed = own('DOC', 'Core'); keyed.tokens._meta.fileKey = 'KEY';
+  assert.equal(clashes(store.writeLibrary(keyed, P)).length, 0, 'nor is the same file arriving under its other id (an unpacked download, no routing ids)');
+  P = fresh();
+  store.writeLibrary(own('OLD', 'Core'), P, { ids: ['OLD'], files: [['OLD']] });
+  assert.equal(clashes(store.writeLibrary(own('NEW', 'Core'), P, { ids: ['NEW'], files: [['NEW']] })).length, 0, 'nor a moved file, whose old key nothing routes any more');
+  P = fresh();
+  const ts = (name) => ({ name, family: 'Inter', size: 16, lineHeight: 1.5 });
+  const styles = { textStyles: [ts('Body')], paintStyles: [{ name: 'Brand', paints: [] }], effects: [{ name: 'Raised', layers: [] }] };
+  store.writeLibrary(own('X', 'Shared', styles), P);
+  const said = clashes(store.writeLibrary(own('Y', 'Shared', styles), P));
+  for (const [noun, name] of [['collection', 'Shared'], ['text style', 'Body'], ['paint style', 'Brand'], ['effect style', 'Raised']])
+    assert.ok(said.some((l) => new RegExp(noun).test(l.text) && l.detail.some((d) => d.startsWith(name + ' — also owned by '))), `a ${noun} another source owns under the same name is warned of`);
+  // Y wrote Shared last, so the one copy is Y's. Y drops it: it goes, though X still lists it,
+  // since keeping it would serve Y's deleted values as X's; X's next write restores X's own.
+  store.writeLibrary(own('Y', 'Mine'), P);
+  let t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.ok(!('Shared' in t.collections) && 'Mine' in t.collections, 'a name the last writer drops goes, even while another source lists it');
+  const back = own('X', 'Shared'); back.tokens.collections.Shared.values['Mode 1'] = { x: 2 };
+  store.writeLibrary(back, P);
+  t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.equal(t.collections.Shared.values['Mode 1'].x, 2, "and the other source's next snapshot restores it with its own values");
+  // A copy another source wrote after this file is that source's: this file dropping the name leaves it.
+  P = fresh();
+  const at = (l, d) => ((l.tokens._meta.snapshot = d), l);
+  // all on one day, as a multi-file library is snapshotted: write order, not the day, decides
+  store.writeLibrary(at(own('X', 'Shared'), '2026-09-18'), P);
+  const y = at(own('Y', 'Shared'), '2026-09-18'); y.tokens.collections.Shared.values['Mode 1'] = { x: 7 };
+  store.writeLibrary(y, P);
+  store.writeLibrary(at(own('X', 'Mine'), '2026-09-18'), P);
+  t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
+  assert.equal(t.collections.Shared && t.collections.Shared.values['Mode 1'].x, 7, "a file that did not write a shared name last dropping it leaves the other's copy");
+});
+
 test('tokens: the canonical shape, and a style a file deletes is gone from the store, while another file\'s stays', async () => {
   const { createRequire } = await import('node:module');
   const store = createRequire(import.meta.url)('./store.cjs');
@@ -943,7 +987,7 @@ test('tokens: the canonical shape, and a style a file deletes is gone from the s
   t = JSON.parse(fs.readFileSync(P.tokens, 'utf8'));
   assert.deepEqual(t.textStyles.map((x) => x.name).sort(), ['Body', 'Label'], "the core file's deleted Caption is gone; the components file's Label stays");
   const stamp = t._meta.snapshotAt;
-  const days = JSON.stringify(Object.values(t._meta.sources).map((x) => x.at));
+  const days = JSON.stringify(Object.values(t._meta.sources).map((x) => [x.at, x.seq]));
   // taken again another day, the same design: neither the stamp nor the day each file was taken moves (toolkit-standard §D 23)
   const day = core.tokens._meta.snapshot;
   core.tokens._meta.snapshot = '2099-01-01';
@@ -951,7 +995,7 @@ test('tokens: the canonical shape, and a style a file deletes is gone from the s
   core.tokens._meta.snapshot = day;
   const again = JSON.parse(fs.readFileSync(P.tokens, 'utf8'))._meta;
   assert.equal(again.snapshotAt, stamp, 'nothing moved, so neither does the stamp');
-  assert.equal(JSON.stringify(Object.values(again.sources).map((x) => x.at)), days, 'nor the day each file was taken');
+  assert.equal(JSON.stringify(Object.values(again.sources).map((x) => [x.at, x.seq])), days, 'nor the day each file was taken, nor its place in the write order');
   // Two sets under one name: one file on disk, one entry in _meta.icons, and
   // the count says 198 where the page holds 199, as one icon page did.
   const dupes = lib('ICONS');
@@ -960,6 +1004,11 @@ test('tokens: the canonical shape, and a style a file deletes is gone from the s
   const said = store.writeLibrary(dupes, P).lines;
   assert.ok(said.some((l) => l.label === 'icons' && /named twice/.test(l.text) && /calendar-cog/.test(l.text)), 'a name carried by two icon sets is reported, not silently deduped');
   assert.ok(!store.writeLibrary(lib('ICONS2'), P).lines.some((l) => /named twice/.test(l.text)), 'and a file with no duplicate says nothing');
+  // Collections merge by name: a second file's `Base` replaces the first's in the one copy the store keeps.
+  const clash = store.writeLibrary(lib('OTHER'), P).lines.find((l) => l.label === 'warning' && /share a name/.test(l.text));
+  assert.ok(clash && clash.detail.some((d) => /^Base — also owned by /.test(d)), "a collection another source owns under the same name is reported, not silently replaced");
+  const alone = lib('LONE'); alone.tokens.collections = { Lone: { modes: ['Mode 1'], values: { 'Mode 1': {} }, alias: {} } };
+  assert.ok(!store.writeLibrary(alone, P).lines.some((l) => /share a name/.test(l.text)), 'and a collection no other source owns says nothing');
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -1034,7 +1083,8 @@ test('files that move to new keys: what only the old keys own goes, once every r
   store.writeLibrary(comps('KW', ['Button', 'Chip']), P, { ids: before[1], files: before });
   // Both files are duplicated to new keys; the stamped ids come with them. Chip and Old are gone.
   const after = [['KC2', 'IC'], ['KW2', 'IW']];
-  store.writeLibrary(comps('KW2', ['Button']), P, { ids: after[1], files: after });
+  const movedSaid = store.writeLibrary(comps('KW2', ['Button']), P, { ids: after[1], files: after });
+  assert.ok(!movedSaid.lines.some((l) => /share a name/.test(l.text)), 'a moved file is not warned of as sharing a name with itself, before routing has settled');
   assert.ok(fs.existsSync(path.join(P.components, 'logo', 'figma.json')), 'until Core reports under its new key, nothing it owned is judged');
   store.writeLibrary(core('KC2', ['Body']), P, { ids: after[0], files: after });
   const index = JSON.parse(fs.readFileSync(P.index, 'utf8'));
