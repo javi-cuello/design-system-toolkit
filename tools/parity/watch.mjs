@@ -23,9 +23,10 @@ import { realpathSync } from 'node:fs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const contract = createRequire(import.meta.url)('../snapshot/projects.cjs');
 // what the code audit builds from, never its own output, a build or installed packages
-const IGNORED = /(^|\/)(node_modules|storybook-static|dist|\.turbo|\.cache)(\/|$)/;
+export const IGNORED = /(^|\/)(node_modules|storybook-static|dist|\.turbo|\.cache)(\/|$)/;
 
-export function watchCodeAudit(label, context, log = console.log, { delay = 10000 } = {}) {
+// `script` is what a run spawns: the audit, or a test's stand-in
+export function watchCodeAudit(label, context, log = console.log, { delay = 10000, script = path.join(HERE, 'external.mjs') } = {}) {
   // a library built elsewhere that the project compares: its context document's code.parity (project.mjs loadParity)
   const lib = Object.values((context && context.libraries) || {}).find((l) => l.code && l.code.repo && l.code.parity);
   const P = lib && lib.code.parity;
@@ -42,7 +43,7 @@ export function watchCodeAudit(label, context, log = console.log, { delay = 1000
     if (running) { again = true; return; }
     running = true;
     const t0 = Date.now();
-    child = spawn(process.execPath, [path.join(HERE, 'external.mjs'), '--project', label], { stdio: ['ignore', 'pipe', 'pipe'] });
+    child = spawn(process.execPath, [script, '--project', label], { stdio: ['ignore', 'pipe', 'pipe'] });
     let tail = '';
     child.stdout.on('data', (d) => { tail = (tail + d).slice(-600); });
     child.stderr.on('data', (d) => { tail = (tail + d).slice(-600); });

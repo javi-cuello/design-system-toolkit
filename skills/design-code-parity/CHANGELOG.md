@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.65.0 (2026-11-01): the engine proposes the screen map, `tools/parity/propose.mjs` (print, or `--write` what the map lacks), for layers gate 8 counts unmapped; merged as the run reads the map, a based `layers` entry refused; a project's proposer becomes a wrapper. Case T99.
 - 1.64.1 (2026-11-01): `is` is held to `parity.tolerances.length` (exact by default), case T98; the stylesheet gates and the pictures name `tools/css-lint` and `bin/parity --shots`.
 - 1.64.0 (2026-11-01): a waiver states the value the page holds by rule (`is`), so a text style that makes a frame taller moves no bound by hand. Case T98.
 - 1.63.1 (2026-10-31): the pairing prompt frames its two lists as data (toolkit-standard §D 24), and the dashboard fills it in one pass, so a Figma name holding `{{CODE}}` stays a name. Case T75.

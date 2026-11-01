@@ -6,8 +6,8 @@
  *   session(project, { page, app, browser, say }) → { PAGE, ROUTES, acquire, release, discard, screen, close }
  *   screen(target, tier) → a tab showing that screen as its frame draws it
  *
- * What the parity run and a project's own tools (a pixel diff, a proposed
- * map) both need, so they get it one way: the story tool built (once per
+ * What the parity run, the proposed map (propose.mjs) and a project's own
+ * tools (a pixel diff) all need, so they get it one way: the story tool built (once per
  * change of what the project names as its inputs, `host.build`) and served
  * by this process; the running product started where it is not up
  * (`app.start`), signed in where it wants a session (`app.session`); one

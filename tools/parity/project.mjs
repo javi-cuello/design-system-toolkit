@@ -79,10 +79,9 @@ export function resolveBases(raw, unused = []) {
     const b = s.base ? one(s.base, seen) : null;
     const merged = { ...(b || {}), ...s };
     delete merged.base;
-    if (b) {
-      for (const k of MERGED) if (b[k] || s[k]) merged[k] = { ...b[k], ...(s[k] || {}) };
-      merged.runtime = s.runtime || b.runtime;
-    }
+    // copied even with no base: a `false` is deleted below, and the caller's own map must not lose it
+    for (const k of MERGED) if (b?.[k] || s[k]) merged[k] = { ...b?.[k], ...(s[k] || {}) };
+    if (b) merged.runtime = s.runtime || b.runtime;
     for (const k of MERGED) for (const [n, v] of Object.entries(merged[k] || {})) {
       if (v !== false) continue;
       if (!b || !b[k] || !(n in b[k])) unused.push(`${key}: ${k} "${n}" is false and inherits nothing to drop`);

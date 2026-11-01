@@ -19,6 +19,8 @@ const screens = resolveBases({
 ok('a screen starts from its base, its own entries win, and false drops what it would inherit',
   screens.scrolled.route === '/' && screens.scrolled.nodes.Main === 'main' && !('Footer' in screens.scrolled.nodes)
   && screens.scrolled.nodes.Aside === 'aside' && !('Main.height' in screens.scrolled.waivers) && screens.home.waivers['Main.height'] === 'feed');
+{ const raw = { solo: { nodes: { A: 'a', B: false } } }; resolveBases(raw);
+  ok('resolving leaves the screens file as read: a `false` with no base stays in the caller\'s map', raw.solo.nodes.B === false); }
 ok('a base that names itself through a cycle is refused', (() => { try { resolveBases({ a: { base: 'b' }, b: { base: 'a' } }); return false; } catch (e) { return /cycle/.test(e.message); } })());
 
 const button = V('Size=lg, State=Rest', 'Size=lg, State=Hover', 'Size=sm, State=Rest', 'Size=sm, State=Hover', 'Size=xl, State=Rest');
