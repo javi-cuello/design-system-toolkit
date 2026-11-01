@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.11.4 (2026-11-01): pass F runs the `figma-properties-table` skill to profile a file, rather than calling that skill's script itself (skill-standard §A H). Prose only; cases unaffected.
 - 2.11.3 (2026-10-31): pass F records a `PT.profile()` error as no table confirmed, never its config (figma-properties-table 1.12.0 returns one beside the error). Prose only.
 - 2.11.2 (2026-10-31): reviewed: pass B reads a mark followed by a space (`🔒 Button`) as naming the bare component; pass E loads the page it scans in ids mode. Case C16.
 - 2.11.1 (2026-10-31): `pass-f-doc-apparatus.js` takes the section header's and the contrast matrix's names from the library's settings (`pageSectionComponent`, `ratiosGrid`), prepended as `TOKENS`, and refuses without them.

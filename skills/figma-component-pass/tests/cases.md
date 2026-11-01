@@ -1,4 +1,6 @@
-# Eval cases — figma-component-pass (v1.10.0)
+# Eval cases — figma-component-pass (v1.10.1)
+
+**Walked: 2026-11-01 against v1.10.1** — the claimed stage 2 → stage 3 hand-off is removed (the descriptions skill never took `PT.plan()`): A1's ordering, P10's re-read detection (`verify.js`) and line 159's "stage 3 is not told a plan exists" all hold, and none asserted the hand-off; every other case unchanged.
 
 **Walked: 2026-10-31 for 1.10.0** — A5 executed in the stage that owns it: `node skills/figma-component-descriptions/tests/test-engines.mjs` holds a stepper whose `Step item` resolves to a different main per `Layout` value, both mains kept, and the planted name-only key failing; its "cross-checked against the distinct mains" half is now that suite, not a recount here. P10's detection is `verify.js` re-reading the interface at verify time (D19's walk). A1–A4, A6–A9, A11 unchanged.
 
