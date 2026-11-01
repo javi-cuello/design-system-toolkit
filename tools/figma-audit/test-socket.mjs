@@ -134,6 +134,10 @@ try {
   back.s.destroy();
   const failed = await lost;
   ok("a call whose socket closed fails at once, not timing out", failed.ok === false && failed.error === "plugin_not_connected");
+  // Figma runs one plugin a file: the snapshot closes the bridge, so the next call names the file to reopen
+  const reopen = await exec("return 5", "GONE");
+  ok("a call for a file whose plugin closed names that file and why it closes", reopen.error === "wrong_file_not_open"
+    && /^Run the bridge plugin in "Reloaded, again" again\. It is no longer connected; running another plugin in that file, such as the snapshot, closes it\./.test(reopen.hint), reopen.hint);
 
   // two claims on a silent holder at once: the first takes it, and the second is asked of the new holder, not let in
   const stale = await connect({ pongs: false });

@@ -89,7 +89,8 @@ try {
   const noPlugin = await post("/exec", { code: "return 1" });
   ok("/exec with no plugin connected answers plugin_not_connected at once", noPlugin.code === 200 && noPlugin.json.ok === false && noPlugin.json.error === "plugin_not_connected");
   const noFile = await post("/exec", { code: "return 1", fileKey: "NOT-OPEN" });
-  ok("/exec naming a file that is not open answers wrong_file_not_open", noFile.json.ok === false && noFile.json.error === "wrong_file_not_open");
+  ok("/exec naming a file that is not open answers wrong_file_not_open", noFile.json.ok === false && noFile.json.error === "wrong_file_not_open"
+    && /^Run the bridge plugin in the file NOT-OPEN\./.test(noFile.json.hint));
   const notJson = await post("/exec", "{not json");
   ok("/exec with a body that is not JSON is a 500 that says so, and the service stays up", notJson.code === 500 && /JSON/.test(notJson.json.error) && (await ask("GET", "/health")).code === 200);
   ok("/claude with no key says so rather than calling out", (await post("/claude", { prompt: "x" })).json.error === "no_api_key");

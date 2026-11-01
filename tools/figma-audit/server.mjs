@@ -479,6 +479,7 @@ const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 // whichever file connected last. That is a wrong-file write waiting to happen,
 // and a guard downstream is a safety net, not a design.
 const plugins = new Map();         // fileKey -> { socket, fileName, at }
+const closedNames = new Map();     // fileKey -> fileName, of a file whose plugin closed
 let nextId = 1;
 const pending = new Map();         // id -> {res, rej, timer, socket}: the socket the call went down
 
@@ -501,6 +502,25 @@ function frame(str) {
   else if (len < 65536) { head = Buffer.alloc(4); head[0] = 0x81; head[1] = 126; head.writeUInt16BE(len, 2); }
   else { head = Buffer.alloc(10); head[0] = 0x81; head[1] = 127; head.writeBigUInt64BE(BigInt(len), 2); }
   return Buffer.concat([head, p]);
+}
+
+/* What to do when the file asked for has no live plugin, by name. Figma runs
+   one plugin at a time in a file, so running another there (the snapshot)
+   closes this one: on one day the bridge "dropped" five times, each right
+   after a snapshot, and every time it needed asking which file to reopen. */
+/* A file's name is the socket's word, read by whoever reads the hint: quoted
+   whole, one line, short; and few kept, so a page cycling keys holds little. */
+const named = (n) => JSON.stringify(String(n).replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 200));
+function remember(key, name) {
+  closedNames.delete(key);
+  closedNames.set(key, name);
+  if (closedNames.size > 50) closedNames.delete(closedNames.keys().next().value);
+}
+function notOpen(fileKey) {
+  const had = closedNames.get(fileKey);
+  const live = [...plugins.values()].filter((e) => !e.socket.destroyed).map((e) => e.fileName).filter(Boolean);
+  return (had ? `Run the bridge plugin in ${named(had)} again. It is no longer connected; running another plugin in that file, such as the snapshot, closes it.` : `Run the bridge plugin in the file ${fileKey}.`)
+    + (live.length ? ` Open now: ${live.map(named).join(", ")}.` : "");
 }
 
 function exec(code, timeout = 30000, fileKey = null) {
@@ -593,7 +613,7 @@ function attach(socket) {
     }
   });
   const gone = () => {
-    for (const [k, e] of plugins) if (e.socket === socket) plugins.delete(k);
+    for (const [k, e] of plugins) if (e.socket === socket) { plugins.delete(k); if (e.fileName) remember(k, e.fileName); }
     // Figma tears the plugin runtime down mid-call routinely. Fail the calls
     // sent down this socket now rather than making the page sit out a
     // 35-second timeout for an answer that can no longer arrive: no other
@@ -1034,7 +1054,10 @@ const server = createServer(async (req, res) => {
         if (result && result.success === false && /timed out/i.test(result.error || "")) result.error += STILL;
         return json(res, 200, { ok: true, result });
       }
-      catch (e) { return json(res, 200, { ok: false, error: e.message === "plugin_timeout" ? "plugin_timeout:" + STILL : e.message }); }
+      catch (e) {
+        if (e.message === "wrong_file_not_open") return json(res, 200, { ok: false, error: e.message, hint: notOpen(fileKey) });
+        return json(res, 200, { ok: false, error: e.message === "plugin_timeout" ? "plugin_timeout:" + STILL : e.message });
+      }
     }
 
     // Claude, proxied so the key never reaches the page.
