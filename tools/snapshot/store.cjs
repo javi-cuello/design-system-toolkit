@@ -1119,7 +1119,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const KINDS = [['collections', 'collection', Object.keys(p.tokens.collections || {})], ...OWNED.map((k) => [k, { textStyles: 'text style', paintStyles: 'paint style', effects: 'effect style' }[k], (p.tokens[k] || []).map((x) => x.name)])];
   for (const [k, noun, names] of KINDS) {
     const shared = names.map((c) => [c, otherSources.filter(([, s]) => s && s.owns && (s.owns[k] || []).includes(c)).map(([id, s]) => s.file || id)]).filter(([, by]) => by.length);
-    if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store shows this file's copy${k === 'collections' ? " and keeps the other's under shared" : ', the other\'s is not kept'}`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
+    if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store shows this file's copy${k === 'collections' ? " and keeps other sources' copies under shared where it has them" : ', the other\'s is not kept'}`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
   }
   const tokens = mergeTokens(tokensBefore, p.tokens, { iconSets: p.iconSets || [...new Set(p.icons.map((i) => i.name))], iconPage: p.iconPage || null, iconGroups: p.iconGroups || null, iconDescriptions: p.iconDescriptions || null, icons: p.icons, ref: fileRef, ids: [...thisFile], orphan });
   const { _meta: m, ...content } = tokens;

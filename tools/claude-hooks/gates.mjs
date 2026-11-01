@@ -131,16 +131,19 @@ const shellDir = (bare, cwd) => path.resolve(cwd, expandHome((bare.match(/^\s*cd
    all read: a write missed loosens the gate. */
 function sedFiles(bare, held) {
   const files = [];
-  for (const m of bare.replace(/\\\r?\n/g, ' ').matchAll(/(?:^|[;&|(\s])sed\s+([^;&|\n]*)/gm)) {
+  // by any path (`/usr/bin/sed`, Homebrew's gsed), in a subshell or backticks; a comment is no operand
+  for (const m of bare.replace(/\\\r?\n/g, ' ').replace(/(^|\s)#[^\n]*/g, '$1').matchAll(/(?:^|[;&|(`\s/])g?sed\s+([^;&|()`\n]*)/gm)) {
     const words = m[1].replace(/\d?(?:>>?|<)&?\s*[^\s<>]*/g, ' ').trim().split(/\s+/).filter(Boolean);
     let inPlace = false, script = false;
     const ops = [];
     for (let i = 0; i < words.length; i++) {
       const w = words[i];
-      if (w === '--in-place' || w.startsWith('--in-place=') || /^-[^-]*i/.test(w)) {
+      // a script stuck to its flag (-e's/a/b/, -fscript.sed) is the script, read before -i could take it
+      if (/^-[a-zA-Z]*?[ef]./.test(w) && !/^-[a-zA-Z]*?i/.test(w.slice(0, w.search(/[ef]/) + 1))) script = true;
+      else if (w === '--in-place' || w.startsWith('--in-place=') || /^-[^-]*i/.test(w)) {
         inPlace = true;
         // BSD: `-i ''` or `-i .bak` (a held quote or a dot word) is the suffix, not the script
-        if (/^-[^-]*i$/.test(w) && /^\0\d+\0$/.test(words[i + 1] || '') && !held[words[i + 1].slice(1, -1)]) i++;
+        if (/^-[^-]*i$/.test(w) && (/^\0\d+\0$/.test(words[i + 1] || '') ? !held[words[i + 1].slice(1, -1)] : /^\.\w+$/.test(words[i + 1] || ''))) i++;
         if (/^-[^-]*e$|^-[^-]*f$/.test(w)) { script = true; i++; }
       } else if (/^-[^-]*[ef]$|^--(?:expression|file)$/.test(w)) { script = true; i++; }
       else if (/^--(?:expression|file)=/.test(w)) script = true;

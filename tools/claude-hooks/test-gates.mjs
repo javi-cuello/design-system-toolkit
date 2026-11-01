@@ -53,6 +53,13 @@ test('a shell command writes only where it redirects, tees or edits in place, ne
     ["sed --in-place -e 's/a/b/' -e 's/c/d/' x.md", ['x.md'], '--in-place, and -e scripts'],
     ["sed -i.bak 's/a/b/' x.md", ['x.md'], 'a GNU suffix'],
     ["sed 's/a/b/' x.md > y.md", ['y.md'], 'a sed without -i writes only its redirect'],
+    ["(cd sub && sed -i '' 's/a/b/' x.md)", ['x.md'], 'a subshell\'s paren is not part of the file'],
+    ["sed -i -e's/a/b/' x.md", ['x.md'], 'a script stuck to -e'],
+    ["sed -i -fscript.sed x.md", ['x.md'], 'or to -f'],
+    ["/usr/bin/sed -i 's/a/b/' x.md", ['x.md'], 'sed by its path'],
+    ["echo `sed -i 's/a/b/' x.md`", ['x.md'], 'sed in backticks'],
+    ["sed -i .bak 's/a/b/' x.md", ['x.md'], 'a BSD dot suffix'],
+    ["sed -i 's/a/b/' x.md # tidy", ['x.md'], 'a comment is no file'],
   ]) assert.deepEqual(shellWrites(cmd, TOOLKIT), want.map(T), why);
   assert.deepEqual(shellWrites('echo hi > notes/a.md', TOOLKIT), [path.join(TOOLKIT, 'notes/a.md')]);
   assert.deepEqual(shellWrites("cd /tmp && sed -i '' 's/a/b/' x.txt", TOOLKIT), ['/tmp/x.txt']);
