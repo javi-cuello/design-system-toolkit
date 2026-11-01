@@ -1,4 +1,6 @@
-# Eval cases — design-code-parity (v1.63.1)
+# Eval cases — design-code-parity (v1.64.1)
+
+**Walked: 2026-11-01 against v1.64.1** — T98 added (1.64.0) and re-read for the tolerance (1.64.1): `node tools/parity/test-waivers.mjs` 28/28, `test-diff` 13; the first project's full run green with every window bound stated as `is`.
 
 **Walked: 2026-10-31 against v1.63.1** — the pairing prompt changed: its FIGMA and CODE lists are framed as data before they are given, and the dashboard fills every prompt in one pass (`tools/docs-site/src/dashboard/prompt.js`). T75 read against it: its assertions (a pair proposed only for names on the lists, a ruling not proposed again) hold unchanged. `node tools/toolkit-check/test-content-is-data.mjs` 8/8 (the prompt is listed and frames its lists before `{{FIGMA}}`); `node tools/docs-site/test-dashboard-safety.mjs` 12/12 (a Figma name holding `{{CODE}}` stays a name; the fix, judge and pairing prompts each filled by `fillPrompt`). Not run against a live model.
 
@@ -1129,5 +1131,5 @@ Runs: node tools/parity/test-external.mjs — "a library on no framework still k
 
 ## T98 · A value the page holds by rule is stated, not measured from the frame — *executed*
 Fixture: a frame drawing Main 2461 tall where the page's Main is the 1117 window, waived `{ decision: true, is: 1117 }`; the same frame redrawn 2468 tall after a text style grows.
-Assert: both frames pass with the page at 1117 (±0.5) and the accepted record says 0 for both; the page at 1200 or `auto` fails, saying what it holds; `is` beside `within` or `'unset'`, on a colour, an opacity, a radius or a turn, on a bare layer or as a string is refused at load; an `is` nothing used is stale.
+Assert: both frames pass with the page at 1117, held as near as the project's `tolerances.length` (exact by default: 1117.4 fails, and passes under 0.5) and the accepted record says 0 for both; the page at 1200 or `auto` fails, saying what it holds; `is` beside `within` or `'unset'`, on a colour, an opacity, a radius or a turn, on a bare layer or as a string is refused at load; an `is` nothing used is stale.
 Runs: node tools/parity/test-waivers.mjs — "is excuses exactly the value the page holds…", "is is a number on a numeric prop, alone…", "is states a length…", "an is row records how far the page is from its ruled value…", "a ruled value no difference uses is stale, as a bound is".

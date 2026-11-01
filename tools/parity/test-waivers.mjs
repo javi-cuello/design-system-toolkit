@@ -108,7 +108,8 @@ ok('a bound is held per target to the largest difference it excused there, give 
 // A rule written as a distance (the frame's Main less the window) moved on a dozen screens with each text style.
 ok('is excuses exactly the value the page holds, whatever the frame draws, and nothing else',
   excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '2461px', actual: '1117px', numeric: true }).excused
-  && excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '9999px', actual: '1117.4px', numeric: true }).excused
+  && !excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '9999px', actual: '1117.4px', numeric: true }).excused
+  && excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '9999px', actual: '1117.4px', numeric: true, tolerances: { length: 0.5 } }).excused
   && excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '2461px', actual: '1200px', numeric: true }).why === 'ruled 1117, and the page holds 1200px'
   && !excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '2461px', actual: 'auto', numeric: true }).excused);
 ok('is is a number on a numeric prop, alone: never beside within or unset, never on a colour or a bare layer',

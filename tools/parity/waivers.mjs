@@ -33,12 +33,12 @@
  * draws: a page's Main is the window (1117) where the frame draws it as tall
  * as its content. It exists because the rule was written as a distance, the
  * frame's height less the window's, and each change of a text style moved
- * that distance on a dozen screens by hand. Half a pixel either side, the
- * rounding a browser reports.
+ * that distance on a dozen screens by hand. Held as near as the project holds
+ * a length (`parity.tolerances.length`, exact by default).
  */
 import { isProp, NUMERIC } from './schema.mjs';
 
-/* The numbers `is` does not take: its half-pixel tolerance is a length's. */
+/* The numbers `is` does not take: it is held as near as a length. */
 const NOT_A_LENGTH = /^(opacity|border-radius|rotate)$/;
 
 export const FIELDS = new Set(['reason', 'within', 'is', 'sameAs', 'content', 'decision', 'fix']);
@@ -93,7 +93,7 @@ export function checkWaiver(key, waiver) {
   if (w.is !== undefined) {
     if (!(typeof w.is === 'number' && Number.isFinite(w.is))) out.push(`${key}: is is a finite number of the prop's own unit`);
     else if (prop && !numeric) out.push(`${key}: is states a number, and ${prop} is not one`);
-    // half a pixel is a length's rounding: an opacity, a radius's four corners or a turn would read loose
+    // held as a length is (the project's tolerance): an opacity, a radius's four corners or a turn are not lengths
     else if (prop && NOT_A_LENGTH.test(prop)) out.push(`${key}: is states a length, and ${prop} is not one — bound it (within)`);
     else if (!prop) out.push(`${key}: is states one property's value, so the key names it (Layer.prop)`);
     if (w.within !== undefined) out.push(`${key}: within and is say different things — a distance from the frame, or the page's own value`);
@@ -154,7 +154,8 @@ export function recordExcused(excused, target, rows, declaredAt) {
 export const asWaiver = (w) => (w == null ? null : typeof w === 'string' ? { reason: w } : w);
 
 /**
- * Does this waiver excuse this difference? `sameElement` is the project's
+ * Does this waiver excuse this difference? `tolerances` is the project's
+ * (`parity.tolerances`), for the value an `is` rules. `sameElement` is the project's
  * answer to "do this layer and `sameAs` resolve to one element", when the
  * waiver makes that claim.
  *
@@ -165,7 +166,7 @@ export const asWaiver = (w) => (w == null ? null : typeof w === 'string' ? { rea
  *
  * @returns {{ excused: true } | { excused: false, why: string }}
  */
-export function excuses(waiver, { expected, actual, sameElement, numeric = false, off: given } = {}) {
+export function excuses(waiver, { expected, actual, sameElement, numeric = false, off: given, tolerances = {} } = {}) {
   const w = asWaiver(waiver);
   if (!w) return { excused: false, why: 'no waiver' };
   if (w.sameAs && sameElement === false) return { excused: false, why: `waiver claims one element with "${w.sameAs}" but the selectors differ` };
@@ -183,7 +184,7 @@ export function excuses(waiver, { expected, actual, sameElement, numeric = false
   // the page's own value, ruled: a keyword or another number is not it
   if (w.is !== undefined) {
     const held = parseFloat(typeof actual === 'object' && actual ? actual.r : actual);
-    return Number.isFinite(held) && Math.abs(held - w.is) <= 0.5 ? { excused: true } : { excused: false, why: `ruled ${w.is}, and the page holds ${typeof actual === 'object' ? JSON.stringify(actual) : actual}` };
+    return Number.isFinite(held) && Math.abs(held - w.is) <= (tolerances.length || 0) + 1e-6 ? { excused: true } : { excused: false, why: `ruled ${w.is}, and the page holds ${typeof actual === 'object' ? JSON.stringify(actual) : actual}` };
   }
   /* A number measured as a keyword (`normal`, `none`, `auto`) has no distance
      to bound: only a ruling excuses it — a ::placeholder that has no line box
@@ -204,7 +205,7 @@ export function excuses(waiver, { expected, actual, sameElement, numeric = false
  * the running product's appWaivers: the day the data happens to match the
  * frame is not the day its excuse died), and a `content` or `decision`
  * waiver that bounds nothing, which records why a layer is not an element of
- * its own and has no difference to match. A bound (`within`) or an `'unset'`
+ * its own and has no difference to match. A bound (`within`), a ruled value (`is`) or an `'unset'`
  * ruling is a fact about a difference on pinned content: if no row uses it,
  * it describes nothing (round 3 of the 2026-10-02 review, S14: 59 and 48
  * such bounds and 16 'unset' rulings sat unused, never stale).

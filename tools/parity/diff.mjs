@@ -41,7 +41,7 @@ export function diff(docs, measured, { waivers = {}, tolerances = {} } = {}) {
     // mapping gives them one selector.
     const sameElement = waiver.sameAs ? selectorOf.get(waiver.sameAs) === doc.selector : undefined;
     const numeric = NUMERIC.has(prop);
-    const v = excuses(waiver, { expected, actual, sameElement, numeric, off: given });
+    const v = excuses(waiver, { expected, actual, sameElement, numeric, off: given, tolerances });
     const declared = waiver.key || key;
     // the distance excused, for a bound to be held to it (run.mjs: per target, recorded at --accept)
     const off = numeric ? (given !== undefined ? given : Math.abs(parseFloat(expected) - parseFloat(actual))) : NaN;
