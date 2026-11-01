@@ -15,22 +15,27 @@ delete process.env.TOOLKIT_GATES; delete process.env.TOOLKIT_EVAL_COPY;
 process.env.TMPDIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-gates-')));
 
 let n = 0;
-/* A session: a transcript built from turns, and its own id so no state leaks. */
-function session(lines) {
+/* A session: a transcript built from turns, and its own id so no state leaks.
+   It opens with the repo's check run and read, as §D 0 has every piece of work begin. */
+function session(lines, { checked = true } = {}) {
   const id = `test-gates-${process.pid}-${n++}`;
   const file = path.join(os.tmpdir(), `${id}.jsonl`);
-  fs.writeFileSync(file, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  // dated long ago: a shell call's span is read from disk, and a file another session saves now must not fall in it
+  const old = (rec) => ({ ...rec, timestamp: '2020-01-01T00:00:00.000Z' });
+  const opening = checked ? [old(withId(call('Bash', { command: 'bin/check' }), `check-${id}`)), old(checkResult(`check-${id}`))] : [];
+  fs.writeFileSync(file, [...opening, ...lines].map((l) => JSON.stringify(l)).join('\n') + '\n');
   return { id, file, clean: () => { for (const f of [file, planPath(id), path.join(os.tmpdir(), `toolkit-gates-${id}.json`)]) fs.rmSync(f, { force: true }); } };
 }
 const user = (text) => ({ type: 'user', origin: { kind: 'human' }, message: { content: text } });
 const harness = (text) => ({ type: 'user', isMeta: true, origin: null, message: { content: text } });
-const PLAN_TEXT = '# Plan\n## Goal\nx\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n';
+const PLAN_TEXT = '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n';
 const DONE = 'Done.\nToolkit: nothing; checked the standards.\nOpen: nothing.';
 const call = (name, input) => ({ type: 'assistant', cwd: TOOLKIT, message: { content: [{ type: 'tool_use', name, input }] } });
 const edit = (rel, lines = 1) => call('Edit', { file_path: path.join(TOOLKIT, rel), old_string: 'a', new_string: Array(lines).fill('b').join('\n') });
 const review = (extra = {}) => call('Agent', { description: 'Review the gates', prompt: 'Review this diff', subagent_type: 'Explore', ...extra });
 const result = (id, is_error) => ({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, is_error, content: 'x' }] } });
 const withId = (rec, id) => { rec.message.content[0].id = id; return rec; };
+const checkResult = (id, out = 'skills ok\ngreen') => ({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content: out }] } });
 
 test('a shell command writes only where it redirects, tees or edits in place, never inside quotes', () => {
   assert.deepEqual(shellWrites(`node -e "import('x').then(({a})=>a)"`, TOOLKIT), []);
@@ -93,6 +98,62 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   assert.equal(planGate(s.id, s.file, REPOS, { name: 'Write', input: { file_path: planPath(s.id), content: '# plan' } }, TOOLKIT), null, 'writing the plan itself passes');
   fs.writeFileSync(planPath(s.id), '# Plan\n## Impact\nx\n');
   assert.notEqual(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a heading alone is not a plan: every section, and impact.mjs output');
+  // the before half (§D 0): the check run before the work, read, and the three questions asked
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('green\n', 'ran it\n'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /bin\/check's closing line under Before/, 'a check said as run is not a check read');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('green\n', '').replace('## Goal\nx', '## Goal\ngreen'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /closing line under Before/, 'the line counts only under Before');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('§D 5 stored', ''));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /§D 1, §D 2 and §D 5/, 'all three questions answered');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('§D 1 no owner; §D 2 yes', '§D 13 applies; §D 21 read'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /§D 1, §D 2 and §D 5/, '§D 13 and §D 21 are not §D 1 and §D 2');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('## Before\ngreen\n', '## Before\n### The check\n> `green, 2 skipped (could not run here):`\n### The questions\n'));
+  assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a subheading inside Before, and a quoted paste, still count');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('green\n', '== 2 FAILED (detail above each):\n'));
+  assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a red inherited check is a finding, and the plan may proceed on it');
+  // the run itself, read from the transcript: a pasted line can be written after the fact
+  const unrun = session([user('go'), edit('a.mjs', 200)], { checked: false });
+  fs.writeFileSync(planPath(unrun.id), PLAN_TEXT);
+  assert.match(String(planGate(unrun.id, unrun.file, REPOS, next, TOOLKIT)), /a bin\/check run in \//, 'no run in the transcript: the pasted line is not taken');
+  unrun.clean();
+  const late = session([user('go'), edit('a.mjs', 200), withId(call('Bash', { command: 'cd ~/Projects/toolkit && bin/check 2>&1 | tail -3' }), 'late1'), checkResult('late1', '== 1 FAILED (detail above each):')], { checked: false });
+  fs.writeFileSync(planPath(late.id), PLAN_TEXT);
+  assert.match(String(planGate(late.id, late.file, REPOS, next, TOOLKIT)), /"late:" line under Before/, 'a check after the first edit is said as late');
+  fs.writeFileSync(planPath(late.id), PLAN_TEXT.replace('green\n', 'green\nlate: the first edit was a.mjs, before the check\n'));
+  assert.equal(planGate(late.id, late.file, REPOS, next, TOOLKIT), null, 'and, said, the work goes on');
+  late.clean();
+  const dated = (rec) => ({ ...rec, timestamp: '2020-01-01T00:00:00.000Z' }); // see session(): a shell call's span is read from disk
+  const bg = session([dated(withId(call('Bash', { command: 'bin/check', run_in_background: true }), 'bg1')), dated(checkResult('bg1', 'Command running in background with ID: b1.')), harness('<task-notification>\n<tool-use-id>bg1</tool-use-id>\n<status>completed</status>\n</task-notification>'), user('go'), edit('a.mjs', 200)], { checked: false });
+  fs.writeFileSync(planPath(bg.id), PLAN_TEXT);
+  assert.equal(planGate(bg.id, bg.file, REPOS, next, TOOLKIT), null, 'a background run counts once its notification says it ended');
+  bg.clean();
+  // each repo's own check, in that repo: another repo's run, or reading the check's helper, is not one
+  const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gates-other-')));
+  const away = session([dated(withId(call('Bash', { command: `cd ${other} && bin/check` }), 'o1')), dated(checkResult('o1', '== all green')), dated(withId(call('Bash', { command: 'sed -n 20,40p bin/check-lib.sh' }), 'o2')), dated(checkResult('o2', 'green() {')), user('go'), edit('a.mjs', 200)], { checked: false });
+  fs.writeFileSync(planPath(away.id), PLAN_TEXT);
+  assert.match(String(planGate(away.id, away.file, [TOOLKIT, other], next, TOOLKIT)), new RegExp(`a bin/check run in ${TOOLKIT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), "another repo's check, and reading check-lib.sh, are not this repo's run");
+  away.clean();
+  // a check run by its path, or after a `cd` joined by `;` or in `( )`, is that repo's
+  for (const cmd of [`${other}/bin/check`, `cd ${other}; bin/check`, `(cd ${other}; bin/check)`]) {
+    const p = session([dated(withId(call('Bash', { command: cmd }), 'q1')), dated(checkResult('q1', 'green')), user('go'), edit('a.mjs', 200)], { checked: false });
+    fs.writeFileSync(planPath(p.id), PLAN_TEXT);
+    assert.match(String(planGate(p.id, p.file, [TOOLKIT, other], next, TOOLKIT)), /a bin\/check run in/, `"${cmd}" is the other repo's check, not this one's`);
+    p.clean();
+  }
+  // reading the check, or one run in a folder the gate cannot read, credits no repo
+  for (const cmd of ['cat bin/check bin/check-lib.sh', 'cd "$X" && bin/check', 'cd - && bin/check']) {
+    const p = session([dated(withId(call('Bash', { command: cmd }), 'r1')), dated(checkResult('r1', 'green() {\ngreen')), user('go'), edit('a.mjs', 200)], { checked: false });
+    fs.writeFileSync(planPath(p.id), PLAN_TEXT);
+    assert.match(String(planGate(p.id, p.file, REPOS, next, TOOLKIT)), /a bin\/check run in/, `"${cmd}" is not this repo's run`);
+    p.clean();
+  }
+  // a project's check ends in its own words
+  for (const end of ['== all green', '== FAILURES above', 'RED']) {
+    const p = session([dated(withId(call('Bash', { command: 'bin/check' }), 'p1')), dated(checkResult('p1', end)), user('go'), edit('a.mjs', 200)], { checked: false });
+    fs.writeFileSync(planPath(p.id), PLAN_TEXT.replace('green\n', end + '\n'));
+    assert.equal(planGate(p.id, p.file, REPOS, next, TOOLKIT), null, `a project's closing line "${end}" counts`);
+    p.clean();
+  }
   fs.writeFileSync(planPath(s.id), PLAN_TEXT);
   assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null);
   s.clean();
@@ -359,7 +420,8 @@ test('a rewrite counts the lines it changes, not the file it writes', () => {
   const dir = fs.mkdtempSync(path.join(TOOLKIT, '.gates-test-'));
   const f = path.join(dir, 'big.md');
   fs.writeFileSync(f, Array.from({ length: 300 }, (_, i) => `line ${i}`).join('\n'));
-  const s = session([user('go')]);
+  // no opening check: a shell call's span is read from disk, and the file the test just wrote would be counted as its
+  const s = session([user('go')], { checked: false });
   try { // inside the repo, so a failed run must not leave it behind
     const content = fs.readFileSync(f, 'utf8').replace('line 7', 'line seven');
     assert.equal(planGate(s.id, s.file, REPOS, { id: 'w1', name: 'Write', input: { file_path: f, content } }, TOOLKIT), null);
@@ -398,7 +460,7 @@ test('closing reviewed work puts its plan aside, so the next full-size work plan
 test('a plan that falls short says what it lacks', () => {
   const s = session([user('go'), edit('a.mjs', 200)]);
   fs.writeFileSync(planPath(s.id), '# Plan\n## Goal\nx\n## Impact\nsummary\n');
-  assert.match(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: 'b' } }, TOOLKIT), /lacks the Claims section and the Beyond scope section and the Budget section and the Review section and impact\.mjs's output/);
+  assert.match(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: 'b' } }, TOOLKIT), /lacks the Before section and the Claims section and the Beyond scope section and the Budget section and the Review section and bin\/check's closing line under Before[\s\S]* and the answers to §D 1, §D 2 and §D 5 under Before and impact\.mjs's output/);
   s.clean();
 });
 
@@ -414,6 +476,37 @@ test("a state written by an older gate is read afresh, never crashes the hook", 
   fs.writeFileSync(path.join(os.tmpdir(), `toolkit-gates-${s.id}.json`), JSON.stringify({ version: 2, offsets: {}, total: { files: {}, wide: [] }, since: { files: {}, wide: [] }, owed: true }));
   assert.equal(stopGate(s.id, s.file, REPOS, 'Done.'), null);
   s.clean();
+});
+
+test("the last gate's state is carried forward: a long session is never re-read from its start", () => {
+  const s = session([user('go'), edit('a.mjs', 5)]);
+  const size0 = fs.statSync(s.file).size;
+  fs.writeFileSync(path.join(os.tmpdir(), `toolkit-gates-${s.id}.json`), JSON.stringify({ version: 3, offsets: { [s.file]: size0 }, total: { files: {}, wide: [] }, since: { files: {}, wide: [] }, checks: { x: true }, checkedAt: '2026-11-01T00:00:00.000Z', firstEdit: '2026-11-01T00:00:00.000Z' }));
+  const st = advance(s.id, s.file, REPOS);
+  assert.equal(st.version, 4);
+  assert.equal(size(st.total).files, 0, 'what the carried offset already read is not read again');
+  assert.deepEqual(st.checkedAt, {}, "the new fields start empty");
+  s.clean();
+});
+
+test('read afresh, work a closed plan ended is not counted again', () => {
+  const s = session([user('go'), { ...edit('a.mjs', 200), timestamp: '2029-12-31T00:00:00.000Z' }, user('next'), { ...edit('b.mjs', 3), timestamp: '2030-01-02T00:00:00.000Z' }]);
+  const done = planPath(s.id).replace(/\.md$/, `-${Date.parse('2030-01-01T00:00:00.000Z')}.done.md`);
+  fs.writeFileSync(done, PLAN_TEXT);
+  const st = advance(s.id, s.file, REPOS);
+  assert.deepEqual(Object.keys(st.total.files).map((f) => path.basename(f)), ['b.mjs'], 'only the edit after the close counts');
+  fs.rmSync(done); s.clean();
+});
+
+test("the work's first edit is the earliest, though a subagent's file is read after the session's", () => {
+  const at = (rec, t) => ({ ...rec, timestamp: t });
+  const s = session([at(user('go'), '2030-01-01T00:00:00.000Z'), at(withId(call('Bash', { command: 'bin/check' }), 'k1'), '2030-01-01T00:05:00.000Z'), at(checkResult('k1'), '2030-01-01T00:05:01.000Z'), at(edit('a.mjs', 5), '2030-01-01T00:10:00.000Z')], { checked: false });
+  const dir = path.join(s.file.replace(/\.jsonl$/, ''), 'subagents');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'agent-x.jsonl'), JSON.stringify(at(edit('b.mjs', 5), '2030-01-01T00:01:00.000Z')) + '\n');
+  const st = advance(s.id, s.file, REPOS);
+  assert.equal(st.firstEdit[TOOLKIT], '2030-01-01T00:01:00.000Z', "the subagent's earlier edit, so the check after it needs late:");
+  fs.rmSync(dir.replace(/\/subagents$/, ''), { recursive: true, force: true }); s.clean();
 });
 
 test("a background subagent's edits from before the person spoke do not mark the new turn", () => {

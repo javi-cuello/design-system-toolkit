@@ -40,8 +40,8 @@ export const WIDE_LINES = 10;
 // skill edit "full" (version, changelog, cases).
 const WORKTREE = /^\.claude\/worktrees\//;
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
-// The plan's sections, each a heading; Impact must hold impact.mjs's output.
-export const PLAN = ['Goal', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
+// The plan's sections, each a heading; Before must hold bin/check's closing line, Impact impact.mjs's output.
+export const PLAN = ['Before', 'Goal', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
 
 /* Unreviewed work a session left uncommitted, kept for the next session in
    the same repo: two small halves in two sessions are one full-size change. */
@@ -53,9 +53,18 @@ export const planPath = (session) => path.join(os.tmpdir(), `toolkit-plan-${sess
 const statePath = (session) => path.join(os.tmpdir(), `toolkit-gates-${session || 'none'}.json`);
 
 const empty = () => ({ files: {}, wide: [] });
-const VERSION = 3; // a state written by another version is read afresh
-const fresh = () => ({ version: VERSION, turnStart: '', offsets: {}, total: empty(), since: empty(), docs: [], turnEdited: false, owed: false, measured: {}, denied: [], counted: {}, shell: {}, pre: {}, reviewing: [], inherited: empty(), cleared: [], reviewedAt: '' });
-const load = (session) => { try { const st = JSON.parse(fs.readFileSync(statePath(session), 'utf8')); return st.version === VERSION ? { ...fresh(), ...st } : fresh(); } catch { return fresh(); } };
+const VERSION = 4;
+// A state of a version listed here is carried forward; any other is read afresh, from the
+// transcript's start, which on a long session outlasts the hook's timeout (2026-11-01 review).
+const CARRIES = [3, VERSION];
+const fresh = () => ({ version: VERSION, closedAt: '', turnStart: '', offsets: {}, total: empty(), since: empty(), docs: [], turnEdited: false, owed: false, measured: {}, denied: [], counted: {}, shell: {}, pre: {}, reviewing: [], checks: {}, checkedAt: {}, firstEdit: {}, inherited: empty(), cleared: [], reviewedAt: '' });
+// Read afresh, the work a closed plan already ended stays ended: its edits are not counted again.
+const closedBefore = (session) => { try { const pre = path.basename(planPath(session)).replace(/\.md$/, '-'); return fs.readdirSync(os.tmpdir()).map((f) => f.startsWith(pre) && Number(f.slice(pre.length).replace(/\.done\.md$/, ''))).filter(Boolean).reduce((a, b) => Math.max(a, b), 0); } catch { return 0; } };
+const load = (session) => {
+  try { const st = JSON.parse(fs.readFileSync(statePath(session), 'utf8')); if (CARRIES.includes(st.version)) return { ...fresh(), ...st, ...(st.version < 4 && { checks: {}, checkedAt: {}, firstEdit: {} }), version: VERSION }; } catch { /* none yet */ } // 3 kept one check for the session, 4 one per repo
+  const at = closedBefore(session);
+  return { ...fresh(), closedAt: at ? new Date(at).toISOString() : '' };
+};
 const save = (session, st) => { try { fs.writeFileSync(statePath(session), JSON.stringify(st)); } catch { /* read-only tmp: recomputed next call */ } };
 
 /* A review is a fresh agent whose job is reviewing (its description says
@@ -218,6 +227,7 @@ function scriptWrites(st, win, repos) {
     if (lines === undefined) try { lines = lineCount(fs.readFileSync(file, 'utf8')); } catch { lines = 0; } // untracked: all of it
     // an untracked file that was there before has no count to start from: all of it, toward a review
     const n = Math.max(0, lines - (before?.lines[file] || 0));
+    if (n && !(st.firstEdit[repo] <= new Date(t).toISOString())) st.firstEdit[repo] = new Date(t).toISOString(); // the earliest, whichever file is read first
     for (const a of [st.total, st.since]) {
       a.files[file] = (a.files[file] || 0) + n;
       if (WIDE.test(rel) && !a.wide.includes(file)) a.wide.push(file);
@@ -363,13 +373,17 @@ function record(st, line, repos, sub) {
   try { rec = JSON.parse(line); } catch { return; }
   if (!sub && personSpoke(rec)) { st.turnEdited = false; st.turnStart = rec.timestamp || ''; return; }
   const content = rec.message?.content;
+  if (st.closedAt && rec.timestamp && rec.timestamp < st.closedAt) return; // work a closed plan ended
   // a background review is running until its notification names its call; one that
   // arrives mid-turn is a queued attachment (or queue record), not a user message
   const note = rec.type === 'user' ? (typeof content === 'string' ? content : Array.isArray(content) ? content.map((x) => (typeof x.text === 'string' ? x.text : '')).join('\n') : '')
     : rec.type === 'attachment' ? String(rec.attachment?.prompt || '') : rec.type === 'queue-operation' ? String(rec.content || '') : '';
   if (note.includes('<task-notification>')) {
     const text = note;
-    for (const m of text.matchAll(/<tool-use-id>([^<]+)<\/tool-use-id>/g)) st.reviewing = st.reviewing.filter((r) => r.id !== m[1]);
+    for (const m of text.matchAll(/<tool-use-id>([^<]+)<\/tool-use-id>/g)) {
+      st.reviewing = st.reviewing.filter((r) => r.id !== m[1]);
+      if (m[1] in st.checks && /<status>completed<\/status>|exit code/.test(text)) checked(st, m[1], rec);
+    }
   }
   if (rec.type === 'user' && Array.isArray(content)) {
     for (const r of content) {
@@ -382,6 +396,8 @@ function record(st, line, repos, sub) {
       if (sh) { delete st.shell[r.tool_use_id]; delete st.pre[r.tool_use_id]; }
       // a foreground review is done when its result comes back; a background one only says it was launched
       const out = typeof r.content === 'string' ? r.content : (r.content || []).map((x) => x.text || '').join('\n');
+      // the repo's check, run and its closing line come back (a background run's comes with its notification)
+      if (r.tool_use_id in st.checks) { if (CHECK_END.test(out)) checked(st, r.tool_use_id, rec); else if (!/^\s*Command running in background/.test(out)) delete st.checks[r.tool_use_id]; }
       if (!/^\s*Async agent launched/.test(out)) st.reviewing = st.reviewing.filter((x) => x.id !== r.tool_use_id);
     }
     return;
@@ -398,18 +414,21 @@ function record(st, line, repos, sub) {
       continue;
     }
     // a shell call's own code may write anything: its span is checked on disk when its result is in
+    // the repo's own check, run in that repo: a run elsewhere is that repo's
+    if (!sub && c.name === 'Bash' && c.id && CHECK_RUN.test(bareShell(c.input?.command))) { const d = checkDir(bareShell(c.input?.command), rec.cwd || process.cwd()); st.checks[c.id] = (d && where(d, repos)?.repo) || ''; }
     if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart };
     if (c.id && st.counted[c.id]) continue; // counted when the plan gate saw it pending
     if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) continue; // a subagent's edit the session's review already covered
     const got = add(st, c, rec.cwd || process.cwd(), repos, sub);
     // a subagent's file is read after the session's, so an edit it made before the person spoke is not this turn's
+    for (const [f] of got) { const r = where(f, repos)?.repo; const at = rec.timestamp || new Date().toISOString(); if (r && !(st.firstEdit[r] <= at)) st.firstEdit[r] = at; }
     if (got.length) { if (!sub || !rec.timestamp || rec.timestamp > st.turnStart) st.turnEdited = true; if (c.id) st.counted[c.id] = got; }
   }
 }
 
 /* Read a transcript from where the last call stopped, so a hook on every edit
    stays cheap on a session of hundreds of MB. */
-function readFrom(st, file, repos, sub) {
+function readFrom(st, file, repos, sub, persist) {
   const fd = fs.openSync(file, 'r');
   const buf = Buffer.alloc(1 << 23);
   let rest = Buffer.alloc(0);
@@ -422,6 +441,7 @@ function readFrom(st, file, repos, sub) {
       let start = 0;
       for (let i = chunk.indexOf(10); i >= 0; i = chunk.indexOf(10, start)) { record(st, chunk.toString('utf8', start, i), repos, sub); start = i + 1; }
       rest = chunk.subarray(start);
+      st.offsets[file] = pos - rest.length; persist(); // a hook killed mid-read resumes here, not at 0
     }
     st.offsets[file] = pos - rest.length; // a line still being written is read next time
   } finally { fs.closeSync(fd); }
@@ -431,11 +451,12 @@ function readFrom(st, file, repos, sub) {
    session's work, and leaving it out was the widest way round every gate. */
 export function advance(session, transcript, repos, st = load(session, repos)) {
   if (!transcript || !fs.existsSync(transcript)) return st;
-  readFrom(st, transcript, repos, false);
+  const persist = () => save(session, st);
+  readFrom(st, transcript, repos, false, persist);
   const subs = path.join(transcript.replace(/\.jsonl$/, ''), 'subagents');
   let list = [];
   try { list = fs.readdirSync(subs).filter((f) => f.endsWith('.jsonl')); } catch { /* none */ }
-  for (const f of list) readFrom(st, path.join(subs, f), repos, true);
+  for (const f of list) readFrom(st, path.join(subs, f), repos, true, persist);
   // a review that never reported back (killed with its session) stops being waited on after a day
   st.reviewing = st.reviewing.filter((r) => Date.now() - r.at < 24 * 3600 * 1000);
   for (const [id, sh] of Object.entries(st.shell)) if (Date.now() - sh.start > 24 * 3600 * 1000) { delete st.shell[id]; delete st.pre[id]; }
@@ -444,8 +465,41 @@ export function advance(session, transcript, repos, st = load(session, repos)) {
   return st;
 }
 
-/* What the plan lacks: a missing section, or an Impact that is not impact.mjs's output. */
-const planGaps = (text) => [...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 'im').test(text)).map((h) => `the ${h} section`),
+/* What the plan lacks: a missing section, a Before without bin/check's closing line
+   and §D 0's three questions, or an Impact that is not impact.mjs's output. */
+const section = (text, h) => {
+  const m = text.match(new RegExp(`^(#+)\\s*${h}\\b[^\\n]*\\n`, 'im'));
+  if (!m) return '';
+  const rest = text.slice(m.index + m[0].length), end = rest.search(new RegExp(`^#{1,${m[1].length}}\\s`, 'm'));
+  return end < 0 ? rest : rest.slice(0, end);
+};
+// each repo's check ends on one of these: the toolkit's ("green…", "== N FAILED…"), and the projects' own
+// ("== all green", "== FAILURES above", "RED")
+const CHECK_END = /^[\s>*`=-]*(green\b|all green\b|[1-9]\d* FAILED\b|FAILURES above\b|RED\b)/m;
+// run as a command, not named as an argument (`cat bin/check` reads it)
+const CHECK_RUN = /(^|[\n;&|(]\s*)(?:[^\s;&|()]*\/)?bin\/check(?![\w.-])/;
+/* The repo a check ran in: the folder its path names (`~/Projects/x/bin/check`), else the
+   last `cd` or `pushd` before it, joined by `&&`, `;` or inside `( )`, else the call's own folder; null, so no repo
+   is credited, when that folder cannot be read (`cd "$X"`, `cd -`). */
+function checkDir(bare, cwd) {
+  const m = bare.match(/(^|[\n;&|(]\s*)((?:[^\s;&|()]*\/)?)bin\/check(?![\w.-])/);
+  let dir = cwd;
+  for (const [, d] of bare.slice(0, m ? m.index : 0).matchAll(/(?:^|[\s;&|(])(?:cd|pushd)\s+([^\s;&|()]+)/g)) {
+    if (d === "''" || d === '-' || d.includes('$')) return null;
+    dir = path.resolve(dir, expandHome(d));
+  }
+  return m && m[2] ? path.resolve(dir, expandHome(m[2])) : dir;
+}
+/* A check whose closing line came back: it counts for the repo it ran in, once per piece of work. */
+function checked(st, id, rec) {
+  const repo = st.checks[id]; delete st.checks[id];
+  if (repo !== undefined && !st.checkedAt[repo]) st.checkedAt[repo] = rec.timestamp || new Date().toISOString();
+}
+const planGaps = (text, st = {}, work = []) => [...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 'im').test(text)).map((h) => `the ${h} section`),
+  ...work.filter((r) => !st.checkedAt?.[r]).map((r) => `a bin/check run in ${r} whose closing line came back (pasted text alone is not a run; output redirected to a file, or cut to a preview, hides that line: pipe it through tail; run it as the command, not behind time or env)`),
+  ...(work.some((r) => st.checkedAt?.[r] && st.firstEdit?.[r] && st.checkedAt[r] > st.firstEdit[r]) && !/^\W*late\W*:/im.test(section(text, 'Before')) ? ['a "late:" line under Before: the check ran after the work\'s first edit, so say what that edit may have hidden'] : []),
+  ...(CHECK_END.test(section(text, 'Before')) ? [] : ["bin/check's closing line under Before (\"green…\", \"== N FAILED…\" or the project's own, pasted from the run before the work)"]),
+  ...(['§D 1', '§D 2', '§D 5'].every((q) => new RegExp(`${q}(?!\\d)`).test(section(text, 'Before'))) ? [] : ['the answers to §D 1, §D 2 and §D 5 under Before']),
   ...(/\(\d+ readers?\)/.test(text) ? [] : ["impact.mjs's output under Impact (its \"(N readers)\" lines, pasted, not summarised)"])];
 
 /* PreToolUse: measures a rewrite against the file it replaces, then refuses
@@ -460,9 +514,11 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     try { if (f && fs.existsSync(f)) st.measured[call.id] = lineDiff(fs.readFileSync(f, 'utf8'), call.input.content || ''); } catch { /* unreadable: counted whole */ }
   }
   const plan = planPath(session);
-  const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8')) : null;
-  const planned = gaps !== null && !gaps.length;
   advance(session, transcript, repos, st);
+  // the repos the work is in: those its files are in, and the one this call writes
+  const work = [...new Set([...Object.keys(st.total.files), ...writes(call, cwd)].map((f) => where(f, repos)?.repo).filter(Boolean))];
+  const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8'), st, work) : null;
+  const planned = gaps !== null && !gaps.length;
   inherit(st, session, repos, cwd);
   // a push carries the work out of reach of the review: unreviewed full-size work stays home
   if (call.name === 'Bash' && isPush(call.input?.command)) {
@@ -488,6 +544,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   save(session, st);
   const files = Object.keys(pending.total.files);
   return `This work is full-size (${s.why.join(', ')}), so it is planned before it is built (toolkit-standard §D 13). ${gaps ? `The plan at ${plan} lacks ${gaps.join(' and ')}; complete it` : `Write the plan to ${plan}`}, then retry this call. Sections, each a heading:\n`
+    + `  ## Before — the closing line of the repo's bin/check run before the work, pasted ("green…", "== N FAILED…", or the project's own), and the answers to §D 1, §D 2 and §D 5 (does the toolkit own this job; would the next project want it; is a new reader about stored state or the present)\n`
     + `  ## Goal — what done means\n`
     + `  ## Impact — the output of: node ${SHOWN}/tools/claude-hooks/impact.mjs ${files.map((f) => JSON.stringify(f)).join(' ')} <and the files still to come>; what each reader needs\n`
     + `  ## Claims — each claim the output's correctness or the work's scope rests on (a tool's limit, an API's behaviour, a file's state, what a test proves): checked (the probe run or the primary source read) or only believed, what being wrong would cost, and the check that settles a believed one before work rests on it; a "cannot" that would drop or shrink the work is probed first\n`
@@ -501,6 +558,8 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
    the next full-size work plans afresh. */
 function close(session, st) {
   st.since = empty(); st.total = empty(); st.docs = [];
+  st.checks = {}; st.checkedAt = {}; st.firstEdit = {}; // the next piece of work runs its own check
+  st.closedAt = new Date().toISOString();
   const plan = planPath(session);
   try { if (fs.existsSync(plan)) fs.renameSync(plan, plan.replace(/\.md$/, `-${Date.now()}.done.md`)); } catch { /* left in place: it still holds */ }
 }
