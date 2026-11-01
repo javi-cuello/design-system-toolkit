@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.19.0 (2026-11-01): step 8's sweep-against-targets diff is a script, `scripts/sweep-diff.mjs --against <targets.json>`, with `--exclude` and `--scope`: missed components, targets out of scope with a reason, alone-page ones for step 2e, unseen scope pages. Case D22.
 - 1.18.3 (2026-10-31): `falseFixity` holds a claim only when its subject, in its clause, is the component (by its name, singular or plural, or "it"): "The icon is fixed" is about a part. A real library raised five such hits, all false. Case D21.
 - 1.18.2 (2026-10-31): `scripts/sections.mjs` says a missing or broken input in one line naming it, never a stack. Case D20.
 - 1.18.1 (2026-10-31): reviewed: step 8 says `virtualSets` lists every virtual set, `shared: false` where members differ, as `verify.js` returns it. Prose only.

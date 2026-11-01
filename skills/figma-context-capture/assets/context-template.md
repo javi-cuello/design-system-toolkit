@@ -136,6 +136,12 @@ block) fill anything left out, and a key here overrides them. Leave out what
 this project does not state: an axis with no recorded order is not checked,
 and a library with no `codeTarget` gets no "in code" claims rather than
 another platform's.
+`tokens.spacing` and `tokens.radius` are added beside `semantic` only as
+lists of numbers in px (`"spacing": [0, 4, 8]`), copied from `pass-c-scales.mjs`'s
+`audit` block run with the source's snapshot tokens; a kind it leaves out stays
+out. With no snapshot, or a `notInSnapshot` entry not yet resolved, leave both
+keys out and put the `[TBD]` in the Tokens prose: a scale read from names, a
+string, or `[]` is a wrong scale, and the audit ignores one that is not numbers.
 
 ```json audit-settings
 {

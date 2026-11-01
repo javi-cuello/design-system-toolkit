@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.38.0)
+# Eval cases — figma-components-audit (v2.39.0)
+
+**Walked: 2026-11-01 for 2.39.0** — A130 added and executed: `node tests/test-audit.mjs` 93/93; with the guard removed, the `[]` assertion fails and the string one throws `s.reduce is not a function`. Other cases unchanged.
 
 **Walked: 2026-10-31 for 2.38.0** — A129 added and executed: `node tools/figma-audit/test-fix-queue.mjs` 24/24 files a payload into a scratch record with `rows.mjs` and renders the queue and the scores from it. A128's assertions unchanged; every other case untouched by Steps 6's no-record path.
 
@@ -1935,3 +1937,9 @@ Runs: node tools/figma-audit/test-fix-queue.mjs — every assertion but the two 
 Fixture: a payload of two findings (a b1 error, a b3 ruling) for a file with no record, filed with `rows.mjs --data` to a path in a scratch directory that does not exist yet.
 Assert: `rows.mjs` creates the record; `fix-queue.mjs --chat` over it prints each finding as a numbered row in its bucket with its fix and recommendation; `scores.mjs` over the same record scores the set from those findings. SKILL.md Steps 6, the chat template and the score report send a one-off run here, and never to the project's record.
 Runs: node tools/figma-audit/test-fix-queue.mjs — "a run with no record renders from a scratch one: each finding a numbered row in its bucket", "the score report runs over the same scratch record, its deductions those findings'"
+
+## A130 · An empty or malformed scale is no scale, never a throw, and is said — WALKED 2026-11-01
+Fixture: `tests/test-audit.mjs`'s Chip with raw paddings 8 and 13, with `TOKENS.spacing` and `TOKENS.radius` given as `[]`, the string `"4, 8"`, a copied template placeholder `["{px, …}"]` and `[4, NaN]`; then with neither key.
+Assert: each raw padding is still raised with no on/off-scale verdict, exactly as with no scale, and the scan does not throw; the result's `settings` says `tokens.spacing ignored (not a list of numbers)` and the same for radius; with neither key there is no `settings`, since an absent key is a rule not stated.
+Recorded: a capture that found no spacing family could write `[]`, and `near` reduced the empty list with no initial value, ending the whole audit; a review then found a string entry passed as a scale.
+Runs: node tests/test-audit.mjs — "an empty or malformed scale is no scale: the verdict is skipped, never a throw", "an invalid scale is said in settings, each key by name".

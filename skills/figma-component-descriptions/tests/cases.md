@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.18.3)
+# Eval cases — figma-component-descriptions (v1.19.0)
+
+**Walked: 2026-11-01 for 1.19.0** — D22 added and executed: `node tests/test-engines.mjs` 47/47, its thirteen assertions among them, run over `enumerate.js`'s own result on the fake file. Not walked live: `sweep-diff.mjs` has met only that sweep. Other cases unchanged.
 
 **Walked: 2026-10-31 for 1.18.3** — D21 added and executed: `node tests/test-verify.mjs` 19/19, the part assertion failing with 1.18.2's check. D19's `verify.js` half Walked live 2026-10-31 on a real component library (64 pages) through the Desktop Bridge, read-only: `verify.js` returned 43 full and 14 compact descriptions passing, one duplicate (two icons sharing one text, a real one) and no virtual sets (the file has none); 1.18.2 listed five false-fixity hits, every one a part's ("The icon is fixed per Feedback value"), and 1.18.3 lists none.
 
@@ -256,3 +258,21 @@ Runs: node tools/toolkit-check/test-missing-input.mjs
 Fixture: `Toast`, with a `Label` text property, described "The icon is fixed per Feedback value and is not swappable"; and D19's top bar, whose text now says a part is static before it says the bar is fixed.
 Assert: `verify.js` lists no false fixity on Toast, and still lists Top bar / Default with the claim `is fixed` (the bar's, after its icon's `is static`). On `Button` with a text property, "It is not customisable", "Buttons are fixed" and "When disabled, the button is fixed" are each a claim. Production finding: on a real library every hit was about a part.
 Runs: node tests/test-verify.mjs — "step 4: a part said to be fixed is no claim about the component", "step 4: \"is not customisable\", a plural and a claim after a lead-in clause are claims about the component", "step 4: a claim of fixity on a component with an interface is false fixity; on one with none it is not"
+
+## D22 · Step 8's sweep is diffed against the targets by a script — *executed* 2026-11-01
+Fixture: `tests/test-engines.mjs`'s enumerate fake file, swept by `enumerate.js`: a set, a component alone on its page, two `Top bar / …` siblings, two `_Row / …` private ones and a lone slashed name. It is then diffed against targets naming the set, one sibling, the alone component and a variant's id, then with `--exclude`, a one-page `--scope`, a `{ targets }` wrapper of URL-form ids, and a target object with no id.
+Assert:
+- `missed` is the other sibling and the lone name, with their pages, and `missedPrivate` is the two `_Row` components.
+- The variant's id is `outOfScope`, and the alone component is in `onAlonePages`.
+- The `--check` descriptions map is read as a target list.
+- An excluded id is never missed, and one written anyway is out of scope.
+- A one-page scope misses nothing elsewhere, and a write on another page is out of scope.
+- The wrapper is unwrapped and `1-1` reads as `1:1`.
+- An object with no id is refused, naming its entry.
+- A `--scope` page the sweep never saw is named in `unknownScope`.
+- A flag with no value, or followed by another flag, is a usage error.
+- The command exits 1 on a miss, 0 when all was written, and 2 in one line naming an unusable input. `tools/toolkit-check/test-missing-input.mjs` holds the missing and broken file.
+Assert the negative: the script decides no tier and no step 2e skip; `unsure` and `onAlonePages` go to the usage check.
+Recorded under toolkit-standard §D 23: step 8's diff of the sweep against the target list was done by eye. A review then found a one-page run and step 2b's slot fillers would exit 1, hence `--scope` and `--exclude`; a second, that a misspelt scope page and a flag missing its value passed silently.
+
+Runs: node tests/test-engines.mjs — "sweep-diff: an untargeted public component is missed, with its page", "sweep-diff: a one-page --scope run misses nothing on other pages, and a write there is out of scope".

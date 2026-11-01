@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.11.4)
+# Eval cases — figma-context-capture (v2.12.0)
+
+**Walked: 2026-11-01 for 2.12.0** — C17 added and executed: `node tests/test-passes.mjs` 73/73, its 26 assertions among them. With the sort dropped from `pass-c-scales.mjs`, the gap assertion fails; with the audit block fed name steps, the px one; with the first snapshot source taken for any library, the own-library one; with an empty kind kept, the `[]` one. Not walked live: the script has met only the fixture's pass C output. Other cases unchanged.
 
 **Walked: 2026-11-01 for 2.11.4** — no case changed: pass F no longer profiles the properties table (it wrote plugin data; the skill is read-only); no case asserts the profile, and A15 of figma-properties-table still holds the error half.
 
@@ -150,3 +152,44 @@ Assert the negative: none of these scripts decides a convention; each contradict
 Recorded under toolkit-standard §D 23: passes B, E, F, S2, S4 and the registry were done by hand each run.
 
 Runs: node tests/test-passes.mjs — "pass B: a name prefixed on one page and bare on another is a contradiction, with both pages", "pass S2: a ramp is its parent path, its steps in library order, with a marker found", "registry: the dependency line names each library and the collection keys behind the edge". Walked live 2026-10-31 (the line at the top).
+
+## C17 · Pass C's scales, grammar and spelling are counted by a script, and only px from the library's own snapshot collection reach the audit — 2026-11-01
+Fixture: pass C outputs and snapshot tokens (`tests/test-passes.mjs`):
+- a collection of 96 names: `Spacing/0`–`Spacing/64` by 2 in reverse order, with 28 absent and `Spacing/10` placed last behind 60 three-slot colour names, plus `Spacing/0-5`, `Radius/4`, `Radius/8` and `Radius/full`;
+- a truncated collection holding a `Grey` ramp and one `color` name;
+- an index-named library (`space/100`…, one spelled `Space/`) whose pass C list is truncated at two names. Its snapshot adds `"1rem"` and null values, word-named radii, a lone `Corner/8`, and `Background/…` and `Workspace/…` families;
+- `Spacing/4` held by both `Primitives` (999) and `Core` (16), a second library's same-named `Core`, and a collection its library does not own;
+- a store whose two sources both own `Core`, and a pass C from a library the snapshot does not hold (renamed);
+- a Compact/Comfortable density collection;
+- names with `4px`, `-4`, `Paddings`, `Insets`, `Spacer`, `Radiuses`, and a word-named `Radius` with no snapshot.
+
+Assert:
+- The spacing name steps hold 10, and the only gap is 28, between 26 and 30.
+- `0-5` and `full` are unparsed, never read as 5 and never dropped.
+- `kind` reads whole words, plurals included, never `Background` or `Workspace`.
+- A truncated list is `complete: false`.
+- The grammar counts slots with labels `[TBD]`; a colour/color tie is asked, and one spelling alone is `[confirmed]`.
+- Without tokens, `audit` is null and the note says name steps are not px and end steps cannot be seen.
+- With tokens:
+  - name steps 100–700 sit beside px 8–32;
+  - names come from the snapshot, complete;
+  - `"1rem"` and null are in `notNumeric`;
+  - radii are a scale by value, and `Corner/8` is skipped;
+  - `Spacing/4` reads 16, never 999;
+  - the other library's `Core` and the unowned collection are `notInSnapshot`;
+  - an absent kind is left out of `audit`, never `[]`;
+  - the density collection gives px per mode and their union;
+  - a collection two sources own is not read, and says so (`shared: true`), and when every rejection is shared, `auditWhy` says shared ownership;
+  - every source with the library's file name is considered, not the first;
+  - with nothing matched, `audit` is null with `auditWhy` naming the snapshot's source files, said on stderr, exit 1.
+- `4px` reads 4 and `-4` reads −4; the word-named radius with no snapshot is skipped, never lost.
+
+Assert the negative: no number read from a name reaches `audit`; the script names no slot and its `kind` is confirmed at step 2.
+Recorded under toolkit-standard §D 23: pass C's scales, grammar and spelling were derived by hand from up to 400 names per collection, and feed the audit's `TOKENS.spacing` and `TOKENS.radius`. Two reviews then found the first versions:
+- took a name's number for its px;
+- read a value from any collection of that name;
+- read one mode only;
+- wrote `[]`, which ended the components audit (its case A130);
+- trusted a collection two sources own, of which the store keeps one copy, and gave an empty block for the wrong store.
+
+Runs: node tests/test-passes.mjs — "pass C scales: a step named late among many is in the scale, not a gap", "pass C scales: a name is looked up only in its own collection of its own library", "pass C scales: a kind with no values is left out of the audit block, never []".

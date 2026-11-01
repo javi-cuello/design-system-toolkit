@@ -36,8 +36,17 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const TOKENS = T;
   const TOK=(typeof TOKENS!=="undefined"&&TOKENS)||{};
   const OVERLAY=Array.isArray(TOK.overlayComponents)&&TOK.overlayComponents.length?new Set(TOK.overlayComponents):null;
-  const SPACING=TOK.spacing||null, COLL=TOK.semantic?[].concat(TOK.semantic):null, TEXTROLE=TOK.textRole||null;
-  const RADIUS=TOK.radius||null;
+  // A scale is a non-empty list of finite numbers; anything else ([] from a
+  // capture that found no family, a string, a copied placeholder) is no scale,
+  // so its verdict is skipped, never a throw from reducing an empty list or a
+  // nearest step computed against a string. An invalid one is said in
+  // `settings`, apart from an absent key, which is a rule not stated.
+  const settingsNotes=[];
+  const scaleOf=k=>{const s=TOK[k];if(s===undefined||s===null)return null;
+    if(Array.isArray(s)&&s.length&&s.every(x=>typeof x==="number"&&Number.isFinite(x)))return s;
+    settingsNotes.push("tokens."+k+" ignored (not a list of numbers)");return null;};
+  const SPACING=scaleOf("spacing"), COLL=TOK.semantic?[].concat(TOK.semantic):null, TEXTROLE=TOK.textRole||null;
+  const RADIUS=scaleOf("radius");
   const sizeSeen={}; // size name -> [{set, height}], compared across sets after the walk
   // The collection KEYS a binding may come from — discovery's `allowedKeys`,
   // a list or the object FCA.discover returns. Names are not unique across
@@ -46,7 +55,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const ALLOWED=TOK.allowedKeys?new Set(Array.isArray(TOK.allowedKeys)?TOK.allowedKeys:Object.keys(TOK.allowedKeys)):null;
   // On a scale or off it, and if off, the nearest step — the fix a reader
   // needs, where "off the scale" alone sends them to look the scale up.
-  const near=(v,s)=>s.reduce((a,x)=>Math.abs(x-v)<Math.abs(a-v)?x:a);
+  const near=(v,s)=>s.reduce((a,x)=>Math.abs(x-v)<Math.abs(a-v)?x:a,s[0]);
   const onScale=(v,s,scale)=>s?(s.includes(v)?" (on the "+scale+" scale)":" (off the "+scale+" scale; nearest step "+near(v,s)+")"):"";
   // Each candidate carries two sentences (design-standard rule 10): `text`
   // says what goes wrong and what it does to the people using the component,
@@ -754,7 +763,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       effectStyles:file.effectStyles
     };
   }
-  return {audited:out, measures:measures, ran:ran, at:new Date().toISOString()};
+  return {audited:out, measures:measures, ran:ran, ...(settingsNotes.length?{settings:settingsNotes}:{}), at:new Date().toISOString()};
 }
 if (typeof figma === "undefined") return checkFacts;
 

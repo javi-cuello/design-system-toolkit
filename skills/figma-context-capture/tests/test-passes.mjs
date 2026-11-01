@@ -4,7 +4,9 @@
 // pass-d-axes.js) against a fake file, the way the bridge runs them: as the
 // body of an async function given `figma`.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -61,6 +63,82 @@ const figma = { root, fileKey: 'KEY', loadAllPagesAsync: async () => {}, getNode
   ok('pass C: collections are identified by key, with their library', spacing.key === 'k1' && spacing.library === 'Foundations' && colour.key === 'k2');
   ok('pass C: a collection over the name cap says it was truncated, with its full count', spacing.count === 401 && spacing.names.length === 400 && spacing.truncated === true && colour.truncated === false);
   ok('pass C: local collections are listed with their mode count', JSON.stringify(out.localCollections) === JSON.stringify([{ id: 'VariableCollectionId:1', name: 'Collection 1', modes: 2 }]));
+}
+
+// ── pass C scales (node, over pass C's output and the source's snapshot tokens) ─
+{
+  const { scales } = await import('../scripts/pass-c-scales.mjs');
+  // 0–64 by 2, unsorted, 28 missing; `Spacing/10` sits last, behind 60 colour names, where an eye reading
+  // the list in order would have called 10 a gap
+  const steps = Array.from({ length: 33 }, (_, i) => i * 2).filter((v) => v !== 10 && v !== 28).reverse();
+  const colours = Array.from({ length: 60 }, (_, i) => ['Background', 'Text', 'Border'][i % 3] + '/' + ['Primary', 'Secondary', 'Danger', 'Success'][i % 4] + '/' + (i % 5 ? 'Rest' : 'Hover'));
+  const passC = { collections: [
+    { key: 'k1', name: 'Tokens', library: 'Foundations', count: 100, truncated: false, names: [...steps.map((v) => 'Spacing/' + v), ...colours, 'Spacing/0-5', 'Radius/4', 'Radius/8', 'Radius/full', 'Spacing/10'] },
+    { key: 'k2', name: 'Colour', library: 'Foundations', count: 900, truncated: true, names: ['Grey/1', 'Grey/2', 'Grey/3', 'Blue/color-1'] }
+  ] };
+  const out = scales(passC);
+  const sp = out.scales.find((s) => s.family === 'Spacing');
+  ok('pass C scales: a step named late among many is in the scale, not a gap', sp.nameSteps.includes(10) && !sp.gaps.some((g) => g.missing.includes(10)));
+  ok('pass C scales: a missing step is a gap, between the values either side', JSON.stringify(sp.gaps) === '[{"after":26,"before":30,"missing":[28]}]' && sp.nameSteps.length === 32 && sp.nameSteps[0] === 0 && sp.nameSteps[31] === 64);
+  ok('pass C scales: a step that is not a plain number is listed, never read as one', JSON.stringify(sp.unparsed) === '["Spacing/0-5"]' && !sp.nameSteps.includes(5));
+  const r = out.scales.find((s) => s.family === 'Radius');
+  ok('pass C scales: kind is read from the family\'s words, and a named step stays unparsed', sp.kind === 'spacing' && r.kind === 'radius' && JSON.stringify(r.nameSteps) === '[4,8]' && JSON.stringify(r.unparsed) === '["Radius/full"]');
+  ok('pass C scales: a scale from a truncated collection says it is not complete', out.scales.find((s) => s.family === 'Grey').complete === false && sp.complete === true);
+  ok('pass C scales: a vocabulary family is not a scale', !out.scales.some((s) => /Background|Text/.test(s.family)));
+  const g = out.grammar[0];
+  ok('pass C scales: the grammar counts names per slot count, and each slot\'s values', g.separator === '/' && g.depths['3'] === 60 && g.depths['2'] === 36 && g.slots[0].values.Background === 20 && g.slots[2].distinct === 2 && /TBD/.test(g.slots[0].label));
+  ok('pass C scales: colour and color are both counted, collection names included; a tie is asked', out.spelling.colour === 1 && out.spelling.color === 1 && /TBD/.test(out.spelling.tag));
+  const uk = scales({ collections: [{ key: 'k', name: 'Colour', names: ['Colour/Text'] }] });
+  ok('pass C scales: one spelling only is confirmed', uk.spelling.tag === '[confirmed] colour');
+  ok('pass C scales: without tokens there is no audit block, and the note says names are not px nor ends seen', out.audit === null && !('px' in sp) && /not px/.test(out.note) && /end steps/.test(out.note));
+
+  // index-named steps: `space/100` is 8px. The audit compares px, so only resolved values reach it.
+  const src = (collections, owns = Object.keys(collections)) => ({ _meta: { sources: { SRC: { file: 'Foundations', owns: { collections: owns } } } }, collections });
+  const one = (values) => ({ modes: ['Value'], values: { Value: values } });
+  const lib = { collections: [{ key: 'k3', name: 'Primitives', library: 'Foundations', names: ['space/100', 'space/200'], truncated: true }] };
+  const tokens = src({ Primitives: one({ 'space/100': 8, 'space/200': 16, 'Space/300': 24, 'space/400': 32, 'space/600': '1rem', 'space/700': null, 'Radius/sm': 4, 'Radius/md': 8, 'Radius/lg': 16, 'Corner/8': 8, 'Background/1': 1, 'Background/2': 2, 'Workspace/1': 1, 'Workspace/2': 2 }) });
+  const v = scales(lib, tokens);
+  const space = v.scales.find((s) => s.family.toLowerCase() === 'space');
+  ok('pass C scales: a name\'s number is a name step; the px come from the tokens, and only px reach the audit', JSON.stringify(space.nameSteps) === '[100,200,300,400,600,700]' && JSON.stringify(space.px.values) === '[8,16,24,32]' && JSON.stringify(v.audit.spacing) === '[8,16,24,32]');
+  ok('pass C scales: with tokens, names come from the snapshot collection, complete, not pass C\'s capped list', space.complete === true && v.scales.filter((s) => s.family.toLowerCase() === 'space').length === 1);
+  ok('pass C scales: a value that is no number (a string, null) is listed, never dropped', JSON.stringify(space.notNumeric) === '[{"name":"space/600","mode":"Value","value":"1rem"},{"name":"space/700","mode":"Value","value":null}]');
+  ok('pass C scales: with tokens, a word-named radius is a scale by its values', JSON.stringify(v.audit.radius) === '[4,8,16]' && v.scales.find((s) => s.family === 'Radius').nameSteps.length === 0);
+  ok('pass C scales: a lone numbered name is skipped, listed with its values, never dropped', JSON.stringify(v.skipped.map((s) => [s.family, s.nameSteps, s.px, s.why])) === '[["Corner",[8],[8],"one numbered name"]]');
+  ok('pass C scales: kind matches whole words: Background holds no "round", Workspace no "spac"', v.scales.find((s) => s.family === 'Background').kind === null && v.scales.find((s) => s.family === 'Workspace').kind === null && !v.audit.spacing.includes(1));
+
+  // two collections and two libraries holding the same name: only the matching one's values are read
+  const two = { collections: [{ key: 'kc', name: 'Core', library: 'Foundations', names: [] }, { key: 'kb', name: 'Core', library: 'Brand kit', names: ['Spacing/4'] }, { key: 'kx', name: 'Extra', library: 'Foundations', names: [] }] };
+  const shared = src({ Primitives: one({ 'Spacing/4': 999, 'Spacing/8': 998 }), Core: one({ 'Spacing/4': 16, 'Spacing/8': 32 }), Extra: one({}) }, ['Primitives', 'Core']);
+  const t2 = scales(two, shared);
+  ok('pass C scales: a name is looked up only in its own collection of its own library', JSON.stringify(t2.audit.spacing) === '[16,32]' && JSON.stringify(t2.notInSnapshot.map((x) => [x.key, /not of/.test(x.why) ? 'library' : 'collection'])) === '[["kb","library"],["kx","collection"]]');
+  ok('pass C scales: a kind with no values is left out of the audit block, never []', !('radius' in t2.audit));
+
+  // the store keeps one copy of a name two sources own: which library's is unknowable, so neither is read
+  const both = { _meta: { sources: { A: { file: 'Foundations', owns: { collections: ['Core'] } }, B: { file: 'Brand kit', owns: { collections: ['Core'] } } } }, collections: { Core: one({ 'Spacing/4': 4, 'Spacing/8': 8 }) } };
+  const t3 = scales({ collections: [{ key: 'kc', name: 'Core', library: 'Foundations', names: [] }] }, both);
+  ok('pass C scales: a collection more than one source owns is not read, and says why', t3.scales.length === 0 && /more than one source/.test(t3.notInSnapshot[0].why) && /shared ownership/.test(t3.auditWhy));
+  const split = { _meta: { sources: { A: { file: 'Foundations', owns: { collections: ['Other'] } }, B: { file: 'Foundations', owns: { collections: ['Core'] } } } }, collections: { Core: one({ 'Spacing/4': 4, 'Spacing/8': 8 }), Other: one({}) } };
+  ok('pass C scales: every source with the library\'s file name is considered, not the first', JSON.stringify(scales({ collections: [{ key: 'kc', name: 'Core', library: 'Foundations', names: [] }] }, split).audit.spacing) === '[4,8]');
+  const wrong = scales({ collections: [{ key: 'kc', name: 'Core', library: 'Renamed library', names: [] }] }, src({ Core: one({ 'Spacing/4': 4 }) }));
+  ok('pass C scales: when nothing matches, audit is null with the reason, naming the snapshot\'s source files', wrong.audit === null && /"Foundations"/.test(wrong.auditWhy) && /"Foundations"/.test(wrong.notInSnapshot[0].why));
+  const dir = mkdtempSync(join(tmpdir(), 'pass-c-'));
+  writeFileSync(join(dir, 'c.json'), JSON.stringify({ collections: [{ key: 'kc', name: 'Core', library: 'Renamed library', names: [] }] }));
+  writeFileSync(join(dir, 't.json'), JSON.stringify(src({ Core: one({ 'Spacing/4': 4 }) })));
+  const cli = spawnSync(process.execPath, [join(HERE, '../scripts/pass-c-scales.mjs'), join(dir, 'c.json'), '--tokens', join(dir, 't.json')], { encoding: 'utf8' });
+  rmSync(dir, { recursive: true });
+  ok('pass C scales: the command says it on stderr and exits non-zero when nothing matched', cli.status === 1 && /no collection of pass C/.test(cli.stderr) && cli.stderr.trim().split('\n').length === 1);
+
+  // modes: a density collection's px are listed per mode and their union is the scale
+  const dens = scales({ collections: [{ key: 'kd', name: 'Density', library: 'Foundations', names: [] }] },
+    src({ Density: { modes: ['Compact', 'Comfortable'], values: { Compact: { 'Gap/sm': 4, 'Gap/md': 8 }, Comfortable: { 'Gap/sm': 8, 'Gap/md': 12 } } } }));
+  ok('pass C scales: every mode is read, px listed per mode and their union in the audit', JSON.stringify(dens.scales[0].pxByMode) === '{"Compact":[4,8],"Comfortable":[8,12]}' && JSON.stringify(dens.audit.spacing) === '[4,8,12]');
+
+  // names a reader would read wrong: a unit, a negative, the kind words' plurals, and a word-named radius with no snapshot
+  const odd = scales({ collections: [{ key: 'ko', name: 'Layout', names: ['space/4px', 'space/8px', 'Margin/-4', 'Margin/4', 'Paddings/1', 'Paddings/2', 'Insets/1', 'Insets/2', 'Spacer/1', 'Spacer/2', 'Radiuses/1', 'Radiuses/2', 'Radius/sm', 'Radius/md', 'Radius/lg'] }] });
+  const fam = (f) => odd.scales.find((s) => s.family === f);
+  ok('pass C scales: `4px` reads 4 and `-4` reads -4', JSON.stringify(fam('space').nameSteps) === '[4,8]' && JSON.stringify(fam('Margin').nameSteps) === '[-4,4]');
+  ok('pass C scales: paddings, insets and spacer are spacing; radiuses is radius', ['Paddings', 'Insets', 'Spacer'].every((f) => fam(f).kind === 'spacing') && fam('Radiuses').kind === 'radius');
+  ok('pass C scales: a radius family with no numbered name and no snapshot is skipped, never lost', odd.skipped.some((s) => s.family === 'Radius' && s.why === 'no numbered name' && s.unparsed.length === 3));
 }
 
 // ── pass D ───────────────────────────────────────────────────────────────────

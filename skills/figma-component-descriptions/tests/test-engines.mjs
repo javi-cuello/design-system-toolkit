@@ -2,10 +2,13 @@
 // node tests/test-engines.mjs — from the skill folder. Runs the workflow's
 // figma_execute bodies (scripts/enumerate.js, consumer-usage.js, composition.js,
 // apply.js, sync-header.js) against a fake file, the way the bridge runs them:
-// as the body of an async function given `figma`. Each guard the prose names is
+// as the body of an async function given `figma`; and sweep-diff.mjs in node
+// over enumerate.js's result. Each guard the prose names is
 // also planted out once, to prove the assertion that covers it can fail.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -73,6 +76,37 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
     const vs = (await run(config(read('enumerate.js'), { internalPrefix: prefix, separator: '/' }), figma)).virtualSets.map((v) => v.stem);
     ok('enumerate: internalPrefix ' + JSON.stringify(prefix) + ' marks nothing private (no throw, groups still form)', JSON.stringify(vs) === '["Top bar","_Row"]');
   }
+
+  // step 8: the same sweep diffed against what the run wrote (sweep-diff.mjs)
+  const { against } = await import('../scripts/sweep-diff.mjs');
+  const d = against(out, ['1:1', '3:0', '2:1', '1:2'], { internalPrefix: '_' });
+  const idsOf = (xs) => JSON.stringify(xs.map((x) => x.id));
+  ok('sweep-diff: an untargeted public component is missed, with its page', idsOf(d.missed) === '["3:1","5:1"]' && d.missed[0].page === 'Top bar');
+  ok('sweep-diff: untargeted private components are listed apart from the missed', idsOf(d.missedPrivate) === '["4:0","4:1"]');
+  ok('sweep-diff: a target that is no component in the sweep (a variant) is out of scope', idsOf(d.outOfScope) === '["1:2"]');
+  ok('sweep-diff: a target on an alone page is named for step 2e\'s usage check', idsOf(d.onAlonePages) === '["2:1"]' && d.unsure.length === 0);
+  const m = against(out, { '1:1': 'A button.' });
+  ok('sweep-diff: the --check descriptions map is a target list; with no prefix, every untargeted one is missed', d.swept === 7 && m.targets === 1 && m.missed.length === 5 && idsOf(m.unsure) === '["2:1"]');
+  const dir = mkdtempSync(join(tmpdir(), 'sweep-diff-'));
+  writeFileSync(join(dir, 'sweep.json'), JSON.stringify(out));
+  writeFileSync(join(dir, 'all.json'), JSON.stringify(out.pages.flatMap((p) => p.items.map((i) => i.id))));
+  const cli = (t) => spawnSync(process.execPath, [join(HERE, '../scripts/sweep-diff.mjs'), join(dir, 'sweep.json'), '--against', join(dir, t)]);
+  writeFileSync(join(dir, 'some.json'), '["1:1"]');
+  ok('sweep-diff: the command exits 1 on a miss and 0 when every component was written', cli('some.json').status === 1 && cli('all.json').status === 0);
+  const ex = against(out, ['1:1', '3:0', '2:1'], { internalPrefix: '_', exclude: ['3:1', '1:1'] });
+  ok('sweep-diff: an --exclude id (a 2b slot filler) is never missed, and one written anyway is out of scope', idsOf(ex.missed) === '["5:1"]' && idsOf(ex.excluded) === '["3:1"]' && ex.outOfScope.some((o) => o.id === '1:1' && /exclude/.test(o.reason)));
+  const sc = against(out, ['1:1', '3:0'], { scope: ['Button'] });
+  ok('sweep-diff: a one-page --scope run misses nothing on other pages, and a write there is out of scope', sc.missed.length === 0 && idsOf(sc.outOfScope) === '["3:0"]' && /scope/.test(sc.outOfScope[0].reason));
+  const url = against(out, { targets: ['1-1'] }, { scope: ['Button'] });
+  ok('sweep-diff: a --scope page the sweep never saw is named', JSON.stringify(against(out, ['1:1'], { scope: ['Button', 'Buton'] }).unknownScope) === '["Buton"]' && !('unknownScope' in d));
+  const flag = (...a) => spawnSync(process.execPath, [join(HERE, '../scripts/sweep-diff.mjs'), join(dir, 'sweep.json'), ...a]);
+  ok('sweep-diff: a flag with no value, or followed by another flag, is a usage error, exit 2', flag('--against', join(dir, 'all.json'), '--scope').status === 2 && flag('--against', '--scope', 'Button').status === 2 && /needs a value/.test(String(flag('--against', join(dir, 'all.json'), '--exclude').stderr)));
+  ok('sweep-diff: a { targets } wrapper is unwrapped and a URL-form id reads as a node id', url.targets === 1 && url.outOfScope.length === 0 && url.missed.length === 0);
+  ok('sweep-diff: a target object with no id is refused, naming the entry', (() => { try { against(out, [{ id: '1:1' }, { name: 'Button' }]); return false; } catch (e) { return /entry 1 has no id/.test(e.message); } })());
+  writeFileSync(join(dir, 'noid.json'), '[{"name":"Button"}]');
+  const bad = cli('noid.json');
+  ok('sweep-diff: an input it cannot use exits 2 in one line naming the file, a miss exits 1', bad.status === 2 && String(bad.stderr).trim().split('\n').length === 1 && String(bad.stderr).includes("noid.json") && cli('missing.json').status === 2);
+  rmSync(dir, { recursive: true });
 }
 
 // ── consumer-usage.js ────────────────────────────────────────────────────────

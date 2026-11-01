@@ -159,6 +159,13 @@ const t = rows(r, "Chip  x ").concat(rows(r, "Button - CTA"));
 const tk = keyed(r, "Chip  x ", /./).concat(keyed(r, "Button - CTA", /./));
 expect("no spacing scale: raw padding is raised without an on/off-scale verdict", keyed(r, "Chip  x ", /^tokens\|padding/).map((x) => x.split("| ")[2]),
   [v0.name + " has a raw right padding of 8, so a change to the spacing tokens never reaches it", v0.name + " has a raw left padding of 13, so a change to the spacing tokens never reaches it"]);
+for (const empty of [[], "4, 8", ["{px, from pass-c-scales.mjs}"], [4, NaN]]) {
+  const e = await run(fx, { tokens: { componentPages: tokens.componentPages, spacing: empty, radius: empty }, scales: {} });
+  expect("an empty or malformed scale is no scale: the verdict is skipped, never a throw — " + JSON.stringify(empty), keyed(e, "Chip  x ", /^tokens\|padding/).map((x) => x.split("| ")[2]),
+    [v0.name + " has a raw right padding of 8, so a change to the spacing tokens never reaches it", v0.name + " has a raw left padding of 13, so a change to the spacing tokens never reaches it"]);
+  expect("an invalid scale is said in settings, each key by name — " + JSON.stringify(empty), e.settings, ["tokens.spacing ignored (not a list of numbers)", "tokens.radius ignored (not a list of numbers)"]);
+}
+expect("an absent scale is a rule not stated, never an invalid one", (await run(fx, { tokens: { componentPages: tokens.componentPages }, scales: {} })).settings, undefined);
 expect("no semantic collection, no text role, no state axis, no scale: those checks stay silent",
   keyed(r, "Chip  x ", /^(tokens\|(fill-collection|text-role)|states\||schema\|order\|)/).concat(keyed(r, "Button - CTA", /^(tokens\|(fill-collection|text-role)|states\||schema\|order\|)/)), []);
 

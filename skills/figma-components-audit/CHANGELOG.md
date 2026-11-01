@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.39.0 (2026-11-01): the scanner takes `TOKENS.spacing` or `TOKENS.radius` only as a non-empty list of finite numbers; anything else is no scale, never a throw in `near`, and is said in the result's `settings`, apart from an absent key. Case A130.
 - 2.38.0 (2026-10-31): a one-off run with no record files its findings into a scratch record and renders the fix queue and score report from it, as a run with a record does; neither is written by hand. Case A129.
 - 2.37.0 (2026-10-31): the score report is computed by `tools/figma-audit/scores.mjs` from the record, through `tools/figma-audit/score-model.mjs`, the one copy of the arithmetic the dashboard also loads; the session adds it up by hand only with no record (toolkit-standard §D 23).
 - 2.36.1 (2026-10-31): 2.35.2 merged with 2.36.0; nothing of either changed.

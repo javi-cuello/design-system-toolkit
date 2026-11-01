@@ -1210,6 +1210,10 @@ async function runAudit(targets) {
       say("That scanned " + (scan.fileName || "another file") + ", not this library \u2014 nothing was kept.", "warn");
       return;
     }
+    // A setting the scanner ignored as invalid (a spacing or radius scale that
+    // is not a list of numbers): its verdict did not run, which the findings
+    // alone would not show.
+    if (Array.isArray(scan.settings) && scan.settings.length) say("Settings the scanner ignored: " + scan.settings.join("; ") + ". Fix them in the context document.", "warn");
     // What was scanned, for every sentence that counts it. A first run's scope
     // is empty because empty means every set, so counting the scope said
     // "0 components" over 82; a full scan's measures carry the real number.

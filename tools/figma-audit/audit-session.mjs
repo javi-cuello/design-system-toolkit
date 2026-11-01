@@ -116,4 +116,6 @@ if (!scan.measures) { stages[0].full = false; stages[0].exhaustive = false; }
 const out = path.join(os.tmpdir(), `audit-${project}-${fileKey}.json`);
 fs.writeFileSync(out, JSON.stringify({ project, fileKey, at: new Date().toISOString(), measures: scan.measures || null, stages }, null, 2));
 console.log(`${lib.name}: ${stages[0].findings.length} component and ${stages[1].findings.length} file candidates → ${out}`);
+// a setting the scanner ignored as invalid: its on/off-scale verdict did not run, which no finding shows
+if (Array.isArray(scan.settings) && scan.settings.length) console.log(`settings the scanner ignored: ${scan.settings.join('; ')} — fix them in the context document`);
 console.log('judge them: move a finding the project has ruled on, or that is wrong, into that stage\'s `dismissed` with a `why`; then bin/audit --file ' + out);

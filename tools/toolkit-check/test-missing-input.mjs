@@ -13,6 +13,8 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const tmp = mkdtempSync(join(tmpdir(), 'missing-input-'));
 const nope = join(tmp, 'nope.json'), bad = join(tmp, 'bad.json');
 writeFileSync(bad, '{"rows": [');
+writeFileSync(join(tmp, 'pass-c.json'), '{"collections": []}');
+writeFileSync(join(tmp, 'sweep.json'), '{"pages": []}');
 let n = 0;
 const run = (script, args, input = '') => spawnSync(process.execPath, [join(ROOT, script), ...args], { encoding: 'utf8', input });
 const oneLine = (name, r, file, said) => {
@@ -28,6 +30,10 @@ try {
     ['skills/figma-foundations-audit/scripts/from-snapshot.mjs', (f) => ['--input', f]],
     ['skills/figma-component-descriptions/scripts/sections.mjs', (f) => ['--composition', f]],
     ['tools/figma-audit/rows.mjs', (f) => ['--data', join(tmp, 'record.json'), '--payload', f]],
+    ['skills/figma-context-capture/scripts/pass-c-scales.mjs', (f) => [f]],
+    ['skills/figma-context-capture/scripts/pass-c-scales.mjs', (f) => [join(tmp, 'pass-c.json'), '--tokens', f]],
+    ['skills/figma-component-descriptions/scripts/sweep-diff.mjs', (f) => [f, '--against', f]],
+    ['skills/figma-component-descriptions/scripts/sweep-diff.mjs', (f) => [join(tmp, 'sweep.json'), '--against', f]],
   ];
   for (const [script, args] of CASES) {
     oneLine(`${script}: a file that is not there is one line naming it`, run(script, args(nope)), nope, /no such file/);
