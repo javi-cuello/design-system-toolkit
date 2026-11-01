@@ -123,6 +123,33 @@ function where(raw, repos) {
    after the call (scriptWrites). */
 const bareShell = (cmd) => String(cmd || '').replace(/<<-?\s*['"]?(\w+)['"]?([^\n]*)\n[\s\S]*?\n\1\b/g, '$2').replace(/'[^']*'|"[^"]*"/g, "''");
 const shellDir = (bare, cwd) => path.resolve(cwd, expandHome((bare.match(/^\s*cd\s+([^\s;&|]+)\s*&&/) || [])[1] || '.'));
+/* The files an in-place sed edits, each command read as words: a line (a
+   backslash continuation joined) or ; & | ends it; a redirect and its target
+   are not operands (the redirect matcher reads those); the script is -e/-f's
+   or the first operand, and every operand after it is a file. BSD's `-i ''`
+   holds the empty suffix. Several files, flags before -i and --in-place are
+   all read: a write missed loosens the gate. */
+function sedFiles(bare, held) {
+  const files = [];
+  for (const m of bare.replace(/\\\r?\n/g, ' ').matchAll(/(?:^|[;&|(\s])sed\s+([^;&|\n]*)/gm)) {
+    const words = m[1].replace(/\d?(?:>>?|<)&?\s*[^\s<>]*/g, ' ').trim().split(/\s+/).filter(Boolean);
+    let inPlace = false, script = false;
+    const ops = [];
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      if (w === '--in-place' || w.startsWith('--in-place=') || /^-[^-]*i/.test(w)) {
+        inPlace = true;
+        // BSD: `-i ''` or `-i .bak` (a held quote or a dot word) is the suffix, not the script
+        if (/^-[^-]*i$/.test(w) && /^\0\d+\0$/.test(words[i + 1] || '') && !held[words[i + 1].slice(1, -1)]) i++;
+        if (/^-[^-]*e$|^-[^-]*f$/.test(w)) { script = true; i++; }
+      } else if (/^-[^-]*[ef]$|^--(?:expression|file)$/.test(w)) { script = true; i++; }
+      else if (/^--(?:expression|file)=/.test(w)) script = true;
+      else if (!w.startsWith('-')) ops.push(w);
+    }
+    if (inPlace) files.push(...(script ? ops : ops.slice(1)));
+  }
+  return files;
+}
 export function shellWrites(cmd, cwd) {
   const base = shellDir(bareShell(cmd), cwd);
   // a quoted word is held as one opaque token, so a target written in quotes
@@ -134,7 +161,7 @@ export function shellWrites(cmd, cwd) {
   const word = (t) => t.replace(/\0(\d+)\0/g, (_, k) => held[k]).replace(/^\$HOME(?=$|\/)/, '~');
   const out = [...bare.matchAll(/(?:^|[\s;&|(])\d?>>?\s*([^\s;&|()<>]+)/g)].map((m) => m[1]);
   for (const m of bare.matchAll(/\btee\s+(?:-a\s+)?([^\s;&|]+)/g)) out.push(m[1]);
-  for (const m of bare.matchAll(/\bsed\s+-i\s*(?:\0\d+\0\s+)?[^;&|]*?\s([^\s;&|]+)\s*(?:[;&|]|$)/g)) out.push(m[1]);
+  out.push(...sedFiles(bare, held));
   const files = out.map(word);
   // cp and mv, where a command starts (a line, after ; & | ( or git, or a word that runs the next:
   // sudo, xargs, then, do, else, time, env X=1, command, nohup, exec), write their target (the last

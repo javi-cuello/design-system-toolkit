@@ -41,6 +41,19 @@ test('a shell command writes only where it redirects, tees or edits in place, ne
   assert.deepEqual(shellWrites(`node -e "import('x').then(({a})=>a)"`, TOOLKIT), []);
   assert.deepEqual(shellWrites(`awk '{ if ($2>400) big++ }' f`, TOOLKIT), []);
   assert.deepEqual(shellWrites('ls 2>/dev/null; cmd 2>&1', TOOLKIT), []);
+  assert.deepEqual(shellWrites("sed -i '' 's|a|b|' x.md\ngit diff --stat; node t.mjs 2>&1 | tail -1", TOOLKIT), [path.join(TOOLKIT, 'x.md')], "a sed's file ends at its line, not the next command's last word");
+  assert.deepEqual(shellWrites("sed -i '' 's|a|b|' y.mjs\nnode y.mjs 2>&1 | tail -1", TOOLKIT), [path.join(TOOLKIT, 'y.mjs')], 'nor is a redirect a file');
+  const T = (f) => path.join(TOOLKIT, f);
+  for (const [cmd, want, why] of [
+    ["sed -i '' 's/a/b/' x.md 2>&1 | tail -1", ['x.md'], 'a redirect after the file leaves the file'],
+    ["sed -i '' 's/a/b/' x.md >/dev/null", ['x.md'], 'so does one to /dev/null'],
+    ["sed -i '' \\\n  -e 's/a/b/' \\\n  x.md", ['x.md'], 'a backslash continuation joins the lines'],
+    ["sed -i '' 's/a/b/' a.md b.md c.md", ['a.md', 'b.md', 'c.md'], 'every file of several'],
+    ["sed -E -i 's/a/b/' x.md", ['x.md'], 'a flag before -i'],
+    ["sed --in-place -e 's/a/b/' -e 's/c/d/' x.md", ['x.md'], '--in-place, and -e scripts'],
+    ["sed -i.bak 's/a/b/' x.md", ['x.md'], 'a GNU suffix'],
+    ["sed 's/a/b/' x.md > y.md", ['y.md'], 'a sed without -i writes only its redirect'],
+  ]) assert.deepEqual(shellWrites(cmd, TOOLKIT), want.map(T), why);
   assert.deepEqual(shellWrites('echo hi > notes/a.md', TOOLKIT), [path.join(TOOLKIT, 'notes/a.md')]);
   assert.deepEqual(shellWrites("cd /tmp && sed -i '' 's/a/b/' x.txt", TOOLKIT), ['/tmp/x.txt']);
   assert.deepEqual(shellWrites('python3 - <<EOF\nopen("a.md","w") > 1\nEOF', TOOLKIT), []);
