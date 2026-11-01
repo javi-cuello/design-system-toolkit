@@ -116,7 +116,7 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   fs.writeFileSync(planPath(unrun.id), PLAN_TEXT);
   assert.match(String(planGate(unrun.id, unrun.file, REPOS, next, TOOLKIT)), /a bin\/check run in \//, 'no run in the transcript: the pasted line is not taken');
   unrun.clean();
-  const late = session([user('go'), edit('a.mjs', 200), withId(call('Bash', { command: 'cd ~/Projects/toolkit && bin/check 2>&1 | tail -3' }), 'late1'), checkResult('late1', '== 1 FAILED (detail above each):')], { checked: false });
+  const late = session([user('go'), edit('a.mjs', 200), withId(call('Bash', { command: `cd ${TOOLKIT} && bin/check 2>&1 | tail -3` }), 'late1'), checkResult('late1', '== 1 FAILED (detail above each):')], { checked: false });
   fs.writeFileSync(planPath(late.id), PLAN_TEXT);
   assert.match(String(planGate(late.id, late.file, REPOS, next, TOOLKIT)), /"late:" line under Before/, 'a check after the first edit is said as late');
   fs.writeFileSync(planPath(late.id), PLAN_TEXT.replace('green\n', 'green\nlate: the first edit was a.mjs, before the check\n'));
