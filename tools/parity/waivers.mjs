@@ -17,7 +17,9 @@
  *   { reason, content: true, within? }                     live data the frame cannot state
  *   { reason, decision: true, within? }                    a ruled translation nobody will change
  *   { reason, decision: 'unset' }                          on a number: the page sets nothing, ruled so
- * `within` is required on a number (schema.mjs NUMERIC) and refused elsewhere.
+ *   { reason, <owner>, is: 1117 }                          on a number: the value the page holds by rule
+ * A number takes `within`, `is` or `decision: 'unset'` (schema.mjs NUMERIC);
+ * `within` and `is` are refused elsewhere.
  * One owner a waiver: `fix`, `content` and `decision` exclude each other.
  *
  * `decision: 'unset'` excuses exactly a page that sets nothing — the prop
@@ -26,10 +28,20 @@
  * to the whole expected value (`Main.min-height { decision, within: 1117 }`
  * on some fifty screens, 171 of 207 such rows on two projects), which also
  * passed any number from 0 to 2234 the page might start to set.
+ *
+ * `is` excuses exactly the value the page holds by rule, whatever the frame
+ * draws: a page's Main is the window (1117) where the frame draws it as tall
+ * as its content. It exists because the rule was written as a distance, the
+ * frame's height less the window's, and each change of a text style moved
+ * that distance on a dozen screens by hand. Half a pixel either side, the
+ * rounding a browser reports.
  */
 import { isProp, NUMERIC } from './schema.mjs';
 
-export const FIELDS = new Set(['reason', 'within', 'sameAs', 'content', 'decision', 'fix']);
+/* The numbers `is` does not take: its half-pixel tolerance is a length's. */
+const NOT_A_LENGTH = /^(opacity|border-radius|rotate)$/;
+
+export const FIELDS = new Set(['reason', 'within', 'is', 'sameAs', 'content', 'decision', 'fix']);
 /* The numbers a page leaves at 0 or a keyword when it sets nothing: what a
    `decision: 'unset'` may rule on. A size or a position at 0 is a box drawn
    empty or in place, which is a difference to bound, not a property unset. */
@@ -55,7 +67,7 @@ export function keyParts(key) {
 export function checkWaiver(key, waiver) {
   const out = [];
   const w = typeof waiver === 'string' ? { reason: waiver } : waiver;
-  if (!w || typeof w !== 'object' || Array.isArray(w)) return [`${key}: a waiver is { reason, fix | content | decision, within? }`];
+  if (!w || typeof w !== 'object' || Array.isArray(w)) return [`${key}: a waiver is { reason, fix | content | decision, within? | is? }`];
   for (const f of Object.keys(w)) if (!FIELDS.has(f)) out.push(`${key}: "${f}" is not a waiver field (${[...FIELDS].join(', ')}) — nothing reads it`);
   if (typeof w.reason !== 'string' || !w.reason.trim()) out.push(`${key}: no reason`);
   if (w.content !== undefined && w.content !== true) out.push(`${key}: content is true or absent`);
@@ -72,11 +84,19 @@ export function checkWaiver(key, waiver) {
     // measures, and every non-number read as "nothing set" (round 3, S9)
     if (!prop) out.push(`${key}: decision 'unset' rules one property, so the key names it (Layer.prop)`);
     else if (!UNSETTABLE.test(prop)) out.push(`${key}: decision 'unset' rules a property the page leaves at its initial 0 or keyword (padding, a gap, min- and max- sizes, line-height, letter-spacing), and ${prop} is not one`);
-    if (w.within !== undefined) out.push(`${key}: decision 'unset' excuses exactly 0 or a keyword, so it takes no within`);
-  } else if (numeric && w.within === undefined) {
+    if (w.within !== undefined || w.is !== undefined) out.push(`${key}: decision 'unset' excuses exactly 0 or a keyword, so it takes no within or is`);
+  } else if (numeric && w.within === undefined && w.is === undefined) {
     out.push(w.decision
-      ? `${key}: a decision on a number excuses a keyword only — say decision: 'unset' when the page sets nothing (0 or a keyword), or bound it (within)`
-      : `${key}: ${prop} is a number, so the waiver says how far it excuses (within)`);
+      ? `${key}: a decision on a number excuses a keyword only — say decision: 'unset' when the page sets nothing (0 or a keyword), the value it holds (is), or bound it (within)`
+      : `${key}: ${prop} is a number, so the waiver says how far it excuses (within) or the value the page holds (is)`);
+  }
+  if (w.is !== undefined) {
+    if (!(typeof w.is === 'number' && Number.isFinite(w.is))) out.push(`${key}: is is a finite number of the prop's own unit`);
+    else if (prop && !numeric) out.push(`${key}: is states a number, and ${prop} is not one`);
+    // half a pixel is a length's rounding: an opacity, a radius's four corners or a turn would read loose
+    else if (prop && NOT_A_LENGTH.test(prop)) out.push(`${key}: is states a length, and ${prop} is not one — bound it (within)`);
+    else if (!prop) out.push(`${key}: is states one property's value, so the key names it (Layer.prop)`);
+    if (w.within !== undefined) out.push(`${key}: within and is say different things — a distance from the frame, or the page's own value`);
   }
   if (w.within !== undefined && !(typeof w.within === 'number' && Number.isFinite(w.within) && w.within >= 0)) out.push(`${key}: within is a finite number of the prop's own unit, at least 0`);
   // a key naming a whole layer (an app waiver, often globbed) covers its numbers too
@@ -123,7 +143,9 @@ export function recordExcused(excused, target, rows, declaredAt) {
     if (!w) continue;
     if (!excused.has(target)) excused.set(target, new Map());
     const at = excused.get(target);
-    if (!at.has(r.waiver) || at.get(r.waiver).off < r.off) at.set(r.waiver, { off: r.off, within: w.within });
+    // a ruled value is held to the page, not the frame: what moves with a text style is not recorded as moved
+    const off = w.is !== undefined ? +Math.abs(parseFloat(r.actual) - w.is).toFixed(4) : r.off;
+    if (!at.has(r.waiver) || at.get(r.waiver).off < off) at.set(r.waiver, { off, within: w.within });
   }
   return excused;
 }
@@ -158,6 +180,11 @@ export function excuses(waiver, { expected, actual, sameElement, numeric = false
     const set = parseFloat(raw);
     return set === 0 || (!Number.isFinite(set) && /^(none|normal|auto)$/.test(String(raw).trim())) ? { excused: true } : { excused: false, why: `ruled unset, and the page sets ${typeof actual === 'string' ? actual : JSON.stringify(actual)}` };
   }
+  // the page's own value, ruled: a keyword or another number is not it
+  if (w.is !== undefined) {
+    const held = parseFloat(typeof actual === 'object' && actual ? actual.r : actual);
+    return Number.isFinite(held) && Math.abs(held - w.is) <= 0.5 ? { excused: true } : { excused: false, why: `ruled ${w.is}, and the page holds ${typeof actual === 'object' ? JSON.stringify(actual) : actual}` };
+  }
   /* A number measured as a keyword (`normal`, `none`, `auto`) has no distance
      to bound: only a ruling excuses it — a ::placeholder that has no line box
      of its own, a cap the code does not need. Bounded or not, a number
@@ -182,7 +209,7 @@ export function excuses(waiver, { expected, actual, sameElement, numeric = false
  * it describes nothing (round 3 of the 2026-10-02 review, S14: 59 and 48
  * such bounds and 16 'unset' rulings sat unused, never stale).
  */
-const exempt = (x, live) => x && (x.content || x.decision) && (live || (x.within === undefined && x.decision !== 'unset'));
+const exempt = (x, live) => x && (x.content || x.decision) && (live || (x.within === undefined && x.is === undefined && x.decision !== 'unset'));
 export function stale(declared, used, live = false) {
   return Object.entries(declared || {})
     .filter(([key, w]) => !used.has(key) && !exempt(asWaiver(w), live))

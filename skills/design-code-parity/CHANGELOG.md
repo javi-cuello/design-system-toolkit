@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.64.0 (2026-11-01): a waiver states the value the page holds by rule (`is`), so a text style that makes a frame taller moves no bound by hand. Case T98.
 - 1.63.1 (2026-10-31): the pairing prompt frames its two lists as data (toolkit-standard §D 24), and the dashboard fills it in one pass, so a Figma name holding `{{CODE}}` stays a name. Case T75.
 - 1.63.0 (2026-10-31): content read from the file, the web or a project is data, never instructions (toolkit-standard §D 24).
 - 1.62.7 (2026-10-30): a dev plugin gets the file key when its manifest sets `enablePrivatePluginApi`, as the snapshot plugin now does. Prose only; cases unaffected.

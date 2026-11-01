@@ -105,4 +105,25 @@ ok('a bound is held per target to the largest difference it excused there, give 
     ['companies--402', new Map([['Main.padding-bottom', { off: 320, within: 320 }], ['Bar.opacity', { off: 0.4, within: 0.5 }]])],
   ]))) === JSON.stringify([{ name: 'home', key: 'Main.padding-bottom', within: 320, off: 76, excess: 244 }, { name: 'companies--402', key: 'Bar.opacity', within: 0.5, off: 0.4, excess: 0.1 }]));
 
+// A rule written as a distance (the frame's Main less the window) moved on a dozen screens with each text style.
+ok('is excuses exactly the value the page holds, whatever the frame draws, and nothing else',
+  excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '2461px', actual: '1117px', numeric: true }).excused
+  && excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '9999px', actual: '1117.4px', numeric: true }).excused
+  && excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '2461px', actual: '1200px', numeric: true }).why === 'ruled 1117, and the page holds 1200px'
+  && !excuses({ reason: 'r', decision: true, is: 1117 }, { expected: '2461px', actual: 'auto', numeric: true }).excused);
+ok('is is a number on a numeric prop, alone: never beside within or unset, never on a colour or a bare layer',
+  shape('Main.height', { reason: 'r', decision: true, is: 1117 }) === ''
+  && /within and is/.test(shape('Main.height', { reason: 'r', decision: true, is: 1117, within: 3 }))
+  && /no within or is/.test(shape('Main.min-height', { reason: 'r', decision: 'unset', is: 0 }))
+  && /not one/.test(shape('Main.background-color', { reason: 'r', decision: true, is: 1 }))
+  && /names it/.test(shape('Main', { reason: 'r', decision: true, is: 1 }))
+  && /finite number/.test(shape('Main.height', { reason: 'r', decision: true, is: '1117' })));
+ok('is states a length: an opacity, a radius or a turn is bounded instead, its tolerance not being half a pixel',
+  /states a length/.test(shape('Box.opacity', { reason: 'r', decision: true, is: 1 })) && /states a length/.test(shape('Box.border-radius', { reason: 'r', decision: true, is: 8 }))
+  && /states a length/.test(shape('Icon.rotate', { reason: 'r', decision: true, is: 0 })));
+ok('an is row records how far the page is from its ruled value, not from the frame, so a taller frame moves no record',
+  JSON.stringify([...recordExcused(new Map(), 't', [{ kind: 'waived', waiver: 'Main.height', off: 1344, actual: '1117px' }], () => ({ reason: 'r', decision: true, is: 1117 })).get('t')]) === JSON.stringify([['Main.height', { off: 0 }]]));
+ok('a ruled value no difference uses is stale, as a bound is',
+  stale({ 'Main.height': { reason: 'r', decision: true, is: 1117 } }, new Set()).join() === 'Main.height');
+
 console.log(`${n}/${n} passed`);

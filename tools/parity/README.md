@@ -171,7 +171,13 @@ what it excused there, and `--accept` records each one's largest difference
 per target). A decision on a number without a bound excuses a keyword only,
 so a page that sets nothing is `{ reason, decision: 'unset' }`, which excuses
 exactly 0 or a keyword on a padding, a gap, a min- or max- size, a line
-height or a letter spacing, on a key that names its prop. A bound or an
+height or a letter spacing, on a key that names its prop. A number the page
+holds by rule, whatever the frame draws, is stated as that number,
+`{ reason, decision: true, is: 1117 }` (a page's Main is the window where the
+frame draws it as tall as its content): it excuses that value give or take
+half a pixel and nothing else, so a text style that makes the frame taller
+moves no bound. It takes any owner, and a length only: an opacity, a radius
+or a turn is bounded (`within`). A bound, an `is` or an
 `'unset'` ruling that nothing used in a full run is stale whoever owns it;
 only `appWaivers`, against live data, keep the exemption. A `*` in a key is
 read in `appWaivers` only. The `waivers` gate refuses any other shape at
