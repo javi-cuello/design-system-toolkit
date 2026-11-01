@@ -42,4 +42,4 @@ A skill comes with the tools, standards and knowledge pages it names, and an orc
 
 ## Licence
 
-© Javier Cuello. Use and change it for your own projects; do not pass it on. The terms are in [LICENSE](LICENSE).
+© Javier Cuello. Use it and change it, client work included, with credit; share it only free and on the same terms; never sell it or a changed copy. The terms are in [LICENSE](LICENSE).
