@@ -60,6 +60,11 @@ test('a shell command writes only where it redirects, tees or edits in place, ne
     ["echo `sed -i 's/a/b/' x.md`", ['x.md'], 'sed in backticks'],
     ["sed -i .bak 's/a/b/' x.md", ['x.md'], 'a BSD dot suffix'],
     ["sed -i 's/a/b/' x.md # tidy", ['x.md'], 'a comment is no file'],
+    ["sed -e s/a/b/ -i .env", ['.env'], 'a dot word after the script is a file, not a suffix'],
+    ["sed -i .env -e s/a/b/", ['.env'], 'so is one with no file after it'],
+    ["sed -i .bak -e s/a/b/ x.md", ['x.md'], 'while one with a file after it is the suffix'],
+    ["\\sed -i s/a/b/ x.md", ['x.md'], 'a sed past its alias'],
+    ["sed -i -e 's/a/b/' -- -x.md", ['-x.md'], 'every word after -- is a file'],
   ]) assert.deepEqual(shellWrites(cmd, TOOLKIT), want.map(T), why);
   assert.deepEqual(shellWrites('echo hi > notes/a.md', TOOLKIT), [path.join(TOOLKIT, 'notes/a.md')]);
   assert.deepEqual(shellWrites("cd /tmp && sed -i '' 's/a/b/' x.txt", TOOLKIT), ['/tmp/x.txt']);
