@@ -138,6 +138,14 @@ try {
   const reopen = await exec("return 5", "GONE");
   ok("a call for a file whose plugin closed names that file and why it closes", reopen.error === "wrong_file_not_open"
     && /^Run the bridge plugin in "Reloaded, again" again\. It is no longer connected; running another plugin in that file, such as the snapshot, closes it\./.test(reopen.hint), reopen.hint);
+  // a file's name is the file's author's: the hint quotes it on one line, cut to 200 characters
+  const odd = await connect();
+  odd.send({ type: "FILE_INFO", data: { fileKey: "ODD", fileName: "Two\nlines\u0007" + "x".repeat(250) } });
+  await waitFor(async () => (await status()).files.some((f) => f.fileKey === "ODD"));
+  odd.s.destroy();
+  await waitFor(async () => !(await status()).files.some((f) => f.fileKey === "ODD"));
+  const quoted = (await exec("return 6", "ODD")).hint || "";
+  ok("a closed file's name is quoted on one line and cut to 200 characters", /^Run the bridge plugin in "Two lines x+" again\./.test(quoted) && !/[\u0000-\u001f]/.test(quoted) && quoted.indexOf('" again') - quoted.indexOf('"') - 1 === 200, quoted.slice(0, 80));
 
   // two claims on a silent holder at once: the first takes it, and the second is asked of the new holder, not let in
   const stale = await connect({ pongs: false });

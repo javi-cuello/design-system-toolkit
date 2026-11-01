@@ -909,6 +909,8 @@ export function writeDrawn(out, rows) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+  // a refused call (a file to reopen, a service gone) is its message, not a stack trace
+  process.on('unhandledRejection', (e) => { console.error(e && e.message || e); process.exit(1); });
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   let run = argv.includes('--run'); if (run) argv.splice(argv.indexOf('--run'), 1);

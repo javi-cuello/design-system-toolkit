@@ -91,6 +91,10 @@ try {
   const noFile = await post("/exec", { code: "return 1", fileKey: "NOT-OPEN" });
   ok("/exec naming a file that is not open answers wrong_file_not_open", noFile.json.ok === false && noFile.json.error === "wrong_file_not_open"
     && /^Run the bridge plugin in the file NOT-OPEN\./.test(noFile.json.hint));
+  // the one client (services.mjs) keeps the hint in the error it throws: a CLI prints the message and nothing else
+  const { figmaExec } = await import("./services.mjs");
+  const thrown = await figmaExec({ port: PORT }, "NOT-OPEN", "return 1", 1000).catch((e) => e.message);
+  ok("the client's error for a file that is not open carries the hint on its one line", /^wrong_file_not_open: Run the bridge plugin in the file NOT-OPEN\./.test(thrown) && !thrown.includes("\n"), thrown);
   const notJson = await post("/exec", "{not json");
   ok("/exec with a body that is not JSON is a 500 that says so, and the service stays up", notJson.code === 500 && /JSON/.test(notJson.json.error) && (await ask("GET", "/health")).code === 200);
   ok("/claude with no key says so rather than calling out", (await post("/claude", { prompt: "x" })).json.error === "no_api_key");
