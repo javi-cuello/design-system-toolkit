@@ -16,15 +16,18 @@ import { buildTokens, shadowCss } from './build-tokens.mjs';
 // (as test-check.mjs does): this read ~/Projects, a folder only one machine has, and skipped silently elsewhere.
 // With no project registered (a fresh clone, CI) the cases skip and say so; with projects and no donor, it fails.
 const repos = createRequire(import.meta.url)('../snapshot/projects.cjs').repos();
-const donor = repos.map((r) => join(r.dir, 'package.json')).find((p) => existsSync(join(p, '..', 'node_modules', 'style-dictionary')));
+// the toolkit's own copy first (tools/tokens/package.json), so this runs with no project, as in CI
+const donor = [new URL('./package.json', import.meta.url).pathname, ...repos.map((r) => join(r.dir, 'package.json'))].find((p) => existsSync(join(p, '..', 'node_modules', 'style-dictionary')));
 if (!donor && repos.length) {
   console.error('no registered project repo has style-dictionary installed: run `pnpm install` in one of them, or register a repo that has it.');
   process.exit(1);
 }
 const SD = donor && (await import(pathToFileURL(createRequire(donor).resolve('style-dictionary')).href)).default;
-const skip = !SD && 'no project repo is registered, so there is no style-dictionary to borrow';
+const skip = !SD && 'style-dictionary is not installed in tools/tokens (`pnpm install` there) and no project repo is registered to borrow one from';
 // said where bin/check reads it, so the run shows as a skip, not a bare ok (node:test's own # SKIP is not read)
 if (skip) console.log(`skip: ${skip}`);
+// a run whose Style Dictionary cases all skipped exits 77, a skip to bin/check and a failure in CI, never a bare 0
+if (skip) process.on('exit', (code) => { if (!code) process.exitCode = 77; });
 
 const colour = (hex) => ({ $type: 'color', $value: hex });
 const dim = (n) => ({ $type: 'dimension', $value: { value: n, unit: 'px' } });

@@ -4,9 +4,9 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
 
 **You need:**
 - a Mac (the services install as launchd agents; on Linux, run them by hand);
-- Node 22.12 or later ([nodejs.org](https://nodejs.org), or `brew install node`), pnpm (`corepack enable pnpm`, which Node ships with), [Google Chrome](https://www.google.com/chrome/) (or `CHROME=/path/to/chrome` for another Chromium), and python3 (the Xcode Command Line Tools provide it: `xcode-select --install`);
+- Node 22.12 or later ([nodejs.org](https://nodejs.org), or `brew install node`), pnpm 12 (`brew install pnpm` or `npm install -g pnpm@12`; Node 25 and later no longer ship corepack), [Google Chrome](https://www.google.com/chrome/) (or `CHROME=/path/to/chrome` for another Chromium), and python3 (the Xcode Command Line Tools provide it: `xcode-select --install`);
 - the Figma desktop app;
-- Claude Code with the [figma-console MCP server](https://github.com/southleft/figma-console-mcp) and its Desktop Bridge plugin, for the skills that read or change a Figma file;
+- Claude Code with the [figma-console MCP server](https://github.com/southleft/figma-console-mcp) and its Desktop Bridge plugin, for the skills that read or change a Figma file (last run with 1.46.0, as `figma-console-mcp@latest` resolved on 2026-11-01);
 - optionally, an Anthropic API key in `~/.figma-dashboard-key`, put there by `bin/set-key audit` on macOS (for the audit page's chat and judgement pass; see [tools/figma-audit](../tools/figma-audit/README.md)) and a Cloudflare account with `npx wrangler login` (to publish a docs site).
 
 1. **Clone and install.** Projects are found beside the toolkit, in the folder that holds its checkout (`TOOLKIT_PROJECTS_ROOT` points elsewhere), so put it where your projects will live. These steps use `~/Projects`:
@@ -14,6 +14,7 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
    ```sh
    git clone https://github.com/javi-cuello/design-system-toolkit.git ~/Projects/toolkit && cd ~/Projects/toolkit
    (cd tools/docs-site && pnpm install --frozen-lockfile)  # the docs site's engine
+   (cd tools/tokens && pnpm install --frozen-lockfile)     # the Style Dictionary the token suites run through
    ./install.sh                            # checks the repo, links the skills into Claude Code, installs the services and the push hook
    ```
 

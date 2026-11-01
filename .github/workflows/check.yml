@@ -35,10 +35,11 @@ jobs:
         run: |
           corepack enable pnpm
           corepack prepare pnpm@12.16.1 --activate
-      - name: the docs site's and docs MCP's packages, from their lockfiles
+      - name: the docs site's, docs MCP's and token suites' packages, from their lockfiles
         run: |
           (cd tools/docs-site && pnpm install --frozen-lockfile)
           (cd tools/docs-mcp && pnpm install --frozen-lockfile)
+          (cd tools/tokens && pnpm install --frozen-lockfile)
       - name: let Chrome use its sandbox
         # Ubuntu 24.04's AppArmor refuses the unprivileged user namespaces Chrome's sandbox needs
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0

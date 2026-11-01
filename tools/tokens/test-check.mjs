@@ -22,16 +22,18 @@ const TOOLKIT = join(HERE, '..', '..');
 // invisible; a missing donor is now a failure that says what to install.
 const require_ = createRequire(import.meta.url);
 const contract = require_('../snapshot/projects.cjs');
-const donor = contract.repos()
-  .map((r) => join(r.dir, 'node_modules'))
+// The toolkit's own copy first (tools/tokens/package.json, installed by setup and CI), so the suite runs with no
+// project; else one a registered repo installed.
+const donor = [join(HERE, 'node_modules'), ...contract.repos().map((r) => join(r.dir, 'node_modules'))]
   .find((d) => existsSync(join(d, 'style-dictionary')));
 
 // A donor that is not there is a finding about this suite, not a pass, on a
 // machine with projects. With none registered (a fresh clone, CI) there is
-// nothing to borrow: the suite says it skipped, and bin/check shows the line.
+// nothing to borrow: the suite exits 77, which bin/check says as a skip.
 if (!donor && !contract.repos().length) {
-  console.log('skip: no project repo is registered, so there is no style-dictionary to borrow and the checker was not run');
-  process.exit(0);
+  // 77: bin/check says a skip, and CI, which installs tools/tokens, fails it
+  console.log('skip: style-dictionary is not installed in tools/tokens (`pnpm install` there) and no registered repo has it, so the checker was not run');
+  process.exit(77);
 }
 if (!donor) {
   console.error('no registered project repo has style-dictionary installed: run `pnpm install` in one of them, or register a repo that has it.');

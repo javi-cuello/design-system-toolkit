@@ -12,7 +12,7 @@ node ~/Projects/toolkit/tools/tokens/build.mjs --repo . --check    # regenerate 
 node ~/Projects/toolkit/tools/tokens/check.mjs --repo .            # the token gates, exit 1 on a finding
 ```
 
-**Needs:** Node 22.12+, and Style Dictionary installed in the project repo (`pnpm add -D style-dictionary`): it is the project's dependency, so the toolkit stays dependency-free.
+**Needs:** Node 22.12+, and Style Dictionary installed in the project repo (`pnpm add -D style-dictionary`): it is the project's dependency, so the toolkit stays dependency-free. This folder's own suites run through a pinned copy (`package.json` here, `pnpm install --frozen-lockfile`), so they run with no project, as in CI; without it and with no project to borrow from, they exit 77, a skip to `bin/check` and a failure in CI.
 
 **Reads** the snapshot's `tokens.json` (where `snapshot.config.json` puts it). **Writes** DTCG files in `dtcg/` beside the snapshot, and the stylesheets at the repo's `paths.styles`.
 
