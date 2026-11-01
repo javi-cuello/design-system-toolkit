@@ -21,10 +21,27 @@
  *               required step that fails fails the snapshot
  *   figmaToken  a command that prints the Figma token, when FIGMA_TOKEN is unset; else
  *               the machine's ~/.config/figma/token (bin/set-key figma)
+ *
+ * When each file was last delivered is kept on this machine, outside every
+ * repo (~/.toolkit/snapshot-runs.json; TOOLKIT_SNAPSHOT_RUNS names another
+ * file): a stored snapshot's own time is when its content last changed, and a
+ * snapshot taken again unchanged keeps it, so it cannot say what came after.
+ * The time is the delivery's, so a kept payload replayed later is timed at the
+ * replay; and Figma saves a version some time after the edits it holds, so the
+ * note says "may".
  */
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const os = require('os');
+
+const RUNS = () => process.env.TOOLKIT_SNAPSHOT_RUNS || path.join(os.homedir(), '.toolkit', 'snapshot-runs.json');
+const runs = () => { try { return JSON.parse(fs.readFileSync(RUNS(), 'utf8')); } catch { return {}; } };
+function ran(key, at = new Date().toISOString()) {
+  if (!key) return;
+  // written whole and renamed, so a reader never meets half a file and writes back only its own key
+  try { const all = runs(); all[key] = at; fs.mkdirSync(path.dirname(RUNS()), { recursive: true }); const tmp = `${RUNS()}.${process.pid}`; fs.writeFileSync(tmp, JSON.stringify(all, null, 1)); fs.renameSync(tmp, RUNS()); } catch { /* a note lost, never a snapshot */ }
+}
 
 // Read fresh, like the router: a store changed while the router runs takes
 // effect on the next snapshot.
@@ -85,6 +102,7 @@ async function deliver(project, kind, payload, { say, under } = {}) {
     : store.writeScreens(payload, P, { version, states: (config.screens || {}).states || [], ids: [entry.key, entry.id].filter(Boolean) });
   for (const l of r.lines) { say(l.label, l.text); for (const d of l.detail || []) under(d); }
   if (r.refused) { say('refused', r.refused); return { result: 'refused', why: r.refused }; }
+  ran(entry.key || meta.fileKey || null);
   // The project's own steps, in its own repo: a summary on screen, the rest in the log.
   const steps = [...(((config.after || {})[kind]) || []), ...toolkitSteps(kind, project, config)];
   if (!steps.length || !project.repo) return { result: 'written' };
@@ -218,7 +236,7 @@ async function pinned(project) {
   const P = pathsOf(project, store, config);
   const read = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
   const tokens = read(P.tokens), index = read(P.index) || {};
-  const stale = [], notes = [];
+  const stale = [], notes = [], last = runs();
   for (const [kind, mode] of [['library', 'published'], ['screens', 'named']]) {
     const list = contract.entries(project.files[kind]);
     const keyed = list.filter((e) => e.key);
@@ -232,6 +250,10 @@ async function pinned(project) {
       const have = meta.version && meta.version.id;
       if (!live) stale.push(mode === 'named' ? `${label}: no named version in Figma yet — File › Save to version history, with a name` : `${label}: never published`);
       else if (live.id !== have) stale.push(`${label}: Figma is at ${live.label === 'published' ? `published ${live.at}` : `version "${live.label}" (${live.at})`}; the snapshot is ${have || 'unpinned'} — snapshot again`);
+      /* At its release and edited after the last delivery of it: that edit is
+         in no snapshot. Edits made after a snapshot were once taken for in it,
+         and only a review saw otherwise. */
+      else if (live.editedSince && last[e.key] && live.editedSince > last[e.key]) notes.push(`${label}: Figma saved a version at ${live.editedSince}, after its last snapshot here (${last[e.key]}); edits in it may not be in the snapshot — if one was meant for code, ${mode === 'named' ? 'save a named version and ' : 'publish and '}snapshot again`);
       const v = meta.version;
       if (v && v.editedSince && v.editedSince < meta.snapshotAt) notes.push(`${label} was edited at ${v.editedSince}, after its release and before the snapshot; if that edit was releasable, release and snapshot again`);
     }

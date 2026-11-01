@@ -208,7 +208,7 @@ The path is printed **only** when a snapshot fails, with the command to re-run
 it (`deliver.cjs <project> <kind> <payload>`). `deliver.cjs <project> --pin`
 re-reads the release stamps without collecting again, and `--pinned` asks
 whether what is stored is at the release, as a check's gate. Each routed file is pinned to its own release (beside its entry in
-`_meta.sources`) and checked against it; a Figma read gives up after 30 s, and a named version is looked for over up to twenty pages of versions. On a good run it is noise, and noise is what buries the one line
+`_meta.sources`) and checked against it, and `--pinned`, while a file is at its release, notes a version Figma saved after the file's last delivery on this machine (each delivery is timed in `~/.toolkit/snapshot-runs.json`, outside every repo; `TOOLKIT_SNAPSHOT_RUNS` names another file): edits in it may not be in the snapshot. "May": Figma saves a version some time after the edits it holds, and a kept payload replayed later is timed at the replay. A Figma read gives up after 30 s, and a named version is looked for over up to twenty pages of versions. On a good run it is noise, and noise is what buries the one line
 that matters.
 
 ## Options

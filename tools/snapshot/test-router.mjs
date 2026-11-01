@@ -17,6 +17,9 @@ import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import contract from './projects.cjs';
 
+// Deliveries are timed on the machine (deliver.cjs RUNS); a test's go to a scratch file, never the real one.
+process.env.TOOLKIT_SNAPSHOT_RUNS = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-runs-')), 'runs.json');
+
 const { identify, projects, route, routing } = contract;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -545,7 +548,7 @@ test('--pin without a Figma token keeps the stored stamps, and a config every re
 
 /* Figma as version.cjs reads it, per file key: each file's last publish, and a
    version list whose one named version sits on the second page. */
-function fakeFigma(published) {
+function fakeFigma(published, edited = '2026-10-01') {
   const seen = [];
   const json = (body) => ({ json: async () => body });
   const fake = async (url) => {
@@ -554,7 +557,7 @@ function fakeFigma(published) {
     if (what === 'components') return json({ meta: { components: [{ updated_at: published[key] }] } });
     if (what === 'styles') return json({ meta: { styles: [] } });
     if (u.searchParams.get('before')) return json({ versions: [{ id: `${key}-named`, label: 'Release', created_at: '2026-01-01' }], pagination: {} });
-    return json({ versions: Array.from({ length: 50 }, (_, i) => ({ id: `${key}-${i}`, label: null, created_at: '2026-10-01' })), pagination: { next_page: `https://api.figma.com/v1/files/${key}/versions?page_size=50&before=1` } });
+    return json({ versions: Array.from({ length: 50 }, (_, i) => ({ id: `${key}-${i}`, label: null, created_at: typeof edited === 'function' ? edited() : edited })), pagination: { next_page: `https://api.figma.com/v1/files/${key}/versions?page_size=50&before=1` } });
   };
   return { fake, seen };
 }
@@ -587,6 +590,36 @@ test('each library file a project routes is pinned to its own publish and checke
   } finally {
     globalThis.fetch = saved.fetch;
     if (saved.token !== undefined) process.env.FIGMA_TOKEN = saved.token; else delete process.env.FIGMA_TOKEN;
+  }
+});
+
+test('a version Figma saved after the last delivery of a file is named: its edits may not be in the snapshot', async () => {
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const { deliver, pinned } = req('./deliver.cjs');
+  const { projectsDir } = world([{ name: 'late', files: { library: [{ key: 'KEYL', id: 'IDL', name: 'UI' }] } }]);
+  const project = projects(projectsDir).list.find((p) => p.name === 'late');
+  let edited = '2026-09-01T00:00:00Z';
+  const { fake } = fakeFigma({ KEYL: '2026-10-20T00:00:00Z' }, () => edited);
+  const saved = { fetch: globalThis.fetch, token: process.env.FIGMA_TOKEN, runs: process.env.TOOLKIT_SNAPSHOT_RUNS };
+  globalThis.fetch = fake; process.env.FIGMA_TOKEN = 'test';
+  process.env.TOOLKIT_SNAPSHOT_RUNS = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'runs-')), 'runs.json');
+  try {
+    assert.deepEqual((await pinned(project)).notes, [], 'never delivered: no time to compare, nothing said');
+    const p = lib('IDL'); p.tokens._meta.fileKey = 'KEYL';
+    assert.equal((await deliver(project, 'library', p, { say: () => {}, under: () => {} })).result, 'written');
+    const at = JSON.parse(fs.readFileSync(process.env.TOOLKIT_SNAPSHOT_RUNS, 'utf8')).KEYL;
+    assert.ok(at && !Number.isNaN(Date.parse(at)), 'the delivery is timed, outside the repo');
+    edited = '2026-10-25T00:00:00Z';
+    assert.deepEqual((await pinned(project)).notes, [], 'saved before the delivery: in it');
+    edited = '2999-01-01T00:00:00Z';
+    const r = await pinned(project);
+    assert.deepEqual(r.stale, [], 'still at its release, so not stale');
+    assert.equal(r.notes.length, 1);
+    assert.match(r.notes[0], /^library: Figma saved a version at 2999-01-01T00:00:00Z, after its last snapshot here \(.+\); edits in it may not be in the snapshot — if one was meant for code, publish and snapshot again/);
+  } finally {
+    globalThis.fetch = saved.fetch;
+    for (const [k, v] of [['FIGMA_TOKEN', saved.token], ['TOOLKIT_SNAPSHOT_RUNS', saved.runs]]) if (v !== undefined) process.env[k] = v; else delete process.env[k];
   }
 });
 
