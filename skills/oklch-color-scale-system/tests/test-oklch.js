@@ -653,7 +653,9 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
     target[5] = '#FF00FF'; // same non-drift manual edit as above — genuinely unresolvable
     const apiResult = recoverParameters(target, { dark: false });
     const cliOutput = buildCliOutput(apiResult);
-    check('recover.js CLI: surfaces a poor-fit warning for a genuinely unresolvable edit', typeof cliOutput.warning === 'string' && cliOutput.warning.length > 0, JSON.stringify(cliOutput.warning));
+    // The poor-fit wording itself: a schedule note once stood in for it, saying the
+    // other fit "is close" over a hand-edited step.
+    check('recover.js CLI: surfaces a poor-fit warning for a genuinely unresolvable edit', /This is a poor fit \(mean error [\d.]+, max error \d+ out of 255\)/.test(cliOutput.warning || '') && !/is close/.test(cliOutput.warning || ''), JSON.stringify(cliOutput.warning));
 
     // A clean, non-drifted ramp should have NO warning at all.
     const cleanScale = generateScale('#1A6FBF', 'free', { dark: false });
@@ -1998,6 +2000,124 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   const viaCli = JSON.parse(require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), '#AC731A', '--collide-with', '#E07000', '--collide-mode', 'anchored'], { encoding: 'utf8' }));
   check('2.2 collision: --collide-mode generates the other colour in its own mode', JSON.stringify(viaCli.collisions) === JSON.stringify(g.hueCollisions(g.generateScale('#AC731A', 'free'), g.generateScale('#E07000', 'anchored'))), JSON.stringify(viaCli.collisions));
   check('2.2 collision: --collide-with --table prints the steps and both hues', /⚠ hue within 3° of #E07000 at step 11 \(55\.75° vs 53\.16°\), step 12/.test(table), table.split('\n')[1]);
+}
+
+// ============================================================
+// 2.3 — the two-mode block is read back by its only reader, and the tail rate is an option
+// ============================================================
+
+{
+  // The cross-skill half — docgen's pickLine reading these blocks back — is in
+  // tools/shared/test-mode-description.mjs: this skill ships alone (skill-standard §A
+  // clause H), so its suite holds only the shape its reader needs.
+  const g = require('../scripts/generate.js');
+  const { recoverParameters, buildCliOutput } = require('../scripts/recover.js');
+  const cli = argv => require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), ...argv], { encoding: 'utf8' });
+  const throwsWith = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
+  // Light anchored, dark free: the shape SKILL.md describes, so the two lines differ.
+  const light = g.generateScale('#2DAFB8', 'anchored'), dark = g.generateScale('#2DAFB8', 'free', { dark: true });
+  const blocks = g.modeDescriptions({ Day: light, Night: dark });
+  check('2.3 mode block: each heading is exactly "<mode name>:" on its own line, over that mode\'s line, every step',
+        blocks.length === 12 && blocks.every((d, i) => d === `Day:\n${light.steps[i].figmaDescriptionLine}\n\nNight:\n${dark.steps[i].figmaDescriptionLine}`), blocks[0]);
+  check('2.3 mode block: names one reader would confuse throw — case, a trailing colon',
+        throwsWith(() => g.composeModeDescription({ Dark: 'x', dark: 'y' }), /case/) && throwsWith(() => g.composeModeDescription({ Light: 'x', 'Light:': 'y' }), /colon/));
+  check('2.3 mode block: an empty or multi-line mode name throws', ['', ' ', 'Day\nNight'].every(k => throwsWith(() => g.composeModeDescription({ [k]: 'x' }), /mode name/)));
+  check('2.3 mode block: no modes throws', throwsWith(() => g.modeDescriptions({}), /at least one/));
+  const viaCli = JSON.parse(cli(['#2DAFB8', '--mode', 'anchored', '--dark-gen-mode', 'free', '--light-name', 'Day', '--dark-name', 'Night']));
+  check('2.3 mode block: --light-name/--dark-name/--dark-gen-mode give the API\'s twelve blocks', JSON.stringify(viaCli.modeDescriptions) === JSON.stringify(blocks), viaCli.modeDescriptions && viaCli.modeDescriptions[0]);
+  const tailedTwo = JSON.parse(cli(['#AC731A', '--tail-rate', '54', '--light-name', 'Light', '--dark-name', 'Dark']));
+  check('2.3 mode block: --tail-rate goes to the light ramp only', JSON.stringify(tailedTwo.modeDescriptions) === JSON.stringify(g.modeDescriptions({ Light: g.generateScale('#AC731A', 'free', { tailRate: 54 }), Dark: g.generateScale('#AC731A', 'free', { dark: true }) })), tailedTwo.modeDescriptions[11]);
+
+  const orange = g.generateScale('#E07000', 'free');
+  const base = g.generateScale('#AC731A', 'free'), slow = g.generateScale('#AC731A', 'free', { tailRate: 54 });
+  check('2.3 tail rate: the default rate gives the default values and no token (tailRate: null, one additive field)', JSON.stringify(g.generateScale('#AC731A', 'free', { tailRate: 70 })) === JSON.stringify(base) && base.tailRate === null);
+  check('2.3 tail rate: only steps 9-12 move', slow.steps.every((st, i) => (i < 8) === (st.hex === base.steps[i].hex)), slow.steps.map(st => st.hex).join(' '));
+  check('2.3 tail rate: every step records it, line form included', slow.steps.every(st => / · tail rate 54\b/.test(st.figmaDescription) && / · tail rate 54\b/.test(st.figmaDescriptionLine)), slow.steps[0].figmaDescription);
+  check('2.3 tail rate: 54 clears #AC731A of the orange and 55 does not', g.hueCollisions(slow, orange).length === 0 && g.hueCollisions(g.generateScale('#AC731A', 'free', { tailRate: 55 }), orange).length > 0);
+  check('2.3 tail rate: clearingTailRate finds that rate', g.clearingTailRate(r => g.generateScale('#AC731A', 'free', { tailRate: r }), orange) === 54);
+  check('2.3 tail rate: a non-yellow source, or a rate above 70 or below 0, throws',
+        throwsWith(() => g.generateScale('#1A6FBF', 'free', { tailRate: 54 }), /yellow/) && [71, -1, NaN].every(r => throwsWith(() => g.generateScale('#AC731A', 'free', { tailRate: r }), /tail rate/)));
+  const lime = g.generateScale('#A4CF5E', 'free', { tailRate: 40 });
+  check('2.3 tail rate: a lime whose drift is faded to nothing gets no token', lime.tailRate === null && JSON.stringify(lime) === JSON.stringify(g.generateScale('#A4CF5E', 'free')));
+  const tailCli = JSON.parse(cli(['#AC731A', '--tail-rate', '54']));
+  check('2.3 tail rate: --tail-rate gives the API\'s ramp', JSON.stringify(tailCli.steps) === JSON.stringify(slow.steps));
+  const collideCli = JSON.parse(cli(['#AC731A', '--collide-with', '#E07000']));
+  check('2.3 tail rate: --collide-with reports the rate that clears the collision', collideCli.clearingTailRate === 54, String(collideCli.clearingTailRate));
+
+  // Recovery. Anchored, the source is verbatim and the rate comes back exact. Free, the
+  // source's L and the rate trade off inside 8-bit rounding (SKILL.md, Parameter
+  // recovery), so the claim is the one that matters: the recovered parameters, rate
+  // included, regenerate the ramp within 1/255, on the current text schedule.
+  for (const [hex, mode, rate] of [['#D4A017', 'anchored', 50], ['#F5C400', 'anchored', 60]]) {
+    const r = recoverParameters(g.generateScale(hex, mode, { tailRate: rate }).steps.map(st => st.hex));
+    check(`2.3 tail rate: an anchored ${hex} ramp at rate ${rate} recovers its source and rate exactly`, r.mode === 'anchored' && r.hex === hex && r.tailRate === rate && r.err.max === 0, JSON.stringify({ mode: r.mode, hex: r.hex, tailRate: r.tailRate, err: r.err }));
+  }
+  for (const [hex, rate] of [['#AC731A', 54], ['#CA8A04', 40], ['#B8860B', 30]]) {
+    const target = g.generateScale(hex, 'free', { tailRate: rate }).steps.map(st => st.hex);
+    const r = recoverParameters(target);
+    const again = r.tailRate != null && g.generateScale(r.hex, r.mode, { tailRate: r.tailRate, noCeiling: r.noCeiling });
+    const worst = again ? Math.max(...again.steps.map((st, i) => Math.max(...[1, 3, 5].map(o => Math.abs(parseInt(st.hex.substr(o, 2), 16) - parseInt(target[i].substr(o, 2), 16)))))) : Infinity;
+    check(`2.3 tail rate: a free ${hex} ramp at rate ${rate} recovers a tail rate that regenerates it within 1/255`, r.mode === 'free' && !r.oklchText && worst <= 1, JSON.stringify({ hex: r.hex, tailRate: r.tailRate, worst, oklchText: r.oklchText }));
+  }
+  check('2.3 tail rate: the recovery CLI prints the rate', buildCliOutput(recoverParameters(g.generateScale('#D4A017', 'anchored', { tailRate: 50 }).steps.map(st => st.hex))).tailRate === 50);
+  check('2.3 tail rate: a default-rate ramp recovers with no rate', recoverParameters(base.steps.map(st => st.hex)).tailRate == null);
+
+  // Default ramps never gain a rate, and never recover worse than before the tail-rate
+  // search existed: each max error is pinned to what the 2.2.1 recover.js gave. Two
+  // reviews found false rates: 34 of 600 default dark free yellows (49-69), and the
+  // light #767E42 (50, then 67) and #C1C736 (67). Those two and #A8A000 open the
+  // light search (best default fit max 2+); #C7C98C dark is the dark free yellow.
+  const PINNED = [['#C7C98C', false, 1], ['#D4A017', false, 1], ['#E07000', false, 2], ['#0E8D00', false, 1],
+    ['#767E42', false, 2], ['#C1C736', false, 2], ['#A8A000', false, 3], ['#A6A921', false, 2], ['#C7C98C', true, 2, true]];
+  // and none newly reads as the older text schedule (#A6A921 did, on a bare lower
+  // mean). The dark #C7C98C did at 2.2.1 too: both schedules miss by 2/255 there, and
+  // past 1/255 the lower mean decides (recoverParameters).
+  const off = PINNED.filter(([hex, dk, max, wasOlder]) => { const r = recoverParameters(g.generateScale(hex, 'free', { dark: dk }).steps.map(st => st.hex), { dark: dk }); return r.tailRate != null || (r.oklchText === true && !wasOlder) || r.err.max > max; });
+  check('2.3 tail rate: default free yellow, orange and green ramps gain no rate, no oklchText, and recover no worse than 2.2.1, the light search opened included', off.length === 0, JSON.stringify(off));
+  // Ramps a review found missed, silently: each regenerates within 1/255, or says it does not.
+  // #AC731A at 40 was reported as rate 53 at max 2, with no warning; #5B4B00 (anchor at step 10) as oklchText.
+  const missed = [['#976500', 'anchored', 42], ['#5B4B00', 'anchored', 39], ['#CAED00', 'free', 62], ['#FFAF03', 'free', 48], ['#C79C00', 'free', 58], ['#8E9853', 'free', 52], ['#AC731A', 'free', 40]]
+    .filter(([hex, mode, rate]) => {
+      const target = g.generateScale(hex, mode, { tailRate: rate }).steps.map(st => st.hex), r = recoverParameters(target);
+      const again = g.generateScale(r.hex, r.mode, { tailRate: r.tailRate, noCeiling: r.noCeiling, luminanceText: !r.oklchText });
+      const worst = Math.max(...again.steps.map((st, i) => Math.max(...[1, 3, 5].map(o => Math.abs(parseInt(st.hex.substr(o, 2), 16) - parseInt(target[i].substr(o, 2), 16))))));
+      return (r.tailRate != null && r.err.max > 1) || (!(worst <= 1 && !r.oklchText) && !/--tail-rate/.test(r.warning || ''));
+    });
+  check('2.3 tail rate: tailed light ramps a review found missed regenerate within 1/255, or carry a warning naming the tail rate; a reported rate is never past 1/255', missed.length === 0, JSON.stringify(missed));
+  // Genuine older-schedule ramps (generated with luminanceText: false; from a seeded
+  // review sweep) are read as older, each at most its 2.2.1 max error. The one-sided
+  // margin of round 4 discarded the exact older fit of the first three for a current one
+  // a unit off.
+  const olderOff = [['#005EB7', 'anchored', true, 0], ['#8B7017', 'anchored', false, 0], ['#C1BE68', 'anchored', false, 0], ['#616623', 'free', false, 1], ['#C29835', 'free', true, 3]]
+    .filter(([hex, mode, dk, max]) => { const r = recoverParameters(g.generateScale(hex, mode, { dark: dk, luminanceText: false }).steps.map(st => st.hex), { dark: dk }); return r.oklchText !== true || r.err.max > max; });
+  check('2.3 text schedule: older-schedule ramps read as older, no worse than 2.2.1', olderOff.length === 0, JSON.stringify(olderOff));
+  // An exact older fit is no guess: no hedge (the hedge once said "neither regenerates").
+  const exactOlder = recoverParameters(g.generateScale('#7A3FBF', 'free', { luminanceText: false }).steps.map(st => st.hex));
+  check('2.3 text schedule: an exact older fit reads as older with no hedge', exactOlder.oklchText === true && exactOlder.err.max === 0 && !exactOlder.warning, JSON.stringify({ oklchText: exactOlder.oklchText, err: exactOlder.err, warning: exactOlder.warning }));
+  // An uncertain pick on equal max says the mean decided, never "the lower max error".
+  const sameMax = recoverParameters(g.generateScale('#D3BD56', 'free', { dark: true }).steps.map(st => st.hex), { dark: true });
+  check('2.3 text schedule: an uncertain pick on equal max names the mean as what decided', /the same max error and the lower mean/.test(sameMax.warning || '') && !/lower max error is reported/.test(sameMax.warning || ''), sameMax.warning);
+  // Poor on both schedules: the flag, if claimed, says it is a guess, and the poor-fit text always stands.
+  const poorBoth = g.generateScale('#D4A017', 'free', { dark: true }).steps.map(st => st.hex); poorBoth[2] = '#808080';
+  const pb = buildCliOutput(recoverParameters(poorBoth, { dark: true }));
+  check('2.3 text schedule: on a poor fit the poor-fit text stands, oklchText is called a guess, and no tail-rate note is added', /This is a poor fit/.test(pb.warning || '') && (pb.oklchText !== true || /read from a poor fit/.test(pb.warning)) && !/--tail-rate/.test(pb.warning || ''), pb.warning);
+  check('2.3 text schedule: the poor-fit threshold reads the raw mean (3.004 is poor)', /This is a poor fit/.test(buildCliOutput({ mode: 'free', hex: '#000000', anchorIdx: 8, noCeiling: false, err: { mean: 3.004, max: 5 } }).warning || ''));
+  // A lower max alone can claim older; when the current fit is past 1/255 too, it says so.
+  const byMax = recoverParameters(g.generateScale('#144D96', 'free', { dark: true }).steps.map(st => st.hex), { dark: true });
+  check('2.3 text schedule: older read from a lower max, with the current fit past 1/255, carries a warning', byMax.oklchText === true && /lower max error/.test(byMax.warning || ''), JSON.stringify({ oklchText: byMax.oklchText, err: byMax.err, warning: byMax.warning }));
+  // A current-schedule tail ramp whose older fit needs a tail rate (exact, against a
+  // current fit a unit off) is not claimed as older: the schedule cannot be told.
+  const anach = recoverParameters(g.generateScale('#8E8628', 'free', { tailRate: 49 }).steps.map(st => st.hex));
+  check('2.3 text schedule: where both schedules fit within 1/255, oklchText is null and a warning says so', anach.oklchText === null && /cannot be told/.test(anach.warning || '') && buildCliOutput(anach).oklchText === null, JSON.stringify({ oklchText: anach.oklchText, max: anach.err.max }));
+  // Muted dark yellows anchored in the tail have no yellow step in 5-8; any yellow step opens the search.
+  const muted = [['#3B3015', 34], ['#2A2302', 45]].filter(([hex, rate]) => { const r = recoverParameters(g.generateScale(hex, 'anchored', { tailRate: rate }).steps.map(st => st.hex)); return !(r.err.max <= 1 || /--tail-rate/.test(r.warning || '')); });
+  check('2.3 tail rate: muted dark yellows anchored in the tail recover within 1/255 or say why not', muted.length === 0, JSON.stringify(muted));
+  const step9 = recoverParameters(g.generateScale('#817200', 'anchored', { tailRate: 45 }).steps.map(st => st.hex));
+  check('2.3 tail rate: an anchor at step 9 is tried, and rebuilds the ramp exactly', step9.mode === 'anchored' && step9.anchorIdx === 8 && step9.hex === '#817200' && step9.tailRate != null && step9.err.max === 0, JSON.stringify({ mode: step9.mode, anchorIdx: step9.anchorIdx, tailRate: step9.tailRate, err: step9.err }));
+  const darkTail = recoverParameters(g.generateScale('#AC731A', 'free', { dark: true, tailRate: 54 }).steps.map(st => st.hex), { dark: true });
+  check('2.3 tail rate: a dark ramp made with a rate gets none back, and a warning saying the rate is not recoverable in dark mode', darkTail.tailRate == null && /not recoverable in dark mode/.test(darkTail.warning || '') && /not recoverable in dark mode/.test(buildCliOutput(darkTail).warning || ''), JSON.stringify({ tailRate: darkTail.tailRate, warning: darkTail.warning }));
+  const darkWarn = require('child_process').spawnSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'generate.js'), '#AC731A', '--dark', '--tail-rate', '54'], { encoding: 'utf8' });
+  check('2.3 tail rate: --tail-rate with --dark warns that the rate is for the light ramp, and still applies it', /meant for the light ramp/.test(darkWarn.stderr) && JSON.parse(darkWarn.stdout).tailRate === 54, darkWarn.stderr);
 }
 
 // ============================================================

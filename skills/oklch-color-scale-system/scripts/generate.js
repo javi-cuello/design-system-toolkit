@@ -23,7 +23,12 @@
 //   --name <label>              label for output (default: "scale")
 //   --collide-with <hex>        generate that colour's scale with the same options and
 //                               report the steps 9-12 whose hue sits within 3° of it
-//   --collide-mode <mode>       the mode that colour is generated in (default: --mode)
+//   --collide-mode <mode>       the mode that colour is generated in (default: --mode);
+//                               on a collision, also reports the tail rate that clears it
+//   --tail-rate <n>             yellow only: drift rate at steps 9-12, 0-70 (default 70)
+//   --light-name <name>         with --dark-name: generate light and dark ramps and give
+//   --dark-name <name>          each step's two-mode description under those mode names
+//   --dark-gen-mode <mode>      the mode the dark ramp is generated in (default: --mode)
 //
 // Examples:
 //   node scripts/generate.js '#1A6FBF'
@@ -473,9 +478,13 @@ function yellowHueScale(sourceH) {
   return (YELLOW_DRIFT_ZERO_H - sourceH) / (YELLOW_DRIFT_ZERO_H - YELLOW_DRIFT_FULL_H);
 }
 
-function yellowDrift(sourceL, sourceH, L) {
+// Degrees of rotation per unit of L moved from the source. `--tail-rate` replaces it
+// at steps 9-12 only, the tail a yellow/orange collision lives in (SKILL.md, Yellow).
+const YELLOW_DRIFT_RATE = 70;
+
+function yellowDrift(sourceL, sourceH, L, rate = YELLOW_DRIFT_RATE) {
   const deltaL = sourceL - L;
-  const drift = Math.max(-45, Math.min(45, 70 * deltaL)) * yellowHueScale(sourceH);
+  const drift = Math.max(-45, Math.min(45, rate * deltaL)) * yellowHueScale(sourceH);
   // Yellow's family range (70-130) combined with the ±45 cap can't currently wrap past
   // 0/360 (worst case lands at H 25 or H 175), but normalize anyway for consistency with
   // every other hue computation in this file — cheap, and removes the assumption from
@@ -602,6 +611,20 @@ function generateScale(hex, mode, opts) {
   const family = detectFamily(srcH);
   const isNeutral = srcC < NEUTRAL_C_THRESHOLD;
 
+  // Versioned option: the yellow drift rate at steps 9-12, the collision fix (SKILL.md,
+  // Yellow). Lowered for the whole tail at once, never one step, so the tail keeps its
+  // shape. Only ever lowered: the collision it fixes comes from too much rotation.
+  // Throws on a source it cannot touch, per the --peak precedent above. The default
+  // rate, or a lime whose drift is faded to nothing (yellowHueScale 0), gives the
+  // default values and carries no token: `tailRate` reads null.
+  let tailRate = opts.tailRate == null ? null : opts.tailRate;
+  if (tailRate != null) {
+    if (family !== 'yellow' || isNeutral || mode === 'grey') throw new Error(`--tail-rate applies to a yellow-family source (got ${isNeutral || mode === 'grey' ? 'a neutral' : family})`);
+    if (!Number.isFinite(tailRate) || tailRate < 0 || tailRate > YELLOW_DRIFT_RATE) throw new Error(`Invalid tail rate: ${tailRate} (expected a number from 0 to ${YELLOW_DRIFT_RATE})`);
+    if (tailRate === YELLOW_DRIFT_RATE || yellowHueScale(srcH) === 0) tailRate = null;
+  }
+  const rateAt = i => (tailRate != null && i >= 8 ? tailRate : YELLOW_DRIFT_RATE);
+
   let LSCALE = dark ? DARK_L.slice() : LIGHT_L.slice();
   if (isNeutral) LSCALE = dark ? DARK_L_NEUTRAL.slice() : LIGHT_L_NEUTRAL.slice();
 
@@ -655,13 +678,16 @@ function generateScale(hex, mode, opts) {
   // 'peak N' is a provenance token like 'uncapped': a --peak ramp is NOT reproducible
   // from source + mode alone, so the record must carry it (drift-note principle).
   const peakLabel = peaked ? `peak ${peakStep}` : null;
-  const provenanceBase = [`source ${hex.toUpperCase()}`, `${modeName} mode`, dark ? 'dark' : 'light', peakLabel].filter(Boolean).join(' · ');
+  // On every step, like 'peak N': it is a parameter of the ramp, and any one step's
+  // record must be enough to regenerate the whole of it.
+  const tailLabel = tailRate != null ? `tail rate ${tailRate}` : null;
+  const provenanceBase = [`source ${hex.toUpperCase()}`, `${modeName} mode`, dark ? 'dark' : 'light', peakLabel, tailLabel].filter(Boolean).join(' · ');
   // Same as provenanceBase but without the light/dark token — for a Figma variable that
   // has separate Light/Dark modes on ONE description field (Figma descriptions are
   // per-variable, not per-mode), the mode label belongs on its own line under a
   // "Light:"/"Dark:" heading instead of baked into the string, which would otherwise
   // read redundant next to a heading that already says which mode it is.
-  const provenanceBaseLine = [`source ${hex.toUpperCase()}`, `${modeName} mode`, peakLabel].filter(Boolean).join(' · ');
+  const provenanceBaseLine = [`source ${hex.toUpperCase()}`, `${modeName} mode`, peakLabel, tailLabel].filter(Boolean).join(' · ');
 
   const steps = LSCALE.map((baseL, i) => {
     let L = baseL;
@@ -703,7 +729,7 @@ function generateScale(hex, mode, opts) {
       let Cc = effSrcC * factor * globalDarkReduction;
       let Hc = srcH;
       if (family === 'yellow') {
-        Hc = yellowDrift(srcL, srcH, Lc);
+        Hc = yellowDrift(srcL, srcH, Lc, rateAt(i));
         if (i <= 4 && i !== anchorIdx) Cc = Math.min(Cc, backgroundCap(i, anchorIdx, effSrcC, designatedPeak));
       } else {
         const adj = applyFamilyRules(i, Lc, Cc, Hc, family, srcH, { noCeiling, beyondAnchorOnly: dark, easeHueSnaps: ease, anchorIdx, effSrcC, designatedPeak });
@@ -735,7 +761,7 @@ function generateScale(hex, mode, opts) {
     let C = effSrcC * factor * globalDarkReduction;
 
     if (family === 'yellow') {
-      H = yellowDrift(srcL, srcH, L);
+      H = yellowDrift(srcL, srcH, L, rateAt(i));
       if (i <= 4 && i !== anchorIdx) C = Math.min(C, backgroundCap(i, anchorIdx, effSrcC, designatedPeak));
     } else {
       const adj = applyFamilyRules(i, L, C, H, family, srcH, { noCeiling, beyondAnchorOnly: dark, easeHueSnaps: ease, anchorIdx, effSrcC, designatedPeak });
@@ -944,6 +970,7 @@ function generateScale(hex, mode, opts) {
     family: isNeutral ? 'neutral' : family,
     mode, modeName, dark, anchorIdx,
     peakStep: peaked ? peakStep : null,
+    tailRate,
     anchorInBackgroundZone,
     anchorInTextZone,
     solidForeground,
@@ -1253,6 +1280,15 @@ function hueCollisions(scale, other, opts) {
   return out;
 }
 
+// The fix for a collision hueCollisions found: the highest whole tail rate at or below
+// the default whose ramp clears `other` (the least change that works), or null if none
+// does down to 0. `build(rate)` regenerates this ramp at that rate with all its other
+// options, so the answer is for the ramp as actually generated.
+function clearingTailRate(build, other, opts) {
+  for (let r = YELLOW_DRIFT_RATE; r >= 0; r--) if (!hueCollisions(build(r), other, opts).length) return r;
+  return null;
+}
+
 // ============================================================
 // CLI
 // ============================================================
@@ -1275,6 +1311,10 @@ function parseArgs(argv) {
     else if (a === '--drift-toward') args.driftToward = argv[++i];
     else if (a === '--collide-with') args.collideWith = argv[++i];
     else if (a === '--collide-mode') args.collideMode = argv[++i];
+    else if (a === '--tail-rate') args.tailRate = Number(argv[++i]);
+    else if (a === '--light-name') args.lightName = argv[++i];
+    else if (a === '--dark-name') args.darkName = argv[++i];
+    else if (a === '--dark-gen-mode') args.darkGenMode = argv[++i];
     else positional.push(a);
   }
   args.hex = positional[0];
@@ -1294,7 +1334,8 @@ function buildTable(scale, alphaSteps) {
     lines.push(`⚠ ${scale.contrastDriftWarning}`);
   }
   if (scale.collisions && scale.collisions.length) {
-    lines.push(`⚠ hue within 3° of ${scale.collidesWith} at ${scale.collisions.map(c => `step ${c.step} (${c.H}° vs ${c.otherH}°)`).join(', ')}: lower the tail's rate as a whole (SKILL.md, Yellow), never one step.`);
+    const fix = scale.clearingTailRate != null ? `--tail-rate ${scale.clearingTailRate} clears it` : 'no tail rate clears it';
+    lines.push(`⚠ hue within 3° of ${scale.collidesWith} at ${scale.collisions.map(c => `step ${c.step} (${c.H}° vs ${c.otherH}°)`).join(', ')}: ${fix} (SKILL.md, Yellow); never move one step.`);
   }
   lines.push('');
   const header = alphaSteps
@@ -1321,7 +1362,7 @@ function printTable(scale, alphaSteps) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.hex) {
-    console.error('Usage: node scripts/generate.js <hex> [--mode free|anchored|grey|gray] [--dark] [--no-ceiling] [--ease-hue] [--oklch-text] [--peak <1-12>] [--saturation <0-1>] [--alpha] [--drift-toward <hex>] [--collide-with <hex> [--collide-mode <mode>]] [--table] [--name <label>]');
+    console.error('Usage: node scripts/generate.js <hex> [--mode free|anchored|grey|gray] [--dark] [--no-ceiling] [--ease-hue] [--oklch-text] [--peak <1-12>] [--saturation <0-1>] [--alpha] [--drift-toward <hex>] [--collide-with <hex> [--collide-mode <mode>]] [--tail-rate <n>] [--light-name <mode name> --dark-name <mode name> [--dark-gen-mode <mode>]] [--table] [--name <label>]');
     process.exit(1);
   }
 
@@ -1331,12 +1372,31 @@ function main() {
     // the curve, the provenance string, recover.js — sees an ordinary source and needs
     // no knowledge that the flag exists.
     if (args.saturation !== null) hex = sourceAtSaturation(hex, args.saturation, args.noCeiling);
-    scale = generateScale(hex, args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText, peakStep: args.peak });
-    if (args.driftToward) scale = driftTowardReference(scale, args.driftToward);
+    const build = (mode, dark, tailRate) => {
+      const s = generateScale(hex, mode, { dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText, peakStep: args.peak, tailRate });
+      return args.driftToward ? driftTowardReference(s, args.driftToward) : s;
+    };
+    scale = build(args.mode, args.dark, args.tailRate);
+    // Allowed, but a dark ramp's steps 9-12 are its light end, where the collision the
+    // rate fixes does not occur, and recover.js never reads a rate back from a dark ramp.
+    if (args.tailRate != null && args.dark && scale.tailRate != null) console.error('warning: --tail-rate is meant for the light ramp; a dark ramp\'s steps 9-12 do not collide with orange, and recover.js cannot read the rate back from a dark ramp.');
     if (args.collideWith) {
       // the other colour in its own mode where it is generated in another; peak and saturation are this source's, not its
       const other = generateScale(args.collideWith, args.collideMode || args.mode, { dark: args.dark, noCeiling: args.noCeiling, easeHueSnaps: args.easeHue, luminanceText: args.luminanceText });
-      scale = { ...scale, collidesWith: args.collideWith, collisions: hueCollisions(scale, other) };
+      const collisions = hueCollisions(scale, other);
+      scale = { ...scale, collidesWith: args.collideWith, collisions };
+      if (collisions.length && scale.family === 'yellow') scale.clearingTailRate = clearingTailRate(r => build(args.mode, args.dark, r), other);
+    }
+    if (args.lightName != null || args.darkName != null) {
+      // One variable, two collection modes: this source's light ramp and its dark one
+      // (in --dark-gen-mode where dark is generated another way), headed by the
+      // collection's own mode names.
+      if (args.lightName == null || args.darkName == null) throw new Error('--light-name and --dark-name go together');
+      if (args.dark) throw new Error('--light-name/--dark-name generate both ramps; drop --dark');
+      // --tail-rate is the light ramp's: dark steps 9-12 are the light end, where a
+      // yellow/orange collision does not occur, so the dark ramp keeps the default rate.
+      const darkScale = build(args.darkGenMode || args.mode, true, null);
+      scale = { ...scale, modeDescriptions: modeDescriptions({ [args.lightName]: scale, [args.darkName]: darkScale }) };
     }
     alphaSteps = args.alpha ? generateAlphaScale(scale, args.name) : null;
   } catch (e) {
@@ -1367,15 +1427,40 @@ if (require.main === module) main();
 // both values in one field. Headings beat inline "· dark" tags: the mode is stated once,
 // each line stays short, and the two values line up for comparison. Feed it
 // figmaDescriptionLine (no mode token), not figmaDescription.
+//
+// The keys are the collection's mode names, exactly: the only reader (figma-doc-generator,
+// docgen.js pickLine) matches a heading against the mode's name, so "Day" written as
+// "Light", or "Light mode:", puts one mode's value in the other's column. Hence it throws
+// on a name that cannot head its own section, rather than writing one that misreads.
 function composeModeDescription(byMode) {
-  return Object.keys(byMode)
+  const names = Object.keys(byMode);
+  const seen = new Set();
+  for (const k of names) {
+    if (!k.trim() || /\n/.test(k)) throw new Error(`Invalid mode name: ${JSON.stringify(k)} (a heading is one non-empty line)`);
+    // the reader matches headings case-insensitively and takes the colon as optional, so
+    // "Dark" and "dark", or "Light" and "Light:", head the same section
+    const key = k.trim().replace(/\s*:$/, '').toLowerCase();
+    if (seen.has(key)) throw new Error(`Mode names ${JSON.stringify(k)} and another differ only in case or a trailing colon; the reader cannot tell them apart`);
+    seen.add(key);
+  }
+  return names
     .filter(k => byMode[k])
     .map(k => `${k}:\n${byMode[k]}`)
     .join('\n\n');
 }
 
+// Every step's two-mode block at once: `byMode` maps each of the collection's mode
+// names to the scale generated for that mode (e.g. { Day: light, Night: dark }), and
+// the result is twelve descriptions, step 1 first.
+function modeDescriptions(byMode) {
+  const names = Object.keys(byMode || {});
+  if (!names.length) throw new Error('modeDescriptions needs at least one mode name and its scale');
+  return byMode[names[0]].steps.map((_, i) =>
+    composeModeDescription(Object.fromEntries(names.map(k => [k, byMode[k].steps[i].figmaDescriptionLine]))));
+}
+
 module.exports = {
-  composeModeDescription,
+  composeModeDescription, modeDescriptions, clearingTailRate, YELLOW_DRIFT_RATE,
   generateScale, generateNeutralAlpha, generateChromaticAlpha, generateAlphaScale,
   driftTowardReference, buildTable, hueCollisions,
   detectFamily, maxChromaAt, usableChromaAt, sourceAtSaturation,

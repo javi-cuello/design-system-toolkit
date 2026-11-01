@@ -11,20 +11,23 @@
 //   node scripts/recover.js <hex1> <hex2> ... <hex12>
 //   node scripts/recover.js --dark <hex1> ... <hex12>     (search against the dark L scale)
 //
-// Output: best-fit mode, source hex, anchor index (if anchored), ceiling setting,
+// Output: best-fit mode, source hex, anchor index (if anchored), ceiling setting, and
+// any peak, oklchText, driftedToward or yellow tailRate needed to regenerate it,
 // and the mean/max per-channel sRGB error (0-255 scale) against the target.
 
 'use strict';
-const { generateScale, hexToLinear, linearToOKLCH, oklchToHex, driftTowardReference, yellowHueScale, computeFactor, LIGHT_L, DARK_L } = require('./generate.js');
+const { generateScale, hexToLinear, linearToOKLCH, oklchToHex, isOutOfGamut, driftTowardReference, yellowHueScale, computeFactor, detectFamily, YELLOW_DRIFT_RATE, LIGHT_L, DARK_L } = require('./generate.js');
 
 function hexToRgb255(hex) {
   hex = hex.replace('#', '');
   return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
 }
 
-function scaleError(candidateSteps, targetHexes) {
+// `n` scores only the first n steps: the tail-rate search fits steps 1-8 alone, which
+// the rate does not touch.
+function scaleError(candidateSteps, targetHexes, n = 12) {
   let sumErr = 0, maxErr = 0;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < n; i++) {
     const a = hexToRgb255(candidateSteps[i].hex);
     const b = hexToRgb255(targetHexes[i]);
     const channelErrs = [Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), Math.abs(a[2] - b[2])];
@@ -32,7 +35,7 @@ function scaleError(candidateSteps, targetHexes) {
     sumErr += stepMean;
     maxErr = Math.max(maxErr, ...channelErrs);
   }
-  return { mean: sumErr / 12, max: maxErr };
+  return { mean: sumErr / n, max: maxErr };
 }
 
 function oklchOf(hex) {
@@ -44,7 +47,7 @@ function oklchOf(hex) {
 // (take a target step's own OKLCH as the candidate source) is usually close but not
 // always exact, since hue nudges and gamut clamping can shift a step slightly away
 // from the raw source it came from.
-function refine(mode, dark, noCeiling, anchorHexHint, baseH, baseC, targetHexes, peakStep, luminanceText) {
+function refine(mode, dark, noCeiling, anchorHexHint, baseH, baseC, targetHexes, peakStep, luminanceText, headSteps = 12) {
   let best = null;
   const hSteps = [-4, -2, -1, -0.5, 0, 0.5, 1, 2, 4];
   const cSteps = [-0.03, -0.015, -0.005, 0, 0.005, 0.015, 0.03];
@@ -60,11 +63,54 @@ function refine(mode, dark, noCeiling, anchorHexHint, baseH, baseC, targetHexes,
       const hex = oklchToHex(L, C, H);
       let scale;
       try { scale = generateScale(hex, mode, { dark, noCeiling, peakStep: peakStep || null, luminanceText }); } catch (e) { return; }
-      const err = scaleError(scale.steps, targetHexes);
+      const err = scaleError(scale.steps, targetHexes, headSteps);
       if (!best || err.mean < best.err.mean) best = { hex, mode, noCeiling, anchorIdx: scale.anchorIdx, peak: peakStep || null, err };
     });
   });
   return best;
+}
+
+// The source hues h with h - D * yellowHueScale(h) = observedH, for a base drift D.
+// yellowHueScale is piecewise linear, so one solution per region (full drift, taper,
+// hold), kept only where the authoritative yellowHueScale() confirms it: a future edit
+// to its constants then breaks recovery loudly instead of silently diverging.
+function invertDrift(observedH, D) {
+  const raw = [observedH + D, observedH];             // scale = 1 (srcH <= 105), scale = 0 (srcH >= 125)
+  const denom = 1 + D / 20;                           // taper: h = (H + 6.25*D) / (1 + D/20)
+  if (Math.abs(denom) > 1e-6) raw.push((observedH + D * 125 / 20) / denom);
+  const consistent = raw.filter(h => Math.abs((h - D * yellowHueScale(h)) - observedH) < 0.01);
+  return [...new Set((consistent.length ? consistent : [observedH + D]).map(h => ((h % 360) + 360) % 360))];
+}
+
+// The yellow tail rate (generate.js --tail-rate). Every yellow step's hue is
+// H_i = srcH - rate_i * k * (srcL - L_i), with k = yellowHueScale(srcH), rate_i 70 at
+// steps 1-8 and the tail rate at 9-12, and each target step's own L and H observable.
+// So once a source is guessed, each tail step gives the rate it implies:
+// rate = (srcH - H_i) / (k (srcL - L_i)). Steps 1-8 fix only A = srcH - 70 k srcL and
+// the chroma, never srcL and srcH apart, which is why the free search tries every srcL
+// (recoverWith). The hues are read back from 8-bit hexes, so the implied rate lands
+// within a few units, and the whole rates around it are regenerated and scored.
+// `build(rate)` returns the candidate ramp at that rate, or null; the best whole rate
+// below the default within `spread` of `center` wins.
+function searchTailRate(build, center, targetHexes, spread = 4) {
+  let best = null;
+  for (let r = Math.round(center) - spread; r <= Math.round(center) + spread; r++) {
+    if (r < 0 || r >= YELLOW_DRIFT_RATE) continue; // the default rate is the plain fit, already tried
+    let got;
+    try { got = build(r); } catch (e) { continue; }
+    if (!got) continue;
+    const err = scaleError(got.scale.steps, targetHexes);
+    const off = Math.abs(r - center);
+    if (!best || err.mean < best.err.mean || (err.mean === best.err.mean && off < best.off)) best = { tailRate: r, hex: got.hex, err, off };
+  }
+  return best;
+}
+
+// Whether any step reads yellow at a chroma whose hue is trustworthy. Any step, not
+// steps 5-8 only: a muted dark yellow anchored in the tail (#3B3015) has no yellow
+// step in 5-8, and came back at max 2 unsearched and unwarned.
+function hasYellowStep(oklchs) {
+  return oklchs.some(([, C, H]) => C >= 0.03 && detectFamily(H) === 'yellow');
 }
 
 function recoverWith(targetHexes, opts, luminanceText) {
@@ -124,14 +170,7 @@ function recoverWith(targetHexes, opts, luminanceText) {
     const cEstimates = cLight > C9 + 0.01 ? [C9, cLight] : [C9];
     ['normal', 'uncapped'].forEach(variant => {
       lGuesses.forEach(lGuess => {
-        const D = Math.max(-45, Math.min(45, 70 * (lGuess - freeAnchorL)));
-        const raw = [];
-        raw.push(H9 + D);                                  // scale = 1 region (srcH <= 105)
-        raw.push(H9);                                      // scale = 0 region (srcH >= 125)
-        const denom = 1 + D / 20;                          // mid region: h = (H9 + 6.25*D) / (1 + D/20)
-        if (Math.abs(denom) > 1e-6) raw.push((H9 + D * 125 / 20) / denom);
-        const consistent = raw.filter(h => Math.abs((h - D * yellowHueScale(h)) - H9) < 0.01);
-        const hues = [...new Set((consistent.length ? consistent : [H9 + D]).map(h => ((h % 360) + 360) % 360))];
+        const hues = invertDrift(H9, Math.max(-45, Math.min(45, 70 * (lGuess - freeAnchorL))));
         for (const invertedH of hues) {
           for (const cGuess of cEstimates) {
             const best = refine('free', dark, variant === 'uncapped', lGuess, invertedH, cGuess, targetHexes, null, luminanceText);
@@ -281,6 +320,109 @@ function recoverWith(targetHexes, opts, luminanceText) {
 
   candidates.sort((a, b) => a.err.mean - b.err.mean);
 
+  // Yellow tail rate. A ramp made with --tail-rate fits nothing above: the free search
+  // inverts step 9's hue at the default rate, and step 9 is a tail step. So when the
+  // best fit is short of exact and steps 5-8 read yellow, the source is found again
+  // from steps 1-8, which the rate does not touch, and the rate from steps 9-12.
+  //   - free: steps 1-8 fix the source's chroma and A = srcH - 70 k srcL, not srcL
+  //     itself. So every srcL is tried, with the hue step 8 implies there (invertDrift)
+  //     and the chroma steps 6-8 imply (C_i / computeFactor), skipping a source outside
+  //     the gamut (a real one is in it); each tail step gives the rate it implies, and
+  //     the best few are polished in L, H, C and the rate together.
+  //   - anchored: every step is tried as the anchor, its own value as the source, and
+  //     the rate comes from the tail steps other than the anchor.
+  // Light only: the rate is a light-ramp fix (a dark ramp's steps 9-12 are its light
+  // end, where the collision does not occur), and a dark search fitted a false rate
+  // (49-69) to 34 of 600 default dark free yellow ramps. And a rate is provenance, so a
+  // tailed fit is taken only with a clear margin: a lower max error than the best
+  // default fit, and at most half its mean error. (Yellow has no chroma ceiling, so
+  // only the default ceiling setting is searched.)
+  const defaultBest = candidates.filter(c => c.mode !== 'anchored' || c.anchorVerbatimOk !== false)[0];
+  if (!dark && defaultBest && defaultBest.err.max >= 2 && hasYellowStep(targetOklch)) {
+    const tailed = [];
+    const regen = (hex, mode, r) => generateScale(hex, mode, { luminanceText, tailRate: r });
+    // the rate a source implies at each tail step but `skip`, the median
+    const impliedRate = (sL, sH, skip) => {
+      const k = yellowHueScale(sH), rs = [];
+      if (k === 0) return null;
+      for (let i = 8; i < 12; i++) {
+        const [L, C, H] = targetOklch[i];
+        if (i !== skip && C >= 0.03 && Math.abs(sL - L) > 0.02) rs.push((sH - H) / ((sL - L) * k));
+      }
+      return rs.length ? rs.sort((x, y) => x - y)[Math.floor(rs.length / 2)] : null;
+    };
+    const score = (L, C, H, r) => {
+      if (r < 0 || r > YELLOW_DRIFT_RATE || isOutOfGamut(L, C, H) || detectFamily(H) !== 'yellow') return null;
+      const hex = oklchToHex(L, C, H);
+      try { return { hex, L, C, H, tailRate: r, err: scaleError(regen(hex, 'free', r).steps, targetHexes) }; } catch (e) { return null; }
+    };
+
+    const [, , H8] = targetOklch[7];
+    const ratios = [5, 6, 7].map(i => targetOklch[i][1] / computeFactor(i, 8)).sort((a, b) => a - b);
+    const coarse = [];
+    for (let L = 0.30; L <= 0.951; L += 0.01) {
+      for (const H of invertDrift(H8, Math.max(-45, Math.min(45, 70 * (L - LIGHT_L[7]))))) {
+        const center = impliedRate(L, H, null);
+        if (center == null) continue;
+        for (const C of [ratios[1], ratios[2]]) {
+          const t = score(L, C, H, Math.round(center));
+          if (t) coarse.push(t);
+        }
+      }
+    }
+    coarse.sort((a, b) => a.err.mean - b.err.mean);
+    // A few rounds of coordinate polish: 8-bit hues put each a fraction out. Each of the
+    // best few is polished twice: with the rate free, and held at the default. The
+    // second is the same search's answer for an untailed ramp, so a rate is only
+    // reported when it beats the default at the source that suits the default best —
+    // without it, a default ramp read as rate 67 at a slightly different source.
+    const polish = (best, holdRate) => {
+      for (let round = 0; round < 3; round++) {
+        const start = best;
+        if (!holdRate) for (const dr of [-2, -1, 1, 2]) { const t = score(best.L, best.C, best.H, best.tailRate + dr); if (t && t.err.mean < best.err.mean) best = t; }
+        for (const dH of [-0.5, -0.25, 0.25, 0.5]) { const t = score(best.L, best.C, best.H + dH, best.tailRate); if (t && t.err.mean < best.err.mean) best = t; }
+        for (const dC of [-0.01, -0.005, 0.005, 0.01]) { const t = score(best.L, best.C + dC, best.H, best.tailRate); if (t && t.err.mean < best.err.mean) best = t; }
+        for (const dL of [-0.01, -0.005, 0.005, 0.01]) { const t = score(best.L + dL, best.C, best.H, best.tailRate); if (t && t.err.mean < best.err.mean) best = t; }
+        if (best === start) break;
+      }
+      return best;
+    };
+    const untailed = [];
+    const atDefault = from => {
+      const d = score(from.L, from.C, from.H, YELLOW_DRIFT_RATE);
+      if (d) { const p = polish(d, true); untailed.push({ hex: p.hex, mode: 'free', noCeiling: false, anchorIdx: 8, peak: null, err: p.err }); }
+    };
+    for (const seed of coarse.slice(0, 3)) {
+      const t = polish(seed, false);
+      if (t.tailRate < YELLOW_DRIFT_RATE) tailed.push({ hex: t.hex, mode: 'free', noCeiling: false, anchorIdx: 8, peak: null, err: t.err, tailRate: t.tailRate });
+      // held at the default from where the seed started and from where the rate ended:
+      // a rate near 70 is otherwise a default ramp read at a slightly different source
+      atDefault(seed);
+      if (t !== seed) atDefault(t);
+    }
+
+    for (let a = 0; a < 12; a++) {
+      const [sL, , sH] = targetOklch[a];
+      if (detectFamily(sH) !== 'yellow') continue;
+      const center = impliedRate(sL, sH, a);
+      if (center == null) continue;
+      // wide: with the anchor in the tail only the other tail steps inform the estimate
+      const t = searchTailRate(r => ({ hex: targetHexes[a], scale: regen(targetHexes[a], 'anchored', r) }), center, targetHexes, a >= 8 ? 10 : 4);
+      // the anchor must still land where claimed
+      if (t && regen(targetHexes[a], 'anchored', t.tailRate).anchorIdx === a)
+        tailed.push({ hex: targetHexes[a], mode: 'anchored', noCeiling: false, anchorIdx: a, peak: null, err: t.err, tailRate: t.tailRate, anchorVerbatimOk: true });
+    }
+    // the default-rate fits found here join the default candidates, and set the bar
+    // (never one with a higher max: candidates are ranked by mean, and a default fit
+    // must not come back worse than the plain search's)
+    candidates.push(...untailed.filter(u => u.err.max <= defaultBest.err.max));
+    const bar = [defaultBest, ...untailed].sort((a, b) => a.err.mean - b.err.mean)[0];
+    // near-exact too (max 1/255): a reported rate is then never one the warning below
+    // would have to hedge, since that warning covers only untailed results
+    for (const c of tailed) if (c.err.max <= 1 && c.err.max < bar.err.max && c.err.mean <= bar.err.mean / 2) candidates.push(c);
+    candidates.sort((a, b) => a.err.mean - b.err.mean);
+  }
+
   // The anchored-mode invariant is a free self-check: by definition, an anchored
   // candidate's source hex must equal the target's own value at the claimed anchor
   // step. A candidate that violates this isn't a valid anchored fit no matter how low
@@ -309,14 +451,80 @@ function recoverWith(targetHexes, opts, luminanceText) {
 }
 
 // A ramp generated before 2.0.0 has its text steps at the fixed OKLCH L; one
-// generated since has them luminance-targeted. Both are tried, and the better
-// fit says which — `oklchText` marks the older schedule, the flag that
-// reproduces it. On a tie the current default wins.
+// generated since has them luminance-targeted. Both are tried, and `oklchText` marks
+// the older schedule, the flag that reproduces it. The rule is symmetric:
+//   - a fit that is no worse on max and mean, and clearly better on one (a lower max,
+//     or at most half the mean), wins;
+//   - otherwise, where both fit within 1/255, the schedule cannot be told: the current
+//     fit is reported, `oklchText` is null, and a warning names the older fit;
+//   - otherwise (both past 1/255, no clear winner, or one with the lower max and the
+//     other the lower mean) the lower max wins, then the lower mean, never a worse
+//     fit, and a warning says the schedule is uncertain.
+// One exception, for provenance: an older fit that needs a tail rate (a 2.3.0 option,
+// on a schedule versioned for ramps made before 2.0.0) only ties with a current fit
+// within 1/255. Without it, current-schedule tail ramps read as older ones (#8E8628 at
+// 49: an older fit at rate 46 exact, the current at rate 47 a unit off).
+// The rule replaced a bare `older < current` (a false oklchText on 9 of 120 tailed
+// ramps and the default #A6A921) and then a one-sided margin (64 of 99 genuine
+// older-schedule ramps flagged, against 94 before; 17 recovered worse).
+// One poor-fit threshold for the CLI warning and every note that defers to it, on the
+// raw errors, so the two can never disagree.
+function isPoor(err) { return err.mean > 3 || err.max > 20; }
+
+function clearlyBetter(a, b) {
+  return a.max <= b.max && a.mean <= b.mean && (a.max < b.max || a.mean <= b.mean / 2) && (a.max < b.max || a.mean < b.mean);
+}
+
 function recoverParameters(targetHexes, opts) {
   const current = recoverWith(targetHexes, opts, true);
   const older = recoverWith(targetHexes, opts, false);
-  if (older && (!current || older.err.mean < current.err.mean)) return Object.assign(older, { oklchText: true });
-  return current;
+  let pick = 'current';
+  if (!current) pick = older ? 'older' : 'current';
+  else if (older) {
+    const c = current.err, o = older.err;
+    if (clearlyBetter(o, c)) pick = older.tailRate != null && c.max <= 1 ? 'tie' : 'older';
+    else if (clearlyBetter(c, o)) pick = 'current';
+    else if (c.max <= 1 && o.max <= 1) pick = 'tie';
+    else pick = (o.max < c.max || (o.max === c.max && o.mean < c.mean)) ? 'older?' : 'current?';
+  }
+  const result = pick.startsWith('older') ? Object.assign(older, { oklchText: true }) : current;
+  const other = result === older ? current : older;
+  const named = f => `${f === older ? `--oklch-text${older.tailRate != null ? ` --tail-rate ${older.tailRate}` : ''}` : 'the current schedule'}, source ${f.hex}, ${f.mode}: max ${f.err.max}/255, mean ${f.err.mean.toFixed(2)}`;
+  // Schedule notes say which schedule the ramp is on; when neither fit explains it
+  // (both poor, the CLI's threshold) there is nothing to say, and the poor-fit warning
+  // speaks instead (buildCliOutput). A note that the other fit "is close" over a ramp
+  // with a hand-edited step was worse than silence.
+  const poor = f => isPoor(f.err);
+  let note = null;
+  if (pick === 'tie') {
+    result.oklchText = null;
+    note = `The text schedule cannot be told from this ramp: the older one (${named(older)}) regenerates it about as well. The current schedule's fit is reported.`;
+  } else if (other && poor(result) && poor(other)) {
+    // only what the flag rests on, if one is claimed; the poor-fit warning says the rest
+    note = result.oklchText ? 'The older text schedule (oklchText) is read from a poor fit, against another poor one: treat it as a guess.' : null;
+  } else if (pick.endsWith('?')) {
+    const why = result.err.max < other.err.max ? 'the lower max error' : 'the same max error and the lower mean';
+    note = `The text schedule is uncertain: neither fit is clearly better, and the other (${named(other)}) ${poor(other) || poor(result) ? 'misses too' : 'is close'}. The fit with ${why} is reported.`;
+  } else if (pick === 'older' && current && current.err.max >= 2 && older.err.max >= 2) {
+    // neither fit is exact: say what the claim rests on (an exact older fit needs no hedge)
+    const by = older.err.max < current.err.max ? 'a lower max error' : 'a mean error at most half the current one';
+    note = `The older text schedule (oklchText) is read from ${by}: ${named(older)}, against ${named(current)}. Neither regenerates the ramp within 1/255, so treat the schedule as likely, not certain.`;
+  }
+  if (note) result.warning = result.warning ? `${result.warning} ${note}` : note;
+  // A yellow ramp that does not come back exact may have been made with --tail-rate:
+  // a dark one is never searched for a rate (recoverWith), and a light one's rate is
+  // reported only near-exact and with a clear margin over the default. Say so, conditionally, rather
+  // than let the nearest default fit read as the answer. Hedged because most such
+  // ramps are default ones a whole unit off somewhere, not tailed ones.
+  // Skipped on a poor fit, as the schedule note is: the poor-fit warning covers it.
+  if (result && result.tailRate == null && result.err.max >= 2 && !isPoor(result.err) && hasYellowStep(targetHexes.map(oklchOf))) {
+    const why = opts && opts.dark
+      ? 'a dark ramp is never searched for a tail rate, so the rate is not recoverable in dark mode'
+      : 'no tail rate fitted clearly better than the default, so none is reported';
+    const note = `Recovery is approximate here (max error ${result.err.max}/255). If this yellow ramp was generated with --tail-rate, ${why}; the parameters${result.oklchText ? ', the older text schedule (oklchText) included,' : ''} are the nearest default fit.`;
+    result.warning = result.warning ? `${result.warning} ${note}` : note;
+  }
+  return result;
 }
 
 // Builds the CLI's output object, including the warning surfacing and general
@@ -333,7 +541,7 @@ function buildCliOutput(result) {
   // recovery has no model for. Thresholds are not exact science; they're calibrated
   // against what "clean" fits look like elsewhere in this file's own test suite (well
   // under 1.0 mean error) versus what a known-drifted ramp measures (5+ mean, 20+ max).
-  const poorFit = meanError > 3 || maxError > 20;
+  const poorFit = isPoor(result.err);
 
   const out = {
     mode: result.mode,
@@ -350,6 +558,9 @@ function buildCliOutput(result) {
   if (result.peak) out.peak = result.peak;
   // Same boundary principle: the older text schedule is a regeneration parameter.
   if (result.oklchText) out.oklchText = true;
+  else if (result.oklchText === null) out.oklchText = null; // schedule cannot be told; the warning says why
+  // Same boundary principle: the yellow tail rate regenerates steps 9-12.
+  if (result.tailRate != null) out.tailRate = result.tailRate;
   // Drift was computed by recoverParameters() but dropped by this CLI entry point —
   // the same boundary bug that once swallowed `warning`, and worse in its effect. A
   // drifted ramp recovers with mean/max error 0, so the CLI reported a *perfect* score
@@ -368,8 +579,9 @@ function buildCliOutput(result) {
   // entry point. Surfaced here, plus a general poor-fit note when error is high even
   // without an invariant violation, since a max error of 20+ out of 255 is a poor fit
   // regardless of whether any specific rule was broken.
-  if (result.warning) out.warning = result.warning;
-  else if (poorFit) out.warning = `This is a poor fit (mean error ${meanError}, max error ${maxError} out of 255) even though no specific invariant was violated. The ramp likely has a manual adjustment (drift or otherwise) applied on top of generation that this tool has no model for — treat the recovered parameters as approximate, not exact.`;
+  // Both, when both apply: a schedule or invariant note never stands in for the poor-fit one.
+  const poorNote = poorFit ? `This is a poor fit (mean error ${meanError}, max error ${maxError} out of 255). The ramp likely has a manual adjustment (drift or otherwise) applied on top of generation that this tool has no model for — treat the recovered parameters as approximate, not exact.` : null;
+  if (result.warning || poorNote) out.warning = [result.warning, poorNote].filter(Boolean).join(' ');
 
   return out;
 }
