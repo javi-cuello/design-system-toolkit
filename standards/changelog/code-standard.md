@@ -1,5 +1,6 @@
 # History — code-standard
 
+- 1.31.2 (2026-11-02): rule 54's example style is `body-md`, a role and a size with no weight word, as text styles are named ([visual: type for UI and long-form content](../../knowledge/ui/design/visual.md#type-for-ui-and-long-form-content)); no rule changed.
 - 1.31.1 (2026-10-31): rules 52 and 23's *Checked:* name the token build at its new home, `tools/tokens/build-tokens.mjs` (toolkit-standard §D 1); no rule changed.
 - 1.31.0 (2026-10-30): rule 6 allows a component's own classes where its stylesheet is generated under class naming; variants and states stay attributes.
 - 1.30.2 (2026-10-29): rule 24 cites toolkit-standard §D 23; no rule changed.

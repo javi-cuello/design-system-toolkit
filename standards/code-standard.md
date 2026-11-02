@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.31.1** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.31.2** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -239,7 +239,7 @@
 
     *Evidence:* the two projects reached the same behaviour by opposite routes (dark-first with a light override, light-first with a dark mixin); in every state a browser can be in, the two resolve identically, so one route was kept. **Mechanical** (the build writes it; the check proves the files are the build's). *Checked:* `tools/tokens/check.mjs` "say('code-standard rule 23'" (the files are the build's, and `tools/tokens/build-tokens.mjs` "prefers-color-scheme: " writes them).
 
-54. **Units, type and breakpoints are written one way.** Lengths are rem, so they follow the reader's font size, except the ones that must not scale: radii, strokes, blur and shadow offsets stay px. A font family carries the system fallback stack. A text style is its fields (`--body-md-regular-font-size`, `-font-family`, `-font-weight`, `-line-height`, `-letter-spacing`, `-paragraph-spacing`, `-list-spacing`), every field written even at zero, and applied whole with `@include text-style(name)`, never as a `font` shorthand. Breakpoints are Sass variables (`$sm` … `$xl`, rem) with `@mixin from($bp)`, never custom properties.
+54. **Units, type and breakpoints are written one way.** Lengths are rem, so they follow the reader's font size, except the ones that must not scale: radii, strokes, blur and shadow offsets stay px. A font family carries the system fallback stack. A text style is its fields (`--body-md-font-size`, `-font-family`, `-font-weight`, `-line-height`, `-letter-spacing`, `-paragraph-spacing`, `-list-spacing`), every field written even at zero, and applied whole with `@include text-style(name)`, never as a `font` shorthand. Breakpoints are Sass variables (`$sm` … `$xl`, rem) with `@mixin from($bp)`, never custom properties.
 
     *Why:* the `font` shorthand cannot carry letter-spacing; a field left out when it is zero makes every `var()` that reads it drop its whole declaration; a media query cannot read `var()`.
 

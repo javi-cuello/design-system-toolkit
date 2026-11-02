@@ -176,7 +176,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - No component writes a `font` shorthand or a raw size.
 
 **How**
-- The build writes each style's fields under its name (`--body-md-regular-…`, the list is code-standard rule 54's), and components apply `@include text-style(body-md-regular)`.
+- The build writes each style's fields under its name (`--body-md-…`, the list is code-standard rule 54's), and components apply `@include text-style(body-md)`.
 - Figma's line height as a percentage or in px becomes unitless (a 24px line on 16px text is 1.5), so it scales with the size; letter spacing as a percentage becomes em (2% is 0.02em). `figma-doc-generator` documents the same conversions.
 - Where the design trims a text box to cap height and baseline, `text-box-trim` reproduces it; it is newly Baseline in 2026 ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/text-box-trim)), so check the project's floor ([browser-support.md](browser-support.md)).
 - A text style with modes (Desktop, Mobile) is a responsive type token; how it switches is [responsive.md: fluid type](responsive.md#fluid-type).

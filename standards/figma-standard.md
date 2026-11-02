@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.20.4** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.20.5** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -34,7 +34,7 @@ Cite a rule as `figma-standard rule N`.
 
 4. **State axis internal order**: `Rest → Focus → Hover → Press (→ Loading)` — Focus immediately precedes Hover, not the reverse.
 
-    *Loading sits on the State axis on purpose, and code separates it.* In Figma one axis keeps the component lean — a `Loading` boolean beside a State axis doubles the grid for a state that excludes the others. It is not a pointer state, so the build does not model it as one: a `loading` prop with `aria-busy`, separate from `:hover`, `:focus-visible` and `:active`. An audit does not raise it; `component-validator` writes it into the component's Implementation notes (its case WT1) and its W7 check leaves it alone. Recorded 2026-09-22, after the finding "the State axis carries Loading" came back on every run of one library and was ruled away and back again.
+    *Loading sits on the State axis on purpose, and code separates it.* In Figma one axis keeps the component lean — a `Loading` boolean beside a State axis doubles the grid for a state that excludes the others. It is not a pointer state, so the build does not model it as one: a `loading` prop that keeps focus with `aria-disabled` and announces through a live region ([actions: loading buttons](../knowledge/ui/patterns/actions.md#loading-buttons); `aria-busy` alone reaches almost no screen reader), separate from `:hover`, `:focus-visible` and `:active`. An audit does not raise it; `component-validator` writes it into the component's Implementation notes (its case WT1) and its W7 check leaves it alone. Recorded 2026-09-22, after the finding "the State axis carries Loading" came back on every run of one library and was ruled away and back again.
 
     *Why:* Focus is the persistent, required state — WCAG 2.4.7 treats a visible focus indicator as non-negotiable for keyboard users, where hover is enhancement-only and mouse-specific. Material's own state-layer model treats them the same way structurally: hovering a focused element shows the hover layer only transiently, reverting to the focus layer once hover ends — focus is the base state, hover a temporary overlay on it. The order also matches a real, tooling-enforced CSS convention (`:link → :visited → :focus → :hover → :active`, "LVFHA", codified in an actual lint rule rather than folklore), though CSS itself is split between two named conventions and neither project derived its order from CSS directly — so that fact grounds plausibility, not origin. Neither project's maintainer could state a reason when asked; this rationale was reconstructed from external research after the fact, and grounds keeping the pattern rather than explaining how it arose.
 

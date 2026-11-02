@@ -10,7 +10,7 @@ This file covers the design half of accessibility: the decisions about a whole s
 - Each criterion has one owner, and design review checks the design half.
 - A failure found in a frame is reported as a design bug, never reproduced.
 
-**How:** [WCAG 2.2](https://www.w3.org/TR/WCAG22/) became a Recommendation on 12 December 2024 and is what UK public-sector sites [must meet](https://www.gov.uk/guidance/accessibility-requirements-for-public-sector-websites-and-apps). [WCAG 3](https://www.w3.org/TR/wcag-3.0/) is a draft that says its final requirements "will be different"; read it for direction only. WCAG advises against requiring AAA "as a general policy for entire sites".
+**How:** [WCAG 2.2](https://www.w3.org/TR/WCAG22/) became a Recommendation on 5 October 2023 (republished with corrections on 12 December 2024) and is what UK public-sector sites [must meet](https://www.gov.uk/guidance/accessibility-requirements-for-public-sector-websites-and-apps). [WCAG 3](https://www.w3.org/TR/wcag-3.0/) is a draft that says its final requirements "will be different"; read it for direction only. WCAG advises against requiring AAA "as a general policy for entire sites".
 
 Who owns what is design-standard's *Accessibility* section, which this page does not restate: a component in Figma is figma-standard's, code is code-standard's, and this page covers what a screen decides that neither can. The code practices not yet proven are [code candidates](../../code/candidates.md).
 
