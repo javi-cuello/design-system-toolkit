@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.9.0)
+# Eval cases — frontend-build (v2.10.0)
+
+**Walked: 2026-11-02 for 2.10.0** — T13 added, traced to Orient step 4 and design-standard rule 14; the other cases read against the new step, none affected.
 
 **Walked: 2026-10-31 for 2.9.0, tests only** — T6's writing half executable: `node tests/test-scaffold.mjs` 12/12 (every file written with its placeholders filled, a second run keeps all and overwrites a changed file never, a dry run writes nothing, a bad vendor or a folder with no `site/` refused). Compiling with `bin/css` and the gallery's 404 stay walks: they need the network and PHP.
 
@@ -176,6 +178,12 @@ Assert: `bin/css --check` exits 1 naming code-standard rule 23 and writes nothin
 Assert: a folder with no partial named after it is not listed, an entry without the markers is refused naming them, and where no snapshot.config.json names the toolkit, or it names a path with no `sass-entry.mjs`, `bin/css` says the list was not generated and compiles, and `--check` fails; run through a symlink, `sass-entry.mjs --check` still checks.
 Runs: node --test tests/test-sass-entry.mjs — "(negative) run through a symlink, --check still checks", "(negative) bin/css with a toolkit path that does not exist warns and compiles; --check still fails".
 Walked live: 2026-10-30 — as the 2.7.0 line above records.
+
+## T13 · With no design file, the knowledge base is the design — *traced*
+Fixture: "build a site to browse these articles; look at Smashing Magazine and the Figma blog for layouts", no Figma file.
+Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values; a reference site supplies only what they leave open, and the report back names each such value.
+Negative: a page whose type, measure and palette come from the reference sites with no knowledge pass.
+Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14.
 
 ## T7 · Native interactive wraps the control, never replaces it — *traced*
 Fixture: "add a disabled state to our `ds-button`."
