@@ -4,7 +4,7 @@
 // carries (how current the snapshot is, published tokens described,
 // deprecations that name a replacement), for the overview and the Tracker's
 // Documentation page. What each component lacks is the audit's. The method
-// and why these three: Research/ai-ready-design-systems.md, sections 8 to 10.
+// and why these three: Research/ai-and-docs/machine-readable-design-systems.md, sections 7 and 8.
 import { snapshot, meta, componentPages, collectionPages, isPrivateName } from './snapshot.js';
 import { deprecation } from './project.js';
 
