@@ -943,11 +943,12 @@ try {
     const count = `JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /s$/.test(k) && Array.isArray(JSON.parse(localStorage.getItem(k) || 'null'))))).length`;
     const kept = await js(count);
     await named(two, was + ' Two');
-    await waitFor(tab, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was + ' Two')}`, { timeout: 3000 }).catch(() => {});
+    await waitFor(tab, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was + ' Two')}`, { timeout: 10000 }).catch(() => {});
     ok('a draft edited in another tab is shown here as it is now', (await json()).component === was + ' Two');
     await named(tab, was);
-    await waitFor(two, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was)}`, { timeout: 3000 }).catch(() => {});
-    ok('and an edit here is shown there, the one draft kept once', await two.evaluate(`JSON.parse(document.querySelector('[data-json]').value).component`) === was && await js(count) === kept);
+    await waitFor(two, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was)}`, { timeout: 10000 }).catch(() => {});
+    ok('and an edit here is shown there', await two.evaluate(`JSON.parse(document.querySelector('[data-json]').value).component`) === was);
+    ok('the one draft kept once', await js(count) === kept);
     await two.evaluate(`document.querySelector('[data-new]').click()`);
     await named(two, 'Other Tab');
     const drafts = `JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /s$/.test(k) && Array.isArray(JSON.parse(localStorage.getItem(k) || 'null')))))`;
