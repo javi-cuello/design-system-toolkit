@@ -152,3 +152,10 @@ Fixture: a run on "when should a button show a loading spinner", inside the tool
 Assert: before searching, the run reads that section and its sources, re-opens the ones it leans on, aims the search at what the section lacks (a delay threshold, double-submit, systems not yet cited), and corrects a cited claim that no longer holds in that section.
 Negative: a run that searches from scratch and re-cites what the section already had, or keeps its own list of sources.
 Traced: 2026-10-12 for 2.7.0 — to SKILL.md Step 1.
+
+## A17 · A deep-mode guide is one focused piece in a curated collection
+Fixture: a deep-mode run on "design principles for interfaces", with the person's research collection holding topic folders and a README, and the toolkit's knowledge base already holding `knowledge/ui/design/ux.md` and `visual.md`.
+Assert: the run reads the collection's README and the knowledge pages first, narrows the piece to one question those pages cannot answer (or adds the finding to the knowledge base instead), files it in the fitting topic folder, and argues a thesis rather than surveying.
+Negative: a broad survey restating the knowledge base saved at the collection's root, a second piece on a question an existing piece asks, or a script or results file saved beside the pieces.
+Observed: 2026-11-02 — the collection had grown to 26 pieces at its root, five of them broad principle surveys restating the knowledge base, plus an experiment's script and results; the person: "not a place to dump everything".
+Traced: 2026-11-02 for 2.9.0 — to SKILL.md "A deep-mode guide is an article, not a store."
