@@ -4,6 +4,8 @@ The deep-mode output is an **educational reference guide**. Someone reads it sta
 
 The failure this file exists to prevent is a guide that passes every structural check and is unreadable: numbered sections, correct citations, a verdict per axis, and prose so compressed that a reader finishes a section without knowing what it said. That is the failure mode of a technical guide, and it is much easier to produce than an essay that rambles.
 
+Its second form is the report: a guide that opens with how it was checked, says what each source's status is in the middle of explaining a mechanism, never talks to the reader, and moves from one example to the next with nothing joining them. Every sentence is true and the reader still feels audited rather than taught. A person called it "a report and summary" and "a stream of examples, not a reading piece" (2026-11-04). The rules under *Write it as a lesson, not a report* below are its fix.
+
 ## The two things that make it work
 
 - **It explains the mechanism before it judges.** The reader is told how Figma derives an Auto line height (ascender plus descender plus line gap, over units-per-em) before being told not to use it. That order is what lets a reader decide whether the rule transfers to their situation, and notice when its reason expires.
@@ -16,7 +18,9 @@ The failure this file exists to prevent is a guide that passes every structural 
 
 [One-line subtitle: what the guide decides, and for whom]
 
-[Researched <month year>. <What was verified against what.>]
+[One or two sentences, to the reader: the situation they are in and what
+they will be able to do by the end. Never how the guide was researched;
+that goes in What to re-check later.]
 
 ---
 
@@ -36,13 +40,15 @@ typing them, and check they resolve.]
 
 ## 1..N. [One decision axis each, numbered, titled as a question]
 
-**The short answer.** [One or two plain sentences. A reader who stops here
-has still got something correct and usable.]
+[The opening paragraph answers the title in one or two plain sentences,
+with no label in front of it. A reader who stops here has still got
+something correct and usable.]
 
-[Prose that explains how the thing works before judging it. A concrete
-scenario where the question actually comes up. Named systems as evidence,
-told as short stories rather than listed. Real token names, real values,
-real dates. Jargon defined in passing at first use.
+[Prose that explains how the thing works before judging it, carried by one
+scenario the reader can picture, which the section keeps returning to.
+Named systems as evidence, told as short stories rather than listed. Real
+token names, real values, real dates. Jargon defined in passing at first
+use.
 
 A table wherever it earns its place: a before and after, or a comparison
 on axes the prose has already introduced. Never a table the reader meets
@@ -51,10 +57,11 @@ before they understand the question.
 Advantages and disadvantages argued in prose at equal specificity, or as
 bulleted runs where the list is genuinely a list.]
 
-**What to do.** [Ends every numbered section. Written as advice from a
-colleague, not a clipped ruling. Says which parts are consensus and which
-are this guide's judgment, and names the constraint the advice depends on
-where one exists.]
+[The closing paragraph is the advice, with no label in front of it: what
+to do, as a colleague would say it, with its one key sentence in bold so a
+scanning reader finds it. Says which parts are consensus and which are this
+guide's judgment, and names the constraint the advice depends on where one
+exists.]
 
 ---
 
@@ -72,8 +79,11 @@ restatement of the sections; a summary someone could read aloud.]
 ---
 
 ## N+3. What to re-check later
-[Volatile tool mechanics, spec versions, features in beta, claims resting
-on a single source, and an honest note on how good the evidence is.]
+[When it was researched and what was verified against what. Volatile tool
+mechanics, spec versions, features in beta, claims resting on a single
+source, the status of each weak source (a search summary, a vendor's own
+description, an abstract read without the paper), and an honest note on how
+good the evidence is.]
 
 ---
 
@@ -106,6 +116,18 @@ A guide whose argument lives in its tables reads as a report. The register here 
 
 Both forms exist to make disadvantages as concrete as advantages. A guide whose costs are abstract and whose benefits are specific has already picked a side without arguing for it.
 
+## Write it as a lesson, not a report
+
+A guide is explanation, in the Diátaxis sense: it is read to understand, so its tone is discursive and it walks the reader through. Diátaxis keeps explanation apart from reference, which is austere lookup ([Diátaxis, explanation](https://diataxis.fr/explanation/)). This skill adds a third kind to keep apart: evidence notes, saying how each fact was established. Mixed into the explanation, reference and evidence notes make it read as a report. So the guide keeps each in its own place: the explanation in the numbered sections, the lookup in the cheat sheet, the evidence notes in `What to re-check later` and `Sources`.
+
+**Talk to the reader.** Write to "you", the practitioner with the problem, and use contractions where speech would. In experiments with students in multimedia lessons, a conversational, second-person version of the same material taught better than a formal one. In a meta-analysis, retention improved (d = 0.30) and transfer more (d = 0.54) ([Ginns, Martin and Marsh, 2013](https://doi.org/10.1007/s10648-013-9228-0)). The effect was largest in lessons under about 35 minutes, so expect less of it over a long guide. Mayer, who named it the *personalization principle*, adds that it works best when not overdone ([Mayer, Cambridge Handbook of Multimedia Learning](https://www.cambridge.org/core/books/abs/cambridge-handbook-of-multimedia-learning/principles-of-multimedia-learning-based-on-social-cues-personalization-voice-and-image-principles/19309D764FD015A556334531A463DE03)). Google's developer style guide gives the same rule for documentation ([Google, second person](https://developers.google.com/style/person)). "You" is not chumminess: no jokes, no "don't worry", no telling the reader how they feel. And it is not a narrator, since the no-"I" rule below still holds.
+
+**Keep evidence status out of the explanation.** A sentence explaining how auto layout works should not also report that the forum thread was re-read in November, has six replies, and that a summary of another page could not be confirmed. Say what is true, as plainly as the evidence allows, and cite it. Where the reader's trust really does change with the source, one plain clause does it ("the vendor says", "Figma's own help page says"), and the detail of how it was checked moves to `What to re-check later`. A test of the draft: read a paragraph with every parenthesis and every source-status clause removed; if it reads better and says the same thing, the clauses belonged at the end.
+
+**One running example, not a stream of them.** A section is carried by one scenario the reader can picture (a settings row, a `Save` button, a filter chip) and comes back to it as the explanation develops. Further examples join only when they show something the running one cannot, and each is introduced by what it shows. A run of systems or plugins named one after another is a list for `Sources`, not a paragraph. If a section's paragraphs could be reordered without anyone noticing, it is a stream and needs its thread.
+
+**Lead into each fact.** Before a number, a table or a system's story, say plainly what question it answers ("How much of a library does this affect? The count below answers it."), never as a teaser or a guess at what the reader expects. The connective sentences ("that's why", "the catch is") are what turn facts into a piece someone can read through, and cutting them for density is the report failure again.
+
 ## Voice rules
 
 These define the deliverable. Violating them produces a different, worse artifact.
@@ -114,7 +136,7 @@ These define the deliverable. Violating them produces a different, worse artifac
 
 **State the claim before the caveat.** A sentence that hedges before it commits reads as unsure of a position the evidence actually supports: "in some contexts a shared core can work well, though" buries the claim a reader has to dig for. Say the position, then the exception: "Shared core wins where both sides are live. It costs more where one side is still being written." This governs sentence and paragraph order, not honesty about uncertainty: where the evidence is genuinely split, land a verdict after naming both sides (see Mixed feelings allowed, below), rather than declining to land one.
 
-**Never end a section without the reader knowing what it said.** The short answer at the top and the advice at the bottom are both load-bearing for this. If a reader could finish a section and not be able to state its conclusion, the section has failed regardless of how well it argues.
+**Never end a section without the reader knowing what it said.** The answering opening paragraph and the advice at the bottom are both load-bearing for this. If a reader could finish a section and not be able to state its conclusion, the section has failed regardless of how well it argues.
 
 **Educational, not paternalistic.** No "here's something reassuring," no "as you'll remember," no "the trap that trips everyone," no telling the reader what to pin above their desk. Respect that the reader is a competent practitioner meeting good evidence for the first time. When something genuinely confuses most people, say so as a fact about the material ("the confusing part, worth flagging"), not as a prediction about the reader.
 

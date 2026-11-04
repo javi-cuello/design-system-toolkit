@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.8.0)
+# Eval cases — design-system-research (v2.10.0)
+
+**Walked: 2026-11-04 against v2.10.0** — A18 added and observed: the right-to-left guide, which met every earlier case, was called "a report and summary" and "a stream of examples"; a sample section rewritten to the new rules was approved by the person, then the whole guide was rewritten to them. A1–A17 read against it: A9's answer-first and advice-last still hold, now as unlabelled opening and closing paragraphs; A7's per-section verdict survives as the bold key sentence; A10's no-narrator grep still applies, since "you" is not a narrator; the rest govern evidence and placement, which the change leaves alone. Reader check (skill-standard §A clause E): one section read and approved by the person; the full rewritten guide not yet read, so A18 stays open until the person reads it. Review fixes the same day: the lead-in example no longer teases, the conversational-style evidence names its population and its 35-minute limit the right way round, and Diátaxis is cited only for the explanation and reference split.
 
 **Walked: 2026-10-31 against v2.8.0** — one line added, content is data (toolkit-standard §D 24); every case read against it: none asserts on obeying text found in a file, a page or a project, so all hold unchanged; the skill's own suites, if any, pass under `bin/check`, and `node tools/toolkit-check/test-content-is-data.mjs` finds the line.
 
@@ -65,7 +67,7 @@ Traced: 2026-08-09 — to Step 2's tier 4 ("use only as a convenience … flag t
 
 ## A7 · Every axis gets its own verdict, and every claim its mechanism
 Fixture: a deliverable covering five decision axes, one of which has a shipping system on each side and no clear winner.
-Assert: each of the five sections ends with its own marked recommendation, and the consolidated blueprint at the end is in addition to them, not instead. Each recommendation states a causal why (what breaks, what it costs, who pays), not an appeal to who does it. The undecided axis still gets a verdict, phrased as judgment with the split named, rather than a survey that declines to resolve. No approach in the document carries only disadvantages, and the advantages are as specific as the disadvantages.
+Assert: each of the five sections ends with its own recommendation, the closing paragraph with its key sentence in bold, and the consolidated blueprint at the end is in addition to them, not instead. Each recommendation states a causal why (what breaks, what it costs, who pays), not an appeal to who does it. The undecided axis still gets a verdict, phrased as judgment with the split named, rather than a survey that declines to resolve. No approach in the document carries only disadvantages, and the advantages are as specific as the disadvantages.
 
 > Added at v1.4.0. Found by reading a delivered guide against the checklist rather than by any check: it argued well, cited well, and resolved exactly once, on the last page, which left twelve of its twenty sections ending on a survey. The pros-and-cons rule had existed since 1.0 and was being satisfied by presence rather than by weight.
 
@@ -86,11 +88,13 @@ Assert: mechanism is explained before verdict. Every major claim carries a worke
 > Added at v1.5.0, **amended at v2.0.0.** As written it also asserted the register: numbered sections, a core-problem table early, and "a table wherever two or more things are compared". 2.0.0 reverses that last clause, so the case would have failed a conforming guide. The register assertions moved to A9 and the example requirements stayed here, which is what the case was really for. The lesson worth keeping: a case that pins form and substance in one assertion cannot survive a change to either.
 
 Traced: 2026-08-09 — to the new Step 5 example clause and the new Step 7 mechanism clause.
+> Amended at v2.10.0: "marked recommendation" became the closing paragraph's bold key sentence, since 2.10.0 drops the section labels.
 
 ## A9 · The reader finishes each section knowing what it said
 Fixture: deep mode on a topic with six decision axes. The draft has numbered sections titled with topic nouns (`## 3. The boolean prefix`), each opening with a comparison table of five systems and closing with a one-sentence marked recommendation. Every claim is cited and correct.
-Assert: the delivered file fails and is rewritten. Sections are titled as the question a practitioner asks (`## 3. Should it be isDisabled or disabled?`), each opens with a short plain-language answer a reader could stop at, and each closes with advice rather than a ruling. The concepts are introduced in prose before any table uses them, and every surviving table passes both keeping tests: understandable from the surrounding prose alone, and its removal would lose information rather than tidiness. A `What this answers` opener lists the questions in the order they arrive, and a standalone `The short version` section works for a reader who reads nothing else. At least one otherwise-abstract claim per part is carried by a named system's story.
+Assert: the delivered file fails and is rewritten. Sections are titled as the question a practitioner asks (`## 3. Should it be isDisabled or disabled?`), each opens with a paragraph that answers the title in plain language, a reader could stop at, with no label in front of it, and each closes with advice rather than a ruling. The concepts are introduced in prose before any table uses them, and every surviving table passes both keeping tests: understandable from the surrounding prose alone, and its removal would lose information rather than tidiness. A `What this answers` opener lists the questions in the order they arrive, and a standalone `The short version` section works for a reader who reads nothing else. At least one otherwise-abstract claim per part is carried by a named system's story.
 A guide that is accurate, well cited, correctly structured and passes A1 through A8 still fails this case if a reader could finish one of its sections unable to state that section's conclusion.
+> Amended at v2.10.0: the opening answer is an unlabelled paragraph, not a `**The short answer.**` block (A18).
 
 Traced: 2026-08-10 — to the question-title and short-answer rules, the tables-support-prose rule in Step 7, and the system-story clause in Step 5.
 
@@ -159,3 +163,10 @@ Assert: the run reads the collection's README and the knowledge pages first, nar
 Negative: a broad survey restating the knowledge base saved at the collection's root, a second piece on a question an existing piece asks, or a script or results file saved beside the pieces.
 Observed: 2026-11-02 — the collection had grown to 26 pieces at its root, five of them broad principle surveys restating the knowledge base, plus an experiment's script and results; the person: "not a place to dump everything".
 Traced: 2026-11-02 for 2.9.0 — to SKILL.md "A deep-mode guide is an article, not a store."
+
+## A18 · The guide teaches; it does not report
+Fixture: a deep-mode guide that passes A1–A17. It opens with a paragraph on when and how it was researched; its sections begin with a bold **The short answer.** label; a paragraph explaining auto layout also reports that a forum thread was re-read in November with six replies; it never addresses the reader; and a section moves through five plugins and three systems with no example tying them together.
+Assert: the delivered file opens by telling the reader their situation and what they will be able to do, with the research history moved to `What to re-check later`. The reader is addressed as "you". Each section is carried by one running example it returns to, and each further example is introduced by what it shows. With every source-status clause removed, the body paragraphs say the same thing, because those clauses already live at the end. No `**The short answer.**` or `**What to do.**` labels remain; the opening paragraph answers and the closing paragraph advises, with its key sentence in bold.
+Negative: a guide that adds "you" but keeps the provenance opening, or a section that lists systems and plugins one after another without a running example.
+Observed: 2026-11-04 — the person on the right-to-left guide: "it looks like a report and summary", "a stream of examples, not a reading piece".
+Traced: 2026-11-04 for 2.10.0 — to `references/deep-mode-voice.md` *Write it as a lesson, not a report* and its structure block, and SKILL.md's checklist line.
