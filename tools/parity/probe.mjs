@@ -183,7 +183,9 @@ export function probe(sections, opts) {
     const [e0, e1] = horizontal ? ['Left', 'Right'] : ['Top', 'Bottom'];
     const r = el.getBoundingClientRect();
     const box = { [s0]: r[s0] + parseFloat(cs[`border${e0}Width`]) + parseFloat(cs[`padding${e0}`]), [s1]: r[s1] - parseFloat(cs[`border${e1}Width`]) - parseFloat(cs[`padding${e1}`]) };
-    const where = (before, after) => (Math.abs(before) <= 0.5 ? 'flex-start' : Math.abs(after) <= 0.5 ? 'flex-end' : Math.abs(before - after) <= 1 ? 'center' : `${before.toFixed(1)}px before, ${after.toFixed(1)}px after`);
+    // room under a pixel on both sides cannot tell start from centre: a
+    // 19.2 label centred in a 20 box sits 0.4 from each edge (2026-11-04)
+    const where = (before, after) => (Math.abs(before) <= 0.5 && Math.abs(after) <= 0.5 ? 'filled' : Math.abs(before) <= 0.5 ? 'flex-start' : Math.abs(after) <= 0.5 ? 'flex-end' : Math.abs(before - after) <= 1 ? 'center' : `${before.toFixed(1)}px before, ${after.toFixed(1)}px after`);
     /* Text with no element inside: where its lines sit in its own box. A
        fixed-height text centred by a line-height as tall as the box was read
        as `normal` and red against the design's CENTER (review 2026-10-02
@@ -193,7 +195,11 @@ export function probe(sections, opts) {
       const t = !horizontal && textLines(el, cs);
       if (!t) return null;
       const before = t.top - box.top, after = box.bottom - t.bottom;
-      const at = before + after <= 0.5 ? 'filled' : where(before, after);
+      // the lines are estimated from the font's content area, which sits
+      // off the line box's centre by up to a pixel: under 2px of room the
+      // estimate cannot tell start from centre (a 12px label at 120% in a
+      // 16 box read flex-start, 2026-11-04)
+      const at = before >= -0.5 && after >= -0.5 && before + after < 2 ? 'filled' : where(before, after);
       return { items: at, run: at };
     }
     // Children that wrapped onto several lines are each placed within their
@@ -202,6 +208,8 @@ export function probe(sections, opts) {
     // which holds for one line, several, or a column flattened into the box.
     const apart = kids.some((a) => kids.some((b) => b[s0] >= a[s1] - 0.5 && a !== b));
     const seen = new Set(kids.filter((k) => box[s1] - box[s0] - (k[s1] - k[s0]) > 0.5).map((k) => where(k[s0] - box[s0], box[s1] - k[s1])));
+    // a child that fills says nothing about where the others sit
+    if (seen.size > 1) seen.delete('filled');
     const items = seen.size && !apart ? [...seen].join(' / ') : null;
     const lead = Math.min(...kids.map((k) => k[s0])) - box[s0], trail = box[s1] - Math.max(...kids.map((k) => k[s1]));
     let run = null;

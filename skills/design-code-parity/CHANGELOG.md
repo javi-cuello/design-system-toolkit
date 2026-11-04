@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.65.1 (2026-11-04): alignment read off the boxes is `filled` where the room cannot tell start from centre: under a pixel on both sides of a child, under 2px for a text leaf, whose lines are estimated from the font's content area. A 120% label in a fixed-height control read flex-start against CENTER. Engine fix with its probe test; cases unaffected.
 - 1.65.0 (2026-11-01): the engine proposes the screen map, `tools/parity/propose.mjs` (print, or `--write` what the map lacks), for layers gate 8 counts unmapped; merged as the run reads the map, a based `layers` entry refused; a project's proposer becomes a wrapper. Case T99.
 - 1.64.1 (2026-11-01): `is` is held to `parity.tolerances.length` (exact by default), case T98; the stylesheet gates and the pictures name `tools/css-lint` and `bin/parity --shots`.
 - 1.64.0 (2026-11-01): a waiver states the value the page holds by rule (`is`), so a text style that makes a frame taller moves no bound by hand. Case T98.
