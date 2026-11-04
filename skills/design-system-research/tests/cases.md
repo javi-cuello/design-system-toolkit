@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.11.0)
+# Eval cases — design-system-research (v2.12.0)
+
+**Walked: 2026-11-04 against v2.12.0** — A20 added and observed on the right-to-left guide: "Only some token names do (section 5)" rewritten with its example on the spot, and the guide's other bare cross-references read (one more fixed, two already explained in place). A1–A19 unchanged: the rule adds to the voice file and none of them asserts on cross-references.
 
 **Walked: 2026-11-04 against v2.11.0** — A19 added and observed: the person stopped at the right-to-left guide's first section for assuming code knowledge and asked for visual examples; the guide was rebuilt to open from what changes on screen, explain logical properties through the settings row's padding, and carry four inline SVG diagrams, rendered in headless Chrome and corrected once (Arabic anchoring). A1–A18 read against it: both rules add to the voice file without changing what A1–A18 assert; A9's question titles and A18's running example are what the diagrams draw. Reader check: pending the person's read of the rebuilt guide.
 
@@ -179,3 +181,10 @@ Assert: the guide opens from what the reader can see (what changes on screen), i
 Negative: a guide whose first section needs code knowledge to follow, or a visual example left as prose ("picture a row"), or an SVG delivered without being rendered.
 Observed: 2026-11-04 — the person on the right-to-left guide: "you cannot start with that if I have no context of how code works", "what spacing? where? how?", "why cannot we have visual examples?".
 Traced: 2026-11-04 for 2.11.0 — to `references/deep-mode-voice.md` *Start where the reader is* and *Show what is visual*, and SKILL.md's checklist line.
+
+## A20 · A claim is explained where it is made
+Fixture: a guide whose section 4 says "Only some token names do (section 5)" and leaves the explanation to a later section.
+Assert: the claim carries its example in place (`spacing.left` lands on the trailing side in Arabic; `spacing.inline-start` doesn't), and any cross-reference that remains adds detail to an explanation already given.
+Negative: a bare "(section N)" standing in for what the claim means.
+Observed: 2026-11-04 — the person: "very vague and I shouldn't need to wait until section 5 to get a full idea".
+Traced: 2026-11-04 for 2.12.0 — to `references/deep-mode-voice.md` *Never make the reader wait for the point*.

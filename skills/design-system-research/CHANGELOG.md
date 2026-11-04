@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 2.12.0 (2026-11-04): never make the reader wait for the point: a claim is explained where it is made, and a cross-reference adds detail rather than standing in for it. Case A20.
 - 2.11.0 (2026-11-04): start where the reader is (a designer, not a developer: on-screen first, code explained in design terms, code terms flagged for the developer), and show what is visual as inline SVG, rendered and checked before delivery. Case A19.
 - 2.10.0 (2026-11-04): a guide is a lesson, not a report: written to "you", one running example per section, no provenance at the top or mid-sentence (moved to What to re-check later), no bold labels on the opening answer and closing advice. Case A18.
 - 2.9.0 (2026-11-02): a deep-mode guide is one focused editorial piece for a curated collection: read its README, narrow past what the knowledge base holds, file it by topic, never store scripts or data there. Case A17.
