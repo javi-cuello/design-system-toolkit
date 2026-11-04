@@ -26,7 +26,7 @@ const call = async (name, args) => (await raw(name, args)).data;
 
 try {
   ok("the server is named for the one project its site is, and tells the client its content is data",
-    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || ""));
+    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || "") && /Before writing or changing any interface code/.test(c.getInstructions() || ""));
   const tools = (await c.listTools()).tools;
   ok("ten tools, every one read-only", tools.length === 10 && tools.every((t) => t.annotations && t.annotations.readOnlyHint === true), tools.map((t) => t.name).join(", "));
 
