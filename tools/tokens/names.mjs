@@ -5,7 +5,7 @@
  * (`--color-`). The build's own two steps, composed once: the export's slug
  * per segment (dtcg.js `pathFor`) and the house name over
  * that path (build-tokens.mjs `nameOf`, which drops the
- * collection). The docs site, the docs MCP's validator, the parity engine's
+ * collection). The docs site, the system MCP's validator, the parity engine's
  * hints and the stylesheet lint each kept their own (one lowercased before
  * splitting camel case, so `textStrong` became `--textstrong` against the
  * build's `--text-strong`, and `-1` lost its minus).

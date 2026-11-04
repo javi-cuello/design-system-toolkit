@@ -16,7 +16,7 @@ node ~/Projects/toolkit/tools/tokens/check.mjs --repo .            # the token g
 
 **Reads** the snapshot's `tokens.json` (where `snapshot.config.json` puts it). **Writes** DTCG files in `dtcg/` beside the snapshot, and the stylesheets at the repo's `paths.styles`.
 
-**Names a token in CSS** for every other reader: `names.mjs` `cssName(collection, name)` is the custom property the build writes for a variable (`Color/textStrong` → `--color-text-strong`) and `cssFamily(name)` the prefix its family shares (`--spacing-`), composed from the build's own two steps. The docs site, the docs MCP's validator, the parity engine's hints and the stylesheet lint call it; `test-names.mjs` holds it.
+**Names a token in CSS** for every other reader: `names.mjs` `cssName(collection, name)` is the custom property the build writes for a variable (`Color/textStrong` → `--color-text-strong`) and `cssFamily(name)` the prefix its family shares (`--spacing-`), composed from the build's own two steps. The docs site, the system MCP's validator, the parity engine's hints and the stylesheet lint call it; `test-names.mjs` holds it.
 
 ## How it fits
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
- * tools/docs-mcp/validate.mjs — generated code checked against one project's
- * published tokens and, where named, a component's contract. The docs MCP's
+ * tools/system-mcp/validate.mjs — generated code checked against one project's
+ * published tokens and, where named, a component's contract. The system MCP's
  * `validate` tool calls it; as a command it is a hook an agent's output runs
  * through once generation is done:
  *
- *   node tools/docs-mcp/validate.mjs <file>… (--docs <docs site URL> | --api <built site's api folder>) [--component <name>] [--from <import prefix>]…
+ *   node tools/system-mcp/validate.mjs <file>… (--docs <docs site URL> | --api <built site's api folder>) [--component <name>] [--from <import prefix>]…
  *
  * exits 1 when it finds something. What it holds, each a finding with what to
  * use instead where there is one:

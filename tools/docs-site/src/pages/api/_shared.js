@@ -1,6 +1,6 @@
 // The site's read-only JSON API: the same data the pages render, written as
 // files at build time, so a local service and a deployed copy serve the same
-// thing. tools/docs-mcp reads it. One site is one project; nothing here names
+// thing. tools/system-mcp reads it. One site is one project; nothing here names
 // another.
 import { project } from '../../lib/project.js';
 import { changes } from '../../lib/snapshot.js';

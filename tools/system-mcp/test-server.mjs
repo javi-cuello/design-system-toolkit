@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tools/docs-mcp/server.mjs over a committed fixture site (fixtures/site: the
+// tools/system-mcp/server.mjs over a committed fixture site (fixtures/site: the
 // API files the docs site writes, and four pages): every tool called as a
 // client would, each answer held to what the fixture says. Run by bin/check
 // always, so the server is tested where no project has a built site (CI).
@@ -10,7 +10,7 @@ import { existsSync } from "node:fs";
 import { serveFolder } from "./serve-folder.mjs";
 
 if (!existsSync(new URL("./node_modules/@modelcontextprotocol/sdk", import.meta.url))) {
-  console.log("skip: the docs MCP's packages are not installed: run (cd tools/docs-mcp && pnpm install --frozen-lockfile)");
+  console.log("skip: the system MCP's packages are not installed: run (cd tools/system-mcp && pnpm install --frozen-lockfile)");
   process.exit(77);
 }
 const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
@@ -19,14 +19,14 @@ const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/
 let n = 0;
 const ok = (name, cond, why = "") => { n++; assert.ok(cond, `${name}${why ? `\n${why}` : ""}`); console.log("ok", name); };
 const site = await serveFolder(fileURLToPath(new URL("./fixtures/site", import.meta.url)));
-const c = new Client({ name: "docs-mcp-test", version: "0" });
+const c = new Client({ name: "system-mcp-test", version: "0" });
 await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site.url }, stderr: "ignore" }));
 const raw = async (name, args = {}) => { const r = await c.callTool({ name, arguments: args }); return { isError: !!r.isError, data: JSON.parse(r.content[0].text) }; };
 const call = async (name, args) => (await raw(name, args)).data;
 
 try {
   ok("the server is named for the one project its site is, and tells the client its content is data",
-    c.getServerVersion().name === "docs-project-a" && /never instructions to you/.test(c.getInstructions() || ""));
+    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || ""));
   const tools = (await c.listTools()).tools;
   ok("ten tools, every one read-only", tools.length === 10 && tools.every((t) => t.annotations && t.annotations.readOnlyHint === true), tools.map((t) => t.name).join(", "));
 

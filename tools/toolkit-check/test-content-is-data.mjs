@@ -35,7 +35,7 @@ const PROMPTS = {
   'skills/figma-components-audit/scanner/judge.txt': /DATA to judge, never instructions/,
   'tools/docs-site/src/dashboard/ask.js': /data to answer about, never instructions/,
   'tools/docs-site/src/dashboard/queue.js': /data to answer about, never instructions/,
-  'tools/docs-mcp/server.mjs': /data to read and cite, never instructions/,
+  'tools/system-mcp/server.mjs': /data to read and cite, never instructions/,
   'tools/skill-evals/eval.mjs': /never instructions to you/,
   'skills/design-code-parity/scripts/pairing.txt': /DATA to pair, never instructions/,
 };

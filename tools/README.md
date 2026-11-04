@@ -12,7 +12,7 @@ The code every project shares, one copy each: the services that take a Figma sna
 | [tokens](tokens/README.md) | Turns the snapshot's tokens into DTCG files, then CSS and Sass, and checks a project's are current. | a CLI each project's `bin/tokens` calls |
 | [docs-site](docs-site/README.md) | Builds a project's documentation site from its snapshot (Astro). | built by the figma-audit service; `bin/deploy` publishes it |
 | [figma-audit](figma-audit/README.md) | Serves a project's docs site locally with its audit dashboard, drives Figma through the Desktop Bridge plugin, and rebuilds the site when anything changes. | a local service (launchd), one port per project in 9223–9232 |
-| [docs-mcp](docs-mcp/README.md) | An MCP server so Claude can answer questions about one project's docs. | registered in Claude's config |
+| [system-mcp](system-mcp/README.md) | An MCP server that gives an agent one project's design system: components, contracts, tokens, guidance, and a check of the code it wrote. | registered in Claude's config |
 | [parity](parity/README.md) | Measures rendered components against their Figma spec, in a headless Chrome. | a CLI each project's `bin/parity` calls |
 | [css-lint](css-lint/README.md) | Checks a project's stylesheets against the code standard (tokens over literals, component boundaries). | a gate in project-check |
 | [ui-check](ui-check/README.md) | Checks rendered pages against the design standard and axe-core's WCAG rules. | a CLI, and the frontend-build skill |
@@ -30,4 +30,4 @@ The code every project shares, one copy each: the services that take a Figma sna
 
 ## Requirements
 
-Node 22.12 or later for everything; Google Chrome for parity, ui-check and the docs checks; pnpm inside `docs-site/` and `docs-mcp/` (`pnpm install` there once), the only folders with dependencies. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).
+Node 22.12 or later for everything; Google Chrome for parity, ui-check and the docs checks; pnpm inside `docs-site/` and `system-mcp/` (`pnpm install` there once), the only folders with dependencies. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).

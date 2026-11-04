@@ -124,7 +124,7 @@ const GATES = [
       const files = changedCode();
       if (files.error) return files.error;
       if (!files.length) return null;
-      const r = spawnSync(process.execPath, [T('tools/docs-mcp/validate.mjs'), ...files.map((f) => path.join(REPO, f)), '--api', path.join(site, 'api'), ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28 });
+      const r = spawnSync(process.execPath, [T('tools/system-mcp/validate.mjs'), ...files.map((f) => path.join(REPO, f)), '--api', path.join(site, 'api'), ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28 });
       if (r.error) return `validate could not run over ${files.length} file(s): ${r.error.message}`;
       if (r.status === 0) return null;
       const lines = `${r.stdout}${r.stderr}`.trim().split('\n').map((l) => l.replace(REPO + path.sep, ''));

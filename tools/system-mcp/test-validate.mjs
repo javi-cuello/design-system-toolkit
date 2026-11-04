@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tools/docs-mcp/validate.mjs: generated code held to the tokens and a contract.
+// tools/system-mcp/validate.mjs: generated code held to the tokens and a contract.
 import assert from 'node:assert/strict';
 import { validate } from './validate.mjs';
 

@@ -2,7 +2,7 @@
 // Claude app would. Fails on an error, an empty answer, or a missing tool.
 //   node smoke.mjs http://localhost:9232
 //   node smoke.mjs <a built site folder>     served here on a free port (how bin/check runs it)
-// Without its packages (pnpm install in tools/docs-mcp) it says so and exits 77, a skip.
+// Without its packages (pnpm install in tools/system-mcp) it says so and exits 77, a skip.
 // test-server.mjs holds each tool's exact answers over a committed fixture site.
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { serveFolder } from "./serve-folder.mjs";
 
 if (!existsSync(new URL("./node_modules/@modelcontextprotocol/sdk", import.meta.url))) {
-  console.log("skip: the docs MCP's packages are not installed: run (cd tools/docs-mcp && pnpm install --frozen-lockfile)");
+  console.log("skip: the system MCP's packages are not installed: run (cd tools/system-mcp && pnpm install --frozen-lockfile)");
   process.exit(77);
 }
 const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
@@ -22,11 +22,11 @@ let url = arg, site = null;
 if (!/^https?:/.test(arg)) {
   // a folder: served as the dashboard service serves it, a folder as its index, never a path outside it
   const root = resolve(arg);
-  if (!existsSync(join(root, "api", "index.json"))) { console.error(`fail — docs-mcp: ${root} is not a built site with its API (no api/index.json)`); process.exit(1); }
+  if (!existsSync(join(root, "api", "index.json"))) { console.error(`fail — system-mcp: ${root} is not a built site with its API (no api/index.json)`); process.exit(1); }
   site = await serveFolder(root);
   url = site.url;
 }
-const c = new Client({ name: "docs-mcp-test", version: "0" });
+const c = new Client({ name: "system-mcp-test", version: "0" });
 await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: url } }));
 
 const fails = [];
@@ -41,7 +41,7 @@ const call = async (name, args) => {
   return data;
 };
 const over = await call("overview", {});
-if (!over || over.error) { console.error("fail — docs-mcp: " + fails.join("; ")); process.exit(1); }
+if (!over || over.error) { console.error("fail — system-mcp: " + fails.join("; ")); process.exit(1); }
 const first = over.components[0];
 if (!first) fails.push("overview lists no components");
 else {
@@ -66,5 +66,5 @@ if (!JSON.parse(miss.content[0].text).error) fails.push("an unknown component di
 await c.close();
 if (site) site.close();
 
-if (fails.length) { console.error("fail — docs-mcp:\n  " + fails.join("\n  ")); process.exit(1); }
-console.log(`pass — docs-mcp: ${names.length} tools against ${over.project.name}, ${over.components.length} components`);
+if (fails.length) { console.error("fail — system-mcp:\n  " + fails.join("\n  ")); process.exit(1); }
+console.log(`pass — system-mcp: ${names.length} tools against ${over.project.name}, ${over.components.length} components`);

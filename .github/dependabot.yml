@@ -5,7 +5,7 @@ updates:
   - package-ecosystem: npm
     directories:
       - /tools/docs-site
-      - /tools/docs-mcp
+      - /tools/system-mcp
       - /plugins/component-graph
       - /plugins/component-guidelines
       - /plugins/design-system-snapshot

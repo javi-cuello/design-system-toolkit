@@ -188,10 +188,10 @@ while IFS="$TAB" read -r label home; do
     step "page structure: $label"
     OUT=$(node tools/docs-site/check-structure.mjs "$d" 2>&1)
     [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$(printf '%s' "$OUT" | tail -20)"
-    # the docs MCP over the same built site, every tool called as a client would (tools/docs-mcp/smoke.mjs); run by
+    # the system MCP over the same built site, every tool called as a client would (tools/system-mcp/smoke.mjs); run by
     # nothing until 2026-10-31. Its packages are its own install: without them a skip, never a pass.
-    step "docs MCP: $label"
-    OUT=$(node tools/docs-mcp/smoke.mjs "$d" 2>&1)
+    step "system MCP: $label"
+    OUT=$(node tools/system-mcp/smoke.mjs "$d" 2>&1)
     RC=$?
     if [ $RC -eq 0 ]; then ok; elif [ $RC -eq 77 ]; then skip "$OUT"; else bad "$(printf '%s' "$OUT" | tail -8)"; fi
 done <<EOF
