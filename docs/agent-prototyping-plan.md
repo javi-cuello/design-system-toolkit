@@ -69,7 +69,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 |---|---|---|
 | No workflow to compose a screen from a recipe and return a receipt | Add a prototype mode to the skill that already builds UI | frontend-build (§D 1: building UI has one owner). Parity stories stay design-code-parity's: they map variants for measuring, while a prototype is a screen being built |
 | Flows have no home | Write templates as stories in a `Templates/` group and flows as stories in a `Prototypes/` group: local state, links, play functions, mocked data | frontend-build's guidance; the method is in the research piece |
-| An agent cannot see or test what it built | Turn on Storybook's MCP in the project for its preview and test tools (`stories-preview`, `test-run`); leave its documentation tools off, so the contract stays the one source of a component's API | the project; the guidance, still to add, goes in `knowledge/code/agent-prototyping.md`, whose Storybook snippet today points agents at the documentation tools too |
+| An agent cannot see or test what it built | Turn on Storybook's MCP in the project for its preview and test tools (`stories-preview`, `test-run`); leave its documentation tools off, so the contract stays the one source of a component's API | the project; the guidance is in `knowledge/code/agent-prototyping.md` (*Giving the agent the system*) |
 | Nothing stops a prototype branch being merged | Refuse merges from prototype branches at the push gate | project-check |
 | Reviewers need a link | Publish per branch, linked to the full-screen view of the story | the project's host; guidance only |
 
