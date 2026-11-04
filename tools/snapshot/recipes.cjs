@@ -18,12 +18,13 @@
  */
 const path = require('node:path');
 const { readScreens, paths, FRAME_NAME } = require('./store.cjs');
+const { nameOf } = require('./graph.cjs');
 
 // an instance by its component's name (before the variant), a frame by its own; the two are
 // tallied apart, since a frame named like a component is not that component (a frame
 // "Empty state" wrapping the Empty state component, 2026-11-04)
-// (a component set's name may hold ' / ' itself: it ends where the first Property=value starts)
-const label = (n) => { if (!n.instanceOf) return n.name; const parts = String(n.instanceOf).split(' / '); const v = parts.findIndex((x) => x.includes('=')); return parts.slice(0, v < 0 ? parts.length : v).join(' / ') || parts[0]; };
+// through graph.cjs's one resolver: the set's name is the longest start holding no Property=value
+const label = (n) => (n.instanceOf ? nameOf(n.instanceOf, (x) => !x.includes('=')) : n.name);
 const isInstance = (n) => !!n.instanceOf || n.type === 'INSTANCE';
 const isFrame = (n) => n.type === 'FRAME' && !isInstance(n);
 const tally = (m, k) => { if (k != null) m[k] = (m[k] || 0) + 1; };
