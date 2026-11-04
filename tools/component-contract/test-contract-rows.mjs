@@ -1,6 +1,6 @@
 // Tests for the rows read from a contract — run: node tools/component-contract/test-contract-rows.mjs
 // A fixture contract in contract 1's shape (tools/component-contract/README.md).
-import { rowsOf, propsOf } from './contract-rows.mjs';
+import { rowsOf, propsOf, rowsFromWalk } from './contract-rows.mjs';
 
 let pass = 0, fail = 0; const failures = [];
 const eq = (a, e, label) => { if (JSON.stringify(a) === JSON.stringify(e)) pass++; else { fail++; failures.push(`${label}\n    expected ${JSON.stringify(e)}\n    actual   ${JSON.stringify(a)}`); } };
@@ -49,6 +49,30 @@ eq(props.find((p) => p.name === 'Size'), { name: 'Size', type: 'VARIANT', values
 eq(props.find((p) => p.name === 'Left icon'), { name: 'Left icon', type: 'BOOLEAN', values: [], default: 'false' }, 'propsOf: a boolean property with its default');
 eq(props.find((p) => p.name === 'Icon swap'), { name: 'Icon swap', type: 'INSTANCE_SWAP', values: [], default: undefined }, 'propsOf: a swap has no default in the contract');
 eq(props.map((p) => p.name), rows.map((r) => r[0]), 'propsOf lists the props in the Properties table\'s order');
+
+// A live walk's rows are the snapshot's: the same component, walked as the plugin walks it, gives the
+// rows read from what the snapshot writes for it (store.cjs writeLibrary's figma.json and contract.json)
+{
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const store = require('../snapshot/store.cjs');
+  const os = await import('node:os'); const fsm = await import('node:fs'); const pth = await import('node:path');
+  const label = { name: 'Label', type: 'TEXT', text: 'Label', textStyle: 'Label/sm', fills: ['Ink'], sizing: 'HUG/HUG' };
+  const tag = (size, dis = 'False') => ({ name: `Size=${size}, Disabled=${dis}`, type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', align: 'MIN/MIN',
+    children: [...(size === 'Large' ? [{ name: 'Dot', type: 'ELLIPSE', sizing: 'FIXED/FIXED', w: 8, h: 8, fills: ['Ink'] }] : []), label] });
+  const raw = { name: 'Tag', id: '2:1', key: 'kt', page: 'Tag', props: { Size: ['Large', 'Small'], Disabled: ['False', 'True'], 'Label text': 'TEXT' },
+    links: { 'Label text': { kind: 'characters', layers: [['Label']] } }, variants: [tag('Large'), tag('Small'), tag('Large', 'True'), tag('Small', 'True')] };
+  const dir = fsm.mkdtempSync(pth.join(os.tmpdir(), 'rows-walk-'));
+  const P = store.paths(dir);
+  store.writeLibrary({ components: [raw], icons: [], tokens: { _meta: { file: 'Lib', fileKey: 'f1' }, collections: {}, textStyles: [], paintStyles: [], effects: [] } }, P, { ids: ['f1'], files: [['f1']] });
+  const read = (f) => JSON.parse(fsm.readFileSync(pth.join(P.components, 'tag', f), 'utf8'));
+  const stored = rowsOf(read('contract.json'), read('figma.json'));
+  const live = rowsFromWalk([raw]);
+  eq(live.rows.kt && live.rows.kt.rows, stored, 'a live walk\'s rows equal the rows read from what the snapshot stores for it');
+  eq(live.rows.kt.rows.map((r) => r.values.slice(0, 3)), [['Size', 'Variant', 'Large\nSmall'], ['Disabled', 'Variant', 'False (default)\nTrue'], ['Label text', 'Editable string', '-']], 'a live walk\'s rows carry the component\'s props, a False/True axis with its default marked');
+  eq(rowsFromWalk([{ name: 'Broken', props: {}, variants: 'no' }]).noContract.length, 1, 'a component no contract can be derived for is named, not dropped silently');
+  fsm.rmSync(dir, { recursive: true, force: true });
+}
 
 // run through a symlink, as an installed toolkit is: it runs, and asks for its folder
 {

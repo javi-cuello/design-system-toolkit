@@ -1,4 +1,6 @@
-# Eval cases — figma-properties-table (v1.13.1)
+# Eval cases — figma-properties-table (v1.14.0)
+
+**Walked: 2026-11-04 for 1.14.0** — the skill's own walk and its copy of the row rules are removed; rows come from the snapshot plugin's walk run live through the audit service (`/table-rows`), recorded by `store.cjs` `recordOf` and read by `rowsOf`: `node tests/test-properties-table.js` 54 passed (A10 re-aimed), `node tools/component-contract/test-contract-rows.mjs` 16 passed (A11: a live walk's rows equal the stored ones).
 
 **Walked: 2026-11-04 for 1.13.1** — A10 extended with the live walk: `node tests/test-properties-table.js` 58 passed, the live-walk assertions failing with 1.13.0's script. The live walk counts a layer only where a tree the snapshot draws shows it: the main as it is, or one boolean flipped from its default; the docs site's `propsOf` lists props in `rowsOf`'s order; `node tools/component-contract/test-contract-rows.mjs` 13 passed with `propsOf` in `rowsOf`'s order.
 
@@ -118,18 +120,17 @@ Fixture: `Tag` with properties `Size` and `Show icon`; its table lists `Size` an
 Assert: the audit reports the table, naming `Show icon` as missing and `Icon` as stale; once the row reads `Show icon`, nothing is reported.
 Runs: node tests/test-properties-table.js — "A9: a row naming a renamed property is reported, with what is missing and what is stale", "A9: rows that match the properties raise nothing"
 
-## A10 · The rows are read from the open file, with nothing loaded
-Fixture: a page with a properties table whose component defines `Size` (variant) and `Show icon` (boolean), with no rows loaded and no snapshot.
-Assert: `PT.plan()` returns the rows `Size`, `Show icon` read from the component, the boolean as `False (default)` then `True`. Skipping the page, or asking for a snapshot, is the failure (production: a component renamed in Figma left its table unrefreshable until a snapshot, 2026-11-04).
-Runs: node tests/test-properties-table.js — "A10: PT.plan reads the rows from the component in the file, with nothing loaded", "A10: a boolean reads False then True, its default marked"
+## A10 · No rows loaded means load them live, never a second reader
+Fixture: a page with a properties table whose component has no rows loaded (`PT.rows()` never given it).
+Assert: `PT.plan()` skips the page, naming the component and saying to run `contract-rows.mjs --live`; `PT.audit()` reports the table as having no rows to compare with. Reading the file's own property definitions in the script instead is the failure (1.13 did, with its own walk: a second reader of the structure the snapshot reads, ruled out 2026-11-04).
+Runs: node tests/test-properties-table.js — "A10: PT.plan skips a page whose component has no rows loaded, saying how to load them live", "A10: a table whose component has no rows loaded is reported, not compared with the file"
 
-## A11 · One mechanism for both tables: order, options verbatim, notes from the layers
-Fixture: a Button contract with a False/True axis declared True first, an enum spelled `Large` / `Icon only`, a boolean that shows an icon whose swap it gates, a text drawn only at one size (`when`), a slot, and a boolean that drives no part.
-Assert: axes first in declared order, the rest in layer order, the boolean that drives nothing last; the True/False axis keeps True first (never reordered); the enum in Figma's spelling; the swap noted `Only for left icon=true` and the text `Only for size=icon only`. The docs site's reader (`propsOf`) gives the same names, options and defaults.
-Runs: node tools/shared/test-prop-rows.mjs — "axes first in declared order, the rest in layer order, a prefix before what extends it, the undriven last", "skills/figma-properties-table/scripts/properties-table.js holds prop-rows.js propRows, line for line"
-Runs: node tools/component-contract/test-contract-rows.mjs — "variant axes first in declared order, then the rest in layer order, then those driving no layer", "a boolean property is False then True, its default marked", "a slot found through its part", "propsOf: a False/True axis as Figma has it", "propsOf lists the props in the Properties table's order"
+## A11 · One reader: the live rows are the snapshot's rows
+Fixture: a Button contract with a False/True axis declared True first, an enum spelled `Large` / `Icon only`, a boolean that shows an icon whose swap it gates, a text drawn only at one size (`when`), a slot, and a boolean that drives no part; and a Tag walked as the snapshot plugin walks it, recorded both by the snapshot (`store.cjs` `writeLibrary`) and by a live read (`rowsFromWalk`).
+Assert: axes first in declared order, the rest in layer order, the boolean that drives nothing last; the True/False axis keeps True first (never reordered); the enum in Figma's spelling; the swap noted `Only for left icon=true` and the text `Only for size=icon only`; the docs site's `propsOf` in the same order. The Tag's live rows equal the rows read from what the snapshot stored for it.
+Runs: node tools/component-contract/test-contract-rows.mjs — "variant axes first in declared order, then the rest in layer order, then those driving no layer", "a boolean property is False then True, its default marked", "a slot found through its part", "propsOf: a False/True axis as Figma has it", "propsOf lists the props in the Properties table's order", "a live walk's rows equal the rows read from what the snapshot stores for it", "a component no contract can be derived for is named, not dropped silently"
 
-## A12 · The script runs through the installed symlink — WALKED 2026-10-22 (retired from the skill 1.13.0: the table no longer runs `contract-rows.mjs`; kept as the tool's own case)
+## A12 · The script runs through the installed symlink — WALKED 2026-10-22 (the skill runs `contract-rows.mjs --live` again from 1.14.0)
 Fixture: `tools/component-contract/contract-rows.mjs` run by a path through a symlink to its folder, as a linked toolkit runs it, with no arguments.
 Assert: it runs and prints its usage (exit 2). Doing nothing and exiting 0 is the failure (production bug: its main-module check compared a resolved path with an unresolved one).
 Runs: node tools/component-contract/test-contract-rows.mjs — "A12: run through a symlink, the script runs"

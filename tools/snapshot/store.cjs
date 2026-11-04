@@ -1036,6 +1036,15 @@ const glyph = (svg) => attrsOrdered(svg).replace(/fill="#[0-9a-fA-F]{3,8}"/g, 'f
  */
 // a component's folder in the store: its name, after its library's platform where the library is routed with one
 const folderOf = (name, platform = null) => (platform ? `${slug(platform)}-${slug(name)}` : slug(name));
+/* One component as the store records it: its spec (compact, default plus deltas) and its contract, derived
+   as on every snapshot, or the reason none could be. The snapshot writes these; figma-properties-table's rows
+   come from the same record of a live walk (tools/component-contract/contract-rows.mjs --live). */
+function recordOf(c, known, deriveWith = {}, platform = null) {
+  const spec = platform ? { ...compact(c), platform } : compact(c);
+  try { return { spec, contract: contract.derive(spec, known, deriveWith), error: null }; }
+  catch (e) { return { spec, contract: null, error: e.message }; }
+}
+
 function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = [], files = [], deriveWith = {} } = {}) {
   const problems = payload.library(p);
   if (problems.length) throw new Error(`malformed library payload:\n    ${problems.slice(0, 8).join('\n    ')}`);
@@ -1085,7 +1094,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   for (const c of p.components) {
     const s = key(c.name);
     mine.add(s);
-    const spec = platform ? { ...compact(c), platform } : compact(c);
+    const { spec, contract: derived, error } = recordOf(c, known, deriveWith, platform);
     const file = path.join(P.components, s, 'figma.json');
     const was = readJson(file, null);
     if (was) specsBefore[s] = was;
@@ -1095,7 +1104,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
     // that cannot be derived is named and never costs the snapshot
     // one that cannot be derived leaves no old contract behind to be read as current
     const cf = path.join(P.components, s, 'contract.json');
-    try { writeIfChanged(cf, text(contract.derive(spec, known, deriveWith))); } catch (e) { fs.rmSync(cf, { force: true }); noContract.push(`${s}: ${e.message}`); }
+    try { if (!derived) throw new Error(error); writeIfChanged(cf, text(derived)); } catch (e) { fs.rmSync(cf, { force: true }); noContract.push(`${s}: ${e.message}`); }
     index.components[s] = { name: c.name, page: c.page, file: fileRef, ...(platform && { platform }) };
   }
   // A spec this file no longer has: removed when nothing is built on it,
@@ -1521,4 +1530,4 @@ function iconComponents(tokens) {
   return { icons: out, unplaced };
 }
 
-module.exports = { attrsOrdered, GRADE_RULES, gradeOf, storedGrade, DEFAULT_PATHS, PATH_KEYS, paths, iconComponents, mergeTokens, diff, grade, gradeLines, recordChanges, readChanges, writeChanges, emptyChange, replaceFiles, pruneSpecs, folderOf, writeLibrary, writeScreens, readSpec, readSpecs, readScreen, readScreens, screenIds, STATES };
+module.exports = { attrsOrdered, GRADE_RULES, gradeOf, storedGrade, DEFAULT_PATHS, PATH_KEYS, paths, iconComponents, mergeTokens, diff, grade, gradeLines, recordChanges, readChanges, writeChanges, emptyChange, replaceFiles, pruneSpecs, folderOf, recordOf, writeLibrary, writeScreens, readSpec, readSpecs, readScreen, readScreens, screenIds, STATES };

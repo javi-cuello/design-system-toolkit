@@ -408,15 +408,15 @@
     },
     {
       "job": "a component's Properties table rows from its props",
-      "module": "tools/shared/prop-rows.js",
+      "module": "tools/component-contract/contract-rows.mjs",
       "files": [],
       "names": [
+        "rowsFromWalk",
         "propRows"
       ],
-      "evidence": "the snapshot's rows (contract-rows.mjs rowsOf, whose order the docs site lists) and the Figma table's (properties-table.js, from the open file since figma-properties-table 1.13.0) would otherwise be two implementations of one set of rules; the maintainer ruled on 2026-11-04 that the sources differ but the mechanism must not. The sandbox script keeps a copy held line for line by tools/shared/test-prop-rows.mjs",
+      "evidence": "figma-properties-table 1.13 read the rows live with its own walk and a copy of the rules, beside rowsOf reading the snapshot: two readers of one structure. The maintainer ruled on 2026-11-04 that the table and the docs site share one mechanism; since 1.14.0 the table's rows are rowsOf's, over the snapshot plugin's own walk run live (contract-rows.mjs --live, the audit service's /table-rows), and the docs site lists propsOf in their order",
       "owners": [
-        "tools/shared/prop-rows.js",
-        "skills/figma-properties-table/scripts/properties-table.js"
+        "tools/component-contract/contract-rows.mjs"
       ]
     },
     {

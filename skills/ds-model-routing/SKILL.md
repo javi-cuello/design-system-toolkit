@@ -30,7 +30,7 @@ Claude cannot change the model or Effort setting itself — only the user can, v
 | Documentation generation / regeneration | `figma-doc-generator` | Sonnet | Default | Mirrors library data into tables |
 | Token export to DTCG / Style Dictionary | `figma-token-export` | Sonnet | Default | Conversion and manifest logic live in a tested script; what's left is reading the skip/warning report and deciding the three project questions (colour format, unit, opacity scale) |
 | Tokens mapping example tables | `figma-tokens-examples` | Sonnet | Default | Skill-guided, repeatable |
-| Properties table for a component page | `figma-properties-table` | Sonnet | Low–default | Reads `componentPropertyDefinitions` and renders it; the component decides the content |
+| Properties table for a component page | `figma-properties-table` | Sonnet | Low–default | Draws the rows the snapshot's own walk reads from the open file; the component decides the content |
 | Writing component descriptions | `figma-component-descriptions` | Sonnet | Default | Structured short-form prose against a recorded per-project shape. Step up where the judgement is *boundary* work — whether a component is one thing or two, whether a child is slot-only |
 | OKLCH scale generation (standard) | `oklch-color-scale-system` | Sonnet | Default | Rule-following once the method is defined |
 | Brand-color anchoring problems, ramps failing contrast | `oklch-color-scale-system` (anchored / hue-drift modes) | Opus (or Sonnet at high) | High | Genuine judgment and trade-offs |

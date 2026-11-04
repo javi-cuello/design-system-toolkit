@@ -1060,6 +1060,42 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    // A Properties table's rows, read from the OPEN file by the snapshot plugin's own walk and recorded as the
+    // store records it (store.cjs recordOf), then read as the docs site reads a stored contract
+    // (contract-rows.mjs rowsOf): figma-properties-table draws them, so the table and the docs site share one
+    // reader and one set of rules, and differ only in when the file was read (toolkit-standard §D 5).
+    if (url.pathname === "/table-rows" && req.method === "POST") {
+      const { fileKey, pages } = JSON.parse(await body(req));
+      if (!Array.isArray(pages) || !pages.length) return json(res, 400, { error: "pages required" });
+      const text = await readIf(SNAPSHOT);
+      if (!text) return json(res, 200, { ok: false, error: "the service has no snapshot plugin to read the file with" });
+      const only = "^(?:" + pages.map((p) => String(p).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")$";
+      let walk;
+      // under node fetch's 300 s wait for headers, so a slow walk is said here rather than as "fetch failed" in the client
+      try {
+        const r = await exec("const PAGES = " + JSON.stringify(only) + ";\n" + text + "\nreturn __headless();\n", 280000, fileKey || null);
+        if (r && r.success === false) return json(res, 200, { ok: false, error: r.error });
+        walk = r && typeof r === "object" && "result" in r ? r.result : r;
+      } catch (e) {
+        if (e.message === "wrong_file_not_open") return json(res, 200, { ok: false, error: e.message, hint: notOpen(fileKey) });
+        return json(res, 200, { ok: false, error: e.message });
+      }
+      if (!walk || !Array.isArray(walk.components)) return json(res, 200, { ok: false, error: "the bridge answered, but not with the file's components" });
+      if (fileKey && walk.fileKey && walk.fileKey !== fileKey) return json(res, 200, { ok: false, error: `that read ${walk.fileName || "another file"}, not ${fileKey}` });
+      // the routing entry of the file that was read, as deliver.cjs finds it: by the key the walk names
+      const read = fileKey || walk.fileKey || null;
+      const entry = LAYOUT && LAYOUT.files && read ? contract.entries(LAYOUT.files.library).find((e) => e.key === read || e.id === read) || {} : {};
+      const index = existsSync(INDEX) ? JSON.parse(readFileSync(INDEX, "utf8")) : { components: {} };
+      const ROWS_OF = join(HERE, "..", "component-contract", "contract-rows.mjs");
+      const { rowsFromWalk } = await import(pathToFileURL(ROWS_OF).href + "?m=" + statSync(ROWS_OF).mtimeMs);
+      const out = rowsFromWalk(walk.components, {
+        known: Object.values(index.components || {}).map((x) => x.name),
+        deriveWith: LAYOUT && LAYOUT.doc ? contract.deriveOptions(contract.auditContext(LAYOUT.doc), entry.key) : {},
+        platform: entry.platform || null,
+      });
+      return json(res, 200, { ok: true, ...out, fileName: walk.fileName || null });
+    }
+
     // Claude, proxied so the key never reaches the page.
     if (url.pathname === "/claude" && req.method === "POST") {
       if (!ANTHROPIC_KEY) return json(res, 200, { ok: false, error: "no_api_key" });

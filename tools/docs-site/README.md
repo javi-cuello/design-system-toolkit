@@ -50,7 +50,7 @@ nobody maintains a second status.
 - **Properties:** each component's contract (`contract.json`, written beside
   its spec on every snapshot), read through `propsOf` in
   `tools/component-contract/contract-rows.mjs`, in the order `rowsOf` gives
-  them (`tools/shared/prop-rows.js`, the rules figma-properties-table runs on the open file). A component with no stored contract says so.
+  them, the rows figma-properties-table draws from the same walk run live. A component with no stored contract says so.
 - **States:** the interaction states from the contract too, by the rule the
   contract editor uses (`statesOf` in `tools/component-contract/layers.mjs`):
   the axis derive marked as interaction, its default left out, a pointer

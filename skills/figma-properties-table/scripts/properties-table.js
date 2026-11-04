@@ -10,6 +10,8 @@
  *
  * Then drive it with:
  *
+ *   PT.rows({...})          load the rows, printed by `node tools/component-contract/contract-rows.mjs --live`
+ *                           from the snapshot plugin's own walk of the open file
  *   PT.profile()            learn this file's scaffolding (once per file, persisted)
  *   PT.pages()              pages that have a Properties table
  *   PT.plan('page name')    dry run, returns proposed rows, writes nothing
@@ -28,7 +30,8 @@
  * engine is not a false alarm, while truncation and substitution still are.
  *
  * Nothing about a specific file is hardcoded. The scaffolding is discovered by
- * profile(); every row's content is read from the component in the open file.
+ * profile(); every row's content comes from the component's contract, read
+ * live and loaded with PT.rows(). This script only draws.
  */
 globalThis.__PT_FACTORY = function () {
   const PT = {};
@@ -402,103 +405,32 @@ globalThis.__PT_FACTORY = function () {
 
   // ------------------------------------------------------------- row content
 
-  // The rows are read from the component in the open file: its property
-  // definitions and the layers that reference them. Figma is where a property
-  // changes first, so the table follows it with no snapshot in between
-  // (toolkit-standard §D 5: the table is about the present). The rules are
-  // tools/shared/prop-rows.js `propRows`, copied below line for line
-  // (tools/shared/test-prop-rows.mjs). contract-rows.mjs `rowsOf` feeds the same
-  // function from the snapshot, and the docs site lists its props in that order:
-  // only where each prop's place, gate and variants come from differs.
-  const propRows = (props) => {
-    const LABEL = { VARIANT: 'Variant', BOOLEAN: 'Boolean', TEXT: 'Editable string', INSTANCE_SWAP: 'Component swap', SLOT: 'Slot' };
-    const earlier = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
-    const lower = (v) => String(v).toLowerCase();
-    const axes = props.filter((p) => p.type === 'VARIANT');
-    const rest = props.filter((p) => p.type !== 'VARIANT');
-    const placed = rest.filter((p) => p.at).sort((a, b) => earlier(a.at, b.at));
-    const order = axes.concat(placed, rest.filter((p) => !p.at));
-    return order.map((p) => {
-      let options = '-';
-      if (p.type === 'VARIANT') {
-        const o = p.options || [];
-        const binary = o.length === 2 && o.every((v) => v === 'True' || v === 'False');
-        options = binary ? o.map((v) => (v === p.default ? v + ' (default)' : v)).join('\n') : o.join('\n');
-      } else if (p.type === 'BOOLEAN') {
-        const on = p.default === true || p.default === 'true';
-        options = ['False', 'True'].map((v) => ((v === 'True') === on ? v + ' (default)' : v)).join('\n');
-      }
-      let notes = '-';
-      if (p.type !== 'VARIANT') {
-        const conds = [];
-        if (p.gate) conds.push(lower(p.gate) + '=true');
-        for (const [axis, vals] of Object.entries(p.when || {})) if (axis !== p.gate) conds.push(lower(axis) + '=' + [].concat(vals).map(lower).join(' or '));
-        if (conds.length) notes = 'Only for ' + conds.slice(0, 2).join(' and ');
-      }
-      return { values: [p.name, LABEL[p.type] || p.type, options, notes], evidence: p.evidence || null };
-    });
-  };
-  const REFS = ['visible', 'characters', 'mainComponent', 'slotContentId'];
-  const rowsFor = (comp) => {
-    const defs = comp.componentPropertyDefinitions || {};
-    const keys = Object.keys(defs);
-    const isSet = comp.type === 'COMPONENT_SET';
-    const dv = isSet ? comp.defaultVariant : null;
-    const variants = isSet ? [dv].concat(comp.children.filter(v => v.type === 'COMPONENT' && v !== dv)).filter(Boolean) : [comp];
-    const earlier = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
-    const first = {};            // prop key -> { at: index path, path: name path, gate }
-    const drawn = new Map();     // name path -> ids of the variants that draw it
-    for (const v of variants) {
-      // a nested instance's layers reference its own component's props, not this one's
-      const walk = (node, at, names, gates, trees) => {
-        const refs = node.componentPropertyReferences || {};
-        const shows = refs.visible && defs[refs.visible] && defs[refs.visible].type === 'BOOLEAN' ? refs.visible : null;
-        // the trees the snapshot draws: the main as it is, and one per boolean flipped from its default, where a
-        // bound layer shows its boolean's value and the rest stay as in the main. A layer no tree draws is skipped.
-        const on = (t) => (shows && t !== null ? (t === shows) !== (defs[shows].defaultValue === true) : node.visible !== false);
-        const alive = trees.filter(on);
-        if (!alive.length) return;
-        const path = names.join('/');
-        if (!drawn.has(path)) drawn.set(path, new Set());
-        drawn.get(path).add(v.id);
-        const here = shows ? gates.concat(shows) : gates;
-        for (const r of REFS) {
-          const k = refs[r];
-          if (!k || !defs[k]) continue;
-          const gate = here.slice().reverse().find(g => g !== k) || null;
-          // the place is the earliest across variants; the note's layer is the default variant's, else the first
-          // variant's to draw one, as the contract reads the default anatomy before the layers variants add
-          if (!first[k]) first[k] = { at, path, gate };
-          else if (earlier(at, first[k].at) < 0) first[k].at = at;
-        }
-        if (node.type === 'INSTANCE' || !node.children) return;
-        node.children.forEach((c, i) => walk(c, at.concat(i), names.concat(c.name), here, alive));
-      };
-      const trees = [null].concat(keys.filter(k => defs[k].type === 'BOOLEAN'));
-      (v.children || []).forEach((c, i) => walk(c, [i], [c.name], [], trees));
+  // The rows come from the component's contract, derived from the snapshot
+  // plugin's own walk of the open file (tools/component-contract/contract-rows.mjs
+  // --live, through the audit service): the one reader of a Figma file, run now
+  // rather than read from the store, and never this script. PT.rows() keeps them in the
+  // document's plugin data, one entry per component, keyed by its key and
+  // name, so a resumable apply() finds them on every later call.
+  const ROWS_KEY = 'pt.rows.v1:';
+  PT.rows = (map) => {
+    let n = 0;
+    for (const [id, e] of Object.entries(map || {})) {
+      const text = JSON.stringify({ name: e.name, key: e.key || null, rows: e.rows });
+      if (e.key) figma.root.setPluginData(ROWS_KEY + e.key, text);
+      figma.root.setPluginData(ROWS_KEY + (e.name || id), text);
+      n++;
     }
-    // the axes' values that draw exactly the variants holding a layer, or none
-    const axes = keys.filter(k => defs[k].type === 'VARIANT');
-    const when = (path) => {
-      const ids = drawn.get(path);
-      if (!isSet || !ids || ids.size === variants.length) return null;
-      const vals = variants.map(v => ({ id: v.id, at: variantValues(v.name) }));
-      const conds = [];
-      for (const a of axes) {
-        const all = defs[a].variantOptions || [];
-        const allowed = all.filter(o => vals.some(x => ids.has(x.id) && x.at[a] === o));
-        if (allowed.length < all.length) conds.push([a, allowed]);
-      }
-      const exact = conds.length && vals.every(x => ids.has(x.id) === conds.every(([a, al]) => al.includes(x.at[a])));
-      return exact ? Object.fromEntries(conds.map(([a, al]) => [nameOf(a), al])) : null;
-    };
-    return propRows(keys.map(k => {
-      const d = defs[k], f = first[k];
-      const out = { name: nameOf(k), type: d.type, options: d.variantOptions || [], default: d.defaultValue, at: null, gate: null, when: null };
-      if (d.type === 'VARIANT' || !f) return out;
-      return Object.assign(out, { at: f.at, gate: f.gate ? nameOf(f.gate) : null, when: when(f.path), evidence: { layer: f.path, gatedBy: f.gate ? nameOf(f.gate) : null } });
-    }));
+    return { loaded: n };
   };
+  const rowsFor = (comp) => {
+    for (const k of [comp.key, comp.name]) {
+      if (!k) continue;
+      const s = figma.root.getPluginData(ROWS_KEY + k);
+      if (s) return JSON.parse(s).rows;
+    }
+    return null;
+  };
+  const noRows = (comps) => comps.filter(c => !rowsFor(c)).map(c => c.name);
 
   // ------------------------------------------------------------------ writing
 
@@ -635,6 +567,10 @@ globalThis.__PT_FACTORY = function () {
     if (!cfg) return { error: 'Run PT.profile() first.' };
     const prep = await preparePage(pageName, cfg);
     if (prep.skipped) return prep;
+    // A component with no rows loaded is not drawn from the file instead: the page waits for its rows
+    // (tools/component-contract/contract-rows.mjs --live, then PT.rows).
+    const missing = noRows(prep.comps);
+    if (missing.length) return { page: pageName, skipped: 'no rows loaded for ' + missing.join(', ') + ': run contract-rows.mjs --live for this page, then PT.rows()' };
     return {
       page: pageName,
       primaryGuessed: prep.primaryGuessed,
@@ -653,6 +589,10 @@ globalThis.__PT_FACTORY = function () {
     unreadable = 0;
     const prep = await preparePage(pageName, cfg);
     if (prep.skipped) return prep;
+    // A component with no rows loaded is not drawn from the file instead: the page waits for its rows
+    // (tools/component-contract/contract-rows.mjs --live, then PT.rows).
+    const missing = noRows(prep.comps);
+    if (missing.length) return { page: pageName, skipped: 'no rows loaded for ' + missing.join(', ') + ': run contract-rows.mjs --live for this page, then PT.rows()' };
     const { page, comps } = prep;
     let tables = prep.tables;
     const section = tables[0].parent;
@@ -800,10 +740,11 @@ globalThis.__PT_FACTORY = function () {
         const n = isEmpty ? 0 : (slot ? kids(slot).length : -1);
         rows += Math.max(0, n);
         if (!isEmpty && n === 0) problems.push(page.name + '/' + title + ': empty table not using the empty variant');
-        // The rows must name the properties the component defines: a
+        // The rows must name the properties the component's contract holds: a
         // renamed property leaves a well-formed table that no other check sees.
         const comp = title && comps.find(c => shown(c.name) === title);
         const stored = comp && rowsFor(comp);
+        if (comp && slot && !isEmpty && !stored) problems.push(page.name + '/' + title + ': no rows loaded to compare with; run contract-rows.mjs --live for this page, then PT.rows()');
         if (stored && slot && !isEmpty) {
           const want = stored.map(r => r.values[0]);
           const have = kids(slot).map(r => { const c = cellsOf(r, cfg.cellTextProp)[0]; const k = c && pid(c, cfg.cellTextProp); return k ? String(c.componentProperties[k].value) : null; }).filter(Boolean);

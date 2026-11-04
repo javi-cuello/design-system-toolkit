@@ -101,7 +101,7 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
   page.findAllWithCriteria = () => all(page).filter(n => n.type === 'INSTANCE');
   table.findAll = (fn) => all(table).filter(fn);
   const cfg = { schema: 4, tableName: 'Properties table', titleNodeName: 'Title', titleTextProp: 'Text', rowsSlotName: null, emptyProp: null, statusMarker: '🚧' };
-  // Plugin data by key: the config.
+  // Plugin data by key: the config, and the rows PT.rows() loads from the contract.
   const data = {};
   const pluginData = (c) => ({ getPluginData: (k) => (k === 'pt.config.v2' ? JSON.stringify(c) : data[k] || ''), setPluginData: (k, v) => { data[k] = v; } });
   globalThis.figma = { root: Object.assign({ children: [page] }, pluginData(cfg)) };
@@ -201,43 +201,13 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     const PT10 = async () => { delete globalThis.PT; return factory().plan('Tag'); };
     globalThis.figma = { root: Object.assign({ children: [tPage] }, pluginData(tcfg)) };
     delete globalThis.PT;
-    // A10: the rows are the component's own definitions in the open file, with no rows loaded
+    let a9 = await factory().audit();
+    ok(a9.problems.some(p => /Tag: no rows loaded to compare with/.test(p)), 'A10: a table whose component has no rows loaded is reported, not compared with the file');
     const planned10 = await PT10();
-    ok(!planned10.skipped && planned10.tables && planned10.tables[0].rows.map(r => r.values[0]).join(',') === 'Size,Show icon', 'A10: PT.plan reads the rows from the component in the file, with nothing loaded');
-    ok(planned10.tables && planned10.tables[0].rows[1].values[2] === 'False (default)\nTrue', 'A10: a boolean reads False then True, its default marked');
-    // A10, the live walk: a layer's gate and the variants that draw it become the note; a layer hidden with no
-    // boolean to show it is not drawn, as the snapshot's walked trees hold visible layers only
-    {
-      const defs = { Size: { type: 'VARIANT', variantOptions: ['sm', 'md'], defaultValue: 'sm' }, 'Show icon#1:0': { type: 'BOOLEAN', defaultValue: false }, 'Icon#1:1': { type: 'INSTANCE_SWAP' }, 'Label#1:2': { type: 'TEXT' } };
-      const icon = () => node({ id: 'i' + Math.random(), type: 'FRAME', name: 'Icon wrap', visible: false, componentPropertyReferences: { visible: 'Show icon#1:0' } }, [node({ id: 'j' + Math.random(), type: 'INSTANCE', name: 'Icon', componentPropertyReferences: { mainComponent: 'Icon#1:1' } })]);
-      const sm = node({ id: '9:1', type: 'COMPONENT', name: 'Size=sm' }, [icon(), node({ id: '9:3', type: 'TEXT', name: 'Label', visible: false, componentPropertyReferences: { characters: 'Label#1:2' } })]);
-      const md = node({ id: '9:2', type: 'COMPONENT', name: 'Size=md' }, [icon(), node({ id: '9:4', type: 'TEXT', name: 'Label', componentPropertyReferences: { characters: 'Label#1:2' } })]);
-      const set = node({ id: '9:0', type: 'COMPONENT_SET', name: 'Tag', componentPropertyDefinitions: defs, defaultVariant: sm }, [sm, md]);
-      tPage.children[0] = set; set.parent = tPage;
-      try {
-        const live = await PT10();
-        const by = Object.fromEntries((live.tables ? live.tables[0].rows : []).map(r => [r.values[0], r.values[3]]));
-        ok(by.Icon === 'Only for show icon=true', 'A10: a swap inside a boolean\'s layer is noted as gated by it, read live');
-        ok(by.Label === 'Only for size=md', 'A10: a layer hidden with no boolean to show it is not drawn there, so the note names the variants that draw it');
-        // a boolean's hidden layer inside another boolean's hidden layer: the snapshot flips one at a time, so never draws it
-        sm.children[0].children.push(node({ id: '9:5', type: 'TEXT', name: 'Hint', visible: false, componentPropertyReferences: { visible: 'Show hint#1:3' } }));
-        defs['Show hint#1:3'] = { type: 'BOOLEAN', defaultValue: false };
-        const nested = await PT10();
-        const hint = (nested.tables ? nested.tables[0].rows : []).find(r => r.values[0] === 'Show hint');
-        ok(hint && hint.values[3] === '-' && nested.tables[0].rows[nested.tables[0].rows.length - 1] === hint, 'A10: a hidden layer inside another boolean\'s hidden layer drives nothing, placed last as the snapshot\'s reader places it');
-        // the trees the snapshot draws: a layer hidden in the main whose boolean defaults to true is drawn by any
-        // other boolean's flip; a boolean's hidden layer inside a layer whose own boolean defaults to false is not
-        sm.children[0].children.pop(); delete defs['Show hint#1:3'];
-        defs['Show dot#1:4'] = { type: 'BOOLEAN', defaultValue: true };
-        defs['Show wrap#1:5'] = { type: 'BOOLEAN', defaultValue: false };
-        defs['Show tip#1:6'] = { type: 'BOOLEAN', defaultValue: false };
-        md.children.push(node({ id: '9:6', type: 'TEXT', name: 'Dot', visible: false, componentPropertyReferences: { visible: 'Show dot#1:4' } }));
-        md.children.push(node({ id: '9:7', type: 'FRAME', name: 'Wrap', componentPropertyReferences: { visible: 'Show wrap#1:5' } }, [node({ id: '9:8', type: 'TEXT', name: 'Tip', visible: false, componentPropertyReferences: { visible: 'Show tip#1:6' } })]));
-        const flips = (await PT10()).tables;
-        const rows = flips ? flips[0].rows.map(r => r.values[0] + ':' + r.values[3]) : [];
-        ok(rows.includes('Show dot:Only for size=md') && rows[rows.length - 1] === 'Show tip:-', 'A10: a layer is drawn where a tree the snapshot draws shows it (the main, or one boolean flipped from its default), and drives nothing where none does');
-      } finally { tPage.children[0] = tagSet; }
-    }
+    ok(planned10.skipped && /no rows loaded for Tag: run contract-rows.mjs --live/.test(planned10.skipped), 'A10: PT.plan skips a page whose component has no rows loaded, saying how to load them live');
+    // the contract's rows: Size and Show icon (the file's definitions are not read)
+    tagSet.componentPropertyDefinitions = {};
+    factory().rows({ Tag: { name: 'Tag', key: null, rows: [{ values: ['Size', 'Variant', 'md', '-'] }, { values: ['Show icon', 'Boolean', 'False (default)\nTrue', '-'] }] } });
     delete globalThis.PT;
     a9 = await factory().audit();
     ok(a9.problems.some(p => /rows do not match the properties; missing Show icon; stale Icon/.test(p)), 'A9: a row naming a renamed property is reported, with what is missing and what is stale');
