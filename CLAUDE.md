@@ -21,7 +21,7 @@ The rules live in the standards. This file says how a session works and points a
 
 These are owned here.
 
-- **Stage your own paths, never `git add -A`.** Other sessions work in this repo; a sweep commits their work under your message.
+- **Stage your own paths, never `git add -A`.** Other sessions work in this repo; a sweep commits their work under your message. Then commit them with `git commit -- <paths>`: a plain commit takes whatever another session left staged.
 - **One writer per path at a time.** Hand over with nothing uncommitted.
 - **A merge commit stages every file its resolution touched**, the version bumps beside a conflict included, and `git status` shows nothing of the merge's after it: bin/check reads the tree, so it stays green over what the commit left out.
 - **Work another session left uncommitted for over a day** (`bin/check` warns): read it, then commit it as theirs or remove it, and say which.

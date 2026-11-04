@@ -50,4 +50,16 @@ ok('a comment line and a fully transparent colour are not findings', !validate('
     g.join() === "Button from './local'@1,TextInput from '../x'@5,Link from './y'@6");
 }
 ok('a hidden input is no field: it is not a raw element', !validate('<input type="hidden" name="id" value={id} />', tokens, null, ['Text input']).length);
+{
+  // the command, as project-check's gate runs it: a built site's api folder, several files, findings as data
+  const { spawnSync } = await import('node:child_process');
+  const fs = await import('node:fs'), os = await import('node:os'), path = await import('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-')), a = path.join(dir, 'a.css'), b = path.join(dir, 'b.css');
+  fs.writeFileSync(a, '.x { color: #123456; }'); fs.writeFileSync(b, '.y { color: transparent; }');
+  const here = path.dirname(new URL(import.meta.url).pathname);
+  const r = spawnSync(process.execPath, [path.join(here, 'validate.mjs'), a, b, '--api', path.join(here, 'fixtures/site/api'), '--json'], { encoding: 'utf8' });
+  fs.rmSync(dir, { recursive: true, force: true });
+  const out = JSON.parse(r.stdout);
+  ok('--api and --json: each finding carries its file, and the exit says there was one', r.status === 1 && out.length === 1 && out[0].file === a && out[0].found === '#123456');
+}
 console.log(`${n}/${n} passed`);

@@ -5,7 +5,7 @@
  * `validate` tool calls it; as a command it is a hook an agent's output runs
  * through once generation is done:
  *
- *   node tools/system-mcp/validate.mjs <file>… (--docs <docs site URL> | --api <built site's api folder>) [--component <name>] [--from <import prefix>]…
+ *   node tools/system-mcp/validate.mjs <file>… (--docs <docs site URL> | --api <built site's api folder>) [--component <name>] [--from <import prefix>]… [--json]
  *
  * exits 1 when it finds something. What it holds, each a finding with what to
  * use instead where there is one:
@@ -124,9 +124,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const docs = (opt('--docs') || process.env.DOCS_URL || '').replace(/\/$/, ''), api = opt('--api'), component = opt('--component');
+  // --json: the findings as data, each with its file, for a caller that weighs them (project-check's gate)
+  const asJson = argv.includes('--json') && argv.splice(argv.indexOf('--json'), 1);
   const from = []; for (let f; (f = opt('--from'));) from.push(f);
   const files = argv;
-  if (!files.length || !(docs || api)) { console.error('usage: validate.mjs <file>… (--docs <docs site URL> | --api <built api folder>) [--component <name>] [--from <import prefix>]…'); process.exit(2); }
+  if (!files.length || !(docs || api)) { console.error('usage: validate.mjs <file>… (--docs <docs site URL> | --api <built api folder>) [--component <name>] [--from <import prefix>]… [--json]'); process.exit(2); }
   // the built site's own files (a push gate, no service running) or the served site
   const get = api ? async (p) => JSON.parse(fs.readFileSync(path.join(api, p), 'utf8'))
     : async (p) => { const r = await fetch(`${docs}/api/${p}`); if (!r.ok) throw new Error(`${docs}/api/${p} answered ${r.status}`); return r.json(); };
@@ -139,11 +141,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
     contract = Object.values((await get(`components/${page.slug}.json`)).contracts || {})[0] || null;
   }
   let n = 0;
+  const all = [];
   for (const file of files) {
     const found = validate(fs.readFileSync(file, 'utf8'), tokens, contract, pages.map((p) => p.title), { from });
-    for (const f of found) console.log(`${file}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`);
+    if (asJson) all.push(...found.map((f) => ({ file, ...f })));
+    else for (const f of found) console.log(`${file}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`);
     n += found.length;
   }
+  if (asJson) { console.log(JSON.stringify(all)); process.exit(n ? 1 : 0); }
   console.log(n ? `${n} finding(s) in ${files.length} file(s)` : `clean (${files.length} file(s)): every colour a token, every token, value and component the library has`);
   process.exit(n ? 1 : 0);
 }

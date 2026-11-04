@@ -29,7 +29,10 @@
  *   validate { system, from?, code? } — what the `validate` gate needs: `system`, the
  *            path prefixes of the design system's own code (left out: it is the
  *            system); `from`, the import prefixes its components come from; `code`,
- *            the path prefixes held (default: every changed code file)
+ *            the path prefixes held (default: every changed code file). A finding
+ *            that must stay is waived by a §6 ruling scoped `validate` whose text
+ *            names its file and what was found, exactly as the gate printed them,
+ *            each as a whole word (`#fff` does not waive `#ffffff`)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -124,11 +127,20 @@ const GATES = [
       const files = changedCode();
       if (files.error) return files.error;
       if (!files.length) return null;
-      const r = spawnSync(process.execPath, [T('tools/system-mcp/validate.mjs'), ...files.map((f) => path.join(REPO, f)), '--api', path.join(site, 'api'), ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28 });
+      const r = spawnSync(process.execPath, [T('tools/system-mcp/validate.mjs'), ...files.map((f) => path.join(REPO, f)), '--api', path.join(site, 'api'), '--json', ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28 });
       if (r.error) return `validate could not run over ${files.length} file(s): ${r.error.message}`;
-      if (r.status === 0) return null;
-      const lines = `${r.stdout}${r.stderr}`.trim().split('\n').map((l) => l.replace(REPO + path.sep, ''));
-      return `${lines.at(-1)}\n${lines.slice(0, -1).join('\n')}\n  Fix each in the code: a finding is never judged away. One that must stay is the project's to rule on; this gate reads no waivers yet.`;
+      let found;
+      try { found = JSON.parse(r.stdout); } catch { const t = `${r.stdout}${r.stderr}`.trim().split('\n'); return `validate did not answer: ${t.find((l) => /error/i.test(l)) || t[0]}`; }
+      // waived only by a ruling that names the very finding: its file and what was found, as printed
+      // (a scope written `validate` in backticks is still validate; a word inside a longer one is not it:
+      // `#fff` is not `#ffffff`, `src/a.css` is not `lib/src/a.css` or `src/a.css.map`)
+      const waivers = contract.rulings(contract.layout(null, label).doc || '').filter((w) => /^validate$/i.test(w.scope.replace(/`/g, '').trim()));
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const names = (k, s) => new RegExp(`(^|[\\s\`'"(])${esc(s)}(?=$|[\\s\`'",;:)]|\\.(\\s|$))`).test(k);
+      const rel = (f) => path.relative(REPO, f.file);
+      const open = found.filter((f) => !waivers.some((w) => names(w.key, rel(f)) && names(w.key, f.found)));
+      if (!open.length) return null;
+      return `${open.length} finding(s)${found.length > open.length ? `, ${found.length - open.length} waived by a ruling` : ''}\n${open.map((f) => `  ${rel(f)}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`).join('\n')}\n  Fix each in the code: a finding is never judged away. One that must stay is waived by a §6 ruling scoped \`validate\` naming its file and what was found.`;
     } },
   { id: 'verdicts', name: 'a check\'s verdict reaches whoever runs it', rule: 'code-standard 49',
     needs: () => null, fn: () => {
