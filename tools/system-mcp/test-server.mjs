@@ -6,7 +6,10 @@
 // Without its packages it says so and exits 77, a skip.
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, mkdtempSync, cpSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
 import { serveFolder } from "./serve-folder.mjs";
 
 if (!existsSync(new URL("./node_modules/@modelcontextprotocol/sdk", import.meta.url))) {
@@ -26,9 +29,42 @@ const call = async (name, args) => (await raw(name, args)).data;
 
 try {
   ok("the server is named for the one project its site is, and tells the client its content is data",
-    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || "") && /Before writing or changing any interface code/.test(c.getInstructions() || ""));
+    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || "") && /Before writing or changing any interface code/.test(c.getInstructions() || "") && /get_screen_recipe/.test(c.getInstructions() || ""));
   const tools = (await c.listTools()).tools;
-  ok("ten tools, every one read-only", tools.length === 10 && tools.every((t) => t.annotations && t.annotations.readOnlyHint === true), tools.map((t) => t.name).join(", "));
+  ok("eleven tools, every one read-only", tools.length === 11 && tools.every((t) => t.annotations && t.annotations.readOnlyHint === true), tools.map((t) => t.name).join(", "));
+
+  const rec = await call("get_screen_recipe", {});
+  ok("get_screen_recipe serves the site's recipe: shells with their overlays, regions, what varies, screen types with their states",
+    rec.screens === 5 && rec.shells.length === 2 && rec.shells[0].overlays.components.Dialog === 1 && rec.regions.some((r) => r.path === "Main/Section/Block/Column")
+    && rec.varies.length === 1 && rec.varies[0].values["Spacing/40"] === 1 && JSON.stringify(rec.screenTypes.find((t) => t.screen === "Login").states) === '["Default","Error"]');
+  const only = await call("get_screen_recipe", { section: "login", path: "Container" });
+  ok("…filtered by section (case-blind) and by region path",
+    only.screenTypes.length === 1 && only.screenTypes[0].section === "Login" && only.shells.length === 1 && only.regions.every((r) => r.path.includes("Container")) && only.regions.length === 1);
+
+  ok("…and an unknown section is an error that names the real ones",
+    (({ isError, data }) => !isError && /No section "nowhere"/.test(data.error) && data.sections.join() === "Login,Settings")(await raw("get_screen_recipe", { section: "nowhere" })));
+  // the fixture's recipe is the recipe's own output over the committed screens: regenerated, never typed
+  ok("the fixture's api/screens.json is recipes.cjs's derive over fixtures/screens.json",
+    JSON.stringify(createRequire(import.meta.url)("../snapshot/recipes.cjs").derive(JSON.parse(readFileSync(new URL("./fixtures/screens.json", import.meta.url), "utf8"))), null, 1) + "\n"
+      === readFileSync(new URL("./fixtures/site/api/screens.json", import.meta.url), "utf8"));
+  // a site built before the page, one with no stored screens, and one whose file is broken: a note, a note, an error
+  for (const [what, file, check] of [
+    ["a site built before the page answers with a note, not an error", null, (r) => !r.isError && r.data.screens === 0 && /rebuild/.test(r.data.note)],
+    ["a project with no stored screens says so", '{"screens":0}', (r) => !r.isError && /no stored screens/.test(r.data.note)],
+    ["a broken recipe file is an error, never a note", "{not json", (r) => r.isError]]) {
+    // every step inside the try, so a failed start never leaves a server listening or a folder behind
+    const dir = mkdtempSync(join(tmpdir(), "mcp-site-"));
+    let site2 = null, c2 = null;
+    try {
+      cpSync(fileURLToPath(new URL("./fixtures/site", import.meta.url)), dir, { recursive: true });
+      if (file === null) rmSync(join(dir, "api", "screens.json")); else writeFileSync(join(dir, "api", "screens.json"), file);
+      site2 = await serveFolder(dir);
+      c2 = new Client({ name: "system-mcp-test", version: "0" });
+      await c2.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site2.url }, stderr: "ignore" }));
+      const r = await c2.callTool({ name: "get_screen_recipe", arguments: {} });
+      ok(what, check({ isError: !!r.isError, data: JSON.parse(r.content[0].text) }));
+    } finally { if (c2) await c2.close(); if (site2) site2.close(); rmSync(dir, { recursive: true, force: true }); }
+  }
 
   const over = await call("overview", {});
   ok("overview is the site's index", over.project.name === "Project A" && over.components.map((p) => p.slug).join() === "button,chip");

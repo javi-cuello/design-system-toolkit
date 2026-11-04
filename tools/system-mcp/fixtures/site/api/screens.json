@@ -1,0 +1,188 @@
+{
+ "screens": 5,
+ "shells": [
+  {
+   "regions": [
+    {
+     "component": "Sidebar"
+    },
+    {
+     "frame": "Main"
+    }
+   ],
+   "screens": 3,
+   "overlays": {
+    "components": {
+     "Dialog": 1,
+     "Toast": 1
+    },
+    "frames": {}
+   },
+   "sections": [
+    "Settings"
+   ]
+  },
+  {
+   "regions": [
+    {
+     "frame": "Main"
+    }
+   ],
+   "screens": 2,
+   "overlays": {
+    "components": {},
+    "frames": {}
+   },
+   "sections": [
+    "Login"
+   ]
+  }
+ ],
+ "regions": [
+  {
+   "path": "Main",
+   "screens": 5,
+   "occurrences": 5,
+   "children": {
+    "components": {
+     "Page header": 3
+    },
+    "frames": {
+     "Section": 3,
+     "Container": 2
+    }
+   },
+   "overlays": {
+    "components": {},
+    "frames": {}
+   },
+   "gap": {
+    "Spacing/0": 5
+   },
+   "pad": {
+    "Spacing/0 Spacing/0 Spacing/0 Spacing/0": 5
+   }
+  },
+  {
+   "path": "Main/Section",
+   "screens": 3,
+   "occurrences": 3,
+   "children": {
+    "components": {},
+    "frames": {
+     "Block": 3
+    }
+   },
+   "overlays": {
+    "components": {},
+    "frames": {}
+   },
+   "gap": {
+    "Spacing/8": 3
+   },
+   "pad": {
+    "Spacing/0 Spacing/0 Spacing/0 Spacing/0": 3
+   }
+  },
+  {
+   "path": "Main/Section/Block",
+   "screens": 3,
+   "occurrences": 3,
+   "children": {
+    "components": {},
+    "frames": {
+     "Column": 3
+    }
+   },
+   "overlays": {
+    "components": {},
+    "frames": {}
+   },
+   "gap": {
+    "Spacing/0": 3
+   },
+   "pad": {
+    "Spacing/0 Spacing/0 Spacing/0 Spacing/0": 3
+   }
+  },
+  {
+   "path": "Main/Section/Block/Column",
+   "screens": 3,
+   "occurrences": 3,
+   "children": {
+    "components": {
+     "Section marker": 3
+    },
+    "frames": {}
+   },
+   "overlays": {
+    "components": {},
+    "frames": {}
+   },
+   "gap": {
+    "Spacing/32": 2,
+    "Spacing/40": 1
+   },
+   "pad": {
+    "Spacing/0 Spacing/0 Spacing/0 Spacing/0": 3
+   }
+  },
+  {
+   "path": "Main/Container",
+   "screens": 2,
+   "occurrences": 2,
+   "children": {
+    "components": {
+     "Button": 2
+    },
+    "frames": {}
+   },
+   "overlays": {
+    "components": {},
+    "frames": {}
+   },
+   "gap": {
+    "Spacing/24": 2
+   },
+   "pad": {
+    "Spacing/0 Spacing/0 Spacing/0 Spacing/0": 2
+   }
+  }
+ ],
+ "varies": [
+  {
+   "path": "Main/Section/Block/Column",
+   "what": "gap",
+   "values": {
+    "Spacing/32": 2,
+    "Spacing/40": 1
+   }
+  }
+ ],
+ "unnamed": [],
+ "screenTypes": [
+  {
+   "section": "Login",
+   "screen": "Login",
+   "states": [
+    "Default",
+    "Error"
+   ]
+  },
+  {
+   "section": "Settings",
+   "screen": "Delete dialog",
+   "states": [
+    "Error"
+   ]
+  },
+  {
+   "section": "Settings",
+   "screen": "Settings",
+   "states": [
+    "Default",
+    "Success"
+   ]
+  }
+ ]
+}

@@ -249,4 +249,6 @@ rules it encodes, and the checklist for adding a project, are
 - `unnamed`: screens whose name snapshot-standard rule 24's taxonomy does not read: listed, never dropped.
 - `screenTypes`: each section's screens and the states drawn for each, read by that taxonomy.
 
+The docs site publishes it as `api/screens.json` and the system MCP serves it as `get_screen_recipe` (tools/system-mcp). A screen whose `figma.json` does not parse is skipped by `readScreens`, as everywhere else, and so is missing from `screens`.
+
 `test-recipes.mjs` holds it to a fixture.

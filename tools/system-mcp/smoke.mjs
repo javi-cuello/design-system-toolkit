@@ -31,7 +31,7 @@ await c.connect(new StdioClientTransport({ command: process.execPath, args: [fil
 
 const fails = [];
 const names = (await c.listTools()).tools.map((t) => t.name);
-for (const want of ["overview", "search", "get_component", "get_contract", "validate", "get_tokens", "get_changes", "get_audit", "list_pages", "read_page"])
+for (const want of ["overview", "search", "get_component", "get_contract", "validate", "get_tokens", "get_changes", "get_audit", "get_screen_recipe", "list_pages", "read_page"])
   if (!names.includes(want)) fails.push("missing tool " + want);
 
 const call = async (name, args) => {
@@ -55,6 +55,9 @@ else {
 const tokens = await call("get_tokens", {});
 if (tokens.collections.length) await call("get_tokens", { collection: tokens.collections[0].name });
 await call("get_changes", { limit: 2 });
+// the screen recipe: a site built before it answers with a note, never an error; one that read screens and found no shell fails
+const rec = await call("get_screen_recipe", {});
+if (rec.screens && !(rec.shells && rec.shells.length)) fails.push("get_screen_recipe: screens read but no shell");
 // Every page the site links to is listed, and a page reads as text.
 const listed = await call("list_pages", {});
 if (!listed.pages || listed.pages.length < over.components.length) fails.push(`list_pages found ${listed.pages ? listed.pages.length : 0} pages, fewer than the ${over.components.length} component pages`);
