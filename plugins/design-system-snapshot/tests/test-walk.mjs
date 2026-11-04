@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const src = readFileSync(fileURLToPath(new URL("../code.js", import.meta.url)), "utf8");
 const figma = { variables: { getVariableByIdAsync: async () => null }, getStyleByIdAsync: async () => null };
-const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION })", vm.createContext({ figma, console }));
+const { walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION } = vm.runInContext(src + "\n;({ walk, unrecorded, slotPaths, markSlots, propLinks, unboundPaints, componentName, collectComponents, place, loadPages, drawnIn, unescaped, VERSION })", vm.createContext({ figma, console, setTimeout, clearTimeout }));
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
@@ -100,6 +100,27 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   figma.root = { children: [pageOf("Cover"), pageOf("Chip", chip), pageOf("Tag", tag)] };
   const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
   ok("each component is filed under its own page", got.map((c) => c.page).join() === "Chip,Tag");
+}
+// 0.69.0: a slot's preferred values are keys, which name nothing to a reader that did not store the component;
+// this file's own are named from the file, importing nothing; another library's by import, a variant by its set;
+// one that cannot be named is null, and the names stay in the order of the keys
+{
+  const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [comp] }; comp.parent = p; p.findAll = (f) => p.children.filter(f); return p; };
+  const pref = [{ type: "COMPONENT", key: "local1" }, { type: "COMPONENT_SET", key: "set1" }, { type: "COMPONENT", key: "v1" }, "c1", { type: "COMPONENT", key: "gone" }];
+  const card = { type: "COMPONENT", name: "Card", key: "local1", id: "2:1", width: 40, height: 20, children: [], componentPropertyDefinitions: { "Content slot#1:0": { type: "SLOT", description: "", preferredValues: pref } } };
+  const imported = [];
+  figma.root = { children: [pageOf("Card", card)], findAllWithCriteria: () => [card] };
+  figma.importComponentSetByKeyAsync = async (k) => { imported.push(k); return k === "set1" ? { type: "COMPONENT_SET", name: "Button" } : null; };
+  figma.importComponentByKeyAsync = async (k) => { imported.push(k);
+    if (k === "v1") return { type: "COMPONENT", name: "Size=Small", parent: { type: "COMPONENT_SET", name: "Tag" } };
+    if (k === "c1") return { type: "COMPONENT", name: "List item", parent: { type: "PAGE" } };
+    throw new Error("not published"); };
+  const [got] = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
+  const slot = got.slots && got.slots["Content slot"];
+  ok("a preferred value is named: this file's from the file, another's by import, a variant by its set; one that will not import is null",
+    slot && JSON.stringify(slot.preferred) === '["local1","set1","v1","c1","gone"]' && JSON.stringify(slot.preferredNames) === '["Card","Button","Tag","List item",null]'
+    && !imported.includes("local1"));
+  delete figma.importComponentSetByKeyAsync; delete figma.importComponentByKeyAsync; delete figma.root.findAllWithCriteria;
 }
 // 0.66.0: where the Figma MCP runs this file (in Figma's cloud) a node whose font the cloud lacks cannot be moved, and
 // every page is loaded on its own; each falls back there, and the plugin's own run never meets the fallback

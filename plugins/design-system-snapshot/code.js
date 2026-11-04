@@ -1,4 +1,4 @@
-// Design system snapshot — v0.68.3 · plugin-standard v1.1.0
+// Design system snapshot — v0.69.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -671,7 +671,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.68.3';
+const VERSION = '0.69.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1326,7 +1326,42 @@ function propLinks(roots) {
  * loop is how a live reader ends up describing a component in a different
  * shape from its stored spec.
  */
+/*
+ * A slot's preferred value, `{ type, key }` (or a bare key), as a name.
+ *
+ * A key names nothing to a reader unless the same snapshot stored that
+ * component: across three stored libraries 7 of 23 did not (2026-11-04). A
+ * key of this file's own components is named from the file, which imports
+ * nothing and so leaves the file as it was; only another library's key is
+ * imported, once per key, and given 5 s, since a hung import would hang the
+ * snapshot. A variant is named by its set. What cannot be named is null,
+ * never guessed.
+ */
+/** @type {Map<string, string|null>} */ const prefNames = new Map();
+/** @type {Map<string, string>|null} */ let localKeys = null;
+async function preferredName(/** @type {any} */ x) {
+  const key = typeof x === 'string' ? x : x && x.key;
+  if (!key) return null;
+  if (!localKeys) {
+    localKeys = new Map();
+    try { for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] })) if (n.key) localKeys.set(n.key, n.type === 'COMPONENT' && n.parent && n.parent.type === 'COMPONENT_SET' ? n.parent.name : n.name); } catch (e) { /* a runtime without the search names from imports alone */ }
+  }
+  if (localKeys.has(key)) return /** @type {string} */ (localKeys.get(key));
+  if (prefNames.has(key)) return /** @type {string|null} */ (prefNames.get(key));
+  let name = null;
+  try {
+    const get = x && x.type === 'COMPONENT_SET' ? figma.importComponentSetByKeyAsync(key) : figma.importComponentByKeyAsync(key);
+    let timer = null;
+    const node = /** @type {any} */ (await Promise.race([get, new Promise((r) => { timer = setTimeout(() => r(null), 5000); })]).finally(() => clearTimeout(timer)));
+    name = node ? (node.type === 'COMPONENT' && node.parent && node.parent.type === 'COMPONENT_SET' ? node.parent.name : node.name) : null;
+  } catch (e) { name = null; }
+  prefNames.set(key, name);
+  return name;
+}
+
 async function collectComponents({ withIcons, previews, darkModes, scope = null, pages = null, section = null, exclude = null }) {
+  // a run names from the file as it is now: a component renamed since the last run is read again
+  localKeys = null; prefNames.clear();
   const components = [];
   // A file with an icon page is an asset library (illustrations, photos,
   // graphics): each variant of its sets is an asset of its own, so each gets
@@ -1411,7 +1446,13 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
           // visible; picking at it again by guess is what this replaced.
         }
         const pref = d.preferredValues || d.preferredInstances;
-        if (Array.isArray(pref)) out.preferred = pref.map((x) => (x && (x.name || x.key)) || String(x)).filter(Boolean);
+        if (Array.isArray(pref)) {
+          const given = pref.filter((x) => (x && (x.name || x.key)) || String(x));
+          out.preferred = given.map((x) => (x && (x.name || x.key)) || String(x));
+          // in the same order as `preferred`, a name or null (preferredName says how)
+          out.preferredNames = [];
+          for (const x of given) out.preferredNames.push(await preferredName(x));
+        }
         // Everything the runtime DID expose, so a reader can tell a field
         // that is absent from a field this plugin never asked for.
         out.fields = Object.keys(d);

@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.69.0] - 2026-11-04
+### Added
+- **A slot's preferred components are named.** Figma gives each preferred value as a key, and a key names nothing to a reader unless the same snapshot stored that component: across three stored libraries 7 of 23 did not. Each slot record gains `preferredNames`, beside `preferred` and in its order, each a name or null. A key of the file's own components is named from the file, importing nothing; another library's is imported (once per key, given 5 s), which brings a copy of that component into the file as any import does; a variant is named by its set; one that will not import is null, never guessed. Checked live on one library the same day: its 3 preferred values named. Not yet met: a key from another library, and the cloud route (`use_figma`), where an import may be refused and the name is then null.
+
 ## [0.68.3] - 2026-10-31
 ### Changed
 - A text style's line height and letter spacing become a fraction of the font size through one function, `perFontSize`, a copy of `tools/shared/text-units.js` that `tools/shared/test-text-units.mjs` holds character for character, as the token build's and the doc generator's copies are. The numbers are the same: four places, by `toFixed`.
