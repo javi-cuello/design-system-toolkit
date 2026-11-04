@@ -20,7 +20,7 @@ each project is its own entry in the client's config.
 | `overview` | project, snapshot, every component with a one-line summary and open findings, token collections, change-log and audit totals |
 | `search` | components by name or guidance text, tokens and styles by name |
 | `get_contract` | a component's contract: props, anatomy and what each value changes, every value a token — what to read before writing its markup |
-| `validate` | generated code checked: raw colours (and the token that holds each), token names the library lacks, prop values the contract does not have, raw HTML elements the library has a component for (`<button>` where it has Button) |
+| `validate` | generated code checked: raw colours (and the token that holds each), token names the library lacks, prop values the contract does not have, raw HTML elements the library has a component for (`<button>` where it has Button), library components defined in the code (a copy), and, given `from`, library components imported from anywhere else |
 | `get_component` | one page in full: sets, properties, guidance, implementation notes, change log, findings |
 | `get_tokens` | collections, or one collection's variables per mode (filterable) |
 | `get_changes` | the change log, newest first, by component or date |
@@ -54,9 +54,9 @@ Deployed, `DOCS_URL` is the site's address. The server needs nothing else.
 
 The server's instructions tell an agent to read `get_contract` before writing a component's markup and to run what it wrote through `validate`. The same check is a command for a hook that runs once generation is done, in the repo that writes the code:
 
-    node tools/docs-mcp/validate.mjs <file> --docs <docs site URL> [--component <name>]
+    node tools/docs-mcp/validate.mjs <file> --docs <docs site URL> [--component <name>] [--from <import prefix>]…
 
-It exits 1 on a finding. `test-validate.mjs` holds its rules.
+`--from` names where the system's components are imported from (`@/design-system/`, which also passes the `@/design-system` barrel); without it, imports are not read. `import * as` and `import type` are not read, a framework part sharing a library name (`Link` from `next/link`) is listed in `--from` to pass, and the system's own files are not what it checks. It exits 1 on a finding. `test-validate.mjs` holds its rules.
 
 ## Test
 

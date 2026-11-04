@@ -89,13 +89,13 @@ tool("get_contract", {
 });
 
 tool("validate", {
-  description: "Check generated code against this design system: every raw colour (and the token that holds it, if one does), every token name the library does not have, every raw HTML element the library has a component for (<button> where it has Button), and, with a component named, every prop value its contract does not have. Run it on what you wrote before handing it over.",
-  inputSchema: { code: z.string().describe("The markup, styles or component code to check"), component: z.string().optional().describe("The component the code renders, to hold its props to its contract") },
-}, async ({ code, component }) => {
+  description: "Check generated code against this design system: every raw colour (and the token that holds it, if one does), every token name the library does not have, every raw HTML element the library has a component for (<button> where it has Button), every library component defined in the code instead of imported (a copy), with `from` given every library component imported from elsewhere, and, with a component named, every prop value its contract does not have. Run it on what you wrote before handing it over.",
+  inputSchema: { code: z.string().describe("The markup, styles or component code to check"), component: z.string().optional().describe("The component the code renders, to hold its props to its contract"), from: z.array(z.string()).optional().describe("Where the system's components are imported from, as prefixes, e.g. ['@/design-system/']") },
+}, async ({ code, component, from }) => {
   const { validate } = await import("./validate.mjs");
   let contract = null;
   if (component) { const page = await findPage(component); if (page) contract = Object.values((await get("components/" + page.slug + ".json")).contracts || {})[0] || null; }
-  const found = validate(code, await get("tokens.json"), contract, ((await get("index.json")).components || []).map((p) => p.title));
+  const found = validate(code, await get("tokens.json"), contract, ((await get("index.json")).components || []).map((p) => p.title), { from: from || [] });
   return reply({ clean: !found.length, findings: found });
 });
 

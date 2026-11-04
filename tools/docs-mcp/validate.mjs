@@ -5,7 +5,7 @@
  * `validate` tool calls it; as a command it is a hook an agent's output runs
  * through once generation is done:
  *
- *   node tools/docs-mcp/validate.mjs <file> --docs <docs site URL> [--component <name>]
+ *   node tools/docs-mcp/validate.mjs <file> --docs <docs site URL> [--component <name>] [--from <import prefix>]…
  *
  * exits 1 when it finds something. What it holds, each a finding with what to
  * use instead where there is one:
@@ -16,8 +16,16 @@
  *   - a raw HTML element where the library has the component for it (<button>
  *     beside a Button): left alone, agents write their own components instead
  *     of the system's (Storybook's MCP trial found this)
+ *   - a library component defined in the code (function Button, const Button =):
+ *     a copy, which the next library release does not reach
+ *   - with `from` given (the specifiers the system's components are imported
+ *     from, as prefixes: '@/design-system/'), a library component imported or
+ *     re-exported by name from anywhere else: Atlassian's models invented imports
+ *     when told not to. `import * as` and `import type` are not read; a framework
+ *     part sharing a name (Link from next/link) is listed in `from` to pass
+ *   Run on code that uses the system, never on the system's own files.
  *
- *   validate(code, tokens, contract?, components?) → [{ kind, found, use?, line }]
+ *   validate(code, tokens, contract?, components?, { from? }) → [{ kind, found, use?, line }]
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,8 +47,12 @@ const REPLACES = {
   input: ['Text input', 'Text field', 'Input'],
 };
 
-export function validate(code, tokens, contract = null, components = []) {
+// a component's title as code names it: Text input → TextInput
+const pascal = (t) => String(t).split(/[^A-Za-z0-9]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join('');
+
+export function validate(code, tokens, contract = null, components = [], { from = [] } = {}) {
   const have = new Map(components.map((c) => [String(c).toLowerCase(), c]));
+  const byCode = new Map(components.map((c) => [pascal(c), c]));
   const componentFor = (tag, type) => [...(type ? REPLACES[`${tag} ${type}`] || [] : []), ...(REPLACES[tag] || [])].map((n) => have.get(n.toLowerCase())).find(Boolean);
   const out = [];
   const values = [];
@@ -81,6 +93,11 @@ export function validate(code, tokens, contract = null, components = []) {
       const use = componentFor(m[1], type);
       if (use) out.push({ kind: 'raw element', found: `<${m[1]}${type ? ` type="${type}"` : ''}>`, use, line: i + 1 });
     }
+    // a library component written here instead of taken from the system
+    for (const m of line.matchAll(/\b(?:function|class)\s+([A-Z]\w*)|\b(?:const|let|var)\s+([A-Z]\w*)\s*=/g)) {
+      const c = byCode.get(m[1] || m[2]);
+      if (c) out.push({ kind: 'component copied', found: m[1] || m[2], use: c, line: i + 1 });
+    }
     // a contract prop given a value it does not have
     if (contract) for (const [k, p] of Object.entries(contract.props || {})) {
       if (p.type !== 'enum') continue;
@@ -89,6 +106,16 @@ export function validate(code, tokens, contract = null, components = []) {
       }
     }
   });
+  // a library component imported from somewhere that is not the system: read over the whole code, since a
+  // formatter wraps an import over lines; `import type` brings no component, `* as` names none
+  if (from.length) for (const m of String(code).matchAll(/\b(import|export)\s+(?!type\b)(?:(\w+)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g)) {
+    const spec = m[4];
+    if (from.some((f) => spec.startsWith(f) || spec === f.replace(/\/$/, ''))) continue;
+    // both sides of an alias: `Button as B` and `Local as Button` each bring a Button in
+    const names = [m[2], ...(m[3] || '').split(',').flatMap((x) => x.trim().replace(/^type\s+.*/, '').split(/\s+as\s+/))].filter(Boolean);
+    const line = String(code).slice(0, m.index).split('\n').length;
+    for (const n of new Set(names)) if (byCode.has(n)) out.push({ kind: 'component not from the system', found: `${n} from '${spec}'`, use: from.join(' | '), line });
+  }
   return out;
 }
 
@@ -96,8 +123,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const docs = (opt('--docs') || process.env.DOCS_URL || '').replace(/\/$/, ''), component = opt('--component');
+  const from = []; for (let f; (f = opt('--from'));) from.push(f);
   const [file] = argv;
-  if (!file || !docs) { console.error('usage: validate.mjs <file> --docs <docs site URL> [--component <name>]'); process.exit(2); }
+  if (!file || !docs) { console.error('usage: validate.mjs <file> --docs <docs site URL> [--component <name>] [--from <import prefix>]…'); process.exit(2); }
   const get = async (p) => { const r = await fetch(`${docs}/api/${p}`); if (!r.ok) throw new Error(`${docs}/api/${p} answered ${r.status}`); return r.json(); };
   const tokens = await get('tokens.json');
   const { components: pages } = await get('index.json');
@@ -107,7 +135,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
     if (!page) { console.error(`no component "${component}"`); process.exit(2); }
     contract = Object.values((await get(`components/${page.slug}.json`)).contracts || {})[0] || null;
   }
-  const found = validate(fs.readFileSync(file, 'utf8'), tokens, contract, pages.map((p) => p.title));
+  const found = validate(fs.readFileSync(file, 'utf8'), tokens, contract, pages.map((p) => p.title), { from });
   for (const f of found) console.log(`${file}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`);
   console.log(found.length ? `${found.length} finding(s)` : 'clean: every colour a token, every token, value and component the library has');
   process.exit(found.length ? 1 : 0);

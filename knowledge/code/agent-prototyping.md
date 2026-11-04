@@ -22,7 +22,7 @@ How a coding agent builds a prototype from the design system's real components i
 - A lookalike carries none of the real component's keyboard model, name or focus ring, so an accessibility check on it says nothing about the product. Only real components make a prototype's accessibility result mean something.
 
 **Check**
-- *Script:* list the prototype's imports and fail on any component that does not come from the system package. `tools/docs-mcp/validate.mjs` flags raw HTML where the library has a component.
+- *Script:* `tools/docs-mcp/validate.mjs` with `--from <the system's import prefix>` fails on a library component imported by name from anywhere else (`import * as` is not read) or defined in the prototype, and on raw HTML where the library has a component.
 - *Judgement:* Change one token in the library. Did the prototype change?
 
 **Sources:** Lovable, v0 and Figma are vendor docs. Vallaure is commentary. The toolkit counts only the first level, imports from the package.

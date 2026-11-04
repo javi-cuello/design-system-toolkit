@@ -21,7 +21,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 
 | Gap today | Fix | Owner |
 |---|---|---|
-| `validate` flags raw elements where the library has a component, but not where a component is imported from, so a local copy or a styled non-native element passes | Add the import test to the existing output check | `tools/docs-mcp` `validate` |
+| `validate` flags raw elements where the library has a component, but not where a component is imported from, so a local copy or a styled non-native element passes | Done 2026-11-04: `validate` flags a library component defined in the code, and, given `--from`, one imported by name from anywhere else | `tools/docs-mcp` `validate` |
 | The check is optional, and an agent can skip it | Add `validate` as a gate in the project's check, which its pre-push hook already runs; a project with CI adds the same check there | project-check (`check.mjs`) |
 | An agent without MCP has no component reference in the repo | Point the agent at the built docs site's generated `api/` files, which already exist, and add no new format | `tools/docs-site` (already generated) |
 | A slot's preferred components are served (`get_contract` returns them), but nothing checks what an agent puts in a slot | Check a slot's children against its preferred components | `tools/docs-mcp` `validate` |

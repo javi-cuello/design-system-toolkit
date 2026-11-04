@@ -30,4 +30,23 @@ ok('a comment line and a fully transparent colour are not findings', !validate('
   ok("a library's own families are what is held, whatever it calls them", h.some((x) => x.found === 'Colour/Surface/sunken') && h.some((x) => x.found === 'var(--gap-xl)')
     && !h.some((x) => /colour-surface-raised|color-text-x/.test(x.found)) && h.length === 2);
 }
+{
+  // a copy and a lookalike import: the next library release reaches neither
+  const lib = ['Button', 'Text input', 'Dialog'];
+  const code = `import { Button, TextInput as Field } from './local/ui';\nimport Dialog from '@/design-system/dialog/dialog';\nimport { Icon } from './icons';\nfunction Button() {}\nconst TextInput = () => null;\nconst Card = () => null;`;
+  const g = validate(code, tokens, null, lib, { from: ['@/design-system/'] });
+  ok("a library component imported from outside the system is said, with where it comes from; the system's own, and a component the library lacks, are not",
+    g.some((x) => x.kind === 'component not from the system' && x.found === "Button from './local/ui'") && g.some((x) => x.found === "TextInput from './local/ui'")
+    && !g.some((x) => /Dialog|Icon/.test(x.found)) && g.filter((x) => x.kind === 'component not from the system').length === 2);
+  ok('a library component defined in the code is a copy, said with or without `from`; a component the library lacks is not',
+    validate(code, tokens, null, lib).filter((x) => x.kind === 'component copied').map((x) => x.found).join() === 'Button,TextInput'
+    && !validate(code, tokens, null, lib).some((x) => x.kind === 'component not from the system'));
+}
+{
+  const lib = ['Button', 'Text input', 'Link'];
+  const code = `import {\n  Card,\n  Button,\n} from './local';\nimport { Local as TextInput } from '../x';\nexport { Link } from './y';\nimport { Button as B } from '@/design-system';\nimport type { Button as T } from './types';\nimport { type Link as L } from './types';`;
+  const g = validate(code, tokens, null, lib, { from: ['@/design-system/'] }).map((x) => `${x.found}@${x.line}`);
+  ok("an import wrapped over lines, either side of an alias and a re-export are read; the system's barrel and type-only imports are not findings",
+    g.join() === "Button from './local'@1,TextInput from '../x'@5,Link from './y'@6");
+}
 console.log(`${n}/${n} passed`);
