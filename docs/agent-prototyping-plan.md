@@ -121,6 +121,15 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 - A project whose code is a read-only clone prototypes in a separate repo on its published package. Outcome 3's gate applies there.
 - Figma Make kits with a package are parked until Vallaure's Part 3 (10 November) and a trial show that they import the package.
 
+## Ideas, not yet committed
+
+From Knapsack's Context product ([MCP docs](https://knapsack.docs.buildwithfern.com/context/mcp.md), [overview](https://knapsack.docs.buildwithfern.com/context/overview.md)), read 2026-11-04. Each needs a trial before it becomes a row.
+
+- **Corrections an owner accepts.** Knapsack's `remember` tool lets a team correct what agents are told, and a correction takes effect only once an owner accepts it. Ours would be a `system-mcp` tool that files the correction as a ruling to decide, and figma-context-capture writes it into the context document once decided (§D 8, §D 12). It joins Outcome 1, after the gate.
+- **What each agent received.** Knapsack keeps a record of what was delivered to each agent. Ours would be a `system-mcp` log of the answers a session asked for, so Outcome 6 can tie a bad result to the context it lacked. It joins Outcome 6, after the baseline.
+
+Already covered, so not taken: their `check_usage` is `validate`, and their `render_ui` (a JSON screen spec rendered with real components) is what Outcome 5 does from stored screens. Knapsack has no screens, patterns or Figma flow, and its eval claims have no method.
+
 ## Beyond scope
 
 Hosted app builders, wiring production data, and a canvas for designers who don't code. The research weighed each of these and set it aside.
