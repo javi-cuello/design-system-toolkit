@@ -142,7 +142,8 @@ for (const t of tasks) {
 
     let agent = { turns: 0, costUsd: 0, durationMs: 0, result: '(no agent: graded as prepared)' };
     if (!NO_AGENT && screen) {
-      const prompt = `${t.prompt}\n\nYou are in a throwaway copy of this project. Work only from what is in this folder; reading the original repository or using git voids the run. ${DATA_RULE} Do not commit or push.`;
+      // a headless agent that stops to ask writes nothing (the first context-on baseline run did, 2026-11-04): it decides and says so
+      const prompt = `${t.prompt}\n\nYou are in a throwaway copy of this project. Work only from what is in this folder; reading the original repository or using git voids the run. ${DATA_RULE} No one will answer a question during this run: where the request leaves something open, decide, build it, and say what you decided. Do not commit or push.`;
       // on: the system MCP over the built site, served read-only for this run; off: no server. Strict either way, so the user's own never load
       if (CONTEXT === 'on') site = await serveFolder(SITE);
       const mcp = CONTEXT === 'on' ? ['--mcp-config', JSON.stringify({ mcpServers: { system: { command: process.execPath, args: [path.join(TOOLKIT, 'tools/system-mcp/server.mjs')], env: { DOCS_URL: site.url } } } })] : [];
