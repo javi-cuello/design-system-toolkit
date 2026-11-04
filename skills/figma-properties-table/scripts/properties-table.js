@@ -407,9 +407,9 @@ globalThis.__PT_FACTORY = function () {
   // changes first, so the table follows it with no snapshot in between
   // (toolkit-standard §D 5: the table is about the present). The rules are
   // tools/shared/prop-rows.js `propRows`, copied below line for line
-  // (tools/shared/test-prop-rows.mjs), the same function the docs site's reader
-  // (tools/component-contract/contract-rows.mjs) feeds from the snapshot: only
-  // where each prop's place, gate and variants come from differs.
+  // (tools/shared/test-prop-rows.mjs). contract-rows.mjs `rowsOf` feeds the same
+  // function from the snapshot, and the docs site lists its props in that order:
+  // only where each prop's place, gate and variants come from differs.
   const propRows = (props) => {
     const LABEL = { VARIANT: 'Variant', BOOLEAN: 'Boolean', TEXT: 'Editable string', INSTANCE_SWAP: 'Component swap', SLOT: 'Slot' };
     const earlier = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
@@ -450,9 +450,13 @@ globalThis.__PT_FACTORY = function () {
     const drawn = new Map();     // name path -> ids of the variants that draw it
     for (const v of variants) {
       // a nested instance's layers reference its own component's props, not this one's
-      const walk = (node, at, names, gates) => {
+      const walk = (node, at, names, gates, hid) => {
         const refs = node.componentPropertyReferences || {};
         const shows = refs.visible && defs[refs.visible] && defs[refs.visible].type === 'BOOLEAN' ? refs.visible : null;
+        // the snapshot draws hidden layers only by flipping one boolean at a time: a layer hidden with no
+        // boolean to show it, or inside another hidden layer, is never drawn, so it is skipped here too
+        if (node.visible === false && (!shows || hid)) return;
+        const off = hid || node.visible === false;
         const path = names.join('/');
         if (!drawn.has(path)) drawn.set(path, new Set());
         drawn.get(path).add(v.id);
@@ -467,9 +471,9 @@ globalThis.__PT_FACTORY = function () {
           else if (earlier(at, first[k].at) < 0) first[k].at = at;
         }
         if (node.type === 'INSTANCE' || !node.children) return;
-        node.children.forEach((c, i) => walk(c, at.concat(i), names.concat(c.name), here));
+        node.children.forEach((c, i) => walk(c, at.concat(i), names.concat(c.name), here, off));
       };
-      (v.children || []).forEach((c, i) => walk(c, [i], [c.name], []));
+      (v.children || []).forEach((c, i) => walk(c, [i], [c.name], [], false));
     }
     // the axes' values that draw exactly the variants holding a layer, or none
     const axes = keys.filter(k => defs[k].type === 'VARIANT');

@@ -48,7 +48,7 @@ eq(props.find((p) => p.name === 'Selected'), { name: 'Selected', type: 'VARIANT'
 eq(props.find((p) => p.name === 'Size'), { name: 'Size', type: 'VARIANT', values: ['Large', 'Icon only'], default: 'Large' }, 'propsOf: an enum in Figma\'s spelling, its default too');
 eq(props.find((p) => p.name === 'Left icon'), { name: 'Left icon', type: 'BOOLEAN', values: [], default: 'false' }, 'propsOf: a boolean property with its default');
 eq(props.find((p) => p.name === 'Icon swap'), { name: 'Icon swap', type: 'INSTANCE_SWAP', values: [], default: undefined }, 'propsOf: a swap has no default in the contract');
-eq(props.map((p) => p.name), Object.keys(spec.props), 'propsOf keeps the declared order');
+eq(props.map((p) => p.name), rows.map((r) => r[0]), 'propsOf lists the props in the Properties table\'s order');
 
 // run through a symlink, as an installed toolkit is: it runs, and asks for its folder
 {

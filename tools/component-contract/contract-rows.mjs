@@ -6,14 +6,15 @@
  * it on every snapshot, so it is as current as the snapshot. Two readers take
  * it from here:
  *
+ *   rowsOf(contract, spec)    the Properties table's rows, four cells each (property, type,
+ *                             options, notes) plus the evidence for each note, through
+ *                             tools/shared/prop-rows.js, which the Figma table runs on the open file
  *   propsOf(contract, spec)   each prop in Figma's words: { name, type, values, default }
- *                             (type is Figma's: VARIANT, BOOLEAN, TEXT, INSTANCE_SWAP, SLOT);
- *                             the docs site's properties table
- *   rowsOf(contract, spec)    the Properties table's rows in Figma, four cells each
- *                             (property, type, options, notes) plus the evidence for each note
+ *                             (type is Figma's: VARIANT, BOOLEAN, TEXT, INSTANCE_SWAP, SLOT),
+ *                             in rowsOf's order; the docs site's properties table
  *
- * Run as a script on the project's stored components folder, it prints the
- * call that loads the rows into the file, for figma-properties-table's scripts/properties-table.js to draw:
+ * Run as a script on the project's stored components folder, it prints each
+ * component's rows as JSON, to compare with the table figma-properties-table draws:
  *
  *   node tools/component-contract/contract-rows.mjs <components folder> [component name…]
  */
@@ -44,6 +45,8 @@ const spell = (p, v, spec) => {
 };
 
 export function propsOf(contract, spec) {
+  // in the Properties table's order (rowsOf, through propRows), so the docs site and the Figma table list them alike
+  const order = rowsOf(contract, spec).map((r) => r.values[0]);
   return Object.values(contract.props || {}).map((p) => {
     const type = typeOf(p);
     const values = optionsOf(p, spec);
@@ -51,7 +54,7 @@ export function propsOf(contract, spec) {
       : p.type === 'boolean' ? String(p.default)
       : p.type === 'string' ? p.default : undefined;
     return { name: p.figma, type, values, default: d };
-  });
+  }).sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
 }
 
 // Every part the contract draws, from the default anatomy and every variant
@@ -139,6 +142,6 @@ if (isMain) {
   const unknown = names.filter((n) => !found.has(n));
   if (missing.length) console.error(`no stored contract for ${missing.join(', ')}: take a snapshot first (the router writes a contract beside each spec).`);
   if (unknown.length) console.error(`not in the stored snapshot: ${unknown.join(', ')}. Take a snapshot first if they are new.`);
-  console.log(`PT.rows(${JSON.stringify(out)});`);
+  console.log(JSON.stringify(out, null, 2));
   if (missing.length || unknown.length) process.exit(1);
 }

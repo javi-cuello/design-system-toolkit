@@ -413,7 +413,7 @@
       "names": [
         "propRows"
       ],
-      "evidence": "the docs site's rows (contract-rows.mjs, from the snapshot) and the Figma table's (properties-table.js, from the open file since figma-properties-table 1.13.0) would otherwise be two implementations of one set of rules; the maintainer ruled on 2026-11-04 that the sources differ but the mechanism must not. The sandbox script keeps a copy held line for line by tools/shared/test-prop-rows.mjs",
+      "evidence": "the snapshot's rows (contract-rows.mjs rowsOf, whose order the docs site lists) and the Figma table's (properties-table.js, from the open file since figma-properties-table 1.13.0) would otherwise be two implementations of one set of rules; the maintainer ruled on 2026-11-04 that the sources differ but the mechanism must not. The sandbox script keeps a copy held line for line by tools/shared/test-prop-rows.mjs",
       "owners": [
         "tools/shared/prop-rows.js",
         "skills/figma-properties-table/scripts/properties-table.js"

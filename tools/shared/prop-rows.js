@@ -1,8 +1,8 @@
-// A component's Properties table rows, from its props as one neutral list: the one set of rules for the
-// docs site (tools/component-contract/contract-rows.mjs, which reads the props from the stored contract)
-// and the Figma table (figma-properties-table's scripts/properties-table.js, which reads them from the open
-// file and keeps a copy of this function, line for line, held by test-prop-rows.mjs). Two
-// sources, one mechanism: only where the props come from differs.
+// A component's Properties table rows, from its props as one neutral list: one set of rules for
+// tools/component-contract/contract-rows.mjs `rowsOf` (props from the stored contract; the docs site lists
+// its props in this order through `propsOf`) and the Figma table (figma-properties-table's
+// scripts/properties-table.js, which reads them from the open file and keeps a copy of this function,
+// line for line, held by test-prop-rows.mjs). Only where the props come from differs.
 //
 // Each prop, in declared order:
 //   name      the prop's Figma name

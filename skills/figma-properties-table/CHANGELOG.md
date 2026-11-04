@@ -1,5 +1,6 @@
 # Changelog — figma-properties-table
 
+- 1.13.1 (2026-11-04): the live walk skips a layer hidden with no boolean to show it, as the snapshot's reader does; the docs site lists props in the table's order; claims of one mechanism corrected. Source hash changes. Case A10.
 - 1.13.0 (2026-11-04): rows are read live from the open file (no snapshot, no `PT.rows()`), through `tools/shared/prop-rows.js` `propRows`, shared with `contract-rows.mjs`. Source hash changes. Cases A10, A11.
 - 1.12.1 (2026-10-31): before a first profile, a title matches its component past a leading emoji or symbol (`🚧`), and a refused forced re-profile says the stored config is unchanged. Source hash changes. Case A15.
 - 1.12.0 (2026-10-31): `profile()` stores nothing when what it found is on one page and titled with no component there, returning an `error` with the config (`PT.setConfig` stores it). Case A15.

@@ -1,4 +1,4 @@
-// node tools/shared/test-prop-rows.mjs — the Properties table's rows, one set of rules for the docs site and the Figma table.
+// node tools/shared/test-prop-rows.mjs — the Properties table's rows, one set of rules for contract-rows.mjs rowsOf (the snapshot) and the Figma table (the open file).
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { propRows } from './prop-rows.js';
