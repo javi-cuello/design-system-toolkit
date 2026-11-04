@@ -34,6 +34,8 @@
  * docs site's api; the prompt never names it. `--context on` gives the agent
  * the system MCP over that site, served read-only; `off` gives it no MCP
  * server at all, its user's own included, so the two differ by the context alone.
+ * A parity task takes `--context` only when it is named; unnamed, its agent
+ * keeps the user's own servers, as every parity line before it did.
  *
  * Written 2026-10-03, after a comparison with practitioners named this the
  * toolkit's largest gap: the gates hold the code, but nothing measured whether
@@ -65,8 +67,10 @@ if (!['on', 'off'].includes(RULES)) { console.log('evals: --rules is on or off')
 // component's contract (tools/component-contract); unset, the prompt names neither
 const BRIEF = opt('--brief');
 if (BRIEF && !['snapshot', 'contract'].includes(BRIEF)) { console.log('evals: --brief is snapshot or contract'); process.exit(2); }
-// a screen task's agent with the system MCP or with no MCP server at all
-const CONTEXT = opt('--context') || 'on';
+// the agent with the system MCP or with no MCP server at all: a screen task's always (on by
+// default), a parity task's only when asked, so its runs keep the setting they were compared under
+const CONTEXT_ASKED = opt('--context');
+const CONTEXT = CONTEXT_ASKED || 'on';
 if (!['on', 'off'].includes(CONTEXT)) { console.log('evals: --context is on or off'); process.exit(2); }
 const only = argv[0] || null;
 const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(REPO, 'evals');
@@ -75,15 +79,16 @@ if (!E || !Array.isArray(E.tasks) || !E.tasks.length) { console.log('evals: no `
 for (const t of E.tasks) { const p = taskProblems(t); if (p.length) { console.log(`evals: task ${t.id || '?'}: ${p.join('; ')}`); process.exit(1); } }
 const tasks = E.tasks.filter((t) => !only || t.id === only);
 if (!tasks.length) { console.log(`evals: no task "${only}" — the tasks are ${E.tasks.map((t) => t.id).join(', ')}`); process.exit(1); }
-// a screen task is graded against the system: refused before any copy is made or money spent when there is none to read
+// a screen task is graded against the system, and an agent given the context reads the site: refused before any copy is made or money spent when there is none to read
 const V = (config.check && config.check.validate) || {};
 const PROJECTS = createRequire(import.meta.url)('../snapshot/projects.cjs');
 const label = (PROJECTS.projects().list.find((p) => p.repo && realPath(p.repo) === realPath(REPO)) || {}).name;
 const SITE = label ? PROJECTS.layout(null, label).site : null;
-if (tasks.some((t) => t.grade === 'validate')) {
-  const why = !V.system ? 'no `check.validate.system` in snapshot.config.json: the design system\'s own code, which a screen is graded against'
+const contextOf = (t) => (t.grade === 'validate' ? CONTEXT : CONTEXT_ASKED || null);
+if (tasks.some((t) => t.grade === 'validate' || (contextOf(t) === 'on' && !NO_AGENT))) {
+  const why = tasks.some((t) => t.grade === 'validate') && !V.system ? 'no `check.validate.system` in snapshot.config.json: the design system\'s own code, which a screen is graded against'
     : !SITE || !fs.existsSync(path.join(SITE, 'api/index.json')) ? 'no built docs site with its api for this project (the docs service builds it after a snapshot)' : null;
-  if (why) { console.log(`evals: a screen task cannot be graded — ${why}`); process.exit(1); }
+  if (why) { console.log(`evals: cannot run — ${why}`); process.exit(1); }
 }
 
 // linked dependencies sit outside the copy, and pnpm 11 then reinstalls before
@@ -120,6 +125,13 @@ for (const t of tasks) {
   const t0 = Date.now();
   let server = null, record, site = null;
   const screen = t.grade === 'validate';
+  // the MCP flags for a context: on serves the built site read-only for this run and gives the agent the
+  // system MCP over it; off gives it no server; null (a parity task not asked) leaves the agent's own as they were
+  const contextArgs = async (c) => {
+    if (c === 'on') site = await serveFolder(SITE);
+    return { flags: c ? ['--strict-mcp-config', ...(c === 'on' ? ['--mcp-config', JSON.stringify({ mcpServers: { system: { command: process.execPath, args: [path.join(TOOLKIT, 'tools/system-mcp/server.mjs')], env: { DOCS_URL: site.url } } } })] : [])] : [],
+      tools: c === 'on' ? ['mcp__system'] : [] };
+  };
   try {
     // what the copy needs but git does not carry: a folder linked rather than
     // installed, a file copied — Kirby loads no config that resolves outside
@@ -145,10 +157,9 @@ for (const t of tasks) {
       // a headless agent that stops to ask writes nothing (the first context-on baseline run did, 2026-11-04): it decides and says so
       const prompt = `${t.prompt}\n\nYou are in a throwaway copy of this project. Work only from what is in this folder; reading the original repository or using git voids the run. ${DATA_RULE} No one will answer a question during this run: where the request leaves something open, decide, build it, and say what you decided. Do not commit or push.`;
       // on: the system MCP over the built site, served read-only for this run; off: no server. Strict either way, so the user's own never load
-      if (CONTEXT === 'on') site = await serveFolder(SITE);
-      const mcp = CONTEXT === 'on' ? ['--mcp-config', JSON.stringify({ mcpServers: { system: { command: process.execPath, args: [path.join(TOOLKIT, 'tools/system-mcp/server.mjs')], env: { DOCS_URL: site.url } } } })] : [];
+      const ctx = await contextArgs(contextOf(t));
       const r = await spawnAsync('claude', ['-p', prompt, '--output-format', 'json', '--max-turns', String(E.maxTurns || 60),
-        '--permission-mode', 'acceptEdits', '--strict-mcp-config', ...mcp, '--allowedTools', ...agentTools(TOOLKIT, E.agentCommands || []), ...(CONTEXT === 'on' ? ['mcp__system'] : []),
+        '--permission-mode', 'acceptEdits', ...ctx.flags, '--allowedTools', ...agentTools(TOOLKIT, E.agentCommands || []), ...ctx.tools,
         '--disallowedTools', 'Bash(git push:*)', 'Bash(git commit:*)',
         ...(RULES === 'on' ? ['--settings', JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Edit|Write|MultiEdit|NotebookEdit|Bash', hooks: [{ type: 'command', command: `node "${TOOLKIT}/tools/claude-hooks/hooks.mjs" edit`, timeout: 15 }] }] } })] : [])],
         { cwd: copy, timeout: (E.minutes || 30) * 60_000,
@@ -164,7 +175,7 @@ for (const t of tasks) {
       agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir()) : ['no transcript found to check'];
       agent.rulesFired = RULES === 'on' ? transcript.includes('First change in this area') : null;
       // a context-on run where the agent never asked the system is still its result, and is said so
-      agent.askedSystem = CONTEXT === 'on' ? transcript.includes('"name":"mcp__system__') : null;
+      agent.askedSystem = contextOf(t) === 'on' ? transcript.includes('"name":"mcp__system__') : null;
       // only what was there before: a story or spec the agent adds for its new screen is not the parity grade's, and this grade reads none of them
       agent.tampered = changed(before, inputs(copy, gradingPaths(config), gradingOutputs(config))).filter((f) => before[f]);
     } else if (!NO_AGENT) {
@@ -181,16 +192,18 @@ for (const t of tasks) {
         ? `\n\nThe component's design is in \`${briefFiles.contract}\`: its contract, what the design means (props, anatomy, what each prop value changes), every value a token. Build from it.`
         : `\n\nThe component's design is in \`${briefFiles.snapshot}\`: the snapshot, every variant as Figma drew it, measured. Build from it.`;
       const prompt = `${t.prompt}${brief}\n\nYou are in a throwaway copy of this project. Work only from what is in this folder and the toolkit; reading the original repository or using git voids the run. ${DATA_RULE} When you are done, \`node ${TOOLKIT}/tools/parity/run.mjs --repo . ${t.target}\` must report no differences and \`node ${TOOLKIT}/tools/css-lint/check.mjs --repo .\` must be green${E.build ? `, after \`${E.build}\`` : ''}. Do not commit or push.`;
-      const r = spawnSync('claude', ['-p', prompt, '--output-format', 'json', '--max-turns', String(E.maxTurns || 60),
-        '--permission-mode', 'acceptEdits', '--allowedTools', ...agentTools(TOOLKIT, E.agentCommands || []),
+      const ctx = await contextArgs(contextOf(t));
+      // run without blocking: with the context on, the site the agent's MCP asks is served from this process
+      const r = await spawnAsync('claude', ['-p', prompt, '--output-format', 'json', '--max-turns', String(E.maxTurns || 60),
+        '--permission-mode', 'acceptEdits', ...ctx.flags, '--allowedTools', ...agentTools(TOOLKIT, E.agentCommands || []), ...ctx.tools,
         '--disallowedTools', 'Bash(git push:*)', 'Bash(git commit:*)',
         ...(RULES === 'on' ? ['--settings', JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Edit|Write|MultiEdit|NotebookEdit|Bash', hooks: [{ type: 'command', command: `node "${TOOLKIT}/tools/claude-hooks/hooks.mjs" edit`, timeout: 15 }] }] } })] : [])],
-        { cwd: copy, encoding: 'utf8', maxBuffer: 1 << 28, timeout: (E.minutes || 30) * 60_000,
+        { cwd: copy, timeout: (E.minutes || 30) * 60_000,
           // the copy counts as a project for the rules hook; off turns the hook off even where the user's own settings register it
           env: { ...process.env, TOOLKIT_EVAL_COPY: copy, ...(RULES === 'off' ? { TOOLKIT_RULES: 'off' } : {}) } });
       let j = {};
       try { j = JSON.parse(r.stdout); } catch { j = { result: (r.stdout || r.stderr || '').slice(-400) }; }
-      agent = { exit: r.error ? r.error.code || 'error' : r.signal || r.status, turns: j.num_turns ?? null, costUsd: j.total_cost_usd == null ? null : Math.round(j.total_cost_usd * 100) / 100, durationMs: j.duration_ms ?? null, result: String(j.result || '').slice(0, 300), session: j.session_id || null };
+      agent = { exit: r.error ? r.error.code || 'error' : r.timedOut ? 'timeout' : r.signal || r.status, turns: j.num_turns ?? null, costUsd: j.total_cost_usd == null ? null : Math.round(j.total_cost_usd * 100) / 100, durationMs: j.duration_ms ?? null, result: String(j.result || '').slice(0, 300), session: j.session_id || null };
       // the agent's own transcript, read for a look at the answer
       const projects = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude's own transcripts, not ours
       const tr = agent.session && fs.existsSync(projects) ? fs.readdirSync(projects).map((d) => path.join(projects, d, `${agent.session}.jsonl`)).find((f) => fs.existsSync(f)) : null;
@@ -198,6 +211,7 @@ for (const t of tasks) {
       agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir()) : ['no transcript found to check'];
       // a rules run where the hook never spoke measured nothing about the rules (the first two did exactly that)
       agent.rulesFired = RULES === 'on' ? transcript.includes('First change in this area') : null;
+      agent.askedSystem = contextOf(t) === 'on' ? transcript.includes('"name":"mcp__system__') : null;
       agent.opened = opened(transcript.split('\n'), briefFiles);
       const after = inputs(copy, gradingPaths(config), gradingOutputs(config));
       agent.tampered = changed(before, after);
@@ -251,7 +265,7 @@ for (const t of tasks) {
     const parity = parseParity(p.stdout);
     const s = vo || (built.status === 0 ? score({ parity, styleFindings: findings, exits: { ...(NO_AGENT ? {} : { agent: agent.exit }), parity: p.status ?? p.signal, styles: st.status ?? st.signal } }) : { score: 0, green: false, why: `the build failed: ${((built.stderr || built.stdout || '').trim().split('\n').pop() || '').slice(0, 120)}` });
     record = { at: new Date().toISOString(), task: t.id, commit: execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), toolkit: TOOLKIT_COMMIT,
-      agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, brief: NO_AGENT ? null : BRIEF || null, opened: agent.opened ?? null, ...s, matched: parity?.matched ?? 0, waived: parity?.waived ?? 0, didNot: parity?.didNot ?? 0, styleFindings: findings,
+      agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, brief: NO_AGENT ? null : BRIEF || null, context: NO_AGENT ? null : contextOf(t), askedSystem: agent.askedSystem ?? null, opened: agent.opened ?? null, ...s, matched: parity?.matched ?? 0, waived: parity?.waived ?? 0, didNot: parity?.didNot ?? 0, styleFindings: findings,
       turns: agent.turns, costUsd: agent.costUsd, minutes: Math.round((Date.now() - t0) / 6000) / 10, note: agent.result };
     }
   } finally {
@@ -265,5 +279,5 @@ for (const t of tasks) {
   const last = [...lines].reverse().find((l) => l.task === t.id && l.agent === record.agent && (!record.agent || comparable(l)) && (l.rules || 'off') === (record.rules || 'off') && (l.brief || null) === (record.brief || null) && (l.context || null) === (record.context || null));
   if (record.agent) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.appendFileSync(file, JSON.stringify(record) + '\n'); }
   if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
-  console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
+  console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
 }
