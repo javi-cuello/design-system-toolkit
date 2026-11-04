@@ -1530,4 +1530,4 @@ function iconComponents(tokens) {
   return { icons: out, unplaced };
 }
 
-module.exports = { attrsOrdered, GRADE_RULES, gradeOf, storedGrade, DEFAULT_PATHS, PATH_KEYS, paths, iconComponents, mergeTokens, diff, grade, gradeLines, recordChanges, readChanges, writeChanges, emptyChange, replaceFiles, pruneSpecs, folderOf, recordOf, writeLibrary, writeScreens, readSpec, readSpecs, readScreen, readScreens, screenIds, STATES };
+module.exports = { attrsOrdered, GRADE_RULES, gradeOf, storedGrade, DEFAULT_PATHS, PATH_KEYS, paths, iconComponents, mergeTokens, diff, grade, gradeLines, recordChanges, readChanges, writeChanges, emptyChange, replaceFiles, pruneSpecs, folderOf, recordOf, writeLibrary, writeScreens, readSpec, readSpecs, readScreen, readScreens, screenIds, STATES, FRAME_NAME };
