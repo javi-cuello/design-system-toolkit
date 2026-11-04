@@ -5,7 +5,12 @@
 #
 # Installed once per clone:  git config core.hooksPath .githooks
 # Override, when you mean it: git push --no-verify
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# the tree being pushed: git runs a hook at its worktree's top, and core.hooksPath
+# is an absolute path to the main checkout's hooks, so the hook's own folder
+# would check the main checkout's tree from every worktree — another
+# session's unfinished work there refused a push it did not carry (2026-11-04)
+REPO="$(git rev-parse --show-toplevel 2>/dev/null)" || REPO=""
+[ -n "$REPO" ] || REPO="$(cd "$(dirname "$0")/.." && pwd)"
 # --no-fix: a heal rewrites the working tree, not the commit being pushed.
 # The check reads the working tree, so an uncommitted change counts too: push
 # from a tree holding only what you committed.
