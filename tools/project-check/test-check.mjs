@@ -17,4 +17,7 @@ spawnSync('git', ['-C', repo, 'init', '-q']);
 const plan = spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', repo, '--plan'], { encoding: 'utf8' }).stdout;
 fs.rmSync(repo, { recursive: true, force: true });
 assert.match(plan, /component specs resolve and compact to themselves\s+runs/, plan);
-console.log('ok a default-layout project\'s stored specs are checked\n1/1 passed');
+console.log('ok a default-layout project\'s stored specs are checked');
+// the validate gate cannot know which code is the system's own: it asks, rather than reading the system as a copy of itself
+assert.match(plan, /changed code uses the system's components and tokens\s+RED — not run: no `check.validate.system`/, plan);
+console.log('ok the validate gate asks where the system\'s own code is\n2/2 passed');

@@ -26,6 +26,10 @@
  *            against (CHECK_BASE, set by pre-push.mjs), the browser gates
  *            skip a push that changed none of them, and say so
  *   without  { gate: reason } — a gate this project rules out
+ *   validate { system, from?, code? } — what the `validate` gate needs: `system`, the
+ *            path prefixes of the design system's own code (left out: it is the
+ *            system); `from`, the import prefixes its components come from; `code`,
+ *            the path prefixes held (default: every changed code file)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -69,6 +73,18 @@ const upstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}
 const range = BASE ? `${BASE}..HEAD` : upstream ? `${upstream}..HEAD` : null;
 
 /* Each gate: what it needs (null when fed, else the missing fact) and how it runs. */
+// code the validate gate reads: what an agent writes a screen in
+const CODE = /\.(tsx|jsx|ts|js|mjs|vue|svelte|astro|html|php|css|scss)$/;
+const V = C.validate || {};
+const site = label ? contract.layout(null, label).site : null;
+const changedCode = () => {
+  // three dots: what this branch changed since it left its base, not what the base did since;
+  // a moved file counts (R), and -z keeps a path as git wrote it
+  const out = git(['diff', '-z', '--name-only', '--diff-filter=AMR', range.replace('..', '...')]);
+  return out.split('\0').filter((f) => f && CODE.test(f) && (!V.code || V.code.some((p) => f.startsWith(p)))
+    && !(V.system || []).some((p) => f.startsWith(p)) && fs.existsSync(path.join(REPO, f)));
+};
+
 const GATES = [
   { id: 'styles', name: 'the stylesheet rules no measurement can see', rule: 'code-standard, as tools/css-lint/README.md lists',
     needs: () => (config.styles ? null : 'no `styles` in snapshot.config.json'), cmd: () => ['node', T('tools/css-lint/check.mjs'), '--repo', REPO] },
@@ -96,6 +112,19 @@ const GATES = [
       const hook = path.resolve(REPO, dir, 'pre-push'); // an absolute hooksPath stays absolute
       if (!fs.existsSync(hook)) return `no pre-push hook at ${path.relative(REPO, hook)}: run tools/project-check/init.mjs --repo <dir>, which writes the shim and sets core.hooksPath`;
       return /tools\/project-check\/pre-push\.mjs/.test(fs.readFileSync(hook, 'utf8')) ? null : `${path.relative(REPO, hook)} does not hand the push to tools/project-check/pre-push.mjs: two projects' hooks had drifted apart (one skipped content-only pushes and cached a green tree, the other did neither)`;
+    } },
+  { id: 'validate', name: 'changed code uses the system\'s components and tokens', rule: '§D 15, knowledge/code/agent-prototyping.md',
+    needs: () => (!V.system ? 'no `check.validate.system`: the path prefixes of the design system\'s own code'
+      : !range ? 'no upstream branch to count commits from'
+      : !site || !fs.existsSync(path.join(site, 'api/index.json')) ? 'no built docs site with its api (the docs service builds it after a snapshot)' : null),
+    fn: () => {
+      const files = changedCode();
+      if (!files.length) return null;
+      const r = spawnSync(process.execPath, [T('tools/docs-mcp/validate.mjs'), ...files.map((f) => path.join(REPO, f)), '--api', path.join(site, 'api'), ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28 });
+      if (r.error) return `validate could not run over ${files.length} file(s): ${r.error.message}`;
+      if (r.status === 0) return null;
+      const lines = `${r.stdout}${r.stderr}`.trim().split('\n').map((l) => l.replace(REPO + path.sep, ''));
+      return `${lines.at(-1)}\n${lines.slice(0, -1).join('\n')}\n  Fix each in the code: a finding is never judged away. One that must stay is the project's to rule on; this gate reads no waivers yet.`;
     } },
   { id: 'verdicts', name: 'a check\'s verdict reaches whoever runs it', rule: 'code-standard 49',
     needs: () => null, fn: () => {

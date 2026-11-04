@@ -49,4 +49,5 @@ ok('a comment line and a fully transparent colour are not findings', !validate('
   ok("an import wrapped over lines, either side of an alias and a re-export are read; the system's barrel and type-only imports are not findings",
     g.join() === "Button from './local'@1,TextInput from '../x'@5,Link from './y'@6");
 }
+ok('a hidden input is no field: it is not a raw element', !validate('<input type="hidden" name="id" value={id} />', tokens, null, ['Text input']).length);
 console.log(`${n}/${n} passed`);

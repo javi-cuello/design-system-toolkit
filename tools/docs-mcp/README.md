@@ -54,9 +54,9 @@ Deployed, `DOCS_URL` is the site's address. The server needs nothing else.
 
 The server's instructions tell an agent to read `get_contract` before writing a component's markup and to run what it wrote through `validate`. The same check is a command for a hook that runs once generation is done, in the repo that writes the code:
 
-    node tools/docs-mcp/validate.mjs <file> --docs <docs site URL> [--component <name>] [--from <import prefix>]…
+    node tools/docs-mcp/validate.mjs <file>… (--docs <docs site URL> | --api <built site's api folder>) [--component <name>] [--from <import prefix>]…
 
-`--from` names where the system's components are imported from (`@/design-system/`, which also passes the `@/design-system` barrel); without it, imports are not read. `import * as` and `import type` are not read, a framework part sharing a library name (`Link` from `next/link`) is listed in `--from` to pass, and the system's own files are not what it checks. It exits 1 on a finding. `test-validate.mjs` holds its rules.
+`--from` names where the system's components are imported from (`@/design-system/`, which also passes the `@/design-system` barrel); without it, imports are not read. `import * as` and `import type` are not read, a framework part sharing a library name (`Link` from `next/link`) is listed in `--from` to pass, and the system's own files are not what it checks. `--api` reads a built site's files with no service running; project-check's `validate` gate runs it so over the code a push changes. It exits 1 on a finding. `test-validate.mjs` holds its rules.
 
 ## Test
 

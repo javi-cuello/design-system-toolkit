@@ -5,7 +5,7 @@
  * `validate` tool calls it; as a command it is a hook an agent's output runs
  * through once generation is done:
  *
- *   node tools/docs-mcp/validate.mjs <file> --docs <docs site URL> [--component <name>] [--from <import prefix>]…
+ *   node tools/docs-mcp/validate.mjs <file>… (--docs <docs site URL> | --api <built site's api folder>) [--component <name>] [--from <import prefix>]…
  *
  * exits 1 when it finds something. What it holds, each a finding with what to
  * use instead where there is one:
@@ -90,7 +90,8 @@ export function validate(code, tokens, contract = null, components = [], { from 
     // a raw element the library has a component for: lower case in JSX or HTML is the element itself
     if (have.size) for (const m of line.matchAll(/<([a-z]+)\b([^>]*)/g)) {
       const type = (m[2].match(/\btype\s*=\s*["'{]\s*["']?([a-z]+)/) || [])[1];
-      const use = componentFor(m[1], type);
+      // a hidden input carries a value for a form, and is no field anyone sees
+      const use = m[1] === 'input' && type === 'hidden' ? null : componentFor(m[1], type);
       if (use) out.push({ kind: 'raw element', found: `<${m[1]}${type ? ` type="${type}"` : ''}>`, use, line: i + 1 });
     }
     // a library component written here instead of taken from the system
@@ -122,11 +123,13 @@ export function validate(code, tokens, contract = null, components = [], { from 
 if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
-  const docs = (opt('--docs') || process.env.DOCS_URL || '').replace(/\/$/, ''), component = opt('--component');
+  const docs = (opt('--docs') || process.env.DOCS_URL || '').replace(/\/$/, ''), api = opt('--api'), component = opt('--component');
   const from = []; for (let f; (f = opt('--from'));) from.push(f);
-  const [file] = argv;
-  if (!file || !docs) { console.error('usage: validate.mjs <file> --docs <docs site URL> [--component <name>] [--from <import prefix>]…'); process.exit(2); }
-  const get = async (p) => { const r = await fetch(`${docs}/api/${p}`); if (!r.ok) throw new Error(`${docs}/api/${p} answered ${r.status}`); return r.json(); };
+  const files = argv;
+  if (!files.length || !(docs || api)) { console.error('usage: validate.mjs <file>… (--docs <docs site URL> | --api <built api folder>) [--component <name>] [--from <import prefix>]…'); process.exit(2); }
+  // the built site's own files (a push gate, no service running) or the served site
+  const get = api ? async (p) => JSON.parse(fs.readFileSync(path.join(api, p), 'utf8'))
+    : async (p) => { const r = await fetch(`${docs}/api/${p}`); if (!r.ok) throw new Error(`${docs}/api/${p} answered ${r.status}`); return r.json(); };
   const tokens = await get('tokens.json');
   const { components: pages } = await get('index.json');
   let contract = null;
@@ -135,8 +138,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.a
     if (!page) { console.error(`no component "${component}"`); process.exit(2); }
     contract = Object.values((await get(`components/${page.slug}.json`)).contracts || {})[0] || null;
   }
-  const found = validate(fs.readFileSync(file, 'utf8'), tokens, contract, pages.map((p) => p.title), { from });
-  for (const f of found) console.log(`${file}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`);
-  console.log(found.length ? `${found.length} finding(s)` : 'clean: every colour a token, every token, value and component the library has');
-  process.exit(found.length ? 1 : 0);
+  let n = 0;
+  for (const file of files) {
+    const found = validate(fs.readFileSync(file, 'utf8'), tokens, contract, pages.map((p) => p.title), { from });
+    for (const f of found) console.log(`${file}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`);
+    n += found.length;
+  }
+  console.log(n ? `${n} finding(s) in ${files.length} file(s)` : `clean (${files.length} file(s)): every colour a token, every token, value and component the library has`);
+  process.exit(n ? 1 : 0);
 }
