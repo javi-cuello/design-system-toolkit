@@ -59,6 +59,15 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 | Context documents are already 336 to 933 lines | Keep the screens section to one table of decisions (screen type, required states, shell config). Measure it at the trial; only if it does not fit, amend §D 12 so a context document may be a folder (an index and a file per section), for every project at once | figma-context-capture records it; the amendment, if needed, is toolkit-standard's |
 | No templates to start from | Make one template per recipe, in code and in Figma, held to parity. Templates are the main carrier, recipes the index: the evidence ranks templates and config first, example screens next, prose last | built through Outcomes 3 and 4; measured by `tools/parity` |
 
+**The trial, by hand (2026-11-04), over one governed project's 114 stored screens.** The patterns hold, and a script can read them, because every frame and gap is bound to a token:
+
+- *Two shells.* 100 screens are the app shell: a sidebar beside a main region whose children are a page header and one section, with a dialog, toast, side panel or action bar laid over it. 13 are standalone: a main region holding one container (sign-in, onboarding, a confirmation).
+- *Two kinds of content.* A form or settings screen is a section of blocks (gap `Spacing/8`), each block a container padded `Spacing/80` and `Spacing/32` holding a column of a section marker and its content. A collection is a container holding a tool bar (a title, or filter chips), then summary cards or an empty state. Edit and create screens add a page footer.
+- *States are named, not structured.* What a screen covers shows only in its name (success 10, error 10, dialog 7, empty 5): a recipe's required states can be read from the names in a section of screens, and a missing one is a gap to report.
+- *A drift the derivation would surface.* A block's column gap is `Spacing/32` in 74 blocks and `Spacing/40` in 33. A recipe states one value; which is the designer's ruling (§6), not the script's.
+
+What the trial leaves to decide: the script's owner. The stored screens are read today by the snapshot's readers (`tools/snapshot`), and the snapshot is the one reader of a project's design (§D 1), so the derivation belongs there, with system-mcp serving its output.
+
 ---
 
 ## Outcome 3 — A code prototype anyone can review, which never ships by accident
