@@ -74,6 +74,32 @@ How a coding agent builds a prototype from the design system's real components i
 
 **Sources:** Vallaure and Frost are practitioners, and neither reports a measured run.
 
+## Building a screen, not a component
+
+**What good looks like**
+- The agent starts a screen from a template that already renders the product's shell, navigation and regions, and fills the page body. Nothing in the chrome is new.
+- Each region covers the states the product requires (loading, empty, error), and the screen passes the same checks as a component prototype.
+
+**How**
+- Put the shell and navigation in configuration a template reads, not in prose. Atlassian's models got the logo wrong until it and the top navigation moved into a JSON config: "The model edits the config, not the code" ([Atlassian, as above](https://www.atlassian.com/blog/how-we-build/turning-handoffs-into-handshakes-integrating-design-systems-for-ai-prototyping-at-scale)). Their Fast and Full starter templates carry the instructions, navigation and theme.
+- Ship screens as files, and let a lookup server point to them. shadcn's registry has a `registry:page` item type with a required `target`, ([shadcn registry-item.json](https://ui.shadcn.com/docs/registry/registry-item-json)), and full screens such as `dashboard-01` ([shadcn blocks](https://ui.shadcn.com/blocks)). Polaris publishes Homepage, Index, Details and Settings templates ([Shopify App Home patterns](https://shopify.dev/docs/api/app-home/patterns)). Ant Design keeps page templates in its Pro starter ([Ant Design Pro](https://github.com/ant-design/ant-design-pro)); its MCP server has a page-generation prompt, `antd-page-generator`, but no templates ([Ant Design MCP](https://ant.design/docs/react/mcp)). Primer's MCP stops at patterns (`list_patterns`, `get_pattern`), and Atlassian's and Carbon's at components and tokens.
+- Show example screens where you have them. Seven retrieved example screens beat one or three on every rated quality in a crowd study ([Kolthoff et al., RAGG](https://arxiv.org/html/2412.11328v1)). A registry of built components beat a style guide in the prompt (95% compliance, six interfaces; [Cha et al., CHI 2026 EA](https://pure.seoultech.ac.kr/en/publications/design-system-compliant-user-interface-generation-with-llm-agents/)).
+- Figma to code: a screen gets real imports only for instances mapped with Code Connect, and a nested instance must be connected separately ([Figma, Code Connect for React](https://developers.figma.com/docs/code-connect/react)); the default output is React and Tailwind ([Figma, MCP tools](https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/)). Large frames "return incomplete results", so read a screen region by region ([Figma, avoid large frames](https://developers.figma.com/docs/figma-mcp-server/avoid-large-frames/)).
+- Code to Figma: `generate_figma_design` captures the page as flat layers "without a connection to your libraries", binding matching variables only when the target file already has a library with them ([Figma, code to canvas](https://developers.figma.com/docs/figma-mcp-server/code-to-canvas/)). Instances come from an agent rebuilding the screen with `use_figma` from the library, as Figma's `figma-generate-design` skill does, with the capture as a reference only ([skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-generate-design/SKILL.md)).
+
+**Cases**
+- A Figma settings screen with three mapped components and an unmapped stat card comes back with three real imports and a `div` with copied grey and white classes. The import check catches the card. Only a template keeps the layout around the components from being invented.
+- An agent places the library Button in Figma, then detaches it to change the padding. The vendor skill compares instance, style and bound-variable keys with its map, but has no scan for detached instances, so nothing names the detached Button. A library audit of the frame does.
+
+**Accessibility**
+- A template carries the shell's landmarks, [skip link](../ui/patterns/navigation.md#skip-links) and heading order, so every screen started from it has them. A shell the agent writes from prose has whatever it remembered.
+
+**Check**
+- *Script:* the import check from the first section on the code. A library audit of the Figma frame that fails on detached instances and unbound values.
+- *Judgement:* Is anything in the chrome new? Does each region show its loading, empty and error states?
+
+**Sources:** Atlassian, shadcn, Shopify, Ant Design, Primer and Figma are vendor docs. Kolthoff et al. and Cha et al. are small studies, so read them as a direction. No benchmark grades screens for design system use, and no vendor tests a screen's round trip as lossless. The toolkit goes with templates and config over prose, because every source with evidence points that way.
+
 ## From prototype to pull request
 
 **What good looks like**

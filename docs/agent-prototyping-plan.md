@@ -1,6 +1,6 @@
 # Plan: agent prototyping in code and Figma
 
-**The goal.** An agent builds whole screens from a project's own components, tokens and screen conventions, in code and in Figma. A screen moves between the two without being redrawn. Written 2026-11-04 from [knowledge/code/agent-prototyping.md](../knowledge/code/agent-prototyping.md) and the research pieces *Prototyping with a design system's real components* and *Making a design system usable by AI agents*.
+**The goal.** An agent builds whole screens from a project's own components, tokens and screen conventions, in code and in Figma. A screen moves between the two without being redrawn. Written 2026-11-04 from [knowledge/code/agent-prototyping.md](../knowledge/code/agent-prototyping.md) and the research pieces *Prototyping with a design system's real components* and *Making a design system usable by AI agents*. Outcomes 2, 4 and 5 were checked the same day against *Building whole screens with an agent from the design system*, and amended where it disagreed.
 
 This plan is written as outcomes: what a designer or developer sees when each part is done. Tools come in only as the existing owner of each outcome, or as a gap where no owner exists yet.
 
@@ -38,9 +38,9 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 | Gap today | Fix | Owner |
 |---|---|---|
 | No project's screen conventions are written down, and no part reads screens for conventions (figma-context-capture reads a library only) | Trial first: derive by hand the patterns that repeat across a governed project's stored screens. If it holds, a script derives the recipes from the stored screens (regions, components, spacing tokens, required states), generated and not hand-written (§D 23), and capture records the project's choices about them in the context document | the derivation is new, and its owner (the snapshot's readers, or `component-contract`) is decided at the trial; recording stays figma-context-capture's |
-| Agents cannot fetch screen knowledge | Serve recipes and stored screens on demand, as components are served now | `tools/docs-site` (renders them) → `docs-mcp` (one reader for agents) |
+| Agents cannot fetch screen knowledge | Serve an index on demand: which template fits a task, which stored screens are examples of it, what each region must contain. The templates themselves stay files, never a second copy in the server (every system that gives agents screens ships them as files: shadcn `registry:page`, Polaris templates, Ant Design Pro, Atlassian's starters) | `tools/docs-site` (renders them) → `docs-mcp` (one reader for agents) |
 | Prose instructions fail on shells and navigation | Keep the shell and navigation as configuration that templates read | the project; the guidance goes into `knowledge/code/agent-prototyping.md` |
-| No templates to start from | Make one template per recipe, in code and in Figma, held to parity | built through Outcomes 3 and 4; measured by `tools/parity` |
+| No templates to start from | Make one template per recipe, in code and in Figma, held to parity. Templates are the main carrier, recipes the index: the evidence ranks templates and config first, example screens next, prose last | built through Outcomes 3 and 4; measured by `tools/parity` |
 
 ---
 
@@ -63,7 +63,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 
 | Gap today | Fix | Owner |
 |---|---|---|
-| No route has been chosen for composing in Figma | Trial Figma's `use_figma` with its generate-design skill, and Figma Console, on one recipe. Use the vendor skill if it does the job with our context; add a toolkit skill only for what it cannot do | decided by the trial; no new owner before it |
+| No route has been chosen for composing in Figma | Trial Figma's `use_figma` with its generate-design skill, and Figma Console, on one recipe. The skill already composes from library instances and variables and compares their keys with its map; what it lacks is a scan for detached instances and a full scan for unbound values, which the next row adds. Use the vendor skill if it does the job with our context; add a toolkit skill only for what it cannot do | decided by the trial; no new owner before it |
 | Nothing checks a composed frame: the scanner reads library components only, and detached instances come from a session probe | Add a frame scope to figma-components-audit: the detached-instance probe plus an instances-only and bound-values check, not a second scanner | figma-components-audit |
 | Two receipt formats would drift | One receipt format, moved to `tools/shared` once Outcome 4's trial gives it a second caller; until then it lives with frontend-build | frontend-build, then `tools/shared` |
 
@@ -75,8 +75,8 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 
 | Gap today | Fix | Owner |
 |---|---|---|
-| A component crosses both ways, but a screen crosses neither way | Extend the contract tools from one component to a screen's tree of instances: Figma → markup with imports, code → Figma instances. Use `generate_figma_design`'s flat layers for reference only | `component-contract` (already owns `to-figma`, `to-markup` and `from-code`) |
-| No proof that a round trip is lossless | Make the round trip a test in both directions: bindings by extending `to-figma --verify`, which already reads a drawing back against its contract, and the look by parity | `component-contract` (bindings), `tools/parity` (the look) |
+| A component crosses both ways, but a screen crosses neither way | Extend the contract tools from one component to a screen's tree of instances: Figma → markup with imports, read region by region (Figma's own advice: whole frames return incomplete results), and code → Figma instances. Use `generate_figma_design`'s flat layers for reference only: no tool turns a capture into instances | `component-contract` (already owns `to-figma`, `to-markup` and `from-code`) |
+| No proof that a round trip is lossless (Figma claims a round trip but tests none, and no other vendor claims one) | Make the round trip a test in both directions: bindings by extending `to-figma --verify`, which already reads a drawing back against its contract, and the look by parity | `component-contract` (bindings), `tools/parity` (the look) |
 | Silent loss | Each leg reports the data, behaviour and states Figma does not draw | as above, §D 15 |
 
 ---
