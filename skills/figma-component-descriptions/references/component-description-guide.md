@@ -103,6 +103,9 @@ Every description follows the same section order. Include a section only when it
 
 ## Code gen notes
 - [Import instructions, slot handling, tokens, code-owned states]
+
+## Right to left
+- [Only where the project's settings name rtlLanguages: what mirrors, what stays]
 ```
 
 **Section rules:**
@@ -110,7 +113,7 @@ Every description follows the same section order. Include a section only when it
 - Headings render from `##`: always use `##`, never plain text labels.
 - List items use `-` and render as bullets: never type manual `•` characters.
 - One blank line between the purpose paragraph and each heading, and between sections.
-- Omit any of Behaviour, Composition, Usage, Don't, Code gen notes when the component has nothing meaningful to say there. A small static component may only need a purpose paragraph plus Usage and Don't.
+- Omit any of Behaviour, Composition, Usage, Don't, Code gen notes when the component has nothing meaningful to say there. Right to left is written only where the project's `audit-settings` name `rtlLanguages`, and then only for a component with something to say (below). A small static component may only need a purpose paragraph plus Usage and Don't.
 
 ---
 
@@ -150,6 +153,20 @@ Behaviour and Composition below are what the skill's generator produces from the
 - Swappable props resolved by their prop, not recreated.
 - Interactive states defined by code, not generated as static variants.
 - Values that come from tokens (colour, spacing, radius, elevation) are not hardcoded.
+
+### Right to left
+Written only where the project's settings name `rtlLanguages` (figma-standard rule 50): the product mirrors in code, and this section is where a developer, Dev Mode and the MCP server find what code can't decide. Each line is a fact, measured from the component, never a general remark:
+- `- Mirrors: the order of its parts` where a horizontal auto layout holds two or more children in the flow; `- Mirrors: nothing beyond what follows` otherwise.
+- `- Padding: <left> leading, <right> trailing` where left and right padding differ, in the values drawn.
+- `- <layer>: pinned to the leading edge` (or trailing) for a layer positioned absolutely, or placed in a frame without auto layout, and constrained left (or right).
+- `- <layer>: aligned to the trailing side` for a row aligned right, or a column whose items align right.
+- `- Text: aligned to the leading side` (or trailing) for a text box wider than its text, aligned left (or right).
+- `- <text style>: uppercase in Latin only` for a style that sets a text case Arabic does not have.
+- `- <text property>: either direction` for a text property holding text people type or the product fills in (a name, a title, a search term), so the developer isolates it; text the team writes needs no line.
+- `- <layer>: corners <TL> <TR> <BR> <BL> (top leading, top trailing, bottom trailing, bottom leading)` where corners differ left and right.
+- `- Stays: <parts>` naming what keeps its direction (playback controls, a chart, a phone number field); `- Stays: nothing` when nothing does.
+
+These are the lines figma-components-audit's `direction|note` finding composes from the same measurements, so a description written either way reads the same. Omit the section for a component with nothing to reorder and nothing pinned, uneven or one-sided (an avatar, a spinner). An icon takes one line instead of the section: `Right to left: mirrors` for one that points the way the reader moves (arrows, chevrons, undo, send), `Right to left: stays` for one that keeps its direction (playback, clocks).
 
 ---
 

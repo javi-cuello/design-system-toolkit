@@ -18,7 +18,7 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 |---|---|
 | **Figma libraries: audit and fix** | |
 | [figma-project-audit](figma-project-audit/SKILL.md) | Runs a project's whole Figma audit by sequencing the audit skills below into one record and one dashboard. |
-| [figma-components-audit](figma-components-audit/SKILL.md) | Audits components in a library file: tokens, naming, auto-layout, variants, states, accessibility, descriptions. |
+| [figma-components-audit](figma-components-audit/SKILL.md) | Audits components in a library file: tokens, naming, auto-layout, variants, states, accessibility, descriptions, and right-to-left readiness where the project ships Arabic. |
 | [figma-foundations-audit](figma-foundations-audit/SKILL.md) | Audits a library file as a whole: page order, names that collide, separators, part naming. |
 | [figma-variable-audit](figma-variable-audit/SKILL.md) | Checks that the variables and styles a file uses still exist in its source library. |
 | [component-validator](component-validator/SKILL.md) | Says what a target platform (web, iOS, Android) cannot build as drawn, before anyone builds it. |

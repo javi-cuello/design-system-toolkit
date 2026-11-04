@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.19.0)
+# Eval cases — figma-component-descriptions (v1.20.0)
+
+**Walked: 2026-11-04 for 1.20.0** — D23 added and traced to the reference file's *Right to left* section, step 5 and the checklist line; its lines match figma-components-audit's `direction|note` advice, composed and printed for one planted Chip the same day. D1–D22 unchanged: the section is written only under a key none of them sets.
 
 **Walked: 2026-11-01 for 1.19.0** — D22 added and executed: `node tests/test-engines.mjs` 47/47, its thirteen assertions among them, run over `enumerate.js`'s own result on the fake file. Not walked live: `sweep-diff.mjs` has met only that sweep. Other cases unchanged.
 
@@ -276,3 +278,9 @@ Assert the negative: the script decides no tier and no step 2e skip; `unsure` an
 Recorded under toolkit-standard §D 23: step 8's diff of the sweep against the target list was done by eye. A review then found a one-page run and step 2b's slot fillers would exit 1, hence `--scope` and `--exclude`; a second, that a misspelt scope page and a flag missing its value passed silently.
 
 Runs: node tests/test-engines.mjs — "sweep-diff: an untargeted public component is missed, with its page", "sweep-diff: a one-page --scope run misses nothing on other pages, and a write there is out of scope".
+
+## D23 · Right to left is written from measurements, and only where the project mirrors — *traced* 2026-11-04
+Fixture: a project whose `audit-settings` name `rtlLanguages: ["ar"]`; a settings row with 16 left and 12 right padding and a chevron instance; an avatar; an `arrow-left` icon and a `play` icon. Then the same project without the key.
+Assert: the settings row's description gains `## Right to left` with `- Mirrors: the order of its parts`, `- Padding: 16 leading, 12 trailing` and a `- Stays:` line; the avatar gets no section; `arrow-left` gets `Right to left: mirrors`, `play` gets `Right to left: stays`. Without the key, none of these appear. No line is a general remark ("mirrors as expected").
+Recorded: 2026-11-04, the person: "the component description skill should also support RTL from the same project context settings", and "the audit need to feel very actionable, no vague advice".
+Traced: 2026-11-04 for 1.20.0 — to `references/component-description-guide.md` *Right to left*, step 5 and the checklist line.

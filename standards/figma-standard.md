@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.20.5** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.21.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -117,6 +117,14 @@ Cite a rule as `figma-standard rule N`.
     *Evidence:* 2026-10-15, one live web library: a square Rest fill on the outer frame of 36 rounded Secondary and Outline button variants (Hover, Press, Focus, Disabled), a Hover fill covering a Date picker's whole Press variant, and a Hover fill on two Focus radios, all fixed that day.
 
    *Checked:* `skills/figma-components-audit/tests/test-audit.mjs` "figma-standard rule 48: a resting token added in Hover only, and a Hover token in Press, are raised; a knob at rest in every state is not".
+
+50. **A library that mirrors keeps order in auto layout, names sides by role and says what mirrors.** Where a project ships a right-to-left language (`rtlLanguages`), nothing that must follow reading direction is pinned to one edge or drawn into the component; no layer, property or option says left or right (`Leading`, `Trailing`); a directional icon records in its description whether it mirrors (`Right to left: mirrors` or `Right to left: stays`); and a component with anything that mirrors, or deliberately does not, says so in a `Right to left` section of its description: uneven padding by leading and trailing, end alignment, corners rounded on one side, a text box wider than its text aligned to a side, a text case only Latin has. Every text style binds its font family to a variable, so a mode per script switches the typeface. Where the project also draws right-to-left screens in Figma before code (`rtlInFigma`), every set whose row reverses carries a `Direction` variant axis with `LTR` and `RTL`, since an instance cannot reverse its own parts. A project with no right-to-left language is not held to it.
+
+    *Why:* Figma has no layout direction, so the library is drawn left to right and the product mirrors in code. Code reverses a row's order by itself but not a layer pinned to the left, an arrow drawn into the frame, padding or a radius written as left and right, or a name that says left; and it cannot know that playback controls stay. The description is where Dev Mode, Code Connect and the MCP server show those decisions to whoever builds the component.
+
+    *Evidence:* 2026-11-04, one production web library of 82 sets: 58 sets and 461 variants hold a row that must reverse, counted across every variant, after a first-variant count read 41 and 238 and put the primary Button among the safe; a chat bubble's side was one end alignment a padding and radius scan called clean; and Figma's MCP server returned a filter chip's 12 left and 8 right padding as `pl-`/`pr-`, so uneven padding not written down ships unmirrored ([i18n: logical properties and mirroring](../knowledge/code/i18n.md#logical-properties-and-mirroring)).
+
+   *Checked:* `skills/figma-components-audit/tests/test-audit.mjs` "figma-standard rule 50: with rtlLanguages, a pinned layer, a drawn chevron, a side name, uneven padding, end alignment, one-sided corners, an icon with no decision and a set with no Right to left note are raised; a stretched focus ring is not; without it, nothing".
 
 32. **Text meets the project's contrast floor against its surface, in every mode.** Where the project names no floor, WCAG 2.2 SC 1.4.3 (Contrast Minimum, AA) applies: 4.5:1, and 3:1 for large text (24px, or 18.66px bold). Each pair is resolved per mode with its alpha; a translucent pair is checked by eye, and disabled text is exempt.
 

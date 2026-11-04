@@ -108,7 +108,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   // Measures accumulate as the walk goes. They are only RETURNED on a full scan:
   // a targeted re-audit of three sets counts three sets, and writing that over a
   // library measure of sixty-four would report a collapse that never happened.
-  const M={sets:0,variants:0,described:0,nodes:0,groups:0,hidden:0,bound:0,unbound:0,autoNamed:0,layers:0,frames:0,staticFrames:0,guidable:0,guided:0,contrastTotal:0,contrastPass:0};
+  const M={sets:0,variants:0,described:0,nodes:0,groups:0,hidden:0,bound:0,unbound:0,autoNamed:0,layers:0,frames:0,staticFrames:0,guidable:0,guided:0,contrastTotal:0,contrastPass:0,rtlSets:0,rtlVariants:0};
   // Measures describe the LIBRARY, so they are only honest when nothing was
   // skipped — and "nothing skipped" is not the same as "TARGETS was empty". The
   // dashboard audits everything by naming all 64 sets explicitly, which the
@@ -162,6 +162,45 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const AUTO_NAME=/^(Frame|Rectangle|Group|Ellipse|Vector|Component|Line|Polygon|Star|Union|Subtract|Intersect|Exclude|Image|Section|Slot|Text) \d+$/;
   // The guidance sections the descriptions skill writes, as headings.
   const SECTION_RE={usage:/^\s*(#{1,6}\s*)?usage\s*:?\s*$/im, dont:/^\s*(#{1,6}\s*)?(don['’]?t|do not|avoid)\s*:?\s*$/im, code:/^\s*(#{1,6}\s*)?code gen(eration)? notes\s*:?\s*$/im};
+  // Right to left (figma-standard rule 50), only where the project names its
+  // right-to-left languages. The names say which in the findings' text.
+  const RTL=typeof TOK.rtlLanguages==="string"&&TOK.rtlLanguages?[TOK.rtlLanguages]:Array.isArray(TOK.rtlLanguages)&&TOK.rtlLanguages.length?TOK.rtlLanguages:null;
+  const LANG_NAME={ar:"Arabic",fa:"Farsi",he:"Hebrew",ur:"Urdu"};
+  const LANGS=RTL?RTL.map(c=>LANG_NAME[c]||c).join(" and "):"";
+  // A side as a word ("Icon left"), or inside camelCase ("iconLeft", "leftIcon").
+  const SIDE_G=/(?<![\p{L}])(left|right)(?![\p{L}])|(?<=\p{Ll})(Left|Right)(?!\p{Ll})|^(left|right)(?=\p{Lu})/gu;
+  const SIDE_W=/(?<![\p{L}])(left|right)(?![\p{L}])/giu;
+  const SIDE={test:nm=>{SIDE_G.lastIndex=0;SIDE_W.lastIndex=0;return SIDE_W.test(nm)||(SIDE_G.lastIndex=0,SIDE_G.test(nm));}};
+  const caseAs=(m,w)=>m===m.toUpperCase()?w.toUpperCase():m[0]===m[0].toUpperCase()?w[0].toUpperCase()+w.slice(1):w;
+  const bySide=nm=>nm.replace(SIDE_W,m=>/^l/i.test(m)?caseAs(m,"leading"):caseAs(m,"trailing")).replace(SIDE_G,m=>/^l/i.test(m)?caseAs(m,"leading"):caseAs(m,"trailing"));
+  const DIR_SHAPE=/(?<![\p{L}])(chevrons?|arrows?|carets?)(?![\p{L}])/iu;
+  const DIR_WORD=/(?<![\p{L}])(chevrons?|arrows?|carets?|undo|redo|reply|send|forward|back|next|previous|prev|log-?in|log-?out|sign-?in|sign-?out|indent|outdent|skip|rewind|fast-forward|play|step-back|step-forward|external-link|corner)(?![\p{L}])/iu;
+  // Up and down stay in Arabic: only a shape that points sideways mirrors.
+  const VERT=/(?<![\p{L}])(up|down|upward|downward)(?![\p{L}])/iu, HORIZ=/(?<![\p{L}])(left|right|forward|back|next|prev|previous)(?![\p{L}])/iu;
+  // An instance's direction comes from its main component (and variant) when that names one: a select's "Icon right" layer holding chevron-down points down.
+  const pointsSide=nm=>!(VERT.test(nm)&&!HORIZ.test(nm));
+  const MEDIA=/(?<![\p{L}])(play|pause|rewind|fast-forward|skip-back|skip-forward|step-back|step-forward|repeat|shuffle|clock|timer)(?![\p{L}])/iu;
+  const RTL_NOTE=/^\s*(#{1,6}\s*)?right to left\b/im, ICON_NOTE=/right to left:\s*(mirrors|stays)/i;
+  // An icon is a lone component drawn only in shapes, at icon size: the
+  // structure says it, not a name or another plugin's data, which this file
+  // cannot read.
+  const SHAPES=new Set(["VECTOR","BOOLEAN_OPERATION","LINE","ELLIPSE","RECTANGLE","POLYGON","STAR"]);
+  const onlyShapes=n=>(n.children||[]).length>0&&n.children.every(c=>SHAPES.has(c.type)||((c.type==="GROUP"||c.type==="FRAME")&&onlyShapes(c)));
+  const iconNode=c=>!!c&&Math.max(c.width||0,c.height||0)<=64&&onlyShapes(c);
+  // A sized icon set (Size=16, 24) is an icon too: every variant is one.
+  const isIcon=set=>set.type==="COMPONENT"?iconNode(set):set.type==="COMPONENT_SET"&&(set.children||[]).length>0&&set.children.every(iconNode);
+  if(RTL) ran.push("direction");
+  // Cached once fetched: the layer-name walk and the direction walk both need it.
+  const MAINS=new WeakMap();
+  // A text layer's style, for its variable bindings. Facts captured without
+  // Figma carry it as textStyle.
+  const STYLES=new Map(), FONT_SEEN=new Set();
+  const CASE_NAME={UPPER:"uppercase",LOWER:"lowercase",TITLE:"title case",SMALL_CAPS:"small caps",SMALL_CAPS_FORCED:"small caps"};
+  // Icon fonts and code type keep their face in every script.
+  const KEEP_FACE=/mono|code|symbols?|icons?/i;
+  const styleOf=async n=>{ if(n.textStyle) return n.textStyle; const id=n.textStyleId; if(typeof id!=="string"||!id||typeof figma==="undefined") return null;
+    if(!STYLES.has(id)) STYLES.set(id,await figma.getStyleByIdAsync(id).catch(()=>null)); return STYLES.get(id); };
+  const mainOf=async n=>{ if(MAINS.has(n)) return MAINS.get(n); const m=typeof n.getMainComponentAsync==="function"?await n.getMainComponentAsync().catch(()=>null):(n.mainComponent||null); MAINS.set(n,m); return m; };
   const RAW_KEY=/^tokens\|(padding(Top|Right|Bottom|Left)|grid(Row|Column)Gap|itemSpacing|(top|bottom)(Left|Right)Radius|fill|stroke|strokeWeight|fontFamily|fontSize|fontStyle)\|/;
   const out=[];
   for(const p of facts.pages){
@@ -303,7 +342,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         // instance, repeats the family at every level (figma-standard rule 9). Only the full name
         // is flagged: copies told apart by a role or a number (`Up`, `Section 1`) are left alone.
         if(n.type==="INSTANCE"&&path){
-          const m=typeof n.getMainComponentAsync==="function"?await n.getMainComponentAsync().catch(()=>null):n.mainComponent;
+          const m=await mainOf(n);
           const pn=m?(m.parent&&m.parent.type==="COMPONENT_SET"?m.parent.name:m.name):null;
           const part=pn&&(slotParts.has(pn)||(TOK.internalPrefix&&pn.replace(/^[^\p{L}\p{N}_]+/u,"").startsWith(TOK.internalPrefix)));
           const want=part?lastWord(pn):"";
@@ -363,6 +402,177 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         // Its disabled axis True, in any case ("true" happens), from the settings.
         curDisabled=!!(TOK.disabledAxis&&(v.name||"").split(",").some(x=>x.trim().toLowerCase()===(TOK.disabledAxis+"=true").toLowerCase()));
         await walk(v,""); shade(v,"",null); }
+      // figma-standard rule 50: a library meant to mirror keeps order in auto
+      // layout and names sides by role. Only with rtlLanguages: a project that
+      // never mirrors gets none of these, since every library has a left padding.
+      if(RTL){
+        const D=[], dk=new Set(), add=f=>{ if(!dk.has(f.key)){ dk.add(f.key); D.push(f); } };
+        const icon=isIcon(set), desc=set.description||"";
+        let revVariants=0;
+        // Side by side: two visible children whose x ranges do not overlap and
+        // whose y ranges do. That is a row, and only auto layout gives it an
+        // order code can reverse.
+        const sideBySide=f=>{ const k=(f.children||[]).filter(c=>c.visible!==false&&typeof c.x==="number");
+          for(let i=0;i<k.length;i++) for(let j=i+1;j<k.length;j++){ const a=k[i],b=k[j];
+            if((a.x+a.width<=b.x||b.x+b.width<=a.x)&&a.y<b.y+b.height&&b.y<a.y+a.height) return true; } return false; };
+        let alRow=false; const uneven=new Map();
+        const rwalk=async(n,path,par)=>{
+          if(n.type==="SLOT"||(path&&n.visible===false)) return false;
+          const at=path||"/", nm=path?n.name:set.name; let rev=false;
+          const main=n.type==="INSTANCE"?await mainOf(n):null;
+          const mn=main?(main.parent&&main.parent.type==="COMPONENT_SET"?main.parent.name:main.name):"";
+          const free=n.type!=="INSTANCE"&&"layoutMode" in n&&n.layoutMode==="NONE"&&"children" in n;
+          // The structure family raises every frame without auto layout as a
+          // review; a row is the stronger case here, so it replaces that row.
+          if(!icon&&free&&sideBySide(n)){ rev=true; const d=F.findIndex(f=>f.key==="structure|no-autolayout|"+at); if(d>=0) F.splice(d,1); add({sev:"warning",rule:"direction",key:"direction|no-autolayout|"+at,
+            text:'"'+(path?n.name:set.name)+'" lays its layers side by side without auto layout, so they keep their order when the layout mirrors for '+LANGS,
+            advice:'Select "'+(path?n.name:set.name)+'" and add auto layout (Shift+A), so the row has an order code can reverse.'}); }
+          // A text layer is named after what it says ("3 days left"), and an
+          // instance after its component until renamed ("arrow-left"): neither
+          // is a name anyone chose for a side.
+          if(!icon&&path&&n.type!=="TEXT"&&!(n.type==="INSTANCE"&&(!main||n.name===(main.name||"")||n.name===mn))&&SIDE.test(n.name)) add({sev:"warning",rule:"direction",key:"direction|side-name|"+at,
+            text:'Layer "'+n.name+'" names a side, so the name is false once the layout mirrors for '+LANGS+', and it travels into Dev Mode and code',
+            advice:'Rename it by role: "'+bySide(n.name)+'".'});
+          // A layer taken out of the flow and pinned to one edge stays on that
+          // edge when the row mirrors. A stretched or centred one (a focus ring,
+          // a state layer) covers both sides and is not pinned: counting those
+          // put a 120-variant icon-only set in the wrong column.
+          const h=n.constraints&&n.constraints.horizontal;
+          // In a frame without auto layout every layer is pinned; one that sits
+          // off-centre on one side (a badge on an avatar) is the same bug. A
+          // centred one is not, and a row is raised once as no-autolayout.
+          // Centred, or covering both edges (a focus ring drawn 2px outside), is
+          // on no side, whatever its constraint says.
+          const even=par&&typeof n.x==="number"&&typeof par.width==="number"&&(Math.abs(n.x-(par.width-n.x-n.width))<=1||(n.x<=0&&n.x+n.width>=par.width));
+          const covers=c=>c.visible!==false&&typeof c.x==="number"&&c.x<=0&&c.y<=0&&c.x+c.width>=par.width&&c.y+c.height>=par.height;
+          const loose=!icon&&par&&par.layoutMode==="NONE"&&!sideBySide(par)&&!onlyShapes(par)&&(par.children||[]).some(c=>c!==n&&covers(c));
+          if(path&&!icon&&!even&&(n.layoutPositioning==="ABSOLUTE"||loose)&&(h==="MIN"||h==="MAX")) add({sev:"warning",rule:"direction",key:"direction|pinned|"+at,
+            text:'"'+n.name+'" is '+(loose&&n.layoutPositioning!=="ABSOLUTE"?"placed in a frame without auto layout":"positioned absolutely")+' and pinned to the '+(h==="MIN"?"left":"right")+", so in "+LANGS+" it stays on that side while the layout around it mirrors",
+            advice:(loose&&n.layoutPositioning!=="ABSOLUTE"?'Add auto layout to "'+par.name+'" (Shift+A) and put "'+n.name+'" in the flow':'Set its position to Auto (in the flow)')+', or keep it '+(loose&&n.layoutPositioning!=="ABSOLUTE"?"where it is":"absolute")+' and add to the description\'s Right to left section: "'+n.name+': pinned to the '+(h==="MIN"?"leading":"trailing")+' edge."',line:n.name+": pinned to the "+(h==="MIN"?"leading":"trailing")+" edge"});
+          if(!icon&&path&&DIR_SHAPE.test(n.name)&&pointsSide(n.name)&&(n.type==="VECTOR"||n.type==="BOOLEAN_OPERATION")) add({sev:"warning",rule:"direction",key:"direction|flat-icon|"+at,
+            text:'"'+n.name+'" is a directional icon drawn into the component, so it can only face the other way in '+LANGS+" by forking the component",
+            advice:'Replace "'+n.name+'" with an instance of the library\'s icon, and expose it as an instance-swap property so the icon can face the other way.'});
+          if(n.type!=="INSTANCE"&&"layoutMode" in n){
+            const flow=(n.children||[]).filter(c=>c.layoutPositioning!=="ABSOLUTE");
+            if(n.layoutMode!=="NONE"&&typeof n.paddingLeft==="number"&&n.paddingLeft!==n.paddingRight){ const k=nm+": "+n.paddingLeft+" leading, "+n.paddingRight+" trailing"; if(!uneven.has(k)) uneven.set(k,{at,name:nm,l:n.paddingLeft,r:n.paddingRight}); }
+            if(n.layoutMode==="HORIZONTAL"){
+              if(flow.length>=2){ rev=true; alRow=true; }
+              if(n.primaryAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
+                text:'"'+nm+'" aligns its content to the right, which code mirrors to the left in '+LANGS+" only if it is written as end, not right",
+                advice:'Add to the description\'s Right to left section: "'+nm+': aligned to the trailing side."',line:nm+": aligned to the trailing side"});
+            }
+            if(n.layoutMode==="VERTICAL"&&n.counterAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
+              text:'"'+nm+'" aligns its content to the right, which code mirrors to the left in '+LANGS+" only if it is written as end, not right",
+              advice:'Add to the description\'s Right to left section: "'+nm+': aligned to the trailing side."',line:nm+": aligned to the trailing side"});
+          }
+          const cr=["topLeftRadius","topRightRadius","bottomLeftRadius","bottomRightRadius"].map(k=>n[k]);
+          if(!icon&&n.type!=="INSTANCE"&&cr.every(x=>typeof x==="number")&&(cr[0]!==cr[1]||cr[2]!==cr[3])) add({sev:"review",rule:"direction",key:"direction|corners|"+at+"|"+cr.join(" "),
+            text:'"'+nm+'" rounds its corners differently on the left and the right, so the shape faces the wrong way in '+LANGS+" unless the corners mirror too",
+            advice:'Add to the description\'s Right to left section: "'+nm+": corners "+cr[0]+" "+cr[1]+" "+cr[3]+" "+cr[2]+' (top leading, top trailing, bottom trailing, bottom leading)."',line:nm+": corners "+cr[0]+" "+cr[1]+" "+cr[3]+" "+cr[2]+" (top leading, top trailing, bottom trailing, bottom leading)"});
+          // An icon instance that no instance-swap property controls can only face
+          // the other way by detaching it or forking the component.
+          // Type that cannot follow the script. A mode switches a typeface only
+          // through a variable; tracking pulls joined Arabic letters apart; and
+          // Arabic has no capitals. One row per text style, not per layer.
+          if(!icon&&n.type==="TEXT"){
+            const st=await styleOf(n), sb=(st&&st.boundVariables)||{}, lb=n.boundVariables||{}, sn=st?st.name:n.name;
+            const fam=n.fontName&&typeof n.fontName==="object"?n.fontName.family||"":"";
+            const fk=(st&&st.id)||sn;
+            // A style is fixed once for the file, not once per set that uses it.
+            if(st&&!sb.fontFamily&&!lb.fontFamily&&!KEEP_FACE.test(fam+" "+sn)&&!FONT_SEEN.has(fk)&&FONT_SEEN.add(fk)) add({sev:"warning",rule:"direction",key:"direction|font-fixed|"+sn,
+              text:'Text style "'+sn+'" names its typeface directly, so a frame set to '+LANGS+" keeps the Latin typeface, and "+LANGS+" letters fall back to whatever font the device has",
+              advice:(st.remote?'In the library that publishes text style "'+sn+'"':'In text style "'+sn+'"')+', bind Font family to a string variable (font/family) whose '+LANGS+" mode names the "+LANGS+" typeface."});
+            const ls=n.letterSpacing&&typeof n.letterSpacing==="object"?n.letterSpacing:null;
+            if(ls&&ls.value>0&&!sb.letterSpacing&&!lb.letterSpacing) add({sev:"review",rule:"direction",key:"direction|tracking|"+sn,
+              text:'"'+sn+'" adds letter spacing ('+ls.value+(ls.unit==="PERCENT"?"%":"px")+"), which pulls joined "+LANGS+" letters apart",
+              advice:'In text style "'+sn+'", bind Letter spacing to a variable that is 0 in the '+LANGS+" mode."});
+            const cn=typeof n.textCase==="string"?CASE_NAME[n.textCase]:null;
+            if(cn) add({sev:"review",rule:"direction",key:"direction|text-case|"+sn,
+              text:'"'+sn+'" sets its text in '+cn+", which "+LANGS+" does not have",
+              advice:'Add to the description\'s Right to left section: "'+sn+': '+cn+' in Latin only."',line:sn+": "+cn+" in Latin only"});
+          }
+          // Alignment is physical in Figma and no mode changes it. It only shows
+          // where the box is wider than its text, so a hugging label is exempt.
+          if(!icon&&n.type==="TEXT"&&(n.textAlignHorizontal==="LEFT"||n.textAlignHorizontal==="RIGHT")&&n.textAutoResize!=="WIDTH_AND_HEIGHT"){
+            const side=n.textAlignHorizontal==="LEFT"?"leading":"trailing";
+            add({sev:"review",rule:"direction",key:"direction|text-align|"+side,
+              text:'"'+n.name+'" is wider than its text and aligned '+n.textAlignHorizontal.toLowerCase()+", which stays "+n.textAlignHorizontal.toLowerCase()+" in "+LANGS+" unless code writes it as "+(side==="leading"?"start":"end"),
+              advice:'Add to the description\'s Right to left section: "Text: aligned to the '+side+' side."',line:"Text: aligned to the "+side+" side"}); }
+          // Only an icon: a Next button in a pager is a button, not an icon.
+          if(!icon&&path&&main&&iconNode(main)&&!(n.componentPropertyReferences&&n.componentPropertyReferences.mainComponent)){
+            const md=mn+(main.parent&&main.parent.type==="COMPONENT_SET"?" "+main.name:""), all=n.name+" "+md;
+            if(DIR_WORD.test(all)&&pointsSide(VERT.test(md)||HORIZ.test(md)?md:all)&&!MEDIA.test(all)) add({sev:"warning",rule:"direction",key:"direction|fixed-icon|"+at,
+              text:'"'+n.name+'" is a directional icon'+(mn&&mn!==n.name?" ("+mn+")":"")+" that no instance-swap property controls, so nobody using the component can make it face the other way in "+LANGS,
+              advice:'Select "'+n.name+'", and in the Design panel\'s instance section choose Create instance swap property; name it Icon.'});
+          }
+          if("children" in n&&n.type!=="INSTANCE") for(const c of n.children) if(await rwalk(c,path+"/"+c.name,n)) rev=true;
+          return rev;
+        };
+        for(const v of vs) if(await rwalk(v,"")) revVariants++;
+        // Property names and variant options are the component's interface, so a
+        // side in them reaches every consumer and Code Connect; renaming one is a
+        // breaking change, which is why it stays in bucket 3.
+        if(!icon) for(const [k,d] of Object.entries(defs)){ const nm=k.replace(/#[^#]*$/,"");
+          if(SIDE.test(nm)) add({sev:"warning",rule:"direction",key:"direction|side-prop|"+nm,
+            text:'Property "'+nm+'" names a side, so it is false once the layout mirrors for '+LANGS+", and code takes the name from it",
+            advice:'Rename the property "'+bySide(nm)+'", and tell consumers: it is a breaking change.'});
+          const so=d.type==="VARIANT"?(d.variantOptions||[]).filter(o=>SIDE.test(o)):[];
+          if(so.length) add({sev:"warning",rule:"direction",key:"direction|side-option|"+nm,
+            text:nm+" = "+so.join(", ")+" name"+(so.length>1?"":"s")+" a side, so "+(so.length>1?"they are":"it is")+" false once the layout mirrors for "+LANGS+", and code takes the value"+(so.length>1?"s":"")+" from "+(so.length>1?"them":"it"),
+            advice:"Rename "+so.map(o=>'"'+o+'" to "'+bySide(o)+'"').join(", ")+", and tell consumers: it is a breaking change."}); }
+        // One row per set, every distinct pair named: Size S at 8/4 and L at
+        // 12/8 are two lines, or the note would give one size's values for all.
+        if(uneven.size){ const u=[...uneven.values()], one=u.length===1&&u[0].name===set.name;
+          const line="Padding: "+(one?u[0].l+" leading, "+u[0].r+" trailing":[...uneven.keys()].join("; "));
+          add({sev:"review",rule:"direction",key:"direction|padding|"+u[0].at,
+          text:'"'+u[0].name+'" has '+u[0].l+" padding on the left and "+u[0].r+" on the right"+(u.length>1?" ("+u.length+" uneven paddings in the set)":"")+", so in "+LANGS+" the two must swap, which code does only if it writes them as leading and trailing",
+          advice:'Add to the description\'s Right to left section: "'+line+'."',line}); }
+        if(revVariants){ M.rtlSets++; M.rtlVariants+=revVariants; }
+        // Where designers draw right-to-left screens before code, an instance
+        // cannot reverse its own parts, so the set carries both directions.
+        const dirAxis=Object.entries(defs).find(([k,d])=>d.type==="VARIANT"&&/^direction$/i.test(k)&&(d.variantOptions||[]).some(o=>/^rtl$/i.test(o)));
+        // An RTL twin is drawn by hand or by a plugin, so check it against its
+        // LTR twin layer by layer: every row's in-flow parts reversed, and every
+        // wide text aligned to the other side. Layers are matched by path of
+        // names, so two siblings with one name are compared as one (a limit).
+        if(TOK.rtlInFigma===true&&dirAxis){ const ax=dirAxis[0];
+          const props=v=>v.variantProperties||Object.fromEntries((v.name||"").split(/,\s*/).map(kv=>{const k=kv.indexOf("=");return [kv.slice(0,k).trim(),kv.slice(k+1).trim()];}));
+          const others=o=>Object.entries(o).filter(([k])=>k!==ax).map(([k,x])=>k+"="+x).sort().join(",");
+          const index=(n,path,out)=>{ if(path&&n.visible===false) return out; out[path]=n; if(n.type!=="INSTANCE") for(const c of n.children||[]) index(c,path+"/"+c.name,out); return out; };
+          const parts=f=>(f.children||[]).filter(c=>c.layoutPositioning!=="ABSOLUTE").map(c=>c.name);
+          const FLIP={LEFT:"RIGHT",RIGHT:"LEFT"};
+          for(const v of vs){ const pv=props(v); if(!/^rtl$/i.test(pv[ax]||"")) continue;
+            const twin=vs.find(w=>w!==v&&/^ltr$/i.test(props(w)[ax]||"")&&others(props(w))===others(pv));
+            if(!twin){ add({sev:"review",rule:"direction",key:"direction|rtl-twin|"+v.name,
+              text:'"'+v.name+'" has no Direction=LTR twin with the same other properties, so nothing says what it mirrors',
+              advice:'Add the LTR variant matching "'+v.name+'", or remove this RTL one.'}); continue; }
+            const A=index(v,"",{}), B=index(twin,"",{});
+            for(const [path,n] of Object.entries(A)){ const t=B[path]; if(!t) continue; const where=path===""?'"'+v.name+'"':'"'+n.name+'" in "'+v.name+'"';
+              // An instance's parts come from its component, which is checked there.
+              const same=JSON.stringify(parts(n).slice().sort())===JSON.stringify(parts(t).slice().sort());
+              if(n.type!=="INSTANCE"&&n.layoutMode==="HORIZONTAL"&&t.layoutMode==="HORIZONTAL"&&!same) add({sev:"warning",rule:"direction",key:"direction|rtl-parts|"+v.name+"|"+path,
+                  text:where+" holds "+parts(n).join(", ")+" where its LTR twin holds "+parts(t).join(", ")+", so the two directions differ in more than order",
+                  advice:"Rename or replace the layers of "+where+" so it holds "+parts(t).slice().reverse().join(", ")+", the LTR parts reversed."});
+              else if(n.type!=="INSTANCE"&&n.layoutMode==="HORIZONTAL"&&t.layoutMode==="HORIZONTAL"&&JSON.stringify(parts(n))!==JSON.stringify(parts(t).slice().reverse()))
+                add({sev:"warning",rule:"direction",key:"direction|rtl-order|"+v.name+"|"+path,
+                  text:where+" does not hold its LTR twin's parts in reverse ("+parts(n).join(", ")+" against "+parts(t).join(", ")+"), so the Arabic mockup shows an order code will not produce",
+                  advice:"Reorder the layers of "+where+" to "+parts(t).slice().reverse().join(", ")+"."});
+              if(n.type==="TEXT"&&t.type==="TEXT"&&FLIP[t.textAlignHorizontal]&&n.textAutoResize!=="WIDTH_AND_HEIGHT"&&n.textAlignHorizontal!==FLIP[t.textAlignHorizontal])
+                add({sev:"warning",rule:"direction",key:"direction|rtl-align|"+v.name+"|"+path,
+                  text:where+" is wider than its text and aligned "+String(n.textAlignHorizontal).toLowerCase()+", the same as its LTR twin, so the Arabic mockup shows it on the wrong side",
+                  advice:"Select "+where+" and set its alignment to "+FLIP[t.textAlignHorizontal].toLowerCase()+"."});
+            } } }
+        if(TOK.rtlInFigma===true&&!icon&&revVariants&&!dirAxis) add({sev:"warning",rule:"direction",key:"direction|no-variant",
+          text:set.name+" has a row whose parts reverse in "+LANGS+", and the project draws "+LANGS+" screens in Figma, where an instance cannot reverse its own parts",
+          advice:"Add a variant property Direction with options LTR and RTL, and draw each RTL variant mirrored (or generate them with a mirroring plugin), following the set's Right to left note."});
+        if(icon&&DIR_WORD.test(set.name)&&pointsSide(set.name)&&!ICON_NOTE.test(desc)) add({sev:"warning",rule:"direction",key:"direction|icon-decision",
+          text:"Icon "+set.name+" points a direction, and nothing records whether it mirrors in "+LANGS+", so a developer guesses",
+          advice:'Add "Right to left: '+(MEDIA.test(set.name)?"stays":"mirrors")+'" to its description'+(MEDIA.test(set.name)?", since playback controls keep their direction":", since it points the way the reader moves")+'; write the other word if this icon is the exception.'});
+        if(!icon&&(D.length||revVariants)&&!RTL_NOTE.test(desc)) add({sev:"review",rule:"direction",key:"direction|note",
+          text:set.name+" has parts that change, or must not change, when it mirrors for "+LANGS+", and its description does not say which",
+          advice:"Add to the description:\n\n## Right to left\n"+["- Mirrors: "+(alRow?"the order of its parts":"nothing beyond what follows")].concat(D.filter(f=>f.line).map(f=>"- "+f.line)).concat(["- Stays: nothing"]).join("\n")+"\n\nIf a part must keep its direction (playback controls, a chart), name it on the Stays line."});
+        F.push(...D);
+      }
       for(const [nm,e] of Object.entries(overlay))
         F.push({sev:"warning",rule:"structure",key:"structure|overlay|"+nm,
           text:e.n+" "+nm+" instance"+(e.n===1?" is":"s are")+" "+[...e.how].join(", ")+", so the tint drifts off the shape it covers or gets dragged instead of the content, e.g. "+e.first,
@@ -760,7 +970,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       modes:colls.map(c=>c.modes.map(m=>m.name).join("/")).join(" \u00b7 "),
       pages:file.pages,
       textStyles:file.textStyles,
-      effectStyles:file.effectStyles
+      effectStyles:file.effectStyles,
+      ...(RTL?{rtlSets:M.rtlSets,rtlVariants:M.rtlVariants}:{})
     };
   }
   return {audited:out, measures:measures, ran:ran, ...(settingsNotes.length?{settings:settingsNotes}:{}), at:new Date().toISOString()};

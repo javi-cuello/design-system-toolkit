@@ -221,6 +221,24 @@
    "status": "scanner"
   },
   {
+   "key": "rtlReverse",
+   "label": "Rows that reverse in right to left",
+   "value": {
+    "num": "rtlSets",
+    "den": "sets"
+   },
+   "render": "ratio",
+   "good": null,
+   "detail": "{rtlSets} sets, {rtlVariants} variants",
+   "why": null,
+   "whyWhen": "notGood",
+   "grade": "context, not a grade",
+   "about": [
+    "Component sets with at least one variant holding a horizontal auto layout with two or more children in the flow, counting hidden children and leaving out absolutely positioned ones. Measured only where the project names rtlLanguages (figma-standard rule 50).",
+    "<b>Why:</b> an instance can override padding and alignment but not the order of its children, so these are the sets that need a direction property, or code, to mirror. Counted across every variant: a count from the first variant read 41 sets where every variant gave 58, because the primary Button's first variant has no icon."
+   ]
+  },
+  {
    "key": "inventory",
    "label": "Inventory",
    "value": {

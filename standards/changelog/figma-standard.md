@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.21.0 (2026-11-04): rule 50, a library that mirrors keeps order in auto layout, names sides by role and says what mirrors, held only where a project names `rtlLanguages`; checked by figma-components-audit's `direction` family.
 - 2.20.5 (2026-11-02): rule 4's note on Loading names `aria-disabled` and a live region, as [actions: loading buttons](../../knowledge/ui/patterns/actions.md#loading-buttons) sets out, not `aria-busy`; no rule changed.
 - 2.20.4 (2026-10-31): rule 25's *Checked:* adds the scanner's placeholder check, which replaced the probe; rule 19's *Why:* names the export at its new path. No rule changed.
 - 2.20.3 (2026-10-31): rule 19's *Checked:* names its engines as they are: figma-foundations-audit's two (components, and a tokens library's variables) and the export's refusals at `tools/tokens/dtcg.js`; the components audit's second collision check is gone. No rule changed.

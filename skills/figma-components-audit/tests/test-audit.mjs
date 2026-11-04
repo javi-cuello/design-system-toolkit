@@ -602,5 +602,97 @@ expect("a layer that is the same in every variant still fires when some forget i
   expect("a variant holding other text is a warning",
     keyed(await run(fx), "Chip", /^metadata\|variant-description$/), ["Chip | warning metadata | 1 of " + s.children.length + " variants carry a description that differs from the set's, so whoever reads that variant gets text the set's description does not say"]);
 }
+// ---- right to left, only with rtlLanguages (figma-standard rule 50) --
+{
+  // From the 2026-11-04 run on one production library: the filter chip's 12/8
+  // padding, a chat bubble's end alignment, and the focus ring that put a
+  // 120-variant set in the wrong column when stretched layers were counted.
+  const fx = fresh(); const s = find(fx, "Chip"); const v = s.children[0];
+  Object.assign(v, { layoutMode: "HORIZONTAL", paddingLeft: 12, paddingRight: 8, width: 100 });
+  const ico = (name) => ({ name, parent: null, width: 24, height: 24, children: [leaf("VECTOR", "Vector")] });
+  v.children.push(
+    leaf("FRAME", "Badge", { layoutPositioning: "ABSOLUTE", constraints: { horizontal: "MIN", vertical: "MIN" } }),
+    leaf("FRAME", "Focus ring", { layoutPositioning: "ABSOLUTE", constraints: { horizontal: "STRETCH", vertical: "STRETCH" } }),
+    leaf("VECTOR", "Chevron"),
+    leaf("FRAME", "Icon left", { layoutMode: "VERTICAL", counterAxisAlignItems: "MAX", children: [] }),
+    leaf("FRAME", "Bubble", { topLeftRadius: 12, topRightRadius: 12, bottomLeftRadius: 0, bottomRightRadius: 12 }),
+    leaf("FRAME", "Pair", { layoutMode: "NONE", x: 0, y: 0, width: 60, height: 20, children: [
+      leaf("TEXT", "One", { x: 0, y: 0, width: 20, height: 20, constraints: { horizontal: "MIN", vertical: "MIN" } }),
+      leaf("TEXT", "Two", { x: 30, y: 0, width: 20, height: 20, constraints: { horizontal: "MIN", vertical: "MIN" } })] }),
+    leaf("FRAME", "Photo", { layoutMode: "NONE", x: 0, y: 0, width: 32, height: 32, children: [
+      leaf("RECTANGLE", "Image", { x: 0, y: 0, width: 32, height: 32, constraints: { horizontal: "STRETCH", vertical: "STRETCH" } }),
+      leaf("FRAME", "Dot", { x: 24, y: 0, width: 8, height: 8, constraints: { horizontal: "MAX", vertical: "MIN" } }),
+      leaf("RECTANGLE", "Centred", { x: 12, y: 12, width: 8, height: 8, constraints: { horizontal: "MIN", vertical: "MIN" } })] }),
+    leaf("INSTANCE", "Arrow", { mainComponent: ico("arrow-right") }),
+    // From the first live run: a chevron-down in a select points down in Arabic too,
+    // whatever its layer is called.
+    leaf("INSTANCE", "Forward", { mainComponent: ico("chevron-down") }),
+    leaf("INSTANCE", "Icon", { mainComponent: Object.assign(ico("Direction=Down"), { parent: { type: "COMPONENT_SET", name: "Chevron" } }) }),
+    leaf("INSTANCE", "Glyph", { mainComponent: Object.assign(ico("Name=Arrow left"), { parent: { type: "COMPONENT_SET", name: "Icon" } }) }),
+    leaf("INSTANCE", "Sort", { mainComponent: ico("arrow_downward") }),
+    leaf("VECTOR", "Chevron down"),
+    leaf("INSTANCE", "chevron-right", { mainComponent: ico("chevron-right"), componentPropertyReferences: { mainComponent: "Icon#1:2" } }),
+    leaf("INSTANCE", "Next", { mainComponent: { name: "Button", parent: null, width: 80, height: 32, children: [leaf("TEXT", "Label")] } }),
+    leaf("FRAME", "Ring", { layoutPositioning: "ABSOLUTE", x: -2, width: 104, constraints: { horizontal: "MIN", vertical: "MIN" } }),
+    leaf("TEXT", "3 days left", { textStyle: { name: "Body", boundVariables: { fontFamily: { id: "v" } } } }),
+    leaf("TEXT", "Tag", { textStyle: { name: "Label", boundVariables: {} }, letterSpacing: { unit: "PERCENT", value: 4 }, textCase: "UPPER" }),
+    leaf("TEXT", "Paragraph", { textStyle: { name: "Body", boundVariables: { fontFamily: { id: "v" } } }, textAlignHorizontal: "LEFT", textAutoResize: "HEIGHT" }),
+    leaf("TEXT", "Hugging", { textStyle: { name: "Body", boundVariables: { fontFamily: { id: "v" } } }, textAlignHorizontal: "LEFT", textAutoResize: "WIDTH_AND_HEIGHT" }),
+    leaf("FRAME", "Hidden left", { visible: false }),
+    leaf("FRAME", "Stack", { layoutMode: "NONE", x: 0, y: 0, width: 100, height: 60, children: [
+      leaf("TEXT", "Title", { x: 16, y: 8, width: 40, height: 20, constraints: { horizontal: "MIN", vertical: "MIN" } }),
+      leaf("TEXT", "Body", { x: 16, y: 32, width: 50, height: 20, constraints: { horizontal: "MIN", vertical: "MIN" } })] }));
+  s.componentPropertyDefinitions["Icon position"] = { type: "VARIANT", variantOptions: ["Left", "Right"], defaultValue: "Left" };
+  s.componentPropertyDefinitions["showLeftIcon#9:9"] = { type: "BOOLEAN", defaultValue: false };
+  fx.pages.push({ name: "❖ Icons", id: "0:9000", sets: [
+    leaf("COMPONENT", "arrow-left", { width: 24, height: 24, description: "previous", children: [leaf("VECTOR", "Vector")] }),
+    Object.assign(leaf("COMPONENT_SET", "Caret", { componentPropertyDefinitions: { Direction: { type: "VARIANT", variantOptions: ["Left", "Right"], defaultValue: "Left" } },
+      description: "Right to left: mirrors", children: [leaf("COMPONENT", "Direction=Left", { width: 16, height: 16, children: [leaf("VECTOR", "caret-left")] }), leaf("COMPONENT", "Direction=Right", { width: 16, height: 16, children: [leaf("VECTOR", "caret-right")] })] })),
+    leaf("COMPONENT", "arrow-down", { width: 24, height: 24, description: "down", children: [leaf("VECTOR", "Vector")] }),
+    leaf("COMPONENT", "heart", { width: 24, height: 24, description: "love", children: [leaf("VECTOR", "Vector")] }),
+    leaf("COMPONENT", "chevron-right", { width: 24, height: 24, description: "next\n\nRight to left: mirrors", children: [leaf("VECTOR", "Vector")] })] });
+  const TK = Object.assign({}, fx.settings.tokens, { rtlLanguages: ["ar"] });
+  const r = await run(fx, { tokens: TK });
+  const kinds = r.audited.filter((e) => e.set === "Chip" || e.page === "❖ Icons").flatMap((e) => e.candidates.filter((c) => c.rule === "direction").map((c) => e.set + " " + c.key.split("|")[1])).sort();
+  expect("figma-standard rule 50: with rtlLanguages, a pinned layer, a drawn chevron, a side name, uneven padding, end alignment, one-sided corners, an icon with no decision and a set with no Right to left note are raised; a stretched focus ring is not; without it, nothing",
+    kinds, ["Chip corners", "Chip end-align", "Chip fixed-icon", "Chip fixed-icon", "Chip flat-icon", "Chip font-fixed", "Chip no-autolayout", "Chip note", "Chip padding", "Chip pinned", "Chip pinned", "Chip side-name", "Chip side-option", "Chip side-prop", "Chip text-align", "Chip text-case", "Chip tracking", "arrow-left icon-decision"]);
+  expect("an icon set with Direction=Left/Right is audited and asked to rename nothing", [r.audited.some((e) => e.set === "Caret"), keyed(r, "Caret", /^direction\|/)], [true, []]);
+  const adv = (re) => r.audited.find((e) => e.set === "Chip").candidates.filter((c) => re.test(c.key)).map((c) => c.advice);
+  expect("the advice renames a side by role, in its case", adv(/^direction\|side-name/), ['Rename it by role: "Icon leading".']);
+  expect("one option row names both renames", adv(/^direction\|side-option/), ['Rename "Left" to "Leading", "Right" to "Trailing", and tell consumers: it is a breaking change.']);
+  expect("a camelCase property name is renamed too", adv(/^direction\|side-prop/), ['Rename the property "showLeadingIcon", and tell consumers: it is a breaking change.']);
+  expect("the family is said to have run", r.ran.includes("direction"), true);
+  expect("the measure counts the sets whose rows reverse", r.measures.rtlSets >= 1, true);
+  const TKF = Object.assign({}, TK, { rtlInFigma: true });
+  expect("with rtlInFigma, a set whose row reverses and has no Direction axis is asked for one", keyed(await run(fx, { tokens: TKF }), "Chip", /^direction\|no-variant$/).length, 1);
+  s.componentPropertyDefinitions["Direction"] = { type: "VARIANT", variantOptions: ["LTR", "RTL"], defaultValue: "LTR" };
+  expect("and a Direction axis with RTL answers it", keyed(await run(fx, { tokens: TKF }), "Chip", /^direction\|no-variant$/), []);
+  {
+    const fy = fresh(); const t = find(fy, "Chip");
+    const mk = (name, kids) => leaf("COMPONENT", name, { layoutMode: "HORIZONTAL", children: kids });
+    t.componentPropertyDefinitions = { Direction: { type: "VARIANT", variantOptions: ["LTR", "RTL"], defaultValue: "LTR" } };
+    const row = (kids) => leaf("FRAME", "Header", { layoutMode: "HORIZONTAL", children: kids });
+    t.children = [Object.assign(mk("Direction=LTR", [leaf("FRAME", "Icon"), leaf("TEXT", "Label", { textAlignHorizontal: "LEFT", textAutoResize: "HEIGHT" }), leaf("FRAME", "Chevron")]), {}),
+      mk("Direction=RTL", [leaf("FRAME", "Icon"), leaf("TEXT", "Label", { textAlignHorizontal: "LEFT", textAutoResize: "HEIGHT" }), leaf("FRAME", "Chevron")]),
+      leaf("COMPONENT", "Size=lg, Direction=LTR", { layoutMode: "VERTICAL", children: [row([leaf("FRAME", "Avatar"), leaf("TEXT", "Name")])] }),
+      leaf("COMPONENT", "Size=lg, Direction=RTL", { layoutMode: "VERTICAL", children: [row([leaf("FRAME", "Avatar"), leaf("TEXT", "Name")])] }),
+      mk("Size=sm, Direction=RTL", []),
+      mk("Size=xs, Direction=LTR", [leaf("FRAME", "Hidden", { visible: false, layoutMode: "HORIZONTAL", children: [leaf("FRAME", "A"), leaf("FRAME", "B")] }), leaf("FRAME", "Icon"), leaf("TEXT", "Label", { textAlignHorizontal: "LEFT", textAutoResize: "HEIGHT" })]),
+      mk("Size=xs, Direction=RTL", [leaf("TEXT", "Label", { textAlignHorizontal: "RIGHT", textAutoResize: "HEIGHT" }), leaf("FRAME", "Icon"), leaf("FRAME", "Hidden", { visible: false, layoutMode: "HORIZONTAL", children: [leaf("FRAME", "A"), leaf("FRAME", "B")] })]),
+      mk("Size=xl, Direction=LTR", [leaf("FRAME", "Leading"), leaf("TEXT", "Label")]),
+      mk("Size=xl, Direction=RTL", [leaf("TEXT", "Label"), leaf("FRAME", "Trailing")])];
+    const ry = await run(fy, { tokens: TKF });
+    expect("an RTL twin whose parts are not reversed, or whose wide text stays left, is raised with the exact fix",
+      ry.audited.find((e) => e.set === "Chip").candidates.filter((c) => /^direction\|rtl-/.test(c.key)).map((c) => c.advice),
+      ['Reorder the layers of "Direction=RTL" to Chevron, Label, Icon.', 'Select "Label" in "Direction=RTL" and set its alignment to right.',
+       'Reorder the layers of "Header" in "Size=lg, Direction=RTL" to Name, Avatar.', 'Add the LTR variant matching "Size=sm, Direction=RTL", or remove this RTL one.',
+       'Rename or replace the layers of "Size=xl, Direction=RTL" so it holds Label, Leading, the LTR parts reversed.']);
+  }
+  delete s.componentPropertyDefinitions["Direction"];
+  const off = await run(fx);
+  expect("and without rtlLanguages no direction finding, run or measure", [off.audited.some((e) => e.candidates.some((c) => c.rule === "direction")), off.ran.includes("direction"), "rtlSets" in off.measures], [false, false, false]);
+  s.description = (s.description || "") + "\n\n## Right to left\n- Mirrors: order";
+  expect("a Right to left section answers the note", keyed(await run(fx, { tokens: TK }), "Chip", /^direction\|note$/), []);
+}
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");
 process.exit(failed ? 1 : 0);

@@ -316,6 +316,8 @@
       "minTarget": "smallest interactive target in px; 24 is WCAG 2.2 SC 2.5.8, level AA (figma-standard rule 26)",
       "minText": "smallest text size in px (figma-standard rule 26)",
       "mechanismPadding": "the smallest off-scale padding, in px, read as a mechanism (a progress or slider fill driven by padding) and raised as a question rather than a defect; absent, every off-scale padding is a defect (figma-standard rule 29)",
+      "rtlLanguages": "languages written right to left that the product ships, as language codes (ar); present, the right-to-left checks run, figma-standard rule 50 (project)",
+      "rtlInFigma": "true where designers draw right-to-left screens in Figma before code exists; then every set whose row reverses needs a Direction variant (LTR, RTL), figma-standard rule 50 (project)",
       "overlayComponents": "components whose instances cover the layer they sit in, such as a state layer: each is locked, stretched both ways, at 0,0 and its parent's size (a project's own rule, stated in its context document); absent, not checked"
     },
     "derived": {

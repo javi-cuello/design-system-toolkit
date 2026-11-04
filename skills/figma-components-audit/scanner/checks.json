@@ -372,6 +372,106 @@
    ]
   },
   {
+   "dimension": "Right to left (opt-in)",
+   "weight": null,
+   "why": "Figma has no layout direction, so the product mirrors in code, and code mirrors only what is built to mirror. Runs only where the project names rtlLanguages (figma-standard rule 50), and is scored under Structure only where it runs, so a project that never mirrors loses nothing.",
+   "checks": [
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Layers laid side by side are in auto layout, so the row has an order code can reverse",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "No layer is positioned absolutely, or placed off-centre in an overlay frame without auto layout, and pinned to the left or right edge",
+     "status": "scanner",
+     "note": "A stretched or centred layer (a focus ring, a state layer) covers both sides and is exempt."
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Every directional icon instance is controlled by an instance-swap property",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "No chevron, arrow or caret is drawn into the component; it is an icon instance",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Where the project draws right-to-left screens in Figma (rtlInFigma), every set whose row reverses has a Direction variant with LTR and RTL",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Each RTL variant has an LTR twin, holds every row's parts in reverse at every level, and aligns wide text to the twin's other side",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "Every text style binds its font family to a variable, so the right-to-left mode switches the typeface",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "No text style adds letter spacing or a text case the right-to-left script cannot take, unless a variable or the note handles it",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "A text box wider than its text and aligned left or right is named in the Right to left note",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "No layer name, property name or variant option says left or right; it says leading or trailing",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "Uneven left and right padding is written down by leading and trailing",
+     "status": "scanner",
+     "note": "One row per set."
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "Content aligned to the right or end is written down as trailing",
+     "status": "scanner"
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "Corners rounded on one side only are written down by start and end",
+     "status": "scanner"
+    },
+    {
+     "tier": "warning",
+     "who": "scanner",
+     "text": "A directional icon records \"Right to left: mirrors\" or \"Right to left: stays\" in its description",
+     "status": "scanner",
+     "note": "An icon is a lone component of shapes at 64px or less; directional is judged by its name."
+    },
+    {
+     "tier": "review",
+     "who": "scanner",
+     "text": "A component with anything that mirrors, or must not, has a Right to left section in its description",
+     "status": "scanner"
+    }
+   ]
+  },
+  {
    "dimension": "Three rules that outrank the tiers",
    "weight": null,
    "why": null,
