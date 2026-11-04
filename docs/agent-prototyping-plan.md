@@ -36,7 +36,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 | Gap today | Fix | Owner |
 |---|---|---|
 | `validate` flags raw elements where the library has a component, but not where a component is imported from, so a local copy or a styled non-native element passes | Done 2026-11-04: `validate` flags a library component defined in the code, and, given `--from`, one imported by name from anywhere else | `tools/docs-mcp` `validate` |
-| The check is optional, and an agent can skip it | Add `validate` as a gate in the project's check, which its pre-push hook already runs; a project with CI adds the same check there | project-check (`check.mjs`) |
+| The check is optional, and an agent can skip it | Add `validate` as a gate in the project's check, which its pre-push hook already runs; a project with CI adds the same check there. As in the audit, its findings are deterministic and never judged away: only a ruling in the context document's §6 waives one | project-check (`check.mjs`) |
 | An agent without MCP has no component reference in the repo | Point the agent at the built docs site's generated `api/` files, which already exist, and add no new format | `tools/docs-site` (already generated) |
 | A slot's preferred components are served (`get_contract` returns them), but nothing checks what an agent puts in a slot | Check a slot's children against its preferred components | `tools/docs-mcp` `validate` |
 | Figma's own MCP returns Tailwind for a frame when it should return the real import | Optional, for people working through Figma's MCP: generate Code Connect from the contract and the mapping. The toolkit's own route (Outcome 5) reads stored screens and needs no Code Connect | `component-contract`; needs a plan with Code Connect seats |
@@ -82,6 +82,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 |---|---|---|
 | No route has been chosen for composing in Figma | Trial Figma's `use_figma` with its generate-design skill, and Figma Console, on one recipe. The skill already composes from library instances and variables and compares their keys with its map; what it lacks is a scan for detached instances and a full scan for unbound values, which the next row adds. Use the vendor skill if it does the job with our context; add a toolkit skill only for what it cannot do | decided by the trial; no new owner before it |
 | Nothing checks a composed frame: the scanner reads library components only, and detached instances come from a session probe | Add a frame scope to figma-components-audit: the detached-instance probe plus an instances-only and bound-values check, not a second scanner | figma-components-audit |
+| A receipt's invented items go nowhere | Each invented item is filed as a decision row (`b3`) through the audit's row writer, so system gaps reach the same queue and rulings as audit findings; a second backlog is not made | `tools/figma-audit/rows.mjs` (the one writer) |
 | Two receipt formats would drift | One receipt format, moved to `tools/shared` once Outcome 4's trial gives it a second caller; until then it lives with frontend-build | frontend-build, then `tools/shared` |
 
 ---
@@ -125,8 +126,8 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 
 From Knapsack's Context product ([MCP docs](https://knapsack.docs.buildwithfern.com/context/mcp.md), [overview](https://knapsack.docs.buildwithfern.com/context/overview.md)), read 2026-11-04. Each needs a trial before it becomes a row.
 
-- **Corrections an owner accepts.** Knapsack's `remember` tool lets a team correct what agents are told, and a correction takes effect only once an owner accepts it. Ours would be a `system-mcp` tool that files the correction as a ruling to decide, and figma-context-capture writes it into the context document once decided (§D 8, §D 12). It joins Outcome 1, after the gate.
-- **What each agent received.** Knapsack keeps a record of what was delivered to each agent. Ours would be a `system-mcp` log of the answers a session asked for, so Outcome 6 can tie a bad result to the context it lacked. It joins Outcome 6, after the baseline.
+- **Corrections an owner accepts.** Knapsack's `remember` tool lets a team correct what agents are told, and a correction takes effect only once an owner accepts it. The audit already has this shape, so nothing new is built: the correction is filed as a decision row (bucket `b3`) through the audit's one row writer (`tools/figma-audit/rows.mjs`), it appears in the dashboard's queue, and once decided it becomes a ruling in the context document's §6 table through the service's `POST /ruling` (§D 8, §D 12). The `system-mcp` tool only files the row. It joins Outcome 1, after the gate.
+- **What each agent received.** Knapsack keeps a record of what was delivered to each agent. Ours would be a `system-mcp` log of the answers a session asked for, so Outcome 6 can tie a bad result to the context it lacked. The audit record already keeps each run with its cost; whether a prototype run is kept the same way, or beside it, is decided at the trial. It joins Outcome 6, after the baseline.
 
 Already covered, so not taken: their `check_usage` is `validate`, and their `render_ui` (a JSON screen spec rendered with real components) is what Outcome 5 does from stored screens. Knapsack has no screens, patterns or Figma flow, and its eval claims have no method.
 
