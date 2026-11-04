@@ -41,6 +41,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { undeclared, renderChanged, pipedVerdicts, trailerReport, unread, knowledgeReport } from './loop.mjs';
 import { realPath } from '../shared/real-path.mjs';
+// code the validate gate reads: what an agent writes a screen in
+import { CODE, unwaived } from '../system-mcp/validate.mjs';
 
 // run from a git hook, git exports where the repo is, and a step that makes a scratch
 // repo would write into the project's instead (toolkit's bin/check clears the same)
@@ -76,8 +78,6 @@ const upstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}
 const range = BASE ? `${BASE}..HEAD` : upstream ? `${upstream}..HEAD` : null;
 
 /* Each gate: what it needs (null when fed, else the missing fact) and how it runs. */
-// code the validate gate reads: what an agent writes a screen in
-const CODE = /\.(tsx|jsx|ts|js|mjs|vue|svelte|astro|html|php|css|scss)$/;
 const V = C.validate || {};
 const site = label ? contract.layout(null, label).site : null;
 const changedCode = () => {
@@ -131,14 +131,9 @@ const GATES = [
       if (r.error) return `validate could not run over ${files.length} file(s): ${r.error.message}`;
       let found;
       try { found = JSON.parse(r.stdout); } catch { const t = `${r.stdout}${r.stderr}`.trim().split('\n'); return `validate did not answer: ${t.find((l) => /error/i.test(l)) || t[0]}`; }
-      // waived only by a ruling that names the very finding: its file and what was found, as printed
-      // (a scope written `validate` in backticks is still validate; a word inside a longer one is not it:
-      // `#fff` is not `#ffffff`, `src/a.css` is not `lib/src/a.css` or `src/a.css.map`)
-      const waivers = contract.rulings(contract.layout(null, label).doc || '').filter((w) => /^validate$/i.test(w.scope.replace(/`/g, '').trim()));
-      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const names = (k, s) => new RegExp(`(^|[\\s\`'"(])${esc(s)}(?=$|[\\s\`'",;:)]|\\.(\\s|$))`).test(k);
+      // waived only by a ruling that names the very finding (validate.mjs unwaived)
       const rel = (f) => path.relative(REPO, f.file);
-      const open = found.filter((f) => !waivers.some((w) => names(w.key, rel(f)) && names(w.key, f.found)));
+      const open = unwaived(found, contract.rulings(contract.layout(null, label).doc || ''), rel);
       if (!open.length) return null;
       return `${open.length} finding(s)${found.length > open.length ? `, ${found.length - open.length} waived by a ruling` : ''}\n${open.map((f) => `  ${rel(f)}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`).join('\n')}\n  Fix each in the code: a finding is never judged away. One that must stay is waived by a §6 ruling scoped \`validate\` naming its file and what was found.`;
     } },

@@ -34,6 +34,19 @@ import { parseColour as colour } from '../parity/values.mjs';
 import { cssName, cssFamily } from '../tokens/names.mjs';
 
 import { realpathSync } from 'node:fs';
+// the files it reads: what an agent writes a screen in (the push gate and the evals pick files by it)
+export const CODE = /\.(tsx|jsx|ts|js|mjs|vue|svelte|astro|html|php|css|scss)$/;
+/* The findings a §6 ruling does not waive. A ruling waives a finding only
+   when it is scoped `validate` (in backticks too) and names the very finding:
+   its file, relative to the project, and what was found, each as a whole word
+   (`#fff` is not `#ffffff`, `src/a.css` is not `lib/src/a.css` or `src/a.css.map`).
+   The push gate and the evals both read it. `rel(f)` is the finding's file as the ruling names it. */
+export function unwaived(found, rulings, rel) {
+  const waivers = rulings.filter((w) => /^validate$/i.test(String(w.scope).replace(/`/g, '').trim()));
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const names = (k, s) => new RegExp(`(^|[\\s\`'"(])${esc(s)}(?=$|[\\s\`'",;:)]|\\.(\\s|$))`).test(k);
+  return found.filter((f) => !waivers.some((w) => names(w.key, rel(f)) && names(w.key, f.found)));
+}
 // two colours the same within a channel step and a hundredth of opacity: a raw value that is a token's
 const same = (a, b) => a && b && a.slice(0, 3).every((x, i) => Math.abs(x - b[i]) <= 1) && Math.abs(a[3] - b[3]) <= 0.01;
 

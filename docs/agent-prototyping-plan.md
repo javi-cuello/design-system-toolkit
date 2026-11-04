@@ -105,6 +105,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
 *Done when:* a fixed set of product tasks that never name a component is run with and without the system's context. Each result is scored by Outcome 1's check and kept with its date, and the set is re-run after each outcome lands.
 
 - **Owner:** `tools/skill-evals`, extended. Today its tasks are "build this component" runs that need a parity target and are graded by parity. The gap: tasks with no target, graded by `validate`. Context on and off extends its existing `--rules` and `--brief` switches.
+- **Status (2026-11-04):** the tool is built: a task with `"grade": "validate"` and the `--context on|off` switch (`tools/skill-evals/README.md`, *Screen tasks*), proven with a stub agent. The baseline itself waits on the first paid runs.
 - **Signals:** invented components, invented props and raw values (all should fall), invented items in receipts (should fall as recipes grow), and differences between a stored screen and its generated code (should be zero).
 
 ---

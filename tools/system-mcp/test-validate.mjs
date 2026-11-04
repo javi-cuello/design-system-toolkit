@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/system-mcp/validate.mjs: generated code held to the tokens and a contract.
 import assert from 'node:assert/strict';
-import { validate } from './validate.mjs';
+import { validate, unwaived } from './validate.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -61,5 +61,11 @@ ok('a hidden input is no field: it is not a raw element', !validate('<input type
   fs.rmSync(dir, { recursive: true, force: true });
   const out = JSON.parse(r.stdout);
   ok('--api and --json: each finding carries its file, and the exit says there was one', r.status === 1 && out.length === 1 && out[0].file === a && out[0].found === '#123456');
+}
+{
+  const found = [{ file: 'src/a.css', found: '#fff' }, { file: 'src/b.css', found: '#fff' }, { file: 'src/a.css', found: '#ffffff' }];
+  const left = unwaived(found, [{ scope: '`validate`', key: 'src/a.css keeps #fff for the print sheet.' }, { scope: 'tokens', key: 'src/b.css #fff' }], (f) => f.file);
+  ok('a §6 ruling scoped validate waives only the finding it names whole: its file and what was found; another scope waives nothing',
+    left.length === 2 && left.every((f) => !(f.file === 'src/a.css' && f.found === '#fff')));
 }
 console.log(`${n}/${n} passed`);

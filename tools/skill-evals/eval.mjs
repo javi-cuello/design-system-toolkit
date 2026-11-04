@@ -39,8 +39,12 @@ export function taskProblems(t) {
   const out = [];
   if (!t || typeof t !== 'object') return ['a task is an object'];
   if (!/^[a-z0-9-]+$/.test(t.id || '')) out.push('id: lower-case words and hyphens');
-  if (!t.target) out.push('target: the parity target the grade measures');
-  if (!Array.isArray(t.remove) || !t.remove.length) out.push('remove: the files the agent rebuilds (an eval with nothing removed measures nothing)');
+  // a screen task ("grade": "validate") builds something new: no parity target, and it may remove nothing
+  const screen = t.grade === 'validate';
+  if (t.grade != null && !['parity', 'validate'].includes(t.grade)) out.push('grade: parity (the default) or validate');
+  if (!screen && !t.target) out.push('target: the parity target the grade measures');
+  if (!screen && (!Array.isArray(t.remove) || !t.remove.length)) out.push('remove: the files the agent rebuilds (an eval with nothing removed measures nothing)');
+  if (screen && t.remove != null && !Array.isArray(t.remove)) out.push('remove: a list of paths');
   if (!t.prompt || t.prompt.trim().split(/\s+/).length < 5) out.push('prompt: what the agent is asked, in a sentence');
   return out;
 }
@@ -169,9 +173,46 @@ export function voided({ contaminated = [], tampered = [] } = {}) {
 }
 export const changed = (before, after) => [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((k) => before[k] !== after[k]);
 
+/* A screen task's code, by content: the files with a code extension under
+   the project's code prefixes (check.validate.code; all of the copy when the
+   key is unset, nothing when it is an empty list, as the push gate reads it)
+   or its system's own (check.validate.system), the latter marked. Prefixes are
+   plain string prefixes, as the push gate reads them. Hashed before and after the agent, so what it wrote is
+   what changed (changed above); a linked folder is the original's and is skipped. */
+export const SYSTEM = '\0system';
+export function codeFiles(root, { code, system = [] } = {}, ext = /$/) {
+  const out = {};
+  const walk = (dir) => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const f = path.join(dir, e.name), rel = path.relative(root, f);
+    if (e.isDirectory() && e.name !== 'node_modules') walk(f);
+    else if (e.isFile() && ext.test(rel)) {
+      const own = system.some((p) => rel.startsWith(p));
+      if (own || !code || code.some((p) => rel.startsWith(p))) out[rel] = crypto.createHash('sha1').update(fs.readFileSync(f)).digest('hex') + (own ? SYSTEM : '');
+    }
+  } };
+  walk(root);
+  return out;
+}
+/* A screen task's score: the share of the files it wrote that validate found
+   nothing in; green, no finding at all. A file written into the system's own
+   code is not graded by validate (the push gate leaves it to a reviewer) and
+   no reviewer reads an eval: it counts as not clean, and is named. Nothing
+   written, a validate that did not report, or an agent that did not exit
+   cleanly (a timeout leaves half a screen) is never a pass. */
+export function validateScore(written, findings, { system = [], agentExit = 0 } = {}) {
+  const all = written.length + system.length;
+  const why = [...(agentExit !== 0 ? [`agent exited ${agentExit}`] : []), ...(system.length ? [`wrote ${system.length} file(s) in the system's own code: ${system.join(', ')}`] : [])];
+  // the grader's own failure leads, so a run it could not grade is never a baseline (comparable)
+  if (!all) return { score: 0, green: false, why: ['wrote no code', ...why].join('; ') };
+  if (written.length && !Array.isArray(findings)) return { score: 0, green: false, why: ['validate did not report', ...why].join('; ') };
+  const dirty = new Set((findings || []).map((f) => f.file));
+  return { score: Math.round((written.filter((f) => !dirty.has(f)).length / all) * 1000) / 1000, green: !(findings || []).length && !why.length, why: why.length ? why.join('; ') : null };
+}
+
 /* A run a later one may be compared with: one that measured the agent. */
 // a failed build is a real result; a void run is not
-export const comparable = (r) => r.agent && r.turns != null && !/^(contaminated|changed the grade's inputs)/.test(r.why || '') && (r.rules !== 'on' || r.rulesFired === true);
+// a grader that did not report is not a measure of the agent either
+export const comparable = (r) => r.agent && r.turns != null && !/^(contaminated|changed the grade's inputs|validate did not report)/.test(r.why || '') && (r.rules !== 'on' || r.rulesFired === true);
 
 /* Which of the brief's files the agent opened, by any tool whose input names
    one: whether a run told to build from the contract had to read the

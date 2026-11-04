@@ -2,11 +2,17 @@
 
 The gates hold the code a project ships. An eval holds the agent that writes it: a task (build this component from its design) run by headless Claude Code in a throwaway copy of the project, graded by the project's own gates. Run it after a skill changes and compare with the task's last line: better, worse, or the same for less.
 
-    node tools/skill-evals/run.mjs --repo <dir> [task] [--rules on|off] [--brief snapshot|contract] [--no-agent] [--keep-files] [--keep]
+    node tools/skill-evals/run.mjs --repo <dir> [task] [--rules on|off] [--brief snapshot|contract] [--context on|off] [--no-agent] [--keep-files] [--keep]
 
 `--rules` runs the agent with the rules hook (`tools/claude-hooks/hooks.mjs edit`) on, the default, or off (the gates are always off in an eval copy: an eval measures the skill, not the process); each line records which, and a run is compared with the last clean one under the same setting (a void run — contaminated, or one that changed the grade's inputs — is never the baseline; a failed build is).
 
 `--brief` names the file that holds the design in the agent's prompt: the snapshot (`figma.json`) or the component's contract (`contract.json`, tools/component-contract). Both stay in the copy, because parity grades against the snapshot; each line records which of the two the agent opened, so a contract that was not enough shows as a run that read the snapshot too.
+
+## Screen tasks
+
+A task with `"grade": "validate"` asks for a product screen in words that name no component ("a notification settings page where…"). It needs no parity target and usually removes nothing (`remove` is still honoured). The grade is `tools/system-mcp/validate.mjs`, the push gate's own checker, over the code files the agent created or changed (inside `check.validate.code`, outside `check.validate.system`), against the built docs site's api. The score is the share of written files with no finding; green is no finding at all; nothing written scores 0. A file written into the system's own code counts as not clean and is named, since validate does not read it and no reviewer reads an eval; an agent that did not exit cleanly (a timeout, its turn limit, an error) is never green. A file git would ignore (a build's output, an install) is not counted as written, and the project's §6 rulings scoped `validate` waive here as at the push (`validate.mjs` `unwaived`), so an existing file the agent touched is not charged for a ruled finding. The prompt never names the grade, though with the context on the system MCP offers the same checker as a tool: using it is part of what the context gives. The parity grade's inputs a screen agent adds (a story for its screen) do not void the run; changing one that was there does. The line records each finding kind's count.
+
+`--context on` (the default) gives the agent the system MCP (`tools/system-mcp/server.mjs`) over that site, served read-only for the run; `off` gives it no MCP server. Both pass `--strict-mcp-config`, so the user's own servers never load and the two differ by the context alone. Each line records the setting and whether the agent asked the system at all; a run is compared only with one under the same setting. A project with no `check.validate.system` or no built site is refused before a copy is made.
 
 | File | What it is |
 |---|---|
@@ -20,7 +26,7 @@ In `evals` of its `snapshot.config.json`:
 
 | Key | What it says |
 |---|---|
-| `tasks` | `[{ id, target, remove, prompt }]` — the parity target graded, the files the agent rebuilds, what it is asked |
+| `tasks` | `[{ id, target, remove, prompt }]` — the parity target graded, the files the agent rebuilds, what it is asked; a screen task is `{ id, grade: "validate", prompt }` |
 | `link` | what the copy needs that git does not carry: a folder is linked (`node_modules`), a file copied (a local config Kirby will not load through a link) |
 | `build` | the step before grading (`bin/css`); a failed build scores 0, since the copy would keep the original's compiled output. It runs in the copy after the agent has edited it, so what it runs is only as trusted as the copy: the agent's narrowed tools (toolkit-standard §D 24) do not reach it, so a copy whose files told the agent to rewrite the build script would have the grader run it. `serve` is the same. Open: run both from HEAD's tree rather than the copy |
 | `serve` | the command that serves the copy's components, `{port}` filled; parity is pointed at it by `PARITY_HOST_BASE` |
@@ -33,4 +39,4 @@ The gates the agent may run are not inert: parity imports the copy's mapping mod
 
 ## Proving the grade
 
-Before trusting a score, `--no-agent` grades the copy as prepared: with the files removed it must score low, and with `--keep-files` it must score as the project does. Both projects were proven both ways on 2026-10-03 before the first agent ran. A removed score of 0 can mean the build failed or parity could not render, not a measured miss (one project's Storybook build fails without the component); that is still the right grade for a missing component, but it proves the grader reaches 0, not that it scores a partial build in between.
+Before trusting a score, `--no-agent` grades the copy as prepared: with the files removed it must score low, and with `--keep-files` it must score as the project does. Both projects were proven both ways on 2026-10-03 before the first agent ran. A screen task's `--no-agent` run scores 0 ("wrote no code"); its grade was proven on 2026-11-04 by a stub agent that wrote one file with a raw colour and a raw `<button>` and one clean file: 0.5, both findings named, under either context. A removed score of 0 can mean the build failed or parity could not render, not a measured miss (one project's Storybook build fails without the component); that is still the right grade for a missing component, but it proves the grader reaches 0, not that it scores a partial build in between.

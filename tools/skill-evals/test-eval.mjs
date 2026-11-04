@@ -2,7 +2,8 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, SYSTEM } from './eval.mjs';
+import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -92,9 +93,9 @@ ok('the grade\'s inputs are read-only in the copy before the agent starts: a map
   locked.size === 2 && (process.getuid && process.getuid() === 0 || (refused('src/b/parity.mjs') && refused('src/b/figma.json')))
   && (() => { fs.writeFileSync(path.join(lk, 'src/b/b.tsx'), 'rebuilt'); return true; })());
 unlock(lk, locked);
-ok('…and writable again, at their old modes, for the build and serve after the agent',
+ok('…and writable again, at their old modes, for the build and serve after the agent, a screen task\'s grade included',
   (fs.statSync(path.join(lk, 'src/b/parity.mjs')).mode & 0o777) === (locked.get('src/b/parity.mjs') & 0o777) && (() => { fs.writeFileSync(path.join(lk, 'src/b/parity.mjs'), 'rebuilt'); return true; })()
-  && /unlock\(copy, modes\);\n    const vo = voided|unlock\(copy, modes\);[\s\S]{0,400}const built = vo/.test(fs.readFileSync(new URL('./run.mjs', import.meta.url), 'utf8')));
+  && /unlock\(copy, modes\);[\s\S]*?if \(screen\) \{[\s\S]*?validateScore\([\s\S]*?\} else \{\s*const built = vo/.test(fs.readFileSync(new URL('./run.mjs', import.meta.url), 'utf8')));
 fs.rmSync(lk, { recursive: true, force: true });
 
 const runSrc = fs.readFileSync(new URL('./run.mjs', import.meta.url), 'utf8');
@@ -130,5 +131,45 @@ const jb = { paths: { parity: 'tests/parity/report.json' }, parity: { baseline: 
 ok('a parity run\'s own output under tests/parity is not a grade input; the accepted set and the fixtures beside it are',
   !['tests/parity/measured/components.json', 'tests/parity/measured/waivers.scope', 'tests/parity/report.json', 'tests/parity/shots/components-1280-dark.png'].some((f) => gradingInput(f, gradingPaths(jb), gradingOutputs(jb)))
   && ['tests/parity/measured/accepted/waivers.json', 'tests/parity/screens.json', 'tests/parity/fixture.php'].every((f) => gradingInput(f, gradingPaths(jb), gradingOutputs(jb))));
+
+ok('a screen task (grade validate) needs no target and may remove nothing; any other grade is refused',
+  taskProblems({ id: 'settings', grade: 'validate', prompt: 'Add a settings page where people choose notifications.' }).length === 0
+  && taskProblems({ id: 'settings', grade: 'looks', prompt: 'Add a settings page where people choose notifications.' }).length === 3
+  && taskProblems({ id: 'settings', grade: 'validate', remove: 'src/a.tsx', prompt: 'Add a settings page where people choose notifications.' }).length === 1);
+
+ok('a screen task\'s written code is what changed under the code prefixes, outside the system and node_modules, with a code extension',
+  (() => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'codefiles-'));
+    const put = (f, t) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), t); };
+    put('src/design-system/button.tsx', 'a'); put('src/app/page.tsx', 'a'); put('src/app/notes.md', 'a'); put('src/node_modules/x/index.js', 'a'); put('scripts/x.js', 'a');
+    const scope = { code: ['src/'], system: ['src/design-system/'] };
+    const before = codeFiles(d, scope, CODE);
+    put('src/app/page.tsx', 'b'); put('src/app/settings/page.tsx', 'b'); put('src/design-system/button.tsx', 'b'); put('scripts/x.js', 'b');
+    const after = codeFiles(d, scope, CODE);
+    fs.rmSync(d, { recursive: true, force: true });
+    const touched = changed(before, after).filter((f) => after[f]).sort();
+    return JSON.stringify(touched.filter((f) => !after[f].endsWith(SYSTEM))) === JSON.stringify(['src/app/page.tsx', 'src/app/settings/page.tsx'])
+      && JSON.stringify(touched.filter((f) => after[f].endsWith(SYSTEM))) === JSON.stringify(['src/design-system/button.tsx']); })());
+
+ok('a screen task scores the share of written files validate found nothing in; nothing written or no report is zero, never a pass',
+  validateScore(['a.tsx', 'b.tsx'], [{ file: 'a.tsx', kind: 'raw colour' }]).score === 0.5
+  && validateScore(['a.tsx'], []).green === true && validateScore(['a.tsx'], [{ file: 'a.tsx' }]).green === false
+  && validateScore([], []).score === 0 && /wrote no code/.test(validateScore([], []).why)
+  && validateScore(['a.tsx'], null).score === 0 && /did not report/.test(validateScore(['a.tsx'], null).why)
+  && !comparable({ agent: true, rules: 'off', turns: 3, why: 'validate did not report' }));
+
+ok('a screen task reads the system wherever it is, and an empty code list as the push gate does: nothing outside the system',
+  (() => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'codefiles-'));
+    const put = (f) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), 'a'); };
+    put('src/app/page.tsx'); put('lib/ds/button.tsx'); put('other/x.tsx');
+    const a = codeFiles(d, { code: ['src/app/'], system: ['lib/ds/'] }, CODE), b = codeFiles(d, { code: [], system: ['lib/ds/'] }, CODE), c = codeFiles(d, {}, CODE);
+    fs.rmSync(d, { recursive: true, force: true });
+    return JSON.stringify(Object.keys(a).sort()) === JSON.stringify(['lib/ds/button.tsx', 'src/app/page.tsx']) && a['lib/ds/button.tsx'].endsWith(SYSTEM)
+      && JSON.stringify(Object.keys(b)) === JSON.stringify(['lib/ds/button.tsx']) && Object.keys(c).length === 3; })());
+
+ok('a screen agent that wrote into the system, or did not exit cleanly, is never green, and is named',
+  (() => { const a = validateScore(['a.tsx'], [], { system: ['src/design-system/x.tsx'] }); return a.score === 0.5 && !a.green && /system's own code: src\/design-system\/x\.tsx/.test(a.why); })()
+  && (() => { const b = validateScore(['a.tsx'], [], { agentExit: 'SIGTERM' }); return b.score === 1 && !b.green && /agent exited SIGTERM/.test(b.why); })()
+  && validateScore([], null, { system: ['src/design-system/x.tsx'] }).score === 0
+  && /^wrote no code; agent exited error_max_turns$/.test(validateScore([], null, { agentExit: 'error_max_turns' }).why));
 
 console.log(`${n}/${n} passed`);
