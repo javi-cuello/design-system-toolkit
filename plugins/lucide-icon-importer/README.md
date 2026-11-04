@@ -6,6 +6,7 @@ Runs with no build step: import `manifest.json` via Figma → Plugins → Develo
 ## Data this plugin stores
 - **The file's settings**, as `pluginData` on the document root under `lucideIconImporterSettings` (frame name, sizes, stroke, colours, the chosen variable), so they travel with the file. No `clientStorage`.
 - **Each icon it builds** keeps `lucideIconName`, `lucideSvgSource` and `lucideTags` as `pluginData`, which the **Update icon** relaunch button rebuilds it from.
+- **Only this plugin can read that data.** `pluginData` is scoped to the plugin that wrote it (skill-standard Part B 11), so code run through the Desktop Bridge or the audit service reads empty settings and no icon data, even on icons this plugin built. That is no evidence an icon was not imported here. To check a library against the importer, rebuild each icon from Lucide's SVG with this file's `buildMasterIcon` and compare what is drawn (shape, centring in the box, the box's padding and hug, description and link), as one library's 208 icons were checked on 2026-11-04.
 - **Network:** the window fetches Lucide's `tags.json` and each icon's SVG from `cdn.jsdelivr.net` (`lucide-static`, at the version `ui.html` pins), and nothing else. The manifest allows that domain alone.
 
 ## Tests
