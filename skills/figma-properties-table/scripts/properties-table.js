@@ -450,13 +450,14 @@ globalThis.__PT_FACTORY = function () {
     const drawn = new Map();     // name path -> ids of the variants that draw it
     for (const v of variants) {
       // a nested instance's layers reference its own component's props, not this one's
-      const walk = (node, at, names, gates, hid) => {
+      const walk = (node, at, names, gates, trees) => {
         const refs = node.componentPropertyReferences || {};
         const shows = refs.visible && defs[refs.visible] && defs[refs.visible].type === 'BOOLEAN' ? refs.visible : null;
-        // the snapshot draws hidden layers only by flipping one boolean at a time: a layer hidden with no
-        // boolean to show it, or inside another hidden layer, is never drawn, so it is skipped here too
-        if (node.visible === false && (!shows || hid)) return;
-        const off = hid || node.visible === false;
+        // the trees the snapshot draws: the main as it is, and one per boolean flipped from its default, where a
+        // bound layer shows its boolean's value and the rest stay as in the main. A layer no tree draws is skipped.
+        const on = (t) => (shows && t !== null ? (t === shows) !== (defs[shows].defaultValue === true) : node.visible !== false);
+        const alive = trees.filter(on);
+        if (!alive.length) return;
         const path = names.join('/');
         if (!drawn.has(path)) drawn.set(path, new Set());
         drawn.get(path).add(v.id);
@@ -471,9 +472,10 @@ globalThis.__PT_FACTORY = function () {
           else if (earlier(at, first[k].at) < 0) first[k].at = at;
         }
         if (node.type === 'INSTANCE' || !node.children) return;
-        node.children.forEach((c, i) => walk(c, at.concat(i), names.concat(c.name), here, off));
+        node.children.forEach((c, i) => walk(c, at.concat(i), names.concat(c.name), here, alive));
       };
-      (v.children || []).forEach((c, i) => walk(c, [i], [c.name], [], false));
+      const trees = [null].concat(keys.filter(k => defs[k].type === 'BOOLEAN'));
+      (v.children || []).forEach((c, i) => walk(c, [i], [c.name], [], trees));
     }
     // the axes' values that draw exactly the variants holding a layer, or none
     const axes = keys.filter(k => defs[k].type === 'VARIANT');

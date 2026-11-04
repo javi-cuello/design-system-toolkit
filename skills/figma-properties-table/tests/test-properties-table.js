@@ -225,6 +225,17 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
         const nested = await PT10();
         const hint = (nested.tables ? nested.tables[0].rows : []).find(r => r.values[0] === 'Show hint');
         ok(hint && hint.values[3] === '-' && nested.tables[0].rows[nested.tables[0].rows.length - 1] === hint, 'A10: a hidden layer inside another boolean\'s hidden layer drives nothing, placed last as the snapshot\'s reader places it');
+        // the trees the snapshot draws: a layer hidden in the main whose boolean defaults to true is drawn by any
+        // other boolean's flip; a boolean's hidden layer inside a layer whose own boolean defaults to false is not
+        sm.children[0].children.pop(); delete defs['Show hint#1:3'];
+        defs['Show dot#1:4'] = { type: 'BOOLEAN', defaultValue: true };
+        defs['Show wrap#1:5'] = { type: 'BOOLEAN', defaultValue: false };
+        defs['Show tip#1:6'] = { type: 'BOOLEAN', defaultValue: false };
+        md.children.push(node({ id: '9:6', type: 'TEXT', name: 'Dot', visible: false, componentPropertyReferences: { visible: 'Show dot#1:4' } }));
+        md.children.push(node({ id: '9:7', type: 'FRAME', name: 'Wrap', componentPropertyReferences: { visible: 'Show wrap#1:5' } }, [node({ id: '9:8', type: 'TEXT', name: 'Tip', visible: false, componentPropertyReferences: { visible: 'Show tip#1:6' } })]));
+        const flips = (await PT10()).tables;
+        const rows = flips ? flips[0].rows.map(r => r.values[0] + ':' + r.values[3]) : [];
+        ok(rows.includes('Show dot:Only for size=md') && rows[rows.length - 1] === 'Show tip:-', 'A10: a layer is drawn where a tree the snapshot draws shows it (the main, or one boolean flipped from its default), and drives nothing where none does');
       } finally { tPage.children[0] = tagSet; }
     }
     delete globalThis.PT;

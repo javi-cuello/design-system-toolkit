@@ -122,7 +122,7 @@ Also worth surfacing to the person: any note that reads oddly, and any component
 
 ## Known limits
 
-- The live walk and the snapshot's reader find a layer's place, gate and variants by their own reading of the file. They agree on a file the snapshot has just read, except where a prop drives a layer only some variants draw: the live walk places it by the earliest place across variants, the snapshot's reader by its anatomy. The docs site's table carries no notes, so a note is written in Figma only.
+- The live walk and the snapshot's reader find a layer's place, gate and variants by their own reading of the file. Both count a layer only where a tree the snapshot draws shows it: the main as it is, or one boolean flipped from its default. They agree on a file the snapshot has just read, except where a prop drives a layer only some variants draw: the live walk places it by the earliest place across variants, the snapshot's reader by its anatomy. The docs site's table carries no notes, so a note is written in Figma only.
 - Creating a Properties section from scratch is not implemented. Pages without one are skipped.
 - A page whose properties table is missing or renamed is skipped rather than matched by shape. Shape matching would sooner or later find a data-table example and overwrite its cells.
 - Detection picks the first table meeting the shape and score test; `setConfig()` is the escape hatch.
