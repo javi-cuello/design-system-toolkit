@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.12.0)
+# Eval cases — design-system-research (v2.13.0)
+
+**Walked: 2026-11-04 against v2.13.0** — A21 added and observed on the right-to-left guide: 29 paragraphs over 70 words split at sentence seams and the seams read, one orphaned sentence merged back, a five-item measuring sentence turned into a list; the four diagrams given inline block spacing and rendered in a plain marked page as well as the reading site, which also caught a scrambled mixed-script sentence. A1–A20 unchanged: the rule governs paragraph length, figure spacing and mixed script, which none of them asserts on.
 
 **Walked: 2026-11-04 against v2.12.0** — A20 added and observed on the right-to-left guide: "Only some token names do (section 5)" rewritten with its example on the spot, and the guide's other bare cross-references read (one more fixed, two already explained in place). A1–A19 unchanged: the rule adds to the voice file and none of them asserts on cross-references.
 
@@ -188,3 +190,10 @@ Assert: the claim carries its example in place (`spacing.left` lands on the trai
 Negative: a bare "(section N)" standing in for what the claim means.
 Observed: 2026-11-04 — the person: "very vague and I shouldn't need to wait until section 5 to get a full idea".
 Traced: 2026-11-04 for 2.12.0 — to `references/deep-mode-voice.md` *Never make the reader wait for the point*.
+
+## A21 · Paragraphs are short, and figures hold their spacing in any viewer
+Fixture: a guide with paragraphs of 100 to 160 words, a sentence listing five things to measure, inline SVG diagrams with no style, and "in Arabic it's تسجيل الدخول, 12" in its prose.
+Assert: no prose paragraph runs past about 70 words or holds more than one idea; the five things are a list; each `<svg>` carries `display:block` and vertical margin inline, and renders with equal space above and below in a plain Markdown page; the Arabic sits at a clause's end in parentheses.
+Negative: a long block left because each sentence is good; a diagram spaced only by the reading site's stylesheet.
+Observed: 2026-11-04 — the person: "we shouldn't have so long paragraphs", and twice "images spacing still looks off", the second time in a viewer the stylesheet fix did not reach.
+Traced: 2026-11-04 for 2.13.0 — to `references/deep-mode-voice.md` *Short paragraphs, one idea each* and *Show what is visual*.
