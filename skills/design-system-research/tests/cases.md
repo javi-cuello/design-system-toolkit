@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.10.0)
+# Eval cases — design-system-research (v2.11.0)
+
+**Walked: 2026-11-04 against v2.11.0** — A19 added and observed: the person stopped at the right-to-left guide's first section for assuming code knowledge and asked for visual examples; the guide was rebuilt to open from what changes on screen, explain logical properties through the settings row's padding, and carry four inline SVG diagrams, rendered in headless Chrome and corrected once (Arabic anchoring). A1–A18 read against it: both rules add to the voice file without changing what A1–A18 assert; A9's question titles and A18's running example are what the diagrams draw. Reader check: pending the person's read of the rebuilt guide.
 
 **Walked: 2026-11-04 against v2.10.0** — A18 added and observed: the right-to-left guide, which met every earlier case, was called "a report and summary" and "a stream of examples"; a sample section rewritten to the new rules was approved by the person, then the whole guide was rewritten to them. A1–A17 read against it: A9's answer-first and advice-last still hold, now as unlabelled opening and closing paragraphs; A7's per-section verdict survives as the bold key sentence; A10's no-narrator grep still applies, since "you" is not a narrator; the rest govern evidence and placement, which the change leaves alone. Reader check (skill-standard §A clause E): one section read and approved by the person; the full rewritten guide not yet read, so A18 stays open until the person reads it. Review fixes the same day: the lead-in example no longer teases, the conversational-style evidence names its population and its 35-minute limit the right way round, and Diátaxis is cited only for the explanation and reference split.
 
@@ -170,3 +172,10 @@ Assert: the delivered file opens by telling the reader their situation and what 
 Negative: a guide that adds "you" but keeps the provenance opening, or a section that lists systems and plugins one after another without a running example.
 Observed: 2026-11-04 — the person on the right-to-left guide: "it looks like a report and summary", "a stream of examples, not a reading piece".
 Traced: 2026-11-04 for 2.10.0 — to `references/deep-mode-voice.md` *Write it as a lesson, not a report* and its structure block, and SKILL.md's checklist line.
+
+## A19 · The guide starts from what its reader knows, and draws what is visual
+Fixture: a deep-mode guide for designers on right-to-left layout. Its first section asks whether Figma can mirror "the way code does", explains spacing written as start and end with no example, and asks the reader to "picture a settings row".
+Assert: the guide opens from what the reader can see (what changes on screen), introduces any code mechanism after it, in design terms and through an example the reader knows, and flags code terms for the developer after the plain explanation. Each visual running example is an inline SVG with a `<title>` and `role="img"`, real labels in the real script, no blank lines inside the block, and was rendered in a browser and looked at before delivery.
+Negative: a guide whose first section needs code knowledge to follow, or a visual example left as prose ("picture a row"), or an SVG delivered without being rendered.
+Observed: 2026-11-04 — the person on the right-to-left guide: "you cannot start with that if I have no context of how code works", "what spacing? where? how?", "why cannot we have visual examples?".
+Traced: 2026-11-04 for 2.11.0 — to `references/deep-mode-voice.md` *Start where the reader is* and *Show what is visual*, and SKILL.md's checklist line.
