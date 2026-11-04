@@ -80,7 +80,10 @@ const site = label ? contract.layout(null, label).site : null;
 const changedCode = () => {
   // three dots: what this branch changed since it left its base, not what the base did since;
   // a moved file counts (R), and -z keeps a path as git wrote it
-  const out = git(['diff', '-z', '--name-only', '--diff-filter=AMR', range.replace('..', '...')]);
+  // read untrimmed, and a range git cannot read is a failure, never an empty push read as green
+  let out;
+  try { out = execFileSync('git', ['-C', REPO, 'diff', '-z', '--name-only', '--diff-filter=AMR', range.replace('..', '...')], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
+  catch (e) { return { error: `git could not read ${range}: ${String(e.stderr || e.message).trim().split('\n')[0]}` }; }
   return out.split('\0').filter((f) => f && CODE.test(f) && (!V.code || V.code.some((p) => f.startsWith(p)))
     && !(V.system || []).some((p) => f.startsWith(p)) && fs.existsSync(path.join(REPO, f)));
 };
@@ -119,6 +122,7 @@ const GATES = [
       : !site || !fs.existsSync(path.join(site, 'api/index.json')) ? 'no built docs site with its api (the docs service builds it after a snapshot)' : null),
     fn: () => {
       const files = changedCode();
+      if (files.error) return files.error;
       if (!files.length) return null;
       const r = spawnSync(process.execPath, [T('tools/docs-mcp/validate.mjs'), ...files.map((f) => path.join(REPO, f)), '--api', path.join(site, 'api'), ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28 });
       if (r.error) return `validate could not run over ${files.length} file(s): ${r.error.message}`;
