@@ -101,7 +101,7 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
   page.findAllWithCriteria = () => all(page).filter(n => n.type === 'INSTANCE');
   table.findAll = (fn) => all(table).filter(fn);
   const cfg = { schema: 4, tableName: 'Properties table', titleNodeName: 'Title', titleTextProp: 'Text', rowsSlotName: null, emptyProp: null, statusMarker: '🚧' };
-  // Plugin data by key: the config, and the rows PT.rows() loads from the contract.
+  // Plugin data by key: the config.
   const data = {};
   const pluginData = (c) => ({ getPluginData: (k) => (k === 'pt.config.v2' ? JSON.stringify(c) : data[k] || ''), setPluginData: (k, v) => { data[k] = v; } });
   globalThis.figma = { root: Object.assign({ children: [page] }, pluginData(cfg)) };
@@ -201,13 +201,10 @@ eq(printed, hash(src), 'scripts/hash.js prints exactly what the library computes
     const PT10 = async () => { delete globalThis.PT; return factory().plan('Tag'); };
     globalThis.figma = { root: Object.assign({ children: [tPage] }, pluginData(tcfg)) };
     delete globalThis.PT;
-    let a9 = await factory().audit();
-    ok(a9.problems.some(p => /Tag: no rows from a stored contract/.test(p)), 'A10: a table whose component has no rows from a stored contract is reported, not compared with the file');
+    // A10: the rows are the component's own definitions in the open file, with no rows loaded
     const planned10 = await PT10();
-    ok(planned10.skipped && /no rows from a stored contract for Tag: take a snapshot/.test(planned10.skipped), 'A10: PT.plan skips a page whose component has no stored contract rows, saying to take a snapshot');
-    // the contract's rows: Size and Show icon (the file's definitions are not read)
-    tagSet.componentPropertyDefinitions = {};
-    factory().rows({ Tag: { name: 'Tag', key: null, rows: [{ values: ['Size', 'Variant', 'md', '-'] }, { values: ['Show icon', 'Boolean', 'False (default)\nTrue', '-'] }] } });
+    ok(!planned10.skipped && planned10.tables && planned10.tables[0].rows.map(r => r.values[0]).join(',') === 'Size,Show icon', 'A10: PT.plan reads the rows from the component in the file, with nothing loaded');
+    ok(planned10.tables && planned10.tables[0].rows[1].values[2] === 'False (default)\nTrue', 'A10: a boolean reads False then True, its default marked');
     delete globalThis.PT;
     a9 = await factory().audit();
     ok(a9.problems.some(p => /rows do not match the properties; missing Show icon; stale Icon/.test(p)), 'A9: a row naming a renamed property is reported, with what is missing and what is stale');

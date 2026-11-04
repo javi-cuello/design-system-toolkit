@@ -1,4 +1,6 @@
-# Eval cases — figma-properties-table (v1.12.1)
+# Eval cases — figma-properties-table (v1.13.0)
+
+**Walked: 2026-11-04 for 1.13.0** — rows read live through `propRows`: `node tests/test-properties-table.js` passed (A10 re-aimed), `node tools/shared/test-prop-rows.mjs` 6 passed (the copy check fails with one character of the script's copy changed), `node tools/component-contract/test-contract-rows.mjs` 13 passed, and `contract-rows.mjs` printed byte-identical rows before and after over one project's 99 KB of stored contracts. Walked live on 2026-11-04 on a component library through the Desktop Bridge: a sidebar page's three tables planned from the file matched `contract-rows.mjs`'s rows from the stored snapshot exactly, after the note's layer was taken from the default variant as the contract takes it (it first came from the earliest layer, and one boolean's note read `expanded=false` against the snapshot's `expanded=true`); `applyPage` refreshed a stale subcomponent table (7 writes). The paste came back hashed `05df7144` against `c056b3b3` on disk: the bridge's transport turns the source's `\uFE0F` escape into the character itself, the same regex, which no hash over source text can tell apart.
 
 **Walked: 2026-10-31 for 1.12.1** — A15 extended: `node tests/test-properties-table.js` 54 passed; the marker and forced re-profile assertions fail with 1.12.0's script, and the `.Pill` one with the wider read-past first written for it (a leading `.` is part of a name).
 
@@ -114,14 +116,15 @@ Fixture: `Tag` with properties `Size` and `Show icon`; its table lists `Size` an
 Assert: the audit reports the table, naming `Show icon` as missing and `Icon` as stale; once the row reads `Show icon`, nothing is reported.
 Runs: node tests/test-properties-table.js — "A9: a row naming a renamed property is reported, with what is missing and what is stale", "A9: rows that match the properties raise nothing"
 
-## A10 · No stored contract means take a snapshot, never a live read
-Fixture: a page with a properties table whose component has no rows loaded from a contract (`PT.rows()` never given it).
-Assert: `PT.plan()` skips the page, naming the component and saying to take a snapshot; `PT.audit()` reports the table as having no rows to compare with. Reading the file's own property definitions instead is the failure.
-Runs: node tests/test-properties-table.js — "A10: PT.plan skips a page whose component has no stored contract rows, saying to take a snapshot", "A10: a table whose component has no rows from a stored contract is reported, not compared with the file"
+## A10 · The rows are read from the open file, with nothing loaded
+Fixture: a page with a properties table whose component defines `Size` (variant) and `Show icon` (boolean), with no rows loaded and no snapshot.
+Assert: `PT.plan()` returns the rows `Size`, `Show icon` read from the component, the boolean as `False (default)` then `True`. Skipping the page, or asking for a snapshot, is the failure (production: a component renamed in Figma left its table unrefreshable until a snapshot, 2026-11-04).
+Runs: node tests/test-properties-table.js — "A10: PT.plan reads the rows from the component in the file, with nothing loaded", "A10: a boolean reads False then True, its default marked"
 
-## A11 · The rows mirror the contract: order, options verbatim, notes from its parts
+## A11 · One mechanism for both tables: order, options verbatim, notes from the layers
 Fixture: a Button contract with a False/True axis declared True first, an enum spelled `Large` / `Icon only`, a boolean that shows an icon whose swap it gates, a text drawn only at one size (`when`), a slot, and a boolean that drives no part.
 Assert: axes first in declared order, the rest in layer order, the boolean that drives nothing last; the True/False axis keeps True first (never reordered); the enum in Figma's spelling; the swap noted `Only for left icon=true` and the text `Only for size=icon only`. The docs site's reader (`propsOf`) gives the same names, options and defaults.
+Runs: node tools/shared/test-prop-rows.mjs — "axes first in declared order, the rest in layer order, a prefix before what extends it, the undriven last", "skills/figma-properties-table/scripts/properties-table.js holds prop-rows.js propRows, line for line"
 Runs: node tools/component-contract/test-contract-rows.mjs — "variant axes first in declared order, then the rest in layer order, then those driving no layer", "a boolean property is False then True, its default marked", "a slot found through its part", "propsOf: a False/True axis as Figma has it", "propsOf keeps the declared order"
 
 ## A12 · The script runs through the installed symlink — WALKED 2026-10-22

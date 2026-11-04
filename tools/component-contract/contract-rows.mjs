@@ -20,9 +20,9 @@
 import { readFileSync, existsSync, readdirSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { propRows } from '../shared/prop-rows.js';
 
 const TYPE = { enum: 'VARIANT', boolean: 'BOOLEAN', string: 'TEXT', instance: 'INSTANCE_SWAP', slot: 'SLOT' };
-const LABEL = { VARIANT: 'Variant', BOOLEAN: 'Boolean', TEXT: 'Editable string', INSTANCE_SWAP: 'Component swap', SLOT: 'Slot' };
 
 const typeOf = (p) => (p.axis ? 'VARIANT' : TYPE[p.type] || String(p.type).toUpperCase());
 
@@ -78,64 +78,40 @@ const partsFor = (key, p, parts) => {
   return [...new Set(own)].filter((id) => parts.has(id));
 };
 
+// The rows themselves are tools/shared/prop-rows.js's: this reader only says, from the contract, where
+// each prop's first part sits, which boolean shows it and which values draw it. The Figma table reads the
+// same from the open file and hands it to the same function.
 export function rowsOf(contract, spec) {
   const entries = Object.entries(contract.props || {});
   const byKey = Object.fromEntries(entries);
   const parts = partsOf(contract);
   const drives = Object.fromEntries(entries.map(([k, p]) => [k, partsFor(k, p, parts)]));
-
-  // Variant axes first, in declared order; then the rest in layer order, from
-  // the first part each drives; then those that drive none, in declared order.
-  const axes = entries.filter(([, p]) => typeOf(p) === 'VARIANT').map(([k]) => k);
-  const rest = entries.filter(([, p]) => typeOf(p) !== 'VARIANT').map(([k]) => k);
-  const firstPart = (k) => drives[k].map((id) => treeKey(parts, id)).sort(before)[0];
-  const placed = rest.filter((k) => drives[k].length).sort((a, b) => before(firstPart(a), firstPart(b)));
-  const order = [...axes, ...placed, ...rest.filter((k) => !drives[k].length)];
-
-  // A condition in the table's words: the prop's Figma name and the value's, lower case.
-  const cond = (k, vals) => {
-    const p = byKey[k];
-    const said = [].concat(vals).map((v) => String(spell(p, v, spec)).toLowerCase());
-    return `${p.figma.toLowerCase()}=${said.join(' or ')}`;
-  };
   // the boolean whose shown part holds a part (the part itself, or its nearest ancestor)
   const shownBy = new Map();
   for (const [k, p] of entries) if (p.type === 'boolean' && !p.axis) for (const id of p.shows || []) if (!shownBy.has(id)) shownBy.set(id, k);
-
-  const notes = {}, evidence = {};
-  for (const k of rest) {
-    const conds = [];
+  return propRows(entries.map(([k, p]) => {
+    const type = typeOf(p);
+    const out = { name: p.figma, type, options: optionsOf(p, spec), default: type === 'VARIANT' ? spell(p, p.default, spec) : p.default, at: null, gate: null, when: null };
+    if (type === 'VARIANT') return out;
     const ev = { parts: drives[k] };
-    const at = drives[k][0];
-    if (at) {
-      const path = chain(parts, at);
-      // signal 1: the innermost other boolean that shows a part on the way down
+    const first = drives[k].map((id) => treeKey(parts, id)).sort(before)[0];
+    if (first) {
+      out.at = first.flat();
+      const path = chain(parts, drives[k][0]);
+      // the innermost other boolean that shows a part on the way down
       const gate = path.slice().reverse().map((id) => shownBy.get(id)).find((g) => g && g !== k);
-      if (gate) { conds.push(`${byKey[gate].figma.toLowerCase()}=true`); ev.gatedBy = byKey[gate].figma; }
-      // signal 2: the part (or its nearest ancestor) drawn only under some props' values
+      if (gate) { out.gate = byKey[gate].figma; ev.gatedBy = byKey[gate].figma; }
+      // the part (or its nearest ancestor) drawn only under some props' values
       const w = path.slice().reverse().map((id) => contract.when?.[id]).find(Boolean);
-      if (w) { for (const [q, vals] of Object.entries(w)) if (byKey[q] && q !== gate) conds.push(cond(q, vals)); ev.when = w; }
+      if (w) {
+        out.when = {};
+        for (const [q, vals] of Object.entries(w)) if (byKey[q] && q !== gate) out.when[byKey[q].figma] = [].concat(vals).map((v) => String(spell(byKey[q], v, spec)));
+        ev.when = w;
+      }
     }
-    notes[k] = conds.length ? 'Only for ' + conds.slice(0, 2).join(' and ') : '-';
-    evidence[k] = ev;
-  }
-
-  const options = (p) => {
-    const t = typeOf(p);
-    if (t === 'VARIANT') {
-      const opts = optionsOf(p, spec);
-      const binary = opts.length === 2 && opts.every((v) => v === 'True' || v === 'False');
-      // verbatim order, always
-      return binary ? opts.map((v) => (v === spell(p, p.default, spec) ? v + ' (default)' : v)).join('\n') : opts.join('\n');
-    }
-    // Figma gives a boolean property no option order, so this one is a convention
-    if (t === 'BOOLEAN') return ['False', 'True'].map((v) => ((v === 'True') === !!p.default ? v + ' (default)' : v)).join('\n');
-    return '-';
-  };
-  return order.map((k) => {
-    const p = byKey[k];
-    return { values: [p.figma, LABEL[typeOf(p)], options(p), notes[k] || '-'], evidence: evidence[k] || null };
-  });
+    out.evidence = ev;
+    return out;
+  }));
 }
 
 // ------------------------------------------------------------------ the script
