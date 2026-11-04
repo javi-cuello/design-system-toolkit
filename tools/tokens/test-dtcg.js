@@ -149,6 +149,12 @@ eq('an unbound size exports as a dimension', h.$value.fontSize, { value: 32, uni
 eq('percent line height becomes a unitless multiplier', h.$value.lineHeight, 1.15);
 eq('percent letter spacing resolves against the font size', h.$value.letterSpacing, { value: -0.64, unit: 'px' });
 eq('the camel weight became 600 here too', h.$value.fontWeight, 600);
+// 2026-11-04: a size bound by mode got the tracking of one mode's size in px
+var boundLs = DTCG.typographyToken({ name: 'Display/md', fontFamily: 'Inter', fontWeight: 'Medium', fontSize: 72,
+  lineHeight: { unit: 'PERCENT', value: 100 }, letterSpacing: { unit: 'PERCENT', value: -2 },
+  bound: { fontFamily: null, fontSize: { collection: 'Type', name: 'Display/size' }, fontWeight: null } }, {}).token;
+eq('percent tracking on a bound size rides along as a fraction of it', boundLs.$extensions['com.figma.variables'], { letterSpacingEm: -0.02 });
+ok('an unbound size carries no tracking extension', !h.$extensions);
 var body = byName['text-style/value.json']['text-style'].body.md;
 ok('AUTO line height is omitted, not faked', body.$value.lineHeight === undefined, body.$value);
 ok('and omitting it was reported',

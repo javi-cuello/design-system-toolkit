@@ -60,6 +60,7 @@ const LIBRARY = {
   },
   'text-style': { value: {
     body: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 400, fontSize: '{type.body.size}', lineHeight: 1.5, letterSpacing: { value: 0, unit: 'px' } } },
+    display: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 500, fontSize: '{type.body.size}', lineHeight: 1, letterSpacing: { value: -1.44, unit: 'px' } }, $extensions: { 'com.figma.variables': { letterSpacingEm: -0.02 } } },
   } },
 };
 
@@ -100,7 +101,9 @@ test('a text style is its fields, a bound field stays a reference, and the mixin
   assert.match(css, /--body-letter-spacing: 0rem;|--body-letter-spacing: 0px;/);
   assert.doesNotMatch(css, /--body: /, 'no font shorthand');
   assert.match(out['_text-styles.scss'], /@mixin text-style\(\$name\)/);
-  assert.match(out['_text-styles.scss'], /1 styles: body/);
+  assert.match(out['_text-styles.scss'], /2 styles: body, display/);
+  // tracking that is a share of a size bound by mode follows that size
+  assert.match(css, /--display-letter-spacing: -0\.02em;/);
 });
 
 test('two paths that become one property fail the build', { skip }, async () => {

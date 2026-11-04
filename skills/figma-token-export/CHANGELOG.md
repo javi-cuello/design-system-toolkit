@@ -1,5 +1,6 @@
 # Changelog — figma-token-export
 
+- 2.11.1 (2026-11-04): percent letter spacing on a style whose size is bound to a variable rides in `$extensions` as `letterSpacingEm`, beside the px of the snapshot's mode, and the token build writes it as em, so it follows the size each mode picks (a 36px phone Display had the −1.44px of its 72px desktop). Tests in test-dtcg.js and test-build-tokens.mjs; cases unaffected.
 - 2.11.0 (2026-11-01): the reference check moves to `tools/tokens/dtcg.js` as `DTCG.verifyReferences`; `from-snapshot.mjs`, the default path, now runs it per manifest build and writes nothing when one fails. `collect.js`'s `verifyReferences()` calls it. Step 3 says both.
 - 2.10.2 (2026-10-31): `collect.js` has a test: `tests/test-collect.mjs` runs it on a stand-in `figma` global with `dtcg.js` prepended. Prose only otherwise; cases unaffected.
 - 2.10.1 (2026-10-31): the case file names `tools/tokens/dtcg.js`; 2.10.0's history line shortened.

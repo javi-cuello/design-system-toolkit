@@ -168,6 +168,10 @@ function register(SD) {
             const [name, type] = FIELD[field] || [field, undefined];
             group[name] = { $value: val, ...(type && { $type: type }) };
           }
+          // tracking that is a share of a size bound by mode is written in
+          // em, so it follows the size the breakpoint picks (dtcg.js)
+          const em = Object.values(v.$extensions || {}).find((e) => e && e.letterSpacingEm !== undefined);
+          if (em) group['letter-spacing'] = { $value: `${em.letterSpacingEm}em` };
           n[k] = group;
         }
         return n;

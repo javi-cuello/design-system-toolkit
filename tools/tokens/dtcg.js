@@ -307,6 +307,14 @@
 
     var token = { $type: 'typography', $value: value };
     if (style.description) token.$description = style.description;
+    // a size bound to a variable can change by mode, and the dimension above
+    // is the percentage of the size in this snapshot's mode only: the
+    // fraction rides along, so a consumer can write it relative to the size
+    // (CSS em). A 36px phone Display got -1.44px, the -2% of 72 (2026-11-04)
+    if (ls && ls.unit === 'PERCENT' && bound.fontSize && !o.noExtensions) {
+      token.$extensions = {};
+      token.$extensions[o.vendor || 'com.figma.variables'] = { letterSpacingEm: +(ls.value / 100).toFixed(4) };
+    }
     return { token: token, warnings: warnings };
   }
 
