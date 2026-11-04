@@ -230,7 +230,8 @@ for (const t of tasks) {
       if (graderSaid) s.why = s.why.replace('validate did not report', `validate did not report (${graderSaid})`);
       record = { at: new Date().toISOString(), task: t.id, grade: 'validate', commit: execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), toolkit: TOOLKIT_COMMIT,
         agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, context: NO_AGENT ? null : CONTEXT, askedSystem: agent.askedSystem ?? null, ...s,
-        written: written.length, inSystem: inSystem.length, findings: findings ? findings.length : null, kinds: findings ? Object.fromEntries([...new Set(findings.map((f) => f.kind))].map((k) => [k, findings.filter((f) => f.kind === k).length])) : null,
+        // each finding as validate printed it: a count says the agent missed, this says what (the first baseline could not tell)
+        written: written.length, inSystem: inSystem.length, findings: findings ? findings.length : null, found: findings ? findings.slice(0, 40).map((f) => `${f.file}:${f.line} ${f.kind}: ${f.found}`) : null, kinds: findings ? Object.fromEntries([...new Set(findings.map((f) => f.kind))].map((k) => [k, findings.filter((f) => f.kind === k).length])) : null,
         turns: agent.turns, costUsd: agent.costUsd, minutes: Math.round((Date.now() - t0) / 6000) / 10, note: agent.result };
     } else {
     const built = vo ? none : E.build ? sh(E.build, copy) : { status: 0 };
