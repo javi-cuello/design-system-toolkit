@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.13.0)
+# Eval cases — design-system-research (v2.14.0)
+
+**Walked: 2026-11-05 against v2.14.0** — A22 added and traced. Its three failures were observed on the right-to-left guide and fixed there: the §9 opener, the digits advice, and §5 and §7 without figures.
 
 **Walked: 2026-11-04 against v2.13.0** — A21 added and observed on the right-to-left guide: 29 paragraphs over 70 words split at sentence seams and the seams read, one orphaned sentence merged back, a five-item measuring sentence turned into a list; the four diagrams given inline block spacing and rendered in a plain marked page as well as the reading site, which also caught a scrambled mixed-script sentence. A1–A20 unchanged: the rule governs paragraph length, figure spacing and mixed script, which none of them asserts on.
 
@@ -197,3 +199,10 @@ Assert: no prose paragraph runs past about 70 words or holds more than one idea;
 Negative: a long block left because each sentence is good; a diagram spaced only by the reading site's stylesheet.
 Observed: 2026-11-04 — the person: "we shouldn't have so long paragraphs", and twice "images spacing still looks off", the second time in a viewer the stylesheet fix did not reach.
 Traced: 2026-11-04 for 2.13.0 — to `references/deep-mode-voice.md` *Short paragraphs, one idea each* and *Show what is visual*.
+
+## A22 · Advice says where and how; no packed openers; long prose gets a figure
+Fixture: a guide section that opens with "Digits: as typed. Punctuation: follows the paragraph.", advises "mark which icons mirror", and runs 500 words of prose with no figure about a layout.
+Assert: the opener is replaced by the reader's situation and one point at a time; the advice names the place and the steps (the description line to add, the panel and command to use); the 500-word run gains a figure of the layout.
+Negative: a vague step left because it's correct in principle; a dense opener kept as a "summary".
+Observed: 2026-11-04 — the person: "mark where, how? often advice is very vague", "this is the super compact report style that i don't like", and "we shouldn't have sections this long without images".
+Traced: 2026-11-05 for 2.14.0 — to `references/deep-mode-voice.md` *Advice names the place and the steps*, *No packed openers* and *Show what is visual*.

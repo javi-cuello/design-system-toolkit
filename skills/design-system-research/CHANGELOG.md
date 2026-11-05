@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 2.14.0 (2026-11-05): advice names the place and the steps; no packed openers; a run of prose past about 300 words with no figure is the cue to draw one. Case A22.
 - 2.13.0 (2026-11-04): short paragraphs, one idea each, rarely past 70 words, and parallel items as a list; each inline svg carries its own block spacing for any Markdown viewer; a word in another script sits at a clause's end, not mid-sentence. Case A21.
 - 2.12.0 (2026-11-04): never make the reader wait for the point: a claim is explained where it is made, and a cross-reference adds detail rather than standing in for it. Case A20.
 - 2.11.0 (2026-11-04): start where the reader is (a designer, not a developer: on-screen first, code explained in design terms, code terms flagged for the developer), and show what is visual as inline SVG, rendered and checked before delivery. Case A19.
