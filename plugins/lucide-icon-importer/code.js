@@ -1,4 +1,4 @@
-// Lucide Icon Importer — v1.13.3 · plugin-standard v1.4.0
+// Lucide Icon Importer — v1.14.0 · plugin-standard v1.4.0
 // @ts-check
 
 var SETTINGS_KEY = 'lucideIconImporterSettings';
@@ -10,8 +10,9 @@ var CHROME_STROKE_WEIGHT = 1; // ALWAYS 1 -- the chrome boundary is decorative, 
 
 // Stashes what's needed to rebuild this icon later (the "Update icon"
 // relaunch button uses this), and registers the relaunch button itself.
-function tagPluginNode(node, iconName, svgString, tags) {
+function tagPluginNode(node, iconName, svgString, tags, rtl) {
   try {
+    node.setPluginData('lucideRtl', rtl || '');
     node.setPluginData('lucideIconName', iconName);
     node.setPluginData('lucideSvgSource', svgString);
     node.setPluginData('lucideTags', JSON.stringify(tags || []));
@@ -34,6 +35,7 @@ var DEFAULT_SETTINGS = {
   fillVariableId: null,
   bgColor: { r: 0.9607843137254902, g: 0.9607843137254902, b: 0.9607843137254902 }, // #f5f5f5
   bgOpacity: 1,
+  rtlMarks: false, // writes "Right to left: mirrors|stays" into each icon's description, which figma-components-audit reads
   strokeWeight: 2 // matches Lucide's own icon stroke convention; unrelated to the component-set chrome stroke, which is hardcoded (see CHROME_STROKE_WEIGHT)
 };
 
@@ -96,7 +98,8 @@ async function loadSettings() {
     fillVariableId: stored.fillVariableId || null,
     bgColor: normalizeColor(stored.bgColor, DEFAULT_SETTINGS.bgColor),
     bgOpacity: normalizeOpacity(stored.bgOpacity, DEFAULT_SETTINGS.bgOpacity),
-    strokeWeight: normalizeStrokeWeight(stored.strokeWeight)
+    strokeWeight: normalizeStrokeWeight(stored.strokeWeight),
+    rtlMarks: stored.rtlMarks === true
   };
 }
 
@@ -110,7 +113,8 @@ async function saveSettings(raw) {
     fillVariableId: raw.fillVariableId || null,
     bgColor: normalizeColor(raw.bgColor, DEFAULT_SETTINGS.bgColor),
     bgOpacity: normalizeOpacity(raw.bgOpacity, DEFAULT_SETTINGS.bgOpacity),
-    strokeWeight: normalizeStrokeWeight(raw.strokeWeight)
+    strokeWeight: normalizeStrokeWeight(raw.strokeWeight),
+    rtlMarks: raw.rtlMarks === true
   };
   figma.root.setPluginData(SETTINGS_KEY, JSON.stringify(settings));
   return settings;
@@ -216,7 +220,7 @@ function buildSingleComponent(size, masterIcon, fillPaint, bgPaint, iconName) {
 // for iconName, appended into `parent`. Already named/described/linked —
 // shared by both the normal add flow and the relaunch-triggered update
 // flow, so the two can never drift out of sync with each other.
-function buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags, parent) {
+function buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags, parent, rtl) {
   var sizes = settings.sizes;
   var node, publishable;
 
@@ -290,8 +294,9 @@ function buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags,
 
   node.name = iconName;
   if (publishable !== node) publishable.name = iconName;
-  if (tags && tags.length > 0) {
-    try { publishable.description = tags.join(', '); } catch (e) {}
+  var description = describeIcon(tags, rtl);
+  if (description) {
+    try { publishable.description = description; } catch (e) {}
   }
   try {
     publishable.documentationLinks = [{ uri: 'https://lucide.dev/icons/' + iconName }];
@@ -422,7 +427,28 @@ function buildMasterIcon(svgString, strokeWeight) {
   return masterIcon;
 }
 
-async function addIcon(iconName, svgString, tags) {
+// The tags, then a blank line and the right-to-left decision when there is one:
+// "Right to left: mirrors" or "Right to left: stays", the line the audit reads.
+function describeIcon(tags, rtl) {
+  var parts = [];
+  if (tags && tags.length > 0) parts.push(tags.join(', '));
+  if (rtl === 'mirrors' || rtl === 'stays') parts.push('Right to left: ' + rtl);
+  return parts.join('\n\n');
+}
+
+// The decision an icon already carries. The description comes first: it is the
+// only place a person can change it (pluginData is this plugin's alone), so an
+// edit there outranks what was stored. Then what this plugin stored.
+function keptRtl(node) {
+  var pub = node.type === 'COMPONENT_SET' || node.type === 'COMPONENT' ? node
+    : (node.children || []).filter(function(c) { return c.type === 'COMPONENT' || c.type === 'COMPONENT_SET'; })[0];
+  var m = pub && /right to left:\s*(mirrors|stays)/i.exec(pub.description || '');
+  if (m) return m[1].toLowerCase();
+  var stored = node.getPluginData('lucideRtl');
+  return stored === 'mirrors' || stored === 'stays' ? stored : '';
+}
+
+async function addIcon(iconName, svgString, tags, rtl) {
   var settings = await loadSettings();
   var iconsFrame = getIconsFrame(settings.frameName); // may be null
   var insertParent = iconsFrame || figma.currentPage;
@@ -448,7 +474,8 @@ async function addIcon(iconName, svgString, tags) {
 
   var node;
   try {
-    node = buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags, insertParent);
+    if (!settings.rtlMarks) rtl = '';
+    node = buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags, insertParent, rtl);
   } catch (e) {
     try { masterIcon.remove(); } catch (err) {}
     return { success: false, error: 'Failed to build icon: ' + e.message };
@@ -457,7 +484,7 @@ async function addIcon(iconName, svgString, tags) {
 
   try {
     finalizeAndInsert(node, iconsFrame);
-    tagPluginNode(node, iconName, svgString, tags);
+    tagPluginNode(node, iconName, svgString, tags, rtl);
   } catch (e) {
     try { node.remove(); } catch (err) {}
     return { success: false, error: 'Failed to finalize icon: ' + e.message };
@@ -498,6 +525,9 @@ async function runUpdateIcon() {
     var tags = [];
     try { tags = tagsRaw ? JSON.parse(tagsRaw) : []; } catch (e) {}
 
+    // A decision once made is kept on replace, whether the setting is on now or not.
+    var rtl = keptRtl(oldNode);
+
     var parent = oldNode.parent;
     var index  = parent.children.indexOf(oldNode);
     var x = oldNode.x, y = oldNode.y;
@@ -512,7 +542,7 @@ async function runUpdateIcon() {
 
     var newNode;
     try {
-      newNode = buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags, parent);
+      newNode = buildIconNode(iconName, masterIcon, fillPaint, bgPaint, settings, tags, parent, rtl);
     } catch (e) {
       try { masterIcon.remove(); } catch (err) {}
       skipped++;
@@ -523,7 +553,7 @@ async function runUpdateIcon() {
     newNode.x = x;
     newNode.y = y;
     try { parent.insertChild(index, newNode); } catch (e) {}
-    tagPluginNode(newNode, iconName, svgSource, tags);
+    tagPluginNode(newNode, iconName, svgSource, tags, rtl);
 
     oldNode.remove();
     newSelection.push(newNode);
@@ -654,7 +684,7 @@ figma.ui.onmessage = async function(msg) {
       var item = items[i];
       var result;
       try {
-        result = await addIcon(item.iconName, item.svgString, item.tags);
+        result = await addIcon(item.iconName, item.svgString, item.tags, item.rtl);
       } catch (e) {
         result = { success: false, error: e.message };
       }

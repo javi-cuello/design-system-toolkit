@@ -206,6 +206,9 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
   .preview-box svg { width: 20px; height: 20px; stroke: var(--text); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
   .preview-box.empty { color: var(--muted); }
   .preview-info { flex: 1; min-width: 0; }
+  .check-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--figma-color-text); cursor: pointer; }
+  .preview-info .check-row { margin-top: 2px; }
+  .check-row[hidden] { display: none; } /* the flex above would otherwise beat the browser's [hidden] */
   .preview-name { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-meta { font-size: 10px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -416,6 +419,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     <div class="preview-info">
       <div class="preview-name" id="previewName">No icon selected</div>
       <div class="preview-meta" id="previewMeta">Choose an icon above</div>
+      <label class="check-row" id="rtlRow" hidden><input type="checkbox" id="rtlMirrors"> Mirrors in Arabic</label>
     </div>
     <button class="btn btn-primary" id="addBtn" disabled>
       <div class="spinner"></div>
@@ -443,6 +447,11 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
       <div class="field-row">
         <label for="setStrokeWeight">Border thickness</label>
         <div class="field-row-control"><input type="number" id="setStrokeWeight" min="0.25" step="0.25"></div>
+      </div>
+
+      <div class="field-row">
+        <label for="setRtlMarks">Right to left</label>
+        <div class="field-row-control"><label class="check-row"><input type="checkbox" id="setRtlMarks"> Mark whether each icon mirrors in Arabic</label></div>
       </div>
     </div>
 
@@ -870,6 +879,7 @@ function cleanSvg(text) {
 }
 
 function resetPreview() {
+  rtlRow.hidden = true;
   previewBox.className = 'preview-box empty';
   previewBox.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>';
   previewName.textContent = 'No icon selected';
@@ -895,7 +905,7 @@ function toggleIconSelection(icon, card) {
 
   card.classList.add('selected');
   card.setAttribute('aria-pressed', 'true');
-  var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false };
+  var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false, mirrors: suggestMirrors(name) };
   selectedIcons.set(name, entry);
   updatePreviewPanel();
 
@@ -945,7 +955,7 @@ function selectFromList(text) {
     var icon = byName[name];
     if (!icon) { unknown.push(name); return; }
     if (selectedIcons.has(name)) return;
-    var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false };
+    var entry = { name: name, tags: icon.tags || [], svgString: null, loading: true, error: false, mirrors: suggestMirrors(name) };
     selectedIcons.set(name, entry);
     added++;
     queuedFetchSvg(name).then(function(svgText) {
@@ -965,12 +975,28 @@ function selectFromList(text) {
   if (unknown.length) showToast(unknown.length + ' name(s) not in Lucide — see the status line', true);
 }
 
+// Whether an icon points the way the reader moves, so it mirrors in Arabic: the
+// same words figma-components-audit's scanner reads as directional (DIR_WORD,
+// MEDIA, VERT and HORIZ in scanner/audit.js; tests/test-importer.mjs keeps the
+// two lists equal). Only a suggestion: the designer confirms it per icon.
+var RTL_DIR = /(?<![\p{L}])(chevrons?|arrows?|carets?|undo|redo|reply|send|forward|back|next|previous|prev|log-?in|log-?out|sign-?in|sign-?out|indent|outdent|skip|rewind|fast-forward|play|step-back|step-forward|external-link|corner)(?![\p{L}])/iu;
+var RTL_MEDIA = /(?<![\p{L}])(play|pause|rewind|fast-forward|skip-back|skip-forward|step-back|step-forward|repeat|shuffle|clock|timer)(?![\p{L}])/iu;
+var RTL_VERT = /(?<![\p{L}])(up|down|upward|downward)(?![\p{L}])/iu;
+var RTL_HORIZ = /(?<![\p{L}])(left|right|forward|back|next|prev|previous)(?![\p{L}])/iu;
+function suggestMirrors(name) {
+  return RTL_DIR.test(name) && !RTL_MEDIA.test(name) && !(RTL_VERT.test(name) && !RTL_HORIZ.test(name));
+}
+
 // Renders 0/1/many selected state into the preview panel + Add button.
 // A single selection keeps the original full single-icon preview (no
 // regression for the common case); 2+ shows a count instead of trying to
 // cram multiple glyphs into a 36px box.
 function updatePreviewPanel() {
   var count = selectedIcons.size;
+  var marking = !!(currentSettings && currentSettings.rtlMarks);
+  rtlRow.hidden = !(marking && count === 1);
+  // Shown is decided: an icon added with others is written only if someone saw its box.
+  if (count === 1) { var one = selectedIcons.values().next().value; rtlMirrors.checked = !!one.mirrors; if (marking) one.seen = true; }
   var anyLoading = false;
   selectedIcons.forEach(function(e) { if (e.loading) anyLoading = true; });
 
@@ -1002,7 +1028,9 @@ function updatePreviewPanel() {
     previewName.textContent = count + ' icons selected';
     var loadingCount = 0;
     selectedIcons.forEach(function(e) { if (e.loading) loadingCount++; });
-    previewMeta.textContent = loadingCount > 0 ? (loadingCount + ' loading…') : 'Ready to add';
+    var unseen = 0;
+    selectedIcons.forEach(function(e) { if (!e.seen && !e.error) unseen++; });
+    previewMeta.textContent = loadingCount > 0 ? (loadingCount + ' loading…') : 'Ready to add' + (marking && unseen ? ' · ' + unseen + ' with no Arabic decision' : '');
     addBtn.querySelector('.btn-label').textContent = 'Add ' + count + ' icons';
   }
 
@@ -1031,7 +1059,7 @@ addBtn.addEventListener('click', function() {
   parent.postMessage({
     pluginMessage: {
       type: 'ADD_ICONS',
-      icons: ready.map(function(e) { return { iconName: e.name, svgString: e.svgString, tags: e.tags }; })
+      icons: ready.map(function(e) { return { iconName: e.name, svgString: e.svgString, tags: e.tags, rtl: currentSettings && currentSettings.rtlMarks && e.seen ? (e.mirrors ? 'mirrors' : 'stays') : '' }; })
     }
   }, '*');
 });
@@ -1040,6 +1068,13 @@ addBtn.addEventListener('click', function() {
 var setFrameName    = document.getElementById('setFrameName');
 var setSizes        = document.getElementById('setSizes');
 var setStrokeWeight = document.getElementById('setStrokeWeight');
+var setRtlMarks     = document.getElementById('setRtlMarks');
+var rtlRow          = document.getElementById('rtlRow');
+var rtlMirrors      = document.getElementById('rtlMirrors');
+// One icon selected: its own decision. Two or more: select one to change it.
+rtlMirrors.addEventListener('change', function() {
+  if (selectedIcons.size === 1) selectedIcons.values().next().value.mirrors = rtlMirrors.checked;
+});
 var fillModeLiteralRadio  = document.getElementById('fillModeLiteralRadio');
 var fillModeVariableRadio = document.getElementById('fillModeVariableRadio');
 
@@ -1311,6 +1346,7 @@ bgColorHex.addEventListener('input', function() {
 setFrameName.addEventListener('input', queueAutosave);
 setSizes.addEventListener('input', queueAutosave);
 setStrokeWeight.addEventListener('input', queueAutosave);
+setRtlMarks.addEventListener('change', queueAutosave);
 fillOpacityInput.addEventListener('input', queueAutosave);
 bgOpacityInput.addEventListener('input', queueAutosave);
 
@@ -1333,7 +1369,8 @@ function doSave() {
     fillVariableId: fillMode === 'variable' ? selectedVariableId : null,
     bgColor: bgHexValid ? hexToRgb01(bgColorHex.value) : (currentSettings ? currentSettings.bgColor : { r: 0.96, g: 0.96, b: 0.96 }),
     bgOpacity: clampOpacityInput(bgOpacityInput),
-    strokeWeight: setStrokeWeight.value
+    strokeWeight: setStrokeWeight.value,
+    rtlMarks: setRtlMarks.checked
   };
   parent.postMessage({ pluginMessage: { type: 'SAVE_SETTINGS', settings: settings } }, '*');
 }
@@ -1348,6 +1385,7 @@ function applySettingsToFields(settings) {
   setFrameName.value = settings.frameName;
   setSizes.value = settings.sizes.join(', ');
   setStrokeWeight.value = settings.strokeWeight;
+  setRtlMarks.checked = !!settings.rtlMarks;
 
   var hex = rgb01ToHex(settings.fillColor);
   fillColorHex.value = hex;
@@ -1382,10 +1420,12 @@ window.onmessage = function(event) {
 
   if (msg.type === 'SETTINGS') {
     applySettingsToFields(msg.settings);
+    updatePreviewPanel();
   }
 
   if (msg.type === 'SETTINGS_SAVED') {
     applySettingsToFields(msg.settings);
+    updatePreviewPanel();
   }
 
   if (msg.type === 'COLOR_VARIABLES') {

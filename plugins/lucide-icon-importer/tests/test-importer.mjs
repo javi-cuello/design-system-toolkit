@@ -143,5 +143,42 @@ check('the settings normalisers', () => {
   is(api.frame('   '), 'Icons', 'a blank frame name falls back to Icons');
 });
 
+check('right to left: the description line the audit reads', () => {   // v1.14.0
+  const api = load(makeFigma([]).figma, 'return { describe: describeIcon };');
+  is(api.describe(['next', 'forward'], 'mirrors'), 'next, forward\n\nRight to left: mirrors', 'the decision follows the tags after a blank line');
+  is(api.describe([], 'stays'), 'Right to left: stays', 'an icon with no tags still gets the line');
+  is(api.describe(['heart'], ''), 'heart', 'no decision, no line: the setting was off');
+  // the audit's own test of the line, so the two cannot drift apart
+  const audit = readFileSync(join(here, '..', '..', '..', 'skills', 'figma-components-audit', 'scanner', 'audit.js'), 'utf8');
+  const note = new RegExp(audit.match(/ICON_NOTE=\/(.*?)\/i/)[1], 'i');
+  ok(note.test(api.describe(['x'], 'mirrors')) && note.test(api.describe([], 'stays')), "the audit's icon-decision check accepts both lines");
+});
+
+check('right to left: the suggestion uses the audit\'s words', () => {
+  const src = ui.match(/var RTL_DIR[\s\S]*?\nfunction suggestMirrors[\s\S]*?\n}/)[0];
+  const suggest = new Function(src + '\nreturn suggestMirrors;')();
+  is(['chevron-right', 'arrow-left', 'undo-2', 'send', 'log-out'].map(suggest), [true, true, true, true, true], 'icons that point the reading way mirror');
+  is(['chevron-down', 'arrow-up', 'play', 'heart', 'chevrons-up-down'].map(suggest), [false, false, false, false, false], 'vertical, media and plain icons stay');
+  const audit = readFileSync(join(here, '..', '..', '..', 'skills', 'figma-components-audit', 'scanner', 'audit.js'), 'utf8');
+  for (const [mine, theirs] of [['RTL_DIR', 'DIR_WORD'], ['RTL_MEDIA', 'MEDIA'], ['RTL_VERT', 'VERT'], ['RTL_HORIZ', 'HORIZ']]) {
+    const words = (text, re) => (text.match(re) || [])[1];
+    ok(words(ui, new RegExp('var ' + mine + ' = /(.*?)/iu;')), mine + ' is found in ui.html, so the comparison below is not two blanks');
+    is(words(ui, new RegExp('var ' + mine + ' = /(.*?)/iu;')), words(audit, new RegExp('(?:const |, ?)' + theirs + '=/(.*?)/iu')), mine + ' lists the same words as the audit\'s ' + theirs);
+  }
+});
+
+check('right to left: off unless the file turns it on, and kept on replace', () => {
+  const api = load(makeFigma([]).figma, 'return { defaults: DEFAULT_SETTINGS };');
+  is(api.defaults.rtlMarks, false, 'the setting is off by default');
+  ok(/\.check-row\[hidden\]\s*\{\s*display:\s*none/.test(ui), 'the hidden box is really hidden: the row\'s own display: flex would beat the browser\'s [hidden]');
+  const kept = load(makeFigma([]).figma, 'return keptRtl;');
+  const node = (data, extra) => Object.assign({ getPluginData: (k) => (k === 'lucideRtl' ? data : '') }, extra);
+  is(kept(node('mirrors')), 'mirrors', 'replace keeps the decision this plugin stored');
+  is(kept(node('', { type: 'FRAME', children: [{ type: 'COMPONENT', description: 'send\n\nRight to left: Stays' }] })), 'stays', 'a line written by hand is kept too');
+  is(kept(node('', { type: 'COMPONENT_SET', description: 'heart' })), '', 'no decision anywhere, none invented');
+  is(kept(node('mirrors', { type: 'COMPONENT_SET', description: 'send\n\nRight to left: stays' })), 'stays', 'a hand edit to the description outranks what the plugin stored');
+  ok(/buildIconNode\([^)]*, rtl\);/.test(code.split('function replaceSelected')[1] || code.slice(code.indexOf('keptRtl(oldNode)'))) && /tagPluginNode\(newNode, iconName, svgSource, tags, rtl\)/.test(code), 'replace passes the kept decision on to the rebuild and the stored data');
+});
+
 console.log(fail.length ? `FAIL — ${fail.length} of ${pass + fail.length}\n  ${fail.join('\n  ')}` : `pass — ${pass} of ${pass} assertions`);
 process.exit(fail.length ? 1 : 0);

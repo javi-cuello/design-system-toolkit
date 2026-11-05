@@ -1,4 +1,10 @@
 # Changelog — lucide-icon-importer
+## [1.14.0] - 2026-11-05
+### Added
+- A Settings option, Right to left, off by default. When it's on, each icon gets `Right to left: mirrors` or `Right to left: stays` in its description: the line figma-components-audit's icon-decision check reads.
+- With one icon selected, a "Mirrors in Arabic" checkbox. It's prefilled from the icon's name, using the audit's own direction words (a test keeps the two lists equal).
+- Update icon keeps the decision already made, including a line written into the description by hand.
+- When several icons are added together, only those whose box someone saw get the line. The rest are left for the audit to ask about, since a guessed line would silence it.
 ## [1.13.3] - 2026-11-01
 ### Fixed
 - The tab and clear buttons set `box-sizing: border-box` beside their own height, so neither leans on the shared baseline's box (conformance §5a).
