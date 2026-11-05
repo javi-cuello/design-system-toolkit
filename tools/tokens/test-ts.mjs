@@ -2,7 +2,7 @@
 // generate-ts.mjs and verify-ts.mjs on a token export written the way every
 // project's is (from-snapshot.mjs's writeDtcg over a snapshot shaped like the
 // plugin's): the modules are generated and pass, and each defect verify-ts
-// exists to catch fails it — figma-token-export's A21 negative half, which was
+// exists to catch fails it — the retired figma-token-export skill's A21 negative half, which was
 // prose until 2026-10-31. Run: node tools/tokens/test-ts.mjs
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

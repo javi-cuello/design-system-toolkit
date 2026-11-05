@@ -5,7 +5,7 @@ description: Advise on the right Claude model and Effort setting before starting
 
 # Design systems model routing
 
-**Version 1.2.10** — history in CHANGELOG.md.
+**Version 1.2.11** — history in CHANGELOG.md.
 
 Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table below and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
 
@@ -28,7 +28,6 @@ Claude cannot change the model or Effort setting itself — only the user can, v
 | Two-file diff (fork vs master, duplication check) | `figma-file-diff` | Sonnet | Default | Hashing and comparison live in scripts; what's left is procedure discipline (identity checks, stability re-runs) and saying what each difference means |
 | Contrast matrix / ratios grid | `figma-contrast-matrix` | Sonnet | Low–default | Pure WCAG math + structured writes |
 | Documentation generation / regeneration | `figma-doc-generator` | Sonnet | Default | Mirrors library data into tables |
-| Token export to DTCG / Style Dictionary | `figma-token-export` | Sonnet | Default | Conversion and manifest logic live in a tested script; what's left is reading the skip/warning report and deciding the three project questions (colour format, unit, opacity scale) |
 | Tokens mapping example tables | `figma-tokens-examples` | Sonnet | Default | Skill-guided, repeatable |
 | Properties table for a component page | `figma-properties-table` | Sonnet | Low–default | Draws the rows the snapshot's own walk reads from the open file; the component decides the content |
 | Writing component descriptions | `figma-component-descriptions` | Sonnet | Default | Structured short-form prose against a recorded per-project shape. Step up where the judgement is *boundary* work — whether a component is one thing or two, whether a child is slot-only |

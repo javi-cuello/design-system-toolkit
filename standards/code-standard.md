@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.31.2** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.31.3** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -221,7 +221,7 @@
 
     *Evidence:* one project's freshness check regenerated into the tracked files and ignored the generator's exit code; a review found both, and an output-directory option fixed both. **Mechanical.** *Checked:* `tools/tokens/check.mjs` "say('code-standard rule 23'" and each project's `bin/tokens --check`.
 
-51. **Tokens are built one way, by the toolkit's token build, in every project.** The design file's snapshot becomes DTCG token files (`figma-token-export`'s converter), stored in `dtcg/` beside the snapshot as the tokens' format-standard contract and gated like any generated file (rule 23), and Style Dictionary turns them into the stylesheets (`frontend-build`'s build, the house conventions in one place), run through `tools/tokens/build.mjs`. A repo's `bin/tokens` calls that and nothing else; no repo keeps a generator of its own.
+51. **Tokens are built one way, by the toolkit's token build, in every project.** The design file's snapshot becomes DTCG token files (`tools/tokens/from-snapshot.mjs`), stored in `dtcg/` beside the snapshot as the tokens' format-standard contract and gated like any generated file (rule 23), and Style Dictionary turns them into the stylesheets (`frontend-build`'s build, the house conventions in one place), run through `tools/tokens/build.mjs`. A repo's `bin/tokens` calls that and nothing else; no repo keeps a generator of its own.
 
     *Why:* two generators are two conventions, and the second one is invisible from inside the first project. Every difference between them is a place where a component moved between projects silently changes.
 

@@ -15,8 +15,7 @@
  * The snapshot plugin already read the file; reading it again through the
  * bridge to export tokens was a second reader of the same variables. This
  * converts what the snapshot holds into the shape dtcg.js takes and writes the
- * same files, manifest included, that the live export writes. dtcg.js is not
- * changed: it stays the one converter, and its tests stay the gate.
+ * DTCG files, manifest included. dtcg.js stays the one converter, and its tests stay the gate.
  *
  * What the snapshot records differently, and how each is recovered:
  *  - values arrive resolved, with each alias's first hop by name only; the

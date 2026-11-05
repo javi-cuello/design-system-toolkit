@@ -16,7 +16,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 
   | Want | Read | Becomes |
   |---|---|---|
-  | Colour, spacing, radius, size scales | variables | DTCG token files, then the token build's Sass (code-standard rule 51, `figma-token-export`) |
+  | Colour, spacing, radius, size scales | variables | DTCG token files, then the token build's Sass (code-standard rule 51, `tools/tokens`) |
   | Type ramp | text styles | text-style fields and the `text-style()` mixin (code-standard rule 54) |
   | Shadows, blurs | effect styles | shadow tokens, layers in CSS paint order |
   | Component structure and props | component sets and their properties | the component inventory (below) |

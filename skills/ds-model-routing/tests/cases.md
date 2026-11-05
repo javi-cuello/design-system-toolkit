@@ -1,4 +1,6 @@
-# Eval cases — ds-model-routing (v1.2.10)
+# Eval cases — ds-model-routing (v1.2.11)
+
+**Walked: 2026-11-05 for 1.2.11** — one row removed with `figma-token-export`; A5's row grep finds a row for every skill in `skills/`, and no other skill's files reference this one (the skills index and a changelog line aside). A1–A4 unaffected.
 
 **Reviewed against v1.2.9 on 2026-09-20** — citation only: the four standards governing the toolkit's parts became `standards/toolkit-standard.md`, and this skill's references point at its §A. No rule and no case changed.
 

@@ -32,7 +32,6 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [figma-contrast-matrix](figma-contrast-matrix/SKILL.md) | Fills a WCAG contrast-ratio grid between colour-scale steps. |
 | [figma-context-capture](figma-context-capture/SKILL.md) | Reads a library's conventions into the project's context document, which every other skill reads. |
 | **Tokens and colour** | |
-| [figma-token-export](figma-token-export/SKILL.md) | Exports variables and text styles as DTCG token files for Style Dictionary. |
 | [oklch-color-scale-system](oklch-color-scale-system/SKILL.md) | Generates perceptually even 12-step OKLCH colour scales, light and dark. |
 | **Code** | |
 | [frontend-build](frontend-build/SKILL.md) | Builds and audits an interface against the design and code standards. |

@@ -853,9 +853,7 @@ globalThis.__DOCGEN_FACTORY = function () {
 
   // `#rrggbb`, `#rrggbbaa`, `rgb(r g b / a)`, `rgba(r, g, b, a)` -> Figma's
   // {r,g,b,a} 0-1. Named for its output: design-code-parity's parseColour
-  // reads the same spellings and returns [r,g,b,a] with r in 0-255. A skill
-  // may not call another skill's scripts, so figma-token-export carries the
-  // same converter; the duplicate is structural, the shared name was not.
+  // reads the same spellings and returns [r,g,b,a] with r in 0-255.
   function figmaRgba(s) {
     var str = String(s).trim(), m = str.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
     if (m) {

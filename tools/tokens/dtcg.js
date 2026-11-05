@@ -1,6 +1,6 @@
-/* figma-token-export — layer 1: pure logic, no `figma` global, fully testable.
+/* The token build's DTCG converter: pure logic, no `figma` global, fully testable.
  *
- * Turns a plain-data snapshot (see collect.js) into DTCG 2025.10 token files.
+ * Turns a stored snapshot's plain data (from-snapshot.mjs) into DTCG 2025.10 token files.
  * Nothing here touches a node, so `node tools/tokens/test-dtcg.js` is the gate.
  *
  * Exposes one global: DTCG.
@@ -79,7 +79,7 @@
   // 6-digit hex, per the color module: the `hex` fallback must not carry alpha.
   function hexOf(c) { return '#' + hex2(c.r) + hex2(c.g) + hex2(c.b); }
 
-  // Two shapes, and the choice is a real trade-off — see references/mapping.md.
+  // Two shapes, and the choice is a real trade-off — see tools/tokens/README.md.
   //   'object' (default): DTCG 2025.10 compliant — {colorSpace, components, alpha, hex}
   //   'hex':              legacy string form — what Style Dictionary v4 consumes today
   function colorValue(c, format) {
@@ -289,13 +289,13 @@
     value.fontWeight = w;
 
     // AUTO is the font's ascender + descender rounded to whole pixels; the
-    // collector measures it on a rendered text node (unit MEASURED). Only an
-    // AUTO that could not be measured is omitted — never faked.
+    // snapshot plugin measures it and from-snapshot.mjs passes it as PERCENT.
+    // An AUTO that reaches here unmeasured is omitted — never faked.
     var lh = style.lineHeight;
     if (!lh || lh.unit === 'AUTO') {
       warnings.push({ name: style.name, reason: 'line height is AUTO and could not be measured — omitted' });
     } else {
-      // a measured AUTO is the rendered line's pixels (collect.js, unit MEASURED)
+      // MEASURED (pixels) came from the retired live collector; no producer sends it now
       value.lineHeight = perFontSize(lh.unit === 'MEASURED' ? { unit: 'PIXELS', value: lh.value } : lh, style.fontSize);
     }
 

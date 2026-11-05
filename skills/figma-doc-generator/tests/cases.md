@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.22.3)
+# Eval cases — figma-doc-generator (v1.22.4)
+
+**Reviewed against v1.22.4 on 2026-11-05** — a comment in `docgen.js` only; the paste hash strips comments (`tools/toolkit-check/test-paste-hash.mjs`); no case changed.
 
 **Walked live: 2026-10-31, tests only (skill-standard §A clause A)** — D48's snapshot half on a real library: the snapshot plugin's run stored 18 text styles, each line height and letter spacing equal to `tools/shared/text-units.js` `perFontSize` on the style's authored value. That library authors every value in percent and no letter spacing, so the pixel branch met no real input. The page half is not walked live: it needs a documentation target file.
 
