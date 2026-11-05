@@ -65,7 +65,7 @@ export function chromeFinding(written, read, chrome) {
   for (const f of written) {
     let text = '';
     try { text = String(read(f) || ''); } catch { continue; }
-    text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1').replace(/\b(import|export)\s+type\b[^;'"]*?from\s*['"][^'"]+['"]/g, '');
+    text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1').replace(/\b(import|export)\s+type\s+(\{[^}]*\}|\*\s+as\s+\w+|\w+)\s*from\s*['"][^'"]+['"]/g, '');
     for (const [, spec] of text.matchAll(/\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)) {
       const full = norm(spec.startsWith('.') ? path.posix.join(path.posix.dirname(f), spec) : spec);
       if (wanted.some((w) => full === w || full.endsWith(`/${w}`))) return null;

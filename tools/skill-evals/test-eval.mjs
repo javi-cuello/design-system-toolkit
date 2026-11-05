@@ -26,6 +26,8 @@ ok('a screen task may name its chrome; a page built outside it is a finding, one
   && chromeFinding(['src/screens/n/n.tsx'], () => "import { AppShell } from '../shell/app-shell';", ['@/screens/shell/app-shell']) === null
   && chromeFinding(['src/app/p/page.tsx'], () => "import { X } from '@/screens/shell';", ['src/screens/shell/index.tsx']) === null
   && chromeFinding(['src/app/p/page.tsx'], () => "import type { NavItem } from '@/screens/shell/app-shell';", ['screens/shell/app-shell']) !== null
+  && chromeFinding(['src/app/p/page.tsx'], () => "export type P = { a: number }\nimport { AppShell } from '../../screens/shell/app-shell'", ['screens/shell/app-shell']) === null
+  && chromeFinding(['src/app/p/page.tsx'], () => "import type {\n  NavItem,\n} from '@/screens/shell/app-shell'", ['screens/shell/app-shell']) !== null
   && chromeFinding(['src/app/p/page.tsx'], () => "// like '@/screens/shell/app-shell'\n/* from '@/screens/shell/app-shell' */", ['screens/shell/app-shell']) !== null
   && chromeFinding(['src/app/p/page.tsx'], () => { throw new Error('gone'); }, ['screens/shell/app-shell']).file === 'src/app/p/page.tsx'
   && chromeFinding(['src/screens/n/n.stories.tsx', 'src/app/x/page.tsx'], () => '', ['a']).file === 'src/app/x/page.tsx');
