@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, SYSTEM } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -10,6 +10,25 @@ import path from 'node:path';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+
+ok('a screen task may name its chrome; a page built outside it is a finding, one that imports it (alias or relative) is not',
+  taskProblems({ id: 'notes', grade: 'validate', chrome: ['screens/shell/app-shell'], prompt: 'Add a notes page for a signed-in person.' }).length === 0
+  && taskProblems({ id: 'notes', grade: 'validate', chrome: [], prompt: 'Add a notes page for a signed-in person.' }).length === 1
+  && taskProblems({ id: 'badge', target: 'badge', remove: ['a.tsx'], chrome: ['x'], prompt: 'Build the Badge component from its design.' }).length === 1
+  && chromeFinding(['src/app/p/page.tsx'], () => "import { AppShell } from '@/screens/shell/app-shell';", ['screens/shell/app-shell']) === null
+  && chromeFinding(['src/screens/n/n.tsx'], () => "import { AppShell } from '../shell/app-shell';", ['screens/shell/app-shell.tsx']) === null
+  && chromeFinding(['src/app/p/page.tsx', 'src/screens/n/n.tsx'], (f) => f.endsWith('n.tsx') ? "import { AppPage } from '../templates/app-page'" : "import { N } from '@/screens/n/n'", ['screens/templates/app-page']) === null
+  && chromeFinding(['src/app/p/page.tsx'], () => "import { Button } from '@/design-system/button/button';\nimport { MyShell } from './shell';", ['screens/shell/app-shell']).kind === 'chrome'
+  && chromeFinding(['src/app/p/page.tsx'], () => "import { AppShellish } from '@/screens/shell/app-shell-old';", ['screens/shell/app-shell']) !== null
+  && chromeFinding(['src/a.tsx'], () => '', undefined) === null
+  && validateScore(['src/app/p/page.tsx', 'src/lib/a.ts', 'src/lib/b.ts'], [chromeFinding(['src/app/p/page.tsx'], () => '', ['screens/shell/app-shell'])]).score === 0
+  && /outside the shell/.test(validateScore(['src/app/p/page.tsx'], [chromeFinding(['src/app/p/page.tsx'], () => '', ['x'])]).why)
+  && chromeFinding(['src/screens/n/n.tsx'], () => "import { AppShell } from '../shell/app-shell';", ['@/screens/shell/app-shell']) === null
+  && chromeFinding(['src/app/p/page.tsx'], () => "import { X } from '@/screens/shell';", ['src/screens/shell/index.tsx']) === null
+  && chromeFinding(['src/app/p/page.tsx'], () => "import type { NavItem } from '@/screens/shell/app-shell';", ['screens/shell/app-shell']) !== null
+  && chromeFinding(['src/app/p/page.tsx'], () => "// like '@/screens/shell/app-shell'\n/* from '@/screens/shell/app-shell' */", ['screens/shell/app-shell']) !== null
+  && chromeFinding(['src/app/p/page.tsx'], () => { throw new Error('gone'); }, ['screens/shell/app-shell']).file === 'src/app/p/page.tsx'
+  && chromeFinding(['src/screens/n/n.stories.tsx', 'src/app/x/page.tsx'], () => '', ['a']).file === 'src/app/x/page.tsx');
 
 ok('the agent may run node only for the two gates, and a project\'s own commands; never node with any code',
   (() => { const t = agentTools('/tk', ['bin/css']); return !t.includes('Bash(node:*)') && !t.some((x) => /^Bash\(node( |:)\*?\)?$/.test(x) || x === 'Bash(node:*)')

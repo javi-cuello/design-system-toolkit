@@ -47,7 +47,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, SYSTEM } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM } from './eval.mjs';
 import { CODE, unwaived } from '../system-mcp/validate.mjs';
 import { serveFolder } from '../system-mcp/serve-folder.mjs';
 import { realPath } from '../shared/real-path.mjs';
@@ -240,6 +240,9 @@ for (const t of tasks) {
         // the project's own §6 waivers hold here as at the push: an existing file the agent touched is not charged for a ruled finding
         try { findings = unwaived(JSON.parse(r.stdout).map((f) => ({ ...f, file: path.relative(copy, f.file) })), PROJECTS.rulings(PROJECTS.layout(null, label).doc || ''), (f) => f.file); } catch { findings = null; graderSaid = r.error ? r.error.message : `exit ${r.status}: ${(r.stderr || r.stdout || '').trim().split('\n')[0].slice(0, 160)}`; }
       }
+      // the screen's shell is graded with its imports: a page built outside it scored 1 on imports alone (feedback-screen, 2026-11-04)
+      const chrome = !vo && Array.isArray(findings) ? chromeFinding(written, (f) => fs.readFileSync(path.join(copy, f), 'utf8'), t.chrome) : null;
+      if (chrome) findings = [...findings, chrome];
       const s = vo || validateScore(written, findings, { system: inSystem, agentExit: NO_AGENT ? 0 : agent.exit });
       if (graderSaid) s.why = s.why.replace('validate did not report', `validate did not report (${graderSaid})`);
       record = { at: new Date().toISOString(), task: t.id, grade: 'validate', commit: execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), toolkit: TOOLKIT_COMMIT,

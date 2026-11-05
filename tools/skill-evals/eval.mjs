@@ -46,7 +46,33 @@ export function taskProblems(t) {
   if (!screen && (!Array.isArray(t.remove) || !t.remove.length)) out.push('remove: the files the agent rebuilds (an eval with nothing removed measures nothing)');
   if (screen && t.remove != null && !Array.isArray(t.remove)) out.push('remove: a list of paths');
   if (!t.prompt || t.prompt.trim().split(/\s+/).length < 5) out.push('prompt: what the agent is asked, in a sentence');
+  // the shell a screen must be built inside: the research's "is anything in the chrome new?" (knowledge/code/agent-prototyping.md)
+  if (t.chrome != null && (!screen || !Array.isArray(t.chrome) || !t.chrome.length || !t.chrome.every((m) => typeof m === 'string' && m))) out.push('chrome: a screen task\'s list of the modules its shell comes from');
   return out;
+}
+
+/* A screen built outside the product's shell, or around a shell it wrote
+   itself: none of what the agent wrote imports a module the task names as the
+   chrome. Paths are compared from `screens/…` on, whatever the import's form:
+   `../shell/app-shell` resolved against its file, `@/screens/shell/app-shell`,
+   or `src/screens/shell/app-shell` in the task. A type-only import and an
+   import inside a comment do not count. Null when one counts, or when the task
+   names no chrome. The finding sits on the route's page where there is one. */
+export function chromeFinding(written, read, chrome) {
+  if (!chrome || !chrome.length || !written.length) return null;
+  const norm = (m) => m.replace(/\.(c|m)?[jt]sx?$/, '').replace(/\/index$/, '').replace(/^(\.\/|@\/|src\/)+/, '');
+  const wanted = chrome.map(norm);
+  for (const f of written) {
+    let text = '';
+    try { text = String(read(f) || ''); } catch { continue; }
+    text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1').replace(/\b(import|export)\s+type\b[^;'"]*?from\s*['"][^'"]+['"]/g, '');
+    for (const [, spec] of text.matchAll(/\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)) {
+      const full = norm(spec.startsWith('.') ? path.posix.join(path.posix.dirname(f), spec) : spec);
+      if (wanted.some((w) => full === w || full.endsWith(`/${w}`))) return null;
+    }
+  }
+  const page = written.find((f) => /(^|\/)page\.[jt]sx$/.test(f)) || written.find((f) => /\.[jt]sx$/.test(f) && !/\.(stories|test)\./.test(f)) || written[0];
+  return { file: page, line: 0, kind: 'chrome', found: `imports none of ${chrome.join(', ')}` };
 }
 
 /* "51170 assertions matched, 2102 waived, 0 did not" — null when absent, which
@@ -206,6 +232,8 @@ export function validateScore(written, findings, { system = [], agentExit = 0 } 
   if (!all) return { score: 0, green: false, why: ['wrote no code', ...why].join('; ') };
   if (written.length && !Array.isArray(findings)) return { score: 0, green: false, why: ['validate did not report', ...why].join('; ') };
   const dirty = new Set((findings || []).map((f) => f.file));
+  // a screen outside its shell is wrong as a whole, not in one file of it
+  if ((findings || []).some((f) => f.kind === 'chrome')) return { score: 0, green: false, why: ['built outside the shell', ...why].join('; ') };
   return { score: Math.round((written.filter((f) => !dirty.has(f)).length / all) * 1000) / 1000, green: !(findings || []).length && !why.length, why: why.length ? why.join('; ') : null };
 }
 
