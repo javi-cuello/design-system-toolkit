@@ -1542,7 +1542,7 @@ server.listen(PORT, "127.0.0.1", () => {
       else console.error(`docs site      ${label} publish failed; the published site keeps the last good upload: ${why}`);
       if (redeploy) { redeploy = false; deploy(); }
     };
-    child.on("exit", (code) => end(code === 0, `exit ${code}\n${err.split("\n").slice(-8).join("\n")}`));
+    child.on("exit", (code, signal) => end(code === 0, `${code === null ? "stopped by " + signal : "exit " + code}\n${err.split("\n").slice(-8).join("\n")}`));
     child.on("error", (e) => end(false, e.message));
   };
 
