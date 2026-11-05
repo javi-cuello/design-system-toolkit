@@ -1513,7 +1513,8 @@ server.listen(PORT, "127.0.0.1", () => {
       }
       if (again) { again = false; build(); }
     };
-    child.on("exit", (code) => done(code === 0, `exit ${code}\n${err.split("\n").slice(-12).join("\n")}`));
+    // code is null when a signal ended it: the service restarting under a build is the usual one
+    child.on("exit", (code, signal) => done(code === 0, `${code === null ? "stopped by " + signal : "exit " + code}\n${err.split("\n").slice(-12).join("\n")}`));
     child.on("error", (e) => done(false, e.message));
   };
   const soon = () => { clearTimeout(timer); timer = setTimeout(build, 3000); };

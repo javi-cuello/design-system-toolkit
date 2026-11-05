@@ -501,7 +501,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           // Only an icon: a Next button in a pager is a button, not an icon.
           if(!icon&&path&&main&&iconNode(main)&&!(n.componentPropertyReferences&&n.componentPropertyReferences.mainComponent)){
             const md=mn+(main.parent&&main.parent.type==="COMPONENT_SET"?" "+main.name:""), all=n.name+" "+md;
-            if(DIR_WORD.test(all)&&pointsSide(VERT.test(md)||HORIZ.test(md)?md:all)&&!MEDIA.test(all)) add({sev:"warning",rule:"direction",key:"direction|fixed-icon|"+at,
+            const nm=[DIR_WORD,MEDIA,VERT,HORIZ].some(r=>r.test(md))?md:all;
+            if(DIR_WORD.test(nm)&&pointsSide(nm)&&!MEDIA.test(nm)) add({sev:"warning",rule:"direction",key:"direction|fixed-icon|"+at,
               text:'"'+n.name+'" is a directional icon'+(mn&&mn!==n.name?" ("+mn+")":"")+" that no instance-swap property controls, so nobody using the component can make it face the other way in "+LANGS,
               advice:'Select "'+n.name+'", and in the Design panel\'s instance section choose Create instance swap property; name it Icon.'});
           }

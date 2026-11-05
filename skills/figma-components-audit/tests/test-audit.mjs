@@ -630,6 +630,7 @@ expect("a layer that is the same in every variant still fires when some forget i
     leaf("INSTANCE", "Icon", { mainComponent: Object.assign(ico("Direction=Down"), { parent: { type: "COMPONENT_SET", name: "Chevron" } }) }),
     leaf("INSTANCE", "Glyph", { mainComponent: Object.assign(ico("Name=Arrow left"), { parent: { type: "COMPONENT_SET", name: "Icon" } }) }),
     leaf("INSTANCE", "Sort", { mainComponent: ico("arrow_downward") }),
+    leaf("INSTANCE", "Play", { mainComponent: ico("chevron-left") }),
     leaf("VECTOR", "Chevron down"),
     leaf("INSTANCE", "chevron-right", { mainComponent: ico("chevron-right"), componentPropertyReferences: { mainComponent: "Icon#1:2" } }),
     leaf("INSTANCE", "Next", { mainComponent: { name: "Button", parent: null, width: 80, height: 32, children: [leaf("TEXT", "Label")] } }),
@@ -655,7 +656,10 @@ expect("a layer that is the same in every variant still fires when some forget i
   const r = await run(fx, { tokens: TK });
   const kinds = r.audited.filter((e) => e.set === "Chip" || e.page === "❖ Icons").flatMap((e) => e.candidates.filter((c) => c.rule === "direction").map((c) => e.set + " " + c.key.split("|")[1])).sort();
   expect("figma-standard rule 50: with rtlLanguages, a pinned layer, a drawn chevron, a side name, uneven padding, end alignment, one-sided corners, an icon with no decision and a set with no Right to left note are raised; a stretched focus ring is not; without it, nothing",
-    kinds, ["Chip corners", "Chip end-align", "Chip fixed-icon", "Chip fixed-icon", "Chip flat-icon", "Chip font-fixed", "Chip no-autolayout", "Chip note", "Chip padding", "Chip pinned", "Chip pinned", "Chip side-name", "Chip side-option", "Chip side-prop", "Chip text-align", "Chip text-case", "Chip tracking", "arrow-left icon-decision"]);
+    kinds, ["Chip corners", "Chip end-align", "Chip fixed-icon", "Chip fixed-icon", "Chip fixed-icon", "Chip flat-icon", "Chip font-fixed", "Chip no-autolayout", "Chip note", "Chip padding", "Chip pinned", "Chip pinned", "Chip side-name", "Chip side-option", "Chip side-prop", "Chip text-align", "Chip text-case", "Chip tracking", "arrow-left icon-decision"]);
+  // By layer, since a count stays the same when one false row replaces a missed one.
+  expect("an instance is read by its main and variant first: Forward holding chevron-down is silent, Play holding chevron-left is raised",
+    r.audited.find((e) => e.set === "Chip").candidates.filter((c) => /^direction\|fixed-icon/.test(c.key)).map((c) => c.text.split('"')[1]).sort(), ["Arrow", "Glyph", "Play"]);
   expect("an icon set with Direction=Left/Right is audited and asked to rename nothing", [r.audited.some((e) => e.set === "Caret"), keyed(r, "Caret", /^direction\|/)], [true, []]);
   const adv = (re) => r.audited.find((e) => e.set === "Chip").candidates.filter((c) => re.test(c.key)).map((c) => c.advice);
   expect("the advice renames a side by role, in its case", adv(/^direction\|side-name/), ['Rename it by role: "Icon leading".']);
