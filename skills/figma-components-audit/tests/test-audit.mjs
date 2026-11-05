@@ -668,6 +668,42 @@ expect("a layer that is the same in every variant still fires when some forget i
   expect("the family is said to have run", r.ran.includes("direction"), true);
   expect("the measure counts the sets whose rows reverse", r.measures.rtlSets >= 1, true);
   const TKF = Object.assign({}, TK, { rtlInFigma: true });
+  {
+    // From the 2026-11-05 overview of one production library: a component
+    // needs the variant for anything that mirrors, not only a row; one that
+    // only holds such a component is covered by it, at any depth; charts stay,
+    // and a recording bar is decided by hand.
+    const fz = fresh();
+    const set = (id, name, kids, extra) => leaf("COMPONENT_SET", name, Object.assign({ id, componentPropertyDefinitions: {}, description: "",
+      children: [leaf("COMPONENT", "Size=md", Object.assign({ id: id + "v", layoutMode: "VERTICAL", width: 100, height: 40, children: kids }, extra || {}))] }));
+    const inst = (main) => leaf("INSTANCE", main.name, { mainComponent: Object.assign({}, main.children[0], { parent: { type: "COMPONENT_SET", id: main.id, name: main.name } }) });
+    const row = set("9:1", "Row", [leaf("FRAME", "Content", { layoutMode: "HORIZONTAL", children: [leaf("FRAME", "Icon"), leaf("TEXT", "Label")] })]);
+    const padded = set("9:2", "Padded", [leaf("TEXT", "Label")], { paddingLeft: 16, paddingRight: 0 });
+    const hidden = set("9:3", "Hidden row", [leaf("FRAME", "Content", { layoutMode: "HORIZONTAL", children: [leaf("FRAME", "Icon", { visible: false, componentPropertyReferences: { visible: "Show icon#1:0" } }), leaf("TEXT", "Label")] })]);
+    const kept = set("9:9", "Kept hidden", [leaf("FRAME", "Content", { layoutMode: "HORIZONTAL", children: [leaf("FRAME", "Icon", { visible: false }), leaf("TEXT", "Label")] })]);
+    const shell = set("9:10", "Shell", [Object.assign(inst(row), { visible: false })]);
+    const arrow = set("9:11", "Back link", [leaf("VECTOR", "Arrow left")]);
+    const card = set("9:4", "Card", [inst(row)]);
+    const page = set("9:5", "Page", [inst(card)]);
+    const chart = set("9:6", "Bar chart", [leaf("FRAME", "Bars", { layoutMode: "HORIZONTAL", children: [leaf("FRAME", "Bar"), leaf("FRAME", "Bar")] })]);
+    const media = set("9:7", "Recording bar", [leaf("FRAME", "Controls", { layoutMode: "HORIZONTAL", children: [leaf("FRAME", "Stop"), leaf("FRAME", "Waves")] })]);
+    const plain = set("9:8", "Plain", [leaf("TEXT", "Label", { textAlignHorizontal: "CENTER", textAutoResize: "HEIGHT" })]);
+    fz.pages.push({ name: "❖ Verdicts", id: "0:9100", sets: [row, padded, hidden, card, page, chart, media, plain, kept, shell, arrow] });
+    const TKV = Object.assign({}, fz.settings.tokens, { rtlLanguages: ["ar"], rtlInFigma: true, rtlStays: ["chart$"], rtlByHand: ["^recording", "("] });
+    const rv = (await run(fz, { tokens: TKV })).measures.rtlVerdicts.filter((x) => x.page === "❖ Verdicts");
+    expect("rtlVerdicts: a row, uneven padding and a boolean-shown row need the variant; holding one, at any depth, is covered; rtlStays and rtlByHand are kept apart; the rest needs none",
+      rv.map((x) => x.set + ": " + x.verdict + (x.by ? " by " + x.by.join(", ") : "")),
+      ["Row: variant", "Padded: variant", "Hidden row: variant", "Card: covered by Row", "Page: covered by Card", "Bar chart: stays", "Recording bar: by hand", "Plain: none", "Kept hidden: variant", "Shell: covered by Row", "Back link: variant"]);
+    expect("and each verdict says why: a boolean-shown row as such, a row hidden for good as hidden, a drawn arrow as an icon",
+      [rv[1].why, rv[2].why, rv[8].why, rv[10].why.includes("a directional icon drawn into the component")],
+      [["uneven left and right padding"], ["a row of parts once a boolean shows a hidden one"], ["a row of parts, one of them hidden"], true]);
+    const rz = await run(fz, { tokens: TKV });
+    expect("a pattern that does not compile is said in settings, never dropped silently", (rz.settings || []).some((x) => /^rtlByHand pattern "\(" ignored/.test(x)), true);
+    expect("no-variant is raised for every reason, by-hand is a review, a covered set raises neither",
+      ["Padded", "Hidden row", "Card", "Recording bar"].map((n) => keyed(rz, n, /^direction\|(no-variant|by-hand)$/).map((x) => x.split(" | ")[1])),
+      [["warning direction"], ["warning direction"], [], ["review direction"]]);
+    expect("without rtlInFigma there are no verdicts", (await run(fz, { tokens: Object.assign({}, TKV, { rtlInFigma: false }) })).measures.rtlVerdicts, undefined);
+  }
   expect("with rtlInFigma, a set whose row reverses and has no Direction axis is asked for one", keyed(await run(fx, { tokens: TKF }), "Chip", /^direction\|no-variant$/).length, 1);
   s.componentPropertyDefinitions["Direction"] = { type: "VARIANT", variantOptions: ["LTR", "RTL"], defaultValue: "LTR" };
   expect("and a Direction axis with RTL answers it", keyed(await run(fx, { tokens: TKF }), "Chip", /^direction\|no-variant$/), []);

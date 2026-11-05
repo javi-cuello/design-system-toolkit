@@ -404,7 +404,7 @@
     {
      "tier": "warning",
      "who": "scanner",
-     "text": "Where the project draws right-to-left screens in Figma (rtlInFigma), every set whose row reverses has a Direction variant with LTR and RTL",
+     "text": "Where the project draws right-to-left screens in Figma (rtlInFigma), every set with anything that must mirror (a row, uneven padding, end alignment, side-aligned text, one-sided corners, a pinned layer, a row without auto layout, a directional icon) has a Direction variant with LTR and RTL, unless rtlStays names it; rtlByHand names are a review",
      "status": "scanner"
     },
     {

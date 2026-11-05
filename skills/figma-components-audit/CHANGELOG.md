@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.41.0 (2026-11-05): with `rtlInFigma`, no-variant covers anything that must mirror, `rtlStays`/`rtlByHand` (`direction|by-hand`), and the `rtlVerdicts` measure gives every set one verdict, `covered` followed any depth.
 - 2.40.1 (2026-11-05): an instance is read by its main component and variant, and by its layer name only when those say nothing, in the traps table and in all three of fixed-icon's tests (eight false directional icons in the first right-to-left run).
 - 2.40.0 (2026-11-04): a `direction` family, opt-in by `rtlLanguages` (figma-standard rule 50), with `rtlInFigma` asking for a Direction variant; checks in scanner-checks.md §3.12; measures `rtlSets`, `rtlVariants`; bucket 3, scored under Structure. Case A131.
 - 2.39.0 (2026-11-01): the scanner takes `TOKENS.spacing` or `TOKENS.radius` only as a non-empty list of finite numbers; anything else is no scale, never a throw in `near`, and is said in the result's `settings`, apart from an absent key. Case A130.

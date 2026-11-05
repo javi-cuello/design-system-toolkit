@@ -190,6 +190,17 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   // A sized icon set (Size=16, 24) is an icon too: every variant is one.
   const isIcon=set=>set.type==="COMPONENT"?iconNode(set):set.type==="COMPONENT_SET"&&(set.children||[]).length>0&&set.children.every(iconNode);
   if(RTL) ran.push("direction");
+  // Where right-to-left screens are drawn in Figma, each component gets one
+  // verdict (rtlVerdicts): what it needs, not only which findings it raised.
+  // rtlStays names the components that keep their direction (charts),
+  // rtlByHand the rows a person decides (media controls, phone numbers), both as
+  // patterns on the component's name, so nothing here names a project.
+  const RV=[];
+  // A pattern that is not a string or does not compile is said in settings, never dropped silently.
+  const rxList=k=>{ const a=TOK[k]; if(a==null) return [];
+    if(!Array.isArray(a)){ settingsNotes.push(k+" ignored (not a list of patterns)"); return []; }
+    return a.map(x=>{ try{ if(typeof x!=="string"||!x) throw 0; return new RegExp(x,"iu"); }catch(e){ settingsNotes.push(k+" pattern "+JSON.stringify(x)+" ignored (not a regular expression)"); return null; } }).filter(Boolean); };
+  const STAYS=rxList("rtlStays"), BYHAND=rxList("rtlByHand");
   // Cached once fetched: the layer-name walk and the direction walk both need it.
   const MAINS=new WeakMap();
   // A text layer's style, for its variable bindings. Facts captured without
@@ -415,12 +426,15 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         const sideBySide=f=>{ const k=(f.children||[]).filter(c=>c.visible!==false&&typeof c.x==="number");
           for(let i=0;i<k.length;i++) for(let j=i+1;j<k.length;j++){ const a=k[i],b=k[j];
             if((a.x+a.width<=b.x||b.x+b.width<=a.x)&&a.y<b.y+b.height&&b.y<a.y+a.height) return true; } return false; };
-        let alRow=false; const uneven=new Map();
+        let alRow=false, visRow=false, boolRow=false; const uneven=new Map(), nestIds=new Set();
         const rwalk=async(n,path,par)=>{
-          if(n.type==="SLOT"||(path&&n.visible===false)) return false;
+          if(n.type==="SLOT") return false;
+          // A hidden instance is still inside: a boolean shows it, so it still covers the set.
+          if(path&&n.visible===false){ if(n.type==="INSTANCE"){ const hm=await mainOf(n); if(hm) nestIds.add(hm.parent&&hm.parent.type==="COMPONENT_SET"?hm.parent.id:hm.id); } return false; }
           const at=path||"/", nm=path?n.name:set.name; let rev=false;
           const main=n.type==="INSTANCE"?await mainOf(n):null;
           const mn=main?(main.parent&&main.parent.type==="COMPONENT_SET"?main.parent.name:main.name):"";
+          if(path&&main) nestIds.add(main.parent&&main.parent.type==="COMPONENT_SET"?main.parent.id:main.id);
           const free=n.type!=="INSTANCE"&&"layoutMode" in n&&n.layoutMode==="NONE"&&"children" in n;
           // The structure family raises every frame without auto layout as a
           // review; a row is the stronger case here, so it replaces that row.
@@ -456,7 +470,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             const flow=(n.children||[]).filter(c=>c.layoutPositioning!=="ABSOLUTE");
             if(n.layoutMode!=="NONE"&&typeof n.paddingLeft==="number"&&n.paddingLeft!==n.paddingRight){ const k=nm+": "+n.paddingLeft+" leading, "+n.paddingRight+" trailing"; if(!uneven.has(k)) uneven.set(k,{at,name:nm,l:n.paddingLeft,r:n.paddingRight}); }
             if(n.layoutMode==="HORIZONTAL"){
-              if(flow.length>=2){ rev=true; alRow=true; }
+              if(flow.length>=2){ rev=true; alRow=true; if(flow.filter(c=>c.visible!==false).length>=2) visRow=true; else if(flow.some(c=>c.visible===false&&c.componentPropertyReferences&&c.componentPropertyReferences.visible)) boolRow=true; }
               if(n.primaryAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
                 text:'"'+nm+'" aligns its content to the right, which code mirrors to the left in '+LANGS+" only if it is written as end, not right",
                 advice:'Add to the description\'s Right to left section: "'+nm+': aligned to the trailing side."',line:nm+": aligned to the trailing side"});
@@ -563,9 +577,23 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
                   text:where+" is wider than its text and aligned "+String(n.textAlignHorizontal).toLowerCase()+", the same as its LTR twin, so the Arabic mockup shows it on the wrong side",
                   advice:"Select "+where+" and set its alignment to "+FLIP[t.textAlignHorizontal].toLowerCase()+"."});
             } } }
-        if(TOK.rtlInFigma===true&&!icon&&revVariants&&!dirAxis) add({sev:"warning",rule:"direction",key:"direction|no-variant",
-          text:set.name+" has a row whose parts reverse in "+LANGS+", and the project draws "+LANGS+" screens in Figma, where an instance cannot reverse its own parts",
-          advice:"Add a variant property Direction with options LTR and RTL, and draw each RTL variant mirrored (or generate them with a mirroring plugin), following the set's Right to left note."});
+        // Anything that mirrors needs the variant, not only a row: an instance
+        // cannot swap its padding, flip its alignment or corners, move a pinned
+        // layer or turn an icon either. A row of two only when a boolean shows a
+        // hidden part still counts, and is said, since instances turn it on.
+        const REASON={"flat-icon":"a directional icon drawn into the component","no-autolayout":"a row without auto layout",pinned:"a layer pinned to one side",padding:"uneven left and right padding","end-align":"content aligned to the right","text-align":"text aligned to a side in a box wider than it",corners:"corners rounded on one side","fixed-icon":"a directional icon"};
+        const why=[]; if(alRow) why.push(visRow?"a row of parts":boolRow?"a row of parts once a boolean shows a hidden one":"a row of parts, one of them hidden");
+        for(const [k,t] of Object.entries(REASON)) if(D.some(f=>f.key.startsWith("direction|"+k+"|")||f.key==="direction|"+k)) why.push(t);
+        if(TOK.rtlInFigma===true&&!icon){
+          const verdict=STAYS.some(r=>r.test(set.name))?"stays":dirAxis?"has variant":!why.length?"none":BYHAND.some(r=>r.test(set.name))?"by hand":"variant";
+          RV.push({set:set.name,id:set.id,page:p.name,variants:vs.length,verdict,why,nested:[...nestIds]});
+          if(verdict==="variant") add({sev:"warning",rule:"direction",key:"direction|no-variant",
+            text:set.name+" has "+why.join(", ")+", which must mirror in "+LANGS+", and the project draws "+LANGS+" screens in Figma, where an instance cannot mirror its own parts",
+            advice:"Add a variant property Direction with options LTR and RTL, and draw each RTL variant mirrored (or generate them with a mirroring plugin), following the set's Right to left note."});
+          if(verdict==="by hand") add({sev:"review",rule:"direction",key:"direction|by-hand",
+            text:set.name+" has "+why.join(", ")+", but its name matches rtlByHand: a row such as media controls or a phone number may keep its order in "+LANGS,
+            advice:"Decide whether it mirrors; if it does, add the Direction variant, and either way say so in its Right to left note."});
+        }
         if(icon&&DIR_WORD.test(set.name)&&pointsSide(set.name)&&!ICON_NOTE.test(desc)) add({sev:"warning",rule:"direction",key:"direction|icon-decision",
           text:"Icon "+set.name+" points a direction, and nothing records whether it mirrors in "+LANGS+", so a developer guesses",
           advice:'Add "Right to left: '+(MEDIA.test(set.name)?"stays":"mirrors")+'" to its description'+(MEDIA.test(set.name)?", since playback controls keep their direction":", since it points the way the reader moves")+'; write the other word if this icon is the exception.'});
@@ -944,6 +972,13 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         candidates:uniq});
     }
   }
+  // A component with nothing of its own to mirror is covered when a component
+  // inside it gets the variant, followed any depth: its own variant would add
+  // nothing an instance swap does not.
+  if(RV.length){ const by=new Map(RV.map(r=>[r.id,r])); let moved=true;
+    while(moved){ moved=false; for(const r of RV){ if(r.verdict!=="none") continue;
+      const c=r.nested.map(i=>by.get(i)).filter(x=>x&&["variant","has variant","covered"].includes(x.verdict));
+      if(c.length){ r.verdict="covered"; r.by=[...new Set(c.map(x=>x.set))]; moved=true; } } } }
   // One size name, one value (figma-standard rule 6's ideal): where sets draw the same
   // name at different heights, each set off the most common height is a review.
   for(const [o,list] of Object.entries(sizeSeen)){
@@ -972,7 +1007,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       pages:file.pages,
       textStyles:file.textStyles,
       effectStyles:file.effectStyles,
-      ...(RTL?{rtlSets:M.rtlSets,rtlVariants:M.rtlVariants}:{})
+      ...(RTL?{rtlSets:M.rtlSets,rtlVariants:M.rtlVariants}:{}),
+      ...(RV.length?{rtlVerdicts:RV.map(r=>({set:r.set,page:r.page,variants:r.variants,verdict:r.verdict,why:r.why,...(r.by?{by:r.by}:{})}))}:{})
     };
   }
   return {audited:out, measures:measures, ran:ran, ...(settingsNotes.length?{settings:settingsNotes}:{}), at:new Date().toISOString()};
