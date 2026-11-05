@@ -8,7 +8,7 @@ Full-size is measured, never asked: files and lines written since the work began
 
 | When | Gate | What clears it |
 |---|---|---|
-| The edit that makes the work full-size | refused (PreToolUse) | a plan at `$TMPDIR/toolkit-plan-<session>.md` with Before (the closing line of a `bin/check` run in each repo the work is in, which the transcript shows came back, in the toolkit's words or the project's own; `late:` if it ran after the work's first edit there; and the answers to §D 1, §D 2 and §D 5), Goal, Impact (the output of `impact.mjs`), Claims, Beyond scope, Budget and Review |
+| The edit that makes the work full-size | refused (PreToolUse) | a plan at `$TMPDIR/toolkit-plan-<session>.md` with Before (the closing line of a `bin/check` run in each repo the work is in that has one, which the transcript shows came back, in the toolkit's words or the project's own; `late:` if it ran after the work's first edit there; and the answers to §D 1, §D 2 and §D 5), Goal, Impact (the output of `impact.mjs`), Claims, Beyond scope, Budget and Review |
 | The end of a turn that did full-size work | blocked (Stop) | a review by fresh Explore agents with "review" in the description (never a fork), after the checks; small fixes after it need no second one |
 | A `git push` of a repo with full-size work since the last review, or while a review runs | refused (PreToolUse) | the review, reported |
 | The end of reviewed work, once every background review has reported (a day at most) | blocked (Stop) | a `Toolkit:` line (what goes back to the toolkit), an `Open:` line (what stays open, and why), and a `Docs:` line when a README describing the changed files was left alone |
