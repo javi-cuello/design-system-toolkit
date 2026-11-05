@@ -30,6 +30,7 @@ Each section names its engine — a rule in `scanner/audit.js` or an `FCA.*` fun
 | `paint.opacity < 1` on a bound paint | Figma caches the token's resolved alpha onto the paint. Not an override. Compare against `resolveForConsumer` if you must check |
 | Scale from `collection.variableIds` | Only imported variables. Use `figma.teamLibrary.getVariablesInLibraryCollectionAsync` |
 | Role from node type (`VECTOR → Icon`) | Wrong constantly. Only `TEXT ↔ Text-role` is safe |
+| An instance's layer name as what it is | Layers are renamed freely ("Forward" holding a chevron-down). Read the main component's name, and its variant's when it sits in a set; fall back to the layer name only when those say nothing. The first right-to-left run flagged 8 vertical chevrons as directional (§3.12) |
 | Collection identity by name | Names are not unique across libraries. Compare `key` |
 | `instance.mainComponent` | Throws under dynamic-page access. Use `getMainComponentAsync()` |
 | A finding on *every* component | Almost certainly a broken check or a house pattern — investigate before reporting |

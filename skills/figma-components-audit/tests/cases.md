@@ -1,6 +1,6 @@
-# Eval cases — figma-components-audit (v2.40.0)
+# Eval cases — figma-components-audit (v2.40.1)
 
-**Walked: 2026-11-04 for 2.40.0** — A131 added and executed: `node tests/test-audit.mjs` 105/105, the rule 50 block planting each check in Chip and on an icons page, with the review round's false positives planted beside them; without `rtlLanguages`, no direction finding, run or measure. A1–A130 unchanged: the family adds candidates only under a key no existing case sets.
+**Walked: 2026-11-05 for 2.40.1** (reference only; `node tests/test-audit.mjs` 105/105) · **2026-11-04 for 2.40.0** — A131 added and executed: `node tests/test-audit.mjs` 105/105, the rule 50 block planting each check in Chip and on an icons page, with the review round's false positives planted beside them; without `rtlLanguages`, no direction finding, run or measure. A1–A130 unchanged: the family adds candidates only under a key no existing case sets.
 
 **Walked: 2026-11-01 for 2.39.0** — A130 added and executed: `node tests/test-audit.mjs` 93/93; with the guard removed, the `[]` assertion fails and the string one throws `s.reduce is not a function`. Other cases unchanged.
 

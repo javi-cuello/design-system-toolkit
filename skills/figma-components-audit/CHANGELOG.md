@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.40.1 (2026-11-05): the traps table says an instance is read by its main component and variant, never its layer name (eight false directional icons in the first right-to-left run).
 - 2.40.0 (2026-11-04): a `direction` family, opt-in by `rtlLanguages` (figma-standard rule 50), with `rtlInFigma` asking for a Direction variant; checks in scanner-checks.md §3.12; measures `rtlSets`, `rtlVariants`; bucket 3, scored under Structure. Case A131.
 - 2.39.0 (2026-11-01): the scanner takes `TOKENS.spacing` or `TOKENS.radius` only as a non-empty list of finite numbers; anything else is no scale, never a throw in `near`, and is said in the result's `settings`, apart from an absent key. Case A130.
 - 2.38.0 (2026-10-31): a one-off run with no record files its findings into a scratch record and renders the fix queue and score report from it, as a run with a record does; neither is written by hand. Case A129.
