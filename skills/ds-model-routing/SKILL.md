@@ -5,7 +5,7 @@ description: Advise on the right Claude model and Effort setting before starting
 
 # Design systems model routing
 
-**Version 1.2.11** — history in CHANGELOG.md.
+**Version 1.3.0** — history in CHANGELOG.md.
 
 Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table below and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
 
@@ -21,34 +21,15 @@ Claude cannot change the model or Effort setting itself — only the user can, v
 
 ## Routing table
 
-| Task family | Skill | Model | Effort | Rationale |
-|---|---|---|---|---|
-| Library audit (component lint, token bindings, variant checks) | `figma-components-audit` | Sonnet | Default | Long mechanical MCP runs; thoroughness, not deep reasoning |
-| Variable/style existence audit | `figma-variable-audit` | Sonnet | Low–default | Deterministic key lookups |
-| Two-file diff (fork vs master, duplication check) | `figma-file-diff` | Sonnet | Default | Hashing and comparison live in scripts; what's left is procedure discipline (identity checks, stability re-runs) and saying what each difference means |
-| Contrast matrix / ratios grid | `figma-contrast-matrix` | Sonnet | Low–default | Pure WCAG math + structured writes |
-| Documentation generation / regeneration | `figma-doc-generator` | Sonnet | Default | Mirrors library data into tables |
-| Tokens mapping example tables | `figma-tokens-examples` | Sonnet | Default | Skill-guided, repeatable |
-| Properties table for a component page | `figma-properties-table` | Sonnet | Low–default | Draws the rows the snapshot's own walk reads from the open file; the component decides the content |
-| Writing component descriptions | `figma-component-descriptions` | Sonnet | Default | Structured short-form prose against a recorded per-project shape. Step up where the judgement is *boundary* work — whether a component is one thing or two, whether a child is slot-only |
-| OKLCH scale generation (standard) | `oklch-color-scale-system` | Sonnet | Default | Rule-following once the method is defined |
-| Brand-color anchoring problems, ramps failing contrast | `oklch-color-scale-system` (anchored / hue-drift modes) | Opus (or Sonnet at high) | High | Genuine judgment and trade-offs |
-| Capturing a project's conventions | `figma-context-capture` | Opus or Fable | Default–high | Read-only, but the output is what **every** later run hydrates from, so an error propagates instead of surfacing. Its hard parts are exactly the escalation triggers below: ambiguous convention calls, contradictory evidence, and knowing when to leave `[TBD]` rather than infer |
-| Full component pass (audit + properties + descriptions) | `figma-component-pass` | Opus or Fable | Default–high | Multi-stage autonomy; model must catch its own mistakes |
-| Creating or revising skills/plugins | `figma-plugin-creator`, and authoring work in this repo | Opus or Fable | High | One-time design decisions that compound; bad skills fail silently forever |
-| Validating Figma components for a target platform (web, iOS, Android) before the build | `component-validator` | Sonnet | Default | The detectors are a tested script per target; what is left is reading each hit against the context document and the target's reference, and putting Figma / code / accept to the designer. Step up only when a finding's class is new to the reference, or a framework's own constraints must be read on top of the platform set |
-| File-level audit (page order, names across the library, part prefixes) | `figma-foundations-audit` | Sonnet | Low–default | The checks live in a tested script; what is left is judging whether a flagged component is really a part |
-| Whole-project audit (every audit into one record and dashboard) | `figma-project-audit` | Sonnet | Default | Sequencing only; each stage carries its own reasoning |
-| Setting up or reading a design–code parity loop (snapshot, specs, stories, gates) | `design-code-parity` | Opus or Fable | Default–high | The scripts are written per project against a contract, and each waiver or gate decision is a ruling that outlives the session; reading a red report is Sonnet work once the loop exists |
-| Building a front end from a design (HTML/Sass/tokens) | `frontend-build` | Sonnet | Default | Implementation against a design that already decided the hard parts; step up where the *architecture* is the question — stylesheet structure, theming strategy, breakpoint model |
-| Light design systems research (few searches, cited answer) | `design-system-research` (light mode) | Sonnet | Default | Quick synthesis |
-| Deep research (Research feature, many sources) | `design-system-research` (deep mode) | Opus or Fable | High | Broad multi-source synthesis earns the premium |
-| Long-form docs prose, guides, narrative writing | — | Fable | Default | Tuned for long-form generation |
-| Editing prose to remove AI tells | `humanizer` | Fable | Default | A rewriting job, which is what Fable is tuned for. The mechanical tells are handled by its scanner, so what is left is judgement about register and about which hits are quoted rather than used. Step up only when the source is dense technical prose where a wrong "simplification" would change a claim |
+The table is data: `~/Projects/toolkit/tools/shared/model-routing.json`, one row per task family — `task`, the `skills` it covers, the advised `model` and `effort` (ranges, as you say them to the user), `why`, `also` (what else the row covers, where it says), `keys` (the skill, or `skill:mode` in the skill's own mode names, plus `authoring` for work on skills and plugins in the toolkit and `long-form-prose` for the row no skill owns; `grey` and `gray` both work), and `agent`, the single pick a workflow sets. Read it before advising; never route from memory. `node tools/shared/test-model-routing.mjs` holds it: every skill has a row.
 
 **Two skills appear twice, and the mode is what moves the tier** — `oklch-color-scale-system` in free/grey mode is rule-following, but anchored mode with a brand colour that fails contrast is a trade-off problem; `design-system-research` light is a few searches, deep is multi-source synthesis. Ask which mode before routing, because the skill name alone does not settle it.
 
 **`ds-model-routing` is not in the table** because it is not a task — it is the thing you consult before one. Every other design-systems skill in the toolkit has a row; `kirby-cms` has none because it is a CMS working reference outside this table's scope, and routing CMS development work is not this skill's question.
+
+## In a workflow
+
+A workflow script sets each `agent()`'s model and effort from the same table, so a mechanical stage runs on Sonnet and a judging stage on Opus at high effort without anyone choosing per run. A script has no filesystem, so pass the routes in as the Workflow's `args`: run `node ~/Projects/toolkit/tools/shared/model-routing.mjs`, put its output in `args.routes`, and spread a stage's route into its options — `agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })`. A skill whose mode moves the tier has only `skill:mode` keys (`design-system-research:deep`, `oklch-color-scale-system:free`): decide the mode before the stage, since a key that is not there spreads nothing and the stage silently keeps the session's model. A Default row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`. This skill is the instruction to set `effort` there; a stage the table has no row for keeps the session's model and effort.
 
 ## Escalation triggers (regardless of task family)
 

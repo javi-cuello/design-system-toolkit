@@ -1,0 +1,357 @@
+[
+  {
+    "keys": [
+      "figma-components-audit"
+    ],
+    "task": "Library audit (component lint, token bindings, variant checks)",
+    "skills": [
+      "figma-components-audit"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Long mechanical MCP runs; thoroughness, not deep reasoning"
+  },
+  {
+    "keys": [
+      "figma-variable-audit"
+    ],
+    "task": "Variable/style existence audit",
+    "skills": [
+      "figma-variable-audit"
+    ],
+    "model": "Sonnet",
+    "effort": "Low–default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "low"
+    },
+    "why": "Deterministic key lookups"
+  },
+  {
+    "keys": [
+      "figma-file-diff"
+    ],
+    "task": "Two-file diff (fork vs master, duplication check)",
+    "skills": [
+      "figma-file-diff"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Hashing and comparison live in scripts; what's left is procedure discipline (identity checks, stability re-runs) and saying what each difference means"
+  },
+  {
+    "keys": [
+      "figma-contrast-matrix"
+    ],
+    "task": "Contrast matrix / ratios grid",
+    "skills": [
+      "figma-contrast-matrix"
+    ],
+    "model": "Sonnet",
+    "effort": "Low–default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "low"
+    },
+    "why": "Pure WCAG math + structured writes"
+  },
+  {
+    "keys": [
+      "figma-doc-generator"
+    ],
+    "task": "Documentation generation / regeneration",
+    "skills": [
+      "figma-doc-generator"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Mirrors library data into tables"
+  },
+  {
+    "keys": [
+      "figma-tokens-examples"
+    ],
+    "task": "Tokens mapping example tables",
+    "skills": [
+      "figma-tokens-examples"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Skill-guided, repeatable"
+  },
+  {
+    "keys": [
+      "figma-properties-table"
+    ],
+    "task": "Properties table for a component page",
+    "skills": [
+      "figma-properties-table"
+    ],
+    "model": "Sonnet",
+    "effort": "Low–default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "low"
+    },
+    "why": "Draws the rows the snapshot's own walk reads from the open file; the component decides the content"
+  },
+  {
+    "keys": [
+      "figma-component-descriptions"
+    ],
+    "task": "Writing component descriptions",
+    "skills": [
+      "figma-component-descriptions"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Structured short-form prose against a recorded per-project shape. Step up where the judgement is *boundary* work — whether a component is one thing or two, whether a child is slot-only"
+  },
+  {
+    "keys": [
+      "oklch-color-scale-system:free",
+      "oklch-color-scale-system:grey",
+      "oklch-color-scale-system:gray"
+    ],
+    "task": "OKLCH scale generation (standard)",
+    "skills": [
+      "oklch-color-scale-system"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Rule-following once the method is defined"
+  },
+  {
+    "keys": [
+      "oklch-color-scale-system:anchored",
+      "oklch-color-scale-system:hue-drift"
+    ],
+    "task": "Brand-color anchoring problems, ramps failing contrast",
+    "skills": [
+      "oklch-color-scale-system"
+    ],
+    "model": "Opus (or Sonnet at high)",
+    "effort": "High",
+    "agent": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "why": "Genuine judgment and trade-offs"
+  },
+  {
+    "keys": [
+      "figma-context-capture"
+    ],
+    "task": "Capturing a project's conventions",
+    "skills": [
+      "figma-context-capture"
+    ],
+    "model": "Opus or Fable",
+    "effort": "Default–high",
+    "agent": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "why": "Read-only, but the output is what **every** later run hydrates from, so an error propagates instead of surfacing. Its hard parts are exactly the escalation triggers below: ambiguous convention calls, contradictory evidence, and knowing when to leave `[TBD]` rather than infer"
+  },
+  {
+    "keys": [
+      "figma-component-pass"
+    ],
+    "task": "Full component pass (audit + properties + descriptions)",
+    "skills": [
+      "figma-component-pass"
+    ],
+    "model": "Opus or Fable",
+    "effort": "Default–high",
+    "agent": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "why": "Multi-stage autonomy; model must catch its own mistakes"
+  },
+  {
+    "keys": [
+      "figma-plugin-creator",
+      "authoring"
+    ],
+    "task": "Creating or revising skills/plugins",
+    "skills": [
+      "figma-plugin-creator"
+    ],
+    "model": "Opus or Fable",
+    "effort": "High",
+    "agent": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "why": "One-time design decisions that compound; bad skills fail silently forever",
+    "also": "authoring work in this repo"
+  },
+  {
+    "keys": [
+      "component-validator"
+    ],
+    "task": "Validating Figma components for a target platform (web, iOS, Android) before the build",
+    "skills": [
+      "component-validator"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "The detectors are a tested script per target; what is left is reading each hit against the context document and the target's reference, and putting Figma / code / accept to the designer. Step up only when a finding's class is new to the reference, or a framework's own constraints must be read on top of the platform set"
+  },
+  {
+    "keys": [
+      "figma-foundations-audit"
+    ],
+    "task": "File-level audit (page order, names across the library, part prefixes)",
+    "skills": [
+      "figma-foundations-audit"
+    ],
+    "model": "Sonnet",
+    "effort": "Low–default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "low"
+    },
+    "why": "The checks live in a tested script; what is left is judging whether a flagged component is really a part"
+  },
+  {
+    "keys": [
+      "figma-project-audit"
+    ],
+    "task": "Whole-project audit (every audit into one record and dashboard)",
+    "skills": [
+      "figma-project-audit"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Sequencing only; each stage carries its own reasoning"
+  },
+  {
+    "keys": [
+      "design-code-parity"
+    ],
+    "task": "Setting up or reading a design–code parity loop (snapshot, specs, stories, gates)",
+    "skills": [
+      "design-code-parity"
+    ],
+    "model": "Opus or Fable",
+    "effort": "Default–high",
+    "agent": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "why": "The scripts are written per project against a contract, and each waiver or gate decision is a ruling that outlives the session; reading a red report is Sonnet work once the loop exists"
+  },
+  {
+    "keys": [
+      "frontend-build"
+    ],
+    "task": "Building a front end from a design (HTML/Sass/tokens)",
+    "skills": [
+      "frontend-build"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Implementation against a design that already decided the hard parts; step up where the *architecture* is the question — stylesheet structure, theming strategy, breakpoint model"
+  },
+  {
+    "keys": [
+      "design-system-research:light"
+    ],
+    "task": "Light design systems research (few searches, cited answer)",
+    "skills": [
+      "design-system-research"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Quick synthesis"
+  },
+  {
+    "keys": [
+      "design-system-research:deep"
+    ],
+    "task": "Deep research (Research feature, many sources)",
+    "skills": [
+      "design-system-research"
+    ],
+    "model": "Opus or Fable",
+    "effort": "High",
+    "agent": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "why": "Broad multi-source synthesis earns the premium"
+  },
+  {
+    "keys": [
+      "long-form-prose"
+    ],
+    "task": "Long-form docs prose, guides, narrative writing",
+    "skills": [],
+    "model": "Fable",
+    "effort": "Default",
+    "agent": {
+      "model": "fable",
+      "effort": "medium"
+    },
+    "why": "Tuned for long-form generation"
+  },
+  {
+    "keys": [
+      "humanizer"
+    ],
+    "task": "Editing prose to remove AI tells",
+    "skills": [
+      "humanizer"
+    ],
+    "model": "Fable",
+    "effort": "Default",
+    "agent": {
+      "model": "fable",
+      "effort": "medium"
+    },
+    "why": "A rewriting job, which is what Fable is tuned for. The mechanical tells are handled by its scanner, so what is left is judgement about register and about which hits are quoted rather than used. Step up only when the source is dense technical prose where a wrong \"simplification\" would change a claim"
+  }
+]

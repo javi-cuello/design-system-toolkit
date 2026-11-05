@@ -1,4 +1,6 @@
-# Eval cases — ds-model-routing (v1.2.11)
+# Eval cases — ds-model-routing (v1.3.0)
+
+**Walked: 2026-11-05 for 1.3.0** — the table moved to `tools/shared/model-routing.json`; A5's row check is now `node tools/shared/test-model-routing.mjs` (4/4: a row for every skill but this one and `kirby-cms`, valid picks, unique keys), and the mode-dependent rows carry `skill:mode` keys in the skills' own mode names (`oklch-color-scale-system:free`/`:grey`/`:gray` on one row, `:anchored`/`:hue-drift` on the other; `design-system-research:light` and `:deep`). A5's negative holds: no other skill's files name this one. A1–A4 read against the new text, unaffected.
 
 **Walked: 2026-11-05 for 1.2.11** — one row removed with `figma-token-export`; A5's row grep finds a row for every skill in `skills/`, and no other skill's files reference this one (the skills index and a changelog line aside). A1–A4 unaffected.
 
@@ -46,8 +48,9 @@ Traced: 2026-08-05 — to SKILL.md's *Context beats model choice*.
 
 ## A5 · The table routes by skill as well as by task family
 Fixture: "run the audit on this library" with the session on Opus.
-Assert: the recommendation names the `figma-components-audit` row and suggests stepping *down* to Sonnet, since a long mechanical MCP run wants thoroughness rather than deep reasoning. The Skill column exists so a request naming a skill does not have to be mapped onto a task family by hand first.
+Assert: the recommendation names the `figma-components-audit` row and suggests stepping *down* to Sonnet, since a long mechanical MCP run wants thoroughness rather than deep reasoning. Each row's `skills` field exists so a request naming a skill does not have to be mapped onto a task family by hand first.
 Assert the mode-dependent rows are not answered from the skill name alone: `oklch-color-scale-system` and `design-system-research` each appear twice, and asking which mode is required before routing. Answering "Sonnet, it's oklch" for an anchored brand colour that fails contrast fails this case.
 Assert the negative: this skill is **not** referenced from any other skill's files, and must not be. Model choice happens before a skill loads, only the user can act on it, and ten embedded copies of one conclusion is the drift pattern this repo has fixed twice — in the context template's restatement of the working rules (now toolkit-standard §D 14, 15 and 16, and figma-standard rule 17), and in the audit's competing description structure.
 
 Walked live: 2026-08-21 — the shipped table, grepped for a row per skill in `skills/`; returns `kirby-cms` alone.
+Since 1.3.0 the row check is `node tools/shared/test-model-routing.mjs`, and the mode-dependent rows are `skill:mode` keys with no plain key beside them.
