@@ -1,4 +1,7 @@
 # Changelog — lucide-icon-importer
+## [1.14.1] - 2026-11-05
+### Fixed
+- The right-to-left checkbox, setting and count say "right to left", not "Arabic": the audit names whichever language the project ships, and a Hebrew project was told about Arabic.
 ## [1.14.0] - 2026-11-05
 ### Added
 - A Settings option, Right to left, off by default. When it's on, each icon gets `Right to left: mirrors` or `Right to left: stays` in its description: the line figma-components-audit's icon-decision check reads.

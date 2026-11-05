@@ -170,6 +170,7 @@ check('right to left: the suggestion uses the audit\'s words', () => {
 check('right to left: off unless the file turns it on, and kept on replace', () => {
   const api = load(makeFigma([]).figma, 'return { defaults: DEFAULT_SETTINGS };');
   is(api.defaults.rtlMarks, false, 'the setting is off by default');
+  ok(!/\bArabic\b/.test(ui), 'the window names no one language: the project may ship Hebrew, Farsi or Urdu');   // v1.14.1
   ok(/\.check-row\[hidden\]\s*\{\s*display:\s*none/.test(ui), 'the hidden box is really hidden: the row\'s own display: flex would beat the browser\'s [hidden]');
   const kept = load(makeFigma([]).figma, 'return keptRtl;');
   const node = (data, extra) => Object.assign({ getPluginData: (k) => (k === 'lucideRtl' ? data : '') }, extra);

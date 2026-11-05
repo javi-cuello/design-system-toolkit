@@ -734,5 +734,39 @@ expect("a layer that is the same in every variant still fires when some forget i
   s.description = (s.description || "") + "\n\n## Right to left\n- Mirrors: order";
   expect("a Right to left section answers the note", keyed(await run(fx, { tokens: TK }), "Chip", /^direction\|note$/), []);
 }
+// ---- right to left: names in camelCase, drawings, hidden holders, RTL twins (A134) --
+{
+  // From the 2026-11-05 audit of 2.40–2.41: each was probed on stand-in nodes first.
+  const fz = fresh();
+  const set = (id, name, kids, extra) => leaf("COMPONENT_SET", name, Object.assign({ id, componentPropertyDefinitions: {}, description: "",
+    children: [leaf("COMPONENT", "Size=md", Object.assign({ id: id + "v", layoutMode: "VERTICAL", width: 100, height: 40, children: kids }, extra || {}))] }));
+  const ico = (name) => ({ name, parent: null, width: 24, height: 24, children: [leaf("VECTOR", "Vector")] });
+  const row = set("8:1", "Row", [leaf("FRAME", "Content", { layoutMode: "HORIZONTAL", children: [leaf("FRAME", "Icon"), leaf("TEXT", "Label")] })]);
+  const holder = set("8:2", "Holder", [leaf("FRAME", "Wrap", { visible: false, layoutMode: "VERTICAL", children: [
+    leaf("INSTANCE", "Row", { mainComponent: Object.assign({}, row.children[0], { parent: { type: "COMPONENT_SET", id: "8:1", name: "Row" } }) })] })]);
+  const brand = set("8:3", "Brand", [leaf("FRAME", "Logo", { layoutMode: "NONE", x: 0, y: 0, width: 60, height: 20, children: [
+    leaf("VECTOR", "L", { x: 0, y: 0, width: 10, height: 20 }), leaf("VECTOR", "o", { x: 12, y: 0, width: 10, height: 20 })] })]);
+  const pager = set("8:4", "Pager", [leaf("INSTANCE", "Icon", { mainComponent: ico("ArrowLeft") }), leaf("INSTANCE", "Forward", { mainComponent: ico("ChevronDown") }), leaf("INSTANCE", "Media", { mainComponent: ico("FastForward") })]);
+  pager.componentPropertyDefinitions["LeftIcon#1:1"] = { type: "BOOLEAN", defaultValue: false };
+  const tv = (d, pl, pr, al, ta, cr, kids) => leaf("COMPONENT", "Direction=" + d, { layoutMode: "HORIZONTAL", paddingLeft: pl, paddingRight: pr, primaryAxisAlignItems: al, width: 100, height: 40,
+    topLeftRadius: cr[0], topRightRadius: cr[1], bottomLeftRadius: cr[2], bottomRightRadius: cr[3], children: kids(ta) });
+  const bubble = leaf("COMPONENT_SET", "Bubble", { id: "8:5", description: "", componentPropertyDefinitions: { Direction: { type: "VARIANT", variantOptions: ["LTR", "RTL"], defaultValue: "LTR" } },
+    children: [tv("LTR", 12, 8, "MAX", "LEFT", [12, 12, 0, 12], (ta) => [leaf("FRAME", "Icon"), leaf("TEXT", "Label", { textAlignHorizontal: ta, textAutoResize: "HEIGHT" })]),
+      tv("RTL", 8, 12, "MIN", "RIGHT", [12, 12, 12, 0], (ta) => [leaf("FRAME", "Icon"), leaf("TEXT", "Label", { textAlignHorizontal: ta, textAutoResize: "HEIGHT" })])] });
+  fz.pages.push({ name: "❖ A134", id: "0:9200", sets: [row, holder, brand, pager, bubble] });
+  fz.pages.push({ name: "❖ A134 icons", id: "0:9201", sets: [leaf("COMPONENT", "ArrowRight", { width: 24, height: 24, description: "", children: [leaf("VECTOR", "Vector")] })] });
+  const rz = await run(fz, { tokens: Object.assign({}, fz.settings.tokens, { rtlLanguages: ["he"], rtlInFigma: true }) });
+  const dk = (set) => rz.audited.filter((e) => e.set === set).flatMap((e) => e.candidates.filter((c) => c.rule === "direction").map((c) => c.key));
+  expect("a PascalCase name is read as words: Icon holding ArrowLeft is raised, Forward holding ChevronDown and Media holding FastForward are not, LeftIcon is a side, ArrowRight wants a decision",
+    [dk("Pager").filter((k) => /fixed-icon|side-prop/.test(k)), dk("ArrowRight")], [["direction|fixed-icon|/Icon", "direction|side-prop|LeftIcon"], ["direction|icon-decision"]]);
+  expect("a drawing of shapes side by side is not a row to mirror", dk("Brand"), []);
+  const rv = rz.measures.rtlVerdicts.filter((x) => x.page === "❖ A134");
+  expect("an instance inside a hidden frame still covers its holder", rv.find((x) => x.set === "Holder"), { set: "Holder", page: "❖ A134", variants: 1, verdict: "covered", why: [], by: ["Row"] });
+  const bn = rz.audited.find((e) => e.set === "Bubble").candidates;
+  expect("an RTL twin's mirrored sides are not noted beside its LTR twin's: one padding, one corners, one alignment",
+    bn.filter((c) => /^direction\|(padding|corners|text-align|end-align)/.test(c.key)).map((c) => c.line),
+    ["Bubble: aligned to the trailing side", "Bubble: corners 12 12 12 0 (top leading, top trailing, bottom trailing, bottom leading)", "Text: aligned to the leading side", "Padding: 12 leading, 8 trailing"]);
+  expect("a twin's finding names the project's language, not Arabic", bn.filter((c) => /^direction\|rtl-order/.test(c.key)).map((c) => /Hebrew mockup/.test(c.text)), [true]);
+}
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");
 process.exit(failed ? 1 : 0);

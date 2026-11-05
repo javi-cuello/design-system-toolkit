@@ -419,7 +419,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
     <div class="preview-info">
       <div class="preview-name" id="previewName">No icon selected</div>
       <div class="preview-meta" id="previewMeta">Choose an icon above</div>
-      <label class="check-row" id="rtlRow" hidden><input type="checkbox" id="rtlMirrors"> Mirrors in Arabic</label>
+      <label class="check-row" id="rtlRow" hidden><input type="checkbox" id="rtlMirrors"> Mirrors right to left</label>
     </div>
     <button class="btn btn-primary" id="addBtn" disabled>
       <div class="spinner"></div>
@@ -451,7 +451,7 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 
       <div class="field-row">
         <label for="setRtlMarks">Right to left</label>
-        <div class="field-row-control"><label class="check-row"><input type="checkbox" id="setRtlMarks"> Mark whether each icon mirrors in Arabic</label></div>
+        <div class="field-row-control"><label class="check-row"><input type="checkbox" id="setRtlMarks"> Mark whether each icon mirrors right to left</label></div>
       </div>
     </div>
 
@@ -975,7 +975,7 @@ function selectFromList(text) {
   if (unknown.length) showToast(unknown.length + ' name(s) not in Lucide — see the status line', true);
 }
 
-// Whether an icon points the way the reader moves, so it mirrors in Arabic: the
+// Whether an icon points the way the reader moves, so it mirrors right to left: the
 // same words figma-components-audit's scanner reads as directional (DIR_WORD,
 // MEDIA, VERT and HORIZ in scanner/audit.js; tests/test-importer.mjs keeps the
 // two lists equal). Only a suggestion: the designer confirms it per icon.
@@ -1030,7 +1030,7 @@ function updatePreviewPanel() {
     selectedIcons.forEach(function(e) { if (e.loading) loadingCount++; });
     var unseen = 0;
     selectedIcons.forEach(function(e) { if (!e.seen && !e.error) unseen++; });
-    previewMeta.textContent = loadingCount > 0 ? (loadingCount + ' loading…') : 'Ready to add' + (marking && unseen ? ' · ' + unseen + ' with no Arabic decision' : '');
+    previewMeta.textContent = loadingCount > 0 ? (loadingCount + ' loading…') : 'Ready to add' + (marking && unseen ? ' · ' + unseen + ' with no right-to-left decision' : '');
     addBtn.querySelector('.btn-label').textContent = 'Add ' + count + ' icons';
   }
 

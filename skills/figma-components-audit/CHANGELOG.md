@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.42.1 (2026-11-05): right to left reads camelCase and PascalCase names as words, exempts a drawing from no-autolayout, counts an instance in a hidden frame as covering, notes an RTL twin's sides once, and names the project's language. Case A134.
 - 2.42.0 (2026-11-05): `FCA.composedFrame` checks a screen composed from the library: raw layers, unbound values, orphaned instances and detached copies in what was composed (the frame and its templates' slot contents), never what the library drew. scanner-checks.md §3.13; case A133.
 - 2.41.0 (2026-11-05): with `rtlInFigma`, no-variant covers anything that must mirror, `rtlStays`/`rtlByHand` (`direction|by-hand`), and the `rtlVerdicts` measure gives every set one verdict, `covered` followed any depth.
 - 2.40.1 (2026-11-05): an instance is read by its main component and variant, and by its layer name only when those say nothing, in the traps table and in all three of fixed-icon's tests (eight false directional icons in the first right-to-left run).

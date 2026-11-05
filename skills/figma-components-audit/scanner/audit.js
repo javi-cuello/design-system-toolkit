@@ -168,7 +168,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const LANG_NAME={ar:"Arabic",fa:"Farsi",he:"Hebrew",ur:"Urdu"};
   const LANGS=RTL?RTL.map(c=>LANG_NAME[c]||c).join(" and "):"";
   // A side as a word ("Icon left"), or inside camelCase ("iconLeft", "leftIcon").
-  const SIDE_G=/(?<![\p{L}])(left|right)(?![\p{L}])|(?<=\p{Ll})(Left|Right)(?!\p{Ll})|^(left|right)(?=\p{Lu})/gu;
+  const SIDE_G=/(?<![\p{L}])(left|right)(?![\p{L}])|(?<=\p{Ll})(Left|Right)(?!\p{Ll})|^([Ll]eft|[Rr]ight)(?=\p{Lu})/gu;
   const SIDE_W=/(?<![\p{L}])(left|right)(?![\p{L}])/giu;
   const SIDE={test:nm=>{SIDE_G.lastIndex=0;SIDE_W.lastIndex=0;return SIDE_W.test(nm)||(SIDE_G.lastIndex=0,SIDE_G.test(nm));}};
   const caseAs=(m,w)=>m===m.toUpperCase()?w.toUpperCase():m[0]===m[0].toUpperCase()?w[0].toUpperCase()+w.slice(1):w;
@@ -179,6 +179,10 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const VERT=/(?<![\p{L}])(up|down|upward|downward)(?![\p{L}])/iu, HORIZ=/(?<![\p{L}])(left|right|forward|back|next|prev|previous)(?![\p{L}])/iu;
   // An instance's direction comes from its main component (and variant) when that names one: a select's "Icon right" layer holding chevron-down points down.
   const pointsSide=nm=>!(VERT.test(nm)&&!HORIZ.test(nm));
+  // A camelCase or PascalCase name ("ArrowLeft", "FastForward") as words, so
+  // the word tests above, which need a boundary, read it as "Arrow-Left" and
+  // "Fast-Forward" (a hyphen, so the media words' own hyphens still match).
+  const words=s=>String(s||"").replace(/(\p{Ll})(\p{Lu})/gu,"$1-$2");
   const MEDIA=/(?<![\p{L}])(play|pause|rewind|fast-forward|skip-back|skip-forward|step-back|step-forward|repeat|shuffle|clock|timer)(?![\p{L}])/iu;
   const RTL_NOTE=/^\s*(#{1,6}\s*)?right to left\b/im, ICON_NOTE=/right to left:\s*(mirrors|stays)/i;
   // An icon is a lone component drawn only in shapes, at icon size: the
@@ -427,10 +431,17 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           for(let i=0;i<k.length;i++) for(let j=i+1;j<k.length;j++){ const a=k[i],b=k[j];
             if((a.x+a.width<=b.x||b.x+b.width<=a.x)&&a.y<b.y+b.height&&b.y<a.y+a.height) return true; } return false; };
         let alRow=false, visRow=false, boolRow=false; const uneven=new Map(), nestIds=new Set();
+        // A Direction axis holding RTL: its RTL variants are the mirror, checked
+        // against their LTR twins below, so their sides are not noted again (an
+        // RTL bubble's 8/12 padding beside the LTR 12/8 is one fact, not two).
+        const dirAxis=Object.entries(defs).find(([k,d])=>d.type==="VARIANT"&&/^direction$/i.test(k)&&(d.variantOptions||[]).some(o=>/^rtl$/i.test(o)));
+        const props=v=>v.variantProperties||Object.fromEntries((v.name||"").split(/,\s*/).map(kv=>{const k=kv.indexOf("=");return [kv.slice(0,k).trim(),kv.slice(k+1).trim()];}));
+        let sided=true;
         const rwalk=async(n,path,par)=>{
           if(n.type==="SLOT") return false;
           // A hidden instance is still inside: a boolean shows it, so it still covers the set.
-          if(path&&n.visible===false){ if(n.type==="INSTANCE"){ const hm=await mainOf(n); if(hm) nestIds.add(hm.parent&&hm.parent.type==="COMPONENT_SET"?hm.parent.id:hm.id); } return false; }
+          // So is one inside a hidden frame, at any depth.
+          if(path&&n.visible===false){ const hid=async h=>{ if(h.type==="INSTANCE"){ const hm=await mainOf(h); if(hm) nestIds.add(hm.parent&&hm.parent.type==="COMPONENT_SET"?hm.parent.id:hm.id); } else for(const c of h.children||[]) await hid(c); }; await hid(n); return false; }
           const at=path||"/", nm=path?n.name:set.name; let rev=false;
           const main=n.type==="INSTANCE"?await mainOf(n):null;
           const mn=main?(main.parent&&main.parent.type==="COMPONENT_SET"?main.parent.name:main.name):"";
@@ -438,7 +449,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           const free=n.type!=="INSTANCE"&&"layoutMode" in n&&n.layoutMode==="NONE"&&"children" in n;
           // The structure family raises every frame without auto layout as a
           // review; a row is the stronger case here, so it replaces that row.
-          if(!icon&&free&&sideBySide(n)){ rev=true; const d=F.findIndex(f=>f.key==="structure|no-autolayout|"+at); if(d>=0) F.splice(d,1); add({sev:"warning",rule:"direction",key:"direction|no-autolayout|"+at,
+          if(!icon&&free&&sideBySide(n)&&!onlyShapes(n)){ rev=true; const d=F.findIndex(f=>f.key==="structure|no-autolayout|"+at); if(d>=0) F.splice(d,1); add({sev:"warning",rule:"direction",key:"direction|no-autolayout|"+at,
             text:'"'+(path?n.name:set.name)+'" lays its layers side by side without auto layout, so they keep their order when the layout mirrors for '+LANGS,
             advice:'Select "'+(path?n.name:set.name)+'" and add auto layout (Shift+A), so the row has an order code can reverse.'}); }
           // A text layer is named after what it says ("3 days left"), and an
@@ -460,27 +471,27 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           const even=par&&typeof n.x==="number"&&typeof par.width==="number"&&(Math.abs(n.x-(par.width-n.x-n.width))<=1||(n.x<=0&&n.x+n.width>=par.width));
           const covers=c=>c.visible!==false&&typeof c.x==="number"&&c.x<=0&&c.y<=0&&c.x+c.width>=par.width&&c.y+c.height>=par.height;
           const loose=!icon&&par&&par.layoutMode==="NONE"&&!sideBySide(par)&&!onlyShapes(par)&&(par.children||[]).some(c=>c!==n&&covers(c));
-          if(path&&!icon&&!even&&(n.layoutPositioning==="ABSOLUTE"||loose)&&(h==="MIN"||h==="MAX")) add({sev:"warning",rule:"direction",key:"direction|pinned|"+at,
+          if(sided&&path&&!icon&&!even&&(n.layoutPositioning==="ABSOLUTE"||loose)&&(h==="MIN"||h==="MAX")) add({sev:"warning",rule:"direction",key:"direction|pinned|"+at,
             text:'"'+n.name+'" is '+(loose&&n.layoutPositioning!=="ABSOLUTE"?"placed in a frame without auto layout":"positioned absolutely")+' and pinned to the '+(h==="MIN"?"left":"right")+", so in "+LANGS+" it stays on that side while the layout around it mirrors",
             advice:(loose&&n.layoutPositioning!=="ABSOLUTE"?'Add auto layout to "'+par.name+'" (Shift+A) and put "'+n.name+'" in the flow':'Set its position to Auto (in the flow)')+', or keep it '+(loose&&n.layoutPositioning!=="ABSOLUTE"?"where it is":"absolute")+' and add to the description\'s Right to left section: "'+n.name+': pinned to the '+(h==="MIN"?"leading":"trailing")+' edge."',line:n.name+": pinned to the "+(h==="MIN"?"leading":"trailing")+" edge"});
-          if(!icon&&path&&DIR_SHAPE.test(n.name)&&pointsSide(n.name)&&(n.type==="VECTOR"||n.type==="BOOLEAN_OPERATION")) add({sev:"warning",rule:"direction",key:"direction|flat-icon|"+at,
+          if(!icon&&path&&DIR_SHAPE.test(words(n.name))&&pointsSide(words(n.name))&&(n.type==="VECTOR"||n.type==="BOOLEAN_OPERATION")) add({sev:"warning",rule:"direction",key:"direction|flat-icon|"+at,
             text:'"'+n.name+'" is a directional icon drawn into the component, so it can only face the other way in '+LANGS+" by forking the component",
             advice:'Replace "'+n.name+'" with an instance of the library\'s icon, and expose it as an instance-swap property so the icon can face the other way.'});
           if(n.type!=="INSTANCE"&&"layoutMode" in n){
             const flow=(n.children||[]).filter(c=>c.layoutPositioning!=="ABSOLUTE");
-            if(n.layoutMode!=="NONE"&&typeof n.paddingLeft==="number"&&n.paddingLeft!==n.paddingRight){ const k=nm+": "+n.paddingLeft+" leading, "+n.paddingRight+" trailing"; if(!uneven.has(k)) uneven.set(k,{at,name:nm,l:n.paddingLeft,r:n.paddingRight}); }
+            if(sided&&n.layoutMode!=="NONE"&&typeof n.paddingLeft==="number"&&n.paddingLeft!==n.paddingRight){ const k=nm+": "+n.paddingLeft+" leading, "+n.paddingRight+" trailing"; if(!uneven.has(k)) uneven.set(k,{at,name:nm,l:n.paddingLeft,r:n.paddingRight}); }
             if(n.layoutMode==="HORIZONTAL"){
               if(flow.length>=2){ rev=true; alRow=true; if(flow.filter(c=>c.visible!==false).length>=2) visRow=true; else if(flow.some(c=>c.visible===false&&c.componentPropertyReferences&&c.componentPropertyReferences.visible)) boolRow=true; }
-              if(n.primaryAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
+              if(sided&&n.primaryAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
                 text:'"'+nm+'" aligns its content to the right, which code mirrors to the left in '+LANGS+" only if it is written as end, not right",
                 advice:'Add to the description\'s Right to left section: "'+nm+': aligned to the trailing side."',line:nm+": aligned to the trailing side"});
             }
-            if(n.layoutMode==="VERTICAL"&&n.counterAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
+            if(sided&&n.layoutMode==="VERTICAL"&&n.counterAxisAlignItems==="MAX") add({sev:"review",rule:"direction",key:"direction|end-align|"+at,
               text:'"'+nm+'" aligns its content to the right, which code mirrors to the left in '+LANGS+" only if it is written as end, not right",
               advice:'Add to the description\'s Right to left section: "'+nm+': aligned to the trailing side."',line:nm+": aligned to the trailing side"});
           }
           const cr=["topLeftRadius","topRightRadius","bottomLeftRadius","bottomRightRadius"].map(k=>n[k]);
-          if(!icon&&n.type!=="INSTANCE"&&cr.every(x=>typeof x==="number")&&(cr[0]!==cr[1]||cr[2]!==cr[3])) add({sev:"review",rule:"direction",key:"direction|corners|"+at+"|"+cr.join(" "),
+          if(sided&&!icon&&n.type!=="INSTANCE"&&cr.every(x=>typeof x==="number")&&(cr[0]!==cr[1]||cr[2]!==cr[3])) add({sev:"review",rule:"direction",key:"direction|corners|"+at+"|"+cr.join(" "),
             text:'"'+nm+'" rounds its corners differently on the left and the right, so the shape faces the wrong way in '+LANGS+" unless the corners mirror too",
             advice:'Add to the description\'s Right to left section: "'+nm+": corners "+cr[0]+" "+cr[1]+" "+cr[3]+" "+cr[2]+' (top leading, top trailing, bottom trailing, bottom leading)."',line:nm+": corners "+cr[0]+" "+cr[1]+" "+cr[3]+" "+cr[2]+" (top leading, top trailing, bottom trailing, bottom leading)"});
           // An icon instance that no instance-swap property controls can only face
@@ -507,14 +518,14 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           }
           // Alignment is physical in Figma and no mode changes it. It only shows
           // where the box is wider than its text, so a hugging label is exempt.
-          if(!icon&&n.type==="TEXT"&&(n.textAlignHorizontal==="LEFT"||n.textAlignHorizontal==="RIGHT")&&n.textAutoResize!=="WIDTH_AND_HEIGHT"){
+          if(sided&&!icon&&n.type==="TEXT"&&(n.textAlignHorizontal==="LEFT"||n.textAlignHorizontal==="RIGHT")&&n.textAutoResize!=="WIDTH_AND_HEIGHT"){
             const side=n.textAlignHorizontal==="LEFT"?"leading":"trailing";
             add({sev:"review",rule:"direction",key:"direction|text-align|"+side,
               text:'"'+n.name+'" is wider than its text and aligned '+n.textAlignHorizontal.toLowerCase()+", which stays "+n.textAlignHorizontal.toLowerCase()+" in "+LANGS+" unless code writes it as "+(side==="leading"?"start":"end"),
               advice:'Add to the description\'s Right to left section: "Text: aligned to the '+side+' side."',line:"Text: aligned to the "+side+" side"}); }
           // Only an icon: a Next button in a pager is a button, not an icon.
           if(!icon&&path&&main&&iconNode(main)&&!(n.componentPropertyReferences&&n.componentPropertyReferences.mainComponent)){
-            const md=mn+(main.parent&&main.parent.type==="COMPONENT_SET"?" "+main.name:""), all=n.name+" "+md;
+            const md=words(mn+(main.parent&&main.parent.type==="COMPONENT_SET"?" "+main.name:"")), all=words(n.name)+" "+md;
             const nm=[DIR_WORD,MEDIA,VERT,HORIZ].some(r=>r.test(md))?md:all;
             if(DIR_WORD.test(nm)&&pointsSide(nm)&&!MEDIA.test(nm)) add({sev:"warning",rule:"direction",key:"direction|fixed-icon|"+at,
               text:'"'+n.name+'" is a directional icon'+(mn&&mn!==n.name?" ("+mn+")":"")+" that no instance-swap property controls, so nobody using the component can make it face the other way in "+LANGS,
@@ -523,7 +534,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           if("children" in n&&n.type!=="INSTANCE") for(const c of n.children) if(await rwalk(c,path+"/"+c.name,n)) rev=true;
           return rev;
         };
-        for(const v of vs) if(await rwalk(v,"")) revVariants++;
+        for(const v of vs){ sided=!(dirAxis&&/^rtl$/i.test(props(v)[dirAxis[0]]||"")); if(await rwalk(v,"")) revVariants++; }
+        sided=true;
         // Property names and variant options are the component's interface, so a
         // side in them reaches every consumer and Code Connect; renaming one is a
         // breaking change, which is why it stays in bucket 3.
@@ -545,13 +557,11 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         if(revVariants){ M.rtlSets++; M.rtlVariants+=revVariants; }
         // Where designers draw right-to-left screens before code, an instance
         // cannot reverse its own parts, so the set carries both directions.
-        const dirAxis=Object.entries(defs).find(([k,d])=>d.type==="VARIANT"&&/^direction$/i.test(k)&&(d.variantOptions||[]).some(o=>/^rtl$/i.test(o)));
         // An RTL twin is drawn by hand or by a plugin, so check it against its
         // LTR twin layer by layer: every row's in-flow parts reversed, and every
         // wide text aligned to the other side. Layers are matched by path of
         // names, so two siblings with one name are compared as one (a limit).
         if(TOK.rtlInFigma===true&&dirAxis){ const ax=dirAxis[0];
-          const props=v=>v.variantProperties||Object.fromEntries((v.name||"").split(/,\s*/).map(kv=>{const k=kv.indexOf("=");return [kv.slice(0,k).trim(),kv.slice(k+1).trim()];}));
           const others=o=>Object.entries(o).filter(([k])=>k!==ax).map(([k,x])=>k+"="+x).sort().join(",");
           const index=(n,path,out)=>{ if(path&&n.visible===false) return out; out[path]=n; if(n.type!=="INSTANCE") for(const c of n.children||[]) index(c,path+"/"+c.name,out); return out; };
           const parts=f=>(f.children||[]).filter(c=>c.layoutPositioning!=="ABSOLUTE").map(c=>c.name);
@@ -570,11 +580,11 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
                   advice:"Rename or replace the layers of "+where+" so it holds "+parts(t).slice().reverse().join(", ")+", the LTR parts reversed."});
               else if(n.type!=="INSTANCE"&&n.layoutMode==="HORIZONTAL"&&t.layoutMode==="HORIZONTAL"&&JSON.stringify(parts(n))!==JSON.stringify(parts(t).slice().reverse()))
                 add({sev:"warning",rule:"direction",key:"direction|rtl-order|"+v.name+"|"+path,
-                  text:where+" does not hold its LTR twin's parts in reverse ("+parts(n).join(", ")+" against "+parts(t).join(", ")+"), so the Arabic mockup shows an order code will not produce",
+                  text:where+" does not hold its LTR twin's parts in reverse ("+parts(n).join(", ")+" against "+parts(t).join(", ")+"), so the "+LANGS+" mockup shows an order code will not produce",
                   advice:"Reorder the layers of "+where+" to "+parts(t).slice().reverse().join(", ")+"."});
               if(n.type==="TEXT"&&t.type==="TEXT"&&FLIP[t.textAlignHorizontal]&&n.textAutoResize!=="WIDTH_AND_HEIGHT"&&n.textAlignHorizontal!==FLIP[t.textAlignHorizontal])
                 add({sev:"warning",rule:"direction",key:"direction|rtl-align|"+v.name+"|"+path,
-                  text:where+" is wider than its text and aligned "+String(n.textAlignHorizontal).toLowerCase()+", the same as its LTR twin, so the Arabic mockup shows it on the wrong side",
+                  text:where+" is wider than its text and aligned "+String(n.textAlignHorizontal).toLowerCase()+", the same as its LTR twin, so the "+LANGS+" mockup shows it on the wrong side",
                   advice:"Select "+where+" and set its alignment to "+FLIP[t.textAlignHorizontal].toLowerCase()+"."});
             } } }
         // Anything that mirrors needs the variant, not only a row: an instance
@@ -594,9 +604,9 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             text:set.name+" has "+why.join(", ")+", but its name matches rtlByHand: a row such as media controls or a phone number may keep its order in "+LANGS,
             advice:"Decide whether it mirrors; if it does, add the Direction variant, and either way say so in its Right to left note."});
         }
-        if(icon&&DIR_WORD.test(set.name)&&pointsSide(set.name)&&!ICON_NOTE.test(desc)) add({sev:"warning",rule:"direction",key:"direction|icon-decision",
+        if(icon&&DIR_WORD.test(words(set.name))&&pointsSide(words(set.name))&&!ICON_NOTE.test(desc)) add({sev:"warning",rule:"direction",key:"direction|icon-decision",
           text:"Icon "+set.name+" points a direction, and nothing records whether it mirrors in "+LANGS+", so a developer guesses",
-          advice:'Add "Right to left: '+(MEDIA.test(set.name)?"stays":"mirrors")+'" to its description'+(MEDIA.test(set.name)?", since playback controls keep their direction":", since it points the way the reader moves")+'; write the other word if this icon is the exception.'});
+          advice:'Add "Right to left: '+(MEDIA.test(words(set.name))?"stays":"mirrors")+'" to its description'+(MEDIA.test(words(set.name))?", since playback controls keep their direction":", since it points the way the reader moves")+'; write the other word if this icon is the exception.'});
         if(!icon&&(D.length||revVariants)&&!RTL_NOTE.test(desc)) add({sev:"review",rule:"direction",key:"direction|note",
           text:set.name+" has parts that change, or must not change, when it mirrors for "+LANGS+", and its description does not say which",
           advice:"Add to the description:\n\n## Right to left\n"+["- Mirrors: "+(alRow?"the order of its parts":"nothing beyond what follows")].concat(D.filter(f=>f.line).map(f=>"- "+f.line)).concat(["- Stays: nothing"]).join("\n")+"\n\nIf a part must keep its direction (playback controls, a chart), name it on the Stays line."});
