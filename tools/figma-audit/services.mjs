@@ -78,7 +78,7 @@ export const serviceFor = (auditDir) => running().find((x) => x.data && x.port &
 /* A route of a service called with JSON (GET without a body): its answer, or the `error` it carries thrown, with the
    `hint` beside it on the same line (a file to reopen), since a caller prints the message and nothing else. */
 export async function call(svc, route, body) {
-  const res = await fetch(`http://localhost:${svc.port}${route}`, { method: body ? 'POST' : 'GET', headers: { Origin: `http://localhost:${svc.port}`, 'Content-Type': 'application/json' }, ...(body && { body: JSON.stringify(body) }) });
+  const res = await fetch(`http://127.0.0.1:${svc.port}${route}`, { method: body ? 'POST' : 'GET', headers: { Origin: `http://127.0.0.1:${svc.port}`, 'Content-Type': 'application/json' }, ...(body && { body: JSON.stringify(body) }) });
   const j = await res.json();
   if (j && j.error) throw new Error([j.error, j.hint].filter(Boolean).join(': '));
   return j;

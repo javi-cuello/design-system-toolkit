@@ -15,13 +15,13 @@ node tools/figma-audit/server.mjs --data ~/Projects/acme/figma-design-system/aud
 
 ## Add a project
 
-Give the project's context document a port in its project block, one the other projects do not use, inside 9223–9232 (the only ports the Desktop Bridge plugin scans):
+Give the project's context document a port in its project block, one the other projects do not use, inside 9223–9232 (the only ports the Desktop Bridge plugin scans), and one no figma-console-mcp holds on `[::1]` (`lsof -nP -iTCP -sTCP:LISTEN`): each Claude session's console MCP takes the first free IPv6 port in that range, the service listens on IPv4 only, and the bridge dials `localhost`, which resolves to `::1` first, so it reaches the MCP instead and the service shows no plugin:
 
 ```json project
 {"name": "Acme", "phase": "design", "port": 9232}
 ```
 
-The service picks it up within a minute; nothing else changes. Then open `http://localhost:9232/audits/`. A project removed, or a port changed, takes effect at the service's next restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-audit`).
+The service picks it up within a minute; nothing else changes. Then open `http://127.0.0.1:9232/audits/`. A project removed, or a port changed, takes effect at the service's next restart (`launchctl kickstart -k gui/$(id -u)/com.toolkit.figma-audit`).
 
 ## Use
 

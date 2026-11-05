@@ -1231,7 +1231,7 @@ server.on("error", (e) => {
 server.requestTimeout = 0;
 server.headersTimeout = 60000;
 server.listen(PORT, "127.0.0.1", () => {
-  console.log("figma audit      http://localhost:" + PORT);
+  console.log("figma audit      http://127.0.0.1:" + PORT);
   console.log("records          " + AUDIT_DIR + (LEGACY ? " (single record: audit.json)" : "/<library>.json"));
   console.log("claude           " + (ANTHROPIC_KEY ? "enabled"
     : RAW_KEY ? "disabled — the key in ~/.figma-dashboard-key is not a valid key"
