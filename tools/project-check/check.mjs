@@ -15,8 +15,8 @@
  * project supplies the fact it needs, or it rules the gate out with a reason
  * in `check.without` of its snapshot.config.json, where the ruling is read
  * like any other. `--plan` lists what would run and what would not, and runs
- * only the gates that cost nothing — the trailers, the hook, the verdicts
- * (bin/closing reads it).
+ * only the gates that cost nothing — the trailers, the hook, validate, the
+ * verdicts (bin/closing reads it).
  *
  * The project's facts, in `check` of snapshot.config.json:
  *   exempt   path prefixes no gate reads (content): a commit touching only

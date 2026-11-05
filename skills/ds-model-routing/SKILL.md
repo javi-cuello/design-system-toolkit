@@ -5,7 +5,7 @@ description: Advise on the right Claude model and Effort setting before starting
 
 # Design systems model routing
 
-**Version 1.3.0** — history in CHANGELOG.md.
+**Version 1.3.1** — history in CHANGELOG.md.
 
 Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table below and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
 
@@ -21,7 +21,7 @@ Claude cannot change the model or Effort setting itself — only the user can, v
 
 ## Routing table
 
-The table is data: `~/Projects/toolkit/tools/shared/model-routing.json`, one row per task family — `task`, the `skills` it covers, the advised `model` and `effort` (ranges, as you say them to the user), `why`, `also` (what else the row covers, where it says), `keys` (the skill, or `skill:mode` in the skill's own mode names, plus `authoring` for work on skills and plugins in the toolkit and `long-form-prose` for the row no skill owns; `grey` and `gray` both work), and `agent`, the single pick a workflow sets. Read it before advising; never route from memory. `node tools/shared/test-model-routing.mjs` holds it: every skill has a row.
+The table is data: `tools/shared/model-routing.json` in the toolkit, one row per task family — `task`, the `skills` it covers, the advised `model` and `effort` (ranges, as you say them to the user), `why`, `also` (what else the row covers, where it says), `keys` (the skill, or `skill:mode` in the skill's own mode names, plus `authoring` for work on skills and plugins in the toolkit and `long-form-prose` for the row no skill owns; `grey` and `gray` both work), and `agent`, the single pick a workflow sets. Read it before advising; never route from memory. `node tools/shared/test-model-routing.mjs` holds it: every skill has a row.
 
 **Two skills appear twice, and the mode is what moves the tier** — `oklch-color-scale-system` in free/grey mode is rule-following, but anchored mode with a brand colour that fails contrast is a trade-off problem; `design-system-research` light is a few searches, deep is multi-source synthesis. Ask which mode before routing, because the skill name alone does not settle it.
 
@@ -29,7 +29,7 @@ The table is data: `~/Projects/toolkit/tools/shared/model-routing.json`, one row
 
 ## In a workflow
 
-A workflow script sets each `agent()`'s model and effort from the same table, so a mechanical stage runs on Sonnet and a judging stage on Opus at high effort without anyone choosing per run. A script has no filesystem, so pass the routes in as the Workflow's `args`: run `node ~/Projects/toolkit/tools/shared/model-routing.mjs`, put its output in `args.routes`, and spread a stage's route into its options — `agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })`. A skill whose mode moves the tier has only `skill:mode` keys (`design-system-research:deep`, `oklch-color-scale-system:free`): decide the mode before the stage, since a key that is not there spreads nothing and the stage silently keeps the session's model. A Default row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`. This skill is the instruction to set `effort` there; a stage the table has no row for keeps the session's model and effort.
+A workflow script sets each `agent()`'s model and effort from the same table, so a mechanical stage runs on Sonnet and a judging stage on Opus at high effort without anyone choosing per run. A script has no filesystem, so pass the routes in as the Workflow's `args`: run `node tools/shared/model-routing.mjs` from the toolkit, put its output in `args.routes`, and spread a stage's route into its options — `agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })`. A skill whose mode moves the tier has only `skill:mode` keys (`design-system-research:deep`, `oklch-color-scale-system:free`): decide the mode before the stage, since a key that is not there spreads nothing and the stage silently keeps the session's model. A Default row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`. This skill is the instruction to set `effort` there; a stage the table has no row for keeps the session's model and effort.
 
 ## Escalation triggers (regardless of task family)
 

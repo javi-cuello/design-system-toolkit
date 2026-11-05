@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { ROWS, routes, routeFor } from './model-routing.mjs';
 
 const MODELS = ['sonnet', 'opus', 'fable', 'haiku'];
@@ -57,4 +58,10 @@ t('routes() and routeFor() return the agent picks', () => {
   assert.equal(routeFor('frontend-build').model, 'sonnet');
 });
 
-console.log(`${n}/4 passed`);
+t('importing it from a process whose argv[1] is no file neither throws nor prints the routes', () => {
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', `const m = await import(${JSON.stringify(fileURLToPath(new URL('./model-routing.mjs', import.meta.url)))}); console.log(Object.keys(m.routes()).length > 0)`, 'no-such-file'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), 'true');
+});
+
+console.log(`${n}/5 passed`);

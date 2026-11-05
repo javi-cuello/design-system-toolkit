@@ -1,4 +1,6 @@
-# Eval cases — ds-model-routing (v1.3.0)
+# Eval cases — ds-model-routing (v1.3.1)
+
+**Walked: 2026-11-05 for 1.3.1** — paths only: `tools/shared/model-routing.json` and `node tools/shared/model-routing.mjs` now read from the toolkit's root; `bin/get --list skills/ds-model-routing` takes `tools/shared`, and `node tools/shared/test-model-routing.mjs` is 5/5 (a fifth: importing the printer from a process whose argv[1] is no file no longer throws). A1–A5 read against the new text, unaffected.
 
 **Walked: 2026-11-05 for 1.3.0** — the table moved to `tools/shared/model-routing.json`; A5's row check is now `node tools/shared/test-model-routing.mjs` (4/4: a row for every skill but this one and `kirby-cms`, valid picks, unique keys), and the mode-dependent rows carry `skill:mode` keys in the skills' own mode names (`oklch-color-scale-system:free`/`:grey`/`:gray` on one row, `:anchored`/`:hue-drift` on the other; `design-system-research:light` and `:deep`). A5's negative holds: no other skill's files name this one. A1–A4 read against the new text, unaffected.
 

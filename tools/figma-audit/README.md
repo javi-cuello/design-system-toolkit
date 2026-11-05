@@ -11,7 +11,7 @@ node tools/figma-audit/server.mjs --all                                   # ever
 node tools/figma-audit/server.mjs --data ~/Projects/acme/figma-design-system/audit --port 9231   # one project
 ```
 
-**Needs:** Node 22.12+, the docs engine's packages (`(cd tools/docs-site && pnpm install --frozen-lockfile)` once; pnpm 12 first if it is not installed, as `docs/setup.md` says), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see *Running it* below).
+**Needs:** Node 22.23.4+ (Astro's floor for the docs site it builds), the docs engine's packages (`(cd tools/docs-site && pnpm install --frozen-lockfile)` once; pnpm 12 first if it is not installed, as `docs/setup.md` says), Figma's desktop app with the [Desktop Bridge plugin](https://github.com/southleft/figma-console-mcp) for audits, and, for the chat and the audit's judgement pass, an Anthropic key in `~/.figma-dashboard-key` (see *Running it* below).
 
 ## Add a project
 
@@ -154,7 +154,7 @@ Each was a real defect; the reason is what keeps the next edit from reintroducin
 
 ## Running it
 
-`--all` serves every project with a `port`; `--data <home>/audit --port <n>`, repeated, serves the ones named, one port each (the plugin tells projects apart by port). Then open `http://localhost:<port>/audits/`. Keep the port inside 9223–9232 — the plugin
+`--all` serves every project with a `port`; `--data <home>/audit --port <n>`, repeated, serves the ones named, one port each (the plugin tells projects apart by port). Then open `http://127.0.0.1:<port>/audits/` (not `localhost`, which can reach a console MCP on `[::1]`). Keep the port inside 9223–9232 — the plugin
 scans only that range and its manifest permits no other. 9231 sits near the top
 so it will not collide with the MCP servers Claude Code spawns from 9223 upward.
 

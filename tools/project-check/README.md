@@ -12,7 +12,7 @@ toolkit-standard §D 13: every change goes round one loop — standards, work, l
 | `init.mjs` | Connects a code repo: writes what *Connect a code repo* lists where nothing is, keeps what is, and shows the gate plan |
 | `test-init.mjs` | `init.mjs` over a throwaway repo: a dry run writes nothing, a second run keeps everything; run by `bin/check` |
 | `test-pre-push.mjs` | the push hook over a throwaway repo: it checks only the commit checked out with nothing beside it, and caches only what it checked |
-| `test-check.mjs` | `check.mjs --plan` over a throwaway repo on the canonical layout: a project saying nothing in `paths` is held by the gates that read its stored specs, not skipped for want of a setting; the `validate` gate asks where the system's own code is |
+| `test-check.mjs` | `check.mjs --plan` over a throwaway repo on the canonical layout: a project saying nothing in `paths` is held by the gates that read its stored specs, not skipped for want of a setting; the `validate` gate asks where the system's own code is, and run, is RED on a finding, waived by a ruling naming it, and RED on a base git cannot read |
 
 ## Connect a code repo
 

@@ -21,6 +21,8 @@ export function routeFor(skill, mode, rows = ROWS) {
   return row ? { ...row.agent } : null;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// argv[1] need not be a file (a script on stdin, an -e with arguments): then this is imported, not run
+const run = () => { try { return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } };
+if (process.argv[1] && run()) {
   process.stdout.write(JSON.stringify(routes(), null, 2) + '\n');
 }
