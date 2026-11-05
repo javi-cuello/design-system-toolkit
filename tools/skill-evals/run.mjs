@@ -203,7 +203,9 @@ for (const t of tasks) {
           env: { ...process.env, TOOLKIT_EVAL_COPY: copy, ...(RULES === 'off' ? { TOOLKIT_RULES: 'off' } : {}) } });
       let j = {};
       try { j = JSON.parse(r.stdout); } catch { j = { result: (r.stdout || r.stderr || '').slice(-400) }; }
-      agent = { exit: r.error ? r.error.code || 'error' : r.timedOut ? 'timeout' : r.signal || r.status, turns: j.num_turns ?? null, costUsd: j.total_cost_usd == null ? null : Math.round(j.total_cost_usd * 100) / 100, durationMs: j.duration_ms ?? null, result: String(j.result || '').slice(0, 300), session: j.session_id || null };
+      // a turn limit or an error result is not a clean exit, as in the screen branch
+      const stopped = j.subtype && j.subtype !== 'success' ? j.subtype : j.is_error ? 'error' : null;
+      agent = { exit: r.error ? r.error.code || 'error' : r.timedOut ? 'timeout' : r.signal || (r.status === 0 && stopped) || r.status, turns: j.num_turns ?? null, costUsd: j.total_cost_usd == null ? null : Math.round(j.total_cost_usd * 100) / 100, durationMs: j.duration_ms ?? null, result: String(j.result || '').slice(0, 300), session: j.session_id || null };
       // the agent's own transcript, read for a look at the answer
       const projects = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude's own transcripts, not ours
       const tr = agent.session && fs.existsSync(projects) ? fs.readdirSync(projects).map((d) => path.join(projects, d, `${agent.session}.jsonl`)).find((f) => fs.existsSync(f)) : null;

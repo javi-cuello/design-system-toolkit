@@ -1074,7 +1074,7 @@ const server = createServer(async (req, res) => {
       // under node fetch's 300 s wait for headers, so a slow walk is said here rather than as "fetch failed" in the client
       try {
         const r = await exec("const PAGES = " + JSON.stringify(only) + ";\n" + text + "\nreturn __headless();\n", 280000, fileKey || null);
-        if (r && r.success === false) return json(res, 200, { ok: false, error: r.error });
+        if (r && r.success === false) return json(res, 200, { ok: false, error: r.error || "the Figma call failed and gave no reason" });
         walk = r && typeof r === "object" && "result" in r ? r.result : r;
       } catch (e) {
         if (e.message === "wrong_file_not_open") return json(res, 200, { ok: false, error: e.message, hint: notOpen(fileKey) });
