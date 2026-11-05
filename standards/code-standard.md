@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.31.3** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.32.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -245,7 +245,7 @@
 
     *Evidence:* one project's generator skipped letter-spacing at zero until nine components read it and got nothing; the other applied type through `font` shorthands, which carried no letter-spacing at all. **Mechanical** (the build writes it; `tools/tokens/check.mjs` fails a `var()` or a `text-style()` that names nothing). *Checked:* `tools/tokens/check.mjs` "is read with no fallback and nothing defines it"; `tools/tokens/check.mjs` "(text-style)".
 
-55. **A project states where its files live and what it builds from a snapshot, and nothing about how CSS is written.** `snapshot.config.json` holds the toolkit's location, the project's name, `paths`, the `after` steps the toolkit runs once a snapshot is written, `figmaToken` (a command that prints one), and `parity`, the parity engine's facts about this project — how its pages are hosted, its tiers and windows, its tolerances (per assertion kind, never written into a comparator) and the rest, each key listed once in `tools/parity/README.md` (*What a project supplies*), and `styles`, where the stylesheet gates find its sheets and how its components are named, each key listed once in `tools/css-lint/check.mjs`'s header, and `screens`, the states its frame names add to snapshot-standard rule 24's list; a CSS convention, a base mode, a unit or a prefix per project has nowhere to go.
+55. **A project states where its files live and what it builds from a snapshot, and nothing about how CSS is written.** `snapshot.config.json` holds the toolkit's location, the project's name, `paths`, the `after` steps the toolkit runs once a snapshot is written, `figmaToken` (a command that prints one), and `parity`, the parity engine's facts about this project — how its pages are hosted, its tiers and windows, its tolerances (per assertion kind, never written into a comparator) and the rest, each key listed once in `tools/parity/README.md` (*What a project supplies*), and `styles`, where the stylesheet gates find its sheets and how its components are named, each key listed once in `tools/css-lint/check.mjs`'s header, and `screens`, the states its frame names add to snapshot-standard rule 24's list, and `templates`, the code file that implements each Figma screen template (`tools/snapshot/README.md`, *Screen recipes*); a CSS convention, a base mode, a unit or a prefix per project has nowhere to go.
 
     *Why:* a setting that exists gets used, and a used setting is a project dialect — which is how the two generators diverged in the first place.
 

@@ -33,8 +33,21 @@ const kinds = () => ({ components: {}, frames: {} });
 const count = (t, n) => { if (isInstance(n)) tally(t.components, label(n)); else if (isFrame(n)) tally(t.frames, label(n)); };
 const sorted = (m) => Object.fromEntries(Object.entries(m).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
 
-function derive(screens) {
-  const shells = new Map(), regions = new Map(), types = new Map(), unnamed = [], spelled = {};
+/*
+ * A SCREEN TEMPLATE is a component a screen is an instance of: the screen's one laid-out child, recorded with its
+ * layers (the snapshot walks a screen's instance whole, since its layers are the page). Its insides are the page's
+ * regions, so it is entered like a frame, where a library instance stays closed but for its slots. Any component
+ * that is a screen's whole content counts, a library Dialog too: what it lays out is that screen's page. Variants of
+ * one set are one template, keyed by the set's name. Which code file
+ * implements each template is the project's fact, `templates` in its snapshot.config.json, passed in as `code`;
+ * `exists` says whether a named file is there.
+ */
+const templateOf = (laid) => (laid.length === 1 && isInstance(laid[0]) && (laid[0].children || []).length ? laid[0] : null);
+
+function derive(screens, { code = {}, exists = null } = {}) {
+  // a `templates` that is not a map (a path, a list) maps nothing, rather than listing its characters as unused
+  if (!code || typeof code !== 'object' || Array.isArray(code)) code = {};
+  const shells = new Map(), regions = new Map(), types = new Map(), unnamed = [], spelled = {}, templates = new Map();
   for (const s of screens) {
     const t = s.tree || {};
     const kids = t.children || [];
@@ -48,6 +61,14 @@ function derive(screens) {
     const sh = shells.get(key) || { regions: named, screens: 0, overlays: kinds(), sections: new Set() };
     sh.screens++; for (const o of over) count(sh.overlays, o); if (section) sh.sections.add(section);
     shells.set(key, sh);
+    const tpl = templateOf(laid);
+    if (tpl) {
+      const name = label(tpl);
+      const tt = templates.get(name) || { component: name, screens: 0, sections: new Set(), regions: kinds() };
+      tt.screens++; if (section) tt.sections.add(section);
+      for (const k of tpl.children || []) if (!k.absolute) count(tt.regions, k);
+      templates.set(name, tt);
+    }
 
     // each frame path once per screen for the screen count, every occurrence for the values
     const seen = new Set();
@@ -72,6 +93,7 @@ function derive(screens) {
     const walk = (n, trail) => {
       for (const c of n.children || []) {
         // an instance's insides are its component's, except its slots, which each screen fills
+        if (c === tpl) { const t2 = [...trail, label(c)]; region(c, t2.join('/')); walk(c, t2); continue; }
         if (isInstance(c)) { for (const [sl, chain] of slots(c)) { const t2 = [...trail, label(c), ...chain, sl.name]; region(sl, t2.join('/')); walk(sl, t2); } continue; }
         // only a frame is a region, and an absolute one is an overlay
         if (!isFrame(c) || c.absolute) continue;
@@ -100,6 +122,14 @@ function derive(screens) {
     varies: repeated.flatMap((r) => ['gap', 'pad'].filter((k) => Object.keys(r[k]).length > 1).map((k) => ({ path: r.path, what: k, values: r[k] }))),
     // a name rule 24's taxonomy does not read is listed, never dropped quietly
     unnamed,
+    templates: [...templates.values()].sort((a, b) => b.screens - a.screens || a.component.localeCompare(b.component)).map((t) => {
+      // a value that is not a path (a note, an object) pairs nothing
+      const file = typeof code[t.component] === 'string' ? code[t.component] : null;
+      return { ...t, sections: [...t.sections].sort(), regions: { components: sorted(t.regions.components), frames: sorted(t.regions.frames) }, code: file, ...(file && exists && !exists(file) && { missing: true }) };
+    }),
+    // a mapped name no stored screen uses: a renamed template, or a typo, said rather than kept quietly
+    // (`_note` is the config's comment, as in every block of snapshot.config.json)
+    unusedCode: Object.keys(code).filter((k) => k !== '_note' && !templates.has(k)).sort(),
     screenTypes: [...types.values()].sort((a, b) => a.section.localeCompare(b.section) || a.screen.localeCompare(b.screen)).map((t) => ({ ...t, states: [...t.states].sort() })),
   };
 }
@@ -115,5 +145,6 @@ if (require.main === module) {
   const dir = paths(repo, config.paths || {}).screens;
   const screens = readScreens(dir);
   if (!screens.length) { console.error(`recipes: no stored screens in ${dir} — nothing to derive, and that is not a recipe`); process.exit(1); }
-  console.log(JSON.stringify(derive(screens), null, 2));
+  const fs = require('node:fs');
+  console.log(JSON.stringify(derive(screens, { code: config.templates || {}, exists: (f) => fs.existsSync(path.join(repo, f)) }), null, 2));
 }

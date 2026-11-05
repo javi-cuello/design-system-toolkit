@@ -248,6 +248,8 @@ rules it encodes, and the checklist for adding a project, are
 - `varies`: a region whose gap or padding is not one token, each value counted. It is a drift, or two kinds of content sharing one path; the designer tells which, and a drift's value is their ruling.
 - `unnamed`: screens whose name snapshot-standard rule 24's taxonomy does not read: listed, never dropped.
 - `screenTypes`: each section's screens and the states drawn for each, read by that taxonomy.
+- `templates`: each screen template, a component a screen is an instance of (the screen's one laid-out child, recorded with its layers): its screens, sections and the regions inside it. Any component that is a screen's whole content counts, a library Dialog too, since what it lays out is that screen's page; the variants of one set are one template, keyed by the set's name. Such a template is entered as the page, so its frames are regions under its name (`_Screen templates - Desktop/_Home/Main/Section`), where a library instance stays closed but for its slots. `code` is the file that implements it, from `templates` in the repo's `snapshot.config.json` (`{ "<template component>": "<repo path>" }`, any framework); `missing: true` when that file is not there.
+- `unusedCode`: names `templates` maps that no stored screen uses: a renamed template, or a typo.
 
 The docs site publishes it as `api/screens.json` and the system MCP serves it as `get_screen_recipe` (tools/system-mcp). A screen whose `figma.json` does not parse is skipped by `readScreens`, as everywhere else, and so is missing from `screens`.
 

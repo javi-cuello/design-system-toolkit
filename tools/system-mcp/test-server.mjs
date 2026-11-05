@@ -36,7 +36,8 @@ try {
   const rec = await call("get_screen_recipe", {});
   ok("get_screen_recipe serves the site's recipe: shells with their overlays, regions, what varies, screen types with their states",
     rec.screens === 5 && rec.shells.length === 2 && rec.shells[0].overlays.components.Dialog === 1 && rec.regions.some((r) => r.path === "Main/Section/Block/Column")
-    && rec.varies.length === 1 && rec.varies[0].values["Spacing/40"] === 1 && JSON.stringify(rec.screenTypes.find((t) => t.screen === "Login").states) === '["Default","Error"]');
+    && rec.varies.length === 1 && rec.varies[0].values["Spacing/40"] === 1 && JSON.stringify(rec.screenTypes.find((t) => t.screen === "Login").states) === '["Default","Error"]'
+    && Array.isArray(rec.templates) && /start a new page from that file/.test(c.getInstructions() || ""));
   const only = await call("get_screen_recipe", { section: "login", path: "Container" });
   ok("…filtered by section (case-blind) and by region path",
     only.screenTypes.length === 1 && only.screenTypes[0].section === "Login" && only.shells.length === 1 && only.regions.every((r) => r.path.includes("Container")) && only.regions.length === 1);

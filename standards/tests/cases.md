@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-05, for code-standard 1.32.0** — rule 55 admits `templates`: `node tools/tokens/check.mjs` on the repo that carries one reads no rule 55 finding, and `node tools/tokens/test-check.mjs` still refuses a `css` key.
+
 **Walked: 2026-11-01, for toolkit-standard 2.23.0** — S21: the fixture in a throwaway clone, each assertion observed; `bin/check`'s step passes on the repo.
 
 **Walked: 2026-10-31, for toolkit-standard 2.21.0** — §D 11's record: `node tools/toolkit-check/test-cadence.mjs` 5 passed, the new case (a merge's trailer saying "independent" leaves the review owed) failing against the old grep; the repo's own closing commit still counts.

@@ -27,7 +27,7 @@ each project is its own entry in the client's config.
 | `get_tokens` | collections, or one collection's variables per mode (filterable) |
 | `get_changes` | the change log, newest first, by component or date |
 | `get_audit` | open (or all) findings and 0–100 component scores, by component, and recent runs with their cost |
-| `get_screen_recipe` | how this project builds a screen, from its stored screens (`api/screens.json`, `tools/snapshot/recipes.cjs`): shells and their overlays, repeated regions and slots with their spacing tokens, what varies, each screen type's states; by section or region path. A site built before it answers with a note |
+| `get_screen_recipe` | how this project builds a screen, from its stored screens (`api/screens.json`, `tools/snapshot/recipes.cjs`): screen templates with the code file each starts from, shells and their overlays, repeated regions and slots with their spacing tokens, what varies, each screen type's states; by section or region path. A site built before it answers with a note |
 | `list_pages` | every page of the site, found by following its own links |
 | `read_page` | any page as plain text, as a reader sees it — foundations, components, tracker, changes |
 

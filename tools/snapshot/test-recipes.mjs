@@ -75,4 +75,27 @@ ok('a slot inside an instance that fills another slot is read under both; a set 
     const r2 = derive([s, s]).regions.find((q) => q.path === 'Dialog/Content slot/Selection group/Content slot');
     return r2 && r2.children.components['Context menu item / Default'] === 2; })());
 
+// A screen that is one instance of a screen template, walked whole: the template is entered as the page,
+// and the project's map names the code file that implements it (one project's 58 screens, 2026-11-05)
+{
+  const page = (name, gap) => ({ name, tree: { name, type: 'FRAME', children: [{ name: '_Home', type: 'INSTANCE', instanceOf: 'Screen templates/_Home', overrides: ['characters'],
+    children: [frame('Header', 0, [inst('Top navigation')]), frame('Main', 0, [frame('Section', gap)]), { ...inst('Toast'), absolute: true }] }] } });
+  const t = derive([page('<Desktop> 1-1 - Main', 24), page('<Desktop> 1-2 - Main - Empty', 24), page('<Mobile> 1-1 - Main', 16)],
+    { code: { 'Screen templates/_Home': 'pages/home.tsx', 'Screen templates/_Gone': 'pages/gone.tsx', _note: 'a comment' }, exists: (f) => f !== 'pages/home.tsx' });
+  const home = t.templates[0];
+  ok('a screen that is one instance of a template lists the template: its screens, sections and the regions inside it, an overlay not among them',
+    t.templates.length === 1 && home.component === 'Screen templates/_Home' && home.screens === 3 && JSON.stringify(home.sections) === '["Desktop","Mobile"]'
+    && JSON.stringify(home.regions.frames) === '{"Header":3,"Main":3}' && !('Toast' in home.regions.components));
+  ok("the template is entered as the page: its frames are regions under its name, and what varies inside it is said",
+    t.regions.some((q) => q.path === 'Screen templates/_Home/Main/Section' && q.screens === 3) && t.varies.some((v) => v.path === 'Screen templates/_Home/Main/Section' && v.what === 'gap'));
+  ok("the code file the project maps it to is given, a mapped file that is not there is marked, and a mapped name no screen uses is listed; the config's _note is neither",
+    home.code === 'pages/home.tsx' && home.missing === true && JSON.stringify(t.unusedCode) === '["Screen templates/_Gone"]');
+  ok('a screen laying out more than one child is not a template screen', r.templates.length === 0);
+  const dialog = { name: '<Projects> 3-1 - Delete', tree: { children: [{ name: 'Dialog', type: 'INSTANCE', instanceOf: 'Dialog / Size=md', children: [frame('Header', 8), frame('Body', 16)] }] } };
+  const d = derive([dialog, dialog], { code: { Dialog: { note: 'not a path' } } });
+  ok("a screen that is one library instance is laid out by it: that component is its template, entered as its page; a mapped value that is not a path pairs nothing",
+    d.templates.length === 1 && d.templates[0].component === 'Dialog' && d.templates[0].code === null && d.regions.some((q) => q.path === 'Dialog/Body'));
+  ok('a templates value that is not a map maps nothing', JSON.stringify(derive([dialog], { code: 'pages/x.tsx' }).unusedCode) === '[]' && JSON.stringify(derive([dialog], { code: ['a.tsx'] }).unusedCode) === '[]');
+}
+
 console.log(`${n}/${n} passed`);

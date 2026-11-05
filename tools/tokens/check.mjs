@@ -46,7 +46,7 @@ else if (!readFileSync(wrapper, 'utf8').includes('tools/tokens/build.mjs')) say(
 
 // 3 · the config says where and what runs after a snapshot, never how CSS is
 // written; `parity` is the parity engine's facts (tolerances per kind)
-const ALLOWED = new Set(['toolkit', 'project', 'paths', 'after', 'figmaToken', 'logs', 'parity', 'styles', 'screens', 'check', 'evals', '_note']);
+const ALLOWED = new Set(['toolkit', 'project', 'paths', 'after', 'figmaToken', 'logs', 'parity', 'styles', 'screens', 'templates', 'check', 'evals', '_note']);
 // From the store, which defines the layout: this file held its own copy and
 // the two had already diverged in both directions.
 const PATHS = new Set(store.PATH_KEYS);
