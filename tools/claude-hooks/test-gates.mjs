@@ -158,6 +158,11 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   fs.writeFileSync(planPath(away.id), PLAN_TEXT);
   assert.match(String(planGate(away.id, away.file, [TOOLKIT, other], next, TOOLKIT)), new RegExp(`a bin/check run in ${TOOLKIT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), "another repo's check, and reading check-lib.sh, are not this repo's run");
   away.clean();
+  // a repo with no bin/check of its own owes no run
+  const bare = session([user('go'), edit(path.join(other, 'doc.md'), 200)], { checked: false });
+  fs.writeFileSync(planPath(bare.id), PLAN_TEXT);
+  assert.ok(!String(planGate(bare.id, bare.file, [TOOLKIT, other], next, TOOLKIT)).includes(`a bin/check run in ${other}`), 'a repo with no bin/check owes no run');
+  bare.clean();
   // a check run by its path, or after a `cd` joined by `;` or in `( )`, is that repo's
   for (const cmd of [`${other}/bin/check`, `cd ${other}; bin/check`, `(cd ${other}; bin/check)`]) {
     const p = session([dated(withId(call('Bash', { command: cmd }), 'q1')), dated(checkResult('q1', 'green')), user('go'), edit('a.mjs', 200)], { checked: false });

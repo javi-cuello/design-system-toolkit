@@ -529,7 +529,7 @@ function checked(st, id, rec) {
   if (repo !== undefined && !st.checkedAt[repo]) st.checkedAt[repo] = rec.timestamp || new Date().toISOString();
 }
 const planGaps = (text, st = {}, work = []) => [...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 'im').test(text)).map((h) => `the ${h} section`),
-  ...work.filter((r) => !st.checkedAt?.[r]).map((r) => `a bin/check run in ${r} whose closing line came back (pasted text alone is not a run; output redirected to a file, or cut to a preview, hides that line: pipe it through tail; run it as the command, not behind time or env)`),
+  ...work.filter((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))).map((r) => `a bin/check run in ${r} whose closing line came back (pasted text alone is not a run; output redirected to a file, or cut to a preview, hides that line: pipe it through tail; run it as the command, not behind time or env)`),
   ...(work.some((r) => st.checkedAt?.[r] && st.firstEdit?.[r] && st.checkedAt[r] > st.firstEdit[r]) && !/^\W*late\W*:/im.test(section(text, 'Before')) ? ['a "late:" line under Before: the check ran after the work\'s first edit, so say what that edit may have hidden'] : []),
   ...(CHECK_END.test(section(text, 'Before')) ? [] : ["bin/check's closing line under Before (\"green…\", \"== N FAILED…\" or the project's own, pasted from the run before the work)"]),
   ...(['§D 1', '§D 2', '§D 5'].every((q) => new RegExp(`${q}(?!\\d)`).test(section(text, 'Before'))) ? [] : ['the answers to §D 1, §D 2 and §D 5 under Before']),
