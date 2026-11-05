@@ -20,7 +20,7 @@
  *   - probes over a node (`FCA.schema(set, opts)` …) read only properties, so
  *     tests/test-probes.mjs drives them with plain objects in node;
  *   - live calls (`FCA.locate`, `FCA.discover`, `FCA.nameSpaces`,
- *     `FCA.detachedScan`, `FCA.sweepSchema`, `FCA.fix.*`) need `figma` and are
+ *     `FCA.detachedScan`, `FCA.sweepSchema`, `FCA.composedFrame`, `FCA.fix.*`) need `figma` and are
  *     syntax-checked only.
  *
  * Load once per Figma file, then bootstrap (SKILL.md, "Session probes"):
@@ -408,6 +408,71 @@ globalThis.__FCA_PROBES_FACTORY = function () {
     }
     return { set: set.name, orphans };
   };
+
+  // ---- §3.13 a composed frame: library instances and bound values only --
+  // A screen an agent or a designer composes from the library, not a library
+  // component. What the composer authored is the root (unless it is an
+  // instance) and whatever they put in a slot of an instance they placed, at
+  // any depth; the rest — an instance's own drawing, and a slot's default
+  // content — is the library's, checked where it is drawn. A slot child is a
+  // default when its id, taken relative to the placed instance, is a node of
+  // that instance's main component (seen live: inserted content's is not).
+  // In what was authored: a node that is not a frame, component, section or
+  // instance is `raw` (a group is raw too, and its children are still read);
+  // a frame's non-zero gap, wrap gap, grid gaps, padding and corner radius,
+  // and each visible solid fill and stroke without a style, are `unbound`;
+  // a placed instance whose main does not resolve, or is a local main gone
+  // from the document, is `orphan`; a frame named like a component it uses,
+  // or one in `componentNames`, is `detached`. Hidden layers are skipped.
+  const FRAME_NUMS = ["paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius"];
+  FCA.composedFindings = async (root, mainOf, componentNames) => {
+    const findings = [], seen = new Set(componentNames || []), frames = [];
+    let instances = 0;
+    const at = (trail) => trail.join(" / ");
+    const num = (n, k, t) => { if (typeof n[k] === "number" && n[k] !== 0 && !(n.boundVariables || {})[k]) findings.push({ kind: "unbound", path: at(t), id: n.id, prop: k, value: n[k] }); };
+    const paints = (n, prop, styleKey, t) => {
+      const arr = n[prop];
+      if (!isArr(arr) || (typeof n[styleKey] === "string" && n[styleKey])) return;
+      arr.forEach((pt, i) => { if (pt && pt.visible !== false && pt.opacity !== 0 && pt.type === "SOLID" && !(pt.boundVariables && pt.boundVariables.color)) findings.push({ kind: "unbound", path: at(t), id: n.id, prop: prop + "[" + i + "]" }); });
+    };
+    const authored = async (n, trail, isRoot) => {
+      if (n.visible === false) return;
+      const t = [...trail, n.name];
+      if (n.type === "INSTANCE") return instance(n, t);
+      if (n.type === "FRAME" || n.type === "COMPONENT") {
+        if (!isRoot) frames.push({ n, t });
+        const lm = n.layoutMode;
+        if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.primaryAxisAlignItems !== "SPACE_BETWEEN") num(n, "itemSpacing", t);
+        if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.layoutWrap === "WRAP" && n.counterAxisAlignContent !== "SPACE_BETWEEN") num(n, "counterAxisSpacing", t);
+        if (lm === "GRID") { num(n, "gridRowGap", t); num(n, "gridColumnGap", t); }
+        for (const k of FRAME_NUMS) if (!k.startsWith("padding") || (lm && lm !== "NONE")) num(n, k, t);
+        paints(n, "fills", "fillStyleId", t);
+        paints(n, "strokes", "strokeStyleId", t);
+      } else if (n.type !== "SECTION") findings.push({ kind: "raw", path: at(t), id: n.id, type: n.type });
+      for (const c of n.children || []) await authored(c, t, false);
+    };
+    // a placed instance: checked itself, then only what was put in its slots
+    const instance = async (n, t) => {
+      instances++;
+      const main = await mainOf(n);
+      if (!main || (!main.parent && !main.key)) findings.push({ kind: "orphan", path: at(t), id: n.id });
+      if (main) { seen.add(main.name); if (main.parent && main.parent.type === "COMPONENT_SET") seen.add(main.parent.name); }
+      const own = new Set(main && main.findAll ? main.findAll(() => true).map((x) => x.id) : []);
+      const pre = (String(n.id).startsWith("I") ? n.id : "I" + n.id) + ";"; // an instance inside another is already I-prefixed
+      const isDefault = (c) => { if (!String(c.id).startsWith(pre)) return false; const rel = c.id.slice(pre.length); return own.has(rel.includes(";") ? "I" + rel : rel); };
+      const stack = [...(n.children || [])];
+      while (stack.length) {
+        const c = stack.pop();
+        if (c.visible === false) continue;
+        if (c.type === "SLOT") { for (const k of c.children || []) { if (isDefault(k)) stack.push(k); else await authored(k, [...t, c.name], false); } }
+        else if (c.children) stack.push(...c.children);
+      }
+    };
+    if (root.type === "INSTANCE") await instance(root, [root.name]); else await authored(root, [], true);
+    for (const { n, t } of frames) if (seen.has(n.name)) findings.push({ kind: "detached", path: at(t), id: n.id });
+    return { frame: root.name, instances, findings };
+  };
+  FCA.composedFrame = (frame, componentNames) => FCA.composedFindings(frame, (n) => n.getMainComponentAsync(), componentNames);
 
   // ---- §3.10f text with a fixed height ----------------------------------
   // textAutoResize alone decides "fixed". layoutSizingVertical is reported,

@@ -6,6 +6,7 @@
 // `figma`. The other live calls (FCA.locate, FCA.nameSpaces, FCA.detachedScan, FCA.sweepSchema, FCA.fix.*)
 // need `figma` and are syntax-checked only — `node --check` below, and loading
 // the file at all parses every one of them.
+// FCA.composedFrame is FCA.composedFindings, tested here, given getMainComponentAsync.
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -218,6 +219,63 @@ expect("discover: a default-named collection and a remote collection are not all
 expect("discover: the default-named stray is still listed and flagged",
   d2.localCollections.filter((c) => c.defaultName).map((c) => c.name), ["Collection 1"]);
 delete globalThis.figma;
+
+// ---- §3.13 a composed frame ---------------------------------------------
+{
+  const alias = { type: "VARIABLE_ALIAS", id: "v" };
+  const solid = (bound, extra) => ({ type: "SOLID", visible: true, ...(bound ? { boundVariables: { color: alias } } : {}), ...extra });
+  const frame = (id, name, extra, children) => ({ id, type: "FRAME", name, visible: true, layoutMode: "VERTICAL", itemSpacing: 0, paddingLeft: 0, paddingRight: 0, paddingTop: 0, paddingBottom: 0, fills: [], strokes: [], boundVariables: {}, children: children || [], ...extra });
+  const n = (id, type, name, extra) => ({ id, type, name, visible: true, ...extra });
+  // a main component: findAll lists its nodes' ids
+  const main = (name, ids, extra) => ({ name, parent: { type: "PAGE" }, key: "k", findAll: () => (ids || []).map((id) => ({ id })), ...extra });
+  const inst = (id, name, m, children) => n(id, "INSTANCE", name, { main: m, children: children || [] });
+  const btn = inst("I1:1;20:2", "Button", main("Size=md", [], { parent: { type: "COMPONENT_SET", name: "Button" } }), [inst("I1:1;20:2;5:1", "Icon", null)]);
+  const ghost = inst("I1:1;20:3", "Ghost", null);
+  const gone = inst("I1:1;20:4", "Gone", main("Gone", [], { parent: null, key: "" }));
+  // a card the composer placed, with something put in its own slot
+  const card = inst("I1:1;20:5", "Card", main("Card", ["30:1", "30:2"]), [n("I1:1;20:5;30:1", "SLOT", "Body", { children: [n("I1:1;20:5;30:2", "TEXT", "Card default"), n("I1:1;20:5;40:1", "TEXT", "Card copy")] })]);
+  const slotted = frame("I1:1;20:1", "Section", { itemSpacing: 16, boundVariables: { itemSpacing: alias } }, [
+    btn, ghost, gone, card,
+    n("I1:1;20:6", "TEXT", "Loose copy"),
+    n("I1:1;20:7", "RECTANGLE", "Hidden bar", { visible: false }),
+    frame("I1:1;20:8", "Panel", { paddingTop: 12, itemSpacing: 8, fills: [solid(true), solid(false), solid(false, { opacity: 0 })], strokes: [solid(false)], strokeStyleId: "S:1" }),
+    frame("I1:1;20:9", "Button", {}),
+    frame("I1:1;20:10", "Spread", { primaryAxisAlignItems: "SPACE_BETWEEN", itemSpacing: 40 }),
+    frame("I1:1;20:11", "Wrap", { layoutWrap: "WRAP", counterAxisSpacing: 12 }),
+    frame("I1:1;20:12", "Wrap between", { layoutWrap: "WRAP", counterAxisSpacing: 12, counterAxisAlignContent: "SPACE_BETWEEN" }),
+    frame("I1:1;20:13", "Row", { layoutMode: "HORIZONTAL", counterAxisSpacing: 12 }),
+    frame("I1:1;20:14", "Grid", { layoutMode: "GRID", itemSpacing: 9, gridRowGap: 16, gridColumnGap: 16, boundVariables: { gridColumnGap: alias } }),
+    frame("I1:1;20:15", "Free", { layoutMode: "NONE", itemSpacing: 10, paddingTop: 8, topLeftRadius: 4, fills: [{ type: "IMAGE", visible: true }] }),
+    n("I1:1;20:16", "GROUP", "Bunch", { children: [inst("I1:1;20:17", "Grouped", null)] }),
+  ]);
+  const template = inst("1:1", "Page", main("Page", ["10:1", "10:2", "10:3"]), [
+    frame("I1:1;10:1", "Library frame", { itemSpacing: 7 }, [n("I1:1;10:1;9:9", "TEXT", "Library text"), inst("I1:1;10:1;9:8", "Library icon", null)]),
+    n("I1:1;10:2", "SLOT", "Content slot", { children: [n("I1:1;10:3", "TEXT", "Default placeholder"), slotted] }),
+    n("I1:1;10:4", "SLOT", "Hidden slot", { visible: false, children: [n("I1:1;50:1", "TEXT", "Hidden content")] }),
+  ]);
+  const r = await FCA.composedFindings(template, async (x) => x.main);
+  expect("composed: only what was put in a slot is read, at any depth; each defect by its full path",
+    r.findings.map((f) => f.kind + " " + f.path + (f.prop ? " " + f.prop : "")).sort(), [
+      "detached Page / Content slot / Section / Button",
+      "orphan Page / Content slot / Section / Bunch / Grouped",
+      "orphan Page / Content slot / Section / Ghost",
+      "orphan Page / Content slot / Section / Gone",
+      "raw Page / Content slot / Section / Bunch",
+      "raw Page / Content slot / Section / Card / Body / Card copy",
+      "raw Page / Content slot / Section / Loose copy",
+      "unbound Page / Content slot / Section / Free topLeftRadius",
+      "unbound Page / Content slot / Section / Grid gridRowGap",
+      "unbound Page / Content slot / Section / Panel fills[1]",
+      "unbound Page / Content slot / Section / Panel itemSpacing",
+      "unbound Page / Content slot / Section / Panel paddingTop",
+      "unbound Page / Content slot / Section / Wrap counterAxisSpacing",
+    ]);
+  expect("composed: placed instances are counted, never the library's own (the icon inside Button, the template's)", r.instances, 6);
+  const bare = await FCA.composedFindings(frame("2:1", "Card", { fills: [solid(false)] }, [inst("2:2", "Card", main("Card"))]), async (x) => x.main);
+  expect("composed: a plain root frame is read itself, and is never its own detached copy", bare.findings.map((f) => f.kind + " " + f.path + " " + f.prop), ["unbound Card fills[0]"]);
+  const sec = await FCA.composedFindings(n("3:1", "SECTION", "Flow", { children: [inst("3:2", "Lost", null)] }), async (x) => x.main);
+  expect("composed: a section root is read through", sec.findings.map((f) => f.kind + " " + f.path), ["orphan Flow / Lost"]);
+}
 
 // ---- §3.10f fixed text -------------------------------------------------
 const al = { layoutMode: "VERTICAL" };

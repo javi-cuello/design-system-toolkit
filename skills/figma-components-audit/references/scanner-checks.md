@@ -460,6 +460,14 @@ Measures `rtlSets` and `rtlVariants`: the sets, and their variants, with a horiz
 
 **What it does not check:** rotation (a rotated chevron that code mirrors still points the right way, and a flip may read as rotation 180, so the check was dropped in review), a row drawn as a Group, language-specific exceptions, line height (whether Arabic reads tight is a judgement on real text), and whether a note is right rather than present.
 
+## 3.13 A composed frame: library instances and bound values only
+
+**Engine:** `FCA.composedFrame(frame, componentNames?)` in `scripts/probes.js`, its pure half `FCA.composedFindings` tested with stand-in nodes. Not a library check: it reads one screen composed from the library (an agent's prototype, a designer's page), so it is not in `scanner/checks.json`, whose dimensions score components.
+
+What was composed is the root, unless it is an instance, and whatever was put in a slot of an instance placed in it, at any depth. The rest is the library's: an instance's own drawing, and a slot's default content, told apart by id — a slot child whose id, taken relative to the placed instance, names a node of that instance's main component came with it (seen live: content put in a slot does not). In what was composed: a node that is not a frame, component, section or instance is `raw` (a group too, and its children are still read); a frame's non-zero gap (unless spaced between), wrap gap (unless spaced between), grid gaps, padding (with auto layout) and corner radius, and each visible solid fill and stroke without a style, are `unbound`; a placed instance whose main does not resolve, or is a local main gone from the document, is `orphan`; a frame other than the root named like a component placed in the frame, or one in `componentNames`, is `detached`. Hidden layers are skipped; gradients, images and fully transparent paints are not judged.
+
+**Why:** the 2026-11-04 composition trial built a page from library instances, and its own background was a raw white that only a probe of this shape caught. **Walked live 2026-11-05** on that page, rebuilt from its template: 9 placed instances, no finding; a copy with a rectangle and an unbound, white-filled frame put in its content slot gave exactly one `raw` and two `unbound`; a fresh instance of the template, its slots at their defaults, gave none. Both scratch nodes were removed. **Limits:** an orphan here is what resolves locally; a remote key that fails to import is §3.10d's (`FCA.orphans`), which retries it. A detached copy of a component the frame does not otherwise place is caught only when its name is passed in `componentNames`.
+
 ## 4. Fixes
 
 Apply only after the user approves. Re-run the matching detection afterwards to confirm.
