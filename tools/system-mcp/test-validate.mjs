@@ -68,4 +68,7 @@ ok('a hidden input is no field: it is not a raw element', !validate('<input type
   ok('a §6 ruling scoped validate waives only the finding it names whole: its file and what was found; another scope waives nothing',
     left.length === 2 && left.every((f) => !(f.file === 'src/a.css' && f.found === '#fff')));
 }
+ok('a commented-out import is not read; a live one after a block comment keeps its line',
+  validate("// import { Button } from './old-button';\n/*\nimport { Button } from './old';\n*/\nimport { Button } from '@/design-system/button';", { collections: {} }, null, ['Button'], { from: ['@/design-system/'] }).length === 0
+  && validate("/* a\nb */\nimport { Button } from './old';", { collections: {} }, null, ['Button'], { from: ['@/design-system/'] })[0].line === 3);
 console.log(`${n}/${n} passed`);

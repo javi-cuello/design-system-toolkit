@@ -122,12 +122,14 @@ export function validate(code, tokens, contract = null, components = [], { from 
   });
   // a library component imported from somewhere that is not the system: read over the whole code, since a
   // formatter wraps an import over lines; `import type` brings no component, `* as` names none
-  if (from.length) for (const m of String(code).matchAll(/\b(import|export)\s+(?!type\b)(?:(\w+)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g)) {
+  // a commented-out import is not code either, as for the lines above: blanked, its newlines kept for the line number
+  const live = String(code).replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/^\s*\/\/.*$/gm, '');
+  if (from.length) for (const m of live.matchAll(/\b(import|export)\s+(?!type\b)(?:(\w+)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g)) {
     const spec = m[4];
     if (from.some((f) => spec.startsWith(f) || spec === f.replace(/\/$/, ''))) continue;
     // both sides of an alias: `Button as B` and `Local as Button` each bring a Button in
     const names = [m[2], ...(m[3] || '').split(',').flatMap((x) => x.trim().replace(/^type\s+.*/, '').split(/\s+as\s+/))].filter(Boolean);
-    const line = String(code).slice(0, m.index).split('\n').length;
+    const line = live.slice(0, m.index).split('\n').length;
     for (const n of new Set(names)) if (byCode.has(n)) out.push({ kind: 'component not from the system', found: `${n} from '${spec}'`, use: from.join(' | '), line });
   }
   return out;

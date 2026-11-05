@@ -82,6 +82,7 @@ ok('git where no repository is reachable does not void a run; git pointed elsewh
   && G('git -C /elsewhere show HEAD:a.tsx').length === 1
   && G('git --git-dir=/x/.git log').length === 1
   && G('GIT_DIR=/x/.git git log').length === 1
+  && G('cd; git log').length === 1 && G('cd && git log').length === 1 && G('pushd .. && git log').length === 1
   && contamination([tu('Bash', { command: 'git status' })], '/repo').length === 1);
 
 const C = (input, name = 'Bash') => contamination([tu(name, input)], '/Users/u/p/site', '/Users/u');

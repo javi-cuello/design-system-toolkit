@@ -44,7 +44,7 @@ drawn by script, and its data is `get_audit`.
 In the Claude app, `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
     "mcpServers": {
-      "docs-<label>": {
+      "system-<label>": {
         "command": "/opt/homebrew/bin/node",
         "args": ["<toolkit>/tools/system-mcp/server.mjs"],
         "env": { "DOCS_URL": "http://localhost:<port>" }
@@ -75,8 +75,9 @@ Holds every tool's exact answer over `fixtures/site/` (its `api/screens.json` is
 
 ## Limits
 
-- Needs the site built with the API: a project whose build fails serves none,
-  and the server exits saying which URL answered what.
+- Needs the site built with the API: a project whose build fails serves none.
+  The server still starts, and each tool answers with an error naming the URL
+  and what it answered.
 - A deployed site behind a login needs the server to send credentials; not
   written, because the one deployed site (one project's, public since 2026-09-24)
   has no login.

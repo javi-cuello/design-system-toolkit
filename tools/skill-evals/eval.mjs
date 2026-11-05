@@ -121,12 +121,14 @@ export function compare(previous, current) {
    no repository is not a look at the answer: `git status` in a copy with no
    .git voided two of five runs (2026-11-05). So with `copy` given and
    `gitReachable` false, git voids a run only when it points elsewhere — a
-   `cd` out of the copy, `-C` other than `.`, `--git-dir`, `--work-tree`,
-   `GIT_DIR`. */
+   `cd` or `pushd` to anywhere but the copy's root (a bare `cd` included: a
+   relative one may follow a linked folder out), `-C` other than `.`,
+   `--git-dir`, `--work-tree`, `GIT_DIR`. */
 export function contamination(transcriptLines, repo, home = '', { copy = null, gitReachable = true } = {}) {
   const elsewhere = (cmd) => /--git-dir|--work-tree|GIT_DIR|GIT_WORK_TREE/.test(cmd)
     || [...cmd.matchAll(/(?:^|[^\w-])git\s+-C\s+("[^"]*"|'[^']*'|\S+)/g)].some((m) => !['.', './', copy, `"${copy}"`, `'${copy}'`].includes(m[1]))
-    || [...cmd.matchAll(/(?:^|[;&|(\s])cd\s+("[^"]*"|'[^']*'|[^\s;&|)]+)/g)].some((m) => m[1].replace(/^["']|["']$/g, '') !== copy);
+    // a bare `cd` goes home and `pushd` anywhere: no target, or one not the copy, is elsewhere
+    || [...cmd.matchAll(/(?:^|[;&|(\s])(?:cd|pushd)(?=$|[\s;&|)])[ \t]*("[^"]*"|'[^']*'|[^\s;&|)]+)?/g)].some((m) => !m[1] || m[1].replace(/^["']|["']$/g, '') !== copy);
   const tail = home && repo.startsWith(home + '/') ? repo.slice(home.length) : null;
   const spellings = [repo, ...(tail ? [`~${tail}`, `$HOME${tail}`, `\${HOME}${tail}`] : [])];
   const names = (s) => spellings.some((p) => s.includes(p + '/') || s.endsWith(p) || new RegExp(`${p.replace(/[$^{}.*+?()[\]\\|]/g, '\\$&')}["'\\s]`).test(s));

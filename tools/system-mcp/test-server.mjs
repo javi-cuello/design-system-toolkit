@@ -49,10 +49,14 @@ try {
     JSON.stringify(createRequire(import.meta.url)("../snapshot/recipes.cjs").derive(JSON.parse(readFileSync(new URL("./fixtures/screens.json", import.meta.url), "utf8"))), null, 1) + "\n"
       === readFileSync(new URL("./fixtures/site/api/screens.json", import.meta.url), "utf8"));
   // a site built before the page, one with no stored screens, and one whose file is broken: a note, a note, an error
-  for (const [what, file, check] of [
+  for (const [what, file, check, args = {}] of [
     ["a site built before the page answers with a note, not an error", null, (r) => !r.isError && r.data.screens === 0 && /rebuild/.test(r.data.note)],
     ["a project with no stored screens says so", '{"screens":0}', (r) => !r.isError && /no stored screens/.test(r.data.note)],
-    ["a broken recipe file is an error, never a note", "{not json", (r) => r.isError]]) {
+    ["a broken recipe file is an error, never a note", "{not json", (r) => r.isError],
+    ["screen templates are served with their code file, filtered by section (case-blind)",
+      JSON.stringify({ screens: 2, shells: [], regions: [], varies: [], screenTypes: [{ section: "Desktop", screen: "Main", states: ["Default"] }, { section: "Mobile", screen: "Main", states: ["Default"] }],
+        templates: [{ component: "T/_Home", sections: ["Desktop"], code: "pages/home.tsx" }, { component: "T/_Phone", sections: ["Mobile"], code: null }] }),
+      (r) => !r.isError && JSON.stringify(r.data.templates) === '[{"component":"T/_Phone","sections":["Mobile"],"code":null}]', { section: "mobile" }]]) {
     // every step inside the try, so a failed start never leaves a server listening or a folder behind
     const dir = mkdtempSync(join(tmpdir(), "mcp-site-"));
     let site2 = null, c2 = null;
@@ -62,7 +66,7 @@ try {
       site2 = await serveFolder(dir);
       c2 = new Client({ name: "system-mcp-test", version: "0" });
       await c2.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site2.url }, stderr: "ignore" }));
-      const r = await c2.callTool({ name: "get_screen_recipe", arguments: {} });
+      const r = await c2.callTool({ name: "get_screen_recipe", arguments: args });
       ok(what, check({ isError: !!r.isError, data: JSON.parse(r.content[0].text) }));
     } finally { if (c2) await c2.close(); if (site2) site2.close(); rmSync(dir, { recursive: true, force: true }); }
   }
