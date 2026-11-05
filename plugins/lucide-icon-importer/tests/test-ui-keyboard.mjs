@@ -29,12 +29,12 @@ try {
   await tab.evaluate(key($('tab-settings'), 'ArrowRight'));
   ok('ArrowRight on the last tab wraps to the first', await tab.evaluate(`document.activeElement.id === 'tab-icons'`));
 
-  await tab.evaluate(`existingNames = { circle: true }; renderGrid([{ name: 'arrow-up', tags: [] }, { name: 'circle', tags: [] }])`);
-  const cards = await tab.evaluate(`[...document.querySelectorAll('.icon-card')].map((e) => [e.tagName, e.getAttribute('aria-label'), e.getAttribute('aria-pressed'), e.disabled])`);
+  // Render and read in one evaluate: the page's own icon-list fetch re-renders the grid
+  // when it lands, and between two evaluates it replaced these cards (CI, 2026-11-05).
+  const cards = await tab.evaluate(`existingNames = { circle: true }; renderGrid([{ name: 'arrow-up', tags: [] }, { name: 'circle', tags: [] }]); [...document.querySelectorAll('.icon-card')].map((e) => [e.tagName, e.getAttribute('aria-label'), e.getAttribute('aria-pressed'), e.disabled])`);
   ok('a card is a button named by its icon: pressable, or disabled and saying it is already in the file',
     JSON.stringify(cards) === JSON.stringify([['BUTTON', 'arrow-up', 'false', false], ['BUTTON', 'circle, already in this file', null, true]]), JSON.stringify(cards));
-  await tab.evaluate(`document.querySelector('.icon-card').click()`);
-  ok('picking a card says it is picked', await tab.evaluate(`document.querySelector('.icon-card').getAttribute('aria-pressed') === 'true'`));
+  ok('picking a card says it is picked', await tab.evaluate(`(() => { const c = document.querySelector('.icon-card'); c.click(); return c.getAttribute('aria-pressed') === 'true'; })()`));
 
   await tab.evaluate(`selectTab(${$('tab-settings')}); colorVariables = [{ id: 'v1', name: 'Fg', collection: 'Colour', color: { r: 0, g: 0, b: 0 } }]; renderVariableList(); ${$('variableSection')}.style.display = 'block'; ${$('variablePickerToggle')}.click()`);
   await pause(50);
