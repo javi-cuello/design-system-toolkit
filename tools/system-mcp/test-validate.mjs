@@ -77,6 +77,7 @@ ok('a commented-out import is not read; a live one after a block comment keeps i
     V("const g = 'src/*.css';\nimport { Button } from './old';\n/** doc */").length === 1
     && V("// files like a/*.ts\nimport { Button } from './old';\n/** doc */").length === 1
     && V("\n\n// x\nimport { Button } from './old';")[0].line === 4
-    && V("const u = 'https://x.dev/a';\nimport { Button } from './old';").length === 1);
+    && V("const u = 'https://x.dev/a';\nimport { Button } from './old';").length === 1
+    && V("const r = /`/g;\n// import { Button } from './old';\nconst y = `z`;").length === 0);
 }
 console.log(`${n}/${n} passed`);
