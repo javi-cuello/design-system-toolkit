@@ -6,7 +6,8 @@
 // Four decimal places, by toFixed, is the canonical precision: the snapshot stores it, the token build writes it, and
 // the docs page shows it, so a 133.33% line height is 1.3333 in all three (the docs page once rounded it to 1.333).
 //
-// The snapshot plugin, the token build's dtcg.js and the doc generator each run in Figma's sandbox, which imports
-// nothing, so each keeps a copy that tools/shared/test-text-units.mjs holds to this one character for character.
+// The snapshot plugin and the doc generator run in Figma's sandbox, which imports nothing, and the token build's
+// dtcg.js ran there until 2026-11-05, so each keeps a copy that tools/shared/test-text-units.mjs holds to this one
+// character for character.
 
 export const perFontSize = (o, fontSize) => (!o ? null : o.unit === 'PERCENT' ? +(o.value / 100).toFixed(4) : o.unit === 'PIXELS' && fontSize ? +(o.value / fontSize).toFixed(4) : null);

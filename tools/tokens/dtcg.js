@@ -71,7 +71,8 @@
   function round(n, dp) { var f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
   // a line height as a fraction of the font size, to four places: tools/shared/text-units.js's, which
-  // tools/shared/test-text-units.mjs holds this copy to (this file also runs in Figma's sandbox, which imports nothing)
+  // tools/shared/test-text-units.mjs holds this copy to (a copy from when this file also ran in Figma's sandbox,
+  // until figma-token-export was retired on 2026-11-05; node alone loads it now)
   const perFontSize = (o, fontSize) => (!o ? null : o.unit === 'PERCENT' ? +(o.value / 100).toFixed(4) : o.unit === 'PIXELS' && fontSize ? +(o.value / fontSize).toFixed(4) : null);
 
   function hex2(n) { return ('0' + Math.round(clamp01(n) * 255).toString(16)).slice(-2); }
@@ -102,8 +103,8 @@
   }
 
   // The font-weight names: the DTCG format's own aliases, as the parity engine's one table has them
-  // (tools/parity/values.mjs WEIGHTS). This file also runs in Figma's sandbox, which imports nothing, so it keeps
-  // a copy that test-dtcg.js holds to that table.
+  // (tools/parity/values.mjs WEIGHTS). A copy, from when this file also ran in Figma's sandbox (until
+  // figma-token-export was retired, 2026-11-05), that test-dtcg.js holds to that table.
   var WEIGHTS = {
     thin: 100, hairline: 100, extralight: 200, ultralight: 200, light: 300,
     regular: 400, normal: 400, book: 400, medium: 500, semibold: 600, demibold: 600,
@@ -295,8 +296,7 @@
     if (!lh || lh.unit === 'AUTO') {
       warnings.push({ name: style.name, reason: 'line height is AUTO and could not be measured — omitted' });
     } else {
-      // MEASURED (pixels) came from the retired live collector; no producer sends it now
-      value.lineHeight = perFontSize(lh.unit === 'MEASURED' ? { unit: 'PIXELS', value: lh.value } : lh, style.fontSize);
+      value.lineHeight = perFontSize(lh, style.fontSize);
     }
 
     var ls = style.letterSpacing;

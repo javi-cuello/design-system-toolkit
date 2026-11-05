@@ -301,11 +301,8 @@ eq('a 0–100 opacity under a nested name lands as a unit number, not a dimensio
   opa.tokens.state.state.disabled.opacity, { $type: 'number', $value: 0.5 });
 eq('its dimension neighbour is untouched', opa.tokens.state.state.focus['stroke-width'].$value, { value: 2, unit: 'px' });
 
-/* ---- A24 a measured AUTO line height is exported; an unmeasured one is omitted ---- */
-var measured = DTCG.typographyToken({ name: 'Body', fontFamily: 'Example Sans', fontWeight: 'Regular', fontSize: 16,
-  lineHeight: { unit: 'MEASURED', value: 19 }, letterSpacing: { unit: 'PERCENT', value: 0 } });
-eq('a measured AUTO becomes the multiplier the render used', measured.token.$value.lineHeight, 1.1875);
-eq('and raises no warning', measured.warnings.length, 0);
+/* ---- A24 an AUTO line height that reaches the converter unmeasured is omitted (the snapshot plugin measures
+   AUTO and from-snapshot.mjs passes it as PERCENT; the retired live collector's MEASURED unit has no producer) ---- */
 var unmeasured = DTCG.typographyToken({ name: 'Body', fontFamily: 'Example Sans', fontWeight: 'Regular', fontSize: 16,
   lineHeight: { unit: 'AUTO' }, letterSpacing: { unit: 'PERCENT', value: 0 } });
 ok('an AUTO the collector could not measure is omitted and says so',

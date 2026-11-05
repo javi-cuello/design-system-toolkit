@@ -162,7 +162,7 @@
         "WEIGHTS",
         "weightName"
       ],
-      "evidence": "the table was kept twice, each missing names the other had (2026-10-01). The token export's dtcg.js runs in Figma's sandbox, which imports nothing, so it keeps a copy, held name for name to this one by tools/tokens/test-dtcg.js",
+      "evidence": "the table was kept twice, each missing names the other had (2026-10-01). The token build's dtcg.js keeps a copy from when it ran in Figma's sandbox (until figma-token-export was retired, 2026-11-05), held name for name to this one by tools/tokens/test-dtcg.js",
       "owners": [
         "tools/parity/values.mjs",
         "tools/tokens/dtcg.js"
@@ -383,7 +383,7 @@
       "names": [
         "perFontSize"
       ],
-      "evidence": "the snapshot plugin, the token build and the doc generator each converted a percentage or pixel line height and letter spacing themselves, by toFixed(4), Math.round to 4 and trimTo 3, so one 133.33% line height was 1.3333 in the tokens and 1.333 on the docs page (the review of 2026-10-31); all three run in Figma's sandbox, which imports nothing, so each keeps a copy that tools/shared/test-text-units.mjs holds character for character",
+      "evidence": "the snapshot plugin, the token build and the doc generator each converted a percentage or pixel line height and letter spacing themselves, by toFixed(4), Math.round to 4 and trimTo 3, so one 133.33% line height was 1.3333 in the tokens and 1.333 on the docs page (the review of 2026-10-31); the plugin and the doc generator run in Figma's sandbox, which imports nothing, and dtcg.js ran there until figma-token-export was retired (2026-11-05), so each keeps a copy that tools/shared/test-text-units.mjs holds character for character",
       "owners": [
         "tools/shared/text-units.js",
         "plugins/design-system-snapshot/",
