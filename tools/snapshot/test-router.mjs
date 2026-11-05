@@ -1241,6 +1241,9 @@ test('a changed component says which fields moved: description, bindings and a r
   assert.deepEqual(store.diff({ tokens: t(), specs: { button: slot({}) } }, { tokens: t(), specs: { button: slot({ preferredNames: ['Card'] }) } }).components.detail.button, [], 'a slot field arriving with a newer plugin is not listed as a change');
   assert.equal(store.diff(stamped({ button: slot({}) }), stamped({ button: slot({ preferredNames: ['Card'] }) })).components.detail.button.length, 1, '…and is, by one release');
   assert.equal(store.diff({ tokens: t(), specs: { button: slot({}) } }, { tokens: t(), specs: { button: slot({ preferred: ['k2'], preferredNames: ['Card'] }) } }).components.detail.button.length, 1, '…and a recorded field that moved is a change');
+  const bare = slotted({ Content: {} });
+  assert.equal(store.diff({ tokens: t(), specs: { button: bare } }, { tokens: t(), specs: { button: slotted({ Content: { preferred: ['k1'], preferredNames: ['Card'] } }) } }).components.detail.button.length, 1, '…and preferred values a slot gains for the first time are a change');
+  assert.equal(store.diff({ tokens: t(), specs: { button: bare } }, { tokens: t(), specs: { button: slotted({ Content: { settings: { maxChildren: 2 } } }) } }).components.detail.button.length, 1, '…and so are settings it gains');
 });
 
 test('a rename is one event, paired by the node id the spec keeps, never by name', async () => {

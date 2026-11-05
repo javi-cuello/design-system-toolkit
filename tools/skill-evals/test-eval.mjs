@@ -77,6 +77,8 @@ const G = (command, gitReachable = false) => contamination([tu('Bash', { command
 ok('git where no repository is reachable does not void a run; git pointed elsewhere, or with a repository above the copy, does',
   G('tail -9 j.json; git -C . status 2>&1 | head -1').length === 0
   && G('cd /tmp/eval-x; git diff --no-index /dev/null /dev/null').length === 0
+  && G('cd /tmp/eval-x/ && git log').length === 0
+  && G('cd -P /tmp/eval-x && git log').length === 0
   && G('git status', true).length === 1
   && G('cd /elsewhere && git show HEAD:a.tsx').length === 1
   && G('git -C /elsewhere show HEAD:a.tsx').length === 1

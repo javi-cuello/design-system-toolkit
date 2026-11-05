@@ -128,7 +128,7 @@ export function contamination(transcriptLines, repo, home = '', { copy = null, g
   const elsewhere = (cmd) => /--git-dir|--work-tree|GIT_DIR|GIT_WORK_TREE/.test(cmd)
     || [...cmd.matchAll(/(?:^|[^\w-])git\s+-C\s+("[^"]*"|'[^']*'|\S+)/g)].some((m) => !['.', './', copy, `"${copy}"`, `'${copy}'`].includes(m[1]))
     // a bare `cd` goes home and `pushd` anywhere: no target, or one not the copy, is elsewhere
-    || [...cmd.matchAll(/(?:^|[;&|(\s])(?:cd|pushd)(?=$|[\s;&|)])[ \t]*("[^"]*"|'[^']*'|[^\s;&|)]+)?/g)].some((m) => !m[1] || m[1].replace(/^["']|["']$/g, '') !== copy);
+    || [...cmd.matchAll(/(?:^|[;&|(\s])(?:cd|pushd)(?=$|[\s;&|)])(?:[ \t]+-[LP])*[ \t]*("[^"]*"|'[^']*'|[^\s;&|)]+)?/g)].some((m) => !m[1] || m[1].replace(/^["']|["']$/g, '').replace(/\/+$/, '') !== String(copy).replace(/\/+$/, ''));
   const tail = home && repo.startsWith(home + '/') ? repo.slice(home.length) : null;
   const spellings = [repo, ...(tail ? [`~${tail}`, `$HOME${tail}`, `\${HOME}${tail}`] : [])];
   const names = (s) => spellings.some((p) => s.includes(p + '/') || s.endsWith(p) || new RegExp(`${p.replace(/[$^{}.*+?()[\]\\|]/g, '\\$&')}["'\\s]`).test(s));

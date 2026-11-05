@@ -71,4 +71,12 @@ ok('a hidden input is no field: it is not a raw element', !validate('<input type
 ok('a commented-out import is not read; a live one after a block comment keeps its line',
   validate("// import { Button } from './old-button';\n/*\nimport { Button } from './old';\n*/\nimport { Button } from '@/design-system/button';", { collections: {} }, null, ['Button'], { from: ['@/design-system/'] }).length === 0
   && validate("/* a\nb */\nimport { Button } from './old';", { collections: {} }, null, ['Button'], { from: ['@/design-system/'] })[0].line === 3);
+{
+  const V = (code) => validate(code, { collections: {} }, null, ['Button'], { from: ['@/design-system/'] });
+  ok('a /* inside a string or a line comment opens no comment, and a blank line before a comment keeps the line count',
+    V("const g = 'src/*.css';\nimport { Button } from './old';\n/** doc */").length === 1
+    && V("// files like a/*.ts\nimport { Button } from './old';\n/** doc */").length === 1
+    && V("\n\n// x\nimport { Button } from './old';")[0].line === 4
+    && V("const u = 'https://x.dev/a';\nimport { Button } from './old';").length === 1);
+}
 console.log(`${n}/${n} passed`);

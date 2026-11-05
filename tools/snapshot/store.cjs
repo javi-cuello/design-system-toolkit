@@ -772,12 +772,14 @@ function specNotes(a, b, known = recordedFields({ a }), names = [a && a.name, b 
     else if (f.rule === 'prop-removed' || f.rule === 'slot-removed') note(`Property ${f.k}`, Array.isArray(pa[f.k]) ? list(pa[f.k]) : String(pa[f.k]), 'none', null, f.rule);
   }
   for (const k of Object.keys(pb).filter((k) => k in pa && j(pa[k]) !== j(pb[k]))) note(`Property ${k}`, show(pa[k]), show(pb[k]), null, loudest(pf.filter((f) => f.k === k)));
-  // The absence rule for a slot's fields: one the older snapshot recorded on
-  // none of this component's slots is the plugin's new field, not a design
-  // change (0.69.0's `preferredNames` noted every slot as changed).
-  const had = new Set(Object.values(a.slots || {}).flatMap((s) => (s && typeof s === 'object' && !Array.isArray(s) ? Object.keys(s) : [])));
-  const recorded = (s) => (known === ALL || !a.slots || !s || Array.isArray(s) ? s
-    : Object.fromEntries(Object.entries(s).map(([k, v]) => [k, v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([f]) => had.has(f))) : v])));
+  // The absence rule for a slot's fields, narrowed to the field the plugin
+  // began to record (0.69.0's `preferredNames` noted every slot as changed):
+  // a newer slot's `preferredNames` is not compared where the older slot had
+  // none. Any other field, `preferred` and `settings` included, still is.
+  const recorded = (s) => (known === ALL || !a.slots || !s || typeof s !== 'object' || Array.isArray(s) ? s
+    : Object.fromEntries(Object.entries(s).map(([k, v]) => { const old = a.slots[k];
+      if (!v || typeof v !== 'object' || Array.isArray(v) || !('preferredNames' in v) || (old && typeof old === 'object' && 'preferredNames' in old)) return [k, v];
+      const { preferredNames, ...rest } = v; return [k, rest]; })));
   if (j(a.slots) !== j(recorded(b.slots))) note('Slot settings', '', 'changed');
   if (a.links && b.links && j(a.links) !== j(b.links)) note('Property links', '', 'changed');
   let ra, rb;

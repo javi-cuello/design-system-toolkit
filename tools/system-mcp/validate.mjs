@@ -123,7 +123,8 @@ export function validate(code, tokens, contract = null, components = [], { from 
   // a library component imported from somewhere that is not the system: read over the whole code, since a
   // formatter wraps an import over lines; `import type` brings no component, `* as` names none
   // a commented-out import is not code either, as for the lines above: blanked, its newlines kept for the line number
-  const live = String(code).replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/^\s*\/\/.*$/gm, '');
+  // one pass that steps over strings, so a `/*` in a glob or a `//` in a URL opens no comment
+  const live = String(code).replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (c, str) => (str ? c : c.replace(/[^\n]/g, ' ')));
   if (from.length) for (const m of live.matchAll(/\b(import|export)\s+(?!type\b)(?:(\w+)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g)) {
     const spec = m[4];
     if (from.some((f) => spec.startsWith(f) || spec === f.replace(/\/$/, ''))) continue;
