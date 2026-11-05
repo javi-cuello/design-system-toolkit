@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { layout, project, shows, status, guidance, contract, spec as specModule, codeTargets, frameworks, statesOf, tokens, ours, TOOLKIT, localCollections, pageMarker } from './project.js';
 // What code builds differently from the drawing is the component-validator
 // skill's to say: the page renders its engine's output, never its own rules.
-import { validate, translations, fromSnapshot } from '../../../validator/validate.mjs';
+import { validate, translations, fromSnapshot } from '../../../component-validator/validate.mjs';
 // The store's own reader for what a component is built from.
 import graph from '../../../snapshot/graph.cjs';
 import storeTool from '../../../snapshot/store.cjs';

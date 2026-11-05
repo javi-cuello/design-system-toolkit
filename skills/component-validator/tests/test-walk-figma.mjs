@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // node tests/test-walk-figma.mjs — the skill's live reader, run as figma_execute
-// runs it (a function body). The engine it feeds is tools/validator/validate.mjs,
-// tested beside it (tools/validator/test-validate.mjs).
+// runs it (a function body). The engine it feeds is tools/component-validator/validate.mjs,
+// tested beside it (tools/component-validator/test-validate.mjs).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 

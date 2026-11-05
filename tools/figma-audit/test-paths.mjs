@@ -3,7 +3,8 @@
 // `join(HERE, …)` it names, and each `join(<default folder>, "<file>")` under a
 // folder it defaults with one. Run: node tools/figma-audit/test-paths.mjs
 //
-// When the validator's engine moved to tools/validator, the service still
+// When the validator's engine moved to tools/validator (since renamed
+// tools/component-validator), the service still
 // looked for it in the skill's scripts/ folder, found nothing, and the page
 // said the stage did not run (review, 2026-10-31): nothing failed.
 import assert from "node:assert/strict";

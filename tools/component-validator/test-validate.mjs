@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// node tools/validator/test-validate.mjs. Runs every target over one fixture.
+// node tools/component-validator/test-validate.mjs. Runs every target over one fixture.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { validate, targets, silentClasses, fromSnapshot, translations, frameworks, unmappedFor, landsOf } from './validate.mjs';

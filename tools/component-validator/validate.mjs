@@ -5,7 +5,7 @@
  * reports, for one target, the places that target cannot reproduce as
  * drawn. Each finding names the class from references/<target>.md.
  *
- *   node tools/validator/validate.mjs --target web|ios|android [--text-styles tokens.json]
+ *   node tools/component-validator/validate.mjs --target web|ios|android [--text-styles tokens.json]
  *     [--states '{"axis":…,"options":[…]}'] [--snapshot] components.json
  *   import { validate } from './validate.mjs'   // validate(components, target)
  *

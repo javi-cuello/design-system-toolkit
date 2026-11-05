@@ -196,14 +196,14 @@
     },
     {
       "job": "validating the stored design for the code target",
-      "module": "tools/validator/validate.mjs (the engine; component-validator calls it, and tools/project-check/validate.mjs runs it for a repo after every library snapshot)",
+      "module": "tools/component-validator/validate.mjs (the engine; component-validator calls it, and tools/project-check/validate.mjs runs it for a repo after every library snapshot)",
       "files": [
         "bin/validate"
       ],
       "names": [],
       "owners": [
         "tools/project-check/validate.mjs",
-        "tools/validator/"
+        "tools/component-validator/"
       ]
     },
     {

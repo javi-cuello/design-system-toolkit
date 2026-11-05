@@ -1,5 +1,6 @@
 # Changelog — component-validator
 
+- 2.32.3 (2026-11-05): the engine's folder is renamed `tools/component-validator/` after its owner, so it is not mistaken for the system MCP's code check `tools/system-mcp/validate.mjs`.
 - 2.32.2 (2026-11-02): WT1 models Loading with `aria-disabled` and a live region, as figma-standard rule 4 now says, not `aria-busy`.
 - 2.32.1 (2026-10-31): SKILL.md names its old engine path in prose, not as a path a reader would follow.
 - 2.32.0 (2026-10-31): the engine `validate.mjs`, its test and fixture move to `tools/validator/` (the router, the docs site, the dashboard and every repo's check call it; toolkit-standard §D 1); the live reader stays, its test now `tests/test-walk-figma.mjs`.

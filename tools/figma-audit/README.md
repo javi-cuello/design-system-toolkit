@@ -40,7 +40,7 @@ source library — the same way a session would, and each stage's rows carry its
 skill's name. The page holds no checks
 and no judgement prompt of its own. `--scanner`, `--foundations`,
 `--validator` (component-validator's `scripts/`, for its live reader) and `--links` point elsewhere if a skill is installed outside
-this repo; a missing one makes the page say that stage did not run. The validator's engine is `tools/validator/validate.mjs`, beside this service, and the service will not start without it. `--pairing`
+this repo; a missing one makes the page say that stage did not run. The validator's engine is `tools/component-validator/validate.mjs`, beside this service, and the service will not start without it. `--pairing`
 does the same for design-code-parity's instruction that pairs a Figma and a
 code component under two names, which `/scripts` serves. The fourth stage, the
 variable audit's link check (`--links`), runs where the project routes a library
@@ -273,7 +273,7 @@ Several skills write to one project's record, so they write rows the same way. T
 | `GET /context` | the project's settings (house defaults merged beneath) and its §6 rulings, read from the context document |
 | `POST /ruling` | `{text, where, dryRun?}` appended as a row to the context document's §6 rulings table; refuses a ruling already there; `dryRun` answers without writing |
 | `POST /table-rows` | `{fileKey, pages}`: the Properties table rows of every component on those pages, read from the open file by the snapshot plugin's own walk, recorded as the store records it (`store.cjs` `recordOf`) and read by `contract-rows.mjs` `rowsOf`; figma-properties-table draws them (`contract-rows.mjs --live`) |
-| `POST /validate` | `{target, specs?, components?, framework?, frameworkMap?, fileKey?}` run through the validator's engine (`tools/validator/validate.mjs`; the service refuses to start without it), which is node code the page cannot run itself |
+| `POST /validate` | `{target, specs?, components?, framework?, frameworkMap?, fileKey?}` run through the validator's engine (`tools/component-validator/validate.mjs`; the service refuses to start without it), which is node code the page cannot run itself |
 | `POST /parity` | `{lib, figma[]}`: the library's component names against the components in the code its settings name, through `tools/shared/code-inventory.mjs`; answers what is in both, only in Figma and only in code, and writes nothing |
 | `POST /rows` | `{owner, fileKey?, target?, full, scope, exhaustive?, ran?, origin?, findings[], dismissed[]?, why?, language?, dryRun?}` filed into the record by the one writer (`rows.mjs`): keys, matches, reopens and closes by owner; `scope` is required with `full`, `ran` with `full` from an owner whose scanner reports it, `why` is said on each row a full run closes; any other field is refused; `dryRun` reports and writes nothing |
 | `GET /health` | what the plugin probes before opening a socket |

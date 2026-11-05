@@ -237,11 +237,11 @@ if (!existsSync(join(SCANNER, "audit.js"))) {
 // same way: the foundations audit's scanner (file-level checks) and the
 // component validator's live reader. Either may be absent — an install
 // without that skill — and the page then says the stage did not run. The
-// validator's engine is a tool (tools/validator), always beside this one, so
+// validator's engine is a tool (tools/component-validator), always beside this one, so
 // its absence is a broken install and an error, never a stage that did not run.
 const FOUNDATIONS = arg("--foundations", join(HERE, "..", "..", "skills", "figma-foundations-audit", "scripts", "foundations.js"));
 const VALIDATOR = arg("--validator", join(HERE, "..", "..", "skills", "component-validator", "scripts"));
-const VALIDATE = join(HERE, "..", "validator", "validate.mjs");
+const VALIDATE = join(HERE, "..", "component-validator", "validate.mjs");
 if (!existsSync(VALIDATE)) { console.error(`validator      no engine at ${VALIDATE}: the toolkit checkout is incomplete`); process.exit(1); }
 const LINKS = arg("--links", join(HERE, "..", "..", "skills", "figma-variable-audit", "scripts", "links.js"));
 // The instruction that asks which unpaired Figma and code components are one

@@ -25,7 +25,7 @@ const oneLine = (name, r, file, said) => {
 };
 try {
   const CASES = [
-    ['tools/validator/validate.mjs', (f) => ['--target', 'web', f]],
+    ['tools/component-validator/validate.mjs', (f) => ['--target', 'web', f]],
     ['tools/tokens/from-snapshot.mjs', (f) => [f, join(tmp, 'out')]],
     ['skills/figma-foundations-audit/scripts/from-snapshot.mjs', (f) => ['--input', f]],
     ['skills/figma-component-descriptions/scripts/sections.mjs', (f) => ['--composition', f]],
