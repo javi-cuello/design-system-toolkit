@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.32.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.32.1** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -401,7 +401,7 @@
     *Evidence:* one project's design gate named every unmeasured layer of a screen and ended RED; run piped into `tail` it reported exit 0, was read as green, and the wrong-coloured screen it had described shipped. The same invocation, backgrounded, then produced a completion notice reading "exit code 0" over the same RED output, and the same screen was called done a second time. **Mechanical** (a check's own test asserts the status it returns; a wrapper runs under `set -o pipefail`). *Checked:* `tools/project-check/check.mjs` "rule: 'code-standard 49'" (the `verdicts` gate), over a project's `bin/` and `.githooks/`: a check piped on, in a script with no `pipefail` that does not read `PIPESTATUS`.
 
 
-65. **A Figma linear gradient translates only at the angle that scales.** A gradient whose handles run corner to corner is CSS `linear-gradient(to bottom right, …)` (or another corner keyword), and one along an axis is `to bottom`, `to right`; both match the design at every size. Handles at any other angle have no CSS equal: Figma places them relative to the box, so the drawn angle changes with the box's proportions, while a CSS angle in degrees does not. Translate the nearest corner or axis, and record the frame as the design's to fix (`fix: 'figma'`); never a degree, which is the corner on one proportion only (`135deg` is the diagonal of a square).
+65. **A Figma linear gradient translates only at the angle that scales.** A gradient that runs corner to corner in the box's own proportions is CSS `linear-gradient(to bottom right, …)` (or another corner keyword), and one along an axis is `to bottom`, `to right`; both match the design at every size. Corner to corner is the gradient's whole transform, not its two end handles: Figma's third (width) handle tilts the bands, so ends dragged onto the corners still drew 131° on a wide box. The corner gradient is `gradientTransform` `[[0.5, 0.5, 0], [-0.5, 0.5, 0.5]]` (top left to bottom right), set by script, since no drag places the width handle exactly. Handles at any other angle have no CSS equal: Figma places them relative to the box, so the drawn angle changes with the box's proportions, while a CSS angle in degrees does not. Translate the nearest corner or axis, and record the frame as the design's to fix (`fix: 'figma'`); never a degree, which is the corner on one proportion only (`135deg` is the diagonal of a square).
 
     *Why:* a degree matches the design at one proportion and drifts at every other, the kind of number rule 57 rejects; the corner and axis keywords are the two shapes both tools define the same way.
 

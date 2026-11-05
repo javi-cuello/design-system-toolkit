@@ -653,6 +653,9 @@ export function assertionsFor(at, ctx) {
       add('position', '-y', box.y, 'y', { chain, absolute: !!node.absolute });
     }
   }
+  // a mirror, carried apart from the turn: recorded as a 180° turn, a mirrored
+  // illustration's scaleX(-1) read as a difference and was waived for weeks
+  if (node.flip) add('text', '-flip', node.flip, 'mirrored');
   if (node.rotation !== undefined || node.fillRotation !== undefined) {
     add('rotation', 'rotate', (node.rotation || 0) + (node.fillRotation || 0), 'rotation and the image fill\'s own turn');
   }
@@ -838,6 +841,7 @@ export const SPEC_KEYS = {
   visual: rule('the box the eye sees of a rotated layer: size and position'),
   rotation: rule('rotate, with the image fill\'s own turn'),
   fillRotation: rule('rotate, with the layer\'s'),
+  flip: rule('-flip: the axis the layer is mirrored on'),
   pad: rule('padding-* per side'),
   gap: rule('column-gap in a row, row-gap in a column, between two in-flow children'),
   crossGap: rule('row-gap in a wrapping row, column-gap in a wrapping column: the space between its lines'),

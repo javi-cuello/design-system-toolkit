@@ -417,6 +417,10 @@ ok('a rotated layer answers with the box the eye sees, and its turn with the fil
   const g = of(F({ w: 500, h: 500, children: [{ name: 'Art', type: 'RECTANGLE', x: 10, y: 20, w: 100, h: 40, sizing: 'FIXED/FIXED', rotation: 180, fillRotation: 180, visual: { x: 60, y: 70, w: 40, h: 100 } }] }), P, 'Art', { Art: '.a' });
   return g.width === '40px' && g.height === '100px' && g['-x'] === 60 && g.rotate === 360 && KINDS.rotation.compare(360, 'none');
 })());
+ok('a mirrored layer asserts its mirror, not a turn: a horizontal one is -flip x and no rotate', (() => {
+  const g = of(F({ w: 500, h: 500, children: [{ name: 'Art', type: 'INSTANCE', x: 0, y: 0, w: 72, h: 72, sizing: 'FIXED/FIXED', flip: 'x' }] }), P, 'Art', { Art: '.a' });
+  return g['-flip'] === 'x' && g.rotate === undefined;
+})());
 ok('an instance prop is an attribute, off ones included; text, State, Disabled and Breakpoint are not', (() => {
   const inst = { name: 'Nav', type: 'INSTANCE', instanceOf: 'Button / lg', w: 10, h: 10, sizing: 'HUG/HUG', props: { 'Label text': 'Go', State: 'Rest', Disabled: 'False', Breakpoint: 'md', Role: 'Primary', Scroll: 'True', Menu: false, Big: true, 'Icon swap': 'House' } };
   const a = doc(F({ children: [inst] }), 'Nav', { Nav: '.n' }, P).assertions.filter((x) => /^-attr|^-swap/.test(x.prop));

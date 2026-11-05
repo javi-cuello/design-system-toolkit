@@ -38,6 +38,7 @@ import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { layerAt } from './layers.mjs';
+import { OWNERS } from './waivers.mjs';
 /* What a project's facts lack is said to its user, never thrown as a stack: an error made here carries `usage`, and each
    command that loads a project prints its message and exits 2 (from-code, run, gates, pages). */
 const said = (message) => Object.assign(new Error(message), { usage: true });
@@ -225,7 +226,7 @@ export function unrenderedOf(name, mapping, variants, rendered) {
     if (typeof e === 'string' && e.trim()) continue;
     if (!e || typeof e !== 'object' || typeof e.reason !== 'string' || !e.reason.trim()) { out.push(`${name} :: "${n}" is unmeasured with no reason`); continue; }
     for (const f of Object.keys(e)) if (!['reason', 'fix'].includes(f)) out.push(`${name} :: "${n}": "${f}" is not an unmeasured field (reason, fix) — nothing reads it`);
-    if (e.fix !== undefined && !['figma', 'code'].includes(e.fix)) out.push(`${name} :: "${n}": fix is 'figma' or 'code', not ${JSON.stringify(e.fix)}`);
+    if (e.fix !== undefined && !OWNERS.includes(e.fix)) out.push(`${name} :: "${n}": fix is ${OWNERS.map((o) => `'${o}'`).join(', ')}, not ${JSON.stringify(e.fix)}`);
   }
   const listed = Array.isArray(mapping.variants) ? mapping.variants.map((v) => v.figma) : Object.keys(mapping.variants || {});
   for (const n of listed) if (!variants.some((v) => v.name === n)) out.push(`${name} :: the mapping renders "${n}", which the design no longer draws`);

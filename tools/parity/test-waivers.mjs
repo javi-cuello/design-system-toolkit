@@ -127,4 +127,11 @@ ok('an is row records how far the page is from its ruled value, not from the fra
 ok('a ruled value no difference uses is stale, as a bound is',
   stale({ 'Main.height': { reason: 'r', decision: true, is: 1117 } }, new Set()).join() === 'Main.height');
 
+ok('a reason that puts the fix in the toolkit is filed under the toolkit', (() =>
+  /fix is 'toolkit'/.test(shape('Graphic.rotate', { reason: 'Figma records a mirror as 180. The fix is in the snapshot plugin: carry the flip.', fix: 'figma', within: 180 }))
+  && shape('Graphic.rotate', { reason: 'Figma records a mirror as 180. The fix is in the snapshot plugin: carry the flip.', fix: 'toolkit', within: 180 }) === ''
+  && !/toolkit/.test(shape('Box.width', { reason: 'the frame rounds the line', fix: 'figma', within: 1 }))
+  && /fix is 'toolkit'/.test(shape('Box.width', { reason: 'the parity engine should measure the hug', fix: 'code', within: 1 }))
+  && /fix is 'toolkit'/.test(shape('Box.width', { reason: 'fixed in the snapshot plugin', fix: 'figma', within: 1 }))
+  && !/toolkit/.test(shape('Box.width', { reason: 'the fix is in the plugin that renders the card', fix: 'code', within: 1 })))());
 console.log(`${n}/${n} passed`);

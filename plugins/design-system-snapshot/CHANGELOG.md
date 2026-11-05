@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.70.0] - 2026-11-05
+### Added
+- **A mirror is recorded as a mirror (`flip`), not a turn.** Figma keeps a flip in the layer's matrix and reports it as a rotation (a horizontal mirror reads -180), so a mirrored illustration was recorded upside down and its code's `scaleX(-1)` was waived as a difference. The walk takes the flip out of `relativeTransform` first (a negative determinant): `flip: 'x'`, or `'y'` where what is left is a half turn, and `rotation` keeps only the turn that remains. `unrecorded` no longer lists the reported turn of a mirrored layer. Parity compares `flip` with the page's `-flip` (tools/parity).
+
 ## [0.69.0] - 2026-11-04
 ### Added
 - **A slot's preferred components are named.** Figma gives each preferred value as a key, and a key names nothing to a reader unless the same snapshot stored that component: across three stored libraries 7 of 23 did not. Each slot record gains `preferredNames`, beside `preferred` and in its order, each a name or null. A key of the file's own components is named from the file, importing nothing; another library's is imported (once per key, given 5 s), which brings a copy of that component into the file as any import does; a variant is named by its set; one that will not import is null, never guessed. Checked live on one library the same day: its 3 preferred values named. Not yet met: a key from another library, and the cloud route (`use_figma`), where an import may be refused and the name is then null.

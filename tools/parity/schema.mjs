@@ -459,7 +459,8 @@ export const KINDS = {
  * drawn inside the box, inset shadow or inward outline; `-rings`: the colour
  * of each outline the box and what it holds draw; `-present`: a layer this variant does not draw,
  * rendered anyway; `-stroke`: whether the element draws an edge at all;
- * `-max-lines`, `-truncate`: how text is cut on purpose; `-text`: the words),
+ * `-max-lines`, `-truncate`: how text is cut on purpose; `-text`: the words;
+ * `-flip`: the axis the element is mirrored on, from its transform and scale),
  * or a kind reads it off the probe's fixed record (`-x`, `-y`, `-children`,
  * `-attr:<name>` for an attribute an instance prop sets, `-swap:<prop>` for
  * the glyph a swap places). What the probe reads is tools/parity/probe.mjs.
@@ -473,7 +474,7 @@ export const PROPS = new Set([
   'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-align',
   'text-transform', 'font-variant-caps', 'text-decoration-line', 'mix-blend-mode', ...SIDES.map((x) => `border-${x}-style`), 'rotate', 'filter', 'backdrop-filter',
   '-stacking', '-clipped', '-present', '-ring-width', '-ring-offset', '-ring-color', '-ring-radius', '-ring-drawn', '-inner-ring-width', '-inner-ring-color', '-inner-ring-drawn', '-rings', '-stroke',
-  '-max-lines', '-truncate', '-text', '-x', '-y', '-children',
+  '-max-lines', '-truncate', '-text', '-x', '-y', '-children', '-flip',
 ]);
 
 /*

@@ -321,6 +321,16 @@ export function probe(sections, opts) {
       return seen && paints(el) ? 'yes' : 'no';
     }
     if (p === '-text') return el.textContent.replace(/\s+/g, ' ').trim();
+    // the axis a box is mirrored on, from transform and scale (`rotate` turns
+    // and never mirrors): a mirror is a matrix whose determinant is negative,
+    // a horizontal one is 'x', as the design records it (`flip`); a mirror
+    // turned inside `transform` reads by its larger diagonal and may say 'y'
+    if (p === '-flip') {
+      const m = new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
+      const [sx = 1, sy = sx] = cs.scale === 'none' ? [] : cs.scale.split(/\s+/).map(Number);
+      const a = m.a * sx, d = m.d * sy, det = a * d - m.b * sx * m.c * sy;
+      return det >= 0 ? 'none' : Math.abs(a) >= Math.abs(d) ? (a < 0 ? 'x' : 'y') : (d < 0 ? 'y' : 'x');
+    }
     if (p === '-under') {
       // what the element sits on: its nearest ancestor that paints a background, null where none does
       for (let a = el.parentElement; a; a = a.parentElement) { const bg = getComputedStyle(a).backgroundColor; if (!/rgba\(.*,\s*0\)$|transparent/.test(bg)) return bg; }

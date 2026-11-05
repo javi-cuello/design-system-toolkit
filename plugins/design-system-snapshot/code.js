@@ -1,4 +1,4 @@
-// Design system snapshot — v0.69.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.70.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -671,7 +671,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.69.0';
+const VERSION = '0.70.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -811,7 +811,20 @@ async function walk(n, depth) {
     const a = n.arcData, deg = (r) => Math.round((r * 180) / Math.PI * 100) / 100;
     if (a.innerRadius || Math.abs(a.endingAngle - a.startingAngle - 2 * Math.PI) > 1e-6) o.arc = { start: deg(a.startingAngle), end: deg(a.endingAngle), inner: Math.round(a.innerRadius * 1000) / 1000 };
   }
-  if ('rotation' in n && n.rotation) o.rotation = round(n.rotation);
+  // A mirror is not a turn. Figma keeps a flip in the matrix and reports it as
+  // a rotation (a horizontal mirror reads -180), so a mirrored layer was
+  // recorded upside down and its code's scaleX(-1) waived as a difference.
+  // The flip is taken out of the matrix first, and what is left is the turn.
+  if ('relativeTransform' in n && n.relativeTransform) {
+    const [[a, c], [b, d]] = n.relativeTransform;
+    if (a * d - b * c < 0) {
+      const deg = round((Math.atan2(b, -a) * 180) / Math.PI) + 0;
+      // a horizontal mirror turned 180 is a vertical one, which is how a
+      // stylesheet says it (scaleY(-1))
+      o.flip = Math.abs(deg) === 180 ? 'y' : 'x';
+      if (deg && Math.abs(deg) !== 180) o.rotation = deg;
+    } else if ('rotation' in n && n.rotation) o.rotation = round(n.rotation);
+  } else if ('rotation' in n && n.rotation) o.rotation = round(n.rotation);
   if ('fills' in n && Array.isArray(n.fills) && n.fills.length) { const f = await paintNames(n.fills); if (f.length) o.fills = f; }
   if ('fillStyleId' in n) { const fs = await styleName(clean(n.fillStyleId)); if (fs) o.fillStyle = fs; }
   if ('strokes' in n && Array.isArray(n.strokes) && n.strokes.length) {
@@ -1214,6 +1227,8 @@ function unrecorded(n, o) {
     if (Array.isArray(v) && v.length === 0) continue;
     if (typeof v === 'object' && 'value' in v && !v.value) continue;
     if ((k === 'strokeWeight' || k === 'strokeAlign' || k === 'dashPattern') && !stroked) continue;
+    // the turn Figma reports for a mirror is carried as the mirror (`flip`)
+    if (k === 'rotation' && 'flip' in o) continue;
     // recorded under its own name, or under the one this snapshot gives it
     const as = { textAlignHorizontal: 'textAlign', textTruncation: 'truncate', cornerRadius: 'radius',
       itemSpacing: 'gap', dashPattern: 'dashed', clipsContent: 'clips', strokeWeight: 'strokeSides',

@@ -165,4 +165,17 @@ ok("the manifest asks for the file key, and both payloads send it", manifest.ena
   const none = vm.runInContext(src + "\n;reachable()", vm.createContext({ figma, console, fetch: async () => { throw new TypeError("Failed to fetch"); } }));
   ok("…and only no answer at all is nobody listening", (await none) === false);
 }
+// 2026-11-05: a mirrored illustration was recorded as rotation -180, the
+// angle Figma reports for a flip, and its code's scaleX(-1) was waived.
+const leaf = (relativeTransform, rotation) => ({ name: "Art", type: "RECTANGLE", width: 72, height: 72, x: 0, y: 0, rotation, relativeTransform, boundVariables: {} });
+const mirrored = await walk(leaf([[-1, 0, 72], [0, 1, 0]], -180), 1);
+ok("a horizontal mirror is a flip on x, not a turn", mirrored.flip === "x" && !("rotation" in mirrored));
+ok("…and the turn Figma reports for it is not left unrecorded", unrecorded(leaf([[-1, 0, 72], [0, 1, 0]], -180), mirrored).length === 0);
+const upside = await walk(leaf([[1, 0, 0], [0, -1, 72]], 180), 1);
+ok("a vertical mirror is a flip on y, not a turn", upside.flip === "y" && !("rotation" in upside));
+const c = Math.cos(Math.PI / 6), s = Math.sin(Math.PI / 6);
+const turned = await walk(leaf([[c, s, 0], [-s, c, 0]], 30), 1);
+ok("a turn without a mirror stays a turn", turned.rotation === 30 && !("flip" in turned));
+const both = await walk(leaf([[-c, s, 0], [s, c, 0]], 0), 1);
+ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation === 30);
 console.log(n + "/" + n + " passed");

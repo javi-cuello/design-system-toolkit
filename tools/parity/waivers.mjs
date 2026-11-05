@@ -13,7 +13,7 @@
  *
  * A waiver is an object (a string is read as its reason, and refused by
  * `checkWaiver` for want of an owner):
- *   { reason, fix: 'figma' | 'code', within?, sameAs? }   a difference someone will close
+ *   { reason, fix: 'figma' | 'code' | 'toolkit', within?, sameAs? }   a difference someone will close
  *   { reason, content: true, within? }                     live data the frame cannot state
  *   { reason, decision: true, within? }                    a ruled translation nobody will change
  *   { reason, decision: 'unset' }                          on a number: the page sets nothing, ruled so
@@ -46,7 +46,14 @@ export const FIELDS = new Set(['reason', 'within', 'is', 'sameAs', 'content', 'd
    `decision: 'unset'` may rule on. A size or a position at 0 is a box drawn
    empty or in place, which is a difference to bound, not a property unset. */
 export const UNSETTABLE = /^(padding-(top|right|bottom|left)|(min|max)-(width|height)|(row|column)-gap|line-height|letter-spacing)$/;
-export const OWNERS = ['figma', 'code'];
+/* Who closes a difference: the design, the build, or the toolkit — a snapshot
+   plugin or engine that records or compares the thing wrong. A toolkit bug
+   filed as 'figma' sat in the designer's list, where nobody acts on one
+   (a mirror recorded as a 180° turn, 2026-11-05). */
+export const OWNERS = ['figma', 'code', 'toolkit'];
+/* A reason that says the toolkit closes it: "the fix is in the snapshot plugin", "the parity engine should record…".
+   A plugin or engine of the project's own is code, so the toolkit's are named as such. */
+export const TOOLKIT_FIX = /\bfix(?:es|ed)? (?:is |lies |belongs )?(?:in|to) the (?:toolkit|(?:snapshot|parity) (?:plugin|engine|walk))\b|\bthe (?:toolkit|(?:snapshot|parity) (?:plugin|engine)|snapshot) (?:should|must|needs to) (?:carry|record|read|compare|measure)\b/i;
 
 /** A waiver key's layer and prop: `[Variant :: ]Layer.prop`, or a bare layer (an app waiver for a layer the product may not draw). */
 export function keyParts(key) {
@@ -72,11 +79,15 @@ export function checkWaiver(key, waiver) {
   if (typeof w.reason !== 'string' || !w.reason.trim()) out.push(`${key}: no reason`);
   if (w.content !== undefined && w.content !== true) out.push(`${key}: content is true or absent`);
   if (w.decision !== undefined && w.decision !== true && w.decision !== 'unset') out.push(`${key}: decision is true, 'unset' or absent`);
-  if (w.fix !== undefined && !OWNERS.includes(w.fix)) out.push(`${key}: fix is ${OWNERS.map((o) => `'${o}'`).join(' or ')}, not ${JSON.stringify(w.fix)}`);
+  if (w.fix !== undefined && !OWNERS.includes(w.fix)) out.push(`${key}: fix is ${OWNERS.map((o) => `'${o}'`).join(', ')}, not ${JSON.stringify(w.fix)}`);
   const owners = ['fix', 'content', 'decision'].filter((f) => w[f] !== undefined);
-  if (!owners.length) out.push(`${key}: no owner — fix: 'figma' or 'code' says who closes it; content or decision says nobody will`);
+  if (!owners.length) out.push(`${key}: no owner — fix: 'figma', 'code' or 'toolkit' says who closes it; content or decision says nobody will`);
   // a ruling nobody will change cannot also be a fix someone will make, or live data
   if (owners.length > 1) out.push(`${key}: one owner — ${owners.join(' and ')} say different things about who closes it`);
+  // a reason that puts the fix in the toolkit, filed under someone else: the
+  // mirror waiver said "the fix is in the snapshot plugin" under fix: 'figma',
+  // listed as the designer's, and nobody acted on it (2026-11-05)
+  if ((w.fix === 'figma' || w.fix === 'code') && TOOLKIT_FIX.test(w.reason || '')) out.push(`${key}: the reason puts the fix in the toolkit, so fix is 'toolkit', not '${w.fix}'`);
   const { prop } = keyParts(key);
   const numeric = prop && NUMERIC.has(prop);
   if (w.decision === 'unset') {

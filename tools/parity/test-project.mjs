@@ -47,7 +47,7 @@ ok('and its disabled sibling wherever the axes sit in the name, with the sample 
 // the waivers gate refused it, because nothing checked an excuse's fields.
 ok('an unmeasured excuse is a reason, or { reason, fix }; a field nothing reads is refused',
   unrenderedOf('modal', { unmeasured: { 'Size=lg, State=Rest': { reason: 'the scrim', accepted: true } } }, button, r).some((l) => /"accepted" is not an unmeasured field/.test(l))
-  && unrenderedOf('modal', { unmeasured: { 'Size=lg, State=Rest': { reason: 'wired wrong', fix: true } } }, button, r).some((l) => /fix is 'figma' or 'code'/.test(l))
+  && unrenderedOf('modal', { unmeasured: { 'Size=lg, State=Rest': { reason: 'wired wrong', fix: true } } }, button, r).some((l) => /fix is 'figma', 'code', 'toolkit'/.test(l))
   && !unrenderedOf('modal', { unmeasured: { 'Size=lg, State=Rest': { reason: 'wired wrong', fix: 'figma' }, 'Size=sm, State=Rest': 'why' } }, button, r).some((l) => /field|fix is|no reason/.test(l)));
 // R8: `bin/parity contact --shots`, documented, answered "no such target".
 {
