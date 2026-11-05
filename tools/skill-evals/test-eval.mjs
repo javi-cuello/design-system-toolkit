@@ -73,6 +73,17 @@ ok('a run that read the original repo or ran git is contaminated; reads inside i
   === JSON.stringify(['Read read the original repo', 'Bash ran git'])
   && contamination([tu('Read', { file_path: '/repository-other/x' })], '/repo').length === 0);
 
+const G = (command, gitReachable = false) => contamination([tu('Bash', { command })], '/repo', '', { copy: '/tmp/eval-x', gitReachable });
+ok('git where no repository is reachable does not void a run; git pointed elsewhere, or with a repository above the copy, does',
+  G('tail -9 j.json; git -C . status 2>&1 | head -1').length === 0
+  && G('cd /tmp/eval-x; git diff --no-index /dev/null /dev/null').length === 0
+  && G('git status', true).length === 1
+  && G('cd /elsewhere && git show HEAD:a.tsx').length === 1
+  && G('git -C /elsewhere show HEAD:a.tsx').length === 1
+  && G('git --git-dir=/x/.git log').length === 1
+  && G('GIT_DIR=/x/.git git log').length === 1
+  && contamination([tu('Bash', { command: 'git status' })], '/repo').length === 1);
+
 const C = (input, name = 'Bash') => contamination([tu(name, input)], '/Users/u/p/site', '/Users/u');
 ok('the original reached by another spelling is still the original: home-relative, $HOME, a glob split over path and pattern, through linked dependencies, or git run from a script',
   C({ file_path: '~/p/site/src/a.tsx' }, 'Read').length === 1

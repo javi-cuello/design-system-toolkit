@@ -172,7 +172,7 @@ for (const t of tasks) {
       const projects = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude's own transcripts, not ours
       const tr = agent.session && fs.existsSync(projects) ? fs.readdirSync(projects).map((d) => path.join(projects, d, `${agent.session}.jsonl`)).find((f) => fs.existsSync(f)) : null;
       const transcript = tr ? fs.readFileSync(tr, 'utf8') : '';
-      agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir()) : ['no transcript found to check'];
+      agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir(), { copy, gitReachable: spawnSync('git', ['-C', copy, 'rev-parse', '--git-dir'], { stdio: 'ignore' }).status === 0 }) : ['no transcript found to check'];
       agent.rulesFired = RULES === 'on' ? transcript.includes('First change in this area') : null;
       // a context-on run where the agent never asked the system is still its result, and is said so
       agent.askedSystem = contextOf(t) === 'on' ? transcript.includes('"name":"mcp__system__') : null;
@@ -208,7 +208,7 @@ for (const t of tasks) {
       const projects = path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude's own transcripts, not ours
       const tr = agent.session && fs.existsSync(projects) ? fs.readdirSync(projects).map((d) => path.join(projects, d, `${agent.session}.jsonl`)).find((f) => fs.existsSync(f)) : null;
       const transcript = tr ? fs.readFileSync(tr, 'utf8') : '';
-      agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir()) : ['no transcript found to check'];
+      agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir(), { copy, gitReachable: spawnSync('git', ['-C', copy, 'rev-parse', '--git-dir'], { stdio: 'ignore' }).status === 0 }) : ['no transcript found to check'];
       // a rules run where the hook never spoke measured nothing about the rules (the first two did exactly that)
       agent.rulesFired = RULES === 'on' ? transcript.includes('First change in this area') : null;
       agent.askedSystem = contextOf(t) === 'on' ? transcript.includes('"name":"mcp__system__') : null;

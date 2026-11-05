@@ -117,8 +117,16 @@ export function compare(previous, current) {
    every tool input that names the original repo by any spelling — absolute,
    from home, through $HOME, a glob's folder and pattern joined, or up out of
    the linked dependencies — or runs git, from the shell or a script. A review
-   reproduced each of those misses (2026-10-03). */
-export function contamination(transcriptLines, repo, home = '') {
+   reproduced each of those misses (2026-10-03). Git run where it can reach
+   no repository is not a look at the answer: `git status` in a copy with no
+   .git voided two of five runs (2026-11-05). So with `copy` given and
+   `gitReachable` false, git voids a run only when it points elsewhere — a
+   `cd` out of the copy, `-C` other than `.`, `--git-dir`, `--work-tree`,
+   `GIT_DIR`. */
+export function contamination(transcriptLines, repo, home = '', { copy = null, gitReachable = true } = {}) {
+  const elsewhere = (cmd) => /--git-dir|--work-tree|GIT_DIR|GIT_WORK_TREE/.test(cmd)
+    || [...cmd.matchAll(/(?:^|[^\w-])git\s+-C\s+("[^"]*"|'[^']*'|\S+)/g)].some((m) => !['.', './', copy, `"${copy}"`, `'${copy}'`].includes(m[1]))
+    || [...cmd.matchAll(/(?:^|[;&|(\s])cd\s+("[^"]*"|'[^']*'|[^\s;&|)]+)/g)].some((m) => m[1].replace(/^["']|["']$/g, '') !== copy);
   const tail = home && repo.startsWith(home + '/') ? repo.slice(home.length) : null;
   const spellings = [repo, ...(tail ? [`~${tail}`, `$HOME${tail}`, `\${HOME}${tail}`] : [])];
   const names = (s) => spellings.some((p) => s.includes(p + '/') || s.endsWith(p) || new RegExp(`${p.replace(/[$^{}.*+?()[\]\\|]/g, '\\$&')}["'\\s]`).test(s));
@@ -130,7 +138,7 @@ export function contamination(transcriptLines, repo, home = '') {
       const input = c.input || {};
       const text = [...Object.values(input).map(String), input.path && input.pattern ? `${input.path}/${input.pattern}` : ''].join('\n');
       if (names(text) || /node_modules\/\.\./.test(text)) hits.push(`${c.name} read the original repo`);
-      else if (/(^|[^\w-])git\s/.test(String(input.command || ''))) hits.push(`${c.name} ran git`);
+      else if (/(^|[^\w-])git\s/.test(String(input.command || '')) && (gitReachable || !copy || elsewhere(String(input.command)))) hits.push(`${c.name} ran git`);
     }
   }
   return [...new Set(hits)];
