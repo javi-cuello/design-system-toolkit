@@ -73,7 +73,7 @@ export function against(sweep, targets, { internalPrefix = null, exclude = [], s
   return out;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const arg = (k) => { const i = args.indexOf(k); return i < 0 ? null : args[i + 1]; };
   const fail = (msg) => { console.error(msg); process.exit(2); };

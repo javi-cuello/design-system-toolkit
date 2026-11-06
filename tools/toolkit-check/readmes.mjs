@@ -135,7 +135,7 @@ export function check(root) {
   return found;
 }
 
-if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))) {
+if ((process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url))) {
   const i = process.argv.indexOf('--root');
   const root = i > -1 ? resolve(process.argv[i + 1]) : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const found = check(root);

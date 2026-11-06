@@ -651,7 +651,7 @@ export function filesFor(c, folder, { framework, naming, library = {}, styleshee
   };
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const flag = (k) => { const i = args.indexOf(`--${k}`); return i < 0 ? null : args.splice(i, 2)[1]; };
   const label = flag('project'), repoFlag = flag('repo'), contractFlag = flag('contract'), platform = flag('platform'), fwFlag = flag('framework');

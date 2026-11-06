@@ -908,7 +908,7 @@ export function writeDrawn(out, rows) {
   return true;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   // a refused call (a file to reopen, a service gone) is its message, not a stack trace
   process.on('uncaughtException', (e) => { console.error(e && e.message || e); process.exit(1); });
   const argv = process.argv.slice(2);

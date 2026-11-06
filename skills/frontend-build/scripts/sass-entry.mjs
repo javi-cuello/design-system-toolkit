@@ -41,7 +41,7 @@ export function generate(file) {
   return withList(readFileSync(file, 'utf8'), componentsIn(join(dirname(file), 'components')), { scss: extname(file) === '.scss' })
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2)
   const file = args.find((a) => !a.startsWith('--'))
   if (!file) { console.error('sass-entry: name the entry, such as assets/design-system/index.sass'); process.exit(2) }

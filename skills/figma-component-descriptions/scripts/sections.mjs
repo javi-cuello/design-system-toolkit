@@ -196,7 +196,7 @@ export function settingsFrom(printed, fileKey) {
            restState: t.stateAxis && Array.isArray(scales[t.stateAxis]) ? scales[t.stateAxis][0] : null };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
   // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)

@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.20.0)
+# Eval cases — figma-component-descriptions (v1.20.1)
+
+**Walked: 2026-11-06 for 1.20.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
 **Walked: 2026-11-04 for 1.20.0** — D23 added and traced to the reference file's *Right to left* section, step 5 and the checklist line; its lines match figma-components-audit's `direction|note` advice, composed and printed for one planted Chip the same day. D1–D22 unchanged: the section is written only under a key none of them sets.
 

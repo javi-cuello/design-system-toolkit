@@ -153,7 +153,7 @@ export function switchTo(label, to, { confirm = false } = {}) {
   return { said: `${label} takes Figma as its source again${lost.length ? `; ${lost.length} difference(s) dropped` : ''}.` };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
   const flag = (n) => { const i = argv.indexOf(n); return i < 0 ? null : argv[i + 1]; };
   const label = flag('--project');

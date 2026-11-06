@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.10.1 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
 - 2.10.0 (2026-11-02): with no design file, the knowledge base is the design: Orient step 4 walks the pages the screen uses before writing, reference sites fill only gaps (design-standard rule 14). T13.
 - 2.9.0 (2026-10-31): `build-tokens.mjs` and its test move to `tools/tokens/` (projects run it through `tools/tokens/build.mjs`; toolkit-standard §D 1); `scripts/build-tokens.mjs` forwards for one release.
 - 2.8.1 (2026-10-31): the scaffold's `package.json` pins `sass` to 1.104.1, where `^1.80.0` took any newer release, and its next steps say to commit the lockfile the first install writes. T6.

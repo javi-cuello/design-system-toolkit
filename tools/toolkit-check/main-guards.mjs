@@ -11,7 +11,10 @@
  * exits 0: a `--check` passed every description that way (review, 2026-10-30,
  * twelve scripts). Every comparison of `process.argv[1]` to the module goes
  * through `realpathSync`; one that matches on the file's name alone
- * (`endsWith`) is fine. Lists each other one; exits 1 when there is any.
+ * (`endsWith`) is fine. And realpathSync is called inside a try: argv[1] need
+ * not be a file (`node -e '…' arg`, a script on stdin), and an unguarded call
+ * throws on import (audit, 2026-11-05: 39 guards). Lists each other one;
+ * exits 1 when there is any.
  * Tested by test-main-guards.mjs.
  */
 import { readFileSync, realpathSync } from 'node:fs';
@@ -27,15 +30,22 @@ export function unresolved(text) {
     .filter(([l]) => /process\.argv\[1\]/.test(l) && /===|==/.test(l) && !/realpath|realPath|endsWith/i.test(l))
     .map(([, n]) => n);
 }
+// the guards that resolve argv[1] outside a try, so importing the module from a process whose argv[1] is no file throws
+export function throwing(text) {
+  return text.split('\n').map((line, i) => [line, i + 1])
+    .filter(([l]) => /realpathSync\(process\.argv\[1\]\)/.test(l) && !/\btry\b/.test(l) && !/console\./.test(l))
+    .map(([, n]) => n);
+}
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const files = execFileSync('git', ['-C', ROOT, 'ls-files', '*.mjs', '*.js', '*.cjs'], { encoding: 'utf8' })
     .split('\n').filter((f) => f && !/(^|\/)(node_modules|test-[^/]*)$|\/tests?\//.test(f) && !/(^|\/)test-[^/]+$/.test(f));
   const found = [];
   for (const f of files) {
     let text; try { text = readFileSync(join(ROOT, f), 'utf8'); } catch { continue; }
-    for (const n of unresolved(text)) found.push(`${f}:${n}`);
+    for (const n of unresolved(text)) found.push(`${f}:${n}: compares process.argv[1] as typed; resolve it with realpathSync`);
+    for (const n of throwing(text)) found.push(`${f}:${n}: resolves process.argv[1] outside a try; an import from a process whose argv[1] is no file throws`);
   }
-  for (const f of found) console.log(`${f}: compares process.argv[1] as typed; compare realpathSync(process.argv[1])`);
+  for (const f of found) console.log(f);
   process.exit(found.length ? 1 : 0);
 }

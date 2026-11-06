@@ -58,7 +58,7 @@ export async function axePages(urls, { disable = [] } = {}) {
   return results;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const args = process.argv.slice(2);
   const i = args.indexOf('--disable');
   const disable = i > -1 ? args.splice(i, 2)[1].split(',').filter(Boolean) : [];

@@ -205,7 +205,7 @@ export function pluginsUnder(dir) {
 
 export const line = (x) => `${x.level === "error" ? "error" : "warn "}  [${x.sec}] ${x.plugin} — ${x.text}  (${x.kind})`;
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
   if (!args.length) { console.error("usage: node scripts/conformance.mjs <plugin-folder | folder of plugins>... [--json]"); process.exit(2); }
   const found = [];

@@ -65,7 +65,7 @@ export function judge(found, wanted, newest) {
   return { bad, seen, found };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   // Not server.mjs alone: every module it binds once, at start, is as stale as
   // it is — the files its static imports reach, walked rather than listed, so a
   // new dependency is covered without anyone remembering to add it. What it

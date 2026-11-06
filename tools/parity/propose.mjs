@@ -261,7 +261,7 @@ export function instanceTagger(project) {
   };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const USAGE = 'usage: node tools/parity/propose.mjs --repo <dir> <screen-key> [/route] [--write]';
   const stop = (msg) => { console.error(msg); process.exit(2); };
   const argv = process.argv.slice(2);

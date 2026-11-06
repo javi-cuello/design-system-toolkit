@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.10.0)
+# Eval cases — frontend-build (v2.10.1)
+
+**Walked: 2026-11-06 for 2.10.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
 **Walked: 2026-11-02 for 2.10.0** — T13 added, traced to Orient step 4 and design-standard rule 14; the other cases read against the new step, none affected.
 

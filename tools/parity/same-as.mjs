@@ -37,7 +37,7 @@ export function sameAs(label, folder, designProp, codeProp) {
   return { said: `${c.contract.component}: ${designProp} is ${codeProp} in code, in ${pm.mappings}. Run the code audit again to compare them.` };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
   const i = argv.indexOf('--project');
   const label = i < 0 ? null : argv.splice(i, 2)[1];

@@ -166,7 +166,7 @@ export async function checkPages(urls, { project, width, shots } = {}) {
   return results;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const args = process.argv.slice(2);
   const opt = (k) => { const i = args.indexOf(k); return i > -1 ? args.splice(i, 2)[1] : null; };
   const project = opt('--project'), width = Number(opt('--width')) || undefined, shots = opt('--shots');

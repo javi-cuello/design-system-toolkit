@@ -1,5 +1,6 @@
 # Changelog — figma-file-diff
 
+- 1.4.5 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
 - 1.4.4 (2026-10-31): the width check sets the frame FIXED first, so it moves on the width, not on the sizing the HUG check left. Case A10.
 - 1.4.3 (2026-10-31): two coverage checks changed nothing in Figma (a resized frame is FIXED already; `maxLines` takes only while the text box grows), so they read as blind spots: they now mutate. Case A10.
 - 1.4.2 (2026-10-31): the coverage test's body is generated, `scripts/coverage-body.mjs` (serialise.js's serialiser, then `coverage-test.js`): nothing is pasted or kept in sync by hand, and the test file alone fails at once. Case A9.

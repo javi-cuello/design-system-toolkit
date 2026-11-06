@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.4)
+# Eval cases — figma-file-diff (v1.4.5)
+
+**Walked: 2026-11-06 for 1.4.5** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
 **Walked: 2026-10-31 for 1.4.4** — A10 extended: `node tests/test-coverage-body.mjs` 7 passed; the old no-op mutations now fail by test, naming both, and a serialiser that stops reading the width is a blind spot only with the frame set FIXED before the width check.
 

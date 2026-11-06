@@ -140,7 +140,7 @@ export function renderQueue(record, opts = {}) {
   return { markdown: out.join("\n").replace(/\n+$/, "") + "\n", gaps };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
   if (!arg("--data")) { console.error("usage: node tools/figma-audit/fix-queue.mjs --data <record> [--file-key <key>] [--owner <skill>] [--chat] [--links] [--held-back <text>] [--not-scanned <text>]"); process.exit(2); }

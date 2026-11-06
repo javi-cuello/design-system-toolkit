@@ -79,7 +79,7 @@ export async function check(site, pages = PAGES) {
   return problems;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const site = process.argv[2];
   if (!site) { console.error('usage: node tools/docs-site/check-structure.mjs <site dir>'); process.exit(2); }
   if (!fs.existsSync(path.join(site, 'index.html'))) { console.log(`not run: no built site at ${path.relative(TOOLKIT, site) || site}`); process.exit(0); }

@@ -604,7 +604,7 @@ export function applyRows(record, payload, now = new Date().toISOString()) {
 
 // CLI, for a session with no service running. Same function, same file, written
 // atomically the way the service writes it.
-if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))) {
+if ((process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url))) {
   const args = process.argv.slice(2);
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
   const data = arg("--data");

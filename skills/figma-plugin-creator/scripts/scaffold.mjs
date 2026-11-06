@@ -54,6 +54,6 @@ function main(argv) {
   console.log(`${dir}: ${Object.keys(out).length} files. Next: the conformance check, then Figma › Plugins › Development › Import plugin from manifest.`);
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   try { main(process.argv.slice(2)); } catch (e) { console.error(e.message); process.exit(1); }
 }

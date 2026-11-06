@@ -32,7 +32,7 @@ export function registry(files) {
   return rows.join("\n") + "\n\n" + dep + "\n";
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2), files = [];
   const load = (f) => JSON.parse(readFileSync(f, "utf8"));
   for (let i = 0; i < args.length; i++) {

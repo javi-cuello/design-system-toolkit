@@ -1182,4 +1182,4 @@ async function main() {
   console.log(`code audit: ${path.join(dir, "report.json")}, ${report.seconds}s${reused ? `, ${reused} unchanged and not re-run` : ""}`);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) await main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) await main();

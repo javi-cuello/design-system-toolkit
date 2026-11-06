@@ -91,7 +91,7 @@ export function render(scans, { scope, keys } = {}) {
 }
 
 // through the real path: run from ~/.claude/skills, argv[1] is the symlink and never equals this module
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const args = process.argv.slice(2), at = args.indexOf("--scope");
   const scope = at < 0 ? undefined : (args.splice(at, 2)[1] || "").split(",").map((p) => p.trim()).filter(Boolean);
   const kat = args.indexOf("--keys"), keysFile = kat < 0 ? null : args.splice(kat, 2)[1];

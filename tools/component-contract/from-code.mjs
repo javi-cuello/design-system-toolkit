@@ -882,4 +882,4 @@ async function pairUp(L, m, read, call, defaults) {
   })), m.elements);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) main().catch((e) => { if (!e.usage) { console.error(e); process.exit(1); } console.error(e.message); process.exit(2); });
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) main().catch((e) => { if (!e.usage) { console.error(e); process.exit(1); } console.error(e.message); process.exit(2); });

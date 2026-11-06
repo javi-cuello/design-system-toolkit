@@ -90,7 +90,7 @@ export function naming(passA, passD = []) {
     suffixSample: sampled ? sampled + " sets" : "none: pass D's output was not given, so suffixes are unread" };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const [a, d] = process.argv.slice(2);
   if (!a) { console.error("usage: node scripts/pass-b-naming.mjs <pass-a.json> [<pass-d.json>]"); process.exit(2); }
   const passA = JSON.parse(readFileSync(a, "utf8"));

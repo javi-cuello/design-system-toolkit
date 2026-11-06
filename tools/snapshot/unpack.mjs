@@ -53,7 +53,7 @@ export function unpack(json, outDir) {
   return kind === 'library' ? store.writeLibrary(payload, P) : store.writeScreens(payload, P);
 }
 
-if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))) {
+if ((process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url))) {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || (major === 22 && minor < 12)) { console.error(`unpack.mjs needs Node 22.12 or later; this is ${process.version}`); process.exit(2); }
   const args = process.argv.slice(2);

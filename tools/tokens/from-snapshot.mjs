@@ -212,7 +212,7 @@ export function tokensOf(json) {
   return json && json.tokens && json.tokens._meta ? json.tokens : json;
 }
 
-if ((process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))) {
+if ((process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url))) {
   const [src, dir] = process.argv.slice(2);
   if (!src || !dir) { console.error('usage: from-snapshot.mjs <tokens.json | downloaded snapshot.json> <out-dir>'); process.exit(2); }
   // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)

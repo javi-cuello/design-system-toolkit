@@ -181,7 +181,7 @@ export function rowsFromWalk(components, { known = [], deriveWith = {}, platform
 // ------------------------------------------------------------------ the script
 
 // run as a script, through the installed symlink too: both paths resolved, as Node resolves the module's own
-const isMain = !!process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
+const isMain = !!process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })();
 if (isMain && process.argv[2] === '--live') {
   const args = process.argv.slice(3), fi = args.indexOf('--file');
   const file = fi >= 0 ? args.splice(fi, 2)[1] : null;

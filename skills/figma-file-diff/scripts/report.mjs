@@ -262,7 +262,7 @@ export function stable(first, again) {
 }
 
 // through the real path: run from ~/.claude/skills, argv[1] is the symlink and never equals this module
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const args = process.argv.slice(2), mode = args[0] === "--next" || args[0] === "--stable" ? args.shift() : null;
   const [a, b] = args;
   if (!a || !b) { console.error("usage: node report.mjs [--next | --stable] <reference.json | first.json> <target.json | re-run.json>"); process.exit(2); }

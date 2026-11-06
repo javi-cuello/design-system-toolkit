@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // node tools/toolkit-check/test-main-guards.mjs — main-guards.mjs finds a guard that compares argv[1] as typed.
 import assert from 'node:assert/strict';
-import { unresolved } from './main-guards.mjs';
+import { unresolved, throwing } from './main-guards.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -11,4 +11,7 @@ ok('one through a file:// URL is found', unresolved("if (process.argv[1] && impo
 ok('one through realpathSync is not', unresolved("if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {").length === 0);
 ok('one matching the file name alone is not', unresolved("if (process.argv[1] && process.argv[1].endsWith('x.mjs')) {").length === 0);
 ok('argv[1] read for another purpose is not', unresolved("const file = process.argv[1];").length === 0);
+ok('a realpathSync of argv[1] outside a try is found; one inside a try is not',
+  throwing("if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {").length === 1
+  && throwing("if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {").length === 0);
 console.log(`${n}/${n} passed`);

@@ -94,7 +94,7 @@ export function renderScores(record, scoring, catalogue, opts = {}) {
   return { markdown: out.join("\n") + "\n", doc, gaps };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
   if (!arg("--data")) { console.error("usage: node tools/figma-audit/scores.mjs --data <record> [--file-key <key>] [--sets <scan.json>] [--scanner <dir>] [--json]"); process.exit(2); }

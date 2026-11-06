@@ -189,7 +189,7 @@ export function scales(passC, tokens = null) {
   return out;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const arg = (k) => { const i = args.indexOf(k); return i < 0 ? null : args[i + 1]; };
   const json = (f) => { try { return JSON.parse(readFileSync(f, "utf8")); } catch (e) { console.error(`${f}: ${e.code === "ENOENT" ? "no such file" : e.code === "EISDIR" ? "a folder, not a file" : "not JSON (" + e.message + ")"}`); process.exit(1); } };

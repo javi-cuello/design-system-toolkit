@@ -186,7 +186,7 @@ export function alerts(repo, ask = (args) => execFileSync('gh', args, { cwd: rep
   return { open: rows.length, by };
 }
 
-if ((process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) && process.argv.includes('--judgement')) {
+if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) && process.argv.includes('--judgement')) {
   const args = process.argv.slice(process.argv.indexOf('--judgement') + 1);
   const pi = args.indexOf('--prompt'), prompt = pi >= 0 ? args[pi + 1] : null;
   const names = args.filter((a, i) => !a.startsWith('--') && !(pi >= 0 && i === pi + 1));
@@ -203,7 +203,7 @@ if ((process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(impor
   }
   process.exit(0);
 }
-if ((process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))) {
+if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url))) {
   const contract = createRequire(import.meta.url)('../snapshot/projects.cjs');
   const repos = [['toolkit', TOOLKIT]];
   for (const r of contract.repos()) if (fs.existsSync(r.dir)) repos.push([r.name, r.dir]);

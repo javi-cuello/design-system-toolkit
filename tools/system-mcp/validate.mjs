@@ -138,7 +138,7 @@ export function validate(code, tokens, contract = null, components = [], { from 
   return out;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const docs = (opt('--docs') || process.env.DOCS_URL || '').replace(/\/$/, ''), api = opt('--api'), component = opt('--component');

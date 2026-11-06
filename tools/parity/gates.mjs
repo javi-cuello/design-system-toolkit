@@ -731,7 +731,7 @@ export function printGates(results, log = console.log) {
   return failed;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const i = process.argv.indexOf('--repo');
   if (i < 0) { console.error('usage: node tools/parity/gates.mjs --repo <dir>'); process.exit(2); }
   const { loadProject } = await import('./project.mjs');

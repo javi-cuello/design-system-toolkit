@@ -70,7 +70,7 @@ export function watchCodeAudit(label, context, log = console.log, { delay = 1000
   return { run, close: () => { closed = true; clearTimeout(t); for (const w of watchers) w.close(); if (child) child.kill(); }, watching: codeDirs };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
   const label = process.argv[2];
   if (!label) { console.error('usage: watch.mjs <label>'); process.exit(2); }
   const where = contract.layout(null, label);
