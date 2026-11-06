@@ -14,4 +14,7 @@ ok('argv[1] read for another purpose is not', unresolved("const file = process.a
 ok('a realpathSync of argv[1] outside a try is found; one inside a try is not',
   throwing("if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {").length === 1
   && throwing("if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {").length === 0);
+ok('spaced, .native and ?? forms are found, and a try elsewhere on the line does not excuse one',
+  throwing("if (realpathSync( process.argv[1] ) === x) {").length === 1 && throwing("if (realpathSync.native(process.argv[1]) === x) {").length === 1
+  && throwing("if (realpathSync(process.argv[1] ?? '') === x) {").length === 1 && throwing("try { a() } catch {} if (realpathSync(process.argv[1]) === x) {").length === 1);
 console.log(`${n}/${n} passed`);

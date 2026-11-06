@@ -13,7 +13,8 @@
  * through `realpathSync`; one that matches on the file's name alone
  * (`endsWith`) is fine. And realpathSync is called inside a try: argv[1] need
  * not be a file (`node -e '…' arg`, a script on stdin), and an unguarded call
- * throws on import (audit, 2026-11-05: 39 guards). Lists each other one;
+ * throws on import (audit, 2026-11-05: 39 guards). The try is written on the
+ * guard's line, `(() => { try { return realpathSync(…); } catch { return null; } })()`. Lists each other one;
  * exits 1 when there is any.
  * Tested by test-main-guards.mjs.
  */
@@ -33,7 +34,7 @@ export function unresolved(text) {
 // the guards that resolve argv[1] outside a try, so importing the module from a process whose argv[1] is no file throws
 export function throwing(text) {
   return text.split('\n').map((line, i) => [line, i + 1])
-    .filter(([l]) => /realpathSync\(process\.argv\[1\]\)/.test(l) && !/\btry\b/.test(l) && !/console\./.test(l))
+    .filter(([l]) => /realpathSync(?:\.native)?\(\s*process\.argv\[1\]/.test(l) && !/\btry\s*\{\s*return\b[^}]*realpathSync/.test(l) && !/console\./.test(l))
     .map(([, n]) => n);
 }
 
