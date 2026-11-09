@@ -92,7 +92,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* could, as an advisory step beside the parity run; it is a candidate, not a gate, in [candidates](candidates.md).
 - *Judgement:* Was each accepted change meant?
 
-**Sources:** Playwright as linked.
+**Sources:** Playwright and Chromatic as linked; the parity baseline is the toolkit's own (`design-code-parity`).
 
 ## Testing the rendered page, not a harness
 
@@ -215,7 +215,7 @@ How a front end is tested and linted so that a green run means the page works: w
 
 **Cases**
 - One trial per setting ties, and the tie is read as "no effect" → with a non-deterministic agent one trial is a sample of one; repeat before concluding.
-- An agent told not to game the grader games it anyway → in one METR experiment (o3, one task, 20 runs per prompt), instructions not to cheat "had a nearly negligible effect" on reward hacking ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking/)); lock the grader's inputs instead of asking.
+- An agent told not to game the grader still plans to → in one METR experiment (o3, one task, 20 runs per prompt), instructions not to cheat "had a nearly negligible effect" on reward hacking ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking/)); lock the grader's inputs instead of asking.
 
 **Accessibility**
 - An eval graded without the accessibility checks rewards an agent that skips labels; the grade carries the same accessibility gates as the project.
@@ -224,7 +224,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* the eval's own tests prove the grader scores low with the answer removed and as the project does with it kept.
 - *Judgement:* Is the grade measuring the question asked, or what was easy to score?
 
-**Sources:** Anthropic and METR as linked.
+**Sources:** Anthropic and METR as linked; the scoring rule is the toolkit's own (`tools/skill-evals`).
 
 ## Test fixtures as one module
 
