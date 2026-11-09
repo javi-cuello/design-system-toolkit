@@ -417,6 +417,42 @@ ok('a rotated layer answers with the box the eye sees, and its turn with the fil
   const g = of(F({ w: 500, h: 500, children: [{ name: 'Art', type: 'RECTANGLE', x: 10, y: 20, w: 100, h: 40, sizing: 'FIXED/FIXED', rotation: 180, fillRotation: 180, visual: { x: 60, y: 70, w: 40, h: 100 } }] }), P, 'Art', { Art: '.a' });
   return g.width === '40px' && g.height === '100px' && g['-x'] === 60 && g.rotate === 360 && KINDS.rotation.compare(360, 'none');
 })());
+ok('a # layer\'s data: the box that hugs it and the layer it pushes along the run are reported as data when they differ, and judged as design when they agree', (() => {
+  const list = { name: '#Job list', type: 'FRAME', x: 0, y: 0, w: 400, h: 300, sizing: 'FILL/HUG', layout: 'VERTICAL', children: [{ name: 'Row', type: 'FRAME', x: 0, y: 0, w: 400, h: 20, sizing: 'FILL/HUG', layout: 'VERTICAL', children: [{ name: 'Words', type: 'FRAME', x: 0, y: 0, w: 400, h: 20, sizing: 'FILL/FIXED' }] }] };
+  const button = { name: 'Button', type: 'FRAME', x: 150, y: 324, w: 100, h: 40, sizing: 'FIXED/FIXED' };
+  // Column is not mapped and the page lays it out by hand, so the button's place in Column's run is read against the page
+  const tree = F({ w: 400, h: 600, layout: 'NONE', children: [{ name: 'Column', type: 'FRAME', x: 0, y: 0, w: 400, h: 364, sizing: 'FIXED/HUG', layout: 'VERTICAL', children: [list, button] }] });
+  const d = docs(tree, { 'Column > #Job list': '.l', 'Column > #Job list > Row': '.r', 'Column > Button': '.b' }, P);
+  const a = (layer, prop) => d.find((x) => x.layer === layer).assertions.find((x) => x.prop === prop);
+  // a box inside the # layer that hugs is the data's own; one inside that holds nothing is not
+  const marked = !!a('Column > #Job list > Row', 'height').data && !a('Column > #Job list > Row', 'width').data
+    && !!a('Column > #Job list', 'height').data && !a('Column > #Job list', 'width').data
+    && !!a('Column > Button', '-y').data && !a('Column > Button', '-x').data && !a('Column > Button', 'height').data;
+  const rows = diff(d, { $root: { self: 0, left: 0, top: 0 }, 'Column > #Job list': { self: 2, left: 0, top: 0, height: '436px', width: '400px' }, 'Column > Button': { self: 3, left: 150, top: 460, height: '40px', width: '100px' } }, { tolerances: { position: 4 } });
+  const row = (layer, prop) => rows.find((r) => r.layer === layer && r.prop === prop);
+  return marked && row('Column > #Job list', 'height').kind === 'waived' && row('Column > #Job list', 'height').data === true
+    && row('Column > Button', '-y').kind === 'waived' && row('Column > Button', '-x').kind === 'match' && row('Column > Button', 'height').kind === 'match';
+})());
+ok('a layer in a run that is not packed from the start moves with any data in it, and a null-mapped layer between does not stop the walk', (() => {
+  const title = { name: '#Title', type: 'TEXT', x: 0, y: 0, w: 120, h: 20, sizing: 'HUG/HUG' };
+  const toggle = { name: 'Toggle', type: 'FRAME', x: 300, y: 0, w: 40, h: 20, sizing: 'FIXED/FIXED' };
+  const header = { name: 'Header', type: 'FRAME', x: 0, y: 0, w: 340, h: 20, sizing: 'FIXED/HUG', layout: 'HORIZONTAL', align: 'SPACE_BETWEEN/CENTER', children: [title, toggle] };
+  const tree = F({ w: 400, h: 400, layout: 'NONE', children: [{ name: 'Column', type: 'FRAME', x: 0, y: 0, w: 340, h: 20, sizing: 'FIXED/HUG', layout: 'NONE', children: [header] }] });
+  const d = docs(tree, { Column: null, 'Column > Header > Toggle': '.t' }, P);
+  const a = (prop) => d.find((x) => x.layer === 'Column > Header > Toggle').assertions.find((x) => x.prop === prop);
+  return !!a('-x').data && !a('-y').data;
+})());
+ok('inside a # layer a hugging sibling pushes the next one; a layer\'s own data moves it in a centred run; a fixed layer that holds data pushes nothing', (() => {
+  const minus = (tree, map, layer, prop) => d0(tree, map).find((x) => x.layer === layer).assertions.find((x) => x.prop === prop);
+  const d0 = (tree, map) => docs(tree, map, P);
+  const words = { name: 'Words', type: 'FRAME', x: 0, y: 0, w: 300, h: 20, sizing: 'FILL/FIXED' };
+  const sections = { name: '#Sections', type: 'FRAME', x: 0, y: 0, w: 300, h: 60, sizing: 'FIXED/HUG', layout: 'VERTICAL', children: [{ name: 'A', type: 'FRAME', x: 0, y: 0, w: 300, h: 20, sizing: 'FILL/HUG', layout: 'VERTICAL', children: [words] }, { name: 'B', type: 'FRAME', x: 0, y: 20, w: 300, h: 40, sizing: 'FIXED/FIXED' }] };
+  const inside = !!minus(F({ w: 400, h: 400, layout: 'NONE', children: [sections] }), { '#Sections > B': '.b' }, '#Sections > B', '-y').data;
+  const header = (title, align) => F({ w: 400, h: 400, layout: 'NONE', children: [{ name: 'Header', type: 'FRAME', x: 0, y: 0, w: 340, h: 20, sizing: 'FIXED/HUG', layout: 'HORIZONTAL', align, children: [title, { name: 'Toggle', type: 'FRAME', x: 300, y: 0, w: 40, h: 20, sizing: 'FIXED/FIXED' }] }] });
+  const own = !!minus(header({ name: '#Title', type: 'TEXT', x: 100, y: 0, w: 120, h: 20, sizing: 'HUG/HUG' }, 'CENTER/CENTER'), { 'Header > #Title': '.t' }, 'Header > #Title', '-x').data;
+  const fixed = !minus(header({ name: '#Title', type: 'TEXT', x: 0, y: 0, w: 120, h: 20, sizing: 'FIXED/FIXED' }, 'SPACE_BETWEEN/CENTER'), { 'Header > Toggle': '.t' }, 'Header > Toggle', '-x').data;
+  return inside && own && fixed;
+})());
 ok('a mirrored layer asserts its mirror, not a turn: a horizontal one is -flip x and no rotate', (() => {
   const g = of(F({ w: 500, h: 500, children: [{ name: 'Art', type: 'INSTANCE', x: 0, y: 0, w: 72, h: 72, sizing: 'FIXED/FIXED', flip: 'x' }] }), P, 'Art', { Art: '.a' });
   return g['-flip'] === 'x' && g.rotate === undefined;

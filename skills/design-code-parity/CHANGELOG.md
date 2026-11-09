@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.67.0 (2026-11-09): a layer named `#…` holds data; the size that hugs it and the place it pushes are reported as data, not judged. `props.skip` takes `Component.Prop`. Case T101.
 - 1.66.0 (2026-11-05): waivers may be `fix: 'toolkit'`, and a reason naming a toolkit fix is refused under figma or code; a mirror is recorded as `flip` and compared with `-flip`. Case T100.
 - 1.65.1 (2026-11-04): alignment read off the boxes is `filled` where the room cannot tell start from centre (under a pixel each side, under 2px for a text leaf); a 120% label in a fixed-height control read flex-start against CENTER. Engine fix with its probe test.
 - 1.65.0 (2026-11-01): the engine proposes the screen map, `tools/parity/propose.mjs` (print, or `--write` what the map lacks), for layers gate 8 counts unmapped; merged as the run reads the map, a based `layers` entry refused; a project's proposer becomes a wrapper. Case T99.

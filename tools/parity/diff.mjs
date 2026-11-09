@@ -94,6 +94,8 @@ export function diff(docs, measured, { waivers = {}, tolerances = {} } = {}) {
       /* A hugged size the text slack excuses by a pixel or more is not a
          match: it is the slack doing a waiver's work, so it is reported as
          one, with the slack it used (adapt.mjs SLACK_CAP), and read. */
+      // a value that follows a # layer's data is reported as such when it differs, never judged
+      if (a.data && !same) { rows.push({ layer: doc.layer, prop: a.prop, kind: 'waived', expected: show(a.expected), actual: show(actual), reason: a.data, data: true }); continue; }
       const off = a.kind === 'hugLength' ? Math.abs(parseFloat(a.expected) - parseFloat(actual)) : 0;
       if (same && off >= 1) { rows.push({ layer: doc.layer, prop: a.prop, kind: 'waived', expected: a.expected, actual, reason: `within the text slack of ${a.within}`, slack: +off.toFixed(4), within: a.within }); continue; }
       judge(doc, a.prop, same, show(a.expected), show(actual), a.from, a.hint, !same && K.off ? K.off(a.expected, actual) : undefined);

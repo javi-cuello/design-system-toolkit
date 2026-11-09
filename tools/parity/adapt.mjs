@@ -118,6 +118,42 @@ function textBoxes(n, axis) {
    own allowance, measured across the projects, not a value a project
    answers: it stays in code, and a project that needs more takes a waiver. */
 export const SLACK_CAP = 3;
+
+/* A layer whose name starts with "#" holds data: the sample the frame shows
+   is one day's, and the page shows whatever the data is (the convention the
+   Google Sheets Sync plugin reads, so designers know it). What follows from
+   it is judged as data rather than design, and reported, never dropped:
+   the size of a box that hugs data on that axis, and the place of a layer
+   the data pushes along its parent's run. On the reference project ~250
+   waivers said "content-driven" one frame at a time (2026-11-09). */
+export const isData = (n) => /^#/.test(String(n.name || ''));
+const holdsData = (n) => isData(n) || inFlow(n).some(holdsData);
+export const DATA = 'follows the data a # layer holds';
+// the size on one axis follows data: the box hugs on it and holds data, or
+// sits inside a # layer, whose insides are the data's own (a brief's sections)
+export const dataSized = (n, axis, ancestors = []) => sizingOn(n, axis) === 'HUG' && (holdsData(n) || ancestors.some(isData));
+/* the place on one axis follows data: in the run of some layer between it
+   and its nearest mapped ancestor, a layer before it is sized by data along
+   that run, or the run is not packed from the start and a layer in it, the
+   node itself included, is sized by data along it. `between` is the node,
+   then each unmapped ancestor, innermost first, each with its parent and the
+   parent's own ancestors, so a layer inside a # layer counts as data. */
+export function dataPlaced(between, axis) {
+  const run = axis === 'x' ? 'HORIZONTAL' : 'VERTICAL';
+  const dim = axis === 'x' ? 'w' : 'h';
+  return between.some(([n, p, above = []]) => {
+    if (!p || n.absolute === true) return false;
+    const along = p.layout === run || (p.wrap === true);
+    if (!along) return false;
+    const sized = (c) => dataSized(c, dim, above);
+    const kids = inFlow(p);
+    const before = kids.slice(0, Math.max(0, kids.indexOf(n)));
+    if (before.some(sized)) return true;
+    const primary = String(p.align || '/').split('/')[0];
+    const packed = !primary || primary === 'MIN';
+    return !packed && kids.some(sized);
+  });
+}
 export function sizeSlack(n, axis, chain) {
   const s = sizingOn(n, axis);
   if (s === 'FIXED') return 0;
@@ -329,8 +365,9 @@ export function assertionsFor(at, ctx) {
        text-align) or a sibling placed after it (asserted on that sibling).
        It is the one width with nothing to observe. */
     const unseen = node.type === 'TEXT' && hSizing === 'FILL' && (!node.textAlign || node.textAlign === 'LEFT' || node.textAlign === 'JUSTIFIED');
-    if (!unseen) add(hSizing === 'FIXED' ? 'length' : 'hugLength', 'width', `${box.w}px`, node.sizing, hSizing === 'FIXED' ? undefined : { within: sizeSlack(node, 'w', ancestors) });
-    add(vSizing === 'FIXED' ? 'length' : 'hugLength', 'height', `${box.h}px`, node.sizing, vSizing === 'FIXED' ? undefined : { within: sizeSlack(node, 'h', ancestors) });
+    const data = (axis) => (dataSized(node, axis, ancestors) ? { data: DATA } : null);
+    if (!unseen) add(hSizing === 'FIXED' ? 'length' : 'hugLength', 'width', `${box.w}px`, node.sizing, hSizing === 'FIXED' ? undefined : { within: sizeSlack(node, 'w', ancestors), ...data('w') });
+    add(vSizing === 'FIXED' ? 'length' : 'hugLength', 'height', `${box.h}px`, node.sizing, vSizing === 'FIXED' ? undefined : { within: sizeSlack(node, 'h', ancestors), ...data('h') });
   }
   // min/max are CSS properties of their own (A7: never `width == minWidth`).
   // A token that names the canvas a frame was drawn in (`parity.canvas`) is
@@ -649,8 +686,17 @@ export function assertionsFor(at, ctx) {
       acc = { x: acc.x + (pb.x || 0), y: acc.y + (pb.y || 0) };
     }
     if (chain.length) {
-      add('position', '-x', box.x, 'x', { chain, absolute: !!node.absolute });
-      add('position', '-y', box.y, 'y', { chain, absolute: !!node.absolute });
+      // the node and each unmapped layer up to the nearest mapped one, with its parent
+      const between = [];
+      for (let k = ancestors.length - 1, n = node; k >= 0; k--) {
+        between.push([n, ancestors[k], ancestors.slice(0, k + 1)]);
+        // the run stops at the first ancestor the read measures against: a
+        // layer mapped to null measures nothing, so the walk goes through it
+        if ((ctx.mappedNodes || new Set()).has(ancestors[k])) break;
+        n = ancestors[k];
+      }
+      add('position', '-x', box.x, 'x', { chain, absolute: !!node.absolute, ...(dataPlaced(between, 'x') ? { data: DATA } : null) });
+      add('position', '-y', box.y, 'y', { chain, absolute: !!node.absolute, ...(dataPlaced(between, 'y') ? { data: DATA } : null) });
     }
   }
   // a mirror, carried apart from the turn: recorded as a 180° turn, a mirrored
