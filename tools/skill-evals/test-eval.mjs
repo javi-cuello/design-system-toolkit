@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -17,7 +17,20 @@ ok('a task is pinned by its own commit, else the config\'s, else HEAD; only a ha
   && pinOf({}, {}) === 'HEAD'
   && taskProblems({ id: 'notes', grade: 'validate', commit: 'abc1234', prompt: 'Add a notes page for a signed-in person.' }).length === 0
   && taskProblems({ id: 'notes', grade: 'validate', commit: 'main; rm -rf /', prompt: 'Add a notes page for a signed-in person.' }).length === 1
-  && COMMIT.test('0123456789abcdef0123456789abcdef01234567') && !COMMIT.test('HEAD~1'));
+  && COMMIT.test('0123456789abcdef0123456789abcdef01234567') && !COMMIT.test('HEAD~1')
+  && sameCommit('1fa2825da11', '1fa2825da') && sameCommit('1fa2825da', '1fa2825da11') && !sameCommit('1fa2825da', '1fa2825db') && !sameCommit(null, '1fa2825'));
+{
+  const run = (o) => ({ task: 'tag', agent: true, turns: 9, rules: 'on', rulesFired: true, ...o });
+  const lines = [run({ commit: 'aaaaaaa1', score: 1 }), run({ commit: 'bbbbbbb', pinned: true, score: 0.5 }), run({ commit: 'ccccccc', score: 0.2 })];
+  ok('a pinned run is compared with a pinned line at the same commit, however long its short hash; an unpinned run never with a pinned one',
+    baselineOf(lines, run({ commit: 'bbbbbbb2', pinned: true })).score === 0.5
+    && baselineOf(lines, run({ commit: 'ddddddd', pinned: true })) === undefined
+    && baselineOf(lines, run({ commit: 'eeeeeee' })).score === 0.2
+    && compare(undefined, run({ commit: 'ddddddd', pinned: true })) === 'first run of this task at ddddddd');
+  ok('a pin whose config moved in what the grade reads is named; one that moved elsewhere is not',
+    configDrift({ paths: { screens: 'a' }, check: { validate: { system: 's' } }, evals: { commit: 'x' } }, { paths: { screens: 'a' }, check: { validate: { system: 's' } } }).length === 0
+    && configDrift({ paths: { screens: 'b' }, check: { validate: { system: 's' } } }, { paths: { screens: 'a' }, check: { validate: { system: 't' } } }).join() === 'paths,check.validate');
+}
 
 ok('a screen task may name its chrome; a page built outside it is a finding, one that imports it (alias or relative) is not',
   taskProblems({ id: 'notes', grade: 'validate', chrome: ['screens/shell/app-shell'], prompt: 'Add a notes page for a signed-in person.' }).length === 0

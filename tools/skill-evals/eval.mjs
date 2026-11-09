@@ -58,6 +58,26 @@ export function taskProblems(t) {
    reaches a shell. */
 export const COMMIT = /^[0-9a-f]{7,40}$/;
 export const pinOf = (E, t) => (t && t.commit) || (E && E.commit) || 'HEAD';
+// two recorded short hashes name one commit when one begins the other: git lengthens its abbreviation as a repo grows
+export const sameCommit = (a, b) => !!a && !!b && (a.startsWith(b) || b.startsWith(a));
+
+/* The line a run is compared with: the last clean one of the same task under
+   the same settings, pinned only with pinned at the same commit, unpinned only
+   with unpinned, so a moved score is never the project's doing passed off as
+   the toolkit's. */
+export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task === r.task && l.agent === r.agent && (!r.agent || comparable(l))
+  && (l.rules || 'off') === (r.rules || 'off') && (l.brief || null) === (r.brief || null) && (l.context || null) === (r.context || null)
+  && !!l.pinned === !!r.pinned && (!r.pinned || sameCommit(l.commit, r.commit)));
+
+/* What a pin's tree would grade differently from today: the runner reads paths,
+   parity and check.validate from today's config, the copy's gates from the
+   pin's, so a pin whose config moved in those is refused rather than graded
+   against the wrong files. */
+export const GRADING_KEYS = ['paths', 'parity', 'check.validate'];
+export function configDrift(now, then) {
+  const at = (c, k) => JSON.stringify(k.split('.').reduce((o, p) => (o == null ? o : o[p]), c) ?? null);
+  return GRADING_KEYS.filter((k) => at(now, k) !== at(then, k));
+}
 
 /* A screen built outside the product's shell, or around a shell it wrote
    itself: none of what the agent wrote imports a module the task names as the
@@ -114,7 +134,7 @@ export function score({ parity, styleFindings, exits = {} }) {
 
 /* A line for the results log, and what changed since the task's last line. */
 export function compare(previous, current) {
-  if (!previous) return 'first run of this task';
+  if (!previous) return current && current.pinned ? `first run of this task at ${current.commit}` : 'first run of this task';
   const d = (k, unit = '') => { const a = previous[k], b = current[k]; return a === undefined || b === undefined ? null : `${k} ${a}${unit} → ${b}${unit}`; };
   return [d('score'), d('turns'), d('costUsd', ' USD')].filter(Boolean).join(', ');
 }

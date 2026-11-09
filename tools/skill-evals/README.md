@@ -38,7 +38,7 @@ In `evals` of its `snapshot.config.json`:
 
 ## Pinned runs
 
-A project moves between runs, so an unpinned score that moved may be the project's doing, not the skill's. A pinned task's copy is that commit's tree, its line records `commit` and `pinned: true`, and it is compared only with a line at the same commit: a toolkit change is then the only thing that differs. A pin that is not a hash, or not a commit in the repo, is refused before any copy is made. What still comes from today: the task list and the rest of `evals` (read from the working tree), what `link` links, and for a screen task the built docs site it is graded against and the context document's rulings; a pin holds the project's code, not its system.
+A project moves between runs, so an unpinned score that moved may be the project's doing, not the skill's. A pinned task's copy is that commit's tree, its line records `commit` (short) and `pinned: true`, and it is compared only with a pinned line at the same commit (an unpinned run only with an unpinned one, `baselineOf`): a toolkit change is then the only thing that differs, and a pinned task's first run says so ("first run of this task at …"). A pin that is not a hash, not exactly one commit in the repo, or whose `snapshot.config.json` differs from today's in `paths`, `parity` or `check.validate` (the runner grades by today's, the copy's gates by the pin's: `configDrift`) is refused before any copy is made. What still comes from today: the task list and the rest of `evals` (read from the working tree), what `link` links, and for a screen task the built docs site it is graded against and the context document's rulings; a pin holds the project's code, not its system.
 
 ## What the agent can still run
 

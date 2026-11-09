@@ -48,7 +48,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift } from './eval.mjs';
 import { CODE, unwaived } from '../system-mcp/validate.mjs';
 import { serveFolder } from '../system-mcp/serve-folder.mjs';
 import { realPath } from '../shared/real-path.mjs';
@@ -84,7 +84,12 @@ if (!tasks.length) { console.log(`evals: no task "${only}" — the tasks are ${E
 if (E.commit != null && !COMMIT.test(E.commit)) { console.log('evals: `evals.commit` is the commit the copies are made from, as a hash'); process.exit(1); }
 for (const t of tasks) {
   const pin = pinOf(E, t);
-  if (pin !== 'HEAD' && spawnSync('git', ['-C', REPO, 'rev-parse', '--verify', '--quiet', `${pin}^{commit}`], { stdio: 'ignore' }).status !== 0) { console.log(`evals: task ${t.id}: commit ${pin} is not in ${REPO}`); process.exit(1); }
+  if (pin === 'HEAD') continue;
+  if (spawnSync('git', ['-C', REPO, 'rev-parse', '--verify', '--quiet', `${pin}^{commit}`], { stdio: 'ignore' }).status !== 0) { console.log(`evals: task ${t.id}: commit ${pin} is not one commit in ${REPO} (missing, or too short to be only one)`); process.exit(1); }
+  const shown = spawnSync('git', ['-C', REPO, 'show', `${pin}:snapshot.config.json`], { encoding: 'utf8' });
+  let then = null; try { then = JSON.parse(shown.stdout); } catch { /* none at the pin */ }
+  const drift = then ? configDrift(config, then) : ['snapshot.config.json'];
+  if (drift.length) { console.log(`evals: task ${t.id}: at ${pin} the config's ${drift.join(', ')} differ from today's, and the grade reads today's: pin a later commit`); process.exit(1); }
 }
 // a screen task is graded against the system, and an agent given the context reads the site: refused before any copy is made or money spent when there is none to read
 const V = (config.check && config.check.validate) || {};
@@ -290,7 +295,7 @@ for (const t of tasks) {
 
   const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-  const last = [...lines].reverse().find((l) => l.task === t.id && l.agent === record.agent && (!record.agent || comparable(l)) && (l.rules || 'off') === (record.rules || 'off') && (l.brief || null) === (record.brief || null) && (l.context || null) === (record.context || null) && (!record.pinned || l.commit === record.commit));
+  const last = baselineOf(lines, record);
   if (record.agent) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.appendFileSync(file, JSON.stringify(record) + '\n'); }
   if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
   console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);

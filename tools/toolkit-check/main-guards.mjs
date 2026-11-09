@@ -32,9 +32,13 @@ export function unresolved(text) {
     .map(([, n]) => n);
 }
 // the guards that resolve argv[1] outside a try, so importing the module from a process whose argv[1] is no file throws
+// (each argv call must be the one the try returns, and the try's null must not go into a call that throws on it)
+const CALL = /realpathSync(?:\.native)?\(\s*process\.argv\[1\]/g;
+const HELD = /try\s*\{\s*return\s+[^;}]*?realpathSync(?:\.native)?\(\s*process\.argv\[1\]/g;
+const FED = /[\w.]+\(\s*\(\(\)\s*=>\s*\{\s*try\s*\{\s*return\s+[^;}]*?realpathSync(?:\.native)?\(\s*process\.argv\[1\]/;
 export function throwing(text) {
   return text.split('\n').map((line, i) => [line, i + 1])
-    .filter(([l]) => /realpathSync(?:\.native)?\(\s*process\.argv\[1\]/.test(l) && !/\btry\s*\{\s*return\b[^}]*realpathSync/.test(l) && !/console\./.test(l))
+    .filter(([l]) => (l.match(CALL) || []).length > (l.match(HELD) || []).length || FED.test(l))
     .map(([, n]) => n);
 }
 

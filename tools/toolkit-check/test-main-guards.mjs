@@ -17,4 +17,10 @@ ok('a realpathSync of argv[1] outside a try is found; one inside a try is not',
 ok('spaced, .native and ?? forms are found, and a try elsewhere on the line does not excuse one',
   throwing("if (realpathSync( process.argv[1] ) === x) {").length === 1 && throwing("if (realpathSync.native(process.argv[1]) === x) {").length === 1
   && throwing("if (realpathSync(process.argv[1] ?? '') === x) {").length === 1 && throwing("try { a() } catch {} if (realpathSync(process.argv[1]) === x) {").length === 1);
+ok('a one-line guard that logs is still read; a try around another realpath does not excuse the argv one; the null fed to a call is found',
+  throwing("if (realpathSync(process.argv[1]) === x) main().catch((e) => { console.error(e.message); });").length === 1
+  && throwing("(() => { try { return realpathSync(fileURLToPath(import.meta.url)); } catch { return null; } })() === realpathSync(process.argv[1])").length === 1
+  && throwing("const me = pathToFileURL((() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()).href;").length === 1
+  && throwing("if (x === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) main().catch((e) => console.error(e));").length === 0
+  && throwing("if (u === (() => { try { return pathToFileURL(fs.realpathSync(process.argv[1])).href; } catch { return null; } })()) {").length === 0);
 console.log(`${n}/${n} passed`);
