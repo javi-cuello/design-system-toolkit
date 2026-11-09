@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -230,4 +230,18 @@ ok('a screen agent that wrote into the system, or did not exit cleanly, is never
   && validateScore([], null, { system: ['src/design-system/x.tsx'] }).score === 0
   && /^wrote no code; agent exited error_max_turns$/.test(validateScore([], null, { agentExit: 'error_max_turns' }).why));
 
+{
+  const run = (o) => ({ task: 'tag', agent: true, turns: 9, rules: 'off', score: 1, green: true, ...o });
+  const s3 = summarise([run(), run({ score: 0.5, green: false }), run({ score: 0, green: false, why: 'contaminated: read the repo' })]);
+  ok('trials: a void trial is counted, never scored; the rate is of the scored; pass^k needs every trial clean and green',
+    s3.trials === 3 && s3.scored === 2 && s3.void === 1 && s3.mean === 0.75 && s3.passRate === 0.5 && s3.passAll === false
+    && summarise([run(), run()]).passAll === true && summarise([run({ turns: null })]).mean === null);
+  const sum = (o) => ({ task: 'tag', agent: true, summary: true, rules: 'off', trials: 3, mean: 0.5, passRate: 0.33, passAll: false, ...o });
+  const lines = [run({ score: 0.2 }), sum({ trials: 5, mean: 0.9 }), sum({ mean: 0.6 })];
+  ok('a summary is compared only with a summary of as many trials, a single run only with a single run',
+    baselineOf(lines, sum({})).mean === 0.6 && baselineOf(lines, sum({ trials: 5 })).mean === 0.9 && baselineOf(lines, sum({ trials: 4 })) === undefined
+    && baselineOf(lines, run({})).score === 0.2
+    && compareSummary(sum({ mean: 0.6 }), sum({ mean: 0.8, passRate: 0.67 })) === 'mean 0.6 → 0.8, passRate 0.33 → 0.67'
+    && compareSummary(undefined, sum({})) === 'first 3-trial run of this task');
+}
 console.log(`${n}/${n} passed`);

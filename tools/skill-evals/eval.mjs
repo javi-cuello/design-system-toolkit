@@ -65,9 +65,29 @@ export const sameCommit = (a, b) => !!a && !!b && (a.startsWith(b) || b.startsWi
    the same settings, pinned only with pinned at the same commit, unpinned only
    with unpinned, so a moved score is never the project's doing passed off as
    the toolkit's. */
-export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task === r.task && l.agent === r.agent && (!r.agent || comparable(l))
+export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task === r.task && l.agent === r.agent && !!l.summary === !!r.summary
+  && (r.summary ? l.trials === r.trials : (!r.agent || comparable(l)))
   && (l.rules || 'off') === (r.rules || 'off') && (l.brief || null) === (r.brief || null) && (l.context || null) === (r.context || null)
   && !!l.pinned === !!r.pinned && (!r.pinned || sameCommit(l.commit, r.commit)));
+
+/* Several trials of one task, as one line: an agent is not deterministic, so
+   one run is a sample of one. A void trial (contaminated, inputs changed, the
+   grader silent: not comparable) is counted, never scored. `mean` is over the
+   scored trials; `passRate` the share of them green; `passAll` (pass^k) true
+   only when every trial ran clean and went green (Anthropic, *Demystifying
+   evals for AI agents*). Null when nothing could be scored. */
+export function summarise(runs) {
+  const scored = runs.filter((r) => comparable(r));
+  const round = (n) => Math.round(n * 1000) / 1000;
+  return { trials: runs.length, scored: scored.length, void: runs.length - scored.length, scores: runs.map((r) => r.score),
+    mean: scored.length ? round(scored.reduce((a, r) => a + r.score, 0) / scored.length) : null,
+    passRate: scored.length ? round(scored.filter((r) => r.green).length / scored.length) : null,
+    passAll: scored.length === runs.length && runs.every((r) => r.green) };
+}
+export function compareSummary(previous, current) {
+  if (!previous) return current.pinned ? `first ${current.trials}-trial run of this task at ${current.commit}` : `first ${current.trials}-trial run of this task`;
+  return [['mean', ''], ['passRate', '']].map(([k]) => `${k} ${previous[k]} → ${current[k]}`).concat(previous.passAll !== current.passAll ? [`pass^k ${previous.passAll} → ${current.passAll}`] : []).join(', ');
+}
 
 /* What a pin's tree would grade differently from today: the runner reads paths,
    parity and check.validate from today's config, the copy's gates from the

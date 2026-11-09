@@ -48,7 +48,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary } from './eval.mjs';
 import { CODE, unwaived } from '../system-mcp/validate.mjs';
 import { serveFolder } from '../system-mcp/serve-folder.mjs';
 import { realPath } from '../shared/real-path.mjs';
@@ -73,6 +73,10 @@ if (BRIEF && !['snapshot', 'contract'].includes(BRIEF)) { console.log('evals: --
 const CONTEXT_ASKED = opt('--context');
 const CONTEXT = CONTEXT_ASKED || 'on';
 if (!['on', 'off'].includes(CONTEXT)) { console.log('evals: --context is on or off'); process.exit(2); }
+// several trials of each task, and a line that summarises them: one run of a non-deterministic agent is a sample of one
+const TRIALS = Number(opt('--trials') || 1);
+if (!Number.isInteger(TRIALS) || TRIALS < 1) { console.log('evals: --trials is a whole number, 1 or more'); process.exit(2); }
+if (TRIALS > 1 && NO_AGENT) { console.log('evals: --trials repeats the agent; --no-agent grades the copy once'); process.exit(2); }
 const only = argv[0] || null;
 const config = createRequire(import.meta.url)('../shared/repo-config.cjs').repoConfig(REPO, 'evals');
 const E = config.evals;
@@ -131,6 +135,8 @@ const spawnAsync = (cmd, args, { timeout, ...o }) => new Promise((done) => {
 const sh = (cmd, cwd, env = {}) => spawnSync(cmd, { cwd, shell: true, encoding: 'utf8', maxBuffer: 1 << 28, env: { ...process.env, ...env } });
 
 for (const t of tasks) {
+  const runs = [];
+  for (let trial = 1; trial <= TRIALS; trial++) {
   // the copy is the pinned commit's tree (HEAD unpinned) with no history: an agent that can run git show
   // has the answer one command away (the first run tried exactly that)
   const pin = pinOf(E, t);
@@ -294,10 +300,23 @@ for (const t of tasks) {
     if (!KEEP) fs.rmSync(copy, { recursive: true, force: true });
   }
 
+  if (TRIALS > 1) Object.assign(record, { trial, of: TRIALS });
+  runs.push(record);
   const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
   const last = baselineOf(lines, record);
   if (record.agent) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.appendFileSync(file, JSON.stringify(record) + '\n'); }
   if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
   console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
+  }
+  if (TRIALS > 1) {
+    const r0 = runs[0];
+    const sum = { at: new Date().toISOString(), task: t.id, agent: true, summary: true, ...(r0.grade ? { grade: r0.grade } : {}), commit: r0.commit, pinned: r0.pinned, toolkit: TOOLKIT_COMMIT,
+      rules: r0.rules, context: r0.context, brief: r0.brief ?? null, ...summarise(runs), costUsd: Math.round(runs.reduce((a, r) => a + (r.costUsd || 0), 0) * 100) / 100 };
+    const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
+    const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+    const last = baselineOf(lines.slice(0, -TRIALS), sum);
+    fs.appendFileSync(file, JSON.stringify(sum) + '\n');
+    console.log(`${t.id}: ${TRIALS} trials — mean ${sum.mean ?? '-'}, green in ${Math.round((sum.passRate ?? 0) * sum.scored)} of ${sum.scored} scored${sum.void ? `, ${sum.void} void` : ''}, pass^${TRIALS} ${sum.passAll ? 'yes' : 'no'}; ${sum.costUsd} USD; ${compareSummary(last, sum)}`);
+  }
 }

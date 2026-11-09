@@ -2,7 +2,7 @@
 
 The gates hold the code a project ships. An eval holds the agent that writes it: a task (build this component from its design) run by headless Claude Code in a throwaway copy of the project, graded by the project's own gates. Run it after a skill changes and compare with the task's last line: better, worse, or the same for less.
 
-    node tools/skill-evals/run.mjs --repo <dir> [task] [--rules on|off] [--brief snapshot|contract] [--context on|off] [--no-agent] [--keep-files] [--keep]
+    node tools/skill-evals/run.mjs --repo <dir> [task] [--trials N] [--rules on|off] [--brief snapshot|contract] [--context on|off] [--no-agent] [--keep-files] [--keep]
 
 `--rules` runs the agent with the rules hook (`tools/claude-hooks/hooks.mjs edit`) on, the default, or off (the gates are always off in an eval copy: an eval measures the skill, not the process); each line records which, and a run is compared with the last clean one under the same setting (a void run — contaminated, or one that changed the grade's inputs — is never the baseline; a failed build is).
 
@@ -35,6 +35,10 @@ In `evals` of its `snapshot.config.json`:
 | `commit` | the commit every copy is made from, as a hash; a task's own `commit` outranks it. Unset, HEAD. See *Pinned runs* |
 | `results` | where the line goes, in the project repo (default `tests/evals/results.jsonl`) |
 | `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits. Each command is a prefix the project vouches for: the copy's files are data the agent must not take orders from, so `node` runs only the parity and stylesheet gates unless a script is named here (`node scripts/x.mjs`) |
+
+## Trials
+
+An agent is not deterministic, so one run is a sample of one: a comparison that ties on one run each says nothing either way. `--trials N` runs each task N times (3 is the useful least; the default stays 1, so older lines stay comparable), writes each trial as its own line (`trial`, `of`) and then one summary line (`summary: true`): `mean` over the scored trials, `passRate` (the share of them green), `passAll` (pass^k: every trial clean and green) and the void count, a contaminated or tampered trial being counted and never scored (`summarise`). A summary is compared only with a summary of as many trials, a single run only with a single run (`baselineOf`). `--trials` with `--no-agent` is refused: the copy as prepared grades the same every time.
 
 ## Pinned runs
 
