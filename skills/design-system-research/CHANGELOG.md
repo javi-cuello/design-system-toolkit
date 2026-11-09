@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 2.15.1 (2026-11-09): the voice file says plainly that dropping "you" gives up part of the measured personalization effect, Google's rule is scoped to developer docs, and the grep also catches yours and yourself.
 - 2.15.0 (2026-11-09): a guide never uses the second person: it talks about the problem and the people in it ("a team", "the designer"), not to the reader; a grep for you/your joins the self-reference checks. Case A23; A18 amended.
 - 2.14.0 (2026-11-05): advice names the place and the steps; no packed openers; a run of prose past about 300 words with no figure is the cue to draw one. Case A22.
 - 2.13.0 (2026-11-04): short paragraphs, one idea each, rarely past 70 words, and parallel items as a list; each inline svg carries its own block spacing for any Markdown viewer; a word in another script sits at a clause's end, not mid-sentence. Case A21.
