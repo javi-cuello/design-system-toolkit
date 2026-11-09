@@ -86,9 +86,10 @@ for (const t of tasks) {
   const pin = pinOf(E, t);
   if (pin === 'HEAD') continue;
   if (spawnSync('git', ['-C', REPO, 'rev-parse', '--verify', '--quiet', `${pin}^{commit}`], { stdio: 'ignore' }).status !== 0) { console.log(`evals: task ${t.id}: commit ${pin} is not one commit in ${REPO} (missing, or too short to be only one)`); process.exit(1); }
-  const shown = spawnSync('git', ['-C', REPO, 'show', `${pin}:snapshot.config.json`], { encoding: 'utf8' });
+  const shown = spawnSync('git', ['-C', REPO, 'show', `${pin}:./snapshot.config.json`], { encoding: 'utf8' });
   let then = null; try { then = JSON.parse(shown.stdout); } catch { /* none at the pin */ }
-  const drift = then ? configDrift(config, then) : ['snapshot.config.json'];
+  if (!then) { console.log(`evals: task ${t.id}: ${pin} has no readable snapshot.config.json here: pin a later commit`); process.exit(1); }
+  const drift = configDrift(config, then);
   if (drift.length) { console.log(`evals: task ${t.id}: at ${pin} the config's ${drift.join(', ')} differ from today's, and the grade reads today's: pin a later commit`); process.exit(1); }
 }
 // a screen task is graded against the system, and an agent given the context reads the site: refused before any copy is made or money spent when there is none to read

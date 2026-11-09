@@ -75,7 +75,9 @@ export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task 
    against the wrong files. */
 export const GRADING_KEYS = ['paths', 'parity', 'check.validate'];
 export function configDrift(now, then) {
-  const at = (c, k) => JSON.stringify(k.split('.').reduce((o, p) => (o == null ? o : o[p]), c) ?? null);
+  // key order is no drift: objects are compared with their keys sorted
+  const sorted = (v) => (Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v);
+  const at = (c, k) => JSON.stringify(sorted(k.split('.').reduce((o, p) => (o == null ? o : o[p]), c) ?? null));
   return GRADING_KEYS.filter((k) => at(now, k) !== at(then, k));
 }
 

@@ -30,6 +30,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel } from './layers.mjs';
@@ -433,7 +434,7 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
 
 /* ── the command ─────────────────────────────────────────────────────── */
 
-const isMain = (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === new URL(import.meta.url).pathname);
+const isMain = (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url));
 if (isMain) {
   const args = process.argv.slice(2);
   const flag = (k) => { const i = args.indexOf(`--${k}`); return i < 0 ? null : args.splice(i, 2)[1]; };

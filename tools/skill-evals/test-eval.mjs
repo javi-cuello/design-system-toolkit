@@ -29,7 +29,9 @@ ok('a task is pinned by its own commit, else the config\'s, else HEAD; only a ha
     && compare(undefined, run({ commit: 'ddddddd', pinned: true })) === 'first run of this task at ddddddd');
   ok('a pin whose config moved in what the grade reads is named; one that moved elsewhere is not',
     configDrift({ paths: { screens: 'a' }, check: { validate: { system: 's' } }, evals: { commit: 'x' } }, { paths: { screens: 'a' }, check: { validate: { system: 's' } } }).length === 0
-    && configDrift({ paths: { screens: 'b' }, check: { validate: { system: 's' } } }, { paths: { screens: 'a' }, check: { validate: { system: 't' } } }).join() === 'paths,check.validate');
+    && configDrift({ paths: { screens: 'b' }, check: { validate: { system: 's' } } }, { paths: { screens: 'a' }, check: { validate: { system: 't' } } }).join() === 'paths,check.validate'
+    && configDrift({ paths: { screens: 'a', tokens: 't' } }, { paths: { tokens: 't', screens: 'a' } }).length === 0
+    && configDrift({ paths: { x: ['a', 'b'] } }, { paths: { x: ['b', 'a'] } }).join() === 'paths');
 }
 
 ok('a screen task may name its chrome; a page built outside it is a finding, one that imports it (alias or relative) is not',
