@@ -5,7 +5,8 @@
 import { changes, componentPages, fileName } from './snapshot.js';
 import { base } from './format.js';
 import { displayName } from '../../../shared/names.js';
-import store from '../../../snapshot/store.cjs';
+import { toolkitRequire } from './project.js';
+const store = toolkitRequire('tools/snapshot/store.cjs');
 
 const { GRADE_RULES } = store;
 const byFolder = new Map(componentPages.flatMap((p) => p.components.map((c) => [c.folder, p])));

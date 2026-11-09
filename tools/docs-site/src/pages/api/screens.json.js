@@ -7,9 +7,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { project } from '../../lib/project.js';
-import repoConfig from '../../../../shared/repo-config.cjs';
-import storeTool from '../../../../snapshot/store.cjs';
-import recipes from '../../../../snapshot/recipes.cjs';
+import { toolkitRequire } from '../../lib/project.js';
+const repoConfig = toolkitRequire('tools/shared/repo-config.cjs');
+const storeTool = toolkitRequire('tools/snapshot/store.cjs');
+const recipes = toolkitRequire('tools/snapshot/recipes.cjs');
 import { json } from './_shared.js';
 
 export function GET() {

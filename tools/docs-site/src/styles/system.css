@@ -258,7 +258,7 @@
   /* a modal's title one step over its body, so it reads as the title */
   .modal__head h2 { margin: 0; font-size: var(--text-lg); line-height: var(--leading-lg); }
   .modal__body { flex: 1 1 auto; overflow: auto; padding: var(--space-16); }
-  .modal__body > * + * { margin-block-start: var(--space-12); }
+  .modal__body > * + :not(dialog) { margin-block-start: var(--space-12); }
   .modal__foot { display: flex; justify-content: flex-end; gap: var(--space-8); border-block-start: var(--stroke-1) solid var(--line); }
   /* One badge for the whole site: severity, a change's level, a status
      stamp, the record's freshness, counts and labels were each their own

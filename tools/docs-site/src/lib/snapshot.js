@@ -2,13 +2,13 @@
 // knows a token or component name: groups come from the paths in the file.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { layout, project, shows, status, guidance, contract, spec as specModule, codeTargets, frameworks, statesOf, tokens, ours, TOOLKIT, localCollections, pageMarker } from './project.js';
+import { layout, project, shows, status, guidance, contract, spec as specModule, codeTargets, frameworks, statesOf, tokens, ours, TOOLKIT, toolkitRequire, localCollections, pageMarker } from './project.js';
 // What code builds differently from the drawing is the component-validator
 // skill's to say: the page renders its engine's output, never its own rules.
 import { validate, translations, fromSnapshot } from '../../../component-validator/validate.mjs';
 // The store's own reader for what a component is built from.
-import graph from '../../../snapshot/graph.cjs';
-import storeTool from '../../../snapshot/store.cjs';
+const graph = toolkitRequire('tools/snapshot/graph.cjs');
+const storeTool = toolkitRequire('tools/snapshot/store.cjs');
 import { partName, mainSet } from './format.js';
 import { variantValues } from '../../../shared/names.js';
 // A component's props come from its contract, read as the properties-table skill reads it.

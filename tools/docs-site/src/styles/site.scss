@@ -406,7 +406,7 @@ $xxl: 90rem;
         margin: 0;
         padding: var(--space-48) var(--space-24) 0 var(--space-24);
       }
-      .page-body > .page-nav:first-child + * { margin-block-start: 0; }
+      .page-body > .page-nav:first-child + :not(dialog) { margin-block-start: 0; }
       // A long list (one entry per component) scrolls on its own, as the
       // sidebar does; pinned without it, the end ran off the screen.
       .page-nav > details {
@@ -1474,7 +1474,7 @@ $xxl: 90rem;
     // A report page's section (AI readiness): its line, then its table.
     .report-section > * + :not(dialog) { margin-block-start: var(--space-24); }
     // A heading sits with the text it introduces, as a .section's does.
-    .report-section > h2 + * { margin-block-start: var(--space-16); }
+    .report-section > h2 + :not(dialog) { margin-block-start: var(--space-16); }
     .page-body > .report-section + .report-section { --flow: var(--space-56); }
     // A section holding one long table reads as the page, not as a box on it.
     .panel--plain { padding: 0; border: 0; border-radius: 0; background: none; }

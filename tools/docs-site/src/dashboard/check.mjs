@@ -330,5 +330,23 @@ for (const v of reads) if (!defined.has(v)) fail.push(`var(${v}) is read with no
   }
 }
 
+// A rule that spaces whatever follows (`> * + *`, `> :not(:first-child)`) skips <dialog>: a modal is
+// centred by margin: auto, and one such rule, later in the same layer, gave the icon dialog a 24px top
+// margin and pinned it to the top of the screen.
+const topLevel = (list) => { const out = [""]; let depth = 0; for (const c of list) { depth += c === "(" ? 1 : c === ")" ? -1 : 0; if (c === "," && !depth) out.push(""); else out[out.length - 1] += c; } return out.map((x) => x.trim()); };
+for (const [file, text] of [["system.css", system], ["site.scss", site]]) {
+  const bare = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  for (const m of bare.matchAll(/([^{};]+)\{/g)) {
+    // its own declarations only, up to a nested block or its end, so a nested rule is read as its own
+    const body = bare.slice(m.index + m[0].length).split(/[{}]/)[0];
+    if (!/(^|[;\s])margin[-a-z]*\s*:/.test(body)) continue;
+    for (const sel of topLevel(m[1])) {
+      let depth = 0, i = sel.length; while (i-- > 0) { const c = sel[i]; depth += c === ")" ? 1 : c === "(" ? -1 : 0; if (!depth && /[>+~\s]/.test(c)) break; } const subject = sel.slice(i + 1);
+      // a subject that names nothing it must be: `*`, `:not(…)`, `:nth-child(…)`, `:first-child`; `:is(.x)` names a class
+      if (/^\*?(:(?!is\(|where\(|has\()[-a-z]+(\((?:[^()]|\([^()]*\))*\))?)*$/.test(subject) && subject && !/:not\((?:[^()]*,\s*)?dialog\s*[,)]/.test(subject)) fail.push(`${file}: "${sel}" sets a margin on whatever follows, a <dialog> too — add dialog to its :not()`);
+    }
+  }
+}
+
 if (fail.length) { for (const f of fail) console.error("FAIL  " + f); process.exit(1); }
 console.log(`pass — dashboard: ${moduleFiles.length} modules, every name and import resolves, ${ids.size} ids`);

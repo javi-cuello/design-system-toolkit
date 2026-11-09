@@ -22,7 +22,10 @@ const findToolkit = (from) => {
 };
 export const TOOLKIT = findToolkit(process.cwd());
 
-const tool = (name) => require(join(TOOLKIT, 'tools/snapshot', name));
+// A toolkit CommonJS module, by its path from the toolkit root: a path relative to the importing file
+// breaks once the build bundles it, and an imported .cjs runs as ESM in the dev server.
+export const toolkitRequire = (path) => require(join(TOOLKIT, path));
+const tool = (name) => toolkitRequire(join('tools/snapshot', name));
 export const contract = tool('projects.cjs');
 export const guidance = tool('guidance.cjs');
 export const spec = tool('spec.cjs');

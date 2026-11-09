@@ -17,7 +17,8 @@ import Time from './Time.astro';
 import { day } from '../lib/format.js';
 import { cap } from '../lib/changes.js';
 import { displayName } from '../../../shared/names.js';
-import store from '../../../snapshot/store.cjs';
+import { toolkitRequire } from '../lib/project.js';
+const store = toolkitRequire('tools/snapshot/store.cjs');
 
 const { GRADE_RULES } = store;
 const { folders, id } = Astro.props;
