@@ -48,8 +48,16 @@ export function taskProblems(t) {
   if (!t.prompt || t.prompt.trim().split(/\s+/).length < 5) out.push('prompt: what the agent is asked, in a sentence');
   // the shell a screen must be built inside: the research's "is anything in the chrome new?" (knowledge/code/agent-prototyping.md)
   if (t.chrome != null && (!screen || !Array.isArray(t.chrome) || !t.chrome.length || !t.chrome.every((m) => typeof m === 'string' && m))) out.push('chrome: a screen task\'s list of the modules its shell comes from');
+  if (t.commit != null && !COMMIT.test(t.commit)) out.push('commit: the commit the copy is made from, as a hash');
   return out;
 }
+
+/* The commit a task's copy is made from: its own `commit`, else the config's
+   `evals.commit`, else HEAD. A pinned copy holds the project still, so a score
+   that moves is the skill's doing, not the project's. A hash only, since it
+   reaches a shell. */
+export const COMMIT = /^[0-9a-f]{7,40}$/;
+export const pinOf = (E, t) => (t && t.commit) || (E && E.commit) || 'HEAD';
 
 /* A screen built outside the product's shell, or around a shell it wrote
    itself: none of what the agent wrote imports a module the task names as the

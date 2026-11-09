@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -10,6 +10,14 @@ import path from 'node:path';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
+
+ok('a task is pinned by its own commit, else the config\'s, else HEAD; only a hash is accepted',
+  pinOf({ commit: 'abc1234' }, { commit: 'def5678' }) === 'def5678'
+  && pinOf({ commit: 'abc1234' }, {}) === 'abc1234'
+  && pinOf({}, {}) === 'HEAD'
+  && taskProblems({ id: 'notes', grade: 'validate', commit: 'abc1234', prompt: 'Add a notes page for a signed-in person.' }).length === 0
+  && taskProblems({ id: 'notes', grade: 'validate', commit: 'main; rm -rf /', prompt: 'Add a notes page for a signed-in person.' }).length === 1
+  && COMMIT.test('0123456789abcdef0123456789abcdef01234567') && !COMMIT.test('HEAD~1'));
 
 ok('a screen task may name its chrome; a page built outside it is a finding, one that imports it (alias or relative) is not',
   taskProblems({ id: 'notes', grade: 'validate', chrome: ['screens/shell/app-shell'], prompt: 'Add a notes page for a signed-in person.' }).length === 0

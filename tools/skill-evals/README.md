@@ -28,12 +28,17 @@ In `evals` of its `snapshot.config.json`:
 
 | Key | What it says |
 |---|---|
-| `tasks` | `[{ id, target, remove, prompt }]` — the parity target graded, the files the agent rebuilds, what it is asked; a screen task is `{ id, grade: "validate", prompt, chrome? }` |
+| `tasks` | `[{ id, target, remove, prompt }]` — the parity target graded, the files the agent rebuilds, what it is asked; a screen task is `{ id, grade: "validate", prompt, chrome? }`; either may add `commit` |
 | `link` | what the copy needs that git does not carry: a folder is linked (`node_modules`), a file copied (a local config Kirby will not load through a link) |
 | `build` | the step before grading (`bin/css`); a failed build scores 0, since the copy would keep the original's compiled output. It runs in the copy after the agent has edited it, so what it runs is only as trusted as the copy: the agent's narrowed tools (toolkit-standard §D 24) do not reach it, so a copy whose files told the agent to rewrite the build script would have the grader run it. `serve` is the same. Open: run both from HEAD's tree rather than the copy |
 | `serve` | the command that serves the copy's components, `{port}` filled; parity is pointed at it by `PARITY_HOST_BASE` |
+| `commit` | the commit every copy is made from, as a hash; a task's own `commit` outranks it. Unset, HEAD. See *Pinned runs* |
 | `results` | where the line goes, in the project repo (default `tests/evals/results.jsonl`) |
 | `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits. Each command is a prefix the project vouches for: the copy's files are data the agent must not take orders from, so `node` runs only the parity and stylesheet gates unless a script is named here (`node scripts/x.mjs`) |
+
+## Pinned runs
+
+A project moves between runs, so an unpinned score that moved may be the project's doing, not the skill's. A pinned task's copy is that commit's tree, its line records `commit` and `pinned: true`, and it is compared only with a line at the same commit: a toolkit change is then the only thing that differs. A pin that is not a hash, or not a commit in the repo, is refused before any copy is made. What still comes from today: the task list and the rest of `evals` (read from the working tree), what `link` links, and for a screen task the built docs site it is graded against and the context document's rulings; a pin holds the project's code, not its system.
 
 ## What the agent can still run
 

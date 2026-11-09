@@ -7,7 +7,8 @@
  *   node tools/skill-evals/run.mjs --repo <dir> [task id] [--rules on|off] [--brief snapshot|contract] [--context on|off] [--no-agent] [--keep-files] [--keep]
  *
  * For each task in `evals.tasks` of the project's snapshot.config.json:
- *   1. a throwaway copy of HEAD's tree with no history (git archive), its dependencies
+ *   1. a throwaway copy of HEAD's tree, or the commit the task is pinned to (`commit`,
+ *      `evals.commit`), with no history (git archive), its dependencies
  *      linked (`evals.link`), the task's files removed (`remove`);
  *   2. Claude Code, headless, in that copy, given the task's prompt — editing
  *      allowed, node only for the two gates (eval.mjs agentTools), pushing refused;
@@ -47,7 +48,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT } from './eval.mjs';
 import { CODE, unwaived } from '../system-mcp/validate.mjs';
 import { serveFolder } from '../system-mcp/serve-folder.mjs';
 import { realPath } from '../shared/real-path.mjs';
@@ -79,6 +80,12 @@ if (!E || !Array.isArray(E.tasks) || !E.tasks.length) { console.log('evals: no `
 for (const t of E.tasks) { const p = taskProblems(t); if (p.length) { console.log(`evals: task ${t.id || '?'}: ${p.join('; ')}`); process.exit(1); } }
 const tasks = E.tasks.filter((t) => !only || t.id === only);
 if (!tasks.length) { console.log(`evals: no task "${only}" — the tasks are ${E.tasks.map((t) => t.id).join(', ')}`); process.exit(1); }
+// a pinned copy: refused before any copy is made when the pin is not a hash, or not a commit this repo has
+if (E.commit != null && !COMMIT.test(E.commit)) { console.log('evals: `evals.commit` is the commit the copies are made from, as a hash'); process.exit(1); }
+for (const t of tasks) {
+  const pin = pinOf(E, t);
+  if (pin !== 'HEAD' && spawnSync('git', ['-C', REPO, 'rev-parse', '--verify', '--quiet', `${pin}^{commit}`], { stdio: 'ignore' }).status !== 0) { console.log(`evals: task ${t.id}: commit ${pin} is not in ${REPO}`); process.exit(1); }
+}
 // a screen task is graded against the system, and an agent given the context reads the site: refused before any copy is made or money spent when there is none to read
 const V = (config.check && config.check.validate) || {};
 const PROJECTS = createRequire(import.meta.url)('../snapshot/projects.cjs');
@@ -118,10 +125,12 @@ const spawnAsync = (cmd, args, { timeout, ...o }) => new Promise((done) => {
 const sh = (cmd, cwd, env = {}) => spawnSync(cmd, { cwd, shell: true, encoding: 'utf8', maxBuffer: 1 << 28, env: { ...process.env, ...env } });
 
 for (const t of tasks) {
-  // the copy is HEAD's tree with no history: an agent that can run git show
+  // the copy is the pinned commit's tree (HEAD unpinned) with no history: an agent that can run git show
   // has the answer one command away (the first run tried exactly that)
+  const pin = pinOf(E, t);
+  const commit = execFileSync('git', ['-C', REPO, 'rev-parse', '--short', `${pin}^{commit}`], { encoding: 'utf8' }).trim();
   const copy = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), `eval-${t.id}-`)));
-  execFileSync('sh', ['-c', `git -C "${REPO}" archive HEAD | tar -x -C "${copy}"`]);
+  execFileSync('sh', ['-c', `git -C "${REPO}" archive ${commit} | tar -x -C "${copy}"`]);
   const t0 = Date.now();
   let server = null, record, site = null;
   const screen = t.grade === 'validate';
@@ -247,7 +256,7 @@ for (const t of tasks) {
       if (chrome) findings = [...findings, chrome];
       const s = vo || validateScore(written, findings, { system: inSystem, agentExit: NO_AGENT ? 0 : agent.exit });
       if (graderSaid) s.why = s.why.replace('validate did not report', `validate did not report (${graderSaid})`);
-      record = { at: new Date().toISOString(), task: t.id, grade: 'validate', commit: execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), toolkit: TOOLKIT_COMMIT,
+      record = { at: new Date().toISOString(), task: t.id, grade: 'validate', commit, pinned: pin !== 'HEAD', toolkit: TOOLKIT_COMMIT,
         agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, context: NO_AGENT ? null : CONTEXT, askedSystem: agent.askedSystem ?? null, ...s,
         // each finding as validate printed it: a count says the agent missed, this says what (the first baseline could not tell)
         written: written.length, inSystem: inSystem.length, findings: findings ? findings.length : null, found: findings ? findings.slice(0, 40).map((f) => `${f.file}:${f.line} ${f.kind}: ${f.found}`) : null, kinds: findings ? Object.fromEntries([...new Set(findings.map((f) => f.kind))].map((k) => [k, findings.filter((f) => f.kind === k).length])) : null,
@@ -269,7 +278,7 @@ for (const t of tasks) {
     const findings = vo ? null : styleCount(st.stdout, st.status);
     const parity = parseParity(p.stdout);
     const s = vo || (built.status === 0 ? score({ parity, styleFindings: findings, exits: { ...(NO_AGENT ? {} : { agent: agent.exit }), parity: p.status ?? p.signal, styles: st.status ?? st.signal } }) : { score: 0, green: false, why: `the build failed: ${((built.stderr || built.stdout || '').trim().split('\n').pop() || '').slice(0, 120)}` });
-    record = { at: new Date().toISOString(), task: t.id, commit: execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), toolkit: TOOLKIT_COMMIT,
+    record = { at: new Date().toISOString(), task: t.id, commit, pinned: pin !== 'HEAD', toolkit: TOOLKIT_COMMIT,
       agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, brief: NO_AGENT ? null : BRIEF || null, context: NO_AGENT ? null : contextOf(t), askedSystem: agent.askedSystem ?? null, opened: agent.opened ?? null, ...s, matched: parity?.matched ?? 0, waived: parity?.waived ?? 0, didNot: parity?.didNot ?? 0, styleFindings: findings,
       turns: agent.turns, costUsd: agent.costUsd, minutes: Math.round((Date.now() - t0) / 6000) / 10, note: agent.result };
     }
@@ -281,7 +290,7 @@ for (const t of tasks) {
 
   const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-  const last = [...lines].reverse().find((l) => l.task === t.id && l.agent === record.agent && (!record.agent || comparable(l)) && (l.rules || 'off') === (record.rules || 'off') && (l.brief || null) === (record.brief || null) && (l.context || null) === (record.context || null));
+  const last = [...lines].reverse().find((l) => l.task === t.id && l.agent === record.agent && (!record.agent || comparable(l)) && (l.rules || 'off') === (record.rules || 'off') && (l.brief || null) === (record.brief || null) && (l.context || null) === (record.context || null) && (!record.pinned || l.commit === record.commit));
   if (record.agent) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.appendFileSync(file, JSON.stringify(record) + '\n'); }
   if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
   console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
