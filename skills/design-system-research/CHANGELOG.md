@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 2.15.0 (2026-11-09): a guide never uses the second person: it talks about the problem and the people in it ("a team", "the designer"), not to the reader; a grep for you/your joins the self-reference checks. Case A23; A18 amended.
 - 2.14.0 (2026-11-05): advice names the place and the steps; no packed openers; a run of prose past about 300 words with no figure is the cue to draw one. Case A22.
 - 2.13.0 (2026-11-04): short paragraphs, one idea each, rarely past 70 words, and parallel items as a list; each inline svg carries its own block spacing for any Markdown viewer; a word in another script sits at a clause's end, not mid-sentence. Case A21.
 - 2.12.0 (2026-11-04): never make the reader wait for the point: a claim is explained where it is made, and a cross-reference adds detail rather than standing in for it. Case A20.

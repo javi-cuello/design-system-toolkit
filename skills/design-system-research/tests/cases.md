@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.14.0)
+# Eval cases — design-system-research (v2.15.0)
+
+**Walked: 2026-11-09 for 2.15.0** — A23 added and traced to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep. A18 amended: its "addressed as you" assertion reversed to no second person. A19 read against it: its "flagged for the developer" example now reads "For the developer". A1–A17 and A20–A22 read and unchanged: none asserts on person. Reader check: pending the next deep-mode guide.
 
 **Walked: 2026-11-05 against v2.14.0** — A22 added and traced. Its three failures were observed on the right-to-left guide and fixed there: the §9 opener, the digits advice, and §5 and §7 without figures. A1–A21 unchanged.
 
@@ -173,9 +175,9 @@ Observed: 2026-11-02 — the collection had grown to 26 pieces at its root, five
 Traced: 2026-11-02 for 2.9.0 — to SKILL.md "A deep-mode guide is an article, not a store."
 
 ## A18 · The guide teaches; it does not report
-Fixture: a deep-mode guide that passes A1–A17. It opens with a paragraph on when and how it was researched; its sections begin with a bold **The short answer.** label; a paragraph explaining auto layout also reports that a forum thread was re-read in November with six replies; it never addresses the reader; and a section moves through five plugins and three systems with no example tying them together.
-Assert: the delivered file opens by telling the reader their situation and what they will be able to do, with the research history moved to `What to re-check later`. The reader is addressed as "you". Each section is carried by one running example it returns to, and each further example is introduced by what it shows. With every source-status clause removed, the body paragraphs say the same thing, because those clauses already live at the end. No `**The short answer.**` or `**What to do.**` labels remain; the opening paragraph answers and the closing paragraph advises, with its key sentence in bold.
-Negative: a guide that adds "you" but keeps the provenance opening, or a section that lists systems and plugins one after another without a running example.
+Fixture: a deep-mode guide that passes A1–A17. It opens with a paragraph on when and how it was researched; its sections begin with a bold **The short answer.** label; a paragraph explaining auto layout also reports that a forum thread was re-read in November with six replies; and a section moves through five plugins and three systems with no example tying them together.
+Assert: the delivered file opens by telling the reader their situation and what they will be able to do, with the research history moved to `What to re-check later`. The reader is never addressed as "you" (amended 2026-11-09, 2.15.0; see A23). Each section is carried by one running example it returns to, and each further example is introduced by what it shows. With every source-status clause removed, the body paragraphs say the same thing, because those clauses already live at the end. No `**The short answer.**` or `**What to do.**` labels remain; the opening paragraph answers and the closing paragraph advises, with its key sentence in bold.
+Negative: a guide that keeps the provenance opening, or a section that lists systems and plugins one after another without a running example.
 Observed: 2026-11-04 — the person on the right-to-left guide: "it looks like a report and summary", "a stream of examples, not a reading piece".
 Traced: 2026-11-04 for 2.10.0 — to `references/deep-mode-voice.md` *Write it as a lesson, not a report* and its structure block, and SKILL.md's checklist line.
 
@@ -206,3 +208,10 @@ Assert: the opener becomes a plain answer in a sentence or two, then the reader'
 Negative: a vague step left because it's correct in principle; a dense opener kept as a "summary".
 Observed: 2026-11-04 — the person: "mark where, how? often advice is very vague", "this is the super compact report style that i don't like", and "we shouldn't have sections this long without images".
 Traced: 2026-11-05 for 2.14.0 — to `references/deep-mode-voice.md` *Advice names the place and the steps*, *No packed openers* and *Show what is visual*.
+
+## A23 · The guide never uses the second person
+Fixture: a deep-mode guide written under the voice file, on a topic where the obvious phrasing is "your library" or "if you mirror an icon".
+Assert: `grep -niE "\byou\b|\byour\b"` over the body, ignoring quoted speech and URLs, returns nothing; the guide talks about the problem and the people in it ("a team building this", "the designer"), with imperatives only in the advice.
+Negative: "you" or "your" in the guide's own sentences, or the second person traded for a narrator "I" or "we".
+Observed: 2026-11-09 — the person's rule is no second person in guides; the voice file asked for "you", so every run produced the break and it was fixed by hand.
+Traced: 2026-11-09 for 2.15.0 — to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep.
