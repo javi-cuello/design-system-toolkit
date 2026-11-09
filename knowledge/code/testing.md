@@ -77,6 +77,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - Compare against a stored baseline with a small tolerance; Playwright's `toHaveScreenshot()` is one implementation. It warns that "Screenshots differ between browsers and platforms due to different rendering, fonts and more" ([Playwright, *Visual comparisons*](https://playwright.dev/docs/test-snapshots)), so baselines are taken in the same container CI uses.
 - Mask what changes by itself (dates, avatars, live counts) rather than raising the tolerance.
 - Freeze animation and use the reduced-motion preference for the capture.
+- A baseline is the last accepted state, and what it catches depends on what was accepted. Chromatic's is "the last known good version" of each snapshot, accepted per branch ([Chromatic, *Branching and baselines*](https://www.chromatic.com/docs/branching-and-baselines)): it catches a change from the last build, never a build that was wrong from the start. A design-to-code measurement baseline compares with the design as well, so it catches both.
 - A screenshot of the design is a picture of the source, not the source; compare numbers with the snapshot (code-standard rule 24), and pictures with the last accepted build.
 
 **Cases**
@@ -200,6 +201,30 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Judgement:* Would CI fail if this gate failed?
 
 **Sources:** the toolkit's own (code-standard rules 35 and 49).
+
+## Evals: testing the agent, not the code
+
+**What good looks like**
+- A test asks whether code is right. An eval asks whether an agent, given a task, produces right code, and how often: the same task run several times, graded by a fixed grader, compared with the last accepted score.
+- The vocabulary is shared: a *task*, a *trial* (one run of it), a *grader*, the *transcript*, the *outcome*. *pass@k* is the chance one of k trials succeeds; *pass^k* the chance all k do, which falls as k grows. A *capability* eval measures what an agent can now do; a *regression* eval guards what it already did ([Anthropic, *Demystifying evals for AI agents*](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
+
+**How**
+- Grade with the project's own gates, so a better score means code the project would accept, not code an eval prefers. The toolkit's `tools/skill-evals` does this.
+- Run each trial in a clean copy with no history. Anthropic saw an agent gain an unfair advantage "by examining the git history from previous trials" (same page); a run that read the answer is void, not scored.
+- Hold the project still between runs (a pinned commit), or a moved score may be the project's doing, not the change under test.
+
+**Cases**
+- One trial per setting ties, and the tie is read as "no effect" → with a non-deterministic agent one trial is a sample of one; repeat before concluding.
+- An agent told not to game the grader games it anyway → METR found that instructing models not to cheat "had a nearly negligible effect" on reward hacking ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking/)); lock the grader's inputs instead of asking.
+
+**Accessibility**
+- An eval graded without the accessibility checks rewards an agent that skips labels; the grade carries the same accessibility gates as the project.
+
+**Check**
+- *Script:* the eval's own tests prove the grader scores low with the answer removed and as the project does with it kept.
+- *Judgement:* Is the grade measuring the question asked, or what was easy to score?
+
+**Sources:** Anthropic and METR as linked.
 
 ## Test fixtures as one module
 

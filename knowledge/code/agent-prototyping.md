@@ -39,6 +39,7 @@ How a coding agent builds a prototype from the design system's real components i
 - Storybook's docs give a snippet for the project's `AGENTS.md`/`CLAUDE.md`. It tells the agent to list the documented components and check their props before writing, and to run `test-run` after: "Never hallucinate component properties!" (same page).
 - A system with its own server serves the same closed set. Atlassian's `@atlaskit/ads-mcp` has `ads_plan`, `ads_search_components` and `ads_search_tokens`, plus axe-based accessibility tools ([README](https://cdn.jsdelivr.net/npm/@atlaskit/ads-mcp/README.md)). Primer's `@primer/mcp` has `list_components`, `get_component`, `find_tokens` "by intent or value" and `lint_css` ([Primer MCP](https://primer.style/product/getting-started/foundations/mcp)). Carbon has a hosted server ([Carbon MCP](https://carbondesignsystem.com/developing/carbon-mcp/overview/)). The toolkit's own is `tools/system-mcp`, which reads a project's docs site.
 - A small system can skip the server: a generated manifest file the agent reads does the same job.
+- Two formats aim to make the contract itself portable, not served. The Design System Doc Spec is a JSON Schema for documentation, draft 0.23.1, whose guidance can be marked `for: agent` ([schema](https://designsystemdocspec.org/schema), [repository](https://github.com/somerandomdude/design-system-documentation-schema)). Spectacular captures component specs from Figma into a published schema ([Spectacular](https://spectacular.systems/)). Both describe what the system is; neither checks what an agent wrote, so the check below is still needed.
 
 **Cases**
 - An agent pointed at the whole repository rebuilds a component that already exists, or copies an old pattern because it appears more often than the new one. Give it the manifest or the server, not the source tree. This is Vallaure's warning. The toolkit found no controlled study of agents copying the majority pattern. Fluent writes the instruction into its `AGENTS.md`: "Never copy patterns from existing code without verifying they match these instructions" ([Fluent AGENTS.md](https://github.com/microsoft/fluentui/blob/master/AGENTS.md)).
@@ -115,6 +116,7 @@ How a coding agent builds a prototype from the design system's real components i
 
 **Cases**
 - A prototype route is added to an app that deploys `main` straight to production. Merging it ships it. Keep prototypes as stories or on an unmerged branch.
+- A review step written only in a skill's prose is a request, not a gate. Salesforce's `design-systems-slds-validate` skill pairs its linter with a "required manual review gate" that nothing enforces: the agent decides whether to run it ([skill](https://github.com/forcedotcom/sf-skills/blob/main/skills/design-systems-slds-validate/SKILL.md)). A step that must happen is a check that fails, or a hook that refuses.
 - The prototype was green on every check and still did the wrong thing for the ticket. An optional AI review that reads the change against the ticket helps, but a person still decides.
 
 **Accessibility**
