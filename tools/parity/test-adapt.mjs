@@ -429,6 +429,11 @@ ok('an instance prop is an attribute, off ones included; text, State, Disabled a
     && a.find((x) => x.prop === '-attr:menu').expected.mode === 'off-only' && read('-attr:scroll', { attrs: { scroll: '' } }) === 'set'
     && read('-swap:icon-swap', { children: [{ tag: 'icon', icon: 'house' }] }) === 'house' && typeof read('-swap:icon-swap', { children: [] }) === 'symbol';
 })());
+ok('a skip scoped as Component.Prop silences that component\'s prop alone', (() => {
+  const Q = { parity: { props: { skip: ['_p.Position'] } } };
+  const attrs = (instanceOf) => doc(F({ children: [{ name: 'N', type: 'INSTANCE', instanceOf, w: 10, h: 10, sizing: 'HUG/HUG', props: { Position: 'First' } }] }), 'N', { N: '.n' }, Q).assertions.filter((x) => x.prop.startsWith('-attr')).map((x) => x.prop).join();
+  return attrs('_Text components/_p / Space above=0') === '' && attrs('Tooltip / Top') === '-attr:position';
+})());
 // the attribute is to-code's (tools/shared/prop-attr.mjs): where to-code writes the sheets, by their naming; else the words
 ok('an instance prop\'s attribute is the one to-code styles by where it writes the sheets, and the prop\'s words where markup is hand-written', (() => {
   const inst = { name: 'Nav', type: 'INSTANCE', instanceOf: 'Button / lg', w: 10, h: 10, sizing: 'HUG/HUG', props: { Size: 'Large', Tone: 'Info', showIcon: 'True', Role: 'Primary' } };

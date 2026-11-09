@@ -681,7 +681,12 @@ export function assertionsFor(at, ctx) {
         if (P.swap) add('swap', `-swap:${kebab(key)}`, glyph, key, { tag: P.swap, drawn });
         continue;
       }
-      if (propType(node, key) === 'TEXT' || (P.skip || []).includes(key)) continue;
+      /* `skip` names a prop everywhere, or one component's prop as
+         `Component.Prop`: a prose page's private text components (_p, _h2)
+         say through props what the code says through structure, and a bare
+         "Text" or "Position" would also silence any other component's */
+      const set = String(node.instanceOf || '').split(' / ')[0].split('/').pop();
+      if (propType(node, key) === 'TEXT' || (P.skip || []).some((s) => s === key || s === `${set}.${key}`)) continue;
       // the attribute to-code styles the prop by, where it writes the project's sheets (prop-attr.mjs), else the prop's words
       const attr = (P.rename || {})[key] || propAttr(key, ctx.attrNaming || null);
       if (typeof value === 'boolean') { if (!value) add('attr', `-attr:${attr}`, { mode: 'off-only', want: 'unset' }, key); }
