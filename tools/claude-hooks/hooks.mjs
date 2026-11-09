@@ -38,6 +38,7 @@ const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.
 // the toolkit as a message names it: where this checkout is, never a folder assumed (~ for the home folder)
 const SHOWN = TOOLKIT.startsWith(os.homedir() + path.sep) ? '~' + TOOLKIT.slice(os.homedir().length) : TOOLKIT;
 const mode = process.argv[2];
+const STARTED = Date.now();
 let payload = {};
 try { payload = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
 
@@ -122,8 +123,9 @@ if (mode === 'prompt') {
    folder, so they run before the folder test. */
 if (mode === 'stop') {
   // the system's checker over the code this session wrote and left uncommitted, before the gates, so a gated
-  // turn is checked too; each finding blocks once (its key kept per session), and a check that fails never blocks
-  if (!payload.stop_hook_active && process.env.TOOLKIT_VALIDATE !== 'off') {
+  // turn is checked too, and on a stop that follows a block, so a fix is read; each finding blocks once (its key
+  // kept per session, which is what ends the loop), and a check that fails never blocks
+  if (process.env.TOOLKIT_VALIDATE !== 'off') {
     let found = null;
     const seenFile = path.join(os.tmpdir(), `toolkit-validate-${payload.session_id || 'none'}`);
     try {
@@ -131,8 +133,9 @@ if (mode === 'stop') {
       const { validateTurn } = await import('./validate-turn.mjs');
       const seen = new Set(fs.existsSync(seenFile) ? fs.readFileSync(seenFile, 'utf8').split('\n').filter(Boolean) : []);
       found = validateTurn(await ownFiles(payload.transcript_path), { seen });
+      // the kept keys are what end the loop: a block whose keys could not be kept is not made
       if (found) fs.appendFileSync(seenFile, found.keys.join('\n') + '\n');
-    } catch { /* the push gate still reads the same files */ }
+    } catch { found = null; /* the push gate still reads the same files */ }
     if (found) { console.log(JSON.stringify({ decision: 'block', reason: found.reason })); process.exit(0); }
   }
   const { stopGate } = await import('./gates.mjs');
@@ -141,7 +144,9 @@ if (mode === 'stop') {
 }
 
 if (!inEcosystem(payload.cwd || process.cwd())) process.exit(0);
-const r = spawnSync('node', [path.join(TOOLKIT, 'tools/toolkit-check/closing.mjs'), '--brief'], { encoding: 'utf8', timeout: 20000 });
+// a stop that follows a block keeps nothing the closing pass finds (below), so it is not run inside the hook's 30 s
+if (mode === 'stop' && payload.stop_hook_active) process.exit(0);
+const r = spawnSync('node', [path.join(TOOLKIT, 'tools/toolkit-check/closing.mjs'), '--brief'], { encoding: 'utf8', timeout: Math.max(1000, Math.min(20000, 28000 - (Date.now() - STARTED))) });
 // a closing pass that failed or ran out of time has said nothing, which is not "nothing open"
 const items = r.status === 0 ? (r.stdout || '').trim() : `the closing pass did not finish (${r.error ? r.error.message : `exit ${r.status}`}): run bin/closing and read it`;
 const open = items && !/^nothing the script can see is open$/.test(items);

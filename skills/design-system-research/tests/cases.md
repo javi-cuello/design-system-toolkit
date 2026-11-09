@@ -1,6 +1,6 @@
-# Eval cases — design-system-research (v2.15.1)
+# Eval cases — design-system-research (v2.15.2)
 
-**Walked: 2026-11-09 for 2.15.1** — the voice file's evidence and the grep only: A23 re-read, its grep widened to yours/yourself and run over this collection's newest guide, clean; nothing else asserts on either. Before that, **Walked: 2026-11-09 for 2.15.0** — A23 added and traced to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep. A18 amended: its "addressed as you" assertion reversed to no second person. A19 read against it, unchanged; the voice file's "flagged for the developer" example now reads "For the developer". A1–A17 and A20–A22 read and unchanged: none asserts on person. Reader check: pending the next deep-mode guide.
+**Walked: 2026-11-09 for 2.15.2** — the checklist line and A23 only: "three register checks" counted against the three greps the line holds; A23's Negative and Traced lines read against the voice file and the 2.15.1 grep. No other case asserts on either. Before that, **Walked: 2026-11-09 for 2.15.1** — the voice file's evidence and the grep only: A23 re-read, its grep widened to yours/yourself and run over this collection's newest guide, clean; nothing else asserts on either. Before that, **Walked: 2026-11-09 for 2.15.0** — A23 added and traced to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep. A18 amended: its "addressed as you" assertion reversed to no second person. A19 read against it, unchanged; the voice file's "flagged for the developer" example now reads "For the developer". A1–A17 and A20–A22 read and unchanged: none asserts on person. Reader check: pending the next deep-mode guide.
 
 **Walked: 2026-11-05 against v2.14.0** — A22 added and traced. Its three failures were observed on the right-to-left guide and fixed there: the §9 opener, the digits advice, and §5 and §7 without figures. A1–A21 unchanged.
 
@@ -212,6 +212,6 @@ Traced: 2026-11-05 for 2.14.0 — to `references/deep-mode-voice.md` *Advice nam
 ## A23 · The guide never uses the second person
 Fixture: a deep-mode guide written under the voice file, on a topic where the obvious phrasing is "your library" or "if you mirror an icon".
 Assert: `grep -niE "\byou(r|rs|rself|rselves)?\b"` over the body, ignoring quoted speech and URLs, returns nothing; the guide talks about the problem and the people in it ("a team building this", "the designer"), with imperatives only in the advice.
-Negative: "you" or "your" in the guide's own sentences, or the second person traded for a narrator "I" or "we".
+Negative: "you", "your", "yours" or "yourself" in the guide's own sentences, or the second person traded for a narrator "I" or "we".
 Observed: 2026-11-09 — the person's rule is no second person in guides; the voice file asked for "you", so every run produced the break and it was fixed by hand.
-Traced: 2026-11-09 for 2.15.0 — to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep.
+Traced: 2026-11-09 for 2.15.1 — to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep.

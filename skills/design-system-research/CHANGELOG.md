@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 2.15.2 (2026-11-09): the checklist counts its register checks right (three, with the second-person grep); case A23 asserts the widened grep and traces to 2.15.1.
 - 2.15.1 (2026-11-09): the voice file says plainly that dropping "you" gives up part of the measured personalization effect, Google's rule is scoped to developer docs, and the grep also catches yours and yourself.
 - 2.15.0 (2026-11-09): a guide never uses the second person: it talks about the problem and the people in it ("a team", "the designer"), not to the reader; a grep for you/your joins the self-reference checks. Case A23; A18 amended.
 - 2.14.0 (2026-11-05): advice names the place and the steps; no packed openers; a run of prose past about 300 words with no figure is the cue to draw one. Case A22.

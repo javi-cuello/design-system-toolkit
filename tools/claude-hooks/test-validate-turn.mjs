@@ -37,6 +37,11 @@ test('code the turn wrote and left uncommitted, in scope, is read and its findin
   assert.match(said.reason, /src\/app\/x\/page\.tsx:2 {2}raw element: <button>/);
   // put once: the same findings, seen, block nothing
   assert.equal(validateTurn(new Set([path.join(dir, 'src/app/x/page.tsx')]), { projects: projectsAt(dir), repoConfig: () => ({ check: { validate: V } }), seen: new Set(said.keys) }), null);
+  // a second occurrence of a seen finding is new
+  fs.appendFileSync(path.join(dir, 'src/app/x/page.tsx'), 'export const Q = () => <button>Again</button>;\n');
+  const again = validateTurn(new Set([path.join(dir, 'src/app/x/page.tsx')]), { projects: projectsAt(dir), repoConfig: () => ({ check: { validate: V } }), seen: new Set(said.keys) });
+  assert.match(again.reason, /raw element: <button>/);
+  assert.equal(again.keys.length, 1);
   // no time left is no finding
   assert.equal(validateTurn(new Set([path.join(dir, 'src/app/x/page.tsx')]), { projects: projectsAt(dir), repoConfig: () => ({ check: { validate: V } }), budget: 0 }), null);
 });

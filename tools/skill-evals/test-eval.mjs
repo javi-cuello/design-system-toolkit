@@ -237,7 +237,16 @@ ok('a screen agent that wrote into the system, or did not exit cleanly, is never
     s3.trials === 3 && s3.scored === 2 && s3.void === 1 && s3.mean === 0.75 && s3.passRate === 0.5 && s3.passAll === false
     && summarise([run(), run()]).passAll === true
     && summarise([run({ why: 'parity did not report' })]).mean === null
-    && summarise([run({ rules: 'on', rulesFired: false })]).void === 1);
+    && summarise([run({ rules: 'on', rulesFired: false })]).void === 1
+    && summarise([run({ score: 0.5, green: false, why: 'the stylesheet gate did not report' })]).void === 1
+    && summarise([run({ score: 0, green: false, why: 'the stylesheet gate did not report; agent exited 1' })]).void === 0
+    && /agent exited 1/.test(score({ parity: null, exits: { agent: 1 } }).why)
+    && summarise([run({ score: 0, green: false, why: 'the build failed: agent exited 1 parity did not report' })]).void === 0
+    && !comparable({ agent: true, turns: 9, why: 'parity did not report; agent exited 1' })
+    && !comparable({ agent: true, turns: 9, why: 'the stylesheet gate did not report' })
+    && !comparable({ agent: true, turns: 9, why: 'validate did not report (x); agent exited 1' })
+    && comparable({ agent: true, turns: 9, why: 'agent exited 1' })
+    && summarise([run({ turns: null, score: 0, green: false, why: 'parity did not report' })]).void === 0);
   ok('an agent that timed out scored what it left; a run cut short says so and never passes all',
     summarise([run({ turns: null, score: 0, green: false, why: 'agent exited 143' }), run()]).mean === 0.5
     && summarise([run(), run()], 3).passAll === false && summarise([run(), run()], 3).ran === 2 && summarise([run(), run()], 3).trials === 3);

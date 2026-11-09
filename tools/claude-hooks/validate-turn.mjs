@@ -38,7 +38,7 @@ export function uncommittedIn(dir, files) {
 const readConfig = (repo) => req('../shared/repo-config.cjs').readRepoConfig(repo).config || {};
 // `seen`: finding keys already put to this session, so each blocks once, not every turn until it is committed;
 // `budget`: milliseconds for every project's run together, inside the Stop hook's 30 s
-export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), repoConfig = readConfig, seen = new Set(), budget = 12000 } = {}) {
+export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), repoConfig = readConfig, seen = new Set(), budget = 8000 } = {}) {
   if (!own || !own.size) return null;
   const files = [...own].map((f) => realPath(f));
   const said = [], keys = [];
@@ -59,8 +59,10 @@ export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), 
     try { found = JSON.parse(r.stdout); } catch { continue; }
     if (!Array.isArray(found)) continue;
     const rel = (f) => path.relative(repo, f.file);
-    const open = unwaived(found, projects.rulings(where.doc || ''), rel).filter((f) => !seen.has(`${name}|${rel(f)}|${f.kind}|${f.found}`));
-    for (const f of open) keys.push(`${name}|${rel(f)}|${f.kind}|${f.found}`);
+    // a key per occurrence, not per line (lines move as a file is edited): a second <button> in the file is new
+    const n = new Map();
+    const keyOf = (f) => { const k = `${name}|${rel(f)}|${f.kind}|${f.found}`; n.set(k, (n.get(k) || 0) + 1); return `${k}#${n.get(k)}`; };
+    const open = unwaived(found, projects.rulings(where.doc || ''), rel).map((f) => [f, keyOf(f)]).filter(([, k]) => !seen.has(k)).map(([f, k]) => { keys.push(k); return f; });
     if (open.length) said.push(`${name}: ${open.length} finding(s) in code this turn wrote\n${open.map((f) => `  ${rel(f)}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`).join('\n')}`);
   }
   if (!said.length) return null;

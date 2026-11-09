@@ -79,7 +79,13 @@ export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task 
    evals for AI agents*). Null when nothing could be scored. `of` is the trials
    asked for: a run cut short says so (ran < trials) and never passes all. */
 // a trial is void when the measurement failed, never when the agent did: a timeout or a crash is the agent's 0
-export const voidTrial = (r) => /^(contaminated|changed the grade's inputs|validate did not report|parity did not report)/.test(r.why || '') || (r.rules === 'on' && r.rulesFired !== true);
+// a silent grader is void only behind an agent that finished: a crashed agent can leave nothing a grader can read, and that is the agent's 0
+// anchored to the runner's own clauses, so a grader's quoted stderr cannot read as one
+export const SILENT = /^(validate|parity|the stylesheet gate) did not report/;
+const CRASHED = /(^|; )agent exited /;
+export const voidTrial = (r) => /^(contaminated|changed the grade's inputs)/.test(r.why || '')
+  || (SILENT.test(r.why || '') && r.turns != null && !CRASHED.test(r.why || ''))
+  || (r.rules === 'on' && r.rulesFired !== true);
 export function summarise(runs, of = runs.length) {
   const scored = runs.filter((r) => !voidTrial(r));
   const round = (n) => Math.round(n * 1000) / 1000;
@@ -150,7 +156,8 @@ export function styleCount(stdout, status) {
    `exits` are the exit codes of what ran (agent, parity, styles): one its
    count does not explain (a crash, a timeout) is never green, and is named. */
 export function score({ parity, styleFindings, exits = {} }) {
-  if (!parity) return { score: 0, green: false, why: 'parity did not report' };
+  // the agent's exit rides along, so a crashed agent behind a silent grader stays its 0 (voidTrial)
+  if (!parity) return { score: 0, green: false, why: ['parity did not report', ...(exits.agent ? [`agent exited ${exits.agent}`] : [])].join('; ') };
   const total = parity.matched + parity.didNot;
   if (!total) return { score: 0, green: false, why: 'parity measured nothing' };
   const s = Math.round((parity.matched / total) * 1000) / 1000;
@@ -306,7 +313,8 @@ export function validateScore(written, findings, { system = [], agentExit = 0 } 
 /* A run a later one may be compared with: one that measured the agent. */
 // a failed build is a real result; a void run is not
 // a grader that did not report is not a measure of the agent either
-export const comparable = (r) => r.agent && r.turns != null && !/^(contaminated|changed the grade's inputs|validate did not report)/.test(r.why || '') && (r.rules !== 'on' || r.rulesFired === true);
+// a grader-silent run is never a baseline, even behind a crashed agent: it measured nothing to compare
+export const comparable = (r) => r.agent && r.turns != null && !voidTrial(r) && !SILENT.test(r.why || '');
 
 /* Which of the brief's files the agent opened, by any tool whose input names
    one: whether a run told to build from the contract had to read the
