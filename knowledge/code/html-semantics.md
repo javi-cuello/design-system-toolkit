@@ -47,12 +47,14 @@ How a page's markup carries its meaning: metadata, the heading outline, landmark
 - The WHATWG rule, now normative: "Each heading following another heading lead in the outline must have a heading level that is less than, equal to, or 1 greater than lead's heading level" ([HTML, headings and outlines](https://html.spec.whatwg.org/multipage/sections.html#headings-and-outlines)). An `h3` straight under an `h1` is its own non-conforming example.
 - The old outline algorithm (an `h1` in every `section`, ranked by nesting) is gone from the standard; write explicit levels.
 - Size is the stylesheet's: a prose scale restores heading sizes where a reset flattened them (code-standard rule 7), and a component heading takes its text style from the component's stylesheet or an attribute (code-standard rule 6), not from a different level.
-- A heading inside a reusable component takes its level from the caller (a `level` attribute or a slot for the heading itself), because the component cannot know where it will sit.
+- A heading inside a reusable component takes its level from the caller (a `level` attribute or a slot for the heading itself), because the component cannot know where it will sit. With no level given it renders a `p` in the same style: a component placed where its title introduces nothing (an empty state under its section's own heading) should not add a heading.
+- A skipped level breaks the HTML standard's "must" above, and the WAI tutorial says it "should be avoided where possible" ([WAI, *Heading ranks*](https://www.w3.org/WAI/tutorials/page-structure/headings/)). WCAG itself fixes no level: H42's example "is not intended to prescribe what level of heading should be used for a particular section" ([H42](https://www.w3.org/WAI/WCAG22/Techniques/html/H42)). An audit reports a skip as non-conforming HTML, not as a 1.3.1 failure on its own.
 
 **Cases**
 - A card list under an `h2` gives every card an `h4` because it "looked right" → `h3`, styled smaller; a heading-list reader sees a gap and assumes a missing section.
 - A hero has a large brand line in an `h1` and the page title in an `h2` → the page title is the `h1`; the brand line is a `p`.
 - A dashboard has tiles with titles but no headings → make each title a heading at the right level, so a screen-reader user can move tile to tile with one key.
+- A heading-audit checklist says "style by class, not by tag" → in a system without styling classes (code-standard rule 6) the same aim is met by a reset that flattens `h1`–`h6` and sizes from the component's stylesheet or the prose scale (code-standard rule 7). What the checklist guards against is a level picked for its default size; check that, not whether a class exists.
 - A modal's title is an `h2` on a page whose outline goes to `h4` → keep the `h2`; it names the dialog through `aria-labelledby`, and the page's outline behind a modal is inert while it is open.
 
 **Accessibility**
