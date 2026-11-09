@@ -463,7 +463,7 @@ $xxl: 90rem;
     // first section, 56 between sections. A block says which it is through
     // --flow; nothing else sets a top-level block's margin.
     // A tab panel is a page within the page, and flows the same way.
-    :is(.page-body, .tabpanel) > :not(:first-child) { margin-block-start: var(--flow, var(--space-24)); }
+    :is(.page-body, .tabpanel) > :not(:first-child, dialog) { margin-block-start: var(--flow, var(--space-24)); }
     :is(.page-body, .tabpanel) > .section { --flow: var(--space-48); }
     :is(.page-body, .tabpanel) > .group { --flow: var(--space-48); }
     @include from($sm) { :is(.page-body, .tabpanel) > .section { --flow: var(--space-64); } }
@@ -553,9 +553,9 @@ $xxl: 90rem;
     // Inside a section, each step up the gap says less related (visual.md
     // *Spacing scale and proximity*): a heading to its own content 16, one
     // block to the next 24, a subheading 32 above, a section 64.
-    .section > * + * { margin-block-start: var(--space-24); }
+    .section > * + :not(dialog) { margin-block-start: var(--space-24); }
     .section h3 { margin-block-start: var(--space-32); }
-    .section > :is(h2, h3) + * { margin-block-start: var(--space-16); }
+    .section > :is(h2, h3) + :not(dialog) { margin-block-start: var(--space-16); }
     // A subgroup's heading straight under its section's: the section's own
     // gap already separates them, so the subgroup's 32 does not double it
     // and leave the heading further from its content than from the controls
@@ -1299,8 +1299,8 @@ $xxl: 90rem;
     // took the rule from under every table head that sits in a panel.
     .panel > .table-wrap:last-child tbody tr:last-child > * { border-block-end: 0; }
     // A panel's parts keep one gap, as a section's do; its head brings its own.
-    .panel > * + * { margin-block-start: var(--space-16); }
-    .panel > .panel__head + * { margin-block-start: 0; }
+    .panel > * + :not(dialog) { margin-block-start: var(--space-16); }
+    .panel > .panel__head + :not(dialog) { margin-block-start: 0; }
     // The overview's cards: one per question, its title inside and its
     // figures as open cells on the card (no box inside the box).
     .overview-cards { display: grid; gap: var(--space-24); }
@@ -1355,12 +1355,12 @@ $xxl: 90rem;
       row-gap: var(--space-4);
       border-block-end: var(--stroke-1) solid var(--line);
     }
-    .overview-cards .panel > .panel__head + * { margin-block-start: var(--space-20); }
+    .overview-cards .panel > .panel__head + :not(dialog) { margin-block-start: var(--space-20); }
     .overview-cards .panel > .panel__head + .kpis { margin-block-start: 0; border-block-start: 0; }
     // A strip with more of the card after it closes with a hairline, as it
     // opens with one; the card's edge closes the last.
     .panel > .kpis:not(:last-child) { border-block-end: var(--stroke-1) solid var(--line); }
-    .panel > .kpis:not(:last-child) + * { margin-block-start: var(--space-20); }
+    .panel > .kpis:not(:last-child) + :not(dialog) { margin-block-start: var(--space-20); }
     .panel__caption { flex-basis: 100%; order: 3; margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
     // The one figure a card answers with, above its detail.
     .panel__figure { font-size: var(--text-md); color: var(--fg-muted); }
@@ -1472,7 +1472,7 @@ $xxl: 90rem;
     .progress__seg.ladder__seg--draft, .legend__item.ladder__item--draft::before, .status.ladder__item--draft::before { background: var(--fg-soft); }
     .progress__seg.ladder__seg--deprecated, .legend__item.ladder__item--deprecated::before, .status.ladder__item--deprecated::before { background: var(--line-strong); }
     // A report page's section (AI readiness): its line, then its table.
-    .report-section > * + * { margin-block-start: var(--space-24); }
+    .report-section > * + :not(dialog) { margin-block-start: var(--space-24); }
     // A heading sits with the text it introduces, as a .section's does.
     .report-section > h2 + * { margin-block-start: var(--space-16); }
     .page-body > .report-section + .report-section { --flow: var(--space-56); }
