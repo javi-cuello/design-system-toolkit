@@ -28,18 +28,21 @@ export function uncommittedIn(dir, files) {
   const rel = files.map((f) => path.relative(dir, f)).filter((f) => f && !f.startsWith('..') && !path.isAbsolute(f));
   if (!rel.length) return [];
   let out = '';
-  try { out = execFileSync('git', ['-C', dir, 'status', '--porcelain', '-z', '--untracked-files=all', '--', ...rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return []; }
+  try { out = execFileSync('git', ['--literal-pathspecs', '-C', dir, 'status', '--porcelain', '-z', '--untracked-files=all', '--', ...rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return []; }
   return out.split('\0').filter(Boolean).map((l) => l.slice(3)).filter((f) => rel.includes(f));
 }
 
-/* What to say when the turn's code has findings, or null. `own` is the
+/* `{ reason, keys }` when the turn's code has findings not yet put to the session, or null. `own` is the
    session's written files (stop-items.mjs ownFiles), absolute. */
 // a project with no config, or one that will not parse, is skipped: never repoConfig, which exits 2, and a Stop hook's exit 2 blocks every stop
 const readConfig = (repo) => req('../shared/repo-config.cjs').readRepoConfig(repo).config || {};
-export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), repoConfig = readConfig } = {}) {
+// `seen`: finding keys already put to this session, so each blocks once, not every turn until it is committed;
+// `budget`: milliseconds for every project's run together, inside the Stop hook's 30 s
+export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), repoConfig = readConfig, seen = new Set(), budget = 12000 } = {}) {
   if (!own || !own.size) return null;
   const files = [...own].map((f) => realPath(f));
-  const said = [];
+  const said = [], keys = [];
+  const until = Date.now() + budget;
   for (const { name, dir } of projects.repos()) {
     const repo = realPath(dir);
     const V = ((repoConfig(repo) || {}).check || {}).validate;
@@ -48,12 +51,18 @@ export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), 
     if (!mine.length) continue;
     const where = projects.layout(null, name);
     if (!where.site || !fs.existsSync(path.join(where.site, 'api/index.json'))) continue;
-    const r = spawnSync(process.execPath, [path.join(TOOLKIT, 'tools/system-mcp/validate.mjs'), ...mine.map((f) => path.join(repo, f)), '--api', path.join(where.site, 'api'), '--json', ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28, timeout: 20000 });
+    const left = until - Date.now();
+    if (left < 500) break;
+    const r = spawnSync(process.execPath, [path.join(TOOLKIT, 'tools/system-mcp/validate.mjs'), ...mine.map((f) => path.join(repo, f)), '--api', path.join(where.site, 'api'), '--json', ...(V.from || []).flatMap((f) => ['--from', f])], { encoding: 'utf8', maxBuffer: 1 << 28, timeout: left });
+    // a checker that failed or ran out of time is not a finding: the push gate reads the same files
     let found;
-    try { found = JSON.parse(r.stdout); } catch { said.push(`${name}: validate did not answer over ${mine.length} file(s); run it before the push does`); continue; }
+    try { found = JSON.parse(r.stdout); } catch { continue; }
+    if (!Array.isArray(found)) continue;
     const rel = (f) => path.relative(repo, f.file);
-    const open = unwaived(found, projects.rulings(where.doc || ''), rel);
+    const open = unwaived(found, projects.rulings(where.doc || ''), rel).filter((f) => !seen.has(`${name}|${rel(f)}|${f.kind}|${f.found}`));
+    for (const f of open) keys.push(`${name}|${rel(f)}|${f.kind}|${f.found}`);
     if (open.length) said.push(`${name}: ${open.length} finding(s) in code this turn wrote\n${open.map((f) => `  ${rel(f)}:${f.line}  ${f.kind}: ${f.found}${f.use ? `  → ${f.use}` : ''}`).join('\n')}`);
   }
-  return said.length ? `The system's checker (tools/system-mcp/validate.mjs) read the code this turn wrote, as the push will:\n${said.join('\n')}\nFix each in the code; one that must stay is waived by a §6 ruling scoped \`validate\` naming its file and what was found.` : null;
+  if (!said.length) return null;
+  return { keys, reason: `The system's checker (tools/system-mcp/validate.mjs) read the code this turn wrote, as the push will:\n${said.join('\n')}\nFix each in the code; one that must stay is waived by a §6 ruling scoped \`validate\` naming its file and what was found.` };
 }

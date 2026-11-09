@@ -235,13 +235,20 @@ ok('a screen agent that wrote into the system, or did not exit cleanly, is never
   const s3 = summarise([run(), run({ score: 0.5, green: false }), run({ score: 0, green: false, why: 'contaminated: read the repo' })]);
   ok('trials: a void trial is counted, never scored; the rate is of the scored; pass^k needs every trial clean and green',
     s3.trials === 3 && s3.scored === 2 && s3.void === 1 && s3.mean === 0.75 && s3.passRate === 0.5 && s3.passAll === false
-    && summarise([run(), run()]).passAll === true && summarise([run({ turns: null })]).mean === null);
+    && summarise([run(), run()]).passAll === true
+    && summarise([run({ why: 'parity did not report' })]).mean === null
+    && summarise([run({ rules: 'on', rulesFired: false })]).void === 1);
+  ok('an agent that timed out scored what it left; a run cut short says so and never passes all',
+    summarise([run({ turns: null, score: 0, green: false, why: 'agent exited 143' }), run()]).mean === 0.5
+    && summarise([run(), run()], 3).passAll === false && summarise([run(), run()], 3).ran === 2 && summarise([run(), run()], 3).trials === 3);
   const sum = (o) => ({ task: 'tag', agent: true, summary: true, rules: 'off', trials: 3, mean: 0.5, passRate: 0.33, passAll: false, ...o });
-  const lines = [run({ score: 0.2 }), sum({ trials: 5, mean: 0.9 }), sum({ mean: 0.6 })];
-  ok('a summary is compared only with a summary of as many trials, a single run only with a single run',
+  const lines = [run({ score: 0.2 }), sum({ trials: 5, mean: 0.9 }), sum({ mean: 0.6 }), sum({ mean: null }), sum({ mean: 0.1, ran: 2 }), run({ score: 0.7, trial: 3, of: 3 })];
+  ok('a summary is compared only with a full, scored summary of as many trials; a single run only with a single run, a trial only with a trial',
     baselineOf(lines, sum({})).mean === 0.6 && baselineOf(lines, sum({ trials: 5 })).mean === 0.9 && baselineOf(lines, sum({ trials: 4 })) === undefined
     && baselineOf(lines, run({})).score === 0.2
+    && baselineOf(lines, run({ trial: 1, of: 3 })).score === 0.7
     && compareSummary(sum({ mean: 0.6 }), sum({ mean: 0.8, passRate: 0.67 })) === 'mean 0.6 → 0.8, passRate 0.33 → 0.67'
+    && compareSummary(sum({}), sum({ void: 2 })) === 'mean 0.5 → 0.5, passRate 0.33 → 0.33, void 0 → 2'
     && compareSummary(undefined, sum({})) === 'first 3-trial run of this task');
 }
 console.log(`${n}/${n} passed`);

@@ -121,18 +121,23 @@ if (mode === 'prompt') {
 /* The review and feedback gates (gates.mjs) judge the session's edits, not its
    folder, so they run before the folder test. */
 if (mode === 'stop') {
+  // the system's checker over the code this session wrote and left uncommitted, before the gates, so a gated
+  // turn is checked too; each finding blocks once (its key kept per session), and a check that fails never blocks
+  if (!payload.stop_hook_active && process.env.TOOLKIT_VALIDATE !== 'off') {
+    let found = null;
+    const seenFile = path.join(os.tmpdir(), `toolkit-validate-${payload.session_id || 'none'}`);
+    try {
+      const { ownFiles } = await import('./stop-items.mjs');
+      const { validateTurn } = await import('./validate-turn.mjs');
+      const seen = new Set(fs.existsSync(seenFile) ? fs.readFileSync(seenFile, 'utf8').split('\n').filter(Boolean) : []);
+      found = validateTurn(await ownFiles(payload.transcript_path), { seen });
+      if (found) fs.appendFileSync(seenFile, found.keys.join('\n') + '\n');
+    } catch { /* the push gate still reads the same files */ }
+    if (found) { console.log(JSON.stringify({ decision: 'block', reason: found.reason })); process.exit(0); }
+  }
   const { stopGate } = await import('./gates.mjs');
   const reason = stopGate(payload.session_id, payload.transcript_path, ecosystemDirs(), payload.last_assistant_message, payload.cwd || process.cwd());
   if (reason) { console.log(JSON.stringify({ decision: 'block', reason })); process.exit(0); }
-  // the system's checker over the code this turn wrote, once: a block already answered is not repeated
-  if (!payload.stop_hook_active && process.env.TOOLKIT_VALIDATE !== 'off') {
-    const { ownFiles } = await import('./stop-items.mjs');
-    const { validateTurn } = await import('./validate-turn.mjs');
-    // a check that failed is not a finding: it never stands between a session and its stop
-    let found = null;
-    try { found = validateTurn(await ownFiles(payload.transcript_path)); } catch { /* the push gate still reads the same files */ }
-    if (found) { console.log(JSON.stringify({ decision: 'block', reason: found })); process.exit(0); }
-  }
 }
 
 if (!inEcosystem(payload.cwd || process.cwd())) process.exit(0);

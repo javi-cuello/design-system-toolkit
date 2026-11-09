@@ -134,8 +134,23 @@ const spawnAsync = (cmd, args, { timeout, ...o }) => new Promise((done) => {
 });
 const sh = (cmd, cwd, env = {}) => spawnSync(cmd, { cwd, shell: true, encoding: 'utf8', maxBuffer: 1 << 28, env: { ...process.env, ...env } });
 
+// the summary of a task's trials: written when they end, and when one throws, so paid runs are never left without one
+function summaryOf(t, runs) {
+  if (TRIALS < 2 || !runs.length) return;
+  const r0 = runs[0];
+  const sum = { at: new Date().toISOString(), task: t.id, agent: true, summary: true, ...(r0.grade ? { grade: r0.grade } : {}), commit: r0.commit, pinned: r0.pinned, toolkit: TOOLKIT_COMMIT,
+    rules: r0.rules, rulesFired: runs.every((r) => r.rulesFired !== false), context: r0.context, brief: r0.brief ?? null, ...summarise(runs, TRIALS), costUsd: Math.round(runs.reduce((a, r) => a + (r.costUsd || 0), 0) * 100) / 100 };
+  const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
+  const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+  const last = baselineOf(lines, sum);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, JSON.stringify(sum) + '\n');
+  console.log(`${t.id}: ${sum.ran} of ${TRIALS} trials${sum.ran < TRIALS ? ' (cut short)' : ''} — mean ${sum.mean ?? '-'}, green in ${sum.green} of ${sum.scored} scored${sum.void ? `, ${sum.void} void` : ''}, pass^${TRIALS} ${sum.passAll ? 'yes' : 'no'}; ${sum.costUsd} USD; ${compareSummary(last, sum)}`);
+}
+
 for (const t of tasks) {
   const runs = [];
+  try {
   for (let trial = 1; trial <= TRIALS; trial++) {
   // the copy is the pinned commit's tree (HEAD unpinned) with no history: an agent that can run git show
   // has the answer one command away (the first run tried exactly that)
@@ -306,17 +321,8 @@ for (const t of tasks) {
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
   const last = baselineOf(lines, record);
   if (record.agent) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.appendFileSync(file, JSON.stringify(record) + '\n'); }
-  if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
-  console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
+  if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${record.of ? `trial ${record.trial} of ${record.of}` : compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
+  console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${record.of ? `trial ${record.trial} of ${record.of}` : compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
   }
-  if (TRIALS > 1) {
-    const r0 = runs[0];
-    const sum = { at: new Date().toISOString(), task: t.id, agent: true, summary: true, ...(r0.grade ? { grade: r0.grade } : {}), commit: r0.commit, pinned: r0.pinned, toolkit: TOOLKIT_COMMIT,
-      rules: r0.rules, context: r0.context, brief: r0.brief ?? null, ...summarise(runs), costUsd: Math.round(runs.reduce((a, r) => a + (r.costUsd || 0), 0) * 100) / 100 };
-    const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
-    const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
-    const last = baselineOf(lines.slice(0, -TRIALS), sum);
-    fs.appendFileSync(file, JSON.stringify(sum) + '\n');
-    console.log(`${t.id}: ${TRIALS} trials — mean ${sum.mean ?? '-'}, green in ${Math.round((sum.passRate ?? 0) * sum.scored)} of ${sum.scored} scored${sum.void ? `, ${sum.void} void` : ''}, pass^${TRIALS} ${sum.passAll ? 'yes' : 'no'}; ${sum.costUsd} USD; ${compareSummary(last, sum)}`);
-  }
+  } finally { summaryOf(t, runs); }
 }

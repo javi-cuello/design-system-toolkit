@@ -65,28 +65,34 @@ export const sameCommit = (a, b) => !!a && !!b && (a.startsWith(b) || b.startsWi
    the same settings, pinned only with pinned at the same commit, unpinned only
    with unpinned, so a moved score is never the project's doing passed off as
    the toolkit's. */
-export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task === r.task && l.agent === r.agent && !!l.summary === !!r.summary
-  && (r.summary ? l.trials === r.trials : (!r.agent || comparable(l)))
+export const baselineOf = (lines, r) => [...lines].reverse().find((l) => l.task === r.task && l.agent === r.agent && !!l.summary === !!r.summary && !!l.of === !!r.of
+  && (r.summary ? l.trials === r.trials && l.mean != null && (l.ran ?? l.trials) === l.trials : (!r.agent || comparable(l)))
   && (l.rules || 'off') === (r.rules || 'off') && (l.brief || null) === (r.brief || null) && (l.context || null) === (r.context || null)
   && !!l.pinned === !!r.pinned && (!r.pinned || sameCommit(l.commit, r.commit)));
 
 /* Several trials of one task, as one line: an agent is not deterministic, so
-   one run is a sample of one. A void trial (contaminated, inputs changed, the
-   grader silent: not comparable) is counted, never scored. `mean` is over the
+   one run is a sample of one. A void trial (the measurement failed: contaminated,
+   inputs changed, the grader silent, the rules hook silent under rules on) is
+   counted, never scored; an agent that timed out or crashed scored what it left. `mean` is over the
    scored trials; `passRate` the share of them green; `passAll` (pass^k) true
    only when every trial ran clean and went green (Anthropic, *Demystifying
-   evals for AI agents*). Null when nothing could be scored. */
-export function summarise(runs) {
-  const scored = runs.filter((r) => comparable(r));
+   evals for AI agents*). Null when nothing could be scored. `of` is the trials
+   asked for: a run cut short says so (ran < trials) and never passes all. */
+// a trial is void when the measurement failed, never when the agent did: a timeout or a crash is the agent's 0
+export const voidTrial = (r) => /^(contaminated|changed the grade's inputs|validate did not report|parity did not report)/.test(r.why || '') || (r.rules === 'on' && r.rulesFired !== true);
+export function summarise(runs, of = runs.length) {
+  const scored = runs.filter((r) => !voidTrial(r));
   const round = (n) => Math.round(n * 1000) / 1000;
-  return { trials: runs.length, scored: scored.length, void: runs.length - scored.length, scores: runs.map((r) => r.score),
+  return { trials: of, ran: runs.length, scored: scored.length, void: runs.length - scored.length, scores: runs.map((r) => r.score), green: scored.filter((r) => r.green).length,
     mean: scored.length ? round(scored.reduce((a, r) => a + r.score, 0) / scored.length) : null,
     passRate: scored.length ? round(scored.filter((r) => r.green).length / scored.length) : null,
-    passAll: scored.length === runs.length && runs.every((r) => r.green) };
+    passAll: runs.length === of && scored.length === runs.length && runs.every((r) => r.green) };
 }
 export function compareSummary(previous, current) {
   if (!previous) return current.pinned ? `first ${current.trials}-trial run of this task at ${current.commit}` : `first ${current.trials}-trial run of this task`;
-  return [['mean', ''], ['passRate', '']].map(([k]) => `${k} ${previous[k]} → ${current[k]}`).concat(previous.passAll !== current.passAll ? [`pass^k ${previous.passAll} → ${current.passAll}`] : []).join(', ');
+  return ['mean', 'passRate'].map((k) => `${k} ${previous[k]} → ${current[k]}`)
+    .concat(previous.passAll !== current.passAll ? [`pass^k ${previous.passAll} → ${current.passAll}`] : [])
+    .concat((previous.void || 0) !== (current.void || 0) ? [`void ${previous.void || 0} → ${current.void || 0}`] : []).join(', ');
 }
 
 /* What a pin's tree would grade differently from today: the runner reads paths,
