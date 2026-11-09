@@ -44,6 +44,14 @@ test('the system\'s own code, committed code and a project with no check.validat
   assert.deepEqual(uncommittedIn(dir, [path.join(dir, 'src/app/x/page.tsx'), path.join(dir, 'src/app/x/done.tsx'), '/elsewhere/a.tsx']), ['src/app/x/page.tsx']);
 });
 
+test('a registered project with no snapshot.config.json is skipped, and the process goes on', () => {
+  const dir = repo();
+  const bare = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'validate-turn-bare-')));
+  const projects = { ...projectsAt(dir), repos: () => [{ name: 'bare', dir: bare }, { name: 'sample', dir }] };
+  // the default reader: the sample repo has no config file either, so nothing is read and nothing exits
+  assert.equal(validateTurn(new Set([path.join(dir, 'src/app/x/page.tsx')]), { projects }), null);
+});
+
 test('a project with no built site is skipped, not failed', () => {
   const dir = repo();
   const projects = { ...projectsAt(dir), layout: () => ({ site: path.join(dir, 'no-site'), doc: '' }) };

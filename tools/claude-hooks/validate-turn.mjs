@@ -34,13 +34,15 @@ export function uncommittedIn(dir, files) {
 
 /* What to say when the turn's code has findings, or null. `own` is the
    session's written files (stop-items.mjs ownFiles), absolute. */
-export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), repoConfig = req('../shared/repo-config.cjs').repoConfig } = {}) {
+// a project with no config, or one that will not parse, is skipped: never repoConfig, which exits 2, and a Stop hook's exit 2 blocks every stop
+const readConfig = (repo) => req('../shared/repo-config.cjs').readRepoConfig(repo).config || {};
+export function validateTurn(own, { projects = req('../snapshot/projects.cjs'), repoConfig = readConfig } = {}) {
   if (!own || !own.size) return null;
   const files = [...own].map((f) => realPath(f));
   const said = [];
   for (const { name, dir } of projects.repos()) {
     const repo = realPath(dir);
-    const V = ((repoConfig(repo, 'check') || {}).check || {}).validate;
+    const V = ((repoConfig(repo) || {}).check || {}).validate;
     if (!V || !V.system) continue;
     const mine = uncommittedIn(repo, files.filter((f) => f.startsWith(repo + path.sep))).filter((f) => inScope(f, V) && fs.existsSync(path.join(repo, f)));
     if (!mine.length) continue;

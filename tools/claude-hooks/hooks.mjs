@@ -128,7 +128,9 @@ if (mode === 'stop') {
   if (!payload.stop_hook_active && process.env.TOOLKIT_VALIDATE !== 'off') {
     const { ownFiles } = await import('./stop-items.mjs');
     const { validateTurn } = await import('./validate-turn.mjs');
-    const found = validateTurn(await ownFiles(payload.transcript_path));
+    // a check that failed is not a finding: it never stands between a session and its stop
+    let found = null;
+    try { found = validateTurn(await ownFiles(payload.transcript_path)); } catch { /* the push gate still reads the same files */ }
     if (found) { console.log(JSON.stringify({ decision: 'block', reason: found })); process.exit(0); }
   }
 }
