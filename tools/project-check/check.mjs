@@ -42,7 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { undeclared, renderChanged, pipedVerdicts, trailerReport, unread, knowledgeReport } from './loop.mjs';
 import { realPath } from '../shared/real-path.mjs';
 // code the validate gate reads: what an agent writes a screen in
-import { CODE, unwaived } from '../system-mcp/validate.mjs';
+import { inScope, unwaived } from '../system-mcp/validate.mjs';
 
 // run from a git hook, git exports where the repo is, and a step that makes a scratch
 // repo would write into the project's instead (toolkit's bin/check clears the same)
@@ -87,8 +87,7 @@ const changedCode = () => {
   let out;
   try { out = execFileSync('git', ['-C', REPO, 'diff', '-z', '--name-only', '--diff-filter=AMR', range.replace('..', '...')], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
   catch (e) { return { error: `git could not read ${range}: ${String(e.stderr || e.message).trim().split('\n')[0]}` }; }
-  return out.split('\0').filter((f) => f && CODE.test(f) && (!V.code || V.code.some((p) => f.startsWith(p)))
-    && !(V.system || []).some((p) => f.startsWith(p)) && fs.existsSync(path.join(REPO, f)));
+  return out.split('\0').filter((f) => f && inScope(f, V) && fs.existsSync(path.join(REPO, f)));
 };
 
 const GATES = [

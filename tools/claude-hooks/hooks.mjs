@@ -124,6 +124,13 @@ if (mode === 'stop') {
   const { stopGate } = await import('./gates.mjs');
   const reason = stopGate(payload.session_id, payload.transcript_path, ecosystemDirs(), payload.last_assistant_message, payload.cwd || process.cwd());
   if (reason) { console.log(JSON.stringify({ decision: 'block', reason })); process.exit(0); }
+  // the system's checker over the code this turn wrote, once: a block already answered is not repeated
+  if (!payload.stop_hook_active && process.env.TOOLKIT_VALIDATE !== 'off') {
+    const { ownFiles } = await import('./stop-items.mjs');
+    const { validateTurn } = await import('./validate-turn.mjs');
+    const found = validateTurn(await ownFiles(payload.transcript_path));
+    if (found) { console.log(JSON.stringify({ decision: 'block', reason: found })); process.exit(0); }
+  }
 }
 
 if (!inEcosystem(payload.cwd || process.cwd())) process.exit(0);

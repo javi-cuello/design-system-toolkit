@@ -13,6 +13,10 @@ Full-size is measured, never asked: files and lines written since the work began
 | A `git push` of a repo with full-size work since the last review, or while a review runs | refused (PreToolUse) | the review, reported |
 | The end of reviewed work, once every background review has reported (a day at most) | blocked (Stop) | a `Toolkit:` line (what goes back to the toolkit), an `Open:` line (what stays open, and why), and a `Docs:` line when a README describing the changed files was left alone |
 
+## The system's checker at the end of a turn
+
+Any size of work: in a registered project that states `check.validate` and has a built docs site, the code files the session wrote and has not committed, in the push gate's own scope (`inScope` in `tools/system-mcp/validate.mjs`), go through `validate.mjs` at Stop, and findings the project's §6 rulings do not waive block the stop once, with each finding. The same files fail the push a day later, after the session that wrote them is gone, and the MCP's `validate` tool is one an agent may skip. A stop that follows that block passes (`stop_hook_active`), so a finding to argue for is argued in words and settled at the push. `TOOLKIT_VALIDATE=off` turns it off. About 0.1 s over one file.
+
 `TOOLKIT_GATES=off` turns them off; a skill-evals copy (`TOOLKIT_EVAL_COPY`) is never gated, since an eval measures a skill, not the process.
 
 ## Status
@@ -40,6 +44,7 @@ They act only inside the toolkit or a project repo (one with a `figma-design-sys
 | `standards-read.mjs` | Which standard, and which part of it, governs a file, so `edit` hands over the right rules; `knowledge` names the pages an interface file is built from (`tools/shared/knowledge.mjs`). |
 | `stop-items.mjs` | Remembers which open items a session has already been handed, so each comes once. |
 | `gates.mjs` | The plan, review, push and feedback gates: the work's size and the last review, read from the transcript where the last call stopped, from disk for a script's writes, and from the carry file for an earlier session's. |
+| `validate-turn.mjs` | The Stop check above: the turn's uncommitted code in a project with `check.validate`, through the system's checker. |
 | `impact.mjs` | Who reads the files a change touches, across the toolkit and every project: the plan's Impact section. `node tools/claude-hooks/impact.mjs <file>...` |
 
 ## Test
@@ -48,5 +53,6 @@ They act only inside the toolkit or a project repo (one with a `figma-design-sys
 node tools/claude-hooks/test-hooks.mjs
 node tools/claude-hooks/test-standards-read.mjs
 node tools/claude-hooks/test-stop-items.mjs
+node tools/claude-hooks/test-validate-turn.mjs
 node tools/claude-hooks/test-gates.mjs
 ```

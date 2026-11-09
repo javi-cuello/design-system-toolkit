@@ -36,6 +36,11 @@ import { cssName, cssFamily } from '../tokens/names.mjs';
 import { realpathSync } from 'node:fs';
 // the files it reads: what an agent writes a screen in (the push gate and the evals pick files by it)
 export const CODE = /\.(tsx|jsx|ts|js|mjs|vue|svelte|astro|html|php|css|scss)$/;
+/* Whether validate reads a project file, by its repo-relative path and the
+   project's `check.validate`: code, inside `code` when it names prefixes, and
+   never the design system's own (`system`). The push gate and the session's
+   Stop check (tools/claude-hooks) read the same files. */
+export const inScope = (f, V = {}) => CODE.test(f) && (!V.code || V.code.some((p) => f.startsWith(p))) && !(V.system || []).some((p) => f.startsWith(p));
 /* The findings a §6 ruling does not waive. A ruling waives a finding only
    when it is scoped `validate` (in backticks too) and names the very finding:
    its file, relative to the project, and what was found, each as a whole word
