@@ -1,6 +1,6 @@
 # Testing and tooling
 
-How a front end is tested and linted so that a green run means the page works: which level a test belongs at, what automated accessibility checks find and what they cannot, screenshot diffs, testing the page a person opens rather than a harness, the linters, a check that says "not run" instead of passing, CI gates, and fixtures kept as one module. It serves the design-standard principles *show state and give feedback* and *honest* (a check reports what it did), and applies code-standard rule 30 (a check that fires on nothing), code-standard rule 35 (a check pins its environment), code-standard rule 41 (a declared rule is proved to run), code-standard rule 49 (a check's verdict is its own) and code-standard rule 56 (the harness is not the product). Accessibility in code is [accessibility](accessibility.md)'s; the design-to-code loop is the `design-code-parity` skill's.
+How a front end is tested and linted so that a green run means the page works: which level a test belongs at, what automated accessibility checks find and what they cannot, screenshot diffs, testing the page a person opens rather than a harness, the linters, a check that says "not run" instead of passing, CI gates, evals of the agent that writes the code, and fixtures kept as one module. It serves the design-standard principles *show state and give feedback* and *honest* (a check reports what it did), and applies code-standard rule 30 (a check that fires on nothing), code-standard rule 35 (a check pins its environment), code-standard rule 41 (a declared rule is proved to run), code-standard rule 49 (a check's verdict is its own) and code-standard rule 56 (the harness is not the product). Accessibility in code is [accessibility](accessibility.md)'s; the design-to-code loop is the `design-code-parity` skill's.
 
 **Implements:** no single pattern; it proves the *Check* part of every ui page, script half.
 
@@ -77,7 +77,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - Compare against a stored baseline with a small tolerance; Playwright's `toHaveScreenshot()` is one implementation. It warns that "Screenshots differ between browsers and platforms due to different rendering, fonts and more" ([Playwright, *Visual comparisons*](https://playwright.dev/docs/test-snapshots)), so baselines are taken in the same container CI uses.
 - Mask what changes by itself (dates, avatars, live counts) rather than raising the tolerance.
 - Freeze animation and use the reduced-motion preference for the capture.
-- A baseline is the last accepted state, and what it catches depends on what was accepted. Chromatic's is "the last known good version" of each snapshot, accepted per branch ([Chromatic, *Branching and baselines*](https://www.chromatic.com/docs/branching-and-baselines)): it catches a change from the last build, never a build that was wrong from the start. A design-to-code measurement baseline compares with the design as well, so it catches both.
+- A baseline is the last accepted state, so it catches a change from what a person accepted, not an error that was accepted. Chromatic's is "the last known good version" of each snapshot, tracked per branch ([Chromatic, *Branching and baselines*](https://www.chromatic.com/docs/branching-and-baselines)); the parity loop's measurement baseline works the same way, and it is parity's comparison with the design, not the baseline, that catches a build wrong from the start (the `design-code-parity` skill).
 - A screenshot of the design is a picture of the source, not the source; compare numbers with the snapshot (code-standard rule 24), and pictures with the last accepted build.
 
 **Cases**
@@ -206,16 +206,16 @@ How a front end is tested and linted so that a green run means the page works: w
 
 **What good looks like**
 - A test asks whether code is right. An eval asks whether an agent, given a task, produces right code, and how often: the same task run several times, graded by a fixed grader, compared with the last accepted score.
-- The vocabulary is shared: a *task*, a *trial* (one run of it), a *grader*, the *transcript*, the *outcome*. *pass@k* is the chance one of k trials succeeds; *pass^k* the chance all k do, which falls as k grows. A *capability* eval measures what an agent can now do; a *regression* eval guards what it already did ([Anthropic, *Demystifying evals for AI agents*](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
+- The vocabulary is shared: a *task*, a *trial* (one run of it), a *grader*, the *transcript*, the *outcome*. *pass@k* is the chance at least one of k trials succeeds; *pass^k* the chance all k do, which falls as k grows. A *capability* eval measures what an agent can now do; a *regression* eval guards what it already did ([Anthropic, *Demystifying evals for AI agents*](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
 
 **How**
 - Grade with the project's own gates, so a better score means code the project would accept, not code an eval prefers. The toolkit's `tools/skill-evals` does this.
-- Run each trial in a clean copy with no history. Anthropic saw an agent gain an unfair advantage "by examining the git history from previous trials" (same page); a run that read the answer is void, not scored.
+- Run each trial in a clean copy with no history. Anthropic saw an agent gain an unfair advantage "by examining the git history from previous trials" (same page); a run that read the answer scores 0 and is never the baseline ([`tools/skill-evals`](../../tools/skill-evals/README.md)).
 - Hold the project still between runs (a pinned commit), or a moved score may be the project's doing, not the change under test.
 
 **Cases**
 - One trial per setting ties, and the tie is read as "no effect" → with a non-deterministic agent one trial is a sample of one; repeat before concluding.
-- An agent told not to game the grader games it anyway → METR found that instructing models not to cheat "had a nearly negligible effect" on reward hacking ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking/)); lock the grader's inputs instead of asking.
+- An agent told not to game the grader games it anyway → in one METR experiment (o3, one task, 20 runs per prompt), instructions not to cheat "had a nearly negligible effect" on reward hacking ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking/)); lock the grader's inputs instead of asking.
 
 **Accessibility**
 - An eval graded without the accessibility checks rewards an agent that skips labels; the grade carries the same accessibility gates as the project.
