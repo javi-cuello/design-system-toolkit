@@ -56,12 +56,15 @@ test('an interface file names the knowledge pages to read before the first line,
 
 test('a gate that throws, or will not load, is told to the session, not swallowed', () => {
   for (const gates of ["export const planGate = () => { throw new Error('boom'); };\nexport const stopGate = () => { throw new Error('boom'); };\n", "throw new Error('boom');\n"]) {
+    // the copy sits at <toolkit>/tools/claude-hooks, as the real one does, so its toolkit is `dir` on any machine
     const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'hooks-throw-')));
+    const hooks = path.join(dir, 'tools/claude-hooks');
     try {
-      fs.copyFileSync(path.join(HERE, 'hooks.mjs'), path.join(dir, 'hooks.mjs'));
-      fs.writeFileSync(path.join(dir, 'gates.mjs'), gates);
+      fs.mkdirSync(hooks, { recursive: true });
+      fs.copyFileSync(path.join(HERE, 'hooks.mjs'), path.join(hooks, 'hooks.mjs'));
+      fs.writeFileSync(path.join(hooks, 'gates.mjs'), gates);
       const sid = `throw-${process.pid}-${gates.length}`;
-      const go = (mode, pl, env = {}) => spawnSync('node', [path.join(dir, 'hooks.mjs'), mode], { input: JSON.stringify(pl), encoding: 'utf8', env: { ...process.env, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off', TOOLKIT_GATES: '', TOOLKIT_EVAL_COPY: '', ...env } });
+      const go = (mode, pl, env = {}) => spawnSync('node', [path.join(hooks, 'hooks.mjs'), mode], { input: JSON.stringify(pl), encoding: 'utf8', env: { ...process.env, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off', TOOLKIT_GATES: '', TOOLKIT_EVAL_COPY: '', ...env } });
       // the rule list needs the toolkit's other modules, absent from this copy: off here, read in the tests above
       const write = { session_id: sid, cwd: dir, tool_name: 'Write', tool_input: { file_path: path.join(dir, 'x') } };
       const e = go('edit', write);
