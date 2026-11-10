@@ -64,8 +64,8 @@ function derive(screens, { code = {}, exists = null } = {}) {
     const tpl = templateOf(laid);
     if (tpl) {
       const name = label(tpl);
-      const tt = templates.get(name) || { component: name, screens: 0, sections: new Set(), regions: kinds() };
-      tt.screens++; if (section) tt.sections.add(section);
+      const tt = templates.get(name) || { component: name, screens: 0, names: new Set(), sections: new Set(), regions: kinds() };
+      tt.screens++; tt.names.add(s.name || s.id); if (section) tt.sections.add(section);
       for (const k of tpl.children || []) if (!k.absolute) count(tt.regions, k);
       templates.set(name, tt);
     }
@@ -125,7 +125,7 @@ function derive(screens, { code = {}, exists = null } = {}) {
     templates: [...templates.values()].sort((a, b) => b.screens - a.screens || a.component.localeCompare(b.component)).map((t) => {
       // a value that is not a path (a note, an object) pairs nothing
       const file = typeof code[t.component] === 'string' ? code[t.component] : null;
-      return { ...t, sections: [...t.sections].sort(), regions: { components: sorted(t.regions.components), frames: sorted(t.regions.frames) }, code: file, ...(file && exists && !exists(file) && { missing: true }) };
+      return { ...t, names: [...t.names].sort((a, b) => a.localeCompare(b, 'en')), sections: [...t.sections].sort(), regions: { components: sorted(t.regions.components), frames: sorted(t.regions.frames) }, code: file, ...(file && exists && !exists(file) && { missing: true }) };
     }),
     // a mapped name no stored screen uses: a renamed template, or a typo, said rather than kept quietly
     // (`_note` is the config's comment, as in every block of snapshot.config.json)

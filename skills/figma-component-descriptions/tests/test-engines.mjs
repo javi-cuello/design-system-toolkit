@@ -145,6 +145,20 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('composition: a part in every variant is unconditional', btn.variantCount === 2 && btn.parts.find((p) => p.name === 'Label').inEvery === true);
   ok('composition: a part one axis reveals is read from the variant that has it, named by its set', JSON.stringify(btn.parts.find((p) => p.name === 'Icon')) === JSON.stringify({ name: 'Icon', inEvery: false, variants: ['Icon=True'] }));
   ok('composition: an unknown id is reported, not fatal', missing.error === 'not found');
+  ok('composition: each variant\'s size is returned only where Figma reports it', JSON.stringify(btn.sizes) === '{}');
+  // A part is what the subject places: an icon inside a nested Button is the Button's, not the shell's (2026-11-10).
+  const shellGlyph = node({ id: '9:7', type: 'COMPONENT', name: 'x' });
+  const nestedBtn = node({ id: '5:3', type: 'INSTANCE', name: 'Button' }, [instanceOf('5:4', 'x', shellGlyph)]);
+  nestedBtn.getMainComponentAsync = async () => label;
+  const shellV = node({ id: '5:2', type: 'COMPONENT', name: 'Fixed height=True', width: 1440, height: 900, layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'FIXED' }, [node({ id: '5:5', type: 'FRAME', name: 'Main' }, [nestedBtn])]);
+  const shellF = node({ id: '5:6', type: 'COMPONENT', name: 'Fixed height=False', width: 1440, height: 900, layoutSizingHorizontal: 'FIXED', layoutSizingVertical: 'HUG' });
+  const shellSet = node({ id: '5:1', type: 'COMPONENT_SET', name: 'Screen' }, [shellV, shellF]);
+  const fsh = fakeFigma([node({ id: '0:5', type: 'PAGE', name: 'Screen' }, [shellSet])]);
+  const srcSh = config(read('composition.js'), { ids: ['5:1'] });
+  const [sc] = await run(srcSh, fsh);
+  ok('composition: an instance inside a nested instance is not a part; one inside a plain frame is', JSON.stringify(sc.parts.map((p) => p.name)) === '["Label"]');
+  ok('composition: a fixed side is its number, a hugging side is hug', JSON.stringify(sc.sizes) === JSON.stringify({ 'Fixed height=True': { w: 1440, h: 900 }, 'Fixed height=False': { w: 1440, h: 'hug' } }));
+  ok('composition: (planted) without the nested-instance guard the Button\'s icon is listed', (await run(plant(srcSh, 'if (insideInstance(i, v)) continue;', ''), fsh))[0].parts.length === 2);
   const firstOnly = plant(src, "n.type === 'COMPONENT_SET' ? n.children : [n]", "n.type === 'COMPONENT_SET' ? [n.children[0]] : [n]");
   ok('composition: (planted) reading children[0] alone loses the Icon', !(await run(firstOnly, figma))[0].parts.some((p) => p.name === 'Icon'));
 

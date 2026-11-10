@@ -86,6 +86,8 @@ ok('a slot inside an instance that fills another slot is read under both; a set 
   ok('a screen that is one instance of a template lists the template: its screens, sections and the regions inside it, an overlay not among them',
     t.templates.length === 1 && home.component === 'Screen templates/_Home' && home.screens === 3 && JSON.stringify(home.sections) === '["Desktop","Mobile"]'
     && JSON.stringify(home.regions.frames) === '{"Header":3,"Main":3}' && !('Toast' in home.regions.components));
+  ok('a template lists the names of the screens built on it, sorted, so a description can name its reference screens',
+    JSON.stringify(home.names) === '["<Desktop> 1-1 - Main","<Desktop> 1-2 - Main - Empty","<Mobile> 1-1 - Main"]');
   ok("the template is entered as the page: its frames are regions under its name, and what varies inside it is said",
     t.regions.some((q) => q.path === 'Screen templates/_Home/Main/Section' && q.screens === 3) && t.varies.some((v) => v.path === 'Screen templates/_Home/Main/Section' && v.what === 'gap'));
   ok("the code file the project maps it to is given, a mapped file that is not there is marked, and a mapped name no screen uses is listed; the config's _note is neither",

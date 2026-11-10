@@ -104,4 +104,36 @@ writeFileSync(desc, JSON.stringify({ '8:1': 'A top bar.\n\n' + vcli[0].markdown,
 const partial = spawnSync('node', [join(HERE, '../scripts/sections.mjs'), '--composition', comp, '--settings', FIX('sections-settings.json'), '--separator', ' / ', '--check', desc], { encoding: 'utf8' });
 ok('virtual sets: --check holds every member to the union; one written from its own lines alone fails', partial.status === 1 && /Top bar \(8:2\)/.test(partial.stdout) && !/Top bar \(8:1\)/.test(partial.stdout));
 rmSync(tmp2, { recursive: true, force: true });
+// A screen template (2026-11-10, a project's Screen): the size its axis decides, and the reference
+// screens the snapshot records, generated so neither is a hand copy that goes stale on a rename.
+const shell = { id: '9:1', name: 'Screen', variantCount: 2, variantNames: ['Fixed height=True', 'Fixed height=False'], broken: [],
+  properties: [{ name: 'Fixed height', type: 'VARIANT', options: ['True', 'False'] }, { name: 'Content slot', type: 'SLOT' }],
+  sizes: { 'Fixed height=True': { w: 1440, h: 900 }, 'Fixed height=False': { w: 1440, h: 'hug' } }, parts: [{ name: 'App header', inEvery: true }] };
+const recipes = { templates: [{ component: 'Components/Screen', names: ['<Screens> 1-1 - Table', '<Screens> 3-1 - Settings'] }] };
+const sh = sections(shell, Object.assign({}, settings, { recipes }));
+ok('templates: an axis that makes a side fixed or growing says the size of each option',
+  sh.behaviour.includes('At `Fixed height` `True` it is 1440 × 900; at `False` it is 1440 wide and grows with its content in height'));
+ok('templates: the reference screens come from the recipe, matched past the path the snapshot records',
+  JSON.stringify(sh.usage) === JSON.stringify(['Start from the reference screen closest to the new one: `<Screens> 1-1 - Table` or `<Screens> 3-1 - Settings`']) && /\n## Usage\n- Start from/.test(sh.markdown));
+const sized = Object.assign({}, shell, { properties: [{ name: 'Size', type: 'VARIANT', options: ['True', 'False'] }], variantNames: ['Size=True', 'Size=False'], sizes: { 'Size=True': { w: 32, h: 32 }, 'Size=False': { w: 40, h: 40 } } });
+ok('templates: (negative) an axis whose options differ only in numbers gets no size line', !sections(sized, settings).behaviour.some((l) => l.startsWith('At ')));
+ok('templates: (negative) with no recipe, or none built on it, there is no Usage line', sections(shell, settings).usage.length === 0 && sections(Object.assign({}, shell, { name: 'Card' }), Object.assign({}, settings, { recipes })).usage.length === 0);
+const twin = { templates: [{ component: 'Desktop/Screen', names: ['A'] }, { component: 'Mobile/Screen', names: ['B'] }] };
+const tw = sections(shell, Object.assign({}, settings, { recipes: twin }));
+ok('templates: two templates ending in the name give no Usage line and a gap; an exact name wins over a path',
+  tw.usage.length === 0 && tw.gaps.some((x) => x.startsWith('Usage: which reference screens'))
+  && sections(shell, Object.assign({}, settings, { recipes: { templates: [{ component: 'Old/Screen', names: ['A'] }, { component: 'Screen', names: ['B'] }] } })).usage[0].endsWith('`B`'));
+const shellMd = 'The shell.\n\n' + sh.markdown + '\n- Put only the page body in `Content slot`';
+ok('check: the generated Usage line is held like the others, and the writer\'s lines beside it pass', check(shellMd, sh).length === 0 && check(shellMd.replace('closest to the new one', 'nearest'), sh).length === 1);
+ok('check: a generated line under a second heading of the same name still counts',
+  check('The shell.\n\n## Usage\n- Mine\n\n' + sh.markdown, sh).length === 0);
+const uMember = (id, name) => sections(barSubject(id, name, [], []), Object.assign({}, settings, { recipes: { templates: [{ component: 'Shell / Desktop', names: ['Home'] }] } }));
+const vu = union([uMember('9:5', 'Shell / Desktop'), uMember('9:6', 'Shell / Mobile')], ' / ');
+ok('virtual sets: a Usage line one member has says which subpart', JSON.stringify(vu.usage) === JSON.stringify(['Start from the reference screen closest to the new one: `Home` (in the `Desktop` subpart)']));
+const tmp3 = mkdtempSync(join(tmpdir(), 'sections-'));
+writeFileSync(join(tmp3, 'c.json'), JSON.stringify([shell])); writeFileSync(join(tmp3, 'r.json'), JSON.stringify(recipes));
+const rcli = JSON.parse(execFileSync('node', [join(HERE, '../scripts/sections.mjs'), '--composition', join(tmp3, 'c.json'), '--recipes', join(tmp3, 'r.json')], { encoding: 'utf8' }));
+ok('templates: --recipes on the CLI reads the file recipes.cjs prints', JSON.stringify(rcli[0].usage) === JSON.stringify(sh.usage));
+rmSync(tmp3, { recursive: true, force: true });
+
 console.log(`\n${n} assertions passed`);

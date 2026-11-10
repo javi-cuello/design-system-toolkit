@@ -3,7 +3,7 @@
 // the full-tier subjects' ids and send this file's body as one figma_execute call.
 // A part in every variant is unconditional composition; one in a subset is
 // revealed by an axis or boolean, and Composition must say so. It also returns
-// the subject's `properties`, and on each part the booleans that show or hide
+// the subject's `properties`, each variant's `sizes`, and on each part the booleans that show or hide
 // it (`toggledBy`) and the swap props bound to it (`swappedBy`): the input
 // scripts/sections.mjs turns into the Behaviour and Composition lists.
 const CONFIG = {
@@ -31,6 +31,19 @@ const refsTo = (inst, variant) => {
   return { visible, swap };
 };
 
+// A part is what the subject itself places: an instance inside another instance is that
+// instance's composition, not the subject's (a Button's icon is not the shell's), so it is
+// never listed, nor reported broken here: its defects are the nested component's. A shell
+// of 4 parts read as 28 before this (2026-11-10).
+const insideInstance = (inst, variant) => { for (let p = inst.parent; p && p !== variant; p = p.parent) if (p.type === 'INSTANCE') return true; return false; };
+// Each variant's size as built: a number where the side is fixed, 'hug' where it grows with its content.
+const sizeOf = (v) => {
+  // a side that fills its parent has no size of its own to state
+  const side = (mode, px) => mode === 'HUG' ? 'hug' : mode === 'FILL' ? null : typeof px === 'number' ? Math.round(px) : null;
+  const w = side(v.layoutSizingHorizontal, v.width), h = side(v.layoutSizingVertical, v.height);
+  return w == null || h == null ? null : { w, h };
+};
+
 const out = [];
 for (const id of CONFIG.ids) {
   const n = await figma.getNodeByIdAsync(id);
@@ -41,6 +54,7 @@ for (const id of CONFIG.ids) {
   const uniq = new Map();
   for (const v of variants) {
     for (const i of v.findAllWithCriteria({ types: ['INSTANCE'] })) {
+      if (insideInstance(i, v)) continue;
       const key = v.name + '::' + i.name;
       if (!uniq.has(key)) uniq.set(key, { inst: i, variant: v.name, refs: refsTo(i, v) });
       else { // a second layer of that name: a toggle holds only if it holds on both
@@ -81,6 +95,8 @@ for (const id of CONFIG.ids) {
   const properties = defs && Object.entries(defs).map(([k, d]) => d.type === 'VARIANT'
     ? { name: k, type: d.type, options: d.variantOptions || [] }
     : { name: bare(k), type: d.type });
-  out.push({ id, name: n.name, variantCount: variants.length, variantNames: variants.map((v) => v.name), parts, broken, properties });
+  const sizes = {};
+  for (const v of variants) { const z = sizeOf(v); if (z) sizes[v.name] = z; }
+  out.push({ id, name: n.name, variantCount: variants.length, variantNames: variants.map((v) => v.name), parts, broken, properties, sizes });
 }
 return out;

@@ -21,11 +21,15 @@
 // --separator    the library's group separator: members of a virtual set (two or more
 //                sharing the stem before it) come back as one entry, `ids` and `members`
 //                beside it, the union of their lines, each line only some have saying which
+// --recipes      what `node tools/snapshot/recipes.cjs --repo <project repo>` prints: a
+//                component a stored screen is built on gets a generated Usage line naming
+//                those reference screens, so the names follow the snapshot, never a hand copy
 // --check        { "<id>": "<descriptionMarkdown>" }: exits 1 naming every
 //                generated line a written description lacks or reworded, and
 //                every subject the file has no description for.
 //
-// Prints JSON: [{ id, name, behaviour[], composition[], markdown, gaps[] }].
+// Prints JSON: [{ id, name, behaviour[], composition[], usage[], markdown, gaps[] }].
+// Behaviour also says the size an axis decides, from composition.js's `sizes`.
 // Plain node; its one import is the toolkit's variant-name reader (tools/shared/names.js,
 // skill-standard §A clause H), which bin/get takes with it. tests/test-sections.mjs runs it on a fixture.
 import { readFileSync, realpathSync } from 'node:fs';
@@ -67,10 +71,49 @@ function conditionOf(part, variantNames) {
   return exact ? 'where ' + restricted.map(([a, held]) => q(a) + ' is ' + list(held, 'or')).join(' and ') : null;
 }
 
-export function sections(subject, { stateAxis = null, disabledAxis = null, restState = null, language = 'en-GB' } = {}) {
+/*
+ * The size an axis decides: a line only where the variants' sides differ in kind between the
+ * axis's options (fixed against growing with the content) and each option builds one size. A
+ * Size axis whose options differ only in numbers says nothing here, so no library's existing
+ * descriptions gain a line they lack.
+ */
+function sizeLines(subject, axes) {
+  const sizes = subject.sizes || {}, names = subject.variantNames || [];
+  if (!names.length || !names.every((v) => sizes[v])) return [];
+  const kind = (z) => (z.w === 'hug' ? 'h' : 'f') + (z.h === 'hug' ? 'h' : 'f');
+  const say = ({ w, h }) => w !== 'hug' && h !== 'hug' ? w + ' × ' + h
+    : w !== 'hug' ? w + ' wide and grows with its content in height'
+    : h !== 'hug' ? h + ' high and grows with its content in width' : 'sized by its content';
+  const lines = [];
+  for (const a of axes) {
+    const per = a.options.map((o) => {
+      const zs = names.filter((v) => axesOf(v)[a.name] === o).map((v) => sizes[v]);
+      return zs.length && zs.every((z) => JSON.stringify(z) === JSON.stringify(zs[0])) ? zs[0] : null;
+    });
+    if (per.some((z) => !z) || new Set(per.map(kind)).size < 2) continue;
+    lines.push('At ' + q(a.name) + ' ' + a.options.map((o, i) => (i ? 'at ' : '') + q(o) + ' it is ' + say(per[i])).join('; '));
+  }
+  return lines;
+}
+
+/*
+ * The reference screens built on this component, from the snapshot's screen recipe
+ * (tools/snapshot/recipes.cjs `templates`, each with the `names` of its screens). A template is
+ * keyed by the name the snapshot records, which can carry a path before the component's own.
+ */
+function referenceScreens(subject, recipes, gaps) {
+  const all = (recipes && recipes.templates) || [];
+  const exact = all.filter((x) => x.component === subject.name);
+  const hits = exact.length ? exact : all.filter((x) => String(x.component).endsWith('/' + subject.name));
+  if (hits.length > 1) { gaps.push('Usage: which reference screens, since ' + list(hits.map((x) => x.component)) + ' all end in its name'); return []; }
+  const t = hits[0];
+  return t && (t.names || []).length ? ['Start from the reference screen closest to the new one: ' + list(t.names, 'or')] : [];
+}
+
+export function sections(subject, { stateAxis = null, disabledAxis = null, restState = null, language = 'en-GB', recipes = null } = {}) {
   if (!HEADINGS[language]) throw new Error('generated lists are English (en-GB or en-US); for ' + language + ' they are written by hand');
   const gaps = [];
-  if (subject.error) return { id: subject.id, name: subject.name || null, behaviour: [], composition: [], markdown: '', gaps: [subject.error] };
+  if (subject.error) return { id: subject.id, name: subject.name || null, behaviour: [], composition: [], usage: [], markdown: '', gaps: [subject.error] };
   if (!Array.isArray(subject.properties)) gaps.push('the interface could not be read (Figma refused the set\'s definitions): both lists are written by hand');
   const props = subject.properties || [];
   const parts = (subject.parts || []).slice();
@@ -81,6 +124,7 @@ export function sections(subject, { stateAxis = null, disabledAxis = null, restS
     if (p.options.length < 2) { gaps.push('the ' + q(p.name) + ' axis has one option: an interface defect, reported rather than documented'); continue; }
     behaviour.push('The ' + q(p.name) + ' axis offers ' + list(p.options));
   }
+  behaviour.push(...sizeLines(subject, props.filter((p) => p.type === 'VARIANT' && p.name !== stateAxis && p.name !== disabledAxis && p.options.length > 1)));
   for (const p of props.filter((p) => p.type === 'BOOLEAN' && p.name !== disabledAxis)) {
     const shown = parts.filter((x) => (x.toggledBy || []).includes(p.name)).map((x) => x.name).sort((a, b) => a.localeCompare(b, 'en'));
     if (shown.length) behaviour.push('The ' + q(p.name) + ' boolean shows or hides ' + list(shown));
@@ -127,10 +171,8 @@ export function sections(subject, { stateAxis = null, disabledAxis = null, restS
   for (const b of subject.broken || [])
     gaps.push('a broken nested instance ' + q(b.instance) + ' in ' + q(b.variant) + ': reported, never documented');
 
-  const md = [];
-  if (behaviour.length) md.push('## ' + HEADINGS[language], ...behaviour.map((l) => '- ' + l), '');
-  if (composition.length) md.push('## Composition', ...composition.map((l) => '- ' + l), '');
-  return { id: subject.id, name: subject.name, behaviour, composition, markdown: md.join('\n').trim(), gaps };
+  const usage = referenceScreens(subject, recipes, gaps);
+  return { id: subject.id, name: subject.name, behaviour, composition, usage, markdown: markdownOf(behaviour, composition, usage, language), gaps };
 }
 
 /*
@@ -149,15 +191,21 @@ export function union(results, separator, language = 'en-GB') {
     return [...seen].map(([l, who]) => who.length === results.length ? l
       : l + ' (in the ' + list(who) + (who.length > 1 ? ' subparts' : ' subpart') + ')');
   };
-  const behaviour = merge('behaviour'), composition = merge('composition');
+  const behaviour = merge('behaviour'), composition = merge('composition'), usage = merge('usage');
   const gaps = [];
   for (const r of results) for (const g of r.gaps) if (!gaps.includes(g) && results.every((x) => x.gaps.includes(g))) gaps.push(g);
   for (const r of results) for (const g of r.gaps) if (!results.every((x) => x.gaps.includes(g))) gaps.push(sub(r) + ': ' + g);
   gaps.push('the purpose paragraph opens with the group, not a member, and names each subpart and what it is for (guide, "Writing for a virtual set")');
+  return { id: results[0].id, ids: results.map((r) => r.id), name: stem, members: results.map((r) => r.name), behaviour, composition, usage, markdown: markdownOf(behaviour, composition, usage, language), gaps };
+}
+
+// The generated sections in the description's order; the writer's Usage lines follow the generated one.
+function markdownOf(behaviour, composition, usage, language) {
   const md = [];
   if (behaviour.length) md.push('## ' + HEADINGS[language], ...behaviour.map((l) => '- ' + l), '');
   if (composition.length) md.push('## Composition', ...composition.map((l) => '- ' + l), '');
-  return { id: results[0].id, ids: results.map((r) => r.id), name: stem, members: results.map((r) => r.name), behaviour, composition, markdown: md.join('\n').trim(), gaps };
+  if (usage.length) md.push('## Usage', ...usage.map((l) => '- ' + l), '');
+  return md.join('\n').trim();
 }
 
 // Subjects whose names share a stem before the separator, two or more of them: the virtual sets.
@@ -175,11 +223,12 @@ export function virtualGroups(subjects, separator) {
 // Every generated line a written description lacks under its heading, verbatim.
 export function check(markdown, generated, language = 'en-GB') {
   const section = (h) => {
-    const m = String(markdown || '').split(/\n(?=## )/).find((s) => s.replace(/^\n+/, '').startsWith('## ' + h + '\n') || s.trim() === '## ' + h);
-    return m ? m.split('\n').filter((l) => l.startsWith('- ')).map((l) => l.slice(2).trim()) : [];
+    // every section under that heading: a writer's own `## Usage` may sit beside the generated one
+    return String(markdown || '').split(/\n(?=## )/).filter((s) => s.replace(/^\n+/, '').startsWith('## ' + h + '\n') || s.trim() === '## ' + h)
+      .flatMap((m) => m.split('\n').filter((l) => l.startsWith('- ')).map((l) => l.slice(2).trim()));
   };
   const missing = [];
-  for (const [h, lines] of [[HEADINGS[language], generated.behaviour], ['Composition', generated.composition]]) {
+  for (const [h, lines] of [[HEADINGS[language], generated.behaviour], ['Composition', generated.composition], ['Usage', generated.usage || []]]) {
     const have = section(h);
     for (const l of lines) if (!have.includes(l)) missing.push(h + ': ' + l);
   }
@@ -201,8 +250,8 @@ if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } ca
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
   // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
   const json = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
-  if (!arg('--composition')) { console.error('usage: sections.mjs --composition <file> [--settings <file>] [--file-key <key>] [--language en-GB|en-US] [--check <file>]'); process.exit(2); }
-  const opts = Object.assign(arg('--settings') ? settingsFrom(json(arg('--settings')), arg('--file-key')) : {}, { language: arg('--language') || 'en-GB' });
+  if (!arg('--composition')) { console.error('usage: sections.mjs --composition <file> [--settings <file>] [--file-key <key>] [--language en-GB|en-US] [--recipes <file>] [--check <file>]'); process.exit(2); }
+  const opts = Object.assign(arg('--settings') ? settingsFrom(json(arg('--settings')), arg('--file-key')) : {}, { language: arg('--language') || 'en-GB', recipes: arg('--recipes') ? json(arg('--recipes')) : null });
   const subjects = [].concat(json(arg('--composition')));
   let out = subjects.map((s) => Object.assign({ generatedBy: GENERATED_BY }, sections(s, opts)));
   // --separator: each virtual set's members become one entry, their union (step 2c)

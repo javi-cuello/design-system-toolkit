@@ -16,6 +16,7 @@
       "The `Trailing` prop swaps a nested instance",
       "The `Content` slot takes any custom content, passed in rather than hardcoded"
     ],
+    "usage": [],
     "markdown": "## Behaviour\n- The `Size` axis offers `Small` and `Large`\n- The `Show icon` boolean shows or hides `Icon`\n- Interactive states on the `State` axis (`Hover`, `Focus`) and `Disabled` are managed by code and not applied in static designs\n\n## Composition\n- Contains `Icon`, revealed by the `Show icon` prop, swapped through the `Icon swap` prop\n- Contains `Label`\n- Contains `Badge` in 3 of 8 variants\n- Contains `Spinner` where `Size` is `Large`\n- The `Trailing` prop swaps a nested instance\n- The `Content` slot takes any custom content, passed in rather than hardcoded",
     "gaps": [
       "the `Theme` axis has one option: an interface defect, reported rather than documented",
@@ -34,6 +35,7 @@
     "composition": [
       "Contains `Label`"
     ],
+    "usage": [],
     "markdown": "## Composition\n- Contains `Label`",
     "gaps": [
       "Behaviour: runtime behaviour the code owns (opening, animation, focus, sorting), if any"
@@ -45,6 +47,7 @@
     "name": null,
     "behaviour": [],
     "composition": [],
+    "usage": [],
     "markdown": "",
     "gaps": [
       "not found"
