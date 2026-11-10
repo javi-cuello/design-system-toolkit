@@ -1,4 +1,4 @@
-// Design system snapshot — v0.70.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.71.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -671,7 +671,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.70.0';
+const VERSION = '0.71.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -715,6 +715,48 @@ async function notesOf(n) {
     .map((a) => ({ text: (a.labelMarkdown || a.label || '').trim(), ...(a.categoryId && noteCategories.get(a.categoryId) && { category: noteCategories.get(a.categoryId) }), ...(a.properties && a.properties.length && { properties: a.properties.map((p) => p.type) }) }))
     .filter((a) => a.text || a.properties);
   return out.length ? out : null;
+}
+
+/*
+ * A screen's instance layer carries the notes its main component's layer holds: Figma keeps an
+ * annotation on the layer it was written on, so a rule pinned once on a template's header never
+ * reached the screens built on it (2026-11-10). The counterparts are the layer's id without its
+ * first part, then without each next one (`I15:2054;1:2433;1:850` → `I1:2433;1:850` → `1:850`),
+ * the notes of every one gathered nearest first, a text said twice kept once. One counts only
+ * when it is a local component's layer (a library's copy says what its own snapshot says) and
+ * carries the layer's own name, so a part renamed or swapped under a new name takes nothing.
+ * Each note says the component it came from. Screens runs only. A layer inside a library
+ * instance has no local counterpart (checked 2026-11-10), so a note there is not read.
+ */
+const sourceSeen = new Map();
+/** @param {SceneNode} n */
+async function componentNotesOf(n) {
+  if (!walkWhole || typeof n.id !== 'string' || !n.id.startsWith('I')) return null;
+  const segs = n.id.slice(1).split(';');
+  /** @type {any[]} */
+  const got = [];
+  for (let k = 1; k < segs.length; k++) {
+    const rest = segs.slice(k), id = rest.length === 1 ? rest[0] : 'I' + rest.join(';');
+    if (!sourceSeen.has(id)) {
+      /** @type {any} */
+      let src = null;
+      try { src = await figma.getNodeByIdAsync(id); } catch (e) { /* not in this file */ }
+      let notes = null;
+      let c = src && src.parent;
+      while (c && c.type !== 'COMPONENT') c = c.parent;
+      const owner = c && c.parent && c.parent.type === 'COMPONENT_SET' ? c.parent : c;
+      const own = src && owner && !owner.remote && (await notesOf(src));
+      if (own) {
+        const from = c ? componentName(c.parent && c.parent.type === 'COMPONENT_SET' ? c.parent : c) : null;
+        notes = own.map((x) => (from ? { ...x, from } : x));
+      }
+      sourceSeen.set(id, src ? { name: src.name, notes } : null);
+    }
+    const hit = sourceSeen.get(id);
+    // the name is compared on every layer, not once per counterpart: a swapped part shares the id
+    if (hit && hit.notes && hit.name === n.name) for (const x of hit.notes) if (!got.some((g) => g.text === x.text)) got.push(x);
+  }
+  return got.length ? got : null;
 }
 
 /** @param {SceneNode} n @param {number} depth @returns {Promise<Record<string, unknown>>} */
@@ -792,8 +834,10 @@ async function walk(n, depth) {
   // logged into one account, this item is read-only"). Recorded since 0.58.0
   // with its category, so the store can list a note that is new or changed
   // and a build reads it beside the layer it is pinned to.
-  const notes = await notesOf(n);
-  if (notes) o.notes = notes;
+  // its own first, then those its main component's layer holds (screens runs, 0.71.0)
+  const mine = (await notesOf(n)) || [];
+  const notes = [...mine, ...((await componentNotesOf(n)) || []).filter((x) => !mine.some((m) => m.text === x.text))];
+  if (notes.length) o.notes = notes;
   // Which numbers are tokens. A padding of 16 and Spacing/16 measure the same;
   // only the binding says whether the design decided it or someone typed it.
   const bound = await numberBindings(n);
@@ -1140,6 +1184,7 @@ async function collectLibrary(withIcons) {
 
 async function collectScreens() {
   walkWhole = true;
+  sourceSeen.clear(); // a component's notes are read fresh each run
   await loadPages();
   const screens = [];
   // The section a page sits in: the nearest header page above it. A page

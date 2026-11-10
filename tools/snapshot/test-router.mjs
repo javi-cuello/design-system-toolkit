@@ -890,6 +890,8 @@ test('screens: addressed by section, page and name without its prefix or numbers
   assert.deepEqual(first.detail, ['notes--main-screens--menu · Account: [Development] Read-only with one account.'], 'a new note is listed whole, with its layer and category');
   assert.match(post('C', [noted('Read-only with one account.')]).lines.find((l) => l.label === 'notes').text, /1 annotated layer\(s\) on 1 screen\(s\), none new/, 'an unchanged note is counted, not listed');
   assert.equal(post('C', [noted('Switches accounts.')]).lines.find((l) => l.label === 'notes').detail.length, 1, 'a changed note is listed again');
+  const inherited = frame('NOTES', '-- Main screens', '<Notes> 1-1 - Menu'); inherited.tree.children = [{ name: 'Header', type: 'FRAME', notes: [{ text: 'Only global actions.', category: 'Development', from: 'Components/Screen' }] }];
+  assert.ok(post('C', [inherited]).lines.find((l) => l.label === 'notes').detail.some((d) => d.endsWith('Header: [Development] Only global actions. — from Components/Screen')), "a note read from the component says which one");
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

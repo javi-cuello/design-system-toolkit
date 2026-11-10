@@ -1385,7 +1385,7 @@ function writeScreens(p, P, { now = new Date(), version, states = [], ids: route
   /* A designer's annotations (plugin 0.58.0), by layer: every one is counted,
      and one that is new or changed since the stored frame is listed whole —
      a note is behaviour to build, and a note nobody reads is how it is lost. */
-  const said = (list) => list.map((x) => `${x.category ? `[${x.category}] ` : ''}${x.text}${x.properties ? ` (${x.properties.join(', ')})` : ''}`).join(' · ');
+  const said = (list) => list.map((x) => `${x.category ? `[${x.category}] ` : ''}${x.text}${x.properties ? ` (${x.properties.join(', ')})` : ''}${x.from ? ` — from ${x.from}` : ''}`).join(' · ');
   const notesIn = (tree) => {
     const m = new Map();
     if (!tree) return m;

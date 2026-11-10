@@ -178,4 +178,40 @@ const turned = await walk(leaf([[c, s, 0], [-s, c, 0]], 30), 1);
 ok("a turn without a mirror stays a turn", turned.rotation === 30 && !("flip" in turned));
 const both = await walk(leaf([[-c, s, 0], [s, c, 0]], 0), 1);
 ok("a mirror and a turn are carried apart", both.flip === "x" && both.rotation === 30);
+// 2026-11-10: a rule annotated once on a template's header never reached the screens built on it:
+// Figma keeps an annotation on the layer it was written on. A screens run reads the main
+// component's layer (the id without its first part) and says where the note came from.
+{
+  const page = { type: "PAGE", name: "Components" };
+  const set = { type: "COMPONENT_SET", name: "Screen", parent: page };
+  const variant = { type: "COMPONENT", name: "Fixed height=False", parent: set };
+  const header = { id: "1:2433", name: "App header", parent: variant, annotations: [{ labelMarkdown: "Only global actions stay here.", categoryId: "c1" }] };
+  const crumb = { id: "I1:2433;1:850", name: "Breadcrumb", parent: header, annotations: [{ labelMarkdown: "Shows how deep the page sits." }] };
+  const crumbSet = { type: "COMPONENT", name: "Breadcrumb", parent: page };
+  const crumbOwn = { id: "1:850", name: "Breadcrumb", parent: crumbSet, annotations: [{ labelMarkdown: "Truncate long labels." }] };
+  const libSet = { type: "COMPONENT_SET", name: "Button", parent: page, remote: true };
+  const libLayer = { id: "4:4", name: "Label", parent: { type: "COMPONENT", name: "Size=M", parent: libSet }, annotations: [{ labelMarkdown: "A library's note." }] };
+  const byId = new Map([[header.id, header], [crumb.id, crumb], [crumbOwn.id, crumbOwn], [libLayer.id, libLayer]]);
+  const f = { ...figma, getNodeByIdAsync: async (id) => byId.get(id) || null, annotations: { getAnnotationCategoriesAsync: async () => [{ id: "c1", label: "Development" }] } };
+  const load = (code) => vm.runInContext(code + "\n;({ walk, setWhole: (v) => { walkWhole = v; sourceSeen.clear(); } })", vm.createContext({ figma: f, console, setTimeout, clearTimeout }));
+  const lib = load(src);
+  const layer = (id, name, annotations) => ({ id, name, type: "FRAME", width: 10, height: 10, x: 0, y: 0, layoutMode: "NONE", boundVariables: {}, children: [], annotations });
+  lib.setWhole(true);
+  const h = await lib.walk(layer("I15:2054;1:2433", "App header"), 1);
+  ok("a screen's instance layer carries its main component's note, its category and where it came from",
+    JSON.stringify(h.notes) === JSON.stringify([{ text: "Only global actions stay here.", category: "Development", from: "Components/Screen" }]));
+  const c = await lib.walk(layer("I15:2054;1:2433;1:850", "Breadcrumb", [{ labelMarkdown: "Three levels here." }]), 2);
+  ok("…its own note first, then every component's, nearest first, each saying which",
+    JSON.stringify(c.notes.map((x) => x.text)) === JSON.stringify(["Three levels here.", "Shows how deep the page sits.", "Truncate long labels."]) && c.notes[1].from === "Components/Screen" && c.notes[2].from === "Components/Breadcrumb");
+  ok("a note the layer says itself is not said again", (await lib.walk(layer("I15:2054;1:2433", "App header", [{ labelMarkdown: "Only global actions stay here." }]), 1)).notes.length === 1);
+  ok("a library component's layer gives none: its own snapshot carries it", !("notes" in (await lib.walk(layer("I15:2054;4:4", "Label"), 1))));
+  ok("a layer whose counterpart has another name (a swapped part) takes no note", !("notes" in (await lib.walk(layer("I15:2054;1:2433", "Search bar"), 1))));
+  ok("a counterpart not in this file (a library's) takes none", !("notes" in (await lib.walk(layer("I15:2054;9:9", "Toolbar"), 1))));
+  lib.setWhole(false);
+  ok("a library run reads no component's notes onto its instances", !("notes" in (await lib.walk(layer("I15:2054;1:2433", "App header"), 1))));
+  const planted = load(src.replace("if (!walkWhole || typeof n.id", "if (typeof n.id"));
+  planted.setWhole(false);
+  ok("(planted) without the screens-only guard a library run takes them", "notes" in (await planted.walk(layer("I15:2054;1:2433", "App header"), 1)));
+}
+
 console.log(n + "/" + n + " passed");

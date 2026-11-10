@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.23.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.24.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -463,15 +463,21 @@ was built from a frame a week old and reported as a duplicate in the design
 The plugin records each layer's Dev Mode annotations as `notes` (text,
 category, pinned properties), and every screens run counts them and lists in
 full each one that is new or changed since the stored frame, naming the
-screen and the layer. A note is behaviour to build; the run says so once and
+screen and the layer. On a screen, an instance's layer also carries the notes
+its main components' layers hold in the same file (every level, nearest first),
+after its own, each saying the component it came from (`from`); a layer renamed
+or swapped under a new name takes none. A rule is written once on the template
+and read on every screen built from it. A note is behaviour to build; the run says so once and
 the mapping or the code answers it.
 *Why:* an annotation is the one place a frame says what no measurement can
 see. *Evidence:* the Screens file's sidebar carried three Development notes —
 show the workspace switcher only with something to switch, the account
 header read-only with one account, Add account opening the login page — and
 nothing in the snapshot carried them; the code had built the first one
-differently (one project, 13 Oct 2026).
-*Checked:* `tools/snapshot/test-router.mjs` "a new note is listed whole".
+differently (one project, 13 Oct 2026). A template's header rules, annotated
+once on its component, were absent from all three screens built on it, since
+Figma keeps a note on the layer it was written on (one project, 10 Nov 2026).
+*Checked:* `tools/snapshot/test-router.mjs` "a new note is listed whole", "a note read from the component says which one"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a screen's instance layer carries its main component's note…".
 
 **26 · A library snapshot through the Figma MCP is the plugin's own, and is proved equal.**
 `tools/snapshot/mcp.mjs` serves the plugin's `code.js` to `use_figma`, never a

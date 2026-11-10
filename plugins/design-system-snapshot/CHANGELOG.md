@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.71.0] - 2026-11-10
+### Added
+- **A screen's instance layer carries its component's notes.** Figma keeps an annotation on the layer it was written on, so a rule annotated once on a template's header reached none of the screens built on it. In a screens run, a layer of an instance also records the notes of its main component's layer (its id without the first part, then each next part: every level, nearest first, a repeated text once), after its own, each with `from`, the component's name; only from a local component's layer with the same name, so a part renamed or swapped under a new name takes nothing. A layer inside a library instance has no local counterpart and reads none. Library runs are unchanged. The store lists `— from <component>` beside such a note (snapshot-standard rule 25). The first screens run after it lists each inherited note as new once, and each screen built on an annotated template changes (`~ notes`) once.
+
 ## [0.70.0] - 2026-11-05
 ### Added
 - **A mirror is recorded as a mirror (`flip`), not a turn.** Figma keeps a flip in the layer's matrix and reports it as a rotation (a horizontal mirror reads -180), so a mirrored illustration was recorded upside down and its code's `scaleX(-1)` was waived as a difference. The walk takes the flip out of `relativeTransform` first (a negative determinant): `flip: 'x'`, or `'y'` where what is left is a half turn, and `rotation` keeps only the turn that remains. `unrecorded` no longer lists the reported turn of a mirrored layer. Parity compares `flip` with the page's `-flip` (tools/parity).
