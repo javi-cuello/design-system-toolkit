@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.4.1] - 2026-11-10
+### Fixed
+- *Run* no longer lists a file-level check that had nothing to check as run; a Page list row's place is its entry's page.
+
 ## [0.4.0] - 2026-11-10
 ### Added
 - The file as a whole: the foundations audit's checks (page and category order, separators, parent names, deprecation, mode pins, page templates, status markers) run after the components scan on the same settings; their findings join the report, file-level ones under "Page list", and *Run* names which ran.
