@@ -11,6 +11,8 @@ It is the components and foundations audits with nothing else to install: no bri
 3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
 4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
+As a page, the results filter by severity, take a Done mark per row, copy a question about a row for the chat (**Ask**), and turn a row that is intended into a rulings-log row (**Keep as is**) to paste into the context document, which the next run then judges by. Done and kept marks stay in that browser only.
+
 On a 71-component library Claude's reply takes about a minute, most of it writing the tables.
 
 A changed manifest needs a re-import; "run last plugin" will not pick it up.

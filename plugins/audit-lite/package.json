@@ -1,2 +1,2 @@
-{ "name": "audit-lite", "version": "0.4.2", "private": true,
+{ "name": "audit-lite", "version": "0.5.0", "private": true,
   "devDependencies": { "@figma/plugin-typings": "1.142.0" } }

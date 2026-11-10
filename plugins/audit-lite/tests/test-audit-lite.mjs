@@ -80,10 +80,11 @@ ok('the run names the file-level checks that ran', fmd.includes('- File-level ch
 ok('a stopped file-level pass is said, the components kept', report(Object.assign({}, r, { foundations: { ran: [], notRun: [], error: 'boom' } }), { fileName: 'X', fileKey: 'K', date: 'd' }).includes('- File-level checks: stopped (boom)'));
 
 // The page: filled as Claude fills it, rendered against a stub document.
-const page = (data) => {
+const page = (data, stored) => {
   const js = LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
   const app = { innerHTML: '' };
-  new Function('document', js)({ getElementById: () => app });
+  const localStorage = { getItem: () => (stored ? JSON.stringify(stored) : null), setItem: () => {} };
+  new Function('document', 'localStorage', js)({ getElementById: () => app, querySelector: () => null }, localStorage);
   return app.innerHTML;
 };
 const data = { file: 'Lib <b>', fileKey: 'ABC123', date: '2026-11-10', scanned: { sets: 2, variants: 9 }, coverage: 90, kept: 3, dropped: 1, notScanned: ['Spacing scale'],
@@ -100,6 +101,27 @@ ok('the place is the row\'s header and seen-by-users its own column', html.inclu
 ok('file text is escaped', !html.includes('<img') && !html.includes('Lib <b>'));
 ok('a row links to its set', html.includes('href="https://www.figma.com/design/ABC123?node-id=1-3"'));
 ok('every table has a caption and column headers', (html.match(/<caption/g) || []).length === 2 && html.includes('scope="col"'));
+ok('a severity chip per severity, with its count, a missing one disabled not removed', html.includes('data-sev="error" aria-pressed="true">error (2)') && /data-sev="preference" aria-pressed="false" disabled>preference \(0\)/.test(html));
+ok('each row has a done box and its two actions', (html.match(/data-done="/g) || []).length === 3 && (html.match(/data-ask="/g) || []).length === 3 && (html.match(/data-keep="/g) || []).length === 3);
+ok('with nothing kept, the decisions section says how to keep one', html.includes('<h2>Decisions to record</h2>') && !html.includes('id="rulings"'));
+ok('without a context document the page offers to draft one', html.includes('<h2>Context document</h2>'));
+const kept = page(Object.assign({}, data, { contextName: 'design-system-context.md' }), { done: ['Button|Label|c'], keep: ['Button|Label|c', 'Gone|x|a finding a later run dropped'] });
+ok('a mark follows its finding, and one for a finding no longer listed is ignored', kept.includes('<tr class="is-done"><td class="n">3.1</td>') && kept.includes('1 of 3 marked done') && (kept.match(/Kept as is: intended/g) || []).length === 1);
+ok('a row kept as is becomes a rulings-log row naming its component', /\| \d{4}-\d\d-\d\d \| Button \| Button › Label: c\. Kept as is: intended\. \| Recorded from Audit lite, on Button\. \|/.test(kept), kept.split('id="rulings"')[1]?.slice(0, 300));
+ok('the rows are read back by the full audit\'s reader as rulings', (() => { const rows = kept.split('readonly aria-label="Rulings log rows">')[1].split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&amp;/g, '&'); const got = projects.rulingsOf('## 6. Rulings log\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n'); return got.length === 1 && got[0].why === 'Recorded from Audit lite, on Button.'; })());
+ok('with a context document, the page names it and offers no draft', kept.includes('design-system-context.md') && !kept.includes('<h2>Context document</h2>'));
+// The clicks: a chip hides its rows, Done and Keep as is change what the page shows and what it stores.
+{
+  const app = { innerHTML: '' }; let stored = null;
+  const js = LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
+  new Function('document', 'localStorage', js)({ getElementById: () => app, querySelector: () => null }, { getItem: () => null, setItem: (k, v) => { stored = JSON.parse(v); } });
+  const click = (dataset) => app.onclick({ target: { closest: () => ({ dataset, id: '' }) } });
+  click({ sev: 'warning' });
+  ok('a chip pressed off hides its rows and shows unpressed', /<tr hidden><td class="n">3\.2<\/td>/.test(app.innerHTML) && app.innerHTML.includes('data-sev="warning" aria-pressed="false">'));
+  click({ done: '3.1' }); click({ keep: '3.1' });
+  ok('done and kept are stored for this browser', JSON.stringify(stored) === JSON.stringify({ done: ['Button|Label|c'], keep: ['Button|Label|c'] }));
+  ok('a kept row reaches the decisions at once', app.innerHTML.includes('id="rulings"'));
+}
 ok('the run\'s scope has its heading', html.includes('<h2>About this run</h2>') && html.includes('Not checked in this run'));
 
 console.log(failed ? `${failed} failed, ${passed} passed` : `${passed} passed`);

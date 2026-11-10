@@ -1,6 +1,13 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.5.0] - 2026-11-10
+### Added
+- The page: severity chips with counts; a Done box per row; Ask, which copies a question about the row for the chat; Keep as is, which turns the row into a rulings-log row (Date | Scope | Ruling | Why, the Why naming the component) gathered under *Decisions to record*, to paste into the context document's section 6. Done and kept stay in the viewer's browser.
+- Without a context document the page offers the request that has Claude draft one.
+### Changed
+- A table scrolls in its frame below 760 px rather than crushing its columns; a row's two actions stay on one line.
+
 ## [0.4.2] - 2026-11-10
 ### Fixed
 - In a real run Claude published the page without asking chat or page, and closed with a table whose cells held raw HTML lists: the question is now the whole first reply, and the closing words are four plain sentences that never repeat the page's rows.

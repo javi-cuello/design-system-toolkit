@@ -23,7 +23,9 @@ h2{font-size:17px;margin:40px 0 4px}
 .counts b{font-size:18px;display:block}
 /* a shadow at a cut edge says the table scrolls; it scrolls away with the content where nothing is cut */
 .wrap{overflow-x:auto;background:linear-gradient(to right,var(--bg) 30%,transparent) left/40px 100% no-repeat local,linear-gradient(to left,var(--bg) 30%,transparent) right/40px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,var(--shadow),transparent) left/12px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,var(--shadow),transparent) right/12px 100% no-repeat scroll}
-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+/* past its narrowest readable width a table scrolls in its wrap rather than crushing its columns */
+table{width:100%;min-width:760px;border-collapse:collapse;margin-top:12px;font-size:14px}
+td.actions{white-space:nowrap}
 th,td{text-align:left;font-weight:400;vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--line)}
 thead th{font-size:12px;font-weight:600;color:var(--muted)}
 td.n{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -37,6 +39,24 @@ a{color:var(--link)}
 .empty{color:var(--muted)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .wrap:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+/* the severity chips: pressed shows by a check and a fill, the check's room kept so a press does not reflow the row
+   (knowledge/ui/patterns/chips.md, *Filter chips*) */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;border:0}
+.chips legend{font-size:13px;color:var(--muted);margin-bottom:6px;padding:0}
+button{font:inherit;color:inherit}
+.chip{display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:4px 12px 4px 8px;border:1px solid var(--line);border-radius:16px;background:var(--bg);font-size:13px;cursor:pointer}
+.chip::before{content:"";display:inline-block;width:12px}
+.chip[aria-pressed="true"]{background:var(--surface);border-color:var(--text)}
+.chip[aria-pressed="true"]::before{content:"✓"}
+.chip:disabled{cursor:default;color:var(--muted)}
+.act{min-height:32px;padding:4px 8px;margin:0 4px 4px 0;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:13px;cursor:pointer;white-space:nowrap}
+.act[aria-pressed="true"]{background:var(--surface);border-color:var(--text)}
+.chip:focus-visible,.act:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+td.done input{width:20px;height:20px;margin:2px 0 0}
+tr.is-done td,tr.is-done th{color:var(--muted)}
+tr.is-done .where a{color:var(--muted)}
+textarea{width:100%;min-height:120px;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.said{min-height:20px;margin:8px 0 0;font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -46,7 +66,7 @@ a{color:var(--link)}
      file: "<library name>", fileKey: "<key or null>", date: "YYYY-MM-DD",
      scanned: { sets: <n>, variants: <n> }, coverage: <token coverage % or null>,
      kept: <n>, dropped: <n>,
-     notScanned: ["<plain words>", …],
+     notScanned: ["<plain words>", …], contextName: "<the context document's file name, or null>",
      rows: [{ bucket: 1|2|3|4, sev: "error|warning|review|preference|hygiene", visible: true|false,
               set: "<component set>", setId: "<node id>", layer: "<layer path or empty>",
               issue: "<one sentence>", fix: "<one sentence>" }, …] } */
@@ -75,27 +95,83 @@ function render(d) {
   for (const b of [1, 2, 3, 4]) html += "<li><b>" + rows.filter((r) => bucketOf(r) === b).length + "</b> " + esc(BUCKETS[b][0]) + "</li>";
   if (d.coverage != null) html += "<li><b>" + esc(d.coverage) + "%</b> Values bound to tokens</li>";
   html += "</ul>";
+  const sevs = Object.keys(RANK).filter((s) => rows.some((r) => r.sev === s) || s !== "hygiene");
+  html += "<fieldset class=\"chips\"><legend>Show severity</legend>" + sevs.map((s) => {
+    const n = rows.filter((r) => r.sev === s).length;
+    return "<button type=\"button\" class=\"chip\" data-sev=\"" + s + "\" aria-pressed=\"" + (n && !off.has(s) ? "true" : "false") + "\"" + (n ? "" : " disabled") + ">" + esc(s) + " (" + n + ")</button>";
+  }).join("") + "</fieldset><p class=\"said\" id=\"said\" role=\"status\">" + esc(said) + "</p>";
+  const numbered = [];
   for (const b of [1, 2, 3, 4]) {
     const list = rows.filter((r) => bucketOf(r) === b)
       .sort((x, y) => (y.visible === true) - (x.visible === true) || (RANK[x.sev] ?? 9) - (RANK[y.sev] ?? 9));
     if (!list.length) continue;
     html += "<h2>" + b + " · " + esc(BUCKETS[b][0]) + "</h2><p class=\"note\">" + esc(BUCKETS[b][1]) + "</p>";
-    html += "<div class=\"wrap\" tabindex=\"0\" role=\"region\" aria-label=\"" + esc(BUCKETS[b][0]) + "\"><table><caption class=\"sr\">" + esc(BUCKETS[b][0]) + "</caption><thead><tr><th scope=\"col\">#</th><th scope=\"col\">Where</th><th scope=\"col\">Issue</th><th scope=\"col\">Fix</th><th scope=\"col\">Severity</th><th scope=\"col\">Seen by users</th></tr></thead><tbody>";
+    html += "<div class=\"wrap\" tabindex=\"0\" role=\"region\" aria-label=\"" + esc(BUCKETS[b][0]) + "\"><table><caption class=\"sr\">" + esc(BUCKETS[b][0]) + "</caption><thead><tr><th scope=\"col\">#</th><th scope=\"col\">Where</th><th scope=\"col\">Issue</th><th scope=\"col\">Fix</th><th scope=\"col\">Severity</th><th scope=\"col\">Seen by users</th><th scope=\"col\">Done</th><th scope=\"col\">Actions</th></tr></thead><tbody>";
     list.forEach((r, i) => {
+      numbered.push({ id: b + "." + (i + 1), r });
       const where = esc(r.set) + (r.layer ? " › " + esc(r.layer) : "");
       const url = link(d, r);
-      html += "<tr><td class=\"n\">" + b + "." + (i + 1) + "</td>"
+      const id = b + "." + (i + 1), done = state.done.includes(idOf(r)), kept = state.keep.includes(idOf(r));
+      html += "<tr" + (done ? " class=\"is-done\"" : "") + (off.has(r.sev) ? " hidden" : "") + "><td class=\"n\">" + id + "</td>"
         + "<th scope=\"row\" class=\"where\">" + (url ? "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\"><code>" + where + "</code></a>" : "<code>" + where + "</code>") + "</th>"
         + "<td>" + esc(r.issue) + "</td><td>" + esc(r.fix) + "</td>"
-        + "<td class=\"sev " + esc(r.sev) + "\">" + esc(r.sev) + "</td><td>" + (r.visible ? "Yes" : "") + "</td></tr>";
+        + "<td class=\"sev " + esc(r.sev) + "\">" + esc(r.sev) + "</td><td>" + (r.visible ? "Yes" : "") + "</td>"
+        + "<td class=\"done\"><input type=\"checkbox\" data-done=\"" + id + "\" aria-label=\"" + id + " " + esc(r.set) + " done\"" + (done ? " checked" : "") + "></td>"
+        + "<td class=\"actions\"><button type=\"button\" class=\"act\" data-ask=\"" + id + "\" aria-label=\"Ask about " + id + "\">Ask</button>"
+        + "<button type=\"button\" class=\"act\" data-keep=\"" + id + "\" aria-pressed=\"" + kept + "\" aria-label=\"Keep as is: " + id + "\">Keep as is</button></td></tr>";
     });
     html += "</tbody></table></div>";
   }
   if (!rows.length) html += "<p>No fixes needed in " + esc(d.file) + " for what this run checked.</p>";
   html += "<h2>About this run</h2><div class=\"gaps\"><p class=\"note\">" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions or not defects.</p>";
   if ((d.notScanned || []).length) html += "<p class=\"note\">Not checked in this run:</p><ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
-  html += "</div>";
+  html += "<p class=\"note\">" + numbered.filter((x) => state.done.includes(idOf(x.r))).length + " of " + rows.length + " marked done in this browser.</p></div>";
+  // Decisions: each row kept as is, as a rulings-log row, so the next run judges by it.
+  const keptRows = numbered.filter((x) => state.keep.includes(idOf(x.r)));
+  html += "<h2>Decisions to record</h2><p class=\"note\">" + (keptRows.length
+    ? keptRows.length + " kept as is. Paste these rows at the end of the rulings table (section 6) of " + (d.contextName ? esc(d.contextName) : "the project's context document; without one, ask Claude to draft it first") + ". The next audit, with that document picked, judges by them."
+    : "Press <b>Keep as is</b> on a row that is intended, and it becomes a ruling to record here.") + "</p>";
+  if (keptRows.length) html += "<textarea id=\"rulings\" readonly aria-label=\"Rulings log rows\">" + esc(keptRows.map((x) => rulingRow(x.r)).join("\n")) + "</textarea><p><button type=\"button\" class=\"act\" id=\"copy-rulings\">Copy the rows</button></p>";
+  if (!d.contextName) html += "<h2>Context document</h2><p class=\"note\">This run used the toolkit's defaults. A context document gives the next run this library's own settings and its rulings: ask Claude to draft one from this report, then pick it in the plugin with <b>Use a context document…</b></p><p><button type=\"button\" class=\"act\" id=\"ask-context\">Copy the request</button></p>";
   app.innerHTML = html;
+  app.onclick = (e) => {
+    const t = e.target.closest("button, input");
+    if (!t) return;
+    const find = (id) => (numbered.find((x) => x.id === id) || {}).r;
+    if (t.dataset.sev) { toggle_(off, t.dataset.sev); redraw("[data-sev=\"" + t.dataset.sev + "\"]"); }
+    else if (t.dataset.done) { toggle(state.done, idOf(find(t.dataset.done))); save(); redraw("[data-done=\"" + t.dataset.done + "\"]"); }
+    else if (t.dataset.keep) { toggle(state.keep, idOf(find(t.dataset.keep))); save(); redraw("[data-keep=\"" + t.dataset.keep + "\"]"); }
+    else if (t.dataset.ask) { const r = find(t.dataset.ask); copy("Tell me about " + t.dataset.ask + " (" + r.set + (r.layer ? " › " + r.layer : "") + "): why it matters, and how to fix it in Figma.", "The question about " + t.dataset.ask); }
+    else if (t.id === "copy-rulings") copy(document.getElementById("rulings").value, "The rulings rows");
+    else if (t.id === "ask-context") copy("Draft the context document for this library from the report: its settings from the discovery, the conventions the dropped findings showed, and the decisions I kept as rulings. Mark every field you cannot fill as a question for me.", "The request");
+  };
+}
+const toggle_ = (set, v) => { if (set.has(v)) set.delete(v); else set.add(v); };
+// a change redraws the page and puts focus back on the control that made it (chips.md: focus stays on the chip)
+function redraw(sel) { render(DATA); const el = document.querySelector(sel); if (el) el.focus(); }
+// What the reader did on this page (done, kept as is) stays in this browser only; the page renders without it.
+const KEY = DATA ? "audit-lite:" + (DATA.fileKey || DATA.file) + ":" + DATA.date : "";
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+const state = Object.assign({ done: [], keep: [] }, load());
+const off = new Set();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ done: state.done, keep: state.keep })); } catch (e) {} };
+// a mark belongs to a finding, not to its place: a later run on the same day may number the rows differently
+const idOf = (r) => [r.set, r.layer, r.issue].join("|");
+let said = "";
+const toggle = (list, id) => { const i = list.indexOf(id); if (i < 0) list.push(id); else list.splice(i, 1); };
+// a backtick would open a code span in the rulings table and merge its cells (projects.cjs cells), so it becomes a quote
+const cellText = (s) => String(s == null ? "" : s).replace(/`/g, "'").replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+const sentence = (s) => { const t = String(s || "").trim(); return /[.!?]$/.test(t) ? t : t + "."; };
+// A decision as a row of the context document's rulings log (§6): Date | Scope | Ruling | Why, the Why naming the
+// component, which is how the full audit's judge reads a ruling's subject.
+function rulingRow(r) {
+  const where = r.set + (r.layer ? " › " + r.layer : "");
+  return "| " + today() + " | " + cellText(r.set) + " | " + cellText(where + ": " + sentence(r.issue) + " Kept as is: intended.") + " | " + cellText("Recorded from Audit lite, on " + r.set + ".") + " |";
+}
+function copy(text, what) {
+  const show = (ok) => { said = ok ? what + " copied. Paste it" + (what === "The rulings rows" ? " at the end of the rulings table." : " into the chat.") : what === "The rulings rows" ? "Copying is blocked here: select the rows in the box and copy them." : "Copying is blocked here. Select this and copy it: " + text; const el = document.getElementById("said"); if (el) el.textContent = said; };
+  try { navigator.clipboard.writeText(text).then(() => show(true), () => show(false)); } catch (e) { show(false); }
 }
 render(DATA);
 </script>
