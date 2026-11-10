@@ -1,6 +1,6 @@
 # HTML semantics
 
-How a page's markup carries its meaning: metadata, the heading outline, landmarks, the element chosen for each job (links and buttons, navigation, lists, description lists, figures, tables and their sorting, disclosure, dialogs and popovers), forms and their errors, search and filter forms, images, charts, code samples, valid nesting and custom elements. Everything downstream reads the document rather than the rendering, so this is where most accessibility is decided for free. It serves code-standard rule 1 (markup stands on its own), code-standard rule 2 (DOM order is reading order), code-standard rule 3 (every band is a landmark holding one container), code-standard rule 8 (three kinds of component), code-standard rule 13 (slots) and code-standard rule 20 (a working no-script path), and design-standard's principles *for everyone, in any context* and *clear words, clear hierarchy*. ARIA, names, focus and live regions are [accessibility.md](accessibility.md)'s; the language and direction of a page are [i18n.md](i18n.md)'s; behaviour layered on the markup is [javascript.md](javascript.md)'s; the design half of accessibility is [ui/design/accessibility.md](../ui/design/accessibility.md).
+How a page's markup carries its meaning: metadata, share previews (Open Graph), the heading outline, landmarks, the element chosen for each job (links and buttons, navigation, lists, description lists, figures, tables and their sorting, disclosure, dialogs and popovers), forms and their errors, search and filter forms, images, charts, code samples, valid nesting and custom elements. Everything downstream reads the document rather than the rendering, so this is where most accessibility is decided for free. It serves code-standard rule 1 (markup stands on its own), code-standard rule 2 (DOM order is reading order), code-standard rule 3 (every band is a landmark holding one container), code-standard rule 8 (three kinds of component), code-standard rule 13 (slots) and code-standard rule 20 (a working no-script path), and design-standard's principles *for everyone, in any context* and *clear words, clear hierarchy*. ARIA, names, focus and live regions are [accessibility.md](accessibility.md)'s; the language and direction of a page are [i18n.md](i18n.md)'s; behaviour layered on the markup is [javascript.md](javascript.md)'s; the design half of accessibility is [ui/design/accessibility.md](../ui/design/accessibility.md).
 
 ## Document metadata
 
@@ -35,6 +35,31 @@ How a page's markup carries its meaning: metadata, the heading outline, landmark
 - *Judgement:* Read the titles of five pages in a row as tab labels: can you tell them apart?
 
 **Sources:** WHATWG, W3C Internationalization and MDN as linked; they agree.
+
+## Share previews
+
+**What good looks like**
+- A shared link shows the page's own title, a description and an image made for sharing, on every platform that reads Open Graph.
+- A changed image reaches people who share the link after the change, without anyone asking a platform to forget the old one.
+
+**How**
+- Open Graph's four required properties are `og:title`, `og:type`, `og:image` and `og:url`; a page with an image "should specify `og:image:alt`", "a description of what is in the image (not a caption)" ([ogp.me](https://ogp.me/)). Give `og:image:width` and `og:image:height` too: Facebook can then render the preview before it has downloaded the image ([Meta, images in link shares](https://developers.facebook.com/docs/sharing/webmasters/images/)).
+- Size: 1200 × 630 or larger, as close to 1.91:1 as possible; under 600 × 315 Facebook drops the large preview, under 200 × 200 it rejects the image, and files over 8 MB are refused ([Meta, as above](https://developers.facebook.com/docs/sharing/webmasters/images/)). X's own card documentation could not be read for this page (it answered 402), so its limits are unchecked here.
+- Facebook caches an image by its URL ([Meta, as above](https://developers.facebook.com/docs/sharing/webmasters/images/)), so a changed image needs a new URL, versioned as any cached asset is ([performance: caching and compression](performance.md#caching-and-compression)); a query (`card.png?v=<hash of what it is drawn from>`) does it without renaming files. Old shares keep the old picture.
+- A per-page image drawn on the server (a title and logo on a fixed background) can be cached by a key of its inputs, written aside and renamed into place, and fall back to the site's card on any failure, redirecting before an image content type is set, so that two requests at once never serve a half-written file and a failure never goes out labelled as an image (one project, 2026-11-10).
+
+**Cases**
+- LinkedIn stores its own 480 px copy of the image (`articleshare-shrink_480` in its CDN address; larger sizes on the same address answer 403) and, since 2024, shows an unpaid link post as a small thumbnail beside the title; only paid posts get the large card ([dsmn8](https://dsmn8.com/blog/linkedin-link-preview-changes/), [Postline](https://postline.ai/blog/linkedin-link-preview-card)). Post Inspector shows that 480 px copy stretched to the large card, which looks blurry; a 2× image does not change either view. In the feed that thumbnail measured about 256 CSS px wide, so the card's text has to read at that size (one project, observed on a live post, 2026-11-10).
+- PHP's GD could not read the site's `.woff2` face, so the server that drew text needed the same face as a static TTF; and GD has no letter-spacing, so its lines ran slightly wider than the design's tracking (one project, 2026-11-10).
+
+**Accessibility**
+- `og:image:alt` is the image's text alternative where a platform shows one ([ogp.me](https://ogp.me/)); it describes the image, and the title already says the rest.
+
+**Check**
+- *Script:* could: every page carries the four required properties, an `og:image` that answers 200 with an image type, and `og:image:alt`.
+- *Judgement:* Paste a page into each platform's inspector (LinkedIn Post Inspector, Facebook Sharing Debugger) and look at the result at the size it really appears in a feed.
+
+**Sources:** Open Graph protocol and Meta as linked; LinkedIn's layout from two practitioner blogs, as LinkedIn publishes none, and its stored size from a run. They agree.
 
 ## Headings and the outline
 
