@@ -46,6 +46,27 @@ const read_ = new Set([...scanner.matchAll(/TOK\.(\w+)/g), ...scanner.matchAll(/
 // is worked out at run time from these.
 const reads = [...read_].filter((k) => !(k in derived)).sort().map((k) => ({ key: k, means: typeof describe[k] === 'string' ? describe[k] : '' }));
 
+// The results page reads as the audit dashboard does: its bucket titles, column labels, severity and area names, and its
+// colour tokens, taken from the dashboard's own files so the two cannot drift apart.
+const DASHBOARD = 'tools/docs-site/src/dashboard';
+const objectAt = (src, name) => { const m = new RegExp('const ' + name + ' = (\\{[\\s\\S]*?\\});').exec(src); if (!m) throw new Error('sync: ' + name + ' not found in the dashboard'); return new Function('return ' + m[1])(); };
+const queueJs = read(`${DASHBOARD}/queue.js`);
+const { OWNER_LABEL } = await import(path.join(ROOT, DASHBOARD, 'labels.js'));
+const DASH = {
+  buckets: Object.fromEntries([...read(`${DASHBOARD}/Dashboard.astro`).matchAll(/<h2 id="(b\d)H">([^<]+)<\/h2>/g)].map((m) => [m[1], m[2]])),
+  columns: objectAt(queueJs, 'COLUMNS'),
+  // (checked below: three titles, or the sync fails rather than the page saying "Bucket 1")
+  sev: objectAt(queueJs, 'SEV_LABEL'),
+  owners: OWNER_LABEL,
+};
+if (Object.keys(DASH.buckets).length !== 3) throw new Error('sync: the dashboard\'s three bucket titles were not found in Dashboard.astro');
+const systemCss = read('tools/docs-site/src/styles/system.css');
+const pageSrc = read('plugins/audit-lite/report.html');
+const used = [...new Set([...pageSrc.matchAll(/var\((--[\w-]+)\)/g)].map((m) => m[1]))];
+const tokens_ = used.map((v) => { const m = new RegExp('^\\s*' + v + ':\\s*([^;]+);', 'm').exec(systemCss); if (!m) throw new Error('sync: ' + v + ' is not in the dashboard\'s system.css'); return v + ':' + m[1].trim(); });
+const template = pageSrc.replace(':root{--dash-tokens:none}', () => ':root{' + tokens_.join(';') + '}').replace('const DASH = {};', () => 'const DASH = ' + JSON.stringify(DASH) + ';');
+if (template === pageSrc) throw new Error('sync: report.html has no token or DASH slot');
+
 const LITE = {
   house,
   naming: JSON.parse(read('standards/naming-preferences.json')).preferences || {},
@@ -56,7 +77,7 @@ const LITE = {
   buckets: JSON.parse(read(`${SCANNER}/buckets.json`)),
   conventions: read(`${REFERENCES}/conventions-universal.md`),
   instructions: read('plugins/audit-lite/instructions.md'),
-  template: read('plugins/audit-lite/report.html'),
+  template,
   contextTemplate: read('skills/figma-context-capture/assets/context-template.md'),
 };
 
@@ -75,7 +96,7 @@ const judgeRules = read('tools/figma-audit/judge-rules.mjs').replace(/^export /g
 // The full audit's discovery and probes (figma-components-audit scripts/probes.js), its factory by source.
 const probes = `const FCA_FACTORY = ${globalThis.__FCA_PROBES_FACTORY.toString()};`;
 
-const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md and report.html; never edit by hand */
+const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md, report.html, and the audit dashboard's words and tokens (tools/docs-site/src/dashboard, styles/system.css); never edit by hand */
 const LITE = ${JSON.stringify(LITE)};
 ${readers}
 ${judgeRules}

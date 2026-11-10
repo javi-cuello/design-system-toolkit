@@ -1,6 +1,12 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.6.0] - 2026-11-10
+### Changed
+- The results page is laid out as the audit dashboard's queue: its three buckets and titles (a breaking fix sits in Decide with its tag), a card per finding with the Done box, severity chip, area tag, User-visible flag and the What's wrong / The fix columns, a Note for Claude, Record as ruling and Ask about this row, the Open / Done tiles, and filters by component and area. Its words and colour tokens are filled in by sync.mjs from the dashboard's own files.
+### Added
+- Rulings come back in one paste: Copy rulings on the page, Paste rulings in the plugin. They are kept for the file on this machine and judged by on every later run, with or without a context document.
+
 ## [0.5.1] - 2026-11-10
 ### Changed
 - The chat-or-page question is asked as two buttons, Chat and Page, where Claude has a tool that offers choices; as one line elsewhere.

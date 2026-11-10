@@ -9,7 +9,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
-const { report, settingsFor, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
+const { report, settingsFor, pastedRulings, mergeRulings, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
 const projects = createRequire(import.meta.url)(path.join(ROOT, 'tools/snapshot/projects.cjs'));
 
 let failed = 0, passed = 0;
@@ -79,50 +79,63 @@ ok('the file-level findings reach the candidates', /"set": "Page list"/.test(fmd
 ok('the run names the file-level checks that ran', fmd.includes('- File-level checks run: ') && fmd.includes('page-order'));
 ok('a stopped file-level pass is said, the components kept', report(Object.assign({}, r, { foundations: { ran: [], notRun: [], error: 'boom' } }), { fileName: 'X', fileKey: 'K', date: 'd' }).includes('- File-level checks: stopped (boom)'));
 
-// The page: filled as Claude fills it, rendered against a stub document.
-const page = (data, stored) => {
-  const js = LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
-  const app = { innerHTML: '' };
-  const localStorage = { getItem: () => (stored ? JSON.stringify(stored) : null), setItem: () => {} };
-  new Function('document', 'localStorage', js)({ getElementById: () => app, querySelector: () => null }, localStorage);
-  return app.innerHTML;
+// The page: filled as Claude fills it, rendered against a stub document. Its words and colours are the dashboard's.
+const pageJs = (data) => LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
+const mount = (data, stored, onSave) => {
+  const app = { innerHTML: '' }, body = { innerHTML: '' };
+  const doc = { getElementById: (id) => (id === 'app' ? app : id === 'rulingsBody' ? body : id === 'rulingsText' ? { value: (body.innerHTML.split('readonly aria-label="Rulings to paste into Audit lite">')[1] || '').split('</textarea>')[0] } : null), querySelector: () => null };
+  new Function('document', 'localStorage', pageJs(data))(doc, { getItem: () => (stored ? JSON.stringify(stored) : null), setItem: (k, v) => onSave && onSave(JSON.parse(v)) });
+  return { app, body, html: () => app.innerHTML + body.innerHTML, click: (dataset) => app.onclick({ target: { closest: () => ({ dataset, id: dataset.id || '' }) } }) };
 };
-const data = { file: 'Lib <b>', fileKey: 'ABC123', date: '2026-11-10', scanned: { sets: 2, variants: 9 }, coverage: 90, kept: 3, dropped: 1, notScanned: ['Spacing scale'],
+const page = (data, stored) => mount(data, stored).html();
+const data = { file: 'Lib <b>', fileKey: 'ABC123', date: '2026-11-10', scanned: { sets: 2, variants: 9 }, coverage: 90, kept: 4, dropped: 1, notScanned: ['Spacing scale'], contextName: null,
   rows: [
     { bucket: 3, sev: 'warning', visible: false, set: 'Chip', setId: '1:2', layer: '', issue: 'a', fix: 'b' },
     { bucket: 3, sev: 'error', visible: true, set: 'Button', setId: '1:3', layer: 'Label', issue: 'c', fix: 'd' },
     { bucket: 'b1', sev: 'error', visible: false, set: '<img src=x onerror=alert(1)>', setId: '1:4', layer: '', issue: 'e', fix: 'f' },
+    { bucket: 4, sev: 'warning', visible: false, area: 'file', set: 'Page list', setId: '', layer: 'Avatar', issue: 'g', fix: 'h' },
   ] };
 const html = page(data);
 ok('an empty page renders nothing', page(null) === '');
-ok('a "b1" bucket counts as bucket 1', html.includes('1 · Safe fixes'));
-ok('a user-visible row leads its bucket as 3.1', /3\.1<\/td><th scope="row" class="where"><a [^>]*><code>Button › Label<\/code><\/a><\/th>/.test(html), html);
-ok('the place is the row\'s header and seen-by-users its own column', html.includes('<td class="sev error">error</td><td>Yes</td>'));
+ok('the dashboard\'s colour tokens are filled in, the slot gone', /:root\{--[\w-]+:light-dark\(/.test(LITE.template) && !LITE.template.includes('--dash-tokens'));
+ok('the dashboard\'s bucket titles head the three buckets', ['Fix on approval', 'Quick manual fixes', 'Decide'].every((t) => html.includes('>' + t + '</h2>')) && !html.includes('b4H'));
+ok('a "b1" bucket counts as bucket 1, with the dashboard\'s columns', html.includes('<span class="rid" id="rid-1-1">1.1</span>') && html.includes("What's wrong") && html.includes('The question'));
+ok('a breaking fix sits in Decide with its tag', /3\.3<\/span>[\s\S]*?class="breaking-tag"/.test(html));
+ok('a user-visible row leads its bucket, with its flag', /rid-3-1">3\.1<\/span><span class="sev error">Error<\/span><span class="owner-tag">Components<\/span><span class="visible-flag">/.test(html), html.slice(html.indexOf('rid-3-1'), html.indexOf('rid-3-1') + 300));
+ok('a file-level row is tagged with the dashboard\'s area name, unlinked', html.includes('<span class="owner-tag">Library file</span>') && html.includes('<span class="where" id="where-3-3">Page list › Avatar</span>'));
 ok('file text is escaped', !html.includes('<img') && !html.includes('Lib <b>'));
 ok('a row links to its set', html.includes('href="https://www.figma.com/design/ABC123?node-id=1-3"'));
-ok('every table has a caption and column headers', (html.match(/<caption/g) || []).length === 2 && html.includes('scope="col"'));
-ok('a severity chip per severity, with its count, a missing one disabled not removed', html.includes('data-sev="error" aria-pressed="true">error (2)') && /data-sev="preference" aria-pressed="false" disabled>preference \(0\)/.test(html));
-ok('each row has a done box and its two actions', (html.match(/data-done="/g) || []).length === 3 && (html.match(/data-ask="/g) || []).length === 3 && (html.match(/data-keep="/g) || []).length === 3);
-ok('with nothing kept, the decisions section says how to keep one', html.includes('<h2>Decisions to record</h2>') && !html.includes('id="rulings"'));
-ok('without a context document the page offers to draft one', html.includes('<h2>Context document</h2>'));
-const kept = page(Object.assign({}, data, { contextName: 'design-system-context.md' }), { done: ['Button|Label|c'], keep: ['Button|Label|c', 'Gone|x|a finding a later run dropped'] });
-ok('a mark follows its finding, and one for a finding no longer listed is ignored', kept.includes('<tr class="is-done"><td class="n">3.1</td>') && kept.includes('1 of 3 marked done') && (kept.match(/Kept as is: intended/g) || []).length === 1);
-ok('a row kept as is becomes a rulings-log row naming its component', /\| \d{4}-\d\d-\d\d \| Button \| Button › Label: c\. Kept as is: intended\. \| Recorded from Audit lite, on Button\. \|/.test(kept), kept.split('id="rulings"')[1]?.slice(0, 300));
-ok('the rows are read back by the full audit\'s reader as rulings', (() => { const rows = kept.split('readonly aria-label="Rulings log rows">')[1].split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&amp;/g, '&'); const got = projects.rulingsOf('## 6. Rulings log\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n'); return got.length === 1 && got[0].why === 'Recorded from Audit lite, on Button.'; })());
-ok('with a context document, the page names it and offers no draft', kept.includes('design-system-context.md') && !kept.includes('<h2>Context document</h2>'));
-// The clicks: a chip hides its rows, Done and Keep as is change what the page shows and what it stores.
+ok('each row has its Done box, note and two actions', ['data-done-id="', 'data-note-id="', 'data-rule-id="', 'data-ask-id="'].every((a) => (html.match(new RegExp(a, 'g')) || []).length === 4));
+ok('the tiles and the two filters are the dashboard\'s', html.includes('<span class="kpi__label">Open</span><span class="kpi__value">4</span>') && html.includes('aria-label="Show rows on"') && html.includes('aria-label="Show rows raised by"'));
+ok('with nothing recorded, the rulings section says how to record one', html.includes('<h2 id="rulingsH">Rulings</h2>') && !html.includes('id="rulingsText"'));
+ok('the run\'s scope has its heading', html.includes('<h2 id="aboutH">About this run</h2>') && html.includes('Not checked in this run'));
+
+// Recorded state: marks follow the finding; a ruling takes the row's note, and is read back by the full audit's reader.
+const kept = page(data, { done: ['Button|Label|c'], rules: ['Button|Label|c', 'Gone|x|a finding a later run dropped'], notes: { 'Button|Label|c': 'The label is decorative' } });
+ok('a mark follows its finding, and one for a finding no longer listed is ignored', kept.includes('<li class="row" data-done="true"><input class="tick" type="checkbox" data-done-id="3.1"') && (kept.match(/Recorded from Audit lite/g) || []).length === 1);
+const rows = (kept.split('readonly aria-label="Rulings to paste into Audit lite">')[1] || '').split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+ok('a recorded row becomes a rulings-log row with its note, naming its component', /^\| \d{4}-\d\d-\d\d \| Button \| Button › Label: The label is decorative\. \| Recorded from Audit lite, on Button, about: c\. \|$/.test(rows), rows);
+const back = pastedRulings(rows);
+ok('the plugin reads the pasted rows as the full audit reads a rulings log', back.length === 1 && JSON.stringify(back) === JSON.stringify(projects.rulingsOf('## 6\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n')));
+ok('a paste with its own header reads the same', JSON.stringify(pastedRulings('| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows)) === JSON.stringify(back));
+ok('a paste of anything else finds no rulings', pastedRulings('hello').length === 0);
+ok('pasted and document rulings merge, each once', mergeRulings(back, back.concat({ key: 'other' })).length === 2);
+const edited = pastedRulings(rows.replace('The label is decorative.', 'Decorative: no ring.'));
+ok('a ruling re-recorded with a new note replaces the earlier one', (() => { const m = mergeRulings(back, edited); return m.length === 1 && m[0].text.includes('Decorative: no ring.'); })());
+ok('the judge reads the ruling with its component and finding', report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { rulings: back })).includes('(recorded on Button about “c”;'));
+const withPasted = report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { rulings: back, pasted: 1 }));
+ok('the next run judges by a pasted ruling, and says where it came from', withPasted.includes('The label is decorative') && withPasted.includes('- Rulings: 1 (1 pasted into the plugin'));
+
+// The clicks: Done and Record as ruling change what the page shows and what it stores.
 {
-  const app = { innerHTML: '' }; let stored = null;
-  const js = LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
-  new Function('document', 'localStorage', js)({ getElementById: () => app, querySelector: () => null }, { getItem: () => null, setItem: (k, v) => { stored = JSON.parse(v); } });
-  const click = (dataset) => app.onclick({ target: { closest: () => ({ dataset, id: '' }) } });
-  click({ sev: 'warning' });
-  ok('a chip pressed off hides its rows and shows unpressed', /<tr hidden><td class="n">3\.2<\/td>/.test(app.innerHTML) && app.innerHTML.includes('data-sev="warning" aria-pressed="false">'));
-  click({ done: '3.1' }); click({ keep: '3.1' });
-  ok('done and kept are stored for this browser', JSON.stringify(stored) === JSON.stringify({ done: ['Button|Label|c'], keep: ['Button|Label|c'] }));
-  ok('a kept row reaches the decisions at once', app.innerHTML.includes('id="rulings"'));
+  let stored = null;
+  const m = mount(data, null, (v) => { stored = v; });
+  m.click({ doneId: '3.1' }); m.click({ ruleId: '3.1' });
+  ok('done and recorded are stored for this browser, by finding', JSON.stringify(stored) === JSON.stringify({ done: ['Button|Label|c'], rules: ['Button|Label|c'], notes: {} }));
+  ok('a recorded row reaches the rulings at once, with the default ruling', m.html().includes('Kept as is: intended.'));
+  m.app.onchange({ target: { id: 'areaFilter', value: 'file' } });
+  ok('the area filter shows only that area\'s rows, and says so', m.app.innerHTML.includes('Showing 1 of 4.') && !m.app.innerHTML.includes('rid-3-1"'));
 }
-ok('the run\'s scope has its heading', html.includes('<h2>About this run</h2>') && html.includes('Not checked in this run'));
 
 console.log(failed ? `${failed} failed, ${passed} passed` : `${passed} passed`);
 process.exit(failed ? 1 : 0);

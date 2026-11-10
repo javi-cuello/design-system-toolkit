@@ -93,6 +93,12 @@ progress:indeterminate::-webkit-progress-bar{background:transparent}
 .text-btn:hover{background:none;color:var(--figma-color-text-brand);text-decoration:underline}
 .text-btn:focus{outline:none}
 .text-btn:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
+/* the paste field: rulings copied from the results page */
+#paste-box{margin:0 0 var(--space-3)}
+#paste-text{display:block;width:100%;height:72px;box-sizing:border-box;padding:var(--space-1) var(--space-2);resize:vertical;border:1px solid var(--figma-color-border);border-radius:var(--radius-sm);background:var(--figma-color-bg-secondary);color:var(--figma-color-text);font:var(--fs-11)/var(--lh) var(--font-stack)}
+#paste-text:focus{outline:none;border-color:var(--figma-color-border-selected)}
+#paste-text:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:1px}
+.paste-actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
 </style>
 </head>
 <body>
@@ -102,6 +108,14 @@ progress:indeterminate::-webkit-progress-bar{background:transparent}
   <p class="settings"><span class="settings-name secondary" id="ctx-name">Settings: the toolkit's defaults</span>
     <button class="text-btn" id="ctx-pick" type="button">Use a context document…</button>
     <button class="text-btn" id="ctx-clear" type="button" hidden>Remove</button></p>
+  <p class="settings"><span class="settings-name secondary" id="rul-name">Rulings: none saved</span>
+    <button class="text-btn" id="rul-paste" type="button">Paste rulings</button>
+    <button class="text-btn" id="rul-clear" type="button" hidden>Remove</button></p>
+  <div id="paste-box" hidden>
+    <label class="secondary" for="paste-text">Paste the rulings copied from the results page</label>
+    <textarea id="paste-text"></textarea>
+    <div class="paste-actions"><button id="paste-add" type="button">Add rulings</button><button id="paste-cancel" class="btn-secondary" type="button">Cancel</button></div>
+  </div>
   <input type="file" id="ctx-file" accept=".md,text/markdown" hidden>
   <button id="run" type="button">Run audit</button>
   <button id="save" class="btn-secondary" type="button" hidden>Save the report again</button>
@@ -152,14 +166,26 @@ function context(name) {
 }
 $('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
 $('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
+// rulings recorded on the results page: one paste, kept for this file on this machine, judged by on every run
+function rulings(n) {
+  $('rul-name').textContent = n ? 'Rulings: ' + n + ' saved for this file' : 'Rulings: none saved';
+  $('rul-clear').hidden = !n; fit();
+}
+function pasteBox(open) { $('paste-box').hidden = !open; if (open) { $('paste-text').value = ''; $('paste-text').focus(); } else $('rul-paste').focus(); fit(); }
+$('rul-paste').onclick = function () { if (!busy) pasteBox(true); };
+$('paste-cancel').onclick = function () { pasteBox(false); };
+$('paste-add').onclick = function () { if (!busy && $('paste-text').value.trim()) parent.postMessage({ pluginMessage: { type: 'rulings-add', text: $('paste-text').value } }, '*'); };
+$('rul-clear').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-clear' } }, '*'); };
 $('ctx-file').onchange = function () {
-  var f = this.files && this.files[0]; if (!f) return;
+  var f = this.files && this.files[0]; if (!f || busy) return;
   f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'context-set', name: f.name, text: text } }, '*'); });
 };
 onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
-  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); return; }
+  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); rulings(msg.rulings); return; }
+  if (msg.type === 'rulings') { var wasOpen = !$('paste-box').hidden; rulings(msg.count); if (wasOpen) pasteBox(false); if (msg.added != null && !busy) say('done', msg.added ? msg.added + (msg.added === 1 ? ' ruling' : ' rulings') + ' added' : 'Rulings updated', 'The next run judges by them.'); else if (!busy) { $('status').hidden = true; fit(); } return; }
+  if (msg.type === 'rulings-failed') { say('error', 'Rulings not changed', msg.why + '.'); return; }
   if (msg.type === 'context') { context(msg.name); if (!busy) $('status').hidden = true; fit(); return; }
   if (msg.type === 'context-failed') { say('error', 'That document was not used', msg.why + '.'); return; }
   busy = false; $('run').removeAttribute('aria-disabled');

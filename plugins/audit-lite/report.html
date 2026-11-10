@@ -5,58 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audit fix queue</title>
 <style>
-:root{color-scheme:light dark;--bg:#fff;--surface:#f6f6f4;--text:#1a1a18;--muted:#5f5e5a;--line:#e2e1dc;--link:#0b5cad;
---error:#c4262e;--shadow:rgb(0 0 0/.18)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
---line:#34332f;--link:#7fb2f0;--error:#f07a7f;--shadow:rgb(0 0 0/.7)}}
+/* The audit dashboard's colour tokens (tools/docs-site/src/styles/system.css), filled in by plugins/audit-lite/sync.mjs */
+:root{--dash-tokens:none}
+:root{color-scheme:light dark}
 :root[data-theme="light"]{color-scheme:light}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
---line:#34332f;--link:#7fb2f0;--error:#f07a7f;--shadow:rgb(0 0 0/.7)}
+:root[data-theme="dark"]{color-scheme:dark}
+/* Laid out as the audit dashboard's queue (tools/docs-site/src/dashboard/dashboard.css), so a person who knows one reads the other */
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
-h1{font-size:24px;line-height:1.25;margin:0 0 4px}
-h2{font-size:17px;margin:40px 0 4px}
-.meta,.note{color:var(--muted);font-size:13px;margin:0}
-.counts{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;list-style:none}
-.counts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
-.counts b{font-size:18px;display:block}
-/* a shadow at a cut edge says the table scrolls; it scrolls away with the content where nothing is cut */
-.wrap{overflow-x:auto;background:linear-gradient(to right,var(--bg) 30%,transparent) left/40px 100% no-repeat local,linear-gradient(to left,var(--bg) 30%,transparent) right/40px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,var(--shadow),transparent) left/12px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,var(--shadow),transparent) right/12px 100% no-repeat scroll}
-/* past its narrowest readable width a table scrolls in its wrap rather than crushing its columns */
-table{width:100%;min-width:760px;border-collapse:collapse;margin-top:12px;font-size:14px}
-td.actions{white-space:nowrap}
-th,td{text-align:left;font-weight:400;vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--line)}
-thead th{font-size:12px;font-weight:600;color:var(--muted)}
-td.n{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
-/* colour marks only what needs action first: an error */
-.sev{white-space:nowrap;font-size:13px}
-.sev.error{color:var(--error);font-weight:600}
-.where code{font-size:13px;overflow-wrap:anywhere}
-a{color:var(--link)}
-.gaps{margin-top:8px;padding:16px;background:var(--surface);border-radius:8px;font-size:13px;color:var(--muted)}
+h1{font-size:28px;line-height:1.2;margin:0}
+h2{font-size:20px;line-height:1.3;margin:0}
+.meta{color:var(--fg-muted);font-size:14px;margin:8px 0 0}
+a{color:var(--accent)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+select{min-height:36px;padding:0 12px;border:1px solid var(--control);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;margin:16px 0 0;padding:0;list-style:none;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.kpis li{display:grid;gap:4px;padding:16px 20px;background:var(--surface)}
+.kpi__label{font-size:14px;color:var(--fg-muted)}
+.kpi__value{font-size:24px;line-height:1.2;font-weight:600;font-variant-numeric:tabular-nums}
+.said{min-height:21px;margin:12px 0 0;font-size:14px;color:var(--fg-muted)}
+.link-button{padding:0;border:0;background:none;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer}
+section.bucket{margin-top:56px}
+.bucket-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bucket-num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-soft);border-radius:4px;padding:2px 7px}
+.bucket-note{color:var(--fg-muted);font-size:14px;margin:8px 0 0;max-width:66ch}
+.bucket-empty{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line);color:var(--good);font-size:14px;font-weight:600}
+.rows{margin:24px 0 0;padding:0;list-style:none;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:26px 1fr;gap:0 12px;padding:24px 12px;border-bottom:1px solid var(--line-soft);border-left:2px solid transparent}
+.row[data-done="true"]{border-left-color:var(--good);background:var(--good-soft)}
+.row[data-done="true"] .rid{color:var(--good)}
+.tick{grid-row:1/span 2;appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0;border:1.5px solid var(--control);border-radius:4px;background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.tick:checked{background:var(--good);border-color:var(--good)}
+.tick:checked::after{content:"";width:10px;height:5.5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.row-body{min-width:0}
+.row-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.rid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:500;color:var(--fg-soft);font-variant-numeric:tabular-nums}
+.sev,.owner-tag,.visible-flag,.breaking-tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid currentColor;white-space:nowrap}
+.sev.error{color:var(--bad)}
+.sev.warn{color:var(--warn)}
+.sev.rule{color:var(--idle)}
+.sev.pref,.sev.hygiene{color:var(--fg-soft)}
+.owner-tag{color:var(--fg-soft);border-color:var(--line)}
+.visible-flag{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-soft)}
+.breaking-tag{color:var(--bad);border-color:var(--line)}
+.where{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--fg);text-decoration:none;border-bottom:1px dotted var(--fg-soft);overflow-wrap:anywhere}
+a.where:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.pair{margin-top:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.cell{min-width:0;overflow-wrap:anywhere}
+.cell+.cell{padding-top:12px;border-top:1px solid var(--line-soft)}
+.cell-label{display:block;margin-bottom:4px;font-size:14px;font-weight:600}
+.cell p{margin:0;color:var(--fg-muted);font-size:14px}
+@media (min-width:45rem){.pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0}.cell{padding:4px 24px 4px 0}.cell+.cell{padding:2px 0 2px 24px;border-top:0;border-left:1px solid var(--line-soft)}}
+.note-wrap{display:grid;gap:4px;margin-top:16px}
+.note-label{font-size:14px;font-weight:600;color:var(--fg-muted)}
+textarea{width:100%;resize:vertical;font:inherit;font-size:14px;line-height:1.5;color:var(--fg);background:transparent;border:1px solid var(--control);border-radius:8px;padding:7px 10px;min-height:calc(1.5em + 16px)}
+textarea::placeholder{color:var(--fg-soft)}
+.row-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.button{min-height:36px;padding:0 14px;border:1px solid var(--control);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.button[aria-pressed="true"]{border-color:var(--good);color:var(--good)}
+.tick:focus-visible,.button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,.link-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gaps{margin-top:12px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;font-size:14px;color:var(--fg-muted)}
+.gaps p{margin:0}
 .gaps ul{margin:4px 0 0;padding-left:18px}
-.empty{color:var(--muted)}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.wrap:focus-visible{outline:2px solid var(--link);outline-offset:2px}
-/* the severity chips: pressed shows by a check and a fill, the check's room kept so a press does not reflow the row
-   (knowledge/ui/patterns/chips.md, *Filter chips*) */
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;border:0}
-.chips legend{font-size:13px;color:var(--muted);margin-bottom:6px;padding:0}
-button{font:inherit;color:inherit}
-.chip{display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:4px 12px 4px 8px;border:1px solid var(--line);border-radius:16px;background:var(--bg);font-size:13px;cursor:pointer}
-.chip::before{content:"";display:inline-block;width:12px}
-.chip[aria-pressed="true"]{background:var(--surface);border-color:var(--text)}
-.chip[aria-pressed="true"]::before{content:"✓"}
-.chip:disabled{cursor:default;color:var(--muted)}
-.act{min-height:32px;padding:4px 8px;margin:0 4px 4px 0;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:13px;cursor:pointer;white-space:nowrap}
-.act[aria-pressed="true"]{background:var(--surface);border-color:var(--text)}
-.chip:focus-visible,.act:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--link);outline-offset:2px}
-td.done input{width:20px;height:20px;margin:2px 0 0}
-tr.is-done td,tr.is-done th{color:var(--muted)}
-tr.is-done .where a{color:var(--muted)}
-textarea{width:100%;min-height:120px;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
-.said{min-height:20px;margin:8px 0 0;font-size:13px;color:var(--muted)}
+.rulings{min-height:96px;margin-top:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--surface)}
+.empty{color:var(--fg-muted)}
 </style>
 </head>
 <body>
@@ -65,115 +78,181 @@ textarea{width:100%;min-height:120px;margin-top:8px;padding:8px;border:1px solid
 /* DATA: {
      file: "<library name>", fileKey: "<key or null>", date: "YYYY-MM-DD",
      scanned: { sets: <n>, variants: <n> }, coverage: <token coverage % or null>,
-     kept: <n>, dropped: <n>,
-     notScanned: ["<plain words>", …], contextName: "<the context document's file name, or null>",
-     rows: [{ bucket: 1|2|3|4, sev: "error|warning|review|preference|hygiene", visible: true|false,
-              set: "<component set>", setId: "<node id>", layer: "<layer path or empty>",
+     kept: <n>, dropped: <n>, notScanned: ["<plain words>", …], contextName: "<the context document's file name, or null>",
+     rows: [{ bucket: 1|2|3, breaking: true|false, sev: "error|warning|review|preference|hygiene", visible: true|false,
+              area: "components|file", set: "<component set, or Page list>", setId: "<node id or empty>", layer: "<layer path or empty>",
               issue: "<one sentence>", fix: "<one sentence>" }, …] } */
 const DATA = null;
 
-const BUCKETS = {
-  1: ["Safe fixes", "Unambiguous changes, such as binding a raw value to its token or renaming a layer."],
-  2: ["Quick manual fixes", "Changes only the Figma UI can make, such as reordering variant options."],
-  3: ["Decide", "Each one is a question: a gap to fill, or a choice to record."],
-  4: ["Breaking: schedule", "Fixes that change the component's API or reset overrides in files that use it."]
+// The dashboard's own words (its bucket titles, column labels, severity and area names), filled in by sync.mjs.
+const DASH = {};
+const NOTES = {
+  1: "Safe, programmatic, non-breaking changes, such as binding a raw value to its token or renaming a layer.",
+  2: "Changes only the Figma UI can make, such as reordering variant options: drags in the variants panel.",
+  3: "Each is a question with two legitimate answers. Write the answer in the row's note and press Record as ruling."
 };
-// "b1", "1" and 1 are one bucket
-const bucketOf = (r) => Number(String(r.bucket).replace(/\D/g, ""));
+// a severity as the dashboard's chip names and colours it
+const SEV = { error: "error", warning: "warn", warn: "warn", review: "rule", rule: "rule", preference: "pref", pref: "pref", hygiene: "hygiene" };
 const RANK = { error: 0, warning: 1, review: 2, preference: 3, hygiene: 4 };
+const AREA = { components: "figma-components-audit", file: "figma-foundations-audit" };
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const link = (d, r) => d.fileKey && r.setId ? "https://www.figma.com/design/" + encodeURIComponent(d.fileKey) + "?node-id=" + encodeURIComponent(r.setId.replace(/:/g, "-")) : null;
+// "b1", "1" and 1 are one bucket; a breaking fix sits in Decide with its tag, as on the dashboard
+const bucketNo = (r) => Number(String(r.bucket).replace(/\D/g, "")) || 3;
+const bucketOf = (r) => Math.min(3, bucketNo(r));
+const breaking = (r) => r.breaking === true || bucketNo(r) === 4;
+const areaOf = (r) => r.area === "file" || r.set === "Page list" ? "file" : "components";
+const areaLabel = (a) => (DASH.owners || {})[AREA[a]] || a;
+const sevLabel = (s) => (DASH.sev || {})[SEV[s] || s] || s;
+const link = (d, r) => d.fileKey && r.setId ? "https://www.figma.com/design/" + encodeURIComponent(d.fileKey) + "?node-id=" + encodeURIComponent(String(r.setId).replace(/:/g, "-")) : null;
+const slug = (id) => id.replace(".", "-");
 
+// What the reader did here (done, notes, rulings) stays in this browser only; the page renders without it.
+// A mark belongs to the finding, not its number: a later run on the same day may number the rows differently.
+const KEY = DATA ? "audit-lite:" + (DATA.fileKey || DATA.file) + ":" + DATA.date : "";
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+const state = Object.assign({ done: [], rules: [], notes: {} }, load());
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ done: state.done, rules: state.rules, notes: state.notes })); } catch (e) {} };
+const idOf = (r) => [r.set, r.layer, r.issue].join("|");
+const toggle = (list, id) => { const i = list.indexOf(id); if (i < 0) list.push(id); else list.splice(i, 1); };
+const view = { set: "", area: "" };
+let said = "";
+
+// A ruling as a row of the context document's rulings log (section 6): Date | Scope | Ruling | Why, the Why naming
+// the component and the finding ("on Button, about: …", as the dashboard writes it), which is how the full audit's judge
+// reads a ruling's subject, and how the plugin knows a re-recorded ruling replaces the earlier one. A backtick would open a code span in the
+// table and merge its cells (projects.cjs cells), so it becomes a quote.
+const cellText = (s) => String(s == null ? "" : s).replace(/`/g, "'").replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+const sentence = (s) => { const t = String(s || "").trim(); return !t || /[.!?]$/.test(t) ? t : t + "."; };
+function rulingRow(r) {
+  const where = r.set + (r.layer ? " › " + r.layer : "");
+  const note = sentence(state.notes[idOf(r)]) || "Kept as is: intended.";
+  return "| " + today() + " | " + cellText(r.set) + " | " + cellText(where + ": " + note) + " | " + cellText("Recorded from Audit lite, on " + r.set + ", about: " + String(r.issue || "").trim().replace(/[.!?]$/, "") + ".") + " |";
+}
+function say(text) { said = text; const el = document.getElementById("saidText"); if (el) el.textContent = text; }
+function copy(text, what, next) {
+  const show = (ok) => say(ok ? what + " copied. " + next : "Copying is blocked here: select the text and copy it.");
+  try { navigator.clipboard.writeText(text).then(() => show(true), () => show(false)); } catch (e) { show(false); }
+}
+
+let numbered = [];
 function render(d) {
   const app = document.getElementById("app");
   if (!d) return;
   const rows = d.rows || [];
   const sc = d.scanned || {};
   document.title = (d.file ? d.file + " – " : "") + "audit fix queue";
-  let html = "<h1>" + esc(d.file) + "</h1><p class=\"meta\">" + (sc.sets != null ? "Audit of " + esc(sc.sets) + " components, " + esc(sc.variants) + " variants · " : "") + "<time datetime=\"" + esc(d.date) + "\">" + esc(d.date) + "</time></p>";
-  html += "<ul class=\"counts\">";
-  for (const b of [1, 2, 3, 4]) html += "<li><b>" + rows.filter((r) => bucketOf(r) === b).length + "</b> " + esc(BUCKETS[b][0]) + "</li>";
-  if (d.coverage != null) html += "<li><b>" + esc(d.coverage) + "%</b> Values bound to tokens</li>";
-  html += "</ul>";
-  const sevs = Object.keys(RANK).filter((s) => rows.some((r) => r.sev === s) || s !== "hygiene");
-  html += "<fieldset class=\"chips\"><legend>Show severity</legend>" + sevs.map((s) => {
-    const n = rows.filter((r) => r.sev === s).length;
-    return "<button type=\"button\" class=\"chip\" data-sev=\"" + s + "\" aria-pressed=\"" + (n && !off.has(s) ? "true" : "false") + "\"" + (n ? "" : " disabled") + ">" + esc(s) + " (" + n + ")</button>";
-  }).join("") + "</fieldset><p class=\"said\" id=\"said\" role=\"status\">" + esc(said) + "</p>";
-  const numbered = [];
-  for (const b of [1, 2, 3, 4]) {
-    const list = rows.filter((r) => bucketOf(r) === b)
-      .sort((x, y) => (y.visible === true) - (x.visible === true) || (RANK[x.sev] ?? 9) - (RANK[y.sev] ?? 9));
-    if (!list.length) continue;
-    html += "<h2>" + b + " · " + esc(BUCKETS[b][0]) + "</h2><p class=\"note\">" + esc(BUCKETS[b][1]) + "</p>";
-    html += "<div class=\"wrap\" tabindex=\"0\" role=\"region\" aria-label=\"" + esc(BUCKETS[b][0]) + "\"><table><caption class=\"sr\">" + esc(BUCKETS[b][0]) + "</caption><thead><tr><th scope=\"col\">#</th><th scope=\"col\">Where</th><th scope=\"col\">Issue</th><th scope=\"col\">Fix</th><th scope=\"col\">Severity</th><th scope=\"col\">Seen by users</th><th scope=\"col\">Done</th><th scope=\"col\">Actions</th></tr></thead><tbody>";
-    list.forEach((r, i) => {
-      numbered.push({ id: b + "." + (i + 1), r });
+  numbered = [];
+  for (const b of [1, 2, 3]) rows.filter((r) => bucketOf(r) === b)
+    .sort((x, y) => (y.visible === true) - (x.visible === true) || (RANK[x.sev] ?? 9) - (RANK[y.sev] ?? 9))
+    .forEach((r, i) => numbered.push({ id: b + "." + (i + 1), b, r }));
+  const shown = (x) => (!view.set || x.r.set === view.set) && (!view.area || areaOf(x.r) === view.area);
+  const done = (x) => state.done.includes(idOf(x.r));
+  const fileUrl = d.fileKey ? "https://www.figma.com/design/" + encodeURIComponent(d.fileKey) : null;
+
+  let html = "<h1>" + esc(d.file) + "</h1><p class=\"meta\">" + (sc.sets != null ? "Audit of " + esc(sc.sets) + " components, " + esc(sc.variants) + " variants · " : "")
+    + "<time datetime=\"" + esc(d.date) + "\">" + esc(d.date) + "</time>" + (fileUrl ? " · <a href=\"" + fileUrl + "\" target=\"_blank\" rel=\"noopener\">Open in Figma</a>" : "") + "</p>";
+  // the dashboard's two filters: the component, and who raised the row
+  const sets = [...new Set(numbered.map((x) => x.r.set))].sort((a, b) => a.localeCompare(b));
+  const areas = [...new Set(numbered.map((x) => areaOf(x.r)))];
+  html += "<div class=\"toolbar\"><select id=\"setFilter\" aria-label=\"Show rows on\"><option value=\"\">All components (" + numbered.length + ")</option>"
+    + sets.map((s) => "<option value=\"" + esc(s) + "\"" + (view.set === s ? " selected" : "") + ">" + esc(s) + " (" + numbered.filter((x) => x.r.set === s).length + ")</option>").join("") + "</select>"
+    + "<select id=\"areaFilter\" aria-label=\"Show rows raised by\"><option value=\"\">All areas (" + numbered.length + ")</option>"
+    + areas.map((a) => "<option value=\"" + a + "\"" + (view.area === a ? " selected" : "") + ">" + esc(areaLabel(a)) + " (" + numbered.filter((x) => areaOf(x.r) === a).length + ")</option>").join("") + "</select></div>";
+  const inView = numbered.filter(shown);
+  html += "<ul class=\"kpis\" aria-label=\"Findings\">"
+    + "<li><span class=\"kpi__label\">Open</span><span class=\"kpi__value\">" + inView.filter((x) => !done(x)).length + "</span></li>"
+    + "<li><span class=\"kpi__label\">Done</span><span class=\"kpi__value\">" + inView.filter(done).length + "</span></li>"
+    + "<li><span class=\"kpi__label\">Raised by the scan</span><span class=\"kpi__value\">" + esc((d.kept || 0) + (d.dropped || 0)) + "</span></li>"
+    + (d.coverage != null ? "<li><span class=\"kpi__label\">Values bound to tokens</span><span class=\"kpi__value\">" + esc(d.coverage) + "%</span></li>" : "")
+    + "</ul>";
+  html += "<p class=\"said\">" + (view.set || view.area ? "Showing " + inView.length + " of " + numbered.length + ". <button type=\"button\" class=\"link-button\" id=\"showAll\">Show all</button> " : "")
+    + "<span id=\"saidText\" role=\"status\">" + esc(said) + "</span></p>";
+
+  for (const b of [1, 2, 3]) {
+    const cols = (DASH.columns || {})["b" + b] || ["What's wrong", "The fix"];
+    const list = inView.filter((x) => x.b === b);
+    html += "<section class=\"bucket\" aria-labelledby=\"b" + b + "H\"><div class=\"bucket-head\"><span class=\"bucket-num\">" + b + "</span><h2 id=\"b" + b + "H\">" + esc((DASH.buckets || {})["b" + b] || "Bucket " + b) + "</h2></div>"
+      + "<p class=\"bucket-note\">" + esc(NOTES[b]) + "</p>";
+    if (!list.length) { html += "<p class=\"bucket-empty\">" + (numbered.some((x) => x.b === b) ? "None with these filters." : "All clear.") + "</p></section>"; continue; }
+    html += "<ul class=\"rows\">";
+    for (const x of list) {
+      const r = x.r, id = x.id, s = slug(id), key = idOf(r), isDone = state.done.includes(key), ruled = state.rules.includes(key);
       const where = esc(r.set) + (r.layer ? " › " + esc(r.layer) : "");
       const url = link(d, r);
-      const id = b + "." + (i + 1), done = state.done.includes(idOf(r)), kept = state.keep.includes(idOf(r));
-      html += "<tr" + (done ? " class=\"is-done\"" : "") + (off.has(r.sev) ? " hidden" : "") + "><td class=\"n\">" + id + "</td>"
-        + "<th scope=\"row\" class=\"where\">" + (url ? "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\"><code>" + where + "</code></a>" : "<code>" + where + "</code>") + "</th>"
-        + "<td>" + esc(r.issue) + "</td><td>" + esc(r.fix) + "</td>"
-        + "<td class=\"sev " + esc(r.sev) + "\">" + esc(r.sev) + "</td><td>" + (r.visible ? "Yes" : "") + "</td>"
-        + "<td class=\"done\"><input type=\"checkbox\" data-done=\"" + id + "\" aria-label=\"" + id + " " + esc(r.set) + " done\"" + (done ? " checked" : "") + "></td>"
-        + "<td class=\"actions\"><button type=\"button\" class=\"act\" data-ask=\"" + id + "\" aria-label=\"Ask about " + id + "\">Ask</button>"
-        + "<button type=\"button\" class=\"act\" data-keep=\"" + id + "\" aria-pressed=\"" + kept + "\" aria-label=\"Keep as is: " + id + "\">Keep as is</button></td></tr>";
-    });
-    html += "</tbody></table></div>";
+      const about = "rid-" + s + " where-" + s;
+      html += "<li class=\"row\" data-done=\"" + isDone + "\">"
+        + "<input class=\"tick\" type=\"checkbox\" data-done-id=\"" + id + "\" aria-label=\"Mark done " + id + " " + esc(r.set) + "\"" + (isDone ? " checked" : "") + ">"
+        + "<div class=\"row-body\"><div class=\"row-top\"><span class=\"rid\" id=\"rid-" + s + "\">" + id + "</span>"
+        + "<span class=\"sev " + (SEV[r.sev] || "rule") + "\">" + esc(sevLabel(r.sev)) + "</span>"
+        + "<span class=\"owner-tag\">" + esc(areaLabel(areaOf(r))) + "</span>"
+        + (breaking(r) ? "<span class=\"breaking-tag\">" + esc((DASH.owners || {})["figma-snapshot-router"] || "Breaking change") + "</span>" : "")
+        + (r.visible ? "<span class=\"visible-flag\">User-visible</span>" : "")
+        + (url ? "<a class=\"where\" id=\"where-" + s + "\" href=\"" + url + "\" target=\"_blank\" rel=\"noopener\">" + where + "</a>" : "<span class=\"where\" id=\"where-" + s + "\">" + where + "</span>")
+        + "</div><div class=\"pair\"><div class=\"cell\"><span class=\"cell-label\">" + esc(cols[0]) + "</span><p>" + esc(r.issue) + "</p></div>"
+        + (r.fix ? "<div class=\"cell\"><span class=\"cell-label\">" + esc(cols[1]) + "</span><p>" + esc(r.fix) + "</p></div>" : "") + "</div>"
+        + "<div class=\"note-wrap\"><label class=\"note-label\" for=\"note-" + s + "\">Note for Claude</label>"
+        + "<textarea id=\"note-" + s + "\" data-note-id=\"" + id + "\" rows=\"1\" placeholder=\"A ruling, or what you did\">" + esc(state.notes[key] || "") + "</textarea>"
+        + "<div class=\"row-actions\"><button type=\"button\" class=\"button\" data-rule-id=\"" + id + "\" aria-pressed=\"" + ruled + "\" id=\"rule-" + s + "\" aria-labelledby=\"rule-" + s + " " + about + "\">Record as ruling</button>"
+        + "<button type=\"button\" class=\"button\" data-ask-id=\"" + id + "\" id=\"ask-" + s + "\" aria-labelledby=\"ask-" + s + " " + about + "\">Ask about this row</button></div></div></div></li>";
+    }
+    html += "</ul></section>";
   }
   if (!rows.length) html += "<p>No fixes needed in " + esc(d.file) + " for what this run checked.</p>";
-  html += "<h2>About this run</h2><div class=\"gaps\"><p class=\"note\">" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions or not defects.</p>";
-  if ((d.notScanned || []).length) html += "<p class=\"note\">Not checked in this run:</p><ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
-  html += "<p class=\"note\">" + numbered.filter((x) => state.done.includes(idOf(x.r))).length + " of " + rows.length + " marked done in this browser.</p></div>";
-  // Decisions: each row kept as is, as a rulings-log row, so the next run judges by it.
-  const keptRows = numbered.filter((x) => state.keep.includes(idOf(x.r)));
-  html += "<h2>Decisions to record</h2><p class=\"note\">" + (keptRows.length
-    ? keptRows.length + " kept as is. Paste these rows at the end of the rulings table (section 6) of " + (d.contextName ? esc(d.contextName) : "the project's context document; without one, ask Claude to draft it first") + ". The next audit, with that document picked, judges by them."
-    : "Press <b>Keep as is</b> on a row that is intended, and it becomes a ruling to record here.") + "</p>";
-  if (keptRows.length) html += "<textarea id=\"rulings\" readonly aria-label=\"Rulings log rows\">" + esc(keptRows.map((x) => rulingRow(x.r)).join("\n")) + "</textarea><p><button type=\"button\" class=\"act\" id=\"copy-rulings\">Copy the rows</button></p>";
-  if (!d.contextName) html += "<h2>Context document</h2><p class=\"note\">This run used the toolkit's defaults. A context document gives the next run this library's own settings and its rulings: ask Claude to draft one from this report, then pick it in the plugin with <b>Use a context document…</b></p><p><button type=\"button\" class=\"act\" id=\"ask-context\">Copy the request</button></p>";
+
+  // Rulings travel back in one paste: the plugin keeps them for this file and the next run judges by them.
+  html += "<section class=\"bucket\" aria-labelledby=\"rulingsH\"><div class=\"bucket-head\"><h2 id=\"rulingsH\">Rulings</h2></div><div id=\"rulingsBody\"></div></section>";
+  html += "<section class=\"bucket\" aria-labelledby=\"aboutH\"><h2 id=\"aboutH\">About this run</h2><div class=\"gaps\"><p>" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions, ruled on, or not defects.</p>"
+    + "<p>Settings: " + (d.contextName ? "the context document " + esc(d.contextName) : "the toolkit's defaults; no context document") + ".</p>";
+  if ((d.notScanned || []).length) html += "<p>Not checked in this run:</p><ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+  html += "</div></section>";
   app.innerHTML = html;
+  rulings();
+}
+
+function rulings() {
+  const host = document.getElementById("rulingsBody");
+  if (!host) return;
+  const ruled = numbered.filter((x) => state.rules.includes(idOf(x.r)));
+  let html = "<p class=\"bucket-note\">" + (ruled.length
+    ? ruled.length + " recorded. Copy them, then in Audit lite press <b>Paste rulings</b>: the plugin keeps them for this file, and the next run judges by them."
+    : "When a row is intended, write why in its note and press <b>Record as ruling</b>. The rulings gather here, to paste into Audit lite once.") + "</p>";
+  if (ruled.length) html += "<textarea class=\"rulings\" id=\"rulingsText\" readonly aria-label=\"Rulings to paste into Audit lite\">" + esc(ruled.map((x) => rulingRow(x.r)).join("\n")) + "</textarea>"
+    + "<div class=\"row-actions\"><button type=\"button\" class=\"button\" id=\"copyRulings\">Copy rulings</button></div>";
+  host.innerHTML = html;
+}
+
+const find = (id) => (numbered.find((x) => x.id === id) || {}).r;
+// a change redraws the page and puts focus back on the control that made it
+function redraw(sel) { render(DATA); const el = sel && document.querySelector(sel); if (el) el.focus(); }
+function wire() {
+  const app = document.getElementById("app");
   app.onclick = (e) => {
-    const t = e.target.closest("button, input");
-    if (!t) return;
-    const find = (id) => (numbered.find((x) => x.id === id) || {}).r;
-    if (t.dataset.sev) { toggle_(off, t.dataset.sev); redraw("[data-sev=\"" + t.dataset.sev + "\"]"); }
-    else if (t.dataset.done) { toggle(state.done, idOf(find(t.dataset.done))); save(); redraw("[data-done=\"" + t.dataset.done + "\"]"); }
-    else if (t.dataset.keep) { toggle(state.keep, idOf(find(t.dataset.keep))); save(); redraw("[data-keep=\"" + t.dataset.keep + "\"]"); }
-    else if (t.dataset.ask) { const r = find(t.dataset.ask); copy("Tell me about " + t.dataset.ask + " (" + r.set + (r.layer ? " › " + r.layer : "") + "): why it matters, and how to fix it in Figma.", "The question about " + t.dataset.ask); }
-    else if (t.id === "copy-rulings") copy(document.getElementById("rulings").value, "The rulings rows");
-    else if (t.id === "ask-context") copy("Draft the context document for this library from the report: its settings from the discovery, the conventions the dropped findings showed, and the decisions I kept as rulings. Mark every field you cannot fill as a question for me.", "The request");
+    const t = e.target && e.target.closest ? e.target.closest("button, input") : null;
+    if (!t || !DATA) return;
+    if (t.dataset.doneId) { toggle(state.done, idOf(find(t.dataset.doneId))); save(); redraw("[data-done-id=\"" + t.dataset.doneId + "\"]"); }
+    else if (t.dataset.ruleId) { toggle(state.rules, idOf(find(t.dataset.ruleId))); save(); redraw("[data-rule-id=\"" + t.dataset.ruleId + "\"]"); }
+    else if (t.dataset.askId) { const r = find(t.dataset.askId); copy("Tell me about " + t.dataset.askId + " (" + r.set + (r.layer ? " › " + r.layer : "") + "): why it matters, and how to fix it in Figma.", "The question about " + t.dataset.askId, "Paste it into the chat."); }
+    else if (t.id === "showAll") { view.set = ""; view.area = ""; redraw("#setFilter"); }
+    else if (t.id === "copyRulings") copy(document.getElementById("rulingsText").value, "The rulings", "In Audit lite, press Paste rulings.");
+  };
+  app.onchange = (e) => {
+    const t = e.target;
+    if (t.id === "setFilter") { view.set = t.value; redraw("#setFilter"); }
+    else if (t.id === "areaFilter") { view.area = t.value; redraw("#areaFilter"); }
+  };
+  // a note is kept as it is typed; a recorded ruling takes the new words at once
+  app.oninput = (e) => {
+    const t = e.target;
+    if (!t.dataset || !t.dataset.noteId) return;
+    const key = idOf(find(t.dataset.noteId));
+    if (t.value.trim()) state.notes[key] = t.value; else delete state.notes[key];
+    save();
+    if (state.rules.includes(key)) rulings();
   };
 }
-const toggle_ = (set, v) => { if (set.has(v)) set.delete(v); else set.add(v); };
-// a change redraws the page and puts focus back on the control that made it (chips.md: focus stays on the chip)
-function redraw(sel) { render(DATA); const el = document.querySelector(sel); if (el) el.focus(); }
-// What the reader did on this page (done, kept as is) stays in this browser only; the page renders without it.
-const KEY = DATA ? "audit-lite:" + (DATA.fileKey || DATA.file) + ":" + DATA.date : "";
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
-const state = Object.assign({ done: [], keep: [] }, load());
-const off = new Set();
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ done: state.done, keep: state.keep })); } catch (e) {} };
-// a mark belongs to a finding, not to its place: a later run on the same day may number the rows differently
-const idOf = (r) => [r.set, r.layer, r.issue].join("|");
-let said = "";
-const toggle = (list, id) => { const i = list.indexOf(id); if (i < 0) list.push(id); else list.splice(i, 1); };
-// a backtick would open a code span in the rulings table and merge its cells (projects.cjs cells), so it becomes a quote
-const cellText = (s) => String(s == null ? "" : s).replace(/`/g, "'").replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
-const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
-const sentence = (s) => { const t = String(s || "").trim(); return /[.!?]$/.test(t) ? t : t + "."; };
-// A decision as a row of the context document's rulings log (§6): Date | Scope | Ruling | Why, the Why naming the
-// component, which is how the full audit's judge reads a ruling's subject.
-function rulingRow(r) {
-  const where = r.set + (r.layer ? " › " + r.layer : "");
-  return "| " + today() + " | " + cellText(r.set) + " | " + cellText(where + ": " + sentence(r.issue) + " Kept as is: intended.") + " | " + cellText("Recorded from Audit lite, on " + r.set + ".") + " |";
-}
-function copy(text, what) {
-  const show = (ok) => { said = ok ? what + " copied. Paste it" + (what === "The rulings rows" ? " at the end of the rulings table." : " into the chat.") : what === "The rulings rows" ? "Copying is blocked here: select the rows in the box and copy them." : "Copying is blocked here. Select this and copy it: " + text; const el = document.getElementById("said"); if (el) el.textContent = said; };
-  try { navigator.clipboard.writeText(text).then(() => show(true), () => show(false)); } catch (e) { show(false); }
-}
 render(DATA);
+wire();
 </script>
 </body>
 </html>
