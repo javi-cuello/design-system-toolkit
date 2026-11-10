@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.5.1] - 2026-11-10
+### Changed
+- The chat-or-page question is asked as two buttons, Chat and Page, where Claude has a tool that offers choices; as one line elsewhere.
+
 ## [0.5.0] - 2026-11-10
 ### Added
 - The page: severity chips with counts; a Done box per row; Ask, which copies a question about the row for the chat; Keep as is, which turns the row into a rulings-log row (Date | Scope | Ruling | Why, the Why naming the component) gathered under *Decisions to record*, to paste into the context document's section 6. Done and kept stay in the viewer's browser.
