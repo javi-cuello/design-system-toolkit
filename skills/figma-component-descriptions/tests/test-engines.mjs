@@ -213,6 +213,23 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
   ok('apply: writes descriptionMarkdown and reports its length', a.descriptionMarkdown === md && out[0].ok && out[0].len === md.length);
   ok('apply: an empty string clears both fields', b.descriptionMarkdown === '' && b.description === '' && out[1].ok);
   ok('apply: a missing id is reported and the batch goes on', out[2].ok === false && out[2].err === 'not found');
+  // a node that stores markdown the way Figma did on 2026-11-10: trailing whitespace dropped, "* " made "- ", "\\" doubled
+  const c = node({ id: '1:3', type: 'COMPONENT', name: 'C', description: '' });
+  let held = '';
+  Object.defineProperty(c, 'descriptionMarkdown', { get: () => held, set: (v) => { held = v.split('\n').map((l) => l.replace(/\s+$/, '').replace(/^\* /, '- ').replace(/\\/g, '\\\\')).join('\n').replace(/\n+$/, ''); } });
+  const f2 = fakeFigma([node({ id: '0:2', type: 'PAGE', name: 'Q' }, [c])]);
+  const [harmless] = await run(config(read('apply.js'), { docs: [['1:3', 'C does a thing.  \n\n## Usage\n* Here\n']] }), f2);
+  ok('apply: Figma\'s harmless rewrites (trailing space, * bullets) still read back as ok', harmless.ok === true);
+  const [escaped] = await run(config(read('apply.js'), { docs: [['1:3', 'A \\| pipe']] }), f2);
+  ok('apply: a write Figma stores differently (a doubled backslash) is not ok, and says what was stored', escaped.ok === false && /differs/.test(escaped.err) && escaped.stored === 'A \\\\| pipe');
+  // the forgiveness is only what was seen: a "* " Figma changed inside a code fence, or indented, is a real change
+  const [fenced] = await run(config(read('apply.js'), { docs: [['1:3', 'Code:\n```\n* literal\n```']] }), f2);
+  ok('apply: a "* " Figma rewrote inside a code fence is not forgiven', fenced.ok === false);
+  // a plain description that will not clear is said
+  const d = node({ id: '1:4', type: 'COMPONENT', name: 'D', descriptionMarkdown: 'old' });
+  Object.defineProperty(d, 'description', { get: () => 'stuck', set: () => {} });
+  const [stuck] = await run(config(read('apply.js'), { docs: [['1:4', '']] }), fakeFigma([node({ id: '0:3', type: 'PAGE', name: 'R' }, [d])]));
+  ok('apply: a plain description left behind by a clear is not ok', stuck.ok === false && stuck.err === 'plain description not cleared');
 }
 
 // ── sync-header.js ───────────────────────────────────────────────────────────

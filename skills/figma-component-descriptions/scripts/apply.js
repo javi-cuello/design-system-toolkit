@@ -9,6 +9,15 @@ const CONFIG = {
   ]
 };
 
+// Each write is read back. Figma rewrites some markdown as it stores it, harmlessly: trailing spaces and
+// trailing blank lines go, and a "* " bullet at a line's start becomes "- " (observed 2026-11-10). Only
+// those are forgiven, and a bullet only outside a code fence. Anything else that differs, such as the
+// backslash it doubles in an escaped "\|", is a write that did not land as written, and is not ok.
+const norm = (s) => { let fence = false; return String(s || '').split('\n').map((l) => {
+  if (/^```/.test(l)) fence = !fence;
+  l = l.replace(/\s+$/, '');
+  return fence ? l : l.replace(/^\* /, '- ');
+}).join('\n').replace(/\n+$/, ''); };
 const applied = [];
 for (const [id, md] of CONFIG.docs) {
   const n = await figma.getNodeByIdAsync(id);
@@ -16,7 +25,10 @@ for (const [id, md] of CONFIG.docs) {
   try {
     n.descriptionMarkdown = md;
     if (md === '') n.description = '';
-    applied.push({ id, name: n.name, ok: true, len: (n.descriptionMarkdown || '').length });
+    const stored = n.descriptionMarkdown || '';
+    const cleared = md !== '' || (n.description || '') === '';
+    if (norm(stored) === norm(md) && cleared) applied.push({ id, name: n.name, ok: true, len: stored.length });
+    else applied.push({ id, name: n.name, ok: false, err: cleared ? 'stored text differs from what was written' : 'plain description not cleared', stored });
   } catch (e) {
     applied.push({ id, name: n.name, ok: false, err: String(e) });
   }

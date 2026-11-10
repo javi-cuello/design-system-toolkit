@@ -1,6 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.20.1)
+# Eval cases — figma-component-descriptions (v1.21.0)
 
-**Walked: 2026-11-06 for 1.20.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
+**Walked: 2026-11-10 for 1.21.0** — D24 added and executed: `apply.js` against the fake file and live on UI library - Demo's Button (the original text, a `* ` bullet with trailing spaces, an escaped pipe and a clear; restored after). D1–D23 read: none asserts on what apply returns beyond D-cases already run by `test-engines.mjs`, which pass. Before that, **Walked: 2026-11-06 for 1.20.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
 **Walked: 2026-11-04 for 1.20.0** — D23 added and traced to the reference file's *Right to left* section, step 5 and the checklist line; its lines match figma-components-audit's `direction|note` advice, composed and printed for one planted Chip the same day. D1–D22 unchanged: the section is written only under a key none of them sets.
 
@@ -286,3 +286,11 @@ Fixture: a project whose `audit-settings` name `rtlLanguages: ["ar"]`; a setting
 Assert: the settings row's description gains `## Right to left` with `- Mirrors: the order of its parts`, `- Padding: 16 leading, 12 trailing` and a `- Stays:` line; the avatar gets no section; `arrow-left` gets `Right to left: mirrors`, `play` gets `Right to left: stays`. Without the key, none of these appear. No line is a general remark ("mirrors as expected").
 Recorded: 2026-11-04, the person: "the component description skill should also support RTL from the same project context settings", and "the audit need to feel very actionable, no vague advice".
 Traced: 2026-11-04 for 1.20.0 — to `references/component-description-guide.md` *Right to left*, step 5 and the checklist line.
+
+## D24 · A write that Figma stores differently is not reported as applied — *executed* 2026-11-10
+Fixture: a node that stores markdown as Figma did on 2026-11-10 (trailing whitespace dropped, `* ` made `- `, a backslash doubled); the batch writes one description with trailing spaces and a `* ` bullet, then one with an escaped `\|`.
+Assert: the first is `ok: true`; the second is `ok: false`, `err` says the stored text differs, and `stored` holds what Figma kept.
+Assert the negative: a harmless rewrite is never a failure, and a rewrite beyond what was observed (a `* ` inside a code fence) is never forgiven; a clear that leaves the plain description is not ok.
+Recorded: 2026-11-10. SKILL.md said `apply.js` "applies and verifies in one round trip" while it read nothing back; the toolkit's review of agent guardrails named Figma write engines whose verification was prose only. Live on UI library - Demo's Button: `\|` came back `\\|`.
+
+Runs: node tests/test-engines.mjs — "apply: Figma's harmless rewrites (trailing space, * bullets) still read back as ok", "apply: a write Figma stores differently (a doubled backslash) is not ok, and says what was stored", "apply: a \"* \" Figma rewrote inside a code fence is not forgiven", "apply: a plain description left behind by a clear is not ok".
