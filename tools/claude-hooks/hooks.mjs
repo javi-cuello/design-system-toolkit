@@ -69,14 +69,34 @@ function ecosystemDirs() {
 
 if (mode === 'edit') {
   // The plan gate (gates.mjs) first: a refused call needs no rule list.
-  const { planGate } = await import('./gates.mjs');
-  // a subagent's call carries agent_id: its worktree edits are counted at the merge, as at Stop
-  const refused = planGate(payload.session_id, payload.transcript_path, ecosystemDirs(), { id: payload.tool_use_id, name: payload.tool_name, input: payload.tool_input || {} }, payload.cwd || process.cwd(), Boolean(payload.agent_id));
+  // A gate that throws would exit 1, which Claude Code lets through with a one-line notice the session never
+  // reads: it is said to the session instead, once a session, beside the rule list. Not denied: a deny would
+  // also refuse the edit that fixes the gate.
+  let refused, broken = '';
+  const gatesOff = process.env.TOOLKIT_GATES === 'off' || !!process.env.TOOLKIT_EVAL_COPY;
+  try {
+    const { planGate } = await import('./gates.mjs');
+    // a subagent's call carries agent_id: its worktree edits are counted at the merge, as at Stop
+    refused = planGate(payload.session_id, payload.transcript_path, ecosystemDirs(), { id: payload.tool_use_id, name: payload.tool_name, input: payload.tool_input || {} }, payload.cwd || process.cwd(), Boolean(payload.agent_id));
+  } catch (e) {
+    // said where the gates act, as at Stop
+    if (!gatesOff && inEcosystem(payload.cwd || process.cwd())) broken = `The plan gate (${SHOWN}/tools/claude-hooks/gates.mjs) failed and did not judge this call: ${String(e?.message ?? e)}. Fix it before more full-size work: until then nothing here is gated.`;
+  }
   if (refused) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: refused } }));
     process.exit(0);
   }
-  if (process.env.TOOLKIT_RULES === 'off') process.exit(0);
+  const seenFile = path.join(os.tmpdir(), `toolkit-rules-${payload.session_id || 'none'}`);
+  let seen = new Set();
+  try { if (fs.existsSync(seenFile)) seen = new Set(fs.readFileSync(seenFile, 'utf8').split('\n').filter(Boolean)); } catch { /* unreadable: nothing seen */ }
+  if (broken && seen.has('gate-broken')) broken = '';
+  const say = (text) => {
+    if (broken) { seen.add('gate-broken'); try { fs.writeFileSync(seenFile, [...seen].join('\n')); } catch { /* said again next call */ } }
+    const all = [broken, text].filter(Boolean).join('\n\n');
+    if (all) console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: all } }));
+    process.exit(0);
+  };
+  if (process.env.TOOLKIT_RULES === 'off') say('');
   const { areas, areaKey, targets, ruleIndex, knowledge } = await import('./standards-read.mjs');
   let repos = process.env.TOOLKIT_EVAL_COPY ? [path.resolve(process.env.TOOLKIT_EVAL_COPY)] : [];
   try {
@@ -88,22 +108,18 @@ if (mode === 'edit') {
     for (const a of areas(f, TOOLKIT, repos)) found.set(areaKey(a), a);
     for (const p of knowledge(f, TOOLKIT, repos)) pages.add(p);
   }
-  if (!found.size) process.exit(0);
-  const seenFile = path.join(os.tmpdir(), `toolkit-rules-${payload.session_id || 'none'}`);
-  const seen = new Set(fs.existsSync(seenFile) ? fs.readFileSync(seenFile, 'utf8').split('\n').filter(Boolean) : []);
+  if (!found.size) say('');
   const fresh = [...found].filter(([k]) => !seen.has(k));
   // a page is named once a session, so a later dialog still names dialogs.md
   const read = [...pages].filter((p) => !seen.has(`knowledge:${p}`));
-  if (!fresh.length && !read.length) process.exit(0);
+  if (!fresh.length && !read.length) say('');
   for (const [k] of fresh) seen.add(k);
   for (const p of read) seen.add(`knowledge:${p}`);
   fs.writeFileSync(seenFile, [...seen].join('\n'));
   const lists = fresh.map(([, a]) => `standards/${a.standard} — ${[].concat(a.part).join(', ')}:\n${ruleIndex(TOOLKIT, a).map((t) => `  ${t}`).join('\n')}`).join('\n\n');
   const kb = read.length ? `Interface work (toolkit-standard §D 21): read these knowledge pages before the first line, and name the ones you followed in the commit's "Knowledge:" trailer (checked at push):\n${read.map((p) => `  ${SHOWN}/${p}`).join('\n')}` : '';
   const rules = fresh.length ? `First change in this area this session. These are the rules that govern it (${SHOWN}; open a rule's section when it bears on the change, and revisit the change if one does).\n\n${lists}` : '';
-  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse',
-    additionalContext: [rules, kb].filter(Boolean).join('\n\n') } }));
-  process.exit(0);
+  say([rules, kb].filter(Boolean).join('\n\n'));
 }
 
 const pendingFile = () => path.join(os.tmpdir(), `toolkit-pending-${payload.session_id || 'none'}`);
@@ -138,8 +154,16 @@ if (mode === 'stop') {
     } catch { found = null; /* the push gate still reads the same files */ }
     if (found) { console.log(JSON.stringify({ decision: 'block', reason: found.reason })); process.exit(0); }
   }
-  const { stopGate } = await import('./gates.mjs');
-  const reason = stopGate(payload.session_id, payload.transcript_path, ecosystemDirs(), payload.last_assistant_message, payload.cwd || process.cwd());
+  // a gate that throws is said once (a stop after a block passes), never swallowed as a pass
+  let reason;
+  try {
+    const { stopGate } = await import('./gates.mjs');
+    reason = stopGate(payload.session_id, payload.transcript_path, ecosystemDirs(), payload.last_assistant_message, payload.cwd || process.cwd());
+  } catch (e) {
+    // said once a turn, only where the gates act, and never where they are switched off
+    const off = process.env.TOOLKIT_GATES === 'off' || !!process.env.TOOLKIT_EVAL_COPY;
+    reason = payload.stop_hook_active || off || !inEcosystem(payload.cwd || process.cwd()) ? null : `The review gate (${SHOWN}/tools/claude-hooks/gates.mjs) failed and did not judge this turn: ${String(e?.message ?? e)}. Fix it, then run the review it would have asked for.`;
+  }
   if (reason) { console.log(JSON.stringify({ decision: 'block', reason })); process.exit(0); }
 }
 

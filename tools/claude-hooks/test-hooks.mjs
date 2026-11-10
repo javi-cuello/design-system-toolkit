@@ -53,3 +53,34 @@ test('an interface file names the knowledge pages to read before the first line,
   fs.rmSync(repo, { recursive: true, force: true });
   fs.rmSync(path.join(os.tmpdir(), `toolkit-rules-${session_id}`), { force: true });
 });
+
+test('a gate that throws, or will not load, is told to the session, not swallowed', () => {
+  for (const gates of ["export const planGate = () => { throw new Error('boom'); };\nexport const stopGate = () => { throw new Error('boom'); };\n", "throw new Error('boom');\n"]) {
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'hooks-throw-')));
+    try {
+      fs.copyFileSync(path.join(HERE, 'hooks.mjs'), path.join(dir, 'hooks.mjs'));
+      fs.writeFileSync(path.join(dir, 'gates.mjs'), gates);
+      const sid = `throw-${process.pid}-${gates.length}`;
+      const go = (mode, pl, env = {}) => spawnSync('node', [path.join(dir, 'hooks.mjs'), mode], { input: JSON.stringify(pl), encoding: 'utf8', env: { ...process.env, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off', TOOLKIT_GATES: '', TOOLKIT_EVAL_COPY: '', ...env } });
+      // the rule list needs the toolkit's other modules, absent from this copy: off here, read in the tests above
+      const write = { session_id: sid, cwd: dir, tool_name: 'Write', tool_input: { file_path: path.join(dir, 'x') } };
+      const e = go('edit', write);
+      assert.equal(e.status, 0);
+      const ctx = JSON.parse(e.stdout).hookSpecificOutput;
+      assert.match(ctx.additionalContext, /plan gate .* failed .*boom/);
+      assert.equal(ctx.permissionDecision, undefined);
+      // said once a session
+      assert.equal(go('edit', write).stdout.trim(), '');
+      // the stop: blocked inside the gates' reach (the temp copy is its own toolkit), passed after a block
+      const s1 = go('stop', { session_id: sid, stop_hook_active: false, cwd: dir });
+      assert.equal(JSON.parse(s1.stdout).decision, 'block');
+      assert.match(JSON.parse(s1.stdout).reason, /review gate .* failed .*boom/);
+      assert.equal(go('stop', { session_id: sid, stop_hook_active: true, cwd: dir }).stdout.trim(), '');
+      // switched off: nothing said
+      assert.doesNotMatch(go('stop', { session_id: sid, stop_hook_active: false, cwd: dir }, { TOOLKIT_GATES: 'off' }).stdout, /review gate/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      for (const f of ['rules', 'stop', 'pending']) fs.rmSync(path.join(os.tmpdir(), `toolkit-${f}-throw-${process.pid}-${gates.length}`), { force: true });
+    }
+  }
+});
