@@ -1,6 +1,6 @@
 # Audit lite
 
-Audits every component in the open Figma library and saves one Markdown report. Upload the report to Claude (claude.ai, the desktop app or Claude Code) and type **show me results**: Claude judges the findings and publishes the fix queue as a page, in four buckets (safe fixes, manual fixes, decisions, breaking changes).
+Audits every component in the open Figma library and saves one Markdown report. Upload the report to Claude (claude.ai, the desktop app or Claude Code) and type **show me results**: Claude asks whether to show them in the chat or as a page, judges the findings, and shows the fix queue in four buckets (safe fixes, manual fixes, decisions, breaking changes).
 
 It is the components audit with nothing else to install: no bridge plugin, no toolkit checkout, no Node, no project setup. The scanner is the same one [figma-components-audit](../../skills/figma-components-audit/SKILL.md) runs, copied in by `sync.mjs`.
 
@@ -8,7 +8,9 @@ It is the components audit with nothing else to install: no bridge plugin, no to
 
 1. Figma desktop → Plugins → Development → Import plugin from manifest → this folder's `manifest.json`.
 2. Open the library, run **Audit lite**, press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
-3. Upload the report to a Claude chat and type `show me results`.
+3. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
+
+On a 71-component library Claude's reply takes about a minute, most of it writing the tables.
 
 A changed manifest needs a re-import; "run last plugin" will not pick it up.
 

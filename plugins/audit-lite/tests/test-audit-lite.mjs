@@ -52,10 +52,12 @@ const data = { file: 'Lib <b>', fileKey: 'ABC123', date: '2026-11-10', scanned: 
 const html = page(data);
 ok('an empty page renders nothing', page(null) === '');
 ok('a "b1" bucket counts as bucket 1', html.includes('1 · Safe fixes'));
-ok('a user-visible row leads its bucket as 3.1', /3\.1<\/td><td class="sev error">error · user-visible/.test(html), html);
+ok('a user-visible row leads its bucket as 3.1', /3\.1<\/td><th scope="row" class="where"><a [^>]*><code>Button › Label<\/code><\/a><\/th>/.test(html), html);
+ok('the place is the row\'s header and seen-by-users its own column', html.includes('<td class="sev error">error</td><td>Yes</td>'));
 ok('file text is escaped', !html.includes('<img') && !html.includes('Lib <b>'));
 ok('a row links to its set', html.includes('href="https://www.figma.com/design/ABC123?node-id=1-3"'));
 ok('every table has a caption and column headers', (html.match(/<caption/g) || []).length === 2 && html.includes('scope="col"'));
+ok('the run\'s scope has its heading', html.includes('<h2>About this run</h2>') && html.includes('Not checked in this run'));
 
 console.log(failed ? `${failed} failed, ${passed} passed` : `${passed} passed`);
 process.exit(failed ? 1 : 0);

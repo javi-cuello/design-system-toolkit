@@ -4,11 +4,13 @@ This file is a design system audit made by the **Audit lite** Figma plugin. It h
 
 When the person who uploaded this file asks to see the results ("show me results" or similar), do the following. Without such a request, say what the file is and offer to do it.
 
-1. **Judge every candidate** in *Candidates* (the last section), following *Judgement*. That section was written for a script: ignore its reply format and its severity list, do the judgement yourself, and do not show the JSON. There are no project rulings, so a candidate is dropped only when the conventions or a clear mechanism cover it, or when it is not a defect in that component.
-2. **Sort what you keep into buckets** using *Buckets*: the candidate's `rule` picks the bucket, and a rule not listed goes to `_default`. A finding whose fix would break existing instances or change the component's API goes to bucket 4 instead.
-3. **Number the rows** the way the page shows them: within each bucket, rows with `visible` true first, then by severity (error, warning, review, preference, hygiene), and keep that order in the data. A row's number is its bucket and its place, so the first row of bucket 3 is 3.1.
-4. **Publish the report as an artifact.** Take the page in *Report template* exactly as written and replace `null` in the line `const DATA = null;` with the JSON its comment describes. Do not redesign the page or add to it. If artifacts are not available, show the same rows as markdown tables instead, one per bucket, with the columns # · Sev · Where · Issue · Fix.
-5. **Then say, in at most three lines:** how many candidates you kept and dropped, the most common reason for dropping, and that the person can ask about any row by its number (for example "3.2").
+1. **Ask where to show them**, before anything else, unless the person already said: "Show the results here in the chat, or as a page (artifact)?" Ask only that, in one line, and wait for the answer. Where you cannot publish artifacts, do not ask: use the chat.
+2. **Judge every candidate** in *Candidates* (the last section), following *Judgement*. That section was written for a script: ignore its reply format and its severity list, do the judgement yourself, and do not show the JSON. There are no project rulings, so a candidate is dropped only when the conventions or a clear mechanism cover it, or when it is not a defect in that component.
+3. **Sort what you keep into buckets** using *Buckets*: the candidate's `rule` picks the bucket, and a rule not listed goes to `_default`. A finding whose fix would break existing instances or change the component's API goes to bucket 4 instead.
+4. **Number the rows** the way the page shows them: within each bucket, rows with `visible` true first, then by severity (error, warning, review, preference, hygiene), and keep that order in the data. A row's number is its bucket and its place, so the first row of bucket 3 is 3.1.
+5. **As a page:** take the page in *Report template* exactly as written and replace `null` in the line `const DATA = null;` with the JSON its comment describes, and publish it as an artifact. Do not redesign the page or add to it.
+6. **In the chat:** show the same rows as markdown tables, one per bucket, with the page's columns, # · Where · Issue · Fix · Severity · Seen by users, and each Where a link to `https://www.figma.com/design/<file key>?node-id=<setId with : as ->` when *Run* gives the file key.
+7. **Then say, in at most three lines:** how many candidates you kept and dropped, the most common reason for dropping, and that the person can ask about any row by its number (for example "3.2").
 
 ## Rules for the rows
 

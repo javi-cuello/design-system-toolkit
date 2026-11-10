@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audit fix queue</title>
 <style>
-:root{--bg:#fff;--surface:#f6f6f4;--text:#1a1a18;--muted:#5f5e5a;--line:#e2e1dc;--link:#0b5cad;
---error:#c4262e;--warning:#9a6200;--review:#2f5fb3;--quiet:#77756f}
+:root{color-scheme:light dark;--bg:#fff;--surface:#f6f6f4;--text:#1a1a18;--muted:#5f5e5a;--line:#e2e1dc;--link:#0b5cad;
+--error:#c4262e;--shadow:rgb(0 0 0/.18)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
---line:#34332f;--link:#7fb2f0;--error:#f07a7f;--warning:#e0b252;--review:#8fb0ee;--quiet:#8d8b84}}
-:root[data-theme="dark"]{--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
---line:#34332f;--link:#7fb2f0;--error:#f07a7f;--warning:#e0b252;--review:#8fb0ee;--quiet:#8d8b84}
+--line:#34332f;--link:#7fb2f0;--error:#f07a7f;--shadow:rgb(0 0 0/.7)}}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
+--line:#34332f;--link:#7fb2f0;--error:#f07a7f;--shadow:rgb(0 0 0/.7)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
@@ -20,17 +21,18 @@ h2{font-size:17px;margin:40px 0 4px}
 .counts{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;list-style:none}
 .counts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
 .counts b{font-size:18px;display:block}
-.wrap{overflow-x:auto}
+/* a shadow at a cut edge says the table scrolls; it scrolls away with the content where nothing is cut */
+.wrap{overflow-x:auto;background:linear-gradient(to right,var(--bg) 30%,transparent) left/40px 100% no-repeat local,linear-gradient(to left,var(--bg) 30%,transparent) right/40px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,var(--shadow),transparent) left/12px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,var(--shadow),transparent) right/12px 100% no-repeat scroll}
 table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
-th,td{text-align:left;vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--line)}
-th{font-size:12px;font-weight:600;color:var(--muted)}
+th,td{text-align:left;font-weight:400;vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--line)}
+thead th{font-size:12px;font-weight:600;color:var(--muted)}
 td.n{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
-.sev{white-space:nowrap;font-size:12px;font-weight:600}
-.sev.error{color:var(--error)}.sev.warning{color:var(--warning)}.sev.review{color:var(--review)}
-.sev.preference,.sev.hygiene{color:var(--quiet)}
+/* colour marks only what needs action first: an error */
+.sev{white-space:nowrap;font-size:13px}
+.sev.error{color:var(--error);font-weight:600}
 .where code{font-size:13px;overflow-wrap:anywhere}
 a{color:var(--link)}
-.gaps{margin-top:40px;padding:16px;background:var(--surface);border-radius:8px;font-size:13px;color:var(--muted)}
+.gaps{margin-top:8px;padding:16px;background:var(--surface);border-radius:8px;font-size:13px;color:var(--muted)}
 .gaps ul{margin:4px 0 0;padding-left:18px}
 .empty{color:var(--muted)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -67,7 +69,8 @@ function render(d) {
   if (!d) return;
   const rows = d.rows || [];
   const sc = d.scanned || {};
-  let html = "<h1>" + esc(d.file) + "</h1><p class=\"meta\">" + (sc.sets != null ? "Audit of " + esc(sc.sets) + " components, " + esc(sc.variants) + " variants · " : "") + esc(d.date) + "</p>";
+  document.title = (d.file ? d.file + " – " : "") + "audit fix queue";
+  let html = "<h1>" + esc(d.file) + "</h1><p class=\"meta\">" + (sc.sets != null ? "Audit of " + esc(sc.sets) + " components, " + esc(sc.variants) + " variants · " : "") + "<time datetime=\"" + esc(d.date) + "\">" + esc(d.date) + "</time></p>";
   html += "<ul class=\"counts\">";
   for (const b of [1, 2, 3, 4]) html += "<li><b>" + rows.filter((r) => bucketOf(r) === b).length + "</b> " + esc(BUCKETS[b][0]) + "</li>";
   if (d.coverage != null) html += "<li><b>" + esc(d.coverage) + "%</b> Values bound to tokens</li>";
@@ -77,20 +80,20 @@ function render(d) {
       .sort((x, y) => (y.visible === true) - (x.visible === true) || (RANK[x.sev] ?? 9) - (RANK[y.sev] ?? 9));
     if (!list.length) continue;
     html += "<h2>" + b + " · " + esc(BUCKETS[b][0]) + "</h2><p class=\"note\">" + esc(BUCKETS[b][1]) + "</p>";
-    html += "<div class=\"wrap\" tabindex=\"0\" role=\"region\" aria-label=\"" + esc(BUCKETS[b][0]) + "\"><table><caption class=\"sr\">" + esc(BUCKETS[b][0]) + "</caption><thead><tr><th scope=\"col\">#</th><th scope=\"col\">Severity</th><th scope=\"col\">Where</th><th scope=\"col\">Issue</th><th scope=\"col\">Fix</th></tr></thead><tbody>";
+    html += "<div class=\"wrap\" tabindex=\"0\" role=\"region\" aria-label=\"" + esc(BUCKETS[b][0]) + "\"><table><caption class=\"sr\">" + esc(BUCKETS[b][0]) + "</caption><thead><tr><th scope=\"col\">#</th><th scope=\"col\">Where</th><th scope=\"col\">Issue</th><th scope=\"col\">Fix</th><th scope=\"col\">Severity</th><th scope=\"col\">Seen by users</th></tr></thead><tbody>";
     list.forEach((r, i) => {
       const where = esc(r.set) + (r.layer ? " › " + esc(r.layer) : "");
       const url = link(d, r);
       html += "<tr><td class=\"n\">" + b + "." + (i + 1) + "</td>"
-        + "<td class=\"sev " + esc(r.sev) + "\">" + esc(r.sev) + (r.visible ? " · user-visible" : "") + "</td>"
-        + "<td class=\"where\">" + (url ? "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\"><code>" + where + "</code></a>" : "<code>" + where + "</code>") + "</td>"
-        + "<td>" + esc(r.issue) + "</td><td>" + esc(r.fix) + "</td></tr>";
+        + "<th scope=\"row\" class=\"where\">" + (url ? "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\"><code>" + where + "</code></a>" : "<code>" + where + "</code>") + "</th>"
+        + "<td>" + esc(r.issue) + "</td><td>" + esc(r.fix) + "</td>"
+        + "<td class=\"sev " + esc(r.sev) + "\">" + esc(r.sev) + "</td><td>" + (r.visible ? "Yes" : "") + "</td></tr>";
     });
     html += "</tbody></table></div>";
   }
-  if (!rows.length) html += "<p>No findings survived judgement.</p>";
-  html += "<div class=\"gaps\">Kept " + esc(d.kept) + " of " + esc((d.kept || 0) + (d.dropped || 0)) + " scanner candidates.";
-  if ((d.notScanned || []).length) html += " Not checked in this run:<ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+  if (!rows.length) html += "<p>No fixes needed in " + esc(d.file) + " for what this run checked.</p>";
+  html += "<h2>About this run</h2><div class=\"gaps\"><p class=\"note\">" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions or not defects.</p>";
+  if ((d.notScanned || []).length) html += "<p class=\"note\">Not checked in this run:</p><ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
   html += "</div>";
   app.innerHTML = html;
 }

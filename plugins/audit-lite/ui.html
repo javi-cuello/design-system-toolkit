@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta charset="utf-8">
+<title>Audit lite</title>
 <style>
 /* ui-base v3 start — canonical: plugins/_shared/ui-base.css
    Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
@@ -51,46 +53,96 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 .divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
 /* ui-base v3 end */
 
-/* audit-lite bespoke styles (extend the base) */
-.stack{display:flex;flex-direction:column;gap:var(--space-2)}
-.status{min-height:var(--lh)}
-.status.error{color:var(--figma-color-text-danger)}
+/* audit-lite bespoke styles, laid out as the snapshot plugin's window: one title with the version, one line of what
+   the run does, one button, one status block that says what is happening and then what happened (knowledge/ui/design/
+   visual.md, *Quiet chrome*; knowledge/ui/patterns/feedback.md, *Loading* and *Success confirmation*). */
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2)}
+.title{margin:0;font-weight:var(--fw-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.version{flex:none;color:var(--figma-color-text-tertiary)}
+.what{margin:0 0 var(--space-3)}
+[hidden]{display:none !important}
+#run,#save{width:100%}
+#save{margin-top:var(--space-2)}
+/* aria-disabled, not disabled: the button keeps focus while the audit runs (knowledge/ui/patterns/actions.md) */
+#run[aria-disabled="true"]{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+#run:focus,#save:focus{outline:none}
+#run:focus-visible,#save:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
+.status{margin:var(--space-3) 0 0}
+.status-head{display:flex;align-items:flex-start;gap:var(--space-2)}
+.status-icon{flex:none;width:16px;height:16px;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.status[data-tone="done"] .status-icon{stroke:var(--figma-color-icon-success)}
+.status[data-tone="error"] .status-icon{stroke:var(--figma-color-icon-danger)}
+.status-title{flex:1;min-width:0}
+.status[data-tone="done"] .status-title{font-weight:var(--fw-semibold)}
+.status[data-tone="error"] .status-title{color:var(--figma-color-text-danger)}
+.status-detail{margin:0;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
+.status[data-tone] .status-detail{padding-left:24px}
+/* The scan is one call with no steps to count, so the bar is indeterminate. */
+progress{display:block;width:100%;height:4px;margin:var(--space-2) 0 0;border:0;border-radius:2px;overflow:hidden;
+  appearance:none;-webkit-appearance:none;background:var(--figma-color-bg-tertiary)}
+progress::-webkit-progress-bar{background:var(--figma-color-bg-tertiary)}
+/* with no value, a third of the bar slides across, so the run is seen to be working */
+progress:indeterminate{background:linear-gradient(90deg,transparent 0 33%,var(--figma-color-bg-brand) 33% 66%,transparent 66%) 0 0/300% 100% var(--figma-color-bg-tertiary);animation:slide 1.2s linear infinite}
+progress:indeterminate::-webkit-progress-bar{background:transparent}
+@keyframes slide{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion: reduce){progress:indeterminate{animation:none;background:var(--figma-color-bg-brand)}}
 </style>
 </head>
 <body>
-<div class="container stack">
-  <div class="section-title">Audit lite</div>
-  <p class="secondary">Audits every component in this file and saves a report. Upload the report to Claude and type <b>show me results</b>.</p>
-  <button id="run">Run audit</button>
-  <button id="save" class="btn-secondary" hidden>Save the report again</button>
-  <p class="status secondary" id="status" role="status"></p>
-</div>
+<main class="container">
+  <div class="head"><p class="title" id="file">Reading the file…</p><span class="version" id="version"></span></div>
+  <p class="what secondary">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+  <button id="run" type="button">Run audit</button>
+  <button id="save" class="btn-secondary" type="button" hidden>Save the report again</button>
+  <div class="status" id="status" role="status" hidden>
+    <div class="status-head">
+      <svg class="status-icon" id="icon-done" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M5.25 8.25l1.75 1.75 3.75-4"/></svg>
+      <svg class="status-icon" id="icon-error" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M8 4.75v3.75M8 11.25v.01"/></svg>
+      <span class="status-title" id="status-title"></span>
+    </div>
+    <progress id="bar" hidden></progress>
+    <p class="status-detail" id="status-detail" hidden></p>
+  </div>
+</main>
 <script>
-var run = document.getElementById('run');
-var save = document.getElementById('save');
-var statusEl = document.getElementById('status');
-var last = null;
+var $ = function (id) { return document.getElementById(id); };
+var last = null, busy = false;
 function download(msg) {
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([msg.text], { type: 'text/markdown' }));
   a.download = msg.name; document.body.appendChild(a); a.click(); a.remove();
 }
-run.onclick = function () {
-  run.disabled = true; statusEl.className = 'status secondary';
-  statusEl.textContent = 'Auditing… a large library takes a minute.';
+// tone: undefined while working, 'done' or 'error' after
+function say(tone, title, detail) {
+  var st = $('status'); st.hidden = false;
+  if (tone) st.setAttribute('data-tone', tone); else st.removeAttribute('data-tone');
+  // an svg has no `hidden` property, only the attribute
+  $('icon-done').toggleAttribute('hidden', tone !== 'done'); $('icon-error').toggleAttribute('hidden', tone !== 'error');
+  $('bar').hidden = !!tone;
+  $('status-title').textContent = title;
+  $('status-detail').textContent = detail || ''; $('status-detail').hidden = !detail;
+  fit();
+}
+// the window takes its content's height, as the snapshot plugin's does
+function fit() { var h = Math.ceil(document.querySelector('main').getBoundingClientRect().height); parent.postMessage({ pluginMessage: { type: 'resize', height: h } }, '*'); }
+$('run').onclick = function () {
+  if (busy) return;
+  busy = true; $('run').setAttribute('aria-disabled', 'true');
+  say(undefined, 'Auditing the components…', 'A large library takes about a minute.');
   parent.postMessage({ pluginMessage: { type: 'run', id: Date.now() } }, '*');
 };
-save.onclick = function () { if (last) download(last); };
+parent.postMessage({ pluginMessage: { type: 'hello' } }, '*');
+$('save').onclick = function () { if (last) download(last); };
 onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
-  run.disabled = false;
+  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; fit(); return; }
+  busy = false; $('run').removeAttribute('aria-disabled');
   if (msg.type === 'done') {
-    last = msg; download(msg); save.hidden = false;
-    statusEl.textContent = 'Saved ' + msg.name + ': ' + msg.sets + ' components, ' + msg.found + ' findings to judge.';
+    last = msg; download(msg); $('save').hidden = false;
+    say('done', 'Saved ' + msg.name, msg.sets + ' components, ' + msg.found + ' possible issues for Claude to review. Upload the file and type "show me results".');
   } else if (msg.type === 'failed') {
-    statusEl.className = 'status error';
-    statusEl.textContent = 'The audit stopped: ' + msg.why;
+    say('error', 'The audit stopped', msg.why + '. Press Run audit to try again.');
   }
 };
 </script>
