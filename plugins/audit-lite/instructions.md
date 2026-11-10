@@ -14,7 +14,7 @@ When the person who uploaded this file asks to see the results ("show me results
 
 ## Rules for the rows
 
-- One row per component and layer. Never merge two components into one row.
+- One row per component and layer. Never merge two components into one row. A file-level finding (its set is `Page list`) is about a page or the page list: `set` stays `Page list`, `layer` is the candidate's `page`, and it links only when the entry has a node id.
 - `issue` says what is wrong and what it costs the people using the component, in one sentence. `fix` says the change to make, in one sentence. Both come from the candidate's `text` and `advice`, tightened, never invented.
 - `bucket` is a number, 1 to 4. `layer` is the layer the candidate's `text` names, if it names one; leave it empty for a finding about the whole component, a property, an axis or an option.
 - Severity is the candidate's `sev`. Keep `visible` true where the candidate has it, and set it true also when an end user of the product would see or feel the defect (contrast, focus, target size, a state that does not render); those rows lead their bucket.

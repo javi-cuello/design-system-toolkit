@@ -23,6 +23,7 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 // each folder named, never the skill's own: bin/get takes a named skill whole, and install.sh then installs it
 const SCANNER = 'skills/figma-components-audit/scanner';
 const REFERENCES = 'skills/figma-components-audit/references';
+const FOUNDATIONS = 'skills/figma-foundations-audit/scripts';
 const CODE = path.join(HERE, 'code.js');
 const BLOCK = /\/\* audit-lite generated start[\s\S]*?\/\* audit-lite generated end \*\//;
 
@@ -34,6 +35,7 @@ const tokens = flatSettings(house, {});
 delete tokens.componentPages;
 
 const scanner = read(`${SCANNER}/audit.js`);
+const foundations = read(`${FOUNDATIONS}/foundations.js`);
 // The settings the scanner reads that the house does not set: each one's check is skipped, and the report says which.
 // A derived key (the page filter, the excluded sections) is not a check, so it is not listed.
 const describe = {};
@@ -73,7 +75,7 @@ const judgeRules = read('tools/figma-audit/judge-rules.mjs').replace(/^export /g
 // The full audit's discovery and probes (figma-components-audit scripts/probes.js), its factory by source.
 const probes = `const FCA_FACTORY = ${globalThis.__FCA_PROBES_FACTORY.toString()};`;
 
-const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md and report.html; never edit by hand */
+const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md and report.html; never edit by hand */
 const LITE = ${JSON.stringify(LITE)};
 ${readers}
 ${judgeRules}
@@ -81,6 +83,10 @@ ${probes}
 /** The components audit's scanner, unchanged: TARGETS [] scans every set. @returns {Promise<any>} */
 async function scan(/** @type {string[]} */ TARGETS, /** @type {any} */ SCALES, /** @type {any} */ TOKENS) {
 ${scanner}
+}
+/** The foundations audit's checks (the file as a whole), unchanged; with no figma in scope it returns checkFacts. @returns {Promise<any>} */
+async function foundations(/** @type {any} */ TOKENS) {
+${foundations}
 }
 /* audit-lite generated end */`;
 

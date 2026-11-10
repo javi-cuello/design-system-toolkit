@@ -1,8 +1,8 @@
 # Audit lite
 
-Audits every component in the open Figma library and saves one Markdown report. Upload the report to Claude (claude.ai, the desktop app or Claude Code) and type **show me results**: Claude asks whether to show them in the chat or as a page, judges the findings, and shows the fix queue in four buckets (safe fixes, manual fixes, decisions, breaking changes).
+Audits every component in the open Figma library, and the file as a whole, and saves one Markdown report. Upload the report to Claude (claude.ai, the desktop app or Claude Code) and type **show me results**: Claude asks whether to show them in the chat or as a page, judges the findings, and shows the fix queue in four buckets (safe fixes, manual fixes, decisions, breaking changes).
 
-It is the components audit with nothing else to install: no bridge plugin, no toolkit checkout, no Node, no project setup. The scanner is the same one [figma-components-audit](../../skills/figma-components-audit/SKILL.md) runs, copied in by `sync.mjs`.
+It is the components and foundations audits with nothing else to install: no bridge plugin, no toolkit checkout, no Node, no project setup. The scanners are the ones [figma-components-audit](../../skills/figma-components-audit/SKILL.md) and [figma-foundations-audit](../../skills/figma-foundations-audit/SKILL.md) run, copied in by `sync.mjs`.
 
 ## Run
 
@@ -19,12 +19,12 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 - Without a context document it runs on the toolkit's house conventions, not the library's own: the report lists them, Claude drops a finding that only says the library follows a different convention, and offers to draft a starter context document from the file's discovery. Checks whose settings are not set do not run, and the report says which.
 - With one, it reads the document's settings for this file (refused, with the reason, when it has none) and its rulings, the way the full audit does. It never writes the document: Claude offers a decision as a rulings-log row to copy.
-- It checks components only: not the file as a whole (page order, names that differ only in case), the code-target validator or the token link check.
+- It does not run the code-target validator, the token link check, or the foundations audit's token-library and icon-library checks, which read a stored snapshot through Node.
 - It fixes nothing, keeps no record and has no dashboard. The full audit ([figma-project-audit](../../skills/figma-project-audit/SKILL.md)) does all of that.
 
 ## Files
 
-- `code.js`: the plugin. Its generated block (the scanner, the judging prompt, the buckets, the universal conventions, the house settings, `instructions.md` and `report.html`) is written by `node plugins/audit-lite/sync.mjs`, never by hand; `bin/check` fails when it differs from its sources.
+- `code.js`: the plugin. Its generated block (the components and foundations scanners, the full audit's context-document readers and discovery, the judging prompt, the buckets, the universal conventions, the house settings, `instructions.md` and `report.html`) is written by `node plugins/audit-lite/sync.mjs`, never by hand; `bin/check` fails when it differs from its sources.
 - `instructions.md`: what Claude does with the report. `report.html`: the page Claude fills in.
 - `tests/test-audit-lite.mjs`: builds a report from the scanner's fixture, checks that a context document gives the settings and rulings the full audit reads from it (`tests/fixtures/design-system-context.md`), and renders the page.
 

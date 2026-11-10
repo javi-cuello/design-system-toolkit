@@ -9,7 +9,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
-const { report, settingsFor, LITE, scan } = /** @type {any} */ (mod.exports);
+const { report, settingsFor, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
 const projects = createRequire(import.meta.url)(path.join(ROOT, 'tools/snapshot/projects.cjs'));
 
 let failed = 0, passed = 0;
@@ -66,6 +66,18 @@ ok('every candidate reaches the report', cands.reduce((n, s) => n + s.candidates
 ok('a candidate carries what the rows need', cands.every((s) => s.setId && s.candidates.every((c) => c.sev && c.rule && c.key && c.text && c.advice)));
 ok('the template reaches the report whole', md.includes(LITE.template.trim()));
 ok('a report with no file key says it has no links', report(r, { fileName: 'X', fileKey: null, date: 'd' }).includes('no Figma links'));
+
+// The file-level checks: the foundations audit's own, run on the same settings, filed beside the components' findings.
+const fcheck = await foundations(LITE.tokens);
+ok('the foundations checks are carried as written', typeof fcheck === 'function');
+const marker = '❖ ';
+const fr = fcheck({ pages: [{ name: marker + 'INPUTS' }, { name: marker + 'Text input' }, { name: marker + 'Combobox' }], components: [] }, Object.assign({}, LITE.tokens, { sectionHeader: '^❖ [A-Z][A-Z &]*$', pageMarker: '^\\S+\\s+' }));
+ok('a page out of order is found (the house settings, with a fixture section header and page marker)', fr.audited.some((e) => e.set === 'Page list' && e.candidates.some((c) => c.rule === 'page-order')), JSON.stringify(fr.audited));
+const both = Object.assign({}, r, { audited: r.audited.concat(fr.audited), foundations: { ran: fr.ran, notRun: fr.notRun } });
+const fmd = report(both, { fileName: 'X', fileKey: 'K', date: 'd' });
+ok('the file-level findings reach the candidates', /"set": "Page list"/.test(fmd) && /"rule": "page-order"/.test(fmd));
+ok('the run names the file-level checks that ran', fmd.includes('- File-level checks run: ') && fmd.includes('page-order'));
+ok('a stopped file-level pass is said, the components kept', report(Object.assign({}, r, { foundations: { ran: [], notRun: [], error: 'boom' } }), { fileName: 'X', fileKey: 'K', date: 'd' }).includes('- File-level checks: stopped (boom)'));
 
 // The page: filled as Claude fills it, rendered against a stub document.
 const page = (data) => {

@@ -173,3 +173,8 @@ Runs: node tests/test-foundations.mjs — "a bare slash and a part without its p
 Fixture: the script's input flag given a path that is not there, then a file that is not JSON.
 Assert: each exits non-zero with one stderr line naming the path and saying `no such file` or `not JSON (…)`, never a Node stack.
 Runs: node tools/toolkit-check/test-missing-input.mjs
+
+## F25 · Audit lite carries these checks unchanged — *executed* 2026-11-10
+Fixture: the scanner's generated block in `plugins/audit-lite/code.js`; a page list with a category out of alphabetical order.
+Assert: `sync.mjs --check` exits 0 (the block equals `scripts/foundations.js`); the copy, run with no `figma`, returns `checkFacts`, raises the page-order finding under `Page list`, and the report carries it among the candidates with a *File-level checks run* line.
+Runs: node plugins/audit-lite/sync.mjs --check && node plugins/audit-lite/tests/test-audit-lite.mjs
