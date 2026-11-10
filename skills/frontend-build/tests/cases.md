@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.10.1)
+# Eval cases — frontend-build (v2.11.0)
+
+**Walked: 2026-11-10 for 2.11.0** — T14 added, traced to *A Figma prototype*; the other cases read against the new section, none affected (it adds a Figma route and changes no code step).
 
 **Walked: 2026-11-06 for 2.10.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
@@ -186,6 +188,12 @@ Fixture: "build a site to browse these articles; look at Smashing Magazine and t
 Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values; a reference site supplies only what they leave open, and the report back names each such value.
 Negative: a page whose type, measure and palette come from the reference sites with no knowledge pass.
 Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14.
+
+## T14 · A Figma prototype knows the system, starts from a reference and says what it read — *traced*
+Fixture: "prototype an edit-employee flow in Figma" in a file whose screen template has three reference screens, one a table.
+Assert: before composing, the session lists the library's components (system MCP `overview`, or the library listing), runs `FCA.references` and starts from a copy of the table screen, walks `knowledge/README.md` and the pages the flow touches (tables, dialogs, forms, feedback) where the toolkit is present; each frame carries the shared `fca` / `receipt` naming the reference, components, invented items and pages read; `FCA.composedFrame` with `{ receipt: true }` is clean.
+Negative: a flow built from the bare template, from only the components a reference holds, or with no receipt.
+Traced: 2026-11-10 for 2.11.0 — to SKILL.md *A Figma prototype*.
 
 ## T7 · Native interactive wraps the control, never replaces it — *traced*
 Fixture: "add a disabled state to our `ds-button`."

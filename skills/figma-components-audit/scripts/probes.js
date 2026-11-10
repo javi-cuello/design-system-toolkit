@@ -20,7 +20,7 @@
  *   - probes over a node (`FCA.schema(set, opts)` …) read only properties, so
  *     tests/test-probes.mjs drives them with plain objects in node;
  *   - live calls (`FCA.locate`, `FCA.discover`, `FCA.nameSpaces`,
- *     `FCA.detachedScan`, `FCA.sweepSchema`, `FCA.composedFrame`, `FCA.fix.*`) need `figma` and are
+ *     `FCA.detachedScan`, `FCA.sweepSchema`, `FCA.composedFrame`, `FCA.references`, `FCA.fix.*`) need `figma` and are
  *     syntax-checked only.
  *
  * Load once per Figma file, then bootstrap (SKILL.md, "Session probes"):
@@ -425,7 +425,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
   // from the document, is `orphan`; a frame named like a component it uses,
   // or one in `componentNames`, is `detached`. Hidden layers are skipped.
   const FRAME_NUMS = ["paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius"];
-  FCA.composedFindings = async (root, mainOf, componentNames) => {
+  FCA.composedFindings = async (root, mainOf, componentNames, opts) => {
     const findings = [], seen = new Set(componentNames || []), frames = [];
     let instances = 0;
     const at = (trail) => trail.join(" / ");
@@ -470,9 +470,54 @@ globalThis.__FCA_PROBES_FACTORY = function () {
     };
     if (root.type === "INSTANCE") await instance(root, [root.name]); else await authored(root, [], true);
     for (const { n, t } of frames) if (seen.has(n.name)) findings.push({ kind: "detached", path: at(t), id: n.id });
+    // an agent's frame carries its receipt (shared plugin data `fca` /
+    // `receipt`, JSON, so any plugin or bridge reads it): with
+    // `receipt: true` a frame with none, or one naming no reference screen,
+    // is a finding — the composer started from the bare template
+    if (opts && opts.receipt) {
+      let r = null;
+      try { r = JSON.parse(root.getSharedPluginData("fca", "receipt") || "null"); } catch (e) { r = null; }
+      if (!r) findings.push({ kind: "no-receipt", path: root.name, id: root.id });
+      else if (!r.reference) findings.push({ kind: "no-reference", path: root.name, id: root.id });
+    }
     return { frame: root.name, instances, findings };
   };
-  FCA.composedFrame = (frame, componentNames) => FCA.composedFindings(frame, (n) => n.getMainComponentAsync(), componentNames);
+  FCA.composedFrame = (frame, componentNames, opts) => FCA.composedFindings(frame, (n) => n.getMainComponentAsync(), componentNames, opts);
+
+  // ---- the reference screens built on a template ------------------------
+  // Before composing, list every screen in the file that places the
+  // template (a component or a set, local or from a library; a variant is
+  // read as its whole set): the composer starts from the closest one, never
+  // from the bare template. An instance inside a component, or inside
+  // another instance's own drawing, is the library's; one in another
+  // instance's slot counts (a slot's default content too: telling it apart
+  // needs the main's ids, and no template ships as a default). Hidden ones,
+  // or ones in a hidden section, are skipped. One row per instance: the instance, its variant, its screen (the frame just under the
+  // page or a section) and page, and `composed` when that screen carries a
+  // receipt, so a past prototype is told from a designer's screen.
+  FCA.referenceList = async (template, instancesOf) => {
+    if (template.type === "COMPONENT" && template.parent && template.parent.type === "COMPONENT_SET") template = template.parent;
+    const variants = template.type === "COMPONENT_SET" ? template.children : [template];
+    const rows = [];
+    for (const v of variants) for (const i of await instancesOf(v)) {
+      let top = i, inside = false, hidden = i.visible === false, viaSlot = false;
+      for (let p = i.parent; p && p.type !== "PAGE" && p.type !== "DOCUMENT" && p.type !== "SECTION"; p = p.parent) {
+        if (p.visible === false) hidden = true;
+        if (p.type === "SLOT") viaSlot = true;
+        else if (p.type === "COMPONENT" || p.type === "COMPONENT_SET") inside = true;
+        else if (p.type === "INSTANCE") { if (!viaSlot) inside = true; viaSlot = false; }
+        top = p;
+      }
+      if (inside || hidden) continue;
+      let page = top.parent;
+      while (page && page.type !== "PAGE") { if (page.visible === false) hidden = true; page = page.parent; }
+      if (hidden) continue;
+      const composed = !!(top.getSharedPluginData && top.getSharedPluginData("fca", "receipt"));
+      rows.push({ id: i.id, variant: v.name, frame: top.name, frameId: top.id, page: page ? page.name : null, composed });
+    }
+    return rows.sort((a, b) => (a.composed - b.composed) || (a.page || "").localeCompare(b.page || "") || a.frame.localeCompare(b.frame));
+  };
+  FCA.references = (template) => FCA.referenceList(template, (v) => v.getInstancesAsync());
 
   // ---- §3.10f text with a fixed height ----------------------------------
   // textAutoResize alone decides "fixed". layoutSizingVertical is reported,

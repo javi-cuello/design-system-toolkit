@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.11.0 (2026-11-10): *A Figma prototype*: the whole component list before building, the closest reference screen (`FCA.references`), the knowledge base walked where present, a receipt on each frame and `FCA.composedFrame` with `receipt: true`. T14.
 - 2.10.1 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
 - 2.10.0 (2026-11-02): with no design file, the knowledge base is the design: Orient step 4 walks the pages the screen uses before writing, reference sites fill only gaps (design-standard rule 14). T13.
 - 2.9.0 (2026-10-31): `build-tokens.mjs` and its test move to `tools/tokens/` (projects run it through `tools/tokens/build.mjs`; toolkit-standard §D 1); `scripts/build-tokens.mjs` forwards for one release.

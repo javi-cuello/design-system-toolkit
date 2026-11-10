@@ -275,6 +275,34 @@ delete globalThis.figma;
   expect("composed: a plain root frame is read itself, and is never its own detached copy", bare.findings.map((f) => f.kind + " " + f.path + " " + f.prop), ["unbound Card fills[0]"]);
   const sec = await FCA.composedFindings(n("3:1", "SECTION", "Flow", { children: [inst("3:2", "Lost", null)] }), async (x) => x.main);
   expect("composed: a section root is read through", sec.findings.map((f) => f.kind + " " + f.path), ["orphan Flow / Lost"]);
+  const withData = (d) => frame("4:1", "Screen", { getSharedPluginData: (ns, k) => (ns === "fca" && k === "receipt" ? d : "") }, []);
+  const kinds = async (d, opts) => (await FCA.composedFindings(withData(d), async (x) => x.main, null, opts)).findings.map((f) => f.kind);
+  expect("composed: with receipt asked, a frame with none, a broken one, or one naming no reference is a finding; one naming its reference is clean; unasked, nothing",
+    [await kinds("", { receipt: true }), await kinds("{bad", { receipt: true }), await kinds('{"components":[]}', { receipt: true }), await kinds('{"reference":"<Screens> 1-1 - Table"}', { receipt: true }), await kinds("", {})],
+    [["no-receipt"], ["no-receipt"], ["no-reference"], [], []]);
+}
+
+// ---- reference screens built on a template --------------------------------
+{
+  const page = { type: "PAGE", name: "Screens" }, other = { type: "PAGE", name: "Archive" };
+  const section = { type: "SECTION", name: "Flows", parent: page };
+  const top = (id, name, parent, extra) => ({ id, type: "FRAME", name, parent: parent || page, ...extra });
+  const set = { type: "COMPONENT_SET", name: "Screen" };
+  set.children = [{ type: "COMPONENT", name: "Fixed=True", parent: set }, { type: "COMPONENT", name: "Fixed=False", parent: set }];
+  const comp = { type: "COMPONENT", name: "Card", parent: { type: "COMPONENT_SET", parent: page } };
+  const host = { type: "INSTANCE", parent: top("8:5", "Host screen") };
+  const placed = {
+    "Fixed=True": [{ id: "9:1", parent: top("8:1", "B settings") }, { id: "9:2", parent: { type: "FRAME", parent: comp } },
+      { id: "9:5", parent: top("8:4", "In a section", section) }, { id: "9:6", parent: top("8:6", "Hidden", page, { visible: false }) },
+      { id: "9:8", parent: top("8:8", "A prototype", page, { getSharedPluginData: () => '{"reference":"B settings"}' }) }],
+    "Fixed=False": [{ id: "9:3", parent: { type: "FRAME", parent: top("8:2", "A table") } }, { id: "9:4", parent: { type: "INSTANCE", parent: top("8:3", "Nested") } },
+      { id: "9:7", parent: { type: "SLOT", parent: host } }, { id: "9:9", parent: top("8:9", "Old", other) }, { id: "9:10", visible: false, parent: top("8:10", "Self hidden") },
+      { id: "9:11", parent: top("8:11", "In a hidden section", { type: "SECTION", visible: false, parent: page }) }],
+  };
+  const rows = await FCA.referenceList(set.children[0], async (v) => placed[v.name]);
+  expect("references: a variant reads its whole set; screens under a page or a section, and in another instance's slot; never inside a component, an instance's own drawing, or hidden; prototypes last",
+    rows.map((r) => r.frame + " " + r.id + " " + r.page + (r.composed ? " composed" : "")),
+    ["Old 9:9 Archive", "A table 9:3 Screens", "B settings 9:1 Screens", "Host screen 9:7 Screens", "In a section 9:5 Screens", "A prototype 9:8 Screens composed"]);
 }
 
 // ---- §3.10f fixed text -------------------------------------------------

@@ -397,7 +397,7 @@ const SCANNERS = process.env.STANDARDS_SCANNERS ? process.env.STANDARDS_SCANNERS
     .filter((f) => f && !/\/test[-.]|\/tests?\/|\/fixtures?\/|\/vendor\/|\.min\.js$/.test(f) && has(f));
 // Files whose settings arrive as `opts`, with the arguments derived from settings or evidence rather than keys.
 const OPTS = process.env.STANDARDS_OPTS ? JSON.parse(process.env.STANDARDS_OPTS) : {
-  "skills/figma-components-audit/scripts/probes.js": ["states", "focus", "rest", "slotName", "parts"],
+  "skills/figma-components-audit/scripts/probes.js": ["states", "focus", "rest", "slotName", "parts", "receipt"],
 };
 let allow = {};
 if (has("tools/toolkit-check/settings-allowlist.json")) {

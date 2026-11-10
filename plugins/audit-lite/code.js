@@ -554,12 +554,13 @@ const FCA_FACTORY = function () {
     };
     if (root.type === "INSTANCE") await instance(root, [root.name]); else await authored(root, [], true);
     for (const { n, t } of frames) if (seen.has(n.name)) findings.push({ kind: "detached", path: at(t), id: n.id });
-    // an agent's frame carries its receipt (`fca.receipt`, JSON): with
+    // an agent's frame carries its receipt (shared plugin data `fca` /
+    // `receipt`, JSON, so any plugin or bridge reads it): with
     // `receipt: true` a frame with none, or one naming no reference screen,
     // is a finding — the composer started from the bare template
     if (opts && opts.receipt) {
       let r = null;
-      try { r = JSON.parse(root.getPluginData("fca.receipt") || "null"); } catch (e) { r = null; }
+      try { r = JSON.parse(root.getSharedPluginData("fca", "receipt") || "null"); } catch (e) { r = null; }
       if (!r) findings.push({ kind: "no-receipt", path: root.name, id: root.id });
       else if (!r.reference) findings.push({ kind: "no-reference", path: root.name, id: root.id });
     }
@@ -569,25 +570,36 @@ const FCA_FACTORY = function () {
 
   // ---- the reference screens built on a template ------------------------
   // Before composing, list every screen in the file that places the
-  // template (a component or a set, local or from a library): the composer
-  // starts from the closest one, never from the bare template. An instance
-  // inside a component or another instance is the library's, not a screen.
-  // Each row: the instance, its variant, the top-level frame and page.
+  // template (a component or a set, local or from a library; a variant is
+  // read as its whole set): the composer starts from the closest one, never
+  // from the bare template. An instance inside a component, or inside
+  // another instance's own drawing, is the library's; one in another
+  // instance's slot counts (a slot's default content too: telling it apart
+  // needs the main's ids, and no template ships as a default). Hidden ones,
+  // or ones in a hidden section, are skipped. One row per instance: the instance, its variant, its screen (the frame just under the
+  // page or a section) and page, and `composed` when that screen carries a
+  // receipt, so a past prototype is told from a designer's screen.
   FCA.referenceList = async (template, instancesOf) => {
+    if (template.type === "COMPONENT" && template.parent && template.parent.type === "COMPONENT_SET") template = template.parent;
     const variants = template.type === "COMPONENT_SET" ? template.children : [template];
     const rows = [];
     for (const v of variants) for (const i of await instancesOf(v)) {
-      let top = i, inside = false;
-      for (let p = i.parent; p && p.type !== "PAGE" && p.type !== "DOCUMENT"; p = p.parent) {
-        if (p.type === "COMPONENT" || p.type === "COMPONENT_SET" || p.type === "INSTANCE") inside = true;
+      let top = i, inside = false, hidden = i.visible === false, viaSlot = false;
+      for (let p = i.parent; p && p.type !== "PAGE" && p.type !== "DOCUMENT" && p.type !== "SECTION"; p = p.parent) {
+        if (p.visible === false) hidden = true;
+        if (p.type === "SLOT") viaSlot = true;
+        else if (p.type === "COMPONENT" || p.type === "COMPONENT_SET") inside = true;
+        else if (p.type === "INSTANCE") { if (!viaSlot) inside = true; viaSlot = false; }
         top = p;
       }
-      if (inside) continue;
+      if (inside || hidden) continue;
       let page = top.parent;
-      while (page && page.type !== "PAGE") page = page.parent;
-      rows.push({ id: i.id, variant: v.name, frame: top.name, frameId: top.id, page: page ? page.name : null });
+      while (page && page.type !== "PAGE") { if (page.visible === false) hidden = true; page = page.parent; }
+      if (hidden) continue;
+      const composed = !!(top.getSharedPluginData && top.getSharedPluginData("fca", "receipt"));
+      rows.push({ id: i.id, variant: v.name, frame: top.name, frameId: top.id, page: page ? page.name : null, composed });
     }
-    return rows.sort((a, b) => (a.page || "").localeCompare(b.page || "") || a.frame.localeCompare(b.frame));
+    return rows.sort((a, b) => (a.composed - b.composed) || (a.page || "").localeCompare(b.page || "") || a.frame.localeCompare(b.frame));
   };
   FCA.references = (template) => FCA.referenceList(template, (v) => v.getInstancesAsync());
 
