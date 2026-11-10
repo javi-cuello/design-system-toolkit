@@ -93,6 +93,7 @@ How a coding agent builds a prototype from the design system's real components i
 
 **Cases**
 - A Figma settings screen with three mapped components and an unmapped stat card comes back with three real imports and a `div` with copied grey and white classes. The import check catches the card. Only a template keeps the layout around the components from being invented.
+- An agent composed a table screen from the bare app-shell template and got the toolbar, row count and height wrong, while the designer's own table screen, an instance of the same template, sat one page away (the toolkit's Figma trial, 2026-11-10). The screens already built on a template are its examples, and the closest one is a better start than the template alone.
 - An agent places the library Button in Figma, then detaches it to change the padding. The vendor skill compares instance, style and bound-variable keys with its map, but has no scan for detached instances, so nothing names the detached Button. A library audit of the frame does.
 
 **Accessibility**
