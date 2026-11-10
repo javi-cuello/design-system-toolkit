@@ -16,6 +16,7 @@
  *   codeOnly        gate 4   every value a mapping's controls offer is rendered as a variant, or `codeOnly`
  *   literals        gate 5   no raw value where a token belongs, unless `literals` says why
  *   overrides       gates 18, 27  what a frame changes inside an instance it places is mapped, or `overrides` says why
+ *   staleCopies     gate 29  every frame places a library component through one imported copy, never an older one beside it
  *   layerCoverage   gates 8, 13   every layer a frame composes or a variant draws is mapped, credited or `excluded`
  *   specKeys        gate 10  every key the snapshot records is compared or excused
  *   configured      notes    what a project leaves off, said rather than silent
@@ -379,6 +380,41 @@ export function overrides(project) {
   return out;
 }
 
+/* ── gate 29 ────────────────────────────────────────────────────────────── */
+
+/*
+ * A library component reaches the frames through one imported copy. Figma
+ * keeps a file's copy of a library component per import, and an accepted
+ * library update moves the copy the file's main components use; an instance
+ * swapped to another variant inside a template can keep the copy it was
+ * swapped to, so the update never reaches it and the frame keeps the old
+ * drawing. The snapshot records both the library key and the file's id, so a
+ * key under two ids is a stale copy (on the reference project a dialog's
+ * footer stayed 1px off and a form label a pixel taller, 2026-11-09).
+ */
+export function staleCopies(project) {
+  const copies = new Map();
+  const walk = (n, where) => {
+    if (!n || typeof n !== 'object') return;
+    if (n.instanceOfKey && n.instanceOfId) {
+      const byId = copies.get(n.instanceOfKey) || new Map();
+      if (!byId.has(n.instanceOfId)) byId.set(n.instanceOfId, { name: String(n.instanceOf || n.name).split(' / ')[0], where });
+      copies.set(n.instanceOfKey, byId);
+    }
+    for (const c of n.children || []) walk(c, where);
+  };
+  // every stored frame, mapped or not, and the whole of it: a copy outside a
+  // map's rootLayer still draws the frame
+  for (const f of (project.frames || new Map()).values()) walk(f.tree, f.name || f.id);
+  const out = [];
+  for (const byId of copies.values()) {
+    if (byId.size < 2) continue;
+    const seen = [...byId].map(([id, { name, where }]) => `${id} in ${where}`).join(', ');
+    out.push(`${[...byId.values()][0].name}: the frames place it through ${byId.size} imported copies (${seen}) — one is older than the library; swap its instances in the template to the current copy, then take the snapshot again`);
+  }
+  return out;
+}
+
 /* ── gates 8 and 13 ─────────────────────────────────────────────────────── */
 
 const shape = (n) => (n.children || []).map((c) => c.type).join('|');
@@ -709,7 +745,7 @@ export const DOM_COVERAGE = (sections, opaque) => {
 
 /* ── the static gates, together ─────────────────────────────────────────── */
 
-export const STATIC = { waivers, variants, backlog, codeOnly, literals, overrides, layerCoverage, specKeys, configured };
+export const STATIC = { waivers, variants, backlog, codeOnly, literals, overrides, staleCopies, layerCoverage, specKeys, configured };
 
 /* Each gate's findings (which fail) and notes (which are said and do not). */
 export function staticGates(project) {

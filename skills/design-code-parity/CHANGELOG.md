@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.68.0 (2026-11-10): gate 29 — a library component the screens reach through two imported copies is a stale copy (`staleCopies`). Case T102.
 - 1.67.0 (2026-11-09): a layer named `#…` holds data; the size that hugs it and the place it pushes are reported as data, not judged. `props.skip` takes `Component.Prop`. Case T101.
 - 1.66.0 (2026-11-05): waivers may be `fix: 'toolkit'`, and a reason naming a toolkit fix is refused under figma or code; a mirror is recorded as `flip` and compared with `-flip`. Case T100.
 - 1.65.1 (2026-11-04): alignment read off the boxes is `filled` where the room cannot tell start from centre (under a pixel each side, under 2px for a text leaf); a 120% label in a fixed-height control read flex-start against CENTER. Engine fix with its probe test.

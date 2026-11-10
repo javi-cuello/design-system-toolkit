@@ -1151,3 +1151,9 @@ Fixture: a page laid out by hand holding an unmapped vertical Column that hugs, 
 Assert: the list's height, its hugging Row's height (inside the `#` layer) and the button's -y carry the data reason, and the list's height and the button's -y report as waived; the Row's filled width and the list's width carry none; the button's -x and height stay judged and match. The Row is asserted at the adapter only, not measured. The `_p` instance asserts no `-attr:position`; the Tooltip still does.
 Also: a header laid out space-between holding `#Title` then a fixed Toggle, under a Column mapped to null; the Toggle's -x carries the data reason and its -y does not. Inside an unmapped `#Sections`, a fixed B after a hugging A carries it on -y; a hugging `#Title` in a centred header carries it on its own -x; a fixed `#Title` in a space-between header gives the Toggle none.
 Runs: node tools/parity/test-adapt.mjs — "a # layer's data…", "a layer in a run that is not packed…", "inside a # layer a hugging sibling…", "a skip scoped as Component.Prop…".
+
+## T102 · A frame reaches each library component through one copy — *executed*
+Fixture: two stored screens placing `_Label` instances under one library key, once through one file id, once through two (one nested in a Form); and a component spec holding a third id. The gate reads every stored frame, not the mapped targets.
+Assert: one id passes; two ids fail once, naming the set (`_Label`) and each id with the first screen that uses it; the component spec is not read.
+Also: on the reference project, the gate is green on today's screens and red on the snapshot taken before the Contact label was swapped, naming `_Label` under 462:47800 and 310:33033.
+Runs: node tools/parity/test-gates.mjs — "one key under one copy passes…".

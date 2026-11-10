@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { slotsOf, unnamedOverrides, overrides, screenCoverage, componentCoverage, layerCoverage, copyMissing, staleContent, backlog, rawValues, glob, waivers, specKeys, configured } from './gates.mjs';
+import { slotsOf, unnamedOverrides, overrides, screenCoverage, componentCoverage, layerCoverage, copyMissing, staleContent, backlog, rawValues, glob, waivers, specKeys, configured, staleCopies } from './gates.mjs';
 import { resolveBases } from './project.mjs';
 
 let n = 0;
@@ -188,4 +188,16 @@ ok('a typed hex, an unbound gap and an unbound radius are raw; a bound one and a
   eq(rawValues({ fills: ['#fff'], gap: 8, radius: 4, bindings: { radius: 'Corner/4' } }).map(([k]) => k), ['fill', 'gap'])
   && !rawValues({ gap: 8, align: 'SPACE_BETWEEN/CENTER' }).length);
 ok('a glob spans anything and keeps the rest literal', glob('Main > Section* > Card*.width').test('Main > Section#2 > Card#3.width') && !glob('A.b').test('Axb'));
+// gate 29: one library key reached through two imported copies is a stale copy
+{
+  const inst = (id, name) => ({ name: 'Label', type: 'INSTANCE', instanceOf: `_Label / ${name}`, instanceOfKey: 'k1', instanceOfId: id, children: [] });
+  const screen = (name, ...kids) => [name, { id: name, name, tree: { name: 'Frame', type: 'FRAME', children: kids } }];
+  const one = staleCopies({ frames: new Map([screen('a', inst('1:1', 'Required=True')), screen('b', { name: 'Form', type: 'FRAME', children: [inst('1:1', 'Required=False')] })]) });
+  const two = staleCopies({ frames: new Map([screen('a', inst('1:1', 'Required=True')), screen('b', { name: 'Form', type: 'FRAME', children: [inst('9:9', 'Required=False')] })]) });
+  const comp = staleCopies({ specs: new Map([['c', { variants: [{ name: 'V', children: [inst('9:9', 'x')] }] }]]), frames: new Map([screen('a', inst('1:1', 'x'))]) });
+  ok('one key under one copy passes; under two, nested or not, it names both copies and the set; a component spec is not read',
+    one.length === 0 && two.length === 1 && /^_Label: .*2 imported copies \(1:1 in a, 9:9 in b\)/.test(two[0]) && comp.length === 0);
+}
+
 console.log(`${n}/${n} passed`);
+
