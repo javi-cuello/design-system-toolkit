@@ -55,6 +55,7 @@ const TOP = new Set(readdirSync(ROOT));
 // the edit hook and the closing pass. A standard with no entry is refused, never skipped.
 import { STANDARDS, rulesOf, unfence } from "./rules.mjs";
 import { code, stripComments } from "./strip.mjs";
+import { GENERATED } from "../../skills/figma-plugin-creator/scripts/conformance.mjs";
 const MARKER = /\*Checked:\*|\*Reviewed:\*/;
 const standards = readdirSync(join(ROOT, "standards")).filter((f) => /-standard\.md$/.test(f)); // a standard is <name>-standard.md; the README is the folder's guide
 const handles = {}, retiredHandles = {};
@@ -430,7 +431,8 @@ for (const rel of SCANNERS) {
   if (!has(rel)) { problems.push(`${rel}: listed scanner is missing`); continue; }
   // the audit's own scripts: settings arrive as TOKENS, and a finding they write names the setting (below)
   const scanner = !/^(tools|plugins)\//.test(rel);
-  let src = code(read(rel));
+  // a sync-generated block is its sources copied, and they are scanned where they live (plugins/audit-lite/sync.mjs --check)
+  let src = code(read(rel).replace(GENERATED, (m) => m.replace(/[^\n]/g, "")));
   if (scanner) for (const m of src.matchAll(/\b(?:T|TOK|TOKENS)(?:\.([A-Za-z_]\w*)|\[["'`]([^"'`]+)["'`]\])/g))
     if (!((m[1] || m[2]) in flatKeys)) problems.push(`${rel}: reads settings key ${m[1] || m[2]}, which is not in audit-keys`);
   if (OPTS[rel]) for (const m of src.matchAll(/\bopts\.([A-Za-z_]\w*)/g))

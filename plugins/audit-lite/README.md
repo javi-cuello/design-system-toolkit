@@ -7,8 +7,9 @@ It is the components audit with nothing else to install: no bridge plugin, no to
 ## Run
 
 1. Figma desktop → Plugins → Development → Import plugin from manifest → this folder's `manifest.json`.
-2. Open the library, run **Audit lite**, press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
-3. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
+2. Open the library, run **Audit lite**, and, if the project has a context document, pick it with **Use a context document…**.
+3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
+4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
 On a 71-component library Claude's reply takes about a minute, most of it writing the tables.
 
@@ -16,7 +17,8 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 ## What it does not do
 
-- It runs on the toolkit's house conventions, not the library's own: the report lists them, and Claude drops a finding that only says the library follows a different convention. Checks that need the library's own scales or collection names do not run, and the report says which.
+- Without a context document it runs on the toolkit's house conventions, not the library's own: the report lists them, Claude drops a finding that only says the library follows a different convention, and offers to draft a starter context document from the file's discovery. Checks whose settings are not set do not run, and the report says which.
+- With one, it reads the document's settings for this file (refused, with the reason, when it has none) and its rulings, the way the full audit does. It never writes the document: Claude offers a decision as a rulings-log row to copy.
 - It checks components only: not the file as a whole (page order, names that differ only in case), the code-target validator or the token link check.
 - It fixes nothing, keeps no record and has no dashboard. The full audit ([figma-project-audit](../../skills/figma-project-audit/SKILL.md)) does all of that.
 
@@ -24,8 +26,10 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 - `code.js`: the plugin. Its generated block (the scanner, the judging prompt, the buckets, the universal conventions, the house settings, `instructions.md` and `report.html`) is written by `node plugins/audit-lite/sync.mjs`, never by hand; `bin/check` fails when it differs from its sources.
 - `instructions.md`: what Claude does with the report. `report.html`: the page Claude fills in.
-- `tests/test-audit-lite.mjs`: builds a report from the scanner's fixture and renders the page.
+- `tests/test-audit-lite.mjs`: builds a report from the scanner's fixture, checks that a context document gives the settings and rulings the full audit reads from it (`tests/fixtures/design-system-context.md`), and renders the page.
 
 ## Data this plugin stores
 
-None. It reads the file and writes nothing to it; the report is a download.
+The context document picked for a file, its name and text, in the plugin's client storage on this machine, keyed by the file; **Remove** deletes it. Nothing is written to the Figma file; the report is a download.
+
+The `teamlibrary` permission lets discovery read the variable collections the file's enabled libraries publish.

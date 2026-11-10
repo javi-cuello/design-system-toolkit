@@ -16,9 +16,13 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const require = createRequire(import.meta.url);
-const { flatSettings } = require(path.join(ROOT, 'tools/snapshot/projects.cjs'));
+const projects = require(path.join(ROOT, 'tools/snapshot/projects.cjs'));
+const { flatSettings } = projects;
+require(path.join(ROOT, 'skills/figma-components-audit/scripts/probes.js'));
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-const SKILL = 'skills/figma-components-audit';
+// each folder named, never the skill's own: bin/get takes a named skill whole, and install.sh then installs it
+const SCANNER = 'skills/figma-components-audit/scanner';
+const REFERENCES = 'skills/figma-components-audit/references';
 const CODE = path.join(HERE, 'code.js');
 const BLOCK = /\/\* audit-lite generated start[\s\S]*?\/\* audit-lite generated end \*\//;
 
@@ -29,28 +33,51 @@ const tokens = flatSettings(house, {});
 // kept, it would scan nothing. Absent, the scanner walks every page.
 delete tokens.componentPages;
 
-const scanner = read(`${SKILL}/scanner/audit.js`);
+const scanner = read(`${SCANNER}/audit.js`);
 // The settings the scanner reads that the house does not set: each one's check is skipped, and the report says which.
 // A derived key (the page filter, the excluded sections) is not a check, so it is not listed.
 const describe = {};
 for (const [name, group] of Object.entries(settings['audit-keys'])) if (name !== 'derived' && group && typeof group === 'object') Object.assign(describe, group);
 const derived = settings['audit-keys'].derived || {};
 const read_ = new Set([...scanner.matchAll(/TOK\.(\w+)/g), ...scanner.matchAll(/scaleOf\("(\w+)"\)/g)].map((m) => m[1]));
-const unset = [...read_].filter((k) => !(k in tokens) && !(k in derived)).sort().map((k) => ({ key: k, means: typeof describe[k] === 'string' ? describe[k] : '' }));
+// Which of them a run leaves unset depends on that run's settings (the house's, or a context document's), so the list
+// is worked out at run time from these.
+const reads = [...read_].filter((k) => !(k in derived)).sort().map((k) => ({ key: k, means: typeof describe[k] === 'string' ? describe[k] : '' }));
 
 const LITE = {
+  house,
+  naming: JSON.parse(read('standards/naming-preferences.json')).preferences || {},
   tokens,
   scales: house.optionOrder || {},
-  unset,
-  judge: read(`${SKILL}/scanner/judge.txt`),
-  buckets: JSON.parse(read(`${SKILL}/scanner/buckets.json`)),
-  conventions: read(`${SKILL}/references/conventions-universal.md`),
+  reads,
+  judge: read(`${SCANNER}/judge.txt`),
+  buckets: JSON.parse(read(`${SCANNER}/buckets.json`)),
+  conventions: read(`${REFERENCES}/conventions-universal.md`),
   instructions: read('plugins/audit-lite/instructions.md'),
   template: read('plugins/audit-lite/report.html'),
+  contextTemplate: read('skills/figma-context-capture/assets/context-template.md'),
 };
 
-const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SKILL}/scanner, ${SKILL}/references/conventions-universal.md, standards/audit-settings.json, instructions.md and report.html; never edit by hand */
+// The full audit's own readers of a context document (tools/snapshot/projects.cjs), copied by their source, so the
+// plugin reads a document exactly as the full audit does; housePreferences is the one stand-in, since a plugin reads no
+// files: the house naming preferences travel in LITE.
+const own = (name, fn) => (/^(async\s+)?function\b/.test(fn.toString()) ? fn.toString() : `const ${name} = ${fn.toString()};`);
+const readers = [
+  `const SECTIONS = ${JSON.stringify(projects.SECTIONS)};`,
+  own('esc', projects.esc),
+  'const housePreferences = () => LITE.naming;',
+  ...['fenced', 'cells', 'walkRulings', 'rulingKey', 'rulingsOf', 'flatSettings'].map((n) => own(n, projects[n])),
+].join('\n');
+// The judge's conventions and rulings lines, as the dashboard derives them.
+const judgeRules = read('tools/figma-audit/judge-rules.mjs').replace(/^export /gm, '');
+// The full audit's discovery and probes (figma-components-audit scripts/probes.js), its factory by source.
+const probes = `const FCA_FACTORY = ${globalThis.__FCA_PROBES_FACTORY.toString()};`;
+
+const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md and report.html; never edit by hand */
 const LITE = ${JSON.stringify(LITE)};
+${readers}
+${judgeRules}
+${probes}
 /** The components audit's scanner, unchanged: TARGETS [] scans every set. @returns {Promise<any>} */
 async function scan(/** @type {string[]} */ TARGETS, /** @type {any} */ SCALES, /** @type {any} */ TOKENS) {
 ${scanner}

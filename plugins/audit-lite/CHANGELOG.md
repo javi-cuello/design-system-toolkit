@@ -1,6 +1,13 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.3.0] - 2026-11-10
+### Added
+- The project's context document, picked in the window and remembered for the file on this machine: its settings for this file and its rulings, read by the full audit's own readers, so the scan and the judge get what the full audit gives them. Claude offers each decision as a rulings-log row to copy.
+- Without one, the report carries the file's discovery (its collections, scales and colour roles) and the context template, and Claude offers to draft a starter context document.
+### Changed
+- The judge's conventions and rulings lines come from tools/figma-audit/judge-rules.mjs, the dashboard's own.
+
 ## [0.2.0] - 2026-11-10
 ### Changed
 - Claude asks first whether to show the results in the chat or as a page; the chat tables keep the Figma links.

@@ -3,6 +3,7 @@
 import { ctx } from './context.js';
 import { ownerLabel as labelFor, FRAMEWORK_NAME } from './labels.js';
 import { api } from './api.js';
+import { judgeConventions, judgeRulings } from '../../../figma-audit/judge-rules.mjs';
 import { paintOwnerFilter } from './queue.js';
 
 // Owner labels live in labels.js, shared with the site's overview; here they
@@ -48,11 +49,7 @@ export async function contextRules(given) {
   const t = lib.tokens || {};
   // What the judge is told about the library's vocabulary is derived from
   // the settings, never written a second time.
-  const conventions = [];
-  if (t.semantic) conventions.push("Colour is bound from the semantic collection" + ([].concat(t.semantic).length > 1 ? "s named " + [].concat(t.semantic).join(" or ") : " named " + t.semantic) + ".");
-  if (t.textRole) conventions.push("Text fills use tokens under the " + t.textRole + " segment.");
-  for (const [axis, order] of Object.entries(lib.optionOrder || {})) conventions.push(axis + " options run " + order.join(" · ") + ".");
-  if (lib.descriptionStructure) conventions.push("Descriptions: " + lib.descriptionStructure);
+  const conventions = judgeConventions(t, lib.optionOrder, lib.descriptionStructure);
   if (lib.framework && lib.frameworkProfile && lib.frameworkProfile.name) FRAMEWORK_NAME[lib.framework] = lib.frameworkProfile.name;
   ctx.lastRules = { tokens: t, optionOrder: lib.optionOrder || {}, descriptionStructure: lib.descriptionStructure || "", codeTarget: lib.codeTarget || "", sourceLibrary: lib.sourceLibrary || "",
                 // What the app is BUILT with, and which MUI component each
@@ -66,11 +63,7 @@ export async function contextRules(given) {
                 language: c.language || "en-GB",
                 // With the component it was recorded on, when the Why column
                 // names one: a ruling without its subject cannot be applied.
-                rulings: (c.rulings || []).map((r) => {
-                  const m = /\bon (.+?)(?:, about: (.+?))?\.?$/.exec(r.why || "");
-                  if (!m) return r.text;
-                  return r.text + " (recorded on " + m[1] + (m[2] ? " about \u201c" + m[2] + "\u201d" : "") + "; applies there and to the same finding on any other component)";
-                }),
+                rulings: judgeRulings(c.rulings),
                 conventions };
   return ctx.lastRules;
 }

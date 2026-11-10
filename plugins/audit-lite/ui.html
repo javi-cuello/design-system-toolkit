@@ -86,12 +86,23 @@ progress:indeterminate{background:linear-gradient(90deg,transparent 0 33%,var(--
 progress:indeterminate::-webkit-progress-bar{background:transparent}
 @keyframes slide{from{background-position:100% 0}to{background-position:0 0}}
 @media (prefers-reduced-motion: reduce){progress:indeterminate{animation:none;background:var(--figma-color-bg-brand)}}
+/* the settings line: what the run reads, and the one action that changes it; text buttons, sized explicitly (ui-base's caution) */
+.settings{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-2);margin:0 0 var(--space-3)}
+.settings-name{min-width:0;overflow-wrap:anywhere}
+.text-btn{height:auto;box-sizing:border-box;padding:0;border:0;background:none;color:var(--figma-color-text-brand);font-weight:var(--fw-regular)}
+.text-btn:hover{background:none;color:var(--figma-color-text-brand);text-decoration:underline}
+.text-btn:focus{outline:none}
+.text-btn:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
 </style>
 </head>
 <body>
 <main class="container">
   <div class="head"><p class="title" id="file">Reading the file…</p><span class="version" id="version"></span></div>
   <p class="what secondary">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+  <p class="settings"><span class="settings-name secondary" id="ctx-name">Settings: the toolkit's defaults</span>
+    <button class="text-btn" id="ctx-pick" type="button">Use a context document…</button>
+    <button class="text-btn" id="ctx-clear" type="button" hidden>Remove</button></p>
+  <input type="file" id="ctx-file" accept=".md,text/markdown" hidden>
   <button id="run" type="button">Run audit</button>
   <button id="save" class="btn-secondary" type="button" hidden>Save the report again</button>
   <div class="status" id="status" role="status" hidden>
@@ -133,14 +144,28 @@ $('run').onclick = function () {
 };
 parent.postMessage({ pluginMessage: { type: 'hello' } }, '*');
 $('save').onclick = function () { if (last) download(last); };
+// the project's context document: its settings and rulings for this file, remembered for this file on this machine
+function context(name) {
+  $('ctx-name').textContent = name ? 'Settings: ' + name : "Settings: the toolkit's defaults";
+  $('ctx-pick').textContent = name ? 'Change…' : 'Use a context document…';
+  $('ctx-clear').hidden = !name; fit();
+}
+$('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
+$('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
+$('ctx-file').onchange = function () {
+  var f = this.files && this.files[0]; if (!f) return;
+  f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'context-set', name: f.name, text: text } }, '*'); });
+};
 onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
-  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; fit(); return; }
+  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); return; }
+  if (msg.type === 'context') { context(msg.name); if (!busy) $('status').hidden = true; fit(); return; }
+  if (msg.type === 'context-failed') { say('error', 'That document was not used', msg.why + '.'); return; }
   busy = false; $('run').removeAttribute('aria-disabled');
   if (msg.type === 'done') {
     last = msg; download(msg); $('save').hidden = false;
-    say('done', 'Saved ' + msg.name, msg.sets + ' components, ' + msg.found + ' possible issues for Claude to review. Upload the file and type "show me results".');
+    say('done', 'Saved ' + msg.name, msg.sets + ' components, ' + msg.found + ' possible issues for Claude to review' + (msg.from === 'context' ? ', judged by the context document' : '') + '. Upload the file and type "show me results".');
   } else if (msg.type === 'failed') {
     say('error', 'The audit stopped', msg.why + '. Press Run audit to try again.');
   }
