@@ -132,6 +132,21 @@ export function waivers(project) {
       else if (!mapped.has(layer)) out.push(`${t.name}: ${field} "${layer}" — no selector maps that layer, so it asserts nothing; map it, or delete it`);
     }
   }
+  // a translation is a decision stated once (waivers.mjs translationsFor): its shape is a decision's, and `on` names targets
+  for (const [key, w] of Object.entries((project.parity && project.parity.translations) || {}).flatMap(([k, v]) => (Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v]]))) {
+    if (!w || typeof w !== 'object' || !w.reason) { out.push(`parity.translations: ${key} — a translation is { reason, within? | is? | decision: 'unset', on?, except? }`); continue; }
+    // an empty glob or list would name every target or none, never what was meant
+    for (const f of ['on', 'except']) if (w[f] !== undefined && !([].concat(w[f]).length && [].concat(w[f]).every((x) => typeof x === 'string' && x))) out.push(`parity.translations: ${key} — \`${f}\` is a glob, or a list of them, over target names`);
+    // 'unset' is a bound (the page sets nothing), not an owner
+    if ((w.decision !== undefined && w.decision !== 'unset') || w.content !== undefined || w.fix !== undefined) out.push(`parity.translations: ${key} — a translation is accepted by being one: it takes no owner`);
+    // the differ looks a translation up as layer.prop; a bare layer or a clip is read through paths it does not reach
+    if (key.includes(' :: ')) out.push(`parity.translations: ${key} — a translation is matched against layer.prop, never a variant; scope it with \`on\``);
+    const { prop } = keyParts(key);
+    if (!prop) out.push(`parity.translations: ${key} — a translation names a layer and a prop (layer.prop); a layer's presence is a screen's own waiver`);
+    else if (prop === '-clipped') out.push(`parity.translations: ${key} — clipped text is a screen's own waiver, not a translation`);
+    const { on: _, except: __, ...rest } = w;
+    for (const l of checkWaiver(key, { decision: true, ...rest })) out.push(`parity.translations: ${l}`);
+  }
   out.push(...(project.unusedFalse || []));
   return out;
 }

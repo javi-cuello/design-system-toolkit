@@ -34,7 +34,7 @@ import { loadProject, scopeTargets } from './project.mjs';
 import { adapt, plan as planFor, carriers } from './adapt.mjs';
 import { diff, BAD } from './diff.mjs';
 import { measure } from './probe.mjs';
-import { asWaiver, staleAcross, looseBounds, appWaivers, recordExcused } from './waivers.mjs';
+import { asWaiver, staleAcross, looseBounds, appWaivers, recordExcused, translationsFor, translationRules, stale } from './waivers.mjs';
 import { lessons, lessonsIndex, deviations, triage } from './lessons.mjs';
 import { forceState } from '../shared/cdp.mjs';
 import * as shots from './shots.mjs';
@@ -384,7 +384,12 @@ const T_JUDGE = performance.now();
 const report = {};
 const declarers = [];
 const contentDeclarers = [];
-let matched = 0, waived = 0, appMatched = 0, appWaived = 0;
+let matched = 0, waived = 0, translated = 0, appMatched = 0, appWaived = 0;
+// the project's accepted translations, one declarer across every target
+const TRANSLATIONS = P.translations || {};
+const translationsUsed = new Set();
+// the largest difference each translation (each entry of a list) excused anywhere, for its bound (looseBounds)
+const translatedOff = new Map();
 /* The largest difference each waiver excused on each target (R2 of the
    2026-10-02 review's second round): a bound shared through a base or a
    spread was the largest sharer's, so on the rest it passed regressions of
@@ -409,9 +414,16 @@ for (const [t, list] of byTarget) {
     const ownDecl = perVariant.get(own);
     const scoped = { ...scopedWaivers(m.waivers, j.name), ...scopedWaivers(own, j.name) };
     const extra = app || (j.host === 'app') ? appWaivers(m.appWaivers, j.docs) : {};
-    const rows = diff(j.docs, read || {}, { waivers: { ...scoped, ...extra }, tolerances: P.tolerances || {} });
+    const tr = translationsFor(TRANSLATIONS, j.docs, t.name);
+    const rows = diff(j.docs, read || {}, { waivers: { ...tr, ...scoped, ...extra }, tolerances: P.tolerances || {} });
     const note = (key) => { if (!key) return; if (key in (own || {})) ownDecl.used.add(key); else decl.used.add(key); };
-    for (const r of rows) note(r.waiver);
+    for (const r of rows) {
+      const t = r.prop && tr[`${r.layer}.${r.prop}`];
+      // a row past a translation's bound shows the difference it names, so the rule is not stale: the row fails instead
+      if (t && (r.translated || (r.kind !== 'waived' && r.waiver === t.key))) translationsUsed.add(t.rule); else note(r.waiver);
+      if (!r.translated || r.kind !== 'waived' || r.off === undefined) continue;
+      if (!translatedOff.has(t.rule) || translatedOff.get(t.rule).off < r.off) translatedOff.set(t.rule, { off: r.off, within: t.within });
+    }
     const judgedClip = new Set(j.docs.filter((d) => d.assertions.some((a) => a.prop === '-clipped')).map((d) => d.layer));
     for (const [layer, rec] of Object.entries(read || {})) {
       if (judgedClip.has(layer)) continue;
@@ -435,7 +447,8 @@ for (const [t, list] of byTarget) {
     const bad = rows.filter((r) => BAD.includes(r.kind));
     const ok = rows.filter((r) => r.kind === 'match').length;
     matched += ok; mine.matched += ok;
-    waived += rows.filter((r) => r.kind === 'waived').length;
+    waived += rows.filter((r) => r.kind === 'waived' && !r.translated).length;
+    translated += rows.filter((r) => r.kind === 'waived' && r.translated).length;
     if (bad.length) {
       fail(bad.length);
       for (const r of bad) if (mine.diffs.length < 12) mine.diffs.push(`${j.name} · ${r.layer}${r.prop ? '.' + r.prop : ''}: ${r.detail || `expected ${r.expected}, measured ${r.actual}`}`);
@@ -473,7 +486,7 @@ for (const [t, list] of byTarget) {
 
 /* ── what only a whole run can judge ───────────────────────────────────── */
 TIME.mark('judge', performance.now() - T_JUDGE);
-say(`\n${matched} assertions matched, ${waived} waived, ${failed} did not — ${jobs.length} renders of ${targets.length} targets, ${TIERS.join(' + ')}, in ${Math.round(TIME.phases.measure / 1000)}s`);
+say(`\n${matched} assertions matched, ${translated} translated, ${waived} waived, ${failed} did not — ${jobs.length} renders of ${targets.length} targets, ${TIERS.join(' + ')}, in ${Math.round(TIME.phases.measure / 1000)}s`);
 /* The same specs judged again on the running app beside their stories are
    counted apart, so the line above is one row per assertion per render: a
    join of every judged row (PARITY_ROWS) counts both, which is why one
@@ -488,6 +501,23 @@ if (staleW.length) {
   say(`\n${staleW.length} waiver(s) excuse a difference nothing that declares them shows any more — delete them:`);
   for (const { key, names } of staleW) say(`  ${key}   (${names.join(', ')})`);
   failed += staleW.length;
+}
+
+// A translation that excuses nothing anywhere is stale too; only a full run saw everywhere.
+if (fullRun) {
+  const staleT = stale(translationRules(TRANSLATIONS), translationsUsed);
+  if (staleT.length) {
+    say(`\n${staleT.length} translation(s) excuse a difference no target shows — delete them from parity.translations:`);
+    for (const key of staleT) say(`  ${key}`);
+    failed += staleT.length;
+  }
+  // a translation's bound is the largest difference it excused on any target, as a waiver's is on its own
+  const looseT = looseBounds(new Map([['parity.translations', translatedOff]]));
+  if (looseT.length) {
+    say(`\n${looseT.length} translation bound(s) wider than any difference they excuse:`);
+    for (const { key, within, off, excess } of looseT) say(`  ${key} — within ${within} exceeds the largest difference it excused (${off}) by ${excess}; bound it at ${off}`);
+    failed += looseT.length;
+  }
 }
 
 /* A bound is the difference it excuses on the target that declares it: one

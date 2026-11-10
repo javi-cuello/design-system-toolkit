@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.70.0 (2026-11-10): accepted translations — `parity.translations` states a conversion rule once for every target it matches; rows it excuses are counted as translated; stale and shape-checked; `on`/`except` scope a rule to no more targets than the waivers it replaces. Case T104.
 - 1.69.0 (2026-11-10): gate 6 names a `copy`, `runtime` or `children` path no frame draws or no selector maps, which asserted nothing. Case T103.
 - 1.68.0 (2026-11-10): gate 29 — a library component the screens reach through two imported copies is a stale copy (`staleCopies`). Case T102.
 - 1.67.0 (2026-11-09): a layer named `#…` holds data; the size that hugs it and the place it pushes are reported as data, not judged. `props.skip` takes `Component.Prop`. Case T101.

@@ -212,5 +212,26 @@ ok('a glob spans anything and keeps the rest literal', glob('Main > Section* > C
     one.length === 0 && two.length === 1 && /^_Label: .*2 imported copies \(1:1 in a, 9:9 in b\)/.test(two[0]) && comp.length === 0);
 }
 
+ok('a translation is a decision stated once: no reason, an owner, an open number or a bad `on` is named; a sound one passes',
+  (() => {
+    const g = (T) => waivers({ targets: [], parity: { translations: T } });
+    return g({ '*_h2.padding-bottom': { reason: 'Figma has no margins', within: 16 } }).length === 0
+      && g({ 'Main.height': { reason: 'the bar', within: 152, on: 'desktop--*' } }).length === 0
+      && /takes no owner/.test(g({ 'Main.height': { reason: 'r', within: 1, decision: true } }).join())
+      && /reason, within/.test(g({ 'Main.height': 'a string' }).join())
+      && /a glob, or a list of them, over target names/.test(g({ 'Main.height': { reason: 'r', within: 1, on: 3 } }).join())
+      && g({ 'Main.height': { reason: 'r' } }).length > 0
+      && g({ 'Main.padding-bottom': { reason: 'r', decision: 'unset' } }).length === 0
+      && g({ 'Main.height': [{ reason: 'r', within: 1, on: 'desktop--*' }, { reason: 'r', within: 2, on: 'mobile--*' }] }).length === 0
+      && /takes no owner/.test(g({ 'Main.height': [{ reason: 'r', within: 1, fix: 'code' }] }).join())
+      && g({ 'Main.height': { reason: 'r', within: 1, on: ['desktop--a', 'desktop--b'], except: 'desktop--b' } }).length === 0
+      && /`on` is a glob/.test(g({ 'Main.height': { reason: 'r', within: 1, on: '' } }).join())
+      && /`on` is a glob/.test(g({ 'Main.height': { reason: 'r', within: 1, on: [] } }).join())
+      && /never a variant/.test(g({ 'State=hover :: Main.height': { reason: 'r', within: 1 } }).join())
+      && /`except` is a glob/.test(g({ 'Main.height': { reason: 'r', within: 1, except: [3] } }).join())
+      && /names a layer and a prop/.test(g({ 'Modal': { reason: 'r' } }).join())
+      && /clipped text is a screen's own/.test(g({ 'Main > Title.-clipped': { reason: 'r' } }).join());
+  })());
+
 console.log(`${n}/${n} passed`);
 

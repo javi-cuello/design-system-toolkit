@@ -141,6 +141,51 @@ export function appWaivers(declared, docs) {
 }
 
 /*
+ * A project's accepted translations (`parity.translations`): a conversion
+ * rule stated once — Figma has no margins, the scrim is the browser's
+ * ::backdrop, a text box is rounded to the pixel — rather than a waiver per
+ * screen, because the ruling is in the rule and not in each case (Javier,
+ * 2026-11-10; on the reference project about ninety per-screen waivers said
+ * the same dozen things). Expanded for one render as app waivers are, on
+ * every target the rule's `on` glob names (all when it has none), and marked
+ * `translated` so a row it excuses is reported apart from a waiver. A
+ * target's own waiver on the same key wins. A rule bounded differently per
+ * target family is a list of them, each with its `on`.
+ */
+/* One translation rule's name in a report: its key, and a list entry's number. */
+export const translationId = (key, i) => (i === undefined ? key : `${key} [${i + 1}]`);
+
+/* Every rule `parity.translations` declares, a list's entries apart, by translationId. */
+export const translationRules = (declared) => Object.fromEntries(Object.entries(declared || {})
+  .flatMap(([k, v]) => (Array.isArray(v) ? v.map((x, i) => [translationId(k, i), x]) : [[k, v]])));
+
+export function translationsFor(declared, docs, target) {
+  // a list is one rule bounded per target family (a phone's bar is not a desktop's): the first whose `on` names the target
+  // `on` and `except` are a glob or a list of them over target names; a rule
+  // that does not hold on some screens says so with `except`, as a screen's
+  // `false` once dropped a base's waiver. One that is not a string names no
+  // target (gate 6 reports it) rather than throwing mid-run.
+  const any = (g) => [].concat(g).some((x) => typeof x === 'string' && glob(x).test(target));
+  const names = (x) => (!x.on || any(x.on)) && !(x.except && any(x.except));
+  const pick = (w) => {
+    if (!Array.isArray(w)) return [w, undefined];
+    const i = w.findIndex((x) => x && typeof x === 'object' && !Array.isArray(x) && names(x));
+    return [w[i], i < 0 ? undefined : i];
+  };
+  const entry = {};
+  const on = Object.fromEntries(Object.entries(declared || {}).map(([k, w]) => { const [x, i] = pick(w); entry[k] = i; return [k, x]; })
+    .filter(([, w]) => w && (typeof w !== 'object' || names(w))));
+  const out = appWaivers(on, docs);
+  // `rule` names the one rule, a list's entry included, so staleness and bounds are judged per entry (run.mjs);
+  // a translation is a ruled decision, so it excuses what only a decision may (a number the browser reads as a keyword)
+  for (const k of Object.keys(out)) {
+    const { on: _, except: __, ...w } = out[k];
+    out[k] = { ...w, decision: w.decision || true, translated: true, rule: translationId(w.key, entry[w.key]) };
+  }
+  return out;
+}
+
+/*
  * The largest difference each declared waiver excused on one target, kept in
  * `excused` (`Map(target → Map(key → { off, within }))`) for `looseBounds`
  * and the accepted run. `declaredAt(key)` is the waiver as the target (or
@@ -270,7 +315,7 @@ export function looseBounds(excused) {
   for (const [name, at] of excused) for (const [key, { off, within }] of at) {
     if (within === undefined || !Number.isFinite(off)) continue;
     const excess = within - off;
-    if (excess > (/\.opacity$/.test(key) ? 0.01 : 1)) out.push({ name, key, within, off, excess: +excess.toFixed(2) });
+    if (excess > (/\.opacity(?: \[\d+\])?$/.test(key) ? 0.01 : 1)) out.push({ name, key, within, off, excess: +excess.toFixed(2) });
   }
   return out;
 }

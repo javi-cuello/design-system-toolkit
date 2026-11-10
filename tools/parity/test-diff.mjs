@@ -55,4 +55,14 @@ ok('a kind or a prop outside the schema is refused, never skipped',
   assert.throws(() => diff([doc('Box', [{ kind: 'nearly', prop: 'width', expected: 1 }])], { Box: {} })) === undefined
   && assert.throws(() => diff([doc('Box', [{ kind: 'length', prop: 'widht', expected: 1 }])], { Box: {} })) === undefined);
 
+
+ok('a translation excuses as a waiver does and its row says translated; a value that agrees is a match',
+  (() => {
+    const rows = diff([doc('Box', [{ kind: 'length', prop: 'width', expected: 100 }, { kind: 'length', prop: 'height', expected: 20 }])], { Box: { width: '110px', height: '20px' } },
+      { waivers: { 'Box.width': { reason: 'a rule', within: 10, key: '*Box.width', translated: true }, 'Box.height': { reason: 'a rule', within: 10, translated: true } } });
+    const w = rows.find((r) => r.prop === 'width'), h = rows.find((r) => r.prop === 'height');
+    const u = diff([doc('Text', [{ kind: 'unresolved', prop: 'font-family', from: 'a mixed text style' }])], { Text: {} }, { waivers: { 'Text.font-family': { reason: 'mixed', key: '*Text.font-family', translated: true } } })[0];
+    return w.kind === 'waived' && w.translated === true && w.waiver === '*Box.width' && h.kind === 'match' && !h.translated
+      && u.kind === 'waived' && u.translated === true && u.waiver === '*Text.font-family';
+  })());
 console.log(`\n${n} passed`);

@@ -45,7 +45,7 @@ export function diff(docs, measured, { waivers = {}, tolerances = {} } = {}) {
     const declared = waiver.key || key;
     // the distance excused, for a bound to be held to it (run.mjs: per target, recorded at --accept)
     const off = numeric ? (given !== undefined ? given : Math.abs(parseFloat(expected) - parseFloat(actual))) : NaN;
-    if (v.excused) rows.push({ layer: doc.layer, prop, kind: 'waived', expected, actual, reason: waiver.reason, waiver: declared, ...(Number.isFinite(off) ? { off: +off.toFixed(4) } : null) });
+    if (v.excused) rows.push({ layer: doc.layer, prop, kind: 'waived', expected, actual, reason: waiver.reason, waiver: declared, ...(waiver.translated ? { translated: true } : null), ...(Number.isFinite(off) ? { off: +off.toFixed(4) } : null) });
     else rows.push({ layer: doc.layer, prop, kind: doc.status === 'absent' ? 'present' : 'differs', expected, actual, from: [from, v.why].filter(Boolean).join(' — '), why: v.why, waiver: declared });
   };
 
@@ -78,7 +78,7 @@ export function diff(docs, measured, { waivers = {}, tolerances = {} } = {}) {
       // waiver that names it.
       if (a.kind === 'unresolved') {
         const w = asWaiver(waivers[`${doc.layer}.${a.prop}`]);
-        if (w) rows.push({ layer: doc.layer, prop: a.prop, kind: 'waived', expected: null, actual: null, reason: w.reason, waiver: w.key || `${doc.layer}.${a.prop}` });
+        if (w) rows.push({ layer: doc.layer, prop: a.prop, kind: 'waived', expected: null, actual: null, reason: w.reason, waiver: w.key || `${doc.layer}.${a.prop}`, ...(w.translated ? { translated: true } : null) });
         else rows.push({ layer: doc.layer, prop: a.prop, kind: 'unresolved', detail: `nothing to compare: ${a.from} does not resolve` });
         continue;
       }

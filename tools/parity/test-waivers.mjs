@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // node tools/parity/test-waivers.mjs — from the toolkit root.
 import assert from 'node:assert/strict';
-import { appWaivers, recordExcused, asWaiver, excuses, stale, staleAcross, checkWaiver, keyParts, looseBounds } from './waivers.mjs';
+import { translationsFor, translationRules, appWaivers, recordExcused, asWaiver, excuses, stale, staleAcross, checkWaiver, keyParts, looseBounds } from './waivers.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -134,4 +134,30 @@ ok('a reason that puts the fix in the toolkit is filed under the toolkit', (() =
   && /fix is 'toolkit'/.test(shape('Box.width', { reason: 'the parity engine should measure the hug', fix: 'code', within: 1 }))
   && /fix is 'toolkit'/.test(shape('Box.width', { reason: 'fixed in the snapshot plugin', fix: 'figma', within: 1 }))
   && !/toolkit/.test(shape('Box.width', { reason: 'the fix is in the plugin that renders the card', fix: 'code', within: 1 })))());
+
+// accepted translations (2026-11-10): one rule, every target its `on` names, marked translated
+{
+  const docs = [{ layer: 'Main > Content > _h2', assertions: [{ prop: 'padding-bottom' }, { prop: 'height' }] }, { layer: 'Main', assertions: [{ prop: 'height' }] }];
+  const T = { '*_h2.padding-bottom': { reason: 'Figma has no margins', within: 16 }, 'Main.height': { reason: 'the bar', within: 152, on: 'desktop--*' } };
+  const d = translationsFor(T, docs, 'desktop--home');
+  const m = translationsFor(T, docs, 'mobile--home');
+  ok('a translation expands like an app waiver, is marked translated, drops `on`, and applies only where `on` names the target',
+    d['Main > Content > _h2.padding-bottom'].translated === true && d['Main > Content > _h2.padding-bottom'].key === '*_h2.padding-bottom'
+    && d['Main.height'].within === 152 && !('on' in d['Main.height']) && !('Main.height' in m) && 'Main > Content > _h2.padding-bottom' in m
+    && !('Main > Content > _h2.height' in d)
+    && translationsFor({ 'Main.height': [{ reason: 'bar', within: 152, on: 'desktop--*' }, { reason: 'bar', within: 434, on: 'mobile--*' }] }, docs, 'mobile--home')['Main.height'].within === 434
+    && !('Main.height' in translationsFor({ 'Main.height': [{ reason: 'bar', within: 152, on: 'desktop--*' }] }, docs, 'mobile--home'))
+    && translationsFor({ 'Main.height': [{ reason: 'bar', within: 152, on: 'desktop--*' }] }, docs, 'desktop--home')['Main.height'].rule === 'Main.height [1]'
+    && translationsFor({ 'Main.height': [{ reason: 'bar', within: 10, except: 'mobile--*' }, { reason: 'bar', within: 400 }] }, docs, 'mobile--home')['Main.height'].rule === 'Main.height [2]'
+    && translationsFor({ 'Main.height': { reason: 'bar', within: 1 } }, docs, 'desktop--home')['Main.height'].decision === true
+    && excuses(translationsFor({ 'Main.line-height': { reason: 'bar', within: 2 } }, [{ layer: 'Main', assertions: [{ prop: 'line-height' }] }], 'x')['Main.line-height'], { expected: '20', actual: 'normal', numeric: true }).excused
+    && Object.keys(translationRules({ A: { reason: 'r' }, B: [{ reason: 'r', on: 'a' }, { reason: 'r', on: 't' }] })).join() === 'A,B [1],B [2]'
+    && stale(translationRules({ B: [{ reason: 'r', within: 1, on: 'a' }, { reason: 'r', within: 1, on: 't' }] }), new Set(['B [1]'])).join() === 'B [2]'
+    && looseBounds(new Map([['t', new Map([['X.opacity [1]', { off: 0.1, within: 0.5 }]])]])).length === 1
+    && !('Main.height' in translationsFor({ 'Main.height': { reason: 'bar', within: 1, on: 3 } }, docs, 'desktop--home'))
+    && !('Main.height' in translationsFor({ 'Main.height': [{ reason: 'bar', within: 1, on: 3 }] }, docs, 'desktop--home'))
+    && 'Main.height' in translationsFor({ 'Main.height': { reason: 'bar', within: 1, on: ['mobile--*', 'desktop--home'] } }, docs, 'desktop--home')
+    && !('Main.height' in translationsFor({ 'Main.height': { reason: 'bar', within: 1, except: 'desktop--h*' } }, docs, 'desktop--home'))
+    && !('except' in translationsFor({ 'Main.height': { reason: 'bar', within: 1, except: 'mobile--*' } }, docs, 'desktop--home')['Main.height']));
+}
 console.log(`${n}/${n} passed`);
