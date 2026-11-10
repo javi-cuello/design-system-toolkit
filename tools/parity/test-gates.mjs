@@ -113,7 +113,8 @@ ok('a copy, runtime or children path the frame does not draw, or no selector map
     const u = target('home', 'screen', frameTree, { Main: 'main' }, {}); u.mapping.copy = ['Main > Title']; u.mapping.children = true;
     const g = waivers({ targets: [u] });
     return f.length === 2 && f.some((l) => /copy "Column > Text"/.test(l)) && f.some((l) => /children "Gone"/.test(l))
-      && g.length === 1 && /no selector maps/.test(g[0]);
+      && g.length === 1 && /no selector maps/.test(g[0])
+      && (() => { const r = target('home', 'screen', frameTree, { Main: 'main' }, {}); r.mapping.root = 'body'; r.mapping.copy = ['$root']; return waivers({ targets: [r] }).length === 0; })();
   })());
 // Round 3: a `*` key under waivers passed the gate and excused nothing (only
 // appWaivers expand one), and as a decision it was never stale either.

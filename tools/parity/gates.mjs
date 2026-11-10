@@ -124,6 +124,7 @@ export function waivers(project) {
     const trees = t.spec.variants.map((v) => layerIndex(v));
     // adapt walks mapped layers only, so a path drawn but not mapped asserts nothing too
     const mapped = new Set([...Object.entries(t.mapping.layers || {}), ...[...(t.variants || new Map()).values()].flatMap((r) => Object.entries(r.layers || {}))].filter(([, sel]) => sel).map(([l]) => l));
+    if (t.mapping.root) mapped.add('$root');  // adapt maps $root from `root`, which expand() takes out of layers
     // `children: true` is a switch, not a list (run.mjs), and names no layer
     for (const field of ['copy', 'runtime', 'children']) for (const layer of Array.isArray(t.mapping[field]) ? t.mapping[field] : []) {
       if (typeof layer !== 'string') continue;
