@@ -10,6 +10,7 @@ In the Figma desktop app: **Plugins → Development → Import plugin from manif
 
 | Plugin | What it does |
 |---|---|
+| [audit-lite](audit-lite/README.md) | Audits a library's components and saves a report to upload to Claude, which shows the fix queue. Nothing else to install. |
 | [design-system-snapshot](design-system-snapshot/README.md) | Reads a library or a screens file and sends it to the snapshot router (or, with no router, saves it as one JSON file). The start of every other tool here. |
 | [lucide-icon-importer](lucide-icon-importer/README.md) | Imports Lucide icons as components with size variants. |
 | [theme-switcher](theme-switcher/README.md) | Switches a selection between a library's themes and brands. |

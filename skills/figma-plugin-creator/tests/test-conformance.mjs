@@ -52,6 +52,14 @@ try {
     assert.deepEqual(said(checkPlugin(loaded), /sync API/), []);
   });
 
+  ok("P2, generated: a sync call inside a generated block is its source's to answer for; the same call outside one is still found", () => {
+    const dir = plant("generated-block", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* scanner generated start */\nconst m = node.mainComponent;\n/* scanner generated end */\nconst n = other.mainComponent;\n"); return out; });
+    const sync = said(checkPlugin(dir), /sync API/);
+    assert.equal(sync.length, 1); assert.match(sync[0].text, /code\.js:6:/);
+    const walk = plant("generated-loads", (out) => { out["code.js"] = out["code.js"].replace("// @ts-check\n", "// @ts-check\n/* scanner generated start */\nawait figma.loadAllPagesAsync();\n/* scanner generated end */\nconst all = figma.root.findAll(() => true);\n"); return out; });
+    assert.match(said(checkPlugin(walk), /sync API/)[0].text, /code\.js:6:/, "a block's page load does not excuse the plugin's own root walk");
+  });
+
   ok("P3: a fetch under [\"none\"] is blocked, unpkg with no fallback and @latest are needs-decision", () => {
     const dir = plant("data-puller", (out) => {
       out["ui.html"] = out["ui.html"].replace("</script>", "fetch('https://api.example.com/x'); fetch('https://unpkg.com/lucide-static@latest/icons/a.svg');\n</script>");

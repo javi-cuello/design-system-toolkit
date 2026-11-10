@@ -1,5 +1,6 @@
 # Changelog — figma-plugin-creator
 
+- 1.16.0 (2026-11-10): `conformance.mjs` §2 skips a generated block (`/* <name> generated start … generated end */`): its code is written by a sync script from a source that runs under dynamic-page elsewhere, as audit-lite carries the components scanner. Case P2.
 - 1.15.1 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
 - 1.15.0 (2026-11-01): `conformance.mjs` §5a runs the ui-base collision check's sizing half: a bespoke class that sizes a control in the markup and sets no `height` or `box-sizing:border-box` warns. States and runtime-assigned classes stay a read. Case P5.
 - 1.14.2 (2026-10-31): the ui-base asset and template carry v3: the shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).

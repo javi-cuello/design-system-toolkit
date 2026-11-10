@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<style>
+/* ui-base v3 start — canonical: plugins/_shared/ui-base.css
+   Requires figma.showUI(__html__, { themeColors: true }). Colour from injected
+   --figma-color-* tokens only; metrics per Figma-native controls.
+   CAUTION for plugins with rich bespoke controls: the rules below use bare
+   element selectors (button, input[type=text], select) that apply to EVERY
+   matching tag. A bespoke class that doesn't explicitly set height/padding/
+   box-sizing will silently inherit this baseline's values instead of its own
+   — not broken, but not intentional. When inlining into a plugin with more
+   than a couple of custom controls, give each bespoke control an explicit
+   height + box-sizing:border-box, even if the value matches what it would
+   have inherited anyway. See skill-standard §B 4. */
+:root{--font-stack:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+--fs-11:11px;--fs-12:12px;--fs-13:13px;--fw-regular:400;--fw-medium:500;
+--fw-semibold:600;--lh:16px;--radius-sm:2px;--radius-lg:6px;--space-1:4px;
+--space-2:8px;--space-3:16px;--space-4:24px;--control-h:32px;--input-h:30px}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-stack);font-size:var(--fs-11);
+line-height:var(--lh);letter-spacing:.005em;color:var(--figma-color-text);
+background:var(--figma-color-bg);-webkit-font-smoothing:antialiased}
+.container{padding:var(--space-3)}
+.section-title{font-weight:var(--fw-semibold)}
+.secondary{color:var(--figma-color-text-secondary)}
+button,.btn{height:var(--control-h);padding:0 var(--space-3);
+border-radius:var(--radius-lg);border:1px solid transparent;
+font:var(--fw-medium) var(--fs-11)/1 var(--font-stack);
+background:var(--figma-color-bg-brand);color:var(--figma-color-text-onbrand);cursor:default}
+button:hover,.btn:hover{background:var(--figma-color-bg-brand-hover)}
+button:disabled{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
+.btn-secondary{background:var(--figma-color-bg);color:var(--figma-color-text);
+border:1px solid var(--figma-color-border-strong)}
+/* Without this, `button:hover` above (0-1-1) beats `.btn-secondary` (0-1-0)
+   and every secondary button turns brand-blue under the pointer. One plugin
+   had already patched that in its own stylesheet, which is the duplication
+   this file exists to prevent. */
+.btn-secondary:hover{background:var(--figma-color-bg-secondary);color:var(--figma-color-text)}
+.btn-secondary:disabled{background:var(--figma-color-bg-disabled);
+color:var(--figma-color-text-ondisabled);border-color:transparent}
+input[type=text],input[type=number],select,.input{height:var(--input-h);width:100%;
+padding:0 var(--space-2);border-radius:var(--radius-sm);
+border:1px solid var(--figma-color-border);background:var(--figma-color-bg-secondary);
+color:var(--figma-color-text);font:var(--fw-regular) var(--fs-11)/1 var(--font-stack)}
+input:focus,select:focus,.input:focus{outline:none;border-color:var(--figma-color-border-selected)}
+/* a border colour alone is no focus indicator (WCAG 2.4.7, 1.4.11): the keyboard's focus gets a ring */
+input:focus-visible,select:focus-visible,.input:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:1px}
+input::placeholder{color:var(--figma-color-text-tertiary)}
+.checkbox{display:flex;align-items:center;gap:var(--space-2);height:var(--control-h)}
+.divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
+/* ui-base v3 end */
+
+/* audit-lite bespoke styles (extend the base) */
+.stack{display:flex;flex-direction:column;gap:var(--space-2)}
+.status{min-height:var(--lh)}
+.status.error{color:var(--figma-color-text-danger)}
+</style>
+</head>
+<body>
+<div class="container stack">
+  <div class="section-title">Audit lite</div>
+  <p class="secondary">Audits every component in this file and saves a report. Upload the report to Claude and type <b>show me results</b>.</p>
+  <button id="run">Run audit</button>
+  <button id="save" class="btn-secondary" hidden>Save the report again</button>
+  <p class="status secondary" id="status" role="status"></p>
+</div>
+<script>
+var run = document.getElementById('run');
+var save = document.getElementById('save');
+var statusEl = document.getElementById('status');
+var last = null;
+function download(msg) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([msg.text], { type: 'text/markdown' }));
+  a.download = msg.name; document.body.appendChild(a); a.click(); a.remove();
+}
+run.onclick = function () {
+  run.disabled = true; statusEl.className = 'status secondary';
+  statusEl.textContent = 'Auditing… a large library takes a minute.';
+  parent.postMessage({ pluginMessage: { type: 'run', id: Date.now() } }, '*');
+};
+save.onclick = function () { if (last) download(last); };
+onmessage = function (e) {
+  var msg = e.data.pluginMessage;
+  if (!msg) return;
+  run.disabled = false;
+  if (msg.type === 'done') {
+    last = msg; download(msg); save.hidden = false;
+    statusEl.textContent = 'Saved ' + msg.name + ': ' + msg.sets + ' components, ' + msg.found + ' findings to judge.';
+  } else if (msg.type === 'failed') {
+    statusEl.className = 'status error';
+    statusEl.textContent = 'The audit stopped: ' + msg.why;
+  }
+};
+</script>
+</body>
+</html>

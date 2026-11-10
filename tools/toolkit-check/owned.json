@@ -359,6 +359,7 @@
       "owners": [
         "tools/shared/colour.js",
         "skills/figma-components-audit/",
+        "plugins/audit-lite/code.js",
         "skills/oklch-color-scale-system/",
         "skills/figma-contrast-matrix/"
       ]
@@ -403,6 +404,7 @@
         "tools/shared/names.js",
         "skills/figma-properties-table/",
         "skills/figma-components-audit/",
+        "plugins/audit-lite/code.js",
         "tools/contract-editor/editor.js"
       ]
     },

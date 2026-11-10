@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.15.1)
+# Eval cases — figma-plugin-creator (v1.16.0)
+
+**Walked: 2026-11-10 for 1.16.0 — P2 executed** (`node tests/test-conformance.mjs`, 21 passed): a sync call inside a `generated start … generated end` block raises nothing and the same call after the block is still found at its line; every plugin in `plugins/` passes, audit-lite included.
 
 **Walked: 2026-11-06 for 1.15.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
@@ -54,6 +56,8 @@ Assert: conformance report classifies it, documentAccess NOT added; the fix (→
 **Walked 2026-08-09 — passes.** Fixture planted: a "Selection Tools" plugin whose manifest has no `documentAccess` and whose `code.js` uses `figma.getNodeById(`, `figma.getStyleById(` and `.mainComponent`. The §2 grep caught all three, at lines 5, 6 and 7 — note it caught *three*, where the case names one, so the regex covers the property-access form (`.mainComponent`) and not only the call forms. Report: all three classified **manual**, since conformance never edits plugin logic. `documentAccess` was **not** added, which is the whole point — adding it while those calls stand converts three working lines into three runtime throws. Sequencing recorded as: convert the three call sites to their `…Async` equivalents → retest → *then* add `documentAccess: "dynamic-page"` → re-import the manifest → retest per §6. The gate in §2 ("must be clean BEFORE adding documentAccess") is what makes the order load-bearing rather than stylistic.
 
 Walked live: 2026-08-09 — a planted "Selection Tools" fixture whose `code.js` carries three sync node calls and whose manifest has no `documentAccess`.
+
+**Generated blocks** (1.16.0): code between `/* <name> generated start` and `<name> generated end */` is written by a sync script from code that runs under dynamic-page elsewhere, and is not grepped here. Assert: a sync call inside such a block is not raised; the same call outside it is, at its line.
 
 ## P3 · networkAccess matches reality
 Fixture: plugin fetching https://api.example.com but manifest says ["none"].

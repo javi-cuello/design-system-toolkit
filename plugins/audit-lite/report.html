@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit fix queue</title>
+<style>
+:root{--bg:#fff;--surface:#f6f6f4;--text:#1a1a18;--muted:#5f5e5a;--line:#e2e1dc;--link:#0b5cad;
+--error:#c4262e;--warning:#9a6200;--review:#2f5fb3;--quiet:#77756f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
+--line:#34332f;--link:#7fb2f0;--error:#f07a7f;--warning:#e0b252;--review:#8fb0ee;--quiet:#8d8b84}}
+:root[data-theme="dark"]{--bg:#161615;--surface:#1f1f1d;--text:#ecebe6;--muted:#a8a69f;
+--line:#34332f;--link:#7fb2f0;--error:#f07a7f;--warning:#e0b252;--review:#8fb0ee;--quiet:#8d8b84}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:24px;line-height:1.25;margin:0 0 4px}
+h2{font-size:17px;margin:40px 0 4px}
+.meta,.note{color:var(--muted);font-size:13px;margin:0}
+.counts{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;list-style:none}
+.counts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+.counts b{font-size:18px;display:block}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--line)}
+th{font-size:12px;font-weight:600;color:var(--muted)}
+td.n{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+.sev{white-space:nowrap;font-size:12px;font-weight:600}
+.sev.error{color:var(--error)}.sev.warning{color:var(--warning)}.sev.review{color:var(--review)}
+.sev.preference,.sev.hygiene{color:var(--quiet)}
+.where code{font-size:13px;overflow-wrap:anywhere}
+a{color:var(--link)}
+.gaps{margin-top:40px;padding:16px;background:var(--surface);border-radius:8px;font-size:13px;color:var(--muted)}
+.gaps ul{margin:4px 0 0;padding-left:18px}
+.empty{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.wrap:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+</style>
+</head>
+<body>
+<main id="app"><p class="empty">No data in this page yet.</p></main>
+<script>
+/* DATA: {
+     file: "<library name>", fileKey: "<key or null>", date: "YYYY-MM-DD",
+     scanned: { sets: <n>, variants: <n> }, coverage: <token coverage % or null>,
+     kept: <n>, dropped: <n>,
+     notScanned: ["<plain words>", …],
+     rows: [{ bucket: 1|2|3|4, sev: "error|warning|review|preference|hygiene", visible: true|false,
+              set: "<component set>", setId: "<node id>", layer: "<layer path or empty>",
+              issue: "<one sentence>", fix: "<one sentence>" }, …] } */
+const DATA = null;
+
+const BUCKETS = {
+  1: ["Safe fixes", "Unambiguous changes, such as binding a raw value to its token or renaming a layer."],
+  2: ["Quick manual fixes", "Changes only the Figma UI can make, such as reordering variant options."],
+  3: ["Decide", "Each one is a question: a gap to fill, or a choice to record."],
+  4: ["Breaking: schedule", "Fixes that change the component's API or reset overrides in files that use it."]
+};
+// "b1", "1" and 1 are one bucket
+const bucketOf = (r) => Number(String(r.bucket).replace(/\D/g, ""));
+const RANK = { error: 0, warning: 1, review: 2, preference: 3, hygiene: 4 };
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const link = (d, r) => d.fileKey && r.setId ? "https://www.figma.com/design/" + encodeURIComponent(d.fileKey) + "?node-id=" + encodeURIComponent(r.setId.replace(/:/g, "-")) : null;
+
+function render(d) {
+  const app = document.getElementById("app");
+  if (!d) return;
+  const rows = d.rows || [];
+  const sc = d.scanned || {};
+  let html = "<h1>" + esc(d.file) + "</h1><p class=\"meta\">" + (sc.sets != null ? "Audit of " + esc(sc.sets) + " components, " + esc(sc.variants) + " variants · " : "") + esc(d.date) + "</p>";
+  html += "<ul class=\"counts\">";
+  for (const b of [1, 2, 3, 4]) html += "<li><b>" + rows.filter((r) => bucketOf(r) === b).length + "</b> " + esc(BUCKETS[b][0]) + "</li>";
+  if (d.coverage != null) html += "<li><b>" + esc(d.coverage) + "%</b> Values bound to tokens</li>";
+  html += "</ul>";
+  for (const b of [1, 2, 3, 4]) {
+    const list = rows.filter((r) => bucketOf(r) === b)
+      .sort((x, y) => (y.visible === true) - (x.visible === true) || (RANK[x.sev] ?? 9) - (RANK[y.sev] ?? 9));
+    if (!list.length) continue;
+    html += "<h2>" + b + " · " + esc(BUCKETS[b][0]) + "</h2><p class=\"note\">" + esc(BUCKETS[b][1]) + "</p>";
+    html += "<div class=\"wrap\" tabindex=\"0\" role=\"region\" aria-label=\"" + esc(BUCKETS[b][0]) + "\"><table><caption class=\"sr\">" + esc(BUCKETS[b][0]) + "</caption><thead><tr><th scope=\"col\">#</th><th scope=\"col\">Severity</th><th scope=\"col\">Where</th><th scope=\"col\">Issue</th><th scope=\"col\">Fix</th></tr></thead><tbody>";
+    list.forEach((r, i) => {
+      const where = esc(r.set) + (r.layer ? " › " + esc(r.layer) : "");
+      const url = link(d, r);
+      html += "<tr><td class=\"n\">" + b + "." + (i + 1) + "</td>"
+        + "<td class=\"sev " + esc(r.sev) + "\">" + esc(r.sev) + (r.visible ? " · user-visible" : "") + "</td>"
+        + "<td class=\"where\">" + (url ? "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\"><code>" + where + "</code></a>" : "<code>" + where + "</code>") + "</td>"
+        + "<td>" + esc(r.issue) + "</td><td>" + esc(r.fix) + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  }
+  if (!rows.length) html += "<p>No findings survived judgement.</p>";
+  html += "<div class=\"gaps\">Kept " + esc(d.kept) + " of " + esc((d.kept || 0) + (d.dropped || 0)) + " scanner candidates.";
+  if ((d.notScanned || []).length) html += " Not checked in this run:<ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+  html += "</div>";
+  app.innerHTML = html;
+}
+render(DATA);
+</script>
+</body>
+</html>

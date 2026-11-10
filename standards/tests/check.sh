@@ -197,6 +197,8 @@ if [ -d plugins ]; then
     # and asset) is written by plugins/_shared/sync.mjs, never pasted
     # (toolkit-standard §D 23); a copy that differs is stale until it runs.
     out=$(node plugins/_shared/sync.mjs --check 2>&1) || err "[4] ui-base: $out"
+    # audit-lite carries the components scanner and its prompts as a generated block
+    out=$(node plugins/audit-lite/sync.mjs --check 2>&1) || err "audit-lite: $out"
 fi
 
 # ─── markdown structure ────────────────────────────────────────────────────

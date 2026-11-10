@@ -21,6 +21,7 @@ const BLOCK = /\/\* ui-base v\d+ start[\s\S]*?\/\* ui-base v\d+ end \*\//;
 // §2: each sync API dynamic-page makes throw. `.instances` and `.consumers` are left to the read: a plugin's own
 // arrays and maps carry those names as often as Figma's nodes do, so a hit is not a finding without one.
 export const BANNED = /getNodeById\(|getStyleById\(|getFileThumbnailNode\(|getLocalTextStyles\(|getLocalPaintStyles\(|getLocalEffectStyles\(|getLocalGridStyles\(|getVariableById\(|getVariableCollectionById\(|getLocalVariables\(|getLocalVariableCollections\(|\.mainComponent\b|figma\.currentPage\s*=[^=]|\.masterComponent\b/;
+export const GENERATED = /\/\* [\w-]+ generated start[\s\S]*?\/\* [\w-]+ generated end \*\//g;
 // `figma.root.findAll` is sync-safe once every page is loaded, which is the checklist's own fix for it.
 export const ROOT_WALK = /figma\.root\.findAll\b/;
 // §1: a gated API and the permission it needs; without it every call throws at runtime.
@@ -101,9 +102,12 @@ export function checkPlugin(dir, opts = {}) {
     if (at.length && !perms.includes(perm)) add("error", "1", `calls ${re.source.replace(/\\[.b]/g, (x) => (x === "\\." ? "." : ""))} (code.js:${at[0]}) without the "${perm}" permission: every call throws at runtime (skill-standard §B 2)`, "needs-decision");
   }
 
-  // §2 banned sync APIs: dynamic-page makes each throw
-  const banned = hits(codeJs, BANNED);
-  if (codeJs != null && !/loadAllPagesAsync\(/.test(codeJs)) banned.push(...hits(codeJs, ROOT_WALK));
+  // §2 banned sync APIs: dynamic-page makes each throw. A generated block (`/* <name> generated start … generated end */`,
+  // written by a sync script from code that already runs under dynamic-page elsewhere, as audit-lite's copy of the
+  // components scanner runs through the bridge) is that code's, and is read where it is written, not here.
+  const own = (codeJs || "").replace(GENERATED, (m) => m.replace(/[^\n]/g, ""));
+  const banned = hits(own, BANNED);
+  if (codeJs != null && !/loadAllPagesAsync\(/.test(own)) banned.push(...hits(own, ROOT_WALK));
   banned.sort((a, b) => a - b);
   if (banned.length) add(m.documentAccess === "dynamic-page" ? "error" : "warn", "2", `a sync API dynamic-page refuses, at code.js:${banned.join(", ")}: convert each to its …Async form${m.documentAccess === "dynamic-page" ? "" : " BEFORE documentAccess is added"}`, "manual");
 
