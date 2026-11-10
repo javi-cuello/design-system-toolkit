@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.12.2)
+# Eval cases — frontend-build (v2.12.3)
+
+**Walked: 2026-11-10 for 2.12.3** — T14's comment layout; traced to step 5.
 
 **Walked: 2026-11-10 for 2.12.2** — T14's comment gains its source link; traced to step 5.
 
@@ -197,7 +199,7 @@ Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* s
 
 ## T14 · A Figma prototype knows the system, starts from a reference and says what it read — *traced*
 Fixture: "prototype an edit-employee flow in Figma" in a file whose screen template has three reference screens, one a table.
-Assert: before composing, the session lists the library's components (system MCP `overview`, or the library listing), runs `FCA.references` and starts from a copy of the table screen, walks `knowledge/README.md` and the pages the flow touches (tables, dialogs, forms, feedback) where the toolkit is present; each frame carries the shared `fca` / `receipt` naming the reference, components, invented items and pages read; `FCA.composedFrame` with `{ receipt: true }` is clean. Where the knowledge base disagrees with the reference (a Sort button where it sorts in the headers), the frame keeps the reference's drawing and a comment on that layer, a title and two or three bullets (the conflict, the option, the question) and a `More:` link to the knowledge section, asks the designer; a disabled input standing for a read-only value is fixed before the check.
+Assert: before composing, the session lists the library's components (system MCP `overview`, or the library listing), runs `FCA.references` and starts from a copy of the table screen, walks `knowledge/README.md` and the pages the flow touches (tables, dialogs, forms, feedback) where the toolkit is present; each frame carries the shared `fca` / `receipt` naming the reference, components, invented items and pages read; `FCA.composedFrame` with `{ receipt: true }` is clean. Where the knowledge base disagrees with the reference (a Sort button where it sorts in the headers), the frame keeps the reference's drawing and a plain-text comment on that layer, `From Claude:`, a title and two or three bullets (the conflict, the option, the question) and a `More:` link to the knowledge section, asks the designer; a disabled input standing for a read-only value is fixed before the check.
 Negative: a flow built from the bare template, from only the components a reference holds, or with no receipt; a knowledge-base conflict that stops the build, or is silently redrawn against the designer's pattern; a comment of quoted guidance and file paths.
 Traced: 2026-11-10 for 2.11.0 — to SKILL.md *A Figma prototype*; 2.12.0, step 5.
 
