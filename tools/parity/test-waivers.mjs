@@ -151,6 +151,9 @@ ok('a reason that puts the fix in the toolkit is filed under the toolkit', (() =
     && translationsFor({ 'Main.height': [{ reason: 'bar', within: 10, except: 'mobile--*' }, { reason: 'bar', within: 400 }] }, docs, 'mobile--home')['Main.height'].rule === 'Main.height [2]'
     && translationsFor({ 'Main.height': { reason: 'bar', within: 1 } }, docs, 'desktop--home')['Main.height'].decision === true
     && excuses(translationsFor({ 'Main.line-height': { reason: 'bar', within: 2 } }, [{ layer: 'Main', assertions: [{ prop: 'line-height' }] }], 'x')['Main.line-height'], { expected: '20', actual: 'normal', numeric: true }).excused
+    && translationsFor({ '*.height': { reason: 'a', within: 1 }, 'Main.height': { reason: 'b', within: 2 } }, docs, 'x')['Main.height'].reason === 'a'
+    && translationsFor({ '*.height': { reason: 'a', within: 1 }, 'Main.height': { reason: 'b', within: 2 } }, docs, 'x').overlaps.join() === 'Main.height: *.height and Main.height'
+    && translationsFor({ 'Main.height': { reason: 'b', within: 2 } }, docs, 'x').overlaps.length === 0
     && Object.keys(translationRules({ A: { reason: 'r' }, B: [{ reason: 'r', on: 'a' }, { reason: 'r', on: 't' }] })).join() === 'A,B [1],B [2]'
     && stale(translationRules({ B: [{ reason: 'r', within: 1, on: 'a' }, { reason: 'r', within: 1, on: 't' }] }), new Set(['B [1]'])).join() === 'B [2]'
     && looseBounds(new Map([['t', new Map([['X.opacity [1]', { off: 0.1, within: 0.5 }]])]])).length === 1

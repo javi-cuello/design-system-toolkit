@@ -390,6 +390,7 @@ const TRANSLATIONS = P.translations || {};
 const translationsUsed = new Set();
 // the largest difference each translation (each entry of a list) excused anywhere, for its bound (looseBounds)
 const translatedOff = new Map();
+const translationOverlaps = new Set();   // "layer.prop: rule and rule", two translations claiming one value
 /* The largest difference each waiver excused on each target (R2 of the
    2026-10-02 review's second round): a bound shared through a base or a
    spread was the largest sharer's, so on the rest it passed regressions of
@@ -415,6 +416,7 @@ for (const [t, list] of byTarget) {
     const scoped = { ...scopedWaivers(m.waivers, j.name), ...scopedWaivers(own, j.name) };
     const extra = app || (j.host === 'app') ? appWaivers(m.appWaivers, j.docs) : {};
     const tr = translationsFor(TRANSLATIONS, j.docs, t.name);
+    for (const o of tr.overlaps) translationOverlaps.add(o);
     const merged = { ...tr, ...scoped, ...extra };
     const rows = diff(j.docs, read || {}, { waivers: merged, tolerances: P.tolerances || {} });
     const note = (key) => { if (!key) return; if (key in (own || {})) ownDecl.used.add(key); else decl.used.add(key); };
@@ -503,6 +505,13 @@ if (staleW.length) {
   say(`\n${staleW.length} waiver(s) excuse a difference nothing that declares them shows any more — delete them:`);
   for (const { key, names } of staleW) say(`  ${key}   (${names.join(', ')})`);
   failed += staleW.length;
+}
+
+// Two translations on one value: the first declared judges it; which was meant is the project's to say.
+if (translationOverlaps.size) {
+  say(`\n${translationOverlaps.size} value(s) two translations both claim — narrow one with \`on\`/\`except\` or its key:`);
+  for (const o of translationOverlaps) say(`  ${o}`);
+  failed += translationOverlaps.size;
 }
 
 // A translation that excuses nothing anywhere is stale too; only a full run saw everywhere.

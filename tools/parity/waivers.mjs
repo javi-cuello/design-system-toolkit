@@ -175,13 +175,23 @@ export function translationsFor(declared, docs, target) {
   const entry = {};
   const on = Object.fromEntries(Object.entries(declared || {}).map(([k, w]) => { const [x, i] = pick(w); entry[k] = i; return [k, x]; })
     .filter(([, w]) => w && (typeof w !== 'object' || names(w))));
-  const out = appWaivers(on, docs);
+  /* Two rules that expand onto one layer.prop would leave one silently
+     unused, so the first declared keeps it and the clash is returned in
+     `overlaps` (not enumerable: the map is spread into a target's waivers)
+     for the run to fail on by name. */
+  const out = {};
+  const overlaps = [];
+  for (const [k, x] of Object.entries(on)) for (const [lp, w] of Object.entries(appWaivers({ [k]: x }, docs))) {
+    if (!out[lp]) { out[lp] = w; continue; }
+    overlaps.push(`${lp}: ${translationId(out[lp].key, entry[out[lp].key])} and ${translationId(k, entry[k])}`);
+  }
   // `rule` names the one rule, a list's entry included, so staleness and bounds are judged per entry (run.mjs);
   // a translation is a ruled decision, so it excuses what only a decision may (a number the browser reads as a keyword)
   for (const k of Object.keys(out)) {
     const { on: _, except: __, ...w } = out[k];
     out[k] = { ...w, decision: w.decision || true, translated: true, rule: translationId(w.key, entry[w.key]) };
   }
+  Object.defineProperty(out, 'overlaps', { value: overlaps });
   return out;
 }
 
