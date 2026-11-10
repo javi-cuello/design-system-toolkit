@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.13.0 (2026-11-10): *A Figma prototype* step 4: fonts loaded once per call, and variants set by Figma's own option names, never the snapshot's lowercased ones (both from a composing trial). T14.
 - 2.12.3 (2026-11-10): a designer comment opens with `From Claude:` and ends, after a blank line, with `More:` and the link on its own line; plain text, since the comments API renders no markdown (seen live). T14.
 - 2.12.2 (2026-11-10): a designer comment ends with one `More:` link to the knowledge section on the public repository. T14.
 - 2.12.1 (2026-11-10): a designer comment is a title and two or three bullets, the conflict, the option and the question, with no file paths or quotes (the user found the first ones too long). T14.

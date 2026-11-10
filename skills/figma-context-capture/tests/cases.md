@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.12.4)
+# Eval cases — figma-context-capture (v2.13.0)
+
+**Walked: 2026-11-11 for 2.13.0** — C18 added, traced to pass M and the template's §3; C7 read against the fifth item (it still asks the four, and the fifth only with a screens file).
 
 **Walked: 2026-11-06 for 2.12.4** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 
@@ -198,3 +200,9 @@ Recorded under toolkit-standard §D 23: pass C's scales, grammar and spelling we
 - trusted a collection two sources own, of which the store then kept one copy, and gave an empty block for the wrong store (now each library's own copy is read, `shared`).
 
 Runs: node tests/test-passes.mjs — "pass C scales: a step named late among many is in the scale, not a gap", "pass C scales: a name is looked up only in its own collection of its own library", "pass C scales: a kind with no values is left out of the audit block, never []".
+
+## C18 · Screen decisions are asked, and what screens contain is never written — traced 2026-11-11
+Fixture: a project whose §5 snapshot routing names a screens file with three stored screens, one named `<Screens> List - Empty`.
+Assert: pass M asks which screen types exist, the template each starts from, their required states and where the shell config lives; the empty screen is put as a hypothesis ("is empty a required state of every list?"); §3's Screens table holds only those answers, `[TBD]` where unanswered, and names no region, example screen or component other than the type's template.
+Negative: a table of each screen's regions and components copied from the stored screens; a required state recorded from a screen name without asking; the item asked of a project with no screens file.
+Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKILL.md step 2 and the template's §3.

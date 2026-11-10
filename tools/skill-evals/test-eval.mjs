@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary, figmaScore } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -259,5 +259,30 @@ ok('a screen agent that wrote into the system, or did not exit cleanly, is never
     && compareSummary(sum({ mean: 0.6 }), sum({ mean: 0.8, passRate: 0.67 })) === 'mean 0.6 → 0.8, passRate 0.33 → 0.67'
     && compareSummary(sum({}), sum({ void: 2 })) === 'mean 0.5 → 0.5, passRate 0.33 → 0.33, void 0 → 2'
     && compareSummary(undefined, sum({})) === 'first 3-trial run of this task');
+}
+{
+  const rc = (reference, knowledge = ['knowledge/README.md']) => ({ reference, components: [], invented: [], knowledge });
+  const fr = (findings, receipt) => ({ name: 'F', instances: 9, findings, receipt });
+  const refs = ['<Screens> 1-1 - Table', '<Screens> 2-1 - Page - Empty'];
+  const full = figmaScore({ references: refs, frames: [fr([], rc(refs[0])), fr([], rc(refs[1]))] });
+  const half = figmaScore({ references: refs, frames: [fr(['raw', 'no-reference'], rc('')), fr([], rc(refs[0], []))] });
+  ok('figma: every frame clean, on a real reference, with knowledge read is green; each failing frame costs its share of one check, and a receipt finding is never counted twice',
+    full.score === 1 && full.green && full.why === ''
+    && half.score === Math.round(((1 + 0.5 + 0.5 + 0.5 + 1) / 5) * 1000) / 1000 && !half.green && half.why === 'clean 1/2 (raw); reference 1/2; knowledge 1/2');
+  ok('figma: no frame, a grader error, or a reference that is not one of the file\'s screens scores as such',
+    figmaScore({ references: refs, frames: [] }).why === 'built no frame' && figmaScore({ error: '0 pages named Eval — x', frames: [] }).score === 0
+    && figmaScore({ references: refs, frames: [fr([], rc('People - Table (my prototype)'))] }).parts.reference === 0);
+  const two = [fr([], rc(refs[0])), fr([], rc(refs[1]))];
+  const asked = { frames: 3, flow: 'Add an employee' };
+  ok('figma: a run short of the frames or the flow the task asked for is not green, and says which',
+    figmaScore({ references: refs, flows: ['Add an employee'], frames: two }, asked).why === 'not the 3 frames and flow "Add an employee" asked'
+    && figmaScore({ references: refs, flows: [], frames: [...two, fr([], rc(refs[0]))] }, asked).green === false
+    && figmaScore({ references: refs, flows: ['Add an employee'], frames: [...two, fr([], rc(refs[0]))] }, asked).green === true);
+  ok('figma: a hidden, empty or stale screen is not clean, a loose layer costs tidy alone; knowledge must start at the README (an anchor allowed) and name pages that exist',
+    figmaScore({ references: refs, strays: ['Rectangle 4'], frames: two }).why === 'loose layers: Rectangle 4'
+    && figmaScore({ references: refs, frames: [fr([], rc(refs[0], ['knowledge/README.md#index']))] }).green
+    && ['hidden', 'empty', 'stale'].every((k) => figmaScore({ references: refs, frames: [fr([k], rc(refs[0]))] }).parts.clean === 0)
+    && figmaScore({ references: refs, frames: [fr([], rc(refs[0], ['knowledge/ui/patterns/forms.md']))] }).parts.knowledge === 0
+    && figmaScore({ references: refs, frames: [fr([], rc(refs[0], ['knowledge/README.md', 'skipped']))] }, {}, (p) => p.startsWith('knowledge/')).parts.knowledge === 0);
 }
 console.log(`${n}/${n} passed`);

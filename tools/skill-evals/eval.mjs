@@ -331,3 +331,32 @@ export function opened(transcriptLines, files) {
   }
   return Object.keys(files).filter((k) => hit.has(k));
 }
+
+// A Figma task's grade, from what tools/skill-evals/figma-grade.js returned:
+// something was built, then shares of screens — clean by FCA.composedFrame
+// (library instances and bound values only; the grader adds `hidden`,
+// `empty` and `stale` for a receipt from another run), a receipt naming one
+// of the file's reference screens built on the template, a receipt naming
+// knowledge pages that exist and start at knowledge/README.md (`known`, the
+// caller's check of a path) — then `tidy`, no loose layer beside the screens,
+// and, when the task names them, its screen count and flow (`asked`). Green
+// when every part is whole.
+export function figmaScore(graded, task = {}, known = () => true) {
+  const frames = (graded && graded.frames) || [];
+  if (graded && graded.error) return { score: 0, green: false, why: graded.error, frames: 0 };
+  if (!frames.length) return { score: 0, green: false, why: 'built no frame', frames: 0 };
+  const refs = new Set(graded.references || []);
+  const share = (ok) => frames.filter(ok).length / frames.length;
+  const read = (k) => Array.isArray(k) && typeof k[0] === 'string' && k[0].split('#')[0] === 'knowledge/README.md' && k.every((p) => typeof p === 'string' && known(p));
+  const parts = {
+    clean: share((f) => !(f.findings || []).some((k) => k !== 'no-receipt' && k !== 'no-reference')),
+    reference: share((f) => !!(f.receipt && refs.has(f.receipt.reference))),
+    knowledge: share((f) => !!(f.receipt && read(f.receipt.knowledge))),
+    tidy: +!(graded.strays || []).length,
+  };
+  if (task.frames || task.flow) parts.asked = +((!task.frames || frames.length === task.frames) && (!task.flow || (graded.flows || []).includes(task.flow)));
+  const vals = Object.values(parts);
+  const score = Math.round(((1 + vals.reduce((a, v) => a + v, 0)) / (1 + vals.length)) * 1000) / 1000;
+  const why = Object.entries(parts).filter(([, v]) => v < 1).map(([k, v]) => k === 'tidy' ? 'loose layers: ' + graded.strays.slice(0, 5).join(', ') : k === 'asked' ? 'not the ' + [task.frames && task.frames + ' frames', task.flow && 'flow "' + task.flow + '"'].filter(Boolean).join(' and ') + ' asked' : k + ' ' + Math.round(v * frames.length) + '/' + frames.length + (k === 'clean' ? ' (' + [...new Set(frames.flatMap((f) => (f.findings || []).filter((x) => x !== 'no-receipt' && x !== 'no-reference')))].join(', ') + ')' : '')).join('; ');
+  return { score, green: vals.every((v) => v === 1), why, frames: frames.length, parts };
+}

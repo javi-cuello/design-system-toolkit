@@ -62,7 +62,7 @@ Only rules genuinely true across every library — durable content, not observat
 
 **Quality** — {accessibility floor · annotations stance}
 
-The four lines below are **maintainer-only facts**: no Figma read can reach them. They stay `[TBD]` until someone answers, and a plausible-looking guess is worse here than a visible gap, because every one of them changes what a skill is allowed to conclude.
+The five items below are **maintainer-only facts**: no Figma read can reach them. They stay `[TBD]` until someone answers, and a plausible-looking guess is worse here than a visible gap, because every one of them changes what a skill is allowed to conclude.
 
 **Lifecycle & status** — {the statuses this project uses · what a component must satisfy to advance · **what each status exempts from audit**}. Every mature system has this and each draws the ladder differently: Primer runs Experimental → Alpha → Beta → Stable → Deprecated with published criteria per rung, Carbon gates "stable" behind tests plus published guidance, GOV.UK gates publication behind contribution criteria. The exemption half is the operative part for skills — an audit that holds an experimental component to stable rules generates a fix queue the maintainer will correctly ignore, and a skill that then learns to discount its own findings is worse than one that never ran.
 
@@ -71,6 +71,14 @@ The four lines below are **maintainer-only facts**: no Figma read can reach them
 **Platforms & parity** — {which platforms ship · which library serves each · **where they are permitted to diverge**}. Omit this line entirely for a single-platform project. Divergence is the load-bearing half: Carbon ships separate web and native mobile kits, Primer keeps Primer Mobile internal-only, GOV.UK is web-only by decision. "Same component, different platform" is a defect on some projects and the intended design on others, and nothing in the file says which.
 
 **Governance** — {who may change the library · who may issue a §6 ruling · how a change reaches published}. GOV.UK routes contributions through a working group that re-forms twice a year; Primer takes Figma branches but a maintainer merges and publishes. This decides whether a skill's finding is something the person in the session can act on at all, or a proposal that has to go somewhere else first.
+
+**Screens** — only where §5's snapshot routing names a screens file. The decisions no stored screen shows, one row per screen type; what each type contains, its regions, components and example screens, is derived from the stored screens (`get_screen_recipe`) and never written here.
+
+| Screen type | Template | Required states |
+|---|---|---|
+| {e.g. Table} | {the template component it starts from} | {e.g. default, empty, loading, error} |
+
+Shell config: {path in the project's code repo of the shell and navigation config templates read, or `[TBD]` until the code has one}
 
 ---
 

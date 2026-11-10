@@ -97,14 +97,15 @@ Only when the file registry says this file plays a doc role, or pass A's page na
 
 ## Pass M — Maintainer-only facts (asked, never read)
 
-**This pass runs no code.** Its four items are invisible to every Figma read, and unlike the rest of this reference they cannot be inferred from a sample, a majority or a pattern. They exist as a pass because the failure mode is silence: without a prompt, a capture simply omits them and the resulting document looks complete.
+**This pass runs no code.** Its items are invisible to every Figma read, and unlike the rest of this reference they cannot be inferred from a sample, a majority or a pattern. They exist as a pass because the failure mode is silence: without a prompt, a capture simply omits them and the resulting document looks complete.
 
-Ask all four at the step-2 summary, in one block, each defaulting to `[TBD]` if the maintainer doesn't know:
+Ask them all at the step-2 summary, in one block, each defaulting to `[TBD]` if the maintainer doesn't know:
 
 - **Lifecycle & status** — what statuses exist, what advances a component between them, and **what each status exempts from audit**. Push for the exemption specifically; maintainers volunteer the ladder and omit the consequence, and the consequence is the part downstream skills act on.
 - **Versioning & deprecation** — how the library versions, when deprecated things are removed, and **how a deprecation is marked inside Figma**. The marking is the only part with a mechanical trace, so if any answer is worth chasing to `[confirmed]` it is this one; ask for an example component and verify the marking on it.
 - **Platforms & parity** — which platforms ship and where they may legitimately diverge. Skip entirely for a single-platform project rather than recording "n/a".
 - **Governance** — who may change the library, who may issue a ruling, how a change reaches published.
+- **Screens**, only where the project registers a screens file — which screen types exist, which template each starts from, the states each must cover, and where the shell config lives. Never what a screen contains: that is derived from the stored screens (`recipes.cjs`, `get_screen_recipe`), and a copy here would drift. A state the stored screens show (a frame named `… - Empty`) is a hypothesis to put to the maintainer, never the answer.
 
 **The trap: file evidence that looks like an answer.** A page named `WIP`, a component prefixed `[deprecated]`, two libraries that look like a web/native pair — each of these is a *hypothesis* to put to the maintainer, never a finding. Record it as `[TBD]` with the observation attached ("`Deprecated` page exists — is this the marking convention?"). The distinction matters more here than anywhere else in this reference: an inferred naming convention is wrong about a name, whereas an inferred deprecation convention makes later skills silently ignore live components.
 
