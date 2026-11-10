@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.11.0)
+# Eval cases — frontend-build (v2.12.0)
+
+**Walked: 2026-11-10 for 2.12.0** — T14 extended with step 5 (knowledge-base conflicts) and traced to it; the other cases read against it, none affected.
 
 **Walked: 2026-11-10 for 2.11.0** — T14 added, traced to *A Figma prototype*; the other cases read against the new section, none affected (it adds a Figma route and changes no code step).
 
@@ -191,9 +193,9 @@ Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* s
 
 ## T14 · A Figma prototype knows the system, starts from a reference and says what it read — *traced*
 Fixture: "prototype an edit-employee flow in Figma" in a file whose screen template has three reference screens, one a table.
-Assert: before composing, the session lists the library's components (system MCP `overview`, or the library listing), runs `FCA.references` and starts from a copy of the table screen, walks `knowledge/README.md` and the pages the flow touches (tables, dialogs, forms, feedback) where the toolkit is present; each frame carries the shared `fca` / `receipt` naming the reference, components, invented items and pages read; `FCA.composedFrame` with `{ receipt: true }` is clean.
-Negative: a flow built from the bare template, from only the components a reference holds, or with no receipt.
-Traced: 2026-11-10 for 2.11.0 — to SKILL.md *A Figma prototype*.
+Assert: before composing, the session lists the library's components (system MCP `overview`, or the library listing), runs `FCA.references` and starts from a copy of the table screen, walks `knowledge/README.md` and the pages the flow touches (tables, dialogs, forms, feedback) where the toolkit is present; each frame carries the shared `fca` / `receipt` naming the reference, components, invented items and pages read; `FCA.composedFrame` with `{ receipt: true }` is clean. Where the knowledge base disagrees with the reference (a Sort button where it sorts in the headers), the frame keeps the reference's drawing and a comment on that layer names the page, its section and the choice; a disabled input standing for a read-only value is fixed before the check.
+Negative: a flow built from the bare template, from only the components a reference holds, or with no receipt; a knowledge-base conflict that stops the build, or is silently redrawn against the designer's pattern.
+Traced: 2026-11-10 for 2.11.0 — to SKILL.md *A Figma prototype*; 2.12.0, step 5.
 
 ## T7 · Native interactive wraps the control, never replaces it — *traced*
 Fixture: "add a disabled state to our `ds-button`."
