@@ -116,6 +116,21 @@ export function waivers(project) {
   const where = (names) => { const u = [...new Set(names)]; return `${u.slice(0, 3).join(', ')}${u.length > 3 ? ` and ${u.length - 3} more` : ''}`; };
   for (const { lines, names } of shape.values()) for (const l of lines) out.push(`${where(names)}: ${l}`);
   for (const { key, ok, names } of reach.values()) if (!ok) out.push(`${where(names)}: ${key} — no variant or frame that declares it draws ${keyParts(key).layer}, so it excuses nothing`);
+  // a path listed under copy, runtime or children asserts on that layer only,
+  // so one the frame does not draw asserts nothing and says nothing: after a
+  // layer was renamed, 8 copy paths on the old name dropped 32 assertions from
+  // one project's run with the run still green (2026-11-10)
+  for (const t of project.targets) {
+    const trees = t.spec.variants.map((v) => layerIndex(v));
+    // adapt walks mapped layers only, so a path drawn but not mapped asserts nothing too
+    const mapped = new Set([...Object.entries(t.mapping.layers || {}), ...[...(t.variants || new Map()).values()].flatMap((r) => Object.entries(r.layers || {}))].filter(([, sel]) => sel).map(([l]) => l));
+    // `children: true` is a switch, not a list (run.mjs), and names no layer
+    for (const field of ['copy', 'runtime', 'children']) for (const layer of Array.isArray(t.mapping[field]) ? t.mapping[field] : []) {
+      if (typeof layer !== 'string') continue;
+      if (!trees.some((ix) => ix.has(layer))) out.push(`${t.name}: ${field} "${layer}" — no frame or variant draws that layer, so it asserts nothing; respell it to the path the snapshot holds, or delete it`);
+      else if (!mapped.has(layer)) out.push(`${t.name}: ${field} "${layer}" — no selector maps that layer, so it asserts nothing; map it, or delete it`);
+    }
+  }
   out.push(...(project.unusedFalse || []));
   return out;
 }

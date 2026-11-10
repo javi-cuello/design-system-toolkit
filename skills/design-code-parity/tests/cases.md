@@ -1157,3 +1157,9 @@ Fixture: two stored screens placing `_Label` instances under one library key, on
 Assert: one id passes; two ids fail once, naming the set (`_Label`) and each id with the first screen that uses it; the component spec is not read.
 Also: on the reference project, the gate is green on today's screens and red on the snapshot taken before the Contact label was swapped, naming `_Label` under 462:47800 and 310:33033.
 Runs: node tools/parity/test-gates.mjs — "one key under one copy passes…".
+
+## T103 · A path in a list names a layer, or it is a finding — *executed*
+Fixture: a screen whose frame draws `Main > Title`, with `copy: ['Main > Title', 'Column > Text']`, `runtime: ['Main']` and `children: ['Gone']`.
+Assert: the waivers gate names `copy "Column > Text"` and `children "Gone"` and nothing else; the drawn, mapped paths pass. A `copy` path drawn but unmapped is named as unmapped, and `children: true` is read as a switch, not iterated.
+Also: on the reference project the first run named `Column > Text` on the Contact page, dead before the check existed; respelled, its text assertions match on both breakpoints.
+Runs: node tools/parity/test-gates.mjs — "a copy, runtime or children path the frame does not draw…".

@@ -103,6 +103,18 @@ const found = waivers({ unusedFalse: unused, targets: [
     'Main > Title.color': { reason: 'r', decision: true, accepted: true },
   }),
 ] });
+// 2026-11-10: copy paths left on a renamed layer's old name asserted nothing
+ok('a copy, runtime or children path the frame does not draw, or no selector maps, is named; a mapped one passes, and children: true is a switch',
+  (() => {
+    const t = target('home', 'screen', frameTree, { Main: 'main' }, {});
+    t.mapping.layers['Main > Title'] = 'h1';
+    t.mapping.copy = ['Main > Title', 'Column > Text']; t.mapping.runtime = ['Main']; t.mapping.children = ['Gone'];
+    const f = waivers({ targets: [t] });
+    const u = target('home', 'screen', frameTree, { Main: 'main' }, {}); u.mapping.copy = ['Main > Title']; u.mapping.children = true;
+    const g = waivers({ targets: [u] });
+    return f.length === 2 && f.some((l) => /copy "Column > Text"/.test(l)) && f.some((l) => /children "Gone"/.test(l))
+      && g.length === 1 && /no selector maps/.test(g[0]);
+  })());
 // Round 3: a `*` key under waivers passed the gate and excused nothing (only
 // appWaivers expand one), and as a decision it was never stale either.
 ok('a glob outside appWaivers is refused; inside them it is read',
