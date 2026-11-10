@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.12.2 (2026-11-10): a designer comment ends with one `More:` link to the knowledge section on the public repository. T14.
 - 2.12.1 (2026-11-10): a designer comment is a title and two or three bullets, the conflict, the option and the question, with no file paths or quotes (the user found the first ones too long). T14.
 - 2.12.0 (2026-11-10): *A Figma prototype* step 5, before the receipt and the check: where the knowledge base and a reference screen disagree, fix what the content decides, keep the designer's pattern, and post a Figma comment on the layer citing the page; never a blocker. T14.
 - 2.11.0 (2026-11-10): *A Figma prototype*: the whole component list before building, the closest reference screen (`FCA.references`), the knowledge base walked where present, a receipt on each frame and `FCA.composedFrame` with `receipt: true`. T14.
