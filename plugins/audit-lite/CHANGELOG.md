@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.4.2] - 2026-11-10
+### Fixed
+- In a real run Claude published the page without asking chat or page, and closed with a table whose cells held raw HTML lists: the question is now the whole first reply, and the closing words are four plain sentences that never repeat the page's rows.
+
 ## [0.4.1] - 2026-11-10
 ### Fixed
 - *Run* no longer lists a file-level check that had nothing to check as run; a Page list row's place is its entry's page.
