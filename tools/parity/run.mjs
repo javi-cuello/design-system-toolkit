@@ -415,12 +415,14 @@ for (const [t, list] of byTarget) {
     const scoped = { ...scopedWaivers(m.waivers, j.name), ...scopedWaivers(own, j.name) };
     const extra = app || (j.host === 'app') ? appWaivers(m.appWaivers, j.docs) : {};
     const tr = translationsFor(TRANSLATIONS, j.docs, t.name);
-    const rows = diff(j.docs, read || {}, { waivers: { ...tr, ...scoped, ...extra }, tolerances: P.tolerances || {} });
+    const merged = { ...tr, ...scoped, ...extra };
+    const rows = diff(j.docs, read || {}, { waivers: merged, tolerances: P.tolerances || {} });
     const note = (key) => { if (!key) return; if (key in (own || {})) ownDecl.used.add(key); else decl.used.add(key); };
     for (const r of rows) {
-      const t = r.prop && tr[`${r.layer}.${r.prop}`];
+      // the translation that judged this row, unless the target's own waiver on that key won
+      const t = r.prop && merged[`${r.layer}.${r.prop}`] && merged[`${r.layer}.${r.prop}`].translated ? merged[`${r.layer}.${r.prop}`] : null;
       // a row past a translation's bound shows the difference it names, so the rule is not stale: the row fails instead
-      if (t && (r.translated || (r.kind !== 'waived' && r.waiver === t.key))) translationsUsed.add(t.rule); else note(r.waiver);
+      if (t && (r.translated || r.kind !== 'waived')) translationsUsed.add(t.rule); else note(r.waiver);
       if (!r.translated || r.kind !== 'waived' || r.off === undefined) continue;
       if (!translatedOff.has(t.rule) || translatedOff.get(t.rule).off < r.off) translatedOff.set(t.rule, { off: r.off, within: t.within });
     }
