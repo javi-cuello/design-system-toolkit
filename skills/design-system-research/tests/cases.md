@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.0.0)
+# Eval cases — design-system-research (v3.1.0)
+
+**Walked: 2026-11-11 for 3.1.0** — A25 added, traced to `references/deep-mode-voice.md` §4 and §11. A9 amended: its example heading loses its number. A11 amended: "every numbered section" becomes "every section". A20 read: a bare "(section N)" stays a failure, and so does any numbered pointer. Others read: none asserts on numbering.
 
 **Walked: 2026-11-11 for 3.0.0** — `references/deep-mode-voice.md` rewritten from scratch, so every case naming it was re-traced to the new numbered sections: A18 (§3, §4, §8, §10), A19 (§2, §6), A20 (§8), A21 (§6, §8), A22 (§6, §8, §10). A18 amended: the guide opens on the problem as a scene, and "you" follows A23. A23 reversed by the person's ruling of 2026-11-11: "you" in worked cases, the advice, the cheat sheet and the short version only. A11 amended: the question list is itself linked, so a short guide carries anchors too. A12 amended: one analogy per hard concept, with its limit (§7). A22 amended: the opener is one sentence. A9 read and unchanged: a one-sentence answer is still the paragraph it asks for. A24 added for the techniques the rewrite brought in. A1 to A8, A10, A13 to A17 read: none asserts on the voice file's wording. Bumped major: the same input now gives materially different output. Reader check: pending the next deep-mode guide.
 
@@ -104,7 +106,7 @@ Traced: 2026-08-09 — to the new Step 5 example clause and the new Step 7 mecha
 
 ## A9 · The reader finishes each section knowing what it said
 Fixture: deep mode on a topic with six decision axes. The draft has numbered sections titled with topic nouns (`## 3. The boolean prefix`), each opening with a comparison table of five systems and closing with a one-sentence marked recommendation. Every claim is cited and correct.
-Assert: the delivered file fails and is rewritten. Sections are titled as the question a practitioner asks (`## 3. Should it be isDisabled or disabled?`), each opens with a paragraph that answers the title in plain language, a reader could stop at, with no label in front of it, and each closes with advice rather than a ruling. The concepts are introduced in prose before any table uses them, and every surviving table passes both keeping tests: understandable from the surrounding prose alone, and its removal would lose information rather than tidiness. A `What this answers` opener lists the questions in the order they arrive, and a standalone `The short version` section works for a reader who reads nothing else. At least one otherwise-abstract claim per part is carried by a named system's story.
+Assert: the delivered file fails and is rewritten. Sections are titled as the question a practitioner asks (`## Should it be isDisabled or disabled?`, amended 3.1.0: no number), each opens with a paragraph that answers the title in plain language, a reader could stop at, with no label in front of it, and each closes with advice rather than a ruling. The concepts are introduced in prose before any table uses them, and every surviving table passes both keeping tests: understandable from the surrounding prose alone, and its removal would lose information rather than tidiness. A `What this answers` opener lists the questions in the order they arrive, and a standalone `The short version` section works for a reader who reads nothing else. At least one otherwise-abstract claim per part is carried by a named system's story.
 A guide that is accurate, well cited, correctly structured and passes A1 through A8 still fails this case if a reader could finish one of its sections unable to state that section's conclusion.
 > Amended at v2.10.0: the opening answer is an unlabelled paragraph, not a `**The short answer.**` block (A18).
 
@@ -122,7 +124,7 @@ Walked live: 2026-08-10 — both greps run over a real guide produced that sessi
 
 ## A11 · A long guide has a way in, and the checklist stays readable
 Fixture: deep mode on a topic that decomposes into 21 sections across three parts. The draft carries a `What this answers` opener listing the questions in the order they arrive, and no index.
-Assert: the question list is itself the linked index covering every numbered section, grouped by part past about fifteen sections. Every anchor resolves to a real heading, and the anchors were generated from the headings rather than typed. A guide of eight sections links its list ungrouped; a separate index beside the list is a failure at any length.
+Assert: the question list is itself the linked index covering every section (amended 3.1.0: sections are unnumbered), grouped by part past about fifteen sections. Every anchor resolves to a real heading, and the anchors were generated from the headings rather than typed. A guide of eight sections links its list ungrouped; a separate index beside the list is a failure at any length.
 The second half is a standing constraint rather than a fixture: the quality checklist in `SKILL.md` stays under about 15 items. A revision that adds a checklist line without either merging two or showing the new line covers something no existing line does fails this case.
 
 > Added at v2.2.0, both halves from this skill's own output. The index half: a 587-line guide shipped with 21 sections and no way to reach one, because the structure block had a question list and nothing else. The checklist half is the offsetting removal, since three revisions running had been net-additive, and it exists because a 19-item checklist fails the same way a 21-section guide with no index fails. Past a certain length nobody reads to the end, which is the argument this skill makes about every document except itself.
@@ -226,3 +228,10 @@ Assert: the first screen holds the title, subtitle, the problem as a scene and t
 Negative: a warm-up before the problem; a figure dropped in cold; an analogy per section or one with no limit named; a rhetorical question not following something the reader has just seen.
 Observed: 2026-11-11 — the person: the guides "still feel a bit robotic / report"; two guides of the agent-ready series read against the research showed the preamble stack, five new terms in one opening section, "**What to do.**" labels and evidence dates mid-mechanism.
 Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §3 to §10.
+
+## A25 · Headings are short questions with no numbers
+Fixture: a guide whose sections read `## 2. What does an agent do with a design system that a person does not?` and `## 6. Is it a new kind of system, or the old discipline made non-optional?`, with "see section 6" in its body.
+Assert: each heading is an unnumbered question of about six words ("What does an agent do differently?"), the detail moved into the one-sentence answer; the back matter reads `## Cheat sheet`, `## The short version`, `## What to re-check later`; the pointer becomes a link on the target's title.
+Negative: a heading that wraps in a 15rem contents rail; a number before a heading; "section N" anywhere in the body.
+Observed: 2026-11-11 — the maintainer, on the reading site's contents rail: "these headings are long" and "we don't need numbers".
+Traced: 2026-11-11 for 3.1.0 — to `references/deep-mode-voice.md` §4 *A title that is a question* and §11.

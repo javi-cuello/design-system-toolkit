@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.1.0 (2026-11-11): section headings are short questions (about six words) with no numbers; a pointer to another section links its title. A9 amended; A25 added.
 - 3.0.0 (2026-11-11): the voice file rewritten on the educational web press: no warm-up, answer then visible problem, framed figures, one analogy with its limit; "you" in cases and advice (the person's ruling). A24 added; A11, A12, A18, A22, A23 amended.
 - 2.15.2 (2026-11-09): the checklist counts its register checks right (three, with the second-person grep); case A23 asserts the widened grep and traces to 2.15.1.
 - 2.15.1 (2026-11-09): the voice file says plainly that dropping "you" gives up part of the measured personalization effect, Google's rule is scoped to developer docs, and the grep also catches yours and yourself.

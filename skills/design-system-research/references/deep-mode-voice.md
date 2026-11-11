@@ -4,7 +4,7 @@
 
 A deep-mode guide teaches a designer a territory once, then stays open beside their work as a lookup. Read start to finish, it should feel like a good magazine piece. Scanned six months later, it should give one section's answer in a glance. Both uses have to work.
 
-It fails in two known ways. **Compressed:** numbered sections, correct citations, a verdict per axis, and prose so dense that a reader finishes a section without knowing what it said. **Report:** every sentence true, but it opens with how it was checked, reports each source's status mid-explanation, moves from example to example with nothing joining them, and never once sounds like a person explaining something. A reader called one "a report and summary" and "a stream of examples, not a reading piece" (2026-11-04). The rules below exist to avoid both, and the second is the one this file was rewritten to fix (2026-11-11).
+It fails in two known ways. **Compressed:** question headings, correct citations, a verdict per axis, and prose so dense that a reader finishes a section without knowing what it said. **Report:** every sentence true, but it opens with how it was checked, reports each source's status mid-explanation, moves from example to example with nothing joining them, and never once sounds like a person explaining something. A reader called one "a report and summary" and "a stream of examples, not a reading piece" (2026-11-04). The rules below exist to avoid both, and the second is the one this file was rewritten to fix (2026-11-11).
 
 The model is the educational web press: A List Apart, Smashing Magazine, CSS-Tricks, web.dev's *Learn* courses, and practitioners such as Josh Comeau, Ahmad Shadeed, Julia Evans, Brad Frost, Nathan Curtis and Amy Hupe. What they share is below; each rule names where it came from.
 
@@ -29,9 +29,9 @@ Series position ("Part 3 of 9"), the reading order and links to the other parts 
 
 ## 4. Anatomy of a section
 
-Sections are numbered, separated by `---`, and follow the decision axes from scoping, never a system-by-system tour. A long topic may group them under `# Part one/two/three` headings. Each section runs in this order.
+Sections are not numbered: a heading is its question, and a pointer to another section links its title ("[which layers carry readiness](#which-layers-carry-readiness)"), never "section 5" (the maintainer, 2026-11-11: "we don't need numbers"). They are separated by `---` and follow the decision axes from scoping, never a system-by-system tour. A long topic may group them under `# Part one/two/three` headings. Each section runs in this order.
 
-**A title that is a question.** The one a practitioner would actually ask: "Should it be `isDisabled` or `disabled`?", never "The boolean prefix". A question tells the reader whether this is the section they need; a topic noun needs the vocabulary they came to learn.
+**A title that is a question.** The one a practitioner would actually ask: "Should it be `isDisabled` or `disabled`?", never "The boolean prefix". A question tells the reader whether this is the section they need; a topic noun needs the vocabulary they came to learn. **Keep it short: about six words, rarely past eight.** It is read in the contents rail as well as the page, and a question that wraps there is two questions or a sentence; the detail goes into the one-sentence answer below it. "What does an agent do differently?", not "What does an agent do with a design system that a person does not?" (2026-11-11).
 
 **A one-sentence answer.** Plain, unlabelled. A reader who stops here still has something correct and usable.
 
@@ -117,14 +117,14 @@ So: an analogy only where a relationship is abstract (Core as a foundation two s
 
 ## 11. The back matter
 
-After the numbered sections, in this order, each separated by `---`:
+After the question sections, in this order, each separated by `---`:
 
 ```
-## N+1. Cheat sheet
+## Cheat sheet
 The one lookup table a reader pins beside their work: this becomes that,
 and here is what not to write. Skipped only where the topic has no lookup shape.
 
-## N+2. The short version
+## The short version
 Everything above as plain prose that stands alone: a reader who reads only
 this can act. Not a numbered restatement; a summary someone could read aloud.
 It resolves to the reader's stated context, marks consensus against
@@ -132,7 +132,7 @@ judgement, and says what to write down for the people downstream. A
 change-management lesson (aliases, deprecation paths, the fact that every
 good system has renamed something) belongs here, not in a closing essay.
 
-## N+3. What to re-check later
+## What to re-check later
 When it was researched and against what. Volatile tool mechanics, spec
 versions, betas, single-source claims, each weak source's status, the guide's
 own corrections, and an honest note on how good the evidence is.
