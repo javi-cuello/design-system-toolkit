@@ -1,6 +1,6 @@
 # Changelog — design-code-parity
 
-- 1.70.1 (2026-11-11): a translation counts as used only where it excused a row, so one that never fires on a difference is named stale; the summary counts the rows let through as data; an unbounded `content` waiver on a `#` key is deleted by hand (the stale gate skips it). T104 re-walked.
+- 1.70.1 (2026-11-11): a translation is used only where it excused a row; the summary counts rows let through as data; an unbounded `content` waiver on a `#` key is deleted by hand; `props.skip` matches a ` / `-named set whole. T104.
 - 1.70.0 (2026-11-10): accepted translations — `parity.translations` states a conversion rule once for every target it matches; rows it excuses are counted as translated; stale and shape-checked; `on`/`except` scope a rule to no more targets than the waivers it replaces. Case T104.
 - 1.69.0 (2026-11-10): gate 6 names a `copy`, `runtime` or `children` path no frame draws or no selector maps, which asserted nothing. Case T103.
 - 1.68.0 (2026-11-10): gate 29 — a library component the screens reach through two imported copies is a stale copy (`staleCopies`). Case T102.

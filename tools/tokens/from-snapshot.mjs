@@ -117,7 +117,8 @@ export function toDtcgSnapshot(t) {
     fontFamily: s.family,
     fontWeight: s.weight,
     fontSize: s.size,
-    lineHeight: { unit: 'PERCENT', value: +(s.lineHeight * 100).toFixed(4) },
+    // none stored (an AUTO the snapshot could not measure) goes on as AUTO, which dtcg.js warns of and omits, never NaN or 0
+    lineHeight: typeof s.lineHeight === 'number' ? { unit: 'PERCENT', value: +(s.lineHeight * 100).toFixed(4) } : { unit: 'AUTO' },
     // Always, zero included: a stylesheet reading `var(--…-letter-spacing)`
     // where nothing defines it drops the whole declaration.
     letterSpacing: { unit: 'PERCENT', value: +((s.letterSpacing || 0) * 100).toFixed(4) },

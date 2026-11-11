@@ -1559,11 +1559,15 @@ server.listen(PORT, "127.0.0.1", () => {
       if (!byDir.has(d)) byDir.set(d, new Set());
       byDir.get(d).add(basename(f));
     }
-    for (const [d, names] of byDir) {
-      if (!existsSync(d)) continue;
-      watch(d, (_, name) => { if (name && names.has(String(name))) soon(); });
-    }
-    for (const d of trees) if (existsSync(d)) watch(d, { recursive: true }, soon);
+    // a folder not there yet (a Storybook first built after the service starts) is looked for every 30 s and
+    // watched once it appears, with a build then, rather than missed until a restart
+    const attach = (d, opts, fn) => {
+      if (existsSync(d)) return void watch(d, opts, fn);
+      const t = setInterval(() => { if (existsSync(d)) { clearInterval(t); watch(d, opts, fn); soon(); } }, 30000);
+      t.unref();
+    };
+    for (const [d, names] of byDir) attach(d, {}, (_, name) => { if (name && names.has(String(name))) soon(); });
+    for (const d of trees) attach(d, { recursive: true }, soon);
     // its official contracts, where it takes the contract as its source (component-contract's official.mjs): watched
     // from the home, so a folder a switch makes while the service runs is seen without a restart
     if (where.projectDir && existsSync(where.projectDir)) watch(where.projectDir, { recursive: true }, (_, name) => { if (/^contracts([\\/]|$)/.test(String(name || ""))) soon(); });

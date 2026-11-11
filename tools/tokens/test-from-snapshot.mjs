@@ -49,6 +49,14 @@ test('a text style binds to the variables the snapshot records', () => {
   assert.equal(ts['text-style'].heading.lg.$value.fontSize, '{responsive-type.heading.lg.size}');
 });
 
+test('a text style with no line height stored goes on as AUTO, never NaN or 0', () => {
+  for (const lineHeight of [undefined, null]) {
+    const snap = snapshot(); snap.textStyles[0].lineHeight = lineHeight;
+    assert.deepEqual(toDtcgSnapshot(snap).textStyles[0].lineHeight, { unit: 'AUTO' });
+  }
+  assert.deepEqual(toDtcgSnapshot(snapshot()).textStyles[0].lineHeight, { unit: 'PERCENT', value: 110 });
+});
+
 test('effects keep inset layers, gradients keep bound stops and the angle', () => {
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeDtcg(snapshot(), dir);

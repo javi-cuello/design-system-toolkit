@@ -1,6 +1,6 @@
 # Eval cases — design-code-parity (v1.70.1)
 
-**Walked: 2026-11-11 against v1.70.1** — T104 re-read for `exercises`: `node tools/parity/test-waivers.mjs` 31/31; `run.mjs` and `session.mjs` parse; no full run (no project change needed it).
+**Walked: 2026-11-11 against v1.70.1** — T104 re-read for `exercises`: `node tools/parity/test-waivers.mjs` 31/31; `run.mjs` and `session.mjs` parse; `test-adapt.mjs` 71 (one added: a set named `Table - Cell / Fill` matched whole by `props.skip`); no full run (no project change needed it).
 
 **Walked: 2026-11-01 against v1.65.0** — T99 added: `node tools/parity/test-propose.mjs` 47/47 (eight of them spawn `--write` over a fixture project); `merge` over that project's 54-entry screens map refused none and left it unchanged (the browser half in Chrome). Replayed on one project's two screens with their hand maps emptied: of 63 hand-mapped layers the proposal landed 40 on the same element, 16 on another (9 of them a repeated item whose selector names its first twin), 7 on none (slots, a background). No other case reads the proposer.
 

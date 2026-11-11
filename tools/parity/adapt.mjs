@@ -731,8 +731,11 @@ export function assertionsFor(at, ctx) {
          `Component.Prop`: a prose page's private text components (_p, _h2)
          say through props what the code says through structure, and a bare
          "Text" or "Position" would also silence any other component's */
-      const set = String(node.instanceOf || '').split(' / ')[0].split('/').pop();
-      if (propType(node, key) === 'TEXT' || (P.skip || []).some((s) => s === key || s === `${set}.${key}`)) continue;
+      // the set's own name: only the variant part (`Prop=Value, …`) is cut, so `Table - Cell / Fill` stays whole;
+      // its last folder segment is accepted too, as before
+      const full = String(node.instanceOf || '').replace(/ \/ [^/]*=[^/]*$/, '');
+      const set = full.split('/').pop().trim();
+      if (propType(node, key) === 'TEXT' || (P.skip || []).some((s) => s === key || s === `${full}.${key}` || s === `${set}.${key}`)) continue;
       // the attribute to-code styles the prop by, where it writes the project's sheets (prop-attr.mjs), else the prop's words
       const attr = (P.rename || {})[key] || propAttr(key, ctx.attrNaming || null);
       if (typeof value === 'boolean') { if (!value) add('attr', `-attr:${attr}`, { mode: 'off-only', want: 'unset' }, key); }

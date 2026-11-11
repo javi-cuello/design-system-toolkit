@@ -470,6 +470,11 @@ ok('a skip scoped as Component.Prop silences that component\'s prop alone', (() 
   const attrs = (instanceOf) => doc(F({ children: [{ name: 'N', type: 'INSTANCE', instanceOf, w: 10, h: 10, sizing: 'HUG/HUG', props: { Position: 'First' } }] }), 'N', { N: '.n' }, Q).assertions.filter((x) => x.prop.startsWith('-attr')).map((x) => x.prop).join();
   return attrs('_Text components/_p / Space above=0') === '' && attrs('Tooltip / Top') === '-attr:position';
 })());
+ok('a set named with " / " is matched by its whole name, its variant part cut', (() => {
+  const Q = { parity: { props: { skip: ['Table - Cell / Fill.Position'] } } };
+  const attrs = (instanceOf) => doc(F({ children: [{ name: 'N', type: 'INSTANCE', instanceOf, w: 10, h: 10, sizing: 'HUG/HUG', props: { Position: 'First' } }] }), 'N', { N: '.n' }, Q).assertions.filter((x) => x.prop.startsWith('-attr')).map((x) => x.prop).join();
+  return attrs('Table - Cell / Fill / Size=sm, State=Rest') === '' && attrs('Table - Cell / Edge / Size=sm') === '-attr:position';
+})());
 // the attribute is to-code's (tools/shared/prop-attr.mjs): where to-code writes the sheets, by their naming; else the words
 ok('an instance prop\'s attribute is the one to-code styles by where it writes the sheets, and the prop\'s words where markup is hand-written', (() => {
   const inst = { name: 'Nav', type: 'INSTANCE', instanceOf: 'Button / lg', w: 10, h: 10, sizing: 'HUG/HUG', props: { Size: 'Large', Tone: 'Info', showIcon: 'True', Role: 'Primary' } };
