@@ -7,6 +7,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 - Remove rulings clears the file before the machine's copy, so a view-only file keeps both.
 - A file the plugin gets no key for keeps its own context document and rulings, keyed by its name.
 - The window has a title; the two panels are tab panels to a screen reader.
+- Letter spacing on a text layer with no style is advised on the layer, not on a "text style" named after it (the components audit 2.44.1).
 - The judge's rule list resynced from the full audit (the §6 subject read only from "Recorded from …").
 
 ## [0.8.0] - 2026-11-11

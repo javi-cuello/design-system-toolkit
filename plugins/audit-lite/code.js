@@ -1352,7 +1352,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             const ls=n.letterSpacing&&typeof n.letterSpacing==="object"?n.letterSpacing:null;
             if(ls&&ls.value>0&&!sb.letterSpacing&&!lb.letterSpacing) add({sev:"review",rule:"direction",key:"direction|tracking|"+sn,
               text:'"'+sn+'" adds letter spacing ('+ls.value+(ls.unit==="PERCENT"?"%":"px")+"), which pulls joined "+LANGS+" letters apart",
-              advice:'In text style "'+sn+'", bind Letter spacing to a variable that is 0 in the '+LANGS+" mode."});
+              advice:(st?'In text style "'+sn+'"':'Select "'+sn+'" (it has no text style)')+', bind Letter spacing to a variable that is 0 in the '+LANGS+" mode."});
             const cn=typeof n.textCase==="string"?CASE_NAME[n.textCase]:null;
             if(cn) add({sev:"review",rule:"direction",key:"direction|text-case|"+sn,
               text:'"'+sn+'" sets its text in '+cn+", which "+LANGS+" does not have",

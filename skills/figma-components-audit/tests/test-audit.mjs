@@ -637,6 +637,8 @@ expect("a layer that is the same in every variant still fires when some forget i
     leaf("FRAME", "Ring", { layoutPositioning: "ABSOLUTE", x: -2, width: 104, constraints: { horizontal: "MIN", vertical: "MIN" } }),
     leaf("TEXT", "3 days left", { textStyle: { name: "Body", boundVariables: { fontFamily: { id: "v" } } } }),
     leaf("TEXT", "Tag", { textStyle: { name: "Label", boundVariables: {} }, letterSpacing: { unit: "PERCENT", value: 4 }, textCase: "UPPER" }),
+    // tracking on a layer with no text style: the advice selects the layer, never "text style <layer>"
+    leaf("TEXT", "Loose", { letterSpacing: { unit: "PIXELS", value: 1 } }),
     leaf("TEXT", "Paragraph", { textStyle: { name: "Body", boundVariables: { fontFamily: { id: "v" } } }, textAlignHorizontal: "LEFT", textAutoResize: "HEIGHT" }),
     leaf("TEXT", "Hugging", { textStyle: { name: "Body", boundVariables: { fontFamily: { id: "v" } } }, textAlignHorizontal: "LEFT", textAutoResize: "WIDTH_AND_HEIGHT" }),
     leaf("FRAME", "Hidden left", { visible: false }),
@@ -656,12 +658,13 @@ expect("a layer that is the same in every variant still fires when some forget i
   const r = await run(fx, { tokens: TK });
   const kinds = r.audited.filter((e) => e.set === "Chip" || e.page === "❖ Icons").flatMap((e) => e.candidates.filter((c) => c.rule === "direction").map((c) => e.set + " " + c.key.split("|")[1])).sort();
   expect("figma-standard rule 50: with rtlLanguages, a pinned layer, a drawn chevron, a side name, uneven padding, end alignment, one-sided corners, an icon with no decision and a set with no Right to left note are raised; a stretched focus ring is not; without it, nothing",
-    kinds, ["Chip corners", "Chip end-align", "Chip fixed-icon", "Chip fixed-icon", "Chip fixed-icon", "Chip flat-icon", "Chip font-fixed", "Chip no-autolayout", "Chip note", "Chip padding", "Chip pinned", "Chip pinned", "Chip side-name", "Chip side-option", "Chip side-prop", "Chip text-align", "Chip text-case", "Chip tracking", "arrow-left icon-decision"]);
+    kinds, ["Chip corners", "Chip end-align", "Chip fixed-icon", "Chip fixed-icon", "Chip fixed-icon", "Chip flat-icon", "Chip font-fixed", "Chip no-autolayout", "Chip note", "Chip padding", "Chip pinned", "Chip pinned", "Chip side-name", "Chip side-option", "Chip side-prop", "Chip text-align", "Chip text-case", "Chip tracking", "Chip tracking", "arrow-left icon-decision"]);
   // By layer, since a count stays the same when one false row replaces a missed one.
   expect("an instance is read by its main and variant first: Forward holding chevron-down is silent, Play holding chevron-left is raised",
     r.audited.find((e) => e.set === "Chip").candidates.filter((c) => /^direction\|fixed-icon/.test(c.key)).map((c) => c.text.split('"')[1]).sort(), ["Arrow", "Glyph", "Play"]);
   expect("an icon set with Direction=Left/Right is audited and asked to rename nothing", [r.audited.some((e) => e.set === "Caret"), keyed(r, "Caret", /^direction\|/)], [true, []]);
   const adv = (re) => r.audited.find((e) => e.set === "Chip").candidates.filter((c) => re.test(c.key)).map((c) => c.advice);
+  expect("tracking on a styled layer names its style; on an unstyled one, the layer", adv(/^direction\|tracking/).sort(), ['In text style "Label", bind Letter spacing to a variable that is 0 in the Arabic mode.', 'Select "Loose" (it has no text style), bind Letter spacing to a variable that is 0 in the Arabic mode.']);
   expect("the advice renames a side by role, in its case", adv(/^direction\|side-name/), ['Rename it by role: "Icon leading".']);
   expect("one option row names both renames", adv(/^direction\|side-option/), ['Rename "Left" to "Leading", "Right" to "Trailing", and tell consumers: it is a breaking change.']);
   expect("a camelCase property name is renamed too", adv(/^direction\|side-prop/), ['Rename the property "showLeadingIcon", and tell consumers: it is a breaking change.']);

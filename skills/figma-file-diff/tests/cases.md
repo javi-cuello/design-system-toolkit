@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.5)
+# Eval cases — figma-file-diff (v1.4.6)
+
+**Walked: 2026-11-11 against v1.4.6** — the script's main guard only; no case reads it, so every case holds; `node -e "import('./skills/figma-file-diff/scripts/coverage-body.mjs')"` imports without throwing.
 
 **Walked: 2026-11-06 for 1.4.5** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 

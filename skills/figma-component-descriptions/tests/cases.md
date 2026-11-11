@@ -1,4 +1,6 @@
-# Eval cases — figma-component-descriptions (v1.21.0)
+# Eval cases — figma-component-descriptions (v1.22.0)
+
+**Walked: 2026-11-11 for 1.22.0** (record written in the seven-day review; the run was 2026-11-10) — D25 executed: `node tests/test-sections.mjs` 33 assertions, `node tests/test-engines.mjs` 55/55, both re-run 2026-11-11.
 
 **Walked: 2026-11-10 for 1.21.0** — D24 added and executed: `apply.js` against the fake file and live on UI library - Demo's Button (the original text, a `* ` bullet with trailing spaces, an escaped pipe and a clear; restored after). D1–D23 read: none asserts on what apply returns beyond D-cases already run by `test-engines.mjs`, which pass. Before that, **Walked: 2026-11-06 for 1.20.1** — the scripts' main guard only (a try around realpathSync); no case reads it, so every case holds; `node tools/toolkit-check/main-guards.mjs` exits 0 and the skill's suites pass under `bin/check`.
 

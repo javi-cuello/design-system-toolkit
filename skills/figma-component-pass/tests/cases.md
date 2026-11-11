@@ -1,4 +1,6 @@
-# Eval cases — figma-component-pass (v1.10.1)
+# Eval cases — figma-component-pass (v1.10.2)
+
+**Walked: 2026-11-11 against v1.10.2** — a sentence on the descriptions stage only; no case reads it, so every case holds.
 
 **Walked: 2026-11-01 against v1.10.1** — the claimed stage 2 → stage 3 hand-off is removed (the descriptions skill never took `PT.plan()`): A1's ordering, P10's re-read detection (`verify.js`) and line 159's "stage 3 is not told a plan exists" all hold, and none asserted the hand-off; every other case unchanged.
 

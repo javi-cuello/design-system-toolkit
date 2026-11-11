@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.25.3)
+# Eval cases — figma-foundations-audit (v1.26.0)
+
+**Walked: 2026-11-11 for 1.26.0** (record written in the seven-day review) — F25 executed 2026-11-10; `node tests/test-foundations.mjs` 87 of 87 re-run 2026-11-11.
 
 **Walked: 2026-10-31 against v1.25.3** — F24 added and executed: `node tools/toolkit-check/test-missing-input.mjs` 12/12; `node tests/test-foundations.mjs` unchanged.
 

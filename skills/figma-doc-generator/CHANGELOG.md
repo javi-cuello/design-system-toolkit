@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.24.0 (2026-11-11): *Variable descriptions* step 4 is `scripts/describe-write.js`: it writes only empty descriptions (or ones the person named), and reads each back, naming what it kept, missed or failed to land (skill-standard clause G); D49's agent half is marked traced. Test `tests/test-describe-write.mjs`.
 - 1.23.0 (2026-11-11): *Variable descriptions*: semantic variables described from the token grammar, a sample approved first; `scripts/describe-coverage.mjs` counts what is missing. D49.
 - 1.22.4 (2026-11-05): a `docgen.js` comment no longer names the retired figma-token-export skill; no behaviour changed.
 - 1.22.3 (2026-10-31): a web line height is shown to four places, as the snapshot and the token build write it (`1.3333`, it was `1.333`), and letter spacing in em by the same function: `perFontSize`, a copy of `tools/shared/text-units.js` held by `tools/shared/test-text-units.mjs`. Case D48.
