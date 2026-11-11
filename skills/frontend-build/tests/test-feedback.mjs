@@ -38,3 +38,12 @@ test('a comment pinned to the canvas has no layer', () => {
   assert.equal(t.node, null);
   assert.equal(t.offset, null);
 });
+
+test('the agent\'s own account marks its messages without a prefix; another person\'s reply still opens the thread', () => {
+  const root = c('1', 'remove button', '2026-11-11T10:00:00Z');
+  const done = c('2', 'Routed: removed from the three screens', '2026-11-11T11:00:00Z', { parent_id: '1', client_meta: null, user: { id: 'agent-1', handle: 'AI agent' } });
+  assert.equal(openThreads([root, done], 'agent-1').length, 0);
+  assert.equal(openThreads([root, done]).length, 1);
+  const again = c('3', 'Keep it on the dialog', '2026-11-11T12:00:00Z', { parent_id: '1', client_meta: null });
+  assert.equal(openThreads([root, done, again], 'agent-1').length, 1);
+});

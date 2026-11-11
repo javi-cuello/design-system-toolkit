@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.15.0 (2026-11-11): comments and replies post as the agent's own Figma account (`figma-feedback.mjs --on`, `--reply`), with no `From Claude:` line; the mark stays only under the maintainer's token. T14, T15.
 - 2.14.1 (2026-11-11): *Feedback on a prototype*: a frame fix covers every composed frame showing the same thing; a whole-frame pin is traced by its `offset`; `figma-feedback.mjs --reply`. T15.
 - 2.14.0 (2026-11-11): *A Figma prototype* reads rulings and open feedback first (step 0, `scripts/figma-feedback.mjs`) and routes each comment once (*Feedback on a prototype*). T15.
 - 2.13.0 (2026-11-10): *A Figma prototype* step 4: fonts loaded once per call, and variants set by Figma's own option names, never the snapshot's lowercased ones (both from a composing trial). T14.
