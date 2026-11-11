@@ -1,5 +1,6 @@
 # History — design-standard
 
+- 1.3.1 (2026-11-11): *Application profiles* names the new editorial profile (`knowledge/ui/profiles/editorial.md`); no rule changed.
 - 1.3.0 (2026-11-02): rule 14 — with no design file, the knowledge base is the design; reference sites fill only what it leaves open.
 - 1.2.3 (2026-10-14): tool paths follow the move of the toolkit's own checks to tools/toolkit-check and of the project registry to tools/snapshot/projects.cjs; no rule or behaviour changed.
 - 1.2.2 (2026-10-14): tool paths follow the renames (tools/snapshot, tools/component-contract, tools/docs-site, tools/css-lint, tools/ui-check, tools/project-check, tools/claude-hooks, tools/skill-evals); no rule changed.

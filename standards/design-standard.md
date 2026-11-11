@@ -1,8 +1,8 @@
 # Design standard — how an interface the toolkit builds or audits looks, behaves and reads, in a design file and in a built page
 
-**Version 1.3.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
+**Version 1.3.1** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
 
-**Scope.** The design of any interface a project or the toolkit itself puts in front of people: a documentation site, a dashboard, a tool, a screen drawn in Figma. Five areas, each owning one kind of decision: **UX** (what and why, across screens), **Interaction** (how it responds, in the moment), **Visual** (how it looks), **Content** (what it says) and **Accessibility** (who it works for). Above them sit the principles every area answers to; below them, **application profiles** say what a kind of product (documentation, dashboards, forms) must specify. A rule applies to a design file and to a built page alike; each says which it can be checked on. Project-agnostic by construction, like `code-standard.md`.
+**Scope.** The design of any interface a project or the toolkit itself puts in front of people: a documentation site, a dashboard, a tool, a screen drawn in Figma. Five areas, each owning one kind of decision: **UX** (what and why, across screens), **Interaction** (how it responds, in the moment), **Visual** (how it looks), **Content** (what it says) and **Accessibility** (who it works for). Above them sit the principles every area answers to; below them, **application profiles** say what a kind of product (documentation, dashboards, editorial reading, forms) must specify. A rule applies to a design file and to a built page alike; each says which it can be checked on. Project-agnostic by construction, like `code-standard.md`.
 
 **What it does not govern.** How a Figma library is built and named is [`figma-standard.md`](figma-standard.md)'s, including the accessibility of its components (figma-standard rules 26, 31 and 32: target and text size, distinct states and visible focus, text contrast); how the code is written, including how an accessible design is implemented (focus after a live swap, accessible names, `hidden`, `color-scheme`, `aria-current`), is [`code-standard.md`](code-standard.md)'s; whether a build matches its design is parity's (code-standard *Design-to-code*, `tools/parity`). Where design and code meet, design decides what happens and code decides how: the focus order is designed here and kept by code-standard rule 2.
 
@@ -212,7 +212,7 @@ Good accessibility is designed in: the screen works by keyboard, at 320px and 20
 
 ## Application profiles
 
-A profile binds the five areas to a kind of product and says what a page of that kind must specify: `knowledge/ui/profiles/documentation.md` and `knowledge/ui/profiles/dashboards.md`; forms are `knowledge/ui/patterns/forms.md`. Rules 1, 3–6, 11 and 12 came from the dashboard profile and hold for any filtered list.
+A profile binds the five areas to a kind of product and says what a page of that kind must specify: `knowledge/ui/profiles/documentation.md`, `knowledge/ui/profiles/dashboards.md` and `knowledge/ui/profiles/editorial.md`; forms are `knowledge/ui/patterns/forms.md`. Rules 1, 3–6, 11 and 12 came from the dashboard profile and hold for any filtered list.
 
 ---
 

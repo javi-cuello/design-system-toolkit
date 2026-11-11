@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v2.15.2)
+# Eval cases — design-system-research (v3.0.0)
+
+**Walked: 2026-11-11 for 3.0.0** — `references/deep-mode-voice.md` rewritten from scratch, so every case naming it was re-traced to the new numbered sections: A18 (§3, §4, §8, §10), A19 (§2, §6), A20 (§8), A21 (§6, §8), A22 (§6, §8, §10). A18 amended: the guide opens on the problem as a scene, and "you" follows A23. A23 reversed by the person's ruling of 2026-11-11: "you" in worked cases, the advice, the cheat sheet and the short version only. A11 amended: the question list is itself linked, so a short guide carries anchors too. A12 amended: one analogy per hard concept, with its limit (§7). A22 amended: the opener is one sentence. A9 read and unchanged: a one-sentence answer is still the paragraph it asks for. A24 added for the techniques the rewrite brought in. A1 to A8, A10, A13 to A17 read: none asserts on the voice file's wording. Bumped major: the same input now gives materially different output. Reader check: pending the next deep-mode guide.
 
 **Walked: 2026-11-09 for 2.15.2** — the checklist line and A23 only: "three register checks" counted against the three greps the line holds; A23's Negative and Traced lines read against the voice file and the 2.15.1 grep. No other case asserts on either. Before that, **Walked: 2026-11-09 for 2.15.1** — the voice file's evidence and the grep only: A23 re-read, its grep widened to yours/yourself and run over this collection's newest guide, clean; nothing else asserts on either. Before that, **Walked: 2026-11-09 for 2.15.0** — A23 added and traced to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep. A18 amended: its "addressed as you" assertion reversed to no second person. A19 read against it, unchanged; the voice file's "flagged for the developer" example now reads "For the developer". A1–A17 and A20–A22 read and unchanged: none asserts on person. Reader check: pending the next deep-mode guide.
 
@@ -120,7 +122,7 @@ Walked live: 2026-08-10 — both greps run over a real guide produced that sessi
 
 ## A11 · A long guide has a way in, and the checklist stays readable
 Fixture: deep mode on a topic that decomposes into 21 sections across three parts. The draft carries a `What this answers` opener listing the questions in the order they arrive, and no index.
-Assert: the opener also carries a linked index, grouped by part, covering every numbered section. Every anchor resolves to a real heading, and the anchors were generated from the headings rather than typed. A guide of eight sections is returned without an index and adding one is a failure there, because the question list already does that job at that length.
+Assert: the question list is itself the linked index covering every numbered section, grouped by part past about fifteen sections. Every anchor resolves to a real heading, and the anchors were generated from the headings rather than typed. A guide of eight sections links its list ungrouped; a separate index beside the list is a failure at any length.
 The second half is a standing constraint rather than a fixture: the quality checklist in `SKILL.md` stays under about 15 items. A revision that adds a checklist line without either merging two or showing the new line covers something no existing line does fails this case.
 
 > Added at v2.2.0, both halves from this skill's own output. The index half: a 587-line guide shipped with 21 sections and no way to reach one, because the structure block had a question list and nothing else. The checklist half is the offsetting removal, since three revisions running had been net-additive, and it exists because a 19-item checklist fails the same way a 21-section guide with no index fails. Past a certain length nobody reads to the end, which is the argument this skill makes about every document except itself.
@@ -129,15 +131,17 @@ The second half is a standing constraint rather than a fixture: the quality chec
 
 > Added at v1.2.0, when the roster gained its first index (component.gallery) and its first survey series. Traced to Step 2's tier 4 — "use only as a convenience … flag them as convenient rather than canonical" — and to the roster's own instruction to cite what the index points at. The rule pre-existed; nothing had ever named a source that could break it.
 
-Traced: 2026-08-10 — to the new index clause in the voice file's structure block and the compressed checklist.
+> Amended at v3.0.0: the question list is itself linked (`references/deep-mode-voice.md` §3), so an eight-section guide carries anchors too; past about fifteen sections the list is grouped by part. A separate index beside it is now the failure.
 
-## A12 · Claim precedes caveat, and at most one recurring image
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §3 item 4 and SKILL.md's checklist line; first traced 2026-08-10.
+
+## A12 · Claim precedes caveat, and one analogy per hard concept, with its limit
 Fixture: deep mode on a topic where one section's advice is genuinely conditional (works well only under specific circumstances), and the topic offers a relationship abstract enough that a metaphor could describe it (e.g., a shared layer with two things built on top of it).
-Assert: the qualified claim states its position before its exception ("Shared core wins where both sides are live. It costs more where one side is still being written.") rather than hedging before committing ("in some contexts a shared core can work well, though..."). At most one image resurfaces across the whole guide, and only where introduced for a relationship a reader would otherwise have to hold abstractly; most sections carry no metaphor at all, and real token names and worked cases remain the primary texture. A guide that leads three or more qualified claims with a hedge before their position, or that introduces a fresh metaphor per section, fails this case even where every individual sentence is accurate on its own.
+Assert: the qualified claim states its position before its exception ("Shared core wins where both sides are live. It costs more where one side is still being written.") rather than hedging before committing ("in some contexts a shared core can work well, though..."). An analogy appears only for a relationship a reader would otherwise hold abstractly, after the worked case, at most one per concept, with a sentence on where it stops holding; an image may return later but is never reinvented per section, most sections carry none, and real token names and worked cases remain the primary texture. A guide that leads three or more qualified claims with a hedge before their position, or that introduces a fresh metaphor per section, fails this case even where every individual sentence is accurate on its own.
 
 > Added at v2.3.0, sourced from reading three practitioner voices (Yesenia Perez-Cruz, TJ Pitre, Brad Frost) directly rather than from auditing this skill's own output or a reader's reaction to it, the first time a voice rule has come from that route. A third pattern the same reading turned up, Frost's short punchy bursts ("Hell no!", "Nope!"), was deliberately left out: it sits close to the manufactured-punchlines line 2.0.0 already drew, and was cut on request rather than adopted. Per skill-standard §A clause E, a rule about sentence-level register is not fully walked until a person reads it against real output; this case has been traced to its instructions but not yet reader-confirmed, and the header's Walked line says so rather than overclaiming.
 
-Traced: 2026-08-10 — to the two new voice-file clauses, "State the claim before the caveat" and "At most one recurring image, and most guides need none"; the reader check is pending.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §9 *State the claim before the caveat* and §7 *Analogy* (amended: one analogy per hard concept replaces one recurring image per guide); first traced 2026-08-10, the reader check pending.
 
 ## A13 · A search summary is not a fetched source
 Fixture: a claim about a tool's underlying mechanics (an API's return scope, a data model's boundary) where a WebSearch call returns only its own synthesized "based on the results" paragraph, with no verbatim quote from any page, and the vendor's developer/API documentation, distinct from its help-centre prose, plausibly holds the precise answer.
@@ -176,42 +180,49 @@ Traced: 2026-11-02 for 2.9.0 — to SKILL.md "A deep-mode guide is an article, n
 
 ## A18 · The guide teaches; it does not report
 Fixture: a deep-mode guide that passes A1–A17. It opens with a paragraph on when and how it was researched; its sections begin with a bold **The short answer.** label; a paragraph explaining auto layout also reports that a forum thread was re-read in November with six replies; and a section moves through five plugins and three systems with no example tying them together.
-Assert: the delivered file opens by telling the reader their situation and what they will be able to do, with the research history moved to `What to re-check later`. The reader is never addressed as "you" (amended 2026-11-09, 2.15.0; see A23). Each section is carried by one running example it returns to, and each further example is introduced by what it shows. With every source-status clause removed, the body paragraphs say the same thing, because those clauses already live at the end. No `**The short answer.**` or `**What to do.**` labels remain; the opening paragraph answers and the closing paragraph advises, with its key sentence in bold.
+Assert: the delivered file opens on the problem as a scene the reader recognises, with the research history moved to `What to re-check later` (amended 2026-11-11, 3.0.0). "You" appears only in worked cases, the advice, the cheat sheet and the short version (A23). Each section is carried by one running example it returns to, and each further example is introduced by what it shows. With every source-status clause removed, the body paragraphs say the same thing, because those clauses already live at the end. No `**The short answer.**` or `**What to do.**` labels remain; the opening paragraph answers and the closing paragraph advises, with its key sentence in bold.
 Negative: a guide that keeps the provenance opening, or a section that lists systems and plugins one after another without a running example.
 Observed: 2026-11-04 — the person on the right-to-left guide: "it looks like a report and summary", "a stream of examples, not a reading piece".
-Traced: 2026-11-04 for 2.10.0 — to `references/deep-mode-voice.md` *Write it as a lesson, not a report* and its structure block, and SKILL.md's checklist line.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §3 *The opening screen*, §4, §8 *One running example* and §10 *Evidence status stays out of the explanation*, and SKILL.md's checklist line.
 
 ## A19 · The guide starts from what its reader knows, and draws what is visual
 Fixture: a deep-mode guide for designers on right-to-left layout. Its first section asks whether Figma can mirror "the way code does", explains spacing written as start and end with no example, and asks the reader to "picture a settings row".
 Assert: the guide opens from what the reader can see (what changes on screen), introduces any code mechanism after it, in design terms and through an example the reader knows, and flags code terms for the developer after the plain explanation. Each visual running example is an inline SVG with a `<title>` and `role="img"`, real labels in the real script, no blank lines inside the block, and was rendered in a browser and looked at before delivery.
 Negative: a guide whose first section needs code knowledge to follow, or a visual example left as prose ("picture a row"), or an SVG delivered without being rendered.
 Observed: 2026-11-04 — the person on the right-to-left guide: "you cannot start with that if I have no context of how code works", "what spacing? where? how?", "why cannot we have visual examples?".
-Traced: 2026-11-04 for 2.11.0 — to `references/deep-mode-voice.md` *Start where the reader is* and *Show what is visual*, and SKILL.md's checklist line.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §2 *Who reads it* and §6 *Figures*, and SKILL.md's checklist line.
 
 ## A20 · A claim is explained where it is made
 Fixture: a guide whose section 4 says "Only some token names do (section 5)" and leaves the explanation to a later section.
 Assert: the claim carries its example in place (`spacing.left` lands on the trailing side in Arabic; `spacing.inline-start` doesn't), and any cross-reference that remains adds detail to an explanation already given.
 Negative: a bare "(section N)" standing in for what the claim means.
 Observed: 2026-11-04 — the person: "very vague and I shouldn't need to wait until section 5 to get a full idea".
-Traced: 2026-11-04 for 2.12.0 — to `references/deep-mode-voice.md` *Never make the reader wait for the point*.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §8 *Explain where the claim is made*.
 
 ## A21 · Paragraphs are short, and figures hold their spacing in any viewer
 Fixture: a guide with paragraphs of 100 to 160 words, a sentence listing five things to measure, inline SVG diagrams with no style, and "in Arabic it's تسجيل الدخول, 12" in its prose.
 Assert: no prose paragraph runs past about 70 words or holds more than one idea; the five things are a list; each `<svg>` carries `display:block` and vertical margin inline, and renders with equal space above and below in a plain Markdown page; the Arabic sits at a clause's end in parentheses.
 Negative: a long block left because each sentence is good; a diagram spaced only by the reading site's stylesheet.
 Observed: 2026-11-04 — the person: "we shouldn't have so long paragraphs", and twice "images spacing still looks off", the second time in a viewer the stylesheet fix did not reach.
-Traced: 2026-11-04 for 2.13.0 — to `references/deep-mode-voice.md` *Short paragraphs, one idea each* and *Show what is visual*.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §8 *One idea per paragraph* and §6 *Mechanics*.
 
 ## A22 · Advice says where and how; no packed openers; long prose gets a figure
 Fixture: a guide section that opens with "Digits: as typed. Punctuation: follows the paragraph.", advises "mark which icons mirror", and runs 500 words of prose with no figure about a layout.
-Assert: the opener becomes a plain answer in a sentence or two, then the reader's situation, then one point at a time; the advice names the place and the steps (the description line to add, the panel and command to use); the 500-word run gains a figure of the layout.
+Assert: the opener becomes a plain answer in one sentence, then the problem the reader can see, then one point at a time; the advice names the place and the steps (the description line to add, the panel and command to use); the 500-word run gains a figure of the layout.
 Negative: a vague step left because it's correct in principle; a dense opener kept as a "summary".
 Observed: 2026-11-04 — the person: "mark where, how? often advice is very vague", "this is the super compact report style that i don't like", and "we shouldn't have sections this long without images".
-Traced: 2026-11-05 for 2.14.0 — to `references/deep-mode-voice.md` *Advice names the place and the steps*, *No packed openers* and *Show what is visual*.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §10 *Advice names the place and the steps*, §8 *No packed openers* and §6 *Draw what is visual*.
 
-## A23 · The guide never uses the second person
-Fixture: a deep-mode guide written under the voice file, on a topic where the obvious phrasing is "your library" or "if you mirror an icon".
-Assert: `grep -niE "\byou(r|rs|rself|rselves)?\b"` over the body, ignoring quoted speech and URLs, returns nothing; the guide talks about the problem and the people in it ("a team building this", "the designer"), with imperatives only in the advice.
-Negative: "you", "your", "yours" or "yourself" in the guide's own sentences, or the second person traded for a narrator "I" or "we".
-Observed: 2026-11-09 — the person's rule is no second person in guides; the voice file asked for "you", so every run produced the break and it was fixed by hand.
-Traced: 2026-11-09 for 2.15.1 — to `references/deep-mode-voice.md` *Talk about the problem, not to the reader* and SKILL.md's checklist grep.
+## A23 · "You" in worked cases and advice; the explanation stays in the third person
+Fixture: a deep-mode guide on mirroring icons, where the obvious phrasing is "your library" throughout, and its advice reads "A team building this adds a line to the component's description".
+Assert: every hit of `grep -niE "\byou(r|rs|rself|rselves)?\b"` over the body, ignoring quoted speech and URLs, sits in a worked case, the advice, the cheat sheet, the short version or a quotation; the explanation talks about the problem and the people in it ("the designer", "a library with forty components"); the advice talks to the reader ("Open the component's description and add a line `Right to left: mirrors`").
+Negative: "your library" in the explanation of a mechanism; the advice kept in a third-person stand-in; the second person traded for a narrator "I" or "we".
+Observed: 2026-11-09 — the person ruled out the second person; 2026-11-11 — the person found the guides still read as a report, the research showed every educational source checked uses "you", and the person ruled it in for worked cases and advice (the cheat sheet and short version count as advice).
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §9 and §13, and SKILL.md's checklist grep.
+
+## A24 · The guide teaches as the magazines do
+Fixture: a deep-mode guide whose first screen stacks a subtitle, a summary line, "Part 3 of 9", a "This piece sets out" paragraph and a section pointer; whose §2 drops a table and an SVG with no sentence before or after; which compares tokens to plumbing in three different sections, each with a new image; whose §1 introduces five new terms in one paragraph; and whose advice opens with a bold **What to do.** label.
+Assert: the first screen holds the title, subtitle, the problem as a scene and the linked question list, with the series line at the end; each section gives a one-sentence answer, then the problem the reader can see (one hook question allowed straight after it), then the mechanism; every figure has a lead-in sentence and a sentence saying what to notice; at most one analogy per hard concept, after the worked case, with where it breaks; about three new terms a section, one a paragraph; the advice has no label; a caveat that doesn't change the advice sits in an `**Aside.**` blockquote; links sit on the noun.
+Negative: a warm-up before the problem; a figure dropped in cold; an analogy per section or one with no limit named; a rhetorical question not following something the reader has just seen.
+Observed: 2026-11-11 — the person: the guides "still feel a bit robotic / report"; two guides of the agent-ready series read against the research showed the preamble stack, five new terms in one opening section, "**What to do.**" labels and evidence dates mid-mechanism.
+Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §3 to §10.
