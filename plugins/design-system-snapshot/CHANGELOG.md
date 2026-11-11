@@ -3,7 +3,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
 ## [0.73.0] - 2026-11-11
 ### Changed
-- A page whose name starts with "Scratch" (after any marker) is not read for components: it holds trials, not the library (snapshot-standard rule 27). A library snapshot had taken a scratch page's two templates as components.
+- A page named "Scratch" (after any marker; alone or before a dash, colon, dot or bracket) is not read for components and is left out of the page list: it holds trials, not the library (snapshot-standard rule 27). A run that names its pages or ids still reads them. A library snapshot had taken a scratch page's two templates as components.
 
 ## [0.72.1] - 2026-11-11
 ### Fixed
