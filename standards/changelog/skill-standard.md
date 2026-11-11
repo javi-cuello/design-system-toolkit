@@ -1,5 +1,6 @@
 # History — skill-standard
 
+- 1.8.0 (2026-11-11): §B 4: before FigUI3's elements upgrade, a plugin script sets their state by attribute, never by property (two plugins shadowed a setter).
 - 1.7.0 (2026-11-11): §B 4 rewritten: the look is FigUI3's (Figma's PropsKit), controls fig-* elements never restyled, the window tabs, panels and a fig-footer; sync.mjs inlines FigUI3. conformance.mjs §5c.
 - 1.6.2 (2026-10-31): §B 4 shows the ui-base markers as `vN`, not a version the baseline has left; no rule changed.
 - 1.6.1 (2026-10-31): §B 1, 2 and 8 are checked by figma-plugin-creator's `scripts/conformance.mjs`, which `standards/tests/check.sh` runs over `plugins/` in place of its own plugin section; §B 2 adds the sync APIs dynamic-page refuses and a fetch under `["none"]`. No rule changed.
