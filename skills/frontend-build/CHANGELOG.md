@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.14.0 (2026-11-11): *A Figma prototype* reads rulings and open feedback first (step 0, `scripts/figma-feedback.mjs`) and routes each comment once (*Feedback on a prototype*). T15.
 - 2.13.0 (2026-11-10): *A Figma prototype* step 4: fonts loaded once per call, and variants set by Figma's own option names, never the snapshot's lowercased ones (both from a composing trial). T14.
 - 2.12.3 (2026-11-10): a designer comment opens with `From Claude:` and ends, after a blank line, with `More:` and the link on its own line; plain text, since the comments API renders no markdown (seen live). T14.
 - 2.12.2 (2026-11-10): a designer comment ends with one `More:` link to the knowledge section on the public repository. T14.

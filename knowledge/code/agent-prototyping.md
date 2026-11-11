@@ -106,6 +106,30 @@ How a coding agent builds a prototype from the design system's real components i
 
 **Sources:** Atlassian, shadcn, Shopify, Ant Design, Primer and Figma are vendor docs. Kolthoff et al. and Cha et al. are small studies, so read them as a direction. No benchmark grades screens for design system use, and no vendor tests a screen's round trip as lossless. The toolkit goes with templates and config over prose, because every source with evidence points that way.
 
+## Feedback on a prototype
+
+**What good looks like**
+- A person gives feedback where they look at the design: a comment on the layer. The next run reads it before composing anything new, and handles it once.
+- Each correction lands at the lowest level that holds it. A one-off is fixed on the frame. A decision about the product becomes a dated project ruling with its why and who decided. A rule for every project waits for evidence it is not a one-off, such as the same correction in a second project, and a person's yes.
+- A ruling, once made, is applied and never asked again. The rule set stays small: a new ruling replaces the one it contradicts, and one that no run applies is a candidate to retire.
+
+**How**
+- Shipping agents agree on the store and differ on the channel. Feedback arrives in chat or comments, and it is shared and durable when it is written to a plain-text rules file loaded on every run: Figma Make's `guidelines/Guidelines.md` ("multiple short guidelines files are better than a few large files", [Figma Help](https://help.figma.com/hc/articles/43602393097239)), Cursor's rules ("under 500 lines", [Cursor](https://cursor.com/docs/context/rules)), Copilot's instruction files ([GitHub](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions)), Claude Code's CLAUDE.md, where contradictory instructions are followed arbitrarily ([Claude Code](https://code.claude.com/docs/en/memory)). Windsurf keeps its own memories local and says to write anything lasting as a rule ([Windsurf](https://docs.windsurf.com/windsurf/cascade/memories)); Devin suggests what to remember from feedback, and a person edits or dismisses each suggestion before it is kept ([Devin](https://docs.devin.ai/product-guides/knowledge)).
+- Memory that only grows can make an agent worse. ExpeL keeps its insights with add, edit, upvote and downvote, and removes one whose count reaches zero ([Zhao et al., 2024](https://arxiv.org/html/2308.10144v3)); agents copy whatever stored experience looks like the task at hand, so a flawed record spreads, and storing everything did worst while selective deletion helped ([Xiong et al., 2025](https://arxiv.org/abs/2505.16067)).
+- Which level a correction belongs to is the design system's oldest question: Brad Frost's governance process asks whether new work is a one-off "snowflake" or part of the system, and only system work goes to the system's backlog and changelog ([Frost, 2019](https://bradfrost.com/blog/post/a-design-system-governance-process/)). A decision is kept with its rationale, as a design system decision record ([Thoughtworks Radar, 2023](https://www.thoughtworks.com/radar/techniques/design-system-decision-records)).
+- Figma's comments API returns each comment's layer (`client_meta.node_id`), its thread (`parent_id`) and `resolved_at`, and takes replies and reactions; it has no call to resolve a comment ([Figma](https://developers.figma.com/docs/rest-api/comments-types/), [endpoints](https://developers.figma.com/docs/rest-api/comments-endpoints/)), so a reply is what an agent can leave to mark a thread handled.
+- A correction that recurs becomes a test: "converting user-reported failures into test cases ensures your suite reflects actual usage" ([Anthropic, 2026](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)). Write checks "for errors you discovered, not errors you imagine", and every so often sort the corrections into kinds and work on the largest kind, not the latest comment ([Husain](https://hamel.dev/blog/posts/evals-faq/)).
+
+**Cases**
+- A designer answers a question the agent left on a Sort button: keep the toolbar sort. The next run records it as a project ruling, replies where it went, and from then on applies it with no comment. The question is never asked again.
+- A comment asks for "New employee" as the dialog title. It is fixed on the frame and nowhere else, unless it turns out to be the product's term everywhere, which is a ruling.
+
+**Check**
+- *Script:* frontend-build's `scripts/figma-feedback.mjs` lists the open threads, unresolved with a person's message last; the receipt names the rulings each frame applied.
+- *Judgement:* Was each correction filed at the lowest level that holds it, and did any ruling contradict an older one left in place?
+
+**Sources:** vendor documentation for the stores; two peer-reviewed or preprint studies on agent memory; practitioners (Frost, Husain) and Anthropic's engineering guidance for routing and evals. None measures a design agent learning from design comments; the loop here is assembled from them, unproven as a whole.
+
 ## From prototype to pull request
 
 **What good looks like**

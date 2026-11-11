@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.13.0)
+# Eval cases — frontend-build (v2.14.0)
+
+**Walked: 2026-11-11 for 2.14.0** — T15 added, traced to step 0 and *Feedback on a prototype*; T14 read against step 5's ruling clause and the receipt's `rulings` (it holds: neither changes what T14 asserts). Live: the script read the WIP file's 4 comments, all unanswered `From Claude:` questions, as 0 open; the routing awaits a real comment.
 
 **Walked: 2026-11-10 for 2.13.0** — step 4's two composing lines; T14 traced to them, the other cases unaffected.
 
@@ -262,3 +264,9 @@ Assert: the audit walks every applicable knowledge page section by section again
 Negative: calling the audit complete when the findings list is empty.
 Traced: 2026-10-12 for 2.4.0 — to SKILL.md *Hold it to the whole of the knowledge* and *Reporting findings*.
 
+## T15 · Feedback on a prototype is read first, routed once, and never re-asked — *traced*
+Fixture: a file with a composed People flow carrying receipts; a person's comment on its dialog title ("this one dialog reads better as New employee"), a person's reply under an earlier `From Claude:` question on the toolbar's Sort button ("keep it, the headers are too small"), and a thread whose last message is a `From Claude:` reply.
+Assert: before composing, the run lists the open threads (`scripts/figma-feedback.mjs`): the two, not the handled one; fixes the title on the frame; records the Sort answer as a dated §6 ruling with the comment's link and the designer as who decided; replies to each with `From Claude:` and `Routed:` where it went (the commenter being the maintainer, who may rule); on the next composition, applies the Sort ruling with no new comment and names it in the receipt's `rulings`.
+Negative: a new composition before the open threads are handled; the Sort question posted again; a ruling written as a memory note or a knowledge-base rule from one project's comment; a ruling taken from someone the context document does not name as able to rule; a thread resolved or left with no reply.
+Traced: 2026-11-11 for 2.14.0 — to SKILL.md *A Figma prototype*, step 0 and *Feedback on a prototype*.
+Runs: node --test tests/test-feedback.mjs — "a thread whose last message is Claude's is handled; a person replying after it opens it again", "Claude's own question waits for the designer; their answer opens it; a resolved thread never is"
