@@ -30,4 +30,6 @@ const r = spawnSync(process.execPath, [path.join(HERE, 'build.mjs')], { cwd: HER
 ok('a project with no component specs builds', r.status === 0, `${r.stdout}\n${r.stderr}`.split('\n').filter((l) => /error|Error/.test(l)).slice(0, 8).join('\n'));
 const page = fs.readFileSync(path.join(out, 'components', 'index.html'), 'utf8');
 ok('its Components page says there are none, with no empty filter', /No components yet/.test(page) && !/Filter 0 components/.test(page));
+const llms = fs.readFileSync(path.join(out, 'llms.txt'), 'utf8');
+ok('its llms.txt names the project and says it has no components yet', /^# \S/.test(llms) && /None yet/.test(llms) && /\/api\/index\.json/.test(llms), llms.slice(0, 300));
 console.log(`${n}/${n} passed`);

@@ -64,6 +64,10 @@ nobody maintains a second status.
   editor runs there; a published copy never offers it. The editor links back
   to the component's page, read from this site's `api/index.json`, which
   gives each set's `path`.
+- **For agents:** `/llms.txt` lists every component page with its first line
+  of guidance and its JSON (`api/components/<slug>.json`), then the index,
+  token and change JSON. It points into the JSON API rather than copying the
+  pages again (knowledge/ui/profiles/documentation.md *Docs for agents*).
 - **Guidance:** each component's description, parsed by the toolkit's
   `guidance.cjs` (purpose, Usage, Don't, Behaviour, Composition, Code gen
   notes). A Don't item naming another component links to it.
