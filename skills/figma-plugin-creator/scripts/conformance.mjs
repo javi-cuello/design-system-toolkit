@@ -162,7 +162,20 @@ const stripConditions = (sel) => {
   }
   return out;
 };
-const subject = (sel) => stripConditions(sel.trim()).split(/\s*[>+~]\s*|\s+(?![^()]*\))/).pop();
+// the last compound: split at a combinator or a space, but never inside [...], (...) or quotes
+const subject = (sel) => {
+  const s = stripConditions(sel.trim());
+  let depth = 0, quote = "", start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quote) { if (c === quote) quote = ""; continue; }
+    if (c === '"' || c === "'") quote = c;
+    else if (c === "[" || c === "(") depth++;
+    else if (c === "]" || c === ")") depth--;
+    else if (depth === 0 && /[\s>+~]/.test(c)) start = i + 1;
+  }
+  return s.slice(start);
+};
 export function restyled(ui) {
   const css = [...ui.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join("\n").replace(BLOCK, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const out = new Set();
@@ -211,8 +224,9 @@ export function handBuilt(ui) {
 // third of the way across, so text inside it floats away from the label.
 export function misComposed(ui) {
   const blank = (m) => m.replace(/[^\n]/g, "");
-  // raw-text and inert content (a textarea's, a title's, a template's) and bogus comments are not markup the window shows
-  const html = ui.replace(/<(style|script|textarea|title|template)\b[\s\S]*?<\/\1\s*>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank).replace(/<![^>]*>/g, blank);
+  // raw-text content (a textarea's, a title's) and bogus comments are not markup the window shows; a template's is
+  // inert, and since templates nest it is skipped in the walk below
+  const html = ui.replace(/<(style|script|textarea|title)(?=[\s>\/])[\s\S]*?<\/\1\s*>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank).replace(/<![^>]*>/g, blank);
   const lineAt = (i) => html.slice(0, i).split("\n").length;
   const out = [];
   // Walk the tags as the parser does: a custom element's `/>` opens it; an end tag closes everything opened after
@@ -220,8 +234,8 @@ export function misComposed(ui) {
   const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/;
   const stack = []; // { name, at, attrs, text }
   const report = (el) => {
-    if (!/^fig-(switch|checkbox)$/.test(el.name) || !stack.some((x) => x.name === "fig-field")) return;
-    const text = (el.attrs.label || "").trim() || el.text.replace(/&(nbsp|NonBreakingSpace|ZeroWidthSpace|#160|#xa0|#8203|#x200b);/gi, " ").trim();
+    if (!/^fig-(switch|checkbox)$/.test(el.name) || !stack.some((x) => x.name === "fig-field") || stack.some((x) => x.name === "template")) return;
+    const text = (el.attrs.label || "").trim() || el.text.replace(/&(nbsp;?|NonBreakingSpace;|ZeroWidthSpace;|#160;|#xa0;|#8203;|#x200b;)|[\u00a0\u200b]/gi, " ").trim();
     if (text) out.push({ what: `text inside a ${el.name} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(el.at) });
   };
   // closing an element: what remains on the stack is its ancestors; a plain child's text counts for its parent
@@ -241,7 +255,7 @@ export function misComposed(ui) {
       continue;
     }
     const attrs = attrsOf("<x" + m[3]);
-    if (name === "fig-button" && stack.some((x) => x.name === "fig-footer")) {
+    if (name === "fig-button" && stack.some((x) => x.name === "fig-footer") && !stack.some((x) => x.name === "template")) {
       const icon = "icon" in attrs && attrs.icon.toLowerCase() !== "false"; // an icon button keeps its own size
       if (!icon && (attrs.size || "").toLowerCase() !== "large") out.push({ what: "a footer fig-button without size=\"large\"", fix: "a window's action is the large button", line: lineAt(m.index) });
     }
