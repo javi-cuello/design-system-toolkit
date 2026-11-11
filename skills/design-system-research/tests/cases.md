@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.2.0)
+# Eval cases — design-system-research (v3.2.1)
+
+**Walked: 2026-11-11 for 3.2.1** — A11 and A18 reworded to the 3.2.0 opener (a list of sections, each with its question); A25 checked against the checklist line, which now names the awk. Others unchanged.
 
 **Walked: 2026-11-11 for 3.2.0** — A25 reversed by the maintainer's ruling: headings are short labels, never questions; traced to `references/deep-mode-voice.md` §4 and §13. A9 amended: its section title example becomes a label. A11 read: the *What this answers* list still links every section, now each title followed by the question it settles; unchanged. A26 added, traced to §5. A18 and A24 read: both ask for worked cases and neither asserts on their source or heading form; unchanged.
 
@@ -127,8 +129,8 @@ Assert: the body of each revised section states the current truth without refere
 Walked live: 2026-08-10 — both greps run over a real guide produced that session, which the walk line records as observed rather than merely traced.
 
 ## A11 · A long guide has a way in, and the checklist stays readable
-Fixture: deep mode on a topic that decomposes into 21 sections across three parts. The draft carries a `What this answers` opener listing the questions in the order they arrive, and no index.
-Assert: the question list is itself the linked index covering every section (amended 3.1.0: sections are unnumbered), grouped by part past about fifteen sections. Every anchor resolves to a real heading, and the anchors were generated from the headings rather than typed. A guide of eight sections links its list ungrouped; a separate index beside the list is a failure at any length.
+Fixture: deep mode on a topic that decomposes into 21 sections across three parts. The draft carries a `What this answers` opener listing the sections in the order they arrive, each with the question it settles, and no index.
+Assert: the list of sections is itself the linked index covering every section (amended 3.1.0: sections are unnumbered), grouped by part past about fifteen sections. Every anchor resolves to a real heading, and the anchors were generated from the headings rather than typed. A guide of eight sections links its list ungrouped; a separate index beside the list is a failure at any length.
 The second half is a standing constraint rather than a fixture: the quality checklist in `SKILL.md` stays under about 15 items. A revision that adds a checklist line without either merging two or showing the new line covers something no existing line does fails this case.
 
 > Added at v2.2.0, both halves from this skill's own output. The index half: a 587-line guide shipped with 21 sections and no way to reach one, because the structure block had a question list and nothing else. The checklist half is the offsetting removal, since three revisions running had been net-additive, and it exists because a 19-item checklist fails the same way a 21-section guide with no index fails. Past a certain length nobody reads to the end, which is the argument this skill makes about every document except itself.
@@ -228,7 +230,7 @@ Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §9 and §13
 
 ## A24 · The guide teaches as the magazines do
 Fixture: a deep-mode guide whose first screen stacks a subtitle, a summary line, "Part 3 of 9", a "This piece sets out" paragraph and a section pointer; whose second section drops a table and an SVG with no sentence before or after; which compares tokens to plumbing in three different sections, each with a new image; whose first section introduces five new terms in one paragraph; and whose advice opens with a bold **What to do.** label.
-Assert: the first screen holds the title, subtitle, the problem as a scene and the linked question list, with the series line at the end; each section gives a one-sentence answer, then the problem the reader can see (one hook question allowed straight after it), then the mechanism; every figure has a lead-in sentence and a sentence saying what to notice; at most one analogy per hard concept, after the worked case, with where it breaks; about three new terms a section, one a paragraph; the advice has no label; a caveat that doesn't change the advice sits in an `**Aside.**` blockquote; links sit on the noun.
+Assert: the first screen holds the title, subtitle, the problem as a scene and the linked list of sections, with the series line at the end; each section gives a one-sentence answer, then the problem the reader can see (one hook question allowed straight after it), then the mechanism; every figure has a lead-in sentence and a sentence saying what to notice; at most one analogy per hard concept, after the worked case, with where it breaks; about three new terms a section, one a paragraph; the advice has no label; a caveat that doesn't change the advice sits in an `**Aside.**` blockquote; links sit on the noun.
 Negative: a warm-up before the problem; a figure dropped in cold; an analogy per section or one with no limit named; a rhetorical question not following something the reader has just seen.
 Observed: 2026-11-11 — the person: the guides "still feel a bit robotic / report"; two guides of the agent-ready series read against the research showed the preamble stack, five new terms in one opening section, "**What to do.**" labels and evidence dates mid-mechanism.
 Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §3 to §10.

@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.2.1 (2026-11-11): the checklist names the five-word awk beside the grep; A11 and A18 say "list of sections", not "question list".
 - 3.2.0 (2026-11-11): headings are short labels, never questions, grep-checked (§4, §13); an illustrative worked case is labelled and invents only its situation (§5). A9, A25 amended; A26 added.
 - 3.1.1 (2026-11-11): "protagonist system" is "system story", as 3.0.0 renamed it; the recommendation line carries its reason, no narrator; A24's fixture names sections unnumbered.
 - 3.1.0 (2026-11-11): section headings are short questions (about six words) with no numbers; a pointer to another section links its title. A9 and A11 amended; A25 added.
