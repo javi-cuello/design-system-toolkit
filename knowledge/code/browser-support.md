@@ -14,6 +14,7 @@ Which platform features a front end can use, and what it does where one is missi
 **How**
 - Baseline has two stages. "Newly available: The feature is supported by all of the core browsers"; "Widely available: 30 months have passed since the newly interoperable date". Before that a feature has limited availability. The core set is Chrome, Edge, Firefox and Safari, desktop and mobile ([web.dev, *Baseline*](https://web.dev/baseline); [MDN, *Baseline*](https://developer.mozilla.org/en-US/docs/Glossary/Baseline/Compatibility)).
 - Each MDN page carries the feature's Baseline status at the top; the data comes from [web-features](https://web-platform-dx.github.io/web-features/). [Can I use](https://caniuse.com/) gives per-version detail.
+- For a feature no page here covers, Chrome's [Modern Web Guidance](https://developer.chrome.com/docs/modern-web-guidance) (Apache-2.0) has over 100 Baseline-aware guides. It defaults to widely available unless the project's CLAUDE.md or AGENTS.md sets a target. Read a guide without installing anything: `npx modern-web-guidance@latest search "<query>"`, then `retrieve "<id>"`. Cite the guide you used. Installing it as a skill would give a second owner for frontend-build's job (toolkit-standard §D 1).
 - Tools read the target from one query: [Browserslist](https://github.com/browserslist/browserslist) accepts `baseline widely available` (and `baseline 2024`, or a date), and Autoprefixer, Babel, Stylelint and Lightning CSS read Browserslist.
 
   ```text
