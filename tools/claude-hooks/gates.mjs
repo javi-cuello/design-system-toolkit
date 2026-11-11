@@ -25,6 +25,7 @@ import { spawnSync } from 'node:child_process';
 import { written } from './stop-items.mjs';
 import { realPath, expandHome } from '../shared/real-path.mjs';
 import { fileURLToPath } from 'node:url';
+import { rulesOf, citations } from '../toolkit-check/rules.mjs';
 // the toolkit as a message names it: this checkout, ~ for the home folder
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SHOWN = HERE.startsWith(os.homedir() + path.sep) ? '~' + HERE.slice(os.homedir().length) : HERE;
@@ -366,7 +367,45 @@ export function staleDocs(st, repos) {
       break;
     }
   }
+  // a guide it could not read is not worth blocking the turn over: the README list above still stands
+  for (const root of roots) try { for (const f of citing(st, root)) out.add(f); } catch { /* skip */ }
   return [...out];
+}
+
+/* The guides and READMEs that cite a rule the work changed: a standard's text
+   moved under them, and a gloss of it is checked by nobody else (§D 22). The
+   rules changed are those whose lines differ from the commit before the work's
+   first edit, committed or not. */
+const GUIDES = /(^|\/)(README|CONTRIBUTING|CLAUDE)\.md$|^docs\/.*\.md$/;
+export function citing(st, root) {
+  const git = (...a) => { const r = spawnSync('git', ['-C', root, ...a], { encoding: 'utf8', maxBuffer: 64 << 20 }); return r.status === 0 ? r.stdout : ''; };
+  const at = st.firstEdit?.[root] || Object.entries(st.firstEdit || {}).find(([r]) => realPath(r) === root)?.[1];
+  const base = at && git('rev-list', '-1', `--before=${at}`, 'HEAD').trim();
+  if (!base) return [];
+  const changed = {};
+  for (const f of Object.keys(st.total.files)) {
+    const m = f.startsWith(root + path.sep) && f.slice(root.length + 1).match(/^standards\/([a-z]+-standard)\.md$/);
+    if (!m || !fs.existsSync(f)) continue;
+    const rules = rulesOf(m[1], fs.readFileSync(f, 'utf8'));
+    if (!rules) continue;
+    const text = fs.readFileSync(f, 'utf8');
+    const lineOf = (i) => text.slice(0, i).split('\n').length;
+    // the label a reader would search for: a part and handle in a parted standard, a bare number in a numbered one
+    const spans = rules.map((r) => [r.handle, lineOf(r.index), lineOf(r.index + r.block.length - 1), (r.part.match(/^Part ([A-Z])\b/) || [])[1]]);
+    for (const h of git('diff', '--no-ext-diff', '--no-color', '-U0', base, '--', m[0]).matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+      const from = +h[1], to = from + Math.max(1, h[2] === undefined ? 1 : +h[2]) - 1;
+      for (const [handle, a, b, part] of spans) if (from <= b && to >= a) (changed[m[1]] ||= new Map()).set(handle, part ? `§${part} ${handle}` : `rule ${handle}`);
+    }
+  }
+  if (!Object.keys(changed).length) return [];
+  const out = [];
+  for (const rel of git('ls-files', '-z').split('\0').filter((x) => GUIDES.test(x))) {
+    const file = path.join(root, rel);
+    if (st.docs.includes(file) || st.total.files[file] !== undefined || !fs.existsSync(file)) continue;
+    const hits = citations(fs.readFileSync(file, 'utf8')).filter((c) => changed[c.std]?.has(c.handle));
+    if (hits.length) out.push(`${file} (cites ${[...new Set(hits.map((c) => `${c.std} ${changed[c.std].get(c.handle)}`))].join(', ')})`);
+  }
+  return out;
 }
 
 function uncount(st, id) {

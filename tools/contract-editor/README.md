@@ -97,7 +97,7 @@ On Variants, the grid is the page. A header is a button: its value alone, at the
 - its token snapshot, read again when the snapshot is taken again (no restart): colours (with dark values, from the mode called Dark, as `tokens.cjs` picks it), lengths, text styles, effect styles and variable scopes (`anatomy.mjs` `tokenLists`; not built on `tools/snapshot/tokens.cjs`, which looks one name up across collections, while this lists every token per collection and runs in the page too, where a CommonJS module cannot load);
 - its icons, for the preview.
 
-**Writes** nothing itself: the contract leaves through the browser's download. `/sync` runs the toolkit tool that owns each side, which writes what it writes (`to-figma.mjs` a drawing in the scratch file; Settings the library's `draw.scratch` and `source` in its context document, and a connected repo's `init.mjs` files and its styles settings; `to-code.mjs` a new component's stylesheet; `from-code.mjs` its report under the project's `parity/from-code/`).
+**Writes** nothing of its own but a library's official contracts, where it takes the contract as its source (**Save as official**, through `component-contract/official.mjs`); otherwise the contract leaves through the browser's download. `/sync` runs the toolkit tool that owns each side, which writes what it writes (Create a project, `projects.create` and `deliver.cjs` the project's home, context document and kept snapshot; `to-figma.mjs` a drawing in the scratch file, or the library's component set with `--patch`; Settings the library's `draw.scratch` and `source` in its context document, and a connected repo's `init.mjs` files and its styles settings; `to-code.mjs` a new component's stylesheet and `to-markup.mjs` its component, mapping and story; `from-code.mjs` its report under the project's `parity/from-code/`).
 
 **Needs:** Node 22.12+. The page uses the toolkit's UI stylesheet ([system.css](../docs-site/src/styles/system.css)), served from where it lives, and Lucide's icons (`icons.mjs`, ISC, notice kept).
 
@@ -120,7 +120,7 @@ Three prop fields a contract made here sets by hand; a derived one carries `axis
 | `icons.mjs` | The block and part icons, Lucide's shapes |
 | `editor.js`, `index.html`, `editor.css` | The page |
 | `sample/` | A made-up library in the store's layout, for `test-editor.mjs --fixtures` |
-| `serve.mjs` | Serves the page, the stylesheet, `/projects.json`, a project's facts at `/project.json`, its icons, and `/sync`, which reads the stored snapshot again and runs `to-figma.mjs`, `to-code.mjs`, `from-code.mjs` and `init.mjs`, for the page alone (its own origin, a local host) |
+| `serve.mjs` | Serves the page, the stylesheet, `/projects.json`, a project's facts at `/project.json`, its icons and previews, and `/sync`, which reads the stored snapshot again and runs `to-figma.mjs`, `to-code.mjs`, `to-markup.mjs`, `from-code.mjs`, `init.mjs` and `deliver.cjs`, and reads and writes official contracts through `component-contract/official.mjs`, for the page alone (its own origin, a local host); its header lists its flags |
 
 ## Test
 

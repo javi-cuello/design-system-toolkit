@@ -1,6 +1,10 @@
 # Snapshot router
 
-    node router.mjs
+The local service that receives a design snapshot from the Figma plugin and stores it in the project that owns that Figma file, through one store every tool reads; `projects.cjs` beside it is how every tool finds a project and its files. Without it, whichever repo happened to be listening on the plugin's one port wrote every snapshot (*Why it exists*, below).
+
+## Use
+
+    node tools/snapshot/router.mjs
 
 Then in Figma, in any project's file: **Plugins › Development › Design system
 snapshot › Take design snapshot**. The payload goes to the project that owns
@@ -11,7 +15,7 @@ that Figma file.
 The first time the plugin reaches the router it asks for this machine's
 pairing code. Print it and paste it into the plugin's window:
 
-    node pairing.cjs
+    node tools/snapshot/pairing.cjs
 
 The code is made once, in `~/.toolkit/pairing-code` (only you can read it;
 `TOOLKIT_PAIRING` moves it, for a test), and the plugin keeps it in its own
@@ -46,9 +50,9 @@ command and only the files it runs.
 An agent with the official Figma MCP can take a library snapshot with no Figma
 app open (snapshot-standard rule 26):
 
-    node mcp.mjs script            # the code to pass to use_figma as it is, on the library
-    node mcp.mjs collect <project> <holder id>   # the id that run returned; delivers through deliver.cjs
-    node mcp.mjs cleanup           # the code that removes the temporary page; pass it to use_figma
+    node tools/snapshot/mcp.mjs script            # the code to pass to use_figma as it is, on the library
+    node tools/snapshot/mcp.mjs collect <project> <holder id>   # the id that run returned; delivers through deliver.cjs
+    node tools/snapshot/mcp.mjs cleanup           # the code that removes the temporary page; pass it to use_figma
 
 `script` is the plugin's own code.js, its whole-line comments dropped to fit
 use_figma's 50,000 characters. The run leaves the payload as shared plugin data
@@ -106,9 +110,6 @@ by the key alone (a copy carries its original's id), so an entry that states
 only an id needs its `key` added; a run before v0.67.0 is routed by the id.
 Only `key` can be handed to Figma. A duplicated file carries its original's id but
 has a key of its own, so it is never written as the original.
-
-It scales to any number of projects because there is no list to grow: the
-projects directory is the registry, read fresh on every request.
 
 It holds no list of its own. **The projects directory is the registry** — a
 project with a context doc is a project — and each project's
@@ -181,10 +182,6 @@ Don't, and the rest of the descriptions skill's structure), and
 `contract.status()` reads a component's status from its page marker through
 the project's legend.
 
-    node --test test-payload.mjs test-spec.cjs test-router.mjs test-guidance.cjs test-changes.cjs
-    node test-graph.cjs
-    node test-check-specs.cjs    # check-specs on a folder the store writes, each defect planted, and an empty folder failed
-
 ## What it writes, and what a project writes
 
 It writes every project itself, through the one store (`store.cjs`, called by
@@ -222,10 +219,6 @@ that matters.
 | `--projects <dir>` | none: every `<label>/figma-design-system/` in the folder that holds the toolkit, or in `TOOLKIT_PROJECTS_ROOT` (a folder of `<label>/` homes, for tests) |
 | `--port <n>` | `9317`, the port the plugin posts to |
 
-`node test-router.mjs` walks it: discovery, each route, an unknown key, a
-missing key, a duplicate claim, and a real server handing two payloads to two
-repos.
-
 ## The contract
 
 `projects.cjs` is the one implementation of all of this — identity, discovery,
@@ -235,6 +228,16 @@ lives — because these things have to agree and they each used to have their
 own answer. The
 rules it encodes, and the checklist for adding a project, are
 [`standards/snapshot-standard.md`](../../standards/snapshot-standard.md).
+
+## The other files
+
+| File | What it is |
+|---|---|
+| `graph.cjs` | The component dependency graph (what each is built from, what places it), from a stored snapshot alone. |
+| `tokens.cjs` | A token's value by name, in a mode, from a snapshot's collections. |
+| `version.cjs` | The point a file was last released (a library's publish, a design file's named version), for pinning; `tokenFor` is the one reader of the Figma token. |
+| `check-specs.cjs` | `node tools/snapshot/check-specs.cjs <components dir>`: every stored spec is in the compact shape and round-trips. |
+| `at-rev.cjs` | A project's stored library at a git revision, for the changes backfill. |
 
 ## Screen recipes
 
@@ -254,3 +257,11 @@ rules it encodes, and the checklist for adding a project, are
 The docs site publishes it as `api/screens.json` and the system MCP serves it as `get_screen_recipe` (tools/system-mcp). A screen whose `figma.json` does not parse is skipped by `readScreens`, as everywhere else, and so is missing from `screens`.
 
 `test-recipes.mjs` holds it to a fixture.
+
+## Test
+
+```sh
+for t in tools/snapshot/test-*.mjs tools/snapshot/test-*.cjs; do node "$t" || exit 1; done
+```
+
+`test-router.mjs` walks discovery, each route, an unknown key, a missing key, a duplicate claim, and a real server handing two payloads to two repos; `test-check-specs.cjs` plants each defect in a folder the store writes.

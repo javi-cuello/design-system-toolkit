@@ -116,7 +116,7 @@ only question is what the reader has to do to see it:
 
 | You changed | Every project gets it after |
 |---|---|
-| the page, `tools/docs-site/src/dashboard/*` — markup, styles, logic | its site rebuilding (seconds, automatic), then a browser refresh |
+| the page, [`tools/docs-site/src/dashboard/*`](../docs-site/README.md) — markup, styles, logic | its site rebuilding (seconds, automatic), then a browser refresh |
 | the skill's `scanner/*` — checks, prompts, buckets, catalogue, scoring | a browser refresh |
 | a project's audit records | a browser refresh (that project only) |
 | `server.mjs` — routes, transport (`frames.mjs`) — and what it binds once: `breaking.mjs`, and the snapshot's `projects.cjs`, `spec.cjs` and `store.cjs` | restarting that project's service |
@@ -149,7 +149,7 @@ Each was a real defect; the reason is what keeps the next edit from reintroducin
 - **The HTTP routes are held by `test-routes.mjs`,** on a real service over a scratch project: Host refused (421), a cross-site read or POST refused (403) while the plugin's `/health` probe is answered, `/status`, `/exec`'s failures (no code, `plugin_not_connected`, `wrong_file_not_open` with a `hint` naming the file to reopen: Figma runs one plugin at a time in a file, so running the snapshot there closes the bridge; the remembered name is held by `test-socket.mjs`, quoted, one line, at most 200 characters; the last 50 files are kept, which no test holds), `PUT /data`'s record guard (an array of rows is not a record), `/patch`'s path guard, and the site folder served without a path out of it. A project that does not resolve gets no docs build, and `/status` says why (`buildError`), rather than a crash retried forever.
 - **A socket message is capped at 2^29 bytes** (`frames.mjs`), longer than any string JSON.parse can be handed: a frame declaring more, or fragments adding up past it, closes the socket before anything is buffered.
 - **A judge reply that does not parse is an error, never an empty verdict.** Its token budget scales with the candidates; a truncated reply once rendered as "nothing to fix" over nineteen real candidates.
-- **Type has a floor:** 14px for UI, 16px for prose, with one exception stated in the token block, `--t-caps: 12px` for uppercase only, because uppercase reads at a size where sentence case does not. An unexplained carve-out spreads.
+- **Type comes from the site's scale,** the `--text-*` tokens in `tools/docs-site/src/styles/system.css` (its compact density included); the page sets no size of its own but `em` for inline code, so it cannot drift from the site.
 - **A role promises its behaviour:** `role="tablist"` implies arrow-key movement, and a status line that changes is `role="status"`, so it is announced.
 
 ## Running it
@@ -290,7 +290,7 @@ sandbox origin before opening the socket.
 connected, the project's service may still hold them: `GET /status` lists them, and
 `POST /exec` with `{ code, fileKey, timeout }` and the header
 `origin: http://localhost:<port>` runs the code in the file named; the value comes
-back at `result.result`. Each project's service has its own port (see its plist).
+back at `result.result`. Each project has its own port, its project block's `port`.
 `bin/audit` (`audit-session.mjs`) is that path for an audit with no API key, its components and foundations stages: the
 scanners through `/exec`, the session's judgement, then `/rows`, dry-run first. Its filing half (`--file`) is held by
 `test-session.mjs` on a real service over a scratch project; the scanning half needs a file open in Figma and is not run.
@@ -340,3 +340,13 @@ system context document. Same shape the skill already writes:
 Rows are keyed on the finding, never on a bucket number — numbers renumber every
 render, and a key that renumbers reattaches last run's ruling to whatever now
 sits in that position.
+
+## Test
+
+```sh
+node tools/figma-audit/test-rows.mjs           # the record's one writer, on fixture records
+node tools/figma-audit/test-fix-queue.mjs      # the queue text, against the golden files in fixtures/
+node tools/figma-audit/test-routes.mjs         # the HTTP routes, on a real service over a scratch project
+```
+
+Each `test-*.mjs` here names what it holds in its first lines; `bin/check` runs every one by discovery, and `check-services.mjs` against the services running. `audit-row.mjs` (a row's component, and whether it is open) is the one definition the row writer and the dashboard share; `judge-rules.mjs` (what the judge is told about a library's conventions and rulings) the one the dashboard and the Audit lite plugin share.

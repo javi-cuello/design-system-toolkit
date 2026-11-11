@@ -39,8 +39,8 @@ drawn by script, and its data is `get_audit`.
 
 ## Use it
 
-    cd tools/system-mcp && pnpm install --frozen-lockfile
-    DOCS_URL=http://localhost:9232 node server.mjs      # one project's port
+    (cd tools/system-mcp && pnpm install --frozen-lockfile)
+    DOCS_URL=http://localhost:9232 node tools/system-mcp/server.mjs      # one project's port
 
 In the Claude app, `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -64,13 +64,13 @@ The server's instructions tell an agent to read `get_contract` before writing a 
 
 ## Test
 
-    node smoke.mjs http://localhost:9232
-    node smoke.mjs <project home>/site      # a built site, served on a free port
+    node tools/system-mcp/smoke.mjs http://localhost:9232
+    node tools/system-mcp/smoke.mjs <project home>/site      # a built site, served on a free port
 
 Starts the server as a client would, calls every tool, and fails on any error
 or empty answer, or when the page list misses the foundations or changes pages. `bin/check` runs it on every project's built site; without this folder's packages it is a skip (exit 77), never a pass.
 
-    node test-server.mjs
+    node tools/system-mcp/test-server.mjs
 
 Holds every tool's exact answer over `fixtures/site/` (its `api/screens.json` is `recipes.cjs`'s `derive` over `fixtures/screens.json`, and its `api/knowledge.json` is `tools/shared/project-knowledge.cjs`'s `read` of `fixtures/project/`; the test fails when either parts from its source: regenerate it), a committed stand-in of what the docs site writes (`api/` and four pages), so the server is tested where no project has a built site, CI included. `bin/check` always runs it; it skips as the smoke does. Both serve a folder with `serve-folder.mjs`. A change to what the docs site's API writes (`tools/docs-site/src/pages/api/`) moves the fixture with it.
 

@@ -33,7 +33,7 @@ It overwrites nothing: a file or setting already there is kept and reported, wit
 
 What it leaves to a person, because each is a decision: the context document ([figma-context-capture](../../skills/figma-context-capture/SKILL.md)); `pnpm add -D style-dictionary`; the `parity` mapping ([design-code-parity](../../skills/design-code-parity/SKILL.md)); `styles`, the facts the stylesheet gates read ([tools/css-lint](../css-lint/README.md)); and each gate the plan shows RED.
 
-The gates are `styles`, `tokens`, `componentStyles` (each component's generated stylesheet matches its contract: `to-code.mjs --check`), `specs`, `owned`, `pinned`, `lessons`, `knowledge`, `hook`, `validate` (the code a push adds or changes, run through `tools/system-mcp/validate.mjs` against the built docs site: copied or lookalike components, raw elements the library has, raw colours, unknown tokens; it needs `check.validate.system`, the prefixes of the system's own code and anything generated from it, and takes `from`, the import prefixes its components come from, and `code`, the prefixes it holds; a class-named system whose components are native elements with its classes rules it out, since its raw-element finding would be the component itself; a finding that must stay is waived by a §6 ruling scoped `validate` whose text names its file and what was found, as the gate printed them, each as a whole word (`#fff` does not waive `#ffffff`), and by nothing looser; it covers that value anywhere in that file), `verdicts`, `parity`, `structure`, `axe` and `overflow`. A gate the project cannot feed yet is RED until it supplies the fact the line names, or rules the gate out with a reason in `snapshot.config.json`:
+The gates are `styles`, `tokens`, `componentStyles` (each component's generated stylesheet matches its contract: `to-code.mjs --check`), `specs`, `owned`, `pinned`, `lessons`, `knowledge`, `hook`, `validate` (the code a push adds or changes, run through `tools/system-mcp/validate.mjs` against the built docs site; what it needs in `check.validate`, and how a §6 ruling waives a finding, is in `check.mjs`'s header), `verdicts`, `parity`, `structure`, `axe` and `overflow`. A gate the project cannot feed yet is RED until it supplies the fact the line names, or rules the gate out with a reason in `snapshot.config.json`:
 
 ```json
 "check": {
@@ -58,3 +58,9 @@ A commit that touches an interface file (markup, a component, a stylesheet; not 
 
     Knowledge: knowledge/ui/patterns/dialogs.md, knowledge/ui/design/visual.md
     Knowledge: none — a colour token renamed, nothing drawn differently
+
+## Test
+
+```sh
+for t in tools/project-check/test-*.mjs; do node "$t" || exit 1; done
+```

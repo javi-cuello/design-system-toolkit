@@ -1,0 +1,8 @@
+{
+  "about": "Values a file owns and prose restates; tools/toolkit-check/restated.mjs holds each restatement to its owner (toolkit-standard §D 22). Each: the owner file, a pattern whose groups capture the value there, and a pattern whose groups capture it in markdown.",
+  "facts": [
+    { "name": "the Node floor", "owner": "install.sh", "ownerRe": "install Node (\\d+\\.\\d+) or later", "proseRe": "\\bNode(?:\\.js)? (\\d+\\.\\d+)(?:\\+| or later)" },
+    { "name": "the snapshot port", "owner": "plugins/design-system-snapshot/code.js", "ownerRe": "localhost:(\\d+)", "proseRe": "\\b(931\\d)\\b" },
+    { "name": "the audit port range", "owner": "tools/figma-audit/server.mjs", "ownerRe": "PORT < (\\d+) \\|\\| PORT > (\\d+)", "proseRe": "\\b(92\\d\\d)[–-](92\\d\\d)\\b" }
+  ]
+}

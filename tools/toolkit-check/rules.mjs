@@ -38,3 +38,38 @@ export function rulesOf(name, md) {
     };
   });
 }
+
+// How a citation of a rule is written, for every reader of citations: the guard
+// resolves them (check-standards.mjs) and the Docs gate (tools/claude-hooks/gates.mjs)
+// finds the docs that cite a section a change touched.
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const either = (w) => "[" + w[0].toLowerCase() + w[0].toUpperCase() + "]" + esc(w.slice(1));
+export const names = Object.keys(STANDARDS);
+export const numeric = names.filter((n) => !STANDARDS[n].parts);
+export const parted = names.filter((n) => STANDARDS[n].parts);
+export const titled = (n) => n.split("-").map((w, i) => (i ? "[ -]" : "") + either(w)).join("");
+// `figma-standard rule 9`, `[figma-standard](…) rule 9`, `Figma standard rule 9`, `code-standard 59`, and lists.
+export const CITE_NUM = new RegExp("\\b(" + numeric.map(titled).join("|") + ")(?:\\.md)?(?:'s)?(?:\\]\\([^)]*\\))? (?:rules? )?(\\d+)(?!\\d|\\.\\d)((?:(?:, |,? and |,? or |[–-])\\d{1,3}(?!\\d|\\.\\d|-)(?! [a-z]))*)", "g");
+// `toolkit-standard §D 13`, `skill-standard §A clause G`, and the bare `§D 13` / `§A clause G`.
+export const CITE_PART = new RegExp("(?:\\b(" + parted.map(titled).join("|") + ")(?:'s)? )?§([A-Z])(?: clause)? ?([A-Z]\\b|\\d+)", "g");
+export const partOwner = Object.fromEntries(parted.flatMap((n) => Object.keys(STANDARDS[n].parts).map((p) => [p, n])));
+export const canon = (raw) => names.find((n) => raw.toLowerCase().replace(" ", "-") === n);
+
+/** Each rule a text cites, as { std, handle, index }; numbered lists and ranges expanded. */
+export function citations(text) {
+  const out = [];
+  for (const m of text.matchAll(CITE_NUM)) {
+    const std = canon(m[1]);
+    if (!std) continue;
+    for (const x of [m[2], ...(m[3] || "").split(/, |,? and |,? or /).filter(Boolean)]) {
+      const r = x.match(/^(\d+)[–-](\d+)$/);
+      const nums = r ? Array.from({ length: Math.max(0, r[2] - r[1] + 1) }, (_, k) => String(+r[1] + k)) : [x.replace(/\D/g, "")];
+      for (const n of nums) out.push({ std, handle: n, index: m.index });
+    }
+  }
+  for (const m of text.matchAll(CITE_PART)) {
+    const std = m[1] ? canon(m[1]) : partOwner[m[2]];
+    if (std) out.push({ std, handle: m[3], index: m.index });
+  }
+  return out;
+}

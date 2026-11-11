@@ -49,3 +49,11 @@ The router writes the contract beside every spec on each library snapshot (`stor
 - **Left out:** the description (guidance, as Curtis and Pitre both leave it), pixels where a token exists, and anything a stored spec does not hold (motion, behaviour, accessibility). An instance's inside is walked as drawn; which of it is the instance's own and which an override is not yet told apart.
 
 On every component stored on 2026-10-05 — 419, across four projects — every variant rebuilt exactly, the contracts are 12% of the specs' size, and deriving all of them took under a second.
+
+## Test
+
+```sh
+node tools/component-contract/test-contract.mjs    # derive, expand and selfCheck on a fixture built to hit each case
+```
+
+Each module's `test-<module>.mjs` is named in its row above; `bin/check` runs every one by discovery.

@@ -109,8 +109,8 @@ unnoticed by three reviews). What holds it now:
 - **Waits are on signals, bounded**: fonts ready, the pictures the browser is
   loading (an eager one, or a lazy one within Chrome's own reach below the
   fold — never one past it), two frames painted, a quiet DOM (100 ms, capped at 3 s),
-  a route's shell present. A fixed sleep is a defect; the two left in `drive`
-  (150 ms after a click or a scroll) are each a candidate for a signal.
+  a route's shell present. A fixed sleep is a defect; the four left in `drive`
+  (150 ms after a click, a hover, a press or a scroll) are each a candidate for a signal.
 - **One browser, one server, one build a run**: the story build is reused
   while the hash of its inputs is unchanged (`session.mjs`), the product is
   started once and signed in once, windows are pooled (`parity.workers`,

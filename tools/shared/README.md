@@ -7,7 +7,7 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | `walk.mjs` | One walk of a repo's files, skipping what every check skips (`node_modules`, build output, dot-folders). |
 | `dialect.cjs` | Which English spelling the toolkit's own words use for a project (its `language` setting), so generated text follows the project; the doc generator's sandbox copy is held to it by `test-dialect.mjs`. |
 | `repo-config.cjs` | A repo's `snapshot.config.json`, read one way: `readRepoConfig` tells a missing file from a malformed one, `repoConfig` says which under the tool's name and exits 2. Every command that needs the file reads it here. |
-| `cdp.mjs` | The Chrome DevTools client every browser run uses (parity, ui-check, the docs checks, the contract tools): `findChrome` (`$CHROME`, else the usual macOS and Linux places), `launch` (its own profile, killed at exit), `newPage`, `navigate`, `viewport`, `media`, `screenshot`, `pool`. |
+| `cdp.mjs` | The Chrome DevTools client every browser run uses (parity, ui-check, the docs checks, the contract tools): `findChrome` (`$CHROME`, else the usual macOS and Linux places), `launch` (its own profile, killed at exit), and the page calls its exports name. |
 | `origin.mjs` | `isFigmaOrigin`: whether a request comes from Figma itself (figma.com or a subdomain, by hostname), for the two local services the Figma plugin talks to. |
 | `names.js` | How a component's Figma name is shown to a reader (`displayName`, `fullName`), and a variant's name read as its prop values (`variantValues`): one definition for the docs site, the parity engine, the contract tools and the sandbox scripts that copy it, each held to it by `test-names.mjs`. |
 | `colour.js` | The sRGB transfer both ways, WCAG 2 relative luminance and contrast ratio (WCAG 2.2's 0.04045 threshold), and OKLab to linear sRGB: imported by the parity engine, copied by the components audit's scanner and the OKLCH generator, each copy held to it by `test-colour.mjs`; the contrast matrix's Python builder keeps one too, held by its numbers by that skill's `tests/test-wcag-copy.mjs`. |
@@ -22,18 +22,9 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | `code-inventory.mjs` | What a code library contains, read from its folders, and how its components line up with the ones in Figma (used by the docs site and the audit). |
 
 ```sh
-node tools/shared/test-code-inventory.mjs
-node tools/shared/test-model-routing.mjs
-node tools/shared/test-free-port.mjs
-node tools/shared/test-real-path.mjs
-node tools/shared/test-dialect.mjs
-node tools/shared/test-output.mjs
-node tools/shared/test-knowledge.mjs
-node tools/shared/test-project-knowledge.mjs
-node tools/shared/test-prop-attr.mjs
-node tools/shared/test-text-units.mjs
-node tools/shared/test-mode-description.mjs   # the OKLCH generator's two-mode description read back by the doc generator
-node tools/shared/test-cdp.mjs    # needs Chrome
+for t in tools/shared/test-*.mjs; do node "$t"; s=$?; [ $s = 0 ] || [ $s = 77 ] || exit 1; done   # 77: skipped (test-cdp.mjs without Chrome)
 ```
+
+`test-mode-description.mjs` holds the OKLCH generator's two-mode description as the doc generator reads it back.
 
 A file belongs here only when two or more tools import it; one used by a single tool lives in that tool's folder.

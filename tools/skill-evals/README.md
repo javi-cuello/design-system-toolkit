@@ -4,6 +4,8 @@ The gates hold the code a project ships. An eval holds the agent that writes it:
 
     node tools/skill-evals/run.mjs --repo <dir> [task] [--trials N] [--rules on|off] [--brief snapshot|contract] [--context on|off] [--no-agent] [--keep-files] [--keep]
 
+**Needs:** the Claude Code CLI (`claude`) on the PATH, and a project whose `snapshot.config.json` has an `evals` block (*A project's facts*, below). The flags are in `run.mjs`'s header.
+
 `--rules` runs the agent with the rules hook (`tools/claude-hooks/hooks.mjs edit`) on, the default, or off (the gates are always off in an eval copy: an eval measures the skill, not the process); each line records which, and a run is compared with the last clean one under the same setting (a void run — contaminated, or one that changed the grade's inputs — is never the baseline; a failed build is).
 
 `--brief` names the file that holds the design in the agent's prompt: the snapshot (`figma.json`) or the component's contract (`contract.json`, tools/component-contract). Both stay in the copy, because parity grades against the snapshot; each line records which of the two the agent opened, so a contract that was not enough shows as a run that read the snapshot too.
@@ -62,3 +64,9 @@ The gates the agent may run are not inert: parity imports the copy's mapping mod
 ## Proving the grade
 
 Before trusting a score, `--no-agent` grades the copy as prepared: with the files removed it must score low, and with `--keep-files` it must score as the project does. Both projects were proven both ways on 2026-10-03 before the first agent ran. A screen task's `--no-agent` run scores 0 ("wrote no code"); its grade was proven on 2026-11-04 by a stub agent that wrote one file with a raw colour and a raw `<button>` and one clean file: 0.5, both findings named, under either context. A removed score of 0 can mean the build failed or parity could not render, not a measured miss (one project's Storybook build fails without the component); that is still the right grade for a missing component, but it proves the grader reaches 0, not that it scores a partial build in between.
+
+## Test
+
+```sh
+node tools/skill-evals/test-eval.mjs
+```

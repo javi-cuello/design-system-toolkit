@@ -1,9 +1,11 @@
 # CSS lint
 
-`lint.mjs` holds the gates, as functions of what they read; `check.mjs` runs
+The stylesheet rules of [code-standard](../../standards/code-standard.md) that a
+script can read in the source, without rendering a page: each gate below finds
+the violations of one rule. `lint.mjs` holds the gates, as functions of what they read; `check.mjs` runs
 them over a project, which states only facts in `styles` in its
 `snapshot.config.json` (the header of `check.mjs` lists the keys). Each
-project's check calls:
+project's check calls it ([tools/project-check](../project-check/README.md)'s `styles` gate):
 
     node tools/css-lint/check.mjs --repo <dir>
 
@@ -41,5 +43,10 @@ of a name) needs the rendered page, so it is `tools/parity/pages.mjs`
 structure's.
 
 A gate whose inputs a project does not name prints *not run*, never *ok*.
-`test-lint.mjs` feeds each gate a violation and the shape it must allow;
-`bin/check` runs it by discovery.
+It exits 1 on any finding (`STYLES_ALL=1` lists every one, not the first 30 a gate).
+
+## Test
+
+    node tools/css-lint/test-lint.mjs
+
+It feeds each gate a violation and the shape it must allow; `bin/check` runs it by discovery.

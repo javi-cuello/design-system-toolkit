@@ -23,7 +23,7 @@ beside the site and swaps it in, so a failed build never leaves the site empty.
 
 The toolkit is found by walking up from the working directory, so run it
 from inside this folder. You rarely need to: the dashboard service
-(`tools/figma-audit`) builds every project's site on start and again
+([tools/figma-audit](../figma-audit/README.md)) builds every project's site on start and again
 whenever its inputs change, and serves it.
 
 To change the docs, change Figma and take a new snapshot.
@@ -81,8 +81,8 @@ nobody maintains a second status.
   Light / Dark control holds the story's theme apart from the site's.
 - **Figma links:** the key from the project's routing block, per component
   file where a project spans several.
-- **Parity (the tracker's second page):** a library's component pages against
-  the components in its code: in code when it has one of the component's
+- **Parity (its own section):** *Coverage* sets a library's component pages
+  against the components in its code: in code when it has one of the component's
   name, or of the name the project says it is built as (`frameworkComponents`). The project names the code on the
   library in its `audit-settings`, as `"code": { "repo": "~/Projects/<repo>",
   "components": "<folder from the repo's root>" }`. A component in code is a
@@ -90,7 +90,11 @@ nobody maintains a second status.
   shared with the audit). Read when the site is built, so a change in the
   code shows at the next build. Its second table, where a component may be in
   code under another name, is the audit's open `design-code-parity` rows read
-  from the record: the page works none of them out.
+  from the record: the page works none of them out. *Overview*, *Tokens*,
+  *Properties* and *Visual* read the code audit's last report
+  (`<project parity folder>/report.json`, written by
+  [tools/parity](../parity/README.md)'s `external.mjs`) and say what to set up
+  where there is none.
 
 Previews and the built Storybook are served under `/previews` and
 `/storybook` on the site's own origin, in dev and in the build, so the site
@@ -120,17 +124,31 @@ registered anywhere.
   and the service (`record.js`, `api.js`), the queue, audits, Ask, scores,
   measures, views, owner labels (`labels.js`, shared with the overview).
   `check.mjs` proves every name each module uses is declared, imported or a
-  browser global, and every import is exported. `test-dashboard-logic.mjs`
-  runs its pure parts on their own source (the score model, an audit's
-  closing words, the sweep's diff, a queue row's markup with a Figma name in
-  every field) and `test-dashboard-safety.mjs` what it does with text a file wrote.
+  browser global, and every import is exported.
 - `src/lib/` — reading the snapshot, the audit record and the project.
-  `test-lib.mjs` runs `format.js` (escaping, names on a page, dates).
-- A project with no component specs yet builds, its Components page saying there are none: `test-empty-build.mjs`, over a made-up project in a temp root. Every page's accessibility is `tools/ui-check/test-own-pages.mjs`'s.
+
+- `check-structure.mjs <site dir>` — the markup contract (one `main`, one
+  `h1`, named landmarks, ids that resolve) on one page of each page type of a
+  built site, through parity's structure probe; `bin/check` runs it over each
+  project's built site.
+
+## Test
+
+```sh
+node tools/docs-site/src/dashboard/check.mjs     # every name a dashboard module uses is declared
+node tools/docs-site/test-lib.mjs                # format.js: escaping, names, dates
+node tools/docs-site/test-empty-build.mjs        # a project with no component specs still builds
+```
+
+The other `test-*.mjs` here each name what they hold in their first lines
+(the build lock, the change log, the structure check, the dashboard's logic
+and its handling of text a file wrote, Parity's pages); `bin/check` runs every
+one by discovery. Every page's accessibility is
+[tools/ui-check](../ui-check/README.md)'s `test-own-pages.mjs`.
 
 ## Publishing
 
-`bin/deploy <project> --public` or `--password` uploads the site the service
+[`bin/deploy`](../../bin/README.md) `<project> --public` or `--password` uploads the site the service
 built (`<project home>/site`) to Cloudflare as the Worker `<name>-docs`, serving
 it as static assets at `<name>-docs.<account>.workers.dev` (Cloudflare folded
 Pages into Workers; wrangler 4.138's Pages commands no longer deploy a folder),

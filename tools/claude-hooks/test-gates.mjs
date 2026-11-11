@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lineDiff, isPush } from './gates.mjs';
+import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lineDiff, isPush, citing } from './gates.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = fs.realpathSync(path.resolve(HERE, '../..'));
@@ -558,6 +558,24 @@ test("a background subagent's edits from before the person spoke do not mark the
   assert.equal(stopGate(s.id, s.file, REPOS, '4.'), null);
   fs.rmSync(path.dirname(dir), { recursive: true, force: true });
   s.clean();
+});
+
+test('the Docs gate names the guides that cite a rule the work changed, and only those', () => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'citing-')));
+  const git = (...a) => spawnSync('git', ['-C', root, '-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { encoding: 'utf8' });
+  const std = path.join(root, 'standards/code-standard.md');
+  fs.mkdirSync(path.dirname(std)); fs.mkdirSync(path.join(root, 'docs'));
+  fs.writeFileSync(std, '# Code\n\n1. **One.** a\n\n2. **Two.** b\n');
+  fs.writeFileSync(path.join(root, 'README.md'), 'See code-standard rule 2.\n');
+  fs.writeFileSync(path.join(root, 'docs/guide.md'), 'See code-standard rule 1.\n');
+  fs.writeFileSync(path.join(root, 'notes.md'), 'See code-standard rule 2.\n');
+  git('init', '-q'); git('add', '.'); git('commit', '-qm', 'base');
+  fs.writeFileSync(std, '# Code\n\n1. **One.** a\n\n2. **Two.** b, changed\n');
+  const st = { firstEdit: { [root]: new Date(Date.now() + 60e3).toISOString() }, docs: [], total: { files: { [std]: 1 } } };
+  assert.deepEqual(citing(st, root), [`${path.join(root, 'README.md')} (cites code-standard rule 2)`], 'rule 1 is unchanged and notes.md is no guide');
+  assert.deepEqual(citing({ ...st, docs: [path.join(root, 'README.md')] }, root), [], 'a README the work touched is not named');
+  assert.deepEqual(citing({ ...st, firstEdit: {} }, root), [], 'no first edit, no base to diff against');
+  fs.rmSync(root, { recursive: true, force: true });
 });
 
 test.after(() => fs.rmSync(process.env.TMPDIR, { recursive: true, force: true }));

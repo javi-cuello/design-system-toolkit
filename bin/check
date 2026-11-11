@@ -115,6 +115,12 @@ step "every folder a newcomer opens has a README"
 OUT=$(node tools/toolkit-check/readmes.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
 
+# toolkit-standard §D 22: prose that restates what another file owns agrees with it.
+# knowledge/README.md missed §D 21's weights and a tool's README three of its scripts (2026-11-11).
+step "restated prose agrees with its owners"
+OUT=$(node tools/toolkit-check/restated.mjs 2>&1)
+[ $? -eq 0 ] && ok || bad "$OUT"
+
 # A script's main guard compared argv[1] as typed: run through ~/.claude/skills
 # (a symlink) it did nothing and exited 0, and a --check passed every
 # description that way. Twelve scripts did it on 2026-10-30.

@@ -16,11 +16,11 @@ node ~/Projects/toolkit/tools/tokens/check.mjs --repo .            # the token g
 
 **Reads** the snapshot's `tokens.json` (where `snapshot.config.json` puts it). **Writes** DTCG files in `dtcg/` beside the snapshot, and the stylesheets at the repo's `paths.styles`.
 
-**Names a token in CSS** for every other reader: `names.mjs` `cssName(collection, name)` is the custom property the build writes for a variable (`Color/textStrong` → `--color-text-strong`) and `cssFamily(name)` the prefix its family shares (`--spacing-`), composed from the build's own two steps. The docs site, the system MCP's validator, the parity engine's hints and the stylesheet lint call it; `test-names.mjs` holds it.
+**Names a token in CSS** for every other reader: `names.mjs` `cssName(collection, name)` is the custom property the build writes for a variable (`Color/textStrong` → `--color-text-strong`) and `cssFamily(name)` the prefix its family shares (`--spacing-`), composed from the build's own two steps. Its callers include the docs site, the system MCP's validator, the parity engine's hints, the stylesheet lint and the component-contract tools; `test-names.mjs` holds it.
 
 ## How it fits
 
-Both conversion steps live here, because every project's build runs them: snapshot → DTCG is `from-snapshot.mjs` over `dtcg.js`, with `generate-ts.mjs` and `verify-ts.mjs` mirroring the result as TypeScript. `from-snapshot.mjs` writes nothing unless every reference resolves inside each manifest build: `dtcg.js`'s `verifyReferences(files, manifest)`. `verify-ts.mjs` loads every module at once, so it cannot see a reference that resolves only in another build's sources; DTCG → CSS and Sass is `build-tokens.mjs` ([frontend-build](../../skills/frontend-build/SKILL.md) explains it). Until 2026-10-31 they were those skills' scripts; the old `build-tokens.mjs` path forwards here for one release, and the old `from-snapshot.mjs` path went with the figma-token-export skill (2026-11-05). The snapshot router runs a project's `bin/tokens` after every snapshot ([tools/snapshot](../snapshot/README.md)).
+Both conversion steps live here, because every project's build runs them: snapshot → DTCG is `from-snapshot.mjs` over `dtcg.js` (a tokens folder's shape, one folder per collection and one file per mode, is read by `discover.mjs`), with `generate-ts.mjs` and `verify-ts.mjs` mirroring the result as TypeScript. `from-snapshot.mjs` writes nothing unless every reference resolves inside each manifest build: `dtcg.js`'s `verifyReferences(files, manifest)`. `verify-ts.mjs` loads every module at once, so it cannot see a reference that resolves only in another build's sources; DTCG → CSS and Sass is `build-tokens.mjs` ([frontend-build](../../skills/frontend-build/SKILL.md) explains it). Until 2026-10-31 they were those skills' scripts; the old `build-tokens.mjs` path forwards here for one release, and the old `from-snapshot.mjs` path went with the figma-token-export skill (2026-11-05). The snapshot router runs a project's `bin/tokens` after every snapshot ([tools/snapshot](../snapshot/README.md)).
 
 ## What the conversion does
 
@@ -76,9 +76,12 @@ A **hidden layer** is dropped by the snapshot plugin, without a warning. A layer
 ## Test
 
 ```sh
-node --test tools/tokens/test-check.mjs        # needs a project repo beside the toolkit with Style Dictionary installed
-node --test tools/tokens/test-build-tokens.mjs # the CSS and Sass build
-node tools/tokens/test-dtcg.js                 # snapshot names and values → DTCG
+node tools/tokens/test-check.mjs              # the token gates, on a throwaway repo (77: skipped)
+node tools/tokens/test-build-tokens.mjs         # the CSS and Sass build (run plainly: its skip exits 77)
+node tools/tokens/test-dtcg.js                  # snapshot names and values → DTCG
 node --test tools/tokens/test-from-snapshot.mjs # the converter, and the per-build reference check
-node tools/tokens/test-ts.mjs                  # generate-ts and verify-ts, each defect verify-ts exists for
+node tools/tokens/test-ts.mjs                   # generate-ts and verify-ts, each defect verify-ts exists for
+node tools/tokens/test-names.mjs                # cssName and cssFamily
 ```
+
+The two Style Dictionary suites use this folder's pinned copy, else one a registered project installed (**Needs**, above).

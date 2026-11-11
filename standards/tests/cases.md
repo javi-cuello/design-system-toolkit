@@ -280,6 +280,12 @@ Assert: the bare item and the wrong word are refused with file and line; the wei
 Walked 2026-11-11 for toolkit-standard 2.27.0: the fixture above, each assertion observed in the test run (93 passed).
 Runs: node tools/toolkit-check/test-check-standards.mjs — "an item with no weight is refused, a weighed one passes", "…and one with a word that is not a weight", "…but a Case and a fenced line are not items"
 
+## S23 · Restated prose agrees with its owner — WALKED 2026-11-11
+Fixture: a tree with a README running a script with a flag it reads and one it does not, a command whose file is gone, a tool README missing a script, a registered value stated wrong, a changelog and a case record; and a git repo whose standard changes one of two rules, cited by a README, a guide and a note.
+Assert: each mismatch is refused with its file, history records are skipped, and an owner that lost the value is refused; the gate names the README citing the changed rule only, not the guide citing the unchanged one, the note, or a README the work touched (toolkit-standard §D 22).
+Walked 2026-11-11 for toolkit-standard 2.28.0: test-restated 7 passed; test-gates 37 passed; on the repo, restated.mjs clean and the gate listed ten guides citing §D 12, 13, 21 and 22.
+Runs: node tools/toolkit-check/test-restated.mjs — "a registered value that differs from its owner is refused"; node --test tools/claude-hooks/test-gates.mjs — "names the guides that cite a rule the work changed"
+
 ## R1 · Every rule says how it is enforced, and a named check exists — WALKED 2026-10-08
 Fixture: throwaway trees in which a rule has no marker; a `*Checked:*` pair names a file that no longer holds its string, or a path that does not exist; a path names a project's own file; a standard has no handle pattern; a rule is marked *No check yet.*
 Assert: each is refused, naming the standard and handle, except the project's path, which is an example and not verified, and *No check yet.*, which passes and is counted as debt. A standard the check cannot read is refused, never skipped.

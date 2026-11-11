@@ -13,7 +13,7 @@ The rules the toolkit holds itself and every project to: how a Figma library is 
 | [code-standard](code-standard.md) | write the HTML, CSS and JavaScript of a site, an app or a design-system component. |
 | [skill-standard](skill-standard.md) | write or change a skill (Part A) or a Figma plugin (Part B). |
 
-A project can override a design or naming rule in its own context document, with a reason, as one `**Overrides:**` line; an instruction given in the session outranks both. Guidance past the rules, with sources, is in [`knowledge/`](../knowledge/README.md).
+Which wins when a project's context document, a standard and the session disagree is the root's *Precedence* paragraph ([toolkit-standard](toolkit-standard.md)); a project overrides a rule with a dated ruling and an `**Overrides:**` line. Guidance past the rules, with sources, is in [`knowledge/`](../knowledge/README.md).
 
 ## How a rule is cited
 
@@ -23,7 +23,7 @@ By handle, never by copying its text: `figma-standard rule 11`, `toolkit-standar
 
 - [`audit-settings.json`](audit-settings.json): the house defaults the audit tools read (markers, option order, token collections), which a project's context document can override per library.
 - [`naming-preferences.json`](naming-preferences.json): the house's naming preferences (separators, the private prefix, property case and words), owned by figma-standard and read by every tool; a project overrides them in its context document's `naming-preferences` block, and an audit files a departure as a preference, never a defect.
-- [`changelog/`](changelog/): one history file per standard, newest first. A standard's version and its history line move in the same commit.
+- [`changelog/`](changelog/): one history file per standard, newest first; a retired standard's file maps its old rules to where they went. A standard's version and its history line move in the same commit.
 - [`tests/`](tests/): `check.sh` (the structural checks over skills, plugins and standards, run by `bin/check`), `check-frontmatter.sh`, `scan-clause-d.py` (project data that escaped into a skill) and `cases.md` (the cases that test the standards themselves).
 
 ## Changing a standard

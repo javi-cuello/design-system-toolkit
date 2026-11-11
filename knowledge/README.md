@@ -1,6 +1,6 @@
 # Knowledge
 
-What the toolkit knows about doing the work well, past what any run has proven: fundamentals, patterns, cases and practice, each with its public sources. Its rule is toolkit-standard §D 21: guidance, never rules; a page cites a standard's rule by handle and restates none; it grows as the work needs, with no proven case behind each line. A practice a run proves becomes a rule in its standard, and the page then cites it.
+What the toolkit knows about doing the work well, past what any run has proven: fundamentals, patterns, cases and practice, each with its public sources. What it may hold, and how it is read, is [toolkit-standard §D 21](../standards/toolkit-standard.md#21--knowledge-is-guidance-with-sources-never-rules): guidance, never rules, each page citing a standard's rule by handle rather than restating it. Any new UI work starts from the pages for what it builds, before its first line; in a project the edit hook names them and the push refuses an interface commit without a `Knowledge:` trailer.
 
 | Folder | What it holds | Serves |
 |---|---|---|
@@ -9,7 +9,7 @@ What the toolkit knows about doing the work well, past what any run has proven: 
 | `ui/profiles/` | What a kind of product must specify: `documentation.md`, `dashboards.md`, `editorial.md` (forms are `ui/patterns/forms.md`) | design-standard |
 | `code/` | How to write front-end code: `html-semantics.md`, `accessibility.md`, `css-architecture.md`, `tokens.md`, `responsive.md`, `figma-handoff.md`, `javascript.md`, `web-components.md`, `react.md`, `performance.md`, `i18n.md`, `security.md`, `testing.md`, `browser-support.md`, `agent-prototyping.md`, `agent-maintenance.md`; and `candidates.md`, lessons from single runs not yet rules, with the sources behind code-standard's rules | code-standard |
 
-Each topic or pattern section follows one shape: use when or what good looks like, how, cases, accessibility, **build** (the code counterpart: elements, ARIA and keyboard model, states as attributes, the code-standard rules it serves, linking the `code/` section that owns the detail), check (what a script can measure, what a reviewer asks), and sources, with the way the toolkit goes where sources disagree. A design pattern never ships without its build part, and a code page names the ui pattern it implements in an **Implements:** line under its intro; a code page's own sections are the build, so they carry no build part. The `frontend-build` skill consults these pages when it builds or audits; any session may.
+Each topic or pattern section follows one shape: use when or what good looks like, how, cases, accessibility, **build** (the code counterpart: elements, ARIA and keyboard model, states as attributes, the code-standard rules it serves, linking the `code/` section that owns the detail), check (what a script can measure, what a reviewer asks), and sources, with the way the toolkit goes where sources disagree. A design pattern never ships without its build part, and a code page that implements a ui pattern names it in an **Implements:** line under its intro; a code page's own sections are the build, so they carry no build part. The `frontend-build` skill walks these pages when it builds or audits.
 
 ## Weights
 

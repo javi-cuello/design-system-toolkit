@@ -30,4 +30,4 @@ The code every project shares, one copy each: the services that take a Figma sna
 
 ## Requirements
 
-Node 22.12 or later for everything, 22.23.4 for the docs site (Astro's floor); Google Chrome for parity, ui-check and the docs checks; pnpm inside `docs-site/` and `system-mcp/` (`pnpm install` there once), the only folders with dependencies. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).
+Node, pnpm and Chrome, at the versions [setup](../docs/setup.md) names. `docs-site/` and `system-mcp/` have dependencies (`pnpm install` there once); `tokens/` pins Style Dictionary only for its own suites, since a project installs its own. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).

@@ -7,7 +7,7 @@ Claude skills, tools, Figma plugins and standards for building, documenting and 
 - **Colour and tokens**: perceptual OKLCH colour scales, WCAG contrast matrices, and design tokens exported and built for code.
 - **Write a component's contract**: its props and parts, agreed by design and code before anyone draws or builds it, in a browser editor that can also push it to Figma.
 - **Build and check the code**: an accessible, token-driven front end from a design, a measurement of how far coded components are from Figma, and checks for markup, styles and accessibility.
-- **Figma plugins**: library snapshots, icon import, theme switching, layer tidying, component graphs and guidelines.
+- **Figma plugins**: library snapshots, an audit that needs nothing else installed, icon import, theme switching, layer tidying, component graphs and guidelines.
 - **Standards and knowledge**: what good looks like, each rule with its reason and the check that enforces it, sourced guidance on UI and code, and research into how real design systems handle a topic.
 
 The tools read a Figma library through one snapshot, taken by a plugin and stored with the project, so every output agrees with the others.
@@ -38,7 +38,7 @@ bin/get tools/contract-editor        # or plugins/<name>, skills/<name>; --list 
 
 A skill comes with the tools, standards and knowledge pages it names, and an orchestrating skill with the skills it runs. A folder with packages of its own (the docs site) is named with its `pnpm install --frozen-lockfile`; a skill goes into Claude Code with `./install.sh`, which says which services it left out and how to start each. Then follow that tool's README.
 
-**The whole toolkit**, with the skills in Claude Code, the services and a first project: [docs/setup.md](docs/setup.md). How the parts connect, and the words used across them: [docs/how-it-fits.md](docs/how-it-fits.md). To change the toolkit: [CONTRIBUTING.md](CONTRIBUTING.md).
+**The whole toolkit**, with the skills in Claude Code, the services and a first project: [docs/setup.md](docs/setup.md). How the parts connect, and the words used across them: [docs/how-it-fits.md](docs/how-it-fits.md). To change the toolkit: [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Licence
 

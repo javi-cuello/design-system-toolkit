@@ -53,7 +53,7 @@ const TOP = new Set(readdirSync(ROOT));
 // ─── the standards ───────────────────────────────────────────────────────────
 // The handle table and the rule reader are tools/toolkit-check/rules.mjs's, shared with
 // the edit hook and the closing pass. A standard with no entry is refused, never skipped.
-import { STANDARDS, rulesOf, unfence } from "./rules.mjs";
+import { STANDARDS, rulesOf, unfence, names, numeric, parted, titled, CITE_NUM, CITE_PART, partOwner, canon } from "./rules.mjs";
 import { code, stripComments } from "./strip.mjs";
 import { GENERATED } from "../../skills/figma-plugin-creator/scripts/conformance.mjs";
 const MARKER = /\*Checked:\*|\*Reviewed:\*/;
@@ -159,16 +159,6 @@ const stems = [...new Set(exact.map(([w]) => (w.match(/^(.*\S) \d+$/) || [])[1])
 const LEGACY = stems.length ? new RegExp(stems.map((st) => "\\b" + either(st) + "s? \\*{0,2}\\d").join("|"), "g") : null;
 // A retired standard's name is refused in a fenced block too: a file tree in a README is not an example of it.
 const RETIRED = retired.length ? new RegExp(retired.map((n) => "\\b" + either(n.replace(/s$/, "")).split("-").join("[- ]") + "s?\\b(?!-)").join("|"), "g") : null;
-const names = Object.keys(STANDARDS);
-const numeric = names.filter((n) => !STANDARDS[n].parts);
-const parted = names.filter((n) => STANDARDS[n].parts);
-const titled = (n) => n.split("-").map((w, i) => (i ? "[ -]" : "") + either(w)).join("");
-// `figma-standard rule 9`, `[figma-standard](…) rule 9`, `Figma standard rule 9`, `code-standard 59`, and lists.
-const CITE_NUM = new RegExp("\\b(" + numeric.map(titled).join("|") + ")(?:\\.md)?(?:'s)?(?:\\]\\([^)]*\\))? (?:rules? )?(\\d+)(?!\\d|\\.\\d)((?:(?:, |,? and |,? or |[–-])\\d{1,3}(?!\\d|\\.\\d|-)(?! [a-z]))*)", "g");
-// `toolkit-standard §D 13`, `skill-standard §A clause G`, and the bare `§D 13` / `§A clause G`.
-const CITE_PART = new RegExp("(?:\\b(" + parted.map(titled).join("|") + ")(?:'s)? )?§([A-Z])(?: clause)? ?([A-Z]\\b|\\d+)", "g");
-const partOwner = Object.fromEntries(parted.flatMap((n) => Object.keys(STANDARDS[n].parts).map((p) => [p, n])));
-const canon = (raw) => names.find((n) => raw.toLowerCase().replace(" ", "-") === n);
 const files = git(["ls-files"]).split("\n").filter((f) => f && has(f)
   && /\.(md|mjs|cjs|js|sh|py|astro|html|json|ya?ml)$/.test(f)
   // History is reference; a test quotes wrong forms on purpose; an audit record is tool output, rewritten on its next run.

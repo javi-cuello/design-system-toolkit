@@ -23,9 +23,11 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
 2. **Connect Claude Code to Figma.** Follow the figma-console MCP's setup (register the server with a Figma access token, import its Desktop Bridge plugin in Figma), then import this repo's snapshot plugin: **Plugins → Development → Import plugin from manifest…** → `plugins/design-system-snapshot/manifest.json`.
 
 3. **Set up a project.** Create `~/Projects/<label>/figma-design-system/`, open the library in Figma with the Desktop Bridge running, and ask Claude Code to "capture the context of this Figma library into ~/Projects/<label>/figma-design-system" ([figma-context-capture](../skills/figma-context-capture/SKILL.md)). The document it writes needs three blocks, all in [the template](../skills/figma-context-capture/assets/context-template.md):
-   - `project`: a display name, and a `port` in 9223–9232 that no other project uses, counting down from 9232 (the template's example is 9232). The port is optional in the template, but without it the audit service does not serve the project, so step 5 has no site; the Figma MCP takes ports from 9223 up;
+   - `project`: a display name, and a `port` in 9223–9232 that no other project uses, counting down from 9232 (the Figma MCP takes ports from 9223 up). The port is optional in the template, but without it the audit service does not serve the project, so step 5 has no site;
    - `snapshot-routing`: the library's Figma file key, the part after `/design/` in its URL;
-   - `audit-settings`: the library's naming conventions, which the audit reads.
+   - `audit-settings`: per library, the collection and axis names it uses and what its code is built as, which the audit reads.
+
+   What each block holds, and the optional ones (`naming-preferences` among them), is said beside it in the template.
 
 4. **Take a snapshot.** In the library file, run **Plugins → Development → Design system snapshot**. The first time, the window asks for this machine's pairing code: run `node tools/snapshot/pairing.cjs` and paste what it prints. The router finds the project by the file key in `snapshot-routing` and stores the snapshot in the project's folder, and everything built from it follows.
 
@@ -39,8 +41,10 @@ A project is a repo beside the toolkit (here `~/Projects/<label>/`) with a `figm
 
 ```
 ~/Projects/<label>/figma-design-system/
-  design-system-context.md   — everything decided about the project; the only
-                               place a fact about it lives (toolkit-standard §D 12)
+  design-system-context.md   — the library and every decision about the project,
+                               in one log, its §6 (toolkit-standard §D 12)
+  product-context.md         — the product: what it is, who uses it, its words
+  guidance/<topic>.md        — how the project designs a topic, gathered from §6
   snapshot/                  — what the plugin stored, machine-written (a code
                                repo may keep it elsewhere: snapshot.config.json)
   audit/<fileKey>.json       — one audit record per library: results, never settings
@@ -50,4 +54,4 @@ A project is a repo beside the toolkit (here `~/Projects/<label>/`) with a `figm
   site/, storybook/          — built, ignored by the folder's own .gitignore
 ```
 
-Only the context document is written by hand: **a document records a decision, a snapshot records a reading.** A project that departs from a design or naming rule says so in one line of it, `**Overrides:** <standard> rule N — <why>`, beside a dated ruling. No credentials go in the folder.
+Only the documents are written by hand: **a document records a decision, a snapshot records a reading.** A project that departs from a figma, naming or code rule says so in its context document, in one line, `**Overrides:** <standard> rule N — <why>`, beside a dated ruling (toolkit-standard *Precedence*). Every piece but the context document is optional. No credentials go in the folder.
