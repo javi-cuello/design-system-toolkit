@@ -21,7 +21,8 @@ import { fileURLToPath } from 'node:url';
 
 import { realpathSync } from 'node:fs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const contract = createRequire(import.meta.url)('../snapshot/projects.cjs');
+const require = createRequire(import.meta.url);
+const contract = require('../snapshot/projects.cjs');
 // what the code audit builds from, never its own output, a build or installed packages
 export const IGNORED = /(^|\/)(node_modules|storybook-static|dist|\.turbo|\.cache)(\/|$)/;
 
@@ -70,9 +71,69 @@ export function watchCodeAudit(label, context, log = console.log, { delay = 1000
   return { run, close: () => { closed = true; clearTimeout(t); for (const w of watchers) w.close(); if (child) child.kill(); }, watching: codeDirs };
 }
 
+/*
+ * A project's own Storybook, the one its docs site serves, kept current: a
+ * project whose repo states how its stories are built (`parity.host.build` in
+ * snapshot.config.json) and where the docs read them (`paths.storybook.dir`)
+ * is rebuilt into that folder when a build input changes. One project's docs
+ * showed a Storybook seven weeks behind its components, built by hand once
+ * (2026-11-11). The build is parity's own (session.mjs buildStories), its
+ * stamp in the folder, so unchanged inputs are never built twice into it; it
+ * runs in a child so the service is never blocked by it.
+ *
+ *   watchStories(label, log) → { run, close } | null
+ */
+export function watchStories(label, log = console.log, { delay = 30000, script = fileURLToPath(import.meta.url) } = {}) {
+  const where = contract.layout(null, label);
+  if (!where || where.error || !where.repo) return null;
+  const out = where.paths && where.paths.storybook && where.paths.storybook.dir;
+  const read = require('../shared/repo-config.cjs').readRepoConfig(where.repo);
+  const build = read && read.config && read.config.parity && read.config.parity.host && read.config.parity.host.build;
+  if (!out || !build || !build.run) return null;
+  const dirs = (build.inputs || [build.dir || '.']).map((d) => path.resolve(where.repo, d)).filter((d) => fs.existsSync(d));
+  let running = false, again = false, t = null, child = null, closed = false;
+  const run = () => {
+    if (running) { again = true; return; }
+    running = true;
+    child = spawn(process.execPath, [script, '--stories', label], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let tail = '';
+    child.stdout.on('data', (d) => { tail = (tail + d).slice(-600); });
+    child.stderr.on('data', (d) => { tail = (tail + d).slice(-600); });
+    child.on('close', (code) => {
+      log(`${code === 0 ? '' : `failed (${code}): `}${tail.trim().split('\n').pop()}`);
+      running = false; child = null;
+      if (again && !closed) { again = false; run(); }
+    });
+  };
+  const soon = () => { clearTimeout(t); t = setTimeout(run, delay); };
+  // the build's own output (the folder, and its .next and .old beside it) never starts a build
+  const outRel = path.relative(where.repo, out);
+  const own = (rel) => outRel && !outRel.startsWith('..') && [outRel, `${outRel}.next`, `${outRel}.old`].some((o) => rel === o || rel.startsWith(o + path.sep));
+  const watchers = dirs.map((d) => fs.watch(d, { recursive: true }, (_, f) => {
+    const rel = path.relative(where.repo, path.join(d, String(f || '')));
+    if (f && !IGNORED.test(rel) && !own(rel)) soon();
+  }));
+  for (const w of watchers) w.on('error', (e) => log(`stopped watching: ${e.message}`));
+  run();
+  return { run, close: () => { closed = true; clearTimeout(t); for (const w of watchers) w.close(); if (child) child.kill(); }, watching: dirs };
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })()) {
+  if (process.argv[2] === '--stories') {
+    // one build of a project's own Storybook into the folder its docs read, reused while nothing changed
+    const where = contract.layout(null, process.argv[3]);
+    if (where.error) { console.error(where.error); process.exit(2); }
+    const { buildStories } = await import('./session.mjs');
+    const read = where.repo ? require('../shared/repo-config.cjs').readRepoConfig(where.repo) : null;
+    const build = read?.config?.parity?.host?.build;
+    const out = where.paths?.storybook?.dir;
+    if (!build || !build.run || !out) { console.error(`${process.argv[3]}: no story build (parity.host.build in snapshot.config.json) or no paths.storybook.dir`); process.exit(2); }
+    try { buildStories(where.repo, build, out, (l) => console.log(l), process.argv[3]); }
+    catch (e) { console.error(e.message.split('\n').slice(0, 6).join('\n')); process.exit(1); }
+    process.exit(0);
+  }
   const label = process.argv[2];
-  if (!label) { console.error('usage: watch.mjs <label>'); process.exit(2); }
+  if (!label) { console.error('usage: watch.mjs <label> | --stories <label>'); process.exit(2); }
   const where = contract.layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   const w = watchCodeAudit(label, contract.auditContext(where.doc), (l) => console.log(`code audit ${label}: ${l}`), { delay: Number(process.env.DELAY || 10000) });

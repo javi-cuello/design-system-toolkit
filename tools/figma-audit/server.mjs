@@ -1426,6 +1426,17 @@ server.listen(PORT, "127.0.0.1", () => {
 }
 
 /*
+ * The project's own Storybook, which the docs site serves, keeps itself
+ * current: rebuilt when its build inputs change (tools/parity/watch.mjs
+ * watchStories); the site below rebuilds when the Storybook's index moves.
+ */
+{
+  const { watchStories } = await import(pathToFileURL(join(HERE, "..", "parity", "watch.mjs")).href);
+  try { watchStories(LABEL, (line) => console.log(`storybook      ${LABEL}: ${line}`)); }
+  catch (e) { console.error(`storybook      ${LABEL}: ${e.message}`); }
+}
+
+/*
  * The docs site keeps itself current.
  *
  * Its pages are static, and "rebuild after every snapshot" is a step nobody
@@ -1462,7 +1473,10 @@ server.listen(PORT, "127.0.0.1", () => {
   // event at all. An audit alone therefore never rebuilt the site, so the
   // Tracker page and the baked offline copy refreshed only when something
   // else on the list happened to change.
-  const files = [CONTEXT, P.tokens, P.changes, P.index, P.parity, P.storybook && join(P.storybook.dir, "index.json")].filter((f) => typeof f === "string");
+  // the Storybook twice: as the folder, seen from its parent, since a build swaps the whole folder in
+  // (tools/parity/session.mjs buildStories) and a watch inside it stays on the one removed; and its
+  // index, for a build by hand into the folder in place
+  const files = [CONTEXT, P.tokens, P.changes, P.index, P.parity, P.storybook && P.storybook.dir, P.storybook && join(P.storybook.dir, "index.json")].filter((f) => typeof f === "string");
   // The engine's source holds the dashboard too (src/dashboard), so one tree covers both.
   // the project's parity folder: the code audit's report, which the Parity pages read
   // DOCS_WATCH_ENGINE=0 leaves the engine out: a test serving a site of its own, which another session's edit to the

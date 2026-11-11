@@ -72,7 +72,8 @@ nobody maintains a second status.
   `guidance.cjs` (purpose, Usage, Don't, Behaviour, Composition, Code gen
   notes). A Don't item naming another component links to it.
 - **Stories:** matched to components by folder (a story file beside a spec is
-  that component's). Build Storybook first; the `storybook` path's `hide`
+  that component's). The docs service keeps a project's own Storybook built
+  (parity's `watch.mjs` `watchStories`, from `parity.host.build`); the `storybook` path's `hide`
   names stories that are machinery, and `themeGlobal` the global that
   switches light and dark. The preview says when the Storybook was built, and "code
   changed since" when the project's story-build inputs (parity's

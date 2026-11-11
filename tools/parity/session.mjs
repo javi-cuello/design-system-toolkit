@@ -52,6 +52,49 @@ export function inputsHash(repo, inputs) {
   return h.digest('hex').slice(0, 16);
 }
 
+/* The story build, where the project says, reused while none of its inputs
+   changed: the parity run and the docs service's watcher (watch.mjs
+   watchStories) both call this, so a project has one build and one stamp.
+   Built beside `out` and swapped in, so a site serving `out` never sees it
+   half-written; a failed build leaves the last good one. */
+export function buildStories(repo, build, out, say = () => {}, label = path.basename(repo)) {
+  // run where the project says (`build.dir`, a workspace's own package), else at the repo's root
+  const cwd = build.dir ? path.join(repo, build.dir) : repo;
+  /* Their packages, installed first where the project says how (`build.install`) and its
+     lockfile moved since: a pull that changed it otherwise builds against yesterday's
+     packages. The stamp is the run's own, outside their repo and the project's files. */
+  if (build.install) {
+    const { lock, dirs } = lockfiles(repo, cwd);
+    const now = crypto.createHash('sha256').update(lock.map((f) => fs.readFileSync(f)).join('')).digest('hex').slice(0, 16);
+    const lockStamp = scratch(label, repo, 'install-hash');
+    if (!fs.existsSync(lockStamp) || fs.readFileSync(lockStamp, 'utf8') !== now) {
+      say('their lockfile changed: installing…');
+      try { for (const dir of dirs.length ? dirs : [repo]) execSync(build.install, { cwd: dir, stdio: 'pipe', maxBuffer: 256e6 }); }
+      catch (e) { throw new Error(`installing their packages failed — nothing was measured:\n${String(e.stderr || e.stdout || e.message).split('\n').slice(-20).join('\n')}`); }
+      fs.writeFileSync(lockStamp, now);
+    }
+  }
+  // what the build reads: the project's `build.inputs`, else the folder it builds in, else the whole repo
+  const hash = inputsHash(repo, build.inputs || [build.dir || '.']);
+  const stamp = path.join(out, '.parity-hash');
+  if (fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8') === hash) { say('build reused — none of its inputs changed'); return false; }
+  say('building…');
+  const next = `${out}.next`;
+  fs.rmSync(next, { recursive: true, force: true });
+  const t = Date.now();
+  try { execSync(build.run.replace('{out}', next), { cwd, stdio: 'pipe', maxBuffer: 256e6 }); }
+  catch (e) { fs.rmSync(next, { recursive: true, force: true }); throw new Error(`the build failed — nothing was measured:\n${String(e.stdout || '').split('\n').slice(-30).join('\n')}\n${String(e.stderr || '').split('\n').slice(-30).join('\n')}`); }
+  fs.writeFileSync(path.join(next, '.parity-hash'), hash);
+  // the old one set aside, the new one in, then the old removed: nothing serves an empty folder
+  const old = `${out}.old`;
+  fs.rmSync(old, { recursive: true, force: true });
+  if (fs.existsSync(out)) fs.renameSync(out, old);
+  fs.renameSync(next, out);
+  fs.rmSync(old, { recursive: true, force: true });
+  say(`built in ${Math.round((Date.now() - t) / 1000)}s`);
+  return true;
+}
+
 /* A screen's window: its whole frame's width, and the height the mapping's
    page state names or the frame's own (a full-page comp is the page at its
    end), at most 16000. A mapping that needs the window (`viewport`) for a
@@ -125,35 +168,7 @@ export async function session(project, { page = true, app = true, browser = true
     // where the build goes: the project's own folder where the loader names one (a library built
     // elsewhere is built where the docs site serves its previews), else the run's scratch
     const out = project.storybookOut || scratch(label, REPO, 'build');
-    // run where the project says (`build.dir`, a workspace's own package), else at the repo's root
-    const cwd = H.build.dir ? path.join(REPO, H.build.dir) : REPO;
-    /* Their packages, installed first where the project says how (`build.install`) and its
-       lockfile moved since: a pull that changed it otherwise builds against yesterday's
-       packages. The stamp is the run's own, outside their repo and the project's files. */
-    if (H.build.install) {
-      const { lock, dirs } = lockfiles(REPO, cwd);
-      const now = crypto.createHash('sha256').update(lock.map((f) => fs.readFileSync(f)).join('')).digest('hex').slice(0, 16);
-      const lockStamp = scratch(label, REPO, 'install-hash');
-      if (!fs.existsSync(lockStamp) || fs.readFileSync(lockStamp, 'utf8') !== now) {
-        say('their lockfile changed: installing…');
-        try { for (const dir of dirs.length ? dirs : [REPO]) execSync(H.build.install, { cwd: dir, stdio: 'pipe', maxBuffer: 256e6 }); }
-        catch (e) { throw new Error(`installing their packages failed — nothing was measured:\n${String(e.stderr || e.stdout || e.message).split('\n').slice(-20).join('\n')}`); }
-        fs.writeFileSync(lockStamp, now);
-      }
-    }
-    // what the build reads: the project's `build.inputs`, else the folder it builds in, else the whole repo
-    const hash = inputsHash(REPO, H.build.inputs || [H.build.dir || '.']);
-    const stamp = path.join(out, '.parity-hash');
-    if (fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8') === hash) say('build reused — none of its inputs changed');
-    else {
-      say('building…');
-      fs.rmSync(stamp, { force: true });
-      const t = Date.now();
-      try { execSync(H.build.run.replace('{out}', out), { cwd, stdio: 'pipe', maxBuffer: 256e6 }); }
-      catch (e) { throw new Error(`the build failed — nothing was measured:\n${String(e.stdout || '').split('\n').slice(-30).join('\n')}\n${String(e.stderr || '').split('\n').slice(-30).join('\n')}`); }
-      fs.writeFileSync(stamp, hash);
-      say(`built in ${Math.round((Date.now() - t) / 1000)}s`);
-    }
+    buildStories(REPO, H.build, out, say, label);
     const s = await serve(out);
     cleanup.push(() => s.close());
     return s.base;
