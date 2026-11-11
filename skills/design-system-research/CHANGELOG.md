@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.2.0 (2026-11-11): headings are short labels, never questions, grep-checked (§4, §13); an illustrative worked case is labelled and invents only its situation (§5). A9, A25 amended; A26 added.
 - 3.1.1 (2026-11-11): "protagonist system" is "system story", as 3.0.0 renamed it; the recommendation line carries its reason, no narrator; A24's fixture names sections unnumbered.
 - 3.1.0 (2026-11-11): section headings are short questions (about six words) with no numbers; a pointer to another section links its title. A9 and A11 amended; A25 added.
 - 3.0.0 (2026-11-11): the voice file rewritten on the educational web press: no warm-up, answer then visible problem, framed figures, one analogy with its limit; "you" in cases and advice (the person's ruling). A24 added; A11, A12, A18, A22, A23 amended.

@@ -4,7 +4,7 @@
 
 A deep-mode guide teaches a designer a territory once, then stays open beside their work as a lookup. Read start to finish, it should feel like a good magazine piece. Scanned six months later, it should give one section's answer in a glance. Both uses have to work.
 
-It fails in two known ways. **Compressed:** question headings, correct citations, a verdict per axis, and prose so dense that a reader finishes a section without knowing what it said. **Report:** every sentence true, but it opens with how it was checked, reports each source's status mid-explanation, moves from example to example with nothing joining them, and never once sounds like a person explaining something. A reader called one "a report and summary" and "a stream of examples, not a reading piece" (2026-11-04). The rules below exist to avoid both, and the second is the one this file was rewritten to fix (2026-11-11).
+It fails in two known ways. **Compressed:** correct citations, a verdict per axis, and prose so dense that a reader finishes a section without knowing what it said. **Report:** every sentence true, but it opens with how it was checked, reports each source's status mid-explanation, moves from example to example with nothing joining them, and never once sounds like a person explaining something. A reader called one "a report and summary" and "a stream of examples, not a reading piece" (2026-11-04). The rules below exist to avoid both, and the second is the one this file was rewritten to fix (2026-11-11).
 
 The model is the educational web press: A List Apart, Smashing Magazine, CSS-Tricks, web.dev's *Learn* courses, and practitioners such as Josh Comeau, Ahmad Shadeed, Julia Evans, Brad Frost, Nathan Curtis and Amy Hupe. What they share is below; each rule names where it came from.
 
@@ -23,15 +23,15 @@ So the first screen holds only:
 1. **The title**, plain and descriptive.
 2. **A one-line subtitle**: what the guide decides, and for whom.
 3. **The problem, as a scene.** Two to four sentences: a moment the reader recognises, with something concrete going wrong in it. Never how the guide was researched, never "this piece sets out".
-4. **What this answers**: the questions a practitioner arrives with, as a short linked list, in the order they come up, then a pointer to the cheat sheet and the short version. It is the guide's contents, so it is also the index; past about fifteen sections, group it by part. Generate the anchors from the headings and check they resolve.
+4. **What this answers**: the guide's sections as a short linked list, each title followed by the question it settles in a few plain words, in the order they come up, then a pointer to the cheat sheet and the short version. It is the guide's contents, so it is also the index; past about fifteen sections, group it by part. Generate the anchors from the headings and check they resolve.
 
 Series position ("Part 3 of 9"), the reading order and links to the other parts go at the end of the guide or in the reading site's frame, never stacked above the problem.
 
 ## 4. Anatomy of a section
 
-Sections are not numbered: a heading is its question, and a pointer to another section links its title ("[which layers carry readiness](#which-layers-carry-readiness)"), never "section 5" (the maintainer, 2026-11-11: "we don't need numbers"). They are separated by `---` and follow the decision axes from scoping, never a system-by-system tour. A long topic may group them under `# Part one/two/three` headings. Each section runs in this order.
+Sections are not numbered: a heading is a short label, and a pointer to another section links its title ("[which layers carry readiness](#which-layers-carry-readiness)"), never "section 5" (the maintainer, 2026-11-11: "we don't need numbers"). They are separated by `---` and follow the decision axes from scoping, never a system-by-system tour. A long topic may group them under `# Part one/two/three` headings. Each section runs in this order.
 
-**A title that is a question.** The one a practitioner would actually ask: "Should it be `isDisabled` or `disabled`?", never "The boolean prefix". A question tells the reader whether this is the section they need; a topic noun needs the vocabulary they came to learn. **Keep it short: about six words, rarely past eight.** It is read in the contents rail as well as the page, and a question that wraps there is two questions or a sentence; the detail goes into the one-sentence answer below it. "What does an agent do differently?", not "What does an agent do with a design system that a person does not?" (2026-11-11).
+**A title that is a short label, never a question.** Two to five words, a noun phrase that names the subject: "The boolean prefix", "Agent-ready as an outcome", "Where readiness lives". No question mark, no sentence, no number. It is read in the contents rail as well as the page, and a long or questioning title there reads as a list of quiz items and wraps (the maintainer, 2026-11-11: "i don't appreciate these long headings and being questions", reversing the question-title rule of 3.1.0). The question the section settles goes into its one-sentence answer and into *What this answers*, never into the heading.
 
 **A one-sentence answer.** Plain, unlabelled. A reader who stops here still has something correct and usable.
 
@@ -45,7 +45,7 @@ Sections are not numbered: a heading is its question, and a pointer to another s
 
 ## 5. Worked cases and traps
 
-**Every major claim gets a worked case.** The situation, the version that looks reasonable, exactly what it costs in real values, the corrected version. Two code fences side by side, two table rows, or a five-line arithmetic walk. The test: could a reader reproduce the failure in their own file from what is written? A claim that resists this has not been understood well enough to publish.
+**Every major claim gets a worked case.** The situation, the version that looks reasonable, exactly what it costs in real values, the corrected version. Two code fences side by side, two table rows, or a five-line arithmetic walk. The test: could a reader reproduce the failure in their own file from what is written? A claim that resists this has not been understood well enough to publish. Take the case from a source where one exists; where none does, an illustrative case is allowed, said so in the sentence that introduces it ("take an illustrative change"), and only its situation is invented: its arithmetic and its behaviour are real, and it never says a named system did it.
 
 **Show the flawed version first.** The magazines teach by showing the thing that looks right and breaks, then the reasoning, then the fix; Shadeed's sections run "The problem", then "The solution" ([Shadeed, subgrid](https://ishadeed.com/article/learn-css-subgrid/)). Not "percentage line heights inherit badly", but sixteen-pixel body text, a thirty-two-pixel title inheriting a 24px computed value, and the lines that overlap.
 
@@ -117,7 +117,7 @@ So: an analogy only where a relationship is abstract (Core as a foundation two s
 
 ## 11. The back matter
 
-After the question sections, in this order, each separated by `---`:
+After the sections, in this order, each separated by `---`:
 
 ```
 ## Cheat sheet
@@ -161,6 +161,7 @@ Every rule above improves a draft, and each can be applied until it damages one.
 
 - **No em dashes or en dashes anywhere in the file.** A period, comma, colon or parentheses instead. Hyphens inside identifiers (`heading-01`) are fine.
 - **Three greps over the body**, excluding *Sources* and *What to re-check later*: `grep -niE "previous version|earlier draft|earlier revision|prior revision|this guide previously|got .{0,15}wrong|has been corrected|been reverted"` (revision narrated in the body); `grep -woiE "\bI\b|\bmy\b"` (a narrator); and `grep -niE "\byou(r|rs|rself|rselves)?\b"`, whose every hit must sit in a worked case, the advice, the cheat sheet, the short version or a quotation.
+- **Headings are labels**: `grep -nE '^#{2,4} .*\?[[:space:]]*$'` returns nothing, and `awk '/^#{2,3} /{if(NF-1>5)print FNR": "$0}'` prints nothing (no `##` or `###` heading past five words).
 - **If the `humanizer` skill is installed**, run its audit on the draft before saving; where it and this file conflict, the dash ban wins.
 - **Quotes in a guide**: at most one per source, under 15 words. Verbatim identifiers are facts and are reproduced exactly.
 - **Never overwrite a section you have not read.** Revising a guide means reading all of it first, sources included; a rewrite that silently drops a source block is worse than none.

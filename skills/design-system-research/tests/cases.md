@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.1.1)
+# Eval cases — design-system-research (v3.2.0)
+
+**Walked: 2026-11-11 for 3.2.0** — A25 reversed by the maintainer's ruling: headings are short labels, never questions; traced to `references/deep-mode-voice.md` §4 and §13. A9 amended: its section title example becomes a label. A11 read: the *What this answers* list still links every section, now each title followed by the question it settles; unchanged. A26 added, traced to §5. A18 and A24 read: both ask for worked cases and neither asserts on their source or heading form; unchanged.
 
 **Walked: 2026-11-11 for 3.1.1** — wording only: A24's fixture loses its numbered pointers; the cases naming the system-story term (A18, A24) and the recommendation line re-read; none changes. The 3.0.0 reader check is still pending, as recorded below.
 
@@ -108,7 +110,7 @@ Traced: 2026-08-09 — to the new Step 5 example clause and the new Step 7 mecha
 
 ## A9 · The reader finishes each section knowing what it said
 Fixture: deep mode on a topic with six decision axes. The draft has numbered sections titled with topic nouns (`## 3. The boolean prefix`), each opening with a comparison table of five systems and closing with a one-sentence marked recommendation. Every claim is cited and correct.
-Assert: the delivered file fails and is rewritten. Sections are titled as the question a practitioner asks (`## Should it be isDisabled or disabled?`, amended 3.1.0: no number), each opens with a paragraph that answers the title in plain language, a reader could stop at, with no label in front of it, and each closes with advice rather than a ruling. The concepts are introduced in prose before any table uses them, and every surviving table passes both keeping tests: understandable from the surrounding prose alone, and its removal would lose information rather than tidiness. A `What this answers` opener lists the questions in the order they arrive, and a standalone `The short version` section works for a reader who reads nothing else. At least one otherwise-abstract claim per part is carried by a named system's story.
+Assert: the delivered file fails and is rewritten. Sections are titled with a short label (`## The boolean prefix`, amended 3.2.0: a label, never a question; 3.1.0: no number), the question each settles moved into its answer and the opener, each opens with a paragraph that answers the title in plain language, a reader could stop at, with no label in front of it, and each closes with advice rather than a ruling. The concepts are introduced in prose before any table uses them, and every surviving table passes both keeping tests: understandable from the surrounding prose alone, and its removal would lose information rather than tidiness. A `What this answers` opener lists the sections in the order they arrive, each followed by the question it settles, and a standalone `The short version` section works for a reader who reads nothing else. At least one otherwise-abstract claim per part is carried by a named system's story.
 A guide that is accurate, well cited, correctly structured and passes A1 through A8 still fails this case if a reader could finish one of its sections unable to state that section's conclusion.
 > Amended at v2.10.0: the opening answer is an unlabelled paragraph, not a `**The short answer.**` block (A18).
 
@@ -231,9 +233,16 @@ Negative: a warm-up before the problem; a figure dropped in cold; an analogy per
 Observed: 2026-11-11 — the person: the guides "still feel a bit robotic / report"; two guides of the agent-ready series read against the research showed the preamble stack, five new terms in one opening section, "**What to do.**" labels and evidence dates mid-mechanism.
 Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §3 to §10.
 
-## A25 · Headings are short questions with no numbers
-Fixture: a guide whose sections read `## 2. What does an agent do with a design system that a person does not?` and `## 6. Is it a new kind of system, or the old discipline made non-optional?`, with "see section 6" in its body.
-Assert: each heading is an unnumbered question of about six words ("What does an agent do differently?"), the detail moved into the one-sentence answer; the back matter reads `## Cheat sheet`, `## The short version`, `## What to re-check later`; the pointer becomes a link on the target's title.
-Negative: a heading that wraps in a 15rem contents rail; a number before a heading; "section N" anywhere in the body.
-Observed: 2026-11-11 — the maintainer, on the reading site's contents rail: "these headings are long" and "we don't need numbers".
-Traced: 2026-11-11 for 3.1.0 — to `references/deep-mode-voice.md` §4 *A title that is a question* and §11.
+## A25 · Headings are short labels, never questions, with no numbers
+Fixture: a guide whose sections read `## 2. What does an agent do with a design system that a person does not?` and `## Is it a new kind of system?`, with "see section 6" in its body.
+Assert: each heading is an unnumbered label of two to five words that names the subject ("What does an agent do with a design system that a person does not?" becomes "How agents differ"; "Is it a new kind of system?" becomes "A new kind of system"); the question moves into the section's one-sentence answer and the *What this answers* list; `grep -nE '^#{2,4} .*\?[[:space:]]*$'` and the five-word `awk` of §13 both print nothing; the back matter reads `## Cheat sheet`, `## The short version`, `## What to re-check later`; the pointer becomes a link on the target's title.
+Negative: a heading ending in a question mark; a heading past five words; a number before a heading; "section N" anywhere in the body.
+Observed: 2026-11-11 — the maintainer, on the reading site's contents rail: "these headings are long" and "we don't need numbers" (3.1.0); then, on the rail of the rewritten guides: "i don't appreciate these long headings and being questions" (3.2.0).
+Traced: 2026-11-11 for 3.2.0 — to `references/deep-mode-voice.md` §4 *A title that is a short label, never a question* and §13 *Headings are labels*.
+
+## A26 · An illustrative case says so, and invents only the situation
+Fixture: a section whose claim no source illustrates (a tracking value carried from one face to another), and a guide-writer who needs a worked case for it.
+Assert: the case is introduced as illustrative in its own sentence ("Take an illustrative case."); its numbers behave as the text says when reproduced; no real system is named as having done it.
+Negative: an unlabelled invented case; an illustrative case whose arithmetic is wrong; "Polaris did this" attached to an invented situation.
+Observed: 2026-11-11 — the 27-guide rewrite: several agents needed worked cases no source supplied and labelled them illustrative on their own; the voice file covered invented traps but not invented cases.
+Traced: 2026-11-11 for 3.2.0 — to `references/deep-mode-voice.md` §5 *Every major claim gets a worked case*.
