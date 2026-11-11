@@ -55,7 +55,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 
 **Accessibility**
 - [required] The grid has an accessible name: `aria-labelledby` to its visible heading, or `aria-label` (Fluent DataGrid best practices) (ARIA).
-- [required] Header cells are `columnheader`, identifier cells `rowheader` ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/) applies `rowheader` to the chosen column) (ARIA).
+- [required] Header cells are `columnheader`, identifier cells `rowheader` ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/) applies `rowheader` to the chosen column) (WCAG 1.3.1).
 
 **Build**
 - [required] `<table role="grid" aria-labelledby="…">` under its visible heading; the toolbar is a `role="toolbar"` above it, outside the table ([code accessibility: *Composite widgets and roving tabindex*](../../code/accessibility.md#composite-widgets-and-roving-tabindex)).
@@ -94,7 +94,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 
 **Build**
 - [required] The "Columns" panel is a `popover` or `dialog` holding a `fieldset` of checkboxes, one per column, with "Move up" and "Move down" buttons as the non-drag route ([HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
-- [required] A resize handle is a focusable separator: `role="separator"`, `aria-orientation="vertical"`, `aria-valuenow` in pixels, Left and Right arrows resize, and the column menu offers the same; pointer drag is the enhancement (ARIA).
+- [required] A resize handle is a focusable separator: `role="separator"`, `aria-orientation="vertical"`, `aria-valuenow` in pixels, Left and Right arrows resize, and the column menu offers the same; pointer drag is the enhancement (WCAG 2.1.1, 2.5.7).
 - [required] Hidden columns leave the DOM (or take `hidden`), never `display: none` on a class that a later rule overrides (code-standard rule 17); `aria-colcount` and `aria-colindex` follow when columns are virtualised.
 - [required] Widths are written to a custom property per column (`--col-owner`), so one rule sizes the column (code-standard rule 38).
 - [required] Column state persists per person on the server or in storage, read before the first render so the grid does not reflow (code-standard rule 14; [javascript: *Re-rendering without losing focus or scroll*](../../code/javascript.md#re-rendering-without-losing-focus-or-scroll)).
@@ -182,7 +182,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 **What good looks like**
 - [strong] The grid is one tab stop; arrow keys move between cells; Tab leaves the grid.
 - [strong] The key set is APG's data grid, unchanged, so it works the same as every other grid people know.
-- [required] Focus is always visible and never hidden under a frozen header or column (WCAG 2.4.11).
+- [required] Focus is always visible and never hidden under a frozen header or column (WCAG 2.4.7, 2.4.11).
 
 **How**
 - [strong] One stop: "Only one of the focusable elements contained by the grid is included in the page tab sequence" ([APG grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/)). Implement with a roving tabindex: the active cell has `tabindex="0"`, every other `-1` ([APG, developing a keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)); the code half is [code accessibility: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex).
@@ -222,7 +222,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 - [required] The roles are complete or absent (ARIA).
 
 **How**
-- [required] `role="grid"` may sit on a native `table` element, which keeps the table's structure for browsers and adds the widget semantics; Fluent's DataGrid sets `role: 'grid'` on its root ([Fluent useDataGrid source](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-table/library/src/components/DataGrid/useDataGrid.ts)), and AG Grid uses `grid` or `treegrid` ([AG Grid accessibility](https://www.ag-grid.com/javascript-data-grid/accessibility/)) (ARIA).
+- [required] `role="grid"` may sit on a native `table` element, which keeps the table's structure for browsers and adds the widget semantics; Fluent's DataGrid sets `role: 'grid'` on its root ([Fluent useDataGrid source](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-table/library/src/components/DataGrid/useDataGrid.ts)), and AG Grid uses `grid` or `treegrid` ([AG Grid accessibility](https://www.ag-grid.com/javascript-data-grid/accessibility/)) (ARIA in HTML).
 - [weak] Don't override the roles a grid component sets (Fluent: "Override the `role` attribute of DataGrid controls" is a don't).
 - [required] Sortable headers carry `aria-sort` as in a table; selected rows `aria-selected`; read-only cells `aria-readonly` in an otherwise editable grid (ARIA).
 - [moderate] Prefer the table: "If it's not a widget, don't use role="grid", use role="table"" (Roselli), and better still, a `table` element.

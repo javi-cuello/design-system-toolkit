@@ -187,7 +187,7 @@ One test sorts most decisions here: **does activating it change the address?** I
 **Build**
 - [required] A `nav` labelled by its visible "On this page" heading (`aria-labelledby`), holding a list of links to the headings' `id`s ([HTML semantics: *Navigation markup*](../../code/html-semantics.md#navigation-markup)).
 - [required] Generated from the page's `h2`s (and `h3`s at most) at build time, so entries cannot drift from headings (code-standard rule 29).
-- [required] `scroll-margin-top` on headings from the sticky header's height token keeps the target visible after the jump (WCAG 2.4.11).
+- [strong] `scroll-margin-top` on headings from the sticky header's height token keeps the target visible after the jump (WCAG 2.4.11).
 - [weak] The section in view, if marked, is set by an `IntersectionObserver` as `aria-current="true"`; the list works without it.
 - [moderate] Sticky only in the wide-screen rail (`position: sticky` inside a media or container query); in the body it is static ([responsive: *Breakpoints*](../../code/responsive.md#breakpoints)).
 

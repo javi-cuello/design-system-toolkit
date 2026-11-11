@@ -70,7 +70,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 **What good looks like**
 - [required] Every focusable element shows a focus indicator when reached by keyboard, drawn from the focus tokens in one place (WCAG 2.4.7).
 - [strong] Text inputs show focus however they were focused.
-- [required] The indicator is never hidden by a sticky region, an overflow clip or a dim (WCAG 2.4.11).
+- [required] The indicator is never hidden by a sticky region, an overflow clip or a dim (WCAG 2.4.7 and 2.4.11).
 
 **How**
 - [strong] **`:focus-visible`**, not `:focus`: browsers use "heuristics to provide focus indicators only when it would be most helpful", typically not after a mouse click on a button but always in a text box ([MDN `:focus-visible`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:focus-visible)).
@@ -265,7 +265,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
     e.preventDefault(); focusCell(r + move[e.key][0], c + move[e.key][1]);   // clamps, moves tabindex 0
   });
   ```
-- [strong] **Edit mode.** Enter or F2 enters the cell: render the editor (an `input` labelled by its column header), focus it and set a mode attribute on the grid (`data-mode="edit"`, code-standard rule 6) that the key handler reads; Escape reverts and Enter or Tab commits, then focus returns to the cell. An invalid value keeps the editor open with `aria-invalid="true"` and its message in `aria-describedby` (code-standard rule 15).
+- [strong] **Edit mode.** Enter or F2 enters the cell: render the editor (an `input` labelled by its column header), focus it and set a mode attribute on the grid (`data-mode="edit"`, code-standard rule 6) that the key handler reads; Escape reverts and Enter or Tab commits, then focus returns to the cell. An invalid value keeps the editor open with `aria-invalid="true"` and its message in `aria-describedby` (beyond code-standard rule 15).
 - [required] **Virtualisation.** `aria-rowcount` and `aria-colcount` on the grid hold the totals, `aria-rowindex` and `aria-colindex` on each rendered row and cell its position (APG, Grid and Table Properties). Rendered rows stay in DOM order (code-standard rule 2), and recycling a row node keeps focus on the same record (code-standard rule 14).
 - [weak] **One handler.** Keys and clicks are delegated from the grid element, never bound per cell ([javascript: events and delegation](javascript.md#events-and-delegation)).
 
@@ -370,7 +370,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - [required] A script's `hidden` always wins against the stylesheet (code-standard rule 17).
 
 **How**
-- [required] **The choices:** (HTML)
+- [required] **The choices:** (HTML, ARIA)
 
   | Hide from | Use | Notes |
   |---|---|---|
@@ -444,7 +444,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Keyboard access and modified clicks
 
 **What good looks like**
-- [required] Everything a pointer can do, the keyboard can do, in an order that follows the reading order (WCAG 2.1.1).
+- [required] Everything a pointer can do, the keyboard can do, in an order that follows the reading order (WCAG 2.1.1, 2.4.3).
 - [strong] No positive `tabindex`; nothing receives focus that cannot be operated.
 - [required] Modified and middle clicks go to the browser (code-standard rule 21).
 
@@ -481,7 +481,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Keyboard shortcuts
 
 **What good looks like**
-- [required] A shortcut is an accelerator for something already reachable by Tab and Enter, never the only way (WCAG 2.1.1).
+- [strong] A shortcut is an accelerator for something already reachable by Tab and Enter, never the only way (WCAG 2.1.1).
 - [strong] It claims no key the browser, the operating system or a screen reader already uses for something else.
 - [required] A single-character shortcut can be turned off or remapped, or works only while its component has focus (WCAG 2.1.4).
 - [weak] It implements [interaction: keyboard parity and shortcuts](../ui/design/interaction.md#keyboard-parity-and-shortcuts).

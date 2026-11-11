@@ -68,7 +68,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [required] Implementation: code-standard rule 15 (a hint is a description, not part of the name). In Figma: figma-standard rule 26 (label text at least 12px), figma-standard rule 32 (label contrast).
 
 **Build**
-- [required] A visible `label` tied by `for` and `id`, or wrapping the control; it comes before a text field in the DOM and after a checkbox or radio (HTML).
+- [required] A visible `label` tied by `for` and `id`, or wrapping the control; it comes before a text field in the DOM and after a checkbox or radio (WCAG 1.3.1, 3.3.2).
 - [required] The name comes from the `label`, never from `aria-label`, `title` or `placeholder` on a field that shows a label ([accessibility: accessible names and descriptions](../../code/accessibility.md#accessible-names-and-descriptions)).
 - [weak] The search box exception: an `input type="search"` in a `search` element may take a visually hidden `label` or an `aria-label`, since its place says what it is.
 - [required] Nothing but the label's words inside it: a hint, count or error is a description (code-standard rule 15).

@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v3.0.0)
+# Eval cases — frontend-build (v3.1.0)
+
+**Walked: 2026-11-12 for 3.1.0** — A6 re-traced: `references/` still holds `audit/` only, and `audit-pass.md` now links knowledge sections for its symptoms, checklist and simplicity questions (each anchor resolves) rather than copying them; A7 reads the same file and holds; the rest read against the cited lines, none affected.
 
 **Walked: 2026-11-11 for 3.0.0** — the Figma prototype section, its feedback routing, script, test, templates and cases T14–T16, T18–T19 moved to `figma-prototype` (its P1–P5); the remaining cases read against the shorter skill, none rests on the moved text.
 

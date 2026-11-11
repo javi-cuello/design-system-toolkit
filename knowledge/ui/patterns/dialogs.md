@@ -155,7 +155,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
   - the least destructive action for "a process that is not easily reversible";
   - the most used button when the dialog only informs or continues.
   Carbon adds: the first field when there is a form, the primary button in a transactional dialog without inputs. MDN's [`dialog`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog) recommends `autofocus` on the intended element.
-- [required] **Trapped.** Tab and Shift+Tab wrap inside the dialog; the page behind is inert. `showModal()` gives inertness and Escape (HTML).
+- [strong] **Trapped.** Tab and Shift+Tab wrap inside the dialog; the page behind is inert. `showModal()` gives inertness and Escape (HTML).
 - [strong] **Returned.** On close, focus goes back to the element that opened it, unless that element no longer exists or the next step logically lives elsewhere (W3C). After "Delete row", focus goes to the next row or the table, never to the document start.
 - [weak] Design the return target in the file, as an annotation, for every dialog whose trigger disappears.
 

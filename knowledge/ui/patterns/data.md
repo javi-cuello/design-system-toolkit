@@ -122,7 +122,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 **Accessibility**
 - [required] 1.4.1: tone has a non-colour cue. 1.4.3: value and label meet contrast (figma-standard rule 32 in a component).
 - [required] 1.3.1: label and value are associated so the value is not read alone ("42" with no context); a description list or a heading with its value serves.
-- [required] A tile that is a link has one accessible name containing label and value (WCAG 2.4.4).
+- [required] A tile that is a link has one accessible name containing label and value (WCAG 2.4.4 and 2.5.3).
 
 **Build**
 - [required] A strip is a list of tiles; each tile is a heading or `dt` for the label and the value beside it, so label and value are read together (code-standard rule 1):

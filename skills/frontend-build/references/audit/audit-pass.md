@@ -16,7 +16,7 @@ The rules a script cannot settle, by handle; read each before raising a finding 
 - **Content:** design-standard rules 10 and 11.
 - **Accessibility:** on a design, figma-standard rules 26, 31 and 32 (checked by `figma-components-audit`); on a build, code-standard rules 2, 14–19 and 64.
 - **The depth:** the fundamentals in `knowledge/ui/design/` and the patterns in `knowledge/ui/patterns/` (toolkit repo) that the screen uses, each section's *Check* line and its cases. A practice there is the default the screen is held to: a deviation is a finding cited by page and section, unless the project records a ruling; only a rule is cited as a breach.
-- **The profile** the page belongs to (`knowledge/ui/profiles/documentation.md`, `knowledge/ui/profiles/dashboards.md`, or `knowledge/ui/patterns/forms.md`), and what it says such a page must specify.
+- **The profile** the page belongs to (design-standard's *Application profiles* names each and its page in `knowledge/ui/profiles/`), and what it says such a page must specify.
 
 ## 3. code-standard's *needs a read* rules
 
@@ -26,60 +26,38 @@ On a build, after `tools/project-check/check.mjs`: code-standard rules 1 (markup
 
 ## Symptoms
 
-| Symptom | Usual cause | Fix |
-|---|---|---|
-| A property is simply not applied, no error | `var(--name)` typo, or the token was never emitted | The generator exits non-zero on unresolved aliases; run it. For a hand-written `var()`, give it a fallback while debugging: `var(--x, magenta)` |
-| Page paints in the wrong theme, then corrects | theme applied by a deferred script | Apply the stored theme to `<html>` in a blocking inline script before first paint |
-| Horizontal scrollbar on mobile only | a fixed width, a long unbroken string, or `100vw` inside a scrollbar-bearing page | `overflow-wrap: anywhere`; `minmax(min(16rem,100%), 1fr)`; use `100%` not `100vw` |
-| A grid overflows its container below ~400px | `minmax(16rem, 1fr)` without the `min()` guard | `minmax(min(16rem, 100%), 1fr)` |
-| Full-height section has a hidden bottom edge on phones | `100vh` includes the retracting browser chrome | `100dvh`, or `100svh` for the conservative case |
-| A container query never matches | `container-type` set on the queried element itself | Move it to the parent; you query the container, not the component |
-| Layout collapses after adding `container-type: inline-size` | it makes block size independent of contents in that axis | Set an explicit height, or use `container-type: normal` and query something else |
-| Everything jumps when an element gets focus | missing `scroll-margin-top` under a sticky header | Add it, sized to the header |
-| Utility class does nothing | a component rule with higher specificity | Cascade layers — `@layer components, utilities` |
-| One rule overrides everything and nothing explains why | it is unlayered; unlayered beats every layer | Put it in a layer |
-| Styles break when markup moves | the stylesheet encodes the DOM through deep nesting | Flatten to two levels; style by class, not by descent |
-| Grepping a class name finds markup but no CSS | `&__element` concatenation in Sass | Write the full class at the top level |
-| Text overflows a button at larger font sizes | fixed height on a text container | Padding, not height (also WCAG 1.4.12) |
-| Layout shifts as images load | no intrinsic size reserved | `width`/`height` attributes on `<img>` plus `height: auto` in CSS |
-| Focus ring invisible on one variant | ring colour has under 3:1 against that surface | Clear the ring off the surface with `focus.ring($clear)`, and check the token against both surfaces |
-| Design change needs edits in many files | literal values in components | The value belongs in the token layer |
-| A fix reappears after the next export | someone hand-edited generated CSS | Fix the source tokens, regenerate |
-| Animation runs for users who asked for less motion | no `prefers-reduced-motion` block | Add the global block in `base/` |
-| Screen reader reads a filename | `<img>` with no `alt` attribute | `alt="…"`, or `alt=""` if decorative |
+A symptom in a build is traced in the knowledge page that owns the property, each with its cause and fix: overflow, viewport units, container queries and reflow in [responsive](../../../../knowledge/code/responsive.md); layers, nesting, custom properties and Sass modules in [css-architecture](../../../../knowledge/code/css-architecture.md); themes, literals and generated files in [tokens](../../../../knowledge/code/tokens.md); images and fonts in [performance](../../../../knowledge/code/performance.md); focus and reduced motion in [accessibility](../../../../knowledge/code/accessibility.md); `alt` in [html-semantics](../../../../knowledge/code/html-semantics.md).
 
 ## Before calling it done
 
+Each line is a question; the answer, and what good looks like, is the linked knowledge section.
+
 **Build**
-- [ ] Every literal is a token or carries its reason (code-standard rule 22).
-- [ ] No `@import` in Sass; every partial `@use`s what it needs.
-- [ ] The folder of mixins and functions (`abstracts/`, or the scaffold's `base/` mixins) emits zero CSS.
-- [ ] Cascade layer order declared once, at the top; nothing unlayered (code-standard rule 4).
-- [ ] Generated files are generated, not hand-edited, and the generator exits 0.
+- [ ] Every literal a token or carrying its reason? ([tokens: literals with reasons](../../../../knowledge/code/tokens.md#literals-with-reasons))
+- [ ] Sass modules only, and the mixins folder emits nothing? ([css-architecture: Sass modules](../../../../knowledge/code/css-architecture.md#sass-modules))
+- [ ] Layer order declared once, nothing unlayered? ([css-architecture: cascade layers](../../../../knowledge/code/css-architecture.md#cascade-layers))
+- [ ] Generated files untouched by hand, the generator exiting 0? ([tokens: generated, never hand-written](../../../../knowledge/code/tokens.md#generated-never-hand-written))
 
 **Responsive**
-- [ ] Resize continuously from 320px to 2560px — not just at the breakpoints. Nothing overlaps, overflows or leaves an orphaned line.
-- [ ] Zoom to 200% and 400%; content reflows without horizontal scrolling.
-- [ ] Real content, not design content: longest label, empty state, missing image, 60-character word.
+- [ ] Resized continuously, and zoomed to 200% and 400%? ([responsive: zoom and reflow](../../../../knowledge/code/responsive.md#zoom-and-reflow))
+- [ ] Real content, not design content? ([testing: fixtures](../../../../knowledge/code/testing.md#test-fixtures-as-one-module), [responsive: intrinsic layout](../../../../knowledge/code/responsive.md#intrinsic-layout-first))
 
 **Accessibility**
-- [ ] One full journey by keyboard only.
-- [ ] `:focus-visible` visible on every interactive element, on every surface it appears on.
-- [ ] Heading outline reads sensibly on its own.
-- [ ] `tools/ui-check/check.mjs` clean on every page type, and an automated accessibility scan (axe or Lighthouse) where one is available.
-- [ ] One page read by a screen reader.
-- [ ] Contrast checked at the token level, both themes.
+- [ ] One journey by keyboard only, and one page by screen reader? ([accessibility: testing with a keyboard and a screen reader](../../../../knowledge/code/accessibility.md#testing-with-a-keyboard-and-a-screen-reader))
+- [ ] Focus visible on every surface? ([accessibility: visible focus](../../../../knowledge/code/accessibility.md#visible-focus))
+- [ ] The heading outline reads on its own? ([html-semantics: headings](../../../../knowledge/code/html-semantics.md#headings-and-the-outline))
+- [ ] `tools/ui-check/check.mjs` and an automated scan clean, and their limits known? ([testing: automated checks](../../../../knowledge/code/testing.md#automated-accessibility-checks-and-their-limits))
+- [ ] Contrast checked at the token level, in both themes? ([visual: theming and dark mode](../../../../knowledge/ui/design/visual.md#theming-and-dark-mode))
 
 **Weight**
-- [ ] No dependency added that a dozen lines of CSS would have covered.
-- [ ] Fonts subset, `font-display: swap`, preloaded if above the fold.
-- [ ] Images sized and in a modern format; `loading="lazy"` below the fold only.
+- [ ] No dependency the platform or a few lines cover? ([javascript: the platform before a library](../../../../knowledge/code/javascript.md#the-platform-before-a-library))
+- [ ] Fonts and images as the performance page says? ([performance: fonts](../../../../knowledge/code/performance.md#fonts), [images](../../../../knowledge/code/performance.md#images))
 
 ## The simplicity questions
 
-Ask these of any code that feels like effort. All four have caught real overbuilding:
+Ask of any code that feels like effort; each rests on design-standard's *Principles* (*As little as possible*) and code-standard rule 28:
 
-1. **What breaks if I delete this?** If the answer is "nothing visible", delete it. This applies hardest to wrapper divs, utility classes used once, and abstractions with one caller.
-2. **Does the platform already do this?** Dialogs, disclosure, form validation, lazy loading, smooth scrolling, sticky positioning and dark mode are all native now. A dependency for any of them is a maintenance liability bought for nothing.
-3. **Is this responsive rule stating the design twice?** If a value appears in the base rule and again in a media query, an intrinsic function (`clamp`, `minmax`, `min`) probably states it once.
-4. **Would a new developer find this by grepping the obvious word?** If not, the name is wrong — and the name is cheaper to fix now than the confusion is later.
+1. **What breaks if I delete this?** Nothing visible: delete it.
+2. **Does the platform already do this?** ([javascript: the platform before a library](../../../../knowledge/code/javascript.md#the-platform-before-a-library))
+3. **Is this responsive rule stating the design twice?** ([responsive: intrinsic layout first](../../../../knowledge/code/responsive.md#intrinsic-layout-first))
+4. **Would a newcomer find this by grepping the obvious word?** ([css-architecture: naming](../../../../knowledge/code/css-architecture.md#naming))

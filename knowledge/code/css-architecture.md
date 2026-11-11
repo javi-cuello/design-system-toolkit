@@ -1,6 +1,6 @@
 # CSS architecture
 
-How a stylesheet is organised so it stays cheap to change: the cascade and specificity, cascade layers, selectors that stay local, custom properties, interaction states, nesting, naming, modern colour, Sass modules, file organisation, dead CSS and utilities. It serves code-standard rules 4, 5, 6, 9, 10, 17, 22, 38, 39, 44, 46, 50 and 60, and the design-standard principles *as little as possible, and no simpler* (one rule per decision) and *consistent, not uniform* (one way to write a thing). Tokens and theming are [tokens.md](tokens.md)'s; breakpoints and intrinsic layout are [responsive.md](responsive.md)'s; logical properties and mirroring are [i18n.md](i18n.md#logical-properties-and-mirroring)'s; focus styling is [accessibility.md](accessibility.md)'s; which features need a fallback is [browser-support.md](browser-support.md)'s.
+How a stylesheet is organised so it stays cheap to change: the cascade and specificity, cascade layers, selectors that stay local, custom properties, interaction states, nesting, naming, modern colour, font smoothing and rendering, Sass modules, file organisation, dead CSS and utilities. It serves code-standard rules 4, 5, 6, 9, 10, 17, 22, 38, 39, 44, 46, 50 and 60, and the design-standard principles *as little as possible, and no simpler* (one rule per decision) and *consistent, not uniform* (one way to write a thing). Tokens and theming are [tokens.md](tokens.md)'s; breakpoints and intrinsic layout are [responsive.md](responsive.md)'s; logical properties and mirroring are [i18n.md](i18n.md#logical-properties-and-mirroring)'s; focus styling is [accessibility.md](accessibility.md)'s; which features need a fallback is [browser-support.md](browser-support.md)'s.
 
 **Implements:** [visual](../ui/design/visual.md)'s states, colour and consistency of the system, and the styling half of every pattern's Build part.
 
@@ -103,6 +103,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 **How**
 - [required] **Scope is the selector, and they inherit.** "The selector given to the ruleset… defines the scope in which the custom property can be used," and an unregistered property "always inherits the value of its parent" ([MDN, Using custom properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties)). Inheritance ignores layers, which is what lets a page change a component it cannot out-rank.
 - [required] **A knob** is a property read with a default (code-standard rule 38):
+- [weak] While debugging, a loud fallback such as `var(--x, magenta)` shows at a glance which custom property resolves to nothing; take it out before the commit (the toolkit's practice; fallback behaviour per [MDN `var()`](https://developer.mozilla.org/en-US/docs/Web/CSS/var)).
 
 ```css
 ds-modal > [data-body] { padding: var(--modal-body-pad, var(--space-5)); }
@@ -214,6 +215,7 @@ ds-card {
 - [required] **Rename collisions.** A Figma axis called `Role` becomes `variant`, because `role` is ARIA's (code-standard rule 9); `align` or `width` on a custom element triggers the browser's presentational hints (code-standard rule 10).
 - [required] **A class convention is a stated choice.** A project that names by class (`.ds-block`, `.ds-block__part`) records it in its context document as a ruling. The rules still hold under it: one block per file naming only its own parts (code-standard rule 5), state as a pseudo-class (code-standard rule 9), hooks as attributes (code-standard rule 6). The *own parts* gate reads either shape (`styles` in `snapshot.config.json` says which).
 - [required] **Utility classes:** the two code-standard rule 6 allows, and no others ([Utilities](#utilities)).
+- [weak] A name is the word a newcomer would search for: a class, attribute or token whose obvious word finds nothing in a grep of the source is renamed now, while one change still fixes it (the toolkit's practice; the concatenation case is [nesting](#nesting)).
 
 **Cases**
 - A design hands over `Size=Large, State=Hover, Disabled=True` → `<ds-x size="large">` with `:hover` and the inner control's `disabled` (code-standard rules 9 and 62); a `state="hover"` attribute would let a template claim a state the control is not in.
@@ -254,6 +256,39 @@ ds-card {
 - *Judgement:* Does the design name this colour, or is the code inventing a step?
 
 **Sources:** MDN as linked. The sources agree; the toolkit derives only where the design states a formula.
+
+## Font smoothing and rendering
+
+**What good looks like**
+- [contested] Body text keeps the platform's own smoothing: no `-webkit-font-smoothing: antialiased` on `html` or `body`. Zach Leatherman: "defer to browser and platform defaults" and "only use `font-smooth` overrides sparingly and as a last resort" ([zachleat.com](https://www.zachleat.com/web/font-smooth/)); Dmitry Fadeyev: "for main portions of text where readability is paramount please leave the default setting alone" ([usabilitypost](http://usabilitypost.com/2012/11/05/stop-fixing-font-smoothing/)); Primer sets none globally. Against: Carbon's type reset and GOV.UK's `govuk-typography-common` set it on all text.
+- [moderate] An override, where one is used, is scoped to light text on a dark surface, the one case the sources that warn against it allow: "Feel free to use it on light text on dark backgrounds" ([usabilitypost](http://usabilitypost.com/2012/11/05/stop-fixing-font-smoothing/)); grayscale is used "to lighten text or icons that are placed on dark backgrounds" ([zachleat.com](https://www.zachleat.com/web/font-smooth/)); "it should't be used on the entire page" ([modern-normalize #19](https://github.com/sindresorhus/modern-normalize/issues/19)). Three agree, but all predate macOS 10.14, so a level lower.
+- [moderate] Kerning and ligatures come from the standard properties, `font-kerning` and `font-variant-ligatures` (both Baseline widely available since January 2020, [MDN `font-kerning`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-kerning), [MDN `font-variant-ligatures`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-ligatures)), whose defaults already apply them; `text-rendering` stays `auto` ([Bocoup](https://bocoup.com/blog/text-rendering): "I'm almost always willing to defer to the browser by keeping the default text-rendering: auto intact").
+
+**How**
+- [required] **What the two smoothing properties do.** Neither is standard ("Not part of any standard") and both only work on macOS ([MDN `font-smooth`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-smooth)). `-webkit-font-smoothing` (Chromium and Safari) takes `auto`, `none`, `antialiased` (smoothing "at the pixel level rather than the subpixel level") and `subpixel-antialiased`; `-moz-osx-font-smoothing` (Firefox) takes `auto` and `grayscale`. Windows, Linux, Android and iOS ignore both, so they cannot fix a rendering problem there.
+- [moderate] **What is left to change on current macOS.** macOS Mojave (10.14) "disabled text subpixel antialiasing by default" ([WebKit r239306](https://trac.webkit.org/r239306)), and high-DPI screens make subpixel rendering "increasingly unnecessary" ([zachleat.com](https://www.zachleat.com/web/font-smooth/)). What `antialiased` still does is make text "appear lighter and thinner" (same source), so it is a weight change, not a sharpness fix.
+- [weak] **The scoped override** goes on the dark surface, styled by attribute like the rest of this page, with both prefixes together:
+  `[data-surface="inverse"] { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }`. Tailwind's `antialiased` utility sets the same pair ([Tailwind `utilities.ts`](https://github.com/tailwindlabs/tailwindcss/blob/main/packages/tailwindcss/src/utilities.ts)); its preflight sets neither.
+- [weak] **Thin weights.** Never apply `antialiased` to light weights (300 and below) at small sizes: "It often leads to overly thin text with smaller weights" ([modern-normalize #19](https://github.com/sindresorhus/modern-normalize/issues/19)). Where light text on dark looks too heavy in a thin face, take the next weight down in the type tokens rather than thinning the rendering.
+- [required] **What `text-rendering` is.** "an SVG property that is not defined in any CSS standard"; `optimizeLegibility` "enables kerning and optional ligatures" and trades rendering speed for it ([MDN `text-rendering`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-rendering)).
+- [moderate] **Its cost.** MDN: `optimizeLegibility` is "not recommended for typical articles due to potential performance impacts" ([MDN `text-rendering`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-rendering)); Bocoup measured that "it can bog down an entire page, from initial render time to repaints", worst on Android ([Bocoup](https://bocoup.com/blog/text-rendering), 2015); Marco Arment found "effectively fatal performance problems" on mobile with long pages ([marco.org](https://marco.org/2012/11/15/text-rendering-optimize-legibility), 2012). Three agree, but the device tests are a decade old, so a level lower. Never set it on `body`; a heading that needs a discretionary ligature asks for it with `font-variant-ligatures`.
+
+**Cases**
+- A reset or framework ships `body { -webkit-font-smoothing: antialiased }` (Carbon, GOV.UK, a copied boilerplate) → remove it from `body`, keep it on the inverse surface if a reviewer on macOS finds the light text too heavy; record a project that keeps it globally as a ruling in its context document.
+- A dark tooltip or banner reads bolder on a Mac than in the design → the scoped override on that surface; Primer chose the opposite for its dark tooltips (`-webkit-font-smoothing: subpixel-antialiased`, [Primer React Tooltip](https://github.com/primer/react/blob/main/packages/react/src/TooltipV2/Tooltip.module.css)), which is why the global setting is contested.
+- An icon font looks heavier than its SVG source → the pair on the icon element only, as Material Web's icon does ([`_icon.scss`](https://github.com/material-components/material-web/blob/main/icon/internal/_icon.scss)).
+- `text-rendering: optimizeLegibility` on `body` "for nicer kerning" → delete it; `font-kerning: auto` and `font-variant-ligatures: normal` are the defaults already.
+- Text looks blurry on Windows → not a smoothing property's job; check the font's hinting and the size in px, since nothing here reaches Windows.
+
+**Accessibility**
+- [required] Smoothing does not change the colours, so WCAG 2.2 1.4.3 Contrast (Minimum) is measured as it always is; an override is never a contrast fix.
+- [weak] Thinning strokes lowers legibility that the contrast ratio cannot show, most for light weights at small sizes; look at overridden text on a Mac at body size before shipping it.
+
+**Check**
+- *Script:* `tools/css-lint/lint.mjs` could flag `-webkit-font-smoothing` or `-moz-osx-font-smoothing` on `html`, `body` or `:root`, one prefix without the other, and any `text-rendering: optimizeLegibility`.
+- *Judgement:* Is this text light on dark, and does it look wrong on macOS without the override?
+
+**Sources:** [MDN `font-smooth`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-smooth), [MDN `text-rendering`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-rendering), [MDN `font-kerning`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-kerning), [MDN `font-variant-ligatures`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-ligatures), [WebKit r239306](https://trac.webkit.org/r239306), [Zach Leatherman, font-smooth](https://www.zachleat.com/web/font-smooth/), [Dmitry Fadeyev, stop fixing font smoothing](http://usabilitypost.com/2012/11/05/stop-fixing-font-smoothing/), [modern-normalize #19](https://github.com/sindresorhus/modern-normalize/issues/19), [Bocoup, text-rendering](https://bocoup.com/blog/text-rendering), [marco.org, optimizeLegibility](https://marco.org/2012/11/15/text-rendering-optimize-legibility), [Carbon type reset](https://github.com/carbon-design-system/carbon/blob/main/packages/type/scss/_reset.scss), [GOV.UK Frontend typography helper](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/helpers/_typography.scss), [Primer React Tooltip](https://github.com/primer/react/blob/main/packages/react/src/TooltipV2/Tooltip.module.css), [Material Web icon](https://github.com/material-components/material-web/blob/main/icon/internal/_icon.scss), [Tailwind utilities](https://github.com/tailwindlabs/tailwindcss/blob/main/packages/tailwindcss/src/utilities.ts). Sources disagree on a global `antialiased`: Carbon (which also sets `optimizeLegibility` on `body`) and GOV.UK ship it on all text, Primer and the authors above keep the platform default. The toolkit keeps the default and scopes an override to light-on-dark surfaces where a macOS review asks for it.
 
 ## Sass modules
 
@@ -355,7 +390,7 @@ components/<x>/   one folder per component, its sheet named after it
 
 **What good looks like**
 - [required] The utilities layer is short and carries behaviour, not looks (code-standard rule 6).
-- [required] Anything visual belongs to a component or a layout primitive (code-standard rule 6).
+- [required] Anything visual belongs to a component or a layout primitive (code-standard rules 6 and 11).
 
 **How**
 - [required] The two classes code-standard rule 6 allows sit in the last layer, so they win; the visually hidden ruleset is [accessibility: hidden content](accessibility.md#hidden-content).

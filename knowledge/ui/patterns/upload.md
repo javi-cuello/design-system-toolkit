@@ -63,7 +63,7 @@ How a person gives the interface a file: which control to offer, how the file in
 - [required] 1.3.1 and 4.1.2 (the input's name comes from its label), 3.3.2 (limits stated before input), 2.4.7 Focus Visible (focus shows on the visible button, even when the native input is transparent), 3.3.1 Error Identification.
 
 **Build**
-- [required] *Elements:* `label for` + `input type="file" id name accept`, a hint element, and an error element per the form's error pattern (HTML).
+- [required] *Elements:* `label for` + `input type="file" id name accept`, a hint element, and an error element per the form's error pattern (WCAG 1.3.1 and 3.3.2).
 - [strong] *ARIA and keyboard:* native; no ARIA role is added to the input or its label.
 - [required] *States:* `aria-describedby="hint error"`, `aria-invalid="true"` on error; the visible focus ring drawn on the label with `:focus-visible` on the input (`input:focus-visible + label`) (code-standard rule 15).
 - [required] *Rules:* code-standard rule 15 (hint and error are descriptions), code-standard rule 18 (an icon in the button is decorative and `aria-hidden`), code-standard rule 20.
@@ -103,7 +103,7 @@ How a person gives the interface a file: which control to offer, how the file in
 **Build**
 - [weak] *Elements:* a container around the native `input type="file"` and its `label`; the drop handling (`dragover`, `drop`) assigns the dropped files to the same input or the same upload queue the button feeds, so there is one path after the pick.
 - [required] *ARIA and keyboard:* none of its own; the zone is not a button, and adding `role="button"` to it would duplicate the real one. A polite live region announces "3 files added".
-- [required] *States:* `data-dragover` (or a class the stylesheet keys on) while a drag is over the zone; `disabled` on the input when the limit is reached (code-standard rule 9).
+- [required] *States:* `data-dragover` (or a class the stylesheet keys on) while a drag is over the zone; `disabled` on the input when the limit is reached (code-standard rules 6 and 9).
 - [required] *Rules:* code-standard rule 20 (without script the input still works; the zone is decoration), code-standard rule 36 (one upload enhancement, one implementation, shared by every page that uploads), code-standard rule 6 (the script finds the zone by a data attribute).
 - [weak] *Detail:* [code: progressive enhancement](../../code/javascript.md#progressive-enhancement); [code: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages).
 

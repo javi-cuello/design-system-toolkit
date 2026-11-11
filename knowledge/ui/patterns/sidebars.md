@@ -17,7 +17,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [weak] **Grouping:** related pages under short group headings; a long flat list becomes five to eight groups. Primer's NavList groups items under titled groups and names the whole region with a heading ([Primer NavList](https://primer.style/product/components/nav-list/)).
 - [weak] **Order:** by the reader's task or the content's own order (getting started first, reference after); less important items at the bottom, where they may fall below the fold (NN/g vertical navigation).
 - [weak] **Labels:** text always; an icon may sit beside the label, never instead of it on a wide screen ("A word is worth a thousand pictures", NN/g vertical navigation).
-- [required] **Current page:** marked by more than colour and with `aria-current`, its group open and its ancestors marked; weaker than or equal to the global bar's current marker (NN/g salience) (code-standard rule 64).
+- [required] **Current page:** marked by more than colour and with `aria-current`, its group open and its ancestors marked; weaker than or equal to the global bar's current marker (NN/g salience) (code-standard rule 64; WCAG 1.4.1).
 - [weak] **Trailing information** (a count, an external-link icon) sits after the label and is not part of its name ([Primer NavList](https://primer.style/product/components/nav-list/)).
 
 **Cases**
@@ -143,9 +143,9 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] 1.4.10 Reflow (no horizontal scroll at 320px), 2.4.3 Focus Order (focus into an overlay and back to its trigger), 2.1.2 No Keyboard Trap, 3.2.3 (the same list, the same order, at every width), 2.4.8 Location.
 
 **Build**
-- [required] *Elements:* one `nav` in the DOM, restyled at the breakpoint; a disclosure form wraps it in `details` or a toggle `button`; an overlay form uses `dialog` opened with `showModal()`, or the Popover API for a non-modal panel (code-standard rule 20).
+- [strong] *Elements:* one `nav` in the DOM, restyled at the breakpoint; a disclosure form wraps it in `details` or a toggle `button`; an overlay form uses `dialog` opened with `showModal()`, or the Popover API for a non-modal panel (beyond code-standard rule 20).
 - [required] *ARIA and keyboard:* the disclosure pattern for an inline form; the dialog's focus contract (focus in, trapped, returned, Escape) for an overlay ([dialogs: focus](dialogs.md#focus-in-trapped-returned)).
-- [required] *States:* `aria-expanded` on the toggle, `hidden` when closed, `open` on `details` or `dialog`; `aria-current` unchanged (ARIA).
+- [required] *States:* `aria-expanded` on the toggle, `hidden` when closed, `open` on `details` or `dialog`; `aria-current` unchanged (WCAG 4.1.2; code-standard rule 64).
 - [required] *Rules:* code-standard rule 20 (a modal opens from `popovertarget` before `showModal()` takes over; without script the list shows), code-standard rule 17, code-standard rule 19, code-standard rule 36 (the same toggle script as the global menu, included once), code-standard rule 2.
 - [weak] *Detail:* [code: breakpoints](../../code/responsive.md#breakpoints), [code: container queries](../../code/responsive.md#container-queries), [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers).
 
@@ -183,7 +183,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 **Build**
 - [strong] *Elements:* the list's items are links (each item's detail has an address) or buttons in a listbox if selection is not navigation; the panel is an `aside` or a `section` with an accessible name, or `main`'s second column. An overlaying panel is a non-modal `dialog` or a popover.
 - [required] *ARIA and keyboard:* the chosen item carries `aria-current="true"` (links) or `aria-selected` (a listbox, [code: composite widgets](../../code/accessibility.md#composite-widgets-and-roving-tabindex)); the panel is labelled by its heading.
-- [required] *States:* the selected item's id in the address (`?item=…`), `aria-current` on it, the panel's content swapped in place keeping focus (code-standard rule 14).
+- [required] *States:* the selected item's id in the address (`?item=…`), `aria-current` on it, the panel's content swapped in place keeping focus (code-standard rules 14 and 64).
 - [required] *Rules:* code-standard rule 14 (a live swap keeps the reader's place), code-standard rule 20 (without script each item is a link to its own page), code-standard rule 21, code-standard rule 64, code-standard rule 12 (the empty panel renders only when nothing is chosen).
 - [weak] *Detail:* [code: state in the address and history](../../code/javascript.md#state-in-the-address-and-history), [code: re-rendering without losing focus or scroll](../../code/javascript.md#re-rendering-without-losing-focus-or-scroll), [code: focus management](../../code/accessibility.md#focus-management).
 
@@ -218,7 +218,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 **Build**
 - [moderate] *Elements:* the sidebar `nav` with `position: sticky`, `top` and `max-block-size` from the header's height token, `overflow-y: auto`; the handle a focusable element between sidebar and content.
 - [moderate] *ARIA and keyboard:* the APG window splitter: `role="separator"`, focusable, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-controls` pointing at the sidebar, and a name from the sidebar's label (`aria-labelledby`) or `aria-label`; Left and Right Arrow move it, Enter collapses and restores, Home and End are optional. The APG marks this pattern as under review, so test it with screen readers ([APG window splitter](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/)).
-- [required] *States:* width as a custom property (`--sidebar-width`) on the layout, `aria-valuenow` kept in step with it; the stored width read at render, written only on resize end (ARIA).
+- [weak] *States:* width as a custom property (`--sidebar-width`) on the layout, `aria-valuenow` kept in step with it; the stored width read at render, written only on resize end (ARIA).
 - [required] *Rules:* code-standard rule 38 (the width reaches the component through a custom property), code-standard rule 22 (min, max and default widths are tokens or carry their reasons), code-standard rule 46 (the header height the offset uses lives in one place), code-standard rule 20 (a render never writes the stored width; without script the sidebar has its default width and still scrolls), code-standard rule 57 (minimums derived from the content, not fitted to today's labels).
 - [weak] *Detail:* [code: custom properties](../../code/css-architecture.md#custom-properties), [code: zoom and reflow](../../code/responsive.md#zoom-and-reflow), [code: layout stability in code](../../code/performance.md#layout-stability-in-code), [code: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex).
 

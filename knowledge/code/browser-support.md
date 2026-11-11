@@ -10,6 +10,7 @@ Which platform features a front end can use, and what it does where one is missi
 - [moderate] A project states its support target once, as a Baseline level, and every feature choice is read against it.
 - [moderate] Baseline widely available features are used without a fallback; newly available ones get a fallback or are enhancements; limited ones are enhancements only.
 - [moderate] The target is one setting the tools read, not a sentence in a README.
+- [weak] As read in August 2026: container size queries, cascade layers, nesting, `@scope` and `light-dark()` were Baseline, style queries newly so. A dated reading, re-checked on the feature's MDN page before it is leaned on.
 
 **How**
 - [required] Baseline has two stages. "Newly available: The feature is supported by all of the core browsers"; "Widely available: 30 months have passed since the newly interoperable date". Before that a feature has limited availability. The core set is Chrome, Edge, Firefox and Safari, desktop and mobile ([web.dev, *Baseline*](https://web.dev/baseline); [MDN, *Baseline*](https://developer.mozilla.org/en-US/docs/Glossary/Baseline/Compatibility)).

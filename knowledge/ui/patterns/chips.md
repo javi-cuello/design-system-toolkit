@@ -29,7 +29,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] 1.4.1 Use of Color (category or status not by colour alone), 1.4.3 (label text contrast), 1.4.11 Non-text Contrast (a chip's boundary at 3:1 so it reads as a control), 4.1.2 Name, Role, Value (an interactive chip exposes a role; a static one exposes none). In Figma: figma-standard rule 31, figma-standard rule 32.
 
 **Build**
-- [required] *Elements:* a badge or static tag is a `span` (or text inside a link or cell); a filter or choice chip is a `button` or a styled `input type="checkbox"`/`radio` with its `label`; an input chip is a `span` holding the value text and a separate remove `button`; a tag that navigates is an `a` (HTML).
+- [required] *Elements:* a badge or static tag is a `span` (or text inside a link or cell); a filter or choice chip is a `button` or a styled `input type="checkbox"`/`radio` with its `label`; an input chip is a `span` holding the value text and a separate remove `button`; a tag that navigates is an `a` (code-standard rule 8; WCAG 4.1.2).
 - [strong] *ARIA and keyboard:* static labels have no role and are not focusable (Atlassian: lozenges cannot be focused). Interactive chips follow their control's APG pattern: [button](https://www.w3.org/WAI/ARIA/apg/patterns/button/) for toggles, checkbox or radio for selection.
 - [required] *States:* none on a static label; `aria-pressed`, `checked` or `aria-checked` on interactive chips; a count badge's number is part of a description, not the parent's name (code-standard rule 15).
 - [required] *Rules:* code-standard rule 8 (the kind of component decides its implementation), code-standard rule 9 (a variant is an attribute, a state a pseudo-class), code-standard rule 15 (a count is a description, not part of a name).
@@ -99,7 +99,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] 1.3.1 (the set's label names the question), 4.1.2 (radio semantics: one checked), 1.4.1, 2.1.1.
 
 **Build**
-- [required] *Elements:* a `fieldset` and `legend` with `input type="radio"` and `label`s styled as segments (WCAG 1.3.1).
+- [strong] *Elements:* a `fieldset` and `legend` with `input type="radio"` and `label`s styled as segments (WCAG 1.3.1).
 - [required] *ARIA and keyboard:* native radio keyboard (arrows move the selection within the group; one Tab stop), the same as the [APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/) describes for custom builds.
 - [strong] *States:* `checked`; never `aria-pressed` on single-choice segments.
 - [required] *Rules:* code-standard rule 9, code-standard rule 20, code-standard rule 16 (native controls follow the theme).
@@ -155,7 +155,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] Don't let a growing set push other controls around (design-standard rule 2).
 
 **How**
-- [required] **Remove:** a trailing "×" button inside the chip, at least a 24px target, named for what it removes; the whole chip is not the remove target unless the chip does nothing else (WCAG 2.5.8).
+- [strong] **Remove:** a trailing "×" button inside the chip, at least a 24px target, named for what it removes; the whole chip is not the remove target unless the chip does nothing else (WCAG 2.5.8).
 - [strong] **After removal:** focus moves to the next chip, or the previous when the last was removed, or the field or bar when none is left.
 - [weak] **Clear all** appears after two or more removable chips in a filter context ([filtering](filtering.md#applied-filters-and-clear-all)).
 - [moderate] **Wrapping:** in a field or a content area, chips may wrap inside their own container, which grows downward without moving anything above it. In a toolbar or table cell, they do not wrap: show as many as fit and a "+3 more" control.

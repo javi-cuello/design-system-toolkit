@@ -1,4 +1,6 @@
-# Eval cases — figma-prototype (v1.0.0)
+# Eval cases — figma-prototype (v1.1.0)
+
+**Walked: 2026-11-11 for 1.1.0** — drafting the product file, recording and retiring a decision and guidance pages now run `figma-context-capture` by name; P2–P5's assertions hold, with those writes traced to its *The project's other documents*.
 
 **Walked: 2026-11-11 for 1.0.0** — the section, script, test, templates and these five cases moved from frontend-build 2.21.0 unchanged, but for one step: the reference screens and the composed-frame check are now `figma-components-audit` run by name, not its probes called (skill-standard §A clause H). P1's assertion is updated to match; P1–P5 otherwise hold as walked there, their walk lines carried as written.
 

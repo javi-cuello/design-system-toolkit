@@ -72,7 +72,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 **What good looks like**
 - [moderate] Every primitive setting (variant, size, a boolean) is both an attribute and a property, and they agree.
 - [strong] Rich data (an array, an object) is a property only.
-- [required] A boolean is true when the attribute is present and false when it is absent, and defaults to false (HTML).
+- [strong] A boolean is true when the attribute is present and false when it is absent, and defaults to false (HTML).
 - [strong] A property set before the element was defined is not lost.
 
 **How**
@@ -83,7 +83,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
   get variant() { return this.getAttribute('variant') ?? 'primary'; }
   set variant(v) { this.setAttribute('variant', v); }
   ```
-- [required] **Booleans.** Present means true: `disabled="false"` is still true ([open-wc: attributes and properties](https://open-wc.org/guides/knowledge/attributes-and-properties/)). Lit: "For a boolean property to be configurable from an attribute, it must default to false" ([Lit: boolean attributes](https://lit.dev/docs/components/properties/#boolean-attributes)); Web Awesome: "Boolean props should *always* default to `false`" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)). A default-on option is named for its opposite (`without-icon`, `hide-label`). Use `toggleAttribute(name, force)` to set one (HTML).
+- [strong] **Booleans.** Present means true: `disabled="false"` is still true ([open-wc: attributes and properties](https://open-wc.org/guides/knowledge/attributes-and-properties/)). Lit: "For a boolean property to be configurable from an attribute, it must default to false" ([Lit: boolean attributes](https://lit.dev/docs/components/properties/#boolean-attributes)); Web Awesome: "Boolean props should *always* default to `false`" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)). A default-on option is named for its opposite (`without-icon`, `hide-label`). Use `toggleAttribute(name, force)` to set one (HTML).
 - [required] **`observedAttributes` lists only what the element reacts to** ([MDN: responding to attribute changes](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#responding_to_attribute_changes)). `attributeChangedCallback` runs once per observed attribute present at upgrade, before `connectedCallback` ([HTML: upgrade an element](https://html.spec.whatwg.org/multipage/custom-elements.html#concept-upgrade-an-element)), so it must not assume the inner nodes exist yet.
 - [strong] **Lazy properties.** A framework or script may set `el.items = [...]` before the definition loads; the value then sits on the instance and shadows the class's setter. Capture and re-set it on upgrade: the `_upgradeProperty` pattern "captures the value from the unupgraded instance and deletes the property" ([web.dev](https://web.dev/articles/custom-elements-best-practices)). Lit does it for its declared properties ([Lit: reactive properties](https://lit.dev/docs/components/properties/)).
   ```js

@@ -30,7 +30,7 @@ How a product lets people set it up for themselves: how a settings area is struc
 **Build**
 - [required] *Elements:* `main` with an `h1`, each group a `section` with an `h2` and its description; the section list a labelled `nav` with links; each group's fields in a `form`; destructive actions a `button` opening a confirmation `dialog` (code-standard rule 1).
 - [strong] *ARIA and keyboard:* native controls carry it; the section list uses `aria-current="page"`; a confirmation follows [APG alert dialog](https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/).
-- [required] *States:* `aria-current` on the current section; read-only settings use the control's `readonly` or `disabled` as interaction.md decides, with the reason as a description (code-standard rule 64).
+- [required] *States:* `aria-current` on the current section; read-only settings use the control's `readonly` or `disabled` as interaction.md decides, with the reason as a description (code-standard rules 64, 15).
 - [required] *Rules:* code-standard rule 64 (the current section), code-standard rule 1 (one `h1`; the `nav` labelled), code-standard rule 15 (the description and "managed by" text are descriptions), code-standard rule 20 (each form posts without script), code-standard rule 9 and code-standard rule 62.
 - [weak] *Detail:* [code: navigation markup](../../code/html-semantics.md#navigation-markup), [code: forms markup](../../code/html-semantics.md#forms-markup).
 
@@ -66,7 +66,7 @@ How a product lets people set it up for themselves: how a settings area is struc
 **Build**
 - [required] *Elements:* explicit sections as `form` with a `button type="submit"`; instant controls are `input type="checkbox"` styled as a switch or a native radio group, each change sent by script with a no-script submit fallback (code-standard rule 20).
 - [strong] *ARIA and keyboard:* a switch per [APG switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/) (Space toggles; prefer a native checkbox, which uses `checked` instead of `aria-checked`); a radio group per [APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/), native radios first.
-- [required] *States:* `checked` on the switch, not a class; the confirmation in a persistent polite live region whose contents change (code-standard rule 14).
+- [required] *States:* `checked` on the switch, not a class; the confirmation in a persistent polite live region whose contents change (code-standard rules 9, 14).
 - [required] *Rules:* code-standard rule 20 (a no-script path for instant controls), code-standard rule 14 (an update keeps focus on the control), code-standard rule 61 (a failed save says why).
 - [weak] *Detail:* [code: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages), [code: progressive enhancement](../../code/javascript.md#progressive-enhancement).
 

@@ -49,7 +49,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 
 **How**
 - [weak] **Width.** Wide enough "to contain the typical query" ([NN/g](https://www.nngroup.com/articles/search-visible-and-simple/)); NN/g gives no character count. Size it from the queries this product gets (the longest common component or token name, plus a margin), so a typical query never scrolls inside the box.
-- [required] **Label.** A visible label or a label the screen reader reads; a magnifier icon and a placeholder are not a label (WCAG 4.1.2).
+- [required] **Label.** A visible label or a label the screen reader reads; a magnifier icon and a placeholder are not a label (WCAG 3.3.2, 4.1.2).
 - [weak] **Placeholder** hints at what can be searched: "Useful and short text hinting at what the user can search for" ([Carbon](https://carbondesignsystem.com/components/search/usage/)). "Search components" or "Name or token", never "Type here…", never an example the reader might mistake for an entered value.
 - [weak] **Clear button** appears once there is text and clears it ([Carbon](https://carbondesignsystem.com/components/search/usage/)); it has a name.
 - [weak] **Submit.** A site search has a submit button (an icon with a name is enough); a list search that runs as you type needs none, but its form still submits on Enter without script.
@@ -230,7 +230,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 - [weak] Don't create a history entry per keystroke ([ux: state persistence and restore](../design/ux.md#state-persistence-and-restore)).
 
 **How**
-- [required] A site search is a GET form whose input is named `q`; the results page reads it. Without script it still works (code-standard rule 20).
+- [strong] A site search is a GET form whose input is named `q`; the results page reads it. Without script it still works (beyond code-standard rule 20).
 - [weak] A list search replaces the history entry while typing and pushes one when the query settles or is submitted, so Back undoes the search as one step.
 - [weak] The query combines with the facets in one address (`?q=button&level=error`).
 - [weak] Clearing the search removes the parameter.

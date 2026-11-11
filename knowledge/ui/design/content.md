@@ -133,6 +133,57 @@ The fundamentals of interface text, for building a page or a design and for audi
 
 ---
 
+## Explanatory text and restraint
+
+**What good looks like**
+- [strong] A page, panel or section starts with no explanatory text; a lede, description or hint is added only where people would otherwise get stuck or choose wrong. GOV.UK: "only add help text if user research shows that you need it" ([Service Manual](https://www.gov.uk/service-manual/design/writing-for-user-interfaces)); W3C: "Too much information or instruction can be just as harmful as too little" ([Understanding 3.3.2](https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions.html)); Apple: "Check each word to be sure it needs to be there" ([HIG: Writing](https://developer.apple.com/design/human-interface-guidelines/writing)); Microsoft: "just enough information to make decisions confidently" ([Top 10 tips](https://learn.microsoft.com/en-us/style-guide/top-10-tips-style-voice)).
+- [strong] Headings and labels carry the meaning, and a short one is enough: "A word, or even a single character, may suffice" ([Understanding 2.4.6](https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels.html)); on a one-question page "the heading is enough to indicate the purpose" (Understanding 3.3.2), and GOV.UK makes the question the page heading ([question pages](https://design-system.service.gov.uk/patterns/question-pages/)); NN/g: "if users see only the first 2 words, they should still get the gist" ([F-shaped pattern](https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/)). How to word them is *Headings and page titles*.
+- [strong] Most of a description goes unread: people read "at most 28% of the words" on a visit, about 20% more likely ([NN/g](https://www.nngroup.com/articles/how-little-do-users-read/)), and "most people scan text instead of reading everything" ([Atlassian](https://atlassian.design/foundations/content/designing-messages/success-messages)). Whatever must be known goes in the heading, the label or the control, never only in the lede.
+- [weak] Text that explains how the interface works is a sign the interface needs fixing, not more words: "Fix the interface so it does not need explaining" (GOV.UK Service Manual); DWP, which builds on GOV.UK and counts once, says more text "is probably because the question is confusing" ([DWP hint text](https://design-system.dwp.gov.uk/guidance/hint-text/)).
+- [moderate] A description never repeats its heading or what the screen already shows: "Avoid duplicating content, such as adding a page title under the page Title bar" ([Shopify app design](https://shopify.dev/docs/apps/design/content)); GOV.UK sets one question as the heading so screen-reader users hear it once (question pages).
+- [weak] Where a lede is earned, it is one line on what the person can do on the page, not a tour of what sits below it ([Learning Equality](https://design-system.learningequality.org/pageheader): "a one-line summary of what the user can accomplish"). On a page built from data, the lede says what the page means (design-standard rule 1).
+- [moderate] Information most people need stays visible; what only some need goes behind a disclosure or a link: GOV.UK details is for "information that only some users will need" and never hides what "the majority of your users will need" ([details](https://design-system.service.gov.uk/components/details/)); PatternFly sends "non-imperative information" to a popover ([helper text](https://www.patternfly.org/components/helper-text/design-guidelines)).
+- [moderate] Helper text carries what the person must know to complete the field (a format, a limit, where to find the answer), never a definition of the field: PatternFly, "Do not use helper text to explain what a form field is"; GOV.UK, hint text "helps the majority of users answer the question" (question pages). Hint length and placement are *Labels, hints and placeholder text in forms*.
+- [strong] Filler is cut: no "please note", "simply", "just", "easy", "now", "below you will find". GOV.UK: "no need to say 'please' or 'please note'" and "You do not usually need the word 'now'" (Service Manual); Primer: "Do not say that something is 'easy', 'quick', or that the user 'just' needs to do something" ([content](https://primer.style/product/getting-started/foundations/content)); Microsoft: "Prune every excess word".
+
+**How:** draft the screen with headings, labels and controls only, then read it cold and add text only where you stalled. Ask of each lede or description: does it say something the heading cannot, and would anyone act differently without it? If not, delete it. When an explanation keeps growing, change the structure instead: rename the heading, split the section, reword the question. Order a description that stays the way *Scannability and hierarchy* orders any text: its point first.
+
+**Cases:**
+- A settings card titled "Notifications" carries "Manage your notification settings" → delete the description; it repeats the heading.
+- A dashboard panel opens "This panel shows the findings from the latest audit, grouped by area" → delete it; the heading "Findings by area" and the caption (design-standard rule 1) already say it.
+- A form opens "Please fill in all the fields below and click Submit" → delete it; the labels and the button carry the task.
+- A permissions panel needs a paragraph explaining that inherited roles override local ones → the structure is the problem; show the inherited role beside each person and drop the paragraph.
+- A one-field page has the heading "Your details" and the label "Email address" → make the label the heading ("What is your email address?") and drop the duplicate.
+
+**Accessibility:** 2.4.6 Headings and Labels (AA) wants headings and labels that describe topic or purpose, and 3.3.2 Labels or Instructions (A) wants instructions where input needs them, but its intent is "not to clutter the page with unnecessary information" ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). A description tied to a control or a dialog is read out in full each time focus arrives, which is why GOV.UK keeps hints to one short sentence ([text input](https://design-system.service.gov.uk/components/text-input/)).
+
+**Build:**
+- [required] Headings are real `h2` to `h6` in order, so the outline carries the meaning without the descriptions (code-standard rule 1); a description beside a control is tied with `aria-describedby`, never placed in its name (code-standard rule 15).
+- [strong] A dialog's `aria-describedby` points at one short sentence or is left off; the WAI-ARIA Authoring Practices make it optional and advise omitting it when the content holds "lists, tables, or multiple paragraphs" ([APG dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)). Markup: [HTML semantics: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers).
+
+**Check:** *Script* could flag a description whose words are mostly its heading's, ledes opening "This page", "This section", "Below", "Here you can", filler words ("please note", "simply", "just", "easy"), and descriptions over two sentences under a section heading. *Judgement:* hide every lede and description: can the screen still be used? If so, each one has to earn its way back.
+
+**Sources:** GOV.UK, W3C, Apple, Microsoft, Primer, Atlassian and NN/g agree on restraint; none of them sets a word count for a section description, so the toolkit gives none beyond "one line" (Learning Equality, one system). PatternFly puts optional context in a popover where GOV.UK uses inline details; both keep what most people need visible, which is the item the toolkit takes. Oracle's guidance that heavy need for help means the interface is too complex was found only through search and not opened, so it is not counted.
+- https://www.gov.uk/service-manual/design/writing-for-user-interfaces
+- https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions.html
+- https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels.html
+- https://developer.apple.com/design/human-interface-guidelines/writing
+- https://learn.microsoft.com/en-us/style-guide/top-10-tips-style-voice
+- https://www.nngroup.com/articles/how-little-do-users-read/
+- https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/
+- https://atlassian.design/foundations/content/designing-messages/success-messages
+- https://primer.style/product/getting-started/foundations/content
+- https://shopify.dev/docs/apps/design/content
+- https://design-system.service.gov.uk/patterns/question-pages/
+- https://design-system.service.gov.uk/components/details/
+- https://design-system.service.gov.uk/components/text-input/
+- https://design-system.dwp.gov.uk/guidance/hint-text/
+- https://www.patternfly.org/components/helper-text/design-guidelines
+- https://design-system.learningequality.org/pageheader
+- https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
+
+---
+
 ## Button and link labels
 
 **What good looks like**

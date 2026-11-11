@@ -42,7 +42,7 @@ component   --button-bg: var(--colour-action-primary);  a knob; optional
 **What good looks like**
 - [required] A component token reads component, then the layer it paints, then the property, with the variant and state as modifiers on the leaf (figma-standard rule 49).
 - [weak] Every component token aliases a semantic token; a brand re-points the same name and never adds one.
-- [required] The Figma path, the custom property and the selector that reads it can each be derived from the other two (code-standard rule 52).
+- [weak] The Figma path, the custom property and the selector that reads it can each be derived from the other two (beyond code-standard rule 52).
 
 **How**
 
@@ -146,7 +146,7 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 - [required] A mode re-points one tier; every alias follows (code-standard rule 53).
 
 **How**
-- [required] DTCG writes an alias as `{group.token}`, which "always resolves to the `$value` property of the target token", and tools keep references until a value is needed ([DTCG 2025.10](https://www.designtokens.org/tr/2025.10/format/)) (code-standard rule 53).
+- [required] DTCG writes an alias as `{group.token}`, which "always resolves to the `$value` property of the target token", and tools keep references until a value is needed ([DTCG 2025.10](https://www.designtokens.org/tr/2025.10/format/)).
 - [weak] Style Dictionary's `outputReferences: true` writes `--color-danger: var(--color-red);` instead of the hex, "useful for outputting themeable and dynamic code" ([Style Dictionary formats](https://styledictionary.com/reference/hooks/formats/)). The token build sets it.
 - [weak] Caveats from the same page: a reference to a filtered-out token, or a transitively transformed one, cannot be kept; the build resolves those, and they are the places a mode will not follow.
 
@@ -231,7 +231,7 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 
 **What good looks like**
 - [weak] A token exists because a value is reused, themed or shared with the design file.
-- [required] A value used once, in one place, stays a literal with its reason (code-standard rule 22).
+- [weak] A value used once, in one place, stays a literal with its reason (beyond code-standard rule 22).
 
 **How**
 - [weak] Do not tokenise: a value used once, the width of one illustration, `0`, `100%`, `1fr`, `auto`, or a keyword.

@@ -114,7 +114,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 **Build**
 - [required] *Elements:* the same disclosure as a dropdown, the panel holding one heading and one `ul` per group. Group headings are headings (or a list's label) so a screen reader can move by them (WCAG 1.3.1).
 - [strong] *ARIA and keyboard:* the APG disclosure navigation pattern, as in *Navigation dropdowns*; no `menu`, `menuitem` or `grid` roles in the panel.
-- [required] *States:* `aria-expanded` on the trigger, `hidden` on the closed panel, `aria-current` on the current link (WCAG 4.1.2).
+- [required] *States:* `aria-expanded` on the trigger, `hidden` on the closed panel, `aria-current` on the current link (WCAG 4.1.2; code-standard rule 64).
 - [required] *Rules:* code-standard rule 19, code-standard rule 17, code-standard rule 20 (without script the trigger reaches the section's index page), code-standard rule 64, code-standard rule 1 (headings and lists in the panel).
 - [weak] *Detail:* [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers), [code: headings and the outline](../../code/html-semantics.md#headings-and-the-outline).
 
@@ -156,7 +156,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 **Build**
 - [weak] *Elements:* the same `nav` and `ul` as the wide bar, with a `button` before the list that shows only below the collapse width; one list serves both widths, restyled by a media or container query, never a second copy of the links. Second levels as `details` or disclosure buttons.
 - [strong] *ARIA and keyboard:* the APG disclosure pattern: the Menu button carries `aria-expanded` and `aria-controls` pointing at the list; Enter or Space toggles; Escape closes and returns focus. A full-screen menu that hides the page behind it is a modal `dialog` with its focus contract ([dialogs: focus](dialogs.md#focus-in-trapped-returned)); a menu that opens below the bar, pushing the page, is a plain disclosure. Not `role="menu"`.
-- [required] *States:* `aria-expanded` on the button, `hidden` on the closed list below the collapse width; the button itself `hidden` above it; `aria-current` on the current link inside (ARIA).
+- [required] *States:* `aria-expanded` on the button, `hidden` on the closed list below the collapse width; the button itself `hidden` above it; `aria-current` on the current link inside (WCAG 4.1.2).
 - [required] *Rules:* code-standard rule 20 (without script the links show and the button is absent; GOV.UK ships its toggle `hidden` until the script runs), code-standard rule 17, code-standard rule 18 (if the button is icon-only, it is named; prefer the visible word), code-standard rule 64, code-standard rule 2, code-standard rule 36.
 - [weak] *Bottom bar:* a `nav` of links, each an icon with its text, `aria-current` on the current one, padded for the device's safe area. The collapse width is measured from the items and written once as a breakpoint token.
 - [weak] *Detail:* [code: breakpoints](../../code/responsive.md#breakpoints), [code: container queries](../../code/responsive.md#container-queries), [code: progressive enhancement](../../code/javascript.md#progressive-enhancement), [code: touch targets](../../code/responsive.md#touch-targets), [code: safe areas](../../code/responsive.md#safe-areas).
@@ -192,9 +192,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [required] 2.4.11 Focus Not Obscured (Minimum): a sticky bar never fully hides the focused element. 1.4.10 Reflow and 1.4.4 Resize Text: at 400% zoom a sticky bar can fill the viewport, so it stops sticking at narrow heights. 2.3.3 Animation from Interactions (AAA, worth meeting) for the reveal. 1.4.3 Contrast over all content.
 
 **Build**
-- [required] *Elements:* the same `header` and `nav`, made sticky with `position: sticky; top: 0` on the band; no script for a fully sticky bar (CSS).
+- [strong] *Elements:* the same `header` and `nav`, made sticky with `position: sticky; top: 0` on the band; no script for a fully sticky bar (CSS).
 - [weak] *ARIA and keyboard:* none added; the bar's links keep their own model.
-- [required] *States:* a partially persistent bar toggles a `data-` attribute (`data-scrolled="up|down"`) from a passive scroll listener and styles its transform off it; the transition sits inside `prefers-reduced-motion: no-preference` (code-standard rule 6).
+- [strong] *States:* a partially persistent bar toggles a `data-` attribute (`data-scrolled="up|down"`) from a passive scroll listener and styles its transform off it; the transition sits inside `prefers-reduced-motion: no-preference` (beyond code-standard rule 6).
 - [required] *Scroll padding:* `scroll-padding-top` on the root equal to the bar's height (a custom property both read), so anchors and focus land below it ([MDN scroll-padding-top](https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top)). A media query on height drops the stickiness when the viewport is too short.
 - [required] *Rules:* code-standard rule 22 (the bar's height is a token or carries its reason, and scroll padding reads the same value), code-standard rule 46 (one place for a dimension the screen takes from the design), code-standard rule 6 (the scroll hook is an attribute).
 - [weak] *Detail:* [code: reduced motion and colour scheme in code](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code), [code: zoom and reflow](../../code/responsive.md#zoom-and-reflow), [code: layout stability in code](../../code/performance.md#layout-stability-in-code).
@@ -214,7 +214,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [weak] Don't use it below the mobile collapse width; there the whole bar becomes the Menu button.
 
 **How**
-- [required] **Order:** the bar keeps its order; items leave from the end (the least used) and enter "More" in the same order, so a section never jumps ahead of another (design-standard rule 2).
+- [weak] **Order:** the bar keeps its order; items leave from the end (the least used) and enter "More" in the same order, so a section never jumps ahead of another (beyond design-standard rule 2).
 - [weak] **Label:** "More", with a chevron; it opens like any navigation dropdown.
 - [required] **Current item inside "More":** "More" itself is marked as current, and some systems lift the current item into the visible bar; the toolkit marks "More" and keeps the order, so items never swap places as the reader moves (design-standard rule 2).
 - [required] **Measured from the content:** how many fit is measured at run time or decided at fixed widths from the longest labels, never from a device list (code-standard rule 57).
@@ -263,7 +263,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [required] 1.1.1 (the avatar has a text alternative), 4.1.2, 2.4.7, 3.2.3 (the menu sits in the same place on every page).
 
 **Build**
-- [required] *Elements:* a `button` holding the avatar `img` with `alt` naming the person, or the name as visible text; a `ul` of items (WCAG 1.1.1).
+- [required] *Elements:* a `button` holding the avatar `img` with `alt` naming the person, or the name as visible text; a `ul` of items (WCAG 1.1.1, 4.1.2).
 - [strong] *ARIA and keyboard:* [APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/): `aria-haspopup="menu"`, `aria-expanded`; Enter, Space or Down open it and focus the first item; Escape closes and returns focus. The identity header is not an item: it sits outside the `menu` or as a `presentation` row.
 - [required] *States:* `aria-expanded` on the trigger (WCAG 4.1.2).
 - [required] *Rules:* code-standard rule 18 (an avatar-only trigger is named), code-standard rule 20 ("Sign out" is a POST form that works without script).

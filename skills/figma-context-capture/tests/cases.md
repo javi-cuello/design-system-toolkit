@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.14.1)
+# Eval cases — figma-context-capture (v2.15.0)
+
+**Walked: 2026-11-11 for 2.15.0** — the section *The project's other documents* and both templates moved in from figma-prototype unchanged in substance; its cases P3 and P4 now trace here for the product file and the recording; no case here reads the moved text.
 
 **Walked: 2026-11-11 for 2.14.1** — the template's §6 text only; `node tools/snapshot/test-rulings-log.mjs` 6/6 reads the template's placeholder row as no ruling and writes a first ruling under it.
 

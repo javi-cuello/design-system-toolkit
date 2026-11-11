@@ -20,6 +20,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 - [weak] Space between siblings is `gap` on the parent, not a margin on each child, so nothing needs a `:last-child` exception.
 - [required] Columns sized by content: `grid-template-columns: max-content 1fr` or `minmax(min-content, 20rem)`, so a longer label widens its column instead of clipping (code-standard rule 57).
 - [strong] Long strings (URLs, codes, identifiers) on any container that holds user content: `overflow-wrap: anywhere` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap)).
+- [weak] Width is `100%`, never `100vw`: viewport units are sized as if no scrollbar were there, so a `100vw` element overflows any page that shows a classic scrollbar ([CSS Values 4, viewport-relative lengths](https://www.w3.org/TR/css-values-4/#viewport-relative-lengths)).
 
 **Cases**
 - A card list breaks into three, two and one columns at three breakpoints → one `auto-fit` grid; it also lays out correctly at every width between, which the three queries did not.
@@ -208,7 +209,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 
 **What good looks like**
 - [required] A table wider than its space scrolls inside its own container; the page does not scroll sideways (WCAG 1.4.10).
-- [required] The scroll container is reachable by keyboard and named, so a screen reader announces what it is (WCAG 2.1.1).
+- [required] The scroll container is reachable by keyboard and named, so a screen reader announces what it is (WCAG 2.1.1, 4.1.2).
 - [weak] Stacking a table into records is chosen deliberately, for tables read one row at a time.
 
 **How**
@@ -304,6 +305,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 - [required] Never `user-scalable=no` or a `maximum-scale` in the viewport meta: "Disabling zooming capabilities… prevents people experiencing low vision conditions from being able to read and understand page content" ([MDN, viewport meta](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element)).
 - [weak] Rows of controls wrap (`flex-wrap`) or move behind a menu button at the narrow breakpoint; a navigation bar is the usual failure.
 - [required] Test with browser zoom at 200% and 400%, with the window at 320px, and with the 1.4.12 spacing values applied (line height 1.5, paragraph spacing 2, letter spacing 0.12, word spacing 0.16 times the font size).
+- [weak] Drag the window continuously from 320px to the widest screen you support, not only to the breakpoints: a layout breaks between named widths, where no fixed-width test looks (the toolkit's practice).
 
 **Cases**
 - A navigation bar of six links scrolls the page sideways at 320px → wrap it, or step its padding down at the narrow breakpoint and collapse it behind a menu button below that; this failure is the nearest reflow candidate to a rule ([candidates.md](candidates.md)).
@@ -326,7 +328,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 **What good looks like**
 - [weak] Text wraps first; truncation is the exception, chosen in the design ([disclosure: show more and truncation](../ui/patterns/disclosure.md#show-more-and-truncation)).
 - [weak] The whole text stays in the DOM; the cut is CSS, by lines, so it follows font size, zoom and language.
-- [required] Every cut has a keyboard-reachable way to read the rest, and the "Show more" control renders only when the text overflows (code-standard rule 12).
+- [required] Every cut has a keyboard-reachable way to read the rest, and the "Show more" control renders only when the text overflows (code-standard rule 12; WCAG 2.1.1).
 
 **How**
 - [strong] **One line**: `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` on a box with a width; a table cell's case is [html-semantics: table behaviour](html-semantics.md#table-behaviour).

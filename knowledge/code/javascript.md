@@ -105,7 +105,7 @@ How a page's scripts are written so that the page works first and is enhanced se
 - [required] **Hooks** are data attributes (code-standard rule 6), checked for collisions first (code-standard rule 39).
 - [required] **Modified clicks** go to the browser (code-standard rule 21); the early return is in [accessibility: keyboard access and modified clicks](accessibility.md#keyboard-access-and-modified-clicks). Better still, a stretched link needs no handler (code-standard rule 21's evidence).
 - [strong] **Clean-up:** pass `{ signal }` from an `AbortController` and call `abort()` to remove every listener a widget added at once ([MDN AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController)).
-- [required] **Listen to `submit`, not the button's `click`**, so Enter in a field and assistive technology both trigger it (HTML).
+- [strong] **Listen to `submit`, not the button's `click`**, so Enter in a field and assistive technology both trigger it (HTML).
 
 **Cases**
 - Rows re-rendered by a poll lose their click handlers → delegate from the table, which persists; the rows can be replaced freely.

@@ -120,7 +120,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 
 **Build**
 - [required] A text style is its fields as tokens, applied whole with `@include text-style(name)`, sizes in rem (code-standard rule 54); prose gets a prose scale, not a reset (code-standard rule 7).
-- [moderate] Measure is a `max-inline-size` in `ch` on the prose column; heading level is markup, independent of the style (code-standard rule 1).
+- [moderate] Measure is a `max-inline-size` in `ch` on the prose column; heading level is markup, independent of the style (beyond code-standard rule 1).
 - [weak] Detail: [figma handoff: text styles to type tokens](../../code/figma-handoff.md#text-styles-to-type-tokens) and [responsive: fluid type](../../code/responsive.md#fluid-type).
 
 **Check**
@@ -316,7 +316,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 
 **Build**
 - [required] The levels are semantic tokens (`--surface-sunken`, `--surface-page`, `--surface-raised`, `--surface-overlay`, each with `-hover` and `-pressed`, plus `--scrim`), re-pointed per theme as code-standard rule 53 sets out ([tokens](../../code/tokens.md)). A component names the level, never a ramp step.
-- [moderate] Shadows pair with levels as tokens: `--shadow-raised` and `--shadow-overlay`, each with its own dark value at dark strength. The border goes in the token, as Primer's `0 0 0 1px` ring does, or as a separate `--border-overlay`. Shadow offsets stay px (code-standard rule 54).
+- [moderate] Shadows pair with levels as tokens: `--shadow-raised` and `--shadow-overlay`, each with its own dark value at dark strength. The border goes in the token, as Primer's `0 0 0 1px` ring does, or as a separate `--border-overlay`. Shadow offsets stay px (beyond code-standard rule 54).
 - [weak] `dialog::backdrop { background: var(--scrim); }`, and the dialog box itself is `var(--surface-overlay)`.
 - [weak] A popover or menu sets its fill from `--surface-overlay` wherever it is opened. It never inherits the container's.
 
@@ -609,7 +609,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 - [weak] Easing: named curves for standard, entrance and exit; productive for tools and docs. Carbon: "Reserve expressive motion for occasional, important moments."
 - [weak] [Apple](https://developer.apple.com/design/human-interface-guidelines/motion): "Don't add motion for the sake of adding motion", "Make motion optional", and avoid motion on frequent interactions.
 - [weak] Reduced motion: replace movement with a fade or an instant change; do not just shorten it. The base layer holds the `prefers-reduced-motion` block once (see [accessibility in code](../../code/accessibility.md)).
-- [required] Nothing flashes more than three times a second; anything moving on its own for more than five seconds can be paused (WCAG 2.3.1).
+- [required] Nothing flashes more than three times a second; anything moving on its own for more than five seconds can be paused (WCAG 2.3.1, 2.2.2).
 
 **Cases**
 - A filter change slides the whole result list in → no motion, or a short fade; the reader is reading, and the layout holds still (design-standard rule 2).

@@ -96,7 +96,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **What good looks like**
 - [required] One `main`, holding everything that is the page's own content (HTML).
-- [required] One banner and one contentinfo: a `header` and a `footer` that are children of `body`, not inside any sectioning element (HTML).
+- [required] One banner and one contentinfo: a `header` and a `footer` that are children of `body`, not inside any sectioning element (ARIA).
 - [strong] Every other region a reader would jump to is a landmark with a name; two of the same kind have different names.
 - [required] No content sits outside a landmark (code-standard rule 3).
 
@@ -144,7 +144,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Links and buttons
 
 **What good looks like**
-- [required] It goes somewhere: `<a href>`. It does something here: `<button type="button">`. It submits: `<button type="submit">` (HTML).
+- [strong] It goes somewhere: `<a href>`. It does something here: `<button type="button">`. It submits: `<button type="submit">` (HTML).
 - [moderate] Every button in a form states its `type`.
 - [required] No `div`, `span` or `href="#"` stands in for either (HTML).
 
@@ -217,7 +217,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 **What good looks like**
 - [required] A set of like things is `ul` or `ol`; a sequence that matters is `ol` (code-standard rule 1).
 - [required] Key–value pairs are `dl`, `dt` and `dd` (code-standard rule 1).
-- [required] Self-contained content with a caption (a chart, a code sample, an image with credit) is a `figure` with a `figcaption` (HTML).
+- [required] Self-contained content with a caption (a chart, a code sample, an image with credit) is a `figure` with a `figcaption` (WCAG 1.3.1).
 
 **How**
 - [required] **Lists.** A `ul`'s content model is "zero or more `li` and script-supporting elements" ([HTML `ul`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-ul-element)): nothing else is a direct child. A screen reader announces "list, 12 items", which is information the reader cannot get from a stack of `div`s.
@@ -321,7 +321,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 **What good looks like**
 - [required] Show-and-hide content is `details` and `summary`; an exclusive group shares a `name` (code-standard rule 1).
 - [required] A modal is a `dialog` opened with `showModal()` (code-standard rule 20).
-- [required] A non-modal overlay (a menu panel, a picker) is a `popover` opened by `popovertarget`, which works without script (HTML).
+- [required] A non-modal overlay (a menu panel, a picker) is a `popover` opened by `popovertarget`, which works without script (code-standard rules 8, 20).
 - [required] A behaviour-heavy web component is written only when none of the three covers it (code-standard rule 8).
 
 **How**
@@ -409,7 +409,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
   ```css
   :is(input, select, textarea):is(:user-invalid, [aria-invalid="true"]) { /* the error variant's tokens */ }
   ```
-- [moderate] **The field message** sits between the hint and the control, in the control's `aria-describedby` after the hint's id, with a visually hidden "Error:" prefix (code-standard rule 15).
+- [moderate] **The field message** sits between the hint and the control, in the control's `aria-describedby` after the hint's id, with a visually hidden "Error:" prefix (beyond code-standard rule 15).
   ```html
   <label for="email">Email address</label>
   <p id="email-hint">We will send your receipt here</p>
@@ -441,7 +441,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Search and filter forms
 
 **What good looks like**
-- [required] A search or a filter bar is a GET `form` whose field names are the address's parameters, so it works, reloads and shares with no script (code-standard rule 20).
+- [strong] A search or a filter bar is a GET `form` whose field names are the address's parameters, so it works, reloads and shares with no script (beyond code-standard rule 20).
 - [strong] A site search sits in a `search` landmark; a list's filter form is its own named form, one per list.
 - [required] The script enhances that form (instant update, removing the submit button), never replaces it (code-standard rule 20).
 - [weak] This section implements [search](../ui/patterns/search.md) and [filtering](../ui/patterns/filtering.md).
@@ -615,7 +615,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **What good looks like**
 - [required] Each element sits where its content model allows; the page passes a validator with no errors (HTML).
-- [required] A `div` or `span` appears only where no element with meaning fits (HTML).
+- [required] A `div` or `span` appears only where no element with meaning fits (code-standard rule 1).
 - [required] No interactive element inside another (HTML).
 
 **How**

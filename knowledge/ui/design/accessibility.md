@@ -320,7 +320,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Error recovery
 
 **What good looks like**
-- [required] Every error is text that names the field and the fix; every input has an error variant with a text slot (WCAG 3.3.1).
+- [required] Every error is text that names the field and the fix; every input has an error variant with a text slot (WCAG 3.3.1, 3.3.3).
 - [required] Anything that commits money or a legal agreement, or changes or deletes data, can be undone, checked or reviewed first (WCAG 3.3.4).
 
 **How:** [3.3.1](https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html): an error is described in text; a red border alone fails it and 1.4.1. [3.3.3](https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html): give a known correction unless it compromises security or purpose. [3.3.4](https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html): reversible, checked with a chance to correct, or reviewed and confirmed. The words are [content: error messages](content.md#error-messages); the summary is [forms: error messages and the error summary](../patterns/forms.md#error-messages-and-the-error-summary); when to validate is [interaction: validation timing](interaction.md#error-prevention-and-validation-timing); undo or confirm is [interaction: undo or confirmation](interaction.md#undo-or-confirmation). What this file adds is the design deliverable: every input drawn with an error variant and a text slot.

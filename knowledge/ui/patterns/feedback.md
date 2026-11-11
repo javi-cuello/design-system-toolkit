@@ -84,7 +84,7 @@ How an interface tells people what happened, what state something is in, and wha
   <div role="status" data-toasts></div>   <!-- in the layout, empty, from the start -->
   ```
 - [required] A toast with Undo has no timer and keeps the Undo `button` reachable; every toast has a named close button (code-standard rule 18).
-- [required] A timed toast pauses on hover and focus, and its duration is one token in the project (WCAG 2.2.1).
+- [strong] A timed toast pauses on hover and focus, and its duration is one token in the project (WCAG 2.2.1).
 - [required] Positioned with `position: fixed` and logical insets, clear of safe areas ([responsive: *Safe areas*](../../code/responsive.md#safe-areas)); it never covers the focused element (2.4.11).
 - [weak] Enters with `transform` and `opacity`, still under reduced motion ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
 

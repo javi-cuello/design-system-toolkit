@@ -381,7 +381,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [moderate] The table. The Analysis Function: "If you expect a non-disabled user to read the data from the chart, give a table"; the text alternative can be "a table of the data presented in the chart" ([Government Analysis Function, charts](https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-charts/)). Place it beside the chart in a disclosure ("Show data"), or as a tab of the same region; never only as a download.
 - [weak] The table follows the table patterns: caption, header cells, right-aligned numbers, the same precision and units as the chart.
 - [moderate] Source text sits in body text under the chart, not inside the image: the ONS asks for the source "directly after the chart" ([ONS chart text](https://service-manual.ons.gov.uk/data-visualisation/guidance/chart-text)) and the Analysis Function for source text in the page, not the image.
-- [required] `figure` and `figcaption` group the chart, its description and its source, as the W3C tutorial shows (HTML).
+- [strong] `figure` and `figcaption` group the chart, its description and its source, as the W3C tutorial shows (HTML).
 
 **Cases**
 - A canvas chart with no alternative → a "Show data" disclosure with the table and a one-sentence summary as the accessible name.
@@ -570,7 +570,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 ## Zoom and reflow of charts
 
 **What good looks like**
-- [required] At 200% text size and 400% zoom, chart text stays legible and the page reflows around the chart (WCAG 1.4.10).
+- [required] At 200% text size and 400% zoom, chart text stays legible and the page reflows around the chart (WCAG 1.4.4, 1.4.10).
 - [required] A chart that needs its two dimensions keeps them and scrolls within its own region, or offers its table (WCAG 1.4.10).
 
 **How**

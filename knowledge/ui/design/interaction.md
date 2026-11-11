@@ -417,12 +417,12 @@ The fundamentals of the design standard's Interaction area: what happens between
 ## Gestures and drag
 
 **What good looks like**
-- [required] Anything done by dragging or gesture can be done with a single pointer, no path (WCAG 2.5.7).
+- [required] Anything done by dragging or gesture can be done with a single pointer, no path (WCAG 2.5.1, 2.5.7).
 - [moderate] The alternative is visible.
 - [required] Pointer actions complete on release and can be abandoned (WCAG 2.5.2).
 
 **How:**
-- [required] Sortable list: "Move up", "Move down" or "Move to…" per item, and keyboard reordering (WCAG 2.5.7).
+- [required] Sortable list: "Move up", "Move down" or "Move to…" per item, and keyboard reordering (WCAG 2.5.7, 2.1.1).
 - [required] Map or canvas: pan and zoom buttons. Slider: track clicks, arrow keys, a typed value where precision matters (WCAG 2.5.7).
 - [required] Swipe actions repeated in a visible menu; pinch has a single-pointer equivalent (WCAG 2.5.1).
 - [strong] Drag shows a lifted state and drop indicator; dropping outside cancels.
