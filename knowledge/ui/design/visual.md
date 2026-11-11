@@ -316,7 +316,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 
 **Build**
 - [required] The levels are semantic tokens (`--surface-sunken`, `--surface-page`, `--surface-raised`, `--surface-overlay`, each with `-hover` and `-pressed`, plus `--scrim`), re-pointed per theme as code-standard rule 53 sets out ([tokens](../../code/tokens.md)). A component names the level, never a ramp step.
-- [moderate] Shadows pair with levels as tokens: `--shadow-raised` and `--shadow-overlay`, each with its own dark value at dark strength. The border goes in the token, as Primer's `0 0 0 1px` ring does, or as a separate `--border-overlay`. Shadow offsets stay px (beyond code-standard rule 54).
+- [moderate] Shadows pair with levels as tokens: `--shadow-raised` and `--shadow-overlay`, each with its own dark value at dark strength. The border goes in the token, as Primer's `0 0 0 1px` ring does, or as a separate `--border-overlay`. Shadow offsets stay px (code-standard rule 54).
 - [weak] `dialog::backdrop { background: var(--scrim); }`, and the dialog box itself is `var(--surface-overlay)`.
 - [weak] A popover or menu sets its fill from `--surface-overlay` wherever it is opened. It never inherits the container's.
 
