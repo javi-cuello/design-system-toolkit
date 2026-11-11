@@ -2,10 +2,11 @@
 // project: the toolkit's snapshot contract. The engine names none; DOCS_PROJECT
 // is a project's label (the repo under ~/Projects/ holding its figma-design-system/), and where
 // that project keeps its snapshot, its name and its phase all come from there.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, lstatSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { resolve, join, dirname } from 'node:path';
+import { resolve, join, dirname, relative } from 'node:path';
 
 const require = createRequire(import.meta.url);
 
@@ -111,6 +112,51 @@ export const shows = {
 };
 
 export const status = (page) => contract.status(page, project.markers);
+
+// When the Storybook the site serves was built, and whether code it renders
+// changed since: the preview says so (documentation.md *Change logs*: date the
+// source, not the edit). A project's own Storybook, built by hand, went seven
+// weeks behind its components with nothing on the page to tell. "Changed" is
+// the project's story-build inputs (parity's `host.build.inputs`) committed or
+// edited after the build; with no inputs named, the date alone is said.
+export const storybookBuild = (() => {
+  if (!project.storybook) return null;
+  let at = NaN;
+  try { at = new Date(JSON.parse(readFileSync(join(project.storybook.dir, 'project.json'), 'utf8')).generatedAt).getTime(); } catch {}
+  if (!Number.isFinite(at)) return null;
+  const repo = project.root;
+  const read = repo ? require(join(TOOLKIT, 'tools/shared/repo-config.cjs')).readRepoConfig(repo) : null;
+  const inputs = (read?.config?.parity?.host?.build?.inputs || []).map((i) => resolve(repo, i));
+  // the last commit touching the inputs, so a checkout or a fresh clone is no change;
+  // a file modified after it and after the build counts too, since an edit not yet
+  // committed is in what the build would render. No git: modification times alone.
+  let last = 0;
+  const seen = (f) => { let st; try { st = lstatSync(f); } catch { last = Date.now(); return; } if (!st.isSymbolicLink()) last = Math.max(last, st.mtimeMs); };
+  const walk = (f) => {
+    if (last > at) return;
+    let st; try { st = lstatSync(f); } catch { return; }
+    if (st.isSymbolicLink()) return;
+    if (st.isDirectory()) { let es = []; try { es = readdirSync(f); } catch {} for (const e of es) if (e !== 'node_modules' && e !== '.git' && !e.startsWith('.DS_')) walk(join(f, e)); return; }
+    last = Math.max(last, st.mtimeMs);
+  };
+  // inside the repo: git's last commit, and each file git calls changed (a
+  // deleted one counts as now); outside it, or with no git: modification times
+  const inside = inputs.filter((i) => !relative(repo, i).startsWith('..'));
+  const log = inside.length ? spawnSync('git', ['log', '-1', '--format=%ct', '--', ...inside], { cwd: repo, encoding: 'utf8' }) : null;
+  if (log && log.status === 0) {
+    last = Number(log.stdout.trim()) * 1000 || 0;
+    const st = spawnSync('git', ['status', '--porcelain', '-z', '--untracked-files=all', '--', ...inside], { cwd: repo, encoding: 'utf8' });
+    const top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: repo, encoding: 'utf8' })?.stdout?.trim() || repo;
+    // -z: "XY path", a rename's old path as the next entry, which is skipped
+    const entries = (st?.stdout || '').split('\0').filter(Boolean);
+    for (let k = 0; k < entries.length; k++) {
+      seen(join(top, entries[k].slice(3)));
+      if (/^(R|C)|^.(R|C)/.test(entries[k])) k++;
+    }
+  } else inside.forEach(walk);
+  inputs.filter((i) => !inside.includes(i)).forEach(walk);
+  return { at: new Date(at).toISOString(), stale: last > at };
+})();
 
 // The code audit's last report (tools/parity/external.mjs): a library someone
 // else built, measured against the design's component contracts. Absent

@@ -628,6 +628,9 @@ $xxl: 90rem;
     // paints an opaque backdrop behind a frame whose document's colour scheme
     // differs from the element around it.
     .preview:not([data-theme-global=""]) > .preview__stage { color-scheme: inherit; }
+    // and a theme the canvas holds (its Light or Dark) wins over the site's
+    .preview[data-canvas-held="light"] > .preview__stage { color-scheme: light; }
+    .preview[data-canvas-held="dark"] > .preview__stage { color-scheme: dark; }
     // At the size it was drawn (width set from the export, half its 2x), never
     // stretched; only a component taller than the stage is scaled, in shape.
     .preview--design .preview__canvas {
@@ -678,6 +681,10 @@ $xxl: 90rem;
       color: var(--fg-muted);
       a { color: var(--fg); }
     }
+    .preview__themes { display: flex; gap: var(--space-4); }
+    // the caption's small type, the target still 24px (WCAG 2.5.8)
+    .preview__caption .preview__story { min-block-size: 1.5rem; }
+    .preview__stale { color: var(--warn); }
 
     // ---- Guidance ------------------------------------------------------------
 

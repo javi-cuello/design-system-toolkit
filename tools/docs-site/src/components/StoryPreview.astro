@@ -2,7 +2,8 @@
 // A component's stories, rendered by the project's own Storybook: one frame,
 // and a button per story to switch it. One frame rather than one per story,
 // because every frame boots a whole Storybook preview.
-import { project } from '../lib/project.js';
+import { project, storybookBuild } from '../lib/project.js';
+import Time from './Time.astro';
 import { base } from '../lib/format.js';
 import { displayName } from '../../../shared/names.js';
 
@@ -21,7 +22,16 @@ const first = stories[0];
   )}
   <div class="preview__stage"><iframe class="preview__frame" title={`${name} — ${first.name}`} data-story={first.id} loading="lazy"></iframe></div>
   <figcaption class="preview__caption">
-    <span>Rendered from code</span>
+    {/* When the code was built, and whether it changed since: a preview
+        that lags its code says so (documentation.md *Change logs*). */}
+    <span>Rendered from code{storybookBuild && <>, built <Time at={storybookBuild.at} /></>}{storybookBuild?.stale && <span class="preview__stale" data-stale> · code changed since</span>}</span>
+    {/* The canvas's own theme, apart from the site's (documentation.md
+        *Examples*): Site follows the page; Light and Dark hold the story there. */}
+    {project.storybook?.themeGlobal && (
+      <span class="preview__themes" role="group" aria-label={`${name} preview theme`}>
+        {[['', 'Site'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => <button type="button" class="preview__story" data-canvas-theme={v} aria-pressed={v === '' ? 'true' : 'false'}>{l}</button>)}
+      </span>
+    )}
     <a data-open href={`${base}/storybook/?path=/story/${first.id}`}>Open in Storybook</a>
   </figcaption>
 </figure>
@@ -37,8 +47,10 @@ const first = stories[0];
     const open = figure.querySelector<HTMLAnchorElement>('[data-open]')!;
     const { base, themeGlobal } = figure.dataset;
 
+    // the canvas's own pick, or the site's theme when it has none
+    let held = '';
     const show = (id: string) => {
-      const globals = themeGlobal ? `&globals=${themeGlobal}:${siteTheme()}` : '';
+      const globals = themeGlobal ? `&globals=${themeGlobal}:${held || siteTheme()}` : '';
       frame.dataset.story = id;
       frame.src = `${base}/iframe.html?id=${id}&viewMode=story${globals}`;
       open.href = `${base}/?path=/story/${id}${globals}`;
@@ -89,9 +101,19 @@ const first = stories[0];
       });
     }
 
+    for (const button of figure.querySelectorAll<HTMLButtonElement>('[data-canvas-theme]')) {
+      button.addEventListener('click', () => {
+        if (button.dataset.canvasTheme === held) return;
+        figure.querySelectorAll('[data-canvas-theme]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+        held = button.dataset.canvasTheme!;
+        if (held) figure.dataset.canvasHeld = held; else delete figure.dataset.canvasHeld;
+        show(frame.dataset.story!);
+      });
+    }
+
     show(frame.dataset.story!);
     if (themeGlobal) {
-      new MutationObserver(() => show(frame.dataset.story!)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      new MutationObserver(() => { if (!held) show(frame.dataset.story!); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     }
   }
 </script>
