@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { files, standardVersion } from "../scripts/scaffold.mjs";
-import { checkPlugin, pluginsUnder, restyled, handBuilt } from "../scripts/conformance.mjs";
+import { checkPlugin, pluginsUnder, restyled, handBuilt, misComposed } from "../scripts/conformance.mjs";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/conformance.mjs", import.meta.url));
 const PLUGINS = fileURLToPath(new URL("../../../plugins", import.meta.url));
@@ -120,9 +120,9 @@ try {
 .spaced { margin-top: 8px; }
 .chip-like { padding: 0 2px; }
 .field { height: 28px; border: 0; }`)
-        .replace('<fig-button id="run">Run</fig-button>', `<fig-button id="run">Run</fig-button>
+        .replace('<fig-button id="run" size="large">Run</fig-button>', `<fig-button id="run" size="large">Run</fig-button>
   <button class="chip">A</button><button class="half">B</button><button class="ok">C</button>
-  <button class="spaced">D</button><button class="text-btn chip-like">E</button>
+  <button class="spaced">D</button><button class="secondary chip-like">E</button>
   <input type="checkbox" class="field">`);
       return out;
     });
@@ -136,7 +136,7 @@ try {
     const dir = plant("tag-rule", (out) => {
       out["ui.html"] = out["ui.html"]
         .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\n#bar button { height: 24px; box-sizing: border-box; }\n.tool { padding: 0 4px; }")
-        .replace('<fig-button id="run">Run</fig-button>', '<fig-button id="run">Run</fig-button><div id="bar"><button class="tool">F</button></div>');
+        .replace('<fig-button id="run" size="large">Run</fig-button>', '<fig-button id="run">Run</fig-button><div id="bar"><button class="tool">F</button></div>');
       return out;
     });
     assert.deepEqual(said(checkPlugin(dir), /sizes a control/), []);
@@ -145,7 +145,7 @@ try {
     const dir = plant("compound", (out) => {
       out["ui.html"] = out["ui.html"]
         .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\n.tab { height: 24px; box-sizing: border-box; padding: 0 4px; }\n.tab-panel.active { min-height: 0; }\n.chip { border-radius: 4px; border-color: red; }")
-        .replace('<fig-button id="run">Run</fig-button>', '<fig-button id="run">Run</fig-button><button class="tab active">A</button><div class="tab-panel active"></div><button class="chip">C</button>');
+        .replace('<fig-button id="run" size="large">Run</fig-button>', '<fig-button id="run">Run</fig-button><button class="tab active">A</button><div class="tab-panel active"></div><button class="chip">C</button>');
       return out;
     });
     assert.deepEqual(said(checkPlugin(dir), /sizes a control/), []);
@@ -154,7 +154,7 @@ try {
     const dir = plant("per-control", (out) => {
       out["ui.html"] = out["ui.html"]
         .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\n.big { padding: 4px; }\n.big.small { height: 20px; box-sizing: border-box; }\n.t { font: 12px/16px sans-serif; }\ninput[type=text] { height: 24px; box-sizing: border-box; }\n.field { padding: 0 4px; }")
-        .replace('<fig-button id="run">Run</fig-button>', '<fig-button id="run">Run</fig-button><button class="big">A</button><button class="big small">B</button><button class="t">T</button><input type="text" class="field">');
+        .replace('<fig-button id="run" size="large">Run</fig-button>', '<fig-button id="run">Run</fig-button><button class="big">A</button><button class="big small">B</button><button class="t">T</button><input type="text" class="field">');
       return out;
     });
     const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
@@ -167,7 +167,7 @@ try {
     const dir = plant("tag-state", (out) => {
       out["ui.html"] = out["ui.html"]
         .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\ninput[type=text]:focus { height: 24px; box-sizing: border-box; }\n.a { padding: 1px; }\nselect:not([multiple]) { height: 24px; box-sizing: border-box; }\n.s { padding: 2px; }\n.u { PADDING: 2px; HEIGHT: 20px; }\n.w { font-weight: 600; }")
-        .replace('<fig-button id="run">Run</fig-button>', '<fig-button id="run">Run</fig-button><input type="text" class="a"><select class="s"></select><button class="u">U</button><button class="w">W</button>');
+        .replace('<fig-button id="run" size="large">Run</fig-button>', '<fig-button id="run">Run</fig-button><input type="text" class="a"><select class="s"></select><button class="u">U</button><button class="w">W</button>');
       return out;
     });
     const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
@@ -180,7 +180,7 @@ try {
     const dir = plant("tag-type", (out) => {
       out["ui.html"] = out["ui.html"]
         .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\ninput[type=checkbox] { height: 16px; box-sizing: border-box; }\n.f { padding: 2px; }\nbutton:not(:disabled) { height: 24px; box-sizing: border-box; }\n.x { padding: 2px; }\n.y { padding: 2px; }\n.v { padding: 2px; }")
-        .replace('<fig-button id="run">Run</fig-button>', '<fig-button id="run">Run</fig-button><input type="text" class="f"><button class="x">X</button><select data-class="z" class="y"></select><textarea class=v></textarea>');
+        .replace('<fig-button id="run" size="large">Run</fig-button>', '<fig-button id="run">Run</fig-button><input type="text" class="f"><button class="x">X</button><select data-class="z" class="y"></select><textarea class=v></textarea>');
       return out;
     });
     const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
@@ -193,7 +193,7 @@ try {
     const dir = plant("tag-default", (out) => {
       out["ui.html"] = out["ui.html"]
         .replace("/* plugin-specific styles below */", "/* plugin-specific styles below */\ninput[type=text] { height: 24px; box-sizing: border-box; }\n.g { padding: 2px; }\nbutton:not(.a, .b) { height: 24px; box-sizing: border-box; }\n.h { padding: 2px; }\ntextarea:not([type=x]) { height: 24px; box-sizing: border-box; }\n.i { padding: 2px; }\n.k:not(.x) { padding: 2px; }")
-        .replace('<fig-button id="run">Run</fig-button>', '<fig-button id="run">Run</fig-button><input class="g"><button class="h">H</button><textarea class="i"></textarea><select class="k"></select>');
+        .replace('<fig-button id="run" size="large">Run</fig-button>', '<fig-button id="run">Run</fig-button><input class="g"><button class="h">H</button><textarea class="i"></textarea><select class="k"></select>');
       return out;
     });
     const got = said(checkPlugin(dir), /sizes a control/).map((x) => x.text).join("\n");
@@ -207,15 +207,25 @@ try {
     const ui = '<style>/* ui-base v4 start */ fig-button{x:1} /* ui-base v4 end */\n.panel fig-button{height:40px}\n.switch:checked{x:1}\n.figure{x:1}\n/* fig-tabs{} */</style>';
     assert.deepEqual(restyled(ui).sort(), [".switch", "fig-button"]);
   });
-  ok("§5c: a native control where FigUI3 has an element is hand-built, by line; a text button and a hidden file picker are the shell's", () => {
-    const ui = ['<style>button{}</style>', '<button id="a">A</button>', '<button class="text-btn">Pick</button>', '<input type="file" hidden>',
+  ok("§5c: a native control where FigUI3 has an element is hand-built, by line; a hidden file picker is the shell's", () => {
+    const ui = ['<style>button{}</style>', '<button id="a">A</button>', '<fig-button variant="link">Pick</fig-button>', '<input type="file" hidden>',
       '<input type="checkbox">', '<input>', '<select></select>', '<div role="tab">T</div>', '<script>"<button>"</script>', '<!-- <button> -->', '<fig-button>B</fig-button>'].join("\n");
-    assert.deepEqual(handBuilt(ui).map((c) => `${c.line}:${c.use}`), ["2:<fig-button>", "5:<fig-checkbox> or <fig-switch>", "6:<fig-input-text>", "7:<fig-dropdown>", "8:<fig-tabs>"]);
+    assert.deepEqual(handBuilt(ui).map((c) => `${c.line}:${c.use}`), ['2:<fig-button> (variant="link" for a link-like action)', "5:<fig-checkbox> or <fig-switch>", "6:<fig-input-text>", "7:<fig-dropdown>", "8:<fig-tabs>"]);
   });
   ok("§5c: case, the rule's subject, exact attribute names, a visible file input and a textarea", () => {
     assert.deepEqual(restyled("<style>FIG-BUTTON{x:1} fig-footer .st{x:1} fig-field label{x:1}</style>"), ["fig-button"]);
     const got = handBuilt(['<input type=checkbox aria-hidden="true">', '<button data-class="text-btn">', '<input type=file>', '<input type=file hidden>', "<textarea></textarea>"].join("\n"));
     assert.deepEqual(got.map((c) => c.line), [1, 2, 3, 5]);
+  });
+  ok("§5c: a footer fig-button that is not large, and text inside a switch or checkbox in a field row, are mis-composed", () => {
+    const ui = ['<fig-footer><span class="footer-hint">v1</span>', '<fig-button variant="secondary">Back</fig-button>', '<fig-button size="large">Go</fig-button></fig-footer>',
+      '<fig-field direction="horizontal"><label>Icons</label><fig-switch>Export icons</fig-switch></fig-field>',
+      '<fig-field direction="horizontal"><label>Ok</label><fig-checkbox></fig-checkbox></fig-field>', '<div><fig-switch>Outside a row</fig-switch></div>', '<script>"<fig-footer><fig-button>"</script>',
+      '<fig-field direction="horizontal"><label>Group</label><fig-checkbox label="By name"></fig-checkbox></fig-field>', '<fig-field><label>X</label><fig-switch><span>Inner</span></fig-switch></fig-field>',
+      '<fig-footer><fig-button variant="ghost" icon>i</fig-button></fig-footer>', '<fig-footer-x><fig-button>no footer</fig-button></fig-footer-x>'].join("\n");
+    assert.deepEqual(misComposed(ui).map((c) => `${c.line}:${c.what}`), ['2:a footer fig-button without size="large"', "4:text inside a fig-switch in a field row", "8:text inside a fig-checkbox in a field row", "9:text inside a fig-switch in a field row"]);
+    const small = plant("small-action", (out) => { out["ui.html"] = out["ui.html"].replace('<fig-button id="run" size="large">', '<fig-button id="run">'); return out; });
+    assert.ok(said(checkPlugin(small), /footer fig-button without size/).length);
   });
   ok("§5: a missing or drifted FigUI3 block is named", () => {
     const none = plant("no-figui3", (out) => { out["ui.html"] = out["ui.html"].replace(/\/\* figui3-js generated start[\s\S]*?figui3-js generated end \*\//, ""); return out; });

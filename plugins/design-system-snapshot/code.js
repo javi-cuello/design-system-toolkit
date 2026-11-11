@@ -1,4 +1,4 @@
-// Design system snapshot — v0.73.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.73.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -671,7 +671,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.73.0';
+const VERSION = '0.73.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1025,7 +1025,7 @@ const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
    trials, never the library: its components are not read and it is not in the page list
    (snapshot-standard rule 27). "Scratch card" and "Scratch-card" are a component's page. A run that names
    component ids reads them. */
-const isScratchPage = (page) => /^\W*Scratch(\s+[-\u2013\u2014]|\s*[:([]|\s*$)/i.test(page.name);
+const isScratchPage = (page) => /^\W*Scratch(\s+[-–—]|\s*[:([]|\s*$)/i.test(page.name);
 /* A graphic is an illustration, not a glyph: a raster or a drawing placed at a
    size, with no Size axis and no currentColor. It exports as a PNG because a
    graphic's fill is usually an image, and an SVG of an image is that image

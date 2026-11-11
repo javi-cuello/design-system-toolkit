@@ -1,5 +1,9 @@
 # Changelog — component-graph
 
+## [3.8.1] - 2026-11-11
+### Fixed
+- A long description's Read more is a FigUI3 link button lined up with the text: as a plain button, FigUI3's hover filled it brand-blue.
+
 ## [3.8.0] - 2026-11-11
 ### Changed
 - **The window is built from FigUI3 (the PropsKit look):** Local and External are a `fig-segmented-control` (arrow keys move between them), the search is a `fig-input-text`, "Show unpublished" a `fig-switch`, and the library Check, Refresh, Add to canvas (now the primary action, last) and the strip's Refresh are `fig-button`s; the sidebar toggle, Back, Forward and the details panel's close are ghost icon `fig-button`s with drawn icons instead of text glyphs, the loading spinner is a `fig-spinner`, and Read more is the shell's `.text-btn`. The plugin's own CSS that drew those controls (segments, switch, search, toolbar and strip buttons, close, spinner, the page-wide focus rule) is gone; what stays styles its own content: the sidebar's rows, the graph and the details panel. `tests/test-ui-keyboard.mjs` passes unchanged.

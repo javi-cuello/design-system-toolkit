@@ -9,7 +9,7 @@
    comes first in this block and its components (fig-button, fig-tabs, fig-field, fig-switch, fig-footer…) come from
    the module script block. Controls are fig-* elements, or the native elements FigUI3 styles; a plugin composes them
    and never restyles them (skill-standard §B 4). This layer adds only the window's frame: panels that scroll between a
-   tab bar and a footer, a text button, and the spacing tokens older bespoke rules still read. */
+   tab bar and a footer, the footer's inset, and the spacing tokens older bespoke rules still read. */
 /* figui3 generated start — FigUI3 11.11.5 dist/fig.css (MIT, plugins/_shared/figui3/LICENSE) */
 /*!
 MIT License
@@ -43,14 +43,11 @@ body{margin:0;display:flex;flex-direction:column;overflow:hidden}
 .secondary{color:var(--figma-color-text-secondary)}
 /* the window: a fig-header holding the fig-tabs, one .panel per tab, each ending in a fig-footer with its action */
 .panel{display:flex;flex:1;min-height:0;flex-direction:column}
-.panel-body{flex:1;min-height:0;overflow-y:auto;padding:var(--spacer-3,12px)}
+.panel-body{flex:1;min-height:0;overflow-y:auto;padding:var(--spacer-3,16px)}
 .panel-body.fields{padding:var(--spacer-2,8px) 0}
+/* the footer's inset is the panels' and the field rows', so its hint and action line up with the content above */
+fig-footer{padding-inline:var(--spacer-3,16px)}
 fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
-/* a link-like action inside a field row, where a fig-button would be too heavy */
-.text-btn{flex:none;height:auto;padding:0;border:0;background:none;color:var(--figma-color-text-brand);font:inherit;cursor:default}
-.text-btn:hover{text-decoration:underline}
-.text-btn:focus{outline:none}
-.text-btn:focus-visible{outline:var(--figma-focus-outline,2px solid var(--figma-color-border-selected));outline-offset:2px}
 [hidden]{display:none !important}
 /* ui-base v4 end */
 
@@ -68,7 +65,8 @@ fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-c
 .status[data-tone="error"] .status-title{color:var(--figma-color-text-danger)}
 .status-detail{margin:var(--space-1) 0 0;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
 .status[data-tone] .status-detail{padding-left:24px}
-.value-row{display:flex;align-items:center;gap:10px;min-width:0;min-height:24px}
+/* a link fig-button pads its label by --spacer-2: the row reaches into the field's inset by as much, so the last link's label ends where the footer's button does */
+.value-row{display:flex;align-items:center;gap:0;margin-right:calc(-1 * var(--spacer-2,8px));min-width:0;min-height:24px}
 .value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 <script type="module">
@@ -294,20 +292,20 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
   </div>
   <fig-footer>
     <span class="footer-hint" id="version"></span>
-    <fig-button id="save" variant="secondary" hidden>Download</fig-button>
-    <fig-button id="run">Run audit</fig-button>
+    <fig-button id="save" variant="secondary" size="large" hidden>Download</fig-button>
+    <fig-button id="run" size="large">Run audit</fig-button>
   </fig-footer>
 </div>
 
 <div class="panel" id="panel-settings" role="tabpanel" aria-label="Settings" hidden>
   <div class="panel-body fields">
-    <fig-header borderless><h3>Context document</h3></fig-header>
+    <fig-header borderless><h3>Context document</h3><fig-button variant="link" id="ctx-pick">Upload…</fig-button></fig-header>
     <fig-field direction="horizontal"><label>Document</label>
-      <div class="value-row"><span class="value" id="ctx-name">No document</span><button class="text-btn" id="ctx-pick" type="button">Upload…</button><button class="text-btn" id="ctx-clear" type="button" hidden>Remove</button></div></fig-field>
-    <fig-field direction="horizontal" id="draft-row"><label for="draft">Create one</label><fig-switch id="draft">With the next results</fig-switch></fig-field>
-    <fig-header borderless><h3>Rulings</h3></fig-header>
+      <div class="value-row"><span class="value" id="ctx-name">No document</span><fig-button variant="link" id="ctx-clear" hidden>Remove</fig-button></div></fig-field>
+    <fig-field direction="horizontal" id="draft-row"><label for="draft">Draft one</label><fig-switch id="draft"></fig-switch></fig-field>
+    <fig-header borderless><h3>Rulings</h3><fig-button variant="link" id="rul-upload">Upload…</fig-button></fig-header>
     <fig-field direction="horizontal"><label>Saved</label>
-      <div class="value-row"><span class="value" id="rul-name">0</span><button class="text-btn" id="rul-upload" type="button">Upload…</button><button class="text-btn" id="rul-download" type="button" hidden>Download</button><button class="text-btn" id="rul-clear" type="button" hidden>Remove</button></div></fig-field>
+      <div class="value-row"><span class="value" id="rul-name">0</span><fig-button variant="link" id="rul-download" hidden>Download</fig-button><fig-button variant="link" id="rul-clear" hidden>Remove</fig-button></div></fig-field>
   </div>
   <fig-footer><span class="footer-hint" id="settings-hint" role="status">Rulings are saved in this file.</span></fig-footer>
 </div>

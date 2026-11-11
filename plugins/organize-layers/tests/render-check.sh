@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run: plugins/organize-layers/tests/render-check.sh [--keep]
 #
-# Renders ui.html headlessly at the plugin's own 260x380, in light and dark, and
+# Renders ui.html headlessly at the plugin's own 260x392, in light and dark, and
 # measures it. Since 0.7.0 every control is a FigUI3 element (skill-standard
 # §B 4), so the sizes asserted are FigUI3's own and a mismatch means something
 # restyled it. It first existed because `.input-compact{width:56px}` was measured at
@@ -11,7 +11,7 @@
 # names the trap, and a rule can only tell you to look.
 #
 # What it can and cannot judge. Layout is exact: the probe is rendered in an
-# iframe of 260x380, the window's own size, so FigUI3's viewport units and media
+# iframe of 260x392, the window's own size, so FigUI3's viewport units and media
 # queries resolve as they do in Figma (the viewport is asserted below). Colour is INDICATIVE only — Figma injects the
 # real --figma-color-* values at runtime and the ones here are the fallbacks
 # already recorded in this repo's other plugins. Use --keep and look at the two
@@ -113,10 +113,10 @@ setTimeout(function () {
 </script>"""
 
 # Headless Chrome will not open a window narrower than 500px, so the probe runs in
-# an iframe of the window's own 260x380 and posts what it measured to this page.
+# an iframe of the window's own 260x392 and posts what it measured to this page.
 HOST = """<html><head><title>pending</title></head><body style="margin:0">
 <script>onmessage=function(e){document.title=e.data;};</script>
-<iframe src="%s" style="width:260px;height:380px;border:0;display:block"></iframe></body></html>"""
+<iframe src="%s" style="width:260px;height:392px;border:0;display:block"></iframe></body></html>"""
 
 for theme, tokens in THEMES.items():
     body = ui.replace('</style>', tokens + '</style>', 1).replace('</body>', DRIVE + '</body>', 1)
@@ -132,7 +132,7 @@ for theme, tokens in THEMES.items():
         open(work + '/host-' + theme + v + '.html', 'w', encoding='utf-8').write(HOST % ('probe-' + theme + v + '.html'))
     open(work + '/frame-' + theme + '.html', 'w', encoding='utf-8').write(
         '<body style="margin:0;background:#777;padding:12px"><iframe src="view-' + theme +
-        '.html" style="width:260px;height:380px;border:0;display:block"></iframe></body>')
+        '.html" style="width:260px;height:392px;border:0;display:block"></iframe></body>')
 PY
 
 fails=0
@@ -148,9 +148,9 @@ for theme in light dark light-v dark-v; do
 
   get() { echo "$title" | tr ' ' '\n' | grep "^$1=" | cut -d= -f2; }
   [ "$(get w)" -le 260 ] || say_fail "$theme · horizontal overflow at 260px: $(get w)"
-  [ "$(get vw)x$(get vh)" = "260x380" ] || say_fail "$theme · the probe's viewport is $(get vw)x$(get vh), not the window's 260x380"
-  [ "$(get h)" -le 380 ] || say_fail "$theme · taller than the 380px window: $(get h)"
-  [ $((380 - $(get h))) -le 8 ] || say_fail "$theme · $((380 - $(get h)))px of dead space — showUI's height has drifted from the content"
+  [ "$(get vw)x$(get vh)" = "260x392" ] || say_fail "$theme · the probe's viewport is $(get vw)x$(get vh), not the window's 260x392"
+  [ "$(get h)" -le 392 ] || say_fail "$theme · taller than the 392px window: $(get h)"
+  [ $((392 - $(get h))) -le 8 ] || say_fail "$theme · $((392 - $(get h)))px of dead space — showUI's height has drifted from the content"
   # Every field's control fills the field's input column: a different width means a rule reached a fig-* element.
   [ "$(get delimiter)" = "$(get gapX)" ] || say_fail "$theme · the separator input is $(get delimiter)px, the gap inputs $(get gapX) — something restyled a field"
   [ "$(get gapY)" = "$(get gapX)" ] || say_fail "$theme · the two gap inputs differ: $(get gapY) vs $(get gapX)"
@@ -180,5 +180,5 @@ if [ $keep -eq 1 ]; then
 fi
 
 echo
-[ $fails -eq 0 ] && echo "pass — layout holds at 260x380 in both themes" || echo "FAIL — $fails"
+[ $fails -eq 0 ] && echo "pass — layout holds at 260x392 in both themes" || echo "FAIL — $fails"
 exit $([ $fails -eq 0 ] && echo 0 || echo 1)

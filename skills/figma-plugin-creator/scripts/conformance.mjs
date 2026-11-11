@@ -136,6 +136,7 @@ export function checkPlugin(dir, opts = {}) {
     if (!jsBlock) add("warn", "5", "ui.html has no FigUI3 block (a <script type=\"module\"> holding /* figui3-js generated start … end */): add it, then run node plugins/_shared/sync.mjs (mandatory)", "auto-fixable");
     else if (js != null && jsBlock[0] !== js.trimEnd()) add("warn", "5", "ui.html's FigUI3 block differs from the shared copy: re-inline it (node plugins/_shared/sync.mjs in the toolkit)", "auto-fixable");
     for (const r of restyled(ui)) add("warn", "5c", `restyles ${r}: the look is FigUI3's, composed, never restyled (skill-standard §B 4)`, "needs-decision");
+    for (const c of misComposed(ui)) add("warn", "5c", `${c.what} at ui.html:${c.line}: ${c.fix} (skill-standard §B 4)`, "auto-fixable");
     for (const c of handBuilt(ui)) add("warn", "5c", `${c.what} at ui.html:${c.line} where FigUI3 has ${c.use}: build it from that element (skill-standard §B 4)`, "needs-decision");
     for (const b of bespokeControls(ui)) add("warn", "5a", `.${b.cls} sizes a control but does not set ${b.missing.join(" or ")}: the shared stylesheet supplies it by accident (references/conformance-checklist.md §5a); set it on the class`, "auto-fixable");
   }
@@ -143,8 +144,9 @@ export function checkPlugin(dir, opts = {}) {
 }
 
 // §5c The look is FigUI3's. Restyled: a plugin rule, outside the shared block, whose selector reaches a fig-* element
-// or FigUI3's switch. Hand-built: a native control in the markup where FigUI3 has an element for it; a text button
-// (`.text-btn`, the shell's link-like action) and a hidden file input (the picker a fig-button opens) are the shell's.
+// or FigUI3's switch. Hand-built: a native control in the markup where FigUI3 has an element for it; a hidden file
+// input (the picker a fig-button opens) is the shell's. A link-like action is FigUI3's `fig-button variant="link"`:
+// a bare <button> takes FigUI3's own button rules, whose hover outranks a class and fills it brand-blue.
 const FIG_SELECTOR = /(^|[\s>+~(,])(fig-[a-z-]+)(?=$|[.:#\[),])|(\.switch)(?![\w-])/i;
 // the rule's subject: its last compound, so `fig-footer .status` styles the plugin's own content, not the footer;
 // what sits inside :not() or :has() is a condition on the subject, not the subject
@@ -168,7 +170,7 @@ function nativeFor(name, a) {
   const type = (a.type || "").toLowerCase();
   const classes = (a.class || "").split(/\s+/);
   if (a.role === "tab") return ["a hand-made tab", "<fig-tabs>"];
-  if (name === "button") return classes.includes("text-btn") ? null : ["a <button>", "<fig-button>"];
+  if (name === "button") return ["a <button>", "<fig-button> (variant=\"link\" for a link-like action)"];
   if (name === "select") return ["a <select>", "<fig-dropdown>"];
   if (name === "textarea") return ["a <textarea>", "<fig-input-text multiline>"];
   if (name !== "input" || "hidden" in a || type === "hidden") return null;
@@ -188,6 +190,28 @@ export function handBuilt(ui) {
   for (const m of html.matchAll(/<([a-z][\w-]*)\b(?:"[^"]*"|'[^']*'|[^'">])*>/gi)) {
     const hit = nativeFor(m[1].toLowerCase(), attrsOf(m[0]));
     if (hit) out.push({ what: hit[0], use: hit[1], line: html.slice(0, m.index).split("\n").length });
+  }
+  return out;
+}
+
+// Mis-composed: FigUI3 elements put together the way PropsKit does not. A footer's action is a large button; a
+// switch or checkbox in a field row holds no text, since the row's label names it and the control column starts a
+// third of the way across, so text inside it floats away from the label.
+export function misComposed(ui) {
+  const blank = (m) => m.replace(/[^\n]/g, "");
+  const html = ui.replace(/<style[\s\S]*?<\/style>/gi, blank).replace(/<script[\s\S]*?<\/script>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank);
+  const lineAt = (i) => html.slice(0, i).split("\n").length;
+  const out = [];
+  // a tag's name ends at a space, `>` or `/`, so `fig-footer-x` is not a footer
+  for (const f of html.matchAll(/<fig-footer(?=[\s>\/])[\s\S]*?<\/fig-footer>/gi)) for (const b of f[0].matchAll(/<fig-button(?=[\s>\/])(?:"[^"]*"|'[^']*'|[^'">])*>/gi)) {
+    const a = attrsOf(b[0]);
+    if ("icon" in a) continue; // an icon button keeps its own size
+    if ((a.size || "").toLowerCase() !== "large") out.push({ what: "a footer fig-button without size=\"large\"", fix: "a window's action is the large button", line: lineAt(f.index + b.index) });
+  }
+  // text beside the box: between the tags (child elements' text included) or in FigUI3's `label` attribute
+  for (const f of html.matchAll(/<fig-field(?=[\s>\/])[\s\S]*?<\/fig-field>/gi)) for (const c of f[0].matchAll(/<(fig-switch|fig-checkbox)(?=[\s>\/])((?:"[^"]*"|'[^']*'|[^'">])*)>([\s\S]*?)<\/\1>/gi)) {
+    const text = c[3].replace(/<[^>]*>/g, "").trim() || (attrsOf("<x" + c[2]).label || "").trim();
+    if (text) out.push({ what: `text inside a ${c[1]} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(f.index + c.index) });
   }
   return out;
 }

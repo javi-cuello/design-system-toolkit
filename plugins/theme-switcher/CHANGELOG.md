@@ -1,4 +1,8 @@
 # Changelog — theme-switcher
+## [3.12.1] - 2026-11-11
+### Fixed
+- Apply and Clear are FigUI3's large buttons, and the footer is inset like the rows above it.
+
 ## [3.12.0] - 2026-11-11
 ### Changed
 - **The window is built from FigUI3 (the PropsKit look):** each row is a `fig-field` holding a `fig-segmented-control` (up to three options) or a `fig-dropdown` (more), and Clear and Apply sit in a `fig-footer` beside the selection note, Apply last. The hand-drawn segmented buttons, the native select and the button overrides are gone; the plugin's own CSS is now only the empty-state line. The window still sizes itself to its rows, measured from the rows and the footer since the body now stretches to the window.

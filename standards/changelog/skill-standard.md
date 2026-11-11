@@ -1,5 +1,6 @@
 # History — skill-standard
 
+- 1.9.0 (2026-11-11): §B 4: no hand-made control (`.text-btn` retired for `fig-button variant="link"`); footer buttons large and the footer inset like the panels; a switch in a field row holds no text.
 - 1.8.0 (2026-11-11): §B 4: before FigUI3's elements upgrade, a plugin script sets their state by attribute, never by property (two plugins shadowed a setter).
 - 1.7.0 (2026-11-11): §B 4 rewritten: the look is FigUI3's (Figma's PropsKit), controls fig-* elements never restyled, the window tabs, panels and a fig-footer; sync.mjs inlines FigUI3. conformance.mjs §5c.
 - 1.6.2 (2026-10-31): §B 4 shows the ui-base markers as `vN`, not a version the baseline has left; no rule changed.

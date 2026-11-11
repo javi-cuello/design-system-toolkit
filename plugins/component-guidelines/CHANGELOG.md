@@ -1,6 +1,10 @@
 # Changelog — component-guidelines
 Format: Keep a Changelog. Versioning: SemVer.
 
+## [2.1.1] - 2026-11-11
+### Fixed
+- The shared frame insets a footer like the panels (no footer here; the shared block is current).
+
 ## [2.1.0] - 2026-11-11
 ### Changed — the window is built from FigUI3 (the PropsKit look)
 - The component's name heads the window in a `fig-header`; the Usage and Don't lists are split by a rule of their own instead of the old `.divider`, which the new baseline (ui-base v4) no longer draws.

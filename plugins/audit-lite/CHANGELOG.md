@@ -1,6 +1,13 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.2] - 2026-11-11
+### Fixed
+- The context document's and rulings' Upload…, Change…, Download and Remove are FigUI3 link buttons: as plain buttons, FigUI3's hover filled them brand-blue and hid their label.
+- Each section's Upload… sits in its header, so the rulings count is no longer squeezed out of its row by three links.
+- The draft switch's row reads "Draft one" with the switch bare, so the switch lines up with the other rows' controls.
+- Run audit and Download are FigUI3's large buttons, and the footer is inset like the panel above it.
+
 ## [0.8.1] - 2026-11-11
 ### Fixed
 - Opening the plugin, running an audit or downloading rulings no longer writes rulings kept on the machine into the file; they move when rulings are added.

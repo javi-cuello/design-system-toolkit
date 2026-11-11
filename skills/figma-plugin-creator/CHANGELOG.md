@@ -1,5 +1,6 @@
 # Changelog — figma-plugin-creator
 
+- 1.18.0 (2026-11-11): skill-standard 1.9.0 §B 4: `.text-btn` retired (a bare `<button>` is always hand-built); `conformance.mjs` §5c warns on a footer fig-button without `size="large"` and on text inside a switch or checkbox in a field row. Template's action is large. Case P7.
 - 1.17.0 (2026-11-11): the PropsKit look from FigUI3 (skill-standard 1.7.0 §B 4): template and assets carry it; `conformance.mjs` checks FigUI3 drift (§5), restyles and native controls (§5c). Case P7.
 - 1.16.0 (2026-11-10): `conformance.mjs` §2 skips a generated block (`/* <name> generated start … generated end */`): its code is written by a sync script from a source that runs under dynamic-page elsewhere, as audit-lite carries the components scanner. Case P2.
 - 1.15.1 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.

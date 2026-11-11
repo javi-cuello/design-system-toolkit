@@ -35,7 +35,7 @@ ok("the ui-base and FigUI3 blocks are inlined as the shared copies hold them, in
   const read = (f) => fs.readFileSync(fileURLToPath(new URL(`../assets/${f}`, import.meta.url)), "utf8").trim();
   assert.ok(out["ui.html"].includes(read("ui-base.css")) && out["ui.html"].includes(read("figui3.js")));
   assert.match(out["ui.html"], /<script type="module">\s*\/\* figui3-js generated start/);
-  assert.match(out["ui.html"], /<fig-footer>[\s\S]*<fig-button id="run">/);
+  assert.match(out["ui.html"], /<fig-footer>[\s\S]*<fig-button id="run" size="large">/);
 });
 ok("an answer is text in the window, never markup", () => {
   const ui = files({ ...answers, purpose: 'Counts "layers" <b>' })["ui.html"].replace(/\/\* figui3-js generated start[\s\S]*?generated end \*\//, "");

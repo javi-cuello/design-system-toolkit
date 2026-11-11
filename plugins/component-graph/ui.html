@@ -8,7 +8,7 @@
    comes first in this block and its components (fig-button, fig-tabs, fig-field, fig-switch, fig-footer…) come from
    the module script block. Controls are fig-* elements, or the native elements FigUI3 styles; a plugin composes them
    and never restyles them (skill-standard §B 4). This layer adds only the window's frame: panels that scroll between a
-   tab bar and a footer, a text button, and the spacing tokens older bespoke rules still read. */
+   tab bar and a footer, the footer's inset, and the spacing tokens older bespoke rules still read. */
 /* figui3 generated start — FigUI3 11.11.5 dist/fig.css (MIT, plugins/_shared/figui3/LICENSE) */
 /*!
 MIT License
@@ -42,14 +42,11 @@ body{margin:0;display:flex;flex-direction:column;overflow:hidden}
 .secondary{color:var(--figma-color-text-secondary)}
 /* the window: a fig-header holding the fig-tabs, one .panel per tab, each ending in a fig-footer with its action */
 .panel{display:flex;flex:1;min-height:0;flex-direction:column}
-.panel-body{flex:1;min-height:0;overflow-y:auto;padding:var(--spacer-3,12px)}
+.panel-body{flex:1;min-height:0;overflow-y:auto;padding:var(--spacer-3,16px)}
 .panel-body.fields{padding:var(--spacer-2,8px) 0}
+/* the footer's inset is the panels' and the field rows', so its hint and action line up with the content above */
+fig-footer{padding-inline:var(--spacer-3,16px)}
 fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
-/* a link-like action inside a field row, where a fig-button would be too heavy */
-.text-btn{flex:none;height:auto;padding:0;border:0;background:none;color:var(--figma-color-text-brand);font:inherit;cursor:default}
-.text-btn:hover{text-decoration:underline}
-.text-btn:focus{outline:none}
-.text-btn:focus-visible{outline:var(--figma-focus-outline,2px solid var(--figma-color-border-selected));outline-offset:2px}
 [hidden]{display:none !important}
 /* ui-base v4 end */
 
@@ -252,7 +249,8 @@ fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-c
   }
   .d-value { font-size: 12px; line-height: 1.45; overflow-wrap: break-word; }
   .d-value .sub { color: var(--muted); }
-  .d-more { display: block; margin-top: 3px; }
+  /* a link fig-button pads its label by --spacer-2; the margin lines the label up with the description above */
+  .d-more { margin: 3px 0 0 calc(-1 * var(--spacer-2, 8px)); }
   .d-value.muted { color: var(--muted); font-style: italic; }
   .d-desc.clamped {
     display: -webkit-box;
@@ -1203,9 +1201,9 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
         desc.className = 'd-desc clamped';
         desc.textContent = d.description;
         v.appendChild(desc);
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'text-btn d-more';
+        const toggle = document.createElement('fig-button');
+        toggle.setAttribute('variant', 'link');
+        toggle.className = 'd-more';
         toggle.hidden = true;
         toggle.textContent = 'Read more';
         toggle.onclick = () => {

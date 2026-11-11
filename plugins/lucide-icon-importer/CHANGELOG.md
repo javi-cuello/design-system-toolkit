@@ -1,5 +1,10 @@
 # Changelog — lucide-icon-importer
 
+## [1.15.2] - 2026-11-11
+### Fixed
+- Add icon and Reset are FigUI3's large buttons, and the footers are inset like the panels.
+- The right-to-left checkbox stands bare in a "Mark mirroring" row: its text beside the box sat a third across, away from the row's label.
+
 ## [1.15.1] - 2026-11-11
 ### Fixed
 - The Icons and Settings panels are tab panels, each labelled by its tab, to a screen reader.

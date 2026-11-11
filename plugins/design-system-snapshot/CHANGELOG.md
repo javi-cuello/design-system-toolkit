@@ -1,6 +1,12 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.73.1] - 2026-11-11
+### Fixed
+- The icons switch sits in its row's control column with "Export icons" as the row's label, rather than its text floating a third across.
+- A page named "Scratch – …" or "Scratch — …" is still recognised: the dashes are written as themselves, since the headless runner refuses `\u` escapes (CI was red).
+- Take snapshot is FigUI3's large button, and the footer is inset like the content above it, so the version and the button line up with it.
+
 ## [0.73.0] - 2026-11-11
 ### Changed
 - A page named "Scratch" (after any marker; alone or followed by a spaced dash, a colon or a bracket) is not read for components, under any page rule, and is left out of the page list: it holds trials, not the library (snapshot-standard rule 27). A run that names component ids still reads them. A library snapshot had taken a scratch page's two templates as components.

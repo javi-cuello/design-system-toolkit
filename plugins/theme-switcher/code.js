@@ -1,4 +1,4 @@
-// Theme Switcher — v3.12.0 · plugin-standard v1.8.0
+// Theme Switcher — v3.12.1 · plugin-standard v1.8.0
 // @ts-check
 
 /*
