@@ -11,6 +11,7 @@ test('a person\'s comment on a layer is open, with the layer it is pinned to', (
   const t = openThreads([c('1', 'The dialog title should say New employee', '2026-11-11T10:00:00Z')]);
   assert.equal(t.length, 1);
   assert.equal(t[0].node, '74:62150');
+  assert.deepEqual(t[0].offset, { x: 1, y: 1 });
   assert.equal(t[0].text, 'The dialog title should say New employee');
 });
 
@@ -33,5 +34,7 @@ test('Claude\'s own question waits for the designer; their answer opens it; a re
 });
 
 test('a comment pinned to the canvas has no layer', () => {
-  assert.equal(openThreads([c('1', 'General: too dense', '2026-11-11T10:00:00Z', { client_meta: { x: 10, y: 20 } })])[0].node, null);
+  const t = openThreads([c('1', 'General: too dense', '2026-11-11T10:00:00Z', { client_meta: { x: 10, y: 20 } })])[0];
+  assert.equal(t.node, null);
+  assert.equal(t.offset, null);
 });

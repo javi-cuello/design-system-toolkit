@@ -6,6 +6,10 @@
 #   ~/.figma-dashboard-key     the audit service's chat and judgement pass (tools/figma-audit)
 figma   figd_    link ~/.config/figma/token figma-console
 audit   sk-ant-  link ~/.figma-dashboard-key audit-service
+# The agent's own Figma account, for the replies it posts on prototype feedback (frontend-build), so they are
+# not the maintainer's: optional, and without it they post with the figma key. A keys.conf made before this line
+# lacks it: add the line there, then bin/set-key figma-claude.
+figma-claude figd_
 #
 # A key of your own goes on a line of its own. set-key tests Figma and Anthropic keys; for any other prefix,
 # a `test` line does (the key on stdin, exit 0 when it works), or the key is saved and said to be untested:
