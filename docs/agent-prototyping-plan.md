@@ -137,6 +137,7 @@ The derivation is built: `tools/snapshot/recipes.cjs` (README, *Screen recipes*)
 ## Open
 
 - **Project knowledge has one door** (closed 2026-11-11): the product file, live decisions and guidance pages are served by the system MCP's `get_project_knowledge`, so a code agent in a playground reads what a Figma run reads.
+- **Project documents have no owning skill** (as of 2026-11-11): filling the product file, keeping the §6 decision log and guidance pages, and routing prototype feedback into them are document-keeping (toolkit-standard §D 1), which figma-context-capture owns, yet they sit in the prototype steps. Move them there once Outcome 4's steps and its pinned eval tasks settle, re-pointing §D 12 and the eval runner in the same change.
 - Code Connect needs a Figma plan with the right seats. It is only needed for the Figma MCP route, so check it for each project before building that.
 - A project whose code is a read-only clone prototypes in a separate repo on its published package. Outcome 3's gate applies there. Where the package's feed needs a token the toolkit does not hold, the package is built from the clone with its own build script and packed (`pnpm pack`), named by the clone's commit so the lockfile's checksum stays true, and kept out of git (13 MB a copy); set up for one project 2026-11-10, parked until its templates exist.
 - Figma Make kits with a package are parked until a trial shows that they import the package; Vallaure's Part 3, expected 10 November, is not yet read here (as of 2026-11-11).
