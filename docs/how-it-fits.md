@@ -47,7 +47,7 @@ Three things worth knowing about the shape:
 | `knowledge/` | guidance with sources, for every project | the toolkit |
 | the project's `design-system-context.md` | the library: conventions, settings, screen types; and §6, the project's one decision log (library, product, pattern, screen) | its audits and the maintainer |
 | the project's `product-context.md` | the product at suite level: what it is, who uses it, its words; no decisions | a person; an agent drafts it from evidence and writes after their yes, then changes a word a comment settles |
-| the project's `guidance/<topic>.md` | how this project designs a pattern, a layout, the shell: only what differs from the knowledge page it builds on, which it outranks; each line a live §6 decision, gathered, and §6 wins where they disagree | a person; an agent proposes one when two decisions share a topic |
+| the project's `guidance/<topic>.md` | how this project designs a pattern, a component, the shell, the layout and its breakpoints, and how each behaves (examples a story or a Figma node in any file): only what differs from the knowledge page it builds on, which it outranks; each line a live §6 decision, gathered, and §6 wins where they disagree | a person; an agent proposes one when two decisions share a topic |
 | the stored screens | what each screen contains | the designer, through the snapshot |
 
 **How a correction travels:**

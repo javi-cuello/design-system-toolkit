@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.19.1)
+# Eval cases — frontend-build (v2.20.0)
+
+**Walked: 2026-11-11 for 2.20.0** — T19 added, traced to *A Figma prototype* step 0 and the template's *Behaviour* and *Examples*; T18 read against it (it holds).
 
 **Walked: 2026-11-11 for 2.19.1** — T15's Negative gains the frame-only fix of what the reference brought, met live: eval run 20261111T151109Z rebuilt the header "+" the maintainer had removed.
 
@@ -297,3 +299,9 @@ Fixture: a project whose `guidance/tables.md` builds on `knowledge/ui/patterns/t
 Assert: the first project's run reads the knowledge page and its guidance page, sorts from the toolbar menu with no Figma comment on the conflict with the reference and names both pages in the receipt; the second follows the knowledge page and says no guidance page exists; at the feedback reading, the run offers a `guidance/shell.md` gathering the two header decisions, each line with its §6 date, and writes it only after the user's yes.
 Negative: the knowledge page's advice applied over the project's page; the guidance page copying the knowledge page; a page written without the yes, or with a line that has no source; a run that stops because `guidance/` is absent; a guidance line with no §6 date, or one left standing after its decision is struck; a page applied over a live §6 decision it contradicts.
 Traced: 2026-11-11 for 2.19.0 — to SKILL.md *A Figma prototype*, steps 0, 3, 5 and 6, and *Feedback on a prototype*, steps 2 and 4, and `references/guidance-template.md`. Not met real input: no project has a guidance page yet.
+
+## T19 · Behaviour is read from guidance pages, with or without a component guidance file — *traced*
+Fixture: a project with `guidance/layout.md` naming two breakpoints (compact under 600, wide from 1200) [§6 2026-11-10] and `guidance/tables.md` saying a table becomes a list of cards at compact [§6 2026-11-11], its example a story id and no Figma node; no component guidance file in Figma; a task for a compact People screen.
+Assert: the run reads `layout.md` and `tables.md` at step 0, draws the People list as cards at compact width, names both pages in the receipt and takes the breakpoint widths from `layout.md`.
+Negative: a run that stops or asks for a component guidance file; breakpoints taken from the knowledge base or invented while `layout.md` names them; a component page that repeats the breakpoint widths instead of naming them.
+Traced: 2026-11-11 for 2.20.0 — to SKILL.md *A Figma prototype*, step 0, *Build* step 4 (layout widths), and `references/guidance-template.md` *Behaviour* and *Examples*. Not met real input: no project has a guidance page yet.
