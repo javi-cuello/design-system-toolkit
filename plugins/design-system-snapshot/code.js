@@ -1021,10 +1021,11 @@ const componentName = (s) => {
 
 /** @param {PageNode} page */
 const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
-/* A scratch page ("Scratch" alone or before a dash, colon, dot or bracket, after any marker) holds trials,
-   never the library: its components are not read and it is not in the page list (snapshot-standard rule 27).
-   "Scratch card" is a component's page. A run that names its pages or ids reads them all. */
-const isScratchPage = (page) => /^\W*Scratch(\s*[-\u2013\u2014:\u00b7|(]|\s*$)/i.test(page.name);
+/* A scratch page ("Scratch" after any marker, alone or followed by a spaced dash, a colon or a bracket) holds
+   trials, never the library: its components are not read and it is not in the page list
+   (snapshot-standard rule 27). "Scratch card" and "Scratch-card" are a component's page. A run that names
+   component ids reads them. */
+const isScratchPage = (page) => /^\W*Scratch(\s+[-\u2013\u2014]|\s*[:([]|\s*$)/i.test(page.name);
 /* A graphic is an illustration, not a glyph: a raster or a drawing placed at a
    size, with no Size axis and no currentColor. It exports as a PNG because a
    graphic's fill is usually an image, and an SVG of an image is that image
@@ -1437,7 +1438,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
   const wanted = [];
   for (const p of figma.root.children) {
     if (section && section.test(p.name)) current = p.name;
-    if (isIconPage(p) || (!pages && !scope && isScratchPage(p))) continue;
+    if (isIconPage(p) || (!scope && isScratchPage(p))) continue;
     if (exclude && current && exclude.has(current)) continue;
     if (pages && !pages.test(p.name)) continue;
     wanted.push(p);

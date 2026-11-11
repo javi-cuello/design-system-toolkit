@@ -105,11 +105,12 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
 {
   const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [] }; if (comp) { comp.parent = p; p.children.push(comp); } p.findAll = (f) => p.children.filter(f); return p; };
   const mk = (name, id) => ({ type: "COMPONENT", name, id, width: 40, height: 20, children: [], componentPropertyDefinitions: {} });
-  figma.root = { children: [pageOf("Chip", mk("Chip", "3:1")), pageOf("Scratch — agent trial 2026-11-04", mk("Template", "3:2")), pageOf("🚧 scratch", mk("Try", "3:3")), pageOf("Scratch card", mk("Card", "3:4")), pageOf("Scratchpad notes", mk("Note", "3:5"))] };
+  figma.root = { children: [pageOf("Chip", mk("Chip", "3:1")), pageOf("Scratch — agent trial 2026-11-04", mk("Template", "3:2")), pageOf("🚧 scratch", mk("Try", "3:3")), pageOf("Scratch card", mk("Card", "3:4")), pageOf("Scratchpad notes", mk("Note", "3:5")), pageOf("Scratch [old]", mk("Old", "3:6")), pageOf("Scratch-card", mk("Card2", "3:7"))] };
   const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
-  ok("a page named Scratch is not read for components, after a marker or none; Scratch card and Scratchpad are", got.map((c) => c.page).join() === "Chip,Scratch card,Scratchpad notes");
-  const named = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: /^🚧 scratch$/ });
-  ok("a run that names a scratch page reads it", named.map((c) => c.page).join() === "🚧 scratch");
+  ok("a page named Scratch is not read for components, after a marker or none; Scratch card, Scratch-card and Scratchpad are", got.map((c) => c.page).join() === "Chip,Scratch card,Scratchpad notes,Scratch-card");
+  const byPage = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], pages: /^[🚧C]/ });
+  const byId = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope: new Set(["3:3"]) });
+  ok("a page rule does not reach a scratch page; a run naming a component's id reads it", byPage.map((c) => c.page).join() === "Chip" && byId.map((c) => c.page).join() === "🚧 scratch");
 }
 // 0.69.0: a slot's preferred values are keys, which name nothing to a reader that did not store the component;
 // this file's own are named from the file, importing nothing; another library's by import, a variant by its set;

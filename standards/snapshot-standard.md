@@ -515,17 +515,18 @@ but for the images, that variable's line and the timestamps (one project,
 *Checked:* `tools/snapshot/test-mcp.mjs` "the payload reads back whole, across frames, its characters as they were"; `tools/snapshot/test-mcp.mjs` "the file's name is Figma's own, since use_figma calls every file Document"; `plugins/design-system-snapshot/tests/test-walk.mjs` "pages load one by one where loading them all is refused"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a style's line is measured from one-line text already drawn in it, never the run's own"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a description the cloud hands back escaped reads as typed"; `tools/snapshot/test-router.mjs` "an icon is stored with its attributes sorted, so the app and the cloud write the same file". `tools/snapshot/test-mcp.mjs` "with several, --file names the one read, never the first by default".
 
 **27 · A scratch page is not the library.**
-A page named "Scratch" (after any marker, any case), alone or before a dash,
-colon, dot or bracket, holds trials: the snapshot reads no component from it
-and leaves it out of the page list. "Scratch card" and "Scratchpad" are not
-one. A run that names its pages or components reads what it names. Moving a
-trial into the library is moving it off that page.
+A page named "Scratch" (after any marker, any case), alone or followed by a
+spaced dash, a colon or a bracket, holds trials: the snapshot reads no
+component from it, under any page rule, and leaves it out of the page list.
+"Scratch card", "Scratch-card" and "Scratchpad" are not one. A run that names
+component ids reads what it names. Moving a trial into the library is moving
+it off that page.
 *Why:* a component is published in code, docs and parity the moment the
 snapshot stores it, so a trial taken as one reaches every reader at once.
 *Evidence:* a library's snapshot took the two templates on its
 "Scratch — agent trial" page as components, and they would have been
 committed beside the real ones (one project, 11 Nov 2026).
-*Checked:* `plugins/design-system-snapshot/tests/test-walk.mjs` "a page named Scratch is not read for components, after a marker or none; Scratch card and Scratchpad are"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a run that names a scratch page reads it".
+*Checked:* `plugins/design-system-snapshot/tests/test-walk.mjs` "a page named Scratch is not read for components, after a marker or none; Scratch card, Scratch-card and Scratchpad are"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a page rule does not reach a scratch page; a run naming a component's id reads it".
 
 ## Adding a project
 
