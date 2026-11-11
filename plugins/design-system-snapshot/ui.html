@@ -389,7 +389,8 @@ onmessage = function (e) {
     // a code just pasted and refused is said as such, so the person knows to check it
     var tried = String($('pair-code').value || '').trim();
     pairing(msg.unpaired ? (tried ? 'That code was refused. ' : '') + msg.unpaired : '');
-    if (!msg.unpaired) $('pair-code').value = '';
+    // cleared only when typed in: set before FigUI3 defines the field, an own `value` would shadow its setter for good
+    if (!msg.unpaired && tried) $('pair-code').value = '';
   }
   if (msg.type === 'progress') show({
     title: sentence(msg.text).replace(/\.$/, '…'),

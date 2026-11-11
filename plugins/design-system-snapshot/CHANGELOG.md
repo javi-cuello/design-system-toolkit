@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.72.1] - 2026-11-11
+### Fixed
+- The pairing field is cleared only once something was typed in it: cleared on open, before FigUI3 had defined it, the field kept an empty value of its own and a pasted code read as empty.
+
 ## [0.72.0] - 2026-11-11
 ### Changed
 - **The window is built from FigUI3 (the PropsKit look):** the icons choice is a `fig-switch` and the pairing code a `fig-input-text` with a secondary `fig-button` (Pair), each in a `fig-field` row; **Take snapshot** is the primary `fig-button` in a `fig-footer`, with the version beside it. The hand-drawn switch, the bespoke button and input rules, and the button's own focus ring are gone; the status block and its progress bar are unchanged. While a snapshot runs the button is `disabled` (FigUI3's), where it was `aria-disabled` and kept focus. Messages to and from code.js are unchanged; the window still fits its content.

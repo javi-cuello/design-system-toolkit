@@ -278,7 +278,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 <body>
 <fig-header><fig-tabs id="tabs" value="audit" aria-label="Audit lite"><fig-tab value="audit">Audit</fig-tab><fig-tab value="settings">Settings</fig-tab></fig-tabs></fig-header>
 
-<div class="panel" id="panel-audit">
+<div class="panel" id="panel-audit" role="tabpanel" aria-label="Audit">
   <div class="panel-body">
     <p class="title" id="file">Reading the file…</p>
     <p class="what">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
@@ -299,7 +299,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
   </fig-footer>
 </div>
 
-<div class="panel" id="panel-settings" hidden>
+<div class="panel" id="panel-settings" role="tabpanel" aria-label="Settings" hidden>
   <div class="panel-body fields">
     <fig-header borderless><h3>Context document</h3></fig-header>
     <fig-field direction="horizontal"><label>Document</label>

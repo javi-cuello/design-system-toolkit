@@ -1,6 +1,14 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.1] - 2026-11-11
+### Fixed
+- Opening the plugin, or running an audit, no longer writes rulings kept on the machine into the file; they move when rulings are added.
+- Remove rulings clears the file before the machine's copy, so a view-only file keeps both.
+- A file the plugin gets no key for keeps its own context document and rulings, keyed by its name.
+- The window has a title; the two panels are tab panels to a screen reader.
+- The judge's rule list resynced from the full audit (the §6 subject read only from "Recorded from …").
+
 ## [0.8.0] - 2026-11-11
 ### Changed
 - The window is built from FigUI3 (the PropsKit look): fig-tabs in a fig-header, fig-field rows with a fig-switch, fig-buttons in a fig-footer, a fig-spinner while the audit runs. Behaviour unchanged.

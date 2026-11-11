@@ -1,18 +1,26 @@
 # Changelog — lucide-icon-importer
+
+## [1.15.1] - 2026-11-11
+### Fixed
+- The Icons and Settings panels are tab panels, each labelled by its tab, to a screen reader.
+
 ## [1.15.0] - 2026-11-11
 ### Changed
 - The window is built from FigUI3 (the PropsKit look): the same Icons and Settings tabs, search, icon grid, selection bar and settings, now from `fig-tabs`, `fig-input-text` (its search type draws the clear button), `fig-field` rows under `fig-header` groups, `fig-checkbox`, a `fig-segmented-control` for Fill mode, `fig-input-color` for Icon color and Background (swatch, hex and opacity in one), `fig-input-number`, `fig-button`s in `fig-footer`s and a `fig-toast`. The hand-drawn tabs, inputs, radios, chips, buttons, footers and toast and their CSS are gone; the icon grid and the colour-variable picker's searchable list stay the plugin's own, since FigUI3's dropdown is a native select with no search, swatch or groups.
 - The window asks for its file, settings and icon list once FigUI3's elements are defined, so a value never lands on a field before it can take it.
 - A colour is saved only once its field holds a whole hex or opacity: FigUI3 reports a half-typed hex as #D9D9D9 and an emptied opacity as 0%, which the window ignores. A hex edit keeps the saved opacity, and opacity is stored to the percent. The hex error line is gone.
+
 ## [1.14.1] - 2026-11-05
 ### Fixed
 - The right-to-left checkbox, setting and count say "right to left", not "Arabic": the audit names whichever language the project ships, and a Hebrew project was told about Arabic.
+
 ## [1.14.0] - 2026-11-05
 ### Added
 - A Settings option, Right to left, off by default. When it's on, each icon gets `Right to left: mirrors` or `Right to left: stays` in its description: the line figma-components-audit's icon-decision check reads.
 - With one icon selected, a "Mirrors in Arabic" checkbox. It's prefilled from the icon's name, using the audit's own direction words (a test keeps the two lists equal).
 - Update icon keeps the decision already made, including a line written into the description by hand.
 - When several icons are added together, only those whose box someone saw get the line. The rest are left for the audit to ask about, since a guessed line would silence it.
+
 ## [1.13.3] - 2026-11-01
 ### Fixed
 - The tab and clear buttons set `box-sizing: border-box` beside their own height, so neither leans on the shared baseline's box (conformance §5a).

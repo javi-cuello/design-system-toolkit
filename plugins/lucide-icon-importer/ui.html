@@ -330,7 +330,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 <fig-header><fig-tabs id="tabs" value="icons" aria-label="Lucide Icon Importer"><fig-tab value="icons" id="tab-icons">Icons</fig-tab><fig-tab value="settings" id="tab-settings">Settings</fig-tab></fig-tabs></fig-header>
 
 <!-- ── Icons tab ── -->
-<div class="panel" id="panel-icons">
+<div class="panel" id="panel-icons" role="tabpanel" aria-labelledby="tab-icons">
   <div class="search-area">
     <div class="search-row">
       <fig-input-text id="searchInput" type="search" full placeholder="Search" aria-label="Search icons" autocomplete="off" spellcheck="false"></fig-input-text>
@@ -363,7 +363,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 </div>
 
 <!-- ── Settings tab ── -->
-<div class="panel" id="panel-settings" hidden>
+<div class="panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
   <div class="panel-body fields">
     <fig-header borderless><h3>General</h3></fig-header>
     <fig-field direction="horizontal"><label>Frame name</label><fig-input-text id="setFrameName" full placeholder="Icons"></fig-input-text></fig-field>
