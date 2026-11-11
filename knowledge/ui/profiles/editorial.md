@@ -1,6 +1,6 @@
 # Profile: editorial and long reads
 
-What a site of articles, essays and series must specify, past what a docs site does: the front page as a magazine, the article frame, editorial type, openings and section breaks, figures and breakouts, quotes, side notes, navigation within an article and across a series, theme, print and static delivery. It binds the fundamentals (`../design/visual.md`, `../design/content.md`, `../design/accessibility.md`, `../design/ux.md`) and the patterns (`../patterns/navigation.md`, `../patterns/pagination.md`) to one kind of product, and takes the reading frame, notes and on-this-page list from [documentation](documentation.md) rather than restating them. It serves the [design-standard](../../../standards/design-standard.md) principles *serve a real need*, *clear words, clear hierarchy*, *as little as possible, and no simpler* and *for everyone, in any context*, and applies design-standard rule 7 (headings sit with their content). The design-standard *Application profiles* entry names this file; it admits nothing as a rule.
+What a site of articles, essays and series must specify, past what a docs site does: the front page as a magazine, art direction, the article frame, editorial type, openings and section breaks, figures and breakouts, quotes, side notes, navigation within an article and across a series, theme, print and static delivery. It binds the fundamentals (`../design/visual.md`, `../design/content.md`, `../design/accessibility.md`, `../design/ux.md`) and the patterns (`../patterns/navigation.md`, `../patterns/pagination.md`) to one kind of product, and takes the reading frame, notes and on-this-page list from [documentation](documentation.md) rather than restating them. It serves the [design-standard](../../../standards/design-standard.md) principles *serve a real need*, *clear words, clear hierarchy*, *as little as possible, and no simpler* and *for everyone, in any context*, and applies design-standard rule 7 (headings sit with their content). The design-standard *Application profiles* entry names this file; it admits nothing as a rule.
 
 ---
 
@@ -36,6 +36,43 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Judgement:* does the eye land on one piece first?
 
 **Sources:** NN/g, A List Apart and Chimero as linked. Mall argues for per-piece direction; the toolkit keeps it to named variants, because a piece styled from scratch is a template nobody maintains.
+
+---
+
+## Art direction: type, colour and space
+
+**Use when**
+- Giving an article site its look: the home hero, the article header, the index and the space between them; hierarchy (one lead) is [Front page as a magazine](#front-page-as-a-magazine).
+
+**How**
+- **Large titles are light and tight.** Stripe, Vercel and Linear set their page titles at 48 to 56px, weight 300 to 590, with negative tracking (Vercel −2.88px on 48px, about −0.06em); none sets a large sans title at 700. Bold belongs to serif or condensed display faces (Increment's Tiempos at 700, Figma's condensed sans). Tracking stays within [visual: typography](../design/visual.md#typography)'s limit, about −0.025em at display sizes: Vercel's −0.06em is one face's choice, not the toolkit's default.
+- **A headline is a few words.** Sketch's is three ("Designers, welcome home."), Increment's measured article title three, Stripe's eight. A sentence that explains goes in the standfirst under it, at about 1.2 times body size (A List Apart 24px over 18px body; Sketch 24px).
+- **The background is flat, with one gesture.** Stripe has one ribbon on white, Sketch one soft gradient, rauno.me one yellow disc, The Pudding one colour field per story; Linear, Vercel and Increment are flat. None layers texture, gradient and image together.
+- **One accent hue**, spent on links, kickers and the main action: Stripe purple, Increment blue, Craig Mod blue; Linear and Vercel use none and let imagery carry colour. A kicker is a link to its section, so this keeps [visual: emphasis](../design/visual.md#emphasis-and-the-attention-budget)'s accent-where-action-is.
+- **The article header repeats the index's title face and scale.** Vercel and Linear set the article title at the same 48px as the index heading and add a kicker above and author and date below; Figma keeps its 90px title and changes the page colour; Stripe keeps its kicker colour and grid lines.
+- **The nav is quiet**: 14 to 16px at weight 400, grey links, at most one filled button (Linear, Vercel, Stripe).
+- **Index entries are regular**: a meta line (date or topic), the title, one or two grey lines of summary, a hairline between rows (Increment, Vercel, Linear). Only the newest or lead piece is featured (Stripe).
+- **Sections get room.** Section gaps measured 100 to 128px, about 6 to 8rem (Figma, Sketch), and 224px, 14rem (Linear). Spending white space on purpose reads as care (the toolkit's judgement; no source measures the effect).
+
+**Cases**
+- A hero headline of two sentences at 72px bold → the first clause as the title at weight 400 to 500 (the toolkit's reading of three sites), the rest as the standfirst.
+- A soft gradient, a texture and a coloured band on one page → one gesture, repeated in the article header so the two pages belong together.
+- Home titles at 800, article titles at 700, topic titles at 600 → one large-title weight and scale for the home hero and the article header; smaller headings step down from it.
+- Topic links set as bordered pills in bold beside a bold name → plain links at 400 in grey; the name at 600 at most.
+
+**Accessibility**
+- 1.4.3 Contrast: muted text over a gradient is measured against the gradient where the text sits, not the page background; a glow behind grey text can take it under 4.5:1.
+- 1.4.12 Text Spacing: nothing may be lost or clipped when the user sets letter-spacing to 0.12em and line height to 1.5; titles get no fixed height, no `overflow: hidden` and no `!important` on their tracking.
+
+**Build**
+- The gesture is one pseudo-element (`::before`) behind the hero and the article header, from tokens (`--glow-*` or a ribbon image), redefined for dark mode ([theming and dark mode](../design/visual.md#theming-and-dark-mode)) and hidden in [print](#print).
+- Title weight and tracking come from the text styles, one style for the large title used by both headers (code-standard rule 54).
+
+**Check**
+- *Script:* could flag (thresholds are the toolkit's judgement) a large title over 40px at weight 700 or more in a sans face that is not condensed, a hero `h1` over about eight words, more than one accent hue in links and kickers, and muted text whose sampled background fails 4.5:1.
+- *Judgement:* does the article header look like it came from the same site as the home page?
+
+**Sources:** [Stripe](https://stripe.com/blog), [Vercel](https://vercel.com/blog), [Linear](https://linear.app/now), [Sketch](https://www.sketch.com), [Figma's Shortcut](https://www.figma.com/blog/), [Increment](https://increment.com), [A List Apart](https://alistapart.com), [Craig Mod](https://craigmod.com), [The Pudding](https://pudding.cool) and [rauno.me](https://rauno.me), measured from their rendered pages (computed styles and screenshots) on 11 November 2026; where tracking disagrees with visual.md, visual's limit holds, since one face's tight setting does not carry to another; Medium and The Verge refused or walled the automated visit and are not counted. Galleries (Awwwards, Land-book) were not crawled.
 
 ---
 
