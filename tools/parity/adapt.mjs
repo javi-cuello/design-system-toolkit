@@ -733,11 +733,11 @@ export function assertionsFor(at, ctx) {
          "Text" or "Position" would also silence any other component's */
       // the names a skill may scope by: the set's whole name, cut at the first ` / ` that opens the variant part
       // (`Prop=Value, …`; a value may hold a slash), so `Table - Cell / Fill` stays whole; and, as before 1.70.1,
-      // the first part's last folder segment
+      // the first part's last folder segment. Never the whole name's last segment: `Fill` would reach every `… / Fill`
       const io = String(node.instanceOf || '');
-      const at = io.split(' / ').findIndex((part, i) => i > 0 && /^[^=,/]+=/.test(part));
-      const full = at > 0 ? io.split(' / ').slice(0, at).join(' / ') : io;
-      const names = new Set([full, full.split('/').pop().trim(), io.split(' / ')[0].split('/').pop()]);
+      const cut = io.split(' / ').findIndex((part, i) => i > 0 && /^[^=,/]+=/.test(part));
+      const full = cut > 0 ? io.split(' / ').slice(0, cut).join(' / ') : io;
+      const names = new Set([full, io.split(' / ')[0].split('/').pop()]);
       if (propType(node, key) === 'TEXT' || (P.skip || []).some((s) => s === key || [...names].some((n) => s === `${n}.${key}`))) continue;
       // the attribute to-code styles the prop by, where it writes the project's sheets (prop-attr.mjs), else the prop's words
       const attr = (P.rename || {})[key] || propAttr(key, ctx.attrNaming || null);

@@ -5,7 +5,6 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 ### Fixed
 - Opening the plugin, running an audit or downloading rulings no longer writes rulings kept on the machine into the file; they move when rulings are added.
 - Remove rulings clears the file's own first, when it has any: a view-only file holding rulings keeps both, one holding none still lets the machine's copy go.
-- A file the plugin gets no key for keeps its own context document and rulings, keyed by its name; what one saved before 0.8.1 is still found. Two unsaved files of one name share an entry.
 - The window has a title; the two panels are tab panels to a screen reader.
 - Letter spacing on a text layer with no style is advised on the layer, not on a "text style" named after it (the components audit 2.44.1).
 - The judge's rule list resynced from the full audit (the §6 subject read only from "Recorded from …").

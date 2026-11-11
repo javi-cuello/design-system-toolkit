@@ -476,7 +476,9 @@ ok('a set named with " / " is matched by its whole name, its variant part cut', 
   const Icon = (instanceOf) => doc(F({ children: [{ name: 'N', type: 'INSTANCE', instanceOf, w: 10, h: 10, sizing: 'HUG/HUG', props: { Position: 'First' } }] }), 'N', { N: '.n' }, { parity: { props: { skip: ['Icon.Position', 'Tooltip.Position'] } } }).assertions.filter((x) => x.prop.startsWith('-attr')).length;
   return attrs('Table - Cell / Fill / Size=sm, State=Rest') === '' && attrs('Table - Cell / Edge / Size=sm') === '-attr:position'
     // a variant value holding a slash, and a slash-named component with no set, still match as before
-    && Icon('Icon / Name=arrow/left') === 0 && Icon('Tooltip / Top') === 0;
+    && Icon('Icon / Name=arrow/left') === 0 && Icon('Tooltip / Top') === 0
+    // a generic last segment reaches no other component
+    && doc(F({ children: [{ name: 'N', type: 'INSTANCE', instanceOf: 'Table - Cell / Fill / Size=sm', w: 10, h: 10, sizing: 'HUG/HUG', props: { Position: 'First' } }] }), 'N', { N: '.n' }, { parity: { props: { skip: ['Fill.Position'] } } }).assertions.some((x) => x.prop === '-attr:position');
 })());
 // the attribute is to-code's (tools/shared/prop-attr.mjs): where to-code writes the sheets, by their naming; else the words
 ok('an instance prop\'s attribute is the one to-code styles by where it writes the sheets, and the prop\'s words where markup is hand-written', (() => {

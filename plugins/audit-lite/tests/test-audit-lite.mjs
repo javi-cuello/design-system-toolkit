@@ -163,11 +163,6 @@ const ruling = { date: '2026-01-01', scope: 'Lib', text: 'x', why: 'about: Butto
   ok('downloading writes nothing to the file either', p.file() === '' && p.store['rulings:F1']);
 }
 {
-  const p = plugin({ fileKey: undefined, store: { 'context:undefined': { name: 'ctx.md', text: '' } } });
-  await p.send({ type: 'hello' });
-  ok('a keyless file still finds a context document saved before 0.8.1', p.sent[0].context === 'ctx.md');
-}
-{
   const p = plugin({ fileKey: 'F2', store: { 'rulings:F2': [ruling] }, viewOnly: true });
   await p.send({ type: 'rulings-clear' });
   ok('a view-only file with no rulings of its own still lets the machine copy be removed', !p.store['rulings:F2']);

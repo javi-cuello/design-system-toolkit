@@ -2625,19 +2625,11 @@ function report(r, meta, run) {
   ].join('\n');
 }
 
-// a file with no key to the plugin (a local or unsaved one) is keyed by its name, so files do not share one 'undefined' entry
-const fileId = () => figma.fileKey || 'name:' + figma.root.name;
-const contextKey = () => 'context:' + fileId();
-// before 0.8.1 a keyless file stored under 'context:undefined' / 'rulings:undefined': read there when its own key holds nothing
-const legacy = (prefix) => (figma.fileKey ? null : prefix + 'undefined');
-async function stored(key, prefix) {
-  const v = await figma.clientStorage.getAsync(key);
-  if (v != null || !legacy(prefix)) return v;
-  return figma.clientStorage.getAsync(legacy(prefix));
-}
+// figma.fileKey is always set: the manifest enables the private plugin API
+const contextKey = () => 'context:' + figma.fileKey;
 // rulings live in the file itself, so they travel with it to anyone who runs the plugin on it; versions up to 0.6 kept
 // them on the machine under this key, and adding rulings moves them into the file
-const oldRulingsKey = () => 'rulings:' + fileId();
+const oldRulingsKey = () => 'rulings:' + figma.fileKey;
 /** @returns {any[]} */
 const fileRulings = () => { try { return JSON.parse(figma.root.getPluginData('rulings') || '[]'); } catch (e) { return []; } };
 /** @param {any[]} list */
@@ -2654,11 +2646,11 @@ const saveRulings = (list) => {
  */
 async function allRulings(move = true) {
   const inFile = fileRulings();
-  const old = await stored(oldRulingsKey(), 'rulings:');
+  const old = await figma.clientStorage.getAsync(oldRulingsKey());
   if (!old || !old.length) return inFile;
   const all = mergeRulings(old, inFile); // the file's own win: a teammate's, or a later edit
   if (!move) return all;
-  try { saveRulings(all); await figma.clientStorage.deleteAsync(oldRulingsKey()); if (legacy('rulings:')) await figma.clientStorage.deleteAsync(legacy('rulings:')); } catch (e) { /* view-only: kept on the machine */ }
+  try { saveRulings(all); await figma.clientStorage.deleteAsync(oldRulingsKey()); } catch (e) { /* view-only: kept on the machine */ }
   return all;
 }
 
@@ -2704,7 +2696,7 @@ if (typeof figma !== 'undefined') {
       if (msg.type === 'close') { figma.closePlugin(); return; }
       // the window asks once it has loaded, so the answer never arrives before it can be read
       if (msg.type === 'hello') {
-        const saved = await stored(contextKey(), 'context:');
+        const saved = await figma.clientStorage.getAsync(contextKey());
         const kept = await allRulings(false);
         figma.ui.postMessage({ type: 'init', file: figma.root.name, version: VERSION, context: saved ? saved.name : null, rulings: kept.length });
         return;
@@ -2730,7 +2722,7 @@ if (typeof figma !== 'undefined') {
         // the file first, and only when it holds any: a view-only file with rulings throws before the machine's copy goes,
         // and one with none still lets the machine's copy be removed
         if (fileRulings().length) saveRulings([]);
-        await figma.clientStorage.deleteAsync(oldRulingsKey()); if (legacy('rulings:')) await figma.clientStorage.deleteAsync(legacy('rulings:'));
+        await figma.clientStorage.deleteAsync(oldRulingsKey());
         figma.ui.postMessage({ type: 'rulings', count: 0 }); return;
       }
       if (msg.type === 'rulings-download') {
@@ -2738,9 +2730,9 @@ if (typeof figma !== 'undefined') {
         figma.ui.postMessage({ type: 'file', name, text: rulingsLog(await allRulings(false)) });
         return;
       }
-      if (msg.type === 'context-clear') { await figma.clientStorage.deleteAsync(contextKey()); if (legacy('context:')) await figma.clientStorage.deleteAsync(legacy('context:')); figma.ui.postMessage({ type: 'context', name: null }); return; }
+      if (msg.type === 'context-clear') { await figma.clientStorage.deleteAsync(contextKey()); figma.ui.postMessage({ type: 'context', name: null }); return; }
       if (msg.type !== 'run') return;
-      const saved = await stored(contextKey(), 'context:');
+      const saved = await figma.clientStorage.getAsync(contextKey());
       const run = Object.assign(settingsFor(saved ? saved.text : null, figma.fileKey || null), { contextName: saved ? saved.name : null });
       const pasted = await allRulings(false);
       // the person asked for a context document to be drafted (meaningless with one in use)

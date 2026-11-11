@@ -1562,15 +1562,15 @@ server.listen(PORT, "127.0.0.1", () => {
     // a folder not there yet (a Storybook first built after the service starts) is looked for every 30 s and
     // watched once it appears, with a build then, rather than missed until a restart
     const attach = (d, opts, fn) => {
-      if (existsSync(d)) { try { watch(d, opts, fn); } catch (e) { console.error(`docs site      could not watch ${d}: ${e.message}`); } return; }
-      const t = setInterval(() => { if (!existsSync(d)) return; clearInterval(t); try { watch(d, opts, fn); } catch (e) { console.error(`docs site      could not watch ${d}: ${e.message}`); } soon(); }, 30000);
+      if (existsSync(d)) { try { watch(d, opts, fn).on("error", (e) => console.error(`docs site      stopped watching ${d}: ${e.message}`)); } catch (e) { console.error(`docs site      could not watch ${d}: ${e.message}`); } return; }
+      const t = setInterval(() => { if (!existsSync(d)) return; clearInterval(t); try { watch(d, opts, fn).on("error", (e) => console.error(`docs site      stopped watching ${d}: ${e.message}`)); } catch (e) { console.error(`docs site      could not watch ${d}: ${e.message}`); } soon(); }, 30000);
       t.unref();
     };
     for (const [d, names] of byDir) attach(d, {}, (_, name) => { if (name && names.has(String(name))) soon(); });
     for (const d of trees) attach(d, { recursive: true }, soon);
     // its official contracts, where it takes the contract as its source (component-contract's official.mjs): watched
     // from the home, so a folder a switch makes while the service runs is seen without a restart
-    if (where.projectDir && existsSync(where.projectDir)) watch(where.projectDir, { recursive: true }, (_, name) => { if (/^contracts([\\/]|$)/.test(String(name || ""))) soon(); });
+    if (where.projectDir && existsSync(where.projectDir)) watch(where.projectDir, { recursive: true }, (_, name) => { if (/^contracts([\\/]|$)/.test(String(name || ""))) soon(); }).on("error", (e) => console.error(`docs site      stopped watching ${where.projectDir}: ${e.message}`));
     console.log(`docs site      ${label}: built now, and again on change to ${files.length} files and ${trees.length} folders`);
     if (process.env.DOCS_WATCH_ENGINE === "0") console.log(`docs site      ${label}: DOCS_WATCH_ENGINE=0, so a change to the docs engine (tools/docs-site/src) does not rebuild it`);
     build();
