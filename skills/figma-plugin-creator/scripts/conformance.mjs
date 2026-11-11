@@ -150,7 +150,7 @@ export function checkPlugin(dir, opts = {}) {
 const FIG_SELECTOR = /(^|[\s>+~(,])(fig-[a-z-]+)(?=$|[.:#\[),])|(\.switch)(?![\w-])/i;
 // the rule's subject: its last compound, so `fig-footer .status` styles the plugin's own content, not the footer;
 // what sits inside :not() or :has() is a condition on the subject, not the subject
-const subject = (sel) => sel.trim().replace(/:(not|has)\([^()]*\)/gi, "").split(/\s*[>+~]\s*|\s+(?![^()]*\))/).pop();
+const subject = (sel) => sel.trim().replace(/:(not|has)\((?:[^()]|\([^()]*\))*\)/gi, "").split(/\s*[>+~]\s*|\s+(?![^()]*\))/).pop();
 export function restyled(ui) {
   const css = [...ui.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join("\n").replace(BLOCK, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const out = new Set();
@@ -202,22 +202,41 @@ export function misComposed(ui) {
   const html = ui.replace(/<style[\s\S]*?<\/style>/gi, blank).replace(/<script[\s\S]*?<\/script>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank);
   const lineAt = (i) => html.slice(0, i).split("\n").length;
   const out = [];
-  // a tag's name ends at a space, `>` or `/`, so `fig-footer-x` is not a footer
-  for (const f of html.matchAll(/<fig-footer(?=[\s>\/])[\s\S]*?<\/fig-footer>/gi)) for (const b of f[0].matchAll(/<fig-button(?=[\s>\/])(?:"[^"]*"|'[^']*'|[^'">])*>/gi)) {
-    const a = attrsOf(b[0]);
-    if ("icon" in a && a.icon.toLowerCase() !== "false") continue; // an icon button keeps its own size
-    if ((a.size || "").toLowerCase() !== "large") out.push({ what: "a footer fig-button without size=\"large\"", fix: "a window's action is the large button", line: lineAt(f.index + b.index) });
+  // Walk the tags as the parser does: a custom element's `/>` opens it; an end tag closes everything opened after
+  // its match (so `<fig-switch>A</fig-field>` leaves "A" in the switch); a stray end tag is ignored.
+  const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/;
+  const stack = []; // { name, at, attrs, text }
+  const report = (el) => {
+    if (!/^fig-(switch|checkbox)$/.test(el.name) || !stack.some((x) => x.name === "fig-field")) return;
+    const text = (el.attrs.label || "").trim() || el.text.replace(/&nbsp;|&#160;|&#xa0;/gi, " ").trim();
+    if (text) out.push({ what: `text inside a ${el.name} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(el.at) });
+  };
+  // closing an element: what remains on the stack is its ancestors; a plain child's text counts for its parent
+  // (`<fig-switch><span>Export</span>`), a nested control's text is its own
+  const close = (el) => {
+    report(el);
+    const parent = stack[stack.length - 1];
+    if (parent && !/^fig-(switch|checkbox)$/.test(el.name)) parent.text += el.text;
+  };
+  for (const m of html.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>|([^<]+)/g)) {
+    if (m[4] !== undefined) { const top = stack[stack.length - 1]; if (top) top.text += m[4]; continue; }
+    const name = m[2].toLowerCase();
+    if (m[1]) { // an end tag
+      const i = stack.map((x) => x.name).lastIndexOf(name);
+      if (i < 0) continue;
+      while (stack.length > i) close(stack.pop());
+      continue;
+    }
+    const attrs = attrsOf("<x" + m[3]);
+    if (name === "fig-button" && stack.some((x) => x.name === "fig-footer")) {
+      const icon = "icon" in attrs && attrs.icon.toLowerCase() !== "false"; // an icon button keeps its own size
+      if (!icon && (attrs.size || "").toLowerCase() !== "large") out.push({ what: "a footer fig-button without size=\"large\"", fix: "a window's action is the large button", line: lineAt(m.index) });
+    }
+    if (VOID.test(name) || (m[3].trim().endsWith("/") && !name.includes("-"))) continue;
+    stack.push({ name, at: m.index, attrs, text: "" });
   }
-  // text beside the box: in FigUI3's `label` attribute, or between the tags (child elements' text included)
-  for (const f of html.matchAll(/<fig-field(?=[\s>\/])[\s\S]*?<\/fig-field>/gi)) for (const c of f[0].matchAll(/<(fig-switch|fig-checkbox)(?=[\s>\/])((?:"[^"]*"|'[^']*'|[^'">])*)>/gi)) {
-    const rest = f[0].slice(c.index + c[0].length);
-    // HTML ignores `/>` on a custom element: it is an open tag like any other
-    const close = rest.search(new RegExp(`<\\/${c[1]}\\s*>|<fig-(switch|checkbox)(?=[\\s>\\/])`, "i"));
-    const inner = close > 0 && /^<\//.test(rest.slice(close)) ? rest.slice(0, close) : "";
-    const text = (attrsOf("<x" + c[2]).label || "").trim() || inner.replace(/<[^>]*>/g, "").replace(/&nbsp;|&#160;|&#xa0;/gi, " ").trim();
-    if (text) out.push({ what: `text inside a ${c[1].toLowerCase()} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(f.index + c.index) });
-  }
-  return out;
+  while (stack.length) close(stack.pop()); // an element never closed ends with the document
+  return out.sort((a, b) => a.line - b.line);
 }
 
 // §5a ui-base collision: a class on a <button>, <input>, <select> or <textarea> in the markup whose own rules size

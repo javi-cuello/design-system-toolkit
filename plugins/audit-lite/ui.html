@@ -66,7 +66,8 @@ fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-c
 .status-detail{margin:var(--space-1) 0 0;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
 .status[data-tone] .status-detail{padding-left:24px}
 /* a link fig-button pads its label by --spacer-2: the row reaches into the field's inset by as much, so the last link's label ends where the footer's button does */
-.value-row{display:flex;align-items:center;gap:0;margin-right:calc(-1 * var(--spacer-2,8px));min-width:0;min-height:24px}
+.value-row{display:flex;align-items:center;gap:0;min-width:0;min-height:24px}
+.value-row:has(> fig-button:not([hidden])){margin-right:calc(-1 * var(--spacer-2,8px))}
 .value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 <script type="module">
@@ -316,6 +317,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 <script>
 var $ = function (id) { return document.getElementById(id); };
 var last = null, busy = false;
+// while an audit runs the settings links ignore a click rather than show disabled: FigUI3 draws a disabled link as a grey filled button
 var HINT = 'Rulings are saved in this file.';
 // the tabs show one panel; fig-tabs owns the keyboard (roving focus) and says which tab is chosen
 $('tabs').addEventListener('change', function (e) { var v = (e.detail && e.detail.value) || e.target.value || this.getAttribute('value'); $('panel-audit').hidden = v !== 'audit'; $('panel-settings').hidden = v !== 'settings'; });

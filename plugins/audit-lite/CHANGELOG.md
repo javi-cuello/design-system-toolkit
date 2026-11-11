@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.3] - 2026-11-11
+### Fixed
+- A row whose links are all hidden keeps the field's right inset, so a long document name no longer runs 8px into it.
+
 ## [0.8.2] - 2026-11-11
 ### Fixed
 - The context document's and rulings' Upload…, Change…, Download and Remove are FigUI3 link buttons: as plain buttons, FigUI3's hover filled them brand-blue and hid their label.
