@@ -247,6 +247,12 @@ const bOut = run(d).stdout;
 ok("a pattern section with no Build part is refused, one with it passes", /pattern "Without" has no Build part/.test(bOut) && !/pattern "With" has/.test(bOut));
 ok("…and an anchor the page has no heading for", /links b\.md#nope, a heading/.test(kOut) && !/b\.md#the-x/.test(kOut));
 ok("…and a path on someone's machine", /links a path outside the repo \(\/Users\/me\/notes\.md\)/.test(kOut));
+// 2026-11-11: every knowledge item carries a weight; a Case is not an item (toolkit-standard §D 21).
+d = tree({ files: { "knowledge/ui/w.md": "# W\n\n## S\n\n**How**\n- [strong] **Weighed.** x\n- **Bare.** y\n- [maybe] z\n\n**Cases**\n- a case → a fix\n\n```\n- **In a fence.** q\n```\n" } });
+const wOut = run(d).stdout;
+ok("an item with no weight is refused, a weighed one passes", /w\.md:7: an item carries no weight/.test(wOut) && !/w\.md:6:/.test(wOut));
+ok("…and one with a word that is not a weight", /w\.md:8: an item carries no weight/.test(wOut));
+ok("…but a Case and a fenced line are not items", !/w\.md:11:/.test(wOut) && !/w\.md:14:/.test(wOut));
 // 2026-10-26: naming preferences are their own standards file and a project's own block, never an audit setting.
 {
   const naming = { preferences: { booleanPrefix: "Show " }, keys: { booleanPrefix: "prefix every boolean property starts with (figma-standard rule 1)" } };

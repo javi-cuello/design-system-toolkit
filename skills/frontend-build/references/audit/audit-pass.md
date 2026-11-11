@@ -10,7 +10,7 @@ Walk design-standard's *Principles* as questions of the whole screen. A "no" is 
 
 The rules a script cannot settle, by handle; read each before raising a finding against it. The mechanical halves are `tools/ui-check/check.mjs`'s and have already run.
 
-- **UX:** design-standard rules 1 and 14 (with no design file, were the values taken from the knowledge pages?).
+- **UX:** design-standard rules 1 and 14 (with no design file, were the values taken from the knowledge pages, each as far as its weight carries?).
 - **Interaction:** the halves marked *needs a read* in design-standard rules 3, 4 and 5, and design-standard rule 6.
 - **Visual:** design-standard rules 7, 8 and 9.
 - **Content:** design-standard rules 10 and 11.

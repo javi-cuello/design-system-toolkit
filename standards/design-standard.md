@@ -1,6 +1,6 @@
 # Design standard — how an interface the toolkit builds or audits looks, behaves and reads, in a design file and in a built page
 
-**Version 1.3.1** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
+**Version 1.4.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
 
 **Scope.** The design of any interface a project or the toolkit itself puts in front of people: a documentation site, a dashboard, a tool, a screen drawn in Figma. Five areas, each owning one kind of decision: **UX** (what and why, across screens), **Interaction** (how it responds, in the moment), **Visual** (how it looks), **Content** (what it says) and **Accessibility** (who it works for). Above them sit the principles every area answers to; below them, **application profiles** say what a kind of product (documentation, dashboards, editorial reading, forms) must specify. A rule applies to a design file and to a built page alike; each says which it can be checked on. Project-agnostic by construction, like `code-standard.md`.
 
@@ -49,7 +49,7 @@ Good UX starts from the task someone came to do, asks for nothing twice, chooses
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the review of any page that shows recorded figures.
 
 
-14. **With no design file, the knowledge base is the design.** A screen built or drawn without a Figma reference (a page, a site, a published artifact, a specimen) takes its type, spacing, colour, layout and patterns from the knowledge pages it uses (`knowledge/README.md` lists them), walked before the first line is written. Reference sites fill only what those pages leave open, and each value taken from one is named in the report back.
+14. **With no design file, the knowledge base is the design.** A screen built or drawn without a Figma reference (a page, a site, a published artifact, a specimen) takes its type, spacing, colour, layout and patterns from the knowledge pages it uses (`knowledge/README.md` lists them), walked before the first line is written, each item as far as its weight carries (toolkit-standard §D 21): a `weak` or `contested` one is a starting point the report back says it kept or changed. Reference sites fill only what those pages leave open, and each value taken from one is named in the report back.
 
    *Why:* a reference site's values are its own decisions, made for its own product; copied in, they skip the sourced defaults the toolkit already holds, and the gaps surface only when someone asks. The principle is *consistent, not uniform*.
 

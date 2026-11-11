@@ -7,13 +7,13 @@ Which upkeep of the system itself (dependency bumps, fixes, deprecations, docs) 
 ## Work that ends in a check
 
 **What good looks like**
-- An agent takes a maintenance task when the task ends in something a person or a script can check: a failing test made to pass, a lint result, a changeset a reviewer reads.
-- Decisions about intent stay with people: what a public API should mean, what to retire, what the system is for.
+- [weak] An agent takes a maintenance task when the task ends in something a person or a script can check: a failing test made to pass, a lint result, a changeset a reviewer reads.
+- [weak] Decisions about intent stay with people: what a public API should mean, what to retire, what the system is for.
 
 **How**
-- Each repeated procedure is a skill in the repository, so the agent follows the team's steps, not its own guess. Primer React keeps 17 in `.agents/skills`; its `deprecations` skill lists the steps to retire a component: a JSDoc `@deprecated` tag on the export, `"status": "deprecated"` in the docs metadata, a changeset, and a pointer to the replacement ([skill](https://github.com/primer/react/blob/main/.agents/skills/deprecations/SKILL.md)).
-- That `@deprecated` tag is what a product agent reads when it meets the old component, so maintenance written as a procedure produces the signals that agents using the system depend on.
-- A person confirms the direction before the agent edits when the fix changes what the API does. Ant Design's maintainer describes this checkpoint: the agent narrows the search, but what the API should do cannot be decided from the implementation alone ([Gao, Ant Design blog, 11 Aug 2026](https://ant.design/docs/blog/ai-open-source-contribution)).
+- [weak] Each repeated procedure is a skill in the repository, so the agent follows the team's steps, not its own guess. Primer React keeps 17 in `.agents/skills`; its `deprecations` skill lists the steps to retire a component: a JSDoc `@deprecated` tag on the export, `"status": "deprecated"` in the docs metadata, a changeset, and a pointer to the replacement ([skill](https://github.com/primer/react/blob/main/.agents/skills/deprecations/SKILL.md)).
+- [weak] That `@deprecated` tag is what a product agent reads when it meets the old component, so maintenance written as a procedure produces the signals that agents using the system depend on.
+- [weak] A person confirms the direction before the agent edits when the fix changes what the API does. Ant Design's maintainer describes this checkpoint: the agent narrows the search, but what the API should do cannot be decided from the implementation alone ([Gao, Ant Design blog, 11 Aug 2026](https://ant.design/docs/blog/ai-open-source-contribution)).
 
 **Cases**
 - Primer React: 336 pull requests opened by the Copilot coding agent, 164 merged; 98 of the repository's 740 merged in 2026, about 13 percent (counted 9 Nov 2026, [merged list](https://github.com/primer/react/pulls?q=is%3Apr+author%3Aapp%2Fcopilot-swe-agent+is%3Amerged)). The titles run from version bumps to a new size variant.
@@ -21,7 +21,7 @@ Which upkeep of the system itself (dependency bumps, fixes, deprecations, docs) 
 - Docs written by an agent for every export of Reshaped, in Storybook's experiment, came out inaccurate: speed did not make them correct ([experiment](https://github.com/storybookjs/ds-mcp-experiment-reshaped/discussions/1)). Docs an agent writes are reviewed like code.
 
 **Accessibility**
-- An agent's fix runs the same accessibility tests as a person's; a regression case it adds is read for what it asserts, not only for passing.
+- [weak] An agent's fix runs the same accessibility tests as a person's; a regression case it adds is read for what it asserts, not only for passing.
 
 **Check**
 - *Script:* the repository's CI on the agent's pull request, and its skills folder exists for each repeated procedure.

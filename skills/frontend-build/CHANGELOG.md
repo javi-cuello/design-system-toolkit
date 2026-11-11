@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.21.0 (2026-11-11): Orient step 4 and the knowledge audit follow each item by its weight (toolkit-standard §D 21); a gap against a weak or contested item is a recorded choice, not a defect. T13 amended.
 - 2.20.2 (2026-11-11): reviewed: `figma-feedback.mjs` refuses to list when the agent's key cannot say who the agent is (its own comments would read as feedback); step 2's decision sentence parses. T15.
 - 2.20.1 (2026-11-11): step 0 names the system MCP's `get_project_knowledge` as the same source a code agent reads. Prose; cases unaffected.
 - 2.20.0 (2026-11-11): guidance pages hold behaviour (resize, breakpoints, touch, keyboard, states over time); breakpoints once in `guidance/layout.md`; examples a story or a Figma node in any file, a component guidance file optional. T19.

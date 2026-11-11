@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.27.0 (2026-11-11): §D 21: every knowledge item carries a weight (required, strong, moderate, weak, contested) set by its evidence, each saying what an agent does; check-standards refuses an unweighed item.
 - 2.26.1 (2026-11-11): §D 12: the one home is the project's folder, a file per kind of fact, and *Why:* says so; both *Checked:* pairs verified; the eval row says when git voids a run; records 2779f564's unbumped "another document".
 - 2.26.0 (2026-11-11): §D 12: a project's guidance pages, `guidance/<topic>.md`, hold only what differs from the knowledge page they build on, and outrank it.
 - 2.25.0 (2026-11-11): §D 12: the context document's §6 is a project's one decision log (library, product, pattern, screen, by Scope); the product file, now `product-context.md`, holds no decisions; every piece but the context document is optional and a reader skips what is absent.

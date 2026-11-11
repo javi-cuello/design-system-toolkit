@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.20.2)
+# Eval cases — frontend-build (v2.21.0)
+
+**Walked: 2026-11-11 for 2.21.0** — T13 amended: the knowledge pass follows each item by its weight; traced to Orient step 4 and toolkit-standard §D 21. Prototype step 5 (a clash with a weak item takes the drawing, no comment) and the audit pass's rule 14 question read against T13; no other case affected. Others read against the change, none affected.
 
 **Walked: 2026-11-11 for 2.20.2** — T15 read against the refusal when the agent's key lacks `current_user:read` (a list that would count the agent's own comments as open is never served); `test-feedback.mjs` 6/6. Missing walk records for 2.14.0, 2.14.1 and 2.15.0 restored below, from the commits.
 
@@ -217,9 +219,9 @@ Walked live: 2026-10-30 — as the 2.7.0 line above records.
 
 ## T13 · With no design file, the knowledge base is the design — *traced*
 Fixture: "build a site to browse these articles; look at Smashing Magazine and the Figma blog for layouts", no Figma file.
-Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values; a reference site supplies only what they leave open, and the report back names each such value.
+Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values as far as each item's weight carries (amended 2.21.0: a `weak` or `contested` item is a starting point the report says it kept or changed); a reference site supplies only what they leave open, and the report back names each such value.
 Negative: a page whose type, measure and palette come from the reference sites with no knowledge pass.
-Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14.
+Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14. Re-traced 2026-11-11 for 2.21.0 — to toolkit-standard §D 21's weights.
 
 ## T14 · A Figma prototype knows the system, starts from a reference and says what it read — *traced*
 Fixture: "prototype an edit-employee flow in Figma" in a file whose screen template has three reference screens, one a table.

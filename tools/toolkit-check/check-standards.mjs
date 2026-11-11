@@ -261,6 +261,21 @@ for (const f of knowledgePages) {
   // A design pattern ships with its code counterpart: every section of a pattern page carries a Build part.
   if (/^knowledge\/ui\/patterns\//.test(f)) for (const sec of read(f).split(/^## /m).slice(1))
     if (!/\*\*Build[.:]?\*\*|\*\*Build:?\*\*/.test(sec)) problems.push(`${f}: pattern "${sec.split("\n")[0].trim()}" has no Build part (its code counterpart, toolkit-standard §D 21)`);
+  // Every item carries a weight first on its bullet: a bullet of a Use when, What good looks like, How,
+  // Accessibility or Build part, or a bold-led bullet anywhere; Cases, Check and Sources are not items.
+  if (!f.endsWith("/README.md")) {
+    let label = "", fence = false;
+    read(f).split("\n").forEach((l, i) => {
+      if (/^\s*```/.test(l)) { fence = !fence; return; }
+      if (fence) return;
+      if (/^#{1,6} /.test(l)) { label = ""; return; }
+      const lab = l.match(/^\*\*([^*]{1,40}?)[.:]?\*\*[.:]?(\s|$)/);
+      if (lab) label = lab[1].trim();
+      if (!/^- /.test(l) || /^(cases|check|sources)$/i.test(label)) return;
+      if (!/^(use when.*|what good looks like|how|accessibility|build)$/i.test(label) && !/^- (\[[^\]]*\] )?\*\*/.test(l)) return;
+      if (!/^- \[(required|strong|moderate|weak|contested)\] /.test(l)) problems.push(`${f}:${i + 1}: an item carries no weight; start it with [required], [strong], [moderate], [weak] or [contested] (toolkit-standard §D 21)`);
+    });
+  }
   // Its relative links resolve: two profile pages pointed one level above the repo for a day.
   // And their anchors name a heading the page has (GitHub's slug: lower case, punctuation dropped, spaces to hyphens).
   const slugs = (md) => new Set([...md.matchAll(/^#{1,6} +(.+)$/gm)].map(([, h]) => h.trim().toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu, "").replace(/ /g, "-")));

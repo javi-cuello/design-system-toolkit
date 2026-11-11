@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-11, for toolkit-standard 2.27.0 and design-standard 1.4.0** — S22 added for §D 21's weights (the fixture run, 93 passed); rule 14's weight clause is walked in frontend-build's T13. Others read against the change, none affected.
+
 **Walked: 2026-11-11, for toolkit-standard 2.24.0–2.26.1, figma-standard 2.21.0–2.22.1, snapshot-standard 2.24.0–2.25.1, code-standard 1.32.1 and skill-standard 1.7.0** (records written in the seven-day review) — no case here reads §D 12's files, rule 25's notes, rule 50, rule 65 or rule 18, so each holds as written; their checks run in `bin/check` (`check-standards.mjs` resolves every *Checked:* pair, rule 50's two tests among them, 117 of 117 in `test-audit.mjs`). skill-standard 1.7.0: P4 extended to the FigUI3 blocks and walked as above; P1–P3 re-read against §B 4's FigUI3 window, unchanged.
 
 **Walked: 2026-11-05, for code-standard 1.32.0** — rule 55 admits `templates`: `node tools/tokens/check.mjs` on the repo that carries one reads no rule 55 finding, and `node tools/tokens/test-check.mjs` still refuses a `css` key.
@@ -271,6 +273,12 @@ Walked 2026-10-31 for skill-standard 1.5.0: the fixtures above, made by hand in 
 Fixture: in a throwaway clone, a tracked `test-*` file holding `command: 'cd ~/Projects/toolkit && bin/check'` (the line that reached CI red), `/Users/me/Projects/y`, `/Users/first.last/Projects/y`, `$HOME/Projects/z`, `${HOME}/Projects/z`, `"$HOME"/Projects/z` and `~/projects/toolkit`, a comment naming `~/Projects`, a line carrying `machine-path:`; and `~/Projects` in a tracked file not named `test-*`.
 Assert: bin/check's "no test needs this machine's home" fails on those seven lines and no others; on the repo itself it passes.
 Walked 2026-11-01 for toolkit-standard 2.23.0: the fixture above, each assertion observed, then removed with the clone.
+
+## S22 · Every knowledge item carries a weight — WALKED 2026-11-11
+Fixture: a knowledge page with a weighed item, a bold-led item with no weight, one starting with a word that is not a weight, a *Cases* bullet and a fenced bullet.
+Assert: the bare item and the wrong word are refused with file and line; the weighed item, the case and the fenced line pass (toolkit-standard §D 21). On the repo before the sweep it listed all 5,908 items, the count the sweep's own finder gave.
+Walked 2026-11-11 for toolkit-standard 2.27.0: the fixture above, each assertion observed in the test run (93 passed).
+Runs: node tools/toolkit-check/test-check-standards.mjs — "an item with no weight is refused, a weighed one passes", "…and one with a word that is not a weight", "…but a Case and a fenced line are not items"
 
 ## R1 · Every rule says how it is enforced, and a named check exists — WALKED 2026-10-08
 Fixture: throwaway trees in which a rule has no marker; a `*Checked:*` pair names a file that no longer holds its string, or a path that does not exist; a path names a project's own file; a standard has no handle pattern; a rule is marked *No check yet.*
