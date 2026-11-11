@@ -11,7 +11,7 @@ import { base } from '../lib/format.js';
 // the guidance's first sentence, on one line, without Markdown's link brackets breaking the list
 // a title inside a link's brackets
 const esc = (s) => String(s).replace(/[\\[\]]/g, '\\$&');
-const oneLine = (s) => String(s || '').replace(/\s+/g, ' ').replace(/[[\]]/g, '').trim().split(/(?<!\b(?:e\.g|i\.e|etc|vs|cf))(?<=[.!?])\s+(?=[A-Z"`'])/)[0];
+const oneLine = (s) => String(s || '').replace(/\s+/g, ' ').replace(/[[\]]/g, '').trim().split(/(?<!\b(?:e\.g|i\.e|etc|vs|cf)\.)(?<=[.!?])\s+(?=[A-Z"`'])/)[0];
 
 export function GET() {
   const at = meta && meta.snapshotAt ? String(meta.snapshotAt).slice(0, 10) : null;

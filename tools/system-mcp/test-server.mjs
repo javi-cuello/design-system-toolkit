@@ -81,7 +81,9 @@ try {
   ok("…filtered by part, by scope (case-blind) and by topic",
     Object.keys(await call("get_project_knowledge", { part: "decisions" })).join() === "decisions"
     && (await call("get_project_knowledge", { scope: "pattern" })).decisions.map((d) => d.date).join() === "2026-11-11"
-    && (await call("get_project_knowledge", { topic: "Tables" })).guidance.length === 1);
+    && (await call("get_project_knowledge", { topic: "Tables" })).guidance.length === 1
+    // a topic filters guidance only: asked beside decisions it is no error
+    && Array.isArray((await call("get_project_knowledge", { part: "decisions", topic: "shell" })).decisions));
   ok("…and an unknown topic is an error that names the real ones",
     (({ isError, data }) => !isError && /No guidance page "shell"/.test(data.error) && data.topics.join() === "tables")(await raw("get_project_knowledge", { topic: "shell" })));
   {

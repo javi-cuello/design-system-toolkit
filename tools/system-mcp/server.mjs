@@ -234,7 +234,8 @@ tool("get_project_knowledge", {
   try { k = await get("knowledge.json"); } catch (e) { if (!/answered 404/.test(e.message)) throw e; return reply({ note: "This site publishes no project knowledge: rebuild it with the current docs site." }); }
   const decisions = scope ? k.decisions.filter((d) => d.scope.toLowerCase() === scope.toLowerCase()) : k.decisions;
   let guidance = k.guidance;
-  if (topic) {
+  // a topic filters the guidance only: asked with part product or decisions, it is no error
+  if (topic && (!part || part === "guidance")) {
     guidance = k.guidance.filter((g) => g.topic.toLowerCase() === topic.toLowerCase());
     if (!guidance.length) return reply({ error: `No guidance page "${topic}".`, topics: k.guidance.map((g) => g.topic) });
   }

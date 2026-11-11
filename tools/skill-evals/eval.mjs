@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { code } from '../toolkit-check/strip.mjs';
 
 /* A task is a project fact, in `evals.tasks` of its snapshot.config.json. */
 /*
@@ -118,7 +119,7 @@ export function configDrift(now, then) {
    chrome. Paths are compared from `screens/…` on, whatever the import's form:
    `../shell/app-shell` resolved against its file, `@/screens/shell/app-shell`,
    or `src/screens/shell/app-shell` in the task. A type-only import and an
-   import inside a comment do not count. Null when one counts, or when the task
+   import inside a comment do not count; a `require()` does. Null when one counts, or when the task
    names no chrome. The finding sits on the route's page where there is one. */
 export function chromeFinding(written, read, chrome) {
   if (!chrome || !chrome.length || !written.length) return null;
@@ -127,8 +128,9 @@ export function chromeFinding(written, read, chrome) {
   for (const f of written) {
     let text = '';
     try { text = String(read(f) || ''); } catch { continue; }
-    text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1').replace(/\b(import|export)\s+type\s+(\{[^}]*\}|\*\s+as\s+\w+|\w+)\s*from\s*['"][^'"]+['"]/g, '');
-    for (const [, spec] of text.matchAll(/\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)) {
+    // comments out by the toolkit's string-aware scanner: a `/*` inside a string once ate the import after it
+    text = code(text).replace(/\b(import|export)\s+type\s+(\{[^}]*\}|\*\s+as\s+\w+|\w+)\s*from\s*['"][^'"]+['"]/g, '');
+    for (const [, spec] of text.matchAll(/\b(?:from|import|require)\s*\(?\s*['"]([^'"]+)['"]/g)) {
       const full = norm(spec.startsWith('.') ? path.posix.join(path.posix.dirname(f), spec) : spec);
       if (wanted.some((w) => full === w || full.endsWith(`/${w}`))) return null;
     }

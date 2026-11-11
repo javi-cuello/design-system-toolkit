@@ -44,6 +44,10 @@ ok('a screen task may name its chrome; a page built outside it is a finding, one
   && chromeFinding(['src/app/p/page.tsx'], () => "import { Button } from '@/design-system/button/button';\nimport { MyShell } from './shell';", ['screens/shell/app-shell']).kind === 'chrome'
   && chromeFinding(['src/app/p/page.tsx'], () => "import { AppShellish } from '@/screens/shell/app-shell-old';", ['screens/shell/app-shell']) !== null
   && chromeFinding(['src/a.tsx'], () => '', undefined) === null
+  // a `/*` inside a string is not a comment: the import after it still counts; a commented-out one does not
+  && chromeFinding(['src/app/p/page.tsx'], () => "const glob = 'src/*';\nimport { AppShell } from '@/screens/shell/app-shell';\nconst end = '*/';", ['screens/shell/app-shell']) === null
+  && chromeFinding(['src/app/p/page.tsx'], () => "/* import { AppShell } from '@/screens/shell/app-shell'; */", ['screens/shell/app-shell']) !== null
+  && chromeFinding(['src/app/p/page.js'], () => "const { AppShell } = require('@/screens/shell/app-shell');", ['screens/shell/app-shell']) === null
   && validateScore(['src/app/p/page.tsx', 'src/lib/a.ts', 'src/lib/b.ts'], [chromeFinding(['src/app/p/page.tsx'], () => '', ['screens/shell/app-shell'])]).score === 0
   && /outside the shell/.test(validateScore(['src/app/p/page.tsx'], [chromeFinding(['src/app/p/page.tsx'], () => '', ['x'])]).why)
   && chromeFinding(['src/screens/n/n.tsx'], () => "import { AppShell } from '../shell/app-shell';", ['@/screens/shell/app-shell']) === null

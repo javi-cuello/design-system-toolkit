@@ -139,7 +139,7 @@ function summaryOf(t, runs) {
   if (TRIALS < 2 || !runs.length) return;
   const r0 = runs[0];
   const sum = { at: new Date().toISOString(), task: t.id, agent: true, summary: true, ...(r0.grade ? { grade: r0.grade } : {}), commit: r0.commit, pinned: r0.pinned, toolkit: TOOLKIT_COMMIT,
-    rules: r0.rules, rulesFired: runs.every((r) => r.rulesFired !== false), context: r0.context, brief: r0.brief ?? null, ...summarise(runs, TRIALS), costUsd: Math.round(runs.reduce((a, r) => a + (r.costUsd || 0), 0) * 100) / 100 };
+    rules: r0.rules, rulesFired: r0.rules === 'on' ? runs.every((r) => r.rulesFired === true) : null, context: r0.context, brief: r0.brief ?? null, ...summarise(runs, TRIALS), costUsd: Math.round(runs.reduce((a, r) => a + (r.costUsd || 0), 0) * 100) / 100 };
   const file = path.join(REPO, E.results || 'tests/evals/results.jsonl');
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
   const last = baselineOf(lines, sum);
