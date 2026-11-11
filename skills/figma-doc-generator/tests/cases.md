@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.22.4)
+# Eval cases — figma-doc-generator (v1.23.0)
+
+**Walked: 2026-11-11 for 1.23.0** — D49 added and executed: `node tests/test-describe-coverage.mjs` 4/4; run on a real project's snapshot (151 semantic variables, none described, 48 groups). The write half not met live in this version.
 
 **Reviewed against v1.22.4 on 2026-11-05** — a comment in `docgen.js` only; the paste hash strips comments (`tools/toolkit-check/test-paste-hash.mjs`); no case changed.
 
@@ -313,3 +315,9 @@ Runs: node tests/test-docgen.js — "verifyDoc: a correct page is clean — floa
 Fixture: a 12px text style with a 16px line height and a -2% letter spacing; the same style through the token build (`tools/tokens/dtcg.js`); a Step 2.2 unitless row of 133.33%.
 Assert: the page shows `1.3333` and `-0.02em`, and the token build writes `1.3333`: one function, `perFontSize`, the copy of `tools/shared/text-units.js` this skill's `docgen.js`, the snapshot plugin and `dtcg.js` each hold character for character; the unitless row reads `1.3333`, never the `1.333` the page rounded to before. Assert (negative): `AUTO` is `Auto`, pixels with no font size stay pixels.
 Runs: node tools/shared/test-text-units.mjs; node tests/test-docgen.js; node tests/test-recipes.js
+
+## D49 · Semantic variables are described from the grammar, after a sample is approved — *executed*
+Fixture: a snapshot whose `04. Semantic` collection has three colour variables (one described, one with a blank description) and a bare `Elevation`, beside a primitives collection.
+Assert: `describe-coverage.mjs --only semantic` keeps the semantic collection only, counts each variable once across modes, counts a blank description as none, and groups the undescribed by grammar position; the run drafts one template per element, shows a sample covering every template, writes after the yes, and re-counts.
+Negative: a primitive given a description; a sentence written per variable by hand; a write before the sample is approved; an existing description overwritten without the person's word.
+Runs: node tests/test-describe-coverage.mjs — "every collection, counted across modes once", "--only keeps the matching collections, case-blind", "a blank description counts as none", "the undescribed are grouped by grammar position, a bare name at top level"

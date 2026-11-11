@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.23.0 (2026-11-11): *Variable descriptions*: semantic variables described from the token grammar, a sample approved first; `scripts/describe-coverage.mjs` counts what is missing. D49.
 - 1.22.4 (2026-11-05): a `docgen.js` comment no longer names the retired figma-token-export skill; no behaviour changed.
 - 1.22.3 (2026-10-31): a web line height is shown to four places, as the snapshot and the token build write it (`1.3333`, it was `1.333`), and letter spacing in em by the same function: `perFontSize`, a copy of `tools/shared/text-units.js` held by `tools/shared/test-text-units.mjs`. Case D48.
 - 1.22.2 (2026-10-31): Step 5's checklist drops the nine items `verifyPage` already checks and names them once; what is left is intent and the page set.

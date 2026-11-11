@@ -31,7 +31,7 @@ await c.connect(new StdioClientTransport({ command: process.execPath, args: [fil
 
 const fails = [];
 const names = (await c.listTools()).tools.map((t) => t.name);
-for (const want of ["overview", "search", "get_component", "get_contract", "validate", "get_tokens", "get_changes", "get_audit", "get_screen_recipe", "list_pages", "read_page"])
+for (const want of ["overview", "search", "get_component", "get_contract", "validate", "get_tokens", "get_changes", "get_audit", "get_screen_recipe", "get_project_knowledge", "list_pages", "read_page"])
   if (!names.includes(want)) fails.push("missing tool " + want);
 
 const call = async (name, args) => {
@@ -42,6 +42,9 @@ const call = async (name, args) => {
 };
 const over = await call("overview", {});
 if (!over || over.error) { console.error("fail — system-mcp: " + fails.join("; ")); process.exit(1); }
+// a site built before the route answers with a note; one built with it holds the three parts
+const know = await call("get_project_knowledge", {});
+if (!know.note && !(Array.isArray(know.decisions) && Array.isArray(know.guidance) && "product" in know)) fails.push("get_project_knowledge answered neither a note nor its three parts");
 const first = over.components[0];
 if (!first) fails.push("overview lists no components");
 else {

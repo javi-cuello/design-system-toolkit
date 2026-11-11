@@ -27,6 +27,7 @@ each project is its own entry in the client's config.
 | `get_tokens` | collections, or one collection's variables per mode (filterable) |
 | `get_changes` | the change log, newest first, by component or date |
 | `get_audit` | open (or all) findings and 0–100 component scores, by component, and recent runs with their cost |
+| `get_project_knowledge` | what the project decided and how it designs (`api/knowledge.json`, `tools/shared/project-knowledge.cjs`): its product file, its live §6 decisions with scope and the two optional columns, its guidance pages; by part, scope or topic. Each part may be absent; a site built before it answers with a note |
 | `get_screen_recipe` | how this project builds a screen, from its stored screens (`api/screens.json`, `tools/snapshot/recipes.cjs`): screen templates with the code file each starts from, shells and their overlays, repeated regions and slots with their spacing tokens, what varies, each screen type's states; by section or region path. A site built before it answers with a note |
 | `list_pages` | every page of the site, found by following its own links |
 | `read_page` | any page as plain text, as a reader sees it — foundations, components, tracker, changes |
@@ -71,7 +72,7 @@ or empty answer, or when the page list misses the foundations or changes pages. 
 
     node test-server.mjs
 
-Holds every tool's exact answer over `fixtures/site/` (its `api/screens.json` is `recipes.cjs`'s `derive` over `fixtures/screens.json`, and the test fails when the two part: regenerate it from them), a committed stand-in of what the docs site writes (`api/` and four pages), so the server is tested where no project has a built site, CI included. `bin/check` always runs it; it skips as the smoke does. Both serve a folder with `serve-folder.mjs`. A change to what the docs site's API writes (`tools/docs-site/src/pages/api/`) moves the fixture with it.
+Holds every tool's exact answer over `fixtures/site/` (its `api/screens.json` is `recipes.cjs`'s `derive` over `fixtures/screens.json`, and its `api/knowledge.json` is `tools/shared/project-knowledge.cjs`'s `read` of `fixtures/project/`; the test fails when either parts from its source: regenerate it), a committed stand-in of what the docs site writes (`api/` and four pages), so the server is tested where no project has a built site, CI included. `bin/check` always runs it; it skips as the smoke does. Both serve a folder with `serve-folder.mjs`. A change to what the docs site's API writes (`tools/docs-site/src/pages/api/`) moves the fixture with it.
 
 ## Limits
 

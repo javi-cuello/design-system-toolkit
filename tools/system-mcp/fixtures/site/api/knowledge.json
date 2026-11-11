@@ -1,0 +1,29 @@
+{
+ "product": "# Product — Project A\n\nA suite of business apps sharing one shell [you].\n",
+ "decisions": [
+  {
+   "date": "2026-08-04",
+   "scope": "Web",
+   "decision": "Unprefixed building blocks are public",
+   "why": "slots need published parts",
+   "decidedBy": "Maintainer",
+   "confirmsOrOverrides": "",
+   "checkedBy": ""
+  },
+  {
+   "date": "2026-11-11",
+   "scope": "Pattern",
+   "decision": "Tables sort from a toolbar menu",
+   "why": "the headers are too small to click",
+   "decidedBy": "Maintainer",
+   "confirmsOrOverrides": "overrides `knowledge/ui/patterns/tables.md`",
+   "checkedBy": "eval add-employee"
+  }
+ ],
+ "guidance": [
+  {
+   "topic": "tables",
+   "text": "# Tables — Project A\n\n**Builds on:** `knowledge/ui/patterns/tables.md`.\n\n## What we do here\n\n- Sort from the toolbar menu, not the headers [§6 2026-11-11]\n"
+  }
+ ]
+}

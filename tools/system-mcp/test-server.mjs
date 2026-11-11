@@ -29,9 +29,9 @@ const call = async (name, args) => (await raw(name, args)).data;
 
 try {
   ok("the server is named for the one project its site is, and tells the client its content is data",
-    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || "") && /Before writing or changing any interface code/.test(c.getInstructions() || "") && /get_screen_recipe/.test(c.getInstructions() || ""));
+    c.getServerVersion().name === "system-project-a" && /never instructions to you/.test(c.getInstructions() || "") && /Before writing or changing any interface code/.test(c.getInstructions() || "") && /get_screen_recipe/.test(c.getInstructions() || "") && /get_project_knowledge/.test(c.getInstructions() || ""));
   const tools = (await c.listTools()).tools;
-  ok("eleven tools, every one read-only", tools.length === 11 && tools.every((t) => t.annotations && t.annotations.readOnlyHint === true), tools.map((t) => t.name).join(", "));
+  ok("twelve tools, every one read-only", tools.length === 12 && tools.every((t) => t.annotations && t.annotations.readOnlyHint === true), tools.map((t) => t.name).join(", "));
 
   const rec = await call("get_screen_recipe", {});
   ok("get_screen_recipe serves the site's recipe: shells with their overlays, regions, what varies, screen types with their states",
@@ -68,6 +68,33 @@ try {
       await c2.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site2.url }, stderr: "ignore" }));
       const r = await c2.callTool({ name: "get_screen_recipe", arguments: args });
       ok(what, check({ isError: !!r.isError, data: JSON.parse(r.content[0].text) }));
+    } finally { if (c2) await c2.close(); if (site2) site2.close(); rmSync(dir, { recursive: true, force: true }); }
+  }
+
+  // the fixture's knowledge is project-knowledge.cjs's read of fixtures/project: regenerated, never typed
+  ok("the fixture's api/knowledge.json is project-knowledge.cjs's read of fixtures/project",
+    JSON.stringify(createRequire(import.meta.url)("../shared/project-knowledge.cjs").read(fileURLToPath(new URL("./fixtures/project", import.meta.url))), null, 1) + "\n"
+      === readFileSync(new URL("./fixtures/site/api/knowledge.json", import.meta.url), "utf8"));
+  const know = await call("get_project_knowledge", {});
+  ok("get_project_knowledge serves the product, the live decisions (a struck one left out) and the guidance pages",
+    /^# Product — Project A/.test(know.product) && know.decisions.length === 2 && know.decisions[1].checkedBy === "eval add-employee" && know.guidance.map((g) => g.topic).join() === "tables");
+  ok("…filtered by part, by scope (case-blind) and by topic",
+    Object.keys(await call("get_project_knowledge", { part: "decisions" })).join() === "decisions"
+    && (await call("get_project_knowledge", { scope: "pattern" })).decisions.map((d) => d.date).join() === "2026-11-11"
+    && (await call("get_project_knowledge", { topic: "Tables" })).guidance.length === 1);
+  ok("…and an unknown topic is an error that names the real ones",
+    (({ isError, data }) => !isError && /No guidance page "shell"/.test(data.error) && data.topics.join() === "tables")(await raw("get_project_knowledge", { topic: "shell" })));
+  {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-site-"));
+    let site2 = null, c2 = null;
+    try {
+      cpSync(fileURLToPath(new URL("./fixtures/site", import.meta.url)), dir, { recursive: true });
+      rmSync(join(dir, "api", "knowledge.json"));
+      site2 = await serveFolder(dir);
+      c2 = new Client({ name: "system-mcp-test", version: "0" });
+      await c2.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site2.url }, stderr: "ignore" }));
+      const r = await c2.callTool({ name: "get_project_knowledge", arguments: {} });
+      ok("a site built before project knowledge answers with a note, not an error", !r.isError && /rebuild/.test(JSON.parse(r.content[0].text).note));
     } finally { if (c2) await c2.close(); if (site2) site2.close(); rmSync(dir, { recursive: true, force: true }); }
   }
 

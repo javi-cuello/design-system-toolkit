@@ -39,7 +39,7 @@ Three things worth knowing about the shape:
 
 ## What a project knows, and how it learns
 
-**Each kind of knowledge has one home and one owner** (toolkit-standard §D 1, §D 12, §D 21). An agent prototyping a screen reads them in this order: the product, the project's decisions and the guidance pages gathering them, the open comments, the stored screens, the knowledge base. Every piece is optional but the context document: a project may have no product file, no feedback log, no eval task, and a reader skips what is absent and says so.
+**Each kind of knowledge has one home and one owner** (toolkit-standard §D 1, §D 12, §D 21). An agent prototyping a screen reads them in this order: the product, the project's decisions and the guidance pages gathering them, the open comments, the stored screens, the knowledge base. The system MCP serves the product, the decisions and the guidance pages (`get_project_knowledge`), so a code agent reads what a Figma run reads. Every piece is optional but the context document: a project may have no product file, no feedback log, no eval task, and a reader skips what is absent and says so.
 
 | Home | Holds | Owned by |
 |---|---|---|

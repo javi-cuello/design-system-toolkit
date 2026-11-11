@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.20.0)
+# Eval cases — frontend-build (v2.20.1)
+
+**Walked: 2026-11-11 for 2.20.1** — step 0 names the MCP tool as a second way to the same files; no case reads by path or by tool only, so every case holds.
 
 **Walked: 2026-11-11 for 2.20.0** — T19 added, traced to *A Figma prototype* step 0 and the template's *Behaviour* and *Examples*; T18 read against it (it holds).
 

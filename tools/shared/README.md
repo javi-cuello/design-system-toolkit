@@ -18,6 +18,7 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | `text-units.js` | A text style's line height or letter spacing as a fraction of its font size (`perFontSize`), the unitless and em values the web takes, to four places: copied by the snapshot plugin, the token build's `dtcg.js` and the doc generator, each copy held to it by `test-text-units.mjs`. |
 | `free-port.mjs` | The one free-port probe the tests use: `freePort([ports])`, the first of the list free on every interface (all, 127.0.0.1 and ::1), or 0; `freePort()`, a port the system picks, held to the same rule; `isFree(port)`; `onFreePort([ports], start)`, a server started on the first port it can bind, the next tried when the bind is refused as in use. A 127.0.0.1-only probe passed a port figma-console's bridge held on ::1, and `localhost` reached the bridge (2026-11-01). Used by figma-audit's and ui-check's service tests and parity's `test-propose.mjs`. |
 | `model-routing.json`, `model-routing.mjs` | Which model and effort a piece of work runs on, one row per task family: what ds-model-routing advises from, and what a workflow sets each `agent()` by (`node tools/shared/model-routing.mjs` prints the routes for its `args`). Held by `test-model-routing.mjs`. |
+| `project-knowledge.cjs` | A project's product file, live §6 decisions (the two optional columns included, struck rows left out) and guidance pages, read from its folder (`read`): the docs site's `api/knowledge.json` and so the system MCP's `get_project_knowledge`. Every piece but the context document optional. |
 | `code-inventory.mjs` | What a code library contains, read from its folders, and how its components line up with the ones in Figma (used by the docs site and the audit). |
 
 ```sh
@@ -28,6 +29,7 @@ node tools/shared/test-real-path.mjs
 node tools/shared/test-dialect.mjs
 node tools/shared/test-output.mjs
 node tools/shared/test-knowledge.mjs
+node tools/shared/test-project-knowledge.mjs
 node tools/shared/test-prop-attr.mjs
 node tools/shared/test-text-units.mjs
 node tools/shared/test-mode-description.mjs   # the OKLCH generator's two-mode description read back by the doc generator

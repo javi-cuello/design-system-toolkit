@@ -136,7 +136,7 @@ The derivation is built: `tools/snapshot/recipes.cjs` (README, *Screen recipes*)
 
 ## Open
 
-- **The product file has one reader so far.** Outcome 2 serves screen knowledge through the system MCP, so code agents and Figma agents read one source; `product-context.md` is read only by frontend-build's Figma runs, by path. A code agent in a project's playground does not see it. Serve it through the system MCP (in `overview`, or its own tool) once a second reader needs it, so it does not become a second door (checked against this plan 2026-11-11, at the maintainer's ask).
+- **Project knowledge has one door** (closed 2026-11-11): the product file, live decisions and guidance pages are served by the system MCP's `get_project_knowledge`, so a code agent in a playground reads what a Figma run reads.
 - Code Connect needs a Figma plan with the right seats. It is only needed for the Figma MCP route, so check it for each project before building that.
 - A project whose code is a read-only clone prototypes in a separate repo on its published package. Outcome 3's gate applies there. Where the package's feed needs a token the toolkit does not hold, the package is built from the clone with its own build script and packed (`pnpm pack`), named by the clone's commit so the lockfile's checksum stays true, and kept out of git (13 MB a copy); set up for one project 2026-11-10, parked until its templates exist.
 - Figma Make kits with a package are parked until Vallaure's Part 3 (10 November) and a trial show that they import the package.
