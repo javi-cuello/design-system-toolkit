@@ -40,19 +40,19 @@ How a design-system component is written in React 19 and TypeScript so that it b
 **What good looks like**
 - [strong] The component accepts every prop its root element accepts, and passes the ones it does not use to that element.
 - [moderate] `className` and `style` from the caller are merged with the component's own, never replaced.
-- [required] `ref` reaches the native element, as a plain prop.
+- [strong] `ref` reaches the native element, as a plain prop.
 
 **How**
-- [required] **Type from the element.** `type ButtonProps = ComponentPropsWithRef<'button'> & { variant?: … }`. `@types/react` says of `ComponentProps`: "It's usually better to use `ComponentPropsWithRef` or `ComponentPropsWithoutRef` instead of this type, as they let you be explicit about whether or not to include the `ref` prop" ([@types/react](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)). In React 19 the ref is a prop, so take the `WithRef` form; `WithoutRef` is the forwardRef-era type. Use `Omit<…, 'x'>` for any native prop the component replaces.
+- [moderate] **Type from the element.** `type ButtonProps = ComponentPropsWithRef<'button'> & { variant?: … }`. `@types/react` says of `ComponentProps`: "It's usually better to use `ComponentPropsWithRef` or `ComponentPropsWithoutRef` instead of this type, as they let you be explicit about whether or not to include the `ref` prop" ([@types/react](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts)). In React 19 the ref is a prop, so take the `WithRef` form; `WithoutRef` is the forwardRef-era type. Use `Omit<…, 'x'>` for any native prop the component replaces.
 - [weak] **Spread the rest last but merge.** Destructure what the component reads, spread the rest on the root, and put the merged values after the spread so they cannot be lost:
   ```tsx
   export function Button({ variant = 'primary', className, type = 'button', ref, ...rest }: ButtonProps) {
     return <button {...rest} ref={ref} type={type} data-variant={variant} className={cx('ds-button', className)} />;
   }
   ```
-- [required] **`ref` as a prop.** "Starting in React 19, you can now access `ref` as a prop for function components … New function components will no longer need `forwardRef` … In future versions we will deprecate and remove `forwardRef`" ([React 19, ref as a prop](https://react.dev/blog/2024/12/05/react-19#ref-as-a-prop)); "`forwardRef` will be deprecated in a future release" ([forwardRef](https://react.dev/reference/react/forwardRef)). A ref callback may return a cleanup, and "returning anything else from a `ref` callback will now be rejected by TypeScript" ([React 19, cleanup functions for refs](https://react.dev/blog/2024/12/05/react-19#cleanup-functions-for-refs)).
-- [required] **`style` is the caller's, not the variant's.** React: "We recommend using `style` only for dynamic styles where you don't know the style values ahead of time. In other cases, applying plain CSS classes with `className` is more efficient" ([Common components, style](https://react.dev/reference/react-dom/components/common)). Pass the caller's `style` through; never compute a variant into it.
-- [required] **`type="button"` by default** on a `button`: the native default is `submit`, so a design-system button inside a form would submit it.
+- [strong] **`ref` as a prop.** "Starting in React 19, you can now access `ref` as a prop for function components … New function components will no longer need `forwardRef` … In future versions we will deprecate and remove `forwardRef`" ([React 19, ref as a prop](https://react.dev/blog/2024/12/05/react-19#ref-as-a-prop)); "`forwardRef` will be deprecated in a future release" ([forwardRef](https://react.dev/reference/react/forwardRef)). A ref callback may return a cleanup, and "returning anything else from a `ref` callback will now be rejected by TypeScript" ([React 19, cleanup functions for refs](https://react.dev/blog/2024/12/05/react-19#cleanup-functions-for-refs)).
+- [required] **`style` is the caller's, not the variant's.** React: "We recommend using `style` only for dynamic styles where you don't know the style values ahead of time. In other cases, applying plain CSS classes with `className` is more efficient" ([Common components, style](https://react.dev/reference/react-dom/components/common)). Pass the caller's `style` through; never compute a variant into it (code-standard rule 9).
+- [required] **`type="button"` by default** on a `button`: the native default is `submit`, so a design-system button inside a form would submit it (HTML).
 
 **Cases**
 - A Button that takes `onClick` and `children` and nothing else → a caller cannot add `aria-describedby`, `form`, `name` or `data-*`; type from `ComponentPropsWithRef<'button'>` and spread the rest.
@@ -83,7 +83,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
   onKeyDown={(e) => { props.onKeyDown?.(e); if (!e.defaultPrevented) handle(e); }}
   ```
 - [weak] **A value event is named for the value**, `onValueChange(value)` beside the native `onChange(event)`, as Radix does with `onPressedChange` ([Radix Toggle](https://www.radix-ui.com/primitives/docs/components/toggle)).
-- [required] **Notify the parent in the handler, not an effect.** "Delete the Effect and instead update the state of *both* components within the same event handler" ([You might not need an effect](https://react.dev/learn/you-might-not-need-an-effect)).
+- [moderate] **Notify the parent in the handler, not an effect.** "Delete the Effect and instead update the state of *both* components within the same event handler" ([You might not need an effect](https://react.dev/learn/you-might-not-need-an-effect)).
 
 **Cases**
 - A Button exposes `onPress` and ignores `onClick` → a caller's `onClick` does nothing; pass `onClick` through.
@@ -103,13 +103,13 @@ How a design-system component is written in React 19 and TypeScript so that it b
 
 **What good looks like**
 - [strong] The component's main content is `children`.
-- [required] A second region with its own place in the anatomy (an icon before, a description, actions) is a named prop that takes a `ReactNode`: a slot.
+- [required] A second region with its own place in the anatomy (an icon before, a description, actions) is a named prop that takes a `ReactNode`: a slot (code-standard rule 13).
 - [weak] A plain-string prop is used only where the value is text with a job no markup could do (an accessible name, a placeholder).
 
 **How**
 - [required] **`children` for the label.** `<Button>Save</Button>` reads as HTML and accepts markup. Type it `ReactNode`, which React calls "a union of all the possible types that can be passed as children in JSX" ([Using TypeScript, typing children](https://react.dev/learn/typescript#typing-children)).
 - [required] **Named slots for the other regions**: `icon`, `description`, `actions`, each `ReactNode`, each rendered in its own part. Fluent v9 makes this its API, `icon?: Slot<'span'>` ([Fluent Button types](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/src/components/Button/Button.types.ts)); MUI's `slots` and `slotProps` "allow for more granular control over the structure of a component" ([MUI overriding component structure](https://mui.com/material-ui/customization/overriding-component-structure/)). This is code-standard rule 13 in React.
-- [required] **Not `Children` or `cloneElement`.** React: "Using `Children` is uncommon and can lead to fragile code" ([Children](https://react.dev/reference/react/Children)), and the same of `cloneElement` ([cloneElement](https://react.dev/reference/react/cloneElement)). For a list of items, React's own alternatives are to export a part component (`<Tabs.Tab>`) or take an array of objects as a prop.
+- [moderate] **Not `Children` or `cloneElement`.** React: "Using `Children` is uncommon and can lead to fragile code" ([Children](https://react.dev/reference/react/Children)), and the same of `cloneElement` ([cloneElement](https://react.dev/reference/react/cloneElement)). For a list of items, React's own alternatives are to export a part component (`<Tabs.Tab>`) or take an array of objects as a prop.
 - [moderate] **A string prop where text is the point**: `aria-label` on an icon-only button, `label` on a field whose `label` element the component owns and ties with `useId` ([useId](https://react.dev/reference/react/useId)).
 
 **Cases**
@@ -129,17 +129,17 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Controlled and uncontrolled state
 
 **What good looks like**
-- [required] A component with a value works both ways: uncontrolled with `defaultValue`, controlled with `value` and a change handler, with the native names.
-- [required] It never switches between the two in its lifetime.
-- [required] State it can compute from props is computed during render, not stored.
+- [strong] A component with a value works both ways: uncontrolled with `defaultValue`, controlled with `value` and a change handler, with the native names.
+- [strong] It never switches between the two in its lifetime.
+- [moderate] State it can compute from props is computed during render, not stored.
 
 **How**
-- [required] **The definitions.** A component is "controlled" "when the important information in it is driven by props rather than its own local state"; one with local state is "uncontrolled" ([Sharing state, controlled and uncontrolled](https://react.dev/learn/sharing-state-between-components#controlled-and-uncontrolled-components)).
-- [required] **Native names.** `value`/`defaultValue`/`onChange` for text, `checked`/`defaultChecked` for a checkbox: "To render a *controlled* input, pass the `value` prop to it (or `checked` for checkboxes and radios)" ([input](https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable)). For a state with no native name, the Radix triple: `pressed`, `defaultPressed`, `onPressedChange` ([Radix Toggle](https://www.radix-ui.com/primitives/docs/components/toggle)).
+- [strong] **The definitions.** A component is "controlled" "when the important information in it is driven by props rather than its own local state"; one with local state is "uncontrolled" ([Sharing state, controlled and uncontrolled](https://react.dev/learn/sharing-state-between-components#controlled-and-uncontrolled-components)).
+- [moderate] **Native names.** `value`/`defaultValue`/`onChange` for text, `checked`/`defaultChecked` for a checkbox: "To render a *controlled* input, pass the `value` prop to it (or `checked` for checkboxes and radios)" ([input](https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable)). For a state with no native name, the Radix triple: `pressed`, `defaultPressed`, `onPressedChange` ([Radix Toggle](https://www.radix-ui.com/primitives/docs/components/toggle)).
 - [weak] **Prefer leaving it to the native element.** A text field that renders an `input` and passes `value`, `defaultValue` and `onChange` through holds no state of its own; the `input` is controlled or not by what the caller passes.
 - [required] **When the component must hold it** (a disclosure, a toggle with no native control), one hook decides: `const isControlled = value !== undefined`; read `value` when controlled, local state when not; call the change handler in both cases. Write it once and import it (code-standard rule 36).
-- [required] **Never switch.** "An input cannot switch between being controlled or uncontrolled over its lifetime" ([input, caveats](https://react.dev/reference/react-dom/components/input#caveats)); `value={v ?? ''}` keeps it controlled.
-- [required] **Derive, don't sync.** "When something can be calculated from the existing props or state, don't put it in state. Instead, calculate it during rendering"; to reset a component's state, give it a `key` ([You might not need an effect](https://react.dev/learn/you-might-not-need-an-effect)). "Figure out the absolute minimal representation of the state" ([Thinking in React](https://react.dev/learn/thinking-in-react)).
+- [strong] **Never switch.** "An input cannot switch between being controlled or uncontrolled over its lifetime" ([input, caveats](https://react.dev/reference/react-dom/components/input#caveats)); `value={v ?? ''}` keeps it controlled.
+- [strong] **Derive, don't sync.** "When something can be calculated from the existing props or state, don't put it in state. Instead, calculate it during rendering"; to reset a component's state, give it a `key` ([You might not need an effect](https://react.dev/learn/you-might-not-need-an-effect)). "Figure out the absolute minimal representation of the state" ([Thinking in React](https://react.dev/learn/thinking-in-react)).
 
 **Cases**
 - A TextField copies `value` into `useState` and syncs it in an effect → the field lags a render and loses the caller's edits; pass `value` through to the `input`.
@@ -158,7 +158,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## The native element first, and the ARIA a system adds
 
 **What good looks like**
-- [required] The component's root is the native element that has the behaviour: `button`, `a`, `input`, `select`, `textarea`, `dialog`, `details`.
+- [required] The component's root is the native element that has the behaviour: `button`, `a`, `input`, `select`, `textarea`, `dialog`, `details` (code-standard rule 8).
 - [required] ARIA appears only for what the element cannot say: a busy or pending state, an icon to hide, a name for an icon-only control, a disabled control that must stay focusable.
 - [moderate] An icon-only shape cannot be rendered without a name.
 
@@ -168,7 +168,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - [required] **Decorative icons** are `aria-hidden="true"` inside a named control; the icon component defaults to hidden and takes a `label` only when it stands alone (code-standard rule 18).
 - [moderate] **Icon-only needs a name, by type.** Make the label required in the icon-only shape, so a missing name fails `tsc`, not an audit: `type IconButtonProps = ComponentPropsWithRef<'button'> & { icon: ReactNode; 'aria-label': string }`. Carbon pairs `hasIconOnly` with `iconDescription` "read by screen readers" ([Carbon Button source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Button/Button.tsx)); Primer's IconButton uses `aria-label` and a tooltip from `description` ([Primer IconButton](https://primer.style/product/components/icon-button/)).
 - [required] **Disabled versus aria-disabled.** Native `disabled` removes the control from the tab order and from form submission; `aria-disabled="true"` "only semantically exposes" the state, does "not change the focusability", and the component must block the action itself ([MDN aria-disabled](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-disabled)). The APG: "screen reader users are far less likely to discover disabled elements that are not focusable", and asks for one consistent convention ([APG, focusability of disabled controls](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/#focusabilityofdisabledcontrols)). Expose both through one prop each: `disabled` (native) and a focusable variant (Fluent's `disabledFocusable`, "to keep a consistent tab order for screen reader and keyboard users", [Fluent Button types](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/src/components/Button/Button.types.ts); Base UI's `focusableWhenDisabled`, [Base UI Button](https://base-ui.com/react/components/button)). The focusable form renders `aria-disabled="true"`, drops `onClick` and prevents form submission. Both are code-standard rule 9's "the control's own".
-- [required] **IDs for relationships** come from `useId`, which "generate[s] unique IDs that can be passed to accessibility attributes" and matches between server and client when the trees match ([useId](https://react.dev/reference/react/useId)).
+- [strong] **IDs for relationships** come from `useId`, which "generate[s] unique IDs that can be passed to accessibility attributes" and matches between server and client when the trees match ([useId](https://react.dev/reference/react/useId)).
 
 **Cases**
 - `<div role="button" onClick>` → `<button type="button">`; the `div` had no Enter, Space or focus.
@@ -191,7 +191,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 **What good looks like**
 - [contested] A component renders one element, the one its behaviour needs.
 - [contested] Where a design needs the same look on a different element (a link styled as a button), there are two components, or one documented composition, not a free `as` prop.
-- [required] Whatever is rendered keeps its own semantics and keyboard behaviour.
+- [required] Whatever is rendered keeps its own semantics and keyboard behaviour (WCAG 4.1.2).
 
 **How**
 - [strong] **The forms on offer.** MUI's `component` prop "allows you to change the root element" ([MUI composition](https://mui.com/material-ui/guides/composition/)); Chakra's `as` changes "the underlying HTML element" and `asChild` composes "a component's functionality onto its child element" ([Chakra composition](https://chakra-ui.com/docs/components/concepts/composition)); Radix's `asChild` clones the child and passes it "the props and behavior needed to function" ([Radix composition](https://www.radix-ui.com/primitives/docs/guides/composition)); Base UI's `render` with `nativeButton={false}` when "the rendered element is not a button" ([Base UI Button](https://base-ui.com/react/components/button)); Carbon's `as` with "Make sure to apply all props to the root node" ([Carbon Button source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Button/Button.tsx)).
@@ -216,16 +216,16 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Styling hooks and the stylesheet
 
 **What good looks like**
-- [required] A variant is an attribute on the root (`data-variant="danger"`) and a state is a pseudo-class or the native attribute; the stylesheet selects on those.
+- [required] A variant is an attribute on the root (`data-variant="danger"`) and a state is a pseudo-class or the native attribute; the stylesheet selects on those (code-standard rule 9).
 - [contested] The component's own class names are stable and documented; the caller's class is added, never required.
-- [required] No variant is drawn with inline `style`; `style` stays the caller's.
-- [required] The stylesheet arrives in a way the bundler cannot drop and the server can order.
+- [required] No variant is drawn with inline `style`; `style` stays the caller's (code-standard rule 9).
+- [moderate] The stylesheet arrives in a way the bundler cannot drop and the server can order.
 
 **How**
 - [required] **Data attributes for variants and states.** Radix: "Stateful components expose their state in a `data-state` attribute" ([Radix styling](https://www.radix-ui.com/primitives/docs/guides/styling)); React Aria exposes "UI states such as pressed, hovered, and selected using data attributes" and gives each component a default class `react-aria-ComponentName` ([React Aria styling](https://react-aria.adobe.com/styling)). For a native state (`:disabled`, `:checked`, `:focus-visible`, `[aria-pressed]`, `[aria-expanded]`) select the real one, never a copy in a data attribute (code-standard rule 9). The generated stylesheet's hooks are `to-code`'s (`tools/component-contract/README.md`).
 - [required] **Class merge.** The root gets the component's class and the caller's: `cx('ds-button', className)`. A React root is the native element with no custom-element host, so the generated sheet selects on the component's classes, root and parts, and every variant and state stays an attribute or pseudo-class (code-standard rule 6).
-- [required] **No inline variant styles.** React recommends `className` over `style` except for values known only at runtime ([Common components, style](https://react.dev/reference/react-dom/components/common)). A runtime value the stylesheet must read (a progress percentage) goes in as one custom property, `style={{ '--progress': p }}`, and the sheet uses it.
-- [required] **CSS import side effects.** `import './button.css'` in a component is a side effect: webpack warns that "A CSS file imported for its side effect alone needs to be added to the side effect list so it will not be unintentionally dropped in production mode", fixed with `"sideEffects": ["**/*.css"]` in `package.json` ([webpack tree shaking](https://webpack.js.org/guides/tree-shaking/)). The alternative is one library stylesheet the application links once.
+- [strong] **No inline variant styles.** React recommends `className` over `style` except for values known only at runtime ([Common components, style](https://react.dev/reference/react-dom/components/common)). A runtime value the stylesheet must read (a progress percentage) goes in as one custom property, `style={{ '--progress': p }}`, and the sheet uses it.
+- [strong] **CSS import side effects.** `import './button.css'` in a component is a side effect: webpack warns that "A CSS file imported for its side effect alone needs to be added to the side effect list so it will not be unintentionally dropped in production mode", fixed with `"sideEffects": ["**/*.css"]` in `package.json` ([webpack tree shaking](https://webpack.js.org/guides/tree-shaking/)). The alternative is one library stylesheet the application links once.
 - [required] **React 19 stylesheets.** A `<link rel="stylesheet" precedence="…">` rendered in a component is hoisted into `head`, de-duplicated by `href`, and the component suspends while it loads ([link](https://react.dev/reference/react-dom/components/link)). It suits a component used on few routes; a layered design-system sheet (code-standard rule 4) is simpler linked once.
 
 **Cases**
@@ -247,16 +247,16 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Server components and `"use client"`
 
 **What good looks like**
-- [required] A component that holds no state, runs no effect and touches no browser API has no directive and renders on the server.
-- [required] `"use client"` sits on the smallest module that needs it.
-- [required] A server-safe component takes only serialisable props.
+- [required] A component that holds no state, runs no effect and touches no browser API has no directive and renders on the server (code-standard rule 47).
+- [required] `"use client"` sits on the smallest module that needs it (code-standard rule 47).
+- [required] A server-safe component takes only serialisable props (code-standard rule 43).
 
 **How**
 - [required] The split itself, and where the directive goes, is [javascript: client and server boundaries, and islands](javascript.md#client-and-server-boundaries-and-islands) and code-standard rules 43 and 47. What React 19 adds:
-- [required] **What forces the client.** React lists `createContext`, hooks "excluding `use` and `useId`", "`forwardRef`, `memo`, `startTransition`", and client APIs ([`'use client'`](https://react.dev/reference/rsc/use-client)). A Button with `ref` as a prop and `useId` needs no directive; the same Button wrapped in `forwardRef` does. One more reason to drop `forwardRef`.
-- [required] **The directive is contagious downwards.** It marks "the module and its transitive dependencies as client code" ([`'use client'`](https://react.dev/reference/rsc/use-client)): a client file that imports the Icon module ships it. Keep shared parts free of client imports.
+- [strong] **What forces the client.** React lists `createContext`, hooks "excluding `use` and `useId`", "`forwardRef`, `memo`, `startTransition`", and client APIs ([`'use client'`](https://react.dev/reference/rsc/use-client)). A Button with `ref` as a prop and `useId` needs no directive; the same Button wrapped in `forwardRef` does. One more reason to drop `forwardRef`.
+- [strong] **The directive is contagious downwards.** It marks "the module and its transitive dependencies as client code" ([`'use client'`](https://react.dev/reference/rsc/use-client)): a client file that imports the Icon module ships it. Keep shared parts free of client imports.
 - [required] **An event handler passed in does not make the leaf a client component.** A server page cannot pass one; a client caller can. The Button stays without a directive and runs wherever its caller runs (code-standard rule 47).
-- [required] **Library packaging.** "If these libraries have been updated to be compatible with React Server Components, then they will already include `'use client'` markers of their own" ([`'use client'`](https://react.dev/reference/rsc/use-client)); keep the directive in the built file, at the very top, above imports.
+- [strong] **Library packaging.** "If these libraries have been updated to be compatible with React Server Components, then they will already include `'use client'` markers of their own" ([`'use client'`](https://react.dev/reference/rsc/use-client)); keep the directive in the built file, at the very top, above imports.
 
 **Cases**
 - `"use client"` at the top of the library's `index.ts` → every component ships to the client; put it on each stateful component's own module.
@@ -280,7 +280,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - [strong] Each prop the component adds has a one-line JSDoc comment; native props inherit theirs.
 
 **How**
-- [required] **`strict`** "enables a wide range of type checking behavior", including `noImplicitAny` and `strictNullChecks` ([tsconfig strict](https://www.typescriptlang.org/tsconfig/#strict)). "Using `any` disables all further type checking" ([Everyday types, any](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#any)); where a type is truly open, `unknown`.
+- [strong] **`strict`** "enables a wide range of type checking behavior", including `noImplicitAny` and `strictNullChecks` ([tsconfig strict](https://www.typescriptlang.org/tsconfig/#strict)). "Using `any` disables all further type checking" ([Everyday types, any](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#any)); where a type is truly open, `unknown`.
 - [weak] **Export the props type** so callers can extend it (`ComponentProps<typeof Button>` also works, but a name is clearer in docs and errors).
 - [strong] **JSDoc on each prop.** React's TypeScript guide documents props in the type: `/** The text to display inside the button */` ([Using TypeScript](https://react.dev/learn/typescript#typescript-with-react-components)); editors show it, and Storybook's docgen reads it into the props table ([Storybook argTypes](https://storybook.js.org/docs/api/arg-types)). Add `@default` where there is one, as Fluent does ([Fluent Button types](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/src/components/Button/Button.types.ts)).
 - [weak] **Make impossible states unrepresentable** with a union of shapes: an icon-only shape requires `aria-label`; a `LinkButton` requires `href`.
@@ -302,12 +302,12 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Stories in CSF3
 
 **What good looks like**
-- [required] One `.stories.tsx` per component, with a typed default export and one named story per meaningful state: each variant, each size where it changes layout, disabled, loading, icon-only, long text, and any state the contract draws.
-- [required] Args come from the props, so the controls are the API; event props are spies.
+- [moderate] One `.stories.tsx` per component, with a typed default export and one named story per meaningful state: each variant, each size where it changes layout, disabled, loading, icon-only, long text, and any state the contract draws.
+- [moderate] Args come from the props, so the controls are the API; event props are spies.
 - [moderate] Accessibility checks run on every story and fail the build.
 
 **How**
-- [required] **Typed meta with `satisfies`.** "Now you will receive type errors for missing required args, not just invalid ones" ([Storybook TypeScript](https://storybook.js.org/docs/writing-stories/typescript)):
+- [moderate] **Typed meta with `satisfies`.** "Now you will receive type errors for missing required args, not just invalid ones" ([Storybook TypeScript](https://storybook.js.org/docs/writing-stories/typescript)):
   ```tsx
   import type { Meta, StoryObj } from '@storybook/react-vite';
   import { fn } from 'storybook/test';
@@ -325,11 +325,11 @@ How a design-system component is written in React 19 and TypeScript so that it b
   export const Disabled = { args: { disabled: true } } satisfies Story;
   ```
 - [strong] **Types from the framework's package.** `Meta` and `StoryObj` are imported from the Storybook framework the project installs (`@storybook/react-vite`, `@storybook/nextjs-vite`), not the renderer's `@storybook/react`, which a project on a framework package does not depend on: `tsc` cannot resolve it (found generating 63 components into a Next.js project, 2026-10-30; [Storybook TypeScript](https://storybook.js.org/docs/writing-stories/typescript)).
-- [required] **What a story is.** "A story captures the rendered state of a UI component"; the default export "controls how Storybook lists your stories", and "every named export in the file represents a story object" ([Writing stories](https://storybook.js.org/docs/writing-stories), [CSF](https://storybook.js.org/docs/api/csf)). CSF3 renders the component with its args when `render` is omitted.
-- [required] **argTypes from the component.** Storybook infers them "using react-docgen (default) or react-docgen-typescript"; state only what inference cannot (`options` for a union, `table: { disable: true }` to hide a row) ([argTypes](https://storybook.js.org/docs/api/arg-types)).
-- [required] **Handlers as spies.** "The recommended way is to assign `fn()` to an arg", imported from `storybook/test`; `argTypesRegex` "is not the recommended way" ([Actions](https://storybook.js.org/docs/essentials/actions)).
-- [required] **Accessibility addon.** Built on axe-core; `parameters.a11y.test` is `'off'`, `'todo'` (warn) or `'error'` (fail in CI) ([Storybook accessibility testing](https://storybook.js.org/docs/writing-tests/accessibility-testing)). Set `'error'` in the meta.
-- [required] **Interaction states with `play`.** A story's `play` function runs after render ([CSF](https://storybook.js.org/docs/api/csf)): open a menu, focus a field, then let the a11y check run on the opened state.
+- [strong] **What a story is.** "A story captures the rendered state of a UI component"; the default export "controls how Storybook lists your stories", and "every named export in the file represents a story object" ([Writing stories](https://storybook.js.org/docs/writing-stories), [CSF](https://storybook.js.org/docs/api/csf)). CSF3 renders the component with its args when `render` is omitted.
+- [moderate] **argTypes from the component.** Storybook infers them "using react-docgen (default) or react-docgen-typescript"; state only what inference cannot (`options` for a union, `table: { disable: true }` to hide a row) ([argTypes](https://storybook.js.org/docs/api/arg-types)).
+- [moderate] **Handlers as spies.** "The recommended way is to assign `fn()` to an arg", imported from `storybook/test`; `argTypesRegex` "is not the recommended way" ([Actions](https://storybook.js.org/docs/essentials/actions)).
+- [moderate] **Accessibility addon.** Built on axe-core; `parameters.a11y.test` is `'off'`, `'todo'` (warn) or `'error'` (fail in CI) ([Storybook accessibility testing](https://storybook.js.org/docs/writing-tests/accessibility-testing)). Set `'error'` in the meta.
+- [moderate] **Interaction states with `play`.** A story's `play` function runs after render ([CSF](https://storybook.js.org/docs/api/csf)): open a menu, focus a field, then let the a11y check run on the opened state.
 - [weak] The parity mapping names stories by id, so story names are stable (the `design-code-parity` skill).
 
 **Cases**

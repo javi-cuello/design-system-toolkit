@@ -29,7 +29,7 @@ How a long list is split and walked: whether to page it, load more on request or
 **Build**
 - [strong] *Elements:* pagination is a `nav` of real links (`a href="?page=3"`); load more is a `button`; infinite scroll is the only one that needs script to exist at all.
 - [strong] *ARIA and keyboard:* no APG pattern governs a pager; it is a navigation landmark ([APG landmarks](https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/)) holding links. An infinite list borrows the [APG feed pattern](https://www.w3.org/WAI/ARIA/apg/patterns/feed/) (below).
-- [required] *States:* `aria-current="page"` on the current page link.
+- [required] *States:* `aria-current="page"` on the current page link (code-standard rule 64).
 - [required] *Rules:* code-standard rule 20 (paging works without script), code-standard rule 64 (the current page is marked), code-standard rule 1 (the pager is a labelled landmark).
 - [weak] *Detail:* [code: progressive enhancement](../../code/javascript.md#progressive-enhancement), [code: navigation markup](../../code/html-semantics.md#navigation-markup).
 
@@ -50,7 +50,7 @@ How a long list is split and walked: whether to page it, load more on request or
 - [weak] **Order:** Previous, numbers, Next, left to right in reading order; Previous is absent on the first page and Next on the last (GOV.UK), never shown disabled, so nothing in the pager invites a click that does nothing.
 - [moderate] **Which numbers:** always the first and last page, the current page and at least one either side; an ellipsis stands for each skipped run ("1 … 4 [5] 6 … 20"). On a small screen GOV.UK keeps first, previous, current, next and last; Atlassian caps at seven slots including ellipses on small screens and 14 on large ([Atlassian pagination](https://atlassian.design/components/pagination/usage)); Primer defaults to one page at each end and two around the current ([Primer pagination](https://primer.style/product/components/pagination/)).
 - [weak] **The ellipsis is not a control.** Atlassian: it cannot be selected; the reader picks a nearby number. A reader who must reach page 37 of 80 directly gets a jump field (*Range, total and jump to page* below).
-- [required] **Current page:** marked by more than colour (filled background or a heavy underline plus weight), and not looking like hover.
+- [required] **Current page:** marked by more than colour (filled background or a heavy underline plus weight), and not looking like hover (WCAG 1.4.1).
 - [required] **Fixed width:** the pager keeps one width as the reader pages, so Next does not slide under the pointer when the numbers change length (design-standard rule 2). Reserve room for the widest arrangement, or keep Previous and Next at the ends with the numbers centred between them.
 - [weak] **Placement:** under the list, where the reader finishes it; for a long table, also above it, the same pager twice, never two different ones. Carbon fixes its table pager directly under the table with no gap ([Carbon pagination](https://carbondesignsystem.com/components/pagination/usage/)).
 - [weak] **Labels:** "Previous" and "Next" as words beside the arrows; an arrow alone is a guess at small sizes.

@@ -6,7 +6,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 
 **What good looks like**
 - [moderate] Most components carry no media query: they respond to the space they get through `min()`, `max()`, `clamp()`, `minmax()`, `auto-fit` and `flex-wrap`.
-- [required] No column, gap or inset is a number fitted to today's labels.
+- [required] No column, gap or inset is a number fitted to today's labels (code-standard rule 57).
 - [weak] Prose has a measure in `ch`; tables and dashboards run wider.
 
 **How**
@@ -41,7 +41,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 
 **What good looks like**
 - [weak] A strip of tiles takes its column count from how many tiles it holds, so every row is full at every width: no tile alone on a last row, no empty cell, no placeholder.
-- [required] The same rules hold when a tile is added or removed; nothing is fitted to today's count.
+- [required] The same rules hold when a tile is added or removed; nothing is fitted to today's count (code-standard rule 57).
 - [weak] The design half (which counts split how, and when tiles should be a table) is [data: KPI tiles](../ui/patterns/data.md#kpi-tiles).
 
 **How**
@@ -80,10 +80,10 @@ How a page and its components respond to the space they are given: intrinsic lay
 **What good looks like**
 - [required] The page grid (maximum width, gutter, centring) is stated once, in one container element, and every band holds exactly one of it (code-standard rules 3, 11 and 46).
 - [weak] Bands are full-bleed; content inside them starts on the same edge at every width.
-- [required] No stylesheet re-derives the grid with margin arithmetic.
+- [required] No stylesheet re-derives the grid with margin arithmetic (code-standard rule 46).
 
 **How**
-- [required] The container component owns the numbers; a page never declares them:
+- [required] The container component owns the numbers; a page never declares them (code-standard rule 46):
   ```css
   ds-container { display: block; inline-size: min(100% - 2 * var(--gutter), var(--page-width)); margin-inline: auto; }
   ```
@@ -111,7 +111,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 
 **What good looks like**
 - [weak] A component that appears in more than one column width responds to its container, not the viewport.
-- [required] The query goes on a wrapper the component sits in, never on the element the query styles.
+- [required] The query goes on a wrapper the component sits in, never on the element the query styles (CSS).
 - [weak] Style queries switch a component's mode where a custom property already carries it.
 
 **How**
@@ -120,7 +120,7 @@ How a page and its components respond to the space they are given: intrinsic lay
   ds-card-region { container: card / inline-size; }
   @container card (inline-size >= 30rem) { ds-card { grid-template-columns: 12rem 1fr; } }
   ```
-- [required] An element cannot query itself: a component that sets `container-type` on its root and queries that root never matches. Put the container on the component's host and style its parts, or on the slot the caller provides.
+- [required] An element cannot query itself: a component that sets `container-type` on its root and queries that root never matches. Put the container on the component's host and style its parts, or on the slot the caller provides (CSS).
 - [required] `container-type: inline-size` applies size containment in the inline axis: the element's width no longer comes from its contents. A container that relied on shrink-to-fit (a flex item sized by its content, an inline-block) collapses; give it a width from its parent ([MDN `container-type`](https://developer.mozilla.org/en-US/docs/Web/CSS/container-type)).
 - [strong] Container query units (`cqi`, `cqb`) size things relative to the container, for type or padding inside a card that must scale with the card.
 - [strong] Style queries: `@container style(--density: compact) { … }`. Any element can be a style container without `container-type`; only custom properties can be queried so far ([MDN, size and style queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_containment/Container_size_and_style_queries)). Support arrived in Firefox last ([caniuse](https://caniuse.com/css-container-queries-style)); below the project's floor, the same mode as an attribute on the component is the fallback ([browser-support.md](browser-support.md)).
@@ -177,7 +177,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 
 **What good looks like**
 - [required] Type comes from the design's text styles (code-standard rule 54); fluid sizing interpolates between values the design file holds, never values the stylesheet invents.
-- [required] Every fluid size has a rem term, so browser zoom and the reader's font size still move it.
+- [required] Every fluid size has a rem term, so browser zoom and the reader's font size still move it (WCAG 1.4.4).
 - [weak] The largest size stays within about 2.5 times the smallest.
 
 **How**
@@ -207,8 +207,8 @@ How a page and its components respond to the space they are given: intrinsic lay
 ## Tables on small screens
 
 **What good looks like**
-- [required] A table wider than its space scrolls inside its own container; the page does not scroll sideways.
-- [required] The scroll container is reachable by keyboard and named, so a screen reader announces what it is.
+- [required] A table wider than its space scrolls inside its own container; the page does not scroll sideways (WCAG 1.4.10).
+- [required] The scroll container is reachable by keyboard and named, so a screen reader announces what it is (WCAG 2.1.1).
 - [weak] Stacking a table into records is chosen deliberately, for tables read one row at a time.
 
 **How**
@@ -242,12 +242,12 @@ How a page and its components respond to the space they are given: intrinsic lay
 **What good looks like**
 - [moderate] Nothing full-height uses `100vh`.
 - [moderate] Full-height sections use `svh`, which is stable; only something that must track the browser's toolbars uses `dvh`.
-- [required] Full height is a minimum (`min-block-size`), never a fixed height around content.
+- [required] Full height is a minimum (`min-block-size`), never a fixed height around content (WCAG 1.4.4).
 
 **How**
 - [moderate] `svh` is the viewport with the browser's toolbars shown, `lvh` with them retracted, `dvh` follows them ([web.dev, viewport units](https://web.dev/blog/viewport-units)). `100vh` on mobile is the large viewport, taller than the visible area while the toolbars show, which is why a "100vh" section hides its bottom edge.
 - [moderate] `dvh` updates are throttled and some browsers debounce them by gesture (web.dev), so a layout sized in `dvh` can resize while the reader scrolls. Use `svh` for a hero; `dvh` for an app shell that must fill the screen exactly.
-- [required] `min-block-size: 100svh`, so content taller than the screen still grows.
+- [required] `min-block-size: 100svh`, so content taller than the screen still grows (WCAG 1.4.4).
 - [strong] The virtual keyboard resizes only the visual viewport by default; `interactive-widget=resizes-content` in the viewport meta makes the layout respond to it ([MDN, viewport meta](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element)).
 
 **Cases**
@@ -267,7 +267,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 ## Touch targets
 
 **What good looks like**
-- [required] Every interactive target is at least 24 by 24 CSS px, or spaced so a 24px circle on it touches no other; touch-first controls aim for 44.
+- [required] Every interactive target is at least 24 by 24 CSS px, or spaced so a 24px circle on it touches no other; touch-first controls aim for 44 (WCAG 2.5.8).
 - [weak] The target is the element's box, made large with padding around the glyph, not by enlarging the glyph.
 - [strong] A small visible control can have a larger hit area that overlaps nothing.
 
@@ -294,13 +294,13 @@ How a page and its components respond to the space they are given: intrinsic lay
 ## Zoom and reflow
 
 **What good looks like**
-- [required] The page reflows to one column at 320 CSS px wide with no horizontal page scroll, which is a 1280px window at 400% zoom.
-- [required] Text reaches 200% with nothing clipped or overlapping.
-- [required] Pinch zoom is never disabled.
+- [required] The page reflows to one column at 320 CSS px wide with no horizontal page scroll, which is a 1280px window at 400% zoom (WCAG 1.4.10).
+- [required] Text reaches 200% with nothing clipped or overlapping (WCAG 1.4.4).
+- [required] Pinch zoom is never disabled (WCAG 1.4.4).
 
 **How**
 - [required] rem for lengths (code-standard rule 54), so the layout follows the reader's font size; px only for radii, strokes, blur and shadow offsets.
-- [required] No fixed height around text: `min-block-size`, and padding for the look.
+- [required] No fixed height around text: `min-block-size`, and padding for the look (WCAG 1.4.12).
 - [required] Never `user-scalable=no` or a `maximum-scale` in the viewport meta: "Disabling zooming capabilities… prevents people experiencing low vision conditions from being able to read and understand page content" ([MDN, viewport meta](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element)).
 - [weak] Rows of controls wrap (`flex-wrap`) or move behind a menu button at the narrow breakpoint; a navigation bar is the usual failure.
 - [required] Test with browser zoom at 200% and 400%, with the window at 320px, and with the 1.4.12 spacing values applied (line height 1.5, paragraph spacing 2, letter spacing 0.12, word spacing 0.16 times the font size).
@@ -326,7 +326,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 **What good looks like**
 - [weak] Text wraps first; truncation is the exception, chosen in the design ([disclosure: show more and truncation](../ui/patterns/disclosure.md#show-more-and-truncation)).
 - [weak] The whole text stays in the DOM; the cut is CSS, by lines, so it follows font size, zoom and language.
-- [required] Every cut has a keyboard-reachable way to read the rest, and the "Show more" control renders only when the text overflows.
+- [required] Every cut has a keyboard-reachable way to read the rest, and the "Show more" control renders only when the text overflows (code-standard rule 12).
 
 **How**
 - [strong] **One line**: `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` on a box with a width; a table cell's case is [html-semantics: table behaviour](html-semantics.md#table-behaviour).

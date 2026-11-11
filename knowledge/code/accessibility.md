@@ -34,9 +34,9 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Accessible names and descriptions
 
 **What good looks like**
-- [required] Every control, landmark, dialog, table and figure has a name; the name is short and comes from visible text where there is any.
-- [required] The visible label's words are inside the accessible name.
-- [required] Secondary text (a hint, a count, an error) is a description, not part of the name.
+- [strong] Every control, landmark, dialog, table and figure has a name; the name is short and comes from visible text where there is any (WCAG 4.1.2 for controls, WCAG 2.5.3 for visible text).
+- [required] The visible label's words are inside the accessible name (WCAG 2.5.3).
+- [required] Secondary text (a hint, a count, an error) is a description, not part of the name (code-standard rule 15).
 
 **How**
 - [strong] **Order of preference**, from the APG's naming rules ([APG, names and descriptions](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/)): "Prefer Visible Text", "Prefer Native Techniques" (`label`, `legend`, `caption`, `figcaption`), "Avoid Browser Fallback" (`title` and `placeholder` content "typically yields low quality accessible names"), "Compose Brief, Useful Names".
@@ -47,7 +47,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
   <span id="q-n">354</span>
   ```
 - [required] **Icon-only controls** name the control and hide the glyph (code-standard rule 18).
-- [required] **A visible label in the name.** If a button reads "Send" and its `aria-label` says "Submit message", speech users saying "click Send" miss it; start the name with the visible words.
+- [required] **A visible label in the name.** If a button reads "Send" and its `aria-label` says "Submit message", speech users saying "click Send" miss it; start the name with the visible words (WCAG 2.5.3).
 
 **Cases**
 - A facet checkbox's count sits inside its label → "Design 354" as one name; move the count out or mark it `aria-hidden` and describe the control with it (code-standard rule 15's evidence).
@@ -68,9 +68,9 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Visible focus
 
 **What good looks like**
-- [required] Every focusable element shows a focus indicator when reached by keyboard, drawn from the focus tokens in one place.
+- [required] Every focusable element shows a focus indicator when reached by keyboard, drawn from the focus tokens in one place (WCAG 2.4.7).
 - [strong] Text inputs show focus however they were focused.
-- [required] The indicator is never hidden by a sticky region, an overflow clip or a dim.
+- [required] The indicator is never hidden by a sticky region, an overflow clip or a dim (WCAG 2.4.11).
 
 **How**
 - [strong] **`:focus-visible`**, not `:focus`: browsers use "heuristics to provide focus indicators only when it would be most helpful", typically not after a mouse click on a button but always in a text box ([MDN `:focus-visible`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:focus-visible)).
@@ -102,10 +102,10 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Focus management
 
 **What good looks like**
-- [required] When content is replaced, focus stays on the control the reader used, or moves to the thing that replaced it; it never falls to `body`.
-- [required] A modal takes focus in on open, keeps it inside, and returns it on close.
+- [required] When content is replaced, focus stays on the control the reader used, or moves to the thing that replaced it; it never falls to `body` (code-standard rule 14).
+- [required] A modal takes focus in on open, keeps it inside, and returns it on close (HTML).
 - [strong] A skip link moves focus to `main`.
-- [required] Opening, closing and swapping never moves focus somewhere the reader did not ask to go.
+- [strong] Opening, closing and swapping never moves focus somewhere the reader did not ask to go.
 
 **How**
 - [required] **Live swaps and re-renders** keep the reader's place (code-standard rule 14); how to swap, key items by id and restore focus and scroll in a script is [javascript: re-rendering without losing focus or scroll](javascript.md#re-rendering-without-losing-focus-or-scroll). What this section adds is where focus goes when the thing that had it is gone.
@@ -133,7 +133,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 **What good looks like**
 - [strong] A composite widget (tabs, a listbox, a menu, a toolbar, a grid) is one tab stop; arrow keys move inside it.
 - [strong] Its keyboard follows the APG pattern for its role, all of it.
-- [required] Without script it degrades to something that works: tab panels as headed sections, menus as lists of links.
+- [required] Without script it degrades to something that works: tab panels as headed sections, menus as lists of links (code-standard rule 20).
 
 **How**
 - [strong] **One stop.** "The tab sequence should include only one focusable element of a composite UI component" ([APG, developing a keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)). With a roving tabindex, the current item has `tabindex="0"` and the rest `tabindex="-1"`; arrow keys move `0` and call `focus()`. `aria-activedescendant` is the alternative where focus must stay on a container (a combobox input).
@@ -178,7 +178,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - [strong] An action menu is a `button` that opens a list of actions; a menu of links that navigate is a disclosure, not a menu ([composite widgets](#composite-widgets-and-roving-tabindex)).
 - [weak] A split button is two buttons side by side: the default action, and a menu button for the rest.
 - [strong] A toolbar of three or more controls is one tab stop with arrows between them.
-- [required] Without script, every action is still reachable: the menu's items render as a list of buttons or links.
+- [required] Without script, every action is still reachable: the menu's items render as a list of buttons or links (code-standard rule 20).
 
 **How**
 - [strong] **Menu button** ([APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/)): the trigger is a `button` with `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`; the list is `role="menu"` holding `menuitem`, `menuitemcheckbox` or `menuitemradio`. A `popover` on the list gives open, Escape and light dismiss with no script (code-standard rule 8); the script adds the roles and the keys.
@@ -215,8 +215,8 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Tooltips and toggletips
 
 **What good looks like**
-- [required] A tooltip is short text tied to a focusable trigger, shown on hover and on focus, and never holds anything focusable.
-- [required] A tooltip that names an icon button is that button's name; one that adds a hint is its description.
+- [strong] A tooltip is short text tied to a focusable trigger, shown on hover and on focus, and never holds anything focusable.
+- [required] A tooltip that names an icon button is that button's name; one that adds a hint is its description (code-standard rule 15).
 - [moderate] Help that holds a link or more than a phrase is a toggletip: a button that opens a non-modal popover on click.
 
 **How**
@@ -290,7 +290,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 **What good looks like**
 - [strong] A choice is a native checkbox, radio group, `select` or `input type="range"` wherever one fits, and gets its keyboard, state and form submission for nothing.
 - [strong] A switch, a combobox, a custom listbox or a multi-select is built on a native control the script enhances, and carries the APG pattern's roles, states and keys in full.
-- [required] Without script, every one of them is still a working form control.
+- [required] Without script, every one of them is still a working form control (code-standard rule 20).
 
 **How**
 - [strong] **Switch** ([APG switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/)): `<input type="checkbox" role="switch">`; the native `checked` stands in for `aria-checked`, Space toggles (Enter optionally), and "it is critical the label on a switch does not change when its state changes". Style on and off from `:checked`.
@@ -332,7 +332,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Live regions and status messages
 
 **What good looks like**
-- [required] A change that does not move focus (a result count, "Saved", an upload's progress) is announced through a live region.
+- [required] A change that does not move focus (a result count, "Saved", an upload's progress) is announced through a live region (WCAG 4.1.3).
 - [strong] The live region exists in the page before its content changes, and persists across swaps.
 - [strong] Polite by default; assertive or `role="alert"` only for what must interrupt.
 
@@ -366,11 +366,11 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 
 **What good looks like**
 - [weak] Each way of hiding is chosen for who should still perceive the content.
-- [required] Nothing focusable is hidden from assistive technology while still reachable by keyboard.
-- [required] A script's `hidden` always wins against the stylesheet.
+- [required] Nothing focusable is hidden from assistive technology while still reachable by keyboard (ARIA).
+- [required] A script's `hidden` always wins against the stylesheet (code-standard rule 17).
 
 **How**
-- [required] **The choices:**
+- [required] **The choices:** (HTML)
 
   | Hide from | Use | Notes |
   |---|---|---|
@@ -409,12 +409,12 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Reduced motion and colour scheme in code
 
 **What good looks like**
-- [required] One reduced-motion block in the base layer, written at the start of a project.
+- [weak] One reduced-motion block in the base layer, written at the start of a project.
 - [moderate] Motion that conveys something becomes a fade or a still state under reduced motion, rather than vanishing.
-- [required] A themed document declares `color-scheme`, so the parts the browser paints follow the theme.
+- [required] A themed document declares `color-scheme`, so the parts the browser paints follow the theme (code-standard rule 16).
 
 **How**
-- [required] **The base block**, the only place the `!important` gate allows it (`tools/css-lint/lint.mjs` *`!important`*):
+- [moderate] **The base block**, the only place the `!important` gate allows it (`tools/css-lint/lint.mjs` *`!important`*):
   ```css
   @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
@@ -444,13 +444,13 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Keyboard access and modified clicks
 
 **What good looks like**
-- [required] Everything a pointer can do, the keyboard can do, in an order that follows the reading order.
+- [required] Everything a pointer can do, the keyboard can do, in an order that follows the reading order (WCAG 2.1.1).
 - [strong] No positive `tabindex`; nothing receives focus that cannot be operated.
-- [required] Modified and middle clicks go to the browser.
+- [required] Modified and middle clicks go to the browser (code-standard rule 21).
 
 **How**
 - [required] **Tab order is DOM order** (code-standard rule 2). `tabindex="0"` adds a custom control to the natural order, `-1` makes an element focusable by script only. MDN: "Avoid using tabindex values greater than 0 and CSS properties that can change the order of focusable HTML elements" ([MDN `tabindex`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/tabindex)).
-- [required] **Native first.** A `button` already handles Enter and Space, a link Enter; a custom control needs both on `keydown`.
+- [required] **Native first.** A `button` already handles Enter and Space, a link Enter; a custom control needs both on `keydown` (HTML).
 - [required] **Content on hover or focus** (a tooltip, a submenu) also appears on focus, stays while the pointer moves onto it, and is dismissible without moving focus, usually by Escape ([Understanding 1.4.13](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html)).
 - [required] **Modified clicks.** A handler that takes over a link's click lets the browser have `cmd`, `ctrl`, `shift`, `alt` and any button but the main one (`button` 1 is the "auxiliary button, usually the wheel button or the middle button", [MDN `MouseEvent.button`](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button)), code-standard rule 21:
   ```js
@@ -481,9 +481,9 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 ## Keyboard shortcuts
 
 **What good looks like**
-- [required] A shortcut is an accelerator for something already reachable by Tab and Enter, never the only way.
+- [required] A shortcut is an accelerator for something already reachable by Tab and Enter, never the only way (WCAG 2.1.1).
 - [strong] It claims no key the browser, the operating system or a screen reader already uses for something else.
-- [required] A single-character shortcut can be turned off or remapped, or works only while its component has focus.
+- [required] A single-character shortcut can be turned off or remapped, or works only while its component has focus (WCAG 2.1.4).
 - [weak] It implements [interaction: keyboard parity and shortcuts](../ui/design/interaction.md#keyboard-parity-and-shortcuts).
 
 **How**

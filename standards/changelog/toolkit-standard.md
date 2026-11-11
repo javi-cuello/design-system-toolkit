@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.30.0 (2026-11-11): §D 21: a weak item a decision rests on is researched before it is leaned on again, by any reader; §D 0 question 13 asks it at every closing. 438 uncited required items: 351 cited, 87 lowered.
 - 2.29.0 (2026-11-11): §D 21: a claim citing another toolkit page takes that item's weight (the section's lowest when no one item); only a bare "see X" line is weak. A blind re-weigh of 100 items agreed on 58 exactly, 84 within a level.
 - 2.28.0 (2026-11-11): §D 22: prose restating what another file owns is held to it — commands, script lists and registered values by restated.mjs; guides citing a changed rule named by the Docs gate.
 - 2.27.0 (2026-11-11): §D 21: every knowledge item carries a weight (required, strong, moderate, weak, contested) set by its evidence, each saying what an agent does; check-standards refuses an unweighed item.

@@ -46,7 +46,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 **What good looks like**
 - [moderate] Values bound to variables and styles are trusted; geometry that is an artefact of the frame is questioned.
 - [weak] Near-duplicate values are consolidated at extraction, not carried forward as new tokens.
-- [required] Layer names inform the inventory; they never become class or attribute names by default.
+- [weak] Layer names inform the inventory; they never become class or attribute names by default.
 
 **How**
 - [moderate] **Trust:** bound variables and styles, auto-layout direction, gap, padding and alignment, stroke alignment, a component's properties and variants, the frames' absolute bounding boxes (code-standard rule 25).
@@ -85,7 +85,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - [strong] Wrap: `layoutWrap: 'WRAP'` is `flex-wrap: wrap`, with the counter-axis spacing as `row-gap` ([Figma API `layoutWrap`](https://developers.figma.com/docs/plugins/api/properties/nodes-layoutwrap/)).
 - [strong] Sizing ([Figma API `layoutSizingHorizontal`](https://developers.figma.com/docs/plugins/api/properties/nodes-layoutsizinghorizontal/)): `HUG` is the default (`auto`, `fit-content`, or nothing); `FILL` is `flex: 1 1 0` on the primary axis or `align-self: stretch` on the counter axis; `FIXED` is the one to question (see above). Min and max widths become `min-inline-size` and `max-inline-size`.
 - [moderate] A control's declared height is a minimum: `min-block-size` from the sizing token, with padding as the inset when content grows. A fixed `height` around text fails at 200%.
-- [required] Strokes in layout: `strokesIncludedInLayout` makes the frame "behave like css box-sizing: border-box" ([Figma API](https://developers.figma.com/docs/plugins/api/properties/nodes-strokesincludedinlayout/)); which CSS draws the stroke is the next section.
+- [required] Strokes in layout: `strokesIncludedInLayout` makes the frame "behave like css box-sizing: border-box" ([Figma API](https://developers.figma.com/docs/plugins/api/properties/nodes-strokesincludedinlayout/)); which CSS draws the stroke is the next section (code-standard rule 63).
 
 **Cases**
 - A button frame is horizontal, 8 gap, 12/16 padding, hug → `display: inline-flex; gap: var(--space-2); padding: var(--space-3) var(--space-4)`; no width, no height.
@@ -172,8 +172,8 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 
 **What good looks like**
 - [required] Each text style reaches code as code-standard rule 54 writes it, through the token build; nothing is typed by hand.
-- [required] Units are converted once, by the build: size in rem, line height unitless, letter spacing in em.
-- [required] No component writes a `font` shorthand or a raw size.
+- [required] Units are converted once, by the build: size in rem, line height unitless, letter spacing in em (code-standard rule 54).
+- [required] No component writes a `font` shorthand or a raw size (code-standard rule 54).
 
 **How**
 - [required] The build writes each style's fields under its name (`--body-md-…`, the list is code-standard rule 54's), and components apply `@include text-style(body-md)`.
@@ -200,11 +200,11 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 
 **What good looks like**
 - [required] A variant axis is an attribute on the custom element; state is a pseudo-class; disabled is the control's own (code-standard rule 9).
-- [required] An axis that differs in kind, not appearance, is a separate component.
+- [weak] An axis that differs in kind, not appearance, is a separate component.
 - [required] An axis named like an HTML or ARIA attribute is renamed (code-standard rules 9 and 10).
 
 **How**
-- [required] `Size=sm|md|lg`, `Variant=primary|outline` → `size="sm"`, `variant="primary"`, selected as `[size=sm]`. The default value is the bare element.
+- [required] `Size=sm|md|lg`, `Variant=primary|outline` → `size="sm"`, `variant="primary"`, selected as `[size=sm]`. The default value is the bare element (code-standard rule 9).
 - [required] `State=Rest|Hover|Focus|Press` → `:hover`, `:focus-visible`, `:active`; `Disabled=True` → native `disabled` or `aria-disabled`, and the dim is the host's, once (code-standard rule 62).
 - [moderate] A boolean that toggles a layer's visibility is usually a slot or an attribute that shows a part; a boolean that is really a state (`Selected`, `Checked`, `Expanded`) is the platform's state (`:checked`, `aria-expanded`, `aria-selected`). `component-validator` reports booleans that are states.
 - [required] An instance-swap property is a slot (code-standard rule 13); a text property is slot content or an attribute, never a hard-coded string.
@@ -337,8 +337,8 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 ## Reporting deviations
 
 **What good looks like**
-- [required] The build matches the design on type, colour, spacing, radii, strokes and structure.
-- [required] Where it departs, the departure is deliberate, has a reason, and is reported back to the design.
+- [required] The build matches the design on type, colour, spacing, radii, strokes and structure (code-standard rule 24).
+- [required] Where it departs, the departure is deliberate, has a reason, and is reported back to the design (code-standard rule 42).
 - [required] No declaration exists to make a check agree (code-standard rule 42), and no deviation is hidden by changing the drawing.
 
 **How**

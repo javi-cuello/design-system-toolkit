@@ -12,7 +12,7 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 
 **How**
 - [weak] **Single sign-on without a second page.** Show both fields; when the address entered belongs to a single sign-on domain, reveal the single sign-on button and make it the default; if the password cannot be used for that account, disable the password field rather than removing it ([Smashing, Friedman 2024](https://www.smashingmagazine.com/2024/06/2-page-login-pattern-how-fix-it/)).
-- [required] **Paste and autofill always work.** Never block paste in either field ([GOV.UK passwords](https://design-system.service.gov.uk/patterns/passwords/); [Smashing, Friedman 2022](https://www.smashingmagazine.com/2022/08/authentication-ux-design-guidelines/)).
+- [required] **Paste and autofill always work.** Never block paste in either field ([GOV.UK passwords](https://design-system.service.gov.uk/patterns/passwords/); [Smashing, Friedman 2022](https://www.smashingmagazine.com/2022/08/authentication-ux-design-guidelines/)) (WCAG 3.3.8).
 - [moderate] **Show password.** Offer a toggle beside the field; masking makes people err more and pick simpler passwords, for little security in most settings ([NN/g, Nielsen 2009](https://www.nngroup.com/articles/stop-password-masking/)).
 - [weak] **A failed attempt** says the address or password is wrong without saying which, and does not keep the password typed ([GOV.UK passwords](https://design-system.service.gov.uk/patterns/passwords/)); the address stays.
 - [weak] **Lockout** after five to ten attempts, not three (GOV.UK, same page), with the way back named in the message.
@@ -33,7 +33,7 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 **Build**
 - [required] *Elements:* a real `form method="post"`; `input type="email"` (or `text`) with `autocomplete="username"`, adding `webauthn` as the last token where passkeys are offered; `input type="password"` with `autocomplete="current-password"` ([MDN autocomplete](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete)); a `button type="submit"`; the show-password control a `button type="button"`.
 - [required] *ARIA and keyboard:* native controls carry it. The show-password button is a toggle: `aria-pressed` with a fixed name, or a name that changes with the state, never both. Enter in either field submits.
-- [required] *States:* the toggle's `aria-pressed`; the password input's `type` switches between `password` and `text`; a field in error carries `aria-invalid="true"` and `aria-describedby` to its message; the disabled password field for a single sign-on account keeps the native `disabled`.
+- [required] *States:* the toggle's `aria-pressed`; the password input's `type` switches between `password` and `text`; a field in error carries `aria-invalid="true"` and `aria-describedby` to its message; the disabled password field for a single sign-on account keeps the native `disabled` (ARIA).
 - [required] *Rules:* code-standard rule 20 (a real POST form that signs in without script), code-standard rule 18 (the icon-only toggle has a name), code-standard rule 15 (the hint and the error are descriptions, not the label), code-standard rule 9 and code-standard rule 62 (disabled is the control's own attribute), code-standard rule 61 (a failure reports the reason it knows, within what security allows).
 - [weak] *Detail:* [code: forms markup](../../code/html-semantics.md#forms-markup), [code: form errors and validation](../../code/html-semantics.md#form-errors-and-validation), [code: forms and cross-site request forgery](../../code/security.md#forms-and-cross-site-request-forgery).
 
@@ -69,9 +69,9 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 - [required] 3.3.2 Labels or Instructions (the rules are instructions, given before input), 1.3.5 (`new-password`), 3.3.1 and 3.3.3 Error Suggestion (an error names the rule unmet), 1.4.1 (the strength meter is not colour alone), 4.1.3 Status Messages (a live rule list is announced politely, not on every keystroke). 3.3.8 covers signing in, not creating an account, but a toggle helps people type a new password ([W3C Understanding 3.3.8](https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html)).
 
 **Build**
-- [required] *Elements:* `input type="password" autocomplete="new-password"`; the rules in a `p` or `ul` referenced by `aria-describedby`; the meter a `meter` element or text, with its level in words.
+- [required] *Elements:* `input type="password" autocomplete="new-password"`; the rules in a `p` or `ul` referenced by `aria-describedby`; the meter a `meter` element or text, with its level in words (WCAG 1.3.5).
 - [required] *ARIA and keyboard:* native controls carry it. A rule list updated as the person types sits in a polite live region that changes its contents, never the element.
-- [required] *States:* `aria-invalid="true"` on submit failure only; met rules marked in text ("met"), not only by a tick's colour.
+- [strong] *States:* `aria-invalid="true"` on submit failure only; met rules marked in text ("met"), not only by a tick's colour.
 - [required] *Rules:* code-standard rule 15 (the rules are a description), code-standard rule 20, code-standard rule 14 (a live update keeps focus in the field).
 - [weak] *Detail:* [code: forms markup](../../code/html-semantics.md#forms-markup), [code: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages).
 
@@ -108,7 +108,7 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 **Build**
 - [required] *Elements:* `input autocomplete="one-time-code" inputmode="numeric"` (type `text`, so leading zeros survive); the username field `autocomplete="username webauthn"`, `webauthn` last; the passkey request through `navigator.credentials.get()` with `mediation: "conditional"` after checking `PublicKeyCredential.isConditionalMediationAvailable()` ([MDN Web Authentication API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API)).
 - [required] *ARIA and keyboard:* native controls carry it; the choice of factor is a radio group in a `fieldset` (native radios carry [APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/)'s arrow keys).
-- [required] *States:* `aria-invalid` and a described error on a wrong code; the resend button keeps the native `disabled` during its wait, with the wait in text beside it.
+- [required] *States:* `aria-invalid` and a described error on a wrong code; the resend button keeps the native `disabled` during its wait, with the wait in text beside it (ARIA).
 - [required] *Rules:* code-standard rule 20 (the code form posts without script; passkeys are an enhancement over it), code-standard rule 15, code-standard rule 61 (an expired code and a wrong code say different things).
 - [weak] *Detail:* [code: forms markup](../../code/html-semantics.md#forms-markup), [code: progressive enhancement](../../code/javascript.md#progressive-enhancement).
 
@@ -177,9 +177,9 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 - [required] 2.2.1 Timing Adjustable ([W3C](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html)), 2.2.5 Re-authenticating (AAA, worth meeting: data survives re-authentication), 2.2.6 Timeouts (AAA: say how long inactivity lasts before data is lost), 2.4.3 (focus into the warning and back).
 
 **Build**
-- [required] *Elements:* the warning a `dialog` opened with `showModal()`; the remaining time as text, updated each minute rather than each second.
+- [moderate] *Elements:* the warning a `dialog` opened with `showModal()`; the remaining time as text, updated each minute rather than each second.
 - [required] *ARIA and keyboard:* [APG alert dialog](https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/): `role="alertdialog"`, named by its heading and described by the message; focus moves to "Stay signed in", Tab stays inside, and on close focus returns to where it was ([APG dialog (modal)](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)). Escape counts as "stay", never as "sign out".
-- [required] *States:* the dialog's `open`; the form's draft held in storage the page writes on input, not on render.
+- [required] *States:* the dialog's `open`; the form's draft held in storage the page writes on input, not on render (code-standard rule 20).
 - [required] *Rules:* code-standard rule 14 (focus restored after the dialog), code-standard rule 20 (a render never writes; saving the draft is an action), code-standard rule 61 (the expiry page says why the session ended).
 - [weak] *Detail:* [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers), [code: focus management](../../code/accessibility.md#focus-management).
 
@@ -214,7 +214,7 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 **Build**
 - [weak] *Elements:* each account a row with avatar, name and email; "Add account", "Sign out" and "Sign out of all accounts" after a separator.
 - [required] *ARIA and keyboard:* inside the account menu ([APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/)), accounts are `menuitemradio` with the active one `aria-checked="true"`.
-- [required] *States:* `aria-checked` on the active account; a signed-out account marked in text, not only greyed.
+- [required] *States:* `aria-checked` on the active account; a signed-out account marked in text, not only greyed (WCAG 1.4.1).
 - [required] *Rules:* code-standard rule 18, code-standard rule 20 (the active account is read from the address or session, never written during render).
 - [weak] *Detail:* [code: state in the address and history](../../code/javascript.md#state-in-the-address-and-history).
 

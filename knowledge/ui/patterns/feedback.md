@@ -84,7 +84,7 @@ How an interface tells people what happened, what state something is in, and wha
   <div role="status" data-toasts></div>   <!-- in the layout, empty, from the start -->
   ```
 - [required] A toast with Undo has no timer and keeps the Undo `button` reachable; every toast has a named close button (code-standard rule 18).
-- [required] A timed toast pauses on hover and focus, and its duration is one token in the project.
+- [required] A timed toast pauses on hover and focus, and its duration is one token in the project (WCAG 2.2.1).
 - [required] Positioned with `position: fixed` and logical insets, clear of safe areas ([responsive: *Safe areas*](../../code/responsive.md#safe-areas)); it never covers the focused element (2.4.11).
 - [weak] Enters with `transform` and `opacity`, still under reduced motion ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
 
@@ -104,7 +104,7 @@ How an interface tells people what happened, what state something is in, and wha
 **How**
 - [moderate] One banner per page. Combine messages or show only the most important (GOV.UK; Carbon: "Only show one banner at a time").
 - [moderate] Page banner: immediately before the page `h1`, as wide as the content (GOV.UK). Product banner: directly below the main header, scrolling with the page, not sticky ([Carbon](https://carbondesignsystem.com/patterns/notification-pattern/)).
-- [required] Severity drives colour role, icon and a heading word, so meaning never rests on colour (GOV.UK asks for a heading such as "Success" for this reason).
+- [required] Severity drives colour role, icon and a heading word, so meaning never rests on colour (GOV.UK asks for a heading such as "Success" for this reason; WCAG 1.4.1).
 - [weak] Dismissible or not: a banner about a condition that still holds (outage, stale data, read-only mode) is not dismissible; it leaves when the condition ends. A banner of information the person has read is dismissible, and stays dismissed for that person. GOV.UK lists dismissal as an open question; this split is the toolkit's commentary.
 - [weak] Body: the problem and its cause, then what the person can do, in one to two sentences. Atlassian's [error messages](https://atlassian.design/foundations/content/designing-messages/error-messages) asks for one to two sentences and not to invent a cause.
 - [required] Reserve its space or place it above the controls so its arrival or dismissal does not move them (design-standard rule 2).
@@ -177,7 +177,7 @@ How an interface tells people what happened, what state something is in, and wha
 - [weak] Don't use semantic colours for decoration or for user-chosen categories (Atlassian's accent colours exist for that).
 
 **How**
-- [required] Colour plus text, and an icon where the status must be scanned at density. Carbon's [status indicator pattern](https://carbondesignsystem.com/patterns/status-indicator-pattern/): rely on at least two of colour, shape and symbol, and add text; "Relying solely on color to convey status is insufficient."
+- [required] Colour plus text, and an icon where the status must be scanned at density. Carbon's [status indicator pattern](https://carbondesignsystem.com/patterns/status-indicator-pattern/): rely on at least two of colour, shape and symbol, and add text; "Relying solely on color to convey status is insufficient" (WCAG 1.4.1).
 - [weak] A fixed vocabulary: list every status the product uses, each with one label, one colour role and one icon, in the project's context document. The same state never has two names on two screens, and two states never share a colour.
 - [weak] Short labels in sentence case (Atlassian: "Don't use long labels"; it truncates past 200px by default). One or two words.
 - [weak] Three attention levels at most: high (act now: error), medium (no action needed: in progress), low (something changed or is ready) ([Carbon](https://carbondesignsystem.com/patterns/status-indicator-pattern/)).
@@ -325,10 +325,10 @@ How an interface tells people what happened, what state something is in, and wha
 - [required] 1.3.1: one `h1`, which is the problem; code-standard rule 1 for the page's structure.
 
 **Build**
-- [required] The server sends the real status (404, 500, 503 with `Retry-After`); the page is rendered in the product's shell, header and navigation included.
+- [strong] The server sends the real status (404, 500, 503 with `Retry-After`); the page is rendered in the product's shell, header and navigation included.
 - [required] One `h1` naming the problem; `title` names the problem and the site ([HTML semantics: *Document metadata*](../../code/html-semantics.md#document-metadata)).
 - [required] Error pages are static and self-contained, so they render when the app or its scripts fail (code-standard rule 20).
-- [required] A renamed page is a redirect (301), not a 404.
+- [weak] A renamed page is a redirect (301), not a 404.
 - [weak] No stack trace, path or status code in the visible text; the detail goes to the server log.
 
 **Check**

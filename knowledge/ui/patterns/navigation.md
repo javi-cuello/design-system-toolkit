@@ -38,7 +38,7 @@ One test sorts most decisions here: **does activating it change the address?** I
 
 **Build**
 - [strong] `nav aria-label="Breadcrumb"` holding an `ol`, before `main`; the last item is text with `aria-current="page"` ([APG breadcrumb](https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/); the snippet is [HTML semantics: *Navigation markup*](../../code/html-semantics.md#navigation-markup)).
-- [required] Separators are CSS (`li + li::before`), never list items or text in the markup, so a screen reader neither reads nor counts them.
+- [strong] Separators are CSS (`li + li::before`), never list items or text in the markup, so a screen reader neither reads nor counts them.
 - [contested] On small screens the same list scrolls on one line (`overflow-x: auto`, no wrapping); no `li` is hidden at any width ([breadcrumbs on small screens](#breadcrumbs-on-small-screens) has the build).
 - [required] The trail is generated from the page tree, never hand-written per page, so its labels equal the pages' titles (code-standard rule 29).
 - [required] No keyboard model of its own: links in the tab order (code-standard rule 21 for any script on them).
@@ -172,7 +172,7 @@ One test sorts most decisions here: **does activating it change the address?** I
 - [moderate] In a right rail on wide screens, labelled "On this page", sticky, with the section in view highlighted. In the body (narrow screens, or no rail), not sticky, because a sticky one competes with global navigation ([NN/g table of contents, Wang and Brown 2023](https://www.nngroup.com/articles/table-of-contents/)).
 - [weak] Entries match the section headings word for word and skip none; one level, two at most.
 - [strong] Each link targets a heading's `id`; the address takes the fragment, so a link to a section can be shared.
-- [required] A sticky header must not cover the heading a link jumps to (`scroll-margin-top`).
+- [moderate] A sticky header must not cover the heading a link jumps to (`scroll-margin-top`).
 
 **Cases**
 - A right-rail list has no heading and goes unused → label it "On this page"; NN/g names right-rail blindness as the failure.
@@ -187,7 +187,7 @@ One test sorts most decisions here: **does activating it change the address?** I
 **Build**
 - [required] A `nav` labelled by its visible "On this page" heading (`aria-labelledby`), holding a list of links to the headings' `id`s ([HTML semantics: *Navigation markup*](../../code/html-semantics.md#navigation-markup)).
 - [required] Generated from the page's `h2`s (and `h3`s at most) at build time, so entries cannot drift from headings (code-standard rule 29).
-- [required] `scroll-margin-top` on headings from the sticky header's height token keeps the target visible after the jump.
+- [required] `scroll-margin-top` on headings from the sticky header's height token keeps the target visible after the jump (WCAG 2.4.11).
 - [weak] The section in view, if marked, is set by an `IntersectionObserver` as `aria-current="true"`; the list works without it.
 - [moderate] Sticky only in the wide-screen rail (`position: sticky` inside a media or container query); in the body it is static ([responsive: *Breakpoints*](../../code/responsive.md#breakpoints)).
 

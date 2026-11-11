@@ -97,8 +97,8 @@ Use Figma's native annotations, which the API can read, or the [GitHub Annotatio
 
 **What good looks like**
 - [moderate] The default order needs no annotation; every layout where visual and logical order could differ has one.
-- [required] A dialog says where focus lands on open and returns on close.
-- [required] Sticky regions never entirely cover a focused control.
+- [required] A dialog says where focus lands on open and returns on close (WCAG 2.4.3).
+- [required] Sticky regions never entirely cover a focused control (WCAG 2.4.11).
 
 **How:** [Carbon](https://carbondesignsystem.com/guidelines/accessibility/keyboard/) gives the default: header, main navigation, content "(from left to right, top to bottom)", footer. Annotate the exceptions:
 - [weak] **Multi-column forms:** by row or by column ([Carbon checkbox](https://carbondesignsystem.com/components/checkbox/accessibility)).
@@ -131,8 +131,8 @@ Give each library component a "needs a focus-order annotation: yes or no" line, 
 
 **What good looks like**
 - [required] Every interactive element has a focus state, drawn in the component (figma-standard rule 31).
-- [required] On every surface a screen places it, the ring reaches 3:1 against what is around it.
-- [required] No overlay, clipping or sticky region hides it.
+- [required] On every surface a screen places it, the ring reaches 3:1 against what is around it (WCAG 1.4.11).
+- [required] No overlay, clipping or sticky region hides it (WCAG 2.4.11).
 
 **How:** the ring itself is a library decision. In short: at AA there is no thickness rule, only an indicator ([2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html)) at 3:1 against adjacent colours ([1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)). The rule with numbers is [2.4.13](https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html), AAA (an area of at least a 2px perimeter, 3:1 change contrast): an offset 2px ring passes, a ring inside the component needs about 3px, which is why [Red Hat](https://ux.redhat.com/foundations/interactions/focus-indicators/) uses 3px everywhere. A one-colour ring fails on some surface; a two-colour ring built to technique [C40](https://www.w3.org/WAI/WCAG22/Techniques/css/C40) (two bands of at least 2px, 9:1 or more against each other) closes that. On inputs the border can be the indicator, thickened or recoloured with a measured 3:1 change. A field in error keeps its normal ring and the error border thins ([GOV.UK Frontend #1870](https://github.com/alphagov/govuk-frontend/pull/1870) measured red to black at 2.75:1 and fixed the error, not the ring). Controls that take you somewhere may show focus to keyboard users only ([`:focus-visible`](https://developer.mozilla.org/en-US/docs/Web/CSS/:focus-visible)); controls you work inside, text inputs above all, show it to everyone.
 
@@ -158,9 +158,9 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Colour independence and contrast
 
 **What good looks like**
-- [required] Colour is never the only signal for information, an action, a prompt or a difference.
-- [required] Text meets 4.5:1, large text 3:1, unrounded, against its real surface, in every mode.
-- [required] What identifies a control or its state meets 3:1 against what is next to it.
+- [required] Colour is never the only signal for information, an action, a prompt or a difference (WCAG 1.4.1).
+- [required] Text meets 4.5:1, large text 3:1, unrounded, against its real surface, in every mode (WCAG 1.4.3).
+- [required] What identifies a control or its state meets 3:1 against what is next to it (WCAG 1.4.11).
 - [weak] A disabled control is dimmed and, where it matters, explained.
 
 **How:**
@@ -191,8 +191,8 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 
 **What good looks like**
 - [strong] Every template has a 320px frame designed alongside the widest.
-- [required] Every text container grows with its content; truncated text can be shown whole.
-- [required] Only maps, diagrams and genuinely two-dimensional tables scroll sideways, inside a page that does not.
+- [required] Every text container grows with its content; truncated text can be shown whole (WCAG 1.4.12).
+- [required] Only maps, diagrams and genuinely two-dimensional tables scroll sideways, inside a page that does not (WCAG 1.4.10).
 
 **How:** [1.4.10](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html): no two-dimensional scrolling at 320 CSS px wide (256 high for horizontal content), a 1280px window at 400% zoom. [1.4.4](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html): text to 200% without loss. [1.4.12](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html): nothing lost at line height 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16 times the font size; truncation passes only with a way to see the rest ("if there is no mechanism to show the truncated text, it fails"). In the design: hug every text frame vertically; draw the 320px frame with the longest real string; decide what each multi-column region becomes (stacked, a disclosure, its own scroll region); let buttons and chips wrap to two lines. Breakpoints are code-standard rule 54's.
 
@@ -216,9 +216,9 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Target size
 
 **What good looks like**
-- [required] Every target is at least 24 by 24 CSS px; touch and important targets are 44pt (Apple) or 48dp (Android).
+- [required] Every target is at least 24 by 24 CSS px; touch and important targets are 44pt (Apple) or 48dp (Android) (WCAG 2.5.8).
 - [weak] Visible size and target size are drawn apart: a small icon in a larger frame.
-- [required] Every drag has a drawn single-pointer alternative.
+- [required] Every drag has a drawn single-pointer alternative (WCAG 2.5.7).
 
 **How:** [2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) sets 24 by 24, with exceptions for spacing (a 24px circle on each small target touches no other), an equivalent control, inline targets, browser-drawn controls and essential presentation; its Understanding text suggests 44px ([2.5.5](https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced.html), AAA) for important controls. [Apple](https://developer.apple.com/design/human-interface-guidelines/accessibility) defaults to 44pt on iOS, with about 12pt around bezelled controls and 24pt around unbezelled ones; [Android](https://developer.android.com/guide/topics/ui/accessibility/apps) recommends 48dp. The component floor is figma-standard rule 26; the screen adds spacing, density and drag alternatives. [2.5.7](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html): a sortable list also moves items with up and down controls; a map also pans with buttons.
 
@@ -241,8 +241,8 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Motion and vestibular safety
 
 **What good looks like**
-- [required] Nothing flashes more than three times a second.
-- [required] Nothing moves on its own for over five seconds without pause, stop or hide.
+- [required] Nothing flashes more than three times a second (WCAG 2.3.1).
+- [required] Nothing moves on its own for over five seconds without pause, stop or hide (WCAG 2.2.2).
 - [moderate] Every non-essential animation has a designed reduced form.
 
 **How:** [2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html): no more than three flashes in a second, or below the thresholds. [2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html): automatic moving, blinking or scrolling content lasting over five seconds beside other content needs a way to pause, stop or hide it; auto-updating content needs control of its frequency. [2.3.3](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html) is AAA, but its Understanding text names the harm ("distraction or nausea", dizziness from scroll-triggered motion, parallax as the example); the toolkit treats it as required. Specify the reduced form beside each transition: a slide becomes a cross-fade, a zoom an instant change, parallax static, a loop its first frame. Reduce rather than remove where motion carries meaning. Apple's Reduce Motion cuts "automatic and repetitive animations, including zooming, scaling, and peripheral motion". The code's global reduced-motion block is a backstop, not the design.
@@ -268,8 +268,8 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 **What good looks like**
 - [weak] One main task and one primary action per screen.
 - [weak] Icons that act carry visible labels.
-- [required] No step relies on remembering an earlier one; nothing is asked twice in a process.
-- [required] Help sits in the same place on every page that has it.
+- [required] No step relies on remembering an earlier one; nothing is asked twice in a process (WCAG 3.3.7).
+- [required] Help sits in the same place on every page that has it (WCAG 3.2.6).
 
 **How:** the W3C note [*Making Content Usable for People with Cognitive and Learning Disabilities*](https://www.w3.org/TR/coga-usable/) (COGA) covers barriers WCAG 2.x does not, and is "not required for conformance". Ask its eight objectives at review of a new template or flow: understand what things are and how to use them; find what they need; clear content; avoid and correct mistakes; help users focus; processes that do not rely on memory; help and support; adaptation and personalisation. In design terms:
 - [weak] **Memory:** show what was chosen earlier (a summary panel, steps with their answers).
@@ -297,8 +297,8 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Accessible authentication
 
 **What good looks like**
-- [required] No sign-in step needs the user to remember, manipulate or transcribe without an alternative or an aid.
-- [required] Password managers and paste work in every credential and code field.
+- [required] No sign-in step needs the user to remember, manipulate or transcribe without an alternative or an aid (WCAG 3.3.8).
+- [required] Password managers and paste work in every credential and code field (WCAG 3.3.8).
 
 **How:** [3.3.8](https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html) (AA) forbids a cognitive function test ("A task that requires the user to remember, manipulate, or transcribe information") in authentication unless there is an alternative, an assisting mechanism, object recognition, or the user's own content. Password managers and copy and paste count as mechanisms. Design one code field, or split boxes only if one paste fills them all; a "Show password" control; magic links or passkeys as alternatives.
 
@@ -310,7 +310,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 **Accessibility:** 3.3.8 (AA); 3.3.9 (AAA) also drops the object-recognition and personal-content exceptions. Paste and `autocomplete` in code are [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)'s.
 
 **Build:**
-- [required] `autocomplete="current-password"`, `"new-password"` or `"one-time-code"` on the field, and no script that blocks paste.
+- [required] `autocomplete="current-password"`, `"new-password"` or `"one-time-code"` on the field, and no script that blocks paste (WCAG 3.3.8).
 - [strong] One code `input` with `inputmode="numeric"`; "Show password" is a `button` with `aria-pressed`. Detail: [HTML semantics: forms markup](../../code/html-semantics.md#forms-markup).
 
 **Check:** *Script* — could: on a built page, paste into password and code fields and confirm it lands; on a Figma file, split code inputs on sign-in screens. *Judgement* — does any step ask for recall or transcription without an aid?
@@ -320,8 +320,8 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Error recovery
 
 **What good looks like**
-- [required] Every error is text that names the field and the fix; every input has an error variant with a text slot.
-- [required] Anything that commits money or a legal agreement, or changes or deletes data, can be undone, checked or reviewed first.
+- [required] Every error is text that names the field and the fix; every input has an error variant with a text slot (WCAG 3.3.1).
+- [required] Anything that commits money or a legal agreement, or changes or deletes data, can be undone, checked or reviewed first (WCAG 3.3.4).
 
 **How:** [3.3.1](https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html): an error is described in text; a red border alone fails it and 1.4.1. [3.3.3](https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html): give a known correction unless it compromises security or purpose. [3.3.4](https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html): reversible, checked with a chance to correct, or reviewed and confirmed. The words are [content: error messages](content.md#error-messages); the summary is [forms: error messages and the error summary](../patterns/forms.md#error-messages-and-the-error-summary); when to validate is [interaction: validation timing](interaction.md#error-prevention-and-validation-timing); undo or confirm is [interaction: undo or confirmation](interaction.md#undo-or-confirmation). What this file adds is the design deliverable: every input drawn with an error variant and a text slot.
 
@@ -345,7 +345,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 
 **What good looks like**
 - [strong] No time limit unless it is essential.
-- [required] A session that can expire has a designed warning and a one-action extend.
+- [required] A session that can expire has a designed warning and a one-action extend (WCAG 2.2.1).
 - [strong] Nothing the user must read or act on disappears by itself.
 
 **How:** [2.2.1](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html): each limit can be turned off, adjusted to at least ten times the default, or warned of with at least 20 seconds to extend by a simple action, at least ten times. Real-time events, limits whose extension "would invalidate the activity" and limits over 20 hours are exempt. A toast that vanishes after five seconds is a time limit on reading it ([feedback: toasts](../patterns/feedback.md#toasts)).
@@ -367,9 +367,9 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 ## Alternatives for images, media and charts
 
 **What good looks like**
-- [required] Every image instance on a screen is annotated informative (with its text) or decorative.
-- [required] Every video has a captions control, and captions do not cover essential content.
-- [required] Every chart has its key values or takeaway in text beside it.
+- [required] Every image instance on a screen is annotated informative (with its text) or decorative (WCAG 1.1.1).
+- [required] Every video has a captions control, and captions do not cover essential content (WCAG 1.2.2).
+- [required] Every chart has its key values or takeaway in text beside it (WCAG 1.1.1).
 
 **How:** [1.1.1](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html): non-text content has a text alternative serving the same purpose, and decoration can be ignored. Only whoever knows why the image is there can decide, and the same image may need different text in different places, so it is a per-screen annotation, never an asset property. Write the purpose: "Findings fell from 120 to 40 after the audit", not "bar chart". [1.2.2](https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html): captions for prerecorded audio in synchronised media. Text values beside a chart serve 1.1.1 and exempt its marks from 1.4.11; chart colour is the `dataviz` skill's.
 

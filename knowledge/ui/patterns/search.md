@@ -49,7 +49,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 
 **How**
 - [weak] **Width.** Wide enough "to contain the typical query" ([NN/g](https://www.nngroup.com/articles/search-visible-and-simple/)); NN/g gives no character count. Size it from the queries this product gets (the longest common component or token name, plus a margin), so a typical query never scrolls inside the box.
-- [required] **Label.** A visible label or a label the screen reader reads; a magnifier icon and a placeholder are not a label.
+- [required] **Label.** A visible label or a label the screen reader reads; a magnifier icon and a placeholder are not a label (WCAG 4.1.2).
 - [weak] **Placeholder** hints at what can be searched: "Useful and short text hinting at what the user can search for" ([Carbon](https://carbondesignsystem.com/components/search/usage/)). "Search components" or "Name or token", never "Type here…", never an example the reader might mistake for an entered value.
 - [weak] **Clear button** appears once there is text and clears it ([Carbon](https://carbondesignsystem.com/components/search/usage/)); it has a name.
 - [weak] **Submit.** A site search has a submit button (an icon with a name is enough); a list search that runs as you type needs none, but its form still submits on Enter without script.
@@ -70,7 +70,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 - [required] `<label>` plus `input type="search"`; a visually hidden label is acceptable where the design shows none, never `placeholder` alone ([HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
 - [moderate] Width in `ch` or `rem` from the typical query (`inline-size: min(100%, 32ch)`), so it scales with the reader's font size ([responsive: *Zoom and reflow*](../../code/responsive.md#zoom-and-reflow)).
 - [required] The designed clear button is `button type="button" aria-label="Clear search"`, rendered while the field has a value (`:placeholder-shown` hides it in CSS), and returns focus to the input; hide the browser's own cross only when drawing one (`::-webkit-search-cancel-button`) (code-standard rule 18).
-- [required] Submit is a `button type="submit"`, named when icon-only.
+- [required] Submit is a `button type="submit"`, named when icon-only (code-standard rule 18).
 - [required] States as pseudo-classes: `:hover`, `:focus-visible` on the input, filled as `:not(:placeholder-shown)`, `disabled` the control's own (code-standard rule 9, code-standard rule 62).
 - [required] The input follows the theme with `color-scheme` (code-standard rule 16).
 
@@ -198,7 +198,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 - [weak] Don't highlight in a list search that shows whole names a few characters long; the match is the row.
 
 **How**
-- [required] Mark the matched text with `mark`, drawn as a background or a weight change that reads in both themes, and never by colour alone.
+- [required] Mark the matched text with `mark`, drawn as a background or a weight change that reads in both themes, and never by colour alone (WCAG 1.4.1).
 - [moderate] In autocomplete, emphasise the predicted part, the reverse of results ([Baymard](https://baymard.com/blog/autocomplete-design)).
 - [weak] Highlight whole matched terms, case-insensitively; don't highlight inside the result's link text so heavily that it stops reading as a link.
 
@@ -230,7 +230,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 - [weak] Don't create a history entry per keystroke ([ux: state persistence and restore](../design/ux.md#state-persistence-and-restore)).
 
 **How**
-- [required] A site search is a GET form whose input is named `q`; the results page reads it. Without script it still works.
+- [required] A site search is a GET form whose input is named `q`; the results page reads it. Without script it still works (code-standard rule 20).
 - [weak] A list search replaces the history entry while typing and pushes one when the query settles or is submitted, so Back undoes the search as one step.
 - [weak] The query combines with the facets in one address (`?q=button&level=error`).
 - [weak] Clearing the search removes the parameter.
@@ -258,7 +258,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 ## Keyboard
 
 **Use when / don't use**
-- [required] Every search is fully usable from the keyboard: reach it, type, submit, move through suggestions, clear.
+- [required] Every search is fully usable from the keyboard: reach it, type, submit, move through suggestions, clear (WCAG 2.1.1).
 - [weak] A single-key shortcut to focus search suits tools used daily; GitHub uses S or / to "Focus the search bar" ([GitHub keyboard shortcuts](https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts)).
 
 **How**

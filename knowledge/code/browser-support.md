@@ -56,7 +56,7 @@ Which platform features a front end can use, and what it does where one is missi
   @supports selector(:has(+ *)) { /* parent-state styles */ }
   ```
 
-- [required] The cascade is its own fallback: an unknown property or value is ignored, so a declaration followed by its newer form works without a query (`height: 100vh; height: 100dvh;`).
+- [required] The cascade is its own fallback: an unknown property or value is ignored, so a declaration followed by its newer form works without a query (`height: 100vh; height: 100dvh;`) (CSS).
 - [required] In script: `if ('showPopover' in HTMLElement.prototype)`, `CSS.supports('anchor-name: --a')`. A missing API leaves the HTML working (code-standard rule 20).
 - [required] The no-script and the old-browser paths are one path: the platform behaviour code-standard rule 20 requires is also the fallback.
 
@@ -112,7 +112,7 @@ Which platform features a front end can use, and what it does where one is missi
 **What good looks like**
 - [moderate] Every change that touches layout, forms or behaviour is seen in all three engines: Blink (Chrome, Edge), Gecko (Firefox) and WebKit (Safari, and every browser on iOS).
 - [moderate] Automated browser tests run in all three; manual checks cover the devices the audience uses.
-- [required] Each run pins what it reads, so a failure is the code's and not the machine's.
+- [required] Each run pins what it reads, so a failure is the code's and not the machine's (code-standard rule 35).
 
 **How**
 - [moderate] [Playwright](https://playwright.dev/docs/browsers) and similar runners drive Chromium, Firefox and WebKit from one test; run the end-to-end suite on each ([testing](testing.md)).

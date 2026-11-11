@@ -97,8 +97,8 @@ How a front end is tested and linted so that a green run means the page works: w
 ## Testing the rendered page, not a harness
 
 **What good looks like**
-- [required] The last check before "done" opens the real route, with real data and the real session, at the widths the design gives.
-- [required] A story or fixture is a tool for building, never the evidence of the finished page.
+- [required] The last check before "done" opens the real route, with real data and the real session, at the widths the design gives (code-standard rule 56).
+- [required] A story or fixture is a tool for building, never the evidence of the finished page (code-standard rule 56).
 
 **How**
 - [required] Stories render a component with props written to match the design, so a loop over stories compares the design to a copy of itself; code-standard rule 56 owns this and says what to do.
@@ -126,7 +126,7 @@ How a front end is tested and linted so that a green run means the page works: w
 **What good looks like**
 - [weak] Stylesheets, scripts and rendered HTML each have a linter in CI, and a lint error fails the build.
 - [weak] Warnings are either errors or off; a warning nobody reads is noise.
-- [required] The toolkit's own gates run for the rules a generic linter cannot know.
+- [required] The toolkit's own gates run for the rules a generic linter cannot know (code-standard rule 59).
 
 **How**
 - [weak] [Stylelint](https://stylelint.io/) for CSS and Sass (syntax errors, unknown properties, physical properties where logical ones are wanted, [i18n](i18n.md)); [ESLint](https://eslint.org/) for JavaScript (unused symbols, unsafe sinks such as `innerHTML`, [security](security.md)); the [Nu Html Checker](https://validator.github.io/validator/) (`vnu`) for the rendered HTML, which catches duplicate ids, invalid nesting and bad attributes.
@@ -151,13 +151,13 @@ How a front end is tested and linted so that a green run means the page works: w
 ## A check that reports "not run"
 
 **What good looks like**
-- [required] Every check has three outcomes: pass, fail, and did not run, and the third is loud and fails the build.
-- [required] Every check states what it examined (pages, swaps, rules) so a zero is visibly a zero of something.
+- [required] Every check has three outcomes: pass, fail, and did not run, and the third is loud and fails the build (code-standard rule 30).
+- [required] Every check states what it examined (pages, swaps, rules) so a zero is visibly a zero of something (code-standard rule 30).
 
 **How**
 - [required] code-standard rule 30 applies to every check a project writes, the toolkit's own included.
-- [required] Print the count examined: "checked 14 pages, 3 swaps". A check with no browser, no server or no input exits non-zero and says which.
-- [required] A gate whose inputs a project does not supply prints *not run*, never *ok*; `tools/project-check/check.mjs` reports it as "RED — not run:".
+- [required] Print the count examined: "checked 14 pages, 3 swaps". A check with no browser, no server or no input exits non-zero and says which (code-standard rule 30).
+- [required] A gate whose inputs a project does not supply prints *not run*, never *ok*; `tools/project-check/check.mjs` reports it as "RED — not run:" (code-standard rule 30).
 - [required] Prove each check fires: feed it a known violation and assert it fails (`tools/css-lint/test-lint.mjs` does this for every stylesheet gate; code-standard rule 41).
 - [weak] A skip names what it looked for; the lesson is in [candidates](candidates.md) ("A skip is only for want of input").
 
@@ -179,8 +179,8 @@ How a front end is tested and linted so that a green run means the page works: w
 
 **What good looks like**
 - [weak] CI runs the same check a developer runs locally, from one entry point.
-- [required] Each gate's exit status reaches CI unaltered, and the job fails on red.
-- [required] The environment is pinned: browser version, fonts, locale, time zone, viewport, theme.
+- [required] Each gate's exit status reaches CI unaltered, and the job fails on red (code-standard rule 49).
+- [required] The environment is pinned: browser version, fonts, locale, time zone, viewport, theme (code-standard rule 35).
 
 **How**
 - [weak] One command (`bin/check` or the project's equivalent) runs everything; CI calls it, never a parallel list of steps that drifts.

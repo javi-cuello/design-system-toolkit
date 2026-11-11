@@ -10,7 +10,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 - [strong] One page grid: a capped content width, a gutter either side, one element that centres it.
 - [strong] A few breakpoints used as a ruler, chosen where the layout changes, never per device.
 - [moderate] Prose sits in a narrower column than tables and dashboards.
-- [required] At 320 CSS pixels wide the page scrolls in one direction only.
+- [required] At 320 CSS pixels wide the page scrolls in one direction only (WCAG 1.4.10).
 
 **How**
 - [weak] Start with one column and add columns only when the content earns them. [GOV.UK layout](https://design-system.service.gov.uk/styles/layout/): "Design for small screens first, starting with a single-column layout", and for different screen sizes "rather than specific devices". Its default maximum page width is 1020px; its default reading column is two-thirds.
@@ -47,7 +47,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 ## Spacing scale and proximity
 
 **What good looks like**
-- [required] Every gap, padding and margin comes from one scale, through tokens.
+- [required] Every gap, padding and margin comes from one scale, through tokens (code-standard rule 22).
 - [moderate] Gap size says relatedness: the tighter the gap, the closer the relationship.
 - [required] A heading sits closer to its own content than to the section above it (design-standard rule 7).
 - [weak] Siblings of one kind share one gap, so the page has a rhythm.
@@ -55,7 +55,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 **How**
 - [moderate] One scale on a 4 or 8 base. [Carbon](https://carbondesignsystem.com/elements/spacing/overview/): 2, 4, 8, 12, 16, 24, 32, 40, 48, 64, 80, 96, 160px, and "deviating from the spacing scales should be avoided whenever possible". [Atlassian](https://atlassian.design/foundations/spacing) builds on 8px and says "Group related items close together".
 - [weak] Order the gaps by level before choosing values: inside a control < between items in a group < heading to its content < between groups < between sections. Each step up is a visibly larger value on the scale.
-- [required] Space above a heading is strictly greater than space below it. A heading as far from its text as from the next block belongs to neither.
+- [required] Space above a heading is strictly greater than space below it. A heading as far from its text as from the next block belongs to neither (design-standard rule 7).
 - [strong] A scale guarantees only that values exist. The bug in design-standard rule 7's evidence had every value on the scale: one shared 24px gap for heading, line and table. Check the relation as well as the value.
 
 **Cases**
@@ -182,13 +182,13 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 **What good looks like**
 - [strong] Components use role tokens (text, background, border, icon by meaning), never palette steps.
 - [moderate] Each status colour means one thing and appears only for that meaning.
-- [required] Nothing is told apart by colour alone: a status has a word or an icon too.
+- [required] Nothing is told apart by colour alone: a status has a word or an icon too (WCAG 1.4.1).
 - [weak] The accent marks action; neutral greys carry the rest.
 
 **How**
 - [strong] Two layers: a raw palette, and roles named by category and meaning, the grammar [Atlassian](https://atlassian.design/foundations/color) uses (`color.<category>.<role>[.<variant>][.<state>]`). Components bind only to roles. Token tiers and generation: [tokens and theming in code](../../code/tokens.md).
 - [moderate] Status roles: danger, warning, success, information, plus neutral. [Apple](https://developer.apple.com/design/human-interface-guidelines/color): "Avoid using the same color to mean different things." A red used for a brand flourish and for errors breaks both.
-- [required] Pair every status colour with a second cue: an icon of its own shape, a word ("Error", "Missing"), a pattern or a position.
+- [required] Pair every status colour with a second cue: an icon of its own shape, a word ("Error", "Missing"), a pattern or a position (WCAG 1.4.1).
 - [required] Links in running text carry an underline; colour alone needs a measured 3:1 against surrounding text ([G183](https://www.w3.org/WAI/WCAG22/Techniques/general/G183)), and an underline needs nothing.
 - [weak] The use of colour in emphasis is a budget (see *Emphasis*); the use of colour in charts has its own palette ([data visualisation: colour by job](../patterns/data-visualisation.md#colour-by-job)).
 
@@ -220,7 +220,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 **What good looks like**
 - [moderate] One set of role tokens, with a designed value per theme.
 - [moderate] Dark surfaces get lighter as they rise; shadows are not relied on in dark.
-- [required] Contrast is measured in every theme, not inferred from the light one.
+- [required] Contrast is measured in every theme, not inferred from the light one (WCAG 1.4.3).
 - [weak] Images and illustrations are checked, and given a dark asset where they fail.
 
 **How**
@@ -369,7 +369,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 **What good looks like**
 - [weak] Comfortable by default; compact as an option for data-heavy views.
 - [weak] Density changes spacing; type stays the same.
-- [required] Targets stay at or above the minimum in compact.
+- [required] Targets stay at or above the minimum in compact (WCAG 2.5.8).
 
 **How**
 - [weak] [Cloudscape](https://cloudscape.design/foundation/visual-foundation/content-density/): comfortable is "active by default"; compact is "for data intensive views"; in compact "the spacing scale is reduced in increments of 4"; users choose.
@@ -489,7 +489,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 
 **How**
 - [weak] Elevation: [Atlassian](https://atlassian.design/foundations/elevation) names sunken, default, raised and overlay, pairs raised and overlay with their shadows, and says "don't use to group content when a border or white space would suffice."
-- [required] Borders separate where space cannot, and identify a control's edge. A control's boundary that identifies it needs 3:1 against its surroundings; a decorative divider does not.
+- [required] Borders separate where space cannot, and identify a control's edge. A control's boundary that identifies it needs 3:1 against its surroundings; a decorative divider does not (WCAG 1.4.11).
 - [weak] Radius by role: [Atlassian](https://atlassian.design/foundations/radius) maps 2px to badges and checkboxes, 4px to tags, 6px to buttons and inputs, 8px to cards and menus, 12px to modals, full to avatars and pills, with a focus radius "always +2px greater". Take the project's tokens; keep the role mapping.
 - [weak] Nested radius: inner radius = outer radius − padding, so a 12px card with 8px padding holds 4px children (practitioner technique, commentary).
 - [weak] Pick one shape language: pills and squares mixed in one toolbar look collected.
@@ -522,7 +522,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 **What good looks like**
 - [moderate] One icon set, one stroke weight, one perspective.
 - [moderate] A few sizes paired to the type ramp; icon colour matches its text.
-- [required] An icon that carries meaning has a text label or an accessible name.
+- [required] An icon that carries meaning has a text label or an accessible name (code-standard rule 18).
 - [required] An icon inside a control keeps the control's inset (design-standard rule 9).
 
 **How**
@@ -564,7 +564,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 - [weak] An image appears only when it does a job words cannot.
 - [weak] The text carries all the information; the image supports it.
 - [moderate] Illustrations are simple and work in both themes.
-- [required] Every image has an `alt`, empty when decorative.
+- [required] Every image has an `alt`, empty when decorative (WCAG 1.1.1).
 
 **How**
 - [weak] [GOV.UK images](https://design-system.service.gov.uk/styles/images/): "Only use images if there's a real user need", "written content must contain all the information the user needs", and illustrations "show a simplified image of something complex."
@@ -609,7 +609,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 - [weak] Easing: named curves for standard, entrance and exit; productive for tools and docs. Carbon: "Reserve expressive motion for occasional, important moments."
 - [weak] [Apple](https://developer.apple.com/design/human-interface-guidelines/motion): "Don't add motion for the sake of adding motion", "Make motion optional", and avoid motion on frequent interactions.
 - [weak] Reduced motion: replace movement with a fade or an instant change; do not just shorten it. The base layer holds the `prefers-reduced-motion` block once (see [accessibility in code](../../code/accessibility.md)).
-- [required] Nothing flashes more than three times a second; anything moving on its own for more than five seconds can be paused.
+- [required] Nothing flashes more than three times a second; anything moving on its own for more than five seconds can be paused (WCAG 2.3.1).
 
 **Cases**
 - A filter change slides the whole result list in → no motion, or a short fade; the reader is reading, and the layout holds still (design-standard rule 2).
@@ -664,15 +664,15 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 **What good looks like**
 - [moderate] Every interactive control draws rest, hover, focus, pressed and disabled, plus selected where it holds a value.
 - [required] Each state differs visibly from rest (figma-standard rule 31); pressed is stronger than hover.
-- [required] Focus is a ring a keyboard user can see on every surface, separate from hover.
-- [required] Selected is shown by more than colour.
+- [required] Focus is a ring a keyboard user can see on every surface, separate from hover (WCAG 2.4.7).
+- [required] Selected is shown by more than colour (WCAG 1.4.1).
 
 **How**
 - [moderate] *Hover:* a hint. A translucent state layer over the control in its content colour, with opacity as a token: [Material](https://github.com/material-components/material-web/blob/main/tokens/versions/latest/sass/_md-sys-state.scss) uses 0.08, [eBay](https://playbook.ebay.com/design-system/tokens/opacity) 4%. Visible on every surface it sits on; never the only signifier, since touch and keyboard have no hover.
 - [moderate] *Focus:* its own ring, outside the state layer. A 2px ring outside the edge with an offset, or 3px when drawn inside, at 3:1 against what it sits on; an offset 2px ring is the passing example of [2.4.13](https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html), and an inside ring encloses less area. On a saturated primary button or a second theme, a two-colour ring (two bands of at least 2px). On a text input, the border is the indicator: thicken it or recolour it with a measured change, and show it on click as well as on tab. A focused errored field keeps the normal focus treatment; make the error border quieter instead.
 - [moderate] *Pressed:* a stronger state layer (Material 0.10, eBay 8%) or a darker step; immediate, even if the result is slow.
 - [required] *Disabled:* reduced emphasis, dimmed once by the host (code-standard rule 62), no hover response. When to disable at all is [interaction: disabled, hidden or read-only](interaction.md#disabled-hidden-or-read-only).
-- [required] *Selected:* a persistent change with a second cue: a check, a fill plus a weight change, an underline on a tab. Selected and focused can coincide and must both remain visible.
+- [required] *Selected:* a persistent change with a second cue: a check, a fill plus a weight change, an underline on a tab. Selected and focused can coincide and must both remain visible (WCAG 1.4.1).
 - [weak] *Read-only:* readable at full contrast, visibly not editable; a separate state from disabled ([Carbon](https://carbondesignsystem.com/patterns/disabled-states/)).
 - [required] Variant mapping in code: code-standard rule 9; a style switched off must compute off (code-standard rule 40).
 
@@ -704,9 +704,9 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 ## Consistency and reuse of the system
 
 **What good looks like**
-- [required] Every element on a page is a system component or built only from system tokens.
+- [strong] Every element on a page is a system component or built only from system tokens.
 - [moderate] The same problem gets the same solution everywhere; a divergence states its reason.
-- [required] No one-off sizes, colours, radii or spacings.
+- [required] No one-off sizes, colours, radii or spacings (code-standard rule 22).
 - [moderate] Brand lives in the accent on the primary action, the typeface and the voice.
 
 **How**

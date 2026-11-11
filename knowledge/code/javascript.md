@@ -8,7 +8,7 @@ How a page's scripts are written so that the page works first and is enhanced se
 
 **What good looks like**
 - [required] The page does its job as HTML: links navigate, forms submit, content is readable, before any script runs.
-- [required] The script adds speed and comfort to a page that already works, and when it fails the page falls back to that working state, never to a broken half.
+- [required] The script adds speed and comfort to a page that already works, and when it fails the page falls back to that working state, never to a broken half (code-standard rule 20).
 - [moderate] What the script hides, it hides itself; the server never ships content hidden in the hope a script will reveal it.
 
 **How**
@@ -68,9 +68,9 @@ How a page's scripts are written so that the page works first and is enhanced se
 ## One implementation per behaviour
 
 **What good looks like**
-- [required] Filter, tabs, view toggle, modal opening, live swap: each is written once and called from every page that needs it.
-- [required] A page passes what differs (the selector, the endpoint, the label) as data; it never copies the code.
-- [required] A fix to the behaviour lands everywhere at once.
+- [required] Filter, tabs, view toggle, modal opening, live swap: each is written once and called from every page that needs it (code-standard rule 36).
+- [required] A page passes what differs (the selector, the endpoint, the label) as data; it never copies the code (code-standard rule 36).
+- [required] A fix to the behaviour lands everywhere at once (code-standard rule 36).
 
 **How**
 - [required] One module per behaviour, initialised from data attributes: `for (const el of document.querySelectorAll('[data-tabs]')) tabs(el);`. The template carries the markup and the hook; the script carries the behaviour (code-standard rule 36).
@@ -96,8 +96,8 @@ How a page's scripts are written so that the page works first and is enhanced se
 
 **What good looks like**
 - [strong] One listener on a persistent container handles every item inside it, including items rendered later.
-- [required] Handlers find their target by a data-attribute hook, not by a class or a position.
-- [required] A click the page intercepts still lets the browser open new tabs and windows.
+- [required] Handlers find their target by a data-attribute hook, not by a class or a position (code-standard rule 6).
+- [required] A click the page intercepts still lets the browser open new tabs and windows (code-standard rule 21).
 
 **How**
 - [strong] **Delegate:** listen on the container and resolve the item with `closest()` ([MDN event bubbling](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling), [`closest()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/closest)):
@@ -105,7 +105,7 @@ How a page's scripts are written so that the page works first and is enhanced se
 - [required] **Hooks** are data attributes (code-standard rule 6), checked for collisions first (code-standard rule 39).
 - [required] **Modified clicks** go to the browser (code-standard rule 21); the early return is in [accessibility: keyboard access and modified clicks](accessibility.md#keyboard-access-and-modified-clicks). Better still, a stretched link needs no handler (code-standard rule 21's evidence).
 - [strong] **Clean-up:** pass `{ signal }` from an `AbortController` and call `abort()` to remove every listener a widget added at once ([MDN AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController)).
-- [required] **Listen to `submit`, not the button's `click`**, so Enter in a field and assistive technology both trigger it.
+- [required] **Listen to `submit`, not the button's `click`**, so Enter in a field and assistive technology both trigger it (HTML).
 
 **Cases**
 - Rows re-rendered by a poll lose their click handlers → delegate from the table, which persists; the rows can be replaced freely.
@@ -154,7 +154,7 @@ How a page's scripts are written so that the page works first and is enhanced se
 ## Re-rendering without losing focus or scroll
 
 **What good looks like**
-- [required] A list replaced by a filter, a sort or a poll keeps the reader's focus and scroll position.
+- [required] A list replaced by a filter, a sort or a poll keeps the reader's focus and scroll position (code-standard rule 14).
 - [weak] The region that changes persists; only its contents change.
 - [weak] An unchanged item is left alone rather than re-created.
 
@@ -183,8 +183,8 @@ How a page's scripts are written so that the page works first and is enhanced se
 
 **What good looks like**
 - [moderate] The page updates at a rate the data needs, pauses when nobody is looking, and stops hammering a server that is failing.
-- [required] An update changes only what changed and leaves the reader where they were.
-- [required] The reader can tell how fresh the data is and can pause updates that move content.
+- [required] An update changes only what changed and leaves the reader where they were (code-standard rule 14).
+- [required] The reader can tell how fresh the data is and can pause updates that move content (WCAG 2.2.2).
 
 **How**
 - [weak] **Schedule the next poll after the last one finishes** (`setTimeout` in a chain), never `setInterval`, so a slow response never overlaps the next.
@@ -215,7 +215,7 @@ How a page's scripts are written so that the page works first and is enhanced se
 
 **What good looks like**
 - [moderate] A control that saves itself (a switch, a segmented control, a notes field) sends its change at once or after a pause, and says "Saving…", "Saved" or "Couldn't save. Retry" beside itself.
-- [required] The value the reader entered stays on screen when the save fails.
+- [moderate] The value the reader entered stays on screen when the save fails.
 - [strong] An explicit form warns before the reader leaves with unsaved changes, and only then.
 - [weak] It implements [interaction: saving: explicit or automatic](../ui/design/interaction.md#saving-explicit-or-automatic).
 
@@ -255,9 +255,9 @@ How a page's scripts are written so that the page works first and is enhanced se
 ## Dragging and its single-pointer alternative
 
 **What good looks like**
-- [required] Every drag (reorder, move between columns, resize, crop) has a visible control that does the same job with a click or a key.
+- [required] Every drag (reorder, move between columns, resize, crop) has a visible control that does the same job with a click or a key (WCAG 2.5.7).
 - [weak] A drag completes on release and is cancelled by Escape or a drop outside a target.
-- [required] The new position is announced.
+- [required] The new position is announced (WCAG 4.1.3).
 - [weak] It implements [interaction: gestures and drag](../ui/design/interaction.md#gestures-and-drag).
 
 **How**
@@ -347,8 +347,8 @@ How a page's scripts are written so that the page works first and is enhanced se
 
 **What good looks like**
 - [moderate] The server renders the page as HTML; the client takes over only the components that hold state or behaviour.
-- [required] A component crosses to the client because of its own behaviour, not a caller's.
-- [required] Only serialisable values cross the boundary.
+- [required] A component crosses to the client because of its own behaviour, not a caller's (code-standard rule 47).
+- [required] Only serialisable values cross the boundary (code-standard rule 43).
 
 **How**
 - [weak] A React component's own shape (its props, `ref`, events, slots, stories) is [react.md](react.md); this section is where its boundary goes.
@@ -377,8 +377,8 @@ How a page's scripts are written so that the page works first and is enhanced se
 
 **What good looks like**
 - [required] A custom element is registered only for behaviour HTML has no element for, after `details`, `dialog` and `popover` are ruled out.
-- [required] The custom element wraps the real control; the control keeps the behaviour and semantics.
-- [required] The page reads correctly before the element is defined.
+- [required] The custom element wraps the real control; the control keeps the behaviour and semantics (code-standard rule 8).
+- [required] The page reads correctly before the element is defined (code-standard rule 1).
 
 **How**
 - [required] code-standard rule 8 sets the three kinds; most components are visual (a custom element with CSS and no script) or native interactive (a wrapper round the real control).
@@ -405,9 +405,9 @@ How a page's scripts are written so that the page works first and is enhanced se
 ## Errors and an envelope's success flag
 
 **What good looks like**
-- [required] Every request's failure is distinguished from an empty answer.
-- [required] The reader sees what failed and what they can do, and work in progress is kept.
-- [required] A failure that knows its cause carries the cause to the surface.
+- [required] Every request's failure is distinguished from an empty answer (code-standard rule 12).
+- [moderate] The reader sees what failed and what they can do, and work in progress is kept.
+- [required] A failure that knows its cause carries the cause to the surface (code-standard rule 61).
 
 **How**
 - [required] **Check the response before the body:** `fetch` resolves on a 404 or 500; read `response.ok` (status 200 to 299) first ([MDN `Response.ok`](https://developer.mozilla.org/en-US/docs/Web/API/Response/ok)).

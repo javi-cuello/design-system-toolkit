@@ -9,7 +9,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 **What good looks like**
 - [moderate] Every screen type has one need written in the user's words: "I need to… so that…".
 - [moderate] Every card, tab, column and action can point at that need; what cannot is removed.
-- [required] The screen's title names its subject, and the first thing on it answers the need.
+- [moderate] The screen's title names its subject, and the first thing on it answers the need.
 - [weak] Different audiences with different needs get different first screens.
 
 **How.** Before drawing or building, write the need line for the screen in the format the [GOV.UK Service Manual](https://www.gov.uk/service-manual/user-research/start-by-learning-user-needs) gives ("I need/want/expect to…", then "So that…"), in words users would use themselves. Keep it in the template's spec or source comment where the next reviewer finds it. Order the screen by it: the answer to the need first, the supporting detail after, everything else one step away (see *Progressive disclosure*). When a stakeholder asks for an element, ask which need it serves; GOV.UK's [first design principle](https://www.gov.uk/guidance/government-design-principles) warns that "what they ask for isn't always what they need". Where research time is short, watching two or three real users do the task once beats an imagined user (commentary).
@@ -93,7 +93,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 
 **What good looks like**
 - [strong] The same problem gets the same solution on every screen: one filter bar, one dialog shape, one name per thing.
-- [required] Landmarks that sibling screens share sit at the same place and size on each.
+- [required] Landmarks that sibling screens share sit at the same place and size on each (WCAG 3.2.3).
 - [moderate] Conventions people know from elsewhere are followed unless there is a stated reason.
 - [weak] A departure is documented with its reason.
 
@@ -122,7 +122,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 
 **What good looks like**
 - [moderate] The product reads what it already knows (the system, the project's settings) before asking.
-- [required] What must be asked is asked once per journey; later steps carry it forward and let it be changed.
+- [required] What must be asked is asked once per journey; later steps carry it forward and let it be changed (WCAG 3.3.7).
 - [weak] Where the set of answers is known, people pick from it instead of typing.
 - [moderate] Options, recent values and current choices are visible, not remembered.
 
@@ -137,7 +137,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 **Accessibility.** 3.3.7 Redundant Entry (A): information entered earlier in the same process is auto-populated or selectable, except where re-entry is essential, for security, or no longer valid ([W3C Understanding](https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html)). 3.3.8 Accessible Authentication (Minimum) (AA): no memory or transcription test to sign in. 1.3.5 Identify Input Purpose (AA): personal fields declare their purpose so browsers can fill them. 3.3.2 Labels or Instructions (A). A visible label carries the name and a hint is a description, code-standard rule 15.
 
 **Build.**
-- [required] Personal fields carry `autocomplete` with their purpose token; known answers are a `select`, radios or a `datalist`, not a free `input`.
+- [required] Personal fields carry `autocomplete` with their purpose token; known answers are a `select`, radios or a `datalist`, not a free `input` (WCAG 1.3.5).
 - [required] Carried-forward values are pre-filled `value`s the reader can change; the hint is `aria-describedby`, never part of the label (code-standard rule 15).
 - [weak] Markup: [HTML semantics: forms markup](../../code/html-semantics.md#forms-markup).
 
@@ -403,7 +403,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 **What good looks like**
 - [weak] Screens are clear enough to need little help; help sits where the question arises.
 - [weak] Help is searchable, task-shaped, in concrete steps, and short.
-- [required] Help that repeats across pages sits in the same place on each.
+- [required] Help that repeats across pages sits in the same place on each (WCAG 3.2.6).
 - [weak] Every unfamiliar term and every finding links to an explanation that resolves.
 
 **How.** Aim first for a screen that needs no help, then add contextual "pull" help the reader asks for over messages pushed at everyone ([NN/g heuristic 10](https://www.nngroup.com/articles/help-and-documentation/): help should be "easy to search, focused on the user's task, list concrete steps to be carried out, and not be too large"). Link each finding to what its check means and how to fix it; that is reactive help at the moment of need. Write procedures as numbered steps. Keep the help link, contact or self-help entry in the same place in every template (3.2.6). Treat a heavily used help link as a sign the screen needs fixing (commentary). Stale inline help is worse than none because it is trusted, so help that names a rule or a figure cites it rather than copying it.
@@ -433,7 +433,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 - [moderate] Every press is acknowledged at once, even when the result takes longer.
 - [moderate] Fast responses show no loading indicator at all.
 - [moderate] Waits of a few seconds show an indeterminate indicator; longer ones show progress and a way to stop or carry on elsewhere.
-- [required] Nothing moves when content arrives.
+- [required] Nothing moves when content arrives (design-standard rule 2).
 
 **How.** The thresholds (instant, about a second, ten seconds) and what each shows are [interaction: response times](interaction.md#response-times-and-perceived-performance); the indicators are [feedback: loading](../patterns/feedback.md#loading). Keep space for what loads late (design-standard rule 2). Across screens, perceived speed is also order: render the primary content first and let secondary sections follow (*Degraded states*).
 

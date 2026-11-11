@@ -5,7 +5,7 @@ How design tokens reach a stylesheet and how themes and modes switch them: the t
 ## Three tiers
 
 **What good looks like**
-- [required] **Components consume semantic tokens only.** A primitive in a component stylesheet is the defect: it is how a system ends up with fourteen greys and no way to theme any of them.
+- [moderate] **Components consume semantic tokens only.** A primitive in a component stylesheet is the defect: it is how a system ends up with fourteen greys and no way to theme any of them.
 - [weak] A component tier exists only where a component exposes a knob.
 - [required] Every token is named by its design-file path (code-standard rule 52), so a designer and an engineer search for the same word.
 
@@ -42,7 +42,7 @@ component   --button-bg: var(--colour-action-primary);  a knob; optional
 **What good looks like**
 - [required] A component token reads component, then the layer it paints, then the property, with the variant and state as modifiers on the leaf (figma-standard rule 49).
 - [weak] Every component token aliases a semantic token; a brand re-points the same name and never adds one.
-- [required] The Figma path, the custom property and the selector that reads it can each be derived from the other two.
+- [required] The Figma path, the custom property and the selector that reads it can each be derived from the other two (code-standard rule 52).
 
 **How**
 
@@ -117,7 +117,7 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 **What good looks like**
 - [required] Token stylesheets come from one build, in every project (code-standard rule 51): what the design file determines is generated (toolkit-standard §D 23).
 - [required] The output is committed and the check regenerates it beside the committed copy and diffs (code-standard rule 23).
-- [required] A wrong token is fixed in the design file and regenerated, never patched in the output.
+- [required] A wrong token is fixed in the design file and regenerated, never patched in the output (code-standard rule 23).
 
 **How**
 - [weak] The pipeline: the design file's snapshot becomes DTCG files in `dtcg/` (one folder per collection, one file per mode), and Style Dictionary writes the stylesheets through `tools/tokens/build.mjs`, which `tools/tokens/build-tokens.mjs` implements. A repo's `bin/tokens` calls it and nothing else; `bin/tokens --check` regenerates beside and diffs.
@@ -143,10 +143,10 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 
 **What good looks like**
 - [required] A semantic token in the output is `var(--that-primitive)`, not the primitive's resolved value (code-standard rule 53).
-- [required] A mode re-points one tier; every alias follows.
+- [required] A mode re-points one tier; every alias follows (code-standard rule 53).
 
 **How**
-- [required] DTCG writes an alias as `{group.token}`, which "always resolves to the `$value` property of the target token", and tools keep references until a value is needed ([DTCG 2025.10](https://www.designtokens.org/tr/2025.10/format/)).
+- [required] DTCG writes an alias as `{group.token}`, which "always resolves to the `$value` property of the target token", and tools keep references until a value is needed ([DTCG 2025.10](https://www.designtokens.org/tr/2025.10/format/)) (code-standard rule 53).
 - [weak] Style Dictionary's `outputReferences: true` writes `--color-danger: var(--color-red);` instead of the hex, "useful for outputting themeable and dynamic code" ([Style Dictionary formats](https://styledictionary.com/reference/hooks/formats/)). The token build sets it.
 - [weak] Caveats from the same page: a reference to a filtered-out token, or a transitively transformed one, cannot be kept; the build resolves those, and they are the places a mode will not follow.
 
@@ -171,9 +171,9 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 ## Custom properties or Sass variables
 
 **What good looks like**
-- [required] Every design token is a custom property.
-- [required] Build-time inputs (breakpoint widths, a mixin's configuration, maths inputs) are Sass variables.
-- [required] The values that change at a breakpoint are custom properties re-pointed inside one breakpoint block.
+- [required] Every design token is a custom property (code-standard rule 52).
+- [required] Build-time inputs (breakpoint widths, a mixin's configuration, maths inputs) are Sass variables (code-standard rule 54).
+- [moderate] The values that change at a breakpoint are custom properties re-pointed inside one breakpoint block.
 
 **How**
 - [moderate] One question decides it: **does the value need to change after the stylesheet is compiled?** Theme, breakpoint, container, state or script: custom property. Build time only: Sass variable.
@@ -231,7 +231,7 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 
 **What good looks like**
 - [weak] A token exists because a value is reused, themed or shared with the design file.
-- [required] A value used once, in one place, stays a literal with its reason.
+- [required] A value used once, in one place, stays a literal with its reason (code-standard rule 22).
 
 **How**
 - [weak] Do not tokenise: a value used once, the width of one illustration, `0`, `100%`, `1fr`, `auto`, or a keyword.
@@ -256,7 +256,7 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 
 **What good looks like**
 - [required] code-standard rule 22 holds for every number in a component sheet; the comment names the constraint, not the value.
-- [required] A literal that equals a token of the family the design binds is the token.
+- [required] A literal that equals a token of the family the design binds is the token (code-standard rule 22).
 - [required] No literal fits only today's content (code-standard rule 57).
 
 **How**
@@ -280,11 +280,11 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 
 **What good looks like**
 - [required] One disabled opacity, from the design's state token, on the component's root (code-standard rule 62).
-- [required] A component holding other components dims once.
-- [required] No differing literals (`0.4`, `.5`, `0.45`) across components.
+- [required] A component holding other components dims once (code-standard rule 62).
+- [required] No differing literals (`0.4`, `.5`, `0.45`) across components (code-standard rule 62).
 
 **How**
-- [required] Apply it on the host, matched from the control's own state, and give parents a knob:
+- [required] Apply it on the host, matched from the control's own state, and give parents a knob (code-standard rule 62):
 
 ```css
 ds-button:has(> :disabled) { opacity: var(--dim, var(--state-disabled-opacity)); }
@@ -336,9 +336,9 @@ ds-card[disabled] > * { --dim: 1; }
 ## Density
 
 **What good looks like**
-- [required] Density is a mode: one attribute re-points spacing and control-height tokens; components do not change.
+- [required] Density is a mode: one attribute re-points spacing and control-height tokens; components do not change (code-standard rule 53).
 - [weak] Type size does not change with density.
-- [required] Compact never takes a target under the minimum size.
+- [required] Compact never takes a target under the minimum size (WCAG 2.5.8).
 
 **How**
 - [required] A density collection in the design file writes like any other mode, `[data-density="compact"]` (code-standard rule 53), re-pointing the spacing and sizing semantics:

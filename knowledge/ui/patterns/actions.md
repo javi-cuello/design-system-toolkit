@@ -12,7 +12,7 @@ How an interface offers things to do: button or link, how links are worded and w
 **How**
 - [moderate] Ask whether the address changes or someone could open it in a new tab. Yes is a link. GOV.UK's [start button](https://design-system.service.gov.uk/components/button/) looks like a button and is built as a link, because start buttons "do not usually submit form data".
 - [moderate] Match the look to the function where the design allows. The W3C [button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/): "both the appearance and role of a widget match the function it provides"; restyling is "a better solution" than patching the role.
-- [required] A link styled as a button keeps link behaviour (middle-click, new tab); a button styled as a link keeps button behaviour.
+- [required] A link styled as a button keeps link behaviour (middle-click, new tab); a button styled as a link keeps button behaviour (HTML).
 - [moderate] A button that opens a dialog may end with an ellipsis ("Save as…"), a convention the W3C pattern and Apple's [buttons](https://developer.apple.com/design/human-interface-guidelines/buttons) record. Use it everywhere or nowhere.
 - [moderate] A link that opens a new tab says so in its name and with an icon (Carbon's launch icon).
 
@@ -131,7 +131,7 @@ How an interface offers things to do: button or link, how links are worded and w
 **How**
 - [weak] **Style by emphasis.** Carbon's danger button has primary, tertiary and ghost styles: primary danger when destruction "is a required or primary step", tertiary or ghost when it is one of several. A row's "Delete" is ghost danger or a menu item; the confirming button in its dialog is primary danger.
 - [weak] **Never icon-only.** Carbon: "Do not use a danger button in an icon only form for a destructive action."
-- [required] **Never colour alone.** GOV.UK's [warning button](https://design-system.service.gov.uk/components/button/): "Do not only rely on the red colour"; the label names action and object ("Delete project").
+- [required] **Never colour alone.** GOV.UK's [warning button](https://design-system.service.gov.uk/components/button/): "Do not only rely on the red colour"; the label names action and object ("Delete project") (WCAG 1.4.1).
 - [weak] **Two steps for the irreversible.** GOV.UK: another style for the first call to action, the warning button "for the final confirmation".
 - [weak] **Not the default.** Apple: "Don't assign the primary role to a button that performs a destructive action, even if that action is the most likely choice." The confirmation dialog, its focus included, is [dialogs: confirmation dialogs](dialogs.md#confirmation-dialogs).
 - [moderate] **Undo for the common case.** Apple's [alerts](https://developer.apple.com/design/human-interface-guidelines/alerts): "Avoid displaying alerts for common, undoable actions, even when they're destructive." Do it, show what happened, offer Undo in place (toasts with actions: [`feedback.md`](feedback.md)).
@@ -247,7 +247,7 @@ How an interface offers things to do: button or link, how links are worded and w
   - Dialog, sheet, or a wizard inside a dialog: trailing side, Cancel leading. Carbon's [dialog pattern](https://carbondesignsystem.com/patterns/dialog-pattern/): "Cancel is always the outmost left button option and the primary action is always the outmost right button." [Primer dialog](https://primer.style/product/components/dialog/guidelines/) and Apple's alerts agree.
   - Foot of a full-page form: leading edge, aligned with the fields. GOV.UK: "Align the primary action button to the left edge of your form." Carbon: "on full-page designs, the primary button is on the left side of the page." A full-page multi-step flow is a form: Continue at the leading edge, Back at the top of the page ([steppers: step navigation](steppers.md#step-navigation-back-continue-save-and-return)).
   - Vertical stack: primary on top (Carbon, Apple).
-- [required] Right-to-left languages mirror the group.
+- [moderate] Right-to-left languages mirror the group.
 - [weak] Pick once per product. NN/g's [OK–Cancel](https://www.nngroup.com/articles/ok-cancel-or-cancel-ok/): "Following platform conventions is more important than optimizing an individual dialog box."
 
 **Cases**
@@ -516,8 +516,8 @@ The threshold is [interaction: response times](../design/interaction.md#response
 **How**
 - [weak] One per screen, positive, never destructive or navigation.
 - [weak] Extended (icon and text) over icon-only; Material: "wider than FABs to accommodate a text label and larger target area".
-- [required] Reserve space at the end of the scroll so the last item clears it.
-- [required] In the DOM where its action belongs in reading order. At wide layouts, an ordinary header button.
+- [weak] Reserve space at the end of the scroll so the last item clears it.
+- [required] In the DOM where its action belongs in reading order. At wide layouts, an ordinary header button (code-standard rule 2).
 
 **Cases**
 - A desktop dashboard with a "+" FAB opening five creation types → a "Create" menu button in the header.

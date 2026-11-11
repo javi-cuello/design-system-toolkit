@@ -34,7 +34,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 
 **Build**
 - [strong] Format at render with one `Intl.NumberFormat` per locale and options set, created once and reused; the locale is the page's `lang` ([i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)). `style: "percent"`, `style: "unit"` and `signDisplay: "exceptZero"` cover percentages, units and the "+" on a change.
-- [required] Keep the raw value machine-readable: `<data value="1204.5">1,204.5</data>`, so a sort, a script or a check reads the number, not the formatted text.
+- [moderate] Keep the raw value machine-readable: `<data value="1204.5">1,204.5</data>`, so a sort, a script or a check reads the number, not the formatted text.
 - [required] Missing is markup, not a digit: `<span aria-label="Not measured">—</span>` or the words themselves; the template branches on the model's missing value, never on `0` (code-standard rule 12, code-standard rule 29).
 - [required] Tabular figures on the numeric parts of a component (`font-variant-numeric: tabular-nums` on table cells, tile values and counters), written once in the component, not per page (code-standard rule 5).
 - [weak] Precision is a formatter option (`maximumFractionDigits`) per measure, defined beside the measure, so every place that measure appears shares it.
@@ -122,10 +122,10 @@ How an interface shows figures so they can be read, compared and trusted: number
 **Accessibility**
 - [required] 1.4.1: tone has a non-colour cue. 1.4.3: value and label meet contrast (figma-standard rule 32 in a component).
 - [required] 1.3.1: label and value are associated so the value is not read alone ("42" with no context); a description list or a heading with its value serves.
-- [required] A tile that is a link has one accessible name containing label and value.
+- [required] A tile that is a link has one accessible name containing label and value (WCAG 2.4.4).
 
 **Build**
-- [required] A strip is a list of tiles; each tile is a heading or `dt` for the label and the value beside it, so label and value are read together:
+- [required] A strip is a list of tiles; each tile is a heading or `dt` for the label and the value beside it, so label and value are read together (code-standard rule 1):
   ```html
   <ul data-tiles role="list">
     <li><a href="/findings?status=open"><dl><dt>Open findings</dt>
@@ -180,7 +180,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 
 **Accessibility**
 - [required] 1.3.1: the caption is text in the page, near the title, so it is reached in reading order (code-standard rule 2).
-- [required] Dates in `time` elements with `datetime`.
+- [moderate] Dates in `time` elements with `datetime`.
 
 **Build**
 - [required] The caption is a `p` directly after the `h1` (or under a chart inside its `figcaption`), holding each source's name and a `<time datetime>` (code-standard rule 2; [html-semantics: *Lists, description lists and figures*](../../code/html-semantics.md#lists-description-lists-and-figures)).

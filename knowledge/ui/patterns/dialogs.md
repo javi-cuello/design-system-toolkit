@@ -155,7 +155,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
   - the least destructive action for "a process that is not easily reversible";
   - the most used button when the dialog only informs or continues.
   Carbon adds: the first field when there is a form, the primary button in a transactional dialog without inputs. MDN's [`dialog`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog) recommends `autofocus` on the intended element.
-- [required] **Trapped.** Tab and Shift+Tab wrap inside the dialog; the page behind is inert. `showModal()` gives inertness and Escape.
+- [required] **Trapped.** Tab and Shift+Tab wrap inside the dialog; the page behind is inert. `showModal()` gives inertness and Escape (HTML).
 - [strong] **Returned.** On close, focus goes back to the element that opened it, unless that element no longer exists or the next step logically lives elsewhere (W3C). After "Delete row", focus goes to the next row or the table, never to the document start.
 - [weak] Design the return target in the file, as an annotation, for every dialog whose trigger disappears.
 
@@ -212,9 +212,9 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 - [required] `aria-modal` only when the page behind is truly inert (W3C note); `showModal()` sets it implicitly (MDN).
 
 **Build**
-- [required] Escape: `showModal()` fires `cancel` then `close`; a dirty dialog calls `preventDefault()` on `cancel` and asks first.
+- [required] Escape: `showModal()` fires `cancel` then `close`; a dirty dialog calls `preventDefault()` on `cancel` and asks first (HTML).
 - [moderate] Backdrop: `closedby="any"` for an information dialog, `closedby="closerequest"` where typed input could be lost; where `closedby` is unsupported, a click whose target is the `dialog` itself closes it only for the passive kind ([MDN `dialog`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog); [browser support: *Progressive enhancement and feature queries*](../../code/browser-support.md#progressive-enhancement-and-feature-queries)).
-- [required] `aria-modal` is implicit with `showModal()`; never set it on a non-modal surface.
+- [required] `aria-modal` is implicit with `showModal()`; never set it on a non-modal surface (ARIA).
 - [contested] One at a time: the open function refuses while another `dialog:modal` is open, except the discard-changes confirmation.
 - [required] One dialog module for the product (code-standard rule 36; [javascript: *One implementation per behaviour*](../../code/javascript.md#one-implementation-per-behaviour)).
 
@@ -302,7 +302,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
   @media (max-width: 30rem), (max-height: 30rem) {
     dialog:has(input, select, textarea) { inset: 0; margin: 0; inline-size: 100%; block-size: 100svh; max-block-size: none; border-radius: 0; } }
   ```
-- [required] `overscroll-behavior: contain` stops a scroll that reaches the body's end from passing to the page behind.
+- [required] `overscroll-behavior: contain` stops a scroll that reaches the body's end from passing to the page behind (CSS).
 - [weak] The breakpoint is a page dimension in one place ([responsive: *Breakpoints*](../../code/responsive.md#breakpoints)).
 
 **Check**
@@ -335,12 +335,12 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 **Accessibility**
 - [required] 3.3.4 Error Prevention (Legal, Financial, Data): a confirmation satisfies "confirmed" where the action modifies or deletes user data or commits money ([W3C Understanding 3.3.4](https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html)).
 - [required] 1.4.1: the danger is in the words, not only the red.
-- [required] Focus and Escape as in the sections above.
+- [strong] Focus and Escape as in the sections above.
 
 **Build**
 - [required] `dialog` with `role="alertdialog"`, named by its title (`aria-labelledby`) and described by the consequence (`aria-describedby`) ([APG alert dialog](https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/)).
 - [contested] `autofocus` on Cancel; the confirming button carries the danger variant ([actions: destructive actions](actions.md#destructive-actions)).
-- [required] `<form method="dialog">` returns the chosen button's `value` in `returnValue`; the caller acts only on the confirming value.
+- [required] `<form method="dialog">` returns the chosen button's `value` in `returnValue`; the caller acts only on the confirming value (HTML).
 - [required] Type-to-confirm: the confirming button is `aria-disabled` until the input matches, and the handler checks the match, not the attribute (code-standard rule 62).
 - [weak] The server still guards the action ([security: *Forms and cross-site request forgery*](../../code/security.md#forms-and-cross-site-request-forgery)); focus after close is [accessibility: *Focus management*](../../code/accessibility.md#focus-management).
 
@@ -373,13 +373,13 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 - A filter drawer on mobile → modal, full height, with "Show 42 results" and a close button (filtering: [`filtering.md`](filtering.md)).
 
 **Accessibility**
-- [required] Modal drawers follow the dialog focus contract above. Non-modal drawers move focus in on open, do not trap, and return focus to the trigger on close; Tab can leave them.
+- [strong] Modal drawers follow the dialog focus contract above. Non-modal drawers move focus in on open, do not trap, and return focus to the trigger on close; Tab can leave them.
 - [required] 2.4.11: a non-modal drawer does not cover the focused element on the page behind.
 - [required] 1.3.2: the drawer's DOM position follows its trigger or is a labelled region, so reading order makes sense (code-standard rule 2).
 
 **Build**
 - [required] Modal drawer: a `dialog` opened with `showModal()`, positioned to an edge; it inherits the dialog focus contract ([accessibility: *Focus management*](../../code/accessibility.md#focus-management)).
-- [required] Non-modal drawer: a `dialog` opened with `show()`, or a labelled `aside` revealed by a `button` with `aria-expanded`; focus moves in on open, Tab can leave, Escape closes and returns focus.
+- [strong] Non-modal drawer: a `dialog` opened with `show()`, or a labelled `aside` revealed by a `button` with `aria-expanded`; focus moves in on open, Tab can leave, Escape closes and returns focus.
 - [moderate] Placed with logical properties (`inset-inline-end: 0`), so a right-to-left page mirrors it ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
 - [moderate] Slides with `transform`, stilled under `prefers-reduced-motion` ([performance: *Layout stability in code*](../../code/performance.md#layout-stability-in-code); [accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
 - [weak] A drawer with its own address closes on Back: open and close push and pop history ([javascript: *State in the address and history*](../../code/javascript.md#state-in-the-address-and-history)).
@@ -445,7 +445,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 - [weak] **Ask first whether it can be on the page.** Primer's alternatives: persist the content, don't duplicate it, use a modal or a disclosure.
 - [moderate] **Content**: a few words; for icon buttons, Carbon asks for "a concise one- or two-word description of the button's function". No repeat of the visible label (NN/g).
 - [moderate] **Trigger**: hover and focus both (NN/g: "Support both mouse and keyboard hover"); after a short delay (W3C [tooltip pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/)).
-- [required] **Stays while needed**: open while the pointer is over the trigger or the tooltip (W3C), until focus leaves, or until Escape.
+- [required] **Stays while needed**: open while the pointer is over the trigger or the tooltip (W3C), until focus leaves, or until Escape (WCAG 1.4.13).
 - [moderate] **Position**: not over related content; an arrow when several triggers are close (NN/g); flipped to stay in the viewport (Carbon).
 - [weak] **Consistency**: all icon buttons in a set have tooltips, or none (NN/g).
 - [weak] **Touch**: there is no hover. Essential labels must already be visible; a "?" toggletip opened by tap carries longer help (NN/g's popup tips).
@@ -464,7 +464,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 
 **Build**
 - [required] `role="tooltip"` on the tip; the focusable trigger points at it with `aria-labelledby` (it names an icon button) or `aria-describedby` (a hint) (code-standard rules 15 and 18; [APG tooltip](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/)).
-- [required] Shown on `pointerenter` and `focusin` after a delay; kept while the pointer is over trigger or tip; hidden on Escape without moving focus.
+- [required] Shown on `pointerenter` and `focusin` after a delay; kept while the pointer is over trigger or tip; hidden on Escape without moving focus (WCAG 1.4.13).
 - [moderate] No focusable content; help with a link is a toggletip, a `button` opening a `popover`.
 - [moderate] Not `title` for anything a keyboard or touch user needs.
 - [weak] Wiring, events and the toggletip are [accessibility: *Tooltips and toggletips*](../../code/accessibility.md#tooltips-and-toggletips).

@@ -29,9 +29,9 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] 1.4.1 Use of Color (category or status not by colour alone), 1.4.3 (label text contrast), 1.4.11 Non-text Contrast (a chip's boundary at 3:1 so it reads as a control), 4.1.2 Name, Role, Value (an interactive chip exposes a role; a static one exposes none). In Figma: figma-standard rule 31, figma-standard rule 32.
 
 **Build**
-- [required] *Elements:* a badge or static tag is a `span` (or text inside a link or cell); a filter or choice chip is a `button` or a styled `input type="checkbox"`/`radio` with its `label`; an input chip is a `span` holding the value text and a separate remove `button`; a tag that navigates is an `a`.
+- [required] *Elements:* a badge or static tag is a `span` (or text inside a link or cell); a filter or choice chip is a `button` or a styled `input type="checkbox"`/`radio` with its `label`; an input chip is a `span` holding the value text and a separate remove `button`; a tag that navigates is an `a` (HTML).
 - [strong] *ARIA and keyboard:* static labels have no role and are not focusable (Atlassian: lozenges cannot be focused). Interactive chips follow their control's APG pattern: [button](https://www.w3.org/WAI/ARIA/apg/patterns/button/) for toggles, checkbox or radio for selection.
-- [required] *States:* none on a static label; `aria-pressed`, `checked` or `aria-checked` on interactive chips; a count badge's number is part of a description, not the parent's name.
+- [required] *States:* none on a static label; `aria-pressed`, `checked` or `aria-checked` on interactive chips; a count badge's number is part of a description, not the parent's name (code-standard rule 15).
 - [required] *Rules:* code-standard rule 8 (the kind of component decides its implementation), code-standard rule 9 (a variant is an attribute, a state a pseudo-class), code-standard rule 15 (a count is a description, not part of a name).
 - [weak] *Detail:* [code: links and buttons](../../code/html-semantics.md#links-and-buttons), [code: accessible names and descriptions](../../code/accessibility.md#accessible-names-and-descriptions), [code: variants to attributes](../../code/figma-handoff.md#variants-to-attributes).
 
@@ -66,9 +66,9 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] 4.1.2 (each chip exposes pressed or checked), 1.4.1, 1.4.11 (the selected state differs at 3:1), 2.1.1, 2.5.8 Target Size, 4.1.3 (the new total announced).
 
 **Build**
-- [required] *Elements:* a `fieldset` with a `legend` holding `input type="checkbox"` and `label` pairs styled as chips, inside the list's GET form; or `button`s with `aria-pressed` in a labelled `role="group"` when script runs the filter.
+- [required] *Elements:* a `fieldset` with a `legend` holding `input type="checkbox"` and `label` pairs styled as chips, inside the list's GET form; or `button`s with `aria-pressed` in a labelled `role="group"` when script runs the filter (code-standard rule 20).
 - [strong] *ARIA and keyboard:* checkbox semantics (Space toggles) or [APG button](https://www.w3.org/WAI/ARIA/apg/patterns/button/) toggle semantics (Space and Enter; the label does not change when the state does). Each chip is a Tab stop; a [toolbar](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/) with roving focus is allowed for three or more chips but makes the set one Tab stop, which readers must discover.
-- [required] *States:* `checked` or `aria-pressed="true"`; native `disabled` for a zero value; the selection as query parameters.
+- [required] *States:* `checked` or `aria-pressed="true"`; native `disabled` for a zero value; the selection as query parameters (code-standard rule 9).
 - [required] *Rules:* code-standard rule 20 (works as a form without script), code-standard rule 9 and code-standard rule 62 (disabled is the control's own), code-standard rule 15 (counts are descriptions), code-standard rule 14 (focus kept after the list updates).
 - [weak] *Detail:* [code: selection controls past the native set](../../code/accessibility.md#selection-controls-past-the-native-set), [code: search and filter forms](../../code/html-semantics.md#search-and-filter-forms), [code: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex).
 
@@ -99,7 +99,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] 1.3.1 (the set's label names the question), 4.1.2 (radio semantics: one checked), 1.4.1, 2.1.1.
 
 **Build**
-- [required] *Elements:* a `fieldset` and `legend` with `input type="radio"` and `label`s styled as segments.
+- [required] *Elements:* a `fieldset` and `legend` with `input type="radio"` and `label`s styled as segments (WCAG 1.3.1).
 - [required] *ARIA and keyboard:* native radio keyboard (arrows move the selection within the group; one Tab stop), the same as the [APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/) describes for custom builds.
 - [strong] *States:* `checked`; never `aria-pressed` on single-choice segments.
 - [required] *Rules:* code-standard rule 9, code-standard rule 20, code-standard rule 16 (native controls follow the theme).
@@ -136,7 +136,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] 1.3.1 and 4.1.2 (the field has a label; chips are announced as values), 2.1.1 (every chip removable by keyboard), 3.3.1 Error Identification, 4.1.3 (a removal or addition announced), 2.5.8 (the remove target).
 
 **Build**
-- [required] *Elements:* a `label`led text `input` (with a `datalist` or a combobox popup for suggestions); chips as a `ul` of `li`, each holding the value text and a `button` named "Remove {value}"; the committed values also as hidden inputs, so the form submits them.
+- [required] *Elements:* a `label`led text `input` (with a `datalist` or a combobox popup for suggestions); chips as a `ul` of `li`, each holding the value text and a `button` named "Remove {value}"; the committed values also as hidden inputs, so the form submits them (code-standard rule 20).
 - [strong] *ARIA and keyboard:* the [APG combobox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) for the input (`role="combobox"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`; Down Arrow opens, Escape closes, Enter accepts); remove buttons are ordinary Tab stops.
 - [strong] *States:* `aria-expanded` on the combobox; `aria-invalid` and `aria-describedby` on a refused value; a polite live region for "Ada Lovelace added".
 - [required] *Rules:* code-standard rule 18 (remove buttons are named), code-standard rule 14 (focus moves to the next chip or the input after a removal), code-standard rule 20 (values submit as form fields), code-standard rule 15.
@@ -155,7 +155,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [required] Don't let a growing set push other controls around (design-standard rule 2).
 
 **How**
-- [required] **Remove:** a trailing "×" button inside the chip, at least a 24px target, named for what it removes; the whole chip is not the remove target unless the chip does nothing else.
+- [required] **Remove:** a trailing "×" button inside the chip, at least a 24px target, named for what it removes; the whole chip is not the remove target unless the chip does nothing else (WCAG 2.5.8).
 - [strong] **After removal:** focus moves to the next chip, or the previous when the last was removed, or the field or bar when none is left.
 - [weak] **Clear all** appears after two or more removable chips in a filter context ([filtering](filtering.md#applied-filters-and-clear-all)).
 - [moderate] **Wrapping:** in a field or a content area, chips may wrap inside their own container, which grows downward without moving anything above it. In a toolbar or table cell, they do not wrap: show as many as fit and a "+3 more" control.
@@ -175,7 +175,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 **Build**
 - [strong] *Elements:* a remove `button type="button"` inside each chip; "+3 more" a `button` with `aria-expanded` controlling a popover or the hidden chips.
 - [strong] *ARIA and keyboard:* the overflow follows the [APG disclosure pattern](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/) (Enter or Space toggles, `aria-expanded`); a popover closes on Escape.
-- [required] *States:* hidden chips carry `hidden`; truncation in CSS with the full text in the DOM, never cut in the template.
+- [moderate] *States:* hidden chips carry `hidden`; truncation in CSS with the full text in the DOM, never cut in the template.
 - [required] *Rules:* code-standard rule 18, code-standard rule 14, code-standard rule 17 (`hidden` beats the stylesheet), code-standard rule 19 (a `details`-based overflow adds Escape), code-standard rule 29 (truncation logic lives in the model, not the template).
 - [weak] *Detail:* [code: truncation and line clamps](../../code/responsive.md#truncation-and-line-clamps), [code: touch targets](../../code/responsive.md#touch-targets), [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers).
 
@@ -209,7 +209,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 **Build**
 - [strong] *Elements:* a `ul` of tags with a heading or `aria-label`; static tags as text in `li`, linking tags as `a` inside them.
 - [strong] *ARIA and keyboard:* none beyond links; no APG pattern applies.
-- [required] *States:* none; a linking tag for the page being read carries `aria-current="page"`.
+- [required] *States:* none; a linking tag for the page being read carries `aria-current="page"` (code-standard rule 64).
 - [required] *Rules:* code-standard rule 64 (current marked), code-standard rule 21 (modified clicks open a new tab), code-standard rule 8.
 - [weak] *Detail:* [code: lists, description lists and figures](../../code/html-semantics.md#lists-description-lists-and-figures), [code: links and buttons](../../code/html-semantics.md#links-and-buttons).
 

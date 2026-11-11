@@ -88,7 +88,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **What good looks like**
 - [weak] Every column tells rows apart or carries the figure the task decides on. A column with the same value in every row tells nothing apart and carries nothing.
 - [moderate] The default view holds the columns the task needs; the rest live on the record page, in a column setting, or in a second view.
-- [required] Each column holds one piece of data ([Primer DataTable guidelines](https://primer.style/product/components/data-table/guidelines/): "Don't use a single column to show multiple pieces of data").
+- [required] Each column holds one piece of data ([Primer DataTable guidelines](https://primer.style/product/components/data-table/guidelines/): "Don't use a single column to show multiple pieces of data") (design-standard rule 8).
 
 **How**
 - [strong] Primer: "Minimize the number of columns. It's easier to scan many rows than it is to scan many columns." Datawrapper: "the fewer columns your table has, the more readable it becomes"; ask "What's the essential information?" GOV.UK: "aim to have less data in your tables", and split a large set "into multiple tables or multiple pages".
@@ -346,7 +346,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **What good looks like**
 - [weak] Most cells carry no colour. Colour marks the few cells that need action, and the reader finds them at once.
 - [weak] Status colours mean status; categories use neutral or accent colours.
-- [required] Colour never alone: a word, an icon or a shape says the same.
+- [required] Colour never alone: a word, an icon or a shape says the same (WCAG 1.4.1).
 
 **How**
 - [weak] Spend colour from the attention budget ([visual: emphasis and the attention budget](../design/visual.md#emphasis-and-the-attention-budget)). A colour applied to most rows has no attention left to give.
@@ -454,7 +454,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **What good looks like**
 - [weak] One row height per table, matched by the header row (Carbon: the header "should always match the row size of the table").
 - [weak] Two densities at most per product: a default and a compact.
-- [required] Every interactive element in a row meets its target size.
+- [required] Every interactive element in a row meets its target size (WCAG 2.5.8).
 
 **How**
 - [weak] Carbon's five heights are a reference: 24, 32, 40 (default), 48 and 64px for two-line rows ([Carbon data table](https://carbondesignsystem.com/components/data-table/usage/)). Choose 40 as the default and 32 as compact for data tools; 48 when rows hold controls used by touch.
@@ -510,7 +510,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **Build**
 - [weak] `position: sticky` with `inset-block-start: 0` on `thead th`, and `inset-inline-start: 0` on the row header, inside the table's scroll container; opaque background and border from tokens ([HTML semantics: *Table behaviour*](../../code/html-semantics.md#table-behaviour)).
-- [required] Any ancestor with `overflow` other than `visible` becomes what the header sticks to; check the wrapper before adding the rule.
+- [required] Any ancestor with `overflow` other than `visible` becomes what the header sticks to; check the wrapper before adding the rule (CSS).
 - [weak] `scroll-padding-block-start` and `scroll-padding-inline-start` on the scroller equal the sticky sizes, from the same custom properties ([code accessibility: *Visible focus*](../../code/accessibility.md#visible-focus)).
 - [required] The page header's sticky height is one custom property both offsets read (code-standard rule 46).
 
@@ -806,7 +806,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **Use when / don't use**
 - [required] When every row can have the same few attributes from a known, closed set, give each its own column (design-standard rule 8).
-- [required] A list in one cell is right only for an open-ended set, such as free tags.
+- [required] A list in one cell is right only for an open-ended set, such as free tags (design-standard rule 8).
 
 **How**
 - [weak] One column per attribute, with a mark in each cell: a check for present, a blank for absent (*Cell content and empty cells*), and a word such as "Missing" in the warning role only where absence needs action. The mark carries text or an accessible name; which state to mark is *Status and boolean cells*.

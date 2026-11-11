@@ -30,7 +30,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 
 **Build**
 - [required] A real `form` with `action` and `method`: GET for a query, POST with a token for a change ([security: forms and cross-site request forgery](../../code/security.md#forms-and-cross-site-request-forgery)); it submits with scripts off (code-standard rule 20).
-- [required] Groups are `fieldset` and `legend`. On a question page the heading sits inside the `legend`, or the `label` sits inside the `h1`, so the question is said once:
+- [required] Groups are `fieldset` and `legend`. On a question page the heading sits inside the `legend`, or the `label` sits inside the `h1`, so the question is said once (WCAG 1.3.1):
   ```html
   <fieldset><legend><h1>Where do you live?</h1></legend> …</fieldset>
   ```
@@ -68,7 +68,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [required] Implementation: code-standard rule 15 (a hint is a description, not part of the name). In Figma: figma-standard rule 26 (label text at least 12px), figma-standard rule 32 (label contrast).
 
 **Build**
-- [required] A visible `label` tied by `for` and `id`, or wrapping the control; it comes before a text field in the DOM and after a checkbox or radio.
+- [required] A visible `label` tied by `for` and `id`, or wrapping the control; it comes before a text field in the DOM and after a checkbox or radio (HTML).
 - [required] The name comes from the `label`, never from `aria-label`, `title` or `placeholder` on a field that shows a label ([accessibility: accessible names and descriptions](../../code/accessibility.md#accessible-names-and-descriptions)).
 - [weak] The search box exception: an `input type="search"` in a `search` element may take a visually hidden `label` or an `aria-label`, since its place says what it is.
 - [required] Nothing but the label's words inside it: a hint, count or error is a description (code-standard rule 15).
@@ -85,7 +85,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 **What good looks like**
 - [strong] Optional fields are few, and each is marked in words.
 - [contested] The convention is decided once per form, from its layout, and held on every field.
-- [required] Nothing relies on colour alone, and a symbol is always explained.
+- [required] Nothing relies on colour alone, and a symbol is always explained (WCAG 1.4.1).
 
 **How**
 1. **Remove optional fields first.** "Limit the form to only 1 or 2 optional fields, and clearly label them as optional" ([NN/g](https://www.nngroup.com/articles/web-form-design/)); "Better yet, avoid optional fields" ([Adam Silver](https://adamsilver.io/blog/form-design-from-zero-to-hero-all-in-one-blog-post/), commentary).
@@ -207,7 +207,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 **How**
 - [strong] **Types.** `type="email"`, `"tel"`, `"url"`, `"search"` and `"password"` where they fit; each changes the on-screen keyboard.
 - [weak] **Numbers.** For a whole number, a text input with `inputmode="numeric"`; for decimals, `inputmode="decimal"`. "Do not use `<input type="number">` unless your user research shows that there's a need for it", because of the risk of accidentally incrementing ([GOV.UK](https://design-system.service.gov.uk/components/text-input/)). Card numbers, account numbers and codes are text: they are identifiers, not quantities.
-- [required] **Autocomplete.** Every field about the person carries its `autocomplete` token: `name`, `given-name`, `email`, `tel`, `street-address`, `postal-code`, `bday-day` and the rest ([GOV.UK](https://design-system.service.gov.uk/components/text-input/): "to help users complete forms more quickly"). A new password takes `new-password`; a sign-in one `current-password`.
+- [required] **Autocomplete.** Every field about the person carries its `autocomplete` token: `name`, `given-name`, `email`, `tel`, `street-address`, `postal-code`, `bday-day` and the rest ([GOV.UK](https://design-system.service.gov.uk/components/text-input/): "to help users complete forms more quickly"). A new password takes `new-password`; a sign-in one `current-password` (WCAG 1.3.5).
 - [weak] **Spellcheck off** for references, codes and email addresses ([GOV.UK](https://design-system.service.gov.uk/components/text-input/)).
 - [weak] **Forgiving formats.** Accept spaces, dashes and mixed case in references, postcodes and phone numbers, and normalise them on the server.
 
@@ -229,7 +229,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
   <input id="email" name="email" type="email" autocomplete="email" spellcheck="false">
   ```
 - [weak] No `type="number"` for identifiers or quantities without research; no `pattern` stricter than what the server accepts after normalising spaces and dashes.
-- [required] Never cancel `paste`, and sign-in fields keep `current-password` or `one-time-code`, so password managers work.
+- [required] Never cancel `paste`, and sign-in fields keep `current-password` or `one-time-code`, so password managers work (WCAG 3.3.8).
 - [weak] Tokens, types and the paste rule in detail: [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup).
 
 **Check**
@@ -261,7 +261,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 **Build**
 - [required] The constraints are in the markup (`required`, `type`, `pattern`, `min`, `max`) and the server checks them again; that is the no-script path (code-standard rule 20).
 - [weak] The script adds `novalidate` and its own messages ([javascript: the platform before a library](../../code/javascript.md#the-platform-before-a-library)).
-- [required] "On leaving a changed field" is the `change` event, which fires on commit only when the value changed; `blur` fires on tabbing past, `input` on every key. Once a field is in error, re-check it on `input` so the error clears as soon as it is fixed.
+- [required] "On leaving a changed field" is the `change` event, which fires on commit only when the value changed; `blur` fires on tabbing past, `input` on every key. Once a field is in error, re-check it on `input` so the error clears as soon as it is fixed (HTML).
 - [required] Style the client's error from `:user-invalid`, which waits for interaction, never `:invalid`, which matches on load ([HTML semantics: *Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation)).
 - [required] The submit button is never `disabled` as a validity signal (code-standard rule 9).
 
@@ -377,7 +377,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 
 **Build**
 - [required] A native `<button type="submit">` whose text is the outcome (code-standard rule 8); a secondary submit is another button with `name="action" value="draft"`, and Cancel is a link.
-- [required] Enter in a field presses the form's first submit button in tree order, so the primary comes first in the DOM.
+- [required] Enter in a field presses the form's first submit button in tree order, so the primary comes first in the DOM (HTML).
 - [required] Never `disabled` on load; disabled, where truly needed, is the control's own (code-standard rule 9, code-standard rule 62).
 - [weak] A second click while the request runs is ignored by a flag on the form, and the button shows progress ([actions: loading buttons](actions.md#loading-buttons); [HTML semantics: *Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation)).
 - [required] The warning style is a variant attribute on the wrapper (`variant="danger"`), never a class (code-standard rule 9).
@@ -438,7 +438,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [weak] **Task list.** Each task with a status; people move on only when every task reads "Completed" ([GOV.UK](https://design-system.service.gov.uk/components/task-list/)). Statuses carry text, not colour alone.
 - [weak] **Saving.** Save each page's answers on Continue; offer a "Save and come back later" link on every page of a long form, and say how to return (a sign-in, or a link sent by email).
 - [weak] **Progress.** On a fixed-order form, a step count ("Question 3 of 8") only when the count is stable; branching makes a count lie.
-- [required] **Timeouts.** Warn before a session ends and let the person extend it; never discard saved answers on expiry.
+- [required] **Timeouts.** Warn before a session ends and let the person extend it; never discard saved answers on expiry (WCAG 2.2.1).
 
 **Cases**
 - A 40-question grant application with no way to stop → a task list by section, answers saved on each Continue, a "Save and come back later" link.
@@ -464,13 +464,13 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 ## Autofill and redundant entry
 
 **What good looks like**
-- [required] Nothing the person has given in this process is asked for again.
-- [required] The browser can fill everything it already knows.
+- [required] Nothing the person has given in this process is asked for again (WCAG 3.3.7).
+- [required] The browser can fill everything it already knows (WCAG 1.3.5).
 
 **How**
 - [required] **Offer, don't re-ask.** Where a later step needs an earlier answer (billing address after delivery address), offer "Same as delivery address" or prefill it, editable ([W3C 3.3.7 Understanding](https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html)).
 - [moderate] **Carry answers forward.** A search term shows in the search box on the results page; an ID entered on step one appears prefilled on step three.
-- [required] **Autocomplete tokens** on every personal field (*Input types and autocomplete attributes*) so the browser fills across forms.
+- [required] **Autocomplete tokens** on every personal field (*Input types and autocomplete attributes*) so the browser fills across forms (WCAG 1.3.5).
 - [required] **Exceptions** the criterion allows: re-entry that is essential, a password confirmation for security, or information no longer valid ([W3C](https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html)).
 - [weak] **Ask once across the journey**: [ux: recognition over recall, and asking once](../design/ux.md#recognition-over-recall-and-asking-once).
 

@@ -28,9 +28,9 @@ How a product lets people set it up for themselves: how a settings area is struc
 - [required] Figma: figma-standard rules 26, 31 and 32 for each control.
 
 **Build**
-- [required] *Elements:* `main` with an `h1`, each group a `section` with an `h2` and its description; the section list a labelled `nav` with links; each group's fields in a `form`; destructive actions a `button` opening a confirmation `dialog`.
+- [required] *Elements:* `main` with an `h1`, each group a `section` with an `h2` and its description; the section list a labelled `nav` with links; each group's fields in a `form`; destructive actions a `button` opening a confirmation `dialog` (code-standard rule 1).
 - [strong] *ARIA and keyboard:* native controls carry it; the section list uses `aria-current="page"`; a confirmation follows [APG alert dialog](https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/).
-- [required] *States:* `aria-current` on the current section; read-only settings use the control's `readonly` or `disabled` as interaction.md decides, with the reason as a description.
+- [required] *States:* `aria-current` on the current section; read-only settings use the control's `readonly` or `disabled` as interaction.md decides, with the reason as a description (code-standard rule 64).
 - [required] *Rules:* code-standard rule 64 (the current section), code-standard rule 1 (one `h1`; the `nav` labelled), code-standard rule 15 (the description and "managed by" text are descriptions), code-standard rule 20 (each form posts without script), code-standard rule 9 and code-standard rule 62.
 - [weak] *Detail:* [code: navigation markup](../../code/html-semantics.md#navigation-markup), [code: forms markup](../../code/html-semantics.md#forms-markup).
 
@@ -64,9 +64,9 @@ How a product lets people set it up for themselves: how a settings area is struc
 - [required] 4.1.3 Status Messages ("Saved" announced), 3.3.1 and 3.3.3 on failure, 2.5.3 Label in Name (distinct visible names for each Save), 3.2.2 (an instant change does not move focus).
 
 **Build**
-- [required] *Elements:* explicit sections as `form` with a `button type="submit"`; instant controls are `input type="checkbox"` styled as a switch or a native radio group, each change sent by script with a no-script submit fallback.
+- [required] *Elements:* explicit sections as `form` with a `button type="submit"`; instant controls are `input type="checkbox"` styled as a switch or a native radio group, each change sent by script with a no-script submit fallback (code-standard rule 20).
 - [strong] *ARIA and keyboard:* a switch per [APG switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/) (Space toggles; prefer a native checkbox, which uses `checked` instead of `aria-checked`); a radio group per [APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/), native radios first.
-- [required] *States:* `checked` on the switch, not a class; the confirmation in a persistent polite live region whose contents change.
+- [required] *States:* `checked` on the switch, not a class; the confirmation in a persistent polite live region whose contents change (code-standard rule 14).
 - [required] *Rules:* code-standard rule 20 (a no-script path for instant controls), code-standard rule 14 (an update keeps focus on the control), code-standard rule 61 (a failed save says why).
 - [weak] *Detail:* [code: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages), [code: progressive enhancement](../../code/javascript.md#progressive-enhancement).
 
@@ -102,7 +102,7 @@ How a product lets people set it up for themselves: how a settings area is struc
 **Build**
 - [required] *Elements:* a list of links (each option is a different address) inside a disclosure: a `button` with `aria-expanded` revealing a `ul` of `a`, each with `hreflang` and its name in a `bdi lang="…"` ([MDN lang](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/lang); [MDN a: hreflang](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/a)). The current language is marked, not linked.
 - [strong] *ARIA and keyboard:* the disclosure pattern for a list of links (Enter or Space opens, Tab moves through links, Escape closes and returns focus), not `role="menu"`; with no script, the list shows.
-- [required] *States:* `aria-expanded` on the trigger; `aria-current="true"` on the current language; the list `hidden` when closed.
+- [required] *States:* `aria-expanded` on the trigger; `aria-current="true"` on the current language; the list `hidden` when closed (code-standard rule 64).
 - [required] *Rules:* code-standard rule 19 (Escape and light dismiss added to a `details`-based disclosure), code-standard rule 17 (`hidden` beats the stylesheet), code-standard rule 20, code-standard rule 64.
 - [weak] *Detail:* [code: language and direction](../../code/i18n.md#language-and-direction), [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers).
 

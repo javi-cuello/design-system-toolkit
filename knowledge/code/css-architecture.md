@@ -7,7 +7,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 ## The cascade and specificity
 
 **What good looks like**
-- [required] A conflict between two rules is settled by layer order, never by counting selectors.
+- [required] A conflict between two rules is settled by layer order, never by counting selectors (code-standard rule 4).
 - [moderate] Selectors inside a layer stay at low, even specificity, so the later rule in the same layer wins for a reason someone can read.
 - [required] No two rules of equal specificity disagree about one element (code-standard rule 44).
 
@@ -34,9 +34,9 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 ## Cascade layers
 
 **What good looks like**
-- [required] The layer order is declared once, at the top of the entry file, before any rule.
+- [required] The layer order is declared once, at the top of the entry file, before any rule (code-standard rule 4).
 - [required] Every rule is in a layer; nothing is unlayered (code-standard rule 4).
-- [required] `!important` appears only where its inverted order is the point, and then with a comment.
+- [required] `!important` appears only where its inverted order is the point, and then with a comment (code-standard rule 4).
 
 **How**
 - [required] **Order.** code-standard rule 4 names the order (tokens, reset, layout, components, utilities, or the project's equivalent, such as a `base` layer between reset and layout). A project's existing order wins. Declare it in a file of its own so the order exists before anything is in it:
@@ -48,7 +48,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 - [required] **Later wins.** "For normal rules the declaration whose cascade layer is last wins" ([CSS Cascade 5 §6.1](https://www.w3.org/TR/css-cascade-5/#layering)), so a one-attribute utility beats a three-part component selector with no `!important`.
 - [required] **Unlayered beats layered.** "Styles that are not defined in a layer always override styles declared in named and anonymous layers" ([MDN `@layer`](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer)). A file someone forgot to layer outranks the whole system, which is why code-standard rule 4 refuses it.
 - [required] **`!important` inverts.** "The order of precedence among important rules is the inverse of normal rules," and "all important declarations within CSS layers take precedence over any important declarations declared outside of a layer" (MDN). An `!important` in the reset therefore beats everything after it, important or not.
-- [required] **In Sass**, `@use` cannot sit inside `@layer`; load a partial into a layer with `@include meta.load-css("base/reset")` inside the layer block, as the frontend-build scaffold's entry file does.
+- [strong] **In Sass**, `@use` cannot sit inside `@layer`; load a partial into a layer with `@include meta.load-css("base/reset")` inside the layer block, as the frontend-build scaffold's entry file does.
 
 **Cases**
 - A reset says `[hidden] { display: none !important }` and a `<noscript>` style tries to show tab panels without script → the reset's important declaration wins over every later layer and over the unlayered override, so the panels stay unreachable. Drop the `!important` (a layered `[hidden]` rule is what code-standard rule 17 asks for); better still, ship the panels visible and let the script hide them, so no override is needed ([javascript: progressive enhancement](javascript.md#progressive-enhancement)).
@@ -73,7 +73,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 - [moderate] Specificity is lowered on purpose with `:where()`, not raised by accident.
 
 **How**
-- [required] **Child, not descendant.** `ds-card > header` stops at the card's edge; `ds-card header` reaches into every component nested in it. The lint runs on the compiled sheet, because nesting can produce a descendant selector the source does not show.
+- [required] **Child, not descendant.** `ds-card > header` stops at the card's edge; `ds-card header` reaches into every component nested in it. The lint runs on the compiled sheet, because nesting can produce a descendant selector the source does not show (code-standard rule 5).
 - [required] **`:where()` and `:is()`.** "`:where()` always has 0 specificity, whereas `:is()` takes on the specificity of the most specific selector in its arguments" ([MDN `:where()`](https://developer.mozilla.org/en-US/docs/Web/CSS/:where)). Use `:where()` in the reset and base so any component rule overrides it; use `:is()` only to shorten a list whose weight you want.
 - [required] **`@scope`** bounds a rule set between a root and a limit (`@scope (.article-body) to (figure)`, the "donut scope") and adds *scope proximity* to the cascade ([MDN `@scope`](https://developer.mozilla.org/en-US/docs/Web/CSS/@scope)). Its limits: it "does not completely isolate" styles (inheritance crosses it); bare selectors inside it get zero specificity; `&` specificity differs by engine; it is Baseline 2026, newly available. And a rule inside `@scope (body)` cannot match a state kept on `<html>` (code-standard rule 60).
 - [required] **Hook names are global.** A data attribute used as a part selector also matches every element of that name a nested component renders (code-standard rule 39); grep before introducing one.
@@ -102,7 +102,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 
 **How**
 - [required] **Scope is the selector, and they inherit.** "The selector given to the ruleset… defines the scope in which the custom property can be used," and an unregistered property "always inherits the value of its parent" ([MDN, Using custom properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties)). Inheritance ignores layers, which is what lets a page change a component it cannot out-rank.
-- [required] **A knob** is a property read with a default:
+- [required] **A knob** is a property read with a default (code-standard rule 38):
 
 ```css
 ds-modal > [data-body] { padding: var(--modal-body-pad, var(--space-5)); }
@@ -210,7 +210,7 @@ ds-card {
 - [required] An attribute name is one the platform has never used (code-standard rule 10).
 
 **How**
-- [required] **Custom elements and attributes.** `<ds-button variant="primary"><button>` names the component and its variant with no class at all; a custom element needs a hyphen and needs no script to be styled.
+- [required] **Custom elements and attributes.** `<ds-button variant="primary"><button>` names the component and its variant with no class at all; a custom element needs a hyphen and needs no script to be styled (code-standard rule 8).
 - [required] **Rename collisions.** A Figma axis called `Role` becomes `variant`, because `role` is ARIA's (code-standard rule 9); `align` or `width` on a custom element triggers the browser's presentational hints (code-standard rule 10).
 - [required] **A class convention is a stated choice.** A project that names by class (`.ds-block`, `.ds-block__part`) records it in its context document as a ruling. The rules still hold under it: one block per file naming only its own parts (code-standard rule 5), state as a pseudo-class (code-standard rule 9), hooks as attributes (code-standard rule 6). The *own parts* gate reads either shape (`styles` in `snapshot.config.json` says which).
 - [required] **Utility classes:** the two code-standard rule 6 allows, and no others ([Utilities](#utilities)).
@@ -232,7 +232,7 @@ ds-card {
 ## Modern colour
 
 **What good looks like**
-- [required] Colours reach components as tokens; derived colours (a translucent fill, a hover tint) are computed from a token in CSS, not typed as a second literal.
+- [required] Colours reach components as tokens; derived colours (a translucent fill, a hover tint) are computed from a token in CSS, not typed as a second literal (code-standard rule 22).
 - [weak] Derivation happens in a perceptual space (OKLCH or Oklab).
 
 **How**
@@ -259,13 +259,13 @@ ds-card {
 
 **What good looks like**
 - [weak] Sass is used for its module system, build-time maths, mixins that expand to more than they cost, and loops that generate a known set.
-- [required] `@use` and `@forward` only; no `@import`.
+- [strong] `@use` and `@forward` only; no `@import`.
 - [moderate] A folder of mixins and functions emits no CSS.
 
 **How**
 - [required] **`@import` is deprecated.** "As of Dart Sass 1.80.0, the `@import` rule is deprecated and will be removed from the language in Dart Sass 3.0.0" ([Sass `@import`](https://sass-lang.com/documentation/at-rules/import/)); the team said it would wait "at least two years" from October 2024 ([Sass blog](https://sass-lang.com/blog/import-is-deprecated/)), a window that has now passed. Treat it as removed.
-- [required] **Modules load once.** "`@use` only ever loads each file once" ([Sass `@use`](https://sass-lang.com/documentation/at-rules/use/)), so every partial `@use`s what it needs; the old "import abstracts once in main" pattern leaves members out of scope.
-- [required] **Namespaced by default** (`bp.$md`); `as *` only for a module with distinctive names. Members starting with `-` or `_` "won't be part of a module's public API". A folder's `_index.scss` with `@forward` is its single entry point.
+- [strong] **Modules load once.** "`@use` only ever loads each file once" ([Sass `@use`](https://sass-lang.com/documentation/at-rules/use/)), so every partial `@use`s what it needs; the old "import abstracts once in main" pattern leaves members out of scope.
+- [strong] **Namespaced by default** (`bp.$md`); `as *` only for a module with distinctive names. Members starting with `-` or `_` "won't be part of a module's public API". A folder's `_index.scss` with `@forward` is its single entry point.
 - [moderate] **Migrate** with `sass-migrator module --migrate-deps <entry>` ([Sass migrator](https://sass-lang.com/documentation/cli/migrator/)), then read its diff: it cannot know which globals were meant to be public.
 
 | Was Sass | Is now CSS | Note |
@@ -329,7 +329,7 @@ components/<x>/   one folder per component, its sheet named after it
 ## Dead CSS
 
 **What good looks like**
-- [required] A rule that matches nothing is removed in the change that orphaned it.
+- [required] A rule that matches nothing is removed in the change that orphaned it (code-standard rule 50).
 - [required] A moved block's selectors move with it (code-standard rule 50).
 
 **How**
@@ -354,8 +354,8 @@ components/<x>/   one folder per component, its sheet named after it
 ## Utilities
 
 **What good looks like**
-- [required] The utilities layer is short and carries behaviour, not looks.
-- [required] Anything visual belongs to a component or a layout primitive.
+- [required] The utilities layer is short and carries behaviour, not looks (code-standard rule 6).
+- [required] Anything visual belongs to a component or a layout primitive (code-standard rule 6).
 
 **How**
 - [required] The two classes code-standard rule 6 allows sit in the last layer, so they win; the visually hidden ruleset is [accessibility: hidden content](accessibility.md#hidden-content).

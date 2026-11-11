@@ -7,7 +7,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 ## Top menu bar
 
 **Use when / don't use**
-- [required] Use on any site or tool with more than one top-level section, on every page, in the same place with the same items in the same order.
+- [required] Use on any site or tool with more than one top-level section, on every page, in the same place with the same items in the same order (WCAG 3.2.3).
 - [weak] Use it for destinations. Product-wide utilities (search, help, notifications, account) sit at its right end as a separate group, as Carbon's header does ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)); page actions never sit in it.
 - [weak] Don't use it as a site map: GOV.UK shows "only the most important top-level sections" and says navigation "is not a site map" ([GOV.UK, help users to navigate a service](https://design-system.service.gov.uk/patterns/navigate-a-service/)).
 - [weak] Don't use it where a service is one linear journey; GOV.UK points that case at a task list instead.
@@ -20,7 +20,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [strong] **Current section.** Marked by more than colour (weight, an underline bar), and kept marked on every page inside the section; NN/g calls a missing current marker "probably the single most common mistake" on menus. GOV.UK pairs the styling with a bold fallback ([GOV.UK service navigation](https://design-system.service.gov.uk/components/service-navigation/)).
 - [weak] **States.** Rest, hover, focus and current each look different; current never looks like hover ([visual: visual states of controls](../design/visual.md#visual-states-of-controls)).
 - [required] **Height and position** are the same on every page; a bar that wraps to two rows on one page moves everything below it (design-standard rule 2).
-- [required] **Contrast.** The bar is opaque and its text meets contrast against it ([NN/g](https://www.nngroup.com/articles/menu-design/)).
+- [required] **Contrast.** The bar is opaque and its text meets contrast against it ([NN/g](https://www.nngroup.com/articles/menu-design/)) (WCAG 1.4.3).
 
 **Cases**
 - A docs site has Components, Foundations, Patterns, Guides, Changes and "New component" in the bar → move "New component" out; it is an action, and mixing it with destinations makes the reader read every item twice.
@@ -34,9 +34,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [required] Figma: figma-standard rule 26 (targets), figma-standard rule 31 (current, hover and focus draw differently), figma-standard rule 32 (contrast in every mode).
 
 **Build**
-- [required] *Elements:* a `header` holding the product link and a `nav` with an accessible name ("Main"), its items a `ul` of `a` elements; the utility group outside that list (its own `nav` if it holds links, or plain buttons if it holds controls).
+- [required] *Elements:* a `header` holding the product link and a `nav` with an accessible name ("Main"), its items a `ul` of `a` elements; the utility group outside that list (its own `nav` if it holds links, or plain buttons if it holds controls) (code-standard rule 1).
 - [strong] *ARIA and keyboard:* no ARIA roles beyond the landmark; Tab moves through the links in reading order. Not `role="menubar"`: the APG's menubar is for "a consistent set of commands" like a desktop application's menu bar ([APG menubar](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/)), and it changes Tab into arrow-key navigation that readers of a website don't expect.
-- [required] *States:* the current link carries `aria-current="page"`, or `aria-current="true"` for its section on an inner page, and the current look is styled off that attribute.
+- [required] *States:* the current link carries `aria-current="page"`, or `aria-current="true"` for its section on an inner page, and the current look is styled off that attribute (code-standard rule 64).
 - [required] *Rules:* code-standard rule 64 (`aria-current`, styled off the attribute, in every navigation that lists the item), code-standard rule 1 (a labelled landmark, lists as lists), code-standard rule 2 (DOM order is the visual order), code-standard rule 21 (modified clicks reach the browser), code-standard rule 18 (an icon-only utility is named).
 - [weak] *Detail:* [code: navigation markup](../../code/html-semantics.md#navigation-markup), [code: landmarks](../../code/html-semantics.md#landmarks), [code: links and buttons](../../code/html-semantics.md#links-and-buttons), [code: keyboard access and modified clicks](../../code/accessibility.md#keyboard-access-and-modified-clicks).
 
@@ -75,8 +75,8 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 **Build**
 - [required] *Elements:* inside the `nav`'s list, an `li` holding a `button` (the trigger) and the dropdown as a nested `ul` of `a`. Where script is absent, the nested list shows, or the trigger is a link to the section index (code-standard rule 20). A `details`/`summary` pair is acceptable and gives open state for free, but nothing else.
 - [strong] *ARIA and keyboard:* the APG disclosure navigation pattern: the button carries `aria-expanded` and `aria-controls`; Space or Enter toggles; Escape closes and returns focus to the button; Tab moves through the open panel's links; arrow keys, Home and End are optional extras ([APG disclosure navigation](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/)). Not `role="menu"`: the APG example avoids it because site navigation does not need the menu widget's behaviour, and assistive technology announces a menu as a command list.
-- [required] *States:* `aria-expanded="true|false"` on the trigger, the panel `hidden` when closed, the chevron and open look styled off `[aria-expanded="true"]`; `aria-current` on the current link and the trigger's section.
-- [required] *Popover:* `popover="auto"` on the panel with `popovertarget` on the button gives click-open, Escape, light dismiss and one-open-at-a-time with no script; a short script mirrors `aria-expanded` on the `toggle` event. Closing when focus leaves is a `focusout` handler that checks `relatedTarget` against the panel.
+- [strong] *States:* `aria-expanded="true|false"` on the trigger, the panel `hidden` when closed, the chevron and open look styled off `[aria-expanded="true"]`; `aria-current` on the current link and the trigger's section.
+- [required] *Popover:* `popover="auto"` on the panel with `popovertarget` on the button gives click-open, Escape, light dismiss and one-open-at-a-time with no script; a short script mirrors `aria-expanded` on the `toggle` event. Closing when focus leaves is a `focusout` handler that checks `relatedTarget` against the panel (HTML).
 - [required] *Rules:* code-standard rule 19 (`details` gives neither Escape nor light dismiss; the script adds both), code-standard rule 17 (`hidden` beats the stylesheet), code-standard rule 20 (works without script), code-standard rule 64, code-standard rule 36 (one dropdown script, included wherever the bar appears).
 - [weak] *Detail:* [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers), [code: focus management](../../code/accessibility.md#focus-management), [code: hidden content](../../code/accessibility.md#hidden-content).
 
@@ -112,9 +112,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [weak] NN/g's accessible fallback holds: each top-level item's index page lists everything in the panel as plain links.
 
 **Build**
-- [required] *Elements:* the same disclosure as a dropdown, the panel holding one heading and one `ul` per group. Group headings are headings (or a list's label) so a screen reader can move by them.
+- [required] *Elements:* the same disclosure as a dropdown, the panel holding one heading and one `ul` per group. Group headings are headings (or a list's label) so a screen reader can move by them (WCAG 1.3.1).
 - [strong] *ARIA and keyboard:* the APG disclosure navigation pattern, as in *Navigation dropdowns*; no `menu`, `menuitem` or `grid` roles in the panel.
-- [required] *States:* `aria-expanded` on the trigger, `hidden` on the closed panel, `aria-current` on the current link.
+- [required] *States:* `aria-expanded` on the trigger, `hidden` on the closed panel, `aria-current` on the current link (WCAG 4.1.2).
 - [required] *Rules:* code-standard rule 19, code-standard rule 17, code-standard rule 20 (without script the trigger reaches the section's index page), code-standard rule 64, code-standard rule 1 (headings and lists in the panel).
 - [weak] *Detail:* [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers), [code: headings and the outline](../../code/html-semantics.md#headings-and-the-outline).
 
@@ -156,7 +156,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 **Build**
 - [weak] *Elements:* the same `nav` and `ul` as the wide bar, with a `button` before the list that shows only below the collapse width; one list serves both widths, restyled by a media or container query, never a second copy of the links. Second levels as `details` or disclosure buttons.
 - [strong] *ARIA and keyboard:* the APG disclosure pattern: the Menu button carries `aria-expanded` and `aria-controls` pointing at the list; Enter or Space toggles; Escape closes and returns focus. A full-screen menu that hides the page behind it is a modal `dialog` with its focus contract ([dialogs: focus](dialogs.md#focus-in-trapped-returned)); a menu that opens below the bar, pushing the page, is a plain disclosure. Not `role="menu"`.
-- [required] *States:* `aria-expanded` on the button, `hidden` on the closed list below the collapse width; the button itself `hidden` above it; `aria-current` on the current link inside.
+- [required] *States:* `aria-expanded` on the button, `hidden` on the closed list below the collapse width; the button itself `hidden` above it; `aria-current` on the current link inside (ARIA).
 - [required] *Rules:* code-standard rule 20 (without script the links show and the button is absent; GOV.UK ships its toggle `hidden` until the script runs), code-standard rule 17, code-standard rule 18 (if the button is icon-only, it is named; prefer the visible word), code-standard rule 64, code-standard rule 2, code-standard rule 36.
 - [weak] *Bottom bar:* a `nav` of links, each an icon with its text, `aria-current` on the current one, padded for the device's safe area. The collapse width is measured from the items and written once as a breakpoint token.
 - [weak] *Detail:* [code: breakpoints](../../code/responsive.md#breakpoints), [code: container queries](../../code/responsive.md#container-queries), [code: progressive enhancement](../../code/javascript.md#progressive-enhancement), [code: touch targets](../../code/responsive.md#touch-targets), [code: safe areas](../../code/responsive.md#safe-areas).
@@ -180,7 +180,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [weak] **Opaque,** with a background distinct from the content so text never sits over text ([NN/g](https://www.nngroup.com/articles/sticky-headers/)).
 - [weak] **No "stalker" motion:** the bar is in place, not drifting in after a delay; motion respects reduced-motion settings ([visual: motion](../design/visual.md#motion)).
 - [weak] **One sticky band at a time where possible;** a sticky bar plus a sticky filter bar plus a sticky table header is a stack the reader reads through. When they stack, each offsets by the one above.
-- [required] **Anchors land below it:** jumping to a heading must not put the heading under the bar (Friedman).
+- [moderate] **Anchors land below it:** jumping to a heading must not put the heading under the bar (Friedman).
 
 **Cases**
 - A long component page keeps the global bar and the "On this page" list sticky → keep one, usually the in-page list on wide screens; the global bar can scroll away.
@@ -192,9 +192,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [required] 2.4.11 Focus Not Obscured (Minimum): a sticky bar never fully hides the focused element. 1.4.10 Reflow and 1.4.4 Resize Text: at 400% zoom a sticky bar can fill the viewport, so it stops sticking at narrow heights. 2.3.3 Animation from Interactions (AAA, worth meeting) for the reveal. 1.4.3 Contrast over all content.
 
 **Build**
-- [required] *Elements:* the same `header` and `nav`, made sticky with `position: sticky; top: 0` on the band; no script for a fully sticky bar.
+- [required] *Elements:* the same `header` and `nav`, made sticky with `position: sticky; top: 0` on the band; no script for a fully sticky bar (CSS).
 - [weak] *ARIA and keyboard:* none added; the bar's links keep their own model.
-- [required] *States:* a partially persistent bar toggles a `data-` attribute (`data-scrolled="up|down"`) from a passive scroll listener and styles its transform off it; the transition sits inside `prefers-reduced-motion: no-preference`.
+- [required] *States:* a partially persistent bar toggles a `data-` attribute (`data-scrolled="up|down"`) from a passive scroll listener and styles its transform off it; the transition sits inside `prefers-reduced-motion: no-preference` (code-standard rule 6).
 - [required] *Scroll padding:* `scroll-padding-top` on the root equal to the bar's height (a custom property both read), so anchors and focus land below it ([MDN scroll-padding-top](https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top)). A media query on height drops the stickiness when the viewport is too short.
 - [required] *Rules:* code-standard rule 22 (the bar's height is a token or carries its reason, and scroll padding reads the same value), code-standard rule 46 (one place for a dimension the screen takes from the design), code-standard rule 6 (the scroll hook is an attribute).
 - [weak] *Detail:* [code: reduced motion and colour scheme in code](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code), [code: zoom and reflow](../../code/responsive.md#zoom-and-reflow), [code: layout stability in code](../../code/performance.md#layout-stability-in-code).
@@ -214,10 +214,10 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [weak] Don't use it below the mobile collapse width; there the whole bar becomes the Menu button.
 
 **How**
-- [required] **Order:** the bar keeps its order; items leave from the end (the least used) and enter "More" in the same order, so a section never jumps ahead of another.
+- [required] **Order:** the bar keeps its order; items leave from the end (the least used) and enter "More" in the same order, so a section never jumps ahead of another (design-standard rule 2).
 - [weak] **Label:** "More", with a chevron; it opens like any navigation dropdown.
 - [required] **Current item inside "More":** "More" itself is marked as current, and some systems lift the current item into the visible bar; the toolkit marks "More" and keeps the order, so items never swap places as the reader moves (design-standard rule 2).
-- [required] **Measured from the content:** how many fit is measured at run time or decided at fixed widths from the longest labels, never from a device list.
+- [required] **Measured from the content:** how many fit is measured at run time or decided at fixed widths from the longest labels, never from a device list (code-standard rule 57).
 
 **Cases**
 - Seven sections, five fit at 1024px → five in the bar, "More" holding the last two in order.
@@ -229,9 +229,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [required] 4.1.2 (the "More" trigger exposes expanded state), 2.4.8 (current shown via "More"), 1.4.10 Reflow (no horizontal scroll while items move), 3.2.3 (the order stays the same).
 
 **Build**
-- [required] *Elements:* every link stays in one `ul` in source order; a "More" `li` with a `button` and a nested `ul`. With no script, all links show and the bar may wrap; that is the accepted no-script state.
+- [required] *Elements:* every link stays in one `ul` in source order; a "More" `li` with a `button` and a nested `ul`. With no script, all links show and the bar may wrap; that is the accepted no-script state (code-standard rule 20).
 - [strong] *ARIA and keyboard:* the APG disclosure navigation pattern, as for any dropdown ([APG](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/)).
-- [required] *States:* `aria-expanded` on the More button; an item moved into it is the same element moved, or hidden in the bar and shown in "More", so each link appears once to assistive technology; `aria-current="true"` on the More button's section marker when the current page is inside.
+- [required] *States:* `aria-expanded` on the More button; an item moved into it is the same element moved, or hidden in the bar and shown in "More", so each link appears once to assistive technology; `aria-current="true"` on the More button's section marker when the current page is inside (code-standard rule 64).
 - [required] *Rules:* code-standard rule 20, code-standard rule 17, code-standard rule 64, code-standard rule 57 (how many fit is derived from measured widths, not a number fitted to today's labels), code-standard rule 14 (moving items keeps the focused link focused).
 - [weak] *Detail:* [code: re-rendering without losing focus or scroll](../../code/javascript.md#re-rendering-without-losing-focus-or-scroll), [code: text expansion and no fixed widths on text](../../code/i18n.md#text-expansion-and-no-fixed-widths-on-text).
 
@@ -263,9 +263,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [required] 1.1.1 (the avatar has a text alternative), 4.1.2, 2.4.7, 3.2.3 (the menu sits in the same place on every page).
 
 **Build**
-- [required] *Elements:* a `button` holding the avatar `img` with `alt` naming the person, or the name as visible text; a `ul` of items.
+- [required] *Elements:* a `button` holding the avatar `img` with `alt` naming the person, or the name as visible text; a `ul` of items (WCAG 1.1.1).
 - [strong] *ARIA and keyboard:* [APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/): `aria-haspopup="menu"`, `aria-expanded`; Enter, Space or Down open it and focus the first item; Escape closes and returns focus. The identity header is not an item: it sits outside the `menu` or as a `presentation` row.
-- [required] *States:* `aria-expanded` on the trigger.
+- [required] *States:* `aria-expanded` on the trigger (WCAG 4.1.2).
 - [required] *Rules:* code-standard rule 18 (an avatar-only trigger is named), code-standard rule 20 ("Sign out" is a POST form that works without script).
 - [weak] *Detail:* [actions: split buttons and overflow menus](actions.md#split-buttons-and-overflow-menus).
 

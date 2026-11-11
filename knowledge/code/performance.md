@@ -45,7 +45,7 @@ How a page loads fast, responds at once and holds still: the Core Web Vitals and
 **What good looks like**
 - [moderate] Every image is served at the size it renders, in a modern format, with its space reserved.
 - [moderate] Images in the first viewport load eagerly, the LCP image at high priority; images below the fold load lazily.
-- [required] Decorative images cost nothing to assistive technology and as little as possible to the network.
+- [required] Decorative images cost nothing to assistive technology and as little as possible to the network (code-standard rule 18).
 
 **How**
 - [moderate] **Dimensions:** `width` and `height` attributes on every `img`, with `max-inline-size: 100%; block-size: auto` in the base, so the browser reserves the box from its aspect ratio ([MDN `<img>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img), [optimize CLS](https://web.dev/articles/optimize-cls)).
@@ -141,7 +141,7 @@ How a page loads fast, responds at once and holds still: the Core Web Vitals and
 
 **What good looks like**
 - [moderate] No script blocks parsing or rendering of the first view.
-- [required] Each page loads the code its own behaviour needs, not the application's.
+- [moderate] Each page loads the code its own behaviour needs, not the application's.
 - [weak] A size limit per route is set and checked.
 
 **How**

@@ -27,9 +27,9 @@ How a person gives the interface a file: which control to offer, how the file in
 - [required] Figma: figma-standard rule 26 (the button and the remove controls meet the target size), figma-standard rule 31 (rest, hover, focus, drag-over and error each draw differently).
 
 **Build**
-- [required] *Elements:* a native `input type="file"` with a `label`, inside a real `form` with `enctype="multipart/form-data"`; `multiple` when the task allows several files; `accept` listing the types. The drop zone is an enhancement around the input, never a replacement for it.
+- [required] *Elements:* a native `input type="file"` with a `label`, inside a real `form` with `enctype="multipart/form-data"`; `multiple` when the task allows several files; `accept` listing the types. The drop zone is an enhancement around the input, never a replacement for it (code-standard rule 20).
 - [strong] *ARIA and keyboard:* no WAI-ARIA APG pattern covers upload ([APG patterns](https://www.w3.org/WAI/ARIA/apg/patterns/)); the native input carries the role, name and keyboard (Space or Enter opens the file dialog).
-- [required] *States:* `aria-describedby` on the input pointing to the limits hint and, when there is one, the error; `aria-invalid="true"` on error; `required` per the form's own convention.
+- [required] *States:* `aria-describedby` on the input pointing to the limits hint and, when there is one, the error; `aria-invalid="true"` on error; `required` per the form's own convention (code-standard rule 15).
 - [required] *Rules:* code-standard rule 20 (the form posts and the upload works without script), code-standard rule 15 (the limits are a description, not part of the label), code-standard rule 1 (markup stands on its own).
 - [weak] *Detail:* [code: forms markup](../../code/html-semantics.md#forms-markup); [code: progressive enhancement](../../code/javascript.md#progressive-enhancement).
 
@@ -63,9 +63,9 @@ How a person gives the interface a file: which control to offer, how the file in
 - [required] 1.3.1 and 4.1.2 (the input's name comes from its label), 3.3.2 (limits stated before input), 2.4.7 Focus Visible (focus shows on the visible button, even when the native input is transparent), 3.3.1 Error Identification.
 
 **Build**
-- [required] *Elements:* `label for` + `input type="file" id name accept`, a hint element, and an error element per the form's error pattern.
+- [required] *Elements:* `label for` + `input type="file" id name accept`, a hint element, and an error element per the form's error pattern (HTML).
 - [strong] *ARIA and keyboard:* native; no ARIA role is added to the input or its label.
-- [required] *States:* `aria-describedby="hint error"`, `aria-invalid="true"` on error; the visible focus ring drawn on the label with `:focus-visible` on the input (`input:focus-visible + label`).
+- [required] *States:* `aria-describedby="hint error"`, `aria-invalid="true"` on error; the visible focus ring drawn on the label with `:focus-visible` on the input (`input:focus-visible + label`) (code-standard rule 15).
 - [required] *Rules:* code-standard rule 15 (hint and error are descriptions), code-standard rule 18 (an icon in the button is decorative and `aria-hidden`), code-standard rule 20.
 - [weak] *Detail:* [code: forms markup](../../code/html-semantics.md#forms-markup); [code: form errors and validation](../../code/html-semantics.md#form-errors-and-validation); [code: accessible names and descriptions](../../code/accessibility.md#accessible-names-and-descriptions).
 
@@ -79,7 +79,7 @@ How a person gives the interface a file: which control to offer, how the file in
 
 **Use when / don't use**
 - [weak] Use around the file input where dragging from the desktop is common and the page has room for a visible target.
-- [required] Never the only path: the zone holds the button or a link that opens the file dialog (Carbon's drag-and-drop variant puts a clickable link inside the zone; [Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)).
+- [required] Never the only path: the zone holds the button or a link that opens the file dialog (Carbon's drag-and-drop variant puts a clickable link inside the zone; [Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)) (WCAG 2.1.1).
 - [weak] Don't make the whole page a hidden drop target with no visible zone; people cannot aim at what they cannot see.
 - [weak] On touch screens dragging files is rare; the zone shows as the button and its hint.
 
@@ -103,7 +103,7 @@ How a person gives the interface a file: which control to offer, how the file in
 **Build**
 - [weak] *Elements:* a container around the native `input type="file"` and its `label`; the drop handling (`dragover`, `drop`) assigns the dropped files to the same input or the same upload queue the button feeds, so there is one path after the pick.
 - [required] *ARIA and keyboard:* none of its own; the zone is not a button, and adding `role="button"` to it would duplicate the real one. A polite live region announces "3 files added".
-- [required] *States:* `data-dragover` (or a class the stylesheet keys on) while a drag is over the zone; `disabled` on the input when the limit is reached.
+- [required] *States:* `data-dragover` (or a class the stylesheet keys on) while a drag is over the zone; `disabled` on the input when the limit is reached (code-standard rule 9).
 - [required] *Rules:* code-standard rule 20 (without script the input still works; the zone is decoration), code-standard rule 36 (one upload enhancement, one implementation, shared by every page that uploads), code-standard rule 6 (the script finds the zone by a data attribute).
 - [weak] *Detail:* [code: progressive enhancement](../../code/javascript.md#progressive-enhancement); [code: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages).
 
@@ -159,7 +159,7 @@ How a person gives the interface a file: which control to offer, how the file in
 **How**
 - [weak] **One row per file:** its name (truncated in the middle so the extension stays visible), its size in units people read ("2.4 MB"), its status, and its actions. Carbon stacks uploaded files vertically under the uploader ([Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)).
 - [weak] **Remove** on every row; **Replace** where one file stands for one answer. Carbon's remove is an "x" reached by Tab and pressed with Space or Enter.
-- [required] **After a remove,** focus moves to the next row's remove button, or to the input when the list is empty.
+- [required] **After a remove,** focus moves to the next row's remove button, or to the input when the list is empty (code-standard rule 14).
 - [weak] **Show the limit as it fills:** "3 of 5 files"; at the limit, the input is disabled and says why.
 - [weak] **Reuse.** On a later step of the same journey, earlier uploads appear as choices so the person does not upload the same file twice ([GOV.UK file upload](https://design-system.service.gov.uk/components/file-upload/)).
 - [weak] **Preview** only where seeing the file confirms it is the right one (an image thumbnail); a generic icon by type is enough otherwise.
@@ -175,9 +175,9 @@ How a person gives the interface a file: which control to offer, how the file in
 - [required] Figma: figma-standard rule 26 (the remove target), figma-standard rule 32.
 
 **Build**
-- [required] *Elements:* a `ul` of files; each `li` holds the name, size (`data` or plain text), the status and `button`s. Remove before submit is a `button type="button"`; remove of a file already stored is a form post that works without script.
+- [required] *Elements:* a `ul` of files; each `li` holds the name, size (`data` or plain text), the status and `button`s. Remove before submit is a `button type="button"`; remove of a file already stored is a form post that works without script (code-standard rule 20).
 - [strong] *ARIA and keyboard:* no APG pattern; plain list and buttons, in tab order. Don't make the list a grid.
-- [required] *States:* `disabled` on the input at the limit, with the reason in its `aria-describedby`; `hidden` on the empty list's container where an empty list says nothing.
+- [required] *States:* `disabled` on the input at the limit, with the reason in its `aria-describedby`; `hidden` on the empty list's container where an empty list says nothing (code-standard rule 9).
 - [required] *Rules:* code-standard rule 18 ("Remove photo.jpg", not a bare ×), code-standard rule 14 (focus after a removal), code-standard rule 9 and code-standard rule 62 (disabled is the input's own attribute), code-standard rule 12 (the list renders only when there are files), code-standard rule 17.
 - [weak] *Detail:* [code: focus management](../../code/accessibility.md#focus-management); [code: hidden content](../../code/accessibility.md#hidden-content); [code: lists, description lists and figures](../../code/html-semantics.md#lists-description-lists-and-figures).
 

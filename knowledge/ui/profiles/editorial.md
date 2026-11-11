@@ -233,9 +233,9 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [required] 1.4.3 Contrast for every quote. 1.3.1: a block quote is a `blockquote`, not an indented `p`.
 
 **Build**
-- [required] `<figure><blockquote cite="…"><p>…</p></blockquote><figcaption>Name, <cite>Work</cite></figcaption></figure>`.
+- [required] `<figure><blockquote cite="…"><p>…</p></blockquote><figcaption>Name, <cite>Work</cite></figcaption></figure>` (HTML).
 - [required] A pull quote is `<aside role="doc-pullquote" aria-hidden="true">`, placed on the `popout` line ([Figures](#figures-captions-and-breakouts)); hidden content in general is [accessibility: hidden content](../../code/accessibility.md#hidden-content).
-- [required] An epigraph is a `blockquote` with `role="doc-epigraph"` at the start of its section.
+- [required] An epigraph is a `blockquote` with `role="doc-epigraph"` at the start of its section (ARIA).
 
 **Check**
 - *Script:* could flag a `doc-pullquote` without `aria-hidden` whose text appears in the body, and a quote colour below 4.5:1.
@@ -327,7 +327,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 
 **Build**
 - [required] The series list is a `nav` labelled by the series name, holding an `ol` of links ([HTML semantics: navigation markup](../../code/html-semantics.md#navigation-markup)); "Part 2 of 5" is text in the header, not a heading.
-- [required] Previous and next are a second labelled `nav` with `rel="prev"` and `rel="next"` links naming the titles.
+- [required] Previous and next are a second labelled `nav` with `rel="prev"` and `rel="next"` links naming the titles (HTML).
 - [required] The list and the part numbers are generated from the series' data at build time, never typed per page (toolkit-standard §D 23).
 
 **Check**

@@ -10,7 +10,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 
 **What good looks like**
 - [strong] One prefix for the whole library, followed by a name that says what the element is.
-- [required] The element is defined once, by one module, and defining it twice does nothing.
+- [moderate] The element is defined once, by one module, and defining it twice does nothing.
 - [weak] The class name and the tag name are derived from each other by one rule.
 
 **How**
@@ -24,7 +24,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 - A method called `hidden()` or `focus()` on the class → it shadows `HTMLElement`'s own; Catalyst lists this as an anti-pattern ([Catalyst anti-patterns](https://github.github.io/catalyst/guide/anti-patterns/)). Rename it for what it does.
 
 **Accessibility**
-- [required] The tag name is never announced; nothing here reaches a reader except through the semantics inside.
+- [required] The tag name is never announced; nothing here reaches a reader except through the semantics inside (HTML).
 
 **Check**
 - *Script:* static scan: every `customElements.define` is preceded by a `customElements.get` guard and its tag starts with the library prefix; in Chrome, import the module twice and assert no error.
@@ -35,8 +35,8 @@ Which components get a script at all is code-standard rule 8; this page is for t
 ## The constructor and the lifecycle
 
 **What good looks like**
-- [required] The constructor does almost nothing: `super()`, private state, perhaps a shadow root or `attachInternals()`.
-- [required] Setup that reads attributes or children happens in `connectedCallback`, and survives being run twice.
+- [required] The constructor does almost nothing: `super()`, private state, perhaps a shadow root or `attachInternals()` (HTML).
+- [required] Setup that reads attributes or children happens in `connectedCallback`, and survives being run twice (HTML).
 - [strong] Everything the element added to the outside world (listeners on `document` or `window`, observers, timers) is removed in `disconnectedCallback`.
 
 **How**
@@ -72,7 +72,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 **What good looks like**
 - [moderate] Every primitive setting (variant, size, a boolean) is both an attribute and a property, and they agree.
 - [strong] Rich data (an array, an object) is a property only.
-- [required] A boolean is true when the attribute is present and false when it is absent, and defaults to false.
+- [required] A boolean is true when the attribute is present and false when it is absent, and defaults to false (HTML).
 - [strong] A property set before the element was defined is not lost.
 
 **How**
@@ -83,7 +83,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
   get variant() { return this.getAttribute('variant') ?? 'primary'; }
   set variant(v) { this.setAttribute('variant', v); }
   ```
-- [required] **Booleans.** Present means true: `disabled="false"` is still true ([open-wc: attributes and properties](https://open-wc.org/guides/knowledge/attributes-and-properties/)). Lit: "For a boolean property to be configurable from an attribute, it must default to false" ([Lit: boolean attributes](https://lit.dev/docs/components/properties/#boolean-attributes)); Web Awesome: "Boolean props should *always* default to `false`" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)). A default-on option is named for its opposite (`without-icon`, `hide-label`). Use `toggleAttribute(name, force)` to set one.
+- [required] **Booleans.** Present means true: `disabled="false"` is still true ([open-wc: attributes and properties](https://open-wc.org/guides/knowledge/attributes-and-properties/)). Lit: "For a boolean property to be configurable from an attribute, it must default to false" ([Lit: boolean attributes](https://lit.dev/docs/components/properties/#boolean-attributes)); Web Awesome: "Boolean props should *always* default to `false`" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)). A default-on option is named for its opposite (`without-icon`, `hide-label`). Use `toggleAttribute(name, force)` to set one (HTML).
 - [required] **`observedAttributes` lists only what the element reacts to** ([MDN: responding to attribute changes](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#responding_to_attribute_changes)). `attributeChangedCallback` runs once per observed attribute present at upgrade, before `connectedCallback` ([HTML: upgrade an element](https://html.spec.whatwg.org/multipage/custom-elements.html#concept-upgrade-an-element)), so it must not assume the inner nodes exist yet.
 - [strong] **Lazy properties.** A framework or script may set `el.items = [...]` before the definition loads; the value then sits on the instance and shadows the class's setter. Capture and re-set it on upgrade: the `_upgradeProperty` pattern "captures the value from the unupgraded instance and deletes the property" ([web.dev](https://web.dev/articles/custom-elements-best-practices)). Lit does it for its declared properties ([Lit: reactive properties](https://lit.dev/docs/components/properties/)).
   ```js
@@ -113,7 +113,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 
 **What good looks like**
 - [weak] The choice is made per element, for a reason the element states.
-- [required] In light DOM, the library's layered stylesheet reaches every part and the author's children stay where they wrote them.
+- [required] In light DOM, the library's layered stylesheet reaches every part and the author's children stay where they wrote them (CSS).
 - [moderate] In shadow DOM, the styling interface is custom properties (and `::part` where needed), named and documented.
 
 **How**
@@ -205,7 +205,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 - [moderate] A host that is itself a form value participates in the form through `ElementInternals`, not hidden inputs.
 
 **How**
-- [required] **Wrap first.** A light-DOM `<ds-button><button>…</button></ds-button>` gets focus, Enter and Space, `disabled`, form submission and its accessible name from the browser. No `role`, no `tabindex`, no key handler on the host.
+- [required] **Wrap first.** A light-DOM `<ds-button><button>…</button></ds-button>` gets focus, Enter and Space, `disabled`, form submission and its accessible name from the browser. No `role`, no `tabindex`, no key handler on the host (code-standard rule 8).
 - [strong] **Host semantics, only for a widget HTML lacks** (a tablist, a listbox with custom options). Default the role and states through `ElementInternals` (`this.#internals.role = 'tablist'`, `ariaSelected`); MDN: these "may be overwritten by author-defined attributes, but ensure that default semantics are retained should the author delete those attributes" ([MDN `ElementInternals`](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals)). WebKit's reason: setting a `role` attribute yourself "prevents users of this custom element to override ARIA role" ([WebKit: ElementInternals and form-associated custom elements](https://webkit.org/blog/13711/elementinternals-and-form-associated-custom-elements/)). If you must set an attribute, web.dev: "Do not override author-set, global attributes" such as `tabindex` and `role` ([web.dev](https://web.dev/articles/custom-elements-best-practices)). The keyboard model is the APG pattern's ([ARIA APG patterns](https://www.w3.org/WAI/ARIA/apg/patterns/)).
 - [required] **Form-associated custom elements.** `static formAssociated = true`, `this.#internals = this.attachInternals()` in the constructor, then `setFormValue()` for the value, `setValidity(flags, message, anchor)` for constraint validation, and the callbacks `formResetCallback`, `formDisabledCallback`, `formStateRestoreCallback` ([MDN `ElementInternals`](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals), [WebKit](https://webkit.org/blog/13711/elementinternals-and-form-associated-custom-elements/)). The element then gets `:invalid`, `form.elements` membership, `<fieldset disabled>` and form reset like a native control.
 - [moderate] **When each fits.** A light-DOM wrapper round a native `<input>`, `<select>` or `<button>` needs no form association: the native control is already in the form. Form association is for a host that is the control, with no native element holding the value (a rating made of stars, a colour well), or for any control in shadow DOM. Shoelace used the `formdata` event because "native `<form>` elements do not recognize form controls located inside a shadow root" ([Shoelace: form controls](https://shoelace.style/getting-started/form-controls)); Web Awesome's form controls extend a form-associated base and "must be tested to work with the standard `<form>` element" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)).
@@ -234,7 +234,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 
 **How**
 - [contested] **Disabled.** For a wrapper, set `disabled` on the inner control; the [html-semantics cases](html-semantics.md#custom-elements) cover the wrapper mistake. For a form-associated host, `formDisabledCallback(disabled)` reports `disabled` from the host or an ancestor `<fieldset>`, and `:disabled` matches the host ([WebKit](https://webkit.org/blog/13711/elementinternals-and-form-associated-custom-elements/)). In a keyboard-navigable set, Web Awesome's rule is that a disabled item "should not receive focus via keyboard, click, or tap" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)); the APG allows focusable disabled items in some composites, so follow the pattern in use.
-- [required] **`aria-disabled` versus `disabled`.** `aria-disabled` keeps the control focusable and discoverable but the script must block its action; `disabled` removes it from the tab order and from submission.
+- [required] **`aria-disabled` versus `disabled`.** `aria-disabled` keeps the control focusable and discoverable but the script must block its action; `disabled` removes it from the tab order and from submission (ARIA).
 - [required] **Focus delegation.** In shadow DOM, `attachShadow({ mode: 'open', delegatesFocus: true })` sends `host.focus()` and clicks on non-focusable parts to "the first focusable part inside the host's shadow DOM" and gives the host `:focus` ([MDN `delegatesFocus`](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/delegatesFocus)). MDN warns the first focusable may be the wrong one; check it. In light DOM there is nothing to delegate: the inner control is focusable on its own, and the host takes no `tabindex`.
 - [strong] **Roving focus** in a composite (tabs, toolbar, listbox): one `tabindex="0"` in the set, the rest `-1`, arrows move it ([APG: keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)). Spectrum ships it as a shared controller ([Spectrum: roving tab index](https://opensource.adobe.com/spectrum-web-components/tools/roving-tab-index/)).
 
@@ -260,7 +260,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 - [moderate] The element never fires an event because the page set one of its properties.
 
 **How**
-- [required] **Let native events through.** In light DOM, `click`, `input` and `change` from the inner control bubble through the host to the page with no help. Re-dispatching them doubles them.
+- [required] **Let native events through.** In light DOM, `click`, `input` and `change` from the inner control bubble through the host to the page with no help. Re-dispatching them doubles them (HTML).
 - [strong] **Its own events.** `this.dispatchEvent(new CustomEvent('ds-tab-select', { bubbles: true, composed: true, detail: { index } }))` ([MDN `CustomEvent()`](https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent/CustomEvent)). Names are lower case and kebab-style: Web Awesome requires a prefix and lower-case kebab names "for compatibility with frameworks that utilize DOM templates" ([Web Awesome contributing](https://webawesome.com/docs/resources/contributing)). `bubbles: true` so delegation works ([javascript: events and delegation](javascript.md#events-and-delegation)); `composed: true` only matters if the event starts inside a shadow root and must leave it ([MDN `composed`](https://developer.mozilla.org/en-US/docs/Web/API/Event/composed)). `detail` holds data, never DOM nodes the page should not touch.
 - [weak] **A cancelable event before an action** (`ds-before-close` with `cancelable: true`, act only if `dispatchEvent` returns `true`) lets the page veto; Carbon does this for its modal ([Carbon coding conventions](https://raw.githubusercontent.com/carbon-design-system/carbon-custom-elements/HEAD/src/coding-conventions.md)).
 - [moderate] **Not on the host's own changes.** "Do not dispatch events in response to the host setting a property" ([web.dev](https://web.dev/articles/custom-elements-best-practices)); the Gold Standard says change events are raised "only when internal activity changes a property" ([Gold Standard: Property Change Events](https://github.com/webcomponents/gold-standard/wiki/Property-Change-Events)).
@@ -376,7 +376,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
       html`<ds-button variant=${variant}><button ?disabled=${disabled}>${label}</button></ds-button>`,
   };
   ```
-- [required] **Why lit-html and not a string.** Lit parses the template before any value is interpolated, so a value is text or an attribute value, never markup; `?attr=` adds or removes a boolean and `.prop=` sets a property ([Lit: expressions](https://lit.dev/docs/templates/expressions/)). A story that builds `\`<ds-button variant="${args.variant}">\`` has the same fault as the element that does it. Without lit-html, build the node with `document.createElement` and `setAttribute`.
+- [moderate] **Why lit-html and not a string.** Lit parses the template before any value is interpolated, so a value is text or an attribute value, never markup; `?attr=` adds or removes a boolean and `.prop=` sets a property ([Lit: expressions](https://lit.dev/docs/templates/expressions/)). A story that builds `\`<ds-button variant="${args.variant}">\`` has the same fault as the element that does it. Without lit-html, build the node with `document.createElement` and `setAttribute`.
 - [moderate] **Controls from the manifest.** Storybook infers web-component `argTypes` from `custom-elements.json` ([Storybook: ArgTypes](https://storybook.js.org/docs/api/arg-types?renderer=web-components)), through `setCustomElementsManifest` in `.storybook/preview`.
 - [weak] **Story ids are parity's input.** The parity loop maps each variant and layer to a story and selector; see the `design-code-parity` skill.
 

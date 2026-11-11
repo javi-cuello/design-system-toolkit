@@ -193,7 +193,7 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - [weak] **Empty**: the four kinds and their copy are [feedback: empty states](../patterns/feedback.md#empty-states).
 - [weak] **Degraded**: secondary content fails quietly, primary content fails to an error page ([ux: degraded states](../design/ux.md#degraded-offline-and-error-states)).
 - [weak] **Missing is not zero** ([data: numbers](../patterns/data.md#numbers)): a failed figure reads "Not measured" with the reason.
-- [required] **Stale**: the caption carries each source's date (next section), so an old source is visibly old. When a source is past its expected age, say so in the caption ("audit of 2 Sep, older than the snapshot").
+- [required] **Stale**: the caption carries each source's date (next section), so an old source is visibly old. When a source is past its expected age, say so in the caption ("audit of 2 Sep, older than the snapshot") (design-standard rule 1).
 - [weak] Feedback states in depth are `../patterns/feedback.md`.
 
 **Cases**
@@ -295,7 +295,7 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - [weak] The drilled view shows its filter in the bar and in the address; Back returns to the summary as it was.
 - [weak] Linked charts update together when one is filtered or zoomed: "Mirror chart modifications like filter and zoom" (Carbon).
 - [weak] Two levels at most from summary to record; deeper hierarchies want a list with facets ([disclosure: progressive disclosure depth](../patterns/disclosure.md#progressive-disclosure-depth)).
-- [required] A drill target is a real link with visible affordance on focus and hover, not a hidden click handler on a chart.
+- [required] A drill target is a real link with visible affordance on focus and hover, not a hidden click handler on a chart (WCAG 2.1.1).
 
 **Cases**
 - Clicking "3 open failures" opens the full findings list unfiltered → open it with the failure facet set, count matching the tile.
@@ -405,7 +405,7 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - [weak] Indicators follow [interaction: response times](../design/interaction.md#response-times-and-perceived-performance): no indicator under about a second.
 - [weak] A manual Refresh control says when it last ran, and acknowledges at once even when the work takes longer (design-standard principles).
 - [weak] A failed refresh keeps the last good data on screen, marked with its time, and says the refresh failed; it never blanks the page.
-- [required] Auto-updating content can be paused.
+- [required] Auto-updating content can be paused (WCAG 2.2.2).
 
 **Cases**
 - A queue refreshes every 30 seconds and the row under the pointer jumps → hold new rows behind a "Show new" notice.

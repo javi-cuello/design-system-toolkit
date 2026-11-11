@@ -74,7 +74,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - [required] Segmented single choice: radios in a `fieldset` with a `legend`, styled as segments from `:checked` and `:focus-visible`; they submit and need no `aria-pressed` ([HTML semantics: *Search and filter forms*](../../code/html-semantics.md#search-and-filter-forms)).
 - [required] A menu past four values: a labelled native `select` first; a custom listbox only with the APG keyboard in full ([accessibility: *Selection controls past the native set*](../../code/accessibility.md#selection-controls-past-the-native-set)).
 - [required] Multi-select: checkboxes in a `fieldset`, or a `popover` of checkboxes opened by a button whose text is its collapsed label ("Levels: 2"); the popover gives Escape and light dismiss (code-standard rule 19).
-- [required] A one-state facet is a checkbox, or `input type="checkbox" role="switch"` where it acts at once.
+- [strong] A one-state facet is a checkbox, or `input type="checkbox" role="switch"` where it acts at once.
 - [required] Each control's `name` is the facet's parameter and `value` a stable identifier, never the display label (code-standard rule 6 for any hook the script reads).
 - [required] The count sits outside the option's name (code-standard rule 15); disabled is the control's own (code-standard rule 9, code-standard rule 62).
 
@@ -163,7 +163,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 
 **Use when / don't use**
 - [required] Use whenever a screen has two or more facets: each offers only what fits the choices in the others, and the facet with the most choices comes first (design-standard rule 6).
-- [required] Don't let a second facet offer values the first has ruled out as if they were live; disable them (next section).
+- [required] Don't let a second facet offer values the first has ruled out as if they were live; disable them (next section) (design-standard rules 5 and 6).
 
 **How**
 - [moderate] AND across facets, OR within one ([Baymard](https://baymard.com/blog/allow-applying-of-multiple-filter-values)).
@@ -254,7 +254,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 **Build**
 - [required] An option at zero keeps its place with the control's own `disabled` (an `option`, a radio or a checkbox), and its count still renders ("(0)") (code-standard rule 9, code-standard rule 62).
 - [required] The dim is the host's one disabled style, never per control ([tokens: *The disabled opacity, once*](../../code/tokens.md#the-disabled-opacity-once)).
-- [required] The selected option is never disabled, even at zero, so the form still submits it.
+- [required] The selected option is never disabled, even at zero, so the form still submits it (HTML).
 - [required] A whole facet with nothing to choose is a `fieldset disabled` or a disabled `select`; a facet that can never apply is not rendered (design-standard rule 5).
 - [required] In a custom listbox an unavailable option is `aria-disabled="true"`, so arrows still reach it ([accessibility: *Menus, menu buttons and toolbars*](../../code/accessibility.md#menus-menu-buttons-and-toolbars) has the same rule for menus).
 

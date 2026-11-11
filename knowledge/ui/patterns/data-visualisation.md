@@ -102,7 +102,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [weak] **Sequential** for magnitude, one hue, darkest for the largest in a light theme; Carbon: "In dark themes, the lightest color denotes the largest values". **Diverging** only when the data has a meaningful midpoint, two hues read as opposite with a neutral middle.
 - [moderate] **Emphasis**: one series in the accent, the rest grey. Atlassian uses its neutral chart colour "for the less important data when you want other data to stand out"; Datawrapper: grey for less important elements, highlight colours "reserved for your most important data points".
 - [moderate] **Status** colours (error, warning, success) colour a series only when the series is that status. Atlassian warns status colours "may be hard for users with color deficiencies to tell apart" and asks for other visual indicators; Carbon reserves red for danger and green for success.
-- [required] **Contrast and colour-vision deficiency**: marks reach 3:1 against the surface; the Analysis Function's categorical palette has every colour, and every adjacent pair in order, at 3:1 against white, and its sequential palette has only its three darkest blues at 3:1. Validate any palette by computation in each theme, never by eye.
+- [required] **Contrast and colour-vision deficiency**: marks reach 3:1 against the surface; the Analysis Function's categorical palette has every colour, and every adjacent pair in order, at 3:1 against white, and its sequential palette has only its three darkest blues at 3:1. Validate any palette by computation in each theme, never by eye (WCAG 1.4.11).
 - [moderate] **Dark mode is its own palette**, redefined per theme from the colour roles and validated separately; Carbon ships light and dark variants. The Analysis Function's palettes are "designed to be used with a white background", so they do not carry over to a dark theme.
 
 **Cases**
@@ -115,7 +115,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 **Accessibility**
 - [required] 1.4.11 Non-text Contrast: parts of graphics required to understand the content need 3:1 against adjacent colours; W3C: "The lines should have 3:1 contrast against their background", unless the same information is in labels or "a table that follows the graph" ([W3C Understanding 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)). Primer: "All chart marks ... must meet a 3:1 contrast ratio against the background".
 - [required] 1.4.1 Use of Color: series are told apart by label, position, line style or marker as well as colour. Chartability: "Color must not be the only channel for conveying meaningful or essential information".
-- [required] Text never wears a light data colour; labels use text tokens at 4.5:1 (Primer: "Axis labels must have a 4.5:1 contrast against the background").
+- [required] Text never wears a light data colour; labels use text tokens at 4.5:1 (Primer: "Axis labels must have a 4.5:1 contrast against the background") (WCAG 1.4.3).
 
 **Build**
 - [required] Colour pinned to a series by attribute: `data-series="errors"` mapped once to the categorical palette's custom properties, so a filter cannot reshuffle colours (code-standard rule 6, code-standard rule 22; [html-semantics: *Charts in markup*](../../code/html-semantics.md#charts-in-markup)).
@@ -249,7 +249,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **Accessibility**
 - [required] 1.4.3: axis and label text at 4.5:1; Chartability's "Small text size": "Text (any) must not be smaller than 9pt/12px in size".
-- [required] Gridlines are context and need no 3:1; a reference line that carries meaning does.
+- [required] Gridlines are context and need no 3:1; a reference line that carries meaning does (WCAG 1.4.11).
 
 **Build**
 - [required] Bars start at zero in the scale function, not by hand per chart (code-standard rule 57); ticks come from the scale's nice-rounding, formatted by the page's `Intl.NumberFormat` ([i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)).
@@ -266,7 +266,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 **What good looks like**
 - [moderate] Detail on hover and on focus, the same content: the values at that point on both axes, every series at that x.
 - [weak] A thin guide line at the point, and the tooltip beside it, inside the plot area; nothing laid over the chart's data, title or legend.
-- [required] Nothing only in the tooltip: every value is also in a label or the table.
+- [moderate] Nothing only in the tooltip: every value is also in a label or the table.
 
 **How**
 - [moderate] Content. Carbon: "A tooltip should repeat the corresponding values of the data point on both axes and any other relevant details" ([Carbon chart anatomy](https://carbondesignsystem.com/data-visualization/chart-anatomy/)). A shared tooltip "displays information for all series at a specific x-axis value" ([Highcharts tooltip](https://www.highcharts.com/docs/chart-concepts/tooltip)); Primer allows one category or all.
@@ -285,12 +285,12 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 **Accessibility**
 - [required] 1.4.13 Content on Hover or Focus: dismissible ("without moving pointer hover or keyboard focus", Escape), hoverable ("the pointer can be moved over the additional content without the additional content disappearing") and persistent ([W3C Understanding 1.4.13](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html)). A tooltip that does not obscure other content is exempt from dismissal, which is one more reason to place it beside the point.
 - [required] 2.1.1 Keyboard and 2.4.7 Focus Visible: the focused point is visibly marked at 3:1.
-- [required] Tooltip text at 4.5:1; announced through the focused point's name, not a live region on every move.
+- [required] Tooltip text at 4.5:1; announced through the focused point's name, not a live region on every move (WCAG 1.4.3).
 
 **Build**
 - [required] The tooltip and guide line are one component, positioned from the point's coordinates and clamped to the plot's box; detail on hover and focus comes from one handler (code-standard rule 36; [accessibility: *Tooltips and toggletips*](../../code/accessibility.md#tooltips-and-toggletips), [dialogs: tooltips](dialogs.md#tooltips)).
 - [moderate] Focusable points use a roving tabindex: one tab stop, arrow keys move, each point's accessible name holds its values ([accessibility: *Composite widgets and roving tabindex*](../../code/accessibility.md#composite-widgets-and-roving-tabindex)); the focus ring is the shared one ([accessibility: *Visible focus*](../../code/accessibility.md#visible-focus)).
-- [required] Escape dismisses; the tooltip is `pointer-events` reachable so the pointer can enter it.
+- [required] Escape dismisses; the tooltip is `pointer-events` reachable so the pointer can enter it (WCAG 1.4.13).
 - [weak] Labels inserted with `textContent`, never `innerHTML` ([javascript: *Escaping and templating safely*](../../code/javascript.md#escaping-and-templating-safely)).
 - [required] Without script, no tooltip and the table carries the values (code-standard rule 20).
 
@@ -381,7 +381,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [moderate] The table. The Analysis Function: "If you expect a non-disabled user to read the data from the chart, give a table"; the text alternative can be "a table of the data presented in the chart" ([Government Analysis Function, charts](https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-charts/)). Place it beside the chart in a disclosure ("Show data"), or as a tab of the same region; never only as a download.
 - [weak] The table follows the table patterns: caption, header cells, right-aligned numbers, the same precision and units as the chart.
 - [moderate] Source text sits in body text under the chart, not inside the image: the ONS asks for the source "directly after the chart" ([ONS chart text](https://service-manual.ons.gov.uk/data-visualisation/guidance/chart-text)) and the Analysis Function for source text in the page, not the image.
-- [required] `figure` and `figcaption` group the chart, its description and its source, as the W3C tutorial shows.
+- [required] `figure` and `figcaption` group the chart, its description and its source, as the W3C tutorial shows (HTML).
 
 **Cases**
 - A canvas chart with no alternative → a "Show data" disclosure with the table and a one-sentence summary as the accessible name.
@@ -411,7 +411,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 ## Colour-vision deficiency
 
 **What good looks like**
-- [required] Nothing in a chart depends on telling two colours apart: direct labels, position, line style, marker shape or texture carry identity too.
+- [required] Nothing in a chart depends on telling two colours apart: direct labels, position, line style, marker shape or texture carry identity too (WCAG 1.4.1).
 - [strong] The palette is validated by computation for colour-vision deficiency, in each theme.
 
 **How**
@@ -444,8 +444,8 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 ## Contrast of marks and text
 
 **What good looks like**
-- [required] Every mark a reader needs (lines, bars, slices, points, reference lines) at 3:1 against the surface and against touching marks, or labelled so the colour is not needed.
-- [required] Every piece of chart text at 4.5:1, or 3:1 when large.
+- [required] Every mark a reader needs (lines, bars, slices, points, reference lines) at 3:1 against the surface and against touching marks, or labelled so the colour is not needed (WCAG 1.4.11).
+- [required] Every piece of chart text at 4.5:1, or 3:1 when large (WCAG 1.4.3).
 
 **How**
 - [required] Marks: WCAG 1.4.11 asks 3:1 for graphical objects required to understand the content; for a graph, "The lines should have 3:1 contrast against their background", lines that rarely overlap need not contrast with each other, and pie slices need 3:1 between them unless "visible labels and values ... convey equivalent information" ([W3C Understanding 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)). Labels or "a table that follows the graph" are the exception's way out.
@@ -453,7 +453,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [weak] The Analysis Function's categorical palette is at 3:1 against white and between adjacent colours in order; of its sequential blues only the three darkest reach 3:1, and its pale "focus" grey does not.
 - [weak] Grey for context is still a mark: if the reader needs it, it reaches 3:1; if it is only context, labels carry it.
 - [required] Text: WCAG 1.4.3, "at least 4.5:1", large text 3:1, and it applies to images of text ([W3C Understanding 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)). Primer: "Axis labels must have a 4.5:1 contrast against the background". Text never takes a light series colour; a label inside a filled segment picks dark or light text by the fill.
-- [required] Gridlines are context and need no 3:1; a threshold line that carries meaning does.
+- [required] Gridlines are context and need no 3:1; a threshold line that carries meaning does (WCAG 1.4.11).
 - [weak] Each theme is measured separately.
 
 **Cases**
@@ -511,7 +511,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 ## Touch targets for points
 
 **What good looks like**
-- [required] Every interactive point, bar or legend toggle has a hit area of at least 24 by 24 CSS pixels, larger than its drawn mark.
+- [required] Every interactive point, bar or legend toggle has a hit area of at least 24 by 24 CSS pixels, larger than its drawn mark (WCAG 2.5.8).
 - [weak] On touch, a tap shows a point's detail and a tap elsewhere dismisses it.
 
 **How**
@@ -570,8 +570,8 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 ## Zoom and reflow of charts
 
 **What good looks like**
-- [required] At 200% text size and 400% zoom, chart text stays legible and the page reflows around the chart.
-- [required] A chart that needs its two dimensions keeps them and scrolls within its own region, or offers its table.
+- [required] At 200% text size and 400% zoom, chart text stays legible and the page reflows around the chart (WCAG 1.4.10).
+- [required] A chart that needs its two dimensions keeps them and scrolls within its own region, or offers its table (WCAG 1.4.10).
 
 **How**
 - [required] WCAG 1.4.10 exempts "parts of the content which require two-dimensional layout for usage or meaning", and the W3C notes that "Slicing up a graphic (photograph, drawing, graph, etc.) and stacking the blocks would make the graphic difficult to understand" ([W3C Understanding 1.4.10](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html)). The chart may keep its shape; the page around it may not scroll in two directions.
@@ -682,7 +682,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - Small multiples each with their own y-scale, read as equal → one shared scale, or "scales differ" in the summary.
 
 **Accessibility**
-- [required] A sparkline's alternative is the number and its comparison beside it; the SVG is decorative (`aria-hidden="true"`) when the text says everything it shows, otherwise named by a sentence ("Down from 72 to 48 over eight weeks").
+- [required] A sparkline's alternative is the number and its comparison beside it; the SVG is decorative (`aria-hidden="true"`) when the text says everything it shows, otherwise named by a sentence ("Down from 72 to 48 over eight weeks") (WCAG 1.1.1).
 - [weak] Small multiples: each panel has a title; one table covers all panels.
 
 **Build**

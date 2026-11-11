@@ -5,12 +5,12 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Document metadata
 
 **What good looks like**
-- [required] Every page starts with a doctype, a UTF-8 charset, a language and a title that names the page before the site.
-- [required] The viewport lets the reader zoom.
+- [required] Every page starts with a doctype, a UTF-8 charset, a language and a title that names the page before the site (HTML; WCAG 2.4.2, WCAG 3.1.1).
+- [required] The viewport lets the reader zoom (WCAG 1.4.4).
 - [strong] The title changes when the view changes, including in a single-page app.
 
 **How**
-- [required] The minimum head, in this order:
+- [required] The minimum head, in this order (HTML):
   ```html
   <!doctype html>
   <html lang="en-GB">
@@ -44,7 +44,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **How**
 - [required] Open Graph's four required properties are `og:title`, `og:type`, `og:image` and `og:url`; a page with an image "should specify `og:image:alt`", "a description of what is in the image (not a caption)" ([ogp.me](https://ogp.me/)). Give `og:image:width` and `og:image:height` too: Facebook can then render the preview before it has downloaded the image ([Meta, images in link shares](https://developers.facebook.com/docs/sharing/webmasters/images/)).
-- [required] Size: 1200 × 630 or larger, as close to 1.91:1 as possible; under 600 × 315 Facebook drops the large preview, under 200 × 200 it rejects the image, and files over 8 MB are refused ([Meta, as above](https://developers.facebook.com/docs/sharing/webmasters/images/)). X's own card documentation could not be read for this page (it answered 402), so its limits are unchecked here.
+- [strong] Size: 1200 × 630 or larger, as close to 1.91:1 as possible; under 600 × 315 Facebook drops the large preview, under 200 × 200 it rejects the image, and files over 8 MB are refused ([Meta, as above](https://developers.facebook.com/docs/sharing/webmasters/images/)). X's own card documentation could not be read for this page (it answered 402), so its limits are unchecked here.
 - [strong] Facebook caches an image by its URL ([Meta, as above](https://developers.facebook.com/docs/sharing/webmasters/images/)), so a changed image needs a new URL, versioned as any cached asset is ([performance: caching and compression](performance.md#caching-and-compression)); a query (`card.png?v=<hash of what it is drawn from>`) does it without renaming files. Old shares keep the old picture.
 - [moderate] A per-page image drawn on the server (a title and logo on a fixed background) can be cached by a key of its inputs, written aside and renamed into place, and fall back to the site's card on any failure, redirecting before an image content type is set, so that two requests at once never serve a half-written file and a failure never goes out labelled as an image (one project, 2026-11-10).
 
@@ -53,7 +53,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - PHP's GD could not read the site's `.woff2` face, so the server that drew text needed the same face as a static TTF; and GD has no letter-spacing, so its lines ran slightly wider than the design's tracking (one project, 2026-11-10).
 
 **Accessibility**
-- [required] `og:image:alt` is the image's text alternative where a platform shows one ([ogp.me](https://ogp.me/)); it describes the image, and the title already says the rest.
+- [moderate] `og:image:alt` is the image's text alternative where a platform shows one ([ogp.me](https://ogp.me/)); it describes the image, and the title already says the rest.
 
 **Check**
 - *Script:* could: every page carries the four required properties, an `og:image` that answers 200 with an image type, and `og:image:alt`.
@@ -64,13 +64,13 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Headings and the outline
 
 **What good looks like**
-- [required] One `h1`, inside `main`, naming the page.
-- [required] Levels descend without gaps; a level is chosen for its place in the outline, never for its size.
+- [required] One `h1`, inside `main`, naming the page (code-standard rule 1).
+- [required] Levels descend without gaps; a level is chosen for its place in the outline, never for its size (code-standard rule 1).
 - [strong] Every section a reader might jump to starts with a heading.
 
 **How**
 - [required] The WHATWG rule, now normative: "Each heading following another heading lead in the outline must have a heading level that is less than, equal to, or 1 greater than lead's heading level" ([HTML, headings and outlines](https://html.spec.whatwg.org/multipage/sections.html#headings-and-outlines)). An `h3` straight under an `h1` is its own non-conforming example.
-- [required] The old outline algorithm (an `h1` in every `section`, ranked by nesting) is gone from the standard; write explicit levels.
+- [required] The old outline algorithm (an `h1` in every `section`, ranked by nesting) is gone from the standard; write explicit levels (HTML).
 - [required] Size is the stylesheet's: a prose scale restores heading sizes where a reset flattened them (code-standard rule 7), and a component heading takes its text style from the component's stylesheet or an attribute (code-standard rule 6), not from a different level.
 - [weak] A heading inside a reusable component takes its level from the caller (a `level` attribute or a slot for the heading itself), because the component cannot know where it will sit. With no level given it renders a `p` in the same style: a component placed where its title introduces nothing (an empty state under its section's own heading) should not add a heading.
 - [required] A skipped level breaks the HTML standard's "must" above, and the WAI tutorial says it "should be avoided where possible" ([WAI, *Heading ranks*](https://www.w3.org/WAI/tutorials/page-structure/headings/)). WCAG itself fixes no level: H42's example "is not intended to prescribe what level of heading should be used for a particular section" ([H42](https://www.w3.org/WAI/WCAG22/Techniques/html/H42)). An audit reports a skip as non-conforming HTML and against code-standard rule 1, not as a 1.3.1 failure on its own; a level chosen only for its look is one, through [F43](https://www.w3.org/WAI/WCAG22/Techniques/failures/F43).
@@ -95,10 +95,10 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Landmarks
 
 **What good looks like**
-- [required] One `main`, holding everything that is the page's own content.
-- [required] One banner and one contentinfo: a `header` and a `footer` that are children of `body`, not inside any sectioning element.
+- [required] One `main`, holding everything that is the page's own content (HTML).
+- [required] One banner and one contentinfo: a `header` and a `footer` that are children of `body`, not inside any sectioning element (HTML).
 - [strong] Every other region a reader would jump to is a landmark with a name; two of the same kind have different names.
-- [required] No content sits outside a landmark.
+- [required] No content sits outside a landmark (code-standard rule 3).
 
 **How**
 - [required] **Which elements become landmarks** ([HTML-AAM](https://www.w3.org/TR/html-aam-1.0/), [APG landmark regions](https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/)):
@@ -144,9 +144,9 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Links and buttons
 
 **What good looks like**
-- [required] It goes somewhere: `<a href>`. It does something here: `<button type="button">`. It submits: `<button type="submit">`.
-- [required] Every button in a form states its `type`.
-- [required] No `div`, `span` or `href="#"` stands in for either.
+- [required] It goes somewhere: `<a href>`. It does something here: `<button type="button">`. It submits: `<button type="submit">` (HTML).
+- [moderate] Every button in a form states its `type`.
+- [required] No `div`, `span` or `href="#"` stands in for either (HTML).
 
 **How**
 - [required] **The test is the result, not the look.** "If the `a` element has an `href` attribute, then it represents a hyperlink"; without one it is "a placeholder for where a link might otherwise have been placed" ([HTML `a`](https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-a-element)). A design's "button" that changes the address is a link styled as a button; choosing between them is [actions: buttons or links](../ui/patterns/actions.md#buttons-or-links).
@@ -177,7 +177,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Navigation markup
 
 **What good looks like**
-- [required] Every set of destinations is a list of links in a named `nav`; the reader's place in it is `aria-current`, and the style reads that attribute.
+- [required] Every set of destinations is a list of links in a named `nav`; the reader's place in it is `aria-current`, and the style reads that attribute (code-standard rule 64).
 - [strong] Breadcrumbs, pagination, link tabs and side navigation are all this one shape; none needs a widget role or a keyboard model of its own.
 - [strong] A collapsible navigation is a disclosure (a `button` with `aria-expanded` and a list), never `role="menu"`.
 - [weak] This section implements [navigation](../ui/patterns/navigation.md) (breadcrumbs, link tabs, in-page navigation), [menus](../ui/patterns/menus.md) (the top bar, dropdowns and the mobile menu), [sidebars](../ui/patterns/sidebars.md) (side navigation) and [pagination](../ui/patterns/pagination.md).
@@ -215,13 +215,13 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Lists, description lists and figures
 
 **What good looks like**
-- [required] A set of like things is `ul` or `ol`; a sequence that matters is `ol`.
-- [required] Key–value pairs are `dl`, `dt` and `dd`.
-- [required] Self-contained content with a caption (a chart, a code sample, an image with credit) is a `figure` with a `figcaption`.
+- [required] A set of like things is `ul` or `ol`; a sequence that matters is `ol` (code-standard rule 1).
+- [required] Key–value pairs are `dl`, `dt` and `dd` (code-standard rule 1).
+- [required] Self-contained content with a caption (a chart, a code sample, an image with credit) is a `figure` with a `figcaption` (HTML).
 
 **How**
 - [required] **Lists.** A `ul`'s content model is "zero or more `li` and script-supporting elements" ([HTML `ul`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-ul-element)): nothing else is a direct child. A screen reader announces "list, 12 items", which is information the reader cannot get from a stack of `div`s.
-- [required] **Navigation is a list of links** inside `nav`.
+- [strong] **Navigation is a list of links** inside `nav`.
 - [required] **Description lists.** `dl` "represents an association list consisting of zero or more name-value groups" ([HTML `dl`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-dl-element)); a `div` may wrap each `dt`/`dd` group for layout.
   ```html
   <dl><div><dt>Status</dt><dd>Open</dd></div>
@@ -249,7 +249,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Tables for data
 
 **What good looks like**
-- [required] A `table` is used for data with rows and columns, and only for that.
+- [required] A `table` is used for data with rows and columns, and only for that (HTML).
 - [strong] It has a `caption`, header cells in `th`, and a `scope` where the direction is not obvious.
 - [strong] A table wider than its space scrolls in a named, focusable container.
 
@@ -319,9 +319,9 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Disclosure, dialogs and popovers
 
 **What good looks like**
-- [required] Show-and-hide content is `details` and `summary`; an exclusive group shares a `name`.
-- [required] A modal is a `dialog` opened with `showModal()`.
-- [required] A non-modal overlay (a menu panel, a picker) is a `popover` opened by `popovertarget`, which works without script.
+- [required] Show-and-hide content is `details` and `summary`; an exclusive group shares a `name` (code-standard rule 1).
+- [required] A modal is a `dialog` opened with `showModal()` (code-standard rule 20).
+- [required] A non-modal overlay (a menu panel, a picker) is a `popover` opened by `popovertarget`, which works without script (HTML).
 - [required] A behaviour-heavy web component is written only when none of the three covers it (code-standard rule 8).
 
 **How**
@@ -360,9 +360,9 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Forms markup
 
 **What good looks like**
-- [required] Every control has a `label` tied to it; a group of radios or checkboxes, or a field in parts, sits in a `fieldset` with a `legend`.
+- [required] Every control has a `label` tied to it; a group of radios or checkboxes, or a field in parts, sits in a `fieldset` with a `legend` (WCAG 1.3.1).
 - [strong] The input `type`, `inputmode` and `autocomplete` say what the answer is.
-- [required] A form is a real `form` with an `action` and a submit button, so it works without script.
+- [required] A form is a real `form` with an `action` and a submit button, so it works without script (code-standard rule 20).
 
 **How**
 - [required] **Labels.** `<label for="email">` matched to the control's `id`, or the control inside the label. Only a labelable element can be labelled, and only the first matching `id` counts ([MDN `label`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label)). Don't put links or buttons inside a label: MDN warns it "makes it difficult for people" to activate the control.
@@ -399,8 +399,8 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Form errors and validation
 
 **What good looks like**
-- [required] The markup carries the constraints (`required`, `type`, `min`, `max`, `pattern`, `maxlength`), the server checks them again, and the script only adds its own messages on top.
-- [required] A field in error says so in its attributes, not only in its border: `aria-invalid="true"` and a message tied by `aria-describedby`.
+- [strong] The markup carries the constraints (`required`, `type`, `min`, `max`, `pattern`, `maxlength`), the server checks them again, and the script only adds its own messages on top.
+- [required] A field in error says so in its attributes, not only in its border: `aria-invalid="true"` and a message tied by `aria-describedby` (WCAG 3.3.1).
 - [moderate] A failed submit renders an error summary that takes focus and links to each field.
 - [moderate] A submit sends one request, however often it is clicked.
 
@@ -441,9 +441,9 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Search and filter forms
 
 **What good looks like**
-- [required] A search or a filter bar is a GET `form` whose field names are the address's parameters, so it works, reloads and shares with no script.
+- [required] A search or a filter bar is a GET `form` whose field names are the address's parameters, so it works, reloads and shares with no script (code-standard rule 20).
 - [strong] A site search sits in a `search` landmark; a list's filter form is its own named form, one per list.
-- [required] The script enhances that form (instant update, removing the submit button), never replaces it.
+- [required] The script enhances that form (instant update, removing the submit button), never replaces it (code-standard rule 20).
 - [weak] This section implements [search](../ui/patterns/search.md) and [filtering](../ui/patterns/filtering.md).
 
 **How**
@@ -479,9 +479,9 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Images and alt
 
 **What good looks like**
-- [required] Every `img` has an `alt` attribute: words that do the image's job, or empty when the image adds nothing.
-- [required] An image that is a link or a button has `alt` naming where it goes or what it does.
-- [required] Decorative graphics are hidden from assistive technology; informative ones are not CSS backgrounds.
+- [required] Every `img` has an `alt` attribute: words that do the image's job, or empty when the image adds nothing (WCAG 1.1.1).
+- [required] An image that is a link or a button has `alt` naming where it goes or what it does (WCAG 1.1.1).
+- [required] Decorative graphics are hidden from assistive technology; informative ones are not CSS backgrounds (WCAG 1.1.1).
 
 **How**
 - [required] **The rule.** "The `alt` attribute must be specified and its value must not be empty" unless a case below says otherwise; an icon beside text that says the same thing takes `alt` that is "present but must be empty" ([HTML, alternative text](https://html.spec.whatwg.org/multipage/images.html#alt)). With `alt` missing, "screen readers might read the image filename" ([WebAIM](https://webaim.org/techniques/alttext/)).
@@ -510,11 +510,11 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **What good looks like**
 - [strong] Recorded speech in a `video` carries a captions track in the page's language, on by the person's choice, never burned into the picture.
-- [required] Audio-only content has a transcript beside it, as text on the page.
+- [required] Audio-only content has a transcript beside it, as text on the page (WCAG 1.2.1).
 - [strong] Media never plays on its own with sound, and the native controls stay unless the replacement does everything they do from the keyboard.
 
 **How**
-- [required] Captions are a WebVTT file on a `track`: `<track kind="captions" src="intro.vtt" srclang="en" label="English" default>`. `kind="captions"` (speech and meaningful sound) is what deaf readers need; `kind="subtitles"` is translation only.
+- [required] Captions are a WebVTT file on a `track`: `<track kind="captions" src="intro.vtt" srclang="en" label="English" default>`. `kind="captions"` (speech and meaningful sound) is what deaf readers need; `kind="subtitles"` is translation only (HTML).
 - [strong] Keep `controls` on the element. A custom player rebuilds play, pause, seek, volume, captions and full screen, each a named button reachable by Tab.
 - [moderate] A transcript sits after the media in a `details` or a plain section, so it is searchable and reads without the player.
 - [required] Autoplay only muted (`muted autoplay playsinline`), for decorative loops, with a pause control (2.2.2).
@@ -538,7 +538,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 **What good looks like**
 - [strong] A chart is a `figure`: the graphic, a visible one-sentence summary of its message, a `figcaption` with the source, and its data as a real `table` beside it.
 - [strong] The graphic is inline SVG (or `canvas`) with one accessible name that states the message; its marks are not each read out.
-- [required] Series colours come from tokens and are pinned to a series by an attribute, not by position.
+- [weak] Series colours come from tokens and are pinned to a series by an attribute, not by position.
 
 **How**
 - [strong] **One name, from visible text.** `role="img"` on the `svg` with `aria-labelledby` pointing at the summary sentence. MDN's SVG [`title`](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/title): "If an element can be described by visible text, it is recommended to reference that text with an `aria-labelledby` attribute rather than using the `<title>` element." `role="img"` hides the marks' text from assistive technology, which is why the table carries the values.
@@ -577,7 +577,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **What good looks like**
 - [moderate] A code sample is `pre` and `code`, its language named, its text exactly what pastes and runs.
-- [required] A copy button is a real `button` with a name, and says it copied in a status message.
+- [required] A copy button is a real `button` with a name, and says it copied in a status message (WCAG 4.1.3).
 - [strong] A live example in an `iframe` has a `title` naming what it shows, and a link that opens it alone.
 - [weak] It implements [documentation: examples](../ui/profiles/documentation.md#examples-do-and-dont-live-examples-code).
 
@@ -614,9 +614,9 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Valid nesting and no div soup
 
 **What good looks like**
-- [required] Each element sits where its content model allows; the page passes a validator with no errors.
-- [required] A `div` or `span` appears only where no element with meaning fits.
-- [required] No interactive element inside another.
+- [required] Each element sits where its content model allows; the page passes a validator with no errors (HTML).
+- [required] A `div` or `span` appears only where no element with meaning fits (HTML).
+- [required] No interactive element inside another (HTML).
 
 **How**
 - [required] **Content models** say what an element may contain ([HTML content models](https://html.spec.whatwg.org/multipage/dom.html#content-models)). The ones that bite:
@@ -646,19 +646,19 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 ## Custom elements
 
 **What good looks like**
-- [required] A component's host is an autonomous custom element whose name contains a hyphen.
+- [required] A component's host is an autonomous custom element whose name contains a hyphen (HTML).
 - [required] The native control lives inside it and carries the behaviour; the host carries the variant (code-standard rule 8).
 - [required] No attribute name the platform already gives meaning to (code-standard rules 9 and 10).
 
 **How**
 - [required] **The name.** A valid custom element name starts with a lower-case ASCII letter, has no upper-case letters and "contains a U+002D (-)"; the hyphen guarantees no future HTML element will collide ([HTML custom elements](https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name)).
 - [strong] **Autonomous, not customised built-ins.** MDN: Safari "does not plan to support" customised built-in elements (`is="…"`) ([MDN, using custom elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)); wrap the native element instead.
-- [required] **No semantics of its own.** An undefined or script-free custom element is a generic inline box with no role. It never takes a role to impersonate a native control; a `<ds-button>` holds a `<button>`.
+- [required] **No semantics of its own.** An undefined or script-free custom element is a generic inline box with no role. It never takes a role to impersonate a native control; a `<ds-button>` holds a `<button>` (code-standard rule 8).
   ```html
   <ds-button variant="primary" size="md"><button type="submit">Save</button></ds-button>
   ```
 - [required] **Content goes in slots** in the template language (code-standard rule 13); a registered element is written only for behaviour HTML lacks (code-standard rule 8), and its script is written once (code-standard rule 36).
-- [required] **Display.** An unknown element is inline by default, so the host's stylesheet sets its `display`.
+- [required] **Display.** An unknown element is inline by default, so the host's stylesheet sets its `display` (CSS).
 - [weak] How a registered one is built is [web-components.md](web-components.md); the same component in React is the native element itself, [react.md](react.md).
 
 **Cases**

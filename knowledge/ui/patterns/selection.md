@@ -118,7 +118,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - [required] Native `<input type="radio">`s sharing a `name` in a `fieldset` with a `legend`; the browser gives one tab stop and arrow-key selection, so no roving script ([APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/)).
 - [contested] No `checked` in a question; in a settings form, `checked` from the stored value.
 - [required] A conditional follow-up follows its radio in the DOM, shown by default; the script hides it on load and toggles `hidden` on `change` (code-standard rule 17, code-standard rule 20).
-- [required] No `change` handler that submits or navigates.
+- [required] No `change` handler that submits or navigates (WCAG 3.2.2).
 - [required] States from `:checked`, `:focus-visible` and `:disabled` (code-standard rule 9); markup in [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup).
 
 **Check**
@@ -195,7 +195,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 
 **Build**
 - [required] A native `select` inside the wrapper (code-standard rule 8). In a question, the first option is `<option value="">Choose a country</option>` and the `select` is `required`.
-- [required] Groups are `optgroup`; an unavailable option is `<option disabled>`, kept in place.
+- [required] Groups are `optgroup`; an unavailable option is `<option disabled>`, kept in place (design-standard rule 5).
 - [required] The chevron is drawn on the `select` itself (`appearance: none` with a background image and inline-end padding from tokens), so the native popup and keyboard stay; `color-scheme` themes the popup (code-standard rule 16).
 - [required] A filter select sits in a GET form with a submit the script removes (code-standard rule 20); the script applies the filter in place on `change`, never navigating away.
 - [weak] Markup in [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup).
@@ -484,7 +484,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 
 **How**
 - [weak] **Three fields** in a `fieldset` whose `legend` is the question, with a hint giving an example ("For example, 27 3 2007"; GOV.UK picks a day of 13 or more and a month of 9 or less so the order is clear). Widths fit two, two and four characters. `inputmode="numeric"` for the number keypad.
-- [required] **Date of birth** takes `autocomplete="bday-day"`, `"bday-month"` and `"bday-year"` ([GOV.UK](https://design-system.service.gov.uk/components/date-input/)).
+- [required] **Date of birth** takes `autocomplete="bday-day"`, `"bday-month"` and `"bday-year"` ([GOV.UK](https://design-system.service.gov.uk/components/date-input/)) (WCAG 1.3.5).
 - [weak] **Calendar** opens from a button beside a text field the person can type into; the typed value and the calendar stay in sync.
 - [weak] **Errors** name the missing part ("Date of birth must include a year") or the impossibility ("must be a real date"), show only the highest-priority one, and mark only the parts in error ([GOV.UK](https://design-system.service.gov.uk/components/date-input/)).
 - [weak] **Time** is [time entry](#time-entry)'s.

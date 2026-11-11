@@ -14,7 +14,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - [weak] Specify three levels separately: **global** (between sections: Foundations, Components, Patterns, Get started), **local** (pages within the current section, in a side list) and **in-page** (the "On this page" list, below). Tabs are not a fourth navigation system; they switch views of one page ([NN/g, Tabs, Used Right](https://www.nngroup.com/articles/tabs-used-right/)).
 - [strong] One site for design and code guidance. Atlassian and Primer both merged two sites into one; Spectrum's split let its design side go stale, and Polaris's move into a developer portal shrank its guidance to a footnote ([Atlassian, 2020](https://community.developer.atlassian.com/t/our-new-home-for-atlassian-design-system/40698); [Primer React PR #4822](https://github.com/primer/react/pull/4822)). Link to the code reference (Storybook, source) at the exact story or symbol rather than rebuilding it.
 - [weak] Local navigation lists every page in the section, in a stable order (alphabetical for components, by task for patterns), with the current page marked. GOV.UK labels it "Pages in this section".
-- [required] Global sections stay in the same order and place on every page. A section that exists only on some pages reads as a different site.
+- [required] Global sections stay in the same order and place on every page. A section that exists only on some pages reads as a different site (WCAG 3.2.3).
 - [weak] Small screens: global and local navigation collapse behind one menu button; the current section and page stay visible as a heading, so the reader still knows where they are.
 - [weak] Navigation behaviour in depth is `../patterns/navigation.md` (breadcrumbs, tabs, in-page lists), `../patterns/menus.md` (the top bar and the mobile menu) and `../patterns/sidebars.md` (the side navigation).
 
@@ -118,7 +118,7 @@ What a page on a design-system documentation site must specify: the site's struc
 
 **Accessibility**
 - [required] 1.3.1 Info and Relationships and 2.4.6 Headings and Labels: the skeleton is a heading outline, levels never skipped, labels that say what follows. 2.4.10 Section Headings (AAA) is why each section has one.
-- [required] Live examples obey the criteria of the component they show; an inaccessible example teaches the inaccessible build.
+- [moderate] Live examples obey the criteria of the component they show; an inaccessible example teaches the inaccessible build.
 - [required] Implementation: code-standard rule 1 (one `h1`, no skipped levels), code-standard rule 7 (prose scale for page content).
 
 **Build**
@@ -332,7 +332,7 @@ What a page on a design-system documentation site must specify: the site's struc
 
 **How**
 - [moderate] **Do and don't come in pairs.** Every "don't" names the "do" it should be replaced with; where the point is visual, the two are shown side by side, same size, same content where possible, with a caption saying why. A list of prohibitions leaves the reader without the thing to reach for ([Write the Docs](https://www.writethedocs.org/guide/writing/docs-principles/) *Exemplary*; [TDesign](https://tdesign.tencent.com/react/components/button) lists similar components).
-- [required] Label do and don't with a word ("Do", "Don't") and an icon, never colour alone.
+- [required] Label do and don't with a word ("Do", "Don't") and an icon, never colour alone (WCAG 1.4.1).
 - [weak] **Live examples** once code exists, served from the project's own Storybook on the docs site's origin and matched to the component by file location; before code exists, images exported from the design, labelled as design. Never both on one page without saying which is which. This labelling is the toolkit's judgement.
 - [weak] Each example has an "Open in a new tab" link naming the example, as GOV.UK does ("Open this example in a new tab: text input"), so it can be tested alone at any width.
 - [weak] **Code snippets** under the example they produce, in the tabs the system supports (GOV.UK: HTML and Nunjucks), with a copy button that says it copied. Short and complete: a snippet that cannot be pasted and run is a fragment.

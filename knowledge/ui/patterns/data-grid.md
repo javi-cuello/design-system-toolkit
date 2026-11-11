@@ -54,8 +54,8 @@ When a table becomes a data grid and how to build one: the threshold between the
 - Row count shown only in the toolbar on page 1 → in the footer, always.
 
 **Accessibility**
-- [required] The grid has an accessible name: `aria-labelledby` to its visible heading, or `aria-label` (Fluent DataGrid best practices).
-- [required] Header cells are `columnheader`, identifier cells `rowheader` ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/) applies `rowheader` to the chosen column).
+- [required] The grid has an accessible name: `aria-labelledby` to its visible heading, or `aria-label` (Fluent DataGrid best practices) (ARIA).
+- [required] Header cells are `columnheader`, identifier cells `rowheader` ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/) applies `rowheader` to the chosen column) (ARIA).
 
 **Build**
 - [required] `<table role="grid" aria-labelledby="…">` under its visible heading; the toolbar is a `role="toolbar"` above it, outside the table ([code accessibility: *Composite widgets and roving tabindex*](../../code/accessibility.md#composite-widgets-and-roving-tabindex)).
@@ -94,7 +94,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 
 **Build**
 - [required] The "Columns" panel is a `popover` or `dialog` holding a `fieldset` of checkboxes, one per column, with "Move up" and "Move down" buttons as the non-drag route ([HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
-- [required] A resize handle is a focusable separator: `role="separator"`, `aria-orientation="vertical"`, `aria-valuenow` in pixels, Left and Right arrows resize, and the column menu offers the same; pointer drag is the enhancement.
+- [required] A resize handle is a focusable separator: `role="separator"`, `aria-orientation="vertical"`, `aria-valuenow` in pixels, Left and Right arrows resize, and the column menu offers the same; pointer drag is the enhancement (ARIA).
 - [required] Hidden columns leave the DOM (or take `hidden`), never `display: none` on a class that a later rule overrides (code-standard rule 17); `aria-colcount` and `aria-colindex` follow when columns are virtualised.
 - [required] Widths are written to a custom property per column (`--col-owner`), so one rule sizes the column (code-standard rule 38).
 - [required] Column state persists per person on the server or in storage, read before the first render so the grid does not reflow (code-standard rule 14; [javascript: *Re-rendering without losing focus or scroll*](../../code/javascript.md#re-rendering-without-losing-focus-or-scroll)).
@@ -182,7 +182,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 **What good looks like**
 - [strong] The grid is one tab stop; arrow keys move between cells; Tab leaves the grid.
 - [strong] The key set is APG's data grid, unchanged, so it works the same as every other grid people know.
-- [required] Focus is always visible and never hidden under a frozen header or column.
+- [required] Focus is always visible and never hidden under a frozen header or column (WCAG 2.4.11).
 
 **How**
 - [strong] One stop: "Only one of the focusable elements contained by the grid is included in the page tab sequence" ([APG grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/)). Implement with a roving tabindex: the active cell has `tabindex="0"`, every other `-1` ([APG, developing a keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)); the code half is [code accessibility: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex).
@@ -218,13 +218,13 @@ When a table becomes a data grid and how to build one: the threshold between the
 ## Roles
 
 **What good looks like**
-- [required] A grid is `role="grid"` (or `treegrid` for nested rows) with `row`, `columnheader`, `rowheader` and `gridcell`; a table stays a native `table`.
-- [required] The roles are complete or absent.
+- [required] A grid is `role="grid"` (or `treegrid` for nested rows) with `row`, `columnheader`, `rowheader` and `gridcell`; a table stays a native `table` (ARIA).
+- [required] The roles are complete or absent (ARIA).
 
 **How**
-- [required] `role="grid"` may sit on a native `table` element, which keeps the table's structure for browsers and adds the widget semantics; Fluent's DataGrid sets `role: 'grid'` on its root ([Fluent useDataGrid source](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-table/library/src/components/DataGrid/useDataGrid.ts)), and AG Grid uses `grid` or `treegrid` ([AG Grid accessibility](https://www.ag-grid.com/javascript-data-grid/accessibility/)).
+- [required] `role="grid"` may sit on a native `table` element, which keeps the table's structure for browsers and adds the widget semantics; Fluent's DataGrid sets `role: 'grid'` on its root ([Fluent useDataGrid source](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-table/library/src/components/DataGrid/useDataGrid.ts)), and AG Grid uses `grid` or `treegrid` ([AG Grid accessibility](https://www.ag-grid.com/javascript-data-grid/accessibility/)) (ARIA).
 - [weak] Don't override the roles a grid component sets (Fluent: "Override the `role` attribute of DataGrid controls" is a don't).
-- [required] Sortable headers carry `aria-sort` as in a table; selected rows `aria-selected`; read-only cells `aria-readonly` in an otherwise editable grid.
+- [required] Sortable headers carry `aria-sort` as in a table; selected rows `aria-selected`; read-only cells `aria-readonly` in an otherwise editable grid (ARIA).
 - [moderate] Prefer the table: "If it's not a widget, don't use role="grid", use role="table"" (Roselli), and better still, a `table` element.
 
 **Cases**
@@ -238,7 +238,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 - [required] `role="grid"` (or `treegrid`) on a native `table`, so `tr`, `th` and `td` supply `row`, `columnheader`, `rowheader` and `gridcell`; on `div`s every role is written by hand ([code accessibility: *Data grids*](../../code/accessibility.md#data-grids)).
 - [required] States are ARIA where HTML has none: `aria-sort` on the sorted header, `aria-selected` on selected rows, `aria-readonly` on read-only cells ([code accessibility: *ARIA: the first rule, and when it is needed*](../../code/accessibility.md#aria-the-first-rule-and-when-it-is-needed)).
 - [weak] A library's roles are configured at its root, never patched cell by cell after each render.
-- [required] The grid is named by `aria-labelledby` pointing at its heading.
+- [required] The grid is named by `aria-labelledby` pointing at its heading (ARIA).
 
 **Check**
 - *Script* could: assert every `role="grid"` contains `row` and `gridcell` or `columnheader` descendants, and an accessible name.
@@ -266,7 +266,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 - Virtualisation turned off in production because a test needed a full DOM → off in the test environment only, as MUI X advises.
 
 **Accessibility**
-- [required] Virtualisation's cost is in the *Pagination or virtual scroll* section: complete `aria-rowcount` and indexes.
+- [required] Virtualisation's cost is in the *Pagination or virtual scroll* section: complete `aria-rowcount` and indexes (ARIA).
 
 **Build**
 - [weak] Render visible rows plus a buffer; fixed row heights from the density token ([tokens: *Density*](../../code/tokens.md#density)); `content-visibility` is no substitute, since it keeps every row in the DOM.

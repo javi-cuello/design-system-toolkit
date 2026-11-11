@@ -30,7 +30,7 @@ How a person keeps their bearings in a task that spans several screens or takes 
 **Build**
 - [weak] *Elements:* an `ol` inside a `nav` labelled "Progress" (or a plain `ol` with a heading when it holds no links); each visited step an `a href` to its page; the current and future steps plain text. The step's state is in text too: a visually hidden "completed" after a done step's label.
 - [weak] *ARIA and keyboard:* no WAI-ARIA APG pattern covers step indicators ([APG patterns](https://www.w3.org/WAI/ARIA/apg/patterns/)); links and list semantics carry it, and Tab moves between the visited links. Don't build it as tabs.
-- [required] *States:* `aria-current="step"` on the current step; `data-state="done|current|todo|error"` for the stylesheet; error described by `aria-describedby` to its message.
+- [required] *States:* `aria-current="step"` on the current step; `data-state="done|current|todo|error"` for the stylesheet; error described by `aria-describedby` to its message (code-standard rule 64).
 - [required] *Rules:* code-standard rule 64 (`aria-current` marks where the reader is; `step` is the value for a process), code-standard rule 20 (each step is its own page or a form post, and works without script), code-standard rule 1 (one `h1` per step), code-standard rule 2.
 - [weak] *Detail:* [code: state in the address and history](../../code/javascript.md#state-in-the-address-and-history); [code: hidden content](../../code/accessibility.md#hidden-content) (the visually hidden state text).
 

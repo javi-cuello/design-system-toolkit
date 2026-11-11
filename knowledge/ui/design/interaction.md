@@ -6,13 +6,13 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 **What good looks like**
 - [strong] Every interactive element has the same small set of states, each drawn differently from rest.
-- [required] Pressed is stronger than hover; focus is a ring of its own, never the hover overlay.
+- [moderate] Pressed is stronger than hover; focus is a ring of its own, never the hover overlay.
 - [weak] A state exists because the control can be in it.
 
 **How:** which states a control has follows from what it does.
 - [strong] *Rest, hover, focus, pressed*: every interactive element.
 - [weak] *Selected*: a control that holds a value (tab, segment, option, toggle, selectable row).
-- [required] *Disabled*: only where the control can become available on this screen (see *Disabled, hidden or read-only*).
+- [required] *Disabled*: only where the control can become available on this screen (see *Disabled, hidden or read-only*) (design-standard rule 5).
 - [moderate] *Loading*: a control whose action can pass about a second; it keeps its width and refuses a second press.
 - [weak] *Error*: a control that takes input and can be invalid. A button has no error state; the error sits beside what failed.
 - [moderate] Hover and pressed are one translucent overlay with tokenised opacities, so every surface gets them free ([Material tokens](https://github.com/material-components/material-web/blob/main/tokens/versions/latest/sass/_md-sys-state.scss): hover 0.08, pressed 0.1; [eBay](https://playbook.ebay.com/design-system/tokens/opacity): 4% and 8%). In Figma, one `State` axis orthogonal to the variant axes.
@@ -137,7 +137,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [moderate] Anything that can appear or load late has reserved space, or sits below the control that changed it.
 
 **How:**
-- [required] Keep the footprint of a column, badge, action area or count that applies only sometimes; leave it empty rather than remove it.
+- [required] Keep the footprint of a column, badge, action area or count that applies only sometimes; leave it empty rather than remove it (design-standard rule 2).
 - [strong] Explicit media dimensions; skeletons sized to content; `scrollbar-gutter: stable` where length varies.
 - [moderate] Loading and error states keep the control's size; a filter bar keeps its height, and on a narrow screen collapses to one "Filters" control rather than wrapping.
 - [weak] In a design file, draw one screen's states as frames of one size and compare the controls' positions.
@@ -324,7 +324,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 **What good looks like**
 - [strong] The control follows what the choice changes: content, a view of the same content, or a value.
-- [required] Few choices are all in sight; many are a menu showing choice and counts.
+- [required] Few choices are all in sight; many are a menu showing choice and counts (design-standard rule 4).
 - [required] One bar per list (design-standard rule 3).
 
 **How:**
@@ -355,15 +355,15 @@ The fundamentals of the design standard's Interaction area: what happens between
 ## Keyboard parity and shortcuts
 
 **What good looks like**
-- [required] Everything a pointer does, the keyboard does, in the screen's order.
+- [required] Everything a pointer does, the keyboard does, in the screen's order (WCAG 2.1.1).
 - [strong] Standard keys keep their meaning: Tab between, arrows within, Enter and Space activate, Escape cancels.
-- [required] Shortcuts speed experts and never surprise anyone.
+- [required] Shortcuts speed experts and never surprise anyone (WCAG 2.1.4).
 
 **How:**
 - [strong] Native elements first; a custom widget follows its APG pattern in full; one tab stop per composite.
 - [strong] Escape closes overlays and returns focus.
 - [required] Focus order is designed here (annotate where visual order is ambiguous); code-standard rule 2 keeps it.
-- [required] Never repurpose a standard shortcut ([Apple](https://developer.apple.com/design/human-interface-guidelines/keyboards)). A single-character shortcut can be turned off or remapped, or works only while its component has focus; shortcuts are listed and shown beside their commands.
+- [required] Never repurpose a standard shortcut ([Apple](https://developer.apple.com/design/human-interface-guidelines/keyboards)). A single-character shortcut can be turned off or remapped, or works only while its component has focus; shortcuts are listed and shown beside their commands (WCAG 2.1.4).
 
 **Cases**
 - A row opens on click with no link → link the row's title; Enter and middle-click work (code-standard rule 21).
@@ -387,14 +387,14 @@ The fundamentals of the design standard's Interaction area: what happens between
 ## Targets and pointer
 
 **What good looks like**
-- [required] Every target at least 24 by 24 CSS pixels, or spaced as if it were.
-- [required] Touch-first surfaces at 44 pt or 48 dp.
+- [required] Every target at least 24 by 24 CSS pixels, or spaced as if it were (WCAG 2.5.8).
+- [strong] Touch-first surfaces at 44 pt or 48 dp.
 - [moderate] Frequent actions near the pointer; destructive ones apart.
 
 **How:**
 - [required] 24×24 px floor; an undersized target passes if a 24px circle centred on it meets no other target; inline links are exempt ([WCAG 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)).
 - [moderate] A small icon gets a larger hit area through padding.
-- [required] Touch: 44×44 pt ([Apple](https://developer.apple.com/design/human-interface-guidelines/accessibility)); 48×48 dp, 8 dp apart ([Android](https://support.google.com/accessibility/android/answer/7101858)); no leaning on the spacing exception.
+- [strong] Touch: 44×44 pt ([Apple](https://developer.apple.com/design/human-interface-guidelines/accessibility)); 48×48 dp, 8 dp apart ([Android](https://support.google.com/accessibility/android/answer/7101858)); no leaning on the spacing exception.
 - [moderate] Fitts: time depends on size and distance ([NN/g](https://www.nngroup.com/articles/fitts-law/)); primary action by its content, Delete away from Save.
 
 **Cases**
@@ -417,14 +417,14 @@ The fundamentals of the design standard's Interaction area: what happens between
 ## Gestures and drag
 
 **What good looks like**
-- [required] Anything done by dragging or gesture can be done with a single pointer, no path.
+- [required] Anything done by dragging or gesture can be done with a single pointer, no path (WCAG 2.5.7).
 - [moderate] The alternative is visible.
-- [required] Pointer actions complete on release and can be abandoned.
+- [required] Pointer actions complete on release and can be abandoned (WCAG 2.5.2).
 
 **How:**
-- [required] Sortable list: "Move up", "Move down" or "Move to…" per item, and keyboard reordering.
-- [required] Map or canvas: pan and zoom buttons. Slider: track clicks, arrow keys, a typed value where precision matters.
-- [required] Swipe actions repeated in a visible menu; pinch has a single-pointer equivalent.
+- [required] Sortable list: "Move up", "Move down" or "Move to…" per item, and keyboard reordering (WCAG 2.5.7).
+- [required] Map or canvas: pan and zoom buttons. Slider: track clicks, arrow keys, a typed value where precision matters (WCAG 2.5.7).
+- [required] Swipe actions repeated in a visible menu; pinch has a single-pointer equivalent (WCAG 2.5.1).
 - [strong] Drag shows a lifted state and drop indicator; dropping outside cancels.
 - [moderate] **The carried item** is a copy of the item under the pointer, held where it was grabbed, raised by a shadow, translucent or plain, never rotated (Atlassian: "Do not rotate the drag preview"; Apple: a "translucent representation… lets people see destinations").
 - [contested] **Where it lands** is one of two marks. A line in the gap between items, the others still, is the design systems' default for lists and trees (Atlassian, React Aria, Fiori's lists). An in-place slot, the item itself dashed where it will land with the others easing aside, is Fiori's grid model and what sortable libraries draw; it shows the result rather than describing it, at the cost of rows moving under the pointer. Pick one per product.
@@ -454,14 +454,14 @@ The fundamentals of the design standard's Interaction area: what happens between
 ## Hover-only affordances
 
 **What good looks like**
-- [required] Nothing that matters is reachable only by hover: no action, information or label.
+- [required] Nothing that matters is reachable only by hover: no action, information or label (WCAG 2.1.1).
 - [moderate] Hover hints at what is already visible or reachable.
-- [required] Content shown on hover or focus can be dismissed, hovered over, and persists.
+- [required] Content shown on hover or focus can be dismissed, hovered over, and persists (WCAG 1.4.13).
 
 **How:**
 - [moderate] Row actions show at rest or behind a visible "More" per row; keyboard and touch have no hover.
 - [moderate] A tooltip repeats or explains, and is never the only reason for a disabled state; what hover shows, focus shows. How tooltips behave, and how one names an icon button, is [dialogs: tooltips](../patterns/dialogs.md#tooltips).
-- [required] Hover or focus content: Escape dismisses it without moving pointer or focus; the pointer can move onto it; it stays until trigger leaves, dismissal, or invalidity.
+- [required] Hover or focus content: Escape dismisses it without moving pointer or focus; the pointer can move onto it; it stays until trigger leaves, dismissal, or invalidity (WCAG 1.4.13).
 - [moderate] Menus open on click; truncated text has its full value reachable another way.
 
 **Cases**
@@ -473,13 +473,13 @@ The fundamentals of the design standard's Interaction area: what happens between
 **Accessibility:** 1.4.13 Content on Hover or Focus (AA): dismissible, hoverable, persistent. 2.1.1 Keyboard (A). 1.4.11 treats hover effects as supplementary, so they may be subtle and carry nothing essential.
 
 **Build:**
-- [required] Anything revealed on hover is revealed on focus too: pair `:hover` with `:focus-within` on the same container, and keep hover-only styling inside `@media (hover: hover)`.
+- [required] Anything revealed on hover is revealed on focus too: pair `:hover` with `:focus-within` on the same container, and keep hover-only styling inside `@media (hover: hover)` (WCAG 2.1.1).
   ```css
   @media (hover: hover) {
     tr:not(:hover, :focus-within) [data-actions] { opacity: 0; }
   }
   ```
-- [required] Hide with `opacity`, never `display: none` or `visibility: hidden`, which take the actions out of the tab order; on a device without hover they show at rest.
+- [required] Hide with `opacity`, never `display: none` or `visibility: hidden`, which take the actions out of the tab order; on a device without hover they show at rest (WCAG 2.1.1).
 - [strong] A menu opens on click: a `button` with `popovertarget`, or the APG menu button ([accessibility: menus, menu buttons and toolbars](../../code/accessibility.md#menus-menu-buttons-and-toolbars)).
 - [required] Hover-or-focus content follows 1.4.13 in code (Escape dismisses, the pointer can reach it): [accessibility: tooltips and toggletips](../../code/accessibility.md#tooltips-and-toggletips).
 

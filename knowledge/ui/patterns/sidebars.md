@@ -17,7 +17,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [weak] **Grouping:** related pages under short group headings; a long flat list becomes five to eight groups. Primer's NavList groups items under titled groups and names the whole region with a heading ([Primer NavList](https://primer.style/product/components/nav-list/)).
 - [weak] **Order:** by the reader's task or the content's own order (getting started first, reference after); less important items at the bottom, where they may fall below the fold (NN/g vertical navigation).
 - [weak] **Labels:** text always; an icon may sit beside the label, never instead of it on a wide screen ("A word is worth a thousand pictures", NN/g vertical navigation).
-- [required] **Current page:** marked by more than colour and with `aria-current`, its group open and its ancestors marked; weaker than or equal to the global bar's current marker (NN/g salience).
+- [required] **Current page:** marked by more than colour and with `aria-current`, its group open and its ancestors marked; weaker than or equal to the global bar's current marker (NN/g salience) (code-standard rule 64).
 - [weak] **Trailing information** (a count, an external-link icon) sits after the label and is not part of its name ([Primer NavList](https://primer.style/product/components/nav-list/)).
 
 **Cases**
@@ -31,7 +31,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] Figma: figma-standard rule 31 (current, hover and focus draw differently), figma-standard rule 26, figma-standard rule 32.
 
 **Build**
-- [required] *Elements:* a `nav` with its own accessible name (a visible heading referenced by `aria-labelledby`, as Primer's NavList heading does), group headings as headings, each group a `ul` of `a`. A second `nav` on the page always has a different name from the global one.
+- [required] *Elements:* a `nav` with its own accessible name (a visible heading referenced by `aria-labelledby`, as Primer's NavList heading does), group headings as headings, each group a `ul` of `a`. A second `nav` on the page always has a different name from the global one (code-standard rule 1).
 - [moderate] *ARIA and keyboard:* landmark and links only; Tab moves through the links. Not a `tree` and not a `menu`: Primer states a tree view "is never an accessible replacement for navigation" because assistive technology does not recognise it as navigation ([Primer NavList](https://primer.style/product/components/nav-list/)), and the APG's menu roles are for commands ([APG disclosure navigation](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/)).
 - [required] *States:* `aria-current="page"` on the current link, `aria-current="true"` on its section link where the page has no link of its own ([MDN aria-current](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-current)); styling off the attribute.
 - [required] *Rules:* code-standard rule 64, code-standard rule 1 (a labelled landmark, headings and lists), code-standard rule 2, code-standard rule 15 (a trailing count is a description, not part of the link's name), code-standard rule 21.
@@ -70,9 +70,9 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] Figma: figma-standard rule 26, figma-standard rule 31.
 
 **Build**
-- [required] *Elements:* the same `nav` and lists; a `button` for collapse, its visible text or name "Collapse sidebar" / "Expand sidebar". Rail icons are the same `a` elements with their text visually hidden, never removed, so the name survives.
+- [required] *Elements:* the same `nav` and lists; a `button` for collapse, its visible text or name "Collapse sidebar" / "Expand sidebar". Rail icons are the same `a` elements with their text visually hidden, never removed, so the name survives (code-standard rule 18).
 - [required] *ARIA and keyboard:* the collapse button carries `aria-expanded` and `aria-controls`; a rail group's fly-out follows the APG disclosure navigation pattern ([APG](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/)); hover labels are a tooltip that also shows on focus ([dialogs: tooltips](dialogs.md#tooltips)).
-- [required] *States:* `aria-expanded` on the button; a `data-sidebar="expanded|collapsed"` attribute on the layout styles both; the remembered state is read before render (a cookie or server-side preference), not written during render.
+- [required] *States:* `aria-expanded` on the button; a `data-sidebar="expanded|collapsed"` attribute on the layout styles both; the remembered state is read before render (a cookie or server-side preference), not written during render (code-standard rule 20).
 - [required] *Rules:* code-standard rule 18 (icon-only links in the rail are named), code-standard rule 20 (without script the sidebar is expanded and every link works; a render never writes the preference), code-standard rule 9 (collapsed is a state attribute, not a separate component), code-standard rule 64, code-standard rule 17.
 - [weak] *Detail:* [code: hidden content](../../code/accessibility.md#hidden-content) (visually hidden text), [code: state in the address and history](../../code/javascript.md#state-in-the-address-and-history), [code: layout stability in code](../../code/performance.md#layout-stability-in-code).
 
@@ -106,9 +106,9 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] 1.3.1 (nesting as nested lists), 4.1.2 (each toggle exposes expanded state and a name), 2.4.8 Location (the current page's ancestors marked), 2.5.8 (a separate chevron meets the target on its own).
 
 **Build**
-- [required] *Elements:* nested `ul` inside the parent's `li`; the toggle a `button` (or a `details`/`summary` with the child list inside). Collapsed children are `hidden` and leave the tab order.
+- [required] *Elements:* nested `ul` inside the parent's `li`; the toggle a `button` (or a `details`/`summary` with the child list inside). Collapsed children are `hidden` and leave the tab order (HTML).
 - [moderate] *ARIA and keyboard:* the disclosure pattern: `aria-expanded` and `aria-controls` on the toggle; Enter or Space toggles; Tab moves through visible links only ([APG disclosure navigation](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/)). Not the APG treeview: although the APG has a navigation tree example, a tree's arrow-key model and single tab stop ([APG treeview](https://www.w3.org/WAI/ARIA/apg/patterns/treeview/)) are not what readers of a website expect, and Primer warns it is not recognised as navigation. A tree is for a file or object hierarchy inside a tool, not for pages.
-- [required] *States:* `aria-expanded` on each toggle, `hidden` on closed child lists, `aria-current="page"` on the current link, its ancestors' open state set server-side so the right group is open without script. Ancestors are styled from a hook attribute (`data-ancestor`) or `aria-current="true"` on a section link, never a second `aria-current="page"`.
+- [required] *States:* `aria-expanded` on each toggle, `hidden` on closed child lists, `aria-current="page"` on the current link, its ancestors' open state set server-side so the right group is open without script. Ancestors are styled from a hook attribute (`data-ancestor`) or `aria-current="true"` on a section link, never a second `aria-current="page"` (code-standard rule 64).
 - [required] *Rules:* code-standard rule 20 (without script every group is open), code-standard rule 17, code-standard rule 18 (a chevron-only toggle is named "Show Tokens pages"), code-standard rule 64, code-standard rule 1.
 - [weak] *Detail:* [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers), [code: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex) (why a tree is a composite widget, and when one is right).
 
@@ -143,9 +143,9 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] 1.4.10 Reflow (no horizontal scroll at 320px), 2.4.3 Focus Order (focus into an overlay and back to its trigger), 2.1.2 No Keyboard Trap, 3.2.3 (the same list, the same order, at every width), 2.4.8 Location.
 
 **Build**
-- [required] *Elements:* one `nav` in the DOM, restyled at the breakpoint; a disclosure form wraps it in `details` or a toggle `button`; an overlay form uses `dialog` opened with `showModal()`, or the Popover API for a non-modal panel.
+- [required] *Elements:* one `nav` in the DOM, restyled at the breakpoint; a disclosure form wraps it in `details` or a toggle `button`; an overlay form uses `dialog` opened with `showModal()`, or the Popover API for a non-modal panel (code-standard rule 20).
 - [required] *ARIA and keyboard:* the disclosure pattern for an inline form; the dialog's focus contract (focus in, trapped, returned, Escape) for an overlay ([dialogs: focus](dialogs.md#focus-in-trapped-returned)).
-- [required] *States:* `aria-expanded` on the toggle, `hidden` when closed, `open` on `details` or `dialog`; `aria-current` unchanged.
+- [required] *States:* `aria-expanded` on the toggle, `hidden` when closed, `open` on `details` or `dialog`; `aria-current` unchanged (ARIA).
 - [required] *Rules:* code-standard rule 20 (a modal opens from `popovertarget` before `showModal()` takes over; without script the list shows), code-standard rule 17, code-standard rule 19, code-standard rule 36 (the same toggle script as the global menu, included once), code-standard rule 2.
 - [weak] *Detail:* [code: breakpoints](../../code/responsive.md#breakpoints), [code: container queries](../../code/responsive.md#container-queries), [code: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers).
 
@@ -181,9 +181,9 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] 2.4.3 Focus Order (focus moves into the panel when an item is chosen by keyboard, and back to the item on close), 4.1.3 Status Messages (if focus stays in the list, the panel's update is announced or the panel is a labelled region), 1.3.1 (the panel is a labelled region), 2.4.11 Focus Not Obscured (an overlay panel never hides the focused item).
 
 **Build**
-- [required] *Elements:* the list's items are links (each item's detail has an address) or buttons in a listbox if selection is not navigation; the panel is an `aside` or a `section` with an accessible name, or `main`'s second column. An overlaying panel is a non-modal `dialog` or a popover.
+- [strong] *Elements:* the list's items are links (each item's detail has an address) or buttons in a listbox if selection is not navigation; the panel is an `aside` or a `section` with an accessible name, or `main`'s second column. An overlaying panel is a non-modal `dialog` or a popover.
 - [required] *ARIA and keyboard:* the chosen item carries `aria-current="true"` (links) or `aria-selected` (a listbox, [code: composite widgets](../../code/accessibility.md#composite-widgets-and-roving-tabindex)); the panel is labelled by its heading.
-- [required] *States:* the selected item's id in the address (`?item=…`), `aria-current` on it, the panel's content swapped in place keeping focus.
+- [required] *States:* the selected item's id in the address (`?item=…`), `aria-current` on it, the panel's content swapped in place keeping focus (code-standard rule 14).
 - [required] *Rules:* code-standard rule 14 (a live swap keeps the reader's place), code-standard rule 20 (without script each item is a link to its own page), code-standard rule 21, code-standard rule 64, code-standard rule 12 (the empty panel renders only when nothing is chosen).
 - [weak] *Detail:* [code: state in the address and history](../../code/javascript.md#state-in-the-address-and-history), [code: re-rendering without losing focus or scroll](../../code/javascript.md#re-rendering-without-losing-focus-or-scroll), [code: focus management](../../code/accessibility.md#focus-management).
 
@@ -218,7 +218,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 **Build**
 - [moderate] *Elements:* the sidebar `nav` with `position: sticky`, `top` and `max-block-size` from the header's height token, `overflow-y: auto`; the handle a focusable element between sidebar and content.
 - [moderate] *ARIA and keyboard:* the APG window splitter: `role="separator"`, focusable, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-controls` pointing at the sidebar, and a name from the sidebar's label (`aria-labelledby`) or `aria-label`; Left and Right Arrow move it, Enter collapses and restores, Home and End are optional. The APG marks this pattern as under review, so test it with screen readers ([APG window splitter](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/)).
-- [required] *States:* width as a custom property (`--sidebar-width`) on the layout, `aria-valuenow` kept in step with it; the stored width read at render, written only on resize end.
+- [required] *States:* width as a custom property (`--sidebar-width`) on the layout, `aria-valuenow` kept in step with it; the stored width read at render, written only on resize end (ARIA).
 - [required] *Rules:* code-standard rule 38 (the width reaches the component through a custom property), code-standard rule 22 (min, max and default widths are tokens or carry their reasons), code-standard rule 46 (the header height the offset uses lives in one place), code-standard rule 20 (a render never writes the stored width; without script the sidebar has its default width and still scrolls), code-standard rule 57 (minimums derived from the content, not fitted to today's labels).
 - [weak] *Detail:* [code: custom properties](../../code/css-architecture.md#custom-properties), [code: zoom and reflow](../../code/responsive.md#zoom-and-reflow), [code: layout stability in code](../../code/performance.md#layout-stability-in-code), [code: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex).
 
@@ -269,7 +269,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [moderate] Atlassian keeps landmarks in one DOM order, "banner, top nav, side nav, main, panel", because it "determines the keyboard tab order, screen reader reading order, and skip link order", each with a "unique, meaningful label" that does not repeat the role (layout usage). Carbon names its icon-only header buttons by default and shows the name on hover and focus ([Carbon header accessibility](https://carbondesignsystem.com/components/UI-shell-header/accessibility/)).
 
 **Build**
-- [required] *Elements:* each region an `aside` (or `nav` for navigation) named by its heading; each toggle a `button` in the toolbar or header. An overlay form is a non-modal `dialog` or a popover at narrow widths, the same element restyled, not a second copy.
+- [required] *Elements:* each region an `aside` (or `nav` for navigation) named by its heading; each toggle a `button` in the toolbar or header. An overlay form is a non-modal `dialog` or a popover at narrow widths, the same element restyled, not a second copy (code-standard rule 1).
 - [required] *ARIA and keyboard:* the [APG disclosure](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/) pattern: `aria-expanded`, optionally `aria-controls`, Enter and Space toggle. A toolbar of view toggles may use `aria-pressed` instead when the button sets a mode rather than revealing a region; one per product, never both on one button. Shortcuts are registered once at application level, each with a modifier, shown in the tooltip and as `aria-keyshortcuts`; a shortcut that hides a region holding focus moves focus to the toggle first.
 - [required] *States:* one attribute per region on the layout root (`data-inspector="shown|hidden"`), widths as custom properties (`--inspector-width`); the region `hidden` when hidden, `inert` while an exit runs. An automatic collapse sets a separate attribute (`data-inspector-fit="overlay"`) and never writes the stored value.
 - [required] *Rules:* code-standard rule 9 (shown and hidden are state attributes, not separate components), code-standard rule 17 (hidden leaves the tab order), code-standard rule 18 (icon-only toggles named), code-standard rule 20 (without script every region is shown; a render never writes the preference), code-standard rule 38 (widths through custom properties).
@@ -386,9 +386,9 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] A switch that loads a new page needs no announcement; one that updates in place announces the new tenant in a status message ([W3C Understanding 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html)).
 
 **Build**
-- [required] *Elements:* a `button` showing the tenant's name; each tenant a link to its address, so it opens in a new tab like any link; "Create workspace" a link or a button.
+- [required] *Elements:* a `button` showing the tenant's name; each tenant a link to its address, so it opens in a new tab like any link; "Create workspace" a link or a button (HTML).
 - [required] *ARIA and keyboard:* a short list is an [APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/) with `menuitemradio` items, the current one `aria-checked="true"` ([APG menubar](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/)); a searchable list is an [APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) with a listbox, focus staying in the field. Escape closes and returns focus to the trigger.
-- [required] *States:* `aria-expanded` on the trigger; `aria-checked` on the current tenant; a long name truncated with the full name as the item's accessible name.
+- [strong] *States:* `aria-expanded` on the trigger; `aria-checked` on the current tenant; a long name truncated with the full name as the item's accessible name.
 - [required] *Rules:* code-standard rule 18 (a logo-only trigger is named), code-standard rule 20 (each tenant is a link that works without script; the tenant is read from the address, never stored during render).
 - [weak] *Detail:* [code: state in the address and history](../../code/javascript.md#state-in-the-address-and-history), [menus: navigation dropdowns](menus.md#navigation-dropdowns).
 
