@@ -624,7 +624,9 @@ function appendRuling(md, text, where, today = new Date().toISOString().slice(0,
   // a day's second decision takes a letter (the context template's §6): 2026-11-11, then 2026-11-11b
   const taken = new Set(); walkRulings(lines, (i, c, h) => taken.add(c[h.indexOf("date")] || ""));
   let date = today;
-  for (let k = 0; taken.has(date); k++) date = today + "bcdefghijklmnopqrstuvwxyz"[k];
+  // past z the letters double (2026-11-11aa), never `undefined`
+  const letter = (k) => (k < 25 ? "" : letter(Math.floor(k / 25) - 1)) + "bcdefghijklmnopqrstuvwxyz"[k % 25];
+  for (let k = 0; taken.has(date); k++) date = today + letter(k);
   const row = header.map((h) => h === "date" ? date
     : h === "scope" ? "Audit" : h === "ruling" ? esc(text)
     : h === "why" ? esc("Recorded from the audit dashboard, on " + where + ".")

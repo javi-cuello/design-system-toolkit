@@ -1562,8 +1562,8 @@ server.listen(PORT, "127.0.0.1", () => {
     // a folder not there yet (a Storybook first built after the service starts) is looked for every 30 s and
     // watched once it appears, with a build then, rather than missed until a restart
     const attach = (d, opts, fn) => {
-      if (existsSync(d)) return void watch(d, opts, fn);
-      const t = setInterval(() => { if (existsSync(d)) { clearInterval(t); watch(d, opts, fn); soon(); } }, 30000);
+      if (existsSync(d)) { try { watch(d, opts, fn); } catch (e) { console.error(`docs site      could not watch ${d}: ${e.message}`); } return; }
+      const t = setInterval(() => { if (!existsSync(d)) return; clearInterval(t); try { watch(d, opts, fn); } catch (e) { console.error(`docs site      could not watch ${d}: ${e.message}`); } soon(); }, 30000);
       t.unref();
     };
     for (const [d, names] of byDir) attach(d, {}, (_, name) => { if (name && names.has(String(name))) soon(); });

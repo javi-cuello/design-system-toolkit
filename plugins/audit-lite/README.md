@@ -32,6 +32,6 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 ## Data this plugin stores
 
-The context document picked for a file (its name and text), in the plugin's client storage on this machine, keyed by the file. The rulings uploaded for a file, in the file itself (plugin data on the document, invisible on the canvas), so saving one needs edit access; rulings 0.6 kept on the machine move into the file the first time rulings are added with edit access; opening the plugin or running an audit writes nothing. Each **Remove** deletes its own. The report is a download.
+The context document picked for a file (its name and text), in the plugin's client storage on this machine, keyed by the file. The rulings uploaded for a file, in the file itself (plugin data on the document, invisible on the canvas), so saving one needs edit access; rulings 0.6 kept on the machine move into the file the first time rulings are added with edit access; opening the plugin, running an audit or downloading writes nothing. Each **Remove** deletes its own. The report is a download.
 
 The `teamlibrary` permission lets discovery read the variable collections the file's enabled libraries publish.
