@@ -128,7 +128,7 @@ How a coding agent builds a prototype from the design system's real components i
 - A comment asks for "New employee" as the dialog title. It is fixed on that frame and on every composed frame of the flow that shows the same dialog; if it is the product's term everywhere, it is a §6 decision instead.
 
 **Check**
-- *Script:* frontend-build's `scripts/figma-feedback.mjs` lists the open threads, unresolved with a person's message last, logs each handled one with a note and lists the notes for a reading every ten (`kinds`); the receipt names the decisions each frame applied, and the Figma eval scores a run that drops one.
+- *Script:* figma-prototype's `scripts/figma-feedback.mjs` lists the open threads, unresolved with a person's message last, logs each handled one with a note and lists the notes for a reading every ten (`kinds`); the receipt names the decisions each frame applied, and the Figma eval scores a run that drops one.
 - *Judgement:* Was each correction filed at the lowest level that holds it, and did any ruling contradict an older one left in place?
 
 **Sources:** vendor documentation for the stores; two peer-reviewed or preprint studies on agent memory; practitioners (Frost, Husain) and Anthropic's engineering guidance for routing and evals. None measures a design agent learning from design comments; the loop here is assembled from them, unproven as a whole.

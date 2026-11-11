@@ -6,7 +6,7 @@
 #   ~/.figma-dashboard-key     the audit service's chat and judgement pass (tools/figma-audit)
 figma   figd_    link ~/.config/figma/token figma-console
 audit   sk-ant-  link ~/.figma-dashboard-key audit-service
-# The agent's own Figma account, for the replies it posts on prototype feedback (frontend-build), so they are
+# The agent's own Figma account, for the replies it posts on prototype feedback (figma-prototype), so they are
 # not the maintainer's (a free viewer account, its token with file_comments:read and :write and current_user:read):
 # optional, and without it they post with the figma key. A keys.conf made before this line
 # lacks it: add the line there, then bin/set-key figma-claude.

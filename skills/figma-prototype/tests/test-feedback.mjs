@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // figma-feedback: which threads are open, on comments shaped as Figma's API returns them.
-// Run: node --test skills/frontend-build/tests/test-feedback.mjs
+// Run: node --test skills/figma-prototype/tests/test-feedback.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openThreads, kinds } from '../scripts/figma-feedback.mjs';

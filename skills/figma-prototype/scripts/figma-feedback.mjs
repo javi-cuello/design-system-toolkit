@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // figma-feedback: the open feedback threads in a Figma file, read at the start
-// of a prototype run (SKILL.md, *A Figma prototype*, step 0).
+// of a prototype run (SKILL.md, *Compose*, step 0).
 //
-//   node skills/frontend-build/scripts/figma-feedback.mjs <fileKey>
-//   node skills/frontend-build/scripts/figma-feedback.mjs <fileKey> --reply <commentId> <message>
-//   node skills/frontend-build/scripts/figma-feedback.mjs <fileKey> --on <nodeId> <message>
+//   node skills/figma-prototype/scripts/figma-feedback.mjs <fileKey>
+//   node skills/figma-prototype/scripts/figma-feedback.mjs <fileKey> --reply <commentId> <message>
+//   node skills/figma-prototype/scripts/figma-feedback.mjs <fileKey> --on <nodeId> <message>
 //     a --reply that closes a thread also takes --log <feedback.jsonl> --area <area> --routed <level> --note <what went wrong>
-//   node skills/frontend-build/scripts/figma-feedback.mjs kinds <feedback.jsonl>
+//   node skills/figma-prototype/scripts/figma-feedback.mjs kinds <feedback.jsonl>
 //
 // The log, the project's tests/evals/feedback.jsonl, is one line per handled
 // thread: { at, file, comment, node, by, text, area, routed, note }: the area

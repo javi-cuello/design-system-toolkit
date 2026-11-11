@@ -35,6 +35,7 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [oklch-color-scale-system](oklch-color-scale-system/SKILL.md) | Generates perceptually even 12-step OKLCH colour scales, light and dark. |
 | **Code** | |
 | [frontend-build](frontend-build/SKILL.md) | Builds and audits an interface against the design and code standards. |
+| [figma-prototype](figma-prototype/SKILL.md) | Composes a screen or flow in Figma from the library for a designer to continue, and routes the feedback on it. |
 | [design-code-parity](design-code-parity/SKILL.md) | Keeps a coded design system measurably equal to its Figma source. |
 | [kirby-cms](kirby-cms/SKILL.md) | A working reference for building sites on Kirby CMS 5. |
 | [figma-plugin-creator](figma-plugin-creator/SKILL.md) | Scaffolds Figma plugins and checks them against the plugin standard. |

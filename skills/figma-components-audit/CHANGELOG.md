@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.44.2 (2026-11-11): the composed-frame section names its caller's new home, figma-prototype's *Compose* (split from frontend-build).
 - 2.44.1 (2026-11-11): `direction|tracking` on an unstyled layer advises the layer, not a style named after it; `rtlSets` and `no-variant` docs match the scanner. An assertion in `tests/test-audit.mjs`.
 - 2.44.0 (2026-11-10): `FCA.references(template)` lists the screens in the file built on a template; `FCA.composedFrame(frame, names, { receipt: true })` adds `no-receipt` and `no-reference`. A135.
 - 2.43.0 (2026-11-10): the Audit lite plugin is named as a third launcher of `scanner/`, carrying it as a generated block; adding a check now ends with `node plugins/audit-lite/sync.mjs`.

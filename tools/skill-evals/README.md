@@ -27,7 +27,7 @@ A screen task may name its `chrome`: the modules the product's shell comes from 
 
 ## Figma tasks
 
-A Figma task asks an agent to compose a screen or flow in a Figma file from the library, by frontend-build's *A Figma prototype*. Composing needs the desktop bridge, so the agent is a subagent of a session that has the figma-console tools, not headless Claude in a copy: `run.mjs` does not run it, and its line records no turns, cost or contamination check. Its tasks live in the project repo (`tests/evals/figma-tasks.json`: `{ results, tasks: [{ id, grade: "figma", file, template, prompt, frames?, flow?, context?, rulings? }] }`), since a project whose library is coded elsewhere has no `snapshot.config.json`.
+A Figma task asks an agent to compose a screen or flow in a Figma file from the library, by figma-prototype's *Compose*. Composing needs the desktop bridge, so the agent is a subagent of a session that has the figma-console tools, not headless Claude in a copy: `run.mjs` does not run it, and its line records no turns, cost or contamination check. Its tasks live in the project repo (`tests/evals/figma-tasks.json`: `{ results, tasks: [{ id, grade: "figma", file, template, prompt, frames?, flow?, context?, rulings? }] }`), since a project whose library is coded elsewhere has no `snapshot.config.json`.
 
     node tools/skill-evals/figma.mjs prompt <tasks.json> <task>               the run id, then the agent's prompt
     node tools/skill-evals/figma.mjs grade-config <tasks.json> <task> <run>   the CONFIG line for figma-grade.js

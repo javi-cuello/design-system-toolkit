@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.44.1)
+# Eval cases — figma-components-audit (v2.44.2)
+
+**Walked: 2026-11-11 for 2.44.2** — one caller's name in the composed-frame section; no case reads it.
 
 **Walked: 2026-11-11 against v2.44.1** — the tracking advice and two doc lines: `node tests/test-audit.mjs` 117 of 117 (one added: a styled and an unstyled layer with letter spacing, each advised by what it has), `test-probes` 54, `test-sweep` 10/10; Audit lite resynced, its test 61 passed.
 

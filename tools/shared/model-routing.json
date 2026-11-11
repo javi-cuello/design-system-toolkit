@@ -294,6 +294,22 @@
   },
   {
     "keys": [
+      "figma-prototype"
+    ],
+    "task": "Composing a screen or flow in Figma from the library, and routing feedback on it",
+    "skills": [
+      "figma-prototype"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Carried from frontend-build's row, which covered it until the 2026-11-11 split; not yet measured on its own"
+  },
+  {
+    "keys": [
       "design-system-research:light"
     ],
     "task": "Light design systems research (few searches, cited answer)",
