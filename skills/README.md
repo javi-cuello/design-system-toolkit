@@ -30,7 +30,7 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [figma-doc-generator](figma-doc-generator/SKILL.md) | Generates documentation pages that mirror variable collections, effects and text styles. |
 | [figma-tokens-examples](figma-tokens-examples/SKILL.md) | Builds or repairs the tokens-mapping example tables on a page. |
 | [figma-contrast-matrix](figma-contrast-matrix/SKILL.md) | Fills a WCAG contrast-ratio grid between colour-scale steps. |
-| [figma-context-capture](figma-context-capture/SKILL.md) | Reads a library's conventions into the project's context document, which every other skill reads. |
+| [figma-context-capture](figma-context-capture/SKILL.md) | Reads a library's conventions into the project's context document, which every other skill reads, and keeps the project's other documents: the product file, its decisions and guidance pages. |
 | **Tokens and colour** | |
 | [oklch-color-scale-system](oklch-color-scale-system/SKILL.md) | Generates perceptually even 12-step OKLCH colour scales, light and dark. |
 | **Code** | |
