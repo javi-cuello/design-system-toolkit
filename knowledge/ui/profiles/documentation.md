@@ -512,7 +512,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - Readers include coding agents and chat assistants as well as people, as several systems now assume.
 
 **How**
-- **An `llms.txt` at the site root**: an `h1` with the site's name (the only required part), an optional one-line summary, and sections of links, ideally to Markdown copies of the pages ([llms.txt proposal](https://llmstxt.org/)). React Spectrum, Atlassian and Carbon publish one ([React Spectrum](https://react-spectrum.adobe.com/llms.txt), [Atlassian](https://atlassian.design/llms.txt)).
+- **An `llms.txt` at the site root**: an `h1` with the site's name (the only required part), an optional one-line summary, and sections of links, ideally to Markdown copies of the pages ([llms.txt proposal](https://llmstxt.org/)). React Spectrum, Atlassian and Carbon publish one ([React Spectrum](https://react-spectrum.adobe.com/llms.txt), [Atlassian](https://atlassian.design/llms.txt), [Carbon](https://carbondesignsystem.com/llms.txt), fetched 2026-11-11).
 - **A Markdown copy of every page**, generated with it: React Spectrum serves `/Button.md`; Spectrum Hub has "Copy markdown", React Spectrum "Copy for LLM", Base UI "View as Markdown", and shopify.dev links a Markdown version of each Polaris page (observed 2026-11-11 on the pages linked in [Page frame](#page-frame-and-visual)).
 - **Same generator, same data.** The Markdown copy is a second rendering of the page's source, never a hand-kept twin; the caption's sources and dates go with it.
 - An MCP server is the next step, and both hosted platforms ship one (zeroheight read and write, Supernova a "Connect" block for readers); a site generated from a committed snapshot can serve the snapshot itself instead.

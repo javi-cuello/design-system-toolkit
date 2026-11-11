@@ -125,7 +125,7 @@ How a coding agent builds a prototype from the design system's real components i
 
 **Cases**
 - A designer answers a question the agent left on a Sort button: keep the toolbar sort. The next run records it as a project ruling, replies where it went, and from then on applies it with no comment. The question is never asked again.
-- A comment asks for "New employee" as the dialog title. It is fixed on the frame and nowhere else, unless it turns out to be the product's term everywhere, which is a ruling.
+- A comment asks for "New employee" as the dialog title. It is fixed on that frame and on every composed frame of the flow that shows the same dialog; if it is the product's term everywhere, it is a §6 decision instead.
 
 **Check**
 - *Script:* frontend-build's `scripts/figma-feedback.mjs` lists the open threads, unresolved with a person's message last, logs each handled one with a note and lists the notes for a reading every ten (`kinds`); the receipt names the decisions each frame applied, and the Figma eval scores a run that drops one.

@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.20.1)
+# Eval cases — frontend-build (v2.20.2)
+
+**Walked: 2026-11-11 for 2.20.2** — T15 read against the refusal when the agent's key lacks `current_user:read` (a list that would count the agent's own comments as open is never served); `test-feedback.mjs` 6/6. Missing walk records for 2.14.0, 2.14.1 and 2.15.0 restored below, from the commits.
 
 **Walked: 2026-11-11 for 2.20.1** — step 0 names the MCP tool as a second way to the same files; no case reads by path or by tool only, so every case holds.
 
@@ -13,6 +15,12 @@
 **Walked: 2026-11-11 for 2.17.0** — T17 added, traced to *Orient* question 5; A6 read against it (it holds: the question points at a knowledge page and copies none of it).
 
 **Walked: 2026-11-11 for 2.16.0** — T16 added, traced to *Feedback on a prototype* steps 2–4; T15 read against the new close step (it holds: a reply still routes and closes the thread; the log is T16's).
+
+**Walked: 2026-11-11 for 2.15.0** — T14 and T15 now post as the agent's account (`figma-feedback.mjs --on`, `--reply`), traced to step 5 and *Feedback on a prototype*; the rest unchanged by this version. (Restored 2026-11-11: a later edit had overwritten this record.)
+
+**Walked: 2026-11-11 for 2.14.1** — T15 read against the frame fix reaching every composed frame and the pin traced by `offset`; met live the same day (one comment, three screens fixed). (Recorded 2026-11-11 from the commit; none was written then.)
+
+**Walked: 2026-11-11 for 2.14.0** — T15 added, traced to step 0 and *Feedback on a prototype*; T14 read against step 5's ruling clause and the receipt's `rulings` (it holds: neither changes what T14 asserts). Live: the script read the WIP file's 4 comments, all unanswered `From Claude:` questions, as 0 open; the routing awaits a real comment. (Restored 2026-11-11: a later edit had overwritten this record.)
 
 **Walked: 2026-11-10 for 2.13.0** — step 4's two composing lines; T14 traced to them, the other cases unaffected.
 
@@ -279,8 +287,8 @@ Traced: 2026-10-12 for 2.4.0 — to SKILL.md *Hold it to the whole of the knowle
 ## T15 · Feedback on a prototype is read first, routed once, and never re-asked — *traced*
 Fixture: a file with a composed People flow carrying receipts; a person's comment on its dialog title ("this one dialog reads better as New employee"), a person's reply under an earlier question from the agent's account on the toolbar's Sort button ("keep it, the headers are too small"), and a thread whose last message is the agent's reply.
 Assert: before composing, the run lists the open threads (`scripts/figma-feedback.mjs`): the two, not the handled one; fixes the title on the frame; a comment pinned to a whole frame ("remove button") is traced by its `offset` to the header's "+" button under the pin, which goes from every screen of the flow that shows it; replies are posted by `figma-feedback.mjs --reply`; records the Sort answer as a dated §6 decision, Scope `Product`, with the comment's link and the designer as who decided; replies to each, as the agent's account, with `Routed:` where it went (the commenter being the maintainer, who may rule); on the next composition, applies the Sort ruling with no new comment and names it in the receipt's `rulings`.
-Negative: a new composition before the open threads are handled; the Sort question posted again; a ruling written as a memory note or a knowledge-base rule from one project's comment; a ruling taken from someone the context document does not name as able to rule; a thread resolved or left with no reply; a fix made on the commented screen while the flow's other screens keep the thing it removed; a fix that removes what the reference brought kept on the frames only, with no §6 Screen decision, so the next copy brings it back.
-Traced: 2026-11-11 for 2.18.0 — to SKILL.md *A Figma prototype*, step 0 and *Feedback on a prototype*, step 2 (§6, Scope `Product`); first traced for 2.16.0; the header button case met real input that day (one comment, three screens fixed).
+Negative: a new composition before the open threads are handled; the Sort question posted again; a ruling written as a memory note or a knowledge-base rule from one project's comment; a ruling taken from someone the context document does not name as able to rule; a thread resolved or left with no reply; a list served when the agent's own identity is unknown; a fix made on the commented screen while the flow's other screens keep the thing it removed; a fix that removes what the reference brought kept on the frames only, with no §6 Screen decision, so the next copy brings it back.
+Traced: 2026-11-11 for 2.18.0 — to SKILL.md *A Figma prototype*, step 0 and *Feedback on a prototype*, step 2 (§6, Scope `Product`); first traced for 2.14.0, its Negative widened for 2.19.1; the header button case met real input that day (one comment, three screens fixed).
 Runs: node --test tests/test-feedback.mjs — "a person's comment on a layer is open, with the layer it is pinned to", "a thread whose last message is Claude's is handled; a person replying after it opens it again", "Claude's own question waits for the designer; their answer opens it; a resolved thread never is", "the agent's own account marks its messages without a prefix; another person's reply still opens the thread"
 
 ## T16 · The product file is filled from evidence; feedback is logged with notes, read every ten, and checked by the eval — *traced*

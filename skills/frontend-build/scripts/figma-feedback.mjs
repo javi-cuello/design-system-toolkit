@@ -118,7 +118,8 @@ if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } ca
   } else {
     // the agent's id needs current_user:read on its key; without it, its unmarked replies read as open, never as handled
     const me = own ? await call('me', own, {}, true) : null;
-    if (own && !me) console.error('figma-feedback: the figma-claude key lacks current_user:read, so the agent\'s replies are not recognised; make its token with that scope');
+    // a list that counts the agent's own comments as a person's feedback is wrong, so it is refused, not warned about (review 2026-11-11)
+    if (own && !me) { console.error('figma-feedback: the figma-claude key lacks current_user:read, so the agent\'s own comments would read as open threads; make its token with that scope'); process.exit(1); }
     const agent = me ? me.id : null;
     console.log(JSON.stringify(openThreads((await call(`files/${key}/comments`, token || own)).comments, agent), null, 2));
   }
