@@ -31,7 +31,7 @@ const tally = (m, k) => { if (k != null) m[k] = (m[k] || 0) + 1; };
 const kinds = () => ({ components: {}, frames: {} });
 // a component or a frame into its own tally; shapes, vectors and text are neither
 const count = (t, n) => { if (isInstance(n)) tally(t.components, label(n)); else if (isFrame(n)) tally(t.frames, label(n)); };
-const sorted = (m) => Object.fromEntries(Object.entries(m).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
+const sorted = (m) => Object.fromEntries(Object.entries(m).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'en')));
 
 /*
  * A SCREEN TEMPLATE is a component a screen is an instance of: the screen's one laid-out child, recorded with its
@@ -113,7 +113,7 @@ function derive(screens, { code = {}, exists = null } = {}) {
       types.set(k, ty);
     }
   }
-  const repeated = [...regions.values()].filter((r) => r.screens >= 2).sort((a, b) => b.screens - a.screens || a.path.localeCompare(b.path))
+  const repeated = [...regions.values()].filter((r) => r.screens >= 2).sort((a, b) => b.screens - a.screens || a.path.localeCompare(b.path, 'en'))
     .map((r) => ({ ...r, children: { components: sorted(r.children.components), frames: sorted(r.children.frames) }, overlays: { components: sorted(r.overlays.components), frames: sorted(r.overlays.frames) }, gap: sorted(r.gap), pad: sorted(r.pad) }));
   return {
     screens: screens.length,
@@ -122,7 +122,7 @@ function derive(screens, { code = {}, exists = null } = {}) {
     varies: repeated.flatMap((r) => ['gap', 'pad'].filter((k) => Object.keys(r[k]).length > 1).map((k) => ({ path: r.path, what: k, values: r[k] }))),
     // a name rule 24's taxonomy does not read is listed, never dropped quietly
     unnamed,
-    templates: [...templates.values()].sort((a, b) => b.screens - a.screens || a.component.localeCompare(b.component)).map((t) => {
+    templates: [...templates.values()].sort((a, b) => b.screens - a.screens || a.component.localeCompare(b.component, 'en')).map((t) => {
       // a value that is not a path (a note, an object) pairs nothing
       const file = typeof code[t.component] === 'string' ? code[t.component] : null;
       return { ...t, names: [...t.names].sort((a, b) => a.localeCompare(b, 'en')), sections: [...t.sections].sort(), regions: { components: sorted(t.regions.components), frames: sorted(t.regions.frames) }, code: file, ...(file && exists && !exists(file) && { missing: true }) };
@@ -130,7 +130,7 @@ function derive(screens, { code = {}, exists = null } = {}) {
     // a mapped name no stored screen uses: a renamed template, or a typo, said rather than kept quietly
     // (`_note` is the config's comment, as in every block of snapshot.config.json)
     unusedCode: Object.keys(code).filter((k) => k !== '_note' && !templates.has(k)).sort(),
-    screenTypes: [...types.values()].sort((a, b) => a.section.localeCompare(b.section) || a.screen.localeCompare(b.screen)).map((t) => ({ ...t, states: [...t.states].sort() })),
+    screenTypes: [...types.values()].sort((a, b) => a.section.localeCompare(b.section, 'en') || a.screen.localeCompare(b.screen, 'en')).map((t) => ({ ...t, states: [...t.states].sort() })),
   };
 }
 

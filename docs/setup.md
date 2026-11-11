@@ -29,7 +29,7 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
 
 4. **Take a snapshot.** In the library file, run **Plugins → Development → Design system snapshot**. The first time, the window asks for this machine's pairing code: run `node tools/snapshot/pairing.cjs` and paste what it prints. The router finds the project by the file key in `snapshot-routing` and stores the snapshot in the project's folder, and everything built from it follows.
 
-5. **Open the docs site** at `http://localhost:<port>/` (it builds within a minute). To audit: with the service already running, open Figma, run the Desktop Bridge plugin in the library, and press **Audit** on the site's Audits page ([tools/figma-audit](../tools/figma-audit/README.md)).
+5. **Open the docs site** at `http://127.0.0.1:<port>/` (it builds within a minute). To audit: with the service already running, open Figma, run the Desktop Bridge plugin in the library, and press **Audit** on the site's Audits page ([tools/figma-audit](../tools/figma-audit/README.md)).
 
 **If the project has a code repo**, connect it so its tokens, checks and parity run from the toolkit: `node tools/project-check/init.mjs --repo ~/Projects/<label>` writes the files and hook, then lists the gates and decisions still open ([Connect a code repo](../tools/project-check/README.md#connect-a-code-repo)). Then publish the docs site with `bin/deploy`, or ask Claude to use any [skill](../skills/README.md).
 

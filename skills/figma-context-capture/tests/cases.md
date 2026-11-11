@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.14.0)
+# Eval cases — figma-context-capture (v2.14.1)
+
+**Walked: 2026-11-11 for 2.14.1** — the template's §6 text only; `node tools/snapshot/test-rulings-log.mjs` 6/6 reads the template's placeholder row as no ruling and writes a first ruling under it.
 
 **Walked: 2026-11-11 for 2.14.0** — the template's §6 only (Scope values, two optional columns); no case asserts §6's columns, so every case holds; `tools/snapshot/test-router.mjs` proves a seven-column log reads as before.
 

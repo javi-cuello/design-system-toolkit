@@ -27,7 +27,9 @@ export function judgeConventions(t, optionOrder, descriptionStructure) {
  */
 export function judgeRulings(rulings) {
   return (rulings || []).map((r) => {
-    const m = /\bon (.+?)(?:, about: (.+?))?\.?$/.exec(r.why || "");
+    // only the writers' own sentence (the dashboard's, Audit lite's) names a subject: a hand-written Why with "on" in it is no component (review 2026-11-11:
+    // 64 of 298 hand-written rulings matched the looser pattern and were told to the judge as recorded on a word)
+    const m = /^Recorded from (?:the audit dashboard|Audit lite), on (.+?)(?:, about: (.+?))?\.?$/.exec(r.why || "");
     if (!m) return r.text;
     return r.text + " (recorded on " + m[1] + (m[2] ? " about “" + m[2] + "”" : "") + "; applies there and to the same finding on any other component)";
   });

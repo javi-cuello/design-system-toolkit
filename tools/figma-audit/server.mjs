@@ -57,7 +57,7 @@ import { decoder, MAX_MESSAGE } from "./frames.mjs";
 // it does in the docs build. Two resolvers would be two answers.
 import specTool from "../snapshot/spec.cjs";
 import store from "../snapshot/store.cjs";
-const { walkRulings, rulingsOf, rulingKey } = contract;
+const { walkRulings, rulingsOf, rulingKey, appendRuling } = contract;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -421,18 +421,6 @@ function storedComponents(fileKey) {
 }
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2", ".woff": "font/woff", ".ico": "image/x-icon" };
 
-function appendRuling(md, text, where) {
-  const lines = md.split("\n"); let at = -1, header = null;
-  walkRulings(lines, (i, c, h) => { at = i; header = h; });
-  if (at < 0) return null;
-  const esc = (s) => String(s).replace(/\|/g, "\\|");
-  const row = header.map((h) => h === "date" ? new Date().toISOString().slice(0, 10)
-    : h === "scope" ? "Audit" : h === "ruling" ? esc(text)
-    : h === "why" ? esc("Recorded from the audit dashboard, on " + where + ".")
-    : /decided/.test(h) ? "Maintainer" : "");
-  lines.splice(at + 1, 0, "| " + row.join(" | ") + " |");
-  return lines.join("\n");
-}
 // The project's audit settings merged over the house defaults, and its
 // rulings: the contract's reader, shared with the docs site's read-only copy.
 const readContext = async () => contract.auditContext(CONTEXT);
@@ -919,7 +907,7 @@ const server = createServer(async (req, res) => {
 
     // A ruling goes to the document's rulings log, the one place it lives.
     if (url.pathname === "/ruling" && req.method === "POST") {
-      const { text, where, about, dryRun } = JSON.parse(await body(req));
+      const { text, where, about, dryRun } = JSON.parse(await body(req)) || {};
       const clean = String(text || "").replace(/\s+/g, " ").trim();
       if (!clean) return json(res, 400, { error: "text required" });
       if (!existsSync(CONTEXT)) return json(res, 200, { ok: false, error: "no context document at " + CONTEXT });
@@ -929,7 +917,8 @@ const server = createServer(async (req, res) => {
       // The Why column names the component the ruling was made on and the
       // finding it answered: that is what lets the judge apply it to that
       // component and to the same finding on any other.
-      const on = String(where || "the queue") + (about ? ", about: " + String(about).replace(/\s+/g, " ").trim().slice(0, 140) : "");
+      // one line, always: a newline in `where` would split the §6 row and write lines of its own into the document
+      const on = String(where || "the queue").replace(/\s+/g, " ").trim() + (about ? ", about: " + String(about).replace(/\s+/g, " ").trim().slice(0, 140) : "");
       const next = appendRuling(md, clean, on);
       if (!next) return json(res, 200, { ok: false, error: "the context document has no rulings table in §6" });
       // A dry run answers every check above and writes nothing — the way to

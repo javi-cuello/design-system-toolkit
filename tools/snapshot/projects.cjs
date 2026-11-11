@@ -591,6 +591,8 @@ function walkRulings(lines, each) {
     // among them.
     if (/^[\s|:-]+$/.test(lines[i + 1] || '')) { header = c.some((x) => /^ruling$/i.test(x)) ? c.map((x) => x.toLowerCase()) : null; return; }
     if (!header || /^[\s|:-]+$/.test(l)) return;
+    // the context template's sample row ({date}, {decision, one line}) is a placeholder, never a ruling
+    if (c.every((x) => !x || /^\{.*\}$/.test(x))) return;
     each(i, c, header);
   });
 }
@@ -599,6 +601,37 @@ function walkRulings(lines, each) {
 // any new ruling that happened to sit inside an older one, and a ruling past
 // the 400-character display cut could be recorded twice.
 const rulingKey = (s) => String(s || "").replace(/\*\*/g, "").replace(/\\\|/g, "|").replace(/\s+/g, " ").trim();
+// The audit dashboard's writer for §6 (its POST /ruling): a row under the last ruling, its cells by the
+// header, a day's second ruling lettered (2026-11-11b), every cell one line. Beside the parser so the
+// two read the same table.
+function appendRuling(md, text, where, today = new Date().toISOString().slice(0, 10)) {
+  const lines = md.split("\n"); let at = -1, header = null;
+  walkRulings(lines, (i, c, h) => { at = i; header = h; });
+  // a log with no ruling yet (only the template's placeholder row, which no reader counts): the row goes under the table
+  if (at < 0) {
+    let inSix = false;
+    for (let i = 0; i < lines.length && at < 0; i++) {
+      if (/^## /.test(lines[i])) { inSix = /^## 6\b/.test(lines[i]) || /rulings log/i.test(lines[i]); continue; }
+      const c = cells(lines[i]);
+      if (inSix && /^\s*\|/.test(lines[i]) && /^[\s|:-]+$/.test(lines[i + 1] || "") && c.some((x) => /^ruling$/i.test(x))) {
+        header = c.map((x) => x.toLowerCase()); at = i + 1;
+        while (/^\s*\|/.test(lines[at + 1] || "")) at++;
+      }
+    }
+  }
+  if (at < 0) return null;
+  const esc = (s) => String(s).replace(/\s+/g, " ").trim().replace(/\|/g, "\\|");  // one line, pipes escaped: a row never splits
+  // a day's second decision takes a letter (the context template's §6): 2026-11-11, then 2026-11-11b
+  const taken = new Set(); walkRulings(lines, (i, c, h) => taken.add(c[h.indexOf("date")] || ""));
+  let date = today;
+  for (let k = 0; taken.has(date); k++) date = today + "bcdefghijklmnopqrstuvwxyz"[k];
+  const row = header.map((h) => h === "date" ? date
+    : h === "scope" ? "Audit" : h === "ruling" ? esc(text)
+    : h === "why" ? esc("Recorded from the audit dashboard, on " + where + ".")
+    : /decided/.test(h) ? "Maintainer" : "");
+  lines.splice(at + 1, 0, "| " + row.join(" | ") + " |");
+  return lines.join("\n");
+}
 function rulingsOf(md) {
   const out = [];
   walkRulings(md.split("\n"), (i, c, header) => {
@@ -959,7 +992,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { appendRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>

@@ -199,7 +199,7 @@ Silence means agreement: the toolkit's standards apply wherever this document is
 
 ## 6 · Rulings log (append-only; newest last)
 
-The project's one decision log: library rulings and product, pattern and screen decisions alike, told apart by Scope: the library or platform a ruling is about (the values this log already uses stay valid), or `Product`, `Pattern`, `Screen`. A decision that reverses an older one says `supersedes <date>`, and the older row's decision is struck through (`~~…~~`), which every reader skips. A decision dropped with nothing in its place is struck through where it stands, its Why gaining `retired <date>: <reason>`; no new row. A day's second decision takes a letter in its date (`2026-11-11b`). The last two columns are optional and may be left empty.
+The project's one decision log: library rulings and product, pattern and screen decisions alike, told apart by Scope: the library or platform a ruling is about (the values this log already uses stay valid), or `Product`, `Pattern`, `Screen`; `validate` marks a waiver the code repo's push check reads (tools/project-check). A decision that reverses an older one says `supersedes <date>`, and the older row's decision is struck through (`~~…~~`), which every reader skips. A decision dropped with nothing in its place is struck through where it stands, its Why gaining `retired <date>: <reason>`; no new row. A day's second decision takes a letter in its date (`2026-11-11b`). The last two columns are optional and may be left empty.
 
 | Date | Scope | Ruling | Why | Decided by | Confirms or overrides | Checked by |
 |---|---|---|---|---|---|---|

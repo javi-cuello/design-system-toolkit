@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.14.1 (2026-11-11): reviewed: §6 names the `validate` scope the push check reads; the sample row is skipped by every reader and a first ruling lands under it. Template only.
 - 2.14.0 (2026-11-11): the template's §6 is the project's one decision log: Scope Library, Product, Pattern or Screen; optional *Confirms or overrides* and *Checked by*; a retired row struck through. Template only.
 - 2.13.0 (2026-11-11): pass M asks a fifth item where a screens file is registered: screen types, their template, required states and where the shell config lives; the template's §3 gains the Screens table (the agent prototyping plan, Outcome 2). C18.
 - 2.12.4 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
