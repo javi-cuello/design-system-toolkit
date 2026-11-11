@@ -359,7 +359,7 @@ components/<x>/   one folder per component, its sheet named after it
 
 **How**
 - [required] The two classes code-standard rule 6 allows sit in the last layer, so they win; the visually hidden ruleset is [accessibility: hidden content](accessibility.md#hidden-content).
-- [contested] CUBE CSS defines a utility as "a CSS class that does one job and does that one job well," generated from tokens to move repetition into the HTML ([CUBE CSS, utility](https://cube.fyi/utility.html)). That is a coherent method, and it conflicts with code-standard rule 6: the toolkit styles by element and attribute, so a spacing or colour class has no place.
+- [required] CUBE CSS defines a utility as "a CSS class that does one job and does that one job well," generated from tokens to move repetition into the HTML ([CUBE CSS, utility](https://cube.fyi/utility.html)). That is a coherent method, and it conflicts with code-standard rule 6: the toolkit styles by element and attribute, so a spacing or colour class has no place.
 - [required] A layout need that repeats (a stack, a cluster) is a layout component (code-standard rule 11), not a class.
 
 **Cases**

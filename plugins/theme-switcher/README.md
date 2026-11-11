@@ -2,7 +2,7 @@
 
 Two choices and one button: **Theme**, **Brand**, **Apply**.
 
-**Version 3.12.0** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
+Runs with no build step: import `manifest.json` via Figma → Plugins → Development → Import plugin from manifest…; its version is in `package.json`, its history in `CHANGELOG.md`.
 
 Setting a theme by hand means visiting every collection that carries it — the colour primitives, the semantics, the brand — and picking the same mode in each. That is what this does in one click, on the selected layers.
 
@@ -19,7 +19,7 @@ Apply sets the theme on every collection that offers it, pins each choice row's 
 
 **Clear** is not the opposite of Apply. It is the reset button: every mode pin on the **current page and everything on it**, whatever set them, with or without a selection. Scope here has to be that wide — a pin on a nested frame overrides the one above it, and a pin on the page node itself is invisible to any walk that starts from the selection, so anything narrower reports success while the canvas does not move.
 
-## Three things the API forces
+## Four things the API forces
 
 **An extension is only reachable once something pins it.** `getAvailableLibraryVariableCollectionsAsync` lists extended collections, but `getVariablesInLibraryCollectionAsync` returns none for them — an extension shares its parent's variables — so importing a variable resolves to the parent and the extension never appears. Resolving the bare `VariableCollectionId:<key>` was tried against a live library: `null` for all six collections. The only handle left is an id already written on a node, so the plugin scans **the whole document** for pins and remembers what it finds in this file. Pin a brand once, anywhere in the file, from Figma's own mode menu, and it stays on the list. Page scope was tried first and was the wrong boundary: opening the plugin on a page that happens not to pin a brand offered no brand at all, in a file that plainly has one.
 
@@ -27,11 +27,16 @@ Apply sets the theme on every collection that offers it, pins each choice row's 
 
 **A team-library call can simply not come back.** `getVariablesInLibraryCollectionAsync` never resolved for one subscribed collection in seven seconds, twice, while the collection beside it answered in one millisecond. Awaited plainly that is a window that never fills. Every team-library call is raced against a timeout, the whole library phase is capped at three seconds and resolved once per open, and what is already known — local collections and the pins in the file — is shown before the library is asked at all.
 
+**A pin set on an extension is cleared through its parent.** `clearExplicitVariableModeForCollection(extension)` does nothing at all — it does not throw, and the pin stays. Pass the parent collection instead. The same asymmetry runs the other way at the start: *setting* the extension's mode replaces the parent's entry rather than adding one, because the two share a slot.
+
 ## Why there is no "apply to the page"
 A mode pinned on a page is overridden by every frame below it that carries its own pin, so an Apply with nothing selected reported "1 layer" and the canvas did not move — the plugin saying it had worked while nothing had. Apply is disabled with an empty selection instead, and the panel says so ("Apply needs a layer · Clear covers the page"). Clear stays enabled: it is the page-wide reset described above, and needs no selection.
 
-## A fourth thing the API forces
-**A pin set on an extension is cleared through its parent.** `clearExplicitVariableModeForCollection(extension)` does nothing at all — it does not throw, and the pin stays. Pass the parent collection instead. The same asymmetry runs the other way at the start: *setting* the extension's mode replaces the parent's entry rather than adding one, because the two share a slot.
+## Test
+
+    node plugins/theme-switcher/tests/test-switcher.js
+
+Runs `code.js` against a stub `figma`: the stable half of a collection id, the timeout race every team-library call runs, and the rows read from local collections. `bin/check` runs it.
 
 ## Data this plugin stores
 - **Relaunch data** on `figma.root`: one `switch` entry, so *Switch theme or brand* appears under **Tools** in the right-hand panel. Written once, never rewritten — the write is a document edit.

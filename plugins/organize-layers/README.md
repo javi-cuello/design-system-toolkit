@@ -56,6 +56,12 @@ Removing the button: right-click the parent → Plugins → the button's own rem
 Figma → Plugins → Development → Import plugin from manifest → select this folder's `manifest.json`.
 A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
+## Test
+
+    node plugins/organize-layers/tests/test-organize.js
+
+The logic against a stubbed `figma`; `bin/check` runs it. What a stub cannot know (the Layers panel order, placement on real frames, relaunch data) is `tests/figma-api-check.js`, run inside Figma, and the window's rendering is `tests/render-check.sh`; [`tests/MANUAL.md`](tests/MANUAL.md) says how to run both and when they last passed.
+
 ## Data this plugin stores
 Two places, both small.
 

@@ -278,6 +278,7 @@ Walked 2026-11-01 for toolkit-standard 2.23.0: the fixture above, each assertion
 Fixture: a knowledge page with a weighed item, a bold-led item with no weight, one starting with a word that is not a weight, a *Cases* bullet and a fenced bullet.
 Assert: the bare item and the wrong word are refused with file and line; the weighed item, the case and the fenced line pass (toolkit-standard §D 21). On the repo before the sweep it listed all 5,908 items, the count the sweep's own finder gave.
 Walked 2026-11-11 for toolkit-standard 2.27.0: the fixture above, each assertion observed in the test run (93 passed).
+Walked 2026-11-11 for 2.29.0: a blind re-weigh of 100 items (20 per weight) matched 58, 84 within a level; contested least (3 of 20). The 69 contested items rechecked: 7 changed after review. Pointer clause ruled by the maintainer.
 Runs: node tools/toolkit-check/test-check-standards.mjs — "an item with no weight is refused, a weighed one passes", "…and one with a word that is not a weight", "…but a Case and a fenced line are not items"
 
 ## S23 · Restated prose agrees with its owner — WALKED 2026-11-11

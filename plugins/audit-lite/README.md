@@ -7,7 +7,7 @@ It is the components and foundations audits with nothing else to install: no bri
 ## Run
 
 1. Figma desktop → Plugins → Development → Import plugin from manifest → this folder's `manifest.json`.
-2. Open the library, run **Audit lite**, and, if the project has a context document, upload it on the **Settings** tab beside Document; without one, the **Create one** switch there has Claude draft one from the file with the results. Claude ends by offering the results, and any drafted document, as files.
+2. Open the library, run **Audit lite**, and, if the project has a context document, upload it with **Upload…** in the Context document section of the **Settings** tab; without one, the **Draft one** switch there has Claude draft one from the file with the results. Claude ends by offering the results, and any drafted document, as files.
 3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
 4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
@@ -26,9 +26,9 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 ## Files
 
-- `code.js`: the plugin. Its generated block (the components and foundations scanners, the full audit's context-document readers and discovery, the judging prompt, the buckets, the universal conventions, the house settings, `instructions.md` and `report.html`) is written by `node plugins/audit-lite/sync.mjs`, never by hand; `bin/check` fails when it differs from its sources.
+- `code.js`: the plugin. Its generated block (the components and foundations scanners, the full audit's context-document readers and discovery, the judging prompt, the buckets, the universal conventions, the house settings, `instructions.md` and `report.html`) is written by `node plugins/audit-lite/sync.mjs`, never by hand; `bin/check` runs `sync.mjs --check` (through `standards/tests/check.sh`) and fails when it differs from its sources.
 - `instructions.md`: what Claude does with the report. `report.html`: the page Claude fills in.
-- `tests/test-audit-lite.mjs`: builds a report from the scanner's fixture, checks that a context document gives the settings and rulings the full audit reads from it (`tests/fixtures/design-system-context.md`), and renders the page.
+- `tests/test-audit-lite.mjs` (`node plugins/audit-lite/tests/test-audit-lite.mjs`; `bin/check` runs it): builds a report from the scanner's fixture, checks that a context document gives the settings and rulings the full audit reads from it (`tests/fixtures/design-system-context.md`), and renders the page.
 
 ## Data this plugin stores
 

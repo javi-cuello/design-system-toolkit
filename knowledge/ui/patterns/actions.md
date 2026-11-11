@@ -358,7 +358,7 @@ How an interface offers things to do: button or link, how links are worded and w
 **Use when / don't use**
 - [strong] A toolbar groups three or more controls acting on one region. The W3C [toolbar pattern](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/): "only if the group contains 3 or more controls."
 - [moderate] A bulk bar appears once items are selected and offers what applies to all of them.
-- [required] No selection controls in an action bar. Primer: "Buttons are the only controls allowed in an ActionBar." Filters belong to the filter bar (design-standard rule 3).
+- [weak] No selection controls in an action bar. Primer: "Buttons are the only controls allowed in an ActionBar." Filters belong to the filter bar (design-standard rule 3).
 
 **How**
 - [moderate] Carbon's table toolbar holds "up to five actions"; the rest overflow. Apple's [toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars): decide which items overflow as the bar narrows.

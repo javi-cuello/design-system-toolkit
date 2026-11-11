@@ -24,7 +24,7 @@ Which components get a script at all is code-standard rule 8; this page is for t
 - A method called `hidden()` or `focus()` on the class → it shadows `HTMLElement`'s own; Catalyst lists this as an anti-pattern ([Catalyst anti-patterns](https://github.github.io/catalyst/guide/anti-patterns/)). Rename it for what it does.
 
 **Accessibility**
-- [moderate] The tag name is never announced; nothing here reaches a reader except through the semantics inside.
+- [required] The tag name is never announced; nothing here reaches a reader except through the semantics inside.
 
 **Check**
 - *Script:* static scan: every `customElements.define` is preceded by a `customElements.get` guard and its tag starts with the library prefix; in Chrome, import the module twice and assert no error.

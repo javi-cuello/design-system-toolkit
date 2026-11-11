@@ -348,7 +348,7 @@ ds-card[disabled] > * { --dim: 1; }
 [data-density="compact"] { --control-height: 2rem; --row-gap: var(--space-2); }
 ```
 
-- [contested] Systems differ on the default: React Spectrum picks its medium or large scale "according to the device type (e.g. touch vs mouse input)" ([React Spectrum Provider](https://react-spectrum.adobe.com/react-spectrum/Provider.html)), which CSS can read as `@media (pointer: coarse)` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/pointer)). The toolkit sets density by attribute only, so there is one mechanism; a project that wants a touch default records it as a ruling.
+- [weak] Systems differ on the default: React Spectrum picks its medium or large scale "according to the device type (e.g. touch vs mouse input)" ([React Spectrum Provider](https://react-spectrum.adobe.com/react-spectrum/Provider.html)), which CSS can read as `@media (pointer: coarse)` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/pointer)). The toolkit sets density by attribute only, so there is one mechanism; a project that wants a touch default records it as a ruling.
 - [weak] Where density applies, and where it never should, is [visual: density modes](../ui/design/visual.md#density-modes).
 
 **Cases**

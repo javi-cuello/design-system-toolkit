@@ -673,7 +673,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 **How**
 - [weak] Sparkline: no axes or gridlines, the line in a neutral colour, the latest point marked in the accent; the number beside it carries the value and its comparison. A few dozen points, a fixed period stated once for the set. Primer does not currently support new sparklines, so a project following Primer builds none.
 - [weak] A row of sparklines shares one period and, where they measure the same thing, one scale.
-- [contested] Small multiples: the Analysis Function says that "it is essential for all the y-axes to have the same scale to avoid misunderstandings". Datawrapper allows independent scales for very different ranges but recommends avoiding them, and stating it when used. The toolkit shares the scale and states any exception in the summary.
+- [moderate] Small multiples: the Analysis Function says that "it is essential for all the y-axes to have the same scale to avoid misunderstandings". Datawrapper allows independent scales for very different ranges but recommends avoiding them, and stating it when used. The toolkit shares the scale and states any exception in the summary.
 - [weak] Panels in a meaningful order (largest first, or a natural order), axis labels only on the outer panels, one colour; a reference line (an average) may repeat in every panel.
 
 **Cases**

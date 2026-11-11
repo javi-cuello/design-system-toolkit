@@ -1,16 +1,17 @@
 # Lucide Icon Importer
 Imports Lucide icons as components with size variants.
 
-Runs with no build step: import `manifest.json` via Figma → Plugins → Development.
+Runs with no build step: import `manifest.json` via Figma → Plugins → Development → Import plugin from manifest…
 
 ## Right to left
-For a project that ships a right-to-left language (Arabic, Hebrew, Farsi, Urdu), turn on **Right to left** in Settings. Each icon added then gets `Right to left: mirrors` or `Right to left: stays` at the end of its description. That line is what figma-components-audit reads to know the decision is made. With one icon selected, the **Mirrors right to left** checkbox sets it. It's prefilled from the name with the audit's own direction words: arrows, chevrons, undo and send mirror; up/down and playback controls stay. Icons added several at a time get the line only if someone selected each one and saw its box. A guess would silence the audit's question. Update icon keeps a decision already made, including one written by hand.
+For a project that ships a right-to-left language (Arabic, Hebrew, Farsi, Urdu), turn on **Mark mirroring** in Settings. Each icon added then gets `Right to left: mirrors` or `Right to left: stays` at the end of its description. That line is what figma-components-audit reads to know the decision is made. With one icon selected, the **Mirrors right to left** checkbox sets it. It's prefilled from the name with the audit's own direction words: arrows, chevrons, undo and send mirror; up/down and playback controls stay. Icons added several at a time get the line only if someone selected each one and saw its box. A guess would silence the audit's question. Update icon keeps a decision already made, including one written by hand.
 
 ## Data this plugin stores
 - **The file's settings**, as `pluginData` on the document root under `lucideIconImporterSettings` (frame name, sizes, stroke, colours, the chosen variable, whether to mark right to left), so they travel with the file. No `clientStorage`.
 - **Each icon it builds** keeps `lucideIconName`, `lucideSvgSource`, `lucideTags` and `lucideRtl` (`mirrors`, `stays` or empty) as `pluginData`, which the **Update icon** relaunch button rebuilds it from.
 - **Only this plugin can read that data.** `pluginData` is scoped to the plugin that wrote it (skill-standard Part B 11), so code run through the Desktop Bridge or the audit service reads empty settings and no icon data, even on icons this plugin built. That is no evidence an icon was not imported here. To check a library against the importer, rebuild each icon from Lucide's SVG with this file's `buildMasterIcon` and compare what is drawn (shape, centring in the box, the box's padding and hug, description and link), as one library's 208 icons were checked on 2026-11-04.
 - **Network:** the window fetches Lucide's `tags.json` and each icon's SVG from `cdn.jsdelivr.net` (`lucide-static`, at the version `ui.html` pins), and nothing else. The manifest allows that domain alone.
+- **Libraries:** the `teamlibrary` permission lets the **Variable** picker offer the colour variables the file's enabled libraries publish, besides its own.
 
 ## Tests
 
@@ -25,6 +26,12 @@ An icon's SVG comes from a CDN, so the window never writes it as markup: `cleanS
     node tests/test-ui-keyboard.mjs
 
 The window in Chrome, from the keyboard: the tabs move with Left and Right, the cards and the variable picker are named buttons that say their state, Escape closes the picker and gives focus back, and every control has a name.
+
+    node tests/test-ui-fetch.mjs
+
+The window's fetch queue and retry are a copy of figma-plugin-creator's `assets/fetch-queue.js`; this holds the copy to its source and runs it against fetches that fail at once.
+
+Run each from this folder; `bin/check` runs them all.
 
 ## How a full Lucide set is laid out
 

@@ -1,6 +1,6 @@
 # Plugins
 
-Figma plugins the toolkit uses inside a design file: taking the snapshot every other tool reads, importing icons, switching themes, tidying layers and showing how components depend on each other. Each is plain JavaScript with no build step, and looks native because its UI is built from FigUI3, the library behind Figma's PropsKit, on Figma's own colour tokens.
+Figma plugins the toolkit uses inside a design file: taking the snapshot every other tool reads, auditing a library without the toolkit installed, importing icons, switching themes, tidying layers, showing how components depend on each other and showing a component's guidelines beside it. Each is plain JavaScript with no build step, and looks native because its UI is built from FigUI3, the library behind Figma's PropsKit, on Figma's own colour tokens.
 
 ## Install one
 

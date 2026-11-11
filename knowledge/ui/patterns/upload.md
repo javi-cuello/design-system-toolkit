@@ -88,7 +88,7 @@ How a person gives the interface a file: which control to offer, how the file in
 - [weak] **Draw every state.** Friedman lists the states a drop area passes through, from empty to ready-to-receive to filled and disabled, and asks that each be designed, with a dashed border as the common signal of a drop area ([Friedman, Drag-and-Drop UX](https://smart-interface-design-patterns.com/articles/drag-and-drop-ux/)).
 - [weak] **Say what happens on drop.** The zone's text names the action and the limits ("Drop a CSV here, or choose a file. Up to 5 MB.").
 - [weak] **Many files at once.** When someone drops a batch, a summary of how many and which types reads better than a long list appearing at once (Friedman, as linked); the per-file list follows.
-- [contested] **Single-file zones.** After one file is added, Carbon removes the zone, and the person removes the file to add another ([Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)); the toolkit keeps the zone but labels it "Replace file", so the place the person aimed at stays put (design-standard rule 2 applies the same stillness to controls).
+- [weak] **Single-file zones.** After one file is added, Carbon removes the zone, and the person removes the file to add another ([Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)); the toolkit keeps the zone but labels it "Replace file", so the place the person aimed at stays put (design-standard rule 2 applies the same stillness to controls).
 
 **Cases**
 - An import page accepts drops anywhere but shows nothing until a drag starts → draw a visible zone with its button; nobody discovers a target that appears only mid-drag.

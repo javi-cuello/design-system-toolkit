@@ -328,7 +328,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [weak] **Body, the only part that scrolls:** the primary pages first, then the reader's own (pinned items, recent, projects), then groups with a visible label each. NN/g: "In long menus, place less-important ones at the bottom".
 - [weak] **Footer, sticky at the bottom:** the account menu ([menus: account menu](menus.md#account-menu)), and settings or help when they are not inside it; shadcn: "use for user menus, settings, or actions". An upgrade prompt, if any, sits here and never between pages.
 - [weak] **Depth:** two tiers in the sidebar at most; Carbon's left panel "does not support three tiers of navigation", and a third tier is tabs on the page ([Carbon UI shell left panel](https://carbondesignsystem.com/components/UI-shell-left-panel/usage/); [navigation: tabs](navigation.md#tabs)).
-- [contested] **One account control per product:** where the sidebar's footer holds the account menu there is none top-right, and the other way round. Both placements are common (shadcn and Notion at the bottom; Carbon, GitHub and Vercel top-right); pick one and keep it on every page.
+- [weak] **One account control per product:** where the sidebar's footer holds the account menu there is none top-right, and the other way round. Both placements are common (shadcn and Notion at the bottom; Carbon, GitHub and Vercel top-right); pick one and keep it on every page.
 
 **Cases**
 - The account menu sits top-right and again in the sidebar footer → keep one.
@@ -340,7 +340,7 @@ How a vertical panel beside the content works: a navigation sidebar listing a se
 - [required] 2.4.6 (group labels describe their group), 2.4.8 Location (AAA, worth meeting: the current page and workspace are both in view), 3.2.3 Consistent Navigation (the regions are in the same order on every page), 1.3.1 (groups are structure, not only spacing).
 
 **Build**
-- [required] *Elements:* an `aside` holding a `header`, a `nav` with `aria-label` for the body, and a `footer`; each group a heading followed by a `ul` of `a`. The switcher and the account menu are `button`s outside the `nav`, because they are not pages.
+- [weak] *Elements:* an `aside` holding a `header`, a `nav` with `aria-label` for the body, and a `footer`; each group a heading followed by a `ul` of `a`. The switcher and the account menu are `button`s outside the `nav`, because they are not pages.
 - [required] *ARIA and keyboard:* the body's links are links, with `aria-current="page"` on the current one; the header's and footer's buttons are menu buttons ([APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/)), since what they open is a list of commands and choices. A collapsible group follows [nesting and expandable groups](#nesting-and-expandable-groups).
 - [required] *States:* `aria-current` on the page link; the collapsed state as in [collapsible sidebar and icon rail](#collapsible-sidebar-and-icon-rail).
 - [required] *Rules:* code-standard rule 64 (the current page carries `aria-current`), code-standard rule 18 (an avatar-only or icon-only trigger is named), code-standard rule 5 (the sidebar's styles stop at its own edge).
