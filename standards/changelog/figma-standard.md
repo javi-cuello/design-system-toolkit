@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.22.1 (2026-11-11): rule 50's *Evidence* and *Checked:* cover 2.22.0's broadening (the Direction variant for anything that mirrors; the rtlVerdicts test).
 - 2.22.0 (2026-11-05): rule 50, with `rtlInFigma` a set needs the Direction variant for anything that must mirror, not only a row; a set that only holds such a component is covered by it; `rtlStays` and `rtlByHand` name the components that keep their direction and the rows a person decides.
 - 2.21.0 (2026-11-04): rule 50, a library that mirrors keeps order in auto layout, names sides by role and says what mirrors, held only where a project names `rtlLanguages`; checked by figma-components-audit's `direction` family.
 - 2.20.5 (2026-11-02): rule 4's note on Loading names `aria-disabled` and a live region, as [actions: loading buttons](../../knowledge/ui/patterns/actions.md#loading-buttons) sets out, not `aria-busy`; no rule changed.

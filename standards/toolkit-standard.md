@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.26.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.26.1** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -506,7 +506,7 @@ reports what it found, unasked.
 
 ### 12 · A project's truth lives in its context document and its product file
 
-**Everything project-specific has one home: `~/Projects/<label>/figma-design-system/design-system-context.md`,** and, for the product rather than its library, `product-context.md` beside it.
+**Everything project-specific has one home, the project's folder `~/Projects/<label>/figma-design-system/`, and each kind of fact one file in it:** `design-system-context.md` for the library and every decision, `product-context.md` for the product rather than its library, `guidance/<topic>.md` for how a topic is designed.
 A project is a repo beside the toolkit with that folder at its root (the label
 is the repo's folder name), so a new project is that folder and nothing else,
 and its files are versioned with the project, outside the toolkit.
@@ -530,7 +530,7 @@ waivers and their reasons. Anything else is the toolkit's, and a project that
 needs something different from the toolkit has found a toolkit bug — that is
 the finding, not the workaround.
 
-*Why:* a project fact with two homes has none. The alternative to one document
+*Why:* a project fact with two homes has none. Three files are not three homes: each holds a different kind of fact, a decision is written only in §6, and a guidance page gathers decisions without restating one as its own. The alternative to one document
 is the fact living in whichever tool happened to need it first — a collection
 name in a scanner, a file key in a script, a ruling in a chat log — where the
 next tool cannot find it and re-derives it differently. This is the rule §D 6
@@ -544,9 +544,7 @@ four projects; a library id absent from it made the router refuse a real
 snapshot until the id was recorded there rather than special-cased in the
 router.
 
-*Checked:* `standards/tests/scan-clause-d.py` "no ID-shaped candidates" (project data has no place in
-`skills/`) and `tools/toolkit-check/owned-check.mjs` "a job the toolkit owns is written again in this repo" (a job the toolkit owns is not written
-again in a project). *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — §D 8's moment — the change that finds a fact
+*Checked:* `standards/tests/scan-clause-d.py` "no ID-shaped candidates"; `tools/toolkit-check/owned-check.mjs` "a job the toolkit owns is written again in this repo" (project data has no place in `skills/`, and a job the toolkit owns is not written again in a project). *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — §D 8's moment — the change that finds a fact
 decides it is the project's and writes it to the document, or the toolkit's;
 and a fact a tool needs about a project is read from there, never compiled in.
 
@@ -566,7 +564,7 @@ fires whether or not anyone remembers it:
 | Learn | where did what this change taught go | a `Toolkit:` trailer on every project commit, naming the toolkit file it went to or `none — <why>`, and a `Knowledge:` trailer on every commit touching interface files, naming the knowledge pages it followed or `none — <why>` (§D 21), both checked at push (`loop.mjs`); parity's `--accept --triaged` asks the same of the rulings it lists, through the same verifier |
 | Feed back | is it written where every project reads it, with its evidence | §C for a standard's rule, skill-standard §A clause E for a skill's case, the context document for a project's fact (§D 12) |
 | Close | what is left open, and what nobody asked | the Stop hook (`hooks.mjs stop`) keeps each open item not yet handed over (`stop-items.mjs`), and the prompt hook (`hooks.mjs prompt`) gives them to the session with the user's next message: each that is the session's is closed, an item another session owns is not worked on, and the user hears only what needs their decision. The hooks speak to the session, never on screen: a Stop block printed on nearly every turn, and the maintainer (15 Oct): "you can check what you want but I don't need to see it". The toolkit question and one unasked finding close a finished task, in a line each (the user's own rules); reviewed full-size work is blocked from ending until its last message carries a `Toolkit:` line answering it, an `Open:` line naming what is unfinished, untested or left beyond the scope (anything closable is closed first), and, when a README describing the changed files was left alone, a `Docs:` line saying it was updated or is still right (§D 22). The gates are the exception to speaking only to the session: they refuse, and a refusal shows |
-| Prove | did a skill change make the agent better or worse | `tools/skill-evals`: a task an agent runs in a history-free copy of a project, graded by that project's own gates, a transcript that touched the original repo or git scoring 0; `bin/closing` asks for a run whenever a skill changed |
+| Prove | did a skill change make the agent better or worse | `tools/skill-evals`: a task an agent runs in a history-free copy of a project, graded by that project's own gates, a transcript that read the original repo, or ran git where a repository was reachable or pointed it elsewhere, scoring 0; `bin/closing` asks for a run whenever a skill changed |
 | Push | the same gates, before anything leaves the machine | each project's pre-push hook is a shim to `tools/project-check/pre-push.mjs`, so every project skips and caches the same way |
 
 The loop is project-agnostic by construction: everything above is the

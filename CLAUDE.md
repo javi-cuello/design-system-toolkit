@@ -6,7 +6,7 @@ The rules live in the standards. This file says how a session works and points a
 
 ## The standards
 
-- [`toolkit-standard`](standards/toolkit-standard.md) is the root: §C how a rule is admitted, enforced, tested, changed and retired; §D the ecosystem — one job, one owner (§D 1); nothing shared buried in a project (§D 2); project-agnostic (§D 6); the feedback loop (§D 8, §D 13); a project's truth in its context document, in `~/Projects/<label>/figma-design-system/` (§D 12). Its table lists the rest: [`skill-standard`](standards/skill-standard.md) (a skill, a plugin), [`figma-standard`](standards/figma-standard.md) (a library in Figma, and every name in it), [`snapshot-standard`](standards/snapshot-standard.md), [`code-standard`](standards/code-standard.md). File a rule in the one that owns its subject; what two share goes in the root.
+- [`toolkit-standard`](standards/toolkit-standard.md) is the root: §C how a rule is admitted, enforced, tested, changed and retired; §D the ecosystem — one job, one owner (§D 1); nothing shared buried in a project (§D 2); project-agnostic (§D 6); the feedback loop (§D 8, §D 13); a project's truth in its own folder, `~/Projects/<label>/figma-design-system/`, one file per kind of fact (§D 12). Its table lists the rest: [`skill-standard`](standards/skill-standard.md) (a skill, a plugin), [`figma-standard`](standards/figma-standard.md) (a library in Figma, and every name in it), [`snapshot-standard`](standards/snapshot-standard.md), [`code-standard`](standards/code-standard.md). File a rule in the one that owns its subject; what two share goes in the root.
 - A project's context document outranks a design or naming rule; an explicit instruction in the session outranks both.
 
 ## Every piece of work

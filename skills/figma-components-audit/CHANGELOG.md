@@ -1,6 +1,6 @@
 # Changelog — figma-components-audit
 
-- 2.44.1 (2026-11-11): `direction|tracking` on a text layer with no style advises the layer ("it has no text style"), not a text style named after it; `rtlSets` is documented as counting a side-by-side row without auto layout too, as the scanner always has; `no-variant` names the icons that give it a reason (an instance no swap property controls, or one drawn in). An assertion in `tests/test-audit.mjs`.
+- 2.44.1 (2026-11-11): `direction|tracking` on an unstyled layer advises the layer, not a style named after it; `rtlSets` and `no-variant` docs match the scanner. An assertion in `tests/test-audit.mjs`.
 - 2.44.0 (2026-11-10): `FCA.references(template)` lists the screens in the file built on a template; `FCA.composedFrame(frame, names, { receipt: true })` adds `no-receipt` and `no-reference`. A135.
 - 2.43.0 (2026-11-10): the Audit lite plugin is named as a third launcher of `scanner/`, carrying it as a generated block; adding a check now ends with `node plugins/audit-lite/sync.mjs`.
 - 2.42.1 (2026-11-05): right to left reads camelCase and PascalCase names as words, exempts a drawing from no-autolayout, counts an instance in a hidden frame as covering, notes an RTL twin's sides once, and names the project's language. Case A134.
