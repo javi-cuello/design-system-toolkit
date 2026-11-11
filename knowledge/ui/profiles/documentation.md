@@ -1,6 +1,6 @@
 # Profile: design-system documentation
 
-What a page on a design-system documentation site must specify: the site's structure and navigation, the component page and its section order, foundations and patterns pages, content types, FAQ pages, footnotes and side notes, examples and code, in-page navigation, provenance, change and versioning, and search. It binds the fundamentals (`../design/ux.md`, `../design/interaction.md`, `../design/visual.md`, `../design/content.md`, `../design/accessibility.md`) and the patterns (`../patterns/navigation.md`, `../patterns/search.md`, `../patterns/tables.md`, `../patterns/disclosure.md`, `../patterns/feedback.md`, `../patterns/data.md`) to one kind of product. It serves the [design-standard](../../../standards/design-standard.md) principles *serve a real need*, *consistent, not uniform*, *honest* and *clear words, clear hierarchy*, and applies design-standard rule 1 (provenance and freshness), design-standard rules 3–6, 11 and 12 (wherever a docs page filters a list), design-standard rule 7 (headings sit with their content) and design-standard rule 8 (attributes as columns). The design-standard *Application profiles* entry names this file; it admits nothing as a rule.
+What a page on a design-system documentation site must specify: the site's structure and navigation, the page frame and its visual, the component page and its section order, foundations and patterns pages, content types, FAQ pages, footnotes and side notes, examples and code, in-page navigation, provenance, change and versioning, search, docs for agents, and when a hosted platform fits. It binds the fundamentals (`../design/ux.md`, `../design/interaction.md`, `../design/visual.md`, `../design/content.md`, `../design/accessibility.md`) and the patterns (`../patterns/navigation.md`, `../patterns/search.md`, `../patterns/tables.md`, `../patterns/disclosure.md`, `../patterns/feedback.md`, `../patterns/data.md`) to one kind of product. It serves the [design-standard](../../../standards/design-standard.md) principles *serve a real need*, *consistent, not uniform*, *honest* and *clear words, clear hierarchy*, and applies design-standard rule 1 (provenance and freshness), design-standard rules 3–6, 11 and 12 (wherever a docs page filters a list), design-standard rule 7 (headings sit with their content) and design-standard rule 8 (attributes as columns). The design-standard *Application profiles* entry names this file; it admits nothing as a rule.
 
 ---
 
@@ -37,7 +37,44 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check that every page carries the same global links in the same order, that exactly one local link is current, and that a skip link exists. code-standard rule 64 already names the marking.
 - *Judgement:* can a reader dropped on any page say which section they are in and what else it holds, without scrolling?
 
-**Sources:** [NN/g tabs](https://www.nngroup.com/articles/tabs-used-right/); [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) for "Pages in this section"; [Atlassian, 2020](https://community.developer.atlassian.com/t/our-new-home-for-atlassian-design-system/40698) and [Primer React PR #4822](https://github.com/primer/react/pull/4822) for the merges. Carbon keeps tabs (Usage, Style, Code, Accessibility) while GOV.UK, Codex and Spectrum use one long page; the toolkit prefers one page, because tabs hide content readers rarely switch to (NN/g).
+**Sources:** [NN/g tabs](https://www.nngroup.com/articles/tabs-used-right/); [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) for "Pages in this section"; [Atlassian, 2020](https://community.developer.atlassian.com/t/our-new-home-for-atlassian-design-system/40698) and [Primer React PR #4822](https://github.com/primer/react/pull/4822) for the merges. Carbon keeps tabs (Usage, Style, Code, Accessibility) while GOV.UK, Codex and Spectrum's design site use one long page. A 2026-11 recount found tabs also on eBay, Atlassian, Primer, Spectrum Web Components and the Supernova sites, so tabs are the more common choice; the toolkit still prefers one page, because tabs hide content readers rarely switch to (NN/g) and no source measured the opposite.
+
+---
+
+## Page frame and visual
+
+**Use when**
+- Setting or auditing the frame every docs page shares: grid, widths, header, body size, theme, the home page.
+
+**How**
+- **Three columns at desktop:** side list, content, "On this page" rail. Of twelve sites measured (2026-11-11, 1440px), ten had the right rail; side lists ran 224–350px, rails 156–352px, headers 48–74px and sticky (Spectrum's 104px and GOV.UK's 121px the outliers). Material 3 has no top bar, only an 88px rail.
+- **Prose capped, examples wider.** Prose ran 530–800px on all twelve (Spectrum Hub 530, GOV.UK 722, Primer 728, Base UI 768); canvases and tables may run the full content width. The measure itself is [visual: typography](../design/visual.md#typography) (about 65–75 `ch`).
+- **Body size follows the reader.** 16/24 is the common default; reading-led sites go larger (GOV.UK 19/25, Fluent 20/28, React Spectrum 20/30), reference-dense ones smaller (Atlassian 14/20, shopify.dev 14/20). A docs site for one team's library is reference: 16 holds, though [visual: typography](../design/visual.md#typography) allows a 14/20 body for a tool or docs site; reading sizes are [visual: type for UI and long-form content](../design/visual.md#type-for-ui-and-long-form-content).
+- **A docs voice apart from the UI type is optional.** Carbon sets its `h1` in a light serif, Codex in Linux Libertine, over sans body text; it marks the page as documentation, not product. Most sites use the system's own sans throughout.
+- **Dark mode follows the system on first visit, with a toggle in the header.** Eight of twelve did both; Primer and Material 3 have a toggle but did not follow the system; Carbon and GOV.UK have no site dark mode. This is the site's theme, separate from the theme of the component being shown ([Examples](#examples-do-and-dont-live-examples-code)).
+- **Brand on the home page and the page hero, not in the reference body.** eBay and Material 3 open component pages with a large illustration or media; eBay's home page is a type-only headline. Reference sections stay plain.
+- **Status sits under the title**, and may repeat beside the entry in the side list (Atlassian); what it says is [Change logs, status and versioning](#change-logs-status-and-versioning) and [the component page](#the-component-page).
+- **Ship the content in the HTML.** A public zeroheight page's HTML holds only its title until script runs; Supernova and static generators serve the landmarks and text. A docs page is readable, indexable and quotable with script off.
+
+**Cases**
+- Prose runs the full content column at 1000px → cap it at the measure; let the preview and tables keep the width.
+- The site defaults to light whatever the system says → follow `prefers-color-scheme` until the reader picks, then remember the pick.
+- At 390px the page scrolls sideways (Spectrum Hub reached 557px, Fluent 455px, Codex 421px in the 2026-11 run) → the overflowing table or canvas scrolls in its own region; the page never does.
+
+**Accessibility**
+- 1.4.10 Reflow (no page scroll at 320px), 1.4.8 Visual Presentation (AAA; line length no more than 80 characters), 1.4.12 Text Spacing.
+- Implementation: code-standard rule 7 (prose scale), code-standard rule 46 (one page grid; the header height is such a dimension, stated once).
+
+**Build**
+- One page grid stated once ([responsive: one page grid and one container element](../../code/responsive.md#one-page-grid-and-one-container-element)); the prose measure on prose elements only, never on the content column ([visual: layout and grid](../design/visual.md#layout-and-grid)).
+- The theme toggle is `system | light | dark`, the system value stored as no preference, applied as an attribute on the root ([tokens: themes and modes](../../code/tokens.md#themes-and-modes)).
+- Static output: the generator writes every page's text into its HTML, so reading needs no script; interactions keep their no-script path (code-standard rule 20).
+
+**Check**
+- *Script:* could check `scrollWidth ≤ innerWidth` at 320px and 390px on every page, rendered prose lines within 80 characters (a `ch` value is not a character count, [visual: layout and grid](../design/visual.md#layout-and-grid)), and that the page's text is in the served HTML.
+- *Judgement:* does the frame recede, so the component is what the eye lands on?
+
+**Sources:** measured live, 2026-11-11, on each system's Button page: [eBay Playbook](https://playbook.ebay.com/design-system/components/button), [Spectrum](https://spectrum.adobe.com/web/rsp/components/button), [React Spectrum](https://react-spectrum.adobe.com/Button), [Carbon](https://carbondesignsystem.com/components/button/usage/), [shopify.dev Polaris](https://shopify.dev/docs/api/polaris), [Primer](https://primer.style/product/components/button/), [Atlassian](https://atlassian.design/components/button), [GOV.UK](https://design-system.service.gov.uk/components/button/), [Material 3](https://m3.material.io/components/buttons/overview), [Fluent 2](https://fluent2.microsoft.design/components/web/react/core/button/usage), [Codex](https://doc.wikimedia.org/codex/latest/components/demos/button.html), [Base UI](https://base-ui.com/react/components/menu); [mews.design](https://www.mews.design/latest/welcome-eumfLxWD) (Supernova) for static output. Widths are from one viewport and one page each; treat them as ranges, not targets.
 
 ---
 
@@ -48,7 +85,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - A reader must decide whether to use a component before deciding how to build it.
 
 **How**
-- One fixed skeleton, in this order: **overview** (one-line purpose, status, links to design and code), **example** (live, with the main variants), **when to use**, **when not to use** (each item naming the alternative), **anatomy**, **variants and states** (what sets each: a property or an interaction), **behaviour** (keyboard, overflow, responsive, motion), **content guidance**, **accessibility** (role, keyboard pattern, known gaps), **code** (properties table, links to the exact story or symbol), **change log** (recent changes on the page).
+- One fixed skeleton, in this order: **overview** (one-line purpose, status, links to design and code), **example** (live, with the main variants), **when to use**, **when not to use** (each item naming the alternative), **anatomy**, **variants and states** (what sets each: a property or an interaction), **behaviour** (keyboard, overflow, responsive, motion), **content guidance**, **accessibility** (role, keyboard pattern, known gaps; split by who acts, below), **code** (properties table, links to the exact story or symbol), **change log** (recent changes on the page), then a **report a problem** link.
 - The order answers "should I use this?" before "how is it built?". The shipping systems agree on the core and disagree on labels:
 
 | System | Order as shipped |
@@ -64,6 +101,11 @@ What a page on a design-system documentation site must specify: the site's struc
 - Hold every generated table to one test: does it help someone choose, build or check this component? A variant-by-state grid of 216 cells, or every token across every variant, goes behind a disclosure (`../patterns/disclosure.md`) or into an export. Primer's own [PR #710](https://github.com/primer/design/pull/710) called its mixed props tables a "matrix of sadness".
 - Headline figures are health (3 open accessibility failures), never inventory (715 variants).
 - If tabs are used, "when not to use" stays on the default tab: readers tend to stay on the default ([NN/g](https://www.nngroup.com/articles/tabs-used-right/)).
+- **Status per platform, not one badge.** Primer opens with React, Rails and Figma cards, each with its status and links; eBay versions the design spec ("v2.0") apart from each framework's release ([eBay `component-metadata`](https://github.com/eBay/evo-web/blob/main/src/data/component-metadata.d.ts)). A component can be stable in Figma and absent in code; one badge hides which.
+- **One record per component** feeds that header: the design spec's version, each implementation's version and status, its story ids, its last review and its last accessibility review (Primer's [`Button.docs.json`](https://github.com/primer/react/blob/main/packages/react/src/Button/Button.docs.json) carries `a11yReviewed`; material-web's docs carry a `freshness` owner and review date, unchecked here). A generator reads the record; nobody types the header.
+- **The properties table, before code exists, is the design API**: Property, Type, Values, Default, Required, Description, as [Spectrum Design Data](https://opensource.adobe.com/spectrum-design-data/components/button/) publishes it, framework-free. A code column joins only when a mapping exists (Primer's Code Connect `Button.figma.tsx`). Shipped code tables vary: React Spectrum has Name, Type, Default, Description; web components add Attribute ([Spectrum Web Components](https://opensource.adobe.com/spectrum-web-components/components/button)); GOV.UK puts defaults in the description.
+- **Accessibility split by who acts** ([Carbon](https://carbondesignsystem.com/components/button/accessibility/)): what the component provides, what designers annotate, what developers must add, then a testing-status table (keyboard, screen readers named) against a component version.
+- **End with a way to report a problem**: GOV.UK's "Help improve this component", Carbon's issues link. A reader who finds the page wrong should not need to find the tracker.
 
 **Cases**
 - A Button page opens with "Button has 216 variants" → replace with the one-line purpose and status; move the count into the properties section, if anywhere.
@@ -107,6 +149,9 @@ What a page on a design-system documentation site must specify: the site's struc
 - **Contrast**: only for defined foreground and background pairs. Computing every combination is noise; Paste's "accessible pairing" popover is the one shipping example.
 - Generate from the same payload the code uses, and carry the provenance caption (below). GOV.UK removed its colour generator during a colour rework ([PR #5002](https://github.com/alphagov/govuk-design-system/pull/5002)); that is the risk of a generator tied to a format being redesigned, not of generation.
 - Deprecated tokens stay listed, marked deprecated, with their replacement, until removed.
+- **Each row says when not to use the token** where misuse is likely (Atlassian's `border.width.selected`: "Do not use as a substitute for a separate keyboard focus indicator"), the primitive in Carbon's form ("Blue 60 — #0f62fe"), and the version it arrived in (Atlassian: "Introduced v…" on each token). Carbon's component tokens say they are for their own component only ([Carbon colour tokens](https://carbondesignsystem.com/elements/color/tokens/)).
+- **Modes stack in one fixed order** (base, then brand, then dark), stated on the page, so a resolved value can be traced ([Supernova theme tokens](https://learn.supernova.io/latest/documentation/documentation-blocks/tokens/displaying-theme-tokens-nd3dFnzE)).
+- **A reference that does not resolve fails the build.** zeroheight prints "token not found" for a deleted token; a Supernova page printed "undefined" for an empty field ([zeroheight](https://help.zeroheight.com/hc/en-us/articles/35886930025755); [mews.design Button](https://www.mews.design/latest/components/button/overview-NEe9ihrh)). A generator knows at build time and stops.
 - Small screens: the table keeps the token name as its first column and scrolls horizontally inside its own container, never the page.
 
 **Cases**
@@ -285,12 +330,17 @@ What a page on a design-system documentation site must specify: the site's struc
 - A page shows a component or pattern in use, gives best practices, or offers code to copy.
 
 **How**
-- **Do and don't come in pairs.** Every "don't" has the "do" it should be replaced with, shown side by side, same size, same content where possible, with a caption saying why. A list of prohibitions leaves the reader without the thing to reach for ([Write the Docs](https://www.writethedocs.org/guide/writing/docs-principles/) *Exemplary*; [TDesign](https://tdesign.tencent.com/react/components/button) lists similar components).
+- **Do and don't come in pairs.** Every "don't" names the "do" it should be replaced with; where the point is visual, the two are shown side by side, same size, same content where possible, with a caption saying why. A list of prohibitions leaves the reader without the thing to reach for ([Write the Docs](https://www.writethedocs.org/guide/writing/docs-principles/) *Exemplary*; [TDesign](https://tdesign.tencent.com/react/components/button) lists similar components).
 - Label do and don't with a word ("Do", "Don't") and an icon, never colour alone.
 - **Live examples** once code exists, served from the project's own Storybook on the docs site's origin and matched to the component by file location; before code exists, images exported from the design, labelled as design. Never both on one page without saying which is which. This labelling is the toolkit's judgement.
 - Each example has an "Open in a new tab" link naming the example, as GOV.UK does ("Open this example in a new tab: text input"), so it can be tested alone at any width.
 - **Code snippets** under the example they produce, in the tabs the system supports (GOV.UK: HTML and Nunjucks), with a copy button that says it copied. Short and complete: a snippet that cannot be pasted and run is a fragment.
 - Examples use realistic content (real labels, long names, translated strings), not "Lorem" or "Button".
+- **The canvas** is a framed box with a toolbar under it (Copy, Reset, open alone or in a sandbox); long code is collapsed behind "Show code" (Primer, Atlassian, Base UI, Codex). GOV.UK's example frame is resizable by the reader from desktop width up ([`_example.scss`](https://github.com/alphagov/govuk-design-system/blob/main/src/stylesheets/components/_example.scss)), which tests responsive behaviour without leaving the page.
+- **The canvas has its own theme and direction**, apart from the site's: Fluent's canvas has a "Theme" menu, Carbon's a theme selector, Codex's demo a left-to-right / right-to-left switch ([Codex button demos](https://doc.wikimedia.org/codex/latest/components/demos/button.html)). A project with several themes or a right-to-left language shows them where the component is.
+- **Controls generated from the component's properties.** Codex lists every prop and slot as a control; React Spectrum puts controls beside the preview. Fixed examples then cover only the combinations worth explaining.
+- **A story, not the Storybook.** Render the named story bare (`iframe.html?id=…`, arguments in the URL) and keep controls and code on the page, as zeroheight's native embed and Carbon's links do; never frame Storybook's own sidebar ([zeroheight Storybook](https://help.zeroheight.com/hc/en-us/articles/35886994075547); [Carbon button code](https://carbondesignsystem.com/components/button/code/)).
+- **One source per example**: the file that renders the demo is the code shown, and another framework's tab is generated from it ([Codex component demos](https://github.com/wikimedia/design-codex/blob/main/packages/codex-docs/docs/contributing/component-demos.md)). zeroheight's live code "must be maintained manually in both your codebase and zeroheight" ([zeroheight](https://help.zeroheight.com/hc/en-us/articles/35886937803547)), which is how examples drift.
 - Small screens: examples render at the narrow width too; a side-by-side do/don't pair stacks, do first.
 
 **Cases**
@@ -313,7 +363,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check each "don't" block has a sibling "do", each example has a labelled source, and each copy button has an accessible name.
 - *Judgement:* is the "do" the right alternative, and is the example representative of real use?
 
-**Sources:** [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) (HTML/Nunjucks tabs, open-in-new-tab link); [Primer button](https://primer.style/product/components/button/) and [Atlassian button examples](https://atlassian.design/components/button/examples) for live, editable examples.
+**Sources:** [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) (HTML/Nunjucks tabs, open-in-new-tab link); [Primer button](https://primer.style/product/components/button/) and [Atlassian button examples](https://atlassian.design/components/button/examples) for live, editable examples. Shipping systems mostly write do and don't as text (eBay's sentences with one image each, Codex's "Use… / Avoid…", Primer's Button none at all); the toolkit's guidance keeps the pair in the words, every "don't" naming its "do", and draws it only where the point is visual.
 
 ---
 
@@ -391,6 +441,9 @@ What a page on a design-system documentation site must specify: the site's struc
 - Each entry says what changed and what it does to the reader's work (design-standard rule 10), not only the commit subject.
 - **Status**: a small vocabulary, shown in the overview. Atlassian's release phases are Early Access, Beta, General Availability, then Intent to Deprecate and Deprecated, with a replacement and migration path for the last ([Atlassian](https://atlassian.design/release-phases)). Primer now uses three ([component status](https://primer.style/product/getting-started/component-status/)). Three or four values, derived from data, never typed.
 - **Deprecated** pages stay published, marked at the top, naming the replacement and the removal date or version.
+- **A release pins everything it shows.** zeroheight's releases keep Storybook and embeds only as URLs, so an old release shows today's components ([zeroheight](https://help.zeroheight.com/hc/en-us/articles/35887037455515)). Pin the design snapshot and the built Storybook per release.
+- **A per-release diff**: zeroheight marks blocks New, Updated or Deleted against the previous release ([zeroheight compare](https://help.zeroheight.com/hc/en-us/articles/54580733804955)). A generator gets this free from two snapshots.
+- **Date the source, not the edit**: Supernova's "Page last updated" dates the edit, not the Figma state shown ([Provenance](#provenance-and-freshness-on-generated-pages)).
 - **Versioning**: when old majors stay in use, keep their docs reachable from a version switcher, with the current stable version marked as the one to use. MUI lists each major with its own docs and marks the stable one "recommended for use in production" ([MUI versions](https://mui.com/versions/)). One version is the default; old versions carry a banner pointing to current.
 
 **Cases**
@@ -449,3 +502,62 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Judgement:* does a hit land the reader on the answer or on a page they must search again?
 
 **Sources:** [Paste docs search](https://github.com/twilio-labs/paste/blob/main/internal-docs/engineering/doc-site/docsearch.md). Paste ranks by vector similarity; the toolkit asks for exact-name matches first on token and prop names, because a reader who types a token's name wants that token.
+
+---
+
+## Docs for agents
+
+**Use when**
+- Readers include coding agents and chat assistants as well as people, as several systems now assume.
+
+**How**
+- **An `llms.txt` at the site root**: an `h1` with the site's name (the only required part), an optional one-line summary, and sections of links, ideally to Markdown copies of the pages ([llms.txt proposal](https://llmstxt.org/)). React Spectrum, Atlassian and Carbon publish one ([React Spectrum](https://react-spectrum.adobe.com/llms.txt), [Atlassian](https://atlassian.design/llms.txt)).
+- **A Markdown copy of every page**, generated with it: React Spectrum serves `/Button.md`; Spectrum Hub has "Copy markdown", React Spectrum "Copy for LLM", Base UI "View as Markdown", and shopify.dev links a Markdown version of each Polaris page (observed 2026-11-11 on the pages linked in [Page frame](#page-frame-and-visual)).
+- **Same generator, same data.** The Markdown copy is a second rendering of the page's source, never a hand-kept twin; the caption's sources and dates go with it.
+- An MCP server is the next step, and both hosted platforms ship one (zeroheight read and write, Supernova a "Connect" block for readers); a site generated from a committed snapshot can serve the snapshot itself instead.
+
+**Cases**
+- An agent quoting the docs invents a prop → the page had the props table only as rendered HTML behind a tab; the Markdown copy carries it as a table.
+- The Markdown copy says a component is stable while the page says beta → it was written by hand; generate it.
+
+**Accessibility**
+- Not applicable: these are files, not pages. The "Copy markdown" button follows the copy-button rules in [Examples](#examples-do-and-dont-live-examples-code).
+
+**Build**
+- The build writes `llms.txt` and one `.md` beside each page's HTML from the same data (toolkit-standard §D 23; code-standard rule 23).
+- Each page links its Markdown copy with `<link rel="alternate" type="text/markdown" href="…">` and a visible link.
+
+**Check**
+- *Script:* could check every page has its `.md`, `llms.txt` lists every page, and the two carry the same snapshot date.
+- *Judgement:* could an agent answer "which props does this take, and is it ready?" from the Markdown alone?
+
+**Sources:** as linked above; Supernova's [2026 releases](https://learn.supernova.io/latest/releases/latest-releases-EhxYhfBn) and zeroheight's [MCP](https://help.zeroheight.com/hc/en-us/articles/54955157637659).
+
+---
+
+## Hosted platforms
+
+**Use when**
+- Choosing between a hosted docs platform and a generated site, or judging one a project already uses.
+
+**How**
+- **zeroheight**: pages of blocks (do/don't rules, status tables, release notes, token tables up to three mode columns, live code in React, Vue, Angular, Svelte and HTML); whole-site releases with a reader switcher and a draft compare view. Figma sync is manual; a deleted file leaves orphaned content; it cannot render property states, "you must create different instances in Figma and import them" ([zeroheight sync](https://help.zeroheight.com/hc/en-us/articles/35886994402203), [states](https://help.zeroheight.com/hc/en-us/articles/35886908929051)). Public pages render in the browser. Theming is colours and a logo.
+- **Supernova**: hourly Figma import on Pro and above, variables through a separate plugin; blocks for health, checklists and Figma properties; a hosted Storybook playground; semver versions; static HTML output with landmarks and ⌘K search; CSS overrides ([import](https://learn.supernova.io/latest/design-systems/import-design-system-data/connect-figma/importing-from-figma/import-and-update-content-V9VjOLrL), [look and feel](https://learn.supernova.io/latest/documentation/customize-your-documentation/look-and-feel-XkLT5wzn)). "Hidden" pages are not private.
+- **Archbee**: developer docs: code tabs, OpenAPI, Mermaid, custom CSS on a custom domain; no versions (a cloned space per version), nothing for tokens, stories or status ([custom CSS](https://docs.archbee.com/custom-css)).
+- **Notion and Coda**: wikis. Notion Sites has a light, dark or system theme and no font, colour or CSS control ([Notion Sites](https://www.notion.com/help/edit-and-customize-your-notion-sites)); Coda's Figma pack and sync tables keep an inventory current, refreshing at most hourly ([Coda Figma](https://help.coda.io/hc/en-us/articles/39555938466957)). Neither has tokens, live examples, versions or status beyond hand-built tables.
+- **Where each wins**: hosted platforms win on authoring by non-developers and on prose; a generated site wins on freshness, on what can be derived (every state, every token, a release diff) and on failing loudly. A project with a committed snapshot gets the second for free; the first is the reason to keep a hosted platform for guidance prose and link to the generated reference.
+
+**Cases**
+- A team keeps component pages in zeroheight and finds them out of date with Figma → the reference (props, states, tokens) is generated; zeroheight keeps the guidance and links to it.
+- A Notion page lists components with a status column typed by hand → the status comes from the snapshot; the wiki links to it.
+
+**Accessibility**
+- A hosted page is only as accessible as the platform's output: check its landmarks, headings and whether the text is in the HTML ([Page frame](#page-frame-and-visual)).
+
+**Build**
+- Not applicable: this section chooses a platform; the generated site's build is in the sections above.
+
+**Check**
+- *Judgement:* which pages are derivable from the snapshot, and are any of them hand-kept elsewhere?
+
+**Sources:** as linked above, from each vendor's own help pages, read 2026-11-11. zeroheight's help centre refuses scripted reads; it was read through its public Zendesk API at the same article ids.
