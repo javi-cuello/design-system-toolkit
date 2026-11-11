@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.19.0)
+# Eval cases — frontend-build (v2.19.1)
+
+**Walked: 2026-11-11 for 2.19.1** — T15's Negative gains the frame-only fix of what the reference brought, met live: eval run 20261111T151109Z rebuilt the header "+" the maintainer had removed.
 
 **Walked: 2026-11-11 for 2.19.0** — T18 added, traced to *A Figma prototype* steps 0, 3, 5 and 6 and *Feedback on a prototype* steps 2 and 4; T16 read against the new offer (it holds: retiring is unchanged).
 
@@ -273,7 +275,7 @@ Traced: 2026-10-12 for 2.4.0 — to SKILL.md *Hold it to the whole of the knowle
 ## T15 · Feedback on a prototype is read first, routed once, and never re-asked — *traced*
 Fixture: a file with a composed People flow carrying receipts; a person's comment on its dialog title ("this one dialog reads better as New employee"), a person's reply under an earlier question from the agent's account on the toolbar's Sort button ("keep it, the headers are too small"), and a thread whose last message is the agent's reply.
 Assert: before composing, the run lists the open threads (`scripts/figma-feedback.mjs`): the two, not the handled one; fixes the title on the frame; a comment pinned to a whole frame ("remove button") is traced by its `offset` to the header's "+" button under the pin, which goes from every screen of the flow that shows it; replies are posted by `figma-feedback.mjs --reply`; records the Sort answer as a dated §6 decision, Scope `Product`, with the comment's link and the designer as who decided; replies to each, as the agent's account, with `Routed:` where it went (the commenter being the maintainer, who may rule); on the next composition, applies the Sort ruling with no new comment and names it in the receipt's `rulings`.
-Negative: a new composition before the open threads are handled; the Sort question posted again; a ruling written as a memory note or a knowledge-base rule from one project's comment; a ruling taken from someone the context document does not name as able to rule; a thread resolved or left with no reply; a fix made on the commented screen while the flow's other screens keep the thing it removed.
+Negative: a new composition before the open threads are handled; the Sort question posted again; a ruling written as a memory note or a knowledge-base rule from one project's comment; a ruling taken from someone the context document does not name as able to rule; a thread resolved or left with no reply; a fix made on the commented screen while the flow's other screens keep the thing it removed; a fix that removes what the reference brought kept on the frames only, with no §6 Screen decision, so the next copy brings it back.
 Traced: 2026-11-11 for 2.18.0 — to SKILL.md *A Figma prototype*, step 0 and *Feedback on a prototype*, step 2 (§6, Scope `Product`); first traced for 2.16.0; the header button case met real input that day (one comment, three screens fixed).
 Runs: node --test tests/test-feedback.mjs — "a person's comment on a layer is open, with the layer it is pinned to", "a thread whose last message is Claude's is handled; a person replying after it opens it again", "Claude's own question waits for the designer; their answer opens it; a resolved thread never is", "the agent's own account marks its messages without a prefix; another person's reply still opens the thread"
 

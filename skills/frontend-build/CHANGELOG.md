@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.19.1 (2026-11-11): a frame fix that removes what the reference brought is also a §6 Screen decision; a removed header button returned in the next eval. T15.
 - 2.19.0 (2026-11-11): a project's `guidance/<topic>.md`, only what it does differently from a knowledge page, read beside that page and outranking it, §6 outranking the page; offered when two decisions share a topic. T18.
 - 2.18.0 (2026-11-11): `product-context.md`, suite level, drafted from evidence; decisions to §6 by Scope; absent pieces skipped; logged threads carry a note, read every ten; decisions retire by judgement (`figma.mjs rulings` removed). T15, T16.
 - 2.17.0 (2026-11-11): *Orient* question 5, which platform features a build may use: `knowledge/code/browser-support.md`, and for a feature no page covers, the source it names (Chrome's Modern Web Guidance), cited. T17.
