@@ -162,12 +162,27 @@ const stripConditions = (sel) => {
   }
   return out;
 };
+// split at a separator outside [...], (...), quotes and escapes
+const topLevel = (s, sep) => {
+  const parts = []; let depth = 0, quote = "", start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "\\") { i++; continue; }
+    if (quote) { if (c === quote) quote = ""; continue; }
+    if (c === '"' || c === "'") quote = c;
+    else if (c === "[" || c === "(") depth++;
+    else if (c === "]" || c === ")") depth--;
+    else if (depth === 0 && c === sep) { parts.push(s.slice(start, i)); start = i + 1; }
+  }
+  return parts.concat(s.slice(start));
+};
 // the last compound: split at a combinator or a space, but never inside [...], (...) or quotes
 const subject = (sel) => {
   const s = stripConditions(sel.trim());
   let depth = 0, quote = "", start = 0;
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
+    if (c === "\\") { i++; continue; } // an escaped character is part of the name
     if (quote) { if (c === quote) quote = ""; continue; }
     if (c === '"' || c === "'") quote = c;
     else if (c === "[" || c === "(") depth++;
@@ -179,8 +194,9 @@ const subject = (sel) => {
 export function restyled(ui) {
   const css = [...ui.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join("\n").replace(BLOCK, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const out = new Set();
-  for (const [, sel] of css.matchAll(/([^{}]+)\{[^{}]*\}/g)) for (const one of sel.split(/,(?![^()]*\))/)) {
-    for (const m of (" " + subject(one)).matchAll(new RegExp(FIG_SELECTOR, "gi"))) out.add((m[2] || m[3]).toLowerCase());
+  for (const [, sel] of css.matchAll(/([^{}]+)\{[^{}]*\}/g)) for (const one of topLevel(sel, ",")) {
+    // an escaped character and a quoted value are not names
+    for (const m of (" " + subject(one).replace(/\\./g, "_").replace(/"[^"]*"|'[^']*'/g, '""')).matchAll(new RegExp(FIG_SELECTOR, "gi"))) out.add((m[2] || m[3]).toLowerCase());
   }
   return [...out];
 }
@@ -235,7 +251,7 @@ export function misComposed(ui) {
   const stack = []; // { name, at, attrs, text }
   const report = (el) => {
     if (!/^fig-(switch|checkbox)$/.test(el.name) || !stack.some((x) => x.name === "fig-field") || stack.some((x) => x.name === "template")) return;
-    const text = (el.attrs.label || "").trim() || el.text.replace(/&(nbsp;?|NonBreakingSpace;|ZeroWidthSpace;|#160;|#xa0;|#8203;|#x200b;)|[\u00a0\u200b]/gi, " ").trim();
+    const text = (el.attrs.label || "").trim() || el.text.replace(/&(nbsp;?|NonBreakingSpace;|ZeroWidthSpace;|#0*160;|#x0*a0;|#0*8203;|#x0*200b;)|[\u00a0\u200b]/gi, " ").trim();
     if (text) out.push({ what: `text inside a ${el.name} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(el.at) });
   };
   // closing an element: what remains on the stack is its ancestors; a plain child's text counts for its parent
