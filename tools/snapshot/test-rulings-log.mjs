@@ -14,5 +14,11 @@ ok('a day\'s second ruling is lettered', r.map((x) => x.date).join() === '2026-1
 ok('a newline in a cell never splits the row or writes a line of its own', !/^## 7 · Injected/m.test(md) && /on Chip ## 7 · Injected\./.test(r[1].why));
 ok('a pipe in a ruling is escaped and reads back whole', rulingsOf(appendRuling(md, 'a | b', 'X', '2026-11-12')).some((x) => x.text === 'a | b'));
 ok('a document with no rulings table is refused', appendRuling('# X\n', 'y', 'z', '2026-11-11') === null);
+{
+  let full = template, msg = '';
+  for (let i = 0; i < 26; i++) full = appendRuling(full, 'r' + i, 'C' + i, '2026-12-01');
+  try { appendRuling(full, 'one more', 'C', '2026-12-01'); } catch (e) { msg = e.message; }
+  ok('a day takes 26 rulings, 2026-12-01 to 2026-12-01z; the 27th is refused by name, never dated undefined', /26 decisions already recorded on 2026-12-01/.test(msg) && full.includes('2026-12-01z') && !full.includes('undefined'));
+}
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
