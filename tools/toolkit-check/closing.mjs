@@ -114,13 +114,13 @@ export const pluginsChanged = (changed) => [...new Set(changed.map((f) => (f.mat
 
 /* Cases changed since the upstream that say they were traced or not walked:
    a claim proven only on paper is open until it has met a real project. */
-export function tracedCases(repo, changed) {
+export function tracedCases(repo, changed, base = '@{u}') {
   const out = [];
   for (const f of changed.filter((x) => /tests\/cases\.md$/.test(x))) {
     const p = path.join(repo, f);
     if (!fs.existsSync(p)) continue;
-    const diff = git(repo, ['diff', '@{u}...HEAD', '--', f]);
-    for (const l of diff.split('\n')) if (/^\+.*(\*traced\*|NOT walked|not walked|Read by:)/i.test(l)) out.push(`${f}: ${l.slice(1).trim().slice(0, 100)}`);
+    const diff = git(repo, ['diff', `${base}...HEAD`, '--', f]);
+    for (const l of diff.split('\n')) if (/^\+.*(\*traced\*|Traced:|not walked|Read by:)/i.test(l)) out.push(`${f}: ${l.slice(1).trim().slice(0, 100)}`);
   }
   return out;
 }

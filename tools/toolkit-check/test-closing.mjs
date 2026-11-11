@@ -49,6 +49,11 @@ git('rm', '-q', 'screens/kept/figma.json'); git('commit', '-q', '-m', 'one file'
 assert.deepEqual(stillNamed(repo, 'up'), [], 'a folder that keeps files is not said deleted for the shared-name file it lost');
 fs.writeFileSync(path.join(repo, 'map.mjs'), "read('screens/kept/figma.json')"); git('add', '-A'); git('commit', '-q', '-m', 'seven');
 assert.deepEqual(stillNamed(repo, 'up'), ['screens/kept/figma.json is deleted and still named in map.mjs'], 'and its own path still named is');
+// cases added since the base that say they were only traced are named, by every marker that means it
+git('branch', '-f', 'up'); fs.mkdirSync(path.join(repo, 'skills/x/tests'), { recursive: true });
+fs.writeFileSync(path.join(repo, 'skills/x/tests/cases.md'), 'Traced: 2026-11-11 — to step 3.\nRuns: node t.mjs "a"\nNot walked.\n');
+git('add', '-A'); git('commit', '-q', '-m', 'eight');
+assert.deepEqual(tracedCases(repo, ['skills/x/tests/cases.md'], 'up').length, 2, 'a Traced: case and a Not walked case are on paper; a Runs: case is not');
 fs.rmSync(repo, { recursive: true, force: true });
 assert.deepEqual(pluginsChanged(['plugins/design-system-snapshot/code.js', 'plugins/design-system-snapshot/CHANGELOG.md', 'plugins/_shared/ui-base.css', 'tools/x.mjs']), ['design-system-snapshot'], 'a changed plugin is named once; the shared base is not a plugin');
-console.log('test-closing: 10 assertions passed');
+console.log('test-closing: 11 assertions passed');
