@@ -200,7 +200,7 @@ function render(d) {
   }
   if (!rows.length) html += "<p>No fixes needed in " + esc(d.file) + " for what this run checked.</p>";
 
-  // Rulings travel back in one paste: the plugin keeps them for this file and the next run judges by them.
+  // Rulings travel back as one file: the plugin keeps them for this file and the next run judges by them.
   html += "<section class=\"bucket\" aria-labelledby=\"rulingsH\"><div class=\"bucket-head\"><h2 id=\"rulingsH\">Rulings</h2></div><div id=\"rulingsBody\"></div></section>";
   html += "<section class=\"bucket\" aria-labelledby=\"aboutH\"><h2 id=\"aboutH\">About this run</h2><div class=\"gaps\"><p>" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions, ruled on, or not defects.</p>"
     + "<p>Settings: " + (d.contextName ? "the context document " + esc(d.contextName) : "the toolkit's defaults; no context document") + ".</p>";
@@ -215,10 +215,10 @@ function rulings() {
   if (!host) return;
   const ruled = numbered.filter((x) => state.rules.includes(idOf(x.r)));
   let html = "<p class=\"bucket-note\">" + (ruled.length
-    ? ruled.length + " recorded. Copy them, then in Audit lite's Settings press <b>Paste rulings</b>: the plugin saves them in the Figma file, and the next run judges by them."
-    : "When a row is intended, write why in its note and press <b>Record as ruling</b>. The rulings gather here, to paste into Audit lite once.") + "</p>";
-  if (ruled.length) html += "<textarea class=\"rulings\" id=\"rulingsText\" readonly aria-label=\"Rulings to paste into Audit lite\">" + esc(ruled.map((x) => rulingRow(x.r)).join("\n")) + "</textarea>"
-    + "<div class=\"row-actions\"><button type=\"button\" class=\"button\" id=\"copyRulings\">Copy rulings</button></div>";
+    ? ruled.length + " recorded. Download them, then in Audit lite's Settings press <b>Upload…</b> beside Rulings: the plugin saves them in the Figma file, and the next run judges by them. If nothing downloads, ask Claude in the chat for the rulings file."
+    : "When a row is intended, write why in its note and press <b>Record as ruling</b>. The rulings gather here, to download and upload into Audit lite once.") + "</p>";
+  if (ruled.length) html += "<textarea class=\"rulings\" id=\"rulingsText\" readonly aria-label=\"Rulings to upload into Audit lite\">" + esc(ruled.map((x) => rulingRow(x.r)).join("\n")) + "</textarea>"
+    + "<div class=\"row-actions\"><button type=\"button\" class=\"button\" id=\"downloadRulings\">Download rulings</button></div>";
   host.innerHTML = html;
 }
 
@@ -234,7 +234,11 @@ function wire() {
     else if (t.dataset.ruleId) { toggle(state.rules, idOf(find(t.dataset.ruleId))); save(); redraw("[data-rule-id=\"" + t.dataset.ruleId + "\"]"); }
     else if (t.dataset.askId) { const r = find(t.dataset.askId); copy("Tell me about " + t.dataset.askId + " (" + r.set + (r.layer ? " › " + r.layer : "") + "): why it matters, and how to fix it in Figma.", "The question about " + t.dataset.askId, "Paste it into the chat."); }
     else if (t.id === "showAll") { view.set = ""; view.area = ""; redraw("#setFilter"); }
-    else if (t.id === "copyRulings") copy(document.getElementById("rulingsText").value, "The rulings", "In Audit lite, open Settings and press Paste rulings.");
+    else if (t.id === "downloadRulings") {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["## 6. Rulings log\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n" + document.getElementById("rulingsText").value + "\n"], { type: "text/markdown" }));
+      a.download = "rulings.md"; document.body.appendChild(a); a.click(); a.remove();
+    }
   };
   app.onchange = (e) => {
     const t = e.target;

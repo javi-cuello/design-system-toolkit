@@ -53,22 +53,31 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 .divider{height:1px;background:var(--figma-color-border);border:0;margin:var(--space-2) 0}
 /* ui-base v3 end */
 
-/* audit-lite bespoke styles, laid out as the snapshot plugin's window: one title with the version, one line of what
-   the run does, one button, one status block that says what is happening and then what happened (knowledge/ui/design/
-   visual.md, *Quiet chrome*; knowledge/ui/patterns/feedback.md, *Loading* and *Success confirmation*). */
-.head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2)}
-.title{margin:0;font-weight:var(--fw-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.version{flex:none;color:var(--figma-color-text-tertiary)}
-.what{margin:0 0 var(--space-3)}
+/* audit-lite bespoke styles, laid out as the Lucide importer's window: a tab bar, a panel that scrolls, a footer that
+   holds the panel's action (knowledge/ui/design/visual.md, *Quiet chrome*; knowledge/ui/patterns/settings.md;
+   knowledge/ui/patterns/feedback.md, *Loading* and *Success confirmation*). */
 [hidden]{display:none !important}
-#run,#save{width:100%}
-#save{margin-top:var(--space-2)}
+html,body{height:100%}
+body{display:flex;flex-direction:column;overflow:hidden;font-size:12px}
+.tabs{display:flex;flex:none;gap:2px;padding:8px 12px;border-bottom:1px solid var(--figma-color-border)}
+.tab{height:auto;box-sizing:border-box;padding:6px 10px;border:0;border-radius:6px;background:none;color:var(--figma-color-text-secondary);font-size:12px;font-weight:var(--fw-regular)}
+.tab[aria-selected=true]{background:var(--figma-color-bg-secondary);color:var(--figma-color-text);font-weight:var(--fw-semibold)}
+.tab:hover:not([aria-selected=true]){background:var(--figma-color-bg-hover);color:var(--figma-color-text)}
+.tab:focus{outline:none}
+.tab:focus-visible{box-shadow:inset 0 0 0 2px var(--figma-color-border-selected)}
+.panel{display:flex;flex:1;min-height:0;flex-direction:column}
+.panel-body{flex:1;overflow-y:auto;padding:14px}
+.footer{display:flex;flex:none;align-items:center;gap:8px;padding:12px 14px;border-top:1px solid var(--figma-color-border)}
+.footer-hint{flex:1;min-width:0;color:var(--figma-color-text-secondary);font-size:11px;overflow-wrap:anywhere}
+.footer button{width:auto}
+.title{margin:0 0 4px;font-weight:var(--fw-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.what{margin:0;color:var(--figma-color-text-secondary)}
 /* aria-disabled, not disabled: the button keeps focus while the audit runs (knowledge/ui/patterns/actions.md) */
 #run[aria-disabled="true"]{background:var(--figma-color-bg-disabled);color:var(--figma-color-text-ondisabled)}
 #run:focus,#save:focus{outline:none}
 #run:focus-visible,#save:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
-.status{margin:var(--space-3) 0 0}
-.status-head{display:flex;align-items:flex-start;gap:var(--space-2)}
+.status{margin:14px 0 0}
+.status-head{display:flex;align-items:flex-start;gap:8px}
 .status-icon{flex:none;width:16px;height:16px;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .status[data-tone="done"] .status-icon{stroke:var(--figma-color-icon-success)}
 .status[data-tone="error"] .status-icon{stroke:var(--figma-color-icon-danger)}
@@ -78,86 +87,90 @@ input::placeholder{color:var(--figma-color-text-tertiary)}
 .status-detail{margin:0;color:var(--figma-color-text-secondary);overflow-wrap:anywhere}
 .status[data-tone] .status-detail{padding-left:24px}
 /* The scan is one call with no steps to count, so the bar is indeterminate. */
-progress{display:block;width:100%;height:4px;margin:var(--space-2) 0 0;border:0;border-radius:2px;overflow:hidden;
+progress{display:block;width:100%;height:4px;margin:8px 0 0;border:0;border-radius:2px;overflow:hidden;
   appearance:none;-webkit-appearance:none;background:var(--figma-color-bg-tertiary)}
 progress::-webkit-progress-bar{background:var(--figma-color-bg-tertiary)}
-/* with no value, a third of the bar slides across, so the run is seen to be working */
 progress:indeterminate{background:linear-gradient(90deg,transparent 0 33%,var(--figma-color-bg-brand) 33% 66%,transparent 66%) 0 0/300% 100% var(--figma-color-bg-tertiary);animation:slide 1.2s linear infinite}
 progress:indeterminate::-webkit-progress-bar{background:transparent}
 @keyframes slide{from{background-position:100% 0}to{background-position:0 0}}
 @media (prefers-reduced-motion: reduce){progress:indeterminate{animation:none;background:var(--figma-color-bg-brand)}}
-/* the settings line: what the run reads, and the one action that changes it; text buttons, sized explicitly (ui-base's caution) */
-.settings{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-2);margin:0 0 var(--space-3)}
-.settings-name{min-width:0;overflow-wrap:anywhere}
-.text-btn{height:auto;box-sizing:border-box;padding:0;border:0;background:none;color:var(--figma-color-text-brand);font-weight:var(--fw-regular)}
+/* settings: groups of label and control rows, as the Lucide importer's */
+.settings-body{padding:12px 0}
+.group+.group{margin-top:4px;padding-top:4px;border-top:1px solid var(--figma-color-border)}
+.group-title{margin:0;padding:8px 14px 4px;font-size:12px;font-weight:700}
+.field-row{display:flex;align-items:center;gap:10px;min-height:32px;padding:4px 14px}
+.field-row>.label{flex:none;width:80px;color:var(--figma-color-text-secondary)}
+.field-control{display:flex;flex:1;min-width:0;align-items:center;gap:10px}
+.value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.text-btn{flex:none;height:auto;box-sizing:border-box;padding:0;border:0;background:none;color:var(--figma-color-text-brand);font-size:12px;font-weight:var(--fw-regular)}
 .text-btn:hover{background:none;color:var(--figma-color-text-brand);text-decoration:underline}
 .text-btn:focus{outline:none}
 .text-btn:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
-/* the paste field: rulings copied from the results page */
-#paste-box{margin:0 0 var(--space-3)}
-#paste-text{display:block;width:100%;height:72px;box-sizing:border-box;padding:var(--space-1) var(--space-2);resize:vertical;border:1px solid var(--figma-color-border);border-radius:var(--radius-sm);background:var(--figma-color-bg-secondary);color:var(--figma-color-text);font:var(--fs-11)/var(--lh) var(--font-stack)}
-#paste-text:focus{outline:none;border-color:var(--figma-color-border-selected)}
-#paste-text:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:1px}
-.paste-actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
-/* two tabs: the audit, and what it reads */
-.tabs{display:flex;gap:var(--space-3);margin:0 0 var(--space-3);border-bottom:1px solid var(--figma-color-border)}
-.tab{height:auto;box-sizing:border-box;padding:var(--space-1) 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--figma-color-text-secondary);font-weight:var(--fw-regular)}
-.tab:hover{background:none;color:var(--figma-color-text)}
-.tab[aria-selected=true]{color:var(--figma-color-text);border-bottom-color:var(--figma-color-border-selected);font-weight:var(--fw-semibold)}
-.tab:focus{outline:none}
-.tab:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
-.hint{margin:calc(-1 * var(--space-2)) 0 var(--space-3)}
+/* a switch: a native checkbox drawn as a track and a thumb (knowledge/ui/patterns/selection.md, *Switch*) */
+.switch{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:24px;height:14px;margin:0;border-radius:7px;background:var(--figma-color-bg-tertiary);transition:background .12s}
+.switch::before{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--figma-color-bg);transition:transform .12s}
+.switch:checked{background:var(--figma-color-bg-brand)}
+.switch:checked::before{transform:translateX(10px)}
+.switch:focus{outline:none}
+.switch:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){.switch,.switch::before{transition:none}}
 </style>
 </head>
 <body>
-<main class="container">
-  <div class="head"><p class="title" id="file">Reading the file…</p><span class="version" id="version"></span></div>
-  <div class="tabs" role="tablist"><button class="tab" role="tab" id="tab-audit" aria-controls="pane-audit" aria-selected="true" type="button">Audit</button><button class="tab" role="tab" id="tab-settings" aria-controls="pane-settings" aria-selected="false" tabindex="-1" type="button">Settings</button></div>
-  <div id="pane-audit" role="tabpanel" aria-labelledby="tab-audit">
-  <p class="what secondary">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
-  <p class="settings secondary" id="summary">Settings: the toolkit's defaults · no rulings</p>
-  </div>
-  <div id="pane-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
-  <p class="settings"><span class="settings-name secondary" id="ctx-name">Settings: the toolkit's defaults</span>
-    <button class="text-btn" id="ctx-pick" type="button">Use a context document…</button>
-    <button class="text-btn" id="ctx-clear" type="button" hidden>Remove</button></p>
-  <label class="checkbox" id="draft-row"><input type="checkbox" id="draft" role="switch"> Draft a context document</label>
-  <p class="hint secondary" id="draft-hint">Claude drafts one from this file with the results. Save it, then pick it here.</p>
-  <p class="settings"><span class="settings-name secondary" id="rul-name">Rulings: none saved</span>
-    <button class="text-btn" id="rul-paste" type="button">Paste rulings</button>
-    <button class="text-btn" id="rul-download" type="button" hidden>Download</button>
-    <button class="text-btn" id="rul-clear" type="button" hidden>Remove</button></p>
-  <div id="paste-box" hidden>
-    <label class="secondary" for="paste-text">Paste the rulings copied from the results page</label>
-    <textarea id="paste-text"></textarea>
-    <div class="paste-actions"><button id="paste-add" type="button">Add rulings</button><button id="paste-cancel" class="btn-secondary" type="button">Cancel</button></div>
-  </div>
-  </div>
-  <input type="file" id="ctx-file" accept=".md,text/markdown" hidden>
-  <button id="run" type="button">Run audit</button>
-  <button id="save" class="btn-secondary" type="button" hidden>Save the report again</button>
-  <div class="status" id="status" role="status" hidden>
-    <div class="status-head">
-      <svg class="status-icon" id="icon-done" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M5.25 8.25l1.75 1.75 3.75-4"/></svg>
-      <svg class="status-icon" id="icon-error" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M8 4.75v3.75M8 11.25v.01"/></svg>
-      <span class="status-title" id="status-title"></span>
+<div class="tabs" role="tablist" aria-label="Audit lite"><button class="tab" role="tab" id="tab-audit" aria-controls="panel-audit" aria-selected="true" type="button">Audit</button><button class="tab" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" type="button">Settings</button></div>
+
+<div class="panel" id="panel-audit" role="tabpanel" aria-labelledby="tab-audit">
+  <div class="panel-body">
+    <p class="title" id="file">Reading the file…</p>
+    <p class="what">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+    <div class="status" id="status" role="status" hidden>
+      <div class="status-head">
+        <svg class="status-icon" id="icon-done" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M5.25 8.25l1.75 1.75 3.75-4"/></svg>
+        <svg class="status-icon" id="icon-error" viewBox="0 0 16 16" aria-hidden="true" hidden><circle cx="8" cy="8" r="6.75"/><path d="M8 4.75v3.75M8 11.25v.01"/></svg>
+        <span class="status-title" id="status-title"></span>
+      </div>
+      <progress id="bar" hidden></progress>
+      <p class="status-detail" id="status-detail" hidden></p>
     </div>
-    <progress id="bar" hidden></progress>
-    <p class="status-detail" id="status-detail" hidden></p>
   </div>
-</main>
+  <div class="footer">
+    <span class="footer-hint" id="version"></span>
+    <button id="save" class="btn-secondary" type="button" hidden>Download</button>
+    <button id="run" type="button">Run audit</button>
+  </div>
+</div>
+
+<div class="panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+  <div class="panel-body settings-body">
+    <section class="group" aria-labelledby="ctx-h">
+      <h2 class="group-title" id="ctx-h">Context document</h2>
+      <div class="field-row"><span class="label">Document</span>
+        <div class="field-control"><span class="value" id="ctx-name">No document</span><button class="text-btn" id="ctx-pick" type="button">Upload…</button><button class="text-btn" id="ctx-clear" type="button" hidden>Remove</button></div></div>
+      <div class="field-row" id="draft-row"><label class="label" for="draft">Create one</label>
+        <div class="field-control"><span class="value secondary">With the next results</span><input type="checkbox" role="switch" class="switch" id="draft"></div></div>
+    </section>
+    <section class="group" aria-labelledby="rul-h">
+      <h2 class="group-title" id="rul-h">Rulings</h2>
+      <div class="field-row"><span class="label">Saved</span>
+        <div class="field-control"><span class="value" id="rul-name">0</span><button class="text-btn" id="rul-upload" type="button">Upload…</button><button class="text-btn" id="rul-download" type="button" hidden>Download</button><button class="text-btn" id="rul-clear" type="button" hidden>Remove</button></div></div>
+    </section>
+  </div>
+  <div class="footer"><span class="footer-hint" id="settings-hint" role="status">Rulings are saved in this file.</span></div>
+</div>
+
+<input type="file" id="ctx-file" accept=".md,text/markdown" hidden>
+<input type="file" id="rul-file" accept=".md,text/markdown" hidden>
+
 <script>
 var $ = function (id) { return document.getElementById(id); };
-var last = null, busy = false, ctxName = null, rulCount = 0;
-function summary() { $('summary').textContent = (ctxName ? 'Settings: ' + ctxName : "Settings: the toolkit's defaults" + ($('draft').checked ? ', drafting a context document' : '')) + ' · ' + (rulCount ? rulCount + (rulCount === 1 ? ' ruling' : ' rulings') : 'no rulings'); }
+var last = null, busy = false;
+var HINT = 'Rulings are saved in this file.';
 function tab(which) {
-  ['audit', 'settings'].forEach(function (t) { var on = t === which; $('tab-' + t).setAttribute('aria-selected', String(on)); $('tab-' + t).tabIndex = on ? 0 : -1; $('pane-' + t).hidden = !on; });
-  fit();
+  ['audit', 'settings'].forEach(function (t) { var on = t === which; $('tab-' + t).setAttribute('aria-selected', String(on)); $('tab-' + t).tabIndex = on ? 0 : -1; $('panel-' + t).hidden = !on; });
 }
-$('tab-audit').onclick = function () { if (!$('paste-box').hidden) { $('paste-box').hidden = true; } tab('audit'); };
+$('tab-audit').onclick = function () { tab('audit'); };
 $('tab-settings').onclick = function () { tab('settings'); };
 document.querySelector('.tabs').onkeydown = function (e) { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { var to = $('tab-audit').getAttribute('aria-selected') === 'true' ? 'settings' : 'audit'; tab(to); $('tab-' + to).focus(); } };
-$('draft').onchange = summary;
 function download(msg) {
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([msg.text], { type: 'text/markdown' }));
@@ -172,10 +185,9 @@ function say(tone, title, detail) {
   $('bar').hidden = !!tone;
   $('status-title').textContent = title;
   $('status-detail').textContent = detail || ''; $('status-detail').hidden = !detail;
-  fit();
 }
-// the window takes its content's height, as the snapshot plugin's does
-function fit() { var h = Math.ceil(document.querySelector('main').getBoundingClientRect().height); parent.postMessage({ pluginMessage: { type: 'resize', height: h } }, '*'); }
+// a settings change says what happened in the settings footer
+function hint(text) { $('settings-hint').textContent = text || HINT; }
 $('run').onclick = function () {
   if (busy) return;
   busy = true; $('run').setAttribute('aria-disabled', 'true');
@@ -184,42 +196,41 @@ $('run').onclick = function () {
 };
 parent.postMessage({ pluginMessage: { type: 'hello' } }, '*');
 $('save').onclick = function () { if (last) download(last); };
-// the project's context document: its settings and rulings for this file, remembered for this file on this machine
+// the project's context document: its settings and rulings, remembered for this file on this computer
 function context(name) {
-  $('ctx-name').textContent = name ? 'Settings: ' + name : "Settings: the toolkit's defaults";
-  $('ctx-pick').textContent = name ? 'Change…' : 'Use a context document…';
+  $('ctx-name').textContent = name || 'No document';
+  $('ctx-pick').textContent = name ? 'Change…' : 'Upload…';
   $('ctx-clear').hidden = !name;
   // a document in use needs no draft
-  ctxName = name; $('draft-row').hidden = $('draft-hint').hidden = !!name; if (name) $('draft').checked = false;
-  summary(); fit();
+  $('draft-row').hidden = !!name; if (name) $('draft').checked = false;
 }
 $('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
 $('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
-// rulings recorded on the results page: one paste, saved in the file, judged by on every run
+// rulings downloaded from the results page: uploaded once, saved in the file, judged by on every run
 function rulings(n) {
-  $('rul-name').textContent = n ? 'Rulings: ' + n + ' saved for this file' : 'Rulings: none saved';
+  $('rul-name').textContent = String(n || 0);
   $('rul-clear').hidden = $('rul-download').hidden = !n;
-  rulCount = n || 0; summary(); fit();
 }
-function pasteBox(open) { $('paste-box').hidden = !open; if (open) { $('paste-text').value = ''; $('paste-text').focus(); } else $('rul-paste').focus(); fit(); }
-$('rul-paste').onclick = function () { if (!busy) pasteBox(true); };
-$('paste-cancel').onclick = function () { pasteBox(false); };
-$('paste-add').onclick = function () { if (!busy && $('paste-text').value.trim()) parent.postMessage({ pluginMessage: { type: 'rulings-add', text: $('paste-text').value } }, '*'); };
+$('rul-upload').onclick = function () { if (busy) return; $('rul-file').value = ''; $('rul-file').click(); };
 $('rul-clear').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-clear' } }, '*'); };
 $('rul-download').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-download' } }, '*'); };
 $('ctx-file').onchange = function () {
   var f = this.files && this.files[0]; if (!f || busy) return;
   f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'context-set', name: f.name, text: text } }, '*'); });
 };
+$('rul-file').onchange = function () {
+  var f = this.files && this.files[0]; if (!f || busy) return;
+  f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'rulings-add', text: text } }, '*'); });
+};
 onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
   if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); rulings(msg.rulings); return; }
-  if (msg.type === 'rulings') { var wasOpen = !$('paste-box').hidden; rulings(msg.count); if (wasOpen) pasteBox(false); if (msg.added != null && !busy) say('done', msg.added ? msg.added + (msg.added === 1 ? ' ruling' : ' rulings') + ' added' : 'Rulings updated', 'Saved in this file. The next run judges by them.'); else if (!busy) { $('status').hidden = true; fit(); } return; }
+  if (msg.type === 'rulings') { rulings(msg.count); hint(msg.added == null ? '' : msg.added ? msg.added + (msg.added === 1 ? ' ruling' : ' rulings') + ' added. The next run judges by them.' : 'Rulings updated. The next run judges by them.'); return; }
   if (msg.type === 'file') { download(msg); return; }
-  if (msg.type === 'rulings-failed') { say('error', 'Rulings not changed', msg.why + '.'); return; }
-  if (msg.type === 'context') { context(msg.name); if (!busy) $('status').hidden = true; fit(); return; }
-  if (msg.type === 'context-failed') { say('error', 'That document was not used', msg.why + '.'); return; }
+  if (msg.type === 'rulings-failed') { hint('Rulings not changed: ' + msg.why + '.'); return; }
+  if (msg.type === 'context') { context(msg.name); hint(''); return; }
+  if (msg.type === 'context-failed') { hint('That document was not used: ' + msg.why + '.'); return; }
   busy = false; $('run').removeAttribute('aria-disabled');
   if (msg.type === 'done') {
     last = msg; download(msg); $('save').hidden = false;

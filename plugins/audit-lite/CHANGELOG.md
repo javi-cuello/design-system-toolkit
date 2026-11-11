@@ -1,6 +1,13 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.1] - 2026-11-11
+### Changed
+- The window is laid out as the Lucide importer's: a tab bar (Audit, Settings), a panel, and a footer holding the version and the actions, Run audit and Download.
+- Settings is two groups of label and control rows: Context document (Upload…, and a **Create one** switch that has Claude draft one with the next results) and Rulings (Upload…, Download, Remove).
+- Rulings come back as a file, not a paste: the results page's **Download rulings**, then **Upload…** in the plugin.
+- Claude's closing files are two separate documents, the results and the drafted context document, bundled in one zip where it can run code.
+
 ## [0.7.0] - 2026-11-11
 ### Changed
 - Rulings pasted into the plugin are saved in the Figma file, not on the machine, so they travel with the file to anyone who runs the plugin; those 0.6 kept on the machine move into the file on first open where it can be edited, and are read beside it where it cannot.

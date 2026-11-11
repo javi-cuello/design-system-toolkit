@@ -83,7 +83,7 @@ ok('a stopped file-level pass is said, the components kept', report(Object.assig
 const pageJs = (data) => LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
 const mount = (data, stored, onSave) => {
   const app = { innerHTML: '' }, body = { innerHTML: '' };
-  const doc = { getElementById: (id) => (id === 'app' ? app : id === 'rulingsBody' ? body : id === 'rulingsText' ? { value: (body.innerHTML.split('readonly aria-label="Rulings to paste into Audit lite">')[1] || '').split('</textarea>')[0] } : null), querySelector: () => null };
+  const doc = { getElementById: (id) => (id === 'app' ? app : id === 'rulingsBody' ? body : id === 'rulingsText' ? { value: (body.innerHTML.split('readonly aria-label="Rulings to upload into Audit lite">')[1] || '').split('</textarea>')[0] } : null), querySelector: () => null };
   new Function('document', 'localStorage', pageJs(data))(doc, { getItem: () => (stored ? JSON.stringify(stored) : null), setItem: (k, v) => onSave && onSave(JSON.parse(v)) });
   return { app, body, html: () => app.innerHTML + body.innerHTML, click: (dataset) => app.onclick({ target: { closest: () => ({ dataset, id: dataset.id || '' }) } }) };
 };
@@ -113,9 +113,10 @@ ok('the run\'s scope has its heading', html.includes('<h2 id="aboutH">About this
 // Recorded state: marks follow the finding; a ruling takes the row's note, and is read back by the full audit's reader.
 const kept = page(data, { done: ['Button|Label|c'], rules: ['Button|Label|c', 'Gone|x|a finding a later run dropped'], notes: { 'Button|Label|c': 'The label is decorative' } });
 ok('a mark follows its finding, and one for a finding no longer listed is ignored', kept.includes('<li class="row" data-done="true"><input class="tick" type="checkbox" data-done-id="3.1"') && (kept.match(/Recorded from Audit lite/g) || []).length === 1);
-const rows = (kept.split('readonly aria-label="Rulings to paste into Audit lite">')[1] || '').split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+const rows = (kept.split('readonly aria-label="Rulings to upload into Audit lite">')[1] || '').split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
 ok('a recorded row becomes a rulings-log row with its note, naming its component', /^\| \d{4}-\d\d-\d\d \| Button \| Button › Label: The label is decorative\. \| Recorded from Audit lite, on Button, about: c\. \|$/.test(rows), rows);
 const back = pastedRulings(rows);
+ok('the page\'s downloaded rulings file reads back the same', JSON.stringify(pastedRulings('## 6. Rulings log\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n')) === JSON.stringify(back));
 ok('the plugin reads the pasted rows as the full audit reads a rulings log', back.length === 1 && JSON.stringify(back) === JSON.stringify(projects.rulingsOf('## 6\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n')));
 ok('a paste with its own header reads the same', JSON.stringify(pastedRulings('| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows)) === JSON.stringify(back));
 ok('a paste of anything else finds no rulings', pastedRulings('hello').length === 0);

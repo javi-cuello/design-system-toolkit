@@ -7,11 +7,11 @@ It is the components and foundations audits with nothing else to install: no bri
 ## Run
 
 1. Figma desktop → Plugins → Development → Import plugin from manifest → this folder's `manifest.json`.
-2. Open the library, run **Audit lite**, and, if the project has a context document, pick it on the **Settings** tab with **Use a context document…**; without one, the **Draft a context document** switch there has Claude draft one from the file with the results. Claude ends by offering the results, and any drafted document, as files.
+2. Open the library, run **Audit lite**, and, if the project has a context document, upload it on the **Settings** tab beside Document; without one, the **Create one** switch there has Claude draft one from the file with the results. Claude ends by offering the results, and any drafted document, as files.
 3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
 4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
-As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Recorded rulings come back in one paste: **Copy rulings** on the page, **Paste rulings** on the plugin's Settings tab saves them in the Figma file, and every later run on that file judges by them, whoever runs it. **Download** gives them as a rulings log for a context document's section 6. Marks and notes stay in that browser.
+As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Recorded rulings come back as one file: **Download rulings** on the page, then **Upload…** beside Rulings on the plugin's Settings tab saves them in the Figma file, and every later run on that file judges by them, whoever runs it. **Download** gives them as a rulings log for a context document's section 6. Marks and notes stay in that browser.
 
 On a 71-component library Claude's reply takes about a minute, most of it writing the tables.
 
@@ -32,6 +32,6 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 ## Data this plugin stores
 
-The context document picked for a file (its name and text), in the plugin's client storage on this machine, keyed by the file. The rulings pasted for a file, in the file itself (plugin data on the document, invisible on the canvas), so saving one needs edit access; rulings 0.6 kept on the machine move into the file the first time it is opened with edit access. Each **Remove** deletes its own. The report is a download.
+The context document picked for a file (its name and text), in the plugin's client storage on this machine, keyed by the file. The rulings uploaded for a file, in the file itself (plugin data on the document, invisible on the canvas), so saving one needs edit access; rulings 0.6 kept on the machine move into the file the first time it is opened with edit access. Each **Remove** deletes its own. The report is a download.
 
 The `teamlibrary` permission lets discovery read the variable collections the file's enabled libraries publish.
