@@ -1,4 +1,6 @@
-# Eval cases — ds-model-routing (v1.3.1)
+# Eval cases — ds-model-routing (v1.3.2)
+
+**Walked: 2026-11-11 for 1.3.2** — two pointers only; A1–A4 re-read against them (step 1 now names where the families are); `node tools/shared/test-model-routing.mjs` 5/5.
 
 **Walked: 2026-11-05 for 1.3.1** — paths only: `tools/shared/model-routing.json` and `node tools/shared/model-routing.mjs` now read from the toolkit's root; `bin/get --list skills/ds-model-routing` takes `tools/shared`, and `node tools/shared/test-model-routing.mjs` is 5/5 (a fifth: importing the printer from a process whose argv[1] is no file no longer throws). A1–A5 read against the new text, unaffected.
 

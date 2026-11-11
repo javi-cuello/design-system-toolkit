@@ -5,13 +5,13 @@ description: Advise on the right Claude model and Effort setting before starting
 
 # Design systems model routing
 
-**Version 1.3.1** — history in CHANGELOG.md.
+**Version 1.3.2** — history in CHANGELOG.md.
 
-Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table below and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
+Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table (`tools/shared/model-routing.json`, printed as the *Routing table* section says) and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
 
 ## How to use this skill
 
-1. Identify which task family the request belongs to (table below).
+1. Identify which task family the request belongs to (the routing table's families).
 2. Compare against the model currently powering the session (from the system prompt) and, if known, the effort level.
 3. If there's a mismatch, give a one-sentence recommendation with the reason, e.g.:
    - "This is a mechanical audit — Sonnet at default effort handles it and uses far less of your limit. Want to switch, or continue here?"

@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.1.0)
+# Eval cases — design-system-research (v3.1.1)
+
+**Walked: 2026-11-11 for 3.1.1** — wording only: A24's fixture loses its numbered pointers; the cases naming the system-story term (A18, A24) and the recommendation line re-read; none changes. The 3.0.0 reader check is still pending, as recorded below.
 
 **Walked: 2026-11-11 for 3.1.0** — A25 added, traced to `references/deep-mode-voice.md` §4 and §11. A9 amended: its example heading loses its number. A11 amended: "every numbered section" becomes "every section". A20 read: a bare "(section N)" stays a failure, and so does any numbered pointer. Others read: none asserts on numbering.
 
@@ -223,7 +225,7 @@ Observed: 2026-11-09 — the person ruled out the second person; 2026-11-11 — 
 Traced: 2026-11-11 for 3.0.0 — to `references/deep-mode-voice.md` §9 and §13, and SKILL.md's checklist grep.
 
 ## A24 · The guide teaches as the magazines do
-Fixture: a deep-mode guide whose first screen stacks a subtitle, a summary line, "Part 3 of 9", a "This piece sets out" paragraph and a section pointer; whose §2 drops a table and an SVG with no sentence before or after; which compares tokens to plumbing in three different sections, each with a new image; whose §1 introduces five new terms in one paragraph; and whose advice opens with a bold **What to do.** label.
+Fixture: a deep-mode guide whose first screen stacks a subtitle, a summary line, "Part 3 of 9", a "This piece sets out" paragraph and a section pointer; whose second section drops a table and an SVG with no sentence before or after; which compares tokens to plumbing in three different sections, each with a new image; whose first section introduces five new terms in one paragraph; and whose advice opens with a bold **What to do.** label.
 Assert: the first screen holds the title, subtitle, the problem as a scene and the linked question list, with the series line at the end; each section gives a one-sentence answer, then the problem the reader can see (one hook question allowed straight after it), then the mechanism; every figure has a lead-in sentence and a sentence saying what to notice; at most one analogy per hard concept, after the worked case, with where it breaks; about three new terms a section, one a paragraph; the advice has no label; a caveat that doesn't change the advice sits in an `**Aside.**` blockquote; links sit on the noun.
 Negative: a warm-up before the problem; a figure dropped in cold; an analogy per section or one with no limit named; a rhetorical question not following something the reader has just seen.
 Observed: 2026-11-11 — the person: the guides "still feel a bit robotic / report"; two guides of the agent-ready series read against the research showed the preamble stack, five new terms in one opening section, "**What to do.**" labels and evidence dates mid-mechanism.

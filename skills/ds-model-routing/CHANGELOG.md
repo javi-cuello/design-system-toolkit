@@ -1,5 +1,6 @@
 # Changelog — ds-model-routing
 
+- 1.3.2 (2026-11-11): step 1 and the opening line no longer point at a "table below": the table is `tools/shared/model-routing.json`.
 - 1.3.1 (2026-11-05): the table and its printer are named by their path from the toolkit's root, as skill-standard asks and `bin/get` reads, not by one machine's clone location.
 - 1.3.0 (2026-11-05): the routing table is data, `tools/shared/model-routing.json`, held by `test-model-routing.mjs`; a workflow sets each agent()'s model and effort from it (*In a workflow*).
 - 1.2.11 (2026-11-05): the `figma-token-export` row removed with the skill.
