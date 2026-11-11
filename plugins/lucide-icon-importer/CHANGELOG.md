@@ -1,4 +1,9 @@
 # Changelog — lucide-icon-importer
+## [1.15.0] - 2026-11-11
+### Changed
+- The window is built from FigUI3 (the PropsKit look): the same Icons and Settings tabs, search, icon grid, selection bar and settings, now from `fig-tabs`, `fig-input-text` (its search type draws the clear button), `fig-field` rows under `fig-header` groups, `fig-checkbox`, a `fig-segmented-control` for Fill mode, `fig-input-color` for Icon color and Background (swatch, hex and opacity in one), `fig-input-number`, `fig-button`s in `fig-footer`s and a `fig-toast`. The hand-drawn tabs, inputs, radios, chips, buttons, footers and toast and their CSS are gone; the icon grid and the colour-variable picker's searchable list stay the plugin's own, since FigUI3's dropdown is a native select with no search, swatch or groups.
+- The window asks for its file, settings and icon list once FigUI3's elements are defined, so a value never lands on a field before it can take it.
+- A colour is saved only once its field holds a whole hex or opacity: FigUI3 reports a half-typed hex as #D9D9D9 and an emptied opacity as 0%, which the window ignores. A hex edit keeps the saved opacity, and opacity is stored to the percent. The hex error line is gone.
 ## [1.14.1] - 2026-11-05
 ### Fixed
 - The right-to-left checkbox, setting and count say "right to left", not "Arabic": the audit names whichever language the project ships, and a Hebrew project was told about Arabic.

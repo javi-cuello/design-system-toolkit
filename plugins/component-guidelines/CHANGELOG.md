@@ -1,6 +1,12 @@
 # Changelog — component-guidelines
 Format: Keep a Changelog. Versioning: SemVer.
 
+## [2.1.0] - 2026-11-11
+### Changed — the window is built from FigUI3 (the PropsKit look)
+- The component's name heads the window in a `fig-header`; the Usage and Don't lists are split by a rule of their own instead of the old `.divider`, which the new baseline (ui-base v4) no longer draws.
+- The window still sizes itself to its content (up to code.js's 900px cap) and now scrolls past the cap instead of clipping. It has no controls, so there is no footer.
+- Removed the bespoke `.component-name` and `.divider` rules; the badges and lists stay as the plugin's own content.
+
 ## [2.0.6] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).

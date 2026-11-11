@@ -1,14 +1,14 @@
 # Shared plugin UI base
 
-`ui-base.css` is the one source of the base stylesheet every plugin's panel uses: Figma's injected `--figma-color-*` tokens for colour, Figma-native sizes for buttons, inputs and selects. A Figma plugin's UI is a single HTML file that cannot load other files at run time, so each plugin carries a copy of this stylesheet inline, between the markers `/* ui-base vN start */` and `/* ui-base vN end */`.
+Every plugin's window is built from [FigUI3](https://github.com/rogie/figui3) (MIT core), the library behind Figma's PropsKit playground: `figui3/` holds its pinned `fig.css`, `fig.js` and `LICENSE` (11.11.5). `ui-base.css` is the toolkit's thin frame on top: panels that scroll between a tab bar and a footer, a text button, spacing tokens. A Figma plugin's UI is a single HTML file that cannot load other files at run time, so each plugin carries two generated copies inline: the ui-base block (FigUI3's stylesheet, then the frame) in its `<style>`, and the FigUI3 block in a `<script type="module">`.
 
 ## Changing it
 
-Edit `ui-base.css`, bump the `vN` in its marker, then write it into every copy: each plugin's `ui.html` and [figma-plugin-creator](../../skills/figma-plugin-creator/SKILL.md)'s template and asset.
+Edit `ui-base.css` (bump the `vN` in its marker), or replace `figui3/` with a newer release (update the version in `sync.mjs`), then write every copy: each plugin's `ui.html` and [figma-plugin-creator](../../skills/figma-plugin-creator/SKILL.md)'s template and assets.
 
 ```sh
 node plugins/_shared/sync.mjs           # write every copy
 node plugins/_shared/sync.mjs --check   # list the copies that differ; bin/check runs it and fails on one
 ```
 
-The copies are generated, never pasted (toolkit-standard §D 23). The rules for using it, including how a plugin with its own controls avoids inheriting these sizes, are [skill-standard](../../standards/skill-standard.md) Part B §4.
+The copies are generated, never pasted (toolkit-standard §D 23). The rules for using them (controls are fig-* elements, composed, never restyled) are [skill-standard](../../standards/skill-standard.md) Part B §4.

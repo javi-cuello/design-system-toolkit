@@ -1,4 +1,10 @@
 # Changelog — theme-switcher
+## [3.12.0] - 2026-11-11
+### Changed
+- **The window is built from FigUI3 (the PropsKit look):** each row is a `fig-field` holding a `fig-segmented-control` (up to three options) or a `fig-dropdown` (more), and Clear and Apply sit in a `fig-footer` beside the selection note, Apply last. The hand-drawn segmented buttons, the native select and the button overrides are gone; the plugin's own CSS is now only the empty-state line. The window still sizes itself to its rows, measured from the rows and the footer since the body now stretches to the window.
+### Fixed
+- **The base brand can be picked in a segmented control.** Its id is empty, which a segment read as its name; it now travels under its own value.
+
 ## [3.11.2] - 2026-10-31
 ### Fixed
 - **The README said Clear is disabled with an empty selection.** Only Apply is; Clear is the page-wide reset and works with nothing selected, as the README's own account of it and the panel's note say.

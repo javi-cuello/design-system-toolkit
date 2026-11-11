@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.72.0] - 2026-11-11
+### Changed
+- **The window is built from FigUI3 (the PropsKit look):** the icons choice is a `fig-switch` and the pairing code a `fig-input-text` with a secondary `fig-button` (Pair), each in a `fig-field` row; **Take snapshot** is the primary `fig-button` in a `fig-footer`, with the version beside it. The hand-drawn switch, the bespoke button and input rules, and the button's own focus ring are gone; the status block and its progress bar are unchanged. While a snapshot runs the button is `disabled` (FigUI3's), where it was `aria-disabled` and kept focus. Messages to and from code.js are unchanged; the window still fits its content.
+
 ## [0.71.0] - 2026-11-10
 ### Added
 - **A screen's instance layer carries its component's notes.** Figma keeps an annotation on the layer it was written on, so a rule annotated once on a template's header reached none of the screens built on it. In a screens run, a layer of an instance also records the notes of its main component's layer (its id without the first part, then each next part: every level, nearest first, a repeated text once), after its own, each with `from`, the component's name; only from a local component's layer with the same name, so a part renamed or swapped under a new name takes nothing. A layer inside a library instance has no local counterpart and reads none. Library runs are unchanged. The store lists `— from <component>` beside such a note (snapshot-standard rule 25). The first screens run after it lists each inherited note as new once, and each screen built on an annotated template changes (`~ notes`) once.

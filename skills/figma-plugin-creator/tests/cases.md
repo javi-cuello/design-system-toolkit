@@ -1,4 +1,6 @@
-# Eval cases — figma-plugin-creator (v1.16.0)
+# Eval cases — figma-plugin-creator (v1.17.0)
+
+**Walked: 2026-11-11 for 1.17.0 — P7 executed, P1 re-run** (`node tests/test-conformance.mjs`, 24 passed): a fresh scaffold raises nothing (the template is FigUI3-built); a restyled fig-button and a `.switch` rule are named, the shared block's own rules are not; hand-built controls are found by line, a `.text-btn` and a hidden file picker are not; a missing or drifted FigUI3 block is named. `test-scaffold.mjs` (9 passed) checks both blocks and the fig-footer, and its escaping test reads the purpose, the window no longer printing the name. P5's fixtures moved to the template's `fig-button`, and its ui-base-class example from `.btn` (gone in ui-base v4) to `.text-btn`.
 
 **Walked: 2026-11-10 for 1.16.0 — P2 executed** (`node tests/test-conformance.mjs`, 21 passed): a sync call inside a `generated start … generated end` block raises nothing and the same call after the block is still found at its line; every plugin in `plugins/` passes, audit-lite included.
 
@@ -78,6 +80,7 @@ Assert: ui-base block inlined (mandatory), duplicated base-control CSS stripped,
 Walked live: 2026-08-09 — a planted "Swatch Picker" fixture with working async code and bespoke UI carrying no ui-base markers, reconciled against the canonical block.
 
 ## P5 · Bare element selectors are caught colliding with bespoke controls
+*Since 1.17.0 the controls are FigUI3's (§5c), so this collision reaches only a native control a plugin keeps; FigUI3's stylesheet, not ui-base, now styles the bare elements. The case below is kept as written.*
 Fixture: a plugin whose ui-base block styles `button`, `input` and `select` by bare element selector, and whose own CSS sizes a bespoke control — including its `:disabled`, `:hover` and `:focus` states.
 Assert: the conformance pass reports the collision in both places — box-model sizing **and** state styling — and proposes scoping the base rules rather than deleting the bespoke ones. The failure this guards is silent: a bare selector wins on specificity ties by document order, so the bespoke control renders at the base size and looks merely "slightly off" rather than broken.
 Assert the state half specifically, because 1.2.0 shipped the sizing check alone and 1.3.0 had to extend it: a collision that only shows on `:focus` is invisible in a static screenshot, which is how it reached a real plugin's focus-ring report before anyone noticed.
@@ -115,3 +118,8 @@ The skeleton assertion holds too, with a refinement the case did not anticipate:
 Walked live: 2026-08-09 — the real `plugins/lucide-icon-importer`, all four parts of the pattern plus both negatives.
 
 Assert the pattern as shipped (since 1.10.0), executed by `node tests/test-fetch-queue.mjs` with no browser: `assets/fetch-queue.js`'s queue never exceeds its bound and returns every result; a rejection reaches its own caller and frees its slot; a job that throws synchronously rejects rather than leaking its slot and stalling the queue; `retryOrFail` unobserves before re-observing (observing an observed target is a no-op), re-observes only after a growing delay (500ms, then 1000ms — never synchronously; since 1.10.1), and past its bound stops observing and returns `false` for the caller's terminal state. The reference carries no inline copy of either function.
+
+## P7 · Controls are FigUI3's, composed, never restyled
+Fixture: a plugin whose CSS sets a `fig-button`'s height and styles a `.switch`, and whose markup holds a bare `<button>`, a checkbox, a text input, a `<select>` and a `role="tab"` element beside a `.text-btn` and a hidden file input.
+Assert: each restyle is a needs-decision warning naming the element; each native control is a needs-decision warning with its line and the fig-* element to use; the `.text-btn`, the hidden picker and anything inside a script or comment raise nothing; the ui-base block's own fig-* rules raise nothing. Assert a fresh scaffold raises nothing, so the template itself meets §B 4.
+Runs: node tests/test-conformance.mjs — "§5c: plugin CSS reaching a fig-* element or the old switch is a restyle; the shared block's own rules are not", "§5c: a native control where FigUI3 has an element is hand-built, by line; a text button and a hidden file picker are the shell's", "§5: a missing or drifted FigUI3 block is named", "a fresh scaffold is conformant: nothing raised"

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // @runs: standards/tests/check.sh, over plugins/ (bin/check runs it), as well as a session.
-// The conformance checklist's mechanical half (references/conformance-checklist.md §1–§5a), over a plugin folder
+// The conformance checklist's mechanical half (references/conformance-checklist.md §1–§5a, §5c), over a plugin folder
 // or a folder of plugins, so no item a grep can answer is answered by hand (toolkit-standard §D 23). What stays a
 // read is named in the reference: settings hygiene (§4b), the ui-base collision check's state rules, the runtime
 // traps (§5b) and the retest (§6).
@@ -17,6 +17,7 @@ import vm from "node:vm";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.join(HERE, "..", "..", "..");
 const BLOCK = /\/\* ui-base v\d+ start[\s\S]*?\/\* ui-base v\d+ end \*\//;
+const JS_BLOCK = /\/\* figui3-js generated start[\s\S]*?\/\* figui3-js generated end \*\//;
 
 // §2: each sync API dynamic-page makes throw. `.instances` and `.consumers` are left to the read: a plugin's own
 // arrays and maps carry those names as often as Figma's nodes do, so a hit is not a finding without one.
@@ -113,12 +114,14 @@ export function checkPlugin(dir, opts = {}) {
 
   // §3 network truth
   const allowed = (m.networkAccess && m.networkAccess.allowedDomains) || null;
-  const fetches = [...hits(codeJs, NETWORK).map((n) => "code.js:" + n), ...hits(ui, NETWORK).map((n) => "ui.html:" + n)];
+  // the generated FigUI3 block is a library's code, not the plugin's own requests (its fetches load media a plugin hands it)
+  const uiOwn = ui == null ? null : ui.replace(GENERATED, (m) => m.replace(/[^\n]/g, ""));
+  const fetches = [...hits(codeJs, NETWORK).map((n) => "code.js:" + n), ...hits(uiOwn, NETWORK).map((n) => "ui.html:" + n)];
   if (!allowed) add("warn", "3", "manifest has no networkAccess.allowedDomains", "needs-decision");
   else if (!fetches.length && !(allowed.length === 1 && allowed[0] === "none")) add("warn", "3", `nothing fetches, yet allowedDomains is ${JSON.stringify(allowed)}: it should be ["none"]`, "needs-decision");
   // a plugin that talks only to a local server in development declares it in devAllowedDomains, beside ["none"]
   else if (fetches.length && allowed.length === 1 && allowed[0] === "none" && !((m.networkAccess.devAllowedDomains || []).length)) add("error", "3", `fetches (${fetches.join(", ")}) while allowedDomains is ["none"]: every request is blocked`, "needs-decision");
-  const net = (codeJs || "") + "\n" + (ui || "");
+  const net = (codeJs || "") + "\n" + (uiOwn || "");
   if (/unpkg\.com/.test(net) && !/cdn\.jsdelivr\.net/.test(net)) add("warn", "3", "fetches from unpkg.com with no jsdelivr fallback: unpkg refuses a plugin UI's null origin (references/network-fetch-patterns.md)", "needs-decision");
   if (/(unpkg\.com|cdn\.jsdelivr\.net)\/[^\s"'`]*@latest\b/.test(net)) add("warn", "3", "a CDN fetch targets @latest, not a pinned version", "needs-decision");
 
@@ -128,7 +131,63 @@ export function checkPlugin(dir, opts = {}) {
     const block = BLOCK.exec(ui);
     if (!block) add("warn", "5", "ui.html has no ui-base block: inline it (mandatory)", "auto-fixable");
     else if (base != null && block[0] !== base.trimEnd()) add("warn", "5", "ui.html's ui-base block differs from the shared base: re-inline it (node plugins/_shared/sync.mjs in the toolkit)", "auto-fixable");
-    for (const b of bespokeControls(ui)) add("warn", "5a", `.${b.cls} sizes a control but does not set ${b.missing.join(" or ")}: ui-base supplies it by accident (references/conformance-checklist.md §5a); set it on the class`, "auto-fixable");
+    const js = read(opts.figui3 || path.join(HERE, "..", "assets", "figui3.js"));
+    const jsBlock = JS_BLOCK.exec(ui);
+    if (!jsBlock) add("warn", "5", "ui.html has no FigUI3 block (a <script type=\"module\"> holding /* figui3-js generated start … end */): add it, then run node plugins/_shared/sync.mjs (mandatory)", "auto-fixable");
+    else if (js != null && jsBlock[0] !== js.trimEnd()) add("warn", "5", "ui.html's FigUI3 block differs from the shared copy: re-inline it (node plugins/_shared/sync.mjs in the toolkit)", "auto-fixable");
+    for (const r of restyled(ui)) add("warn", "5c", `restyles ${r}: the look is FigUI3's, composed, never restyled (skill-standard §B 4)`, "needs-decision");
+    for (const c of handBuilt(ui)) add("warn", "5c", `${c.what} at ui.html:${c.line} where FigUI3 has ${c.use}: build it from that element (skill-standard §B 4)`, "needs-decision");
+    for (const b of bespokeControls(ui)) add("warn", "5a", `.${b.cls} sizes a control but does not set ${b.missing.join(" or ")}: the shared stylesheet supplies it by accident (references/conformance-checklist.md §5a); set it on the class`, "auto-fixable");
+  }
+  return out;
+}
+
+// §5c The look is FigUI3's. Restyled: a plugin rule, outside the shared block, whose selector reaches a fig-* element
+// or FigUI3's switch. Hand-built: a native control in the markup where FigUI3 has an element for it; a text button
+// (`.text-btn`, the shell's link-like action) and a hidden file input (the picker a fig-button opens) are the shell's.
+const FIG_SELECTOR = /(^|[\s>+~(,])(fig-[a-z-]+)(?=$|[.:#\[),])|(\.switch)(?![\w-])/i;
+// the rule's subject: its last compound, so `fig-footer .status` styles the plugin's own content, not the footer;
+// what sits inside :not() or :has() is a condition on the subject, not the subject
+const subject = (sel) => sel.trim().replace(/:(not|has)\([^()]*\)/gi, "").split(/\s*[>+~]\s*|\s+(?![^()]*\))/).pop();
+export function restyled(ui) {
+  const css = [...ui.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join("\n").replace(BLOCK, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const out = new Set();
+  for (const [, sel] of css.matchAll(/([^{}]+)\{[^{}]*\}/g)) for (const one of sel.split(/,(?![^()]*\))/)) {
+    for (const m of (" " + subject(one)).matchAll(new RegExp(FIG_SELECTOR, "gi"))) out.add((m[2] || m[3]).toLowerCase());
+  }
+  return [...out];
+}
+// Each tag's attributes are parsed, so a word inside a value (`title="hidden layers"`, `data-role="tab"`) is no attribute.
+const attrsOf = (tag) => {
+  const a = {};
+  for (const m of tag.replace(/^<[\w-]+/, "").matchAll(/([^\s=>\/"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)) a[m[1].toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? "";
+  return a;
+};
+const BUTTONISH = /^(button|submit|reset)$/i;
+function nativeFor(name, a) {
+  const type = (a.type || "").toLowerCase();
+  const classes = (a.class || "").split(/\s+/);
+  if (a.role === "tab") return ["a hand-made tab", "<fig-tabs>"];
+  if (name === "button") return classes.includes("text-btn") ? null : ["a <button>", "<fig-button>"];
+  if (name === "select") return ["a <select>", "<fig-dropdown>"];
+  if (name === "textarea") return ["a <textarea>", "<fig-input-text multiline>"];
+  if (name !== "input" || "hidden" in a || type === "hidden") return null;
+  if (type === "checkbox") return ["a checkbox", "<fig-checkbox> or <fig-switch>"];
+  if (type === "radio") return ["a radio", "<fig-radio> or <fig-segmented-control>"];
+  if (type === "file") return ["a visible file input", "<fig-input-file>, or a hidden one opened by a fig-button"];
+  if (type === "range") return ["a range", "<fig-slider>"];
+  if (type === "color") return ["a colour input", "<fig-input-color>"];
+  if (BUTTONISH.test(type)) return ["an input button", "<fig-button>"];
+  return ["a text input", "<fig-input-text>"];
+}
+export function handBuilt(ui) {
+  // markup only: styles, scripts and comments blanked, so line numbers stay true
+  const blank = (m) => m.replace(/[^\n]/g, "");
+  const html = ui.replace(/<style[\s\S]*?<\/style>/gi, blank).replace(/<script[\s\S]*?<\/script>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank);
+  const out = [];
+  for (const m of html.matchAll(/<([a-z][\w-]*)\b(?:"[^"]*"|'[^']*'|[^'">])*>/gi)) {
+    const hit = nativeFor(m[1].toLowerCase(), attrsOf(m[0]));
+    if (hit) out.push({ what: hit[0], use: hit[1], line: html.slice(0, m.index).split("\n").length });
   }
   return out;
 }
@@ -149,7 +208,7 @@ export function bespokeControls(ui) {
   const html = ui.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<!--[\s\S]*?-->/g, "");
   // A control carrying a class ui-base defines (.btn, .input, …) takes its box from that class on purpose.
   const block = BLOCK.exec(ui);
-  const base = new Set(block ? [...block[0].replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]) : []);
+  const base = new Set(block ? [...block[0].replace(/\/\* figui3 generated start[\s\S]*?figui3 generated end \*\//, "").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]) : []);
   const controls = []; // each control's tag and own class list
   for (const [, tag, attrs] of html.matchAll(/<(button|input|select|textarea)\b([^>]*)>/gi)) {
     // `data-type=` and `data-class=` are not the attribute

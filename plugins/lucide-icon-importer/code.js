@@ -1,4 +1,4 @@
-// Lucide Icon Importer — v1.14.1 · plugin-standard v1.4.0
+// Lucide Icon Importer — v1.15.0 · plugin-standard v1.4.0
 // @ts-check
 
 var SETTINGS_KEY = 'lucideIconImporterSettings';

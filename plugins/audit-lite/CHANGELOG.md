@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.0] - 2026-11-11
+### Changed
+- The window is built from FigUI3 (the PropsKit look): fig-tabs in a fig-header, fig-field rows with a fig-switch, fig-buttons in a fig-footer, a fig-spinner while the audit runs. Behaviour unchanged.
+
 ## [0.7.1] - 2026-11-11
 ### Changed
 - The window is laid out as the Lucide importer's: a tab bar (Audit, Settings), a panel, and a footer holding the version and the actions, Run audit and Download.

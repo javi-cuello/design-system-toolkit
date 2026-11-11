@@ -1,6 +1,11 @@
 # Changelog — Layer organiser
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.0] - 2026-11-11
+### Changed
+- **The window is built from FigUI3 (the PropsKit look):** the settings are `fig-field` rows (Separator, Flow, Row gap, Column gap, Group), the separator a `fig-input-text`, the two gaps `fig-input-number` in px, the flow a `fig-segmented-control` with its icons (arrows, Home and End now move it), grouping a `fig-checkbox`, and Organise Layers a `fig-button` in a `fig-footer` with the layer count beside it. The bespoke checkbox, segmented control, number input and button CSS is gone; only the preview keeps its own rules. The window is 380px tall, measured at 380px of content.
+- `tests/render-check.sh` measures in a 260x380 iframe, because FigUI3's stylesheet uses viewport units and headless Chrome opens no window narrower than 500px; its control assertions are now FigUI3's sizes, plus a check that no label or segment is clipped.
+
 ## [0.6.4] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).

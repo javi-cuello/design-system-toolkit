@@ -8,7 +8,7 @@ reverse `appendChild` really produces that Layers panel order, the placement
 arithmetic really lands where it says, `setRelaunchData` takes on both a page
 and a frame, and a lone selected container really means "arrange what is inside".
 
-A third, `render-check.sh`, renders `ui.html` headlessly at 260x420 in light and
+A third, `render-check.sh`, renders `ui.html` headlessly at 260x380 in light and
 dark and measures it — it found the separator input rendering at 468px inside a
 260px window. What is left here is what none of the three can reach: the real
 injected token values, and anything the plugin **host** draws or keeps.
@@ -18,15 +18,13 @@ Import via Plugins → Development → Import plugin from manifest; a changed
 manifest needs a re-import, and "run last plugin" will not pick it up.
 
 ## 1 · The window
-`render-check.sh` measures the layout at 260x420 in both themes and asserts every
+`render-check.sh` measures the layout at 260x380 in both themes and asserts every
 control's width, so what is left here is what only the real editor can settle:
 - [ ] The injected `--figma-color-*` values are the real ones, not the check's
       approximations. Anything hardcoded would show here — a static read says
-      the only literal in the plugin's CSS is the `#fff` fallback on
-      `--figma-color-icon-onbrand`, which is what a fallback is for.
-- [ ] The checkbox tick is legible on the blue box. Drawn by the plugin from
-      `--figma-color-icon-onbrand` for exactly this reason: `accent-color` let
-      the native control pick its own tick colour and it picked a dark one.
+      the plugin's own CSS (the preview) holds no colour literal.
+- [ ] The controls match Figma's PropsKit: they are FigUI3's elements, and the
+      checkbox tick, segmented control and number steppers are drawn by it.
 
 ## 2 · The preview
 - [ ] Change the selection with the plugin open: the preview follows.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ui.html from the keyboard, in Chrome: the tabs follow the APG pattern, the icon
+// ui.html from the keyboard, in Chrome: the tabs (FigUI3's fig-tabs) follow the APG pattern, the icon
 // cards and the variable picker are named buttons that say their state, Escape
 // closes the picker and gives focus back, and every control has a name.
 // Run: node plugins/lucide-icon-importer/tests/test-ui-keyboard.mjs
@@ -24,7 +24,7 @@ try {
   ok('the script ran to its end', await tab.evaluate(`typeof selectTab === 'function' && typeof renderGrid === 'function'`));
 
   await tab.evaluate(`${$('tab-icons')}.focus(); ${key($('tab-icons'), 'ArrowRight')}`);
-  const t = await tab.evaluate(`({ sel: ${$('tab-settings')}.getAttribute('aria-selected'), focus: document.activeElement.id, shown: ${$('panel-settings')}.classList.contains('active'), stop: ${$('tab-icons')}.tabIndex })`);
+  const t = await tab.evaluate(`({ sel: ${$('tab-settings')}.getAttribute('aria-selected'), focus: document.activeElement.id, shown: !${$('panel-settings')}.hidden, stop: ${$('tab-icons')}.tabIndex })`);
   ok('ArrowRight selects and focuses Settings, and Icons leaves the tab order', t.sel === 'true' && t.focus === 'tab-settings' && t.shown && t.stop === -1, JSON.stringify(t));
   await tab.evaluate(key($('tab-settings'), 'ArrowRight'));
   ok('ArrowRight on the last tab wraps to the first', await tab.evaluate(`document.activeElement.id === 'tab-icons'`));
@@ -36,10 +36,10 @@ try {
     JSON.stringify(cards) === JSON.stringify([['BUTTON', 'arrow-up', 'false', false], ['BUTTON', 'circle, already in this file', null, true]]), JSON.stringify(cards));
   ok('picking a card says it is picked', await tab.evaluate(`(() => { const c = document.querySelector('.icon-card'); c.click(); return c.getAttribute('aria-pressed') === 'true'; })()`));
 
-  await tab.evaluate(`selectTab(${$('tab-settings')}); colorVariables = [{ id: 'v1', name: 'Fg', collection: 'Colour', color: { r: 0, g: 0, b: 0 } }]; renderVariableList(); ${$('variableSection')}.style.display = 'block'; ${$('variablePickerToggle')}.click()`);
+  await tab.evaluate(`selectTab(${$('tab-settings')}); colorVariables = [{ id: 'v1', name: 'Fg', collection: 'Colour', color: { r: 0, g: 0, b: 0 } }]; renderVariableList(); ${$('variableSection')}.hidden = false; ${$('variablePickerToggle')}.click()`);
   await pause(50);
-  const open = await tab.evaluate(`({ expanded: ${$('variablePickerToggle')}.getAttribute('aria-expanded'), focus: document.activeElement.id, option: document.querySelector('.variable-option').tagName })`);
-  ok('the variable picker opens, says so, puts focus in its search, and its options are buttons', open.expanded === 'true' && open.focus === 'variableSearchInput' && open.option === 'BUTTON', JSON.stringify(open));
+  const open = await tab.evaluate(`({ expanded: ${$('variablePickerToggle')}.getAttribute('aria-expanded'), focus: ${$('variableSearchInput')}.contains(document.activeElement), option: document.querySelector('.variable-option').tagName })`);
+  ok('the variable picker opens, says so, puts focus in its search, and its options are buttons', open.expanded === 'true' && open.focus === true && open.option === 'BUTTON', JSON.stringify(open));
   await tab.evaluate(key($('variableSearchInput'), 'Escape'));
   const shut = await tab.evaluate(`({ expanded: ${$('variablePickerToggle')}.getAttribute('aria-expanded'), focus: document.activeElement.id })`);
   ok('Escape closes it and gives focus back to its button', shut.expanded === 'false' && shut.focus === 'variablePickerToggle', JSON.stringify(shut));

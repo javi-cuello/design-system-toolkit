@@ -171,7 +171,8 @@ check('right to left: off unless the file turns it on, and kept on replace', () 
   const api = load(makeFigma([]).figma, 'return { defaults: DEFAULT_SETTINGS };');
   is(api.defaults.rtlMarks, false, 'the setting is off by default');
   ok(!/\bArabic\b/.test(ui), 'the window names no one language: the project may ship Hebrew, Farsi or Urdu');   // v1.14.1
-  ok(/\.check-row\[hidden\]\s*\{\s*display:\s*none/.test(ui), 'the hidden box is really hidden: the row\'s own display: flex would beat the browser\'s [hidden]');
+  // the box is a fig-checkbox, which draws itself as flex: ui-base's [hidden] rule is !important, so [hidden] still wins
+  ok(/<fig-checkbox id="rtlMirrors"[^>]* hidden>/.test(ui) && /\[hidden\]\s*\{\s*display:\s*none\s*!important/.test(ui), 'the hidden box is really hidden: the box\'s own display would beat the browser\'s [hidden]');
   const kept = load(makeFigma([]).figma, 'return keptRtl;');
   const node = (data, extra) => Object.assign({ getPluginData: (k) => (k === 'lucideRtl' ? data : '') }, extra);
   is(kept(node('mirrors')), 'mirrors', 'replace keeps the decision this plugin stored');

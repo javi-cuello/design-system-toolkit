@@ -29,7 +29,7 @@ The current selection, or — when nothing is selected — every top-level layer
 page. Only layers that share one parent are moved: `x`/`y` are parent-relative, so
 mixing parents would place layers by coordinates that don't mean the same thing.
 Layers inside an auto-layout frame are skipped, because the frame owns their position.
-The count of skipped layers is shown under the button.
+The count of skipped layers is shown beside the button.
 
 ## The Layers panel
 A run also reorders the layers inside their parent so the Layers panel reads in the

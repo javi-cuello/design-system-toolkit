@@ -2,7 +2,7 @@
 
 Two choices and one button: **Theme**, **Brand**, **Apply**.
 
-**Version 3.11.2** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
+**Version 3.12.0** · runs with no build step: import `manifest.json` via Figma → Plugins → Development.
 
 Setting a theme by hand means visiting every collection that carries it — the colour primitives, the semantics, the brand — and picking the same mode in each. That is what this does in one click, on the selected layers.
 
@@ -13,7 +13,7 @@ It knows no collection or mode names. It reads the shape of the file instead:
 
 - **Choice** — any other collection with modes to pick that the theme does not cover, one row each under the collection's name. This is how a file that keeps brands as modes of one collection (`Semantic - Brand` with `A` and `B`) gets its brand switched: no extension, no theme name, but still a choice. Shape cannot tell a brand set from a density set, so the row says which collection it sets rather than guessing.
 
-Each row is segmented buttons up to three options and a select beyond that — four segments in a 300px panel truncate any real brand name.
+Each row is a segmented control up to three options and a dropdown beyond that — four segments in a 300px panel truncate any real brand name.
 
 Apply sets the theme on every collection that offers it, pins each choice row's mode, pins the chosen brand, and clears the brands you did not choose — including pins left by an earlier published generation of that collection, which is what otherwise resolves to a default nobody picked.
 

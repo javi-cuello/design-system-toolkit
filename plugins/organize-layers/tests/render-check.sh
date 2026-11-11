@@ -1,16 +1,18 @@
 #!/bin/bash
 # Run: plugins/organize-layers/tests/render-check.sh [--keep]
 #
-# Renders ui.html headlessly at the plugin's own 260x420, in light and dark, and
-# measures it. It exists because `.input-compact{width:56px}` was measured at
+# Renders ui.html headlessly at the plugin's own 260x380, in light and dark, and
+# measures it. Since 0.7.0 every control is a FigUI3 element (skill-standard
+# §B 4), so the sizes asserted are FigUI3's own and a mismatch means something
+# restyled it. It first existed because `.input-compact{width:56px}` was measured at
 # 468px: ui-base's `input[type=text]` carries an attribute selector, so a bare
 # class ties with it on specificity and loses on source order. Nothing else in
 # this repo could see that — the ui-base collision rule in skill-standard §B 4
 # names the trap, and a rule can only tell you to look.
 #
-# What it can and cannot judge. Layout is exact: ui.html uses no viewport units
-# and no media queries, so a 260px containing block lays out identically to a
-# 260px window (asserted below). Colour is INDICATIVE only — Figma injects the
+# What it can and cannot judge. Layout is exact: the probe is rendered in an
+# iframe of 260x380, the window's own size, so FigUI3's viewport units and media
+# queries resolve as they do in Figma (the viewport is asserted below). Colour is INDICATIVE only — Figma injects the
 # real --figma-color-* values at runtime and the ones here are the fallbacks
 # already recorded in this repo's other plugins. Use --keep and look at the two
 # PNGs for anything about contrast; trust the numbers for anything about size.
@@ -51,13 +53,6 @@ echo "  browser: $CHROME"
 work=$(mktemp -d)
 [ $keep -eq 0 ] && trap 'rm -rf "$work"' EXIT
 
-grep -qE '@media|[0-9]v[wh]\b' "$plugin/ui.html" && {
-  echo "FAIL — ui.html now uses a media query or viewport units, so a fixed-width"
-  echo "       containing block no longer stands in for a real window. Re-do this"
-  echo "       check with an iframe sized 260x420."
-  exit 1
-}
-
 python3 - "$work" "$plugin/ui.html" <<'PY'
 import sys
 work, uipath = sys.argv[1], sys.argv[2]
@@ -87,23 +82,41 @@ setTimeout(function () {
 }, 0);
 </script>"""
 
-PROBE = """<style>html{width:260px}</style>
-<script>
+PROBE = """<script>
 setTimeout(function () {
   function w(sel){var e=document.querySelector(sel);return e?Math.round(e.getBoundingClientRect().width):-1;}
   var over=[];
   Array.prototype.forEach.call(document.querySelectorAll('*'),function(e){
     var r=e.getBoundingClientRect();
     if(r.right>260.5||r.left<-0.5)over.push(e.tagName+'.'+e.className+'@'+Math.round(r.right));});
-  document.title=['w='+document.body.scrollWidth,'h='+document.body.scrollHeight,
-    'delimiter='+w('#delimiter'),'gapY='+w('#gapY'),'gapX='+w('#gapX'),
-    'run='+w('#run'),'box='+w('.checkbox .box'),
+  function px(e,p){return parseFloat(getComputedStyle(e)[p])||0;}
+  // what the window needs: the preview, the settings at their natural height, the footer
+  var pb=document.querySelector('.panel-body'),last=pb.lastElementChild;
+  var need=document.getElementById('preview').offsetHeight+
+    Math.round(last.getBoundingClientRect().bottom-pb.getBoundingClientRect().top+pb.scrollTop+px(pb,'paddingBottom'))+
+    document.querySelector('fig-footer').offsetHeight;
+  var clipped=[];
+  Array.prototype.forEach.call(document.querySelectorAll('fig-segment,fig-button,fig-field>label,fig-checkbox'),function(e){
+    if(e.scrollWidth>e.clientWidth+0.5)clipped.push(e.tagName+'#'+(e.id||e.textContent.trim()));});
+  var box=document.querySelector('#grouped input');
+  var report=['vw='+innerWidth,'vh='+innerHeight,'w='+document.body.scrollWidth,'h='+need,
+    'delimiter='+w('#delimiter'),'flow='+w('#flow'),'gapY='+w('#gapY'),'gapX='+w('#gapX'),
+    'run='+w('#run'),'box='+(box?Math.round(box.getBoundingClientRect().width):-1),
     'segH='+w('#dir-horizontal'),'segV='+w('#dir-vertical'),
+    'clipped='+(clipped.length?clipped.join('|').replace(/\s+/g,'-'):'none'),
     'previewClass='+document.querySelector('.preview').className.replace(/\s+/g,'-'),
     'group='+w('.preview .col'),
     'over='+(over.length?over.join('|'):'none')].join(' ');
+  // window.parent is stubbed by DRIVE; top is not replaceable, and reaches the host page across file:// origins
+  window.top.postMessage(report,'*');
 }, 60);
 </script>"""
+
+# Headless Chrome will not open a window narrower than 500px, so the probe runs in
+# an iframe of the window's own 260x380 and posts what it measured to this page.
+HOST = """<html><head><title>pending</title></head><body style="margin:0">
+<script>onmessage=function(e){document.title=e.data;};</script>
+<iframe src="%s" style="width:260px;height:380px;border:0;display:block"></iframe></body></html>"""
 
 for theme, tokens in THEMES.items():
     body = ui.replace('</style>', tokens + '</style>', 1).replace('</body>', DRIVE + '</body>', 1)
@@ -115,16 +128,18 @@ for theme, tokens in THEMES.items():
         "count: 6, skipped: 0", "count: 6, skipped: 0, direction: 'vertical'")
     open(work + '/probe-' + theme + '-v.html', 'w', encoding='utf-8').write(
         vertical.replace('<head>', '<head><title>pending</title>', 1).replace('</body>', PROBE + '</body>', 1))
+    for v in ('', '-v'):
+        open(work + '/host-' + theme + v + '.html', 'w', encoding='utf-8').write(HOST % ('probe-' + theme + v + '.html'))
     open(work + '/frame-' + theme + '.html', 'w', encoding='utf-8').write(
         '<body style="margin:0;background:#777;padding:12px"><iframe src="view-' + theme +
-        '.html" style="width:260px;height:420px;border:0;display:block"></iframe></body>')
+        '.html" style="width:260px;height:380px;border:0;display:block"></iframe></body>')
 PY
 
 fails=0
 say_fail() { echo "  FAIL  $*"; fails=$((fails + 1)); }
 
 for theme in light dark light-v dark-v; do
-  case "$theme" in *-v) probe="probe-${theme%-v}-v.html";; *) probe="probe-$theme.html";; esac
+  probe="host-$theme.html"
   title=$("$CHROME" --headless --disable-gpu --virtual-time-budget=4000 \
           --dump-dom "file://$work/$probe" 2>/dev/null \
           | grep -o '<title>[^<]*</title>' | sed 's/<[^>]*>//g')
@@ -133,16 +148,19 @@ for theme in light dark light-v dark-v; do
 
   get() { echo "$title" | tr ' ' '\n' | grep "^$1=" | cut -d= -f2; }
   [ "$(get w)" -le 260 ] || say_fail "$theme · horizontal overflow at 260px: $(get w)"
-  [ "$(get h)" -le 420 ] || say_fail "$theme · taller than the 420px window: $(get h)"
-  [ $((420 - $(get h))) -le 8 ] || say_fail "$theme · $((420 - $(get h)))px of dead space — showUI's height has drifted from the content"
-  # 56 is what .input-compact asks for. A full-width answer means ui-base won.
-  [ "$(get delimiter)" = "56" ] || say_fail "$theme · the separator input is $(get delimiter)px, not 56 — ui-base's input[type=text] is winning on source order"
+  [ "$(get vw)x$(get vh)" = "260x380" ] || say_fail "$theme · the probe's viewport is $(get vw)x$(get vh), not the window's 260x380"
+  [ "$(get h)" -le 380 ] || say_fail "$theme · taller than the 380px window: $(get h)"
+  [ $((380 - $(get h))) -le 8 ] || say_fail "$theme · $((380 - $(get h)))px of dead space — showUI's height has drifted from the content"
+  # Every field's control fills the field's input column: a different width means a rule reached a fig-* element.
+  [ "$(get delimiter)" = "$(get gapX)" ] || say_fail "$theme · the separator input is $(get delimiter)px, the gap inputs $(get gapX) — something restyled a field"
   [ "$(get gapY)" = "$(get gapX)" ] || say_fail "$theme · the two gap inputs differ: $(get gapY) vs $(get gapX)"
-  [ "$(get box)" = "12" ] || say_fail "$theme · the checkbox box is $(get box)px, not 12"
-  # ui-base styles bare `button`; the two halves matching proves neither is
-  # being sized by it and that both labels fit at 260px.
+  # 16 is FigUI3's checkbox.
+  [ "$(get box)" = "16" ] || say_fail "$theme · the checkbox box is $(get box)px, not FigUI3's 16"
+  # The two halves matching, and nothing clipped, proves both labels and their
+  # icons fit at 260px.
   [ "$(get segH)" = "$(get segV)" ] || say_fail "$theme · the segmented halves differ: $(get segH) vs $(get segV)"
   [ "$(get segH)" -ge 100 ] || say_fail "$theme · the segmented control collapsed to $(get segH)px"
+  [ "$(get clipped)" = "none" ] || say_fail "$theme · text clipped inside: $(get clipped)"
   [ "$(get over)" = "none" ] || say_fail "$theme · past the right edge: $(get over)"
   case "$theme" in
     *-v) [ "$(get previewClass)" = "preview-vertical" ] || say_fail "$theme · the preview did not transpose: $(get previewClass)"
@@ -155,12 +173,12 @@ done
 if [ $keep -eq 1 ]; then
   for theme in light dark; do
     "$CHROME" --headless --disable-gpu --hide-scrollbars --virtual-time-budget=2500 \
-      --screenshot="$work/$theme.png" --window-size=284,444 "file://$work/frame-$theme.html" >/dev/null 2>&1
+      --screenshot="$work/$theme.png" --window-size=284,404 "file://$work/frame-$theme.html" >/dev/null 2>&1
   done
   echo "  screenshots: $work/light.png  $work/dark.png"
   echo "  (colour here is indicative — Figma injects the real token values)"
 fi
 
 echo
-[ $fails -eq 0 ] && echo "pass — layout holds at 260x420 in both themes" || echo "FAIL — $fails"
+[ $fails -eq 0 ] && echo "pass — layout holds at 260x380 in both themes" || echo "FAIL — $fails"
 exit $([ $fails -eq 0 ] && echo 0 || echo 1)

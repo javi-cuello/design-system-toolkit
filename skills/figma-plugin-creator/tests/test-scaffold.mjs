@@ -31,11 +31,16 @@ ok("version 0.1.0, @ts-check on line 2, the standard it was made against, the RE
   assert.ok(/Data this plugin stores/.test(out["README.md"]) && out["README.md"].includes("Nothing."));
   assert.ok(out["CHANGELOG.md"].includes("## [0.1.0] - 2026-10-30"));
 });
-ok("the ui-base block is inlined as the shared baseline holds it", () => {
-  const base = fs.readFileSync(fileURLToPath(new URL("../assets/ui-base.css", import.meta.url)), "utf8").trim();
-  assert.ok(out["ui.html"].includes(base.split("\n")[0]) && out["ui.html"].includes("CAUTION"));
+ok("the ui-base and FigUI3 blocks are inlined as the shared copies hold them, in a FigUI3-built window", () => {
+  const read = (f) => fs.readFileSync(fileURLToPath(new URL(`../assets/${f}`, import.meta.url)), "utf8").trim();
+  assert.ok(out["ui.html"].includes(read("ui-base.css")) && out["ui.html"].includes(read("figui3.js")));
+  assert.match(out["ui.html"], /<script type="module">\s*\/\* figui3-js generated start/);
+  assert.match(out["ui.html"], /<fig-footer>[\s\S]*<fig-button id="run">/);
 });
-ok("a name is text in the window, never markup", () => assert.ok(out["ui.html"].includes("Layer &quot;Counter&quot; &lt;b&gt;") && !out["ui.html"].includes("<b>")));
+ok("an answer is text in the window, never markup", () => {
+  const ui = files({ ...answers, purpose: 'Counts "layers" <b>' })["ui.html"].replace(/\/\* figui3-js generated start[\s\S]*?generated end \*\//, "");
+  assert.ok(ui.includes("Counts &quot;layers&quot; &lt;b&gt;") && !ui.includes("<b>"));
+});
 ok("an answer of two lines, or a folder that is no id, is refused", () => {
   assert.throws(() => files({ ...answers, purpose: "Counts.\nfigma.closePlugin()" }), /one line/);
   assert.throws(() => files({ ...answers, slug: "Layer Counter" }), /lower case/);

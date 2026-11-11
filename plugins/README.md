@@ -1,6 +1,6 @@
 # Plugins
 
-Figma plugins the toolkit uses inside a design file: taking the snapshot every other tool reads, importing icons, switching themes, tidying layers and showing how components depend on each other. Each is plain JavaScript with no build step, and looks native because its UI uses Figma's own colour tokens.
+Figma plugins the toolkit uses inside a design file: taking the snapshot every other tool reads, importing icons, switching themes, tidying layers and showing how components depend on each other. Each is plain JavaScript with no build step, and looks native because its UI is built from FigUI3, the library behind Figma's PropsKit, on Figma's own colour tokens.
 
 ## Install one
 
@@ -18,7 +18,7 @@ In the Figma desktop app: **Plugins → Development → Import plugin from manif
 | [component-graph](component-graph/README.md) | Shows what a component is built from and what uses it. |
 | [component-guidelines](component-guidelines/README.md) | Shows a selected instance's Usage and Don't guidelines from its description. |
 
-[`_shared/ui-base.css`](_shared/ui-base.css) is the base stylesheet every plugin's UI copies inline, since a plugin cannot load files at run time; [`_shared/README.md`](_shared/README.md) says how it is kept in step.
+Every plugin's window is built from FigUI3 (the PropsKit look), vendored in [`_shared/figui3`](_shared/figui3) with the thin frame [`_shared/ui-base.css`](_shared/ui-base.css); each UI copies both inline, since a plugin cannot load files at run time; [`_shared/README.md`](_shared/README.md) says how it is kept in step.
 
 ## Writing or changing a plugin
 

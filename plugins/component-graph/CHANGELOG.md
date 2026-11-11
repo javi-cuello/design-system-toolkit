@@ -1,5 +1,9 @@
 # Changelog — component-graph
 
+## [3.8.0] - 2026-11-11
+### Changed
+- **The window is built from FigUI3 (the PropsKit look):** Local and External are a `fig-segmented-control` (arrow keys move between them), the search is a `fig-input-text`, "Show unpublished" a `fig-switch`, and the library Check, Refresh, Add to canvas (now the primary action, last) and the strip's Refresh are `fig-button`s; the sidebar toggle, Back, Forward and the details panel's close are ghost icon `fig-button`s with drawn icons instead of text glyphs, the loading spinner is a `fig-spinner`, and Read more is the shell's `.text-btn`. The plugin's own CSS that drew those controls (segments, switch, search, toolbar and strip buttons, close, spinner, the page-wide focus rule) is gone; what stays styles its own content: the sidebar's rows, the graph and the details panel. `tests/test-ui-keyboard.mjs` passes unchanged.
+
 ## [3.7.2] - 2026-10-31
 ### Fixed
 - **Focus shows as a ring.** The shared baseline (ui-base v3) gives a focused input or select a 2px ring under the keyboard; a border colour alone was the only sign (WCAG 2.4.7, 1.4.11).
