@@ -1,5 +1,7 @@
 # Eval cases — figma-doc-generator (v1.24.0)
 
+**Walked: 2026-11-11 for 1.24.1** — D49 executed on a real library: coverage counted from a repo's `paths.tokens` file (3/145 described, 46 groups), one template per element drafted, a sample covering every template approved by the maintainer, `describe-write.js` wrote 142 and read each back (0 kept, missing or mismatched), the yes recorded as a §6 decision. Step 5's re-count waits on the next snapshot.
+
 **Walked: 2026-11-11 for 1.24.0** — D49's write executed against a fake file: `node tests/test-describe-write.mjs` 7/7 (written, kept, overwritten on the word, missing, another collection untouched, a write that did not land, a wrong file); the templates, the sample and the yes are traced to steps 2–3, not yet run on a real library (it waits on the maintainer's sample approval).
 
 **Walked: 2026-11-11 for 1.23.0** — D49 added and executed: `node tests/test-describe-coverage.mjs` 4/4; run on a real project's snapshot (151 semantic variables, none described, 48 groups). The write half not met live in this version.
@@ -318,7 +320,7 @@ Fixture: a 12px text style with a 16px line height and a -2% letter spacing; the
 Assert: the page shows `1.3333` and `-0.02em`, and the token build writes `1.3333`: one function, `perFontSize`, the copy of `tools/shared/text-units.js` this skill's `docgen.js`, the snapshot plugin and `dtcg.js` each hold character for character; the unitless row reads `1.3333`, never the `1.333` the page rounded to before. Assert (negative): `AUTO` is `Auto`, pixels with no font size stay pixels.
 Runs: node tools/shared/test-text-units.mjs; node tests/test-docgen.js; node tests/test-recipes.js
 
-## D49 · Semantic variables are described from the grammar, after a sample is approved — *executed* (the scripts) · *traced* (templates, sample, the yes)
+## D49 · Semantic variables are described from the grammar, after a sample is approved — *executed*
 Fixture: a snapshot whose `04. Semantic` collection has three colour variables (one described, one with a blank description) and a bare `Elevation`, beside a primitives collection.
 Assert: `describe-coverage.mjs --only semantic` keeps the semantic collection only, counts each variable once across modes, counts a blank description as none, and groups the undescribed by grammar position; the run drafts one template per element, shows a sample covering every template, writes after the yes, and re-counts.
 Negative: a primitive given a description; a sentence written per variable by hand; a write before the sample is approved; an existing description overwritten without the person's word.

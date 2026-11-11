@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.24.1 (2026-11-11): *Variable descriptions* step 1 reads the token snapshot where the project keeps it (`paths.tokens` in a repo), not only `snapshot/tokens.json`; found on the first real run. D49 executed end to end.
 - 1.24.0 (2026-11-11): *Variable descriptions* step 4 is `scripts/describe-write.js`: writes only empty or named descriptions and reads each back (clause G); D49's agent half marked traced. `tests/test-describe-write.mjs`.
 - 1.23.0 (2026-11-11): *Variable descriptions*: semantic variables described from the token grammar, a sample approved first; `scripts/describe-coverage.mjs` counts what is missing. D49.
 - 1.22.4 (2026-11-05): a `docgen.js` comment no longer names the retired figma-token-export skill; no behaviour changed.
