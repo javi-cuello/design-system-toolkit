@@ -207,7 +207,7 @@ if (isMain && process.argv[2] === '--live') {
   // a failed read answers ok:false, with or without its reason
   if (!r || r.ok === false || !Array.isArray(r.noContract)) { console.error(`${label}: the service could not read the file${r && r.error ? `: ${r.error}` : ' and gave no reason'}`); process.exit(1); }
   if (r.noContract.length) console.error(`no contract could be derived for ${r.noContract.join('; ')}`);
-  if (!Object.keys(r.rows).length) { console.error(`no components on ${pages.join(', ')} in the open file`); process.exit(1); }
+  if (!Object.keys(r.rows).length) { console.error(`no components on ${pages.join(', ')} in the open file (a page named Scratch is never read: snapshot-standard rule 27)`); process.exit(1); }
   console.log(`PT.rows(${JSON.stringify(r.rows)});`);
 } else if (isMain) {
   const [dir, ...names] = process.argv.slice(2);
