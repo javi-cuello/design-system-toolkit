@@ -74,7 +74,10 @@ nobody maintains a second status.
 - **Stories:** matched to components by folder (a story file beside a spec is
   that component's). Build Storybook first; the `storybook` path's `hide`
   names stories that are machinery, and `themeGlobal` the global that
-  switches light and dark.
+  switches light and dark. The preview says when the Storybook was built, and "code
+  changed since" when the project's story-build inputs (parity's
+  `host.build.inputs`) moved after it; where `themeGlobal` is set, a Site /
+  Light / Dark control holds the story's theme apart from the site's.
 - **Figma links:** the key from the project's routing block, per component
   file where a project spans several.
 - **Parity (the tracker's second page):** a library's component pages against
