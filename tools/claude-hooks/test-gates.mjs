@@ -166,6 +166,14 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   assert.match(bareGaps, /a bin\/check run in /, 'the toolkit, which has one, still owes its run');
   assert.ok(!bareGaps.includes(`a bin/check run in ${other}`), 'a repo with no bin/check owes no run');
   bare.clean();
+  // work only in a repo with no bin/check owes no check's closing line under Before either
+  const only = session([user('go'), { ...call('Edit', { file_path: path.join(other, 'doc.md'), old_string: 'a', new_string: Array(200).fill('b').join('\n') }), cwd: other }], { checked: false });
+  fs.writeFileSync(planPath(only.id), PLAN_TEXT.replace('## Before\ngreen\n', '## Before\n'));
+  const onlyNext = { name: 'Edit', input: { file_path: path.join(other, 'e.md'), old_string: 'a', new_string: 'b' } };
+  const onlyOut = String(planGate(only.id, only.file, [other], onlyNext, other));
+  // unfixed, this returned the plan's gaps naming the closing line; fixed, the plan is complete
+  assert.ok(!/closing line under Before/.test(onlyOut), 'no repo with a check, no closing line owed: ' + onlyOut);
+  only.clean();
   // a check run by its path, or after a `cd` joined by `;` or in `( )`, is that repo's
   for (const cmd of [`${other}/bin/check`, `cd ${other}; bin/check`, `(cd ${other}; bin/check)`]) {
     const p = session([dated(withId(call('Bash', { command: cmd }), 'q1')), dated(checkResult('q1', 'green')), user('go'), edit('a.mjs', 200)], { checked: false });
