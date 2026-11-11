@@ -150,7 +150,19 @@ export function checkPlugin(dir, opts = {}) {
 const FIG_SELECTOR = /(^|[\s>+~(,])(fig-[a-z-]+)(?=$|[.:#\[),])|(\.switch)(?![\w-])/i;
 // the rule's subject: its last compound, so `fig-footer .status` styles the plugin's own content, not the footer;
 // what sits inside :not() or :has() is a condition on the subject, not the subject
-const subject = (sel) => sel.trim().replace(/:(not|has)\((?:[^()]|\([^()]*\))*\)/gi, "").split(/\s*[>+~]\s*|\s+(?![^()]*\))/).pop();
+// what sits inside :not() or :has(), at any depth, is a condition on the subject: each is cut through its balanced ")"
+const stripConditions = (sel) => {
+  let out = "", i = 0;
+  while (i < sel.length) {
+    const m = /^:(not|has)\(/i.exec(sel.slice(i));
+    if (!m) { out += sel[i++]; continue; }
+    let depth = 0, k = i + m[0].length - 1;
+    for (; k < sel.length; k++) { if (sel[k] === "(") depth++; else if (sel[k] === ")" && --depth === 0) break; }
+    i = k + 1;
+  }
+  return out;
+};
+const subject = (sel) => stripConditions(sel.trim()).split(/\s*[>+~]\s*|\s+(?![^()]*\))/).pop();
 export function restyled(ui) {
   const css = [...ui.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join("\n").replace(BLOCK, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const out = new Set();
@@ -199,7 +211,8 @@ export function handBuilt(ui) {
 // third of the way across, so text inside it floats away from the label.
 export function misComposed(ui) {
   const blank = (m) => m.replace(/[^\n]/g, "");
-  const html = ui.replace(/<style[\s\S]*?<\/style>/gi, blank).replace(/<script[\s\S]*?<\/script>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank);
+  // raw-text and inert content (a textarea's, a title's, a template's) and bogus comments are not markup the window shows
+  const html = ui.replace(/<(style|script|textarea|title|template)\b[\s\S]*?<\/\1\s*>/gi, blank).replace(/<!--[\s\S]*?-->/g, blank).replace(/<![^>]*>/g, blank);
   const lineAt = (i) => html.slice(0, i).split("\n").length;
   const out = [];
   // Walk the tags as the parser does: a custom element's `/>` opens it; an end tag closes everything opened after
@@ -208,7 +221,7 @@ export function misComposed(ui) {
   const stack = []; // { name, at, attrs, text }
   const report = (el) => {
     if (!/^fig-(switch|checkbox)$/.test(el.name) || !stack.some((x) => x.name === "fig-field")) return;
-    const text = (el.attrs.label || "").trim() || el.text.replace(/&nbsp;|&#160;|&#xa0;/gi, " ").trim();
+    const text = (el.attrs.label || "").trim() || el.text.replace(/&(nbsp|NonBreakingSpace|ZeroWidthSpace|#160|#xa0|#8203|#x200b);/gi, " ").trim();
     if (text) out.push({ what: `text inside a ${el.name} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(el.at) });
   };
   // closing an element: what remains on the stack is its ancestors; a plain child's text counts for its parent
@@ -218,7 +231,7 @@ export function misComposed(ui) {
     const parent = stack[stack.length - 1];
     if (parent && !/^fig-(switch|checkbox)$/.test(el.name)) parent.text += el.text;
   };
-  for (const m of html.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>|([^<]+)/g)) {
+  for (const m of html.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>|([^<]+|<)/g)) {
     if (m[4] !== undefined) { const top = stack[stack.length - 1]; if (top) top.text += m[4]; continue; }
     const name = m[2].toLowerCase();
     if (m[1]) { // an end tag
@@ -232,7 +245,7 @@ export function misComposed(ui) {
       const icon = "icon" in attrs && attrs.icon.toLowerCase() !== "false"; // an icon button keeps its own size
       if (!icon && (attrs.size || "").toLowerCase() !== "large") out.push({ what: "a footer fig-button without size=\"large\"", fix: "a window's action is the large button", line: lineAt(m.index) });
     }
-    if (VOID.test(name) || (m[3].trim().endsWith("/") && !name.includes("-"))) continue;
+    if (VOID.test(name)) continue; // `/>` closes nothing outside SVG; an SVG child left open is closed by its parent's end tag
     stack.push({ name, at: m.index, attrs, text: "" });
   }
   while (stack.length) close(stack.pop()); // an element never closed ends with the document

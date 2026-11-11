@@ -213,7 +213,8 @@ try {
     assert.deepEqual(handBuilt(ui).map((c) => `${c.line}:${c.use}`), ['2:<fig-button> (variant="link" for a link-like action)', "5:<fig-checkbox> or <fig-switch>", "6:<fig-input-text>", "7:<fig-dropdown>", "8:<fig-tabs>"]);
   });
   ok("§5c: case, the rule's subject, exact attribute names, a visible file input and a textarea", () => {
-    assert.deepEqual(restyled("<style>FIG-BUTTON{x:1} fig-footer .st{x:1} fig-field label{x:1} .row:has(> fig-button:not([hidden])){x:1}</style>"), ["fig-button"]);
+    assert.deepEqual(restyled("<style>FIG-BUTTON{x:1} fig-footer .st{x:1} fig-field label{x:1} .row:has(> fig-button:not([hidden])){x:1} .a:has(:not(:is(.b)) > fig-button){x:1} .c:has(.d + fig-button){x:1}</style>"), ["fig-button"]);
+    assert.deepEqual(restyled("<style>.x :is(fig-tabs, .y){x:1}</style>"), ["fig-tabs"]);
     const got = handBuilt(['<input type=checkbox aria-hidden="true">', '<button data-class="text-btn">', '<input type=file>', '<input type=file hidden>', "<textarea></textarea>"].join("\n"));
     assert.deepEqual(got.map((c) => c.line), [1, 2, 3, 5]);
   });
@@ -226,8 +227,10 @@ try {
       '<fig-field><label>a</label><fig-checkbox label="Self-closed"/></fig-field>', '<fig-field><label>b</label><fig-switch>&nbsp;</fig-switch></fig-field>', '<fig-field><label>c</label><fig-switch/>Slash</fig-switch></fig-field>',
       '<fig-field><fig-field><label>d</label></fig-field><fig-switch>After inner</fig-switch></fig-field>', '<fig-field><fig-switch>Wraps<fig-checkbox></fig-checkbox></fig-switch></fig-field>',
       '<fig-field><fig-switch>Unclosed</fig-field>', '<fig-field><fig-checkbox>&#xA0;</fig-checkbox><fig-checkbox label="  "></fig-checkbox></fig-field>',
-      '<fig-footer><fig-button icon="FALSE">Big?</fig-button></fig-footer>', '</fig-switch>'].join("\n");
-    assert.deepEqual(misComposed(ui).map((c) => `${c.line}:${c.what}`), ['2:a footer fig-button without size="large"', "4:text inside a fig-switch in a field row", "8:text inside a fig-checkbox in a field row", "9:text inside a fig-switch in a field row", "12:text inside a fig-checkbox in a field row", "14:text inside a fig-switch in a field row", "15:text inside a fig-switch in a field row", "16:text inside a fig-switch in a field row", "17:text inside a fig-switch in a field row", '19:a footer fig-button without size="large"']);
+      '<fig-footer><fig-button icon="FALSE">Big?</fig-button></fig-footer>', '</fig-switch>',
+      '<fig-field><textarea><fig-switch>raw</fig-switch></textarea><fig-switch>&#8203;&NonBreakingSpace;<!x></fig-switch></fig-field>', '<fig-footer><template><fig-button>t</fig-button></template></fig-footer>',
+      '<fig-field><fig-switch> < </fig-switch></fig-field>'].join("\n");
+    assert.deepEqual(misComposed(ui).map((c) => `${c.line}:${c.what}`), ['2:a footer fig-button without size="large"', "4:text inside a fig-switch in a field row", "8:text inside a fig-checkbox in a field row", "9:text inside a fig-switch in a field row", "12:text inside a fig-checkbox in a field row", "14:text inside a fig-switch in a field row", "15:text inside a fig-switch in a field row", "16:text inside a fig-switch in a field row", "17:text inside a fig-switch in a field row", '19:a footer fig-button without size="large"', "23:text inside a fig-switch in a field row"]);
     const small = plant("small-action", (out) => { out["ui.html"] = out["ui.html"].replace('<fig-button id="run" size="large">', '<fig-button id="run">'); return out; });
     assert.ok(said(checkPlugin(small), /footer fig-button without size/).length);
   });
