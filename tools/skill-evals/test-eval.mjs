@@ -294,6 +294,7 @@ ok('a screen agent that wrote into the system, or did not exit cleanly, is never
     && figmaScore({ references: refs, frames: [ruled([])] }, { rulings: ['2026-11-11', '2026-11-12'] }).why === 'rulings not applied: 2026-11-11, 2026-11-12'
     && figmaScore({ references: refs, frames: [ruled(['2026-11-12 x'])] }, { rulings: ['2026-11-11', '2026-11-12'] }).parts.rulings === 0.5
     && figmaScore({ references: refs, frames: two }).parts.rulings === undefined
-    && figmaScore({ references: refs, frames: [ruled(['2026-11-11b sort'])] }, { rulings: ['2026-11-11'] }).parts.rulings === 0);
+    && figmaScore({ references: refs, frames: [ruled(['2026-11-11b sort'])] }, { rulings: ['2026-11-11'] }).parts.rulings === 0
+    && figmaScore({ references: refs, frames: [ruled([{ date: '2026-11-11', applied: 'header has no more button' }])] }, { rulings: ['2026-11-11'] }).green);
 }
 console.log(`${n}/${n} passed`);

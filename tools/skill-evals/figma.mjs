@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { figmaScore } from './eval.mjs';
+import { figmaScore, rulingText } from './eval.mjs';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const [cmd, tasksPath, id, arg] = process.argv.slice(2);
@@ -60,7 +60,7 @@ if (cmd === 'prompt') {
   if (graded.error && !/^\d+ pages named /.test(graded.error)) fail(`not scored, the grader failed: ${graded.error}`);
   const known = (p) => { const f = p.split('#')[0]; return f.startsWith('knowledge/') && !f.split('/').includes('..') && fs.existsSync(path.join(TOOLKIT, f)) && fs.statSync(path.join(TOOLKIT, f)).isFile(); };
   const r = figmaScore(graded, task, known);
-  const applied = [...new Set(graded.frames.flatMap((f) => (f.receipt && Array.isArray(f.receipt.rulings) ? f.receipt.rulings : []).map(String)))];
+  const applied = [...new Set(graded.frames.flatMap((f) => (f.receipt && Array.isArray(f.receipt.rulings) ? f.receipt.rulings : []).map(rulingText)))];
   const line = { task: id, grade: 'figma', at: new Date().toISOString(), run: graded.run, agent: 'subagent', ...r, rulings: applied };
   fs.mkdirSync(path.dirname(resultsFile), { recursive: true });
   fs.appendFileSync(resultsFile, JSON.stringify(line) + '\n');

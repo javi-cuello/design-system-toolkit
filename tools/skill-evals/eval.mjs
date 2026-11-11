@@ -369,4 +369,6 @@ export function figmaScore(graded, task = {}, known = () => true) {
 
 // A product decision is named by its date, with a letter when a day has two (2026-11-11b): the first
 // word of a receipt's entry, and of the eval task's `rulings` (the context document's §6, the project's decision log).
-export const decisionId = (x) => (String(x).match(/^\d{4}-\d{2}-\d{2}[a-z]?(?![\w-])/) || [''])[0];
+// An entry is a string ("2026-11-11 header has no more button") or { date, applied }, the two shapes agents write.
+export const rulingText = (x) => (x && typeof x === 'object' ? [x.date, x.applied].filter(Boolean).join(' ') : String(x));
+export const decisionId = (x) => (rulingText(x).match(/^\d{4}-\d{2}-\d{2}[a-z]?(?![\w-])/) || [''])[0];
