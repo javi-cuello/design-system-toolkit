@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 2.16.0 (2026-11-11): a project's product file (`product.md`, `references/product-template.md`) is read first and takes product decisions; threads logged by area (`--log`), sorted every ten (`kinds`); decisions join the eval's `rulings`, unused ones offered to retire. T16.
 - 2.15.0 (2026-11-11): comments and replies post as the agent's own Figma account (`figma-feedback.mjs --on`, `--reply`), with no `From Claude:` line; the mark stays only under the maintainer's token. T14, T15.
 - 2.14.1 (2026-11-11): *Feedback on a prototype*: a frame fix covers every composed frame showing the same thing; a whole-frame pin is traced by its `offset`; `figma-feedback.mjs --reply`. T15.
 - 2.14.0 (2026-11-11): *A Figma prototype* reads rulings and open feedback first (step 0, `scripts/figma-feedback.mjs`) and routes each comment once (*Feedback on a prototype*). T15.

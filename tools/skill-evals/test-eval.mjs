@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary, figmaScore } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary, figmaScore, unusedRulings, RECENT } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -284,5 +284,24 @@ ok('a screen agent that wrote into the system, or did not exit cleanly, is never
     && ['hidden', 'empty', 'stale'].every((k) => figmaScore({ references: refs, frames: [fr([k], rc(refs[0]))] }).parts.clean === 0)
     && figmaScore({ references: refs, frames: [fr([], rc(refs[0], ['knowledge/ui/patterns/forms.md']))] }).parts.knowledge === 0
     && figmaScore({ references: refs, frames: [fr([], rc(refs[0], ['knowledge/README.md', 'skipped']))] }, {}, (p) => p.startsWith('knowledge/')).parts.knowledge === 0);
+  const ruled = (rulings) => fr([], { ...rc(refs[0]), rulings });
+  ok('figma: a ruling the task lists is applied when some frame\'s receipt names its date; a missed one says which',
+    figmaScore({ references: refs, frames: [ruled(['2026-11-11 header has no more button']), ruled([])] }, { rulings: ['2026-11-11'] }).green
+    && figmaScore({ references: refs, frames: [ruled([])] }, { rulings: ['2026-11-11', '2026-11-12'] }).why === 'rulings not applied: 2026-11-11, 2026-11-12'
+    && figmaScore({ references: refs, frames: [ruled(['2026-11-12 x'])] }, { rulings: ['2026-11-11', '2026-11-12'] }).parts.rulings === 0.5
+    && figmaScore({ references: refs, frames: two }).parts.rulings === undefined
+    && figmaScore({ references: refs, frames: [ruled(['2026-11-11b sort'])] }, { rulings: ['2026-11-11'] }).parts.rulings === 0);
+  const doc = ['# Product', '', '## Decisions', '', '| Date | Decision | Why | Decided by |', '|---|---|---|---|',
+    '| 2026-11-11 | Header has no more button | remove button | Maintainer |',
+    '| 2026-11-12 | Sort stays in the toolbar | x | Maintainer |',
+    '| 2026-11-13 | Tables sort in the headers; supersedes 2026-11-12 | x | Maintainer |',
+    '| 2026-11-13b | A badge on new rows | x | Maintainer |', '| 2026-11-14 | Drop the badge | Retires 2026-11-13b: nobody used it | Maintainer |', '', '## Open', '| 2026-11-14 | not a decision | x | y |'].join('\n');
+  const runs = (k, named) => Array.from({ length: k }, (_, i) => ({ rulings: i < named ? ['2026-11-11 header'] : [] }));
+  const u = unusedRulings(doc, runs(RECENT, 0));
+  ok('rulings: only the live rows of product.md\'s Decisions are listed; one no recent run named is a candidate to retire, never before enough runs',
+    u.map((r) => r.date).join() === '2026-11-11,2026-11-13' && u.every((r) => r.retire && r.runs === RECENT)
+    && unusedRulings(doc, runs(RECENT, 1))[0].retire === false && unusedRulings(doc, runs(RECENT, 1))[0].named === 1
+    && unusedRulings(doc, runs(RECENT - 1, 0)).every((r) => !r.retire)
+    && unusedRulings(doc, [...runs(1, 1), ...runs(RECENT, 0)])[0].retire === true);
 }
 console.log(`${n}/${n} passed`);

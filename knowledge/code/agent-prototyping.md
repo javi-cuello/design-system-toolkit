@@ -125,10 +125,31 @@ How a coding agent builds a prototype from the design system's real components i
 - A comment asks for "New employee" as the dialog title. It is fixed on the frame and nowhere else, unless it turns out to be the product's term everywhere, which is a ruling.
 
 **Check**
-- *Script:* frontend-build's `scripts/figma-feedback.mjs` lists the open threads, unresolved with a person's message last; the receipt names the rulings each frame applied.
+- *Script:* frontend-build's `scripts/figma-feedback.mjs` lists the open threads, unresolved with a person's message last, logs each handled one by area and counts them (`kinds`); the receipt names the rulings each frame applied, the Figma eval scores a run that drops one, and `figma.mjs rulings` names the rulings no recent run applied.
 - *Judgement:* Was each correction filed at the lowest level that holds it, and did any ruling contradict an older one left in place?
 
 **Sources:** vendor documentation for the stores; two peer-reviewed or preprint studies on agent memory; practitioners (Frost, Husain) and Anthropic's engineering guidance for routing and evals. None measures a design agent learning from design comments; the loop here is assembled from them, unproven as a whole.
+
+## Where a project's knowledge lives
+
+**What good looks like**
+- An agent designing a screen reads a short account of the product first: what it does, who uses it, its words and its flows, and the decisions already made about it. It is separate from the library's conventions, which it does not need, and from general design guidance, which is shared.
+- Each kind of knowledge has one home and one owner, and a correction moves only as far up as it holds: a frame, the product, the library, or every project.
+
+**How**
+- Vendors keep product context apart from rules and keep both short. Lovable's project knowledge lists what the application does, user personas, domain terminology and architecture decisions, up to 10,000 characters ([Lovable](https://docs.lovable.dev/features/knowledge)); Figma Make's guidelines open with the product's character and link out to detailed files ([Figma Help](https://help.figma.com/hc/articles/43602393097239)); Linear gives agents workspace and team guidance that can point at documents ([Linear](https://linear.app/docs/agents-in-linear)).
+- Size matters because the file is loaded every run. Claude Code's guidance is to target under 200 lines, since longer files reduce adherence ([Claude Code](https://code.claude.com/docs/en/memory)); Cursor's is rules under 500 lines, split when larger ([Cursor](https://cursor.com/docs/context/rules)); Anthropic's is the smallest set of high-signal tokens ([Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)). Chroma reports models growing less reliable as input lengthens ([Chroma](https://www.trychroma.com/research/context-rot); read from summaries only, unchecked).
+- A product's words are one vocabulary for users and builders, Evans' ubiquitous language ([Fowler](https://martinfowler.com/bliki/UbiquitousLanguage.html)): a comment that settles a word changes the glossary, not only the screen.
+- A decision is recorded with its context and consequences, and a reversed one is marked superseded, never deleted ([Nygard, 2011](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)).
+
+**Cases**
+- A project's context document grew to 763 lines about its library and said nothing about its users, domain or flows; a prototype run read all of it and still did not know what the product was. The product went to a file of its own, beside it.
+
+**Check**
+- *Script:* `figma.mjs rulings` reads the product file's *Decisions*, live ones only.
+- *Judgement:* Did the run read the product file first (or start one), is it under 200 lines, and does every decision in it name who made it?
+
+**Sources:** vendor documentation (Lovable, Figma, Linear, Claude Code, Cursor, Anthropic); Fowler and Nygard for vocabulary and decision records. No study measures whether product context improves a design agent's screens; the case rests on vendor practice and the general findings on context length.
 
 ## From prototype to pull request
 

@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.23.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.24.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -504,9 +504,9 @@ someone to notice drift:
 the first question; when either names a job twice, the sharing audit runs and
 reports what it found, unasked.
 
-### 12 · A project's truth lives in its context document
+### 12 · A project's truth lives in its context document and its product file
 
-**Everything project-specific has one home: `~/Projects/<label>/figma-design-system/design-system-context.md`.**
+**Everything project-specific has one home: `~/Projects/<label>/figma-design-system/design-system-context.md`,** and, for the product rather than its library, `product.md` beside it.
 A project is a repo beside the toolkit with that folder at its root (the label
 is the repo's folder name), so a new project is that folder and nothing else,
 and its files are versioned with the project, outside the toolkit.
@@ -516,7 +516,7 @@ needs to know something about a project reads it there, and a decision taken
 about a project is written back there in the same session. Beside it sit the
 machine-written files the same project owns: its `snapshot/` (the plugin's
 output, never hand-edited) and its `audit/` record (results, never settings).
-The document is what a person decides; the snapshot is what Figma said.
+The document is what a person decides; the snapshot is what Figma said. The product file is the one other document a person decides: what the product is, who uses it, its words, its flows and the decisions made about how it works or looks (frontend-build's `references/product-template.md`). A library convention or ruling stays in the context document; a product decision goes in the product file, so a prototype run reads the product without the library's history and an audit reads neither twice.
 
 The document outranks every shared default in the toolkit's standards. It does not
 outrank an explicit instruction in the session, and where it contradicts the
@@ -537,7 +537,7 @@ next tool cannot find it and re-derives it differently. This is the rule §D 6
 and §D 7 depend on: shared code can refuse to know a project's names only
 because there is somewhere those names are written down.
 
-*Evidence:* a scanner with one library's collection name compiled in raised 210
+*Evidence:* the product file, maintainer-decreed 2026-11-11: the one project's context document had reached 763 lines with no word on its users, domain or flows, and agent vendors keep product context short and apart from rules (`knowledge/code/agent-prototyping.md`, *Where a project's knowledge lives*). A scanner with one library's collection name compiled in raised 210
 false findings against another, and the fix was to read the name from the
 document; the routing block in the same document is what lets one router serve
 four projects; a library id absent from it made the router refuse a real

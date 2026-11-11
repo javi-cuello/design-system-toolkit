@@ -3,7 +3,7 @@
 // Run: node --test skills/frontend-build/tests/test-feedback.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openThreads } from '../scripts/figma-feedback.mjs';
+import { openThreads, kinds } from '../scripts/figma-feedback.mjs';
 
 const c = (id, message, at, more = {}) => ({ id, message, created_at: at, user: { handle: 'Javi' }, resolved_at: null, client_meta: { node_id: '74:62150', node_offset: { x: 1, y: 1 } }, ...more });
 
@@ -46,4 +46,14 @@ test('the agent\'s own account marks its messages without a prefix; another pers
   assert.equal(openThreads([root, done]).length, 1);
   const again = c('3', 'Keep it on the dialog', '2026-11-11T12:00:00Z', { parent_id: '1', client_meta: null });
   assert.equal(openThreads([root, done, again], 'agent-1').length, 1);
+});
+
+test('kinds counts the log by area and by level, largest first, with the largest area\'s comments', () => {
+  const l = (text, area, routed) => ({ text, area, routed });
+  const k = kinds([l('remove button', 'visual', 'frame'), l('New employee', 'content', 'frame'), l('drop the badge', 'visual', 'ruling')]);
+  assert.equal(k.total, 3);
+  assert.deepEqual(k.area[0], ['visual', 2]);
+  assert.deepEqual(k.routed[0], ['frame', 2]);
+  assert.deepEqual(k.comments, ['remove button', 'drop the badge']);
+  assert.equal(kinds([]).top, null);
 });

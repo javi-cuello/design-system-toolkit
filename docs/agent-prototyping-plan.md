@@ -25,6 +25,20 @@ This plan is written as outcomes: what a designer or developer sees when each pa
   - No markdown file is written per screen.
 - **Behaviour (states, data, interaction):** the code. Figma does not hold it.
 - **Prototypes:** never a source of truth. A code prototype is a branch or a story, and a Figma prototype is a scratch page.
+- **The product:** `product.md` beside the context document (§D 12): what the product is, who uses it, its words, its flows and its decisions. A person owns it; an agent adds a decision only from a person's comment, and drafts nothing it was not told.
+- **Learning from feedback (2026-11-11).** Each piece has one owner, and each correction lands at the lowest level that holds it:
+
+  | Piece | Holds | Written by | Read by |
+  |---|---|---|---|
+  | Comment on a frame | a person's feedback | the person | the next run, step 0 (`figma-feedback.mjs`) |
+  | Receipt on a frame | the reference, parts, invented items, pages read, decisions applied | the agent | the eval's grader |
+  | `product.md` *Decisions*, *Words* | how the product works, looks and is called | the agent, from a comment by someone who may decide | every prototype run, whole |
+  | Context document §6 | how the library is built and named | audits, the maintainer | every Figma skill |
+  | `tests/evals/feedback.jsonl` | each handled thread, its area and where it went | `figma-feedback.mjs --log` | `kinds`, every tenth thread |
+  | `tests/evals/figma-tasks.json` `rulings` | the decisions a run must apply | the agent, with each decision | the eval's score |
+  | `knowledge/`, a skill step | what holds for every project | the toolkit, on the same correction in a second project and the maintainer's yes | every project's runs |
+
+  The loop: a comment is fixed on the frame, or becomes a decision, a ruling or a toolkit change; the decision becomes an eval check; every ten threads the largest kind gets one fix that would have prevented most of them; a decision no recent run applied is offered to retire. Nothing goes to memory.
 - **Direction:** screens flow one way, Figma through the snapshot into code. Nothing turns a coded screen back into Figma. A code prototype is continued in Figma by rebuilding it from the same template (Outcome 4).
 
 ---

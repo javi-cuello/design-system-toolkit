@@ -8,26 +8,31 @@
 //   node tools/skill-evals/figma.mjs prompt <tasks.json> <task>              the agent's prompt; prints its run id first
 //   node tools/skill-evals/figma.mjs grade-config <tasks.json> <task> <run>  the CONFIG line for figma-grade.js
 //   node tools/skill-evals/figma.mjs score <tasks.json> <task> <graded.json> score it, append the line
+//   node tools/skill-evals/figma.mjs rulings <tasks.json> <task>             the product decisions no recent run applied
 //
 // tasks.json, in the project repo: { "results": "results.jsonl",
-//   "tasks": [{ "id", "grade": "figma", "file", "template", "prompt", "frames"?, "flow"?, "context"? }] },
+//   "tasks": [{ "id", "grade": "figma", "file", "template", "prompt", "frames"?, "flow"?, "context"?, "product"?, "rulings"? }] },
+// rulings: the dates of the product decisions (product.md, *Decisions*) the task's frames must apply;
+// product defaults to ../../product.md, beside the context document.
 // paths relative to the tasks file's folder; context defaults to
 // ../../design-system-context.md (tasks in <project>/tests/evals/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { figmaScore } from './eval.mjs';
+import { figmaScore, unusedRulings } from './eval.mjs';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const [cmd, tasksPath, id, arg] = process.argv.slice(2);
 const fail = (m) => { console.error(m); process.exit(2); };
-if (!cmd || !tasksPath || !id) fail('usage: figma.mjs prompt|grade-config|score <tasks.json> <task> [graded.json]');
+if (!cmd || !tasksPath || !id) fail('usage: figma.mjs prompt|grade-config|score|rulings <tasks.json> <task> [graded.json]');
 const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
 const task = (tasks.tasks || []).find((t) => t.id === id);
 if (!task) fail(`no task ${id} in ${tasksPath}`);
 if (!/^[a-z0-9-]+$/.test(task.id) || task.grade !== 'figma' || !/^\d+:\d+$/.test(task.template)) fail(`task ${id}: id is lower-case words and hyphens, grade is figma, template a node id`);
 for (const k of ['file', 'template', 'prompt']) if (!task[k]) fail(`task ${id} has no ${k}`);
+if (task.rulings && !(Array.isArray(task.rulings) && task.rulings.every((d) => /^\d{4}-\d{2}-\d{2}[a-z]?$/.test(d)))) fail(`task ${id}: rulings is a list of decision dates (2026-11-11, or 2026-11-11b for a day's second)`);
+const resultsFile = path.resolve(path.dirname(tasksPath), tasks.results || 'results.jsonl');
 const page = `Eval — ${task.id}`;
 
 if (cmd === 'prompt') {
@@ -57,9 +62,14 @@ if (cmd === 'prompt') {
   if (graded.error && !/^\d+ pages named /.test(graded.error)) fail(`not scored, the grader failed: ${graded.error}`);
   const known = (p) => { const f = p.split('#')[0]; return f.startsWith('knowledge/') && !f.split('/').includes('..') && fs.existsSync(path.join(TOOLKIT, f)) && fs.statSync(path.join(TOOLKIT, f)).isFile(); };
   const r = figmaScore(graded, task, known);
-  const line = { task: id, grade: 'figma', at: new Date().toISOString(), run: graded.run, agent: 'subagent', ...r };
-  const file = path.resolve(path.dirname(tasksPath), tasks.results || 'results.jsonl');
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.appendFileSync(file, JSON.stringify(line) + '\n');
+  const applied = [...new Set(graded.frames.flatMap((f) => (f.receipt && Array.isArray(f.receipt.rulings) ? f.receipt.rulings : []).map(String)))];
+  const line = { task: id, grade: 'figma', at: new Date().toISOString(), run: graded.run, agent: 'subagent', ...r, rulings: applied };
+  fs.mkdirSync(path.dirname(resultsFile), { recursive: true });
+  fs.appendFileSync(resultsFile, JSON.stringify(line) + '\n');
   console.log(JSON.stringify(line));
+} else if (cmd === 'rulings') {
+  const doc = path.resolve(path.dirname(tasksPath), task.product || '../../product.md');
+  if (!fs.existsSync(doc)) fail(`no product file at ${doc} (frontend-build's references/product-template.md starts one)`);
+  const lines = fs.existsSync(resultsFile) ? fs.readFileSync(resultsFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((l) => l.task === id) : [];
+  console.log(JSON.stringify(unusedRulings(fs.readFileSync(doc, 'utf8'), lines), null, 2));
 } else fail(`unknown command ${cmd}`);
