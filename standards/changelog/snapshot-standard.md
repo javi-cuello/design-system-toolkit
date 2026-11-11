@@ -1,5 +1,6 @@
 # History — snapshot-standard
 
+- 2.25.0 (2026-11-11): rule 18: `design` is a project with no code; a code feature is not owed to it, nothing waits for its code, and moving it to `build` is the project's decision in §6. A session parked a code preview feature as waiting for a design-only project's stories.
 - 2.24.0 (2026-11-10): rule 25: a screen's instance layer carries its main component's notes, after its own, each with `from`.
 - 2.23.0 (2026-11-01): rule 17: styles two files name alike keep the other's copy too; `shared` is keyed by kind first, `shared[kind][name][source]`. No store was written in 2.22.0's shape, so none is migrated.
 - 2.22.0 (2026-11-01): rule 17: a collection two files name alike keeps every other source's copy under `shared[name][source]`; a name the last writer drops, or a writer that moved, shows the other's kept copy instead of going.

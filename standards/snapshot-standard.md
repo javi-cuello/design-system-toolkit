@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.24.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.25.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -296,7 +296,10 @@ tokens file's key. *Checked:* `tools/snapshot/test-router.mjs` "DESIGN-ONLY: a p
 { "name": "Display name", "phase": "design" }
 ```
 in the context document; `phase` is `design`, `build` or `maintenance`, and
-every output reads it through `contract.project()` / `layout()`. An optional
+every output reads it through `contract.project()` / `layout()`. `design` is a
+project with no code: a feature that reads code is not owed to it, and nothing
+is listed as waiting for its code; moving it to `build` is the project's
+decision, recorded in §6. An optional
 `markers` object is the page-marker legend in ladder order, where a project's
 markers say more than figma-standard rule 11's two (`🚧` in progress, `❖` finished); a
 component's status is read from its page name through it (`contract.status()`),
