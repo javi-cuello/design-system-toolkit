@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.73.0] - 2026-11-11
+### Changed
+- A page whose name starts with "Scratch" (after any marker) is not read for components: it holds trials, not the library (snapshot-standard rule 27). A library snapshot had taken a scratch page's two templates as components.
+
 ## [0.72.1] - 2026-11-11
 ### Fixed
 - The pairing field is cleared only once something was typed in it: cleared on open, before FigUI3 had defined it, the field kept an empty value of its own and a pasted code read as empty.

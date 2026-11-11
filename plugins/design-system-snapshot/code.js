@@ -1,4 +1,4 @@
-// Design system snapshot — v0.72.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.73.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -671,7 +671,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.72.1';
+const VERSION = '0.73.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1021,6 +1021,9 @@ const componentName = (s) => {
 
 /** @param {PageNode} page */
 const isIconPage = (page) => /^\W*\s*Icons?$/i.test(page.name);
+/* A scratch page (a name starting "Scratch", after any marker) holds trials, never the library: its
+   components are not read (snapshot-standard rule 27). */
+const isScratchPage = (page) => /^\W*\s*Scratch\b/i.test(page.name);
 /* A graphic is an illustration, not a glyph: a raster or a drawing placed at a
    size, with no Size axis and no currentColor. It exports as a PNG because a
    graphic's fill is usually an image, and an SVG of an image is that image
@@ -1433,7 +1436,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
   const wanted = [];
   for (const p of figma.root.children) {
     if (section && section.test(p.name)) current = p.name;
-    if (isIconPage(p)) continue;
+    if (isIconPage(p) || isScratchPage(p)) continue;
     if (exclude && current && exclude.has(current)) continue;
     if (pages && !pages.test(p.name)) continue;
     wanted.push(p);

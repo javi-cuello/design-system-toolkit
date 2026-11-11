@@ -101,6 +101,14 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
   ok("each component is filed under its own page", got.map((c) => c.page).join() === "Chip,Tag");
 }
+// 0.73.0: a scratch page's components are trials, not the library; a snapshot took two as components
+{
+  const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [] }; if (comp) { comp.parent = p; p.children.push(comp); } p.findAll = (f) => p.children.filter(f); return p; };
+  const mk = (name, id) => ({ type: "COMPONENT", name, id, width: 40, height: 20, children: [], componentPropertyDefinitions: {} });
+  figma.root = { children: [pageOf("Chip", mk("Chip", "3:1")), pageOf("Scratch — agent trial 2026-11-04", mk("Template", "3:2")), pageOf("🚧 scratch", mk("Try", "3:3")), pageOf("Scratchpad notes", mk("Note", "3:4"))] };
+  const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
+  ok("a page named Scratch is not read for components, after a marker or none; a longer word is", got.map((c) => c.page).join() === "Chip,Scratchpad notes");
+}
 // 0.69.0: a slot's preferred values are keys, which name nothing to a reader that did not store the component;
 // this file's own are named from the file, importing nothing; another library's by import, a variant by its set;
 // one that cannot be named is null, and the names stay in the order of the keys

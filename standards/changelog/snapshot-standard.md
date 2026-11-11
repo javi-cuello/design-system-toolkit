@@ -1,5 +1,6 @@
 # History — snapshot-standard
 
+- 2.26.0 (2026-11-11): rule 27: a page named Scratch is not the library; the snapshot reads no component from it. A library snapshot took a scratch page's two templates as components.
 - 2.25.1 (2026-11-11): rule 18's incident moved into its *Evidence*; a *Reviewed:* marker for the `design` phase's no-code clause.
 - 2.25.0 (2026-11-11): rule 18: `design` is a project with no code; a code feature is not owed to it, nothing waits for its code, and moving it to `build` is the project's decision in §6. A session parked a code preview feature as waiting for a design-only project's stories.
 - 2.24.0 (2026-11-10): rule 25: a screen's instance layer carries its main component's notes, after its own, each with `from`.

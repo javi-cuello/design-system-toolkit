@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.25.1** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.26.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -513,6 +513,18 @@ by more than 17. With the fixes, a second pair of runs wrote the same files
 but for the images, that variable's line and the timestamps (one project,
 30 Oct 2026).
 *Checked:* `tools/snapshot/test-mcp.mjs` "the payload reads back whole, across frames, its characters as they were"; `tools/snapshot/test-mcp.mjs` "the file's name is Figma's own, since use_figma calls every file Document"; `plugins/design-system-snapshot/tests/test-walk.mjs` "pages load one by one where loading them all is refused"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a style's line is measured from one-line text already drawn in it, never the run's own"; `plugins/design-system-snapshot/tests/test-walk.mjs` "a description the cloud hands back escaped reads as typed"; `tools/snapshot/test-router.mjs` "an icon is stored with its attributes sorted, so the app and the cloud write the same file". `tools/snapshot/test-mcp.mjs` "with several, --file names the one read, never the first by default".
+
+**27 · A scratch page is not the library.**
+A page whose name starts with "Scratch" (after any marker, any case) holds
+trials, and the snapshot reads no component from it. A word that only begins
+the same way ("Scratchpad") is not one. Moving a trial into the library is
+moving it off that page.
+*Why:* a component is published in code, docs and parity the moment the
+snapshot stores it, so a trial taken as one reaches every reader at once.
+*Evidence:* a library's snapshot took the two templates on its
+"Scratch — agent trial" page as components, and they would have been
+committed beside the real ones (one project, 11 Nov 2026).
+*Checked:* `plugins/design-system-snapshot/tests/test-walk.mjs` "a page named Scratch is not read for components, after a marker or none; a longer word is".
 
 ## Adding a project
 
