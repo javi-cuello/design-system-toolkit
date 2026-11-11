@@ -277,6 +277,11 @@ export function excuses(waiver, { expected, actual, sameElement, numeric = false
  * such bounds and 16 'unset' rulings sat unused, never stale).
  */
 const exempt = (x, live) => x && (x.content || x.decision) && (live || (x.within === undefined && x.is === undefined && x.decision !== 'unset'));
+// Whether a row exercised the translation that judged it: it excused the row, or the row went past the
+// translation's bound and fails. A row that matched never needed it, so it does not keep the rule from being stale
+// (review 2026-11-11: any non-waived row counted, a match included, and the stale check could not fire).
+export const exercises = (row) => !!row.translated || row.kind === 'differs' || row.kind === 'present';
+
 export function stale(declared, used, live = false) {
   return Object.entries(declared || {})
     .filter(([key, w]) => !used.has(key) && !exempt(asWaiver(w), live))

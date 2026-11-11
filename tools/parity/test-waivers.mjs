@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // node tools/parity/test-waivers.mjs — from the toolkit root.
 import assert from 'node:assert/strict';
-import { translationsFor, translationRules, appWaivers, recordExcused, asWaiver, excuses, stale, staleAcross, checkWaiver, keyParts, looseBounds } from './waivers.mjs';
+import { translationsFor, translationRules, appWaivers, recordExcused, asWaiver, excuses, stale, staleAcross, checkWaiver, keyParts, looseBounds, exercises } from './waivers.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -163,4 +163,5 @@ ok('a reason that puts the fix in the toolkit is filed under the toolkit', (() =
     && !('Main.height' in translationsFor({ 'Main.height': { reason: 'bar', within: 1, except: 'desktop--h*' } }, docs, 'desktop--home'))
     && !('except' in translationsFor({ 'Main.height': { reason: 'bar', within: 1, except: 'mobile--*' } }, docs, 'desktop--home')['Main.height']));
 }
+ok('a translation is exercised by a row it excused or one past its bound, never by a match', exercises({ kind: 'waived', translated: true }) && exercises({ kind: 'differs' }) && exercises({ kind: 'present' }) && !exercises({ kind: 'match' }) && !exercises({ kind: 'waived' }));
 console.log(`${n}/${n} passed`);

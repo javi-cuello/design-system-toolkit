@@ -1,4 +1,6 @@
-# Eval cases — design-code-parity (v1.65.0)
+# Eval cases — design-code-parity (v1.70.1)
+
+**Walked: 2026-11-11 against v1.70.1** — T104 re-read for `exercises`: `node tools/parity/test-waivers.mjs` 31/31; `run.mjs` and `session.mjs` parse; no full run (no project change needed it).
 
 **Walked: 2026-11-01 against v1.65.0** — T99 added: `node tools/parity/test-propose.mjs` 47/47 (eight of them spawn `--write` over a fixture project); `merge` over that project's 54-entry screens map refused none and left it unchanged (the browser half in Chrome). Replayed on one project's two screens with their hand maps emptied: of 63 hand-mapped layers the proposal landed 40 on the same element, 16 on another (9 of them a repeated item whose selector names its first twin), 7 on none (slots, a background). No other case reads the proposer.
 
@@ -1167,5 +1169,5 @@ Runs: node tools/parity/test-gates.mjs — "a copy, runtime or children path the
 ## T104 · A conversion rule is a translation, stated once — *executed*
 Fixture: translations `*_h2.padding-bottom` (within 16) and `Main.height` scoped `on: 'desktop--*'`, and `Main.height` as a list bounded 152 on desktop and 434 on mobile, one entry scoped by `except`; a differ row excused by one, one that agrees, and an unresolved font excused by one; gate 6 over sound and broken shapes.
 Assert: the glob expands onto the render's layer.prop and is marked translated, `on` limits it to the targets it names and is dropped from the waiver, a list picks the entry whose `on` names the target and keeps it as `scope`, a non-string `on` names no target rather than throwing, a list of globs in `on` names each, and `except` removes the targets it names; two rules on one value keep the first and report the clash; the differ marks the excused row and the unresolved row translated and leaves an agreeing value a match; gate 6 passes a reasoned, bounded translation and `decision: 'unset'`, and names one with an owner, no reason, an open number, a non-string `on`, a bare layer or a `-clipped` key.
-Also: on the reference project the run's summary reads "N matched, T translated, W waived", and a full run names a translation no target uses and one bounded past the largest difference it excused.
+Also: on the reference project the run's summary reads "N matched, T translated, W waived (D of them as data, unbounded)"; a translation is used only where it excused a row (`exercises`), so one whose every row matched is named stale, and a full run names a translation no target uses and one bounded past the largest difference it excused.
 Runs: node tools/parity/test-waivers.mjs — "a translation expands like an app waiver"; node tools/parity/test-diff.mjs — "a translation excuses as a waiver does"; node tools/parity/test-gates.mjs — "a translation is a decision stated once"

@@ -34,7 +34,7 @@ import { loadProject, scopeTargets } from './project.mjs';
 import { adapt, plan as planFor, carriers } from './adapt.mjs';
 import { diff, BAD } from './diff.mjs';
 import { measure } from './probe.mjs';
-import { asWaiver, staleAcross, looseBounds, appWaivers, recordExcused, translationsFor, translationRules, stale } from './waivers.mjs';
+import { asWaiver, staleAcross, looseBounds, appWaivers, recordExcused, translationsFor, translationRules, stale, exercises } from './waivers.mjs';
 import { lessons, lessonsIndex, deviations, triage } from './lessons.mjs';
 import { forceState } from '../shared/cdp.mjs';
 import * as shots from './shots.mjs';
@@ -384,7 +384,7 @@ const T_JUDGE = performance.now();
 const report = {};
 const declarers = [];
 const contentDeclarers = [];
-let matched = 0, waived = 0, translated = 0, appMatched = 0, appWaived = 0;
+let matched = 0, waived = 0, translated = 0, asData = 0, appMatched = 0, appWaived = 0;
 // the project's accepted translations, one declarer across every target
 const TRANSLATIONS = P.translations || {};
 const translationsUsed = new Set();
@@ -424,7 +424,7 @@ for (const [t, list] of byTarget) {
       // the translation that judged this row, unless the target's own waiver on that key won
       const t = r.prop && merged[`${r.layer}.${r.prop}`] && merged[`${r.layer}.${r.prop}`].translated ? merged[`${r.layer}.${r.prop}`] : null;
       // a row past a translation's bound shows the difference it names, so the rule is not stale: the row fails instead
-      if (t && (r.translated || r.kind !== 'waived')) translationsUsed.add(t.rule); else note(r.waiver);
+      if (t && exercises(r)) translationsUsed.add(t.rule); else note(r.waiver);
       if (!r.translated || r.kind !== 'waived' || r.off === undefined) continue;
       if (!translatedOff.has(t.rule) || translatedOff.get(t.rule).off < r.off) translatedOff.set(t.rule, { off: r.off, within: t.within });
     }
@@ -452,6 +452,8 @@ for (const [t, list] of byTarget) {
     const ok = rows.filter((r) => r.kind === 'match').length;
     matched += ok; mine.matched += ok;
     waived += rows.filter((r) => r.kind === 'waived' && !r.translated).length;
+    // differences let through unbounded because a `#` layer holds data: counted apart, so a run says how much it did not judge
+    asData += rows.filter((r) => r.kind === 'waived' && r.data).length;
     translated += rows.filter((r) => r.kind === 'waived' && r.translated).length;
     if (bad.length) {
       fail(bad.length);
@@ -490,7 +492,7 @@ for (const [t, list] of byTarget) {
 
 /* ── what only a whole run can judge ───────────────────────────────────── */
 TIME.mark('judge', performance.now() - T_JUDGE);
-say(`\n${matched} assertions matched, ${translated} translated, ${waived} waived, ${failed} did not — ${jobs.length} renders of ${targets.length} targets, ${TIERS.join(' + ')}, in ${Math.round(TIME.phases.measure / 1000)}s`);
+say(`\n${matched} assertions matched, ${translated} translated, ${waived} waived (${asData} of them as data, unbounded), ${failed} did not — ${jobs.length} renders of ${targets.length} targets, ${TIERS.join(' + ')}, in ${Math.round(TIME.phases.measure / 1000)}s`);
 /* The same specs judged again on the running app beside their stories are
    counted apart, so the line above is one row per assertion per render: a
    join of every judged row (PARITY_ROWS) counts both, which is why one

@@ -65,7 +65,10 @@ export function inputsHash(repo, inputs, command = '', skip = []) {
 
 /* The story build, where the project says, reused while none of its inputs
    changed: the parity run and the docs service's watcher (watch.mjs
-   watchStories) both call this, so a project has one build and one stamp.
+   watchStories) both call this. The stamp lives in `out`, so the two share
+   one build only when they name the same folder: the run builds into the
+   project home's `storybook/`, the watcher into `paths.storybook.dir`; where
+   a repo sets that elsewhere, each keeps its own build.
    Built beside `out` and swapped in, so a site serving `out` never sees it
    half-written; a failed build leaves the last good one. */
 export function buildStories(repo, build, out, say = () => {}, label = path.basename(repo)) {
