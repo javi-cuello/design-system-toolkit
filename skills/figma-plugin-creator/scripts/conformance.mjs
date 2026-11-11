@@ -205,15 +205,16 @@ export function misComposed(ui) {
   // a tag's name ends at a space, `>` or `/`, so `fig-footer-x` is not a footer
   for (const f of html.matchAll(/<fig-footer(?=[\s>\/])[\s\S]*?<\/fig-footer>/gi)) for (const b of f[0].matchAll(/<fig-button(?=[\s>\/])(?:"[^"]*"|'[^']*'|[^'">])*>/gi)) {
     const a = attrsOf(b[0]);
-    if ("icon" in a && a.icon !== "false") continue; // an icon button keeps its own size
+    if ("icon" in a && a.icon.toLowerCase() !== "false") continue; // an icon button keeps its own size
     if ((a.size || "").toLowerCase() !== "large") out.push({ what: "a footer fig-button without size=\"large\"", fix: "a window's action is the large button", line: lineAt(f.index + b.index) });
   }
   // text beside the box: in FigUI3's `label` attribute, or between the tags (child elements' text included)
   for (const f of html.matchAll(/<fig-field(?=[\s>\/])[\s\S]*?<\/fig-field>/gi)) for (const c of f[0].matchAll(/<(fig-switch|fig-checkbox)(?=[\s>\/])((?:"[^"]*"|'[^']*'|[^'">])*)>/gi)) {
     const rest = f[0].slice(c.index + c[0].length);
-    const close = c[2].trim().endsWith("/") ? -1 : rest.search(new RegExp(`<\\/${c[1]}\\s*>|<fig-(switch|checkbox)(?=[\\s>\\/])`, "i"));
+    // HTML ignores `/>` on a custom element: it is an open tag like any other
+    const close = rest.search(new RegExp(`<\\/${c[1]}\\s*>|<fig-(switch|checkbox)(?=[\\s>\\/])`, "i"));
     const inner = close > 0 && /^<\//.test(rest.slice(close)) ? rest.slice(0, close) : "";
-    const text = (attrsOf("<x" + c[2]).label || "").trim() || inner.replace(/<[^>]*>/g, "").replace(/&nbsp;|&#160;/gi, " ").trim();
+    const text = (attrsOf("<x" + c[2]).label || "").trim() || inner.replace(/<[^>]*>/g, "").replace(/&nbsp;|&#160;|&#xa0;/gi, " ").trim();
     if (text) out.push({ what: `text inside a ${c[1].toLowerCase()} in a field row`, fix: "put it in the row's label and leave the control bare", line: lineAt(f.index + c.index) });
   }
   return out;
