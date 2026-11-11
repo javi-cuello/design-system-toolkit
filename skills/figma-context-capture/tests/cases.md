@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.13.0)
+# Eval cases — figma-context-capture (v2.14.0)
+
+**Walked: 2026-11-11 for 2.14.0** — the template's §6 only (Scope values, two optional columns); no case asserts §6's columns, so every case holds; `tools/snapshot/test-router.mjs` proves a seven-column log reads as before.
 
 **Walked: 2026-11-11 for 2.13.0** — C18 added, traced to pass M and the template's §3; C7 read against the fifth item (it still asks the four, and the fifth only with a screens file).
 

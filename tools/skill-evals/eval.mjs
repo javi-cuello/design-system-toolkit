@@ -365,26 +365,6 @@ export function figmaScore(graded, task = {}, known = () => true) {
   return { score, green: vals.every((v) => v === 1), why, frames: frames.length, parts };
 }
 
-// The product decisions a project made from prototype feedback (its product.md, *Decisions*: Date |
-// Decision | Why | Decided by), each with how many of the task's last RECENT scored runs named it in a
-// receipt. One that none of RECENT runs named is a candidate to retire, for a person to decide: an agent
-// copies stored experience that looks like its task, so a stale decision spreads (Xiong et al., 2025).
-// A decision a later one supersedes or retires is left out.
-export const RECENT = 5;
-// a decision is named by its date, with a letter when a day has two (2026-11-11b): the first word of a receipt's entry
+// A product decision is named by its date, with a letter when a day has two (2026-11-11b): the first
+// word of a receipt's entry, and of the eval task's `rulings` (the context document's §6, the project's decision log).
 export const decisionId = (x) => (String(x).match(/^\d{4}-\d{2}-\d{2}[a-z]?(?![\w-])/) || [''])[0];
-export function unusedRulings(productDoc, results) {
-  const at = productDoc.search(/^## Decisions\b/m);
-  const rest = at < 0 ? '' : productDoc.slice(at + 1);
-  const end = rest.search(/^## /m);
-  const rows = (end < 0 ? rest : rest.slice(0, end)).split('\n')
-    .filter((l) => /^\|\s*\d{4}-\d{2}-\d{2}[a-z]?\s*\|/.test(l))
-    .map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
-  const dead = new Set(rows.flatMap((r) => [...r.join(' ').matchAll(/(?:supersedes|retires) (\d{4}-\d{2}-\d{2}[a-z]?)\b/gi)].map((m) => m[1])));
-  const recent = results.slice(-RECENT);
-  // a row that retires another is a removal, not a decision to apply; one that supersedes is a decision
-  return rows.filter((r) => !dead.has(r[0]) && !/\bretires \d{4}-/i.test(r.join(' '))).map(([date, decision]) => {
-    const named = recent.filter((l) => (l.rulings || []).some((x) => decisionId(x) === date)).length;
-    return { date, decision, named, runs: recent.length, retire: recent.length >= RECENT && named === 0 };
-  });
-}

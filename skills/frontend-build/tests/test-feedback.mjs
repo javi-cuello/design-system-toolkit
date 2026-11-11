@@ -48,12 +48,12 @@ test('the agent\'s own account marks its messages without a prefix; another pers
   assert.equal(openThreads([root, done, again], 'agent-1').length, 1);
 });
 
-test('kinds counts the log by area and by level, largest first, with the largest area\'s comments', () => {
-  const l = (text, area, routed) => ({ text, area, routed });
-  const k = kinds([l('remove button', 'visual', 'frame'), l('New employee', 'content', 'frame'), l('drop the badge', 'visual', 'ruling')]);
+test('kinds counts the log by area and by level, largest first, and lists every note by area', () => {
+  const l = (text, area, routed, note) => ({ text, area, routed, note });
+  const k = kinds([l('remove button', 'visual', 'frame', 'a header action nobody asked for'), l('New employee', 'content', 'frame', 'a title in the library\'s words, not the product\'s'), l('drop the badge', 'visual', 'ruling')]);
   assert.equal(k.total, 3);
   assert.deepEqual(k.area[0], ['visual', 2]);
   assert.deepEqual(k.routed[0], ['frame', 2]);
-  assert.deepEqual(k.comments, ['remove button', 'drop the badge']);
-  assert.equal(kinds([]).top, null);
+  assert.deepEqual(k.notes.visual, ['a header action nobody asked for', 'drop the badge']);
+  assert.deepEqual(kinds([]).notes, {});
 });

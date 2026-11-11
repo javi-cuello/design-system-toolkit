@@ -282,6 +282,18 @@ test('a second table in the rulings section is not a table of rulings', () => {
     'and a new ruling would be appended under the rulings table, not under the other one');
 });
 
+test('the decision log may carry the two optional columns, and reads as before', () => {
+  const md = ['## 6 · Rulings log', '', '| Date | Scope | Ruling | Why | Decided by | Confirms or overrides | Checked by |', '|---|---|---|---|---|---|---|',
+    '| 2026-11-11 | Product | Screens say Absences | one word | Maintainer | | |',
+    '| 2026-11-12 | Pattern | Tables sort in the headers | x | Maintainer | overrides `knowledge/ui/patterns/tables.md` | eval add-employee |', ''].join('\n');
+  const r = contract.rulingsOf(md);
+  assert.deepEqual(r.map((x) => [x.date, x.scope, x.text, x.why]), [['2026-11-11', 'Product', 'Screens say Absences', 'one word'], ['2026-11-12', 'Pattern', 'Tables sort in the headers', 'x']]);
+  const old = md.replace('| 2026-11-11 | Product | Screens say Absences | one word | Maintainer | | |',
+    '| 2026-08-04 | Web | Five cells, as before | because | Maintainer |\n| 2026-11-11 | Product | ~~Screens say Absences~~ | retired 2026-11-12: gone | Maintainer | | |');
+  assert.deepEqual(contract.rulingsOf(old).map((x) => x.text), ['Five cells, as before', 'Tables sort in the headers'],
+    'a five-cell row under the wider header reads, and a struck one is skipped');
+});
+
 test('the server writes each payload into the right repo and runs that repo\'s steps', async () => {
   const { projectsDir, made } = two();
   await serving(projectsDir, async ({ post }) => {

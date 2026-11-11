@@ -8,24 +8,22 @@
 //   node tools/skill-evals/figma.mjs prompt <tasks.json> <task>              the agent's prompt; prints its run id first
 //   node tools/skill-evals/figma.mjs grade-config <tasks.json> <task> <run>  the CONFIG line for figma-grade.js
 //   node tools/skill-evals/figma.mjs score <tasks.json> <task> <graded.json> score it, append the line
-//   node tools/skill-evals/figma.mjs rulings <tasks.json> <task>             the product decisions no recent run applied
 //
 // tasks.json, in the project repo: { "results": "results.jsonl",
-//   "tasks": [{ "id", "grade": "figma", "file", "template", "prompt", "frames"?, "flow"?, "context"?, "product"?, "rulings"? }] },
-// rulings: the dates of the product decisions (product.md, *Decisions*) the task's frames must apply;
-// product defaults to ../../product.md, beside the context document.
+//   "tasks": [{ "id", "grade": "figma", "file", "template", "prompt", "frames"?, "flow"?, "context"?, "rulings"? }] },
+// rulings: the dates of the project's decisions (its context document's §6) the task's frames must apply.
 // paths relative to the tasks file's folder; context defaults to
 // ../../design-system-context.md (tasks in <project>/tests/evals/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { figmaScore, unusedRulings } from './eval.mjs';
+import { figmaScore } from './eval.mjs';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const [cmd, tasksPath, id, arg] = process.argv.slice(2);
 const fail = (m) => { console.error(m); process.exit(2); };
-if (!cmd || !tasksPath || !id) fail('usage: figma.mjs prompt|grade-config|score|rulings <tasks.json> <task> [graded.json]');
+if (!cmd || !tasksPath || !id) fail('usage: figma.mjs prompt|grade-config|score <tasks.json> <task> [graded.json]');
 const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
 const task = (tasks.tasks || []).find((t) => t.id === id);
 if (!task) fail(`no task ${id} in ${tasksPath}`);
@@ -67,9 +65,4 @@ if (cmd === 'prompt') {
   fs.mkdirSync(path.dirname(resultsFile), { recursive: true });
   fs.appendFileSync(resultsFile, JSON.stringify(line) + '\n');
   console.log(JSON.stringify(line));
-} else if (cmd === 'rulings') {
-  const doc = path.resolve(path.dirname(tasksPath), task.product || '../../product.md');
-  if (!fs.existsSync(doc)) fail(`no product file at ${doc} (frontend-build's references/product-template.md starts one)`);
-  const lines = fs.existsSync(resultsFile) ? fs.readFileSync(resultsFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((l) => l.task === id) : [];
-  console.log(JSON.stringify(unusedRulings(fs.readFileSync(doc, 'utf8'), lines), null, 2));
 } else fail(`unknown command ${cmd}`);

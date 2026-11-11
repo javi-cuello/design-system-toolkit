@@ -5,15 +5,16 @@
 //   node skills/frontend-build/scripts/figma-feedback.mjs <fileKey>
 //   node skills/frontend-build/scripts/figma-feedback.mjs <fileKey> --reply <commentId> <message>
 //   node skills/frontend-build/scripts/figma-feedback.mjs <fileKey> --on <nodeId> <message>
-//     a --reply that closes a thread also takes --log <feedback.jsonl> --area <area> --routed <level>
+//     a --reply that closes a thread also takes --log <feedback.jsonl> --area <area> --routed <level> --note <what went wrong>
 //   node skills/frontend-build/scripts/figma-feedback.mjs kinds <feedback.jsonl>
 //
 // The log, the project's tests/evals/feedback.jsonl, is one line per handled
-// thread: { at, file, comment, node, by, text, area, routed }, the area one of
-// design-standard's five and the level where it went. `kinds` counts it by
-// area and by level, largest first, with the largest area's comments: the
-// error analysis a run reports when a logged thread makes the count a
-// multiple of ten.
+// thread: { at, file, comment, node, by, text, area, routed, note }: the area
+// one of design-standard's five, for routing; the level where it went; and a
+// note in the run's own words of what went wrong, since the kinds of failure
+// emerge from reading the notes, never from fixed categories (Husain). `kinds`
+// prints the counts and every note by area, for the reading a run does when a
+// logged thread makes the count a multiple of ten.
 //
 // Prints JSON: [{ id, node, offset, by, at, text, thread: [{ by, at, text }] }], one
 // per open thread. A thread is open while it is unresolved and its last
@@ -45,9 +46,9 @@ export const EVERY = 10;
 
 export function kinds(lines) {
   const count = (k) => Object.entries(lines.reduce((m, l) => ({ ...m, [l[k]]: (m[l[k]] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]);
-  const area = count('area');
-  const top = area.length ? area[0][0] : null;
-  return { total: lines.length, area, routed: count('routed'), top, comments: lines.filter((l) => l.area === top).map((l) => l.text) };
+  const notes = {};
+  for (const l of lines) (notes[l.area] = notes[l.area] || []).push(l.note || l.text);
+  return { total: lines.length, area: count('area'), routed: count('routed'), notes };
 }
 
 export function openThreads(comments, agent = null) {
@@ -77,14 +78,14 @@ if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } ca
     console.log(JSON.stringify(kinds(readLog(argv[1])), null, 2));
     process.exit(0);
   }
-  const log = opt('--log'), area = opt('--area'), routed = opt('--routed');
+  const log = opt('--log'), area = opt('--area'), routed = opt('--routed'), note = opt('--note');
   const [key, flag, target, text, ...extra] = argv;
-  const usage = 'usage: figma-feedback.mjs <fileKey> [--reply <commentId> | --on <nodeId>] <message> [--log <feedback.jsonl> --area <area> --routed <level>]';
+  const usage = 'usage: figma-feedback.mjs <fileKey> [--reply <commentId> | --on <nodeId>] <message> [--log <feedback.jsonl> --area <area> --routed <level> --note <what went wrong>]';
   const post = flag === '--reply' ? /^\d+$/ : flag === '--on' ? /^I?\d+:\d+(;\d+:\d+)*$/ : null;
-  const logged = log !== null || area !== null || routed !== null;
+  const logged = log !== null || area !== null || routed !== null || note !== null;
   if (!/^[A-Za-z0-9]{10,}$/.test(key || '') || extra.length || (flag && (!post || !post.test(target || '') || !String(text || '').trim()))
-    || (logged && (flag !== '--reply' || !log || !AREAS.includes(area) || !LEVELS.includes(routed)))) {
-    console.error(usage + `; --log goes with --reply, area one of ${AREAS.join(', ')}, level one of ${LEVELS.join(', ')}`); process.exit(2);
+    || (logged && (flag !== '--reply' || !log || !AREAS.includes(area) || !LEVELS.includes(routed) || !String(note || '').trim()))) {
+    console.error(usage + `; --log goes with --reply and needs a --note, area one of ${AREAS.join(', ')}, level one of ${LEVELS.join(', ')}`); process.exit(2);
   }
   const { tokenFor } = createRequire(import.meta.url)('../../../tools/snapshot/version.cjs');
   const own = (() => { try { return readFileSync(`${homedir()}/.config/keys/figma-claude`, 'utf8').trim(); } catch { return ''; } })();
@@ -108,11 +109,11 @@ if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } ca
     const made = await call(`files/${key}/comments`, own || token, { method: 'POST', body: JSON.stringify(body) });
     console.log(`posted ${made.id}`);
     if (logged) {
-      const line = { at: new Date().toISOString(), file: key, comment: root.id, node: (root.client_meta && root.client_meta.node_id) || null, by: (root.user && root.user.handle) || null, text: root.message, area, routed };
+      const line = { at: new Date().toISOString(), file: key, comment: root.id, node: (root.client_meta && root.client_meta.node_id) || null, by: (root.user && root.user.handle) || null, text: root.message, area, routed, note };
       mkdirSync(dirname(log), { recursive: true });
       appendFileSync(log, JSON.stringify(line) + '\n');
       const n = readLog(log).length;
-      console.log(`logged ${n}` + (n % EVERY === 0 ? `: ${n} handled, time to sort them (figma-feedback.mjs kinds ${log})` : ''));
+      console.log(`logged ${n}` + (n % EVERY === 0 ? `: ${n} handled, time to read them (figma-feedback.mjs kinds ${log})` : ''));
     }
   } else {
     // the agent's id needs current_user:read on its key; without it, its unmarked replies read as open, never as handled

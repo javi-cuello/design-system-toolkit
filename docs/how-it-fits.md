@@ -39,14 +39,14 @@ Three things worth knowing about the shape:
 
 ## What a project knows, and how it learns
 
-**Each kind of knowledge has one home and one owner** (toolkit-standard §D 1, §D 12, §D 21). An agent prototyping a screen reads them in this order: the product, the library's rulings, the open comments, the stored screens, the knowledge base.
+**Each kind of knowledge has one home and one owner** (toolkit-standard §D 1, §D 12, §D 21). An agent prototyping a screen reads them in this order: the product, the project's decisions, the open comments, the stored screens, the knowledge base. Every piece is optional but the context document: a project may have no product file, no feedback log, no eval task, and a reader skips what is absent and says so.
 
 | Home | Holds | Owned by |
 |---|---|---|
 | `standards/` | rules, each proven by a run or decreed | the toolkit, by §C |
 | `knowledge/` | guidance with sources, for every project | the toolkit |
-| the project's `design-system-context.md` | the library: conventions, settings, rulings (§6), screen types | its audits and the maintainer |
-| the project's `product.md` | the product: what it is, who uses it, its words, its flows, its decisions | a person; an agent adds only what a person's comment decided |
+| the project's `design-system-context.md` | the library: conventions, settings, screen types; and §6, the project's one decision log (library, product, pattern, screen) | its audits and the maintainer |
+| the project's `product-context.md` | the product at suite level: what it is, who uses it, its words; no decisions | a person; an agent drafts it from evidence and writes after their yes, then changes a word a comment settles |
 | the stored screens | what each screen contains | the designer, through the snapshot |
 
 **How a correction travels:**
@@ -55,18 +55,18 @@ Three things worth knowing about the shape:
 |---|---|---|---|
 | Comment on a frame | a person's feedback | the person | the next run, step 0 (`figma-feedback.mjs`) |
 | Receipt on a frame | the reference, parts, invented items, pages read, decisions applied | the agent | the eval's grader |
-| `product.md` *Decisions*, *Words* | how the product works, looks and is called | the agent, from a comment by someone who may decide | every prototype run, whole |
-| Context document §6 | how the library is built and named | audits, the maintainer | every Figma skill |
-| `tests/evals/feedback.jsonl` | each handled thread, its area and where it went | `figma-feedback.mjs --log` | `kinds`, every tenth thread |
+| `product-context.md` *Words* | what the product is called, at suite level | the agent, from a comment by someone who may decide | every prototype run, whole |
+| Context document §6 | every decision, by Scope, with what it confirms or overrides and what checks it | audits, the maintainer, the agent from a comment by someone who may decide | every Figma skill, every prototype run |
+| `tests/evals/feedback.jsonl` | each handled thread, its area, where it went and a note of what went wrong | `figma-feedback.mjs --log` | a reading every tenth thread (`kinds`) |
 | `tests/evals/figma-tasks.json` `rulings` | the decisions a run must apply | the agent, with each decision | the eval's score |
 | `knowledge/`, a skill step | what holds for every project | the toolkit, on the same correction in a second project and the maintainer's yes | every project's runs |
 
-The loop: a comment is fixed on the frame, or becomes a decision, a ruling or a toolkit change; the decision becomes an eval check; every ten threads the largest kind gets one fix that would have prevented most of them; a decision no recent run applied is offered to retire. Nothing goes to memory.
+The loop: a comment is fixed on the frame, or becomes a decision, a ruling or a toolkit change; the decision becomes an eval check; every ten threads the notes are read and the largest kind that emerges gets one fix that would have prevented it; a decision that is contradicted, outdated or redundant is offered to retire. Nothing goes to memory.
 
 ## Words used here
 
 - **Snapshot**: what the snapshot plugin reads out of a Figma file (tokens, component specs, screens), stored as files. Every other output is built from it, never from Figma directly.
-- **Context document**: a project's `design-system-context.md`, the one place a decision about that project is written (its naming, its libraries, its audit settings, its rulings).
+- **Context document**: a project's `design-system-context.md`, the one place a decision about that project is written (its naming, its libraries, its audit settings, its decisions).
 - **Gate**: a check that fails a run, as opposed to one that reports.
 - **Parity**: how far a coded component is from its Figma design, measured in a browser.
 - **Desktop Bridge**: the Figma plugin that lets Claude and the audit service read and change an open Figma file.

@@ -25,7 +25,7 @@ This plan is written as outcomes: what a designer or developer sees when each pa
   - No markdown file is written per screen.
 - **Behaviour (states, data, interaction):** the code. Figma does not hold it.
 - **Prototypes:** never a source of truth. A code prototype is a branch or a story, and a Figma prototype is a scratch page.
-- **The product:** `product.md` beside the context document (§D 12): what the product is, who uses it, its words, its flows and its decisions. A person owns it; an agent adds a decision only from a person's comment, and drafts nothing it was not told.
+- **The product:** `product-context.md` beside the context document (§D 12): what the product is, who uses it and its words, at suite level. A person owns it; an agent drafts it from evidence and writes after their yes. Its decisions go to the context document's §6, the project's one decision log, Scope `Product`.
 - **Learning from feedback (2026-11-11):** each piece, its owner and its reader are in [how-it-fits.md](how-it-fits.md), *What a project knows, and how it learns*.
 - **Direction:** screens flow one way, Figma through the snapshot into code. Nothing turns a coded screen back into Figma. A code prototype is continued in Figma by rebuilding it from the same template (Outcome 4).
 
@@ -136,6 +136,7 @@ The derivation is built: `tools/snapshot/recipes.cjs` (README, *Screen recipes*)
 
 ## Open
 
+- **The product file has one reader so far.** Outcome 2 serves screen knowledge through the system MCP, so code agents and Figma agents read one source; `product-context.md` is read only by frontend-build's Figma runs, by path. A code agent in a project's playground does not see it. Serve it through the system MCP (in `overview`, or its own tool) once a second reader needs it, so it does not become a second door (checked against this plan 2026-11-11, at the maintainer's ask).
 - Code Connect needs a Figma plan with the right seats. It is only needed for the Figma MCP route, so check it for each project before building that.
 - A project whose code is a read-only clone prototypes in a separate repo on its published package. Outcome 3's gate applies there. Where the package's feed needs a token the toolkit does not hold, the package is built from the clone with its own build script and packed (`pnpm pack`), named by the clone's commit so the lockfile's checksum stays true, and kept out of git (13 MB a copy); set up for one project 2026-11-10, parked until its templates exist.
 - Figma Make kits with a package are parked until Vallaure's Part 3 (10 November) and a trial show that they import the package.
