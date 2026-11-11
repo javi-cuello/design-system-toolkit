@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.25.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.26.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -516,7 +516,7 @@ needs to know something about a project reads it there, and a decision taken
 about a project is written back there in the same session. Beside it sit the
 machine-written files the same project owns: its `snapshot/` (the plugin's
 output, never hand-edited) and its `audit/` record (results, never settings).
-The document is what a person decides; the snapshot is what Figma said. The product file is the one other document a person decides: what the product is, who uses it and its words, at the level a suite's products share (frontend-build's `references/product-context-template.md`). Decisions of every kind (library, product, pattern, screen) have one log, the context document's §6, each with its Scope and, where the log carries them, what it confirms or overrides and what checks it. A project may lack every piece but the context document; a reader skips what is absent and says so.
+The document is what a person decides; the snapshot is what Figma said. The product file is the one other document a person decides: what the product is, who uses it and its words, at the level a suite's products share (frontend-build's `references/product-context-template.md`). Decisions of every kind (library, product, pattern, screen) have one log, the context document's §6, each with its Scope and, where the log carries them, what it confirms or overrides and what checks it. How the project designs a topic (a pattern, a layout, the shell) is a guidance page, `guidance/<topic>.md` beside them, gathering the live §6 decisions on that topic, holding only what differs from the knowledge page it builds on, which it outranks; §6 wins where they disagree. A project may lack every piece but the context document; a reader skips what is absent and says so.
 
 The document outranks every shared default in the toolkit's standards. It does not
 outrank an explicit instruction in the session, and where it contradicts the

@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.26.0 (2026-11-11): §D 12: a project's guidance pages, `guidance/<topic>.md`, hold only what differs from the knowledge page they build on, and outrank it.
 - 2.25.0 (2026-11-11): §D 12: the context document's §6 is a project's one decision log (library, product, pattern, screen, by Scope); the product file, now `product-context.md`, holds no decisions; every piece but the context document is optional and a reader skips what is absent.
 - 2.24.0 (2026-11-11): §D 12: a project's `product.md` beside its context document holds the product and its decisions; library rulings stay in §6.
 - 2.23.0 (2026-11-01): §D 6: bin/check's "no test needs this machine's home"; a test naming `~/Projects` passed on the owner's Mac and turned CI red once pushed.

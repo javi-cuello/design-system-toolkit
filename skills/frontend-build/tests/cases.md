@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.18.0)
+# Eval cases — frontend-build (v2.19.0)
+
+**Walked: 2026-11-11 for 2.19.0** — T18 added, traced to *A Figma prototype* steps 0, 3, 5 and 6 and *Feedback on a prototype* steps 2 and 4; T16 read against the new offer (it holds: retiring is unchanged).
 
 **Walked: 2026-11-11 for 2.18.0** — T16 rewritten for notes, the reading and retiring by judgement, and decisions recorded in §6 with Scope `Product`; T15 read against step 0's product file and an absent piece skipped.
 
@@ -287,3 +289,9 @@ Fixture: a build from a brief that wants a tooltip anchored to its trigger, in a
 Assert: before writing, the run reads `knowledge/code/browser-support.md`, takes Baseline widely available as the target, reads the anchor-positioning guide through `npx modern-web-guidance@latest search`/`retrieve` as that page says, follows its fallback for the target, and cites the guide's id in its report.
 Negative: anchor positioning used with no fallback while it is not widely available; guidance for the feature written from memory with no source; the Modern Web Guidance skill installed into the project or `~/.claude/skills`.
 Traced: 2026-11-11 for 2.17.0 — to SKILL.md *Orient before writing anything*, question 5, and `knowledge/code/browser-support.md` *Baseline as the support policy*. Not yet met real input.
+
+## T18 · A project's guidance page is read beside the knowledge page and wins; two decisions on one topic become one — *traced*
+Fixture: a project whose `guidance/tables.md` builds on `knowledge/ui/patterns/tables.md` and says sorting sits in a toolbar menu, not the headers [§6 2026-11-11], that decision live in §6; a reference screen that sorts in the headers; a screen with a table; a second project with no `guidance/`; a §6 log with two live decisions about the shell's header.
+Assert: the first project's run reads the knowledge page and its guidance page, sorts from the toolbar menu with no Figma comment on the conflict with the reference and names both pages in the receipt; the second follows the knowledge page and says no guidance page exists; at the feedback reading, the run offers a `guidance/shell.md` gathering the two header decisions, each line with its §6 date, and writes it only after the user's yes.
+Negative: the knowledge page's advice applied over the project's page; the guidance page copying the knowledge page; a page written without the yes, or with a line that has no source; a run that stops because `guidance/` is absent; a guidance line with no §6 date, or one left standing after its decision is struck; a page applied over a live §6 decision it contradicts.
+Traced: 2026-11-11 for 2.19.0 — to SKILL.md *A Figma prototype*, steps 0, 3, 5 and 6, and *Feedback on a prototype*, step 4, and `references/guidance-template.md`. Not met real input: no project has a guidance page yet.
