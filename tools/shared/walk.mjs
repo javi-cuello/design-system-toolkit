@@ -31,8 +31,12 @@ export function walkRepo(root, exts, { reject = () => false } = {}) {
   const out = [];
   const want = exts && new Set(exts);
   (function walk(dir) {
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (SKIP.has(e.name) || e.name.startsWith('.')) continue;
+    // a folder a build removed between listing and reading is empty, not an error; a root that is not there still is
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT' && dir !== root) return; throw e; }
+    for (const e of entries) {
+      // a build folder half-swapped (`<name>.next`, `<name>.old`) is build output too
+      if (SKIP.has(e.name) || SKIP.has(e.name.replace(/\.(next|old)$/, '')) || e.name.startsWith('.')) continue;
       const p = join(dir, e.name);
       if (e.isDirectory()) walk(p);
       else if ((!want || want.has(extname(e.name))) && !reject(p, e.name)) out.push(p);

@@ -115,8 +115,9 @@ unnoticed by three reviews). What holds it now:
   while the hash of its inputs is unchanged (`session.mjs`), the product is
   started once and signed in once, windows are pooled (`parity.workers`,
   default 8, `PARITY_WORKERS` over it). The one cache is the story build, keyed
-  on a content hash of its inputs (`session.mjs` `inputsHash`), never a
-  timestamp; `test-session.mjs` fails if a changed byte reused it.
+  on a content hash of its inputs and its build command (`session.mjs`
+  `inputsHash`), never a timestamp; `test-session.mjs` fails if a changed byte
+  reused it.
 - **Pictures are opt-in**: `--shots` takes them and compares them with the kept
   set, `--accept --shots` keeps them; nothing gated reads them, so a project's
   check runs without them.

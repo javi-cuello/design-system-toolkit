@@ -33,7 +33,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* The story build's cache key: a content hash of every file under the inputs
    the project names (`host.build.inputs`), by path and bytes — never a
    timestamp, so a touched file reuses the build and a changed byte rebuilds
-   it. The one cache the engine keeps; test-session.mjs holds it to that. */
+   it; the build command is hashed too, so a changed command rebuilds. The one
+   cache the engine keeps; test-session.mjs holds it to that. */
 /* The lockfiles a build installs from: the repo's root's, and the build
    folder's own where it is a package of its own; each installed where it is. */
 export function lockfiles(repo, cwd) {
@@ -41,11 +42,21 @@ export function lockfiles(repo, cwd) {
   return { lock, dirs: [...new Set(lock.map((f) => path.dirname(f)))] };
 }
 
-export function inputsHash(repo, inputs) {
-  const h = crypto.createHash('sha256');
+/* The path a folder has on disk, through symlinks and case (the native call:
+   the JS one keeps the case it was given), so a skip matches however the repo
+   and the folder were spelled; a folder not made yet resolves by its parent. */
+const realOf = (p) => { try { return fs.realpathSync.native(p); } catch { try { return path.join(fs.realpathSync.native(path.dirname(p)), path.basename(p)); } catch { return path.resolve(p); } } };
+
+export function inputsHash(repo, inputs, command = '', skip = []) {
+  const h = crypto.createHash('sha256').update(command).update('\0');
+  skip = skip.map(realOf);
   const walk = (p) => {
     if (!fs.existsSync(p)) return;
-    if (fs.statSync(p).isDirectory()) { for (const e of fs.readdirSync(p).sort()) if (e !== 'node_modules' && e !== '.git' && !e.startsWith('.DS_')) walk(path.join(p, e)); return; }
+    if (fs.statSync(p).isDirectory()) {
+      if (skip.length && skip.includes(realOf(p))) return;
+      for (const e of fs.readdirSync(p).sort()) if (e !== 'node_modules' && e !== '.git' && !e.startsWith('.DS_')) walk(path.join(p, e));
+      return;
+    }
     h.update(path.relative(repo, p)).update(fs.readFileSync(p));
   };
   for (const i of inputs) walk(path.join(repo, i));
@@ -75,7 +86,9 @@ export function buildStories(repo, build, out, say = () => {}, label = path.base
     }
   }
   // what the build reads: the project's `build.inputs`, else the folder it builds in, else the whole repo
-  const hash = inputsHash(repo, build.inputs || [build.dir || '.']);
+  // the build's own folders are never its input, or every build would change the hash of the next
+  const own = [out, `${out}.next`, `${out}.old`];
+  const hash = inputsHash(repo, build.inputs || [build.dir || '.'], build.run, own);
   const stamp = path.join(out, '.parity-hash');
   if (fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8') === hash) { say('build reused — none of its inputs changed'); return false; }
   say('building…');

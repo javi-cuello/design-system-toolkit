@@ -40,7 +40,9 @@ for (const entry of owned) {
     }
   }
   for (const file of files) {
-    const text = readFileSync(file, 'utf8');
+    // a file a build swapped out between the walk and this read is no definition (the docs site rebuilds beside this check)
+    let text;
+    try { text = readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') continue; throw e; }
     // The names this file takes from the toolkit: used, not re-implemented. A project names the toolkit in the path;
     // a file inside the toolkit takes an owner by a relative path, which counts once it resolves into the toolkit
     // (without it, every module that imported an owner and handed its code on was flagged as defining it)
