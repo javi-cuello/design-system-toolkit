@@ -99,22 +99,39 @@ progress:indeterminate::-webkit-progress-bar{background:transparent}
 #paste-text:focus{outline:none;border-color:var(--figma-color-border-selected)}
 #paste-text:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:1px}
 .paste-actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+/* two tabs: the audit, and what it reads */
+.tabs{display:flex;gap:var(--space-3);margin:0 0 var(--space-3);border-bottom:1px solid var(--figma-color-border)}
+.tab{height:auto;box-sizing:border-box;padding:var(--space-1) 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--figma-color-text-secondary);font-weight:var(--fw-regular)}
+.tab:hover{background:none;color:var(--figma-color-text)}
+.tab[aria-selected=true]{color:var(--figma-color-text);border-bottom-color:var(--figma-color-border-selected);font-weight:var(--fw-semibold)}
+.tab:focus{outline:none}
+.tab:focus-visible{outline:2px solid var(--figma-color-border-selected);outline-offset:2px}
+.hint{margin:calc(-1 * var(--space-2)) 0 var(--space-3)}
 </style>
 </head>
 <body>
 <main class="container">
   <div class="head"><p class="title" id="file">Reading the file…</p><span class="version" id="version"></span></div>
+  <div class="tabs" role="tablist"><button class="tab" role="tab" id="tab-audit" aria-controls="pane-audit" aria-selected="true" type="button">Audit</button><button class="tab" role="tab" id="tab-settings" aria-controls="pane-settings" aria-selected="false" tabindex="-1" type="button">Settings</button></div>
+  <div id="pane-audit" role="tabpanel" aria-labelledby="tab-audit">
   <p class="what secondary">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+  <p class="settings secondary" id="summary">Settings: the toolkit's defaults · no rulings</p>
+  </div>
+  <div id="pane-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
   <p class="settings"><span class="settings-name secondary" id="ctx-name">Settings: the toolkit's defaults</span>
     <button class="text-btn" id="ctx-pick" type="button">Use a context document…</button>
     <button class="text-btn" id="ctx-clear" type="button" hidden>Remove</button></p>
+  <label class="checkbox" id="draft-row"><input type="checkbox" id="draft" role="switch"> Draft a context document</label>
+  <p class="hint secondary" id="draft-hint">Claude drafts one from this file with the results. Save it, then pick it here.</p>
   <p class="settings"><span class="settings-name secondary" id="rul-name">Rulings: none saved</span>
     <button class="text-btn" id="rul-paste" type="button">Paste rulings</button>
+    <button class="text-btn" id="rul-download" type="button" hidden>Download</button>
     <button class="text-btn" id="rul-clear" type="button" hidden>Remove</button></p>
   <div id="paste-box" hidden>
     <label class="secondary" for="paste-text">Paste the rulings copied from the results page</label>
     <textarea id="paste-text"></textarea>
     <div class="paste-actions"><button id="paste-add" type="button">Add rulings</button><button id="paste-cancel" class="btn-secondary" type="button">Cancel</button></div>
+  </div>
   </div>
   <input type="file" id="ctx-file" accept=".md,text/markdown" hidden>
   <button id="run" type="button">Run audit</button>
@@ -131,7 +148,16 @@ progress:indeterminate::-webkit-progress-bar{background:transparent}
 </main>
 <script>
 var $ = function (id) { return document.getElementById(id); };
-var last = null, busy = false;
+var last = null, busy = false, ctxName = null, rulCount = 0;
+function summary() { $('summary').textContent = (ctxName ? 'Settings: ' + ctxName : "Settings: the toolkit's defaults" + ($('draft').checked ? ', drafting a context document' : '')) + ' · ' + (rulCount ? rulCount + (rulCount === 1 ? ' ruling' : ' rulings') : 'no rulings'); }
+function tab(which) {
+  ['audit', 'settings'].forEach(function (t) { var on = t === which; $('tab-' + t).setAttribute('aria-selected', String(on)); $('tab-' + t).tabIndex = on ? 0 : -1; $('pane-' + t).hidden = !on; });
+  fit();
+}
+$('tab-audit').onclick = function () { if (!$('paste-box').hidden) { $('paste-box').hidden = true; } tab('audit'); };
+$('tab-settings').onclick = function () { tab('settings'); };
+document.querySelector('.tabs').onkeydown = function (e) { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { var to = $('tab-audit').getAttribute('aria-selected') === 'true' ? 'settings' : 'audit'; tab(to); $('tab-' + to).focus(); } };
+$('draft').onchange = summary;
 function download(msg) {
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([msg.text], { type: 'text/markdown' }));
@@ -154,7 +180,7 @@ $('run').onclick = function () {
   if (busy) return;
   busy = true; $('run').setAttribute('aria-disabled', 'true');
   say(undefined, 'Auditing the components…', 'A large library takes about a minute.');
-  parent.postMessage({ pluginMessage: { type: 'run', id: Date.now() } }, '*');
+  parent.postMessage({ pluginMessage: { type: 'run', id: Date.now(), draft: $('draft').checked } }, '*');
 };
 parent.postMessage({ pluginMessage: { type: 'hello' } }, '*');
 $('save').onclick = function () { if (last) download(last); };
@@ -162,20 +188,25 @@ $('save').onclick = function () { if (last) download(last); };
 function context(name) {
   $('ctx-name').textContent = name ? 'Settings: ' + name : "Settings: the toolkit's defaults";
   $('ctx-pick').textContent = name ? 'Change…' : 'Use a context document…';
-  $('ctx-clear').hidden = !name; fit();
+  $('ctx-clear').hidden = !name;
+  // a document in use needs no draft
+  ctxName = name; $('draft-row').hidden = $('draft-hint').hidden = !!name; if (name) $('draft').checked = false;
+  summary(); fit();
 }
 $('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
 $('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
-// rulings recorded on the results page: one paste, kept for this file on this machine, judged by on every run
+// rulings recorded on the results page: one paste, saved in the file, judged by on every run
 function rulings(n) {
   $('rul-name').textContent = n ? 'Rulings: ' + n + ' saved for this file' : 'Rulings: none saved';
-  $('rul-clear').hidden = !n; fit();
+  $('rul-clear').hidden = $('rul-download').hidden = !n;
+  rulCount = n || 0; summary(); fit();
 }
 function pasteBox(open) { $('paste-box').hidden = !open; if (open) { $('paste-text').value = ''; $('paste-text').focus(); } else $('rul-paste').focus(); fit(); }
 $('rul-paste').onclick = function () { if (!busy) pasteBox(true); };
 $('paste-cancel').onclick = function () { pasteBox(false); };
 $('paste-add').onclick = function () { if (!busy && $('paste-text').value.trim()) parent.postMessage({ pluginMessage: { type: 'rulings-add', text: $('paste-text').value } }, '*'); };
 $('rul-clear').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-clear' } }, '*'); };
+$('rul-download').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-download' } }, '*'); };
 $('ctx-file').onchange = function () {
   var f = this.files && this.files[0]; if (!f || busy) return;
   f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'context-set', name: f.name, text: text } }, '*'); });
@@ -184,7 +215,8 @@ onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
   if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); rulings(msg.rulings); return; }
-  if (msg.type === 'rulings') { var wasOpen = !$('paste-box').hidden; rulings(msg.count); if (wasOpen) pasteBox(false); if (msg.added != null && !busy) say('done', msg.added ? msg.added + (msg.added === 1 ? ' ruling' : ' rulings') + ' added' : 'Rulings updated', 'The next run judges by them.'); else if (!busy) { $('status').hidden = true; fit(); } return; }
+  if (msg.type === 'rulings') { var wasOpen = !$('paste-box').hidden; rulings(msg.count); if (wasOpen) pasteBox(false); if (msg.added != null && !busy) say('done', msg.added ? msg.added + (msg.added === 1 ? ' ruling' : ' rulings') + ' added' : 'Rulings updated', 'Saved in this file. The next run judges by them.'); else if (!busy) { $('status').hidden = true; fit(); } return; }
+  if (msg.type === 'file') { download(msg); return; }
   if (msg.type === 'rulings-failed') { say('error', 'Rulings not changed', msg.why + '.'); return; }
   if (msg.type === 'context') { context(msg.name); if (!busy) $('status').hidden = true; fit(); return; }
   if (msg.type === 'context-failed') { say('error', 'That document was not used', msg.why + '.'); return; }

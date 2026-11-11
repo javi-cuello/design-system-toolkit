@@ -9,7 +9,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
-const { report, settingsFor, pastedRulings, mergeRulings, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
+const { report, settingsFor, pastedRulings, mergeRulings, rulingsLog, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
 const projects = createRequire(import.meta.url)(path.join(ROOT, 'tools/snapshot/projects.cjs'));
 
 let failed = 0, passed = 0;
@@ -124,7 +124,11 @@ const edited = pastedRulings(rows.replace('The label is decorative.', 'Decorativ
 ok('a ruling re-recorded with a new note replaces the earlier one', (() => { const m = mergeRulings(back, edited); return m.length === 1 && m[0].text.includes('Decorative: no ring.'); })());
 ok('the judge reads the ruling with its component and finding', report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { rulings: back })).includes('(recorded on Button about “c”;'));
 const withPasted = report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { rulings: back, pasted: 1 }));
-ok('the next run judges by a pasted ruling, and says where it came from', withPasted.includes('The label is decorative') && withPasted.includes('- Rulings: 1 (1 pasted into the plugin'));
+ok('the next run judges by a pasted ruling, and says where it came from', withPasted.includes('The label is decorative') && withPasted.includes('- Rulings: 1 (1 saved in the file'));
+const piped = back.concat(pastedRulings('| 2026-01-01 | Tag | Tag: a | b \\| c |'));
+ok('downloaded rulings read back as the same rulings', JSON.stringify(pastedRulings(rulingsLog(piped))) === JSON.stringify(piped) && JSON.stringify(projects.rulingsOf(rulingsLog(piped))) === JSON.stringify(piped));
+ok('the draft switch reaches the report, and only without a document', report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { draft: true })).includes('- Draft a context document: yes') && !withPasted.includes('- Draft a context document: yes'));
+ok('the instructions say what a draft request and the closing files are', LITE.instructions.includes('Draft a context document: yes') && LITE.instructions.includes('8. **Offer the files**'));
 
 // The clicks: Done and Record as ruling change what the page shows and what it stores.
 {

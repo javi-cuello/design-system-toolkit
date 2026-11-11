@@ -1,6 +1,14 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.0] - 2026-11-11
+### Changed
+- Rulings pasted into the plugin are saved in the Figma file, not on the machine, so they travel with the file to anyone who runs the plugin; those 0.6 kept on the machine move into the file on first open where it can be edited, and are read beside it where it cannot.
+- The window has two tabs: Audit, and Settings (the context document and the rulings).
+### Added
+- **Download** gives the saved rulings as a rulings log, ready for a context document's section 6.
+- A **Draft a context document** switch, shown when no document is in use: the report asks Claude to draft one from the file with the results. Claude ends by offering the results and the drafted document as files.
+
 ## [0.6.0] - 2026-11-10
 ### Changed
 - The results page is laid out as the audit dashboard's queue: its three buckets and titles (a breaking fix sits in Decide with its tag), a card per finding with the Done box, severity chip, area tag, User-visible flag and the What's wrong / The fix columns, a Note for Claude, Record as ruling and Ask about this row, the Open / Done tiles, and filters by component and area. Its words and colour tokens are filled in by sync.mjs from the dashboard's own files.

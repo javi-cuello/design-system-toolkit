@@ -215,7 +215,7 @@ function rulings() {
   if (!host) return;
   const ruled = numbered.filter((x) => state.rules.includes(idOf(x.r)));
   let html = "<p class=\"bucket-note\">" + (ruled.length
-    ? ruled.length + " recorded. Copy them, then in Audit lite press <b>Paste rulings</b>: the plugin keeps them for this file, and the next run judges by them."
+    ? ruled.length + " recorded. Copy them, then in Audit lite's Settings press <b>Paste rulings</b>: the plugin saves them in the Figma file, and the next run judges by them."
     : "When a row is intended, write why in its note and press <b>Record as ruling</b>. The rulings gather here, to paste into Audit lite once.") + "</p>";
   if (ruled.length) html += "<textarea class=\"rulings\" id=\"rulingsText\" readonly aria-label=\"Rulings to paste into Audit lite\">" + esc(ruled.map((x) => rulingRow(x.r)).join("\n")) + "</textarea>"
     + "<div class=\"row-actions\"><button type=\"button\" class=\"button\" id=\"copyRulings\">Copy rulings</button></div>";
@@ -234,7 +234,7 @@ function wire() {
     else if (t.dataset.ruleId) { toggle(state.rules, idOf(find(t.dataset.ruleId))); save(); redraw("[data-rule-id=\"" + t.dataset.ruleId + "\"]"); }
     else if (t.dataset.askId) { const r = find(t.dataset.askId); copy("Tell me about " + t.dataset.askId + " (" + r.set + (r.layer ? " › " + r.layer : "") + "): why it matters, and how to fix it in Figma.", "The question about " + t.dataset.askId, "Paste it into the chat."); }
     else if (t.id === "showAll") { view.set = ""; view.area = ""; redraw("#setFilter"); }
-    else if (t.id === "copyRulings") copy(document.getElementById("rulingsText").value, "The rulings", "In Audit lite, press Paste rulings.");
+    else if (t.id === "copyRulings") copy(document.getElementById("rulingsText").value, "The rulings", "In Audit lite, open Settings and press Paste rulings.");
   };
   app.onchange = (e) => {
     const t = e.target;
