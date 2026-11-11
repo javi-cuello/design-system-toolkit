@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v2.16.0)
+# Eval cases — frontend-build (v2.17.0)
+
+**Walked: 2026-11-11 for 2.17.0** — T17 added, traced to *Orient* question 5; A6 read against it (it holds: the question points at a knowledge page and copies none of it).
 
 **Walked: 2026-11-11 for 2.16.0** — T16 added, traced to *Feedback on a prototype* steps 2–4; T15 read against the new close step (it holds: a reply still routes and closes the thread; the log is T16's).
 
@@ -277,3 +279,9 @@ Assert: the close posts the reply and logs the thread with its area and level in
 Negative: a thread replied to and not logged; an area outside the five; the sort skipped at the tenth line, or reported as the latest comment rather than the largest kind; a decision recorded without joining the eval task, or in the library's §6; a decision retired by the agent alone, or deleted rather than retired by a new row; a project with no product file prototyped without starting one.
 Traced: 2026-11-11 for 2.16.0 — to SKILL.md *Feedback on a prototype*, steps 2–4.
 Runs: node --test tests/test-feedback.mjs — "kinds counts the log by area and by level, largest first, with the largest area's comments"; node tools/skill-evals/test-eval.mjs — "figma: a ruling the task lists is applied when some frame's receipt names its date; a missed one says which", "rulings: only the live rows of product.md's Decisions are listed; one no recent run named is a candidate to retire, never before enough runs"
+
+## T17 · A build settles its platform features against the support target, and cites an uncovered one — *traced*
+Fixture: a build from a brief that wants a tooltip anchored to its trigger, in a project whose CLAUDE.md sets no Baseline target; no knowledge page covers anchor positioning.
+Assert: before writing, the run reads `knowledge/code/browser-support.md`, takes Baseline widely available as the target, reads the anchor-positioning guide through `npx modern-web-guidance@latest search`/`retrieve` as that page says, follows its fallback for the target, and cites the guide's id in its report.
+Negative: anchor positioning used with no fallback while it is not widely available; guidance for the feature written from memory with no source; the Modern Web Guidance skill installed into the project or `~/.claude/skills`.
+Traced: 2026-11-11 for 2.17.0 — to SKILL.md *Orient before writing anything*, question 5, and `knowledge/code/browser-support.md` *Baseline as the support policy*. Not yet met real input.
