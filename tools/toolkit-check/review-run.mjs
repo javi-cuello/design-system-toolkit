@@ -220,6 +220,9 @@ if ((() => { try { return fs.realpathSync(process.argv[1]) === fileURLToPath(imp
     const { held, gone, kept } = heldBranches(TOOLKIT);
     for (const b of kept) say(`${b}: kept, a person committed on it`);
     if (fs.existsSync(tree)) { run('git', ['-C', TOOLKIT, 'worktree', 'remove', '--force', tree]); fs.rmSync(tree, { recursive: true, force: true }); }
+    // a killed run's worktrees, this one's or an earlier day's (its -land one too): gone, so its branch can go
+    for (const l of git(TOOLKIT, ['worktree', 'list', '--porcelain']).split('\n'))
+      if (l.startsWith(`worktree ${path.join(os.tmpdir(), 'toolkit-review-')}`)) run('git', ['-C', TOOLKIT, 'worktree', 'remove', '--force', l.slice(9)]);
     run('git', ['-C', TOOLKIT, 'worktree', 'prune']); // a killed run's folder, gone from disk but still registered
     if (!DRY && gone.includes(branch)) run('git', ['-C', TOOLKIT, 'branch', '-D', branch]); // a held run from earlier today
     if (git(TOOLKIT, ['branch', '--list', branch])) throw new Error(`${branch} exists already (a person committed on it, or a dry run leaves a held one): not started`);
