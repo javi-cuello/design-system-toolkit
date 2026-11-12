@@ -1066,7 +1066,10 @@ async function main() {
         // else only where the design's component is that glyph, or its set holds it elsewhere in the design: an
         // instance of another kind (Avatar/Small) or a glyph outside the set (a logo) stays the code's graphic
         const set = fe.component.split('/').slice(0, -1).join('/'), named = `${set}/${e.asset}`;
-        if (!swapped && fe.component !== named && !JSON.stringify(figmaContract).includes(JSON.stringify(named))) return;
+        const held = (n) => fe.component === n || JSON.stringify(figmaContract).includes(JSON.stringify(n));
+        // and every glyph a variant changes it to, held the same way, or the whole layer stays the code's graphic
+        const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
+        if (!swapped && (!held(named) || !glyphs.every((g) => held(`${set}/${g}`)))) return;
         e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set
         if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = `${set}/${v.set[`${id}.asset`]}`; delete v.set[`${id}.asset`]; }
