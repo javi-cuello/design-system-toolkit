@@ -1,4 +1,6 @@
-# Eval cases — figma-file-diff (v1.4.6)
+# Eval cases — figma-file-diff (v1.4.7)
+
+**Walked: 2026-11-12 against v1.4.7** — two sentences of prose (clientStorage crosses files; a screenshot shows only the active file); no case reads them and no procedure changed, so every case holds; `node skills/figma-file-diff/tests/test-report.mjs` and `test-serialise.mjs` re-run under `bin/check`.
 
 **Walked: 2026-11-11 against v1.4.6** — the script's main guard only; no case reads it, so every case holds; `node -e "import('./skills/figma-file-diff/scripts/coverage-body.mjs')"` imports without throwing.
 

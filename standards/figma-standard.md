@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.22.1** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.23.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -392,13 +392,13 @@ Cite a rule as `figma-standard rule N`.
 
    *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used".
 
-43. **A style binds a variable wherever Figma lets it.** A text style binds its font family, weight, size, line height and letter spacing; an effect binds each layer's colour, offsets, blur and spread.
+43. **A style binds a variable wherever Figma lets it.** A text style binds its font family, weight, size, line height and letter spacing; an effect binds each layer's colour, offsets, blur and spread. One exception: letter spacing set in percent may stay unbound, since a bound variable is always px, unless a mode must change it (a script that takes no tracking, [i18n](../knowledge/code/i18n.md)).
 
-    *Why:* a style's raw value is a decision the tokens cannot reach: change the line-height token and every style keeps its own copy. Rule 29 binds a component's values; this is the same rule one level down.
+    *Why:* a style's raw value is a decision the tokens cannot reach: change the line-height token and every style keeps its own copy. Rule 29 binds a component's values; this is the same rule one level down. The exception holds because binding would cost more than it reaches: a percent tracking scales with the size, so one value serves every size and mode, where a px variable needs a value per size per mode.
 
-    *Evidence:* maintainer-decreed 2026-10-11. The same library's 44 text styles bound family, size and weight, and none bound line height or letter spacing.
+    *Evidence:* maintainer-decreed 2026-10-11. The same library's 44 text styles bound family, size and weight, and none bound line height or letter spacing. The exception, 2026-11-12: the toolkit's own measurement through the plugin API bound number variables to a style's and a node's line height and letter spacing, both set to percent first, and both read back in px.
 
-   *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a style field Figma can bind and the style leaves loose is raised, one row per field".
+   *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a style field Figma can bind and the style leaves loose is raised, one row per field"; `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: letter spacing in percent may stay unbound".
 
 44. **Parallel token groups have one shape.** A group holds tokens or groups, not both, and sibling groups carry the same leaves: a leaf most siblings have and one lacks is a gap or a decision, and a ruling records the decision. Two names that differ only in case or separator are rule 19's error.
 

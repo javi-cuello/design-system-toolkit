@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.26.1)
+# Eval cases — figma-foundations-audit (v1.27.0)
+
+**Walked: 2026-11-12 for 1.27.0** — F26 added and executed: `node tests/test-foundations.mjs` 88 of 88; on 1.26.1's `library.mjs` F26 fails (87 of 88). F20's assertions unchanged.
 
 **Walked: 2026-11-11 for 1.26.0** (record written in the seven-day review) — F25 executed 2026-11-10; `node tests/test-foundations.mjs` 87 of 87 re-run 2026-11-11.
 
@@ -180,3 +182,8 @@ Runs: node tools/toolkit-check/test-missing-input.mjs
 Fixture: the scanner's generated block in `plugins/audit-lite/code.js`; a page list with a category out of alphabetical order.
 Assert: `sync.mjs --check` exits 0 (the block equals `scripts/foundations.js`); the copy, run with no `figma`, returns `checkFacts`, raises the page-order finding under `Page list`, and the report carries it among the candidates with a *File-level checks run* line.
 Runs: node plugins/audit-lite/sync.mjs --check && node plugins/audit-lite/tests/test-audit-lite.mjs
+
+## F26 · Letter spacing in percent may stay unbound — *executed* 2026-11-12
+Fixture: F20's tokens file with a second text style, `Caption`, binding family, size, weight and line height and leaving letter spacing unbound at 2%; `Body` leaves it unbound in px.
+Assert: the letter-spacing row names `Body` only (figma-standard rule 43's exception: a bound variable is px, so a percent tracking stays on the style).
+Runs: node tests/test-foundations.mjs — "tokens: letter spacing in percent may stay unbound, since Figma binds it only as px; in px it is raised"

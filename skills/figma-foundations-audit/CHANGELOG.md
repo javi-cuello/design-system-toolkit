@@ -1,5 +1,6 @@
 # Changelog — figma-foundations-audit
 
+- 1.27.0 (2026-11-12): the style-binding check leaves a text style's letter spacing set in percent unraised, figma-standard rule 43's new exception: Figma binds a number variable to it only as px. Case F26.
 - 1.26.1 (2026-11-12): `scripts/from-snapshot.mjs`'s header names `--parents`, which it reads and SKILL.md documents.
 - 1.26.0 (2026-11-10): the Audit lite plugin carries `scripts/foundations.js` as a third launcher, copied by its `sync.mjs` and held equal by `bin/check`; a change here is followed by that sync. Case F25.
 - 1.25.3 (2026-10-31): `scripts/from-snapshot.mjs` says a missing or broken input in one line naming it, never a stack. Case F24.

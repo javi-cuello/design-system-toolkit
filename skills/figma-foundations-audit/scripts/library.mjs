@@ -83,10 +83,12 @@ export function tokenChecks({ tokens, source, used = new Set() }) {
       list(unused), ["Remove what nothing needs.", "Meant for code or prototypes only (motion, breakpoints, charts): record it as a ruling, and it stops being raised."]));
   }
 
-  // Styles bind variables wherever Figma lets them (figma-standard rule 43).
+  // Styles bind variables wherever Figma lets them (figma-standard rule 43),
+  // except letter spacing in percent: Figma binds a variable to it only as px.
+  const exempt = (s, f) => f === "letterSpacing" && ((s.authored || {}).letterSpacing || {}).unit === "PERCENT";
   const styleCheck = (where, styles, fields, boundOf) => {
     for (const [f, label] of Object.entries(fields)) {
-      const loose = styles.filter((s) => boundOf(s).some((b) => !b[f])).map((s) => s.name);
+      const loose = styles.filter((s) => !exempt(s, f) && boundOf(s).some((b) => !b[f])).map((s) => s.name);
       if (loose.length) findings.push(finding(where, "tokens-style-binding", f, "warn", 1,
         `${loose.length} of ${styles.length} leave the ${label} unbound, so a change to that token never reaches them`,
         list(loose), [`Bind each one's ${label} to a variable, so a token change reaches the style.`]));

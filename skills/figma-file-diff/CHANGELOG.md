@@ -1,5 +1,6 @@
 # Changelog — figma-file-diff
 
+- 1.4.7 (2026-11-12): two bridge facts in prose: `figma.clientStorage` crosses files where nodes cannot, and a screenshot captures only the active file.
 - 1.4.6 (2026-11-11): `coverage-body.mjs` builds the URL inside the guard's try too (landed unbumped on 2026-11-06).
 - 1.4.5 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.
 - 1.4.4 (2026-10-31): the width check sets the frame FIXED first, so it moves on the width, not on the sizing the HUG check left. Case A10.

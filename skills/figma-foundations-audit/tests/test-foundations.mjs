@@ -547,14 +547,15 @@ expect("and checkFacts reads the adapter's facts unchanged",
   const { tokenChecks, iconChecks, namesUsed } = await import("../scripts/library.mjs");
   const col = (values, extra = {}) => ({ modes: ["Value"], values: { Value: values }, alias: { Value: extra.alias || {} }, descriptions: extra.descriptions || {}, hidden: extra.hidden || [] });
   const tokens = {
-    _meta: { sources: { T: { owns: { collections: ["Primitives", "Semantic"], textStyles: ["Body"], effects: ["Raised"] } }, C: { owns: { collections: ["Local"] } } } },
+    _meta: { sources: { T: { owns: { collections: ["Primitives", "Semantic"], textStyles: ["Body", "Caption"], effects: ["Raised"] } }, C: { owns: { collections: ["Local"] } } } },
     collections: {
       Primitives: col({ "Grey/1": "#eee", "Grey/2": "#ccc", "Size/4": 4 }, { hidden: ["Grey/1", "Grey/2"], descriptions: { "Size/4": "Small gaps" } }),
       Semantic: col({ "Text/Base/base": 0, "Text/Base/soft": 0, "Text/Primary/base": 0, "Text/Primary/soft": 0, "Text/Brand/base": 0, "Text/brand/Base": 0, "Icon/x": 0, "Icon/Big/y": 0 },
         { alias: { "Text/Base/base": "Grey/1" }, descriptions: { "Text/Base/base": "Body copy" } }),
       Local: col({ "Only/here": 0 }),
     },
-    textStyles: [{ name: "Body", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/4" }, fontWeight: { name: "w" } } }],
+    textStyles: [{ name: "Body", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/4" }, fontWeight: { name: "w" } }, authored: { letterSpacing: { unit: "PIXELS", value: 0 } } },
+      { name: "Caption", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/4" }, fontWeight: { name: "w" }, lineHeight: { name: "l" } }, authored: { letterSpacing: { unit: "PERCENT", value: 2 } } }],
     effects: [{ name: "Raised", layers: [{ bound: { color: { name: "c" }, x: {}, y: {}, blur: {}, spread: {} } }] }],
   };
   const used = namesUsed([{ fills: ["Text/Base/base"], textStyle: "Body", children: [{ gap: "Text/Primary/base" }] }]);
@@ -570,6 +571,8 @@ expect("and checkFacts reads the adapter's facts unchanged",
     by("tokens-unused").map((f) => f.where + ": " + names(f)), ["Primitives: Grey/2.", "Semantic: Text/Base/soft, Text/Primary/soft, Text/Brand/base, Text/brand/Base, Icon/x, Icon/Big/y."]);
   expect("tokens: a style field Figma can bind and the style leaves loose is raised, one row per field",
     by("tokens-style-binding").map((f) => f.where + " " + f.key.split("|")[2]), ["Text styles lineHeight", "Text styles letterSpacing"]);
+  expect("tokens: letter spacing in percent may stay unbound, since Figma binds it only as px; in px it is raised",
+    by("tokens-style-binding").filter((f) => f.key.split("|")[2] === "letterSpacing").map(names), ["Body."]);
   expect("tokens: two names that differ only in case are an error",
     by("tokens-naming").map((f) => f.sev + " " + f.check), ["error Text/Brand/base and Text/brand/Base differ only in case or separator, so code exports them as one name and one overwrites the other"]);
   expect("tokens: a group holding tokens and groups, and a sibling group missing a common leaf, are one structure row",
