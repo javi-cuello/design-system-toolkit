@@ -434,6 +434,8 @@ async function governedSource(project, name) {
     // another component of the library inside this one, by the project's instance pattern (parity.instance)
     instanceOf: (slug) => (project.parity.instance ? project.parity.instance.replace(/\{(?:slug|Name)\}/, slug) : null),
     instancePattern: project.parity.instance ? (await import('../parity/pair.mjs')).rootPattern(project.parity.instance) : null,
+    // another component's mapping axes, by its folder: the props an instance of it is drawn at
+    axesOf: (slug) => { const x = project.targets.find((y) => y.kind === 'component' && y.folder === slug); return x && x.mapping ? x.mapping.axes || null : null; },
     async render(all) {
       const { __state, ...args } = all;
       if (host === 'storybook') await S.PAGE.open(tab, { storyId: t.mapping.storyId, args, tier });
@@ -589,6 +591,8 @@ async function main() {
           const filled = marks.find(([m]) => text === m);
           const kind = filled ? 'slot' : tag === 'svg' ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
           const e = { id, kind, ...(parent != null && { parent, order }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }) };
+          // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
+          { const r = n.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
           if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
@@ -597,9 +601,11 @@ async function main() {
           const other = parent != null && rootRe && [...n.classList, n.tagName.toLowerCase()].map((c) => (c.match(new RegExp(rootRe)) || [])[1]).find((x) => x && others[x]);
           if (other) { seen[id]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
             n.setAttribute('data-contract-id', id);
-            out.push({ id, kind: 'instance', parent, order, component: others[other], width: px(s.width), height: px(s.height), ...(n.querySelector('img') && { image: true }) }); return; }
-          // an icon set's name for it, where its class carries one (lucide-circle-x), as Figma's swap names it
-          if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (set) e.asset = set[1]; }
+            out.push({ id, kind: 'instance', parent, order, component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+              // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
+              slug: other, attrs: Object.fromEntries([...n.attributes].map((a) => [a.name, a.value])), glyphs: [...n.querySelectorAll('svg')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) }); return; }
+          // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
+          if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; }
           else if (kind === 'text') { e.color = s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             if (/flex/.test(s.display)) {
@@ -610,7 +616,7 @@ async function main() {
             if (Object.values(pad).some(Boolean)) (e.layout = e.layout || {}).padding = pad;
             if (!clear(s.backgroundColor)) e.background = s.backgroundColor;
             if (px(s.borderTopLeftRadius)) { const r = n.getBoundingClientRect(); Object.assign(e, corner(s.borderTopLeftRadius, r.width, r.height)); }
-            if (s.borderTopStyle !== 'none' && px(s.borderTopWidth)) e.border = { color: s.borderTopColor, width: px(s.borderTopWidth) };
+            if (s.borderTopStyle !== 'none' && px(s.borderTopWidth)) e.border = { color: s.borderTopColor, width: px(s.borderTopWidth), inLayout: true }; // a css border takes room, as a Figma stroke in the layout does
             // a stroke drawn as an inset shadow with no offset and no blur is a border (values.mjs insetStroke, as the code audit reads it)
             else { const st = String(s.boxShadow).split(/,(?![^(]*\))/).map(insetStroke).find((x) => x && x.width > 0); if (st) e.border = { color: st.colour, width: px(st.width) }; }
             if (s.overflow === 'hidden') e.overflow = 'hidden';
@@ -689,8 +695,30 @@ async function main() {
         const fa = L.governed && figmaContract && figmaContract.anatomy && figmaContract.anatomy[id];
         if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; }
         delete x.asText;
+        // another component's instance at the props its markup shows: each axis of that component's mapping at the value
+        // whose args the markup carries (an attribute with that value, or one named for a true flag), else the value
+        // that sets nothing; a swap at the icon it draws
+        if (x.kind === 'instance' && x.attrs) {
+          const axes = L.axesOf ? L.axesOf(x.slug) : null;
+          const fc = official.get(x.slug);
+          const w = {};
+          // the arg's own attribute (size, data-size) first; else a data attribute holding the value (data-hierarchy for
+          // variant); a flag by its presence. Never class, style or the walk's own marks
+          const own = (k) => x.attrs[k] ?? x.attrs[`data-${k}`] ?? x.attrs[`aria-${k}`];
+          const data = Object.entries(x.attrs).filter(([n]) => n.startsWith('data-') && !/^data-(contract-id|figma-)/.test(n)).map(([, v]) => v);
+          const has = (k, v) => (v === true ? k in x.attrs || own(k) === 'true' || own(k) === '' : v === false ? !(k in x.attrs) && own(k) !== 'true' : own(k) != null ? own(k) === String(v) : data.includes(String(v)));
+          if (axes) for (const [ax, vals] of Object.entries(axes)) {
+            const hit = Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => has(k, v)));
+            const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);
+            if (hit || rest) w[ax] = (hit || rest)[0];
+          }
+          if (fc && x.glyphs && x.glyphs.length) for (const p of Object.values(fc.props)) if (p.type === 'instance' || p.type === 'swap') w[p.figma] = x.glyphs[0];
+          if (Object.keys(w).length) x.with = w;
+        }
+        delete x.slug; delete x.attrs; delete x.glyphs;
         if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
-        drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null };
+        drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box };
+        delete x.box;
         if (x.layout) {
           if ('gap' in x.layout) x.layout.gap = await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
           if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [SIDE[k]]);
@@ -701,9 +729,10 @@ async function main() {
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
         if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
-        if (x.border) x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border']), width: await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width']) };
+        if (x.border) x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border']), width: await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width']), ...(x.border.inLayout && { inLayout: true }) };
         // a shadow is the library's effect style that draws it (layers matched by what they draw); none, its css
-        if (x.shadow) { const k = shadowKey(cssShadows(x.shadow)); const hit = (L.tokens.effects || []).find((fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))) === k); x.shadow = hit ? hit.name : x.shadow; }
+        // the effect style the code wrote (box-shadow: var(--elevation-raised)), else the one that draws the same layers
+        if (x.shadow) { const said = await authoredVars(L.tab, `[data-contract-id="${id}"]`, 'box-shadow', styles); const named = said.length && (L.tokens.effects || []).find((fx) => said.some((v) => writtenAs(v, fx.name))); const k = shadowKey(cssShadows(x.shadow)); const hit = named || (L.tokens.effects || []).find((fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))) === k); x.shadow = hit ? hit.name : x.shadow; }
         if (x.type) { const r = styleFor(x.type, L.tokens.textStyles || [], usage); if (r.tie) ties.push({ at: `${id}.typography`, token: r.token, tie: r.tie }); x.typography = r.token ?? r.value; delete x.type; }
         if (x.kind === 'text') { const p = Object.entries(props).find(([, q]) => q.type === 'string' && (args[q.code] ?? q.sample) === x.content); if (p) x.content = `{${p[0]}}`; }
         anatomy[id] = x;
@@ -897,6 +926,29 @@ async function main() {
       const fields = [['radius'], ['layout', 'gap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])];
       const at = (o, path) => path.reduce((x, k) => (x == null ? x : x[k]), o);
       const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
+      // a size the design states that the code renders the same: hug or fill where the code sets no size of its own
+      // (an instance hugs what it holds), a number where the code's box is that number
+      const boxes = (base && base.drawn) || {};
+      for (const [id, e] of Object.entries(fromCode.anatomy)) {
+        const fe = figmaContract.anatomy[id], box = boxes[id] && boxes[id].box;
+        if (!fe || fe.kind !== e.kind) continue;
+        for (const [dim, i] of [['width', 0], ['height', 1]]) {
+          const want = fe[dim], have = e[dim];
+          // fill only where the box spans its parent's room (its box less the parent's padding on that axis)
+          const pe = e.parent && fromCode.anatomy[e.parent], pb = e.parent && boxes[e.parent] && boxes[e.parent].box;
+          const pad = pe && pe.layout && pe.layout.padding ? (i ? ['top', 'bottom'] : ['start', 'end']).reduce((t, k) => t + (+val(pe.layout.padding[k]) || 0), 0) : 0;
+          // on the parent's main axis the room is what its other children and gaps leave
+          const main = pe && pe.layout && (pe.layout.direction === 'column' ? 1 : 0) === i;
+          const sibs = main ? Object.entries(fromCode.anatomy).filter(([k, o]) => k !== id && o.parent === e.parent && boxes[k] && boxes[k].box) : [];
+          const taken = sibs.reduce((t, [k]) => t + boxes[k].box[i], 0) + (sibs.length ? sibs.length * (+val(pe.layout.gap) || 0) : 0);
+          // and a css border takes room too
+          const edge = pe && pe.border && pe.border.inLayout ? 2 * (+val([].concat(pe.border.width)[0]) || 0) : 0;
+          const fills = box && pb && box[i] >= pb[i] - pad - edge - taken - 1;
+          if (want === 'fill' && (have == null || have === 'hug' || e.kind === 'instance') && (fills || !pb)) e[dim] = want;
+          else if (want === 'hug' && (have == null || have === 'hug' || e.kind === 'instance')) e[dim] = want;
+          else if (typeof want === 'number' && box && Math.abs(box[i] - want) < 0.5 && (have == null || have === 'hug' || typeof have === 'number')) e[dim] = want;
+        }
+      }
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id];
         if (!fe || fe.kind !== e.kind) continue;

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plan, pluginCode, verify, writeDrawn, variantKeys, needs, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED } from './to-figma.mjs';
+import { plan, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -154,6 +154,26 @@ delete globalThis.figma;
   ok('verify rewrites it when a row changed', writeDrawn(out, [{ ...rows[0], got: null, verdict: 'not bound' }]) === true
     && JSON.parse(fs.readFileSync(out, 'utf8')).rows[0].verdict === 'not bound');
   fs.rmSync(dir, { recursive: true, force: true });
+}
+
+
+// roundTrip: a drawing from code held to the library's own component, by what each combination draws
+{
+  const lib = { contract: 1, component: 'Badge', props: { label: { type: 'string', default: 'Label', figma: 'Label' }, feedback: { type: 'enum', values: ['danger', 'info'], default: 'danger', figma: 'Feedback' } },
+    anatomy: { root: { kind: 'container', background: 'Bg/danger' }, label: { kind: 'text', parent: 'root', color: 'Text/danger', content: '{label}' } },
+    variants: [{ when: { feedback: 'info' }, set: { 'root.background': 'Bg/info', 'label.color': 'Text/info' } }] };
+  // worded the other way round: info the default, its values in another order; it draws the same
+  const same = { contract: 1, component: 'Badge', props: { label: { type: 'string', default: 'Label', figma: 'Label' }, feedback: { type: 'enum', values: ['info', 'danger'], default: 'info', figma: 'Feedback' } },
+    anatomy: { root: { kind: 'container', background: 'Bg/info' }, label: { kind: 'text', parent: 'root', color: 'Text/info', content: '{label}' } },
+    variants: [{ when: { feedback: 'danger' }, set: { 'root.background': 'Bg/danger', 'label.color': 'Text/danger' } }] };
+  ok('a drawing worded differently that draws every combination the same has no difference', roundTrip(lib, same).rows.length === 0 && roundTrip(lib, same).combinations === 2);
+  // the label an empty slot, as from-code drew Badge on 2026-11-12: the bindings check passed it
+  const slot = JSON.parse(JSON.stringify(lib));
+  slot.props = { children: { type: 'slot', figma: 'Children' }, feedback: lib.props.feedback };
+  slot.anatomy.label = { kind: 'slot', parent: 'root', width: 100, height: 100, content: '{children}' };
+  const r = roundTrip(lib, slot);
+  ok('a text drawn as an empty slot is a difference in every combination, and so are the props', r.rows.some((x) => x.at === 'label.kind' && x.library === 'text' && x.drawn === 'slot' && x.in === 2) && r.rows.some((x) => x.at === 'props'));
+  ok('another name is a difference', roundTrip(lib, { ...same, component: 'Badge-x' }).rows.some((x) => x.at === 'name'));
 }
 
 console.log(`${n}/${n} passed`);

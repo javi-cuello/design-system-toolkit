@@ -35,7 +35,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { partName, figmaWord, camel, sentence } from './layers.mjs';
+import { partName, figmaWord, camel, sentence, variantDefaults } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
 import { variantValues } from '../shared/names.js';
 
@@ -46,6 +46,37 @@ const { expand } = req('./derive.cjs');
 
 // a slot's layer is named as its prop is in Figma: Figma names the slot property after it
 const slotName = (e, props) => { const ref = e.kind === 'slot' && typeof e.content === 'string' && /^\{(.+)\}$/.exec(e.content); return ref ? (props[ref[1]] || {}).figma ?? null : null; };
+
+/* A drawing from code held to the library's own component: each combination the library draws (its enums and booleans,
+   at most 256), expanded from both contracts and compared field by field, so how a contract is worded (its default,
+   its order of values) does not count and what a variant draws does; then the props' names and kinds and the
+   component's name. Rows: { at, library, drawn, in } where `in` counts the combinations it differs in. */
+export function roundTrip(library, drawn, { limit = 256 } = {}) {
+  const rows = new Map();
+  const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
+  const diff = (a, b, at) => {
+    if (JSON.stringify(a) === JSON.stringify(b)) return;
+    if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) { for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) diff(a[k], b[k], at ? `${at}.${k}` : k); }
+    else add(at, a, b);
+  };
+  const low = (x) => String(x).toLowerCase();
+  const axes = Object.entries(library.props).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
+  let combos = [{}];
+  for (const [k, vs] of axes) combos = combos.flatMap((c) => vs.map((v) => ({ ...c, [k]: v }))).slice(0, limit);
+  const named = Object.fromEntries(Object.entries(drawn.props).map(([k, q]) => [low(q.figma || k), k]));
+  for (const c of combos) {
+    const theirs = {};
+    for (const [k, v] of Object.entries(c)) {
+      const dk = named[low(library.props[k].figma || k)] || k, dq = drawn.props[dk];
+      theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
+    }
+    diff(expand(library, { ...variantDefaults(library), ...c }), expand(drawn, { ...variantDefaults(drawn), ...theirs }), '');
+  }
+  const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
+  if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
+  if (library.component !== drawn.component) add('name', library.component, drawn.component);
+  return { combinations: combos.length, rows: [...rows.values()] };
+}
 
 export function plan(contract, { axisOrder = [] } = {}) {
   const props = contract.props;
@@ -296,12 +327,15 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
           const opts = set.componentPropertyDefinitions;
           const pick = (v) => Object.entries(opts).filter(([, d]) => d.type === 'VARIANT').every(([k, d]) => {
             const val = v.variantProperties[k];
-            if (P.sizeAxis && k.toLowerCase() === P.sizeAxis.toLowerCase() && d.variantOptions.every((o) => /^\d+$/.test(o))) return val === d.variantOptions.reduce((a, b) => (Math.abs(+b - e.width) < Math.abs(+a - e.width) ? b : a));
+            // a value the contract sets for it (the props its markup shows) chooses; else by size, then the default
+            if (e.with && k in e.with) return val === String(e.with[k]);
+            if (P.sizeAxis && k.toLowerCase() === P.sizeAxis.toLowerCase() && d.variantOptions.every((o) => /^\d+$/.test(o)) && typeof e.width === 'number') return val === d.variantOptions.reduce((a, b) => (Math.abs(+b - e.width) < Math.abs(+a - e.width) ? b : a));
             if (/^content$/i.test(k) && d.variantOptions.some((o) => /photo|image/i.test(o))) return /photo|image/i.test(val) === !!e.image;
             return val === d.defaultValue || val === set.defaultVariant.variantProperties[k];
           });
           n = (set.children.find(pick) || set.defaultVariant).createInstance();
-          if (e.width && Math.round(n.width) !== Math.round(e.width)) missing.add(`${e.component} at ${e.width}px (the library's nearest is ${Math.round(n.width)})`);
+          await withProps(n, e);
+          if (typeof e.width === 'number' && Math.round(n.width) !== Math.round(e.width)) missing.add(`${e.component} at ${e.width}px (the library's nearest is ${Math.round(n.width)})`);
         } else if (Object.keys((K.variants || {})[e.component] || {}).length) {
           // a variant the snapshot met: the one whose pixel size (on the settings' size axis) is nearest the part's, else the first
           const vs = K.variants[e.component];
@@ -957,8 +991,34 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const out = path.join(path.dirname(report), `${path.basename(report, '.json')}.drawn.json`);
     const wrote = writeDrawn(out, rows);
     console.log(`${p.name} as drawn, against its contract: ${n('same')} the same, ${n('not bound')} not bound, ${n('differs')} differ, ${n('not drawn')} not drawn (${rows.length}) — ${path.relative(process.cwd(), out)}${wrote ? '' : ' (unchanged)'}`);
+    // and held to the library's own component of that name, where it has one: the drawing read by the snapshot plugin's
+    // own walk and derived as the snapshot derives it, every combination the library draws compared (roundTrip). Bindings
+    // alone passed a Badge whose label was an empty 100 px slot (2026-11-12)
+    let back = 0;
+    let index = {};
+    try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: no library component to hold it to */ }
+    const folder = !target && Object.keys(index).find((k) => index[k].name === p.name);
+    const libFile = folder && path.join(where.paths.components, folder, 'contract.json');
+    if (libFile && fs.existsSync(libFile)) {
+      const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(p.name)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
+      const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
+      const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, into, 120000);
+      const comp = live && (live.components || []).find((x) => x.id === setId);
+      if (comp) {
+        const { compact } = req('../snapshot/spec.cjs');
+        const { derive } = req('./derive.cjs');
+        const now = derive(compact(comp), Object.values(index).map((x) => x.name), contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into));
+        const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now);
+        back = rt.rows.length;
+        const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
+        const body = JSON.stringify({ component: p.name, combinations: rt.combinations, rows: rt.rows }, null, 2) + '\n';
+        if (!fs.existsSync(rtOut) || fs.readFileSync(rtOut, 'utf8') !== body) fs.writeFileSync(rtOut, body);
+        console.log(`${p.name} as drawn, against the library's own: ${back ? `${back} difference(s)` : 'the same'} over ${rt.combinations} combination(s) — ${path.relative(process.cwd(), rtOut)}`);
+        for (const r of rt.rows.slice(0, 12)) console.log(`  ${r.at}: library ${JSON.stringify(r.library)}, drawn ${JSON.stringify(r.drawn)} (${r.in}/${rt.combinations})`);
+      } else { back = 1; const stale = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`); if (fs.existsSync(stale)) fs.unlinkSync(stale); console.log(`${p.name}: not found drawn in ${into}, so it could not be held to the library's own: failed`); }
+    }
     // not bound is a failure too: a drawing is held to its contract, and a value it could not bind is not held
-    process.exit(n('differs') + n('not drawn') + n('not bound') ? 1 : 0);
+    process.exit(n('differs') + n('not drawn') + n('not bound') + back ? 1 : 0);
   }
   // a text style's key from the snapshot (plugin 0.51.0 on); the rest looked up where the library uses them
   const stored = JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).textStyles || [];
