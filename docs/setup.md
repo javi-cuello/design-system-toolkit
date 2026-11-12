@@ -18,7 +18,7 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
    ./install.sh                            # checks the repo, links the skills into Claude Code, installs the services and the push hook
    ```
 
-   `install.sh` runs the standards guard first and stops on its errors; `SKIP_CHECKS=1 ./install.sh` links anyway, and `SKIP_SERVICES=1` leaves the services alone. Each service logs to `~/Library/Logs/toolkit/` (`figma-snapshot.log` and `.err`, `figma-audit.log` and `.err`). Then `bin/check` checks the whole toolkit: about six minutes, or `bin/check --quick` for the standards and scanners alone, in under a minute.
+   `install.sh` runs the standards guard first and stops on its errors; `SKIP_CHECKS=1 ./install.sh` links anyway, and `SKIP_SERVICES=1` leaves the services alone; `REVIEW=on ./install.sh` adds the daily periodic review (`bin/review`, `review.log` and `.err`), which spends API credit and is the maintainer's to opt into. Each service logs to `~/Library/Logs/toolkit/` (`figma-snapshot.log` and `.err`, `figma-audit.log` and `.err`). Then `bin/check` checks the whole toolkit: about six minutes, or `bin/check --quick` for the standards and scanners alone, in under a minute.
 
 2. **Connect Claude Code to Figma.** Follow the figma-console MCP's setup (register the server with a Figma access token, import its Desktop Bridge plugin in Figma), then import this repo's snapshot plugin: **Plugins → Development → Import plugin from manifest…** → `plugins/design-system-snapshot/manifest.json`.
 
