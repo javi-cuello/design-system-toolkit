@@ -392,11 +392,11 @@ Cite a rule as `figma-standard rule N`.
 
    *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used".
 
-43. **A style binds a variable wherever Figma lets it.** A text style binds its font family, weight, size, line height and letter spacing; an effect binds each layer's colour, offsets, blur and spread. One exception: letter spacing set in percent may stay unbound, since a bound variable is always px, unless a mode must change it (a script that takes no tracking, [i18n](../knowledge/code/i18n.md)).
+43. **A style binds a variable wherever Figma lets it.** A text style binds its font family, weight, size, line height and letter spacing; an effect binds each layer's colour, offsets, blur and spread. One exception: letter spacing set in percent may stay unbound unless a mode must change it (a script that takes no tracking, [i18n](../knowledge/code/i18n.md#font-coverage)), since a bound variable is always px.
 
     *Why:* a style's raw value is a decision the tokens cannot reach: change the line-height token and every style keeps its own copy. Rule 29 binds a component's values; this is the same rule one level down. The exception holds because binding would cost more than it reaches: a percent tracking scales with the size, so one value serves every size and mode, where a px variable needs a value per size per mode.
 
-    *Evidence:* maintainer-decreed 2026-10-11. The same library's 44 text styles bound family, size and weight, and none bound line height or letter spacing. The exception, 2026-11-12: the toolkit's own measurement through the plugin API bound number variables to a style's and a node's line height and letter spacing, both set to percent first, and both read back in px.
+    *Evidence:* maintainer-decreed 2026-10-11. The same library's 44 text styles bound family, size and weight, and none bound line height or letter spacing. The exception, 2026-11-12: the toolkit's own measurement through the plugin API bound number variables to a style's and a node's line height and letter spacing, both set to percent first, and all four read back in px.
 
    *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a style field Figma can bind and the style leaves loose is raised, one row per field"; `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: letter spacing in percent may stay unbound, since Figma binds it only as px; in px it is raised". The "unless a mode must change it" half is unchecked: the audit exempts every percent tracking.
 
