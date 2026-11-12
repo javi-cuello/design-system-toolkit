@@ -770,7 +770,7 @@ const CHECKS = [
   { key: 'detach', label: () => 'Not detached', miss: (n) => n.toLocaleString() + ' detached', share: (t) => [t.instances, t.instances + t.detached] },
   { key: 'colour', label: () => 'Colour bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' raw colour' : ' raw colours'), share: (t) => [t.paints - t.unboundPaints, t.paints] },
   { key: 'spacing', label: () => 'Spacing and radius bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' raw value' : ' raw values'), share: (t) => [t.values - t.unboundValues, t.values] },
-  { key: 'text', label: () => 'Text styles', miss: (n) => n.toLocaleString() + (n === 1 ? ' unstyled text' : ' unstyled texts'), share: (t) => [t.styledTexts, t.texts] },
+  { key: 'text', label: () => 'Text style bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' unstyled text' : ' unstyled texts'), share: (t) => [t.styledTexts, t.texts] },
 ];
 // Bands are a house choice, not a researched threshold (README). Each carries a word, so colour is never the only cue;
 // the fills are FigUI3's success, warning and danger.

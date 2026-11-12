@@ -17,11 +17,11 @@ Every visible frame and instance at the top of a page, or inside a section there
 
 | Check | Passes / judged |
 |---|---|
-| System components | placed instances from the system libraries (every library, until some are set) / instances plus raw layers (a rectangle, vector, group…; text is scored under Text styles) |
+| System components | placed instances from the system libraries (every library, until some are set) / instances plus raw layers (a rectangle, vector, group…; text is scored under Text style bound) |
 | Not detached | instances / instances plus frames inside a screen that Figma marks as detached. A whole screen detached from a template was meant to be, and a frame only named like a component may be the designer's own, so neither counts |
 | Colour bound | visible solid fills and strokes with a variable or a style / all of them |
 | Spacing and radius bound | non-zero gap, padding and radius with a variable / all of them |
-| Text styles | text layers with a text style / all of them |
+| Text style bound | text layers with a text style / all of them |
 
 The total is the plain average of the checks that had something to judge, shown with every check's own share so one weak check is never hidden in it. Bands: **Good** 90 and up, **Fair** 75 to 89, **Poor** below 75. They are a house choice, not a researched threshold: no published research sets one, and the one vendor that publishes bands uses 40 and 70 (knowledge/code/adoption.md).
 
