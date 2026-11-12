@@ -146,6 +146,9 @@ ok("a bare part citation resolves to its standard, and a handle of the wrong kin
   /cites toolkit-standard §D 99/.test(r.stdout) && /cites toolkit-standard §C 1/.test(r.stdout) && /cites toolkit-standard §D A/.test(r.stdout));
 d = tree({ files: { "docs/a.md": "As rule 2 says.\n" } });
 ok("outside standards/, a rule number that names no standard is refused", /docs\/a\.md:1: "rule 2" names no standard/.test(run(d).stdout));
+d = tree({ history: HISTORY("figma-standard", "1.0.0", MAP), files: { "research/a.md": "As rule 2 says, per old rule 5.\n", "research/index.html": "<p>As rule 2 says.</p>\n" } });
+r = run(d, true);
+ok("research/ is dated essays outside the knowledge base: not checked, not healed", r.status === 0 && !/research\//.test(r.stdout) && /per old rule 5/.test(readFileSync(join(d, "research/a.md"), "utf8")));
 d = tree({ files: { "docs/a.md": "Toolkit: standards/figma-standard.md rule 2\n", "standards/notes.md": "As rule 2 above says.\n" } });
 ok("a path-form citation passes, and a standard may say rule N of itself", !/names no standard/.test(run(d).stdout));
 d = tree({ files: { "docs/a.md": "As §D 2 said.\n" } });

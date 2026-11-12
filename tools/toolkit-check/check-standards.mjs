@@ -165,8 +165,9 @@ const LEGACY = stems.length ? new RegExp(stems.map((st) => "\\b" + either(st) + 
 const RETIRED = retired.length ? new RegExp(retired.map((n) => "\\b" + either(n.replace(/s$/, "")).split("-").join("[- ]") + "s?\\b(?!-)").join("|"), "g") : null;
 const files = git(["ls-files"]).split("\n").filter((f) => f && has(f)
   && /\.(md|mjs|cjs|js|sh|py|astro|html|json|ya?ml)$/.test(f)
-  // History is reference; a test quotes wrong forms on purpose; an audit record is tool output, rewritten on its next run.
-  && !/(^|\/)CHANGELOG\.md$|^standards\/changelog\/|(^|\/)test-[^/]+$|node_modules|\/snapshot\/|\/dist\/|package(-lock)?\.json$/.test(f));
+  // History is reference; a test quotes wrong forms on purpose; an audit record is tool output, rewritten on its next run;
+  // research/ is dated essays outside the knowledge base, citing rules as they stood when written: never checked, never healed.
+  && !/(^|\/)CHANGELOG\.md$|^standards\/changelog\/|^research\/|(^|\/)test-[^/]+$|node_modules|\/snapshot\/|\/dist\/|package(-lock)?\.json$/.test(f));
 // The live part of a text: history sections, fenced examples and walk records are blanked line for line.
 const live = (f, text, fences = true) => {
   let t = fences && /\.md$/.test(f) ? unfence(text) : text;
