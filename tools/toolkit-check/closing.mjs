@@ -190,8 +190,15 @@ export function queue(repos, toolkit = TOOLKIT) {
     }
     for (const [why, n] of [...reasons].sort((a, b) => b[1] - a[1])) out.push({ source: name, kind: 'toolkit-none', text: why, count: n });
   }
-  for (const l of git(toolkit, ['grep', '-n', '-E', '^#+ Known limit|\\*Open:\\*', '--', '*.md', ':!CHANGELOG.md', ':!**/CHANGELOG.md', ':!standards/changelog/*', ':!**/tests/cases.md']).split('\n').filter(Boolean)) {
+  // An *Open:* line is a paragraph that opens with the marker; prose about the marker, wrapped so a line
+  // happens to start with it, is not one (the review of 2026-11-12 found review.md queued three times for it).
+  const lines = {};
+  for (const l of git(toolkit, ['grep', '-n', '-E', '^#+ Known limit|^\\*Open:\\*', '--', '*.md', ':!CHANGELOG.md', ':!**/CHANGELOG.md', ':!standards/changelog/*', ':!**/tests/cases.md']).split('\n').filter(Boolean)) {
     const [file, line] = l.split(':');
+    if (/^\d+:\*Open:\*/.test(l.slice(file.length + 1))) {
+      lines[file] ??= fs.readFileSync(path.join(toolkit, file), 'utf8').split('\n');
+      if (Number(line) > 1 && lines[file][Number(line) - 2].trim() !== '') continue;
+    }
     out.push({ source: 'toolkit', kind: 'open-edge', text: `${file}:${line}` });
   }
   return { since: last ? last.slice(0, 10) : 'never', items: out };
