@@ -398,7 +398,7 @@ Cite a rule as `figma-standard rule N`.
 
     *Evidence:* maintainer-decreed 2026-10-11. The same library's 44 text styles bound family, size and weight, and none bound line height or letter spacing. The exception, 2026-11-12: the toolkit's own measurement through the plugin API bound number variables to a style's and a node's line height and letter spacing, both set to percent first, and both read back in px.
 
-   *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a style field Figma can bind and the style leaves loose is raised, one row per field"; `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: letter spacing in percent may stay unbound".
+   *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a style field Figma can bind and the style leaves loose is raised, one row per field"; `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: letter spacing in percent may stay unbound, since Figma binds it only as px; in px it is raised". The "unless a mode must change it" half is unchecked: the audit exempts every percent tracking.
 
 44. **Parallel token groups have one shape.** A group holds tokens or groups, not both, and sibling groups carry the same leaves: a leaf most siblings have and one lacks is a gap or a decision, and a ruling records the decision. Two names that differ only in case or separator are rule 19's error.
 
