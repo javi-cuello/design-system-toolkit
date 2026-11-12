@@ -62,6 +62,7 @@ How a coding agent builds a prototype from the design system's real components i
 
 **How**
 - [weak] Vallaure's prompt: "Use only components from my system. If something does not exist, piece it together from what is there, mark it clearly, and tell me what you had to invent." When the same corrections keep coming back, package them as a skill. Read a third-party skill first, because "a skill can run code on your machine" (Vallaure, as above).
+- [weak] A question the brief has not settled is marked as open, and an agent that meets one stops and asks rather than filling it in. Groos's component documents prefix such a line `[open]`, design closes each one, and a build agent stops at any left ([Groos, 2026](https://www.designsystemscollective.com/probabilistic-isnt-a-dirty-word)). toolkit-standard §D 15 does the same for a token a run could not confirm.
 - [weak] Brad Frost's `vibe-killer` skill does the same for a page that already exists. It catalogues the page's regions, maps each to a real component, a composition or a recorded system gap, converts it using only verified components and tokens, renders the result, and writes a receipt of what it replaced and what the system lacks ([bradfrost/skills](https://github.com/bradfrost/skills)).
 
 **Cases**
@@ -74,7 +75,7 @@ How a coding agent builds a prototype from the design system's real components i
 - *Script:* none in the toolkit. A project can diff the receipt's "used" list against the prototype's imports.
 - *Judgement:* Is anything in the prototype neither in the receipt nor in the system?
 
-**Sources:** Vallaure and Frost are practitioners, and neither reports a measured run.
+**Sources:** Vallaure, Frost and Groos are practitioners, and none reports a measured run.
 
 ## Building a screen, not a component
 
@@ -144,6 +145,7 @@ How a coding agent builds a prototype from the design system's real components i
 - [moderate] Size matters because the file is loaded every run. Claude Code's guidance is to target under 200 lines, since longer files reduce adherence ([Claude Code](https://code.claude.com/docs/en/memory)); Cursor's is rules under 500 lines, split when larger ([Cursor](https://cursor.com/docs/context/rules)); Anthropic's is the smallest set of high-signal tokens ([Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)). Chroma reports models growing less reliable as input lengthens ([Chroma](https://www.trychroma.com/research/context-rot); read from summaries only, unchecked).
 - [weak] A product's words are one vocabulary for users and builders, Evans' ubiquitous language ([Fowler](https://martinfowler.com/bliki/UbiquitousLanguage.html)): a comment that settles a word changes the glossary, not only the screen.
 - [weak] A decision is recorded with its context and consequences, and a reversed one is marked superseded, never deleted ([Nygard, 2011](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)).
+- [weak] An option that was rejected is recorded with its reason, so an agent researching best practice does not propose it again. Groos keeps a "Ruled out" list in each component's document for this, apart from the requirements, and logs a decision only if "someone could plausibly propose the opposite" ([Groos, 2026](https://www.designsystemscollective.com/probabilistic-isnt-a-dirty-word); eight months in production, with only anecdotal evidence, by her own account).
 
 **Cases**
 - A project's context document grew to 763 lines about its library and said nothing about its users, domain or flows; a prototype run read all of it and still did not know what the product was. The product went to a file of its own, beside it.
@@ -151,7 +153,7 @@ How a coding agent builds a prototype from the design system's real components i
 **Check**
 - *Judgement:* Did the run read the product file first, or draft one from evidence with a source per line and the user's yes; is it under 200 lines; does every decision the run recorded go to the context document's §6 and name who made it?
 
-**Sources:** vendor documentation (Lovable, Figma, Linear, Claude Code, Cursor, Anthropic); Fowler and Nygard for vocabulary and decision records. No study measures whether product context improves a design agent's screens; the case rests on vendor practice and the general findings on context length.
+**Sources:** vendor documentation (Lovable, Figma, Linear, Claude Code, Cursor, Anthropic); Fowler and Nygard for vocabulary and decision records; Groos is a practitioner. No study measures whether product context improves a design agent's screens; the case rests on vendor practice and the general findings on context length.
 
 ## From prototype to pull request
 
