@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.2.1)
+# Eval cases — design-system-research (v3.2.2)
+
+**Walked: 2026-11-12 for 3.2.2** — path only: the collection is named as `research/` in deep mode and Step 8. A17 read against it (reads the collection's README, files by topic, no scripts): unchanged, its fixture now that folder; A15 (Step 8: the guide feeds the knowledge page, which links nothing private) unchanged. No other case names the collection's location.
 
 **Walked: 2026-11-11 for 3.2.1** — A11 and A18 reworded to the 3.2.0 opener (a list of sections, each with its question); A25 checked against the checklist line, which now names the awk. Others unchanged.
 
