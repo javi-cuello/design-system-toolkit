@@ -24,7 +24,7 @@ export function skillCalled(streamJson) {
 export const cost = (streamJson) => Number((streamJson.match(/"total_cost_usd":([0-9.]+)/g) || []).pop()?.split(':')[1] || 0);
 
 const asked = process.argv.slice(2);
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url) && asked.length) {
+if (asked.length && (() => { try { return fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })()) {
   for (const prompt of asked.slice(0, 30)) {
     const r = spawnSync(process.env.CLAUDE_BIN || 'claude', ['-p', prompt, '--max-turns', '1', '--output-format', 'stream-json', '--verbose',
       '--permission-mode', 'default', '--allowedTools', 'Skill', '--disallowedTools', 'Bash', 'Edit', 'Write', 'WebFetch', 'WebSearch'],

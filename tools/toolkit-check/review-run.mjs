@@ -99,7 +99,7 @@ export function takeLock(dir) {
   return dir;
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if ((() => { try { return fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })()) {
   if (IF_OWED && !cadence(TOOLKIT).length) { say('no review owed'); process.exit(0); }
   const waiting = reviewBranches(TOOLKIT);
   if (waiting.length) { say(`not started: ${waiting.map((b) => b.branch).join(', ')} waits to be reviewed and merged`); process.exit(0); }
