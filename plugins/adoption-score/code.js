@@ -755,7 +755,7 @@ const { AutoLayout, Text, Span, Rectangle, useSyncedState, usePropertyMenu, h } 
 // A widget draws on the canvas and cannot read CSS, so the values are copied here; widget font weights take hundreds,
 // so FigUI3's 450 and 550 are 400 and 500.
 const UI = {
-  bg: '#FFFFFF', border: '#E6E6E6',
+  bg: '#FFFFFF', bgHover: '#F5F5F5', border: '#E6E6E6',
   text: '#000000E5', textSecondary: '#00000099', textTertiary: '#0000004D', textDanger: '#DC3412',
   brand: '#0D99FF', brandHover: '#007BE5', onBrand: '#FFFFFF',
   radiusWindow: 13, radiusControl: 5, s1: 4, s2: 8, s25: 12, s3: 16,
@@ -949,9 +949,11 @@ function AdoptionScore() {
   // with no libraries set, every library counts as the system: the card says so and offers the fix
   const source = libraries.length
     ? txt('System: ' + libraries.map((/** @type {any} */ l) => l.name).join(', '), UI.body, { fill: UI.textSecondary, width: 'fill-parent' })
-    : h(AutoLayout, { direction: 'vertical', width: 'fill-parent', spacing: UI.s1 },
-        txt('Any library counts as the system, so the score may be too high.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
-        txt('Connect your system libraries for an accurate score', UI.body, { fill: UI.brand, fontWeight: 500, onClick: connect, hoverStyle: { fill: UI.brandHover } }));
+    : h(AutoLayout, { direction: 'vertical', width: 'fill-parent', spacing: UI.s2 },
+        txt('Any library counts as the system, so the score may be too high. Connect yours for an accurate one.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
+        // FigUI3's secondary button: a hairline border, default text, a grey hover
+        h(AutoLayout, { stroke: UI.border, cornerRadius: UI.radiusControl, height: 24, padding: { horizontal: UI.s2 }, verticalAlignItems: 'center', onClick: connect, hoverStyle: { fill: UI.bgHover } },
+          txt('Connect libraries', UI.body)));
   const where = result ? `${result.screens} ${result.screens === 1 ? 'screen' : 'screens'} on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages');
 
   return h(AutoLayout, { direction: 'vertical', width: 360, fill: UI.bg, cornerRadius: UI.radiusWindow, stroke: UI.border, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.15 }, offset: { x: 0, y: 2 }, blur: 6 } },
