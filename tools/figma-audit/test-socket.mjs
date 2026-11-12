@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import net from "node:net";
-import { onFreePort } from "../shared/free-port.mjs";
+import { onFreePort, freePort } from "../shared/free-port.mjs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -21,24 +21,23 @@ let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log("ok", name); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// a free port in the range the bridge scans, which the server insists on
-const PORTS = [9223, 9224, 9225, 9226, 9227, 9228, 9229, 9230, 9231, 9232];
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-socket-"));
 fs.mkdirSync(path.join(dir, "audit"));
 let server = null, log = "";
 const done = () => { if (server) server.kill(); fs.rmSync(dir, { recursive: true, force: true }); };
 process.on("exit", done);
-// started on the first port of PORTS it can bind: one taken between the probe and the bind moves to the next
-const up = await onFreePort(PORTS, async (port) => {
+// a port the system picks, outside the bridge's range under the service's test seam: a real Desktop Bridge plugin never
+// dials in (it scans 9223–9232, the flake this had), and a machine whose ten bridge ports are all held still runs it
+const up = await onFreePort([await freePort()], async (port) => {
   log = "";
-  const s = server = spawn("node", [path.join(HERE, "server.mjs"), "--data", path.join(dir, "audit"), "--port", String(port)], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "" } });
+  const s = server = spawn("node", [path.join(HERE, "server.mjs"), "--data", path.join(dir, "audit"), "--port", String(port)], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "", FIGMA_AUDIT_TEST_PORT: "1" } });
   s.stdout.on("data", (c) => { log += c; });
   s.stderr.on("data", (c) => { log += c; });
   for (let i = 0; i < 80 && !log.includes("figma audit") && s.exitCode === null; i++) await sleep(100);
   if (!log.includes("figma audit")) { s.kill(); throw new Error(`the service never started:\n${log}`); }
 });
-if (!up) { console.log("skip: every port the bridge scans (9223–9232) is taken, so the socket cannot be tested here"); process.exit(77); }
+if (!up) throw new Error("the port the system picked was taken before the service bound it: run again");
 const PORT = up.port;
 
 /* A client frame: masked, as RFC 6455 requires of a client. */

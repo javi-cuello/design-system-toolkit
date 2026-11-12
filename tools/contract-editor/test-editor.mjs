@@ -1191,8 +1191,11 @@ try {
         await js(`document.querySelector('[data-new]').click()`);
         if (await dialogOpen()) await js(`${inDialog('[data-dialog-delete]')}.click()`);
         await js(`(() => { const f = document.querySelector('[data-component]'); f.value = 'Badge'; f.dispatchEvent(new Event('input')); })()`);
-        await js(`document.querySelector('[data-figma-menu]').click()`);
-        ok('an unlinked draft of a component the library has offers Pull and Propose', await js(`[...document.querySelectorAll('#figma-menu:popover-open button')].map(b => b.textContent).join('|')`) === 'Pull from Figma|Propose to Figma');
+        // the menu is drawn once, as it opens, from what the page holds then: a slower machine (CI, 2026-11-12) opened it
+        // before the name was taken in, so it is opened again until the page has caught up, or 10 s have passed
+        const proposeMenu = `[...document.querySelectorAll('#figma-menu:popover-open button')].map(b => b.textContent).join('|')`;
+        await waitFor(tab, `(() => { const m = document.querySelector('#figma-menu'); if (m.matches(':popover-open')) m.hidePopover(); document.querySelector('[data-figma-menu]').click(); return ${proposeMenu} === 'Pull from Figma|Propose to Figma'; })()`, { timeout: 10000, every: 250 }).catch(() => {});
+        ok('an unlinked draft of a component the library has offers Pull and Propose', await js(proposeMenu) === 'Pull from Figma|Propose to Figma');
         await js(`[...document.querySelectorAll('#figma-menu button')].find(b => b.firstChild.textContent === 'Propose to Figma').click()`);
         ok('proposing downloads the change for review', /Downloaded badge\.proposal\.json/.test(await js(`new Promise(r => requestAnimationFrame(() => r(document.querySelector('[data-status]').textContent)))`)));
         await js(`document.querySelector('[data-code-menu]').click()`);

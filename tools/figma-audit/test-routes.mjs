@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
-import { onFreePort } from "../shared/free-port.mjs";
+import { onFreePort, freePort } from "../shared/free-port.mjs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -20,8 +20,6 @@ let n = 0;
 const ok = (name, cond, why = "") => { n++; assert.ok(cond, `${name}${why ? `\n${why}` : ""}`); console.log("ok", name); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// a free port in the range the bridge scans, which the server insists on (counted down: test-socket counts up)
-const PORTS = [9232, 9231, 9230, 9229, 9228, 9227, 9226, 9225, 9224, 9223];
 
 // a scratch project: its audit folder, no context document, no site yet, and no project list, so nothing real is read
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-routes-"));
@@ -31,17 +29,18 @@ fs.writeFileSync(path.join(dir, "secret.txt"), "outside the site");
 let server = null, log = "";
 const done = () => { if (server) server.kill(); fs.rmSync(dir, { recursive: true, force: true }); };
 process.on("exit", done);
-// started on the first port of PORTS it can bind: one taken between the probe and the bind moves to the next
-const up = await onFreePort(PORTS, async (port) => {
+// a port the system picks, outside the bridge's range under the service's test seam: a real Desktop Bridge plugin never
+// dials in (it scans 9223–9232, the flake this had), and a machine whose ten bridge ports are all held still runs it
+const up = await onFreePort([await freePort()], async (port) => {
   log = "";
   const s = server = spawn("node", [path.join(HERE, "server.mjs"), "--data", path.join(dir, "audit"), "--port", String(port), "--key-file", path.join(dir, "no-key")],
-  { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "", TOOLKIT_PROJECTS_ROOT: path.join(dir, "projects") } });
+  { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ANTHROPIC_API_KEY: "", FIGMA_AUDIT_TEST_PORT: "1", TOOLKIT_PROJECTS_ROOT: path.join(dir, "projects") } });
   s.stdout.on("data", (c) => { log += c; });
   s.stderr.on("data", (c) => { log += c; });
   for (let i = 0; i < 80 && !log.includes("figma audit") && s.exitCode === null; i++) await sleep(100);
   if (!log.includes("figma audit")) { s.kill(); throw new Error(`the service never started:\n${log}`); }
 });
-if (!up) { console.log("skip: every port the bridge scans (9223–9232) is taken, so the routes cannot be tested here"); process.exit(77); }
+if (!up) throw new Error("the port the system picked was taken before the service bound it: run again");
 const PORT = up.port;
 
 /* One request with the headers a browser would send; fetch cannot set Host, so this is node:http. */

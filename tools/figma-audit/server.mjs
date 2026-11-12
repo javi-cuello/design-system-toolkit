@@ -222,6 +222,10 @@ const ANTHROPIC_KEY = KEY_LOOKS_REAL ? RAW_KEY : "";
 // Fix this and Ask. The audit's judgement takes its model and effort from the
 // skill (scanner/judge.json), read per call so an edit there needs no restart.
 const MODEL = "claude-sonnet-5";
+// where Claude is called. FIGMA_AUDIT_TEST_API is a test seam (a fake API that records what the proxy sends), honoured
+// only beside FIGMA_AUDIT_TEST_PORT=1 and only on this machine, so no environment set for anything else sends the key away
+const TEST_API = process.env.FIGMA_AUDIT_TEST_PORT === "1" && /^http:\/\/127\.0\.0\.1:\d+$/.test(process.env.FIGMA_AUDIT_TEST_API || "") ? process.env.FIGMA_AUDIT_TEST_API : "";
+const API = TEST_API || "https://api.anthropic.com";
 // the most one call may ask for: the page's largest is the judge's 16000, so no page spends past it
 const MAX_TOKENS = 16000;
 // USD per million tokens, input and output, from Anthropic's price list.
@@ -447,7 +451,9 @@ if (LEGACY && !existsSync(DATA_ARG)) {
 // Number.isInteger first: NaN passes BOTH of the range comparisons, so a
 // `--port` with nothing after it sailed through this guard and reached
 // listen() as NaN, where the error names the wrong problem.
-if (!Number.isInteger(PORT) || PORT < 9223 || PORT > 9232) {
+// FIGMA_AUDIT_TEST_PORT=1 is a test seam: a test's fake plugin needs no scanned port, so a machine whose ten bridge
+// ports are all held (one figma-console per open session, a service per project) still runs the service's tests
+if (!Number.isInteger(PORT) || ((PORT < 9223 || PORT > 9232) && !(process.env.FIGMA_AUDIT_TEST_PORT === "1" && PORT > 1024))) {
   console.error("--port must be a whole number in 9223–9232 (the range the Desktop Bridge plugin scans).");
   // Echo only what identifies the mistake. A mistyped command line can carry a
   // pasted API key into the wrong argument, and an error that prints the value
@@ -1092,7 +1098,7 @@ const server = createServer(async (req, res) => {
       if (!ANTHROPIC_KEY) return json(res, 200, { ok: false, error: "no_api_key" });
       const { prompt, system, max_tokens, use } = JSON.parse(await body(req));
       const judge = use === "judge" ? JSON.parse(await readFile(join(SCANNER, "judge.json"), "utf8")) : null;
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const r = await fetch(API + "/v1/messages", {
         method: "POST",
         headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({

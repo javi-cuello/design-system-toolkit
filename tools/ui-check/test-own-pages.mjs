@@ -18,7 +18,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { axePages } from './axe.mjs';
 import { findChrome } from '../shared/cdp.mjs';
-import { onFreePort } from '../shared/free-port.mjs'; // every interface: figma-console's bridge holds one of these ports on ::1
+import { onFreePort, freePort } from '../shared/free-port.mjs'; // every interface: figma-console's bridge holds one of these ports on ::1
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLS = path.join(HERE, '..');
@@ -56,7 +56,7 @@ for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(130)
 // DOCS_WATCH_ENGINE=0: the site is built once from the engine as it is now; another session editing the engine
 // would otherwise rebuild it and swap it in mid-run, and a page asked for between the two renames is the service's
 // "being built" note, with no title or lang
-const env = { ...process.env, DOCS_WATCH_ENGINE: '0', ANTHROPIC_API_KEY: '', TOOLKIT_PROJECTS_ROOT: root, TOOLKIT_UNCLAIMED: path.join(root, 'unclaimed') }; // projects-path: the run's own root
+const env = { ...process.env, DOCS_WATCH_ENGINE: '0', ANTHROPIC_API_KEY: '', FIGMA_AUDIT_TEST_PORT: '1', TOOLKIT_PROJECTS_ROOT: root, TOOLKIT_UNCLAIMED: path.join(root, 'unclaimed') }; // projects-path: the run's own root
 const start = (args, ready) => new Promise((resolve, reject) => {
   const c = spawn(process.execPath, args, { stdio: ['ignore', 'pipe', 'pipe'], env });
   children.push(c);
@@ -66,14 +66,15 @@ const start = (args, ready) => new Promise((resolve, reject) => {
   c.once('exit', (code) => reject(new Error(`${path.basename(args[0])} exited ${code}:\n${log.slice(-1500)}`)));
 });
 
-// the dashboard service, on a free port of the range the bridge scans (it insists on one)
-// the first free port the service can bind; one taken between the probe and the bind moves to the next
-const up = await onFreePort([9223, 9224, 9225, 9226, 9227, 9228, 9229, 9230, 9231, 9232], (p) =>
+// the dashboard service
+// a port the system picks, outside the bridge's range under the service's test seam: a real Desktop Bridge plugin never
+// dials in (it scans 9223–9232, the flake this had), and a machine whose ten bridge ports are all held still runs it
+const up = await onFreePort([await freePort()], (p) =>
   // built on start (the engine's lock can make it wait for another project's build); a failed build is said, never waited on
   start([path.join(TOOLS, 'figma-audit', 'server.mjs'), '--data', path.join(home, 'audit'), '--port', String(p), '--key-file', path.join(root, 'no-key')],
     (l) => { if (/sample build failed/.test(l)) throw new Error(`the docs site did not build for the sample library:\n${l.slice(-2000)}`); return /docs site +sample built in/.test(l); }));
 const svc = up && up.value, PORT = up && up.port;
-if (!svc) { console.log('skip: every port the bridge scans (9223–9232) is taken, so the dashboard cannot be served here; nothing ran'); process.exit(77); }
+if (!svc) throw new Error("the port the system picked was taken before the service bound it: run again");
 const site = path.join(home, 'site');
 ok('the docs site builds for the sample library', fs.existsSync(path.join(site, 'index.html')), svc.log());
 

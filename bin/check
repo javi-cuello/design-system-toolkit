@@ -331,7 +331,12 @@ for t in bin/test-*.mjs tools/*/test-*.mjs tools/*/test-*.cjs tools/*/test-*.js 
         # a suite that could not run here at all (no browser): exit 77, said as a skip, never as ok
         skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"
     else
-        bad "$(printf '%s' "$OUT" | tail -20)"
+        # a node:test suite ends on its counts, so its failing subtest (a `not ok` block) is shown, not the tail: a CI
+        # flake on 2026-11-12 printed 20 lines of passes and left the failure unread
+        # (TAP's `not ok` where output is not a terminal's, as in CI; the spec reporter's `✖ failing tests:` here)
+        if printf '%s\n' "$OUT" | grep -q '^not ok'; then bad "$(printf '%s\n' "$OUT" | grep -A24 '^not ok' | grep -vE '^ +at ' | head -30)"
+        elif printf '%s\n' "$OUT" | grep -q '^✖ failing tests:'; then bad "$(printf '%s\n' "$OUT" | sed -n '/^✖ failing tests:/,$p' | grep -vE '^ +at ' | head -30)"
+        else bad "$(printf '%s' "$OUT" | tail -20)"; fi
     fi
 done
 
