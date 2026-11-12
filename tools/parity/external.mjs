@@ -874,12 +874,12 @@ export function storyIndex(out) {
    (specificity, @media, unlayered over layered, !important and inline as
    Chrome orders them), in px; null where it is not a px length. Not handled:
    !important across @layers, where the cascade reverses layer order. */
-export async function authoredWidth(tab, selector, property) {
+export async function authoredWidth(tab, selector, property, { raw = false } = {}) {
   const { root } = await tab.send('DOM.getDocument', { depth: 0 });
   const { nodeId } = await tab.send('DOM.querySelector', { nodeId: root.nodeId, selector });
   if (!nodeId) return null;
   const r = await tab.send('CSS.getMatchedStylesForNode', { nodeId });
-  return winning([...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])], property);
+  return winning([...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])], property, { raw });
 }
 
 /* The custom properties a property's value was written with, outermost first
@@ -887,14 +887,20 @@ export async function authoredWidth(tab, selector, property) {
    code meant, where two tokens hold the value it computes to. Empty where it
    was written as a value. Read from the element's matched styles and those
    it inherits, nearest first, as a custom property inherits. */
-export async function authoredVars(tab, selector, property) {
-  const { root } = await tab.send('DOM.getDocument', { depth: 0 });
-  const { nodeId } = await tab.send('DOM.querySelector', { nodeId: root.nodeId, selector });
-  if (!nodeId) return [];
-  const r = await tab.send('CSS.getMatchedStylesForNode', { nodeId });
-  const own = [...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])];
-  const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => m.rule.style), ...(x.inlineStyle ? [x.inlineStyle] : [])]);
-  return varChain([own, ...inherited], property);
+export async function authoredVars(tab, selector, property, cache = null) {
+  // `cache`, a Map one render's reads share: an element's matched styles are fetched once for all its properties
+  let levels = cache && cache.get(selector);
+  if (!levels) {
+    const { root } = await tab.send('DOM.getDocument', { depth: 0 });
+    const { nodeId } = await tab.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+    if (!nodeId) return [];
+    const r = await tab.send('CSS.getMatchedStylesForNode', { nodeId });
+    const own = [...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])];
+    const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => m.rule.style), ...(x.inlineStyle ? [x.inlineStyle] : [])]);
+    levels = [own, ...inherited];
+    if (cache) cache.set(selector, levels);
+  }
+  return varChain(levels, property);
 }
 
 /* varChain, with nothing opened: `levels` are the styles of the element and

@@ -20,6 +20,14 @@ ok('a value takes the token its field offers that holds it: a background among t
   designTokenFor('background', 'rgb(238, 238, 238)', table, {}, null, null, offered).token === 'Color/Background/Neutral/secondary'
   && designTokenFor('space', 8, table, {}, null, null, offered).token === 'Spacing/8' && designTokenFor('radius', 8, table, {}, null, null, offered).token === 'Corner radius/8'
   && designTokenFor('text', '#5e0007', table, {}, null, null, offered).token === 'Color/Text/Feedback/Danger/primary' && designTokenFor('space', 7, table, {}, null, null, offered).value === 7);
+ok('the token the code wrote wins over the field\'s guess, where it holds the value: a dot painted with an icon token is not given the palette colour the background field offers',
+  (() => { const t = [['Palette/Red/10', '#c00', ['ALL_SCOPES'], 'Primitives'], ['Colour/Icon/Feedback/Danger/strong', '#c00', ['SHAPE_FILL'], 'Semantic']];
+    const off = offerFor([['Palette/Red/10', '#c00', ['FRAME_FILL']]]);
+    return designTokenFor('background', '#c00', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === 'Colour/Icon/Feedback/Danger/strong'
+      && designTokenFor('background', '#c00', t, {}, null, null, null, ['--some-other-thing']).token !== undefined
+      && designTokenFor('background', '#0c0', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === undefined; })());
+ok('of two names a property ends in, the longer: Background/Primary before Primary',
+  designTokenFor('background', '#fff', [['Primary', '#fff', null, 'A'], ['Colour/Background/Primary', '#fff', null, 'B']], {}, null, null, null, ['--ds-colour-background-primary']).token === 'Colour/Background/Primary');
 ok('a field nothing is known of (no scopes, never set by the library) names no token rather than guess among every token of that number',
   designTokenFor('fontSize', 14, [['Spacing/14', 14], ['Font/Size/14', 14]], {}, null, null, offerFor([])).value === 14);
 ok('Figma\'s own scopes, where the snapshot recorded them, decide before the library\'s groups',

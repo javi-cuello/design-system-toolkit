@@ -100,11 +100,11 @@ export function offerFor(contracts) {
   return (field, list) => (list.some((t) => t.scopes) || (groups[field] || []).length ? forField(list, groups[field], field) : null);
 }
 
-/* Which token holds a value: among the tokens the field offers (`offered`,
-   offerFor; a field nothing is known of names none; no `offered`, every
-   token), the one the code wrote it with (`vars`, the custom properties its
-   value came through, authoredVars), else the one the library's contracts
-   use most; `tie` lists the rest that hold it too, and `more` says several
+/* Which token holds a value: the one the code wrote it with (`vars`, the
+   custom properties its value came through, authoredVars) where it holds
+   that value, whatever the field offers; else among the tokens the field
+   offers (`offered`, offerFor; a field nothing is known of names none; no
+   `offered`, every token) the one the library's contracts use most; `tie` lists the rest that hold it too, and `more` says several
    held it, so the code's own words are worth reading. */
 export function designTokenFor(kind, value, table, usage, under = null, judge = null, offered = null, vars = null) {
   const colour = ['background', 'text', 'icon', 'stroke'].includes(kind);
@@ -112,6 +112,14 @@ export function designTokenFor(kind, value, table, usage, under = null, judge = 
   // the tokens the kind's fields offer. Where nothing is known of them (no scopes recorded, and the library
   // sets them nowhere) no token is named: a guess among every token of the same number is a wrong name
   // said with confidence (toolkit-standard §D 15). Without `offered` at all, every token is a candidate.
+  // the token the code wrote, where it holds this value, whatever the field offers: what the code says beats a
+  // guess by scope (a dot the code paints with an icon token is a box in the markup and an ellipse in Figma)
+  if (vars && vars.length) for (const v of vars) {
+    const holds = (t) => (colour ? sameColour(t[1], value) : typeof t[1] === 'number' && +t[1] === +value);
+    // the toolkit's own css name for the token first; else the longest name the property ends in
+    const said = table.find((t) => v === cssName(t[3] || '', t[0]) && holds(t)) || table.filter((t) => writtenAs(v, t[0], t[3]) && holds(t)).sort((a, b) => b[0].length - a[0].length)[0];
+    if (said) return { token: said[0] };
+  }
   const known = offered ? (FIELDS[kind] || []).map((f) => offered(f, list)).filter(Boolean) : null;
   if (known && !known.length) return { value };
   const allowed = new Set((known ? known.flat() : list).map((t) => t.name));
@@ -550,14 +558,15 @@ async function main() {
     const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
     const read = async (args) => {
       await show(args);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
         const clear = (c) => /rgba\(.*,\s*0\)$|transparent/.test(c);
         let root = document.querySelector(sel); if (!root) return null;
         const holder = document.querySelector(container);
-        while (root.parentElement && root.parentElement !== holder && root.parentElement !== document.body) root = root.parentElement;
+        // up to the story's top unless the mapping names the root: that is the root, not a wrapper a story puts around it
+        if (climb) while (root.parentElement && root.parentElement !== holder && root.parentElement !== document.body) root = root.parentElement;
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         for (const [s, id] of named) { const n = document.querySelector(s); if (!n) continue; if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
@@ -580,11 +589,13 @@ async function main() {
           const filled = marks.find(([m]) => text === m);
           const kind = filled ? 'slot' : tag === 'svg' ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
           const e = { id, kind, ...(parent != null && { parent, order }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }) };
+          // a slot holding only words: its text styles kept aside, for where the design draws a text there
+          if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
           // another component of the library, drawn inside this one (a chip's avatar): an instance of it, its
           // inside the other component's business; named by the library's own class (MuiAvatar-root)
           const other = parent != null && rootRe && [...n.classList, n.tagName.toLowerCase()].map((c) => (c.match(new RegExp(rootRe)) || [])[1]).find((x) => x && others[x]);
-          if (other) { seen[id]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1)}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
+          if (other) { seen[id]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
             n.setAttribute('data-contract-id', id);
             out.push({ id, kind: 'instance', parent, order, component: others[other], width: px(s.width), height: px(s.height), ...(n.querySelector('img') && { image: true }) }); return; }
           // an icon set's name for it, where its class carries one (lucide-circle-x), as Figma's swap names it
@@ -641,27 +652,30 @@ async function main() {
         const byParent = {}; for (const e of out) if (e.parent != null) (byParent[e.parent] = byParent[e.parent] || []).push(e);
         for (const xs of Object.values(byParent)) xs.forEach((e, i) => { e.order = i; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a whole computed border may be a floored one (1.5px reads 1px): the cascade's, as the code audit reads it
       for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, 'border-top-width'); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
       // a box the code sizes itself (height: 24px, a minimum), which a hug would lose: the cascade's own value,
       // as the contract's minHeight/minWidth (Figma's min sizes on an auto layout)
-      for (const e of raw) if (e.kind === 'container' && e.layout) for (const [css, field] of [['height', 'minHeight'], ['min-height', 'minHeight'], ['width', 'minWidth'], ['min-width', 'minWidth']]) {
-        const v = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css);
+      // written physically or logically (block-size is height in a horizontal writing mode), in px or rem
+      const remPx = await call(L.tab, () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
+      const lengthOf = (v) => { const m = /^\s*(-?[\d.]+)(px|rem)\s*$/.exec(v || ''); return m ? +(+m[1] * (m[2] === 'rem' ? remPx : 1)).toFixed(2) : null; };
+      for (const e of raw) if (e.kind === 'container' && e.layout) for (const [css, field] of [['height', 'minHeight'], ['min-height', 'minHeight'], ['block-size', 'minHeight'], ['min-block-size', 'minHeight'], ['width', 'minWidth'], ['min-width', 'minWidth'], ['inline-size', 'minWidth'], ['min-inline-size', 'minWidth']]) {
+        const v = lengthOf(await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true }));
         if (v && !(field in e)) e[field] = v;
       }
       // values to tokens
       const anatomy = {}, drawn = {};
       let under = null;
+      const styles = new Map();
       const asRgba = (v) => { const c = parseColour(v); return c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${c[3]})` : v; };
       // where several tokens hold a value, the one the code wrote it with: the custom properties of the css it came from
       const tok = async (kind, v, at, css = []) => {
-        let r = designTokenFor(kind, v, table, usage, under, judge, offered);
-        if (r.more && css.length) {
-          const el = at.slice(0, at.lastIndexOf('.'));
-          for (const p of css) { const vars = await authoredVars(L.tab, `[data-contract-id="${el}"]`, p); if (vars.length) { r = designTokenFor(kind, v, table, usage, under, judge, offered, vars); break; } }
-        }
+        let r = null;
+        const el = at.slice(0, at.lastIndexOf('.'));
+        for (const p of css) { const vars = await authoredVars(L.tab, `[data-contract-id="${el}"]`, p, styles); if (vars.length) { r = designTokenFor(kind, v, table, usage, under, judge, offered, vars); if (r.token) break; } }
+        if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
         if (r.tie) ties.push({ at, token: r.token, tie: r.tie });
         return r.token ?? (['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(r.value) : r.value);
       };
@@ -669,6 +683,13 @@ async function main() {
       for (const e of raw) {
         const { id, under: u, ...x } = e;
         under = u;
+        // where a governed mapping gives the design's layer, a part the code draws the same way is built as the
+        // design builds it: content that is only words where the design draws a text, a round empty box where
+        // it draws an ellipse
+        const fa = L.governed && figmaContract && figmaContract.anatomy && figmaContract.anatomy[id];
+        if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; }
+        delete x.asText;
+        if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null };
         if (x.layout) {
           if ('gap' in x.layout) x.layout.gap = await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
@@ -849,6 +870,52 @@ async function main() {
     const nested = Object.assign({}, base, ...variants.map((v) => v.add || {}));
     for (const [id, e] of Object.entries(nested)) if (e.kind === 'instance' && e.component) structure.push(`${id}: the ${e.component} component, drawn as its instance; its own values are compared in ${e.component}'s audit, not here`);
 
+    // where a governed mapping gives the design's layers: a slot the code fills with words where the design draws
+    // a text is the design's text prop, under its name and with its sample (a slot has no default of its own);
+    // an enum with the design's values lists them in the design's order, its own default kept
+    if (L.governed && figmaContract) {
+      for (const [k, p] of Object.entries({ ...fromCode.props })) {
+        if (p.type !== 'slot') continue;
+        const el = Object.entries(fromCode.anatomy).find(([, e]) => e.content === `{${k}}` && e.kind === 'text');
+        const fa = el && figmaContract.anatomy[el[0]];
+        const fk = fa && fa.kind === 'text' && (/^\{(.+)\}$/.exec(fa.content || '') || [])[1];
+        const fp = fk && figmaContract.props[fk];
+        if (!fp || fp.type !== 'string' || (fk !== k && fromCode.props[fk])) continue;
+        delete fromCode.props[k];
+        fromCode.props[fk] = { type: 'string', code: p.code, default: fp.default };
+        const swap = (x) => JSON.parse(JSON.stringify(x).split(`"{${k}}"`).join(`"{${fk}}"`));
+        fromCode.anatomy = swap(fromCode.anatomy); fromCode.variants = swap(fromCode.variants);
+      }
+      // the design's name for the component, not the code folder's (Board card, not Board-card)
+      fromCode.component = figmaContract.component;
+      // a value the code draws as the design does, written raw or left unset (a 0 padding, no radius), takes the
+      // design's token for it: the drawing binds what the design binds. The compare above keeps what the code wrote
+      const val = (t) => (typeof t === 'string' && t.includes('/') ? L.value(t) : t);
+      const unbound = (v) => v == null || typeof v === 'number';
+      const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
+      // opacity aside: unset is 1, and its tokens hold percentages
+      const fields = [['radius'], ['layout', 'gap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])];
+      const at = (o, path) => path.reduce((x, k) => (x == null ? x : x[k]), o);
+      const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
+      for (const [id, e] of Object.entries(fromCode.anatomy)) {
+        const fe = figmaContract.anatomy[id];
+        if (!fe || fe.kind !== e.kind) continue;
+        for (const path of fields) {
+          const want = at(fe, path), have = at(e, path);
+          if (typeof want !== 'string' || !want.includes('/') || !unbound(have)) continue;
+          if (path[0] === 'layout' && !e.layout) continue;
+          // a padding the code leaves unset is 0 on every side: each side said, not only those the design binds
+          if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
+          if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
+        }
+      }
+      for (const p of Object.values(fromCode.props)) {
+        if (p.type !== 'enum') continue;
+        const low = (v) => String(v).toLowerCase();
+        const fp = Object.values(figmaContract.props).find((q) => q.type === 'enum' && q.values.length === p.values.length && q.values.every((v) => p.values.some((w) => low(w) === low(v))));
+        if (fp) p.values = fp.values.map((v) => p.values.find((w) => low(w) === low(v)));
+      }
+    }
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)
     const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [] });
     const propsCompare = figmaContract ? compareProps(figmaContract, side.map, side.code, side.framework, side.fw || {}) : [];
