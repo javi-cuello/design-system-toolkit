@@ -1,4 +1,4 @@
-// Adoption score — v0.3.2 · skill-standard v1.9.0
+// Adoption score — v0.3.3 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -749,7 +749,7 @@ const FCA_FACTORY = function () {
 /* adoption-score generated end */
 
 const { widget } = figma;
-const { AutoLayout, Text, Rectangle, useSyncedState, usePropertyMenu, h } = widget;
+const { AutoLayout, Text, Span, Rectangle, useSyncedState, usePropertyMenu, h } = widget;
 
 // The look is the plugins' (skill-standard §B 4): FigUI3's light-theme values, read from plugins/_shared/figui3/fig.css.
 // A widget draws on the canvas and cannot read CSS, so the values are copied here; widget font weights take hundreds,
@@ -852,7 +852,7 @@ async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, n
 function score(/** @type {any} */ t) {
   const rows = CHECKS.map((c) => {
     const [pass, total] = c.share(t);
-    return { key: c.key, label: c.label(t), miss: c.miss(total - pass, t), pass, total, pct: total ? Math.round((100 * pass) / total) : null };
+    return { key: c.key, label: c.label(t), miss: c.miss(total - pass, t), bad: total - pass, pass, total, pct: total ? Math.round((100 * pass) / total) : null };
   });
   const live = rows.filter((r) => r.pct !== null);
   const total = live.length ? Math.round(live.reduce((n, r) => n + /** @type {number} */ (r.pct), 0) / live.length) : null;
@@ -906,9 +906,11 @@ const divider = (/** @type {string} */ key) => h(Rectangle, { key, width: 'fill-
 
 const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-parent', padding: { vertical: UI.s2 }, spacing: UI.s2, verticalAlignItems: 'center' },
   h(AutoLayout, { direction: 'vertical', width: 'fill-parent' },
-    txt(r.label, UI.body),
+    txt(r.label, UI.body, { fontWeight: 500 }),
     // the share stays a pass rate, like the total; the line under it names what failed, which is what someone fixes
-    txt(r.total ? `${r.miss} · ${r.total.toLocaleString()} checked` : 'Nothing to check', UI.body, { fill: UI.textSecondary })),
+    r.total
+      ? h(Text, { fontFamily: 'Inter', ...UI.body, fill: UI.textSecondary }, h(Span, { fill: r.bad ? UI.textDanger : UI.textSecondary }, r.miss), ` · ${r.total.toLocaleString()} checked`)
+      : txt('Nothing to check', UI.body, { fill: UI.textSecondary })),
   r.pct === null
     ? txt('—', UI.body, { fill: UI.textTertiary })
     : h(AutoLayout, { spacing: UI.s2, verticalAlignItems: 'center' }, txt(r.pct + '%', UI.body, { fontWeight: 500 }), chip(r.pct)));
