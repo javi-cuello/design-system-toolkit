@@ -166,9 +166,9 @@ export function touched(repo, changed, projectRepos = [], toolkit = TOOLKIT) {
    closed the owed review in silence; one calling itself independent did so
    again (2026-10-31), so the list's name is what tells them apart. */
 export const REVIEW_DAYS = 14;
-export function cadence(repo, now = Date.now()) {
+export function cadence(repo, now = Date.now(), ref = 'HEAD') { // bin/review reads origin/main: a review it landed is there before any pull
   const out = [];
-  const last = git(repo, ['log', '-1', '--format=%cI', '-i', '--grep=^Review:.*independent.*review\\.md']);
+  const last = git(repo, ['log', '-1', '--format=%cI', '-i', '--grep=^Review:.*independent.*review\\.md', ref]);
   const days = last ? (now - Date.parse(last)) / 864e5 : Infinity;
   if (days > REVIEW_DAYS) out.push(`an independent review is owed (last ${last ? last.slice(0, 10) : 'never'}; every ${REVIEW_DAYS} days, §D 11): fresh agents read the toolkit end to end against tools/toolkit-check/review.md; the commit closing it carries a Review: trailer naming it independent and naming review.md`);
   return out;
@@ -207,8 +207,8 @@ export function queue(repos, toolkit = TOOLKIT) {
   return { since: last ? last.slice(0, 10) : 'never', items: out };
 }
 
-/* Review branches bin/review left and nobody merged: the run never merges or pushes, so the next session does,
-   with gates on (tools/toolkit-check/review.md, *How a review runs*). */
+/* Review branches bin/review held (a reviewer's High, a red check, a conflict): nothing landed, and the next
+   owed run deletes the branch (unless a person committed on it) and redoes it with the reason (tools/toolkit-check/review.md, *How a review runs*). */
 export function reviewBranches(repo) {
   return git(repo, ['branch', '--list', 'review/*', '--no-merged', 'main', '--format=%(refname:short)']).split('\n').filter(Boolean)
     .map((b) => ({ branch: b, commits: Number(git(repo, ['rev-list', '--count', `main..${b}`])) || 0 }));
@@ -293,7 +293,7 @@ if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); 
       } else if (p && p.lessons && p.lessons.error) say(`  (the parity facts could not be read: ${p.lessons.error.split('\n')[0]})`);
     }
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
-    if (name === 'toolkit') for (const b of reviewBranches(repo)) flag(`review branch ${b.branch} is ready (${b.commits} commit(s), fixes and proposals in their messages): review it with gates on, settle each proposal, then git merge --no-ff ${b.branch} with a Review: trailer naming it independent and naming tools/toolkit-check/review.md`);
+    if (name === 'toolkit') for (const b of reviewBranches(repo)) flag(`review branch ${b.branch} was held, not merged (${b.commits} commit(s); its last message says why): the next owed bin/review run redoes it, unless a person has committed on it, which keeps it theirs; nothing is owed here unless that reason is yours to fix`);
     // not on the Stop hook's brief pass, which has 20 s and runs every turn: a network call there can cost 5 of them
     if (name === 'toolkit' && !BRIEF) {
       const a = alerts(repo);

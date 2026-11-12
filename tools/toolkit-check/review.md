@@ -16,15 +16,23 @@ with `--if-owed`; it acts only when the cadence says a review is owed): on a
 first finding and stops the run), then the queue (`bin/closing --queue`: each
 project's `Toolkit: none` reasons since the last review, and every standing
 *Known limit* and *Open:* line in the toolkit, computed, never stored), then one headless
-agent over this list. A finding whose fix is mechanical and follows from a rule
-as written is fixed on the branch, each with the check that would have caught
-its class; anything that needs a decision (which behaviour is right, a rule
-loosened or retired, a check or test made weaker) is a proposal in the branch's
-last commit, never a change. The run never merges and never pushes: the next
-session reviews the branch with the gates on, the maintainer decides the
-proposals, and the merge (`--no-ff`) carries the `Review:` trailer. Each
-proposal is fixed in that merge, dropped with its reason, or left as an *Open:*
-line in the file that owns it, which the next queue reads.
+agent over this list. Every finding is fixed on the branch, each with the check
+that would have caught its class; a choice between behaviours takes the
+smallest option that keeps every check, test and rule at least as strict, said
+in its commit. What could only be fixed by loosening or retiring a rule,
+weakening a check or test, or changing a rule in `standards/`, is not changed:
+it is listed as dropped in the last commit and as an *Open:* line in the file
+that owns it, which `bin/closing` shows the maintainer. The branch is cut from
+`origin/main`. Then the run lands its own work: a fresh read-only reviewer
+agent, in a clean worktree of `origin/main`, reads the whole branch, and with
+no High issue the merge is built against `origin/main`, `bin/check` runs on it
+there, and it is pushed, carrying the `Review:` trailer that resets the
+cadence. `bin/check` and the push hook run the merged code, so the reviewer is
+the one independent gate. The local `main` follows only when it is checked out
+and is the main the merge was built on. A hold
+(the reviewer's High, a red check, a conflict, a refused push) lands nothing:
+the branch's last commit says why, and the next owed run starts anyway with
+that reason in its brief. One macOS notification per run says which.
 
 Each review should leave the next one smaller: a judgement made twice becomes
 a check, a point below that a script now holds leaves this list in the same

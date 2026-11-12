@@ -1,6 +1,6 @@
 #!/bin/sh
 # The periodic independent review (toolkit-standard §D 11), run without the maintainer: a review/<date> branch
-# in its own worktree, bin/check, the queue, one headless agent over tools/toolkit-check/review.md. It never
-# merges or pushes; bin/closing names the branch to the next session. Flags: --if-owed, --dry-run, --budget <usd>.
+# in its own worktree, bin/check, the queue, one headless agent over tools/toolkit-check/review.md, then a
+# fresh reviewer; with no High it merges and pushes to main, otherwise the branch is held for the next run. Flags: --if-owed, --dry-run, --budget <usd>.
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 exec node "$REPO/tools/toolkit-check/review-run.mjs" "$@"
