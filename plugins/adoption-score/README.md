@@ -7,7 +7,7 @@ A Figma widget that scores how closely a product file's screens use its design s
 1. Figma desktop → **Widgets → Development → Import widget from manifest…** → this folder's `manifest.json`.
 2. Open the product file, insert **Adoption score** from **Widgets → Development**, and press **Run scan**.
 3. To name your design system: click **Connect libraries** on the card (or **System libraries…** in the widget's menu), paste a link to each library, one per line, and a Figma personal access token with the `library_content:read` scope (Figma › Settings › Security). Without libraries, every library counts as the system. With them, an instance of this file's own components, or of a component its library no longer publishes, counts as not the system. Changing the libraries clears the last result.
-4. To narrow the scan, pick **This page** (leaving out an archive or sketches) or **Selection** (the frames, instances or sections you select before clicking Run) on the card's scope control.
+4. To narrow the scan, pick **This page** (leaving out an archive or sketches) or **Selection** (the frames, instances or sections you select before clicking Run) with the radio buttons above Run.
 
 A changed manifest needs a re-import.
 

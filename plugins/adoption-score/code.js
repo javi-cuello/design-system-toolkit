@@ -1,4 +1,4 @@
-// Adoption score — v0.4.0 · skill-standard v1.9.0
+// Adoption score — v0.4.1 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -749,13 +749,13 @@ const FCA_FACTORY = function () {
 /* adoption-score generated end */
 
 const { widget } = figma;
-const { AutoLayout, Text, Span, Rectangle, useSyncedState, usePropertyMenu, useWidgetNodeId, h } = widget;
+const { AutoLayout, Text, Span, Rectangle, Ellipse, useSyncedState, usePropertyMenu, useWidgetNodeId, h } = widget;
 
 // The look is the plugins' (skill-standard §B 4): FigUI3's light-theme values, read from plugins/_shared/figui3/fig.css.
 // A widget draws on the canvas and cannot read CSS, so the values are copied here; widget font weights take hundreds,
 // so FigUI3's 450 and 550 are 400 and 500.
 const UI = {
-  bg: '#FFFFFF', bgHover: '#F5F5F5', bgSecondary: '#F5F5F5', border: '#E6E6E6',
+  bg: '#FFFFFF', bgHover: '#F5F5F5', border: '#E6E6E6', borderTranslucent: '#0000001A',
   text: '#000000E5', textSecondary: '#00000099', textTertiary: '#0000004D', textDanger: '#DC3412',
   brand: '#0D99FF', brandHover: '#007BE5', onBrand: '#FFFFFF',
   radiusWindow: 13, radiusControl: 5, s1: 4, s2: 8, s25: 12, s3: 16,
@@ -916,13 +916,15 @@ const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-p
     ? txt('—', UI.body, { fill: UI.textTertiary })
     : h(AutoLayout, { spacing: UI.s2, verticalAlignItems: 'center' }, txt(r.pct + '%', UI.body, { fontWeight: 500 }), chip(r.pct)));
 
-// FigUI3's segmented control: a grey track, the chosen segment white under a hairline
-const segmented = (/** @type {string} */ value, /** @type {(v: string) => void} */ set) =>
-  h(AutoLayout, { fill: UI.bgSecondary, cornerRadius: UI.radiusControl, height: 24, padding: 1, width: 'fill-parent' },
-    ...SCOPES.map((o) => h(AutoLayout, {
-      key: o.option, width: 'fill-parent', height: 'fill-parent', horizontalAlignItems: 'center', verticalAlignItems: 'center', cornerRadius: UI.radiusControl - 1,
-      ...(o.option === value ? { fill: UI.bg, stroke: UI.border } : { onClick: () => set(o.option) }),
-    }, txt(o.label, UI.body, { fill: o.option === value ? UI.text : UI.textSecondary }))));
+// FigUI3's radio: a 16px circle, grey under a faint ring, brand with a white dot when chosen. The scope sits above
+// Run, as what the next scan covers, so it does not read as a filter on the last result.
+const radios = (/** @type {string} */ value, /** @type {(v: string) => void} */ set) =>
+  h(AutoLayout, { spacing: UI.s25, verticalAlignItems: 'center' },
+    ...SCOPES.map((o) => h(AutoLayout, { key: o.option, spacing: UI.s2, verticalAlignItems: 'center', onClick: () => set(o.option) },
+      h(AutoLayout, { width: 16, height: 16, cornerRadius: 8, horizontalAlignItems: 'center', verticalAlignItems: 'center',
+        fill: o.option === value ? UI.brand : UI.bgHover, stroke: o.option === value ? UI.brandHover : UI.borderTranslucent },
+        o.option === value ? h(Ellipse, { width: 6, height: 6, fill: UI.onBrand }) : null),
+      txt(o.label, UI.body))));
 
 function AdoptionScore() {
   const [result, setResult] = useSyncedState('result', /** @type {any} */ (null));
@@ -970,7 +972,6 @@ function AdoptionScore() {
   return h(AutoLayout, { direction: 'vertical', width: 360, fill: UI.bg, cornerRadius: UI.radiusWindow, stroke: UI.border, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.15 }, offset: { x: 0, y: 2 }, blur: 6 } },
     h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3, top: UI.s25, bottom: UI.s2 }, spacing: UI.s2 },
       txt('Adoption score', UI.heading),
-      segmented(scope, setScope),
       s && s.total !== null
         ? h(AutoLayout, { spacing: UI.s25, verticalAlignItems: 'center' },
             txt(String(s.total), { fontSize: 40, lineHeight: 48, fontWeight: 600 }),
@@ -980,10 +981,12 @@ function AdoptionScore() {
     s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3 } }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
     error ? h(AutoLayout, { width: 'fill-parent', padding: { horizontal: UI.s3, vertical: UI.s2 } }, txt('Error: ' + error, UI.body, { fill: UI.textDanger, width: 'fill-parent' })) : null,
     divider('footer-line'),
-    h(AutoLayout, { width: 'fill-parent', padding: UI.s25, spacing: UI.s2, verticalAlignItems: 'center' },
+    h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: UI.s25, spacing: UI.s25 },
+     radios(scope, setScope),
+     h(AutoLayout, { width: 'fill-parent', spacing: UI.s2, verticalAlignItems: 'center' },
       txt(where, UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
       h(AutoLayout, { fill: UI.brand, cornerRadius: UI.radiusControl, height: 32, padding: { horizontal: UI.s3 }, verticalAlignItems: 'center', onClick: run, hoverStyle: { fill: UI.brandHover } },
-        txt(result ? 'Run again' : 'Run scan', UI.body, { fontWeight: 500, fill: UI.onBrand }))));
+        txt(result ? 'Run again' : 'Run scan', UI.body, { fontWeight: 500, fill: UI.onBrand })))));
 }
 
 widget.register(AdoptionScore);

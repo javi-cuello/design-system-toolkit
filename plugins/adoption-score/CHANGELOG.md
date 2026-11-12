@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.4.1] - 2026-11-12
+### Changed
+- The scope is a row of radio buttons above Run (All pages, This page, Selection), as what the next scan covers: the segmented control under the heading read as a filter on the results.
+
 ## [0.4.0] - 2026-11-12
 ### Added
 - Selection scope: scans the selected frames, instances or sections; the widget itself is left out of the selection.
