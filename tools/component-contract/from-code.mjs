@@ -60,6 +60,8 @@ const { expand, variantDefaults } = req('./derive.cjs');
    `type: 'slot'`). Its stand-in is a word no
    component draws, so the element it lands in is found by it. */
 export const isSlot = (a) => a.control === 'slot' || a.element || /\b(ReactNode|ReactElement|JSX\.Element|Snippet|VNode|TemplateRef|slot)\b/.test(String(a.summary || ''));
+// a value that shows nothing: none, empty, or an option the story lists as undefined or null (button's icon)
+const NONE = /^(none|undefined|null|)$/i;
 export const slotMark = (code) => `slot·${code}·here`;
 
 const sameColour = (a, b) => { const x = parseColour(a), y = parseColour(b); return !!x && !!y && x.slice(0, 3).every((v, i) => Math.abs(v - y[i]) <= 1) && Math.abs(x[3] - y[3]) <= 0.01; };
@@ -219,8 +221,8 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
     if (p.type === 'swap' && p.shows) {
       const shown = sentence(p.shows[0].split('/').pop());
       const bkey = shown[0].toLowerCase() + shown.slice(1).replace(/\s+(.)/g, (_, c) => c.toUpperCase());
-      props[bkey] = { type: 'boolean', default: !/^(none|)$/i.test(p.default), figma: shown, shows: p.shows, code: p.code };
-      props[`${bkey}Swap`] = { type: 'swap', default: p.default, figma: `${shown} swap`, code: p.code };
+      props[bkey] = { type: 'boolean', default: !NONE.test(p.default), figma: shown, shows: p.shows, code: p.code };
+      props[`${bkey}Swap`] = { type: 'swap', default: p.glyph || p.default, figma: `${shown} swap`, code: p.code };
       renamed.push(`${k} → ${shown} (boolean) + ${shown} swap`);
       valueMap[k] = { __key: bkey, __swap: true };
       continue;
@@ -237,7 +239,7 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
     const when = {};
     for (const [k, v] of Object.entries(x.when)) {
       const m = valueMap[k];
-      if (m && m.__swap) when[m.__key] = !/^(none|)$/i.test(v);
+      if (m && m.__swap) when[m.__key] = !NONE.test(v);
       else if (m) when[m.__key] = m[v];
       else when[k] = v;
     }
@@ -382,11 +384,25 @@ export function governedReading(t, b, { stateAxis = null, container = '' } = {})
     // each layer the mapping places, as the contract element it is; a ruling or a layer that is not exactly
     // one element is refused, as the compared reader refuses it, never dropped
     elements() {
-      const out = {};
+      const out = {}, skipped = [];
+      Object.defineProperty(out, 'skipped', { value: skipped });
       for (const [path, sel] of Object.entries(t.mapping.layers || {})) {
         if (sel === null) continue;
         if (typeof sel !== 'string') throw new Error(`the layer ${path} carries a ruling (${JSON.stringify(sel)}): a governed mapping rules in its waivers`);
-        const ids = b.ids[path] || [];
+        // the second of two layers at one path is `#2`, as the store spells it, under that path where the store keeps
+        // it; where one of them is hidden in some variant the store keeps both under the plain path, in tree order
+        // (x, x_2, …), and `#N` takes the N-th
+        const nth = /^(.*)#(\d+)$/.exec(path), named = t.mapping.layers || {};
+        const order = (xs) => [...xs].sort((a, c) => (+(a.match(/_(\d+)$/) || [0, 1])[1]) - (+(c.match(/_(\d+)$/) || [0, 1])[1]));
+        const direct = b.ids[path] || [];
+        const all = nth ? order(b.ids[nth[1]] || []) : order(direct);
+        const ids = direct.length === 1 ? direct : all.length > 1 && (nth || `${path}#2` in named) ? [all[nth ? +nth[2] - 1 : 0]].filter(Boolean) : nth ? [] : direct;
+        // a layer inside another component's instance (Feedback message > Icon) is that component's, compared in its
+        // own audit: the contract draws the instance, not its insides. Its nearest stored ancestor is said here, and
+        // held to being an instance once the contract is open; any other missing layer is refused
+        const ups = path.split(' > ').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join(' > ')).reverse();
+        const up = ups.find((u) => (b.ids[u] || []).length === 1);
+        if (!ids.length && up) { skipped.push({ path, up: b.ids[up][0] }); continue; }
         if (ids.length !== 1) throw new Error(`the layer ${path} is ${ids.length ? `several elements of the design (${ids.join(', ')})` : 'no layer of the design'}`);
         out[ids[0]] = { selector: at(sel) };
       }
@@ -541,7 +557,10 @@ async function main() {
   // the library's fullest radius: the largest the radius field offers
   const tokenList = table.map(([n, v, sc]) => ({ name: n, value: v, ...(sc && { scopes: sc }) }));
   const fullest = () => { const r = (offered('radius', tokenList) || []).filter((t) => typeof t.value === 'number').sort((a, b) => b.value - a.value)[0]; return r ? r.name : null; };
-  const ties = [], notes = [];
+  // the ancestor as the design draws it: in the base anatomy, or added at some props (text input's feedback message)
+  const kindIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).kind;
+  for (const x of m.elements.skipped || []) if (!figmaContract || kindIn(figmaContract, x.up) !== 'instance') { console.error(`${name}'s mapping: the layer ${x.path} is no layer of the design`); process.exit(2); }
+  const ties = [], notes = (m.elements.skipped || []).map((x) => `${x.path}: inside another component's instance (${x.up}), which is compared in its own audit`);
   // the library's other components, by the name the code's markup gives them (a framework's, or the
   // project's instance pattern), where one name is one component (a framework's TextField is five inputs: none)
   const byName = {};
@@ -565,14 +584,21 @@ async function main() {
       const viaChannel = Object.keys(fill).length && await call(L.tab, () => !!window.__STORYBOOK_PREVIEW__);
       await L.render(Object.fromEntries(Object.entries(all).filter(([k]) => !(viaChannel && k in fill)).map(([k, v]) => [k, v === 'null' && nullable.has(k) ? null : v])), { reload: !!viaChannel });
       if (!viaChannel) return;
-      const got = await call(L.tab, async (args) => {
+      const missing = await call(L.tab, async ([args, wait]) => {
         const p = window.__STORYBOOK_PREVIEW__;
+        // a slot not drawn before may draw at these props: Storybook's word that it drew is waited for (3 s at most)
+        const drew = new Promise((res) => { const f = () => { p.channel.off('storyRendered', f); res(); }; p.channel.on('storyRendered', f); setTimeout(res, 3000); });
         p.channel.emit('updateStoryArgs', { storyId: p.currentRender.id, updatedArgs: args });
-        for (let i = 0; i < 100; i++) { if (Object.values(args).every((m) => document.body.textContent.includes(m))) return true; await new Promise((r) => setTimeout(r, 50)); }
-        return false;
-      }, fill);
-      if (!got) throw new Error(`the slot stand-in for ${Object.keys(fill).join(', ')} never drew: the story may not render that prop`);
+        await drew;
+        const out = () => Object.keys(args).filter((k) => !document.body.textContent.includes(args[k]));
+        for (let i = 0; i < 100; i++) { if (out().every((k) => !wait.includes(k))) return out(); await new Promise((r) => setTimeout(r, 50)); }
+        return out();
+      }, [fill, Object.keys(fill).filter((k) => !undrawn.has(k))]);
+      // a slot the story draws only at some props (date input's error, section marker's description on lg) is placed
+      // where it draws, if anywhere; it neither stops the read nor is waited for again
+      for (const k of missing) if (!undrawn.has(k)) { undrawn.add(k); notes.push(`${k}: a slot the story does not draw at its starting props (the story may not render it at all); placed where a read draws it`); }
     };
+    const undrawn = new Set();
     await show({});
     // the code's own props and their starting values
     const story = await L.api();
@@ -811,34 +837,43 @@ async function main() {
       const others = p.type === 'enum' ? p.values.filter((v) => v !== p.default) : p.type === 'boolean' ? [!p.default] : [];
       // a value that draws what the default draws picks content, not style (an icon by name):
       // two such in a row make the prop a swap, as Figma's instance swap is, and none of the rest is rendered
-      const absent = p.type === 'enum' ? others.filter((v) => /^(none|)$/i.test(v)) : [];
+      const absent = p.type === 'enum' ? others.filter((v) => NONE.test(v)) : [];
       let alike = 0;
       // a change only to the glyph drawn (an icon's asset, or a nested icon's swap; avatar's icon by name) is content
       // too: else every glyph of the set was a value, and avatar's pairs and triples ran to some 30 000 reads
-      const glyphOnly = (d, got) => !d.add && !d.remove && !!d.set && Object.keys(d.set).every((sk) => {
+      const glyphOnly = (d, got, from = base) => !d.add && !d.remove && !!d.set && Object.keys(d.set).every((sk) => {
         const at = sk.lastIndexOf('.'), id = sk.slice(0, at);
         if (sk.slice(at + 1) === 'asset') return true;
         if (sk.slice(at + 1) !== 'with') return false;
-        const a = base[id].with || {}, b = got[id].with || {}, g = got[id].glyphOf || [];
+        const a = from[id].with || {}, b = got[id].with || {}, g = got[id].glyphOf || [];
         return [...new Set([...Object.keys(a), ...Object.keys(b)])].every((q) => a[q] === b[q] || g.includes(q));
       });
+      // where the default shows nothing (button's icon, unset), each glyph adds the icon: one is alike to the glyph
+      // before it, and the first says what the prop shows
+      let prev = null, shownBy = null;
       for (const v of [...absent, ...others.filter((x) => !absent.includes(x))]) {
         const got = await read({ ...defaults, [p.code]: v });
         const d = delta(base, got);
+        if (p.type === 'enum' && NONE.test(String(p.default)) && !absent.includes(v) && !shownBy && d.add && !d.remove) { shownBy = String(v); props[k].shows = Object.keys(d.add); }
+        const dp = prev && delta(prev, got);
         // a pointer state that changes nothing here (a checked switch's hover) is still a state, never a swap
-        const same = !absent.includes(v) && p.type === 'enum' && p.role !== 'interaction' && (!Object.keys(d).length || glyphOnly(d, got));
+        const same = !absent.includes(v) && p.type === 'enum' && p.role !== 'interaction' && (!Object.keys(d).length || glyphOnly(d, got) || (!!dp && (!Object.keys(dp).length || glyphOnly(dp, got, prev))));
+        if (!absent.includes(v)) prev = got;
         // two in a row, as said: a value between them that draws more (a password field's reveal) keeps it an enum
         alike = same ? alike + 1 : 0;
-        if (same && alike === 2) { props[k] = { type: 'swap', default: p.default, code: p.code, ...(props[k].shows && { shows: props[k].shows }) }; break; }
+        if (same && alike === 2) { props[k] = { type: 'swap', default: p.default, code: p.code, ...(p.required && { required: true }), ...(props[k].shows && { shows: props[k].shows }), ...(shownBy && { glyph: shownBy }) }; break; }
         renders.push([{ [k]: p.type === 'boolean' ? v : String(v) }, got]);
         if (absent.includes(v) && d.remove && !d.add) props[k].shows = d.remove;
         if (Object.keys(d).length) variants.push({ when: { [k]: p.type === 'boolean' ? v : String(v) }, ...d });
       }
+      // what the first glyph showed is a swap's; a prop that stays an enum (badge's none, dot, count) keeps none of it
+      if (shownBy && props[k].type !== 'swap') delete props[k].shows;
       // a swap's renders are the default's: nothing to rebuild beyond it
       if (props[k].type === 'swap') {
-        for (let i = renders.length - 1; i > 0; i--) if (k in renders[i][0] && !/^(none|)$/i.test(renders[i][0][k])) renders.splice(i, 1);
+        // (but the one that shows it, where the default shows nothing: it is the boolean's true)
+        for (let i = renders.length - 1; i > 0; i--) if (k in renders[i][0] && !NONE.test(renders[i][0][k]) && renders[i][0][k] !== shownBy) renders.splice(i, 1);
         // and its layers: a glyph value read before the second showed it a swap (avatar's arrow-down-narrow-wide)
-        variants = variants.filter((x) => !(k in x.when && !/^(none|)$/i.test(x.when[k])));
+        variants = variants.filter((x) => !(k in x.when && !NONE.test(x.when[k]) && x.when[k] !== shownBy));
       }
     }
     };
@@ -847,7 +882,9 @@ async function main() {
     // not where the story starts it; one at a time, each against renders made with the defaults so far
     for (const [k, p] of Object.entries(props)) {
       if (p.type !== 'enum' || !p.undeclared) continue;
-      const unset = await read({ ...defaults, [p.code]: undefined });
+      // a prop the component needs (sidebar menu item's icon) does not draw unset: the story's start stays the default
+      const unset = await read({ ...defaults, [p.code]: undefined }).catch((e) => { if (!/sb-show-errordisplay/.test(e.message)) throw e; return null; });
+      if (!unset) { notes.push(`${k}: unset, the story does not draw; the default is the story's, ${p.default}`); continue; }
       const hit = renders.find(([w, got]) => (k in w || !Object.keys(w).length) && !Object.keys(delta(unset, got)).length);
       const v = hit && (k in hit[0] ? hit[0][k] : p.default);
       if (!hit) notes.push(`${k}: unset, the component draws none of its values; the default is the story's, ${p.default}`);
@@ -858,7 +895,7 @@ async function main() {
     // what two props do together that each alone does not explain: read every pair of
     // non-default values, and where expand() mispredicts it, a pair layer (as derive.cjs has)
     const fromCode = { contract: 1, component: name, code: { story: m.story, from: 'code' }, props: Object.fromEntries(Object.entries(props).map(([k, p]) => { const { sample, ...rest } = p; return [k, rest]; })), anatomy: base, variants };
-    const valuesOf = (p) => (p.type === 'enum' ? p.values.filter((v) => v !== p.default) : p.type === 'boolean' ? [!p.default] : p.type === 'swap' && p.shows ? ['none'] : []);
+    const valuesOf = (p) => (p.type === 'enum' ? p.values.filter((v) => v !== p.default) : p.type === 'boolean' ? [!p.default] : p.type === 'swap' && p.shows ? [p.glyph || 'none'] : []);
     const argOf = (p, v) => (p.type === 'boolean' ? v : String(v));
     const keys = Object.keys(props);
     const combos = (n) => { const out = []; const go = (i, acc) => { if (acc.length === n) { out.push(acc); return; } for (let j = i; j < keys.length; j++) for (const v of valuesOf(props[keys[j]])) go(j + 1, [...acc, [keys[j], v]]); }; go(0, []); return out; };
@@ -933,6 +970,9 @@ async function main() {
         const driven = new Set(Object.values(m.props || {}).flatMap((x) => (typeof x === 'string' ? [x] : x ? [x.arg, x.code].filter(Boolean) : [])));
         // unset first, so the story's own starting value (checked: true) gives way too
         const sent = { ...Object.fromEntries(Object.entries(defaults).filter(([k]) => !driven.has(k))), ...Object.fromEntries([...driven].map((k) => [k, undefined])), ...L.argsOf(all, m) };
+        // except a prop the component requires that the map names no value for: it keeps the story's own (the icon
+        // sidebar menu item and context menu item action require; unset, they do not draw)
+        for (const p of Object.values(props)) if (p.required && sent[p.code] === undefined && (p.type === 'swap' ? defaults[p.code] : p.type === 'string' ? p.sample : undefined) !== undefined) sent[p.code] = p.type === 'swap' ? defaults[p.code] : p.sample;
         const c = await read(sent);
         for (const [mapped, cid] of Object.entries(pairs).filter(([k]) => !k.includes('@'))) {
           const fid = elementIn(f, mapped) || mapped;
@@ -943,7 +983,8 @@ async function main() {
             if (k === 'radius' && f[fid].kind === 'graphic' && c[cid].radius === fullest()) continue;
             if (!(k in f[fid]) && !(k in c[cid])) continue;
             const fv = k === 'border' && f[fid].border ? { color: f[fid].border.color, width: [].concat(f[fid].border.width)[0] } : f[fid][k] ?? null;
-            const cv = c[cid][k] ?? null;
+            // a border is compared by its colour and width, as Figma's is read: where it sits (inLayout) is drawing, not paint
+            const cv = k === 'border' && c[cid].border ? { color: c[cid].border.color, width: c[cid].border.width } : c[cid][k] ?? null;
             let verdict = JSON.stringify(fv) === JSON.stringify(cv) ? 'same token' : 'differs';
             // another token, or none, that draws the same colour
             if (verdict === 'differs' && (k === 'background' || k === 'color') && fv) {

@@ -101,6 +101,15 @@ ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a fu
     JSON.stringify(G.elements()) === '{"content":{"selector":"#root .chip__content"},"content/label":{"selector":"#root .chip__label"},"root":{"selector":"#root .chip"}}');
   const refused = (layers) => { try { governedReading({ ...t, mapping: { ...t.mapping, layers } }, b, {}).elements(); return null; } catch (e) { return e.message; } };
   ok('a ruling, or a layer that is not exactly one element, is refused, never dropped', /carries a ruling/.test(refused({ Content: { selector: '.x', why: 'w' } })) && /several elements/.test(refused({ Twice: '.x' })) && /no layer of the design/.test(refused({ Elsewhere: '.x' })));
+  {
+    const read = (layers) => governedReading({ ...t, mapping: { ...t.mapping, layers } }, b, {}).elements();
+    const two = read({ Twice: '.x > :nth-child(1)', 'Twice#2': '.x > :nth-child(2)' });
+    ok('a repeated layer and its #2 each take their own element, in order', two.a.selector.endsWith('.x > :nth-child(1)') && two.b.selector.endsWith('.x > :nth-child(2)'));
+    const kept = governedReading({ ...t, mapping: { ...t.mapping, layers: { Pair: '.p1', 'Pair#2': '.p2' } } }, { ...b, ids: { ...b.ids, Pair: ['p'], 'Pair#2': ['p_2'] } }, {}).elements();
+    ok('a #2 the store keeps under its own path is that element, not the first one again', kept.p.selector.endsWith('.p1') && kept.p_2.selector.endsWith('.p2'));
+    const inside = read({ Content: '.c', 'Content > Icon': '.c .i' });
+    ok('a layer inside a layer that is one element (another component\'s instance) is passed over and said, not refused', !Object.values(inside).some((e) => e.selector.endsWith('.c .i')) && inside.skipped.length === 1 && inside.skipped[0].path === 'Content > Icon' && inside.skipped[0].up === 'content');
+  }
   ok('a host that declares no props reads the mapping\'s controls, said as declared; none, nothing to read', controlsApi({ label: { type: 'text', default: 'Hi' }, size: { options: ['sm', 'md'], default: 'md' } }).argTypes.size.control === 'select'
     && controlsApi({ label: { type: 'text', default: 'Hi' } }).declared === true && controlsApi({}) === null);
 }
