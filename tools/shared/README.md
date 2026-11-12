@@ -5,6 +5,7 @@ Small libraries more than one tool imports, kept in one place so each has one de
 | File | What it gives |
 |---|---|
 | `walk.mjs` | One walk of a repo's files, skipping what every check skips (`node_modules`, build output, dot-folders). |
+| `push-hook.mjs` | `pushHookProblem`: whether a repo's pushes run its check (the pre-push hook git will actually run, and what it hands the push to): one definition for project-check's `hook` gate and the toolkit's own `bin/check`, which runs it as a script. |
 | `dialect.cjs` | Which English spelling the toolkit's own words use for a project (its `language` setting), so generated text follows the project; the doc generator's sandbox copy is held to it by `test-dialect.mjs`. |
 | `repo-config.cjs` | A repo's `snapshot.config.json`, read one way: `readRepoConfig` tells a missing file from a malformed one, `repoConfig` says which under the tool's name and exits 2. Every command that needs the file reads it here. |
 | `cdp.mjs` | The Chrome DevTools client every browser run uses (parity, ui-check, the docs checks, the contract tools): `findChrome` (`$CHROME`, else the usual macOS and Linux places), `launch` (its own profile, killed at exit), and the page calls its exports name. |

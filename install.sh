@@ -5,6 +5,7 @@
 #   ./install.sh                   the standards guard, the skills, the push hook and (macOS) the services
 #   SKIP_CHECKS=1 ./install.sh     link even though the standards guard fails
 #   SKIP_SERVICES=1 ./install.sh   leave the launchd services alone
+#   REVIEW=on ./install.sh         also the daily periodic review (bin/review, the maintainer's: it spends API credit)
 set -e
 
 # the path as the disk spells it: a shell entered through ~/projects would write that case into the services
@@ -65,7 +66,7 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   install_agent() {
     label="$1"; template="$2"; by_hand="$3"; plist="$HOME/Library/LaunchAgents/$label.plist"
     mkdir -p "$HOME/Library/LaunchAgents"
-    sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" -e "s|LOGS|$logs|g" "$template" > "$plist.new"
+    sed -e "s|TOOLKIT|$repo|g" -e "s|NODE_DIR|$(dirname "$node_bin")|g" -e "s|LOGS|$logs|g" -e "s|USERHOME|$HOME|g" "$template" > "$plist.new"
     if ! cmp -s "$plist.new" "$plist" 2>/dev/null; then
       mv "$plist.new" "$plist"
       launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true  # not loaded yet is fine; set -e would stop here
@@ -79,6 +80,7 @@ if [ "$(uname)" = "Darwin" ] && [ "${SKIP_SERVICES:-0}" != 1 ] && [ "$sparse" !=
   }
   install_agent com.toolkit.figma-snapshot "$repo/tools/snapshot/com.toolkit.figma-snapshot.plist" "node $repo/tools/snapshot/router.mjs"
   install_agent com.toolkit.figma-audit "$repo/tools/figma-audit/com.toolkit.figma-audit.plist" "node $repo/tools/figma-audit/server.mjs --all"
+  if [ "${REVIEW:-}" = on ]; then install_agent com.toolkit.review "$repo/tools/toolkit-check/com.toolkit.review.plist" "$repo/bin/review"; fi
   echo "logs: $logs"
   # the snapshot plugin asks once for this machine's pairing code; made here so it is there to print
   "$node_bin" "$repo/tools/snapshot/pairing.cjs" >/dev/null && echo "pairing: the snapshot plugin asks once for this machine's code; node $repo/tools/snapshot/pairing.cjs prints it"

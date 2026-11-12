@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.30.2** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.31.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -500,9 +500,25 @@ someone to notice drift:
   independent and naming `review.md`, which is the only record kept (a change's
   own review may carry a `Review:` trailer too, and does not close it, even
   when it calls itself independent).
+- **The review runs without the maintainer, and never merges.** `bin/review`
+  (a daily launch agent, acting only when a review is owed) runs it on a
+  `review/<date>` branch in its own worktree: `bin/check`, the queue
+  (`bin/closing --queue`, computed from git, never stored), then one headless
+  agent over `review.md`. It fixes on the branch what follows mechanically from
+  a rule as written, each fix with the check that would have caught its class,
+  and proposes everything that needs a decision; it never weakens a check, a
+  test or a rule (§D 0, question 2). `bin/closing` names the waiting branch; the
+  next session reviews it with the gates on, the maintainer decides each
+  proposal, and the merge carries the `Review:` trailer. The maintainer's
+  absence delays a merge, never a review.
+
+*Why (the second clock's runner):* a review owed is a line every session
+reads and none acts on; the one closed on 2026-11-01 was run by hand, and a
+pilot of this runner on 2026-11-11 found a push hook git had been skipping and
+a check that never saw two of the shapes its rule names.
 
 *Checked:* `tools/toolkit-check/closing.mjs`
-"REVIEW_DAYS"; `tools/toolkit-check/test-cadence.mjs` "a review is owed"; `tools/toolkit-check/test-cadence.mjs` "a change's own Review: trailer is not the independent review"; `tools/toolkit-check/test-cadence.mjs` "a change's trailer calling its own review independent does not close the periodic one". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" —
+"REVIEW_DAYS"; `tools/toolkit-check/test-cadence.mjs` "an unmerged review branch is named with its commits"; `tools/toolkit-check/test-cadence.mjs` "a project's Toolkit: none reasons are queued once each, counted"; `tools/toolkit-check/test-cadence.mjs` "a review is owed"; `tools/toolkit-check/test-cadence.mjs` "a change's own Review: trailer is not the independent review"; `tools/toolkit-check/test-cadence.mjs` "a change's trailer calling its own review independent does not close the periodic one". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" —
 §D 2's triggers — the question asked before code is written in a project and
 the first question; when either names a job twice, the sharing audit runs and
 reports what it found, unasked.

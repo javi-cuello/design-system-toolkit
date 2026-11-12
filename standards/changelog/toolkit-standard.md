@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.31.0 (2026-11-12): §D 11: the review runs without the maintainer (`bin/review`, a daily launch agent acting when one is owed) on a branch it never merges; `bin/closing --queue` computes what was left for later; the next session merges it with the trailer.
 - 2.30.2 (2026-11-11): §D 12: the product file's template is figma-context-capture's, which now keeps the project's documents.
 - 2.30.1 (2026-11-11): §D 12: the product file's template is figma-prototype's, split from frontend-build.
 - 2.30.0 (2026-11-11): §D 21: a weak item a decision rests on is researched before it is leaned on again, by any reader; §D 0 question 13 asks it at every closing. 438 uncited required items: 351 cited, 87 lowered.

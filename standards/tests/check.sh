@@ -142,11 +142,20 @@ if [ -d skills ]; then
         # agent to paste an engine each run. Exempt: a block every one of whose
         # `function`/`const` names is defined in the skill's scripts/ (an
         # account of shipped code; one shared name is not, which exempted a
-        # 27-line paste-and-run engine). One line per skill, with the count;
-        # the blocks are the debt.
+        # 27-line paste-and-run engine). A script fence (js, ts, python) always
+        # counts; a shell or untagged fence counts when it defines a name or
+        # loops (the pilot of 2026-11-11 planted a bash and an untagged engine
+        # and neither was seen; a long command line is not an engine).
+        # One line per skill, with the count; the blocks are the debt.
         blocks=$(cat "${d}SKILL.md" $(find "${d}references" -name '*.md' 2>/dev/null) 2>/dev/null | awk -v scripts="$(cat $(find "${d}scripts" -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.py' \) 2>/dev/null) /dev/null 2>/dev/null | grep -oE '(function|const|def) +[A-Za-z_][A-Za-z0-9_]*' | sed -E 's/^(function|const|def) +//' | sort -u | tr '\n' ' ')" '
-            /^[ \t]*```(js|javascript|mjs|python)([^a-z]|$)/ { inb = 1; n = 0; defined = 0; shipped = 0; next }
-            /^[ \t]*```/ { if (inb && n >= 8 && !(defined > 0 && defined == shipped)) k++; inb = 0; next }
+            # inb: 1 a script fence, 2 a shell or untagged fence (code only when it defines or loops), 3 any other fence.
+            # A fence closes only on a bare run of its own character at least as long (CommonMark), so a ```js
+            # inside a ```` block is content, not a close, and ~~~ fences pair too.
+            /^[ \t]*(```|~~~)/ && inb { f = $0; sub(/^[ \t]*/, "", f); if (substr(f, 1, 1) == fc && f ~ /^(`+|~+)[ \t]*$/) { m = f; sub(/[ \t]*$/, "", m); if (length(m) >= fl) { if (inb != 3 && n >= 8 && (inb == 1 || defined + loops > 0) && !(defined > 0 && defined == shipped)) k++; inb = 0; next } } }
+            !inb && /^[ \t]*(```|~~~)/ { f = $0; sub(/^[ \t]*/, "", f); fc = substr(f, 1, 1); match(f, /^(`+|~+)/); fl = RLENGTH; tag = substr(f, fl + 1); n = 0; defined = 0; shipped = 0; loops = 0
+                inb = tag ~ /^(js|javascript|mjs|cjs|ts|typescript|python|py)([^a-z]|$)/ ? 1 : tag ~ /^((sh|bash|shell|zsh)([^a-z]|$)|[ \t]*$)/ ? 2 : 3; next }
+            inb == 3 { next }
+            inb && /^[ \t]*(for [A-Za-z_][A-Za-z0-9_]* in |while |until )|^[ \t]*[A-Za-z_][A-Za-z0-9_]* *\(\) *\{/ { loops++ }
             inb { n++; line = $0; while (match(line, /(function|const|def) +[A-Za-z_][A-Za-z0-9_]*/)) { name = substr(line, RSTART, RLENGTH); sub(/^(function|const|def) +/, "", name); defined++; if (index(" " scripts " ", " " name " ")) shipped++; line = substr(line, RSTART + RLENGTH) } }
             END { print k + 0 }')
         [ "${blocks:-0}" -eq 0 ] || warn "[G] $s — $blocks fenced code block(s) of 8+ lines in its prose; clause G says an engine in scripts/"
@@ -341,21 +350,6 @@ if [ "$CASES_TOTAL" -gt 0 ]; then
     else
         echo "clause E: $CASES_MARKED of $CASES_TOTAL cases say how they were walked — $behind skill(s) to migrate"
         echo "          Runs: / Walked live: / Traced: / Read by: / Not walked.  (skill-standard §A clause E)"
-    fi
-fi
-
-# ─── tools: the dashboard is one long script in one scope ───────────────────
-# No `| while` here: a pipeline runs in a subshell, so err()'s count would be
-# incremented in a shell that exits before the summary reads it.
-# It lives with the page it checks, in the docs engine (tools/docs-site/src/dashboard).
-if [ -f tools/docs-site/src/dashboard/check.mjs ] && [ ! -d tools/docs-site/node_modules ]; then
-    # a fresh clone: the docs engine's packages are not installed yet
-    echo "ERROR  [TOOLS] the docs site's packages are not installed: run (cd tools/docs-site && pnpm install --frozen-lockfile), then check again"
-    errors=$((errors + 1))
-elif [ -f tools/docs-site/src/dashboard/check.mjs ]; then
-    if ! out=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); then
-        printf '%s\n' "$out" | sed 's/^FAIL  /ERROR  [TOOLS] dashboard page — /'
-        errors=$((errors + 1))
     fi
 fi
 

@@ -23,6 +23,7 @@ import { existsSync, statSync, realpathSync } from 'node:fs';
 import { basename, join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = join(HERE, '..', '..');
@@ -72,7 +73,16 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // loads per request (rows.mjs, the scanners) arrives by dynamic import and is
   // rightly not here.
   const { closure } = await import('../snapshot/unpack.mjs');
-  const BOUND = closure(join(HERE, 'server.mjs'));
+  // The services run from the main checkout (the launch agents name its path). From a linked worktree,
+  // this folder's files were all stamped at checkout, later than every service's start, and every
+  // service read as stale (bin/review's worktree, 2026-11-11): read the main checkout's files instead.
+  let SERVED = HERE;
+  try {
+    const common = execFileSync('git', ['-C', HERE, 'rev-parse', '--path-format=absolute', '--git-common-dir'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const main = join(dirname(common), 'tools', 'figma-audit');
+    if (basename(common) === '.git' && existsSync(join(main, 'server.mjs'))) SERVED = main;
+  } catch {}
+  const BOUND = closure(join(SERVED, 'server.mjs'));
   const newest = BOUND.map((f) => ({ f, mtime: statSync(f).mtime })).sort((a, b) => b.mtime - a.mtime)[0];
 
   const wanted = new Map();

@@ -115,6 +115,12 @@ step "every folder a newcomer opens has a README"
 OUT=$(node tools/toolkit-check/readmes.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
 
+# toolkit-standard §D 13: a push runs this check. Git skips a core.hooksPath that does not exist without
+# a word; this clone's pointed at a deleted worktree's folder and pushes ran nothing (2026-11-11).
+step "a push runs this check"
+OUT=$(node tools/shared/push-hook.mjs 2>&1)
+[ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
+
 # toolkit-standard §D 22: prose that restates what another file owns agrees with it.
 # knowledge/README.md missed §D 21's weights and a tool's README three of its scripts (2026-11-11).
 step "restated prose agrees with its owners"
@@ -162,9 +168,11 @@ step "the running dashboards serve what the projects have"
 OUT=$(node tools/figma-audit/check-services.mjs 2>&1)
 [ $? -eq 0 ] && { ok; printf '%s\n' "$OUT" | tail -1 | sed 's/^/  /'; } || bad "$OUT"
 
+# The dashboard is one long script in one scope; its check lives with the page, in the docs engine.
+# A fresh clone has no packages: a skip here (a failure in CI, which installs them), never a red that hides new reds.
 step "the docs engine resolves"
-if [ -d tools/docs-site/node_modules ]; then OUT=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); else OUT="the docs site's packages are not installed: run (cd tools/docs-site && pnpm install --frozen-lockfile)"; false; fi
-[ $? -eq 0 ] && ok || bad "$OUT"
+if [ ! -d tools/docs-site/node_modules ]; then skip "the docs site's packages are not installed: run (cd tools/docs-site && pnpm install --frozen-lockfile)"
+elif OUT=$(node tools/docs-site/src/dashboard/check.mjs 2>&1); then ok; else bad "$OUT"; fi
 
 # The docs site is the toolkit's own front end, and nothing held it to
 # code-standard's stylesheet gates: a one-off run on 2026-10-11 found 219

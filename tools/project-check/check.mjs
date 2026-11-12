@@ -38,6 +38,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { pushHookProblem } from '../shared/push-hook.mjs';
 import { fileURLToPath } from 'node:url';
 import { undeclared, renderChanged, pipedVerdicts, trailerReport, unread, knowledgeReport } from './loop.mjs';
 import { realPath } from '../shared/real-path.mjs';
@@ -112,12 +113,7 @@ const GATES = [
   { id: 'knowledge', name: 'every interface commit names the knowledge it followed', rule: '§D 21',
     needs: () => (range ? null : 'no upstream branch to count commits from'), fn: () => knowledgeReport(unread(REPO, range, C.exempt || [], TOOLKIT), range) },
   { id: 'hook', name: 'a push runs this check', rule: '§D 13',
-    needs: () => null, fn: () => {
-      const dir = git(['config', 'core.hooksPath']) || '.git/hooks';
-      const hook = path.resolve(REPO, dir, 'pre-push'); // an absolute hooksPath stays absolute
-      if (!fs.existsSync(hook)) return `no pre-push hook at ${path.relative(REPO, hook)}: run tools/project-check/init.mjs --repo <dir>, which writes the shim and sets core.hooksPath`;
-      return /tools\/project-check\/pre-push\.mjs/.test(fs.readFileSync(hook, 'utf8')) ? null : `${path.relative(REPO, hook)} does not hand the push to tools/project-check/pre-push.mjs: two projects' hooks had drifted apart (one skipped content-only pushes and cached a green tree, the other did neither)`;
-    } },
+    needs: () => null, fn: () => pushHookProblem(REPO, /tools\/project-check\/pre-push\.mjs/, 'run tools/project-check/init.mjs --repo <dir>, which writes the shim and sets core.hooksPath (two projects\' own hooks had drifted apart: one skipped content-only pushes and cached a green tree, the other did neither)') },
   { id: 'validate', name: 'changed code uses the system\'s components and tokens', rule: '§D 15, knowledge/code/agent-prototyping.md',
     needs: () => (!V.system ? 'no `check.validate.system`: the path prefixes of the design system\'s own code'
       : !range ? 'no upstream branch to count commits from'

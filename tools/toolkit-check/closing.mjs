@@ -174,6 +174,36 @@ export function cadence(repo, now = Date.now()) {
   return out;
 }
 
+/* The review's queue (toolkit-standard §D 11), computed each time and never stored (§D 0, §D 17): what
+   was left for later since the last periodic review. Each project's `Toolkit: none — <why>` reasons, counted,
+   since a lesson filed as a project's own is the one the toolkit never hears of; and where the toolkit names
+   its own open edges (a "Known limit" section, an *Open:* line). `repos` is [[name, dir]], toolkit first. */
+export function queue(repos, toolkit = TOOLKIT) {
+  const last = git(toolkit, ['log', '-1', '--format=%cI', '-i', '--grep=^Review:.*independent.*review\\.md']);
+  const since = last || '2000-01-01';
+  const out = [];
+  for (const [name, dir] of repos) {
+    const reasons = new Map();
+    for (const l of git(dir, ['log', `--since=${since}`, '--format=%B']).split('\n')) {
+      const m = l.match(/^Toolkit:\s*none\s*[—-]+\s*(.+)$/i);
+      if (m) reasons.set(m[1].trim(), (reasons.get(m[1].trim()) || 0) + 1);
+    }
+    for (const [why, n] of [...reasons].sort((a, b) => b[1] - a[1])) out.push({ source: name, kind: 'toolkit-none', text: why, count: n });
+  }
+  for (const l of git(toolkit, ['grep', '-n', '-E', '^#+ Known limit|\\*Open:\\*', '--', '*.md', ':!CHANGELOG.md', ':!**/CHANGELOG.md', ':!standards/changelog/*', ':!**/tests/cases.md']).split('\n').filter(Boolean)) {
+    const [file, line] = l.split(':');
+    out.push({ source: 'toolkit', kind: 'open-edge', text: `${file}:${line}` });
+  }
+  return { since: last ? last.slice(0, 10) : 'never', items: out };
+}
+
+/* Review branches bin/review left and nobody merged: the run never merges or pushes, so the next session does,
+   with gates on (tools/toolkit-check/review.md, *How a review runs*). */
+export function reviewBranches(repo) {
+  return git(repo, ['branch', '--list', 'review/*', '--no-merged', 'main', '--format=%(refname:short)']).split('\n').filter(Boolean)
+    .map((b) => ({ branch: b, commits: Number(git(repo, ['rev-list', '--count', `main..${b}`])) || 0 }));
+}
+
 /* The repo's open security alerts (Dependabot), read through gh: nineteen sat unread for a day because nothing
    here said them (2026-11-01). gh absent, signed out or offline is said as not read, never as none. `ask` is the
    gh call, given by the test. */
@@ -186,6 +216,12 @@ export function alerts(repo, ask = (args) => execFileSync('gh', args, { cwd: rep
   return { open: rows.length, by };
 }
 
+if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) && process.argv.includes('--queue')) {
+  const contract = createRequire(import.meta.url)('../snapshot/projects.cjs');
+  const repos = [['toolkit', TOOLKIT], ...contract.repos().filter((r) => fs.existsSync(r.dir)).map((r) => [r.name, r.dir])];
+  console.log(JSON.stringify(queue(repos), null, 1));
+  process.exit(0);
+}
 if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })() === fileURLToPath(import.meta.url)) && process.argv.includes('--judgement')) {
   const args = process.argv.slice(process.argv.indexOf('--judgement') + 1);
   const pi = args.indexOf('--prompt'), prompt = pi >= 0 ? args[pi + 1] : null;
@@ -247,6 +283,7 @@ if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); 
       } else if (p && p.lessons && p.lessons.error) say(`  (the parity facts could not be read: ${p.lessons.error.split('\n')[0]})`);
     }
     if (name === 'toolkit') for (const l of cadence(repo)) flag(l);
+    if (name === 'toolkit') for (const b of reviewBranches(repo)) flag(`review branch ${b.branch} is ready (${b.commits} commit(s), fixes and proposals in their messages): review it with gates on, settle each proposal, then git merge --no-ff ${b.branch} with a Review: trailer naming it independent and naming tools/toolkit-check/review.md`);
     // not on the Stop hook's brief pass, which has 20 s and runs every turn: a network call there can cost 5 of them
     if (name === 'toolkit' && !BRIEF) {
       const a = alerts(repo);
