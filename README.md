@@ -18,7 +18,7 @@ The toolkit holds no project. Each project keeps its design-system files in its 
 
 | Folder | What it holds |
 |---|---|
-| [`plugins/`](plugins/README.md) | Figma plugins: the snapshot plugin every other tool starts from, and smaller helpers. |
+| [`plugins/`](plugins/README.md) | Figma plugins: the snapshot plugin every other tool starts from, smaller helpers, and the Adoption score widget. |
 | [`tools/`](tools/README.md) | The shared code: the snapshot router, the docs site and audit service, the token build, the parity engine, the checks. |
 | [`skills/`](skills/README.md) | Claude skills, one job each: audits, documentation, tokens, building and checking code. |
 | [`standards/`](standards/README.md) | The rules everything is held to, each with its reason and the check that enforces it. |
