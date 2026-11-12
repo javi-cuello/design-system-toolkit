@@ -1,4 +1,4 @@
-// Adoption score — v0.3.3 · skill-standard v1.9.0
+// Adoption score — v0.4.0 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -749,13 +749,13 @@ const FCA_FACTORY = function () {
 /* adoption-score generated end */
 
 const { widget } = figma;
-const { AutoLayout, Text, Span, Rectangle, useSyncedState, usePropertyMenu, h } = widget;
+const { AutoLayout, Text, Span, Rectangle, useSyncedState, usePropertyMenu, useWidgetNodeId, h } = widget;
 
 // The look is the plugins' (skill-standard §B 4): FigUI3's light-theme values, read from plugins/_shared/figui3/fig.css.
 // A widget draws on the canvas and cannot read CSS, so the values are copied here; widget font weights take hundreds,
 // so FigUI3's 450 and 550 are 400 and 500.
 const UI = {
-  bg: '#FFFFFF', bgHover: '#F5F5F5', border: '#E6E6E6',
+  bg: '#FFFFFF', bgHover: '#F5F5F5', bgSecondary: '#F5F5F5', border: '#E6E6E6',
   text: '#000000E5', textSecondary: '#00000099', textTertiary: '#0000004D', textDanger: '#DC3412',
   brand: '#0D99FF', brandHover: '#007BE5', onBrand: '#FFFFFF',
   radiusWindow: 13, radiusControl: 5, s1: 4, s2: 8, s25: 12, s3: 16,
@@ -786,8 +786,8 @@ const SCREEN = ['FRAME', 'INSTANCE'];
 /** @returns {SceneNode[]} */
 const screensIn = (/** @type {readonly SceneNode[]} */ nodes) => nodes.flatMap((n) =>
   n.visible === false ? [] : n.type === 'SECTION' ? screensIn(n.children) : SCREEN.includes(n.type) ? [n] : []);
-// The scope: every page, or only the page the widget sits on (a click or a menu choice happens on that page).
-const SCOPES = [{ option: 'file', label: 'All pages' }, { option: 'page', label: 'This page' }];
+// The scope: every page, the page the widget sits on (a click happens on that page), or what is selected on it.
+const SCOPES = [{ option: 'file', label: 'All pages' }, { option: 'page', label: 'This page' }, { option: 'selection', label: 'Selection' }];
 
 // A library is named by a link to its file; the key is the part after /design/ or /file/ (a branch link's main file,
 // since only a main file publishes).
@@ -810,7 +810,7 @@ async function libraryKeys(/** @type {{ fileKey: string, name: string }} */ lib,
   return ((body.meta && body.meta.components) || []).map((/** @type {any} */ c) => String(c.key));
 }
 
-async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, name: string }[]} */ libraries) {
+async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, name: string }[]} */ libraries, /** @type {readonly SceneNode[]} */ selected) {
   figma.skipInvisibleInstanceChildren = true;
   /** @type {Set<string> | null} */
   let system = null;
@@ -822,10 +822,11 @@ async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, n
   }
   const FCA = FCA_FACTORY();
   const t = { pages: 0, screens: 0, instances: 0, systemInstances: 0, orphans: 0, raw: 0, detached: 0, paints: 0, unboundPaints: 0, values: 0, unboundValues: 0, texts: 0, styledTexts: 0, system: !!system };
-  const pages = scope === 'page' ? [figma.currentPage] : figma.root.children;
+  // the selection is scanned as one page: each selected frame, instance or section is a screen, or holds them
+  const pages = scope === 'file' ? figma.root.children : [figma.currentPage];
   for (const page of pages) {
     await page.loadAsync();
-    const roots = screensIn(page.children);
+    const roots = screensIn(scope === 'selection' ? selected : page.children);
     if (roots.length) t.pages++;
     for (const root of roots) {
       const r = await FCA.composedFrame(root);
@@ -915,6 +916,14 @@ const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-p
     ? txt('—', UI.body, { fill: UI.textTertiary })
     : h(AutoLayout, { spacing: UI.s2, verticalAlignItems: 'center' }, txt(r.pct + '%', UI.body, { fontWeight: 500 }), chip(r.pct)));
 
+// FigUI3's segmented control: a grey track, the chosen segment white under a hairline
+const segmented = (/** @type {string} */ value, /** @type {(v: string) => void} */ set) =>
+  h(AutoLayout, { fill: UI.bgSecondary, cornerRadius: UI.radiusControl, height: 24, padding: 1, width: 'fill-parent' },
+    ...SCOPES.map((o) => h(AutoLayout, {
+      key: o.option, width: 'fill-parent', height: 'fill-parent', horizontalAlignItems: 'center', verticalAlignItems: 'center', cornerRadius: UI.radiusControl - 1,
+      ...(o.option === value ? { fill: UI.bg, stroke: UI.border } : { onClick: () => set(o.option) }),
+    }, txt(o.label, UI.body, { fill: o.option === value ? UI.text : UI.textSecondary }))));
+
 function AdoptionScore() {
   const [result, setResult] = useSyncedState('result', /** @type {any} */ (null));
   const [error, setError] = useSyncedState('error', '');
@@ -922,18 +931,20 @@ function AdoptionScore() {
   const [libraries, setLibraries] = useSyncedState('libraries', /** @type {any[]} */ ([]));
 
   usePropertyMenu([
-    { itemType: 'dropdown', propertyName: 'scope', tooltip: 'Scope', selectedOption: scope, options: SCOPES },
     { itemType: 'action', propertyName: 'libraries', tooltip: 'System libraries…' },
-  ], ({ propertyName, propertyValue }) => {
-    if (propertyName === 'scope' && propertyValue) setScope(propertyValue);
+  ], ({ propertyName }) => {
     if (propertyName === 'libraries') return connect();
   });
 
   const connect = () => openLibraries(libraries, setLibraries, (changed) => { setError(''); if (changed) setResult(null); });
 
+  const widgetId = useWidgetNodeId();
   const run = async () => {
     try {
-      const t = await scan(scope, libraries);
+      // the widget itself is left out, in case clicking it selected it
+      const selected = figma.currentPage.selection.filter((n) => n.id !== widgetId);
+      if (scope === 'selection' && !selected.length) throw new Error('Nothing selected: select frames, then run again.');
+      const t = await scan(scope, libraries, selected);
       setResult({ ...t, scope, at: new Date().toISOString() });
       setError('');
     } catch (e) {
@@ -954,11 +965,12 @@ function AdoptionScore() {
         // FigUI3's secondary button: a hairline border, default text, a grey hover
         h(AutoLayout, { stroke: UI.border, cornerRadius: UI.radiusControl, height: 24, padding: { horizontal: UI.s2 }, verticalAlignItems: 'center', onClick: connect, hoverStyle: { fill: UI.bgHover } },
           txt('Connect libraries', UI.body)));
-  const where = result ? `${result.screens} ${result.screens === 1 ? 'screen' : 'screens'} on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages');
+  const where = result ? `${result.screens} ${result.screens === 1 ? 'screen' : 'screens'} on ${result.scope === 'file' ? result.pages + ' pages' : result.scope === 'page' ? 'this page' : 'the selection'} · ${when}` : '';
 
   return h(AutoLayout, { direction: 'vertical', width: 360, fill: UI.bg, cornerRadius: UI.radiusWindow, stroke: UI.border, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.15 }, offset: { x: 0, y: 2 }, blur: 6 } },
     h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3, top: UI.s25, bottom: UI.s2 }, spacing: UI.s2 },
       txt('Adoption score', UI.heading),
+      segmented(scope, setScope),
       s && s.total !== null
         ? h(AutoLayout, { spacing: UI.s25, verticalAlignItems: 'center' },
             txt(String(s.total), { fontSize: 40, lineHeight: 48, fontWeight: 600 }),

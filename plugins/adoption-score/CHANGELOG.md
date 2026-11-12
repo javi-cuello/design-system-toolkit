@@ -1,6 +1,12 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.4.0] - 2026-11-12
+### Added
+- Selection scope: scans the selected frames, instances or sections; the widget itself is left out of the selection.
+### Changed
+- The scope is a segmented control on the card (All pages, This page, Selection) instead of a dropdown in the widget's menu.
+
 ## [0.3.3] - 2026-11-12
 ### Changed
 - Check names are medium weight; a row's failure count is red when anything failed; the checked total stays grey.
