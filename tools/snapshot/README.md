@@ -162,7 +162,8 @@ component, as the Change log section of its docs page: every fact with its
 value before and after, graded per audience (snapshot-standard rule 20).
 Claude-written day summaries were generated here until 1 Oct 2026 and
 removed: they restated the facts beside them.
-`backfill-changes.cjs <label> [--write] [--grades-only [--regrade]]` rebuilds the facts from the
+`backfill-changes.cjs <label> [--out <file>] [--write] [--grades-only [--regrade]] [--projects <dir>]`
+(without `--write` it prints the entries, or writes them to `--out`) rebuilds the facts from the
 snapshot's git history with the same differ, one entry per commit pair and
 file; `at-rev.cjs` is the reader it uses, and it reads the repository the
 project's layout names — a code project's own, at the paths its
@@ -233,7 +234,7 @@ rules it encodes, and the checklist for adding a project, are
 
 | File | What it is |
 |---|---|
-| `graph.cjs` | The component dependency graph (what each is built from, what places it), from a stored snapshot alone. |
+| `graph.cjs` | The component dependency graph (what each is built from, what places it), from a stored snapshot alone: `node tools/snapshot/graph.cjs --project <label>`. |
 | `tokens.cjs` | A token's value by name, in a mode, from a snapshot's collections. |
 | `version.cjs` | The point a file was last released (a library's publish, a design file's named version), for pinning; `tokenFor` is the one reader of the Figma token. |
 | `check-specs.cjs` | `node tools/snapshot/check-specs.cjs <components dir>`: every stored spec is in the compact shape and round-trips. |
