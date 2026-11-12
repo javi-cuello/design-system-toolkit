@@ -212,6 +212,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - [weak] Grade with the project's own gates, so a better score means code the project would accept, not code an eval prefers. The toolkit's `tools/skill-evals` does this.
 - [moderate] Run each trial in a clean copy with no history. Anthropic saw an agent gain an unfair advantage "by examining the git history from previous trials" (same page); a run that read the answer scores 0 and is never the baseline ([`tools/skill-evals`](../../tools/skill-evals/README.md)).
 - [weak] Hold the project still between runs (a pinned commit), or a moved score may be the project's doing, not the change under test.
+- [weak] Keep a held-out set once there are enough tasks to tune on: draw a share of tasks at random, commit only a salted hash of the list, tune on the rest, and score the held-out set once at the end, so the score is not one the work was tuned to. Southleft holds out a third of its components this way for its contracts engine ([Pitre, 2026](https://southleft.substack.com/p/why-a-button-takes-a-month)).
 
 **Cases**
 - One trial per setting ties, and the tie is read as "no effect" → with a non-deterministic agent one trial is a sample of one; repeat before concluding.
@@ -224,7 +225,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* the eval's own tests prove the grader scores low with the answer removed and as the project does with it kept.
 - *Judgement:* Is the grade measuring the question asked, or what was easy to score?
 
-**Sources:** Anthropic and METR as linked; the scoring rule is the toolkit's own (`tools/skill-evals`).
+**Sources:** Anthropic and METR as linked; Pitre is a practitioner, and his held-out read had not happened at the time of writing; the scoring rule is the toolkit's own (`tools/skill-evals`).
 
 ## Test fixtures as one module
 
