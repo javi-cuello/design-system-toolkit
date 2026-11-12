@@ -424,7 +424,8 @@ globalThis.__FCA_PROBES_FACTORY = function () {
   // a placed instance whose main does not resolve, or is a local main gone
   // from the document, is `orphan`; a frame named like a component it uses,
   // or one in `componentNames`, or any frame Figma marks as detached
-  // (`detachedInfo`), is `detached`; a raw text says whether it has a text
+  // (`detachedInfo`), is `detached`, saying `by` which (`figma` or `name`) and
+  // `root` when the root itself is the detached copy; a raw text says whether it has a text
   // style (`styled`). `checked` counts what was judged, bound or not (values,
   // solid paints, texts), so a caller can turn findings into a share. Hidden
   // layers are skipped.
@@ -455,7 +456,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       if (n.type === "INSTANCE") return instance(n, t);
       if (n.type === "FRAME" || n.type === "COMPONENT") {
         if (!isRoot) frames.push({ n, t });
-        if (n.detachedInfo) { detached.add(n.id); findings.push({ kind: "detached", path: at(t), id: n.id }); }
+        if (n.detachedInfo) { detached.add(n.id); findings.push({ kind: "detached", path: at(t), id: n.id, by: "figma", ...(isRoot ? { root: true } : {}) }); }
         const lm = n.layoutMode;
         if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.primaryAxisAlignItems !== "SPACE_BETWEEN") num(n, "itemSpacing", t);
         if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.layoutWrap === "WRAP" && n.counterAxisAlignContent !== "SPACE_BETWEEN") num(n, "counterAxisSpacing", t);
@@ -488,7 +489,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       }
     };
     if (root.type === "INSTANCE") await instance(root, [root.name]); else await authored(root, [], true);
-    for (const { n, t } of frames) if (seen.has(n.name) && !detached.has(n.id)) findings.push({ kind: "detached", path: at(t), id: n.id });
+    for (const { n, t } of frames) if (seen.has(n.name) && !detached.has(n.id)) findings.push({ kind: "detached", path: at(t), id: n.id, by: "name" });
     // an agent's frame carries its receipt (shared plugin data `fca` /
     // `receipt`, JSON, so any plugin or bridge reads it): with
     // `receipt: true` a frame with none, or one naming no reference screen,

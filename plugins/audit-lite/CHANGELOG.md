@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.6] - 2026-11-12
+### Changed
+- The generated block carries figma-components-audit 2.46.0's probes: a detached finding says how it was found and whether it is the whole screen.
+
 ## [0.8.5] - 2026-11-12
 ### Changed
 - The generated block carries figma-components-audit 2.45.0's probes: the composed-frame check counts what it judged and reads Figma's detach flag.

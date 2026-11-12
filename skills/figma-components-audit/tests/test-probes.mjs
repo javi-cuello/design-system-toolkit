@@ -284,7 +284,10 @@ delete globalThis.figma;
   expect("composed: a raw text says whether it carries a text style; a mixed one does",
     counted.findings.filter((f) => f.type === "TEXT").map((f) => f.path + " " + f.styled), ["Screen / Styled true", "Screen / Plain false", "Screen / Mixed true"]);
   expect("composed: a frame Figma marks as detached is detached, named like a component or not, and only once",
-    counted.findings.filter((f) => f.kind === "detached").map((f) => f.path), ["Screen / Was a card", "Screen / Card"]);
+    counted.findings.filter((f) => f.kind === "detached").map((f) => f.path + " " + f.by), ["Screen / Was a card figma", "Screen / Card figma"]);
+  const fromTemplate = await FCA.composedFindings(frame("6:1", "Screen", { detachedInfo: { type: "library", componentKey: "t" } }, [frame("6:2", "Card", {}), inst("6:3", "Card", main("Card"))]), async (x) => x.main);
+  expect("composed: a root detached from a template says root; a frame matched by name says name",
+    fromTemplate.findings.filter((f) => f.kind === "detached").map((f) => f.path + " " + f.by + " " + !!f.root), ["Screen figma true", "Screen / Card name false"]);
   const withData = (d) => frame("4:1", "Screen", { getSharedPluginData: (ns, k) => (ns === "fca" && k === "receipt" ? d : "") }, []);
   const kinds = async (d, opts) => (await FCA.composedFindings(withData(d), async (x) => x.main, null, opts)).findings.map((f) => f.kind);
   expect("composed: with receipt asked, a frame with none, a broken one, or one naming no reference is a finding; one naming its reference is clean; unasked, nothing",

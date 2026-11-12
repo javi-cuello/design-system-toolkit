@@ -1,4 +1,4 @@
-// Adoption score — v0.1.0 · skill-standard v1.9.0
+// Adoption score — v0.2.0 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: library instances, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -398,7 +398,8 @@ const FCA_FACTORY = function () {
   // a placed instance whose main does not resolve, or is a local main gone
   // from the document, is `orphan`; a frame named like a component it uses,
   // or one in `componentNames`, or any frame Figma marks as detached
-  // (`detachedInfo`), is `detached`; a raw text says whether it has a text
+  // (`detachedInfo`), is `detached`, saying `by` which (`figma` or `name`) and
+  // `root` when the root itself is the detached copy; a raw text says whether it has a text
   // style (`styled`). `checked` counts what was judged, bound or not (values,
   // solid paints, texts), so a caller can turn findings into a share. Hidden
   // layers are skipped.
@@ -429,7 +430,7 @@ const FCA_FACTORY = function () {
       if (n.type === "INSTANCE") return instance(n, t);
       if (n.type === "FRAME" || n.type === "COMPONENT") {
         if (!isRoot) frames.push({ n, t });
-        if (n.detachedInfo) { detached.add(n.id); findings.push({ kind: "detached", path: at(t), id: n.id }); }
+        if (n.detachedInfo) { detached.add(n.id); findings.push({ kind: "detached", path: at(t), id: n.id, by: "figma", ...(isRoot ? { root: true } : {}) }); }
         const lm = n.layoutMode;
         if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.primaryAxisAlignItems !== "SPACE_BETWEEN") num(n, "itemSpacing", t);
         if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.layoutWrap === "WRAP" && n.counterAxisAlignContent !== "SPACE_BETWEEN") num(n, "counterAxisSpacing", t);
@@ -462,7 +463,7 @@ const FCA_FACTORY = function () {
       }
     };
     if (root.type === "INSTANCE") await instance(root, [root.name]); else await authored(root, [], true);
-    for (const { n, t } of frames) if (seen.has(n.name) && !detached.has(n.id)) findings.push({ kind: "detached", path: at(t), id: n.id });
+    for (const { n, t } of frames) if (seen.has(n.name) && !detached.has(n.id)) findings.push({ kind: "detached", path: at(t), id: n.id, by: "name" });
     // an agent's frame carries its receipt (shared plugin data `fca` /
     // `receipt`, JSON, so any plugin or bridge reads it): with
     // `receipt: true` a frame with none, or one naming no reference screen,
@@ -746,7 +747,7 @@ const FCA_FACTORY = function () {
 /* adoption-score generated end */
 
 const { widget } = figma;
-const { AutoLayout, Text, Rectangle, useSyncedState, h } = widget;
+const { AutoLayout, Text, Rectangle, useSyncedState, usePropertyMenu, h } = widget;
 
 // Each check is a share: what passed over what was judged. A check with nothing to judge is left out of the total.
 /** @type {{ key: string, label: string, share: (t: any) => [number, number] }[]} */
@@ -764,17 +765,25 @@ const BANDS = [
   { min: 0, word: 'Poor', fill: '#F24822', ink: '#FFFFFF' },
 ];
 const bandOf = (/** @type {number} */ pct) => BANDS.find((b) => pct >= b.min) || BANDS[BANDS.length - 1];
-// What a page holds that is a screen: frames, sections and placed instances. A component, a widget, a sticky or a
-// loose layer at the page's top level is not one.
-const SCREEN = ['FRAME', 'SECTION', 'INSTANCE'];
+// What a page holds that is a screen: a frame or a placed instance at the page's top level, or inside a section
+// there (a section only groups screens). A component, a widget, a sticky or a loose layer is not one.
+const SCREEN = ['FRAME', 'INSTANCE'];
+/** @returns {SceneNode[]} */
+const screensIn = (/** @type {readonly SceneNode[]} */ nodes) => nodes.flatMap((n) =>
+  n.visible === false ? [] : n.type === 'SECTION' ? screensIn(n.children) : SCREEN.includes(n.type) ? [n] : []);
 
-async function scan() {
+// The scope: every page, or only the page the widget sits on (an archive or sketch page left out by moving the
+// widget to the page that matters, or by keeping it in the file's own handoff page).
+const SCOPES = [{ option: 'file', label: 'All pages' }, { option: 'page', label: 'This page' }];
+
+async function scan(/** @type {string} */ scope) {
   figma.skipInvisibleInstanceChildren = true;
   const FCA = FCA_FACTORY();
   const t = { pages: 0, screens: 0, instances: 0, orphans: 0, raw: 0, detached: 0, paints: 0, unboundPaints: 0, values: 0, unboundValues: 0, texts: 0, styledTexts: 0 };
-  for (const page of figma.root.children) {
+  const pages = scope === 'page' ? [figma.currentPage] : figma.root.children;
+  for (const page of pages) {
     await page.loadAsync();
-    const roots = page.children.filter((n) => SCREEN.includes(n.type) && n.visible !== false);
+    const roots = screensIn(page.children);
     if (roots.length) t.pages++;
     for (const root of roots) {
       const r = await FCA.composedFrame(root);
@@ -785,7 +794,9 @@ async function scan() {
       t.texts += r.checked.texts;
       for (const f of r.findings) {
         if (f.kind === 'orphan') t.orphans++;
-        else if (f.kind === 'detached') t.detached++;
+        // a detach is one Figma marks, inside a screen: a whole screen detached from a template was meant to be,
+        // and a frame merely named like a component may be the designer's own (README)
+        else if (f.kind === 'detached') { if (f.by === 'figma' && !f.root) t.detached++; }
         else if (f.kind === 'raw' && f.type === 'TEXT') { if (f.styled) t.styledTexts++; }
         else if (f.kind === 'raw') t.raw++;
         else if (f.kind === 'unbound') { if (/^(fills|strokes)\[/.test(f.prop)) t.unboundPaints++; else t.unboundValues++; }
@@ -826,11 +837,15 @@ const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-p
 function AdoptionScore() {
   const [result, setResult] = useSyncedState('result', /** @type {any} */ (null));
   const [error, setError] = useSyncedState('error', '');
+  const [scope, setScope] = useSyncedState('scope', 'file');
+
+  usePropertyMenu([{ itemType: 'dropdown', propertyName: 'scope', tooltip: 'Scope', selectedOption: scope, options: SCOPES }],
+    ({ propertyName, propertyValue }) => { if (propertyName === 'scope' && propertyValue) setScope(propertyValue); });
 
   const run = async () => {
     try {
-      const t = await scan();
-      setResult({ ...t, at: new Date().toISOString() });
+      const t = await scan(scope);
+      setResult({ ...t, scope, at: new Date().toISOString() });
       setError('');
     } catch (e) {
       const msg = String((e && /** @type {any} */ (e).message) || e);
@@ -853,7 +868,7 @@ function AdoptionScore() {
     s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent' }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
     error ? h(Text, { fontSize: 12, lineHeight: 16, fill: '#F24822', width: 'fill-parent' }, 'Error: ' + error) : null,
     h(AutoLayout, { width: 'fill-parent', spacing: 8, verticalAlignItems: 'center' },
-      h(Text, { fontSize: 12, lineHeight: 16, fill: MUTED, width: 'fill-parent' }, result ? `${result.screens} screens on ${result.pages} pages · ${when}` : ''),
+      h(Text, { fontSize: 12, lineHeight: 16, fill: MUTED, width: 'fill-parent' }, result ? `${result.screens} screens on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages')),
       h(AutoLayout, { fill: '#0D99FF', cornerRadius: 6, padding: { horizontal: 12, vertical: 8 }, onClick: run, hoverStyle: { fill: '#007BE5' } },
         h(Text, { fontSize: 12, lineHeight: 16, fontWeight: 600, fill: '#FFFFFF' }, result ? 'Run again' : 'Run scan'))));
 }
