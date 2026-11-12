@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.6.0] - 2026-11-12
+### Changed
+- Bands: Good 75 and up, Fair 60 to 74, Poor below 60 (were 90 and 75), after Google's code-coverage guidelines; no design-system source publishes a pass mark.
+
 ## [0.5.2] - 2026-11-12
 ### Removed
 - Clicking a row's count to go to its failing layers (0.5.0, 0.5.1): it did not help find them. The rows show counts only; locating and fixing is Check designs' job.

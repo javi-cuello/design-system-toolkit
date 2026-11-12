@@ -23,7 +23,7 @@ Every visible frame and instance at the top of a page, or inside a section there
 | Spacing and radius bound | non-zero gap, padding and radius with a variable / all of them |
 | Text style bound | text layers with a text style / all of them |
 
-The total is the plain average of the checks that had something to judge, shown with every check's own share so one weak check is never hidden in it. Bands: **Good** 90 and up, **Fair** 75 to 89, **Poor** below 75. They are a house choice, not a researched threshold: no published research sets one, and the one vendor that publishes bands uses 40 and 70 (knowledge/code/adoption.md).
+The total is the plain average of the checks that had something to judge, shown with every check's own share so one weak check is never hidden in it. Bands: **Good** 75 and up, **Fair** 60 to 74, **Poor** below 60. No design-system source publishes a pass mark; these follow Google's code-coverage guidelines, where 60% is acceptable and 75% commendable, since coverage is the same kind of share (knowledge/code/adoption.md).
 
 ## What it does not do
 

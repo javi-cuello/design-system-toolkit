@@ -1,4 +1,4 @@
-// Adoption score — v0.5.2 · skill-standard v1.9.0
+// Adoption score — v0.6.0 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -772,11 +772,13 @@ const CHECKS = [
   { key: 'spacing', label: () => 'Spacing and radius bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' raw value' : ' raw values'), share: (t) => [t.values - t.unboundValues, t.values] },
   { key: 'text', label: () => 'Text style bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' unstyled text' : ' unstyled texts'), share: (t) => [t.styledTexts, t.texts] },
 ];
-// Bands are a house choice, not a researched threshold (README). Each carries a word, so colour is never the only cue;
+// Bands are a reading aid, not a target (README). Each carries a word, so colour is never the only cue;
 // the fills are FigUI3's success, warning and danger.
+// Google's code-coverage guidelines read 75 as "commendable" and 60 as "acceptable" (knowledge/code/adoption.md):
+// no design-system source publishes a pass mark, and coverage is the same kind of share.
 const BANDS = [
-  { min: 90, word: 'Good', fill: '#14AE5C', ink: '#FFFFFF' },
-  { min: 75, word: 'Fair', fill: '#FFCD29', ink: '#000000E5' },
+  { min: 75, word: 'Good', fill: '#14AE5C', ink: '#FFFFFF' },
+  { min: 60, word: 'Fair', fill: '#FFCD29', ink: '#000000E5' },
   { min: 0, word: 'Poor', fill: '#F24822', ink: '#FFFFFF' },
 ];
 const bandOf = (/** @type {number} */ pct) => BANDS.find((b) => pct >= b.min) || BANDS[BANDS.length - 1];
