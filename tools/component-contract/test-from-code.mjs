@@ -61,6 +61,11 @@ ok("in the house's conventions: an enum named and valued by its tokens' words, a
   && shaped.contract.props.icon.type === 'boolean' && shaped.contract.props.icon.default === true && shaped.contract.props.iconSwap.figma === 'Icon swap'
   && shaped.contract.props.showAvatar.figma === 'Show avatar' && Object.keys(shaped.contract.props).at(-1) === 'feedback'
   && shaped.renamed.includes('variant positive → Feedback success'));
+ok('a swap the design does not name stays a swap prop, not an instance one', shaped.contract.props.iconSwap.type === 'swap');
+const both = asFigma({ ...code, props: { ...code.props, iconName: { ...code.props.iconName, showName: 'Icon', swapName: 'Icon' } } }, ORDER);
+ok('a design swap name that equals the boolean\'s key is not taken: the two props stay apart', both.contract.props.icon.type === 'boolean' && both.contract.props.iconSwap && both.contract.props.iconSwap.type === 'swap');
+const twinNames = asFigma({ ...code, props: { size: { type: 'enum', values: ['sm', 'lg'], default: 'sm', figma: 'Size' }, iconSize: { type: 'enum', values: ['sm', 'lg'], default: 'sm', figma: 'Size' } }, variants: [] }, ORDER);
+ok('two enums under one design name do not overwrite each other', Object.values(twinNames.contract.props).filter((p) => p.type === 'enum').length === 2);
 ok('…and it still rebuilds what the code drew, in the new words',
   expand(shaped.contract, { feedback: 'success' }).root.background === 'Color/Background/Feedback/Success/primary'
   && !expand(shaped.contract, { icon: false }).icon && expand(shaped.contract, {}).icon);

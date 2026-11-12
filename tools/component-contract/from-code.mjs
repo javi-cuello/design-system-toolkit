@@ -196,7 +196,8 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
   const props = {}, valueMap = {};
   const tokensOf = (anatomy) => Object.values(anatomy).flatMap((e) => [e.background, e.color].filter((t) => typeof t === 'string' && t.includes('/')));
   for (const [k, p] of Object.entries(contract.props)) {
-    if (p.type === 'enum' && p.role !== 'interaction') {
+    // one that took the design's name (and so its values) keeps them: the token words are the code's guess at them
+    if (p.type === 'enum' && p.role !== 'interaction' && !p.figma) {
       // each value's tokens: the default's from the anatomy, the others' from what their layer sets
       const of = (v) => (v === p.default ? tokensOf(contract.anatomy) : contract.variants.filter((x) => Object.keys(x.when).length === 1 && x.when[k] === v).flatMap((x) => Object.values(x.set || {}).filter((t) => typeof t === 'string' && t.includes('/'))));
       const segs = Object.fromEntries(p.values.map((v) => [v, of(v)]));
@@ -219,12 +220,31 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
       }
     }
     if (p.type === 'swap' && p.shows) {
-      const shown = sentence(p.shows[0].split('/').pop());
-      const bkey = shown[0].toLowerCase() + shown.slice(1).replace(/\s+(.)/g, (_, c) => c.toUpperCase());
+      // the design's names where it shows and swaps the same layer (Show icon, Icon (20)), else the layer's
+      // a design name another prop already holds is not taken: two props under one key lose one
+      const free = (key) => !props[key] && !(key !== k && contract.props[key]);
+      const keyOf = (n) => n[0].toLowerCase() + n.slice(1).replace(/\s+(.)/g, (_, c) => c.toUpperCase());
+      const own = sentence(p.shows[0].split('/').pop());
+      const shown = p.showName && free(keyOf(p.showName)) ? p.showName : own;
+      const bkey = keyOf(shown);
+      const adopted = p.swapName && camel(p.swapName.replace(/[()]/g, ' ').trim());
+      const named = adopted && adopted !== bkey && free(adopted);
+      const swapName = named ? p.swapName : `${shown} swap`;
+      const skey = named ? adopted : `${bkey}Swap`;
       props[bkey] = { type: 'boolean', default: !NONE.test(p.default), figma: shown, shows: p.shows, code: p.code };
-      props[`${bkey}Swap`] = { type: 'swap', default: p.glyph || p.default, figma: `${shown} swap`, code: p.code };
-      renamed.push(`${k} → ${shown} (boolean) + ${shown} swap`);
+      // under the design's swap name, as the design states it: an instance property naming the layers it swaps
+      props[skey] = named ? { type: 'instance', default: p.glyph || p.default, figma: swapName, swaps: p.shows, code: p.code } : { type: 'swap', default: p.glyph || p.default, figma: swapName, code: p.code };
+      renamed.push(`${k} → ${shown} (boolean) + ${swapName}`);
       valueMap[k] = { __key: bkey, __swap: true };
+      continue;
+    }
+    // an enum under the design's name (variant is the design's Hierarchy): keyed by it, its values as they are
+    if (p.type === 'enum' && p.figma) {
+      const key = p.figma[0].toLowerCase() + p.figma.slice(1).replace(/\s+(.)/g, (_, c) => c.toUpperCase());
+      if (props[key] || (key !== k && contract.props[key])) { props[k] = { ...p, figma: sentence(k) }; continue; }
+      if (key !== k) renamed.push(`${k} → ${p.figma}`);
+      props[key] = { ...p };
+      valueMap[k] = { ...Object.fromEntries(p.values.map((v) => [v, v])), __key: key };
       continue;
     }
     const name = sentence(k);
@@ -1023,16 +1043,55 @@ async function main() {
     // an enum with the design's values lists them in the design's order, its own default kept
     if (L.governed && figmaContract) {
       for (const [k, p] of Object.entries({ ...fromCode.props })) {
-        if (p.type !== 'slot') continue;
+        // a slot of words, or a word prop under the code's name (button's children, the design's Label)
+        if (p.type !== 'slot' && p.type !== 'string') continue;
         const el = Object.entries(fromCode.anatomy).find(([, e]) => e.content === `{${k}}` && e.kind === 'text');
         const fa = el && figmaContract.anatomy[el[0]];
         const fk = fa && fa.kind === 'text' && (/^\{(.+)\}$/.exec(fa.content || '') || [])[1];
         const fp = fk && figmaContract.props[fk];
-        if (!fp || fp.type !== 'string' || (fk !== k && fromCode.props[fk])) continue;
+        if (!fp || fp.type !== 'string' || (fk === k ? p.type === 'string' : fromCode.props[fk])) continue;
         delete fromCode.props[k];
         fromCode.props[fk] = { type: 'string', code: p.code, default: fp.default };
         const swap = (x) => JSON.parse(JSON.stringify(x).split(`"{${k}}"`).join(`"{${fk}}"`));
         fromCode.anatomy = swap(fromCode.anatomy); fromCode.variants = swap(fromCode.variants);
+      }
+      // a glyph the code draws where the design draws an icon component's instance (Icon/house): that component at the
+      // code's glyph, sized as the code sizes it, so the drawing places the library's icon, not a frame
+      const figmaEl = (id) => figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
+      const asIcon = (id, e) => {
+        const fe = figmaEl(id);
+        if (!e || e.kind !== 'graphic' || !e.asset || !fe || fe.kind !== 'instance' || !/\//.test(fe.component || '')) return;
+        // a layer a swap shows draws the design's own glyph there (button's house), as the swap's content is a choice
+        const swapped = Object.values(fromCode.props).some((p) => p.type === 'swap' && (p.shows || []).includes(id));
+        // else only where the design's component is that glyph, or its set holds it elsewhere in the design: an
+        // instance of another kind (Avatar/Small) or a glyph outside the set (a logo) stays the code's graphic
+        const set = fe.component.split('/').slice(0, -1).join('/'), named = `${set}/${e.asset}`;
+        if (!swapped && fe.component !== named && !JSON.stringify(figmaContract).includes(JSON.stringify(named))) return;
+        e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
+        // a variant that changes the glyph (an alert's error icon) changes the component in the same set
+        if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = `${set}/${v.set[`${id}.asset`]}`; delete v.set[`${id}.asset`]; }
+      };
+      for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
+      for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);
+      // a swap that shows a layer the design shows and swaps: the design's boolean and swap names
+      for (const p of Object.values(fromCode.props)) {
+        if (p.type !== 'swap' || !p.shows) continue;
+        // only a design prop that covers this swap alone: one that also shows another of the code's swaps names neither
+        const swaps = Object.values(fromCode.props).filter((q) => q.type === 'swap' && q.shows);
+        const alone = (list) => swaps.filter((q) => q.shows.some((x) => (list || []).includes(x))).length === 1;
+        const fb = Object.values(figmaContract.props).find((q) => q.type === 'boolean' && (q.shows || []).some((x) => p.shows.includes(x)) && alone(q.shows));
+        const fs = Object.values(figmaContract.props).find((q) => (q.type === 'instance' || q.type === 'swap') && (q.swaps || []).some((x) => p.shows.includes(x)) && alone(q.swaps));
+        if (fb) p.showName = fb.figma;
+        if (fs) p.swapName = fs.figma;
+        // shown at the design's own glyph, where the code offers it (button's house)
+        const at = p.shows.map(figmaEl).find((x) => x && x.component);
+        const g = at && at.component.split('/').pop();
+        if (g && p.glyph) p.glyph = g;
+      }
+      // a text that hugs its words aligns them nowhere: it takes the design's alignment, as it renders the same
+      for (const [id, e] of Object.entries(fromCode.anatomy)) {
+        const fe = figmaContract.anatomy[id];
+        if (e.kind === 'text' && fe && fe.kind === 'text' && fe.textAlign && e.textAlign !== fe.textAlign && (e.width == null || e.width === 'hug')) e.textAlign = fe.textAlign;
       }
       // the design's name for the component, not the code folder's (Board card, not Board-card)
       fromCode.component = figmaContract.component;
@@ -1041,7 +1100,7 @@ async function main() {
       const val = (t) => (typeof t === 'string' && t.includes('/') ? L.value(t) : t);
       const unbound = (v) => v == null || typeof v === 'number';
       const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
-      // opacity aside: unset is 1, and its tokens hold percentages
+      // opacity aside: unset is 1, and its tokens hold percentages (taken below, where the code writes one)
       const fields = [['radius'], ['layout', 'gap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])];
       const at = (o, path) => path.reduce((x, k) => (x == null ? x : x[k]), o);
       const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
@@ -1080,11 +1139,42 @@ async function main() {
           if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
         }
       }
+      // stacking first on top, as the design does, where the children cannot overlap (no negative gap, none placed
+      // absolutely): then the order they paint in shows nowhere, and the code renders the same either way
+      for (const [id, e] of Object.entries(fromCode.anatomy)) {
+        const fe = figmaContract.anatomy[id];
+        if (!fe || !fe.layout || !fe.layout.firstOnTop || !e.layout || e.layout.firstOnTop) continue;
+        const gap = e.layout.gap == null ? 0 : Number(val(e.layout.gap));
+        // in any variant: a gap it sets below 0, or a child it adds or places absolutely
+        const loose = Object.values(fromCode.anatomy).some((c) => c.parent === id && c.position === 'absolute')
+          || fromCode.variants.some((v) => ((v.set || {})[`${id}.layout.gap`] != null && !(Number(val(v.set[`${id}.layout.gap`])) >= 0)) || Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && (fromCode.anatomy[f.slice(0, -9)] || {}).parent === id) || Object.values(v.add || {}).some((c) => c.parent === id && c.position === 'absolute'));
+        if (gap >= 0 && !loose) e.layout.firstOnTop = true;
+      }
+      // an opacity the code writes raw (0.5 when disabled) takes the design's opacity token that holds it, where exactly
+      // one the design uses does (its tokens hold percentages: 50 is 0.5, never 0.5%)
+      const opacities = new Set();
+      const seek = (o) => { if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) { if (/(^|\.)opacity$/.test(k) && typeof v === 'string' && v.includes('/')) opacities.add(v); else seek(v); } };
+      seek(figmaContract.anatomy); seek(figmaContract.variants);
+      const opacityToken = (n) => { const hit = [...opacities].filter((t) => { const v = Number(val(t)); return v === +(n * 100).toFixed(3); }); return hit.length === 1 ? hit[0] : null; };
+      const adopt = (o, key) => { if (typeof o[key] === 'number') { const t = opacityToken(o[key]); if (t) o[key] = t; } };
+      for (const e of Object.values(fromCode.anatomy)) adopt(e, 'opacity');
+      for (const v of fromCode.variants) {
+        for (const k of Object.keys(v.set || {})) if (/\.opacity$/.test(k)) adopt(v.set, k);
+        for (const e of Object.values(v.add || {})) adopt(e, 'opacity');
+      }
       for (const p of Object.values(fromCode.props)) {
         if (p.type !== 'enum') continue;
         const low = (v) => String(v).toLowerCase();
-        const fp = Object.values(figmaContract.props).find((q) => q.type === 'enum' && q.values.length === p.values.length && q.values.every((v) => p.values.some((w) => low(w) === low(v))));
-        if (fp) p.values = fp.values.map((v) => p.values.find((w) => low(w) === low(v)));
+        const same = (q) => q.type === 'enum' && q.values.length === p.values.length && q.values.every((v) => p.values.some((w) => low(w) === low(v)));
+        // exactly one design enum with these words, and no other code enum with them: else the name is a guess
+        const hits = Object.values(figmaContract.props).filter(same);
+        const words = (q) => q.values.map(low).sort().join();
+        const twins = Object.values(fromCode.props).filter((q) => q.type === 'enum' && words(q) === words(p));
+        // the design's order where any design enum has these words; its name only where that one is certain
+        if (hits.length) p.values = hits[0].values.map((v) => p.values.find((w) => low(w) === low(v)));
+        const fp = hits.length === 1 && twins.length === 1 ? hits[0] : null;
+        // and its name: the design's Hierarchy for the code's variant, where the values are the same words
+        if (fp && fp.figma) p.figma = fp.figma;
       }
     }
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)

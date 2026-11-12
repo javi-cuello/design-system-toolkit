@@ -28,6 +28,19 @@ ok('each variant drawn with every boolean on, the layers a boolean shows marked 
 const linked = plan({ contract: 1, component: 'tag', props: { showIcon: { type: 'boolean', default: false, figma: 'Show icon', shows: ['icon'] } },
   anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/check' } }, variants: [] }, {});
 ok('a part a boolean shows is bound to it, though no variant removes it', linked.variants[0].anatomy.icon.shownBy === 'Show icon' && !linked.variants[0].anatomy.root.shownBy);
+const loading = plan({ contract: 1, component: 'button', props: { loading: { type: 'boolean', default: false, figma: 'Loading' } },
+  anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Label' } },
+  variants: [{ when: { loading: true }, add: { spinner: { kind: 'graphic', parent: 'root' } }, remove: ['label'] }] }, {});
+ok('a boolean that hides a layer when on is an axis, so that layer is drawn where it is off', loading.axes.includes('Loading') && !loading.booleans.length && loading.variants.some((v) => v.anatomy.label));
+const closed = plan({ contract: 1, component: 'dialog', props: { open: { type: 'boolean', default: true, figma: 'Open' } },
+  anatomy: { root: { kind: 'container' }, body: { kind: 'container', parent: 'root' } }, variants: [{ when: { open: false }, remove: ['root', 'body'] }] }, {});
+ok('a prop that takes the whole component away is not drawn: Figma cannot hide a component\'s root', !closed.booleans.length && !closed.axes.length && closed.variants.length === 1 && !closed.variants[0].anatomy.root.shownBy && /^Open /.test(closed.notDrawn[0]));
+const hidden = plan({ contract: 1, component: 'toast', props: { state: { type: 'enum', values: ['rest', 'hover', 'hidden'], default: 'rest', figma: 'State' } },
+  anatomy: { root: { kind: 'container' } }, variants: [{ when: { state: 'hidden' }, remove: ['root'] }] }, {});
+ok('an enum keeps its axis and drops only the value that takes the component away', hidden.axes.includes('State') && hidden.variants.length === 2 && hidden.variants.every((v) => !/hidden/.test(v.name)) && hidden.notDrawn[0] === 'State=hidden (takes the whole component away)');
+const named = plan({ contract: 1, component: 'tag', props: { showIcon: { type: 'boolean', default: true, figma: 'Show icon', shows: ['showIconIcon', 'showMore'] } },
+  anatomy: { root: { kind: 'container' }, showIconIcon: { kind: 'container', parent: 'root' }, showMore: { kind: 'container', parent: 'root' } }, variants: [] }, {});
+ok('a shown layer drops its boolean\'s prefix at a word\'s edge only', named.variants[0].anatomy.showIconIcon.name === 'Icon' && named.variants[0].anatomy.showMore.name !== 'More');
 // the properties are made in the contract's order, which Figma's panel keeps: Show icon, the Icon it reveals, then Label
 const chipContract = { contract: 1, component: 'chip', props: { showIcon: { type: 'boolean', default: false, figma: 'Show icon', shows: ['icon'] }, icon: { type: 'instance', figma: 'Icon', swaps: ['icon'] }, label: { type: 'string', default: 'Label', figma: 'Label' }, state: { type: 'enum', values: ['rest', 'hover'], default: 'rest', figma: 'State' } },
   anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/check' } }, variants: [] };
@@ -174,6 +187,9 @@ delete globalThis.figma;
   const r = roundTrip(lib, slot);
   ok('a text drawn as an empty slot is a difference in every combination, and so are the props', r.rows.some((x) => x.at === 'label.kind' && x.library === 'text' && x.drawn === 'slot' && x.in === 2) && r.rows.some((x) => x.at === 'props'));
   ok('another name is a difference', roundTrip(lib, { ...same, component: 'Badge-x' }).rows.some((x) => x.at === 'name'));
+  const withIcon = (c) => ({ ...lib, anatomy: { ...lib.anatomy, icon: { kind: 'instance', parent: 'root', component: c } } });
+  ok('an icon named by its set alone in the drawing is the library\'s Icon/house; another icon is still a difference',
+    roundTrip(withIcon('Icon/house'), withIcon('house')).rows.length === 0 && roundTrip(withIcon('Icon/house'), withIcon('check')).rows.length === 1);
 }
 
 console.log(`${n}/${n} passed`);

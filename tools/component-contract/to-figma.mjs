@@ -56,6 +56,9 @@ export function roundTrip(library, drawn, { limit = 256 } = {}) {
   const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
+    // another library component, named in the drawing's file by its set alone (house): the library's stored name
+    // carries the path it sits under in its own file (Icon/house), which no other file can read
+    if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;
     if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) { for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) diff(a[k], b[k], at ? `${at}.${k}` : k); }
     else add(at, a, b);
   };
@@ -78,15 +81,31 @@ export function roundTrip(library, drawn, { limit = 256 } = {}) {
   return { combinations: combos.length, rows: [...rows.values()] };
 }
 
+// a boolean's own layer is named for the prop that shows it in its id (derive.cjs idOf: Show icon's Icon is
+// showIconIcon): the layer is the name after it, else reading it back names it twice (showIconShowIconIcon)
+const ownId = (id, e) => {
+  if (!e.shownBy) return id;
+  const segs = id.split('/'), last = segs.at(-1), pre = camel(e.shownBy);
+  // at a word's edge only (showIconIcon, not showMore under Show)
+  return last.startsWith(pre) && /^[A-Z]/.test(last.slice(pre.length)) ? [...segs.slice(0, -1), last[pre.length].toLowerCase() + last.slice(pre.length + 1)].join('/') : id;
+};
+
 export function plan(contract, { axisOrder = [] } = {}) {
   const props = contract.props;
   const AXES = axisOrder.map(camel);
   // a boolean is an axis where the contract says so, or where a layer of its own styles beyond adding, removing and
   // ordering, which a boolean property cannot; one that only shares a layer with an axis stays a property
-  const styles = (k) => props[k].axis === true || contract.variants.some((v) => !v.combination && Object.keys(v.when).join() === k && Object.keys(v.set || {}).some((f) => !/\.order$/.test(f)));
-  const booleans = Object.entries(props).filter(([k, p]) => p.type === 'boolean' && !styles(k)).map(([k, p]) => ({ key: k, figma: p.figma, default: p.default, shows: p.shows || [] }));
-  const axes = Object.entries(props).filter(([k, p]) => p.type === 'enum' || (p.type === 'boolean' && styles(k)))
-    .map(([k, p]) => ({ key: k, figma: p.figma, values: p.type === 'enum' ? [p.default, ...p.values.filter((v) => v !== p.default)] : [p.default, !p.default], boolean: p.type === 'boolean' }))
+  // nor one that hides a layer when on (button's Loading takes its label away): a boolean shows layers, and every
+  // variant is drawn with every boolean on, so that layer was drawn nowhere
+  const styles = (k) => props[k].axis === true || contract.variants.some((v) => !v.combination && Object.keys(v.when).join() === k && (Object.keys(v.set || {}).some((f) => !/\.order$/.test(f)) || (v.when[k] === true && (v.remove || []).length > 0)));
+  // a prop that takes the whole component away (a dialog's Open, off) draws nothing to show or hide: Figma cannot hide
+  // a component's own root, so the drawing is at its default and the prop is not drawn
+  // an enum loses only the values that do (a State's hidden), and keeps its axis
+  const gone = (k) => contract.variants.filter((v) => Object.keys(v.when).join() === k && (v.remove || []).includes('root')).map((v) => v.when[k]);
+  const whole = (k) => props[k].type !== 'enum' && gone(k).length > 0;
+  const booleans = Object.entries(props).filter(([k, p]) => p.type === 'boolean' && !whole(k) && !styles(k)).map(([k, p]) => ({ key: k, figma: p.figma, default: p.default, shows: p.shows || [] }));
+  const axes = Object.entries(props).filter(([k, p]) => !whole(k) && (p.type === 'enum' || (p.type === 'boolean' && styles(k))))
+    .map(([k, p]) => ({ key: k, figma: p.figma, values: p.type === 'enum' ? [p.default, ...p.values.filter((v) => v !== p.default && !gone(k).includes(v))] : [p.default, !p.default], boolean: p.type === 'boolean' }))
     // figma-standard rule 1: props and booleans first, then the axes in the house's order (audit-settings axisOrder)
     .sort((a, b) => (AXES.includes(a.key) ? AXES.indexOf(a.key) : a.boolean ? -1 : AXES.length) - (AXES.includes(b.key) ? AXES.indexOf(b.key) : b.boolean ? -1 : AXES.length));
   const text = Object.entries(props).filter(([, p]) => p.type === 'string').map(([k, p]) => ({ key: k, figma: p.figma, default: p.default }));
@@ -118,10 +137,10 @@ export function plan(contract, { axisOrder = [] } = {}) {
     for (const e of Object.values(anatomy)) if (e.kind === 'graphic' && !e.asset && swap) e.asset = swap.default;
     for (const [id, e] of Object.entries(anatomy)) if (e.kind === 'instance') { const by = e.swappedBy ? swaps.filter((x) => x.key === e.swappedBy) : swaps.filter((x) => x.parts.includes(id)); if (by.length) anatomy[id] = { ...e, swapProps: by.map((x) => x.figma) }; }
     for (const e of Object.values(anatomy)) if (e.kind === 'text') { const t = text.find((x) => e.content === `{${x.key}}`); if (t) e.text = t.figma; }
-    return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(id) }])) };
+    return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(ownId(id, e)) }])) };
   });
   const slots = Object.values(contract.props || {}).filter((p) => p.type === 'slot' && p.figma).map((p) => ({ figma: p.figma, settings: p.settings || null, description: p.description || '', preferred: p.preferred || [] }));
-  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), order: Object.values(props).map((p) => p.figma).filter(Boolean), rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
+  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
 }
 
 /* What the plugin runs: the plan drawn, every value bound to the variable,
@@ -266,7 +285,10 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
       const e = variant.anatomy[id], up = live(e.parent);
       return (nodes[id] = ('children' in up ? up.children.filter((c) => c.name === e.name) : [])[nthOf(id)] || up);
     };
-    const ids = Object.keys(variant.anatomy).sort((a, b) => a.split('/').length - b.split('/').length || (variant.anatomy[a].order ?? 0) - (variant.anatomy[b].order ?? 0));
+    // parents first, by the parent chain, not the id's segments: a mapping's ids need not follow the tree
+    // (multiselect input's field sits inside div, both one segment deep)
+    const depth = (id, n = 0) => { const up = variant.anatomy[id] && variant.anatomy[id].parent; return up && n < 50 ? depth(up, n + 1) : n; };
+    const ids = Object.keys(variant.anatomy).sort((a, b) => depth(a) - depth(b) || (variant.anatomy[a].order ?? 0) - (variant.anatomy[b].order ?? 0));
     for (const id of ids) {
       const e = variant.anatomy[id];
       // a part inside another component's instance is that component's own layer, found by its name (a repeat by
@@ -1091,6 +1113,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   await awake;
   if (res && res.refused) { console.error(`refused: ${res.refused}`); process.exit(1); }
   for (const x of notOpen) console.log(`note: ${x}`);
+  // a prop or value Figma cannot draw: the library's combinations at it stay a difference, said here
+  for (const x of p.notDrawn) console.log(`note: not drawn: ${x}`);
   if (target) {
     const ch = res.changed;
     console.log(`${p.name} updated in place (${res.set}): ${ch.kept} variant(s) kept, ${ch.added} added, ${ch.removed} removed${res.orphaned ? ` (${res.orphaned} instance(s) in this file used a removed one)` : ''}, ${ch.layers} change(s) to layers; props ${res.props.map((k) => k.split('#')[0]).join(', ')}; ${res.missing.length ? `not bound or not changed: ${res.missing.join(', ')}` : 'every value bound'}; in ${Math.round((Date.now() - t0) / 1000)}s`);
