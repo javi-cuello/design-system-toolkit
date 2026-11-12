@@ -877,9 +877,9 @@ function openLibraries(/** @type {any[]} */ libraries, /** @type {(libs: any[]) 
           if (token) await figma.clientStorage.setAsync('token', token);
           // one entry per library file, however many links name it
           const seen = new Set();
-          setLibraries(parsed.filter((p) => { const k = /** @type {any} */ (p.lib).fileKey; return seen.has(k) ? false : (seen.add(k), true); }).map((p) => ({ link: p.link, .../** @type {any} */ (p.lib) })));
-          // the last run was counted against the old libraries, so it no longer describes them
-          clearResult();
+          const next = parsed.filter((p) => { const k = /** @type {any} */ (p.lib).fileKey; return seen.has(k) ? false : (seen.add(k), true); }).map((p) => ({ link: p.link, .../** @type {any} */ (p.lib) }));
+          // the last run was counted against the old libraries, so it no longer describes them; a token alone changes nothing counted
+          if (next.map((l) => l.fileKey).join() !== libraries.map((l) => l.fileKey).join()) { setLibraries(next); clearResult(); }
           figma.closePlugin();
         } else if (msg.type === 'forget') {
           await figma.clientStorage.deleteAsync('token');
@@ -921,7 +921,7 @@ function AdoptionScore() {
     { itemType: 'action', propertyName: 'libraries', tooltip: 'System libraries…' },
   ], ({ propertyName, propertyValue }) => {
     if (propertyName === 'scope' && propertyValue) setScope(propertyValue);
-    if (propertyName === 'libraries') return openLibraries(libraries, setLibraries, () => setResult(null));
+    if (propertyName === 'libraries') return openLibraries(libraries, setLibraries, () => { setResult(null); setError(''); });
   });
 
   const run = async () => {
