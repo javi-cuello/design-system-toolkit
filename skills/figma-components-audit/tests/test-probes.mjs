@@ -275,6 +275,16 @@ delete globalThis.figma;
   expect("composed: a plain root frame is read itself, and is never its own detached copy", bare.findings.map((f) => f.kind + " " + f.path + " " + f.prop), ["unbound Card fills[0]"]);
   const sec = await FCA.composedFindings(n("3:1", "SECTION", "Flow", { children: [inst("3:2", "Lost", null)] }), async (x) => x.main);
   expect("composed: a section root is read through", sec.findings.map((f) => f.kind + " " + f.path), ["orphan Flow / Lost"]);
+  const counted = await FCA.composedFindings(frame("5:1", "Screen", { itemSpacing: 8, paddingTop: 0, fills: [solid(true), solid(false), { type: "IMAGE", visible: true }], fillStyleId: "" }, [
+    n("5:2", "TEXT", "Styled", { textStyleId: "S:2" }), n("5:3", "TEXT", "Plain", { textStyleId: "" }), n("5:4", "TEXT", "Mixed", { textStyleId: Symbol("mixed") }),
+    frame("5:5", "Was a card", { detachedInfo: { type: "library", componentKey: "k" } }), frame("5:6", "Card", { detachedInfo: { type: "local", componentId: "9:9" } }), inst("5:7", "Card", main("Card")),
+  ]), async (x) => x.main);
+  expect("composed: what was judged is counted, bound or not; zero values and images are not",
+    counted.checked, { values: 1, paints: 2, texts: 3 });
+  expect("composed: a raw text says whether it carries a text style; a mixed one does",
+    counted.findings.filter((f) => f.type === "TEXT").map((f) => f.path + " " + f.styled), ["Screen / Styled true", "Screen / Plain false", "Screen / Mixed true"]);
+  expect("composed: a frame Figma marks as detached is detached, named like a component or not, and only once",
+    counted.findings.filter((f) => f.kind === "detached").map((f) => f.path), ["Screen / Was a card", "Screen / Card"]);
   const withData = (d) => frame("4:1", "Screen", { getSharedPluginData: (ns, k) => (ns === "fca" && k === "receipt" ? d : "") }, []);
   const kinds = async (d, opts) => (await FCA.composedFindings(withData(d), async (x) => x.main, null, opts)).findings.map((f) => f.kind);
   expect("composed: with receipt asked, a frame with none, a broken one, or one naming no reference is a finding; one naming its reference is clean; unasked, nothing",

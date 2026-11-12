@@ -405,6 +405,7 @@
         "skills/figma-properties-table/",
         "skills/figma-components-audit/",
         "plugins/audit-lite/code.js",
+        "plugins/adoption-score/code.js",
         "tools/contract-editor/editor.js"
       ]
     },

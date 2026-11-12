@@ -1,0 +1,34 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      '@figma/plugin-typings':
+        specifier: 1.142.0
+        version: 1.142.0
+      '@figma/widget-typings':
+        specifier: 1.13.0
+        version: 1.13.0(@figma/plugin-typings@1.142.0)
+
+packages:
+
+  '@figma/plugin-typings@1.142.0':
+    resolution: {integrity: sha512-Loa9P4bUZi/pQejic8OYQSU4Zz9izJdIiDUkkKddq5Bfc5JPRV6pCeg3C8owovbX9lKshaFym86PlMhKZgLeBw==}
+
+  '@figma/widget-typings@1.13.0':
+    resolution: {integrity: sha512-Ag1fNYk2+Kwv48uV90QQycY+CHI7jLMokk0JdII1PyM5JYOZPhGKG0yiit3bnZUFdaTv9ZnFIa8/gPFS/7Ia8Q==}
+    peerDependencies:
+      '@figma/plugin-typings': 1.x
+
+snapshots:
+
+  '@figma/plugin-typings@1.142.0': {}
+
+  '@figma/widget-typings@1.13.0(@figma/plugin-typings@1.142.0)':
+    dependencies:
+      '@figma/plugin-typings': 1.142.0

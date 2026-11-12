@@ -1,6 +1,6 @@
 # Plugins
 
-Figma plugins the toolkit uses inside a design file: taking the snapshot every other tool reads, auditing a library without the toolkit installed, importing icons, switching themes, tidying layers, showing how components depend on each other and showing a component's guidelines beside it. Each is plain JavaScript with no build step, and looks native because its UI is built from FigUI3, the library behind Figma's PropsKit, on Figma's own colour tokens.
+Figma plugins, and one widget, the toolkit uses inside a design file: scoring a product file's adoption of the system, taking the snapshot every other tool reads, auditing a library without the toolkit installed, importing icons, switching themes, tidying layers, showing how components depend on each other and showing a component's guidelines beside it. Each is plain JavaScript with no build step, and looks native because its UI is built from FigUI3, the library behind Figma's PropsKit, on Figma's own colour tokens; the widget draws on the canvas instead, and is imported under **Widgets → Development**.
 
 ## Install one
 
@@ -10,6 +10,7 @@ In the Figma desktop app: **Plugins → Development → Import plugin from manif
 
 | Plugin | What it does |
 |---|---|
+| [adoption-score](adoption-score/README.md) | A widget on the canvas that scores how closely a product file's screens use the design system, with a band per check. |
 | [audit-lite](audit-lite/README.md) | Audits a library's components and saves a report to upload to Claude, which shows the fix queue. Nothing else to install. |
 | [design-system-snapshot](design-system-snapshot/README.md) | Reads a library or a screens file and sends it to the snapshot router (or, with no router, saves it as one JSON file). The start of every other tool here. |
 | [lucide-icon-importer](lucide-icon-importer/README.md) | Imports Lucide icons as components with size variants. |

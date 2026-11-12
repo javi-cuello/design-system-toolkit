@@ -7,6 +7,7 @@ updates:
       - /tools/docs-site
       - /tools/system-mcp
       - /tools/tokens
+      - /plugins/adoption-score
       - /plugins/audit-lite
       - /plugins/component-graph
       - /plugins/component-guidelines

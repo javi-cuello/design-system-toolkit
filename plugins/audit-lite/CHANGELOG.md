@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.5] - 2026-11-12
+### Changed
+- The generated block carries figma-components-audit 2.45.0's probes: the composed-frame check counts what it judged and reads Figma's detach flag.
+
 ## [0.8.4] - 2026-11-12
 ### Added
 - `pnpm-lock.yaml`, so its one dev dependency is pinned like every other package's (tools/toolkit-check/test-dependabot.mjs now requires it).

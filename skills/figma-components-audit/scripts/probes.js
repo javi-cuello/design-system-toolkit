@@ -423,17 +423,31 @@ globalThis.__FCA_PROBES_FACTORY = function () {
   // and each visible solid fill and stroke without a style, are `unbound`;
   // a placed instance whose main does not resolve, or is a local main gone
   // from the document, is `orphan`; a frame named like a component it uses,
-  // or one in `componentNames`, is `detached`. Hidden layers are skipped.
+  // or one in `componentNames`, or any frame Figma marks as detached
+  // (`detachedInfo`), is `detached`; a raw text says whether it has a text
+  // style (`styled`). `checked` counts what was judged, bound or not (values,
+  // solid paints, texts), so a caller can turn findings into a share. Hidden
+  // layers are skipped.
   const FRAME_NUMS = ["paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius"];
   FCA.composedFindings = async (root, mainOf, componentNames, opts) => {
-    const findings = [], seen = new Set(componentNames || []), frames = [];
+    const findings = [], seen = new Set(componentNames || []), frames = [], detached = new Set();
+    const checked = { values: 0, paints: 0, texts: 0 };
     let instances = 0;
     const at = (trail) => trail.join(" / ");
-    const num = (n, k, t) => { if (typeof n[k] === "number" && n[k] !== 0 && !(n.boundVariables || {})[k]) findings.push({ kind: "unbound", path: at(t), id: n.id, prop: k, value: n[k] }); };
+    const num = (n, k, t) => {
+      if (typeof n[k] !== "number" || n[k] === 0) return;
+      checked.values++;
+      if (!(n.boundVariables || {})[k]) findings.push({ kind: "unbound", path: at(t), id: n.id, prop: k, value: n[k] });
+    };
     const paints = (n, prop, styleKey, t) => {
       const arr = n[prop];
-      if (!isArr(arr) || (typeof n[styleKey] === "string" && n[styleKey])) return;
-      arr.forEach((pt, i) => { if (pt && pt.visible !== false && pt.opacity !== 0 && pt.type === "SOLID" && !(pt.boundVariables && pt.boundVariables.color)) findings.push({ kind: "unbound", path: at(t), id: n.id, prop: prop + "[" + i + "]" }); });
+      if (!isArr(arr)) return;
+      const styled = typeof n[styleKey] === "string" && !!n[styleKey];
+      arr.forEach((pt, i) => {
+        if (!pt || pt.visible === false || pt.opacity === 0 || pt.type !== "SOLID") return;
+        checked.paints++;
+        if (!styled && !(pt.boundVariables && pt.boundVariables.color)) findings.push({ kind: "unbound", path: at(t), id: n.id, prop: prop + "[" + i + "]" });
+      });
     };
     const authored = async (n, trail, isRoot) => {
       if (n.visible === false) return;
@@ -441,6 +455,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       if (n.type === "INSTANCE") return instance(n, t);
       if (n.type === "FRAME" || n.type === "COMPONENT") {
         if (!isRoot) frames.push({ n, t });
+        if (n.detachedInfo) { detached.add(n.id); findings.push({ kind: "detached", path: at(t), id: n.id }); }
         const lm = n.layoutMode;
         if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.primaryAxisAlignItems !== "SPACE_BETWEEN") num(n, "itemSpacing", t);
         if ((lm === "HORIZONTAL" || lm === "VERTICAL") && n.layoutWrap === "WRAP" && n.counterAxisAlignContent !== "SPACE_BETWEEN") num(n, "counterAxisSpacing", t);
@@ -448,6 +463,10 @@ globalThis.__FCA_PROBES_FACTORY = function () {
         for (const k of FRAME_NUMS) if (!k.startsWith("padding") || (lm && lm !== "NONE")) num(n, k, t);
         paints(n, "fills", "fillStyleId", t);
         paints(n, "strokes", "strokeStyleId", t);
+      } else if (n.type === "TEXT") {
+        // a text style id is a string ("" when none) or figma.mixed, read as styled: some range carries one
+        checked.texts++;
+        findings.push({ kind: "raw", path: at(t), id: n.id, type: n.type, styled: typeof n.textStyleId !== "string" || !!n.textStyleId });
       } else if (n.type !== "SECTION") findings.push({ kind: "raw", path: at(t), id: n.id, type: n.type });
       for (const c of n.children || []) await authored(c, t, false);
     };
@@ -469,7 +488,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       }
     };
     if (root.type === "INSTANCE") await instance(root, [root.name]); else await authored(root, [], true);
-    for (const { n, t } of frames) if (seen.has(n.name)) findings.push({ kind: "detached", path: at(t), id: n.id });
+    for (const { n, t } of frames) if (seen.has(n.name) && !detached.has(n.id)) findings.push({ kind: "detached", path: at(t), id: n.id });
     // an agent's frame carries its receipt (shared plugin data `fca` /
     // `receipt`, JSON, so any plugin or bridge reads it): with
     // `receipt: true` a frame with none, or one naming no reference screen,
@@ -480,7 +499,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       if (!r) findings.push({ kind: "no-receipt", path: root.name, id: root.id });
       else if (!r.reference) findings.push({ kind: "no-reference", path: root.name, id: root.id });
     }
-    return { frame: root.name, instances, findings };
+    return { frame: root.name, instances, checked, findings };
   };
   FCA.composedFrame = (frame, componentNames, opts) => FCA.composedFindings(frame, (n) => n.getMainComponentAsync(), componentNames, opts);
 

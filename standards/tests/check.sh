@@ -212,6 +212,7 @@ if [ -d plugins ]; then
     out=$(node plugins/_shared/sync.mjs --check 2>&1) || err "[4] ui-base: $out"
     # audit-lite carries the components scanner and its prompts as a generated block
     out=$(node plugins/audit-lite/sync.mjs --check 2>&1) || err "audit-lite: $out"
+    out=$(node plugins/adoption-score/sync.mjs --check 2>&1) || err "adoption-score: $out"
 fi
 
 # ─── markdown structure ────────────────────────────────────────────────────

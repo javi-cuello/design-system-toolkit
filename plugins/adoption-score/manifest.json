@@ -1,0 +1,20 @@
+{
+  "name": "Adoption score",
+  "id": "adoption-score",
+  "api": "1.0.0",
+  "widgetApi": "1.0.0",
+  "containsWidget": true,
+  "main": "code.js",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  },
+  "permissions": [
+    "teamlibrary"
+  ]
+}
