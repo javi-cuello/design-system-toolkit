@@ -20,12 +20,18 @@ const q = await freePort();
 const s = await hold(q, '127.0.0.1');
 // the free one is picked while q is held, so it is never q, and just before the probe, so a parallel test is unlikely to take it (CI, 2026-11-12: a p picked earlier failed)
 const r = await freePort();
-ok('the first free port of the list, held ones passed over', (await freePort([q, r])) === r);
+const sr = await hold(r, '127.0.0.1');
+const t = await freePort();
+await new Promise((done) => sr.close(done));
+ok('the first free port of the list, held ones passed over', (await freePort([q, r, t])) === r);
 ok('none of the list free: 0', (await freePort([q])) === 0);
 await new Promise((r) => s.close(r));
 
 // a port taken between the probe and the bind: the next is tried; any other failure is thrown
-const [a, b] = [await freePort(), await freePort()];
+const a = await freePort();
+const sa = await hold(a, '127.0.0.1');
+const b = await freePort(); // picked while a is held, so never a
+await new Promise((done) => sa.close(done));
 const tried = [];
 const got = await onFreePort([a, b], async (port) => { tried.push(port); if (port === a) throw new Error(`listen EADDRINUSE: address already in use :::${port}`); return 'up'; });
 ok('a refusal for the port in use moves to the next', got && got.port === b && got.value === 'up' && tried.join() === `${a},${b}`);
