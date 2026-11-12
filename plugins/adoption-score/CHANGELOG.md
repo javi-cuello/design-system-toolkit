@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.5.2] - 2026-11-12
+### Removed
+- Clicking a row's count to go to its failing layers (0.5.0, 0.5.1): it did not help find them. The rows show counts only; locating and fixing is Check designs' job.
+
 ## [0.5.1] - 2026-11-12
 ### Changed
 - A click on a row's red count shows one failing layer at a time: it selects and zooms to it and names what is wrong (paddingLeft 13 not bound to a variable); the next click shows the next. Selecting them all at once showed only the screen around them.
