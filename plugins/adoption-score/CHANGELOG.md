@@ -5,6 +5,7 @@ All notable changes. Format: Keep a Changelog; versioning: SemVer.
 ### Changed
 - Check names are medium weight; a row's failure count is red when anything failed; the checked total stays grey.
 - With no libraries set, the card says the score may be too high until your libraries are connected, with a small secondary Connect libraries button under it.
+- The card before a first run drops its line describing the checks.
 
 ## [0.3.2] - 2026-11-12
 ### Changed

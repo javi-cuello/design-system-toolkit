@@ -963,7 +963,7 @@ function AdoptionScore() {
         ? h(AutoLayout, { spacing: UI.s25, verticalAlignItems: 'center' },
             txt(String(s.total), { fontSize: 40, lineHeight: 48, fontWeight: 600 }),
             h(AutoLayout, { direction: 'vertical', spacing: UI.s1 }, chip(s.total), txt('out of 100', UI.body, { fill: UI.textSecondary })))
-        : txt(result ? 'Nothing to score: no screens found.' : 'Scans the screens for system components, detaches, bound colour and spacing, and text styles.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
+        : result ? txt('Nothing to score: no screens found.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }) : null,
       source),
     s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3 } }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
     error ? h(AutoLayout, { width: 'fill-parent', padding: { horizontal: UI.s3, vertical: UI.s2 } }, txt('Error: ' + error, UI.body, { fill: UI.textDanger, width: 'fill-parent' })) : null,
