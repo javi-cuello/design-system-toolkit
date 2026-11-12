@@ -34,21 +34,27 @@ for f in $files; do
             # `wc -m`, not awk's length(): awk here counts bytes, and an em
             # dash is three of them, so a byte count over-reports a description
             # written in this repo's prose by tens of characters near the cap.
-            dlen=$(awk '/^---$/{c++; next}
+            folded=$(awk '/^---$/{c++; next}
                         c==1 && /^description:/{sub(/^description:[ \t]*/,""); v=$0; d=1; next}
                         c==1 && d && /^[a-zA-Z_-]+:/{d=0}
                         c==1 && d{sub(/^[ \t]+/,""); if ($0 != "") v=v" "$0}
                         c==2{exit}
-                        END{printf "%s", v}' "$f" | wc -m | tr -d ' ')
+                        END{printf "%s", v}' "$f")
+            dlen=$(printf '%s' "$folded" | wc -m | tr -d ' ')
             # A plain (unquoted) scalar may not hold `: ` or ` #`: YAML reads
             # the first as a mapping and the second as a comment, and the
             # loader drops the description. Four skills shipped that way.
+            # Read folded, every continuation line with the first: the review
+            # of 2026-11-12 found only the first line was read.
             plain=$(awk '/^---$/{c++; next} c==1 && /^description:/{sub(/^description:[ \t]*/,""); print; exit}' "$f")
             case "$plain" in
                 \"*|\'*|\>*|\|*) ;;
-                *": "*|*" #"*)
-                    echo "FAIL $f — description: holds ': ' or ' #' unquoted; quote it"
-                    rc=1 ;;
+                *)
+                    case "$folded " in
+                        *": "*|*" #"*)
+                            echo "FAIL $f — description: holds ': ' or ' #' unquoted; quote it"
+                            rc=1 ;;
+                    esac ;;
             esac
             if [ "$nm" != "$dir" ]; then
                 echo "FAIL $f — name: '$nm' does not match directory '$dir'"

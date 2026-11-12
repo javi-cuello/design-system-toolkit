@@ -250,7 +250,7 @@ if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } ca
   const arg = (n) => { const i = args.indexOf(n); return i > -1 ? args[i + 1] : null; };
   // a missing or unreadable input is one line naming it, never a stack (as tools/figma-audit/scores.mjs)
   const json = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { console.error(`${f}: ${e.code === 'ENOENT' ? 'no such file' : e.code === 'EISDIR' ? 'a folder, not a file' : 'not JSON (' + e.message + ')'}`); process.exit(1); } };
-  if (!arg('--composition')) { console.error('usage: sections.mjs --composition <file> [--settings <file>] [--file-key <key>] [--language en-GB|en-US] [--recipes <file>] [--check <file>]'); process.exit(2); }
+  if (!arg('--composition')) { console.error('usage: sections.mjs --composition <file> [--settings <file>] [--file-key <key>] [--language en-GB|en-US] [--recipes <file>] [--check <file>] [--separator <sep>]'); process.exit(2); }
   const opts = Object.assign(arg('--settings') ? settingsFrom(json(arg('--settings')), arg('--file-key')) : {}, { language: arg('--language') || 'en-GB', recipes: arg('--recipes') ? json(arg('--recipes')) : null });
   const subjects = [].concat(json(arg('--composition')));
   let out = subjects.map((s) => Object.assign({ generatedBy: GENERATED_BY }, sections(s, opts)));

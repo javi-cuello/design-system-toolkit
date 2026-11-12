@@ -59,6 +59,7 @@ import { GENERATED } from "../../skills/figma-plugin-creator/scripts/conformance
 const MARKER = /\*Checked:\*|\*Reviewed:\*/;
 const standards = readdirSync(join(ROOT, "standards")).filter((f) => /-standard\.md$/.test(f)); // a standard is <name>-standard.md; the README is the folder's guide
 const handles = {}, retiredHandles = {};
+let reviewedOnly = 0;
 for (const f of standards) {
   const name = basename(f, ".md");
   if (!STANDARDS[name]) { problems.push(`standards/${f}: no entry in tools/toolkit-check/rules.mjs's STANDARDS; add one so its rules are read`); continue; }
@@ -79,6 +80,9 @@ for (const f of standards) {
     // A rule with no check is a rule nobody sees broken: there is no debt marker to hide behind (§C clause D).
     if (/no check yet/i.test(block)) problems.push(`${at}: says it has no check yet, in whole or in part; a rule ships with its check (*Checked:*) or the file that prompts its reading (*Reviewed:*), and a half with neither is a second rule nobody sees`);
     if (!MARKER.test(block)) { problems.push(`${at}: has no enforcement marker (*Checked:* or *Reviewed:*)`); return; }
+    // Counted, never refused: a judgement rule is allowed, and the periodic review reports how many
+    // remain so each run can leave fewer (tools/toolkit-check/review.md, *How a review runs*).
+    if (!/\*Checked:\*/.test(block)) reviewedOnly++;
     if (!/\*Why:\*/.test(block.replace(/`[^`\n]*`/g, ""))) problems.push(`${at}: has no *Why:* (§C clause C)`);
     // A *Checked:* runs to the end of its paragraph or the next marker.
     // A quoted string is one unit, so a marker quoted inside it ends nothing.
@@ -467,6 +471,7 @@ for (const sec of [...SECTIONS, "derived"]) for (const k of Object.keys(keys[sec
 for (const h of healed) console.log("healed  " + h);
 for (const s of skipped) console.log("skipped " + s);
 for (const p of problems) console.log("FAIL    " + p);
-const tail = (healed.length ? ` (${healed.length} healed)` : "") + (skipped.length ? ` (${skipped.length} heal(s) skipped)` : "");
+const tail = (healed.length ? ` (${healed.length} healed)` : "") + (skipped.length ? ` (${skipped.length} heal(s) skipped)` : "") +
+  `; ${reviewedOnly} rule(s) *Reviewed:* with no *Checked:*`;
 console.log(problems.length ? `${problems.length} problem(s)${tail}` : `standards clean${tail}`);
 process.exit(problems.length ? 1 : 0);

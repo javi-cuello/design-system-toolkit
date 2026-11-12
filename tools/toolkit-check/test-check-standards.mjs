@@ -44,6 +44,8 @@ const MAP = "| Was | Now |\n|---|---|\n| old rule 5 | figma-standard rule 2 |\n\
 
 let d = tree(), r = run(d);
 ok("a clean tree passes", r.status === 0 && /standards clean/.test(r.stdout));
+// figma-standard 2 and toolkit-standard §C A and §D 1 are *Reviewed:* only; figma 1 is *Checked:*; the tombstone is neither.
+ok("the rules *Reviewed:* with no *Checked:* are counted", /; 3 rule\(s\) \*Reviewed:\* with no \*Checked:\*/.test(r.stdout));
 
 // rules
 d = tree({ figma: FIGMA("1. **One.** Text with no marker.\n") });

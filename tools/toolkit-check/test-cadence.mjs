@@ -44,7 +44,7 @@ pg("commit", "-q", "--allow-empty", "-m", "a\n\nToolkit: none — this board's o
 pg("commit", "-q", "--allow-empty", "-m", "b\n\nToolkit: none — this board's own rule");
 pg("commit", "-q", "--allow-empty", "-m", "c\n\nToolkit: skills/x/SKILL.md");
 mkdirSync(join(repo, "tools"), { recursive: true });
-writeFileSync(join(repo, "tools/README.md"), "# T\n\n## Known limits\n\nOne.\n");
+writeFileSync(join(repo, "tools/README.md"), "# T\n\n## Known limits\n\nOne.\n\n*Open:* a real one.\n\nProse that names an\n*Open:* line, wrapped, and mid-line *Open:* too.\n");
 c("add", "tools/README.md"); c("commit", "-q", "-m", "docs");
 let q = queue([["toolkit", repo], ["board", proj]], repo);
 ok("the queue reads from the last periodic review", /^\d{4}-\d\d-\d\d$/.test(q.since));
@@ -52,6 +52,7 @@ ok("a project's Toolkit: none reasons are queued once each, counted", q.items.fi
 ok("a Toolkit: none line from before the last review is not queued again", !q.items.some((i) => /read by the last review/.test(i.text)));
 ok("a Toolkit: line naming a file is not queued", !q.items.some((i) => /skills\/x/.test(i.text)));
 ok("a Known limits section is queued by its place", q.items.some((i) => i.kind === "open-edge" && i.text === "tools/README.md:3"));
+ok("an *Open:* paragraph is queued; prose naming the marker is not", JSON.stringify(q.items.filter((i) => i.kind === "open-edge").map((i) => i.text)) === JSON.stringify(["tools/README.md:3", "tools/README.md:7"]));
 // review branches: one bin/review left is named until it is merged
 c("branch", "-M", "main");
 ok("no review branch, nothing named", reviewBranches(repo).length === 0);

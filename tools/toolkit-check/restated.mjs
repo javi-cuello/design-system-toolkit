@@ -10,7 +10,8 @@
  * seven sections (2026-11-11). What a script can hold to its owner, it does:
  *   - every `node <toolkit path> --flag` in a markdown file names a file that
  *     exists, and each flag is read by that file or a script beside it;
- *   - a tool's README names every script at the top of its folder;
+ *   - a tool's README names every script at the top of its folder, and every
+ *     flag each script's own usage line offers (bin/README.md, for a bin/ command's);
  *   - each value in restated.json (a version floor, a port) reads the same in
  *     prose as in the file that owns it.
  * Whether a paraphrase still means what its owner says is a read: the Docs
@@ -54,6 +55,18 @@ export function check(root) {
     if (!existsSync(readme)) continue;
     const text = readFileSync(readme, 'utf8');
     for (const n of scripts(join(tools, t))) if (!/^test-/.test(n) && !text.includes(n)) found.push(`tools/${t}/README.md: does not name ${n}`);
+    // …and every flag a script's own usage line offers: the review of 2026-11-12 found backfill-changes.cjs
+    // printing `--out` and `--projects` in its usage while the README's line for it named neither. A usage
+    // line that names a `bin/` command is that command's, and bin/README.md is where it is documented.
+    const binText = existsSync(join(root, 'bin/README.md')) ? read('bin/README.md') : '';
+    for (const n of scripts(join(tools, t))) {
+      if (/^test-/.test(n)) continue;
+      for (const u of readFileSync(join(tools, t, n), 'utf8').matchAll(/usage: [^\n]*/gi)) {
+        const [doc, docText] = /usage: bin\//i.test(u[0]) ? ['bin/README.md', binText] : [`tools/${t}/README.md`, text];
+        for (const flag of new Set(u[0].match(/--[a-z][\w-]*/g) || []))
+          if (!new RegExp(flag + '(?![\\w-])').test(docText)) found.push(`${doc}: does not name ${flag}, which tools/${t}/${n}'s usage line offers`);
+      }
+    }
   }
 
   // values a file owns, restated in prose

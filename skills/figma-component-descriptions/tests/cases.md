@@ -1,4 +1,4 @@
-# Eval cases — figma-component-descriptions (v1.22.0)
+# Eval cases — figma-component-descriptions (v1.22.1)
 
 **Walked: 2026-11-11 for 1.22.0** (record written in the seven-day review; the run was 2026-11-10) — D25 executed: `node tests/test-sections.mjs` 33 assertions, `node tests/test-engines.mjs` 55/55, both re-run 2026-11-11.
 
