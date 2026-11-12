@@ -1,5 +1,6 @@
 # History — code-standard
 
+- 1.33.0 (2026-11-12): rule 57 covers a fix keyed to one named thing (a company, host, board or id in a list or branch): fix the mechanism that produced the case; a list stays only for a ruling no mechanism can make.
 - 1.32.1 (2026-11-05): rule 65 says corner to corner is the gradient's whole transform, `[[0.5, 0.5, 0], [-0.5, 0.5, 0.5]]`, not its two end handles: dragged corner handles still drew 131° on a wide box because the width handle tilts the bands. No rule's requirement changed.
 - 1.32.0 (2026-11-05): rule 55 admits `templates`, the code file per Figma screen template, which the screen recipe pairs (agent-prototyping plan, Outcome 2).
 - 1.31.3 (2026-11-05): rule 51 names the converter at `tools/tokens/from-snapshot.mjs`, as the figma-token-export skill is retired; no rule changed.
