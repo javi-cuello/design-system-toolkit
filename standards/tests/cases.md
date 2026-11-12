@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-12, for toolkit-standard 2.31.1** — §D 21's "(beyond <rule>)" clause read against S22: it adds a citation form, not a weight; S22's fixture holds (`grep -rn '(beyond ' knowledge` lists 14 items, none `[required]`).
+
 **Walked: 2026-11-11, for toolkit-standard 2.27.0 and design-standard 1.4.0** — S22 added for §D 21's weights (the fixture run, 93 passed); rule 14's weight clause is walked in frontend-build's T13. Others read against the change, none affected.
 
 **Walked: 2026-11-11, for toolkit-standard 2.24.0–2.26.1, figma-standard 2.21.0–2.22.1, snapshot-standard 2.24.0–2.25.1, code-standard 1.32.1 and skill-standard 1.7.0** (records written in the seven-day review) — no case here reads §D 12's files, rule 25's notes, rule 50, rule 65 or rule 18, so each holds as written; their checks run in `bin/check` (`check-standards.mjs` resolves every *Checked:* pair, rule 50's two tests among them, 117 of 117 in `test-audit.mjs`). skill-standard 1.7.0: P4 extended to the FigUI3 blocks and walked as above; P1–P3 re-read against §B 4's FigUI3 window, unchanged.

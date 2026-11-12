@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.31.1 (2026-11-12): §D 21: an item that goes past a rule it builds on cites it "(beyond <the rule>)", which sets no weight; a rule cited for one part weighs that part only. 14 items use it.
 - 2.31.0 (2026-11-12): §D 11: the review runs without the maintainer (`bin/review`, a daily launch agent acting when one is owed) on a branch it never merges; `bin/closing --queue` computes what was left for later; the next session merges it with the trailer.
 - 2.30.2 (2026-11-11): §D 12: the product file's template is figma-context-capture's, which now keeps the project's documents.
 - 2.30.1 (2026-11-11): §D 12: the product file's template is figma-prototype's, split from frontend-build.
