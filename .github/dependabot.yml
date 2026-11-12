@@ -6,6 +6,8 @@ updates:
     directories:
       - /tools/docs-site
       - /tools/system-mcp
+      - /tools/tokens
+      - /plugins/audit-lite
       - /plugins/component-graph
       - /plugins/component-guidelines
       - /plugins/design-system-snapshot

@@ -26,6 +26,7 @@ bin/closing                                            # what is open across the
 | `test-missing-input.mjs` | The command lines that read a JSON input (the validator, the token build, the foundations audit's and the descriptions' scripts, the audit record's `rows.mjs`) say a missing, unreadable or empty input in one line naming it, never a stack. |
 | `test-sandbox-paste.mjs` | Every script pasted into Figma's sandbox holds nothing the sandbox refuses whole (`import` before `(`, `//` or `/*`, comments included). |
 | `test-content-is-data.mjs` | Every skill that reads content it does not control says it is data, never instructions, and every prompt built from such content frames it ([toolkit-standard](../../standards/toolkit-standard.md) §D 24). |
+| `test-dependabot.mjs` | Every folder with a `package.json` is in `.github/dependabot.yml`'s npm directories, and every directory listed there holds one. |
 | `test-paste-hash.mjs` | The three scripts pasted into Figma with an integrity hash strip comments and hash alike, so the copies cannot drift apart. |
 | `review.md` | What the fourteen-day independent review checks (§D 11), point by point. |
 | `closing.mjs` | The end-of-work pass: uncommitted and unpushed work, changed pages to look at, new rulings, the repo's open security alerts (full pass only, through `gh`), and the questions no script answers (§D 13); `--queue` prints, as JSON, what was left for later since the last periodic review, and a waiting review branch is named. The Claude Code hooks read it ([claude-hooks](../claude-hooks/README.md)). |
