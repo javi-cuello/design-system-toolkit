@@ -857,7 +857,7 @@ async function main() {
         if (p.type === 'enum' && NONE.test(String(p.default)) && !absent.includes(v) && !shownBy && d.add && !d.remove) { shownBy = String(v); props[k].shows = Object.keys(d.add); }
         const dp = prev && delta(prev, got);
         // a pointer state that changes nothing here (a checked switch's hover) is still a state, never a swap
-        const same = !absent.includes(v) && p.type === 'enum' && p.role !== 'interaction' && (!Object.keys(d).length || glyphOnly(d, got) || (!!dp && (!Object.keys(dp).length || glyphOnly(dp, got, prev))));
+        const same = !absent.includes(v) && p.type === 'enum' && p.role !== 'interaction' && (!Object.keys(d).length || glyphOnly(d, got) || (NONE.test(String(p.default)) && !!dp && (!Object.keys(dp).length || glyphOnly(dp, got, prev))));
         if (!absent.includes(v)) prev = got;
         // two in a row, as said: a value between them that draws more (a password field's reveal) keeps it an enum
         alike = same ? alike + 1 : 0;
