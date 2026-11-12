@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.5.0] - 2026-11-12
+### Added
+- A row's red count, underlined, selects its failing layers and zooms to them (the first page holding any; up to 200 failures a check, a layer failing twice selected once). Fixing stays with Check designs or the designer. The System components row is not clickable while system libraries are set: other libraries' instances are counted by key, not by layer.
+
 ## [0.4.1] - 2026-11-12
 ### Changed
 - The scope is a row of radio buttons above Run (All pages, This page, Selection), as what the next scan covers: the segmented control under the heading read as a filter on the results.

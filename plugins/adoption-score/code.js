@@ -1,4 +1,4 @@
-// Adoption score — v0.4.1 · skill-standard v1.9.0
+// Adoption score — v0.5.0 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -810,6 +810,24 @@ async function libraryKeys(/** @type {{ fileKey: string, name: string }} */ lib,
   return ((body.meta && body.meta.components) || []).map((/** @type {any} */ c) => String(c.key));
 }
 
+const MAX_IDS = 200;
+
+// Selects a row's failing layers and zooms to them: the first page holding any, then every one on that page.
+// Finding them is the widget's job; fixing them is Check designs' or the designer's.
+async function selectLayers(/** @type {string[]} */ ids) {
+  const nodes = [];
+  // a layer failing twice (fill and stroke, padding and radius) is noted twice, and selected once
+  for (const id of new Set(ids)) { const n = await figma.getNodeByIdAsync(id); if (n && n.type !== 'PAGE' && n.type !== 'DOCUMENT') nodes.push(/** @type {SceneNode} */ (n)); }
+  if (!nodes.length) { figma.notify('Those layers are gone: run the scan again.'); return; }
+  const pageOf = (/** @type {BaseNode} */ n) => { let p = n.parent; while (p && p.type !== 'PAGE') p = p.parent; return /** @type {PageNode | null} */ (p); };
+  const page = pageOf(nodes[0]);
+  if (page && page !== figma.currentPage) await figma.setCurrentPageAsync(page);
+  const here = nodes.filter((n) => pageOf(n) === page);
+  figma.currentPage.selection = here;
+  figma.viewport.scrollAndZoomIntoView(here);
+  if (here.length < nodes.length) figma.notify(`Selected ${here.length} of ${nodes.length} layers: the rest are on other pages`);
+}
+
 async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, name: string }[]} */ libraries, /** @type {readonly SceneNode[]} */ selected) {
   figma.skipInvisibleInstanceChildren = true;
   /** @type {Set<string> | null} */
@@ -821,7 +839,10 @@ async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, n
     for (const lib of libraries) for (const k of await libraryKeys(lib, token)) system.add(k);
   }
   const FCA = FCA_FACTORY();
-  const t = { pages: 0, screens: 0, instances: 0, systemInstances: 0, orphans: 0, raw: 0, detached: 0, paints: 0, unboundPaints: 0, values: 0, unboundValues: 0, texts: 0, styledTexts: 0, system: !!system };
+  const t = { pages: 0, screens: 0, instances: 0, systemInstances: 0, orphans: 0, raw: 0, detached: 0, paints: 0, unboundPaints: 0, values: 0, unboundValues: 0, texts: 0, styledTexts: 0, system: !!system,
+    /** @type {Record<string, string[]>} */ ids: { library: [], detach: [], colour: [], spacing: [], text: [] } };
+  // the failing layers' ids, so a click on a row's count can select them; capped to keep the widget's saved state light
+  const note = (/** @type {string} */ key, /** @type {string} */ id) => { if (t.ids[key].length < MAX_IDS) t.ids[key].push(id); };
   // the selection is scanned as one page: each selected frame, instance or section is a screen, or holds them
   const pages = scope === 'file' ? figma.root.children : [figma.currentPage];
   for (const page of pages) {
@@ -837,13 +858,13 @@ async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, n
       t.texts += r.checked.texts;
       if (system) for (const [k, n] of Object.entries(r.keys)) if (system.has(k)) t.systemInstances += Number(n);
       for (const f of r.findings) {
-        if (f.kind === 'orphan') t.orphans++;
+        if (f.kind === 'orphan') { t.orphans++; note('library', f.id); }
         // a detach is one Figma marks, inside a screen: a whole screen detached from a template was meant to be,
         // and a frame merely named like a component may be the designer's own (README)
-        else if (f.kind === 'detached') { if (f.by === 'figma' && !f.root) t.detached++; }
-        else if (f.kind === 'raw' && f.type === 'TEXT') { if (f.styled) t.styledTexts++; }
-        else if (f.kind === 'raw') t.raw++;
-        else if (f.kind === 'unbound') { if (/^(fills|strokes)\[/.test(f.prop)) t.unboundPaints++; else t.unboundValues++; }
+        else if (f.kind === 'detached') { if (f.by === 'figma' && !f.root) { t.detached++; note('detach', f.id); } }
+        else if (f.kind === 'raw' && f.type === 'TEXT') { if (f.styled) t.styledTexts++; else note('text', f.id); }
+        else if (f.kind === 'raw') { t.raw++; note('library', f.id); }
+        else if (f.kind === 'unbound') { if (/^(fills|strokes)\[/.test(f.prop)) { t.unboundPaints++; note('colour', f.id); } else { t.unboundValues++; note('spacing', f.id); } }
       }
     }
   }
@@ -853,7 +874,10 @@ async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, n
 function score(/** @type {any} */ t) {
   const rows = CHECKS.map((c) => {
     const [pass, total] = c.share(t);
-    return { key: c.key, label: c.label(t), miss: c.miss(total - pass, t), bad: total - pass, pass, total, pct: total ? Math.round((100 * pass) / total) : null };
+    const ids = (t.ids && t.ids[c.key]) || [];
+    // a row is clickable only when its ids are its failures: with system libraries set, other libraries' instances are counted by key, not by layer
+    const pick = total - pass > 0 && (ids.length === total - pass || (ids.length === MAX_IDS && !(c.key === 'library' && t.system))) ? ids : null;
+    return { key: c.key, label: c.label(t), miss: c.miss(total - pass, t), bad: total - pass, pick, pass, total, pct: total ? Math.round((100 * pass) / total) : null };
   });
   const live = rows.filter((r) => r.pct !== null);
   const total = live.length ? Math.round(live.reduce((n, r) => n + /** @type {number} */ (r.pct), 0) / live.length) : null;
@@ -910,7 +934,8 @@ const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-p
     txt(r.label, UI.body, { fontWeight: 500 }),
     // the share stays a pass rate, like the total; the line under it names what failed, which is what someone fixes
     r.total
-      ? h(Text, { fontFamily: 'Inter', ...UI.body, fill: UI.textSecondary }, h(Span, { fill: r.bad ? UI.textDanger : UI.textSecondary }, r.miss), ` · ${r.total.toLocaleString()} checked`)
+      ? h(Text, { fontFamily: 'Inter', ...UI.body, fill: UI.textSecondary, ...(r.pick ? { onClick: () => selectLayers(r.pick), tooltip: 'Select them' } : {}) },
+          h(Span, { fill: r.bad ? UI.textDanger : UI.textSecondary, ...(r.pick ? { textDecoration: 'underline' } : {}) }, r.miss), ` · ${r.total.toLocaleString()} checked`)
       : txt('Nothing to check', UI.body, { fill: UI.textSecondary })),
   r.pct === null
     ? txt('—', UI.body, { fill: UI.textTertiary })
