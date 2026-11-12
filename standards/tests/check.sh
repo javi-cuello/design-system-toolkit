@@ -96,7 +96,7 @@ if [ -d skills ]; then
 
         # Bare 'client' only; clientStorage is a Figma API name. SKILL.md and its references alike: the
         # review of 2026-11-12 planted one in a reference and this read only SKILL.md.
-        n=$(cat "$f" $(find "${d}references" -name '*.md' 2>/dev/null) 2>/dev/null | grep -oiE 'client[a-z]*' | grep -ciE '^clients?$')
+        n=$({ cat "$f"; find "${d}references" -name '*.md' -exec cat {} + 2>/dev/null; } | grep -oiE 'client[a-z]*' | grep -ciE '^clients?$')
         [ "$n" -eq 0 ] || warn "[C] $s — $n bare 'client'; the vocabulary is 'project'"
 
         c="${d}tests/cases.md"

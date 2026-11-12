@@ -25,6 +25,7 @@ export const cost = (streamJson) => Number((streamJson.match(/"total_cost_usd":(
 
 const asked = process.argv.slice(2);
 if (asked.length && (() => { try { return fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })()) {
+  if (asked.length > 30) console.error(`route-probe: ${asked.length} prompts asked, the first 30 probed; ${asked.length - 30} not run`);
   for (const prompt of asked.slice(0, 30)) {
     const r = spawnSync(process.env.CLAUDE_BIN || 'claude', ['-p', prompt, '--max-turns', '1', '--output-format', 'stream-json', '--verbose',
       '--permission-mode', 'default', '--allowedTools', 'Skill', '--disallowedTools', 'Bash', 'Edit', 'Write', 'WebFetch', 'WebSearch'],

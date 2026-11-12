@@ -14,8 +14,8 @@ change's own review never closes this one.
 with `--if-owed`; it acts only when the cadence says a review is owed): on a
 `review/<date>` branch in its own worktree, `bin/check` first (a red is the
 first finding and stops the run), then the queue (`bin/closing --queue`: each
-project's `Toolkit: none` reasons and the toolkit's own *Known limit* and
-*Open:* lines since the last review, computed, never stored), then one headless
+project's `Toolkit: none` reasons since the last review, and every standing
+*Known limit* and *Open:* line in the toolkit, computed, never stored), then one headless
 agent over this list. A finding whose fix is mechanical and follows from a rule
 as written is fixed on the branch, each with the check that would have caught
 its class; anything that needs a decision (which behaviour is right, a rule

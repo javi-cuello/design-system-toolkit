@@ -190,14 +190,17 @@ export function queue(repos, toolkit = TOOLKIT) {
     }
     for (const [why, n] of [...reasons].sort((a, b) => b[1] - a[1])) out.push({ source: name, kind: 'toolkit-none', text: why, count: n });
   }
-  // An *Open:* line is a paragraph that opens with the marker; prose about the marker, wrapped so a line
-  // happens to start with it, is not one (the review of 2026-11-12 found review.md queued three times for it).
+  // An *Open:* line opens a paragraph, a list item or a quote with the marker; prose about the marker,
+  // wrapped so a line happens to start with it, is not one (the review of 2026-11-12 found review.md queued
+  // three times for it). A paragraph opens after a blank line or a heading.
   const lines = {};
-  for (const l of git(toolkit, ['grep', '-n', '-E', '^#+ Known limit|^\\*Open:\\*', '--', '*.md', ':!CHANGELOG.md', ':!**/CHANGELOG.md', ':!standards/changelog/*', ':!**/tests/cases.md']).split('\n').filter(Boolean)) {
+  for (const l of git(toolkit, ['grep', '-n', '-E', '^#+ Known limit|^[[:blank:]]*([-*>][[:blank:]]+)?\\*Open:\\*', '--', '*.md', ':!CHANGELOG.md', ':!**/CHANGELOG.md', ':!standards/changelog/*', ':!**/tests/cases.md']).split('\n').filter(Boolean)) {
     const [file, line] = l.split(':');
-    if (/^\d+:\*Open:\*/.test(l.slice(file.length + 1))) {
+    const text = l.slice(file.length + line.length + 2);
+    if (/^[ \t]*\*Open:\*/.test(text)) {
       lines[file] ??= fs.readFileSync(path.join(toolkit, file), 'utf8').split('\n');
-      if (Number(line) > 1 && lines[file][Number(line) - 2].trim() !== '') continue;
+      const prev = Number(line) > 1 ? lines[file][Number(line) - 2].trim() : '';
+      if (prev !== '' && !/^#/.test(prev)) continue;
     }
     out.push({ source: 'toolkit', kind: 'open-edge', text: `${file}:${line}` });
   }

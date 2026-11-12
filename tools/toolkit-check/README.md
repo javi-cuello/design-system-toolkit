@@ -31,7 +31,7 @@ bin/closing                                            # what is open across the
 | `review.md` | What the fourteen-day independent review checks (§D 11), point by point. |
 | `closing.mjs` | The end-of-work pass: uncommitted and unpushed work, changed pages to look at, new rulings, the repo's open security alerts (full pass only, through `gh`), and the questions no script answers (§D 13); `--queue` prints, as JSON, what was left for later since the last periodic review, and a waiting review branch is named. The Claude Code hooks read it ([claude-hooks](../claude-hooks/README.md)). |
 | `review-run.mjs` | The periodic review run without the maintainer (§D 11), behind `bin/review`: a `review/<date>` branch in its own worktree with its packages installed, `bin/check`, the queue, one headless agent over `review.md` with a narrowed tool list and a budget, and `bin/check` again on what it committed. It never merges or pushes, and runs one at a time. `com.toolkit.review.plist` is its daily launch agent, installed only by `REVIEW=on ./install.sh`. |
-| `route-probe.mjs` | Which skill a request reaches (`review.md` point 22): one headless turn per prompt, a line each with the skill called (or `none`) and the cost. The only way the review's agent reaches `claude`, with the flags fixed here. |
+| `route-probe.mjs` | Which skill a request reaches (`review.md` point 22): one headless turn per prompt, a line each with the skill called (or `none`) and the cost. The only way the review's agent reaches `claude`, with the flags fixed here; past 30 prompts in one call it says how many it left on stderr. `CLAUDE_BIN` (here and in `review-run.mjs`) names the `claude` binary to run, for a test or a machine where it is not on the PATH. |
 
 ## Test
 
