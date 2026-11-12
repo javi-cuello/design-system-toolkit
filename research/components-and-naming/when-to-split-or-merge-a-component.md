@@ -78,7 +78,7 @@ MUI breaks its own rule twice, and both breaks are instructive:
 
 [John Gozde of Imply](https://imply.io/blog/an-opinionated-guide-to-component-apis/) argues for the other fix. After N toggles a component handles 2^N modes, so move the variation into composition. Consolidate when the variants share their markup; compose when they diverge. Genuinely independent switches such as `disabled` and `fullWidth` stay booleans.
 
-The toolkit applies the converse as well. An axis whose only effect is showing or hiding one subtree is a boolean, not a variant (`~/Projects/toolkit/standards/figma-standard.md` rule 35).
+The toolkit applies the converse as well. An axis whose only effect is showing or hiding one subtree is a boolean, not a variant (`standards/figma-standard.md` rule 35).
 
 For any two toggles on your component, ask whether both can be true and whether anyone designed that. **If not, they are one dropdown, or two components.**
 
@@ -110,7 +110,7 @@ What the split buys is accessibility:
 - A merged Button has to keep the same prop optional, so Polaris can only recommend `accessibilityLabel`.
 - Carbon always wraps an icon button in a tooltip, and Primer turned one on by default.
 
-The toolkit requires both the name and the tooltip when a button is icon-only, plus an accessible-name property or annotation on the Figma component (`~/Projects/toolkit/knowledge/ui/patterns/actions.md#icon-only-buttons`, `figma-standard.md` rule 40).
+The toolkit requires both the name and the tooltip when a button is icon-only, plus an accessible-name property or annotation on the Figma component (`knowledge/ui/patterns/actions.md#icon-only-buttons`, `figma-standard.md` rule 40).
 
 Keep your icon button separate unless the team accepts one larger set. **Either way, make the accessible name required in the API, and say so in the Figma description.**
 
@@ -313,5 +313,5 @@ Researched August to October 2026 from the migration guides, source and issue tr
 
 **Toolkit**
 
-- `~/Projects/toolkit/knowledge/ui/patterns/actions.md` (button hierarchy, icon-only buttons)
-- `~/Projects/toolkit/standards/figma-standard.md` rules 14, 20, 21, 26, 35, 40
+- `knowledge/ui/patterns/actions.md` (button hierarchy, icon-only buttons)
+- `standards/figma-standard.md` rules 14, 20, 21, 26, 35, 40

@@ -2,7 +2,7 @@
 
 Why Figma's percentages must never be typed into CSS as percentages, which Figma unit to choose for line height and letter spacing, and exactly what to write in CSS instead.
 
-Researched August 2026, revised November 2026. Figma behaviour checked against its own blog, developer docs, help centre and forum threads with staff responses. CSS behaviour checked against MDN, the CSS Text Level 4 spec, and the Chromium and Mozilla shipping announcements. The August pass re-checked letter-spacing percentages most closely: valid CSS since Chrome 145, resolving against the space character rather than the font size. Re-checked in November 2026: `text-box-trim` shipped in Firefox 154 and MDN now marks it Baseline 2026 (newly available since August 2026); Figma's percentage line-height request is still open (198 replies and about 25,900 views, with forum posts from September and October 2026 still describing it as missing); the Dev Mode em request has had no update since its June 2025 acknowledgement. The toolkit's build rules for the same conversions are in `~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54. What the line-height numbers themselves should be, per role, is in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md#3-is-line-height-set-by-role-or-stepped-onto-a-4px-grid).
+Researched August 2026, revised November 2026. Figma behaviour checked against its own blog, developer docs, help centre and forum threads with staff responses. CSS behaviour checked against MDN, the CSS Text Level 4 spec, and the Chromium and Mozilla shipping announcements. The August pass re-checked letter-spacing percentages most closely: valid CSS since Chrome 145, resolving against the space character rather than the font size. Re-checked in November 2026: `text-box-trim` shipped in Firefox 154 and MDN now marks it Baseline 2026 (newly available since August 2026); Figma's percentage line-height request is still open (198 replies and about 25,900 views, with forum posts from September and October 2026 still describing it as missing); the Dev Mode em request has had no update since its June 2025 acknowledgement. The toolkit's build rules for the same conversions are in `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54. What the line-height numbers themselves should be, per role, is in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md#3-is-line-height-set-by-role-or-stepped-onto-a-4px-grid).
 
 ---
 
@@ -244,7 +244,7 @@ Pin this next to a handoff document.
 | Letter spacing 0% | `letter-spacing: 0`, written out | leaving the field out of the token build |
 | A whole text style | each field as a token, applied together (`@include text-style(name)`) | a `font` shorthand, which cannot carry letter spacing |
 
-The last three rows are the toolkit's own rules, each from a bug on a real project (`~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens`, code-standard rule 54). One generator skipped letter spacing when it was zero, and nine components that read the missing custom property lost the whole declaration, because a `var()` with no definition and no fallback invalidates it. Another project applied type through `font` shorthands, which carried no letter spacing at all. The conversions are done once, by the token build, never typed by hand; the toolkit's `figma-doc-generator` skill documents the same conversions on the Figma side.
+The last three rows are the toolkit's own rules, each from a bug on a real project (`knowledge/code/figma-handoff.md#text-styles-to-type-tokens`, code-standard rule 54). One generator skipped letter spacing when it was zero, and nine components that read the missing custom property lost the whole declaration, because a `var()` with no definition and no fallback invalidates it. Another project applied type through `font` shorthands, which carried no letter spacing at all. The conversions are done once, by the token build, never typed by hand; the toolkit's `figma-doc-generator` skill documents the same conversions on the Figma side.
 
 ---
 
@@ -305,7 +305,7 @@ Write the conversion rules down. The highest-value artefact here is not the toke
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and `~/Projects/toolkit/standards/code-standard.md` rule 54. The build-side rules and their evidence.
+- `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and `standards/code-standard.md` rule 54. The build-side rules and their evidence.
 - [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [space between prose elements](space-between-prose-elements.md), [naming text styles](naming-text-styles.md).
 
 ---

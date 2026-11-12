@@ -2,7 +2,7 @@
 
 Why the dark half of a yellow ramp is a choice of destination hue rather than a fidelity problem, what shipping systems choose (gold for yellow, held hue for lime), and how the toolkit's OKLCH scale skill measures against them.
 
-Researched August 2026, revised November 2026. Claims about each system were verified against its own shipped values (token source files fetched from the repos, then converted to OKLCH locally), its documentation, or its generator source code; commentary by tool creators is labelled as commentary. Where a hue number describes another system's ramp, it was computed locally from that system's published hex values and is marked as such. Re-checked in November 2026: Tailwind's yellow and amber `oklch()` values on main are unchanged; Spectrum's yellow in `@adobe/spectrum-tokens` 15.6.0 was re-converted and still traces the same s-curve (H 99.9 at 100, 71.2 at 1000, 86.6 at 1600); Radix's lime11 and lime12 are unchanged. The larger change is on the toolkit's side: the skill (`~/Projects/toolkit/skills/oklch-color-scale-system`, now 2.3.0) adopted three of this guide's August recommendations in versions 1.4.0 to 2.0.0 and added a yellow-against-orange collision check of its own; section 7 says what landed and what is still open, and the lime values in section 3 were regenerated with 2.3.0.
+Researched August 2026, revised November 2026. Claims about each system were verified against its own shipped values (token source files fetched from the repos, then converted to OKLCH locally), its documentation, or its generator source code; commentary by tool creators is labelled as commentary. Where a hue number describes another system's ramp, it was computed locally from that system's published hex values and is marked as such. Re-checked in November 2026: Tailwind's yellow and amber `oklch()` values on main are unchanged; Spectrum's yellow in `@adobe/spectrum-tokens` 15.6.0 was re-converted and still traces the same s-curve (H 99.9 at 100, 71.2 at 1000, 86.6 at 1600); Radix's lime11 and lime12 are unchanged. The larger change is on the toolkit's side: the skill (`skills/oklch-color-scale-system`, now 2.3.0) adopted three of this guide's August recommendations in versions 1.4.0 to 2.0.0 and added a yellow-against-orange collision check of its own; section 7 says what landed and what is still open, and the lime values in section 3 were regenerated with 2.3.0.
 
 ---
 
@@ -259,7 +259,7 @@ Dark text on yellow solids is universal, and Radix designs those steps with APCA
 
 ### Toolkit
 
-- `~/Projects/toolkit/skills/oklch-color-scale-system/SKILL.md` and `CHANGELOG.md`, version 2.3.0. The lime hold, the dual contrast report, `--peak`, luminance-targeted text steps, and the yellow-against-orange collision sweep (the toolkit's own measurement). The lime values in section 3 were generated with its `scripts/generate.js` in November 2026.
+- `skills/oklch-color-scale-system/SKILL.md` and `CHANGELOG.md`, version 2.3.0. The lime hold, the dual contrast report, `--peak`, luminance-targeted text steps, and the yellow-against-orange collision sweep (the toolkit's own measurement). The lime values in section 3 were generated with its `scripts/generate.js` in November 2026.
 
 ### Cited but not resolved to a URL
 

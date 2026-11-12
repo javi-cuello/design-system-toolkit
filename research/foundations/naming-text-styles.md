@@ -269,7 +269,7 @@ Even HTML has stopped tying an element to a size. Until 2022 the spec's outline 
 
 Name your styles by role and size, never by element, and carry the intended element as separate metadata: an `as` prop in code, an annotation or a component property in Figma. Publish a default mapping table in Angular Material's style, overridable rather than load-bearing, and set `h1` sizes explicitly instead of relying on browser defaults. **Once the name stops enforcing the outline, make the outline a review item: one `<h1>` per page, no skipped levels.**
 
-The toolkit states the same split as a rule: the heading level is code's (code-standard rule 1), the look is the style's, and a card title can be an `h3` and look small (`~/Projects/toolkit/knowledge/ui/design/visual.md#typography`). If most of your pages are prose, CMS.gov's `ds-content` pattern gives back the convenience without the coupling.
+The toolkit states the same split as a rule: the heading level is code's (code-standard rule 1), the look is the style's, and a card title can be an `h3` and look small (`knowledge/ui/design/visual.md#typography`). If most of your pages are prose, CMS.gov's `ds-content` pattern gives back the convenience without the coupling.
 
 ---
 
@@ -412,7 +412,7 @@ In Figma, variables are primitives and styles are composites, and nothing announ
 
 ## What to re-check later
 
-Researched August 2026, revised November 2026. Token names, values and migration histories were checked against each system's own documentation, repository or developer docs. The toolkit's own rules on styles and tokens are in `~/Projects/toolkit/knowledge/ui/design/visual.md#typography`, `~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54.
+Researched August 2026, revised November 2026. Token names, values and migration histories were checked against each system's own documentation, repository or developer docs. The toolkit's own rules on styles and tokens are in `knowledge/ui/design/visual.md#typography`, `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54.
 
 - **GOV.UK's type scale and Atlassian's weights** were re-checked in November 2026 against GOV.UK Frontend 6.6.0 (15 October 2026, no type-scale change since 6.0, so the mobile table holds) and `@atlaskit/tokens` 20.8.2. Atlassian's corrected this guide: an earlier version said Atlassian ships exactly three weights; there are four tokens, and the heading weight, called bold, is 653. Re-check both before quoting either in a document with a long shelf life.
 - **`<h1>` UA styles in Chrome and Safari** were last confirmed from MDN's April 2025 post; the November 2026 pass could not confirm either browser's state since. WebKit bug 292765 is the place to look.
@@ -483,5 +483,5 @@ Researched August 2026, revised November 2026. Token names, values and migration
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/ui/design/visual.md#typography` and `~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens`; `~/Projects/toolkit/standards/code-standard.md` rules 1 and 54.
+- `knowledge/ui/design/visual.md#typography` and `knowledge/code/figma-handoff.md#text-styles-to-type-tokens`; `standards/code-standard.md` rules 1 and 54.
 - [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [type on a phone](type-on-a-phone.md), [line height and letter spacing](line-height-letter-spacing-figma-to-css.md).

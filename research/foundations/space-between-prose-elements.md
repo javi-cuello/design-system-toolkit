@@ -331,7 +331,7 @@ Researched November 2026.
 - **Figma behaviour** comes from the Plugin API reference, a staff forum reply confirming how paragraph spacing applies, and the 10 June 2026 plugin update that made slots generally available.
 - **The toolkit's own measurements.** The x-height and `ch` figures were measured from the Inter 4.1 and mono font files. Characters per line were computed from Inter 4.1's advance widths on one English sample paragraph, without kerning or tracking; other languages, or text with more capitals and figures, will differ by a few characters.
 - **Unverified prose systems.** The Guardian, NYT, BBC GEL, Medium, Stripe and Microsoft Learn keep their CSS in bundles or refused the fetch, so they are not in the table.
-- **Where this came from.** This guide was split out of a longer guide on type for UI and content; the scale it spaces is in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), and what changes on a phone is in [type on a phone](type-on-a-phone.md). The toolkit's distilled rules are `~/Projects/toolkit/knowledge/ui/design/visual.md#type-for-ui-and-long-form-content`.
+- **Where this came from.** This guide was split out of a longer guide on type for UI and content; the scale it spaces is in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), and what changes on a phone is in [type on a phone](type-on-a-phone.md). The toolkit's distilled rules are `knowledge/ui/design/visual.md#type-for-ui-and-long-form-content`.
 - **Evidence quality.** No system read publishes research on gap ratios; the ordering rule is consensus, not a tested outcome.
 
 ---
@@ -370,5 +370,5 @@ Researched November 2026.
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/ui/design/visual.md#type-for-ui-and-long-form-content` and `#typography`. The x-height and `ch` measurements, the prose selectors, the Figma build note, the nearest-token case.
+- `knowledge/ui/design/visual.md#type-for-ui-and-long-form-content` and `#typography`. The x-height and `ch` measurements, the prose selectors, the Figma build note, the nearest-token case.
 - [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [type on a phone](type-on-a-phone.md), [line height and letter spacing](line-height-letter-spacing-figma-to-css.md).

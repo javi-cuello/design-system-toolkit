@@ -2,7 +2,7 @@
 
 What each part around an agent does to its work (harness, hook, gate, guardrail, eval, baseline), and which parts the agent can ignore.
 
-An agent builds a job board's feedback page. It renders and it looks right, but the reasons are raw `<input type="radio">` elements where the design system has a radio group. In the review afterwards, one person says a hook should have caught it, another that the evals should have, and a third that the context file already said not to.
+An agent builds a marketplace's feedback page. It renders and it looks right, but the reasons are raw `<input type="radio">` elements where the design system has a radio group. In the review afterwards, one person says a hook should have caught it, another that the evals should have, and a third that the context file already said not to.
 
 All three are talking about the same machine. Each names a different part of it, and the pairs that sound alike (hook and gate, test and eval, skill and MCP tool) do different jobs.
 
@@ -171,7 +171,7 @@ A skill can tell the agent to call a tool; a tool can't tell the agent how to do
 | Can it go stale? | Yes, when the system changes and the text doesn't | Only if the data behind it does |
 | Example for the feedback page | "Build a form page": which components, which order, which check | `get_component` for the radio group's props |
 
-**A worked case: offered is not used.** One design-system toolkit ran this on a job board. Its MCP server, over the system's built documentation site, was loaded for the agent building the feedback page. The server's instructions were written as documentation ("this server returns components, tokens…"). The agent never called it, in two tasks out of two.
+**A worked case: offered is not used.** One design-system toolkit ran this on a marketplace. Its MCP server, over the system's built documentation site, was loaded for the agent building the feedback page. The server's instructions were written as documentation ("this server returns components, tokens…"). The agent never called it, in two tasks out of two.
 
 Then the instructions were rewritten to say the system is what the interface is built from, and to ask it before writing any interface code. The agent called it in both tasks: search, get the component, get its contract, validate. The progressive disclosure had been there all along. The index entry never told the agent when to open it.
 
@@ -439,7 +439,7 @@ The post separates two purposes. A *capability* eval asks what the agent can do,
 
 It also separates two ways of counting. *pass@k* is the chance at least one of k trials succeeds; *pass^k* is the chance all k do. A 75 percent per-trial rate is about 42 percent over three trials when all three must pass.
 
-**The tie, worked through.** One toolkit's eval runs headless Claude Code in a throwaway copy of a project. It asks for a screen in words that name no component, and grades the result with the same validator its push gate runs. The score is the share of written files with no finding. It ran on the job board with the system's MCP server on and off.
+**The tie, worked through.** One toolkit's eval runs headless Claude Code in a throwaway copy of a project. It asks for a screen in words that name no component, and grades the result with the same validator its push gate runs. The score is the share of written files with no finding. It ran on the marketplace with the system's MCP server on and off.
 
 - **The settings page.** A notification-settings page, context on and off: both scored 1, about $1.50 and four minutes each. The agent with the server loaded never asked it. The repository already had pages built from the system, and the agent copied the code around it, so the task couldn't tell the two settings apart.
 - **The feedback page.** No existing page built anything like it. Both settings scored 0.833, three raw elements each, and again the server went unasked.
@@ -688,7 +688,7 @@ What was not found: any controlled study of evals for design-system agents speci
 
 - [`tools/claude-hooks/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/README.md) and [`gates.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/gates.mjs): the hooks and the plan, review, push and feedback gates; `FILES = 3`, `LINES = 100`, `WIDE_LINES = 10`.
 - [`tools/skill-evals/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/skill-evals/README.md): screen tasks graded by `validate`, `--context on|off`, contamination, void runs, pinned runs, proving the grade.
-- [`docs/agent-prototyping-plan.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/docs/agent-prototyping-plan.md), Outcome 6: the job board's on/off runs and their numbers.
+- [`docs/agent-prototyping-plan.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/docs/agent-prototyping-plan.md), Outcome 6: the marketplace's on/off runs and their numbers.
 - [`tools/system-mcp/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/README.md) and [`validate.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/validate.mjs): the server's tools and `validate`.
 - [`tools/parity/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/README.md), [`waivers.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/waivers.mjs) and [`baseline.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/baseline.mjs): waivers, the bounded-waiver case, the measurement baseline.
 - [`skills/design-code-parity/SKILL.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/skills/design-code-parity/SKILL.md), §6 and *Pixels are for eyes, never for gates*: advisory screenshots.

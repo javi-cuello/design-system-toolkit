@@ -71,7 +71,7 @@ The systems differ in what the label opens. Here they are side by side.
 
 Carbon is the only one that requires an explanation behind every label; the others leave it optional or unstated.
 
-Write the label as text in your component, with the sparkle as an optional companion that has no accessible name of its own. **The word is the marker; the icon is decoration beside it.** If your design ever needs an icon-only marker, give it an accessible name that says the same words. The toolkit's content page states the same rule (`~/Projects/toolkit/knowledge/ui/design/content.md#ai-disclosure`), and on this point every system read agrees.
+Write the label as text in your component, with the sparkle as an optional companion that has no accessible name of its own. **The word is the marker; the icon is decoration beside it.** If your design ever needs an icon-only marker, give it an accessible name that says the same words. The toolkit's content page states the same rule (`knowledge/ui/design/content.md#ai-disclosure`), and on this point every system read agrees.
 
 ---
 
@@ -134,7 +134,7 @@ A model drafts a component description. A designer reads it, fixes a wrong prop 
 
 SAP covers the review case from the other side. Its read-only variant exists for when "no details on how AI results were validated can be provided", which implies the interactive one should say how they were.
 
-The toolkit adds the review state to the words themselves, as its own rule for its own generated text (`~/Projects/toolkit/knowledge/ui/design/content.md#ai-disclosure`):
+The toolkit adds the review state to the words themselves, as its own rule for its own generated text (`knowledge/ui/design/content.md#ai-disclosure`):
 
 | Source of the string | Review state | Label |
 |---|---|---|
@@ -235,4 +235,4 @@ Researched October 2026, when Carbon for AI was the only design system found wit
 
 **The toolkit**
 
-- `~/Projects/toolkit/knowledge/ui/design/content.md#ai-disclosure`: review state in the label, provenance in data, no label on template text.
+- `knowledge/ui/design/content.md#ai-disclosure`: review state in the label, provenance in data, no label on template text.

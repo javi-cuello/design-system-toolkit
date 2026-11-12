@@ -104,7 +104,7 @@ Here is how a few ring colours measure, against the surfaces they would touch:
 | `#FFDD00` | `#0B0C0C` near-black | ~14.5:1 | The pairing is the design |
 | A mid-blue ring touching a blue button | the button | near 1:1 | Invisible on that side |
 
-The toolkit takes this as its working rule: one ring colour per mode, offset from the component, measured against the surface and never the component. A near-black ring in light mode and a near-white one in dark mode then pass on every surface whose lightness matches its mode ([toolkit: accessibility, focus visibility](~/Projects/toolkit/knowledge/ui/design/accessibility.md#focus-visibility)).
+The toolkit takes this as its working rule: one ring colour per mode, offset from the component, measured against the surface and never the component. A near-black ring in light mode and a near-white one in dark mode then pass on every surface whose lightness matches its mode ([toolkit: accessibility, focus visibility](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/ui/design/accessibility.md#focus-visibility)).
 
 The ring has to change only in two cases: when one mode mixes light and dark surfaces, such as a dark footer on a light page or a brand band, and when the ring lands on an image. So the question shifts from "does the library have a coloured primary button?" to "does any mode put the ring on surfaces of opposite lightness?" Most product libraries answer yes somewhere (a dark footer, a hero, a dark-mode card on a darker page), which is where [one ring colour or two](#one-ring-colour-or-two) starts.
 
@@ -120,7 +120,7 @@ A browser fires focus whenever an element becomes active, including on a mouse c
 
 Dave House's practitioner essay [*Focusing on focus states*](https://iknowdavehouse.medium.com/focusing-on-focus-states-7c64089d805c) sorts components usefully. **Transitional** focus belongs to things that take the user somewhere, a link or a submit button, where a ring during the click tells a mouse user nothing and collides with the pressed state. **Retained** focus belongs to things the user sits inside, a text field, where everyone benefits from seeing where they are typing.
 
-It is tempting to read that as "retained components need plain `:focus`, or mouse users lose the ring". The browser already covers it. The Selectors Level 4 draft's suggested heuristics say to indicate focus on an element that supports keyboard input, "such as an input element", and only for a pointer on an element that doesn't take keyboard input, "don't indicate focus" ([Selectors 4, `:focus-visible`](https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo)). MDN says the same, and the toolkit follows `:focus-visible` throughout for this reason ([toolkit: accessibility in code, visible focus](~/Projects/toolkit/knowledge/code/accessibility.md#visible-focus)).
+It is tempting to read that as "retained components need plain `:focus`, or mouse users lose the ring". The browser already covers it. The Selectors Level 4 draft's suggested heuristics say to indicate focus on an element that supports keyboard input, "such as an input element", and only for a pointer on an element that doesn't take keyboard input, "don't indicate focus" ([Selectors 4, `:focus-visible`](https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo)). MDN says the same, and the toolkit follows `:focus-visible` throughout for this reason ([toolkit: accessibility in code, visible focus](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/accessibility.md#visible-focus)).
 
 House's framing still earns its place for what the heuristics leave out. A custom listbox, a contenteditable region or a `select` is retained in his sense, but may not count as taking keyboard input in every browser: the heuristics are non-normative, and browsers choose their own. Those are the components to test with a mouse in each browser.
 
@@ -233,9 +233,9 @@ Forced-colours mode, the setting behind Windows contrast themes, drops `box-shad
 
 Some designs need a shadow, for a two-colour ring or a halo. The fix is to pair it with `outline: 2px solid transparent`, which costs nothing visually and gives forced colours something to paint.
 
-The toolkit tested this in Chromium's forced-colours emulation on 25 October 2026: the shadow ring drew nothing, and the transparent outline drew the ring ([toolkit: accessibility in code, visible focus](~/Projects/toolkit/knowledge/code/accessibility.md#visible-focus)). GOV.UK added such outlines to its radios and checkboxes for the same reason ([govuk-frontend #2264](https://github.com/alphagov/govuk-frontend/pull/2264)).
+The toolkit tested this in Chromium's forced-colours emulation on 25 October 2026: the shadow ring drew nothing, and the transparent outline drew the ring ([toolkit: accessibility in code, visible focus](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/accessibility.md#visible-focus)). GOV.UK added such outlines to its radios and checkboxes for the same reason ([govuk-frontend #2264](https://github.com/alphagov/govuk-frontend/pull/2264)).
 
-One measurement matters at handoff: an outline's corners grow by its offset and width. In the toolkit's Chromium measurement the same day, a `border-radius` of 12 with a 2px outline at offset 2 drew an outer radius of 16. Copying the Figma ring layer's radius onto the element therefore rounds the ring too much; the element keeps its own radius ([toolkit: figma handoff, focus rings](~/Projects/toolkit/knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry)).
+One measurement matters at handoff: an outline's corners grow by its offset and width. In the toolkit's Chromium measurement the same day, a `border-radius` of 12 with a 2px outline at offset 2 drew an outer radius of 16. Copying the Figma ring layer's radius onto the element therefore rounds the ring too much; the element keeps its own radius ([toolkit: figma handoff, focus rings](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry)).
 
 How corners grow under an offset isn't specified yet ([csswg-drafts #8786](https://github.com/w3c/csswg-drafts/issues/8786)), so Firefox and Safari can differ from Chromium.
 
@@ -354,7 +354,7 @@ The tempting alternative is an effect. A drop shadow with X, Y and blur at 0 and
 - a spread can't leave a transparent gap, so an offset ring drawn as an effect paints the gap in one surface colour and is wrong on every other;
 - Figma paints the last shadow in a list on top and CSS paints the first, so stacks reverse on the way to code.
 
-Untitled UI shows the cost. It draws rings as effect styles, and adds combined ring-and-shadow styles because a layer takes only one effect style, a doubling its own docs call a workaround. Its React code, meanwhile, draws an outline at a 2px offset ([toolkit: figma handoff, focus rings](~/Projects/toolkit/knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry)).
+Untitled UI shows the cost. It draws rings as effect styles, and adds combined ring-and-shadow styles because a layer takes only one effect style, a doubling its own docs call a workaround. Its React code, meanwhile, draws an outline at a 2px offset ([toolkit: figma handoff, focus rings](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry)).
 
 Since December 2023, colour variables bind to shadow colours and number variables to stroke weight and shadow geometry ([Figma forum, variables bound to new fields](https://forum.figma.com/product-updates-3/variables-can-now-be-bound-to-new-fields-in-figma-13940)), so the step from AA to AAA can be one value. Effects themselves still can't be variables, and variables can't derive one value from another, so the radius-plus-offset relation and the inner band live in words. A set of variables like this one covers it:
 
@@ -466,9 +466,9 @@ Researched August 2026 from each system's documentation, repositories and issue 
 
 **The toolkit's own tested rules and measurements**
 
-- `~/Projects/toolkit/knowledge/ui/design/accessibility.md#focus-visibility`. One ring colour per mode, measured against the surface.
-- `~/Projects/toolkit/knowledge/code/accessibility.md#visible-focus`. `:focus-visible` throughout; the forced-colours test of 25 October 2026.
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry`. Outline corner growth measured in Chromium; the clear-and-offset arithmetic; effect rings and spread.
+- `knowledge/ui/design/accessibility.md#focus-visibility`. One ring colour per mode, measured against the surface.
+- `knowledge/code/accessibility.md#visible-focus`. `:focus-visible` throughout; the forced-colours test of 25 October 2026.
+- `knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry`. Outline corner growth measured in Chromium; the clear-and-offset arithmetic; effect rings and spread.
 
 **Commentary**
 

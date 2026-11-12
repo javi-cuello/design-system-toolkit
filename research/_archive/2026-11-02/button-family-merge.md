@@ -1,8 +1,8 @@
 # Button, icon button, context button and interactive icon: merge or keep apart
 
-Whether Suiteify's four button-like components should become fewer, what the major design systems ship instead, and what each merge would cost in a Figma library that is meant to stay small. The proposal (section 8) is two merges: Context button into Button and Icon button, Interactive icon into Icon button.
+Whether Project A's four button-like components should become fewer, what the major design systems ship instead, and what each merge would cost in a Figma library that is meant to stay small. The proposal (section 8) is two merges: Context button into Button and Icon button, Interactive icon into Icon button.
 
-Researched October 2026. Thirteen systems were read from their own documentation, source code or issue trackers (Material 3, MUI, Carbon, Polaris, Primer, Spectrum, Atlassian, Fluent 2, Ant Design, GOV.UK, Radix Themes, Chakra UI, Twilio Paste). Suiteify's figures were read from the live Figma library and from the engineers' code on the same day. Where a claim rests on a single source or on commentary, it says so.
+Researched October 2026. Thirteen systems were read from their own documentation, source code or issue trackers (Material 3, MUI, Carbon, Polaris, Primer, Spectrum, Atlassian, Fluent 2, Ant Design, GOV.UK, Radix Themes, Chakra UI, Twilio Paste). Project A's figures were read from the live Figma library and from the engineers' code on the same day. Where a claim rests on a single source or on commentary, it says so.
 
 ---
 
@@ -10,20 +10,20 @@ Researched October 2026. Thirteen systems were read from their own documentation
 
 The question arrives as "can we merge some of these?", and it splits into smaller ones that come up in this order:
 
-- What does Suiteify have today, and what does each component cost?
+- What does Project A have today, and what does each component cost?
 - Do other systems give icon-only buttons their own component?
 - Is "compact" ever a component of its own, and what would merging Context button cost?
 - Where does a bare clickable icon live in other systems?
 - What would merging Icon button into Button actually cost?
 - What would merging Interactive icon into Icon button cost?
 - Do other libraries draw an "open" state on buttons, as Context button does?
-- So what should Suiteify merge?
+- So what should Project A merge?
 
 Section 9 is the lookup table. Section 10 is the short version for someone who reads nothing else.
 
 ---
 
-## 1. What does Suiteify have today, and what does each component cost?
+## 1. What does Project A have today, and what does each component cost?
 
 **The short answer.** Four components, 245 variants between them, and two of the four already overlap: Context button contains its own icon-only form, and Interactive icon is what MUI calls an icon button.
 
@@ -46,7 +46,7 @@ The engineers' code tells a second story. Its `IconButton` is built on top of it
 
 ## 2. Do other systems give icon-only buttons their own component?
 
-**The short answer.** More of them split than merge, and the split systems include MUI, the library Suiteify's code is built on. But one large system merged and stayed merged, so this is a real choice rather than a settled rule.
+**The short answer.** More of them split than merge, and the split systems include MUI, the library Project A's code is built on. But one large system merged and stayed merged, so this is a real choice rather than a settled rule.
 
 Lay the thirteen systems on a ladder, from fully split to fully merged.
 
@@ -58,7 +58,7 @@ Lay the thirteen systems on a ladder, from fully split to fully merged.
 
 Two migrations make the trade-off concrete. **Fluent merged.** Its v8 library had a separate `IconButton`; the v9 migration guide says plainly that common buttons now all map to `Button`, so `<IconButton iconProps={…}/>` becomes `<Button appearance="subtle" icon={…}/>`. Fluent kept separate components only where the *behaviour* differs: `MenuButton`, `SplitButton`, `ToggleButton`, `CompoundButton`. **Atlassian split.** Its 2025 write-up on the new buttons describes the old one-size-fits-all button as large and slow, and replaced it with purpose-built components, reporting about a 10% cut in render time. That reason is about code performance, which a Figma library does not have, so it does not transfer here.
 
-Atlassian's split also shows the cost of splitting. Its `ButtonAppearance` offers `danger` and `warning`; its narrower `IconButtonAppearance` offers neither. Two lists that started as one have drifted apart. Carbon reaches the same restriction by rule rather than by accident: its usage guidance says a danger button cannot be icon-only. Suiteify's Icon button has narrowed the same way, without saying so: it has no Primary role, no Secondary Danger, and no Loading state.
+Atlassian's split also shows the cost of splitting. Its `ButtonAppearance` offers `danger` and `warning`; its narrower `IconButtonAppearance` offers neither. Two lists that started as one have drifted apart. Carbon reaches the same restriction by rule rather than by accident: its usage guidance says a danger button cannot be icon-only. Project A's Icon button has narrowed the same way, without saying so: it has no Primary role, no Secondary Danger, and no Loading state.
 
 What a separate icon button buys, in the systems that kept one, is mostly accessibility. An icon-only button has no visible text, so it needs an accessible name some other way. A separate component can make that name **required in its API**: Primer lists `aria-label` as required, Atlassian and Carbon require a `label`. A merged Button cannot do that cleanly, because the same prop must be optional when there is visible text; Polaris can only recommend `accessibilityLabel`. Several split systems also build the tooltip in: Carbon's `IconButton` always wraps a tooltip, and Primer turned it on by default after an issue argued that the label should appear on hover and on keyboard focus.
 
@@ -76,7 +76,7 @@ The pattern is uniform. MUI uses `size="small"`, and its API page describes smal
 
 Context button is compact only incidentally. Its job is a **menu trigger**: it has an `Open` axis, a `Value text` beside the label and a `Badge`, and its description calls it the trigger for actions attached to a single row or element. Read from the library, its looks are Button's. Its two sizes are 40 and 32px tall, Button's Medium and Small. It has no background at rest, like Button's Tertiary role. Its `Icon only` type is a 40 or 32px square, Icon button's Tertiary Medium and Small. The one thing it draws that Button does not is `Open=True`, a `secondary-translucent` background behind the button.
 
-Systems split on whether a menu trigger needs its own component. Fluent keeps a `MenuButton` and Carbon a `MenuButton` and `ComboButton`. Primer, Atlassian and Polaris keep it on `Button`: Primer's Button styles `aria-expanded` and takes a `count` badge, Atlassian's dropdown trigger is a `Button` with `isSelected`, and Polaris has a `disclosure` prop. Suiteify's case falls on the second side, because the trigger already shares Button's sizes and role and differs only in three properties and one background.
+Systems split on whether a menu trigger needs its own component. Fluent keeps a `MenuButton` and Carbon a `MenuButton` and `ComboButton`. Primer, Atlassian and Polaris keep it on `Button`: Primer's Button styles `aria-expanded` and takes a `count` badge, Atlassian's dropdown trigger is a `Button` with `isSelected`, and Polaris has a `disclosure` prop. Project A's case falls on the second side, because the trigger already shares Button's sizes and role and differs only in three properties and one background.
 
 What the merge costs, priced the same way as sections 5 and 6:
 
@@ -105,11 +105,11 @@ Unlike the icon-only merge in section 5, this one adds no axis to Button: the tr
 
 The pattern holds across every split system. Material 3's "standard" icon button is the one with no container, one of four styles beside filled, tonal and outlined. Primer uses `variant="invisible"`, Atlassian `appearance="subtle"`, Carbon `kind="ghost"`, Spectrum `isQuiet`, Radix `variant="ghost"`. The merged systems do the same on Button: Fluent's `appearance="transparent"` removes background and border, Ant Design uses `type="text"` with an icon.
 
-MUI deserves its own paragraph because the code is built on it. MUI's `IconButton` has **no container by default**: a glyph with a ripple, exactly like Suiteify's Interactive icon. It has no `variant` prop at all. A request to add a contained variant was opened in May 2023 and closed as not planned ([issue #37443](https://github.com/mui/material-ui/issues/37443)). So in MUI's vocabulary, Suiteify's Interactive icon is the icon button, and Suiteify's contained Icon button is something MUI does not offer, which is why the engineers built it on `Button` instead. That inversion is worth saying out loud to them, because a developer reading "IconButton" in a ticket will picture the bare one.
+MUI deserves its own paragraph because the code is built on it. MUI's `IconButton` has **no container by default**: a glyph with a ripple, exactly like Project A's Interactive icon. It has no `variant` prop at all. A request to add a contained variant was opened in May 2023 and closed as not planned ([issue #37443](https://github.com/mui/material-ui/issues/37443)). So in MUI's vocabulary, Project A's Interactive icon is the icon button, and Project A's contained Icon button is something MUI does not offer, which is why the engineers built it on `Button` instead. That inversion is worth saying out loud to them, because a developer reading "IconButton" in a ticket will picture the bare one.
 
 How the names line up today and after the merges in section 8:
 
-| Figma today | Suiteify code today | Closest MUI component | Figma after the merges |
+| Figma today | Project A code today | Closest MUI component | Figma after the merges |
 |---|---|---|---|
 | Button | `Button` | `Button` | Button |
 | Icon button (contained) | `IconButton`, a styled `Button` | `Button` with square padding; MUI's `IconButton` has no contained form | Icon button, Secondary and Tertiary roles |
@@ -122,11 +122,11 @@ How the names line up today and after the merges in section 8:
 
 ## 5. What would merging Icon button into Button actually cost?
 
-**The short answer.** One fewer component, in exchange for a 153-variant Button whose `Size` means two shapes. The industry is split on this merge, and Suiteify's constraint of small Figma components points to keeping them apart.
+**The short answer.** One fewer component, in exchange for a 153-variant Button whose `Size` means two shapes. The industry is split on this merge, and Project A's constraint of small Figma components points to keeping them apart.
 
 Walk the merge. The merged Button needs a way to say "icon only", so it gains an axis, say `Content` with Label and Icon only. If every existing combination got an icon-only form, Button would double from 108 to 216 variants. It would not, because Icon button deliberately has fewer roles: keeping that restriction, the icon-only side adds Icon button's 45 variants, and Button becomes **153 variants in one set**.
 
-Then the properties. Properties are defined once for the whole set, but a variant only uses those bound to layers it contains. Suiteify's Context button already works this way: its `Icon only` variants bind only `Icon swap`, while `Label text`, `Value`, `Value text` and `Badge` are bound only in `Type=Default`. So icon-only variants of a merged Button need not carry the label layers, at the price of building those variants differently from their labelled siblings. What does not go away is `Size` meaning two things: a 64 to 80px-wide button with text, or a 32 to 44px square.
+Then the properties. Properties are defined once for the whole set, but a variant only uses those bound to layers it contains. Project A's Context button already works this way: its `Icon only` variants bind only `Icon swap`, while `Label text`, `Value`, `Value text` and `Badge` are bound only in `Type=Default`. So icon-only variants of a merged Button need not carry the label layers, at the price of building those variants differently from their labelled siblings. What does not go away is `Size` meaning two things: a 64 to 80px-wide button with text, or a 32 to 44px square.
 
 | | Today | Merged |
 |---|---|---|
@@ -145,12 +145,12 @@ The merge would also not simplify the code, because the code already shares one 
 - **The two families are not the same grid.** Icon button has no Primary, no Secondary Danger and no Loading. In a merged set those become holes: combinations the picker refuses, which read as bugs. Filling them means drawing variants nobody asked for.
 - **The Ghost role belongs only to icons.** After the Interactive icon merge, Ghost exists only for icon-only buttons with its own 24 and 36px sizes. Inside Button it would be one more role with holes across every labelled variant.
 - **Accessibility rules need a home.** An icon-only button has no visible text, so its accessible name is mandatory. A separate component is where that can be required (Primer requires `aria-label`; Atlassian and Carbon require `label`) and where a tooltip can be built in (Carbon always, Primer by default). On a merged Button the same prop must stay optional for labelled buttons, so the rule becomes a recommendation, as it is in Polaris.
-- **The code already has two names.** MUI ships `Button` and `IconButton`, and Suiteify's code exposes both. One Figma component mapping to two code components breaks the one-to-one naming that Dev Mode and the parity checks rely on.
+- **The code already has two names.** MUI ships `Button` and `IconButton`, and Project A's code exposes both. One Figma component mapping to two code components breaks the one-to-one naming that Dev Mode and the parity checks rely on.
 - **The migration buys nothing.** 101 places to swap, with no change in code and no fewer decisions for designers, only fewer entries in the assets panel.
 
 **The case for it, stated fairly.** Fluent, Polaris and Ant Design merged and did not go back. One component means one place to change a role's colours, and no drift between two lists, the failure Atlassian shows, where its icon button lost `danger` and `warning`. Both of those are real but cheap to guard in Figma: the two sets bind the same colour variables, so a role's colour already changes in one place, and a restriction like Tertiary Danger only can be written in the description so it reads as a decision rather than drift.
 
-**What to do.** Do not merge Icon button into Button. The saving is one entry in the assets panel; the cost is a larger set with two shapes behind one `Size`, in a library whose stated goal is small components. Fluent made the opposite call and it works for them, but Fluent's Figma kit is not the constraint Suiteify is optimising for.
+**What to do.** Do not merge Icon button into Button. The saving is one entry in the assets panel; the cost is a larger set with two shapes behind one `Size`, in a library whose stated goal is small components. Fluent made the opposite call and it works for them, but Fluent's Figma kit is not the constraint Project A is optimising for.
 
 ---
 
@@ -193,13 +193,13 @@ The systems fall into four groups:
 | Polaris | chevron only | `disclosure` | up or down arrow |
 | MUI, Spectrum, Ant Design | no | nothing styled | unchanged |
 
-The code fact that matters for Suiteify: MUI draws nothing for open, so whatever the Figma `Open=True` variant shows, the engineers will have to add a style for it themselves, as Primer does with an `aria-expanded` selector. In code, open is the `aria-expanded` attribute the menu sets, not a value a designer chooses.
+The code fact that matters for Project A: MUI draws nothing for open, so whatever the Figma `Open=True` variant shows, the engineers will have to add a style for it themselves, as Primer does with an `aria-expanded` selector. In code, open is the `aria-expanded` attribute the menu sets, not a value a designer chooses.
 
 **What to do.** Keep the open look, but as one `State` value (`Open`) on the Tertiary and Ghost roles, not as an axis. That is Primer's model: open is one appearance, not a second dimension multiplied by hover, focus and press. Today's `Open=True` × four states draws hover-while-open and focus-while-open separately; the merged set draws open once and lets the focus ring sit on top in code. Tell the engineers it maps to `aria-expanded`, with a style they will need to add because MUI draws none.
 
 ---
 
-## 8. So what should Suiteify merge?
+## 8. So what should Project A merge?
 
 **The short answer.** Two merges: Context button into Button and Icon button, and Interactive icon into Icon button as a Ghost role. Button and Icon button stay separate from each other. Four components become two, and the variant total falls by a quarter.
 
@@ -227,7 +227,7 @@ The order to do it in:
 6. Deprecate both retired components rather than deleting them, so product files can migrate on their own schedule.
 7. Tell the engineers: `ContextButton` becomes their `Button` with `buttonRole="tertiary"`, its value and badge as children, and `aria-expanded` styled to match `State=Open`; the Ghost icon button is MUI's default `IconButton`; the contained Icon button stays their styled `Button`.
 
-**Property names in the merged sets.** This guide uses the library's current property names so its counts can be checked against the file. Suiteify's naming decisions of 5 October 2026 rename several of them, and the merged Button and Icon button should be built with the new names, so the swapped instances are renamed once rather than twice:
+**Property names in the merged sets.** This guide uses the library's current property names so its counts can be checked against the file. Project A's naming decisions of 5 October 2026 rename several of them, and the merged Button and Icon button should be built with the new names, so the swapped instances are renamed once rather than twice:
 
 | Name today | Name under the naming decisions |
 |---|---|
@@ -247,7 +247,7 @@ A boolean takes `Show` only when the element it reveals has a text or swap prope
 
 ## 9. Cheat sheet
 
-| Question | Industry answer | Suiteify |
+| Question | Industry answer | Project A |
 |---|---|---|
 | Icon-only button: own component or Button prop? | split, slightly more common (MUI, Primer, Atlassian, Material 3); merged works too (Fluent, Polaris, Ant) | keep Icon button separate |
 | Compact button? | always a size or density value, never a component | no compact component; Context button merges into Button and Icon button Tertiary |
@@ -262,9 +262,9 @@ A boolean takes `Show` only when the element it reveals has a text or swap prope
 
 ## 10. The short version
 
-Suiteify has four button-like components: Button (108 variants), Icon button (45), Context button (72) and Interactive icon (20). Across thirteen major design systems, the pattern for each is clear enough to act on.
+Project A has four button-like components: Button (108 variants), Icon button (45), Context button (72) and Interactive icon (20). Across thirteen major design systems, the pattern for each is clear enough to act on.
 
-Icon-only buttons are a separate component in most systems, including MUI, the library Suiteify's code is built on, and a separate component is where an accessible name can be made mandatory. Fluent, Polaris and Ant Design merged them into Button instead and that works, but for Suiteify it would turn Button into a 153-variant set where `Size` means both a labelled button and a square. Keep Icon button separate.
+Icon-only buttons are a separate component in most systems, including MUI, the library Project A's code is built on, and a separate component is where an accessible name can be made mandatory. Fluent, Polaris and Ant Design merged them into Button instead and that works, but for Project A it would turn Button into a 153-variant set where `Size` means both a labelled button and a square. Keep Icon button separate.
 
 No system ships a compact button component; compactness is always a size. Context button is a menu trigger drawn as a Tertiary button at Button's 40 and 32px heights, and Primer, Atlassian and Polaris keep menu triggers on Button. So it merges: its labelled form into Button Tertiary with a value and a badge, its icon-only form into Icon button Tertiary.
 
@@ -284,7 +284,7 @@ The result is two components instead of four, 177 variants instead of 245, and n
 - **Why MUI, Primer and Spectrum split.** No issue or design record stating the original reason was found for any of them; the split is documented, its rationale is not.
 - **User research.** No system's own research on icon-only buttons was found. The only usability evidence is commentary: Nielsen Norman Group's icon usability article, and research Carbon cites on labels being learned better than icons. Treat the case for visible labels as well-argued rather than measured.
 - **Spectrum 2, Paste's usage guidance and Base Web** were not checked.
-- **Suiteify's counts** were read on 5 October 2026 and change as the library does; product design files were not counted.
+- **Project A's counts** were read on 5 October 2026 and change as the library does; product design files were not counted.
 
 ---
 
@@ -344,7 +344,7 @@ The result is two components instead of four, 177 variants instead of 245, and n
 
 - [Nielsen Norman Group: Icon Usability (Aurora Harley, 2014)](https://www.nngroup.com/articles/icon-usability/)
 
-### Suiteify
+### Project A
 
 - The Components - Web app Figma library, read through the Figma plugin on 5 October 2026: variant counts, property definitions and instance placements.
-- The engineers' code at `~/Projects/suiteify`: `Button.types.ts` (size list with icon sizes), `IconButton.tsx` (a styled `Button`), `InteractiveIcon.tsx` and `ContextButton.tsx` (both on `ButtonBase`).
+- The engineers' code at Project A's repository: `Button.types.ts` (size list with icon sizes), `IconButton.tsx` (a styled `Button`), `InteractiveIcon.tsx` and `ContextButton.tsx` (both on `ButtonBase`).

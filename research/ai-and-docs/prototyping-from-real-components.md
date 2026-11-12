@@ -68,7 +68,7 @@ For flows, accept only the first level: a copy is a fork that starts drifting th
 
 Storybook can carry one: a flow is a story that composes the real screen components with fixture data, and Storybook 10 has every mechanism a click-through needs, though the flow is written as code, not drawn.
 
-Blackbook, one of the two projects this guide was researched for, shows how close a team already is. It keeps a story per screen state: `contacts-list.stories.tsx` holds `Default`, `Details`, `AddBadge`, `Filter`, `FilterResults`, `FilterNoResults`, `Search` and others, each rendering the real screen with fixtures. That is a state catalogue, and a state catalogue is most of a prototype. What it lacks is the clicks between the states.
+Project B, one of the two projects this guide was researched for, shows how close a team already is. It keeps a story per screen state: `contacts-list.stories.tsx` holds `Default`, `Details`, `AddBadge`, `Filter`, `FilterResults`, `FilterNoResults`, `Search` and others, each rendering the real screen with fixtures. That is a state catalogue, and a state catalogue is most of a prototype. What it lacks is the clicks between the states.
 
 Here are four of those states joined into a flow.
 
@@ -247,13 +247,13 @@ Both get flow stories written by a coding agent and published to Chromatic, plus
 
 This is a worked case, not general advice. It applies the sections above to two of the projects this guide was researched for, as they stood on 14 October 2026.
 
-**Blackbook** keeps components and screens in `src/design-system` and `src/screens`, with a story per screen state and fixtures. It already runs `@storybook/addon-mcp` and `@chromatic-com/storybook`, designs in Figma by rule, deploys every commit to `main` to production with no preview step, and reverted Tailwind and shadcn by recorded decision.
+**Project B** keeps components and screens in `src/design-system` and `src/screens`, with a story per screen state and fixtures. It already runs `@storybook/addon-mcp` and `@chromatic-com/storybook`, designs in Figma by rule, deploys every commit to `main` to production with no preview step, and reverted Tailwind and shadcn by recorded decision.
 
 So its flows are stories in a `Prototypes/` group composing the existing screens, published to Chromatic. A Vercel preview of a `/prototype` route is the wrong channel: with no preview step, a merged route ships to production. Hosted builders are ruled out by their starters and by the components not being a package.
 
-**Suiteify**'s code is a read-only clone. Its library, `@arc/design-system` (MUI 9, MUI X Pro and Premium, Storybook 10 with `react-vite`), is published to a private Azure Artifacts feed.
+**Project A**'s code is a read-only clone. Its library, `@project-a/design-system` (MUI 9, MUI X Pro and Premium, Storybook 10 with `react-vite`), is published to a private Azure Artifacts feed.
 
-So its flows live in a small prototype repository outside the clone, with its own Storybook, installing the published package with a read token and writing flow stories exactly as for Blackbook, with the MCP addon. That keeps prototypes on released versions, which is what a reviewer should see. If designers must build flows without code, UXPin Merge with Wire through the Storybook route is the option, after a trial confirms React 19 and MUI 9. Story UI's MUI preset makes it a reasonable trial in the prototype repository; whether it handles a wrapper rather than raw `@mui/material` is untested.
+So its flows live in a small prototype repository outside the clone, with its own Storybook, installing the published package with a read token and writing flow stories exactly as for Project B, with the MCP addon. That keeps prototypes on released versions, which is what a reviewer should see. If designers must build flows without code, UXPin Merge with Wire through the Storybook route is the option, after a trial confirms React 19 and MUI 9. Story UI's MUI preset makes it a reasonable trial in the prototype repository; whether it handles a wrapper rather than raw `@mui/material` is untested.
 
 If your projects look like either, start with what needs no new platform and no new spend: flow stories plus Chromatic, and agent-composed Figma concepts. **Add UXPin or a package-backed Figma Make only when a measured gap justifies the seats**, such as designers blocked on engineers or reviewers wanting a running app.
 
@@ -295,7 +295,7 @@ A prototype that wins isn't merged: rebuild it on a feature branch from the same
 
 ## What to re-check later
 
-Researched October 2026 for a design-systems lead running several projects, two in detail: blackbook (Next.js 16, React 19, SCSS generated from Figma, Storybook 10 with the Storybook MCP addon) and suiteify (a Material UI 9 wrapper library in a read-only repository, Storybook 10, published to a private npm feed).
+Researched October 2026 for a design-systems lead running several projects, two in detail: Project B (Next.js 16, React 19, SCSS generated from Figma, Storybook 10 with the Storybook MCP addon) and Project A (a Material UI 9 wrapper library in a read-only repository, Storybook 10, published to a private npm feed).
 
 Vendor mechanics were read from primary sources only: Figma's help centre and MCP developer docs, Storybook's AI and testing docs, Chromatic's docs and pricing, Vercel's deployment-protection docs, v0's two design-system guides, the shadcn registry spec, Lovable's and Bolt's support docs, UXPin's docs and changelog, Anima's and Builder.io's docs, Magic Patterns' docs, Anthropic's Claude Design and artifacts docs, and Southleft's Story UI and Figma Console MCP. No tool was run hands-on.
 
@@ -369,15 +369,15 @@ Extended on 4 November 2026 after Christine Vallaure's *AI prototyping inside yo
 
 Private repositories, not linkable; read 14 October 2026.
 
-- Blackbook project file: `package.json`.
-- Blackbook project file: `.storybook/main.ts`.
-- Blackbook project file: `AGENTS.md`.
-- Blackbook project file: `src/screens/contacts-list/contacts-list.stories.tsx`.
-- Blackbook project context document.
-- Suiteify project file: `pnpm-workspace.yaml`.
-- Suiteify project file: `apps/storybook/package.json`.
-- Suiteify project file: `packages/design-system/package.json`.
-- Suiteify project context document.
+- Project B file: `package.json`.
+- Project B file: `.storybook/main.ts`.
+- Project B file: `AGENTS.md`.
+- Project B file: `src/screens/contacts-list/contacts-list.stories.tsx`.
+- Project B context document.
+- Project A file: `pnpm-workspace.yaml`.
+- Project A file: `apps/storybook/package.json`.
+- Project A file: `packages/design-system/package.json`.
+- Project A context document.
 
 ---
 

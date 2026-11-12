@@ -106,7 +106,7 @@ In the test, a frame carried two opaque drop shadows: red at 20px offset first, 
 
 The bug has shipped before. Dev Mode once emitted reversed CSS, reported fixed by Figma staff in March 2024, and Tokens Studio still lists reversed shadow order on import as a known issue.
 
-Translate it in code, once, in the export transform, with a test that a two-colour fixture comes out in order. **Reverse the effects array exactly once, where tokens are exported, and nowhere else.** The toolkit's token exporter does exactly this, writing effect layers in CSS paint order, top first (`~/Projects/toolkit/skills/figma-token-export/`).
+Translate it in code, once, in the export transform, with a test that a two-colour fixture comes out in order. **Reverse the effects array exactly once, where tokens are exported, and nowhere else.** The toolkit's token exporter does exactly this, writing effect layers in CSS paint order, top first (`skills/figma-token-export/`).
 
 ---
 
@@ -180,7 +180,7 @@ Here is the same 40px button built six ways:
 | CSS, auto height, `border: 1px` | 42 | 24 |
 | CSS, auto height, inset `box-shadow` ring | 40 | 24 |
 
-The toolkit turned this into one mapping and checked it against both of its projects' stored specs (`~/Projects/toolkit/standards/code-standard.md`, rule 63). Outside and centre strokes took no layout room, whatever the flag, on 208 real nodes. Inside-in-layout drew as a border on 217, and inside-not-in-layout as an inset ring on 1,521.
+The toolkit turned this into one mapping and checked it against both of its projects' stored specs (`standards/code-standard.md`, rule 63). Outside and centre strokes took no layout room, whatever the flag, on 208 real nodes. Inside-in-layout drew as a border on 217, and inside-not-in-layout as an inset ring on 1,521.
 
 | Figma stroke | CSS |
 |---|---|
@@ -191,7 +191,7 @@ The toolkit turned this into one mapping and checked it against both of its proj
 
 A line, a vector with no extent on one axis, has no inside: it's a border on its leading edge. The hairline under a list row, a 1px outside stroke on the bottom edge, is an outer shadow offset down by its width, so a 48px row stays 48.
 
-That shadow paints under the next sibling's background, and an `overflow: hidden` ancestor cuts it off. Where either happens, draw it on the sibling or the clipping ancestor (`~/Projects/toolkit/knowledge/code/figma-handoff.md#strokes-borders-outlines-and-shadows`).
+That shadow paints under the next sibling's background, and an `overflow: hidden` ancestor cuts it off. Where either happens, draw it on the sibling or the clipping ancestor (`knowledge/code/figma-handoff.md#strokes-borders-outlines-and-shadows`).
 
 Systems split on the code primitive. Primer ships `boxShadow.thin` as `inset 0 0 0 {borderWidth.thin}`, described as a thin shadow used instead of a border to prevent layout shift. MUI's outlined text field draws its border on an absolutely positioned `fieldset`, so going from 1px to 2px on focus never moves the content. Everyone else uses `border`.
 
@@ -207,7 +207,7 @@ The Card gets a focus state: a 2px ring layer drawn around it, a little larger t
 
 Focus rings belong to the outside-stroke row: they mustn't shift layout when state changes. The toolkit computes one number per component, `clear`, the distance from the ringed box to the ring's outer edge. It's half the difference between the ring layer's and the ringed layer's widths, plus half the stroke for a centre stroke or the whole stroke for an outside one.
 
-The CSS is then `outline-offset: calc(clear - width)`. A 2px inside ring on a layer 8px wider than the button gives `clear` 4 and offset 2 (`~/Projects/toolkit/knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry`).
+The CSS is then `outline-offset: calc(clear - width)`. A 2px inside ring on a layer 8px wider than the button gives `clear` 4 and offset 2 (`knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry`).
 
 The radius is where builds go wrong. An outline's corners follow `border-radius` and grow, so its outer radius is the element's radius plus `clear`. Writing the Figma ring layer's radius onto the element rounds the ring too much.
 
@@ -348,7 +348,7 @@ The Card's thumbnail uses Figma's Fill, its avatar is masked to a circle, and it
 
 **Masks.** A vector mask becomes `clip-path`, an alpha mask `mask-image`, and the common rounded-rectangle mask is `overflow: clip` with a radius.
 
-One trap is the toolkit's. A render of a node with an image fill returns the visible crop flattened, so transparent artwork has to come from the raw upload, with the crop rebuilt in CSS. One project shipped two hero images with baked white backgrounds that way (`~/Projects/toolkit/standards/code-standard.md`, rule 26).
+One trap is the toolkit's. A render of a node with an image fill returns the visible crop flattened, so transparent artwork has to come from the raw upload, with the crop rebuilt in CSS. One project shipped two hero images with baked white backgrounds that way (`standards/code-standard.md`, rule 26).
 
 **Icons.** In Figma, resizing an instance whose constraints are Scale grows the geometry but keeps the stroke weight. So the 24px icon with a 2px stroke looks heavier at 16 and lighter at 32. An SVG scaled through its `viewBox` scales its stroke, unless `vector-effect: non-scaling-stroke` is set.
 
@@ -378,7 +378,7 @@ Figma allows a negative gap, described as intentional overlap, for avatar stacks
 
 **Position and order.** A child set to ignore auto layout (`layoutPositioning: ABSOLUTE`) is `position: absolute` in a positioned parent, and Scale constraints map only to percentage insets. Figma's "first on top" reverses painting without changing layer order. CSS needs `z-index` per child, because reversing the flex direction also reverses reading order against the DOM.
 
-The toolkit reads absolute positions with suspicion. Outside an auto-layout frame, a layer placed at x=412 usually means "here, in this frame", not `position: absolute` (`~/Projects/toolkit/knowledge/code/figma-handoff.md#what-to-trust-in-a-design-file-and-what-not`).
+The toolkit reads absolute positions with suspicion. Outside an auto-layout frame, a layer placed at x=412 usually means "here, in this frame", not `position: absolute` (`knowledge/code/figma-handoff.md#what-to-trust-in-a-design-file-and-what-not`).
 
 **Baselines, grids and truncation.** Baseline alignment matches for text-only rows. How Figma treats a child without text is undocumented, while CSS synthesises a baseline from the box edge.
 
@@ -542,9 +542,9 @@ Researched October 2026; re-checked November 2026.
 
 **The toolkit's own tested rules**
 
-- `~/Projects/toolkit/standards/code-standard.md`, rules 25, 26 and 63 (stroke channels on 1,946 real nodes)
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md` (strokes; focus rings, Chromium test of 25 October 2026; what to trust)
-- `~/Projects/toolkit/skills/design-code-parity/SKILL.md` (fonts in the measuring browser)
+- `standards/code-standard.md`, rules 25, 26 and 63 (stroke channels on 1,946 real nodes)
+- `knowledge/code/figma-handoff.md` (strokes; focus rings, Chromium test of 25 October 2026; what to trust)
+- `skills/design-code-parity/SKILL.md` (fonts in the measuring browser)
 
 **Commentary and measurement**
 

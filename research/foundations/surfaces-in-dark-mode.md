@@ -21,7 +21,7 @@ A team ships dark mode by giving every surface token a dark value. The page work
 - [Testing dark surfaces](#testing-dark-surfaces): what to check, and where
 - [Evidence and lineage](#evidence-and-lineage): how strong the evidence is, and how independent
 
-For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole piece in a few paragraphs. The basics are not repeated here: the toolkit's knowledge base already holds the dark step size (about 0.03 to 0.04 OKLCH lightness), deriving levels from the neutral ramp, the case against a pure black page, keeping shadows in dark but darker, a border on every overlay, and a scrim that darkens (`~/Projects/toolkit/knowledge/ui/design/visual.md`, section *Surfaces and elevation levels*). Which surface sits on which is in [how surfaces stack](how-surfaces-stack.md), shadows in [elevation and shadows](elevation-and-shadows.md), and blur and translucency in [materials and translucency](materials-and-translucency.md).
+For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole piece in a few paragraphs. The basics are not repeated here: the toolkit's knowledge base already holds the dark step size (about 0.03 to 0.04 OKLCH lightness), deriving levels from the neutral ramp, the case against a pure black page, keeping shadows in dark but darker, a border on every overlay, and a scrim that darkens (`knowledge/ui/design/visual.md`, section *Surfaces and elevation levels*). Which surface sits on which is in [how surfaces stack](how-surfaces-stack.md), shadows in [elevation and shadows](elevation-and-shadows.md), and blur and translucency in [materials and translucency](materials-and-translucency.md).
 
 ---
 

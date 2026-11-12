@@ -31,11 +31,11 @@ Five properties of the system's own content decide most of the outcome: every re
 - **Bound, semantic tokens.** A model given `color-primary-500` pulls the value the team assigned to that role; given a hex value it can only copy it. Primer's `find_tokens` tool tells agents to search by intent (blue becomes accent, red becomes danger) and to check the result with its `lint_css` tool.
 - **Conventional names.** Section 3.
 
-**A worked case.** Suiteify's Figma Button exposes `Role: Primary`, `Feedback: Neutral` and `Left icon`. Its code, a wrapper over Material UI's Button, takes `buttonRole="primary"`, a Material UI `color` and `startIcon`.
+**A worked case.** Project A's Figma Button exposes `Role: Primary`, `Feedback: Neutral` and `Left icon`. Its code, a wrapper over Material UI's Button, takes `buttonRole="primary"`, a Material UI `color` and `startIcon`.
 
 An agent reading the Figma instance with no mapping writes `<Button role="primary" feedback="neutral" leftIcon={...}>`: three plausible props, none valid. An agent that knows Material UI writes `variant="contained"`, which is valid Material UI and bypasses the wrapper's own prop.
 
-Every value in that Button is bound (Suiteify's audit recorded 31,772 bound properties and none unbound in October), so the colours are right; the interface is what fails. With a mapping, or the typed props in context, the output is correct, because the translation from `Role` to `buttonRole` is written once instead of guessed every time.
+Every value in that Button is bound (Project A's audit recorded 31,772 bound properties and none unbound in October), so the colours are right; the interface is what fails. With a mapping, or the typed props in context, the output is correct, because the translation from `Role` to `buttonRole` is written once instead of guessed every time.
 
 **What to do.** Invest in content before transport, in Figma's own order: components for everything repeated, a mapping for every published component, types and short descriptions on every prop, semantic tokens bound everywhere. **A delivery surface can only carry what the library already states, so the library's content is where the first effort goes.** The order is Figma's own guidance; that it comes before servers and context files is this series' judgment, resting on the one head-to-head test in Part 4.
 
@@ -82,9 +82,9 @@ The bench author mined a lexicon from 898 graded generations across six model co
 
 The bench turns this into a convention-distance score. A concept whose expected name exists is aligned; one where only a known alias exists (`Toggle` where agents expect `Switch`) is distance. The score is 100 times one minus the occurrence-weighted share of distance.
 
-A small controlled test on Suiteify's own components with Claude measured the effect from the other side (reported in [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md#10-what-does-alignment-change-for-ai), section 10). With the component API in context, naming made no difference: every condition was fully correct. Without it, aligning Figma's property names to the code's raised fully correct output from 33 to 52 percent and cut wrong props from 45 to 21.
+A small controlled test on Project A's own components with Claude measured the effect from the other side (reported in [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md#10-what-does-alignment-change-for-ai), section 10). With the component API in context, naming made no difference: every condition was fully correct. Without it, aligning Figma's property names to the code's raised fully correct output from 33 to 52 percent and cut wrong props from 45 to 21.
 
-The failures that remained sat where Suiteify's code departs from Material UI: Claude wrote `variant` on every Button whatever the Figma property was called. Suiteify's parity comparison sizes the gap for one library: of 390 Figma properties across 52 components, 67 have no code counterpart, and of the other 323, 53 carry a different name in code (`Label text` is `children`, `Left icon` is `startIcon`) and 8 option values are renamed.
+The failures that remained sat where Project A's code departs from Material UI: Claude wrote `variant` on every Button whatever the Figma property was called. Project A's parity comparison sizes the gap for one library: of 390 Figma properties across 52 components, 67 have no code counterpart, and of the other 323, 53 carry a different name in code (`Label text` is `children`, `Left icon` is `startIcon`) and 8 option values are renamed.
 
 Three traps recur.
 
@@ -143,7 +143,7 @@ Researched November 2026, when this part was assembled from guides first researc
 
 - **Where this came from.** This part was split on 9 November 2026 out of *Making a design system usable by AI agents* (sections 2, 3 and the first half of 6), which had been consolidated on 2 November 2026 from two earlier guides. The original is archived at `_archive/2026-11-09/machine-readable-design-systems.md`; the two guides before it are in `_archive/2026-11-02/`. The toolkit was read from its repository on 2 November 2026.
 - **Wolosin's figures.** The original write-up is behind a sign-in wall, secondary summaries quote slightly different numbers, and her case-study page reports a different, later pilot (over 4,000 prototypes). Treat the direction as the finding.
-- **No controlled study isolates one property** (binding, descriptions, naming) and measures its effect on agent output; the Suiteify test is the closest and is small.
+- **No controlled study isolates one property** (binding, descriptions, naming) and measures its effect on agent output; the Project A test is the closest and is small.
 - **The bench's lexicon** (version 1, mined 25 August 2026) is one author's mining. Re-check before vendoring it.
 - **Code Connect plans and seats**, checked 9 November 2026.
 - **The toolkit's token export** did not emit `$deprecated` as of November 2026.
@@ -179,4 +179,4 @@ Researched November 2026, when this part was assembled from guides first researc
 
 **Project records (private, not linkable)**
 
-- Suiteify's snapshot, audit record and parity report, as computed on 10 October 2026.
+- Project A's snapshot, audit record and parity report, as computed on 10 October 2026.

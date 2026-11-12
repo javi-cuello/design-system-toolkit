@@ -33,7 +33,7 @@ The word comes from Anthropic's own split. Its engineering post on evals defines
 
 The same post defines a second thing with a similar name, the *evaluation harness*: the machinery that runs test tasks, records what happened and grades it. The two are easy to confuse. The first is what the agent works inside; the second is what a team uses to measure the first.
 
-One page carries this whole guide. A job board needs a feedback page: a person picks one reason from a list, adds a comment, and ticks a box to be contacted. The design system has components for each of those (a radio group, a text area, a checkbox).
+One page carries this whole guide. A marketplace needs a feedback page: a person picks one reason from a list, adds a comment, and ticks a box to be contacted. The design system has components for each of those (a radio group, a text area, a checkbox).
 
 An agent asked to build the page can use them, or it can write the raw HTML elements (`<input type="radio">`, `<textarea>`, `<input type="checkbox">`) and style them to look close enough. Both pages render. Only one is on the system.
 
@@ -157,7 +157,7 @@ An MCP tool is a function the agent calls: a question with an answer computed by
 | Can it go stale? | Yes, when the system changes and the text does not | Only if the data behind it does |
 | Example for the feedback page | "Build a form page": which components, which order, which check | `get_component` for the radio group's props |
 
-**A worked case: offered is not used.** One design-system toolkit ran this experiment on a job board. Its MCP server, over the system's built documentation site, was loaded for the agent building the feedback page. With the server's instructions written as documentation ("this server returns components, tokens…"), the agent never called it, in two tasks out of two.
+**A worked case: offered is not used.** One design-system toolkit ran this experiment on a marketplace. Its MCP server, over the system's built documentation site, was loaded for the agent building the feedback page. With the server's instructions written as documentation ("this server returns components, tokens…"), the agent never called it, in two tasks out of two.
 
 With the instructions rewritten to say the system is what the interface is built from, and to ask it before writing any interface code, the agent called it in both (search, get the component, get its contract, validate). The progressive disclosure was there all along; the index entry never told the agent when to open it.
 
@@ -357,7 +357,7 @@ Anthropic's post also separates two purposes. A *capability* eval asks what the 
 
 And it separates two ways of counting: *pass@k*, the chance at least one of k trials succeeds, and *pass^k*, the chance all k do. A 75 percent per-trial rate is about 42 percent over three trials when all three must pass.
 
-**A worked case: the tie.** One toolkit's eval runs headless Claude Code in a throwaway copy of a project, asks for a screen in words that name no component, and grades the result with the same validator its push gate runs (section 4). The score is the share of written files with no finding. It ran on the job board with the system's MCP server on and off.
+**A worked case: the tie.** One toolkit's eval runs headless Claude Code in a throwaway copy of a project, asks for a screen in words that name no component, and grades the result with the same validator its push gate runs (section 4). The score is the share of written files with no finding. It ran on the marketplace with the system's MCP server on and off.
 
 - **The settings page.** A notification-settings page, context on and off: both scored 1, about $1.50 and four minutes each. The agent with the server loaded never asked it. The repository already had pages built from the system, and the agent copied the code around it. The task could not tell the two settings apart.
 - **The feedback page.** No existing page built anything like it. Both settings scored 0.833, three raw elements each, and again the server went unasked.
@@ -594,7 +594,7 @@ What was not found: any controlled study of evals for design-system agents speci
 
 - [`tools/claude-hooks/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/README.md) and [`gates.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/gates.mjs): the hooks and the plan, review, push and feedback gates; `FILES = 3`, `LINES = 100`, `WIDE_LINES = 10`.
 - [`tools/skill-evals/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/skill-evals/README.md): screen tasks graded by `validate`, `--context on|off`, contamination, void runs, pinned runs, proving the grade.
-- [`docs/agent-prototyping-plan.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/docs/agent-prototyping-plan.md), Outcome 6: the job board's on/off runs and their numbers.
+- [`docs/agent-prototyping-plan.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/docs/agent-prototyping-plan.md), Outcome 6: the marketplace's on/off runs and their numbers.
 - [`tools/system-mcp/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/README.md) and [`validate.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/validate.mjs): the server's tools and `validate`.
 - [`tools/parity/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/README.md), [`waivers.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/waivers.mjs) and [`baseline.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/baseline.mjs): waivers, the bounded-waiver case, the measurement baseline.
 - [`skills/design-code-parity/SKILL.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/skills/design-code-parity/SKILL.md), §6 and *Pixels are for eyes, never for gates*: advisory screenshots.

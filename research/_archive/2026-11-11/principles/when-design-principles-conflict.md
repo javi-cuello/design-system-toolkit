@@ -4,7 +4,7 @@ Why a list of design principles is only useful once it says which principle lose
 
 Researched October 2026 from the primary sources listed at the end: Rams via Vitsœ, Norman, Shneiderman, Nielsen Norman Group, Tognazzini, WCAG 2.2, and the published principles of GOV.UK, Apple, Fluent 2, Carbon, Atlassian, Polaris, Spectrum, Primer and Salesforce Lightning. Apple's principles were read from the page's JSON data and Polaris's from its repository's MDX source, because neither renders to a fetcher. Re-checked in November 2026: GOV.UK's principles (last updated 2 April 2025; the quotations below still stand), Fluent 2's four principles and its "80% of the time" line, and Primer's getting-started page, which still carries the Zen of GitHub aphorisms quoted here. Left out because they could not be confirmed: Salesforce UX's post on ranking principles (HTTP 403), Atlassian's old design-values URL (HTTP 404), and Microsoft's persona spectrum, no longer on the Inclusive Design landing page. Laws of UX and Friedman are commentary and are labelled as such.
 
-This piece grew out of a broader survey of good design principles; the principle list itself now lives in the toolkit's design standard (`~/Projects/toolkit/standards/design-standard.md#principles`), which this article argues around rather than repeats.
+This piece grew out of a broader survey of good design principles; the principle list itself now lives in the toolkit's design standard (`standards/design-standard.md#principles`), which this article argues around rather than repeats.
 
 ---
 
@@ -50,7 +50,7 @@ Two of these deserve a closer look, because they are the ones teams settle wrong
 
 **Simple is not minimal.** Apple draws the line exactly: "Simplicity isn't minimalism. Aim for a focused, useful experience that keeps the important things close by and lets the others fall away." GOV.UK names the cost: "Making something look simple is easy. Making something simple to use is much harder." Complexity removed from the screen does not vanish; it moves into the person's memory or a support ticket. A sparse screen that hides an essential control has failed the simplicity principle, not honoured it.
 
-**Responsive versus fast is not a contradiction.** GitHub does not gloss its aphorisms, and read together they look inconsistent. Read beside Tognazzini's 50 milliseconds, one reasonable reading (commentary) is that immediate acknowledgement matters more than total time, and total time still matters. The toolkit's standard states the same settlement: acknowledge an action at once even when the work takes longer (`~/Projects/toolkit/standards/design-standard.md#principles`).
+**Responsive versus fast is not a contradiction.** GitHub does not gloss its aphorisms, and read together they look inconsistent. Read beside Tognazzini's 50 milliseconds, one reasonable reading (commentary) is that immediate acknowledgement matters more than total time, and total time still matters. The toolkit's standard states the same settlement: acknowledge an action at once even when the work takes longer (`standards/design-standard.md#principles`).
 
 ---
 
@@ -74,7 +74,7 @@ Taking Friedman's point literally gives a list that does more in a review than t
 | A clean report from a partial scan | Honest; evidence | The report states no coverage |
 | Half-built states: no error, empty or loading | Show state; crafted | Missing variants |
 
-The last-but-one row matters most for a tool that audits. A green dashboard over real problems is reporting a verdict without its coverage. The toolkit made that a rule after its own docs site showed an AI-readiness page whose audit had not run since the record's first import: a page built from data names its source and the date of it under its title (`~/Projects/toolkit/standards/design-standard.md`, rule 1, maintainer-decreed 2026-10-11).
+The last-but-one row matters most for a tool that audits. A green dashboard over real problems is reporting a verdict without its coverage. The toolkit made that a rule after its own docs site showed an AI-readiness page whose audit had not run since the record's first import: a page built from data names its source and the date of it under its title (`standards/design-standard.md`, rule 1, maintainer-decreed 2026-10-11).
 
 ---
 
@@ -100,7 +100,7 @@ The last-but-one row matters most for a tool that audits. A green dashboard over
 
 Measurement favours what is measurable. A team that runs only the left column will drift towards principles it can score and away from the two it cannot. That is the argument for naming the reviewer's question as part of the principle rather than leaving it implied.
 
-The toolkit applies this split in practice: the mechanical rules run on a built page through `tools/ui-check/check.mjs`, and the judgement rules are read at the closing pass, because no script can say whether a need is real (`~/Projects/toolkit/standards/design-standard.md`, *Where the checks live*). Its standard also declines to make any principle a rule on its own: "none is a rule, and none is checked on its own." A principle becomes enforceable only through a rule that a run has proved, with evidence and a check attached.
+The toolkit applies this split in practice: the mechanical rules run on a built page through `tools/ui-check/check.mjs`, and the judgement rules are read at the closing pass, because no script can say whether a need is real (`standards/design-standard.md`, *Where the checks live*). Its standard also declines to make any principle a rule on its own: "none is a rule, and none is checked on its own." A principle becomes enforceable only through a rule that a run has proved, with evidence and a check attached.
 
 ---
 
@@ -168,4 +168,4 @@ Test: most principles have a script signal, and every one has a reviewer's quest
 
 **The toolkit**
 
-- `~/Projects/toolkit/standards/design-standard.md`: the principle list, its one-sentence settlement of the tensions, rule 1 (source and freshness caption), and where the checks live.
+- `standards/design-standard.md`: the principle list, its one-sentence settlement of the tensions, rule 1 (source and freshness caption), and where the checks live.

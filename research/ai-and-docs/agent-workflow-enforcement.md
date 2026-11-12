@@ -221,7 +221,7 @@ The record before the gates is the opening scene in numbers. In October the tool
 - Stop collects what a turn left open;
 - UserPromptSubmit hands that over with the next message.
 
-They refused nothing by choice: an earlier blocking Stop hook had printed on screen "on nearly every turn". The cost showed in the record. The two steps gated at push (the check and the commit trailers) held. The one gated at Stop (reply length) held. The steps only written down were the ones the maintainer kept asking about.
+They refused nothing by choice: an earlier blocking Stop hook had printed on screen "on nearly every turn". The cost showed in the record. The two steps gated at push (the check and the commit trailers) held. The one gated at Stop (reply length) held. The steps only written down were the ones a person kept having to ask for.
 
 Of 293 commits since 1 September, 23 mentioned an independent review. On 28 October, an agent asked whether it had reviewed its work answered "partly", three weeks after the rule was written down to make the question unnecessary.
 

@@ -117,7 +117,7 @@ The Zen of GitHub, quoted on [Primer's getting-started page](https://primer.styl
 
 [Tognazzini's first principles](https://asktog.com/atc/principles-of-interaction-design/) supply the missing piece: acknowledge clicks "within 50 milliseconds." Read beside that figure, one reasonable reading (commentary, not GitHub's own) is that immediate acknowledgement matters more than total time, and total time still matters.
 
-For your Save button, show a pending state within 50 milliseconds of the press, keep the rest of the page usable while it saves, and then work on the two seconds. **Acknowledge first, then get fast.** The toolkit's design standard states the same settlement: acknowledge an action at once even when the work takes longer (`~/Projects/toolkit/standards/design-standard.md#principles`).
+For your Save button, show a pending state within 50 milliseconds of the press, keep the rest of the page usable while it saves, and then work on the two seconds. **Acknowledge first, then get fast.** The toolkit's design standard states the same settlement: acknowledge an action at once even when the work takes longer (`standards/design-standard.md#principles`).
 
 ---
 
@@ -147,7 +147,7 @@ The refusals below each name the principle they break and the signal a reviewer 
 
 Most rows have a signal a script or a quick look can find. The first row is the exception: only a person can ask what a piece of decoration is for.
 
-The second-to-last row matters most for a tool that audits. A green dashboard over real problems is reporting a verdict without its coverage. The toolkit made that a rule after its own docs site showed an AI-readiness page whose audit had not run since the record's first import. Now a page built from data names its source and the date of it under its title (`~/Projects/toolkit/standards/design-standard.md`, rule 1, a maintainer decision of 11 October 2026).
+The second-to-last row matters most for a tool that audits. A green dashboard over real problems is reporting a verdict without its coverage. The toolkit made that a rule after its own docs site showed an AI-readiness page whose audit had not run since the record's first import. Now a page built from data names its source and the date of it under its title (`standards/design-standard.md`, rule 1, a maintainer decision of 11 October 2026).
 
 Write a refusal under each of your principles, phrased as something a reviewer can point at on a page. **A principle is defined by what it refuses.** Where a refusal has a signal in the table above, put that signal into your review checklist or your lint rules.
 
@@ -179,7 +179,7 @@ The signals for "serve a real need" and "honest" only catch the surface: a descr
 
 That is why measurement favours what is measurable. A team that runs only the middle column drifts towards the principles it can score and away from the two it can't, which is what happened to the team above.
 
-The toolkit applies this split in practice. Its mechanical rules run on a built page through `tools/ui-check/check.mjs`, and its judgement rules are read at the closing pass, because no script can say whether a need is real (`~/Projects/toolkit/standards/design-standard.md`, *Where the checks live*). Its standard also declines to make any principle a rule on its own: "none is a rule, and none is checked on its own." A principle becomes enforceable only through a rule that a run has proved, with evidence and a check attached.
+The toolkit applies this split in practice. Its mechanical rules run on a built page through `tools/ui-check/check.mjs`, and its judgement rules are read at the closing pass, because no script can say whether a need is real (`standards/design-standard.md`, *Where the checks live*). Its standard also declines to make any principle a rule on its own: "none is a rule, and none is checked on its own." A principle becomes enforceable only through a rule that a run has proved, with evidence and a check attached.
 
 Automate the middle column, and write the right-hand question into each principle so it is asked in every review. **A script pass is necessary and never sufficient.** Give need and honesty review time on purpose, since nothing else will catch them.
 
@@ -216,7 +216,7 @@ Test: most principles have a script signal, and every one has a reviewer's quest
 
 Researched October 2026; re-checked in November 2026.
 
-- **How the guide came about.** It grew out of a broader survey of good design principles. The principle list itself now lives in the toolkit's design standard (`~/Projects/toolkit/standards/design-standard.md#principles`), which this guide argues around rather than repeats.
+- **How the guide came about.** It grew out of a broader survey of good design principles. The principle list itself now lives in the toolkit's design standard (`standards/design-standard.md#principles`), which this guide argues around rather than repeats.
 - **Sources read in October 2026.** Rams via Vitsœ, Norman, Shneiderman, Nielsen Norman Group, Tognazzini, WCAG 2.2, and the published principles of GOV.UK, Apple, Fluent 2, Carbon, Atlassian, Polaris, Spectrum, Primer and Salesforce Lightning.
 - **Pages that don't render to a fetcher.** Apple's principles were read from the page's JSON data and Polaris's from its repository's MDX source.
 - **Re-checked in November 2026.** GOV.UK's principles (last updated 2 April 2025; the quotations still stand), Fluent 2's four principles and its "80% of the time" line, and Primer's getting-started page, which still carries the Zen of GitHub aphorisms quoted here.
@@ -262,4 +262,4 @@ Researched October 2026; re-checked in November 2026.
 
 **The toolkit**
 
-- `~/Projects/toolkit/standards/design-standard.md`: the principle list, its one-sentence settlement of the tensions, rule 1 (source and freshness caption), and where the checks live.
+- `standards/design-standard.md`: the principle list, its one-sentence settlement of the tensions, rule 1 (source and freshness caption), and where the checks live.

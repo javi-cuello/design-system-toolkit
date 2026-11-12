@@ -416,7 +416,7 @@ Researched August 2026, revised November 2026.
 
 **Toolkit**
 
-- `~/Projects/toolkit/skills/oklch-color-scale-system/SKILL.md` and `CHANGELOG.md`, version 2.3.0. The lime hold, the dual contrast report, `--peak`, luminance-targeted text steps, and the yellow-against-orange collision sweep (the toolkit's own measurement). The lime values in [Lime versus yellow](#lime-versus-yellow) were generated with its `scripts/generate.js` in November 2026.
+- `skills/oklch-color-scale-system/SKILL.md` and `CHANGELOG.md`, version 2.3.0. The lime hold, the dual contrast report, `--peak`, luminance-targeted text steps, and the yellow-against-orange collision sweep (the toolkit's own measurement). The lime values in [Lime versus yellow](#lime-versus-yellow) were generated with its `scripts/generate.js` in November 2026.
 
 **Cited but not resolved to a URL**
 

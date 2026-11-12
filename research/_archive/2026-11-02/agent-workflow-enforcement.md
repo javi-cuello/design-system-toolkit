@@ -2,7 +2,7 @@
 
 Why the toolkit's working steps (plan, understand the impact, build, check, independent review, fix, feed the lesson back) read as optional to the agents that run them, what other tools and practitioners do to make such steps stick, and a design for this toolkit that keeps a one-line fix fast while making the full sequence mandatory for anything larger. Written for the maintainer of a design-system toolkit worked on by several Claude Code sessions at once, across the toolkit repository and a handful of project repositories.
 
-Researched 27 to 28 October 2026. Vendor mechanics were read from primary sources: Anthropic's Claude Code documentation (best practices, hooks, permission modes, local code review), GitHub Spec Kit's repository and command templates, AWS Kiro's specs and hooks documentation, the obra/superpowers repository, OpenAI's codex-plugin-cc repository and Codex documentation, Cursor's rules and hooks documentation, and Aider's and Cline's documentation. Research papers were read at arXiv. The toolkit was read from its own repository, hooks, settings and session memory as they stood on 28 October 2026. The key Claude Code claims were checked a second time against the pages verbatim; where a claim rests on a summary rather than a quoted sentence, the text says so.
+Researched 27 to 28 October 2026. Vendor mechanics were read from primary sources: Anthropic's Claude Code documentation (best practices, hooks, permission modes, local code review), GitHub Spec Kit's repository and command templates, AWS Kiro's specs and hooks documentation, the obra/superpowers repository, OpenAI's codex-plugin-cc repository and Codex documentation, Cursor's rules and hooks documentation, and Aider's and Cline's documentation. Research papers were read at arXiv. The toolkit was read from its own repository, hooks and settings as they stood on 28 October 2026. The key Claude Code claims were checked a second time against the pages verbatim; where a claim rests on a summary rather than a quoted sentence, the text says so.
 
 ---
 
@@ -38,7 +38,7 @@ The mechanism behind this is not mysterious. A model working on a task holds the
 
 Three research findings explain why this gets worse in exactly the setting the toolkit runs in: long sessions, many rules.
 
-- **Many rules at once.** IFScale (July 2025) measured instruction following as the number of simultaneous instructions grows. The best frontier models reached about 68% accuracy at 500 instructions, with a bias toward instructions that appear earlier. The toolkit's CLAUDE.md, its five standards and the session memory together hold hundreds of rules.
+- **Many rules at once.** IFScale (July 2025) measured instruction following as the number of simultaneous instructions grows. The best frontier models reached about 68% accuracy at 500 instructions, with a bias toward instructions that appear earlier. The toolkit's CLAUDE.md, and its five standards together hold hundreds of rules.
 - **Long conversations.** Laban and colleagues (May 2025) found an average drop of 39% in performance from single-turn to multi-turn conversations, mostly from unreliability rather than lost ability: "when LLMs take a wrong turn in a conversation, they get lost and do not recover."
 - **Context files cost more than they give.** Gloaguen and colleagues (February 2026) found that agents generally do follow repository context files, but that the files do not generally improve task success, raise cost by over 20%, and that unnecessary requirements make tasks harder.
 
@@ -54,7 +54,7 @@ Compaction adds a fourth cause. When a long session is summarised to fit the con
 
 The toolkit already did the first half of what section 1 recommends. In October it moved its working loop out of prose into four Claude Code hooks: SessionStart hands the session the open items it inherits, PreToolUse hands it the rules of an area beside its first edit there (and the knowledge pages an interface file is built from), Stop collects what a turn left open, and UserPromptSubmit hands those items over with the next message. The hooks' own header records why: "The closing pass was prose for a month, then a script nobody was made to run."
 
-But every one of those hooks informs; none refuses. That was a deliberate choice, made on 15 October when a blocking Stop hook and an edit refusal printed on the screen "on nearly every turn" and the maintainer asked for the hooks to speak to the session alone. Informing quietly solved the noise and left the steps as advice, which section 1 shows is what advice gets.
+But every one of those hooks informs; none refuses. That was a deliberate choice, made on 15 October when a blocking Stop hook and an edit refusal printed on the screen "on nearly every turn", and the hooks were changed to speak to the session alone. Informing quietly solved the noise and left the steps as advice, which section 1 shows is what advice gets.
 
 | Step | Where it is written | How it is enforced | Can an agent skip it? |
 |---|---|---|---|
@@ -64,13 +64,13 @@ But every one of those hooks informs; none refuses. That was a deliberate choice
 | State a budget for large work | CLAUDE.md step 5 | Nothing (no commit since 1 September mentions one) | Yes |
 | Verify | `bin/check` | **Pre-push hook refuses a red check** | Only with `--no-verify` |
 | Commit trailers (`Toolkit:`, `Knowledge:`) in projects | CLAUDE.md step 3 | **Checked at push** | Only with `--no-verify` |
-| Independent review of a change | CLAUDE.md step 5, memory | Nothing per change; a toolkit-wide review is flagged when overdue (every N days, `Review:` trailer) | Yes |
+| Independent review of a change | CLAUDE.md step 5 | Nothing per change; a toolkit-wide review is flagged when overdue (every N days, `Review:` trailer) | Yes |
 | Feed the lesson back (the toolkit question) | Global CLAUDE.md, §D 13 | Stop hook collects open items; closing pass prints the questions | Yes: the questions are printed, not answered |
 | Short replies | Global CLAUDE.md | **Stop hook blocks a long reply** | No |
 
-The record shows what the "Yes" column costs. The session memory holds the maintainer's own words from 3 October: "do you need to review, clean and audit your code?", then "I don't want to repeat this, just check the principles and standards and run the independent review & fix", and the note that this kind of prompt "was expecting to come more from you than from me." Of 293 toolkit commits since 1 September, 23 mention an independent or fresh-agent review. And on 28 October an agent on the job board, asked whether it had reviewed its work, answered "partly": the same question asked again, three weeks after the rule was written down to make it unnecessary.
+The record shows what the "Yes" column costs. The person running the sessions had to ask for the review step by hand, more than once, though it was written down as the agent's to take. Of 293 toolkit commits since 1 September, 23 mention an independent or fresh-agent review. And an agent working on one project, asked whether it had reviewed its work, answered "partly": the same question asked again, three weeks after the rule was written down to make it unnecessary.
 
-The pattern is consistent. The two steps the toolkit gates at push hold. The step it gates at Stop (brevity) holds. The steps it only writes down are the ones the maintainer keeps asking about.
+The pattern is consistent. The two steps the toolkit gates at push hold. The step it gates at Stop (brevity) holds. The steps it only writes down are the ones a person still has to ask for.
 
 **What to do.** Keep the informing hooks; they are why the rules arrive at the right moment. Add refusal at exactly the steps in the table that have no gate and a record of being skipped: the plan, the review, the feedback loop.
 
@@ -195,7 +195,7 @@ Where a change lands matters as much as its size. A two-line edit to a standard 
 
 **The feedback loop becomes the last gate.** The toolkit's own loop (toolkit-standard §D 13) is already written and already prompted: the global CLAUDE.md asks "Anything from this session worth adding to the toolkit?" at the end of every task, and `bin/closing` prints the questions. On the full path the Stop hook makes the answer a condition of finishing: the final message must name what goes where, or say nothing does and why. It does not write to the toolkit; that still waits for the maintainer's go. It makes sure the question is never silently skipped.
 
-**What the prose keeps.** With the steps in the harness, CLAUDE.md step 5 ("Large work. State a budget ... Finish with an independent review ...") becomes a pointer to the gates, and the memory's review section shrinks to how to review well. Anthropic's warning about long instruction files, and the IFScale result, both argue for the toolkit's prose getting shorter as its gates get stronger.
+**What the prose keeps.** With the steps in the harness, CLAUDE.md step 5 ("Large work. State a budget ... Finish with an independent review ...") becomes a pointer to the gates, and the written review guidance shrinks to how to review well. Anthropic's warning about long instruction files, and the IFScale result, both argue for the toolkit's prose getting shorter as its gates get stronger.
 
 **What to do.** Build it in the order the evidence ranks the need: the review gate first (the step skipped most, with the clearest evidence in the transcript), then the feedback gate (same Stop hook, a few lines more), then the size script and plan gate together. Each lands with a test case built from a real session where the step was skipped.
 
@@ -207,7 +207,7 @@ Where a change lands matters as much as its size. A two-line edit to a standard 
 
 **Cost.** A full-path change adds one plan (a minute of agent time, most of it the impact script), one review round of two or three fresh agents (a few minutes), and a fix-and-re-review loop when findings land. That is the cost the toolkit already decided to pay for large work; today it is paid only when the maintainer asks.
 
-**Noise.** The 15 October decision stands: the gates speak to the session, not the screen. A Stop block is a message to the agent; the maintainer sees the review happen, not the hook that demanded it.
+**Noise.** The 15 October decision stands: the gates speak to the session, not the screen. A Stop block is a message to the agent; the person sees the review happen, not the hook that demanded it.
 
 **Holes that remain.**
 
@@ -245,7 +245,7 @@ Where a change lands matters as much as its size. A two-line edit to a standard 
 
 The toolkit's working steps feel optional to its agents because, in Claude Code, they are: a line in CLAUDE.md is a guideline the model is allowed to judge inapplicable, and Anthropic's documentation says so. Only the harness binds: a hook that refuses an edit, a hook that will not let a turn end, a check that refuses a push. The research on instruction following explains why the toolkit's setting makes this worse: hundreds of rules, long sessions, and compaction all erode prose.
 
-The toolkit already gates verification and commit trailers at push, and those hold. It gates nothing about planning, impact or review, and those are exactly the steps the maintainer keeps asking about, most recently when an agent answered "partly" to whether it had reviewed its work.
+The toolkit already gates verification and commit trailers at push, and those hold. It gates nothing about planning, impact or review, and those are exactly the steps a person still has to ask for, most recently when an agent answered "partly" to whether it had reviewed its work.
 
 Other tools agree on the phases (plan, implement, verify, review) and mostly enforce them with prose, which is why their gates leak too. The exceptions use the harness: plan mode, PreToolUse refusals, Stop hooks, CI. A different model as reviewer is not supported by evidence as necessary; a reviewer that never saw the implementer's reasoning is. Practitioners who run agents at scale report the same: Spotify gates pull requests with a Stop hook, Stripe wraps its agents in code-defined steps with a capped retry, and the individuals who improve over time write every mistake back into their rules or tools.
 
@@ -298,6 +298,5 @@ The design keeps small changes fast by letting a script, not the agent, decide w
 
 ### Project sources (local)
 
-- `~/Projects/toolkit/CLAUDE.md`, `tools/claude-hooks/hooks.mjs` and its README, `.githooks/pre-push`, `tools/toolkit-check/closing.mjs`, `~/.claude/settings.json`, `~/.claude/hooks/brevity.mjs`.
-- The session memory's *Review your own work* and *Raise systemic gaps unasked* sections.
+- `CLAUDE.md`, `tools/claude-hooks/hooks.mjs` and its README, `.githooks/pre-push`, `tools/toolkit-check/closing.mjs`, `~/.claude/settings.json`, `~/.claude/hooks/brevity.mjs`.
 - Commit history since 1 September 2026 (293 commits), measured with `git log --numstat` on 28 October 2026.

@@ -38,7 +38,7 @@ That's the general shape. A name inside a component isn't a label for people; it
 | Code Connect | `figma.children('Name')`, `figma.boolean('Name')` and friends take literal strings | the mapping stops matching, at publish or, for enums, not at all |
 | Dev Mode and code generation | the name is often the only semantic label on a layer | worse generated code |
 
-The fourth row has grown. [Figma's guidance on helping its AI understand a design system](https://help.figma.com/hc/en-us/articles/38978644498199-Best-practices-to-help-Figma-AI-understand-your-design-system) says "Group 7 or Rectangle 3 give the agent nothing to work with". The toolkit measured the effect in a small test: when Claude wrote code from Figma without the component API in context, names aligned with the code cut wrong props by more than half (`~/Projects/toolkit/standards/figma-standard.md`, rule 21's *Why*).
+The fourth row has grown. [Figma's guidance on helping its AI understand a design system](https://help.figma.com/hc/en-us/articles/38978644498199-Best-practices-to-help-Figma-AI-understand-your-design-system) says "Group 7 or Rectangle 3 give the agent nothing to work with". The toolkit measured the effect in a small test: when Claude wrote code from Figma without the component API in context, names aligned with the code cut wrong props by more than half (`standards/figma-standard.md`, rule 21's *Why*).
 
 The audience grew too. Since simplified instances were deprecated on 23 March 2026, every layer inside an instance shows in every consumer's layers panel. Names written for the author's convenience are now part of the library's public surface.
 
@@ -111,7 +111,7 @@ The text-property majority breaks the tie. Once text properties take the bare no
 
 Code has its own prefix argument, and it points the same way. React Spectrum's written grammar (`is` for state, `allows` for permission, `should` for behaviour) is house style; asked why not plain `disabled`, its maintainers answered "consistency between all boolean props". Chakra dropped the prefix in v3 (`isDisabled` became `disabled`), no major system went the other way, and Ant Design reached bare words independently. The concrete bug the bare form avoids is a component accepting both `disabled` and `isDisabled`.
 
-The toolkit has ruled on the ties (`~/Projects/toolkit/standards/figma-standard.md` rule 21):
+The toolkit has ruled on the ties (`standards/figma-standard.md` rule 21):
 
 - `Show` for a boolean that reveals text, an instance or a slot;
 - a bare word for a boolean that only switches a style, such as `AI`, ruled on 12 October 2026 because the code has `variant="ai"` and no `show` prop;
@@ -167,7 +167,7 @@ Two or three levels appear only where every level is a component in code. lifina
 
 Kits built to mirror code (Primer, Simple Design System, lifinance, Coveo) take the code's compound name. Kits not built from code drift: Infineon has `Dropdown Menu Item` for `ifx-dropdown-item`, and `_Tabs Items` for one tab. MUI's own kit chose slash folders that end in the export name, which buys names string-equal with code at the cost of a casing no sentence-case library uses elsewhere.
 
-Under the kit majority, the five-level name becomes `Sidebar dialog item`. `Modal` and `Sidebar` drop out because they're layout wrappers, not components. The toolkit adopted exactly this as `~/Projects/toolkit/standards/figma-standard.md` rule 9 on 7 October 2026, and applied it the same day to one library: 72 components, with 29 nested instances renamed.
+Under the kit majority, the five-level name becomes `Sidebar dialog item`. `Modal` and `Sidebar` drop out because they're layout wrappers, not components. The toolkit adopted exactly this as `standards/figma-standard.md` rule 9 on 7 October 2026, and applied it the same day to one library: 72 components, with 29 nested instances renamed.
 
 A few marks carry meaning on top of the name:
 
@@ -397,5 +397,5 @@ Researched August to October 2026 from Figma's help centre and Plugin API, Code 
 
 **Toolkit**
 
-- `~/Projects/toolkit/standards/figma-standard.md` rules 5, 6, 8, 9, 10, 18, 20, 21, 38
-- `~/Projects/toolkit/standards/naming-preferences.json`
+- `standards/figma-standard.md` rules 5, 6, 8, 9, 10, 18, 20, 21, 38
+- `standards/naming-preferences.json`

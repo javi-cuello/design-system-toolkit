@@ -310,27 +310,27 @@ What reads Figma today, and how:
 | Descriptions skill (`verify.js`) | `descriptionMarkdown` | Live bridge | Descriptions written into Figma |
 | Component guidelines plugin | Plain `description` | Plugin | A panel on the canvas |
 
-What writes code from tokens: `figma-token-export` (DTCG, then Style Dictionary), `frontend-build`'s `tokens-to-css.mjs` (DTCG to CSS), blackbook's `bin/tokens` (snapshot to custom properties) and job-board's `bin/tokens.js` (snapshot to Sass variables). Four generators, three input shapes.
+What writes code from tokens: `figma-token-export` (DTCG, then Style Dictionary), `frontend-build`'s `tokens-to-css.mjs` (DTCG to CSS), Project B's `bin/tokens` (snapshot to custom properties) and the marketplace's `bin/tokens.js` (snapshot to Sass variables). Four generators, three input shapes.
 
 ### What works, and should be kept
 
 - **The snapshot chain's identity contract.** `snapshot-standard.md` and `contract.cjs` settle whose payload a snapshot is (file ids, not names; one implementation; exit codes that mean something). This is the hardest part of an extraction layer and it is done.
-- **The normalised component spec.** Each component's `figma.json` already stores one full default variant and every other variant as its difference from it, which is Curtis's normalised model, reached independently and round-trip tested in blackbook.
+- **The normalised component spec.** Each component's `figma.json` already stores one full default variant and every other variant as its difference from it, which is Curtis's normalised model, reached independently and round-trip tested in Project B.
 - **The parity loop.** A rendered, per-variant, per-layer measurement against the Figma spec with a baseline and waivers is a better parity source than anything published, Altitude's hash included.
 - **The docs engine's shape.** It names no project, reads committed data, matches stories to components by folder, serves Storybook on its own origin, and reads the Figma key through the snapshot contract rather than copying it. Generated from the payload, it cannot drift the way Carbon's hand-maintained colour file does.
 - **The audit record and rulings log.** `audit.json` with runs, scores and fingerprints, plus an append-only rulings log in each context document, is most of the data a design-phase tracker needs.
 
 ### What does not, stated plainly
 
-- **There is no payload schema.** `contract.cjs` checks identity only. What a payload contains is defined by each repo's receiver, and the two receivers disagree: job-board's token file carries legacy `global`, `semantic`, `layout` and `type` keys and numbered collection names that blackbook's does not, and the two repos' screen files have different shapes. The receivers, the token generators and the parity libraries are forked per repo, by design of the parity skill, which multiplies every fix.
-- **Design-only projects have no extraction at all.** Inception and Infoniqa have no repo and no receiver, so every tool they use reads Figma live, and the docs site cannot build for them. The two projects in the phase where documentation most needs to be a handoff spec are the two that cannot have it.
+- **There is no payload schema.** `contract.cjs` checks identity only. What a payload contains is defined by each repo's receiver, and the two receivers disagree: the marketplace's token file carries legacy `global`, `semantic`, `layout` and `type` keys and numbered collection names that Project B's does not, and the two repos' screen files have different shapes. The receivers, the token generators and the parity libraries are forked per repo, by design of the parity skill, which multiplies every fix.
+- **Design-only projects have no extraction at all.** Project C and Project D have no repo and no receiver, so every tool they use reads Figma live, and the docs site cannot build for them. The two projects in the phase where documentation most needs to be a handoff spec are the two that cannot have it.
 - **The snapshot omits exactly the data the outputs need.** No component descriptions (zero `description` keys across every spec), no variable descriptions (the doc generator needs them), no page status markers beyond what survives in the page name, no truncation or blend mode (so the validator walks live), and no audit results.
 - **The docs site discards the designers' status.** It strips `❖` and `🚧` from page names to make tidy titles, which removes the one status signal the designers maintain.
 - **The docs site is technical only.** It has no guidance because the snapshot carries no descriptions. By GOV.UK's standard (docs are only as good as the guidance), it is a reference, not documentation.
 - **It reports inventory, not health.** Its overview leads with 374 variables and 715 variants. Its token page lists every token across every variant under a disclosure. Its dimensions page draws a bar for every number. Section 5's test (does it help someone choose, build or check?) fails on much of it.
 - **It is phase-blind.** It renders the same pages for a project with no code and a project in maintenance. There is no phase concept anywhere in the toolkit: not in the dashboard, not in the context template, not in the router.
-- **Parity is measured and then lost.** Blackbook's parity run measures every variant against the design and prints the result to the terminal. Nothing persists a report the docs site, tracker or dashboard could read.
-- **Audit output is written twice.** Inception's dated audit markdown files restate what `audit.json` holds, in a different shape, by hand.
+- **Parity is measured and then lost.** Project B's parity run measures every variant against the design and prints the result to the terminal. Nothing persists a report the docs site, tracker or dashboard could read.
+- **Audit output is written twice.** Project C's dated audit markdown files restate what `audit.json` holds, in a different shape, by hand.
 - **Some documentation is stale.** The toolkit README names a dashboard `scripts/` folder that does not exist; the snapshot plugin's README contradicts the snapshot standard on the port and on plugin data.
 
 **What to do.** Keep the identity contract, the normalised spec, the parity measurement, the audit record and the docs engine's core. Treat the absence of a payload schema and of a toolkit-owned receiver as the root problem, because nearly every duplication and every gap listed above follows from it. This assessment is a judgment made against the evidence in Part one; the inventory behind it is in the toolkit data-flow map produced on the same day.
@@ -347,7 +347,7 @@ What writes code from tokens: `figma-token-export` (DTCG, then Style Dictionary)
 
 **Extraction (one plugin, one schema, one receiver).** The snapshot plugin stays the only reporting reader. It gains the fields the outputs need: `descriptionMarkdown` per component, variable descriptions, the page marker as a status field, truncation and blend mode, and a default-variant image for design-only previews. Its payload gets a JSON Schema, versioned, with a test that fails on an unknown or missing field. The receiver logic (writing files, compacting specs) moves from each repo into the toolkit as one library, writing one layout under a project-chosen root. For a project with no repo, the root is the project's folder in the toolkit (`projects/<label>/snapshot/`), which the toolkit's rules already allow for project data outside `skills/`.
 
-**Contract (derived, plus a thin authored layer).** Each component's contract is the normalised spec (from the payload), its guidance (from the description), and, once code exists, the axis-to-code mapping that blackbook already writes per component in `parity.mjs`. That file already holds what Primer's Code Connect holds: which Figma axis and value become which code prop, which states are pseudo-classes. It is the authored layer, and it exists. States and accessibility intent can live beside it when a project needs them.
+**Contract (derived, plus a thin authored layer).** Each component's contract is the normalised spec (from the payload), its guidance (from the description), and, once code exists, the axis-to-code mapping that Project B already writes per component in `parity.mjs`. That file already holds what Primer's Code Connect holds: which Figma axis and value become which code prop, which states are pseudo-classes. It is the authored layer, and it exists. States and accessibility intent can live beside it when a project needs them.
 
 **Outputs (modules, switched on by phase).**
 
@@ -365,7 +365,7 @@ The phase is one field in the project's context document, read by every output. 
 ### What collapses
 
 - **Six reporting readers become one.** The audits keep their live reads, because they fix what they find. The validator reads truncation and blend mode from the payload once the plugin sends them. The file diff, the doc generator's reads and the token export's reads come from the payload.
-- **Four token generators become one path.** The payload's tokens convert to DTCG with the token export's existing, tested `dtcg.js`, and `frontend-build`'s `tokens-to-css.mjs` turns DTCG into CSS for every project. Blackbook's and job-board's `bin/tokens` retire once their output matches; the live `collect.js` retires with them.
+- **Four token generators become one path.** The payload's tokens convert to DTCG with the token export's existing, tested `dtcg.js`, and `frontend-build`'s `tokens-to-css.mjs` turns DTCG into CSS for every project. Project B's and the marketplace's `bin/tokens` retire once their output matches; the live `collect.js` retires with them.
 - **Two component formats become one.** The validator reads the normalised spec instead of its own `components.json`.
 - **Two description parsers become one module**, used by the plugin, the descriptions check and the docs site.
 - **Two audit outputs become one.** The dated markdown reports become a rendering of `audit.json` at a run, not a second record.
@@ -376,7 +376,7 @@ The phase is one field in the project's context document, read by every output. 
 Each step removes something and is useful on its own, so the program can stop after any of them.
 
 1. **Schema the payload and extend the plugin** (descriptions, variable descriptions, page status, truncation, blend mode, default-variant image). Everything downstream depends on this, and it is the smallest change with the widest reach.
-2. **Move the receiver into the toolkit** as one library writing one layout, with the project folder as the root for design-only projects. Inception and Infoniqa gain an extraction; the per-repo receivers shrink to a call.
+2. **Move the receiver into the toolkit** as one library writing one layout, with the project folder as the root for design-only projects. Project C and Project D gain an extraction; the per-repo receivers shrink to a call.
 3. **Refit the docs site to the schema and add the phase switch**: guidance from descriptions, status from page markers, design images before code, stories after, health figures instead of inventory, and a "changed since last snapshot" list.
 4. **Persist the parity report as data** and show it per component on the docs site.
 5. **Build the tracker view** over page status, audit scores, open findings, rulings and fingerprints.

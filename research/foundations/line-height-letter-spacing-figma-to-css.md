@@ -356,7 +356,7 @@ Researched August 2026, revised November 2026. Figma's behaviour was checked aga
 - **Dev Mode em output for letter spacing.** Requested June 2025, acknowledged the same day, no later update on the thread as of November 2026.
 - **Config 2026** covered Code Layers, Motion, shader fills and effects, generative plugins and an updated agent, and nothing touching typography variable units. The absence suggests the current architecture is the settled state, not a stopgap awaiting a keynote.
 - **A corrected figure.** The Dev Mode example (2% on 18px type) previously gave `0.1125rem`; 2% of 18px is 0.36px, which is `0.0225rem` at a 16px root, and the guide now says so.
-- **The toolkit's build rules** for the same conversions are in `~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54; re-check them if this guide's conversion table changes.
+- **The toolkit's build rules** for the same conversions are in `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54; re-check them if this guide's conversion table changes.
 - **The evidence, honestly.** The WCAG 1.4.12 understanding document grounds its 1.5x line-height and 0.12x/0.16x spacing thresholds in readability research, so that floor is evidence-based. Nothing in the public record shows that any particular ratio above it outperforms another in product UI; the role ratios are craft consensus.
 
 ---
@@ -392,5 +392,5 @@ Researched August 2026, revised November 2026. Figma's behaviour was checked aga
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and `~/Projects/toolkit/standards/code-standard.md` rule 54. The build-side rules and their evidence.
+- `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and `standards/code-standard.md` rule 54. The build-side rules and their evidence.
 - [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [space between prose elements](space-between-prose-elements.md), [naming text styles](naming-text-styles.md).

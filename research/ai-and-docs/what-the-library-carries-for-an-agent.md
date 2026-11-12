@@ -33,10 +33,10 @@ Whatever the library leaves unstated, the agent fills from its training, which i
 - **Bound, semantic tokens.** A model given `color-primary-500` pulls the value the team assigned to that role; given a hex value, it can only copy it. Primer's `find_tokens` tool tells agents to search by intent (blue becomes accent, red becomes danger) and to check the result with its `lint_css` tool.
 - **Conventional names.** These get their own section, [the weight of names](#the-weight-of-names).
 
-Here is what a missing mapping costs on one real component. Suiteify's Figma Button exposes `Role: Primary`, `Feedback: Neutral` and `Left icon`. Its code, a wrapper over Material UI's Button, takes `buttonRole="primary"`, a Material UI `color` and `startIcon`. The figure sets the two side by side, with what an agent writes when nothing connects them.
+Here is what a missing mapping costs on one real component. Project A's Figma Button exposes `Role: Primary`, `Feedback: Neutral` and `Left icon`. Its code, a wrapper over Material UI's Button, takes `buttonRole="primary"`, a Material UI `color` and `startIcon`. The figure sets the two side by side, with what an agent writes when nothing connects them.
 
 <svg role="img" viewBox="0 0 680 310" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
-<title>Suiteify's Button in Figma and in code. Left, the Figma properties: Role Primary, Feedback Neutral, Left icon. Right, the code props: buttonRole primary, color, startIcon. Middle, what an agent writes with no mapping: role primary, feedback neutral, leftIcon, none of which exists; and what one that knows Material UI writes: variant contained, valid Material UI that skips the wrapper's own prop.</title>
+<title>Project A's Button in Figma and in code. Left, the Figma properties: Role Primary, Feedback Neutral, Left icon. Right, the code props: buttonRole primary, color, startIcon. Middle, what an agent writes with no mapping: role primary, feedback neutral, leftIcon, none of which exists; and what one that knows Material UI writes: variant contained, valid Material UI that skips the wrapper's own prop.</title>
 <rect x="0" y="0" width="680" height="310" fill="#f7f6f2"/>
 <text x="20" y="30" font-size="14" font-weight="600" fill="#1a1a1a">In Figma</text>
 <rect x="20" y="44" width="190" height="150" rx="8" fill="#ffffff" stroke="#c9c6bd"/>
@@ -65,7 +65,7 @@ Here is what a missing mapping costs on one real component. Suiteify's Figma But
 
 Neither guess in the middle matches the right-hand column. An agent reading the Figma instance with no mapping writes `<Button role="primary" feedback="neutral" leftIcon={...}>`: three plausible props, none valid. An agent that knows Material UI writes `variant="contained"`, which is valid Material UI and bypasses the wrapper's own prop.
 
-The colours, meanwhile, are right. Every value in that Button is bound: Suiteify's audit recorded 31,772 bound properties and none unbound. The interface is what fails.
+The colours, meanwhile, are right. Every value in that Button is bound: Project A's audit recorded 31,772 bound properties and none unbound. The interface is what fails.
 
 With a mapping, or the typed props in context, the output is correct, because the translation from `Role` to `buttonRole` is written once instead of guessed every time.
 
@@ -127,13 +127,13 @@ How far do agents reach for public names? The bench author mined a lexicon from 
 
 The bench turns this into a convention-distance score. A concept whose expected name exists is aligned. One where only a known alias exists (`Toggle` where agents expect `Switch`) is distance. The score is 100 times one minus the occurrence-weighted share of distance.
 
-A small controlled test on Suiteify's own components with Claude measured the effect from the other side. It is reported in [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md), under what alignment changes for AI.
+A small controlled test on Project A's own components with Claude measured the effect from the other side. It is reported in [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md), under what alignment changes for AI.
 
 With the component API in context, naming made no difference: every condition was fully correct. Without it, aligning Figma's property names to the code's raised fully correct output from 33 to 52 percent, and cut wrong props from 45 to 21.
 
-The failures that remained sat where Suiteify's code departs from Material UI: Claude wrote `variant` on every Button, whatever the Figma property was called.
+The failures that remained sat where Project A's code departs from Material UI: Claude wrote `variant` on every Button, whatever the Figma property was called.
 
-How big is that gap in one library? Suiteify's parity comparison sizes it. Of 390 Figma properties across 52 components, 67 have no code counterpart. Of the other 323, 53 carry a different name in code (`Label text` is `children`, `Left icon` is `startIcon`), and 8 option values are renamed.
+How big is that gap in one library? Project A's parity comparison sizes it. Of 390 Figma properties across 52 components, 67 have no code counterpart. Of the other 323, 53 carry a different name in code (`Label text` is `children`, `Left icon` is `startIcon`), and 8 option values are renamed.
 
 Three traps recur.
 
@@ -196,10 +196,10 @@ Researched November 2026, when this part was assembled from guides first researc
 
 - **Where this came from.** This part was split on 9 November 2026 out of *Making a design system usable by AI agents* (sections 2, 3 and the first half of 6), which had been consolidated on 2 November 2026 from two earlier guides. The original is archived at `_archive/2026-11-09/machine-readable-design-systems.md`; the two guides before it are in `_archive/2026-11-02/`. The toolkit was read from its repository on 2 November 2026. Rewritten into the current house voice on 11 November 2026, with no change of substance; the earlier text is in `_archive/2026-11-11/ai-and-docs/`.
 - **Wolosin's figures.** The original write-up is behind a sign-in wall, secondary summaries quote slightly different numbers, and her case-study page reports a different, later pilot (over 4,000 prototypes). Treat the direction as the finding. Wolosin and Morales are practitioners writing commentary, not published studies.
-- **No controlled study isolates one property** (binding, descriptions, naming) and measures its effect on agent output; the Suiteify test is the closest and is small.
+- **No controlled study isolates one property** (binding, descriptions, naming) and measures its effect on agent output; the Project A test is the closest and is small.
 - **The bench's lexicon** (version 1, mined 25 August 2026) is one author's mining, and the catalogue-quality weights are the author's own. Re-check before vendoring either.
 - **Code Connect plans and seats**, checked 9 November 2026: it needs a Full or Dev seat on a Professional, Education, Organization, Government or Enterprise plan, and a Professional plan has one active library and one active framework.
-- **Suiteify's audit figure** (31,772 bound properties, none unbound) is from October 2026.
+- **Project A's audit figure** (31,772 bound properties, none unbound) is from October 2026.
 - **The toolkit's token export** did not emit `$deprecated` as of November 2026.
 
 ---
@@ -233,7 +233,7 @@ Researched November 2026, when this part was assembled from guides first researc
 
 **Project records (private, not linkable)**
 
-- Suiteify's snapshot, audit record and parity report, as computed on 10 October 2026.
+- Project A's snapshot, audit record and parity report, as computed on 10 October 2026.
 
 ---
 

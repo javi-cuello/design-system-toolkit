@@ -57,7 +57,7 @@ The test: open the generated code and read the imports. From the team's package,
 
 For a team whose components live in Storybook, a flow is a story that composes the real screen components with fixture data, and Storybook 10 has every mechanism a click-through needs. What it lacks is a designer-facing canvas: a flow is written as code.
 
-Blackbook already keeps a story per screen state (`contacts-list.stories.tsx` holds `Default`, `Details`, `AddBadge`, `Filter`, `FilterResults`, `FilterNoResults`, `Search` and others, each rendering the real screen with fixtures). That is a state catalogue, which is most of a prototype. Four documented mechanisms turn it into a flow:
+Project B already keeps a story per screen state (`contacts-list.stories.tsx` holds `Default`, `Details`, `AddBadge`, `Filter`, `FilterResults`, `FilterNoResults`, `Search` and others, each rendering the real screen with fixtures). That is a state catalogue, which is most of a prototype. Four documented mechanisms turn it into a flow:
 
 - **State inside the story.** A wrapper holds the current step in `useState` and swaps screens on the real components' events. Ordinary React, no addon.
 - **Links between stories.** `@storybook/addon-links` provides `linkTo('Title', 'Story')` as an `onClick` and a `LinkTo` component, chaining separate screen stories into a click-through.
@@ -184,7 +184,7 @@ A prototype that wins is not merged: it is rebuilt on a feature branch from the 
 
 ## 10. What to re-check later
 
-Researched October 2026 for a design-systems lead running several projects, two in detail: blackbook (Next.js 16, React 19, SCSS generated from Figma, Storybook 10 with the Storybook MCP addon) and suiteify (a Material UI 9 wrapper library in a read-only repository, Storybook 10, published to a private npm feed). Vendor mechanics were read from primary sources only: Figma's help centre and MCP developer docs, Storybook's AI and testing docs, Chromatic's docs and pricing, Vercel's deployment-protection docs, v0's two design-system guides, the shadcn registry spec, Lovable's and Bolt's support docs, UXPin's docs and changelog, Anima's and Builder.io's docs, Magic Patterns' docs, Anthropic's Claude Design and artifacts docs, and Southleft's Story UI and Figma Console MCP. No tool was run hands-on. Re-checked on 2 November 2026: Figma's write-to-canvas page (still beta and free during it; the plan requirement and image and font limits have changed, section 6), the npm and GitHub release records (`@storybook/addon-mcp` and `@storybook/addon-links` 10.6.5, Story UI 5.23.0 of 26 October, Figma Console MCP 1.46.0 of 29 October, `msw-storybook-addon` 3.0.3, `@uxpin/merge-cli` 3.7.2), and the Storybook MCP docs (10.6, still preview). Prices were re-checked at each vendor's pricing page on 9 November 2026 (Chromatic, Vercel, v0, Bolt, UXPin, Figma) and were unchanged. Extended on 4 November 2026 after Christine Vallaure's *AI prototyping inside your design system* (3 November 2026), with primary sources: section 7 (prototype to pull request) was added, and section 3 gains the Storybook MCP's move into the Storybook repository and its agent snippet.
+Researched October 2026 for a design-systems lead running several projects, two in detail: Project B (Next.js 16, React 19, SCSS generated from Figma, Storybook 10 with the Storybook MCP addon) and Project A (a Material UI 9 wrapper library in a read-only repository, Storybook 10, published to a private npm feed). Vendor mechanics were read from primary sources only: Figma's help centre and MCP developer docs, Storybook's AI and testing docs, Chromatic's docs and pricing, Vercel's deployment-protection docs, v0's two design-system guides, the shadcn registry spec, Lovable's and Bolt's support docs, UXPin's docs and changelog, Anima's and Builder.io's docs, Magic Patterns' docs, Anthropic's Claude Design and artifacts docs, and Southleft's Story UI and Figma Console MCP. No tool was run hands-on. Re-checked on 2 November 2026: Figma's write-to-canvas page (still beta and free during it; the plan requirement and image and font limits have changed, section 6), the npm and GitHub release records (`@storybook/addon-mcp` and `@storybook/addon-links` 10.6.5, Story UI 5.23.0 of 26 October, Figma Console MCP 1.46.0 of 29 October, `msw-storybook-addon` 3.0.3, `@uxpin/merge-cli` 3.7.2), and the Storybook MCP docs (10.6, still preview). Prices were re-checked at each vendor's pricing page on 9 November 2026 (Chromatic, Vercel, v0, Bolt, UXPin, Figma) and were unchanged. Extended on 4 November 2026 after Christine Vallaure's *AI prototyping inside your design system* (3 November 2026), with primary sources: section 7 (prototype to pull request) was added, and section 3 gains the Storybook MCP's move into the Storybook repository and its agent snippet.
 
 - **Figma's write-to-canvas limits moved** between October and November 2026: the page no longer names a seat type (it had said a Full seat), and the earlier "no images and no custom fonts" limit gave way to `upload_assets`, `generate_image` and uploaded fonts.
 - **Nothing was run hands-on.** The first test for any adopted tool is the import test with the real library.
@@ -207,9 +207,9 @@ Researched October 2026 for a design-systems lead running several projects, two 
 
 Both projects get flow stories written by a coding agent and published to Chromatic, and agent-composed concepts in Figma. What differs is where the stories can live.
 
-**Blackbook** keeps components and screens in `src/design-system` and `src/screens` with a story per screen state and fixtures, already runs `@storybook/addon-mcp` and `@chromatic-com/storybook`, designs in Figma by rule, deploys every commit to `main` to production with no preview step, and reverted Tailwind and shadcn by recorded decision. So: flows as stories in a `Prototypes/` group composing the existing screens, published to Chromatic. A Vercel preview of a `/prototype` route is the wrong channel, because with no preview step a merged route ships to production. Hosted builders are ruled out by their starters and by the components not being a package.
+**Project B** keeps components and screens in `src/design-system` and `src/screens` with a story per screen state and fixtures, already runs `@storybook/addon-mcp` and `@chromatic-com/storybook`, designs in Figma by rule, deploys every commit to `main` to production with no preview step, and reverted Tailwind and shadcn by recorded decision. So: flows as stories in a `Prototypes/` group composing the existing screens, published to Chromatic. A Vercel preview of a `/prototype` route is the wrong channel, because with no preview step a merged route ships to production. Hosted builders are ruled out by their starters and by the components not being a package.
 
-**Suiteify**'s code is a read-only clone; its library `@arc/design-system` (MUI 9, MUI X Pro and Premium, Storybook 10 with `react-vite`) is published to a private Azure Artifacts feed. So: a small prototype repository outside the clone with its own Storybook, installing the published package with a read token, writing flow stories exactly as for blackbook, with the MCP addon. That keeps prototypes on released versions, which is what a reviewer should see. If designers must build flows without code, UXPin Merge with Wire through the Storybook route, after a trial confirms React 19 and MUI 9. Story UI's MUI preset makes it a reasonable trial in the prototype repository; whether it handles a wrapper rather than raw `@mui/material` is untested.
+**Project A**'s code is a read-only clone; its library `@project-a/design-system` (MUI 9, MUI X Pro and Premium, Storybook 10 with `react-vite`) is published to a private Azure Artifacts feed. So: a small prototype repository outside the clone with its own Storybook, installing the published package with a read token, writing flow stories exactly as for Project B, with the MCP addon. That keeps prototypes on released versions, which is what a reviewer should see. If designers must build flows without code, UXPin Merge with Wire through the Storybook route, after a trial confirms React 19 and MUI 9. Story UI's MUI preset makes it a reasonable trial in the prototype repository; whether it handles a wrapper rather than raw `@mui/material` is untested.
 
 **What to do.** Start with what needs no new platform and no new spend (flow stories plus Chromatic, agent-composed Figma concepts), and add UXPin or a package-backed Figma Make only when a measured gap (designers blocked on engineers, reviewers wanting a running app) justifies the seats.
 
@@ -264,12 +264,12 @@ Both projects get flow stories written by a coding agent and published to Chroma
 
 ### Project records for the appendix (private repositories, not linkable; read 14 October 2026)
 
-- Blackbook project file: `package.json`.
-- Blackbook project file: `.storybook/main.ts`.
-- Blackbook project file: `AGENTS.md`.
-- Blackbook project file: `src/screens/contacts-list/contacts-list.stories.tsx`.
-- Blackbook project context document.
-- Suiteify project file: `pnpm-workspace.yaml`.
-- Suiteify project file: `apps/storybook/package.json`.
-- Suiteify project file: `packages/design-system/package.json`.
-- Suiteify project context document.
+- Project B file: `package.json`.
+- Project B file: `.storybook/main.ts`.
+- Project B file: `AGENTS.md`.
+- Project B file: `src/screens/contacts-list/contacts-list.stories.tsx`.
+- Project B context document.
+- Project A file: `pnpm-workspace.yaml`.
+- Project A file: `apps/storybook/package.json`.
+- Project A file: `packages/design-system/package.json`.
+- Project A context document.

@@ -122,7 +122,7 @@ There is no press token. `activatedOpacity` is the lasting look of a toggle that
 
 Focus isn't a ring either. `action.focus` is a translucent overlay. A stroke-based focus design has no theme key, so it goes in a global `styleOverrides` on `MuiButtonBase` and the inputs, keyed on `.Mui-focusVisible`.
 
-The toolkit's validator records what goes wrong otherwise: a ring drawn as a new element renders *in addition* to MUI's own, so the result is two rings, not none (`~/Projects/toolkit/skills/component-validator/references/mui.md`, MU4).
+The toolkit's validator records what goes wrong otherwise: a ring drawn as a new element renders *in addition* to MUI's own, so the result is two rings, not none (`skills/component-validator/references/mui.md`, MU4).
 
 Map your `States/` tokens onto `palette.action`, per colour scheme, with dark values of their own. Add a press key. **Draw the focus ring as one override on `.Mui-focusVisible` that replaces MUI's indicator.**
 
@@ -223,7 +223,7 @@ Named deviations are the few places where the library and MUI genuinely disagree
 
 The library says `Danger`; MUI says `error`. Neither file shows the mismatch on its own, and a reviewer who sees `color="error"` on a component documented as `Danger` can't tell whether it's a bug.
 
-The toolkit's rule that component vocabulary matches token vocabulary (`~/Projects/toolkit/standards/figma-standard.md` rule 22) is why the pair must be recorded rather than left. Three items qualify:
+The toolkit's rule that component vocabulary matches token vocabulary (`standards/figma-standard.md` rule 22) is why the pair must be recorded rather than left. Three items qualify:
 
 | Item | Why it is acceptable |
 |---|---|
@@ -316,5 +316,5 @@ Researched August 2026 against Material UI v9 documentation and source (`createP
 
 **Toolkit**
 
-- `~/Projects/toolkit/skills/component-validator/references/mui.md` (MU3, MU4, MU9, MU10)
-- `~/Projects/toolkit/standards/figma-standard.md` rule 22
+- `skills/component-validator/references/mui.md` (MU3, MU4, MU9, MU10)
+- `standards/figma-standard.md` rule 22

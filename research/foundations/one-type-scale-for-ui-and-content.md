@@ -289,7 +289,7 @@ Researched November 2026.
 - **Inter 3's dynamic-metrics page** still returned a 404 on the live site in November 2026; only the archived copy exists.
 - **Atlassian's weight tokens** were re-checked against `@atlaskit/tokens` 20.8.2 in November 2026.
 - **Rello and colleagues** are cited from the abstract only.
-- **Where this came from.** This guide was split out of a longer guide on type for UI and content; its sister pieces are [space between prose elements](space-between-prose-elements.md) and [type on a phone](type-on-a-phone.md), which holds the worked example. The toolkit's distilled rules are in `~/Projects/toolkit/knowledge/ui/design/visual.md#typography`, `#type-for-ui-and-long-form-content` and `#one-size-scale-per-screen`.
+- **Where this came from.** This guide was split out of a longer guide on type for UI and content; its sister pieces are [space between prose elements](space-between-prose-elements.md) and [type on a phone](type-on-a-phone.md), which holds the worked example. The toolkit's distilled rules are in `knowledge/ui/design/visual.md#typography`, `#type-for-ui-and-long-form-content` and `#one-size-scale-per-screen`.
 - **Evidence quality.** Everything here is what systems ship, which proves a pattern survives, not that it reads better. No system read publishes research on stride or line-height ratios above the WCAG floor.
 
 ---
@@ -324,7 +324,7 @@ Researched November 2026.
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/ui/design/visual.md#typography`, `#type-for-ui-and-long-form-content` and `#one-size-scale-per-screen`. The Inter measurements, tracking rules, the line-height roles.
+- `knowledge/ui/design/visual.md#typography`, `#type-for-ui-and-long-form-content` and `#one-size-scale-per-screen`. The Inter measurements, tracking rules, the line-height roles.
 - [Space between prose elements](space-between-prose-elements.md), [type on a phone](type-on-a-phone.md), [line height and letter spacing](line-height-letter-spacing-figma-to-css.md), [naming text styles](naming-text-styles.md).
 
 **Cited but not resolved to a URL**

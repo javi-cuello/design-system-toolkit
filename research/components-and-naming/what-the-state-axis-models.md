@@ -142,7 +142,7 @@ Focused and errored at once is routine in a browser and has no frame in the kit.
 
 That is why error belongs beside the axis rather than on it. Primer does the same one level down: its `validationStatus` (`error`, `success`; `warning` was dropped) folds the whole validation family into one enum of its own.
 
-The toolkit's canon, tested across two project libraries, spells out the arrangement in its Figma standard (`~/Projects/toolkit/standards/figma-standard.md`):
+The toolkit's canon, tested across two project libraries, spells out the arrangement in its Figma standard (`standards/figma-standard.md`):
 
 - Axes run `Size → Role → Feedback → Disabled → State`, with `State` last and `Disabled` a True/False variant directly before it (rule 1).
 - Disabled pairs only with Rest (rule 2), and its variant sits straight after its Rest sibling (rule 3). In one library, 28 of 28 sets already did this.
@@ -195,7 +195,7 @@ The Loading frame still has to carry what a picture can't:
 - It keeps the resting width, so the layout doesn't jump.
 - Its label is faded with `opacity`, never `visibility: hidden`, so it stays the button's accessible name.
 
-The behaviour around it (focus kept with `aria-disabled`, a live region present from page load, a spinner shown after about a second and held a minimum time once shown, a server-side guard against a double press) lives in the toolkit's knowledge page on loading buttons, `~/Projects/toolkit/knowledge/ui/patterns/actions.md#loading-buttons`.
+The behaviour around it (focus kept with `aria-disabled`, a live region present from page load, a spinner shown after about a second and held a minimum time once shown, a server-side guard against a double press) lives in the toolkit's knowledge page on loading buttons, `knowledge/ui/patterns/actions.md#loading-buttons`.
 
 One contradiction inside the toolkit needs fixing. Figma-standard rule 4 describes the build as "a `loading` prop with `aria-busy`". The actions page says `aria-busy` is not an adequate announcement. [Adrian Roselli's 2020 testing](https://adrianroselli.com/2020/11/more-accessible-skeletons.html) found only JAWS honoured it, and [Polaris issue #1212](https://github.com/Shopify/polaris/issues/1212) from 2018 recorded VoiceOver and NVDA users hearing stale labels or "alert unavailable busy save product". The actions page is right.
 
@@ -279,7 +279,7 @@ A `State` axis models appearances you can't draw together. Hover, focus and pres
 
 Researched August to October 2026 from component source code and documentation (MUI, Primer, React Aria and Spectrum, Polaris, Chakra, Ant Design, Radix Themes, GitLab Pajamas, Atlassian, Carbon, Fluent), Nathan Curtis's audit of ten published text-input kits, and the `State` axes in 23 kits' Code Connect files (46 in the blind re-run). Re-checked in November 2026: Primer issue #7881, MUI's current major (v9; v10 in preview), and the Figma request for selective exposure of nested properties.
 
-- **Where this came from.** This guide merges the Figma half of the loading-state guide, the state section of the naming guide, the nested-state study and the open-state survey from the button-merge study. Loading *behaviour* now lives in the toolkit's `~/Projects/toolkit/knowledge/ui/patterns/actions.md#loading-buttons`.
+- **Where this came from.** This guide merges the Figma half of the loading-state guide, the state section of the naming guide, the nested-state study and the open-state survey from the button-merge study. Loading *behaviour* now lives in the toolkit's `knowledge/ui/patterns/actions.md#loading-buttons`.
 - **Selective exposure of nested properties.** Requested since 2022 and still unshipped in November 2026. If Figma ships it, the split in [nested child state](#nested-child-state) becomes unnecessary.
 - **Primer's loading announcement.** Issue [#7881](https://github.com/primer/react/issues/7881) was open in November 2026, with [#7882](https://github.com/primer/react/pull/7882) proposed to document the built-in announcement.
 - **figma-standard rule 4's `aria-busy` wording**, against `actions.md`.
@@ -313,6 +313,6 @@ Researched August to October 2026 from component source code and documentation (
 
 **Toolkit**
 
-- `~/Projects/toolkit/standards/figma-standard.md` rules 1 to 4, 7, 31, 38, 39, 48
-- `~/Projects/toolkit/knowledge/ui/patterns/actions.md#loading-buttons`
-- `~/Projects/toolkit/skills/component-validator/references/mui.md` (MU3, MU4)
+- `standards/figma-standard.md` rules 1 to 4, 7, 31, 38, 39, 48
+- `knowledge/ui/patterns/actions.md#loading-buttons`
+- `skills/component-validator/references/mui.md` (MU3, MU4)

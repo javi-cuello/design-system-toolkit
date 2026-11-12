@@ -1,8 +1,8 @@
 # Subcomponent naming and nested state in real Figma kits
 
-How shipping design-system kits name the parts of a component, and how they handle a parent whose nested child has its own state axes. Sections 1 to 3 report what real kits do; section 4 turns that into recommendations for Suiteify, with worked names.
+How shipping design-system kits name the parts of a component, and how they handle a parent whose nested child has its own state axes. Sections 1 to 3 report what real kits do; section 4 turns that into recommendations for Project A, with worked names.
 
-Researched 5 October 2026 for Suiteify, whose library names parts by chaining every ancestor (`🚧 Sidebar dialog - Modal - Sidebar - Section - Item`), marks private parts with `_`, and uses ` / ` for siblings deliberately split out of one set (`_FAB (AI) - Button / Default` and `_FAB (AI) - Button / Open`).
+Researched 5 October 2026 for Project A, whose library names parts by chaining every ancestor (`🚧 Sidebar dialog - Modal - Sidebar - Section - Item`), marks private parts with `_`, and uses ` / ` for siblings deliberately split out of one set (`_FAB (AI) - Button / Default` and `_FAB (AI) - Button / Open`).
 
 
 **Independent check, 6 October 2026.** A blind re-run on 6 October 2026, over 46 kits and 1,998 Code Connect files collected independently, reached the same conventions: space-joined part names in 13 kits (the most common; ` - ` only in Carbon, 6 names), bare-noun text properties in 38 of 40 kits (322 of 489 names), `Show X` with a bare `X` as the most common boolean pair (13 kits), `Icon` as the most common swap name, a `State` axis in 33 of 46 kits, and Size values as words (`Small`, `Medium`, `Large`) in 27 kits against codes in 20.
@@ -14,7 +14,7 @@ Researched 5 October 2026 for Suiteify, whose library names parts by chaining ev
 - Do Figma part names match the code's names?
 - What separators and privacy prefixes do kits use, and does any use ` / ` for split siblings?
 - When a parent nests a child with its own states, how do kits stop invalid combinations, such as an open FAB holding a closed button?
-- So what should Suiteify name its parts, and how should it build the FAB?
+- So what should Project A name its parts, and how should it build the FAB?
 
 ---
 
@@ -56,7 +56,7 @@ One limit applies throughout. Code Connect matches an instance's **layer name**,
 
 Only Carbon puts ` - ` in part names, six of them, as a family or variant suffix (`UI shell - Header actions`, `_Structured list row item - Selectable`), not as a chain of ancestors.
 
-**What Suiteify's own code does.** The same: `ListItem`, `ListItemText`, `SidebarNavItem`. In `SidebarSecondary`, sections and items are not components at all; they are rows of a data type, `SidebarSecondaryGroup`.
+**What Project A's own code does.** The same: `ListItem`, `ListItemText`, `SidebarNavItem`. In `SidebarSecondary`, sections and items are not components at all; they are rows of a data type, `SidebarSecondaryGroup`.
 
 **What the evidence shows.** Kits built to mirror their code (Primer, Figma SDS, LI.FI, Coveo) name parts with the code's compound name. Kits not built from code drift: Carbon for IBM Products drops the parent, and Infineon adds a word the code lacks (`Dropdown Menu Item` for `ifx-dropdown-item`) and pluralises a single tab (`_Tabs Items`).
 
@@ -68,15 +68,15 @@ Only Carbon puts ` - ` in part names, six of them, as a family or variant suffix
 
 - **Separators.** A plain space, matching the code name with spaces added: Figma SDS, LI.FI, Infineon, Carbon. A dot, copying the code's dot notation: Primer, Coveo. A slash as a folder path: Synergy, Sikt (`.Toggle/Segment/Single`), and MUI's own Figma kit, whose parts are folders ending in the code name (`Card/Elements/CardHeader`, `DataGrid/Elements/Cell`). Apart from Carbon's six family names, no kit uses ` - ` between parent and part.
 - **Privacy prefixes.** `_`: Primer, Carbon, Infineon, Qualcomm, Synergy. `.`: LI.FI, Coveo, Kajabi Pine, Sikt, Codecademy Gamut. Kits mix public and private parts under one parent: LI.FI's `Card Header` is public while `.Card Footer` is private.
-- **` / ` for split siblings.** One real case. Primer has `NavList.Item` and a separate component `NavList.Item/SubItem`: `.` carries the hierarchy and `/` marks a sibling split ([NavList.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/NavList/NavList.figma.tsx)). That matches Suiteify's FAB convention. No other kit found uses `/` that way, and no kit uses ` - ` for hierarchy beside ` / ` for siblings.
+- **` / ` for split siblings.** One real case. Primer has `NavList.Item` and a separate component `NavList.Item/SubItem`: `.` carries the hierarchy and `/` marks a sibling split ([NavList.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/NavList/NavList.figma.tsx)). That matches Project A's FAB convention. No other kit found uses `/` that way, and no kit uses ` - ` for hierarchy beside ` / ` for siblings.
 
-**What the evidence shows.** Suiteify's `_` prefix matches common practice and its ` / ` sibling split has one precedent. Its ` - ` ancestry chain has none.
+**What the evidence shows.** Project A's `_` prefix matches common practice and its ` / ` sibling split has one precedent. Its ` - ` ancestry chain has none.
 
 ---
 
 ## 3. How do kits handle a nested child with its own states?
 
-**The short answer.** Three patterns appear, and one kit documents its invalid combinations openly. No kit found splits a child into separate components per state as Suiteify's FAB does, and none says in writing that it hides a nested instance to block invalid combinations.
+**The short answer.** Three patterns appear, and one kit documents its invalid combinations openly. No kit found splits a child into separate components per state as Project A's FAB does, and none says in writing that it hides a nested instance to block invalid combinations.
 
 The problem: Figma's nested-instance exposure is all or nothing per instance. Once a nested instance is exposed, every one of its properties appears, including its state axes. Users have asked Figma to allow choosing individual properties since at least December 2025 ([forum request](https://forum.figma.com/suggest-a-feature-11/allow-selective-exposure-of-nested-component-properties-48984)), with no staff reply on the thread.
 
@@ -88,11 +88,11 @@ The problem: Figma's nested-instance exposure is all or nothing per instance. On
 
 **One kit with open states on both levels.** Untitled UI describes dropdown triggers with default, hover, focused and open states, and separately open and closed variants of the whole menu, which allows a mismatch. This comes from a search snippet of its components page, not a file read.
 
-**What the evidence shows.** Carbon accepts invalid nested combinations and tracks them as gaps. Primer leaves selection to each child. Pajamas avoids nesting full instances. A per-state split like Suiteify's FAB has no direct Figma precedent; Material 3's separate toggle component is the nearest, and it is in code.
+**What the evidence shows.** Carbon accepts invalid nested combinations and tracks them as gaps. Primer leaves selection to each child. Pajamas avoids nesting full instances. A per-state split like Project A's FAB has no direct Figma precedent; Material 3's separate toggle component is the nearest, and it is in code.
 
 ---
 
-## 4. What should Suiteify do?
+## 4. What should Project A do?
 
 **The short answer.** Name a part as its published parent plus the part, joined by a space in sentence case as the largest group of kits does (12 of 33), keep `_` for private parts and ` / ` for split siblings, and choose how to build a stateful child by what the parent needs to expose from it.
 
@@ -106,9 +106,9 @@ The rule, in the shape every code-mirroring kit uses:
 4. **Where code exists, use the code's words.** `ListItemText` in code is `List item text` in Figma, not a new description of the same part.
 5. **Keep `_` for private parts** (Primer, Carbon, Infineon, Qualcomm and Synergy use it) and **keep ` / ` for siblings split out of one set**, which has one precedent (Primer's `NavList.Item/SubItem`) and is the separator the project's context document already records for virtual sets.
 
-**The separator, following the kits rather than the file.** Most code-mirroring kits join parent and part with a plain space and let the code name be the same words run together: Figma SDS `Menu Item` is `MenuItem`, LI.FI `.Sidebar Menu Button` is `SidebarMenuButton`, Carbon `_Tab bar`, Infineon `_Dropdown Menu Item`, Qualcomm `_Breadcrumb item`. Primer and Coveo use a dot instead, because their Figma names copy PascalCase code (`_PageHeader.Title`); Suiteify's sentence-case names would have to change case throughout to follow them. Only Carbon uses ` - `, for a handful of family names. So the industry-aligned form for Suiteify is the space join in sentence case, which turns into the code name by capitalising each word and removing the spaces.
+**The separator, following the kits rather than the file.** Most code-mirroring kits join parent and part with a plain space and let the code name be the same words run together: Figma SDS `Menu Item` is `MenuItem`, LI.FI `.Sidebar Menu Button` is `SidebarMenuButton`, Carbon `_Tab bar`, Infineon `_Dropdown Menu Item`, Qualcomm `_Breadcrumb item`. Primer and Coveo use a dot instead, because their Figma names copy PascalCase code (`_PageHeader.Title`); Project A's sentence-case names would have to change case throughout to follow them. Only Carbon uses ` - `, for a handful of family names. So the industry-aligned form for Project A is the space join in sentence case, which turns into the code name by capitalising each word and removing the spaces.
 
-The strongest alternative is the slash folder, and it has a code-parity case of its own: MUI's own Figma kit names parts `Card/Elements/CardHeader`, ending in the exact MUI component name, and Suiteify's code is built on MUI. It is the choice of 5 kits against 12 for the space join, and it would put parts into folders in the assets panel, which is a larger change to the library's layout than a rename. This guide keeps the space join and records the slash folder as the alternative to revisit if code parity comes to outweigh the shorter names.
+The strongest alternative is the slash folder, and it has a code-parity case of its own: MUI's own Figma kit names parts `Card/Elements/CardHeader`, ending in the exact MUI component name, and Project A's code is built on MUI. It is the choice of 5 kits against 12 for the space join, and it would put parts into folders in the assets panel, which is a larger change to the library's layout than a rename. This guide keeps the space join and records the slash folder as the alternative to revisit if code parity comes to outweigh the shorter names.
 
 The other two marks stay: `_` for private parts (Primer, Carbon, Infineon, Qualcomm, Synergy) and ` / ` for siblings split out of one set (Primer's `NavList.Item/SubItem`), which is also the separator the project's context document records for virtual sets.
 
@@ -135,13 +135,13 @@ And elsewhere in the library, the same rule:
 
 **The cost.** 83 of the library's 214 components use ` - ` today (74 of the 138 published ones), five levels deep at most. Renaming does not break instances, but it changes every name the parity map, the audit record and the documentation pages key on, and product files see the new names on the next library update. Not every ` - ` is a part, either: `Button - AI` is a flavour of Button, not a part of it, and needs its own decision.
 
-The code names in the third column are the same words, as `List`, `ListItem` and `ListItemText` are in Suiteify's code today.
+The code names in the third column are the same words, as `List`, `ListItem` and `ListItemText` are in Project A's code today.
 
 ### Nested instance names
 
 A nested instance is a component placed inside another component's definition. Its layer name starts as the component's name and can be renamed, and Code Connect files find nested instances by that layer name. In the kits' files most nested instances keep the component name (`Button`, `Avatar`, `Menu`, `Text input`). Role names are the minority: Primer's `trigger` and `leadingVisual`, Carbon's `Menu trigger`. Where one component holds several instances of the same child, kits number them (NYSDS `Option 1` to `Option 10`, LI.FI `Col 1` and `Col 2`) or match them all with a wildcard (`Col*`, `TabItem*`).
 
-Suiteify renames 132 of the 278 nested instances in its library, almost half. The most frequent renames cut a long chained name down to its last word:
+Project A renames 132 of the 278 nested instances in its library, almost half. The most frequent renames cut a long chained name down to its last word:
 
 | Layer name in the parent | Component it is an instance of | Times |
 |---|---|---|
@@ -178,7 +178,7 @@ Either way, code has one `open` prop; Figma's structure only decides what a desi
 
 ## 5. The short version
 
-Real kits name a part as its parent plus the part, almost always one level deep, and kits that mirror their code reuse the code's compound name (`_PageHeader.Title`, `.Sidebar Menu Button`). Deeper names appear only when every level is a code component. Separators are a space or a dot; privacy is `_` or `.`; `/` is a folder, with one exception, Primer's `NavList.Item/SubItem`, which uses it for a sibling split as Suiteify does. Across 33 kits the space join is the largest group (12), ahead of no parent in the name (7) and slash folders (5, MUI's own kit among them). No kit chains ancestry with ` - `; Carbon's six ` - ` names are families, not chains. Nested instances mostly keep their component's name, and kits rename them only to tell repeats apart.
+Real kits name a part as its parent plus the part, almost always one level deep, and kits that mirror their code reuse the code's compound name (`_PageHeader.Title`, `.Sidebar Menu Button`). Deeper names appear only when every level is a code component. Separators are a space or a dot; privacy is `_` or `.`; `/` is a folder, with one exception, Primer's `NavList.Item/SubItem`, which uses it for a sibling split as Project A does. Across 33 kits the space join is the largest group (12), ahead of no parent in the name (7) and slash folders (5, MUI's own kit among them). No kit chains ancestry with ` - `; Carbon's six ` - ` names are families, not chains. Nested instances mostly keep their component's name, and kits rename them only to tell repeats apart.
 
 For nested state, kits either let the parent own the state while the child keeps its axes (Carbon, which tracks the resulting invalid combinations as known gaps), put the state on the child alone (Primer), or avoid nesting the full component (GitLab Pajamas). None found splits a child per state in Figma, and none states that it hides a nested instance to prevent invalid combinations. Figma offers no way to expose only some of a nested instance's properties.
 
@@ -224,7 +224,7 @@ For nested state, kits either let the parent own the state while the child keeps
 - [Figma forum: allow selective exposure of nested component properties](https://forum.figma.com/suggest-a-feature-11/allow-selective-exposure-of-nested-component-properties-48984)
 - [figma/code-connect issue #11: combine properties from nested instances](https://github.com/figma/code-connect/issues/11)
 
-### Suiteify
+### Project A
 
 - The Components - Web app Figma library, read 5 October 2026: the `🚧 Sidebar dialog` page and the FAB (AI) components.
-- The engineers' code at `~/Projects/suiteify`: `List` exports, `SidebarNavItem`, `SidebarSecondary`.
+- The engineers' code at Project A's repository: `List` exports, `SidebarNavItem`, `SidebarSecondary`.

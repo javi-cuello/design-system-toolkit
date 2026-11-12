@@ -170,9 +170,9 @@ Where the design has a breakpoints collection, the toolkit's token build writes 
 
 rem in a media query is relative to the browser's initial font size. A reader who raises their default size reaches the narrow layout sooner, which is what they need. Queries are `min-width` only, because mixing directions produces overlapping ranges at the boundary.
 
-A breakpoint is a page-level change: navigation collapsing, a sidebar stacking. A component's own layout is a container query. Touch is its own query, `pointer: coarse`, because width says nothing about input (`~/Projects/toolkit/knowledge/code/responsive.md#breakpoints`).
+A breakpoint is a page-level change: navigation collapsing, a sidebar stacking. A component's own layout is a container query. Touch is its own query, `pointer: coarse`, because width says nothing about input (`knowledge/code/responsive.md#breakpoints`).
 
-So the `Breakpoint=sm|md` set is rendered at that window width, or answered by a container query, and the parity mapping maps the axis to widths (`~/Projects/toolkit/knowledge/code/figma-handoff.md#variants-to-attributes`).
+So the `Breakpoint=sm|md` set is rendered at that window width, or answered by a container query, and the parity mapping maps the axis to widths (`knowledge/code/figma-handoff.md#variants-to-attributes`).
 
 Two situations need care. A collection that holds both the canvas width the screens are drawn at and a container width inside it has to be read closely: the container width is the page grid's, and the canvas width is a breakpoint or nothing. And where every screen is drawn at one desktop width, the code doesn't invent the small layouts. It builds intrinsically, asks for the phone frame and the tokens, and records the undecided widths.
 
@@ -244,8 +244,8 @@ Researched August 2026; re-checked November 2026.
 
 **The toolkit's own rules**
 
-- `~/Projects/toolkit/knowledge/code/responsive.md#breakpoints`
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md#variants-to-attributes`
+- `knowledge/code/responsive.md#breakpoints`
+- `knowledge/code/figma-handoff.md#variants-to-attributes`
 
 **Commentary**
 

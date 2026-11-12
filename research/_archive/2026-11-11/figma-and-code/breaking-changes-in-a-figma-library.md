@@ -100,7 +100,7 @@ So collection, mode, group and variable names all become file names, custom prop
 
 Code syntax is a separate trap, tested directly: a variable with web code syntax `var(--c)` renamed to `color/renamed` still printed `var(--c)` in Dev Mode. A team that renames without updating code syntax ships snippets pointing at the old name while an exporter that reads names ships the new one.
 
-The toolkit's projects take the opposite route on purpose: tokens are generated under Figma's own names, and a component's contract can be stored keyed by its Figma component key, so a rename in Figma keeps its contract (`~/Projects/toolkit/knowledge/code/figma-handoff.md#what-a-component-contract-covers`).
+The toolkit's projects take the opposite route on purpose: tokens are generated under Figma's own names, and a component's contract can be stored keyed by its Figma component key, so a rename in Figma keeps its contract (`knowledge/code/figma-handoff.md#what-a-component-contract-covers`).
 
 **What to do. Breaking.** Treat exported names as a public API. Carry the variable's ID in `$extensions` so a rename is detectable as a rename. Keep the old name as a deprecated alias for at least one release, lint for unknown custom properties (Primer's stylelint uses `csstools/value-no-unknown-custom-properties` against its own token files), update code syntax in the same change, and fix collection and mode names before the first export.
 
@@ -142,7 +142,7 @@ Renames are where policy turns strict. Fluent lists API renames as major; USWDS 
 
 Values split by audience. Code-side policies call them minor (Spectrum lists intentional value changes under minor; the Polaris CDN puts visual refinements in minors). Figma-kit policies call some breaking: Pajamas defines a breaking change as anything that would require a designer to act after updating, and names a component whose size changed as its medium tier, because instances in fixed layouts reflow; Helios labelled a spacing fix in its kit as breaking. Nathan Curtis argues the same from code: a change contained inside a component is safe, while one that alters what an adopter controls (contrast against their background, text that now wraps) breaks them whatever the version says.
 
-The toolkit implemented this as a table that grades every snapshot of a library for both audiences and stores the grade with the change (`~/Projects/toolkit/standards/snapshot-standard.md`, rule 20; `GRADE_RULES` in `~/Projects/toolkit/tools/snapshot/store.cjs`). Running it corrected two rows of this piece's first draft. A **component** or **layer** rename is minor for code, not major: Code Connect connects by node, so only what finds the component or layer by name needs the new one. And a changed **default variant** is a patch for Figma files and minor for code, since only new instances get it and code defaults should follow. The table as the toolkit runs it:
+The toolkit implemented this as a table that grades every snapshot of a library for both audiences and stores the grade with the change (`standards/snapshot-standard.md`, rule 20; `GRADE_RULES` in `tools/snapshot/store.cjs`). Running it corrected two rows of this piece's first draft. A **component** or **layer** rename is minor for code, not major: Code Connect connects by node, so only what finds the component or layer by name needs the new one. And a changed **default variant** is a patch for Figma files and minor for code, since only new instances get it and code defaults should follow. The table as the toolkit runs it:
 
 | Change | Figma files | Code |
 |---|---|---|
@@ -159,7 +159,7 @@ The toolkit implemented this as a table that grades every snapshot of a library 
 | A layer removed | major | minor |
 | A description or page changed | patch | patch |
 
-No policy found names a default value change outright; Primer has shipped flipped defaults as minors with an upgrade caution, and this piece treats them as minor for both, announced. The toolkit's one operational lesson about the grade itself: print it first. On one project the run's first lines said BREAKING with six renamed tokens, and the reader looked at the last forty lines and missed it (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, "Traps").
+No policy found names a default value change outright; Primer has shipped flipped defaults as minors with an upgrade caution, and this piece treats them as minor for both, announced. The toolkit's one operational lesson about the grade itself: print it first. On one project the run's first lines said BREAKING with six renamed tokens, and the reader looked at the last forty lines and missed it (`skills/design-code-parity/SKILL.md`, "Traps").
 
 **What to do.** Keep the two levels separate all the way to the release note, and let the higher set the version number. A release whose only major is a variable rename should say it is major for code and nothing for Figma files, so designers do not stop work for it. Promote a value change to major for Figma files when it changes a component's size, and for code when it lowers contrast below the level the system promises.
 
@@ -299,8 +299,8 @@ So a release carries two levels. Removing or narrowing is major for both audienc
 
 ### The toolkit's own tested rules
 
-- `~/Projects/toolkit/standards/snapshot-standard.md`, rule 20, and `GRADE_RULES` in `~/Projects/toolkit/tools/snapshot/store.cjs`
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md#what-a-component-contract-covers`
+- `standards/snapshot-standard.md`, rule 20, and `GRADE_RULES` in `tools/snapshot/store.cjs`
+- `knowledge/code/figma-handoff.md#what-a-component-contract-covers`
 
 ### Commentary and community reports
 

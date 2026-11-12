@@ -51,7 +51,7 @@ The distinction matters because the two claims fail differently and are proved d
 
 An agent picks a component by matching the words of its task against the words the system offers, and wherever the system says nothing, it fills the gap with what it has seen most often, which is public code. A person in the same position asks a colleague, copies a neighbouring screen, remembers last week's correction and looks at the result. An agent, left to itself, does none of those.
 
-Take one task, which the rest of this piece keeps returning to. A job board's product team asks an agent to add a step before a saved search is deleted: ask the person to confirm, and say that deletion cannot be undone. The job board's library has a `Dialog`, a `Button` whose destructive style is set with `tone="critical"`, and a `Text` component for headings and body copy.
+Take one task, which the rest of this piece keeps returning to. A marketplace's product team asks an agent to add a step before a saved search is deleted: ask the person to confirm, and say that deletion cannot be undone. The marketplace's library has a `Dialog`, a `Button` whose destructive style is set with `tone="critical"`, and a `Text` component for headings and body copy.
 
 A new designer on the team would open the docs, find `Dialog`, and probably ask someone which button style a destructive action takes. The agent reads the task, sees the words "confirm" and "delete", and looks for something with a matching name. If its context holds a component called `Dialog` with a description that mentions confirmation, it finds it. If it does not, it reaches for the names that dominate public code: `Modal`, `ConfirmDialog`, `Heading`.
 
@@ -73,11 +73,11 @@ Storybook's documentation for its MCP server shows how ordinary the guessing is.
 
 In four ways: it invents a component, invents a prop, hard-codes a value, or rebuilds a component it should have imported. Each of the four produces a screen that renders and looks close to right, which is why each gets past a quick review. Only a reviewer who knows the system catches them by eye.
 
-Here is the confirm-before-delete step written the way an agent with no system context tends to write it. The code is illustrative, written against the job board's library as described in section 2.
+Here is the confirm-before-delete step written the way an agent with no system context tends to write it. The code is illustrative, written against the marketplace's library as described in section 2.
 
 ```jsx
 // What the agent wrote
-import { Button } from "@jobboard/ui";
+import { Button } from "@marketplace/ui";
 import { Modal } from "@mui/material";                 // (1) a component the system does not have
 
 export function DeleteSavedSearch({ open, onCancel, onDelete }) {
@@ -99,7 +99,7 @@ export function DeleteSavedSearch({ open, onCancel, onDelete }) {
 
 ```jsx
 // The same step on the system
-import { Dialog, Button, Text } from "@jobboard/ui";
+import { Dialog, Button, Text } from "@marketplace/ui";
 
 export function DeleteSavedSearch({ open, onCancel, onDelete }) {
   return (
@@ -118,7 +118,7 @@ Each failure in the first version has its own mechanism and its own cost.
 
 **An invented component.** The agent needed a modal, did not find one under a name it expected, and imported Material UI's, which happened to be installed. The screen works. The cost arrives later: when the system's `Dialog` changes its padding, its motion or its close behaviour, this screen does not change with it.
 
-**An invented prop.** `kind="danger"` is plausible and wrong; the job board's `Button` takes `tone`. In plain JavaScript, React passes the unknown prop through, the button renders in its default style, and nothing complains. In a TypeScript codebase the type checker rejects it, which is one reason typed props are part of readiness: they turn this failure into an error message.
+**An invented prop.** `kind="danger"` is plausible and wrong; the marketplace's `Button` takes `tone`. In plain JavaScript, React passes the unknown prop through, the button renders in its default style, and nothing complains. In a TypeScript codebase the type checker rejects it, which is one reason typed props are part of readiness: they turn this failure into an error message.
 
 **A hard-coded value.** `#1F2937` and `20` were copied from a screenshot or guessed. They match the light theme today. In dark mode the heading is dark grey on a dark surface, and a rebrand that edits the colour token never reaches it.
 
@@ -143,7 +143,7 @@ A design system is agent-ready to the degree that an agent given an ordinary pro
 
 This is the definition the whole series keeps; Parts 2, 4 and 9 build on it. Each clause is there for a reason.
 
-**"Never names a component."** A task that says "use the Dialog" tests whether the agent obeys, not whether the system can be found. The job board's real tasks arrive as "ask before deleting", so the test has to as well.
+**"Never names a component."** A task that says "use the Dialog" tests whether the agent obeys, not whether the system can be found. The marketplace's real tasks arrive as "ask before deleting", so the test has to as well.
 
 **Real components, props, tokens, imports.** These are the four failures of section 3, turned round. The outcome is the absence of all four, not an improvement on one.
 
@@ -151,7 +151,7 @@ This is the definition the whole series keeps; Parts 2, 4 and 9 build on it. Eac
 
 Two boundaries keep the definition honest.
 
-The first is that readiness belongs to the system, the agent and its harness together. Anthropic's engineering post on evals says that evaluating "an agent" means evaluating the model and its harness as one. The job board's system can be ready for one coding agent with its MCP server connected and not ready for a hosted prototyping tool that cannot reach that server. A readiness claim names the setup it was measured in.
+The first is that readiness belongs to the system, the agent and its harness together. Anthropic's engineering post on evals says that evaluating "an agent" means evaluating the model and its harness as one. The marketplace's system can be ready for one coding agent with its MCP server connected and not ready for a hosted prototyping tool that cannot reach that server. A readiness claim names the setup it was measured in.
 
 The second is that readiness is not quality. Brad Frost's `ds-ai-rails` skill keeps four questions apart: what the system knows, what the organisation wants agents to do, what is enforced, and whether the result works for its users. It notes that correct imports prove neither good design nor working behaviour. A confirm dialog built perfectly from the system can still be the wrong design for a deletion that should have been undoable.
 
@@ -229,7 +229,7 @@ Mostly the old discipline, made non-optional. The content an agent needs (compon
 
 The overlap is plain in the vendors' own lists. Figma's recommendations for its MCP server (components, Code Connect, variables, clear names) are the handoff advice the company gave before agents. Di Capua's essay makes the same observation from practice: designers have spent years learning to name colours by meaning rather than value, and that is the habit agents need. Shopify's account of Polaris before agents (components in 70 percent of the admin, tokens in 44 percent of admin components) is a readiness problem described in pre-agent terms; Part 2 tells that story.
 
-What changed is who absorbs the gaps. When the job board's docs never said which button tone a destructive action takes, a designer asked in a channel, got an answer, and the gap cost one conversation. An agent does not ask. It writes `kind="danger"`, and it writes it again in every session, for every team, at the speed agents work. The same gap that cost a conversation now costs a defect per run. That is why a team can no longer leave a property undescribed on the grounds that people know what it means.
+What changed is who absorbs the gaps. When the marketplace's docs never said which button tone a destructive action takes, a designer asked in a channel, got an answer, and the gap cost one conversation. An agent does not ask. It writes `kind="danger"`, and it writes it again in every session, for every team, at the speed agents work. The same gap that cost a conversation now costs a defect per run. That is why a team can no longer leave a property undescribed on the grounds that people know what it means.
 
 Three things have no pre-agent equivalent.
 
@@ -273,11 +273,11 @@ One real task, one agent setup, three runs. Write a task the way the product tea
 
 The sources agree on starting small, from different directions. Figma's page on LLM context design suggests documenting one widely used component, then checking one AI-generated variant against it. Frost's `ds-ai-rails` skill starts from one system, one consuming project or sandbox and one AI environment, with a small task that has a meaningful interaction and one requirement the system does not cover. Anthropic's evals guidance says 20 to 50 tasks drawn from real failures are a good start for a test suite, which is where this ends up, not where it begins.
 
-For the job board, the first afternoon looks like this.
+For the marketplace, the first afternoon looks like this.
 
 1. Write the task in product language: "Before a saved search is deleted, ask the person to confirm. Say that it cannot be undone. Offer an undo for ten seconds after deleting." The undo is the deliberate gap: the library has no toast component, and what the agent does at a gap is worth seeing.
 2. Run it three times in the setup the product team actually uses. One run says little about a tool whose output changes between runs.
-3. Read each result's imports first. Anything imported from outside `@jobboard/ui` for UI is a candidate invented component.
+3. Read each result's imports first. Anything imported from outside `@marketplace/ui` for UI is a candidate invented component.
 4. Search the result for raw colours and sizes (`#`, `px`, `rem` in style attributes) and for raw elements the library covers (`<button`, `<dialog`, `role="dialog"`).
 5. Check every prop on every system component against its definition.
 6. Tally the four failures per run, and note what happened at the gap: did the agent build a toast, import one, or say the system had none?

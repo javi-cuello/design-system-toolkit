@@ -766,7 +766,7 @@ Researched 12 November 2026.
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/ui/design/visual.md#surfaces-and-elevation-levels`, `#theming-and-dark-mode` and `#elevation-borders-radius-and-shape`. The four levels, dark values, scrim and input sinking.
+- `knowledge/ui/design/visual.md#surfaces-and-elevation-levels`, `#theming-and-dark-mode` and `#elevation-borders-radius-and-shape`. The four levels, dark values, scrim and input sinking.
 - [Elevation and shadows](elevation-and-shadows.md), [surfaces in dark mode](surfaces-in-dark-mode.md), [materials and translucency](materials-and-translucency.md).
 
 **Cited but not resolved to a URL**

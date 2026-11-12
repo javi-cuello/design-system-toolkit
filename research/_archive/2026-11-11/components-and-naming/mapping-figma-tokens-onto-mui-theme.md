@@ -70,7 +70,7 @@ The extra keys need an augmentation of `PaletteColor` and `SimplePaletteColorOpt
 
 **No press token.** `activatedOpacity` is the persistent look of an activated toggle, not the moment a pointer is down; MUI's answer to press is the ripple, a different visual model. A `States/Press/opacity` token needs a custom key (`action.pressedOpacity`, augmented).
 
-**Focus is not a ring.** `action.focus` is a translucent overlay. A stroke-based focus specification has no theme key and goes in a global `styleOverrides` on `MuiButtonBase` and the inputs, keyed on `.Mui-focusVisible`. The toolkit's validator adds the failure this prevents: a ring drawn as a new element renders *in addition* to MUI's own, so two rings, not none (`~/Projects/toolkit/skills/component-validator/references/mui.md`, MU4).
+**Focus is not a ring.** `action.focus` is a translucent overlay. A stroke-based focus specification has no theme key and goes in a global `styleOverrides` on `MuiButtonBase` and the inputs, keyed on `.Mui-focusVisible`. The toolkit's validator adds the failure this prevents: a ring drawn as a new element renders *in addition* to MUI's own, so two rings, not none (`skills/component-validator/references/mui.md`, MU4).
 
 **What to do.** Map `States/` onto `palette.action` per colour scheme, with dark values of its own; add a press key; implement the focus ring as one override replacing MUI's.
 
@@ -158,7 +158,7 @@ Root is always `root`; an enum variant is prefixed by its prop (`colorPrimary`, 
 | No press token in MUI | needs a custom key; the ripple is a different model |
 | The `State` axis | documentation of what code produces, never a prop (see [what the State axis models](what-the-state-axis-models.md)) |
 
-The toolkit's rule that component vocabulary matches token vocabulary (`~/Projects/toolkit/standards/figma-standard.md` rule 22) is why the `Danger`/`error` pair must be recorded rather than left: a mismatch is invisible in either artefact alone.
+The toolkit's rule that component vocabulary matches token vocabulary (`standards/figma-standard.md` rule 22) is why the `Danger`/`error` pair must be recorded rather than left: a mismatch is invisible in either artefact alone.
 
 ---
 
@@ -188,4 +188,4 @@ MUI's palette gives four slots per semantic colour, and computes two of them if 
 - [Typography](https://mui.com/material-ui/customization/typography/) and [`createTypography.js`](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/styles/createTypography.js), [Spacing](https://mui.com/material-ui/customization/spacing.md), [Shape](https://mui.com/material-ui/customization/shape.md), [`shadows.js`](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/styles/shadows.js), [`zIndex.js`](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/styles/zIndex.js), [Breakpoints](https://mui.com/material-ui/customization/breakpoints.md)
 - [How to customize](https://mui.com/material-ui/customization/how-to-customize/) (class names, state classes), [Building extensible themes](https://mui.com/material-ui/guides/building-extensible-themes.md), [Theming](https://mui.com/material-ui/customization/theming/)
 - [Joy UI theme colours (v7)](https://v7.mui.com/joy-ui/customization/theme-colors/); [MD3 tracking issue #29345](https://github.com/mui/material-ui/issues/29345); [Material UI Sync](https://mui.com/material-ui/design-resources/material-ui-sync/)
-- Toolkit: `~/Projects/toolkit/skills/component-validator/references/mui.md` (MU3, MU4, MU9, MU10); `~/Projects/toolkit/standards/figma-standard.md` rule 22
+- Toolkit: `skills/component-validator/references/mui.md` (MU3, MU4, MU9, MU10); `standards/figma-standard.md` rule 22

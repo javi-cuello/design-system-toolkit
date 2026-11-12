@@ -1208,7 +1208,7 @@ Researched November 2026.
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/ui/design/visual.md#elevation-borders-radius-and-shape`, `#surfaces-and-elevation-levels` and `#theming-and-dark-mode`; `~/Projects/toolkit/knowledge/code/figma-handoff.md#strokes-borders-outlines-and-shadows`.
+- `knowledge/ui/design/visual.md#elevation-borders-radius-and-shape`, `#surfaces-and-elevation-levels` and `#theming-and-dark-mode`; `knowledge/code/figma-handoff.md#strokes-borders-outlines-and-shadows`.
 - [How surfaces stack](how-surfaces-stack.md), [surfaces in dark mode](surfaces-in-dark-mode.md), [materials and translucency](materials-and-translucency.md).
 
 **Cited but not resolved to a URL**

@@ -119,7 +119,7 @@ Utopia generalises the idea. It defines one scale at a small viewport and anothe
 
 Fluid type buys freedom from breakpoint decisions and a scale that never jumps. It costs the stylesheet's readability, since a `clamp()` with a `vw` term can't be read as a size. More seriously, it can interfere with zoom, which [what zoom does to shrinking type](#zoom-and-shrinking-type) works through.
 
-The toolkit adds a sourcing rule, tested on its own builds: fluid sizes interpolate only between values the design file holds. Sizes invented in Sass have no record in the source, and the next token build can't reproduce them. Where text styles carry Desktop and Mobile modes, the build switches them at a breakpoint, and a clamp between the two is a project's written ruling (`~/Projects/toolkit/knowledge/code/responsive.md#fluid-type`).
+The toolkit adds a sourcing rule, tested on its own builds: fluid sizes interpolate only between values the design file holds. Sizes invented in Sass have no record in the source, and the next token build can't reproduce them. Where text styles carry Desktop and Mobile modes, the build switches them at a breakpoint, and a clamp between the two is a project's written ruling (`knowledge/code/responsive.md#fluid-type`).
 
 Default to stepped rem sizes at one breakpoint, taken from a Mobile mode in the design file. If the design has only desktop sizes, ask for a Mobile mode in the file rather than inventing phone sizes in Sass. **Use `clamp()` by decision, never by default.** Body text that holds avoids the question entirely, which is one more reason to hold it.
 
@@ -429,7 +429,7 @@ Researched November 2026.
 - **The 0.4 zoom bound** is derived from WCAG's understanding text and browsers' 500% zoom limit, matched by the 2.5× rule in Smashing's commentary; it is not a WCAG rule. A stricter reading of 1.4.4 that requires 200% at 200% zoom would fail any breakpoint shrink, GOV.UK's included.
 - **The worked example's style-to-size mapping** is read from its ten sizes and ten styles in order; if the project assigns them differently, the mobile table's rows move with it.
 - **Unread sources.** The New York Times served no article to the headless browser, and Material 3's guidance for compact windows did not render; neither is in the tables.
-- **Where this came from.** This guide was split out of a longer guide on type for UI and content. The scale itself is in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), the prose gaps in [space between prose elements](space-between-prose-elements.md), and the toolkit's rules on fluid type in `~/Projects/toolkit/knowledge/code/responsive.md#fluid-type`.
+- **Where this came from.** This guide was split out of a longer guide on type for UI and content. The scale itself is in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), the prose gaps in [space between prose elements](space-between-prose-elements.md), and the toolkit's rules on fluid type in `knowledge/code/responsive.md#fluid-type`.
 - **Evidence quality.** The only user-outcome evidence here is GOV.UK's, and it rests on service teams' findings and BDA guidance rather than a published study. No system read publishes research comparing stepped with fluid type, or measuring whether heading gaps should shrink on phones.
 
 ---
@@ -469,6 +469,6 @@ Researched November 2026.
 
 **Toolkit knowledge base and sister pieces**
 
-- `~/Projects/toolkit/knowledge/code/responsive.md#fluid-type`. Rem terms, the 2.5× bound, modes from the design file.
-- `~/Projects/toolkit/knowledge/ui/design/visual.md#type-for-ui-and-long-form-content`.
+- `knowledge/code/responsive.md#fluid-type`. Rem terms, the 2.5× bound, modes from the design file.
+- `knowledge/ui/design/visual.md#type-for-ui-and-long-form-content`.
 - [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [space between prose elements](space-between-prose-elements.md), [naming text styles](naming-text-styles.md).

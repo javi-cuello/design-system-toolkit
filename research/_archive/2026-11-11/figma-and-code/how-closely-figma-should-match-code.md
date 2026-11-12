@@ -37,7 +37,7 @@ A Figma component and a coded component share a purpose and very little machiner
 
 The practitioners who disagree most loudly about where truth lives still converge on the first three rows. Nathan Curtis says his belief in component API alignment has only hardened. Greg Sargent, who argues Figma and code should be built differently, still insists the naming has to match. The fight is almost entirely about rows four and five.
 
-The toolkit's component contract draws the same line from the other direction, by asking which layers a check can hold exactly: the API, the structure, the token bound to each part per variant, layout as intent, and states as props with the token changes they cause. Behaviour, keyboard and focus stay in code tests; usage guidance stays on the docs page (`~/Projects/toolkit/knowledge/code/figma-handoff.md#what-a-component-contract-covers`). Every published system that ships component data (Spectrum's JSON schemas, Primer's `docs.json`, the custom elements manifest, Code Connect) stops at the API and structure too.
+The toolkit's component contract draws the same line from the other direction, by asking which layers a check can hold exactly: the API, the structure, the token bound to each part per variant, layout as intent, and states as props with the token changes they cause. Behaviour, keyboard and focus stay in code tests; usage guidance stays on the docs page (`knowledge/code/figma-handoff.md#what-a-component-contract-covers`). Every published system that ships component data (Spectrum's JSON schemas, Primer's `docs.json`, the custom elements manifest, Code Connect) stops at the API and structure too.
 
 **What to do.** State the policy per layer, not as one sentence. "As aligned as possible" is right for names, the interface and the visual result. For structure the defensible rule is "same named parts, construction free". For behaviour it is "code owns it, Figma shows its states".
 
@@ -58,7 +58,7 @@ Shipping systems mostly say code while maintaining a Figma library that mirrors 
 
 No system keeps the two identical by tooling alone. MUI's Sync plugin, which generated a theme from Figma, was suspended in 2024; its component sync had covered only Button, Switch and Typography and broke if a layer was renamed. Sparkbox's account of drift is typical: a radio button changed in production without design review was found nine months later by comparing screenshots against Figma.
 
-The toolkit runs the loop with Figma canonical for the look and for the API while the design is drawn first, and offers a project the option of making a component contract, keyed by Figma component key rather than name, the source of the API instead. In both cases neither side updates the other directly: a change is a proposal, made on both sides and derived again (`~/Projects/toolkit/knowledge/code/figma-handoff.md#what-a-component-contract-covers`).
+The toolkit runs the loop with Figma canonical for the look and for the API while the design is drawn first, and offers a project the option of making a component contract, keyed by Figma component key rather than name, the source of the API instead. In both cases neither side updates the other directly: a change is a proposal, made on both sides and derived again (`knowledge/code/figma-handoff.md#what-a-component-contract-covers`).
 
 **What to do.** Do not stall the alignment rule on this debate. Write the interface down once (names, props, values) and treat a mismatch as a defect on whichever side is behind. For a team building on a code library such as MUI, code will lead most of the time; that is a default, not a doctrine.
 
@@ -70,7 +70,7 @@ The toolkit runs the loop with Figma canonical for the look and for the API whil
 
 A designer and an engineer who say "Button" should mean the same thing, and every tool that pairs a Figma component with its code needs a key. Primer's contribution guide makes it a rule: `ActionList` in code is `ActionList` in Figma, with parts named after their subcomponents, such as `ActionList.Divider` ([Primer: contributing to Figma](https://primer.style/product/contribute/contributing-to-figma/)). MUI's kit uses the React export name in its paths (`Card/Elements/CardHeader`).
 
-Matching does not mean matching casing. Curtis's 2026 spec work declares the Figma casing as a convention and transforms between them, so `Card header` and `CardHeader` are the same name ([What Component Specs Leave Behind](https://nathanacurtis.substack.com/p/what-component-specs-leave-behind)). The toolkit's inventory comparison does the same and nothing looser: a Figma component is in code when the code has a component of its name written any way ("Autocomplete input" is `AutocompleteInput`). Resemblance is only a suggestion: "Text area input" and `TextArea` are probably one component, and nothing in the two names proves it, so a proposed pair goes to a person to confirm (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, "Before measuring").
+Matching does not mean matching casing. Curtis's 2026 spec work declares the Figma casing as a convention and transforms between them, so `Card header` and `CardHeader` are the same name ([What Component Specs Leave Behind](https://nathanacurtis.substack.com/p/what-component-specs-leave-behind)). The toolkit's inventory comparison does the same and nothing looser: a Figma component is in code when the code has a component of its name written any way ("Autocomplete input" is `AutocompleteInput`). Resemblance is only a suggestion: "Text area input" and `TextArea` are probably one component, and nothing in the two names proves it, so a proposed pair goes to a person to confirm (`skills/design-code-parity/SKILL.md`, "Before measuring").
 
 Three kinds of exception appear in shipping systems, all narrow:
 
@@ -103,7 +103,7 @@ Even Figma's Simple Design System is not perfectly aligned: `State: Disabled` be
 
 Names also beat structure in one migration worth knowing. Polaris v12 collapsed seven Button booleans (`connectedDisclosure`, `outline`, `destructive`, `primary`, `primarySuccess`, `plain`, `monochrome`) into two enumerations, `variant` and `tone`: `destructive` became `variant="primary" tone="critical"`. A Figma axis that mirrored the old booleans would have needed a mapping table; one that mirrors the enums maps straight through. Model an enumeration as one axis on both sides.
 
-The toolkit adds a rule from a real escape: name code attributes as Figma names the prop, and declare a translation only for a real collision, such as `Role` to `variant`, because `role` is an ARIA attribute. On the reference project a code attribute named `tint` for Figma's `Colour` measured fine inside its own story and surfaced only when a screen held the component, because instance props compare under Figma's names (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, "Traps").
+The toolkit adds a rule from a real escape: name code attributes as Figma names the prop, and declare a translation only for a real collision, such as `Role` to `variant`, because `role` is an ARIA attribute. On the reference project a code attribute named `tint` for Figma's `Colour` measured fine inside its own story and surfaced only when a screen held the component, because instance props compare under Figma's names (`skills/design-code-parity/SKILL.md`, "Traps").
 
 **What to do.** Make property names and option values match the code's words, with only the casing translated (`Size: Small` for `size="small"`). Keep translations to genuine collisions with HTML or ARIA names, and record each in one place the comparison owns. Treat every other translation in a mapping file as a rename waiting to happen.
 
@@ -121,7 +121,7 @@ Figma's property types are variant, boolean, instance swap, text and, since June
 - **Code-only, accessibility and semantics.** `aria-label`, heading `level`, the polymorphic `as`. Primer says a parameter that cannot be expressed in Figma, such as `alt` or `href`, need not be included; yet its IconButton exposes `aria-label` as a text property so designers write the accessible name.
 - **Code-only, controlled state and data.** `value`, `onChange`, `minLength`.
 
-Where code-only props are written down is split. Curtis and Pitre put them in a hidden "code only props" layer that never renders ([Southleft: implementing code-only props](https://southleft.substack.com/p/implementing-code-only-props-in-figma)); Sargent says they belong in documentation ([Figma and code library sharing](https://gregsargent.com/articles/figma-code-library-sharing)). The toolkit's parity loop treats a value the code offers and Figma never drew as a question rather than a pass: a `codeOnly` entry needs a reason, and asking "is every value your controls offer mapped to a Figma variant?" once on a finished build found four that were code ahead of the design (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, gate 4).
+Where code-only props are written down is split. Curtis and Pitre put them in a hidden "code only props" layer that never renders ([Southleft: implementing code-only props](https://southleft.substack.com/p/implementing-code-only-props-in-figma)); Sargent says they belong in documentation ([Figma and code library sharing](https://gregsargent.com/articles/figma-code-library-sharing)). The toolkit's parity loop treats a value the code offers and Figma never drew as a question rather than a pass: a `codeOnly` entry needs a reason, and asking "is every value your controls offer mapped to a Figma variant?" once on a finished build found four that were code ahead of the design (`skills/design-code-parity/SKILL.md`, gate 4).
 
 **What to do.** Accept one-sided properties, and mark the boundary: one prefix or suffix for Figma-only toggles, one agreed home for code-only props. Never let a code-only prop recorded in Figma reuse the name of a native prop (Curtis's rule). Check the other direction too: a value only code offers is a design question.
 
@@ -143,7 +143,7 @@ Shipping systems map it the same way. SDS turns `State: Disabled` into `isDisabl
 
 Carbon carries the pattern one step further: `State: Skeleton` in Figma renders a separate component in code (`ButtonSkeleton`). Two traps sit here. **Compound values** such as `Checked-Hover` match no code and do not scale. **Inverted values**: Carbon maps `Show label` to `hideLabel` by inverting it, which works until someone edits one side and forgets.
 
-The toolkit's rule matches: a state axis is pseudo-classes, disabled is the control's own, and a boolean that is really a state (`Selected`, `Checked`, `Expanded`) is the platform's state (`:checked`, `aria-selected`), never an invented attribute (`~/Projects/toolkit/knowledge/code/figma-handoff.md#variants-to-attributes`). Keep Focus on the axis, drawn as an outside stroke so it maps to `outline` and never shifts layout.
+The toolkit's rule matches: a state axis is pseudo-classes, disabled is the control's own, and a boolean that is really a state (`Selected`, `Checked`, `Expanded`) is the platform's state (`:checked`, `aria-selected`), never an invented attribute (`knowledge/code/figma-handoff.md#variants-to-attributes`). Keep Focus on the axis, drawn as an outside stroke so it maps to `outline` and never shifts layout.
 
 **What to do.** Accept interaction state as a Figma axis with no code prop, and disabled and loading as Figma states mapped to code booleans. Keep each value single-meaning, name boolean values after the code prop, and say in the spec which properties each state changes, so combinations are predictable without being drawn.
 
@@ -157,7 +157,7 @@ The arguments against mirroring are concrete. Curtis calls a fully transformable
 
 Structural differences are not free, though. Carbon's list of what Code Connect cannot map is made of them: RadioButton's props sit on each radio in Figma and on the group in code; a TreeView node's icon is a child in code and not a swap in Figma; nested lists are built differently. The Tampere Design System's feasibility review counted 25 components that mapped directly, 3 needing static snippets, 4 with structural mismatches and 2 with no Figma counterpart ([Tampere issue 37](https://github.com/Tampere/Tampere-design-system/issues/37)).
 
-The toolkit's parity loop met the commonest benign case and turned it into a mapping rule: when the design draws a pair of frames the DOM collapses into one element (an outer frame that pads nothing around an inner one that pads 20), map the wrapper to nothing and the inner frame to the element. On one project that turned 52 of 56 newly surfaced differences into mappings, and the four left were real defects (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, "Traps").
+The toolkit's parity loop met the commonest benign case and turned it into a mapping rule: when the design draws a pair of frames the DOM collapses into one element (an outer frame that pads nothing around an inner one that pads 20), map the wrapper to nothing and the inner frame to the element. On one project that turned 52 of 56 newly surfaced differences into mappings, and the four left were real defects (`skills/design-code-parity/SKILL.md`, "Traps").
 
 **What to do.** Match the named parts and where each property sits (group or item). Leave construction free: auto-layout wrappers and CSS containers need not mirror each other. Record a property that lives in a different place on each side as a deviation, and record a collapsed wrapper as a mapping, not a waiver.
 
@@ -188,7 +188,7 @@ Shipping examples run both ways. Pajamas removed a Figma property from Modal bec
 
 Nobody argues for visual divergence; what varies is enforcement. Chromatic's answer is to link each story to its Figma variant for side-by-side review ([Chromatic](https://www.chromatic.com/blog/connect-figma-to-storybook/)). Southleft's Figma Console MCP scores a comparison of visuals, spacing, type, tokens, API and accessibility ([Figma Console MCP](https://github.com/southleft/figma-console-mcp)). The precondition is shared tokens, and most teams lack it: zeroheight's 2026 survey of 147 teams found 60% with no token automation; 29% automate design to code, 6% code to design and 5% both ([zeroheight Design Systems Report 2026](https://report.zeroheight.com/)).
 
-The toolkit has run this as a gate on two projects, and its findings change what "measured" should mean (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`):
+The toolkit has run this as a gate on two projects, and its findings change what "measured" should mean (`skills/design-code-parity/SKILL.md`):
 
 - **Render and read computed styles.** A tool that scores a typed description of the code against a Figma node measures the typist; a wrong transcription scores 100%. The Figma Console MCP's spec comparison is of that kind.
 - **Prove the set, not the sample.** Every variant the library declares is measured or waived by name; until that gate was written, the run had no opinion about the ninety-one variants nobody mentioned.
@@ -231,7 +231,7 @@ The failures say more than the averages. With the current names, Claude turned F
 
 The systems that handle exceptions well name the exception where it lives (Primer's `?` suffix), encode the translation once (Code Connect files, published from CI in Carbon and Primer), and keep a list of what cannot be mapped (Carbon's open issue is in effect a deviation register). Southleft's contracts prototype states the principle for tools: missing information is reported, never guessed ([ds-contracts-poc](https://github.com/southleft/ds-contracts-poc)).
 
-The toolkit's parity loop, run on two projects, sharpened the register into four properties a prose list does not have (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, part 6):
+The toolkit's parity loop, run on two projects, sharpened the register into four properties a prose list does not have (`skills/design-code-parity/SKILL.md`, part 6):
 
 - **A waiver carries its size.** An open-ended waiver written for two pixels of stroke silently absorbed a twenty-two pixel bug, a label the code still rendered after being told to hide it. `within: 2` fails the moment it becomes a different difference.
 - **A waiver has one owner:** fix the Figma file, fix the code, live content, or a ruled translation.
@@ -333,8 +333,8 @@ What keeps it workable is measurement and a register: compare rendered code with
 
 ### The toolkit's own tested rules
 
-- `~/Projects/toolkit/skills/design-code-parity/SKILL.md` (waivers, gates, traps; two projects)
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md` (variants to attributes; what a component contract covers)
+- `skills/design-code-parity/SKILL.md` (waivers, gates, traps; two projects)
+- `knowledge/code/figma-handoff.md` (variants to attributes; what a component contract covers)
 
 ### Commentary: practitioners
 

@@ -387,7 +387,7 @@ Then record, for every icon, whether it flips. Codex keeps that decision as data
 
 You can keep the same decision in the icon library itself: one line in each icon's description, `Right to left: mirrors` or `Right to left: stays`. Arrows and chevrons usually mirror; play, pause and clocks stay.
 
-In code, the developer then flips every marked icon in one place. It follows the direction of whatever surrounds the icon, so an arrow inside a block of English on an Arabic page correctly stays as it is ([toolkit: i18n](~/Projects/toolkit/knowledge/code/i18n.md#logical-properties-and-mirroring)).
+In code, the developer then flips every marked icon in one place. It follows the direction of whatever surrounds the icon, so an arrow inside a block of English on an Arabic page correctly stays as it is ([toolkit: i18n](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/i18n.md#logical-properties-and-mirroring)).
 
 ### Keep left and right out of every name
 
@@ -663,7 +663,7 @@ So a designer working in English does nothing different. A designer drawing an A
 
 ### What developers do
 
-In code, the same decisions become two rules. The font stack names both typefaces, or the page picks the family by language, so every Arabic letter gets the Arabic one. And line height is a ratio of the font size, like 1.5, from your tokens, never a fixed pixel number; a fixed pixel line height that suits English cuts off the stacked marks of scripts like Thai or Vietnamese ([toolkit: i18n](~/Projects/toolkit/knowledge/code/i18n.md#font-coverage)).
+In code, the same decisions become two rules. The font stack names both typefaces, or the page picks the family by language, so every Arabic letter gets the Arabic one. And line height is a ratio of the font size, like 1.5, from your tokens, never a fixed pixel number; a fixed pixel line height that suits English cuts off the stacked marks of scripts like Thai or Vietnamese ([toolkit: i18n](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/i18n.md#font-coverage)).
 
 **Pick an Arabic companion, switch it with a mode, set letter spacing to 0, keep the scale, and change line height only if real Arabic reads tight.**
 
@@ -699,7 +699,7 @@ Here's what that does to a button. "Sign in" is 7 characters, and its Arabic run
   <text x="300" y="132" font-size="12" fill="#5b6270" text-anchor="middle">7 characters in English, 12 in Arabic</text>
 </svg>
 
-A fixed-width button looks perfect for ever with "Sign in" in it, which is exactly why real Arabic belongs in your file. Developers can catch the same problem without a translator: they swap every label for a deliberately longer fake version, about 40 percent longer, and check what overflows ([toolkit: i18n](~/Projects/toolkit/knowledge/code/i18n.md#text-expansion-and-no-fixed-widths-on-text)).
+A fixed-width button looks perfect for ever with "Sign in" in it, which is exactly why real Arabic belongs in your file. Developers can catch the same problem without a translator: they swap every label for a deliberately longer fake version, about 40 percent longer, and check what overflows ([toolkit: i18n](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/i18n.md#text-expansion-and-no-fixed-widths-on-text)).
 
 **Hug content, use minimum widths rather than fixed ones, let labels wrap to two lines, and paste real Arabic into your components.**
 
@@ -764,7 +764,7 @@ Figma doesn't convert digits. It shows exactly the characters you type, so `123`
 
 Your components don't change. A badge with a count, a price tag, a date picker: each shows whatever text it's given, in either style.
 
-For your developer: the digit style is a setting on the language, never hard-coded, and every number goes through the platform's own number formatting rather than being assembled by hand ([toolkit: i18n](~/Projects/toolkit/knowledge/code/i18n.md#numbers-dates-plurals-and-lists)).
+For your developer: the digit style is a setting on the language, never hard-coded, and every number goes through the platform's own number formatting rather than being assembled by hand ([toolkit: i18n](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/i18n.md#numbers-dates-plurals-and-lists)).
 
 ### What always runs left to right?
 
@@ -841,7 +841,7 @@ Text your team writes, like a button label or a heading, needs no mark. It's alw
   <text x="300" y="196" font-size="12" fill="#5b6270" text-anchor="middle">Mark text from users (names, search terms, titles) as either direction</text>
 </svg>
 
-For your developer: that's `dir="auto"` or `<bdi>` around the inserted text, never invisible Unicode control characters typed into the strings ([W3C](https://www.w3.org/International/articles/inline-bidi-markup/); [toolkit: i18n](~/Projects/toolkit/knowledge/code/i18n.md#bidirectional-text)).
+For your developer: that's `dir="auto"` or `<bdi>` around the inserted text, never invisible Unicode control characters typed into the strings ([W3C](https://www.w3.org/International/articles/inline-bidi-markup/); [toolkit: i18n](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/i18n.md#bidirectional-text)).
 
 **Decide the digit style per market and type it in your mockups, keep numbers, addresses and codes left to right, write each sentence as one text layer with gaps, mark text from users as either direction, and test with real mixed content.**
 
@@ -896,7 +896,7 @@ That's why review is the real control. Ask for a direction switch in your compon
 
 Use real translated text, because mirrored English tests neither length nor mixed-language behaviour. Make your test content mix scripts, because bugs cluster where the direction changes. And have someone who reads the language review it. That's the step teams skip, and it's the only one that catches the photograph.
 
-Some of this can be automated. The toolkit proposes code checks that render each page right to left and look for overflowing text, flag padding and alignment written as "left" and "right" in component code, flag invisible control characters in text files, and check that each page declares its language ([toolkit: i18n](~/Projects/toolkit/knowledge/code/i18n.md)). These are proposals there, not checks that run yet.
+Some of this can be automated. The toolkit proposes code checks that render each page right to left and look for overflowing text, flag padding and alignment written as "left" and "right" in component code, flag invisible control characters in text files, and check that each page declares its language ([toolkit: i18n](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/i18n.md)). These are proposals there, not checks that run yet.
 
 **Ask for a direction switch on day one, review with real text and mixed-script content, and get a native reader to look.**
 
@@ -990,7 +990,7 @@ Give developers rules, not mirrored artboards. Code generated from Figma mirrors
 
 **The toolkit's own pages**
 
-- `~/Projects/toolkit/knowledge/code/i18n.md`: language and direction, logical properties and mirroring (including the MCP code-output case), bidirectional text, numbers and dates, text expansion, font coverage. Logical properties are listed as a candidate in `~/Projects/toolkit/knowledge/code/candidates.md`.
+- `knowledge/code/i18n.md`: language and direction, logical properties and mirroring (including the MCP code-output case), bidirectional text, numbers and dates, text expansion, font coverage. Logical properties are listed as a candidate in `knowledge/code/candidates.md`.
 
 **Vendor descriptions, not verified by a trial**
 

@@ -202,7 +202,7 @@ So collection, mode, group and variable names all become file names, custom prop
 
 Code syntax is a separate trap. In a test, a variable with web code syntax `var(--c)` was renamed to `color/renamed`, and Dev Mode still printed `var(--c)`. A team that renames without updating code syntax ships snippets pointing at the old name, while an exporter that reads names ships the new one.
 
-The toolkit's projects take the opposite route on purpose. Tokens are generated under Figma's own names, and a component's contract can be stored keyed by its Figma component key, so a rename in Figma keeps its contract (`~/Projects/toolkit/knowledge/code/figma-handoff.md#what-a-component-contract-covers`).
+The toolkit's projects take the opposite route on purpose. Tokens are generated under Figma's own names, and a component's contract can be stored keyed by its Figma component key, so a rename in Figma keeps its contract (`knowledge/code/figma-handoff.md#what-a-component-contract-covers`).
 
 A rename that reaches exported names is breaking. **Treat exported names as a public API, and carry each variable's ID in `$extensions` so your pipeline can tell a rename from a deletion.** Keep the old name as a deprecated alias for at least one release. Lint for unknown custom properties, as Primer's [stylelint config](https://github.com/primer/stylelint-config) does with `csstools/value-no-unknown-custom-properties` against its own token files. Update code syntax in the same change, and settle collection and mode names before the first export.
 
@@ -272,7 +272,7 @@ Values split the other way. Code-side policies call them minor: Spectrum lists i
 
 Nathan Curtis argues the same from code. A change contained inside a component is safe, while one that alters what an adopter controls (contrast against their background, text that now wraps) [breaks them whatever the version says](https://nathanacurtis.substack.com/p/visual-breaking-change-in-design-systems-1e9109fac9c4).
 
-Put as one rule, both audiences get their own column. The toolkit grades every snapshot of a library for both audiences and stores the grade with the change (`~/Projects/toolkit/standards/snapshot-standard.md`, rule 20; `GRADE_RULES` in `~/Projects/toolkit/tools/snapshot/store.cjs`). The table below is what it runs.
+Put as one rule, both audiences get their own column. The toolkit grades every snapshot of a library for both audiences and stores the grade with the change (`standards/snapshot-standard.md`, rule 20; `GRADE_RULES` in `tools/snapshot/store.cjs`). The table below is what it runs.
 
 | Change | Figma files | Code |
 |---|---|---|
@@ -293,7 +293,7 @@ Two rows are less obvious than they look. A component or layer rename is minor f
 
 No policy found names a default *value* change outright. Primer has shipped flipped defaults as minors with an upgrade caution, so minor for both, announced, is the reading that matches shipped practice.
 
-The toolkit's one operational lesson about the grade itself is to print it first. On one project a run's first lines said BREAKING, with six renamed tokens, and the reader looked at the last forty lines and missed it (`~/Projects/toolkit/skills/design-code-parity/SKILL.md`, "Traps").
+The toolkit's one operational lesson about the grade itself is to print it first. On one project a run's first lines said BREAKING, with six renamed tokens, and the reader looked at the last forty lines and missed it (`skills/design-code-parity/SKILL.md`, "Traps").
 
 **Keep the two levels separate all the way to the release note, and let the higher one set the version number.** A release whose only major is a variable rename should say it is major for code and nothing for Figma files, so your designers don't stop work for it. Promote a value change to major for Figma files when it changes a component's size, and for code when it lowers contrast below the level your system promises.
 
@@ -456,9 +456,9 @@ Researched October 2026; re-checked November 2026.
 
 **The toolkit's own tested rules**
 
-- `~/Projects/toolkit/standards/snapshot-standard.md`, rule 20, and `GRADE_RULES` in `~/Projects/toolkit/tools/snapshot/store.cjs`
-- `~/Projects/toolkit/knowledge/code/figma-handoff.md#what-a-component-contract-covers`
-- `~/Projects/toolkit/skills/design-code-parity/SKILL.md`, "Traps"
+- `standards/snapshot-standard.md`, rule 20, and `GRADE_RULES` in `tools/snapshot/store.cjs`
+- `knowledge/code/figma-handoff.md#what-a-component-contract-covers`
+- `skills/design-code-parity/SKILL.md`, "Traps"
 
 **Commentary and community reports**
 
