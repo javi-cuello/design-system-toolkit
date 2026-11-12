@@ -146,7 +146,10 @@ if [ -d skills ]; then
         # 27-line paste-and-run engine). A script fence (js, ts, python) always
         # counts; a shell or untagged fence counts when it defines a name or
         # loops (the pilot of 2026-11-11 planted a bash and an untagged engine
-        # and neither was seen; a long command line is not an engine).
+        # and neither was seen; a long command line is not an engine). awk,
+        # ruby and perl are script fences too (2026-11-12): an agent runs them.
+        # A fence of a language a project writes into its own code (php, jsx,
+        # html, css: kirby-cms's 23 php templates) is an example, not an engine.
         # One line per skill, with the count; the blocks are the debt.
         blocks=$(cat "${d}SKILL.md" $(find "${d}references" -name '*.md' 2>/dev/null) 2>/dev/null | awk -v scripts="$(cat $(find "${d}scripts" -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.py' \) 2>/dev/null) /dev/null 2>/dev/null | grep -oE '(function|const|def) +[A-Za-z_][A-Za-z0-9_]*' | sed -E 's/^(function|const|def) +//' | sort -u | tr '\n' ' ')" '
             # inb: 1 a script fence, 2 a shell or untagged fence (code only when it defines or loops), 3 any other fence.
@@ -154,7 +157,7 @@ if [ -d skills ]; then
             # inside a ```` block is content, not a close, and ~~~ fences pair too.
             /^[ \t]*(```|~~~)/ && inb { f = $0; sub(/^[ \t]*/, "", f); if (substr(f, 1, 1) == fc && f ~ /^(`+|~+)[ \t]*$/) { m = f; sub(/[ \t]*$/, "", m); if (length(m) >= fl) { if (inb != 3 && n >= 8 && (inb == 1 || defined + loops > 0) && !(defined > 0 && defined == shipped)) k++; inb = 0; next } } }
             !inb && /^[ \t]*(```|~~~)/ { f = $0; sub(/^[ \t]*/, "", f); fc = substr(f, 1, 1); match(f, /^(`+|~+)/); fl = RLENGTH; tag = substr(f, fl + 1); n = 0; defined = 0; shipped = 0; loops = 0
-                inb = tag ~ /^(js|javascript|mjs|cjs|ts|typescript|python|py)([^a-z]|$)/ ? 1 : tag ~ /^((sh|bash|shell|zsh)([^a-z]|$)|[ \t]*$)/ ? 2 : 3; next }
+                inb = tag ~ /^(js|javascript|mjs|cjs|ts|typescript|python|py|awk|ruby|rb|perl|pl)([^a-z]|$)/ ? 1 : tag ~ /^((sh|bash|shell|zsh)([^a-z]|$)|[ \t]*$)/ ? 2 : 3; next }
             inb == 3 { next }
             inb && /^[ \t]*(for [A-Za-z_][A-Za-z0-9_]* in |while |until )|^[ \t]*[A-Za-z_][A-Za-z0-9_]* *\(\) *\{/ { loops++ }
             inb { n++; line = $0; while (match(line, /(function|const|def) +[A-Za-z_][A-Za-z0-9_]*/)) { name = substr(line, RSTART, RLENGTH); sub(/^(function|const|def) +/, "", name); defined++; if (index(" " scripts " ", " " name " ")) shipped++; line = substr(line, RSTART + RLENGTH) } }

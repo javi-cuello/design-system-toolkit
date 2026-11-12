@@ -49,6 +49,8 @@ They act only inside the toolkit or a project repo (one with a `figma-design-sys
 
 ## Test
 
+`test-hooks.mjs` also runs the loop end to end through `hooks.mjs` as Claude Code calls it: one session refused an unplanned full-size edit, let through once planned, held at the stop and the push until a reviewer reports, then closed and pushed.
+
 ```sh
 node tools/claude-hooks/test-hooks.mjs
 node tools/claude-hooks/test-standards-read.mjs

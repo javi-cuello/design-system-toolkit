@@ -47,6 +47,7 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
+import { expandHome } from '../shared/real-path.mjs';
 import { fileURLToPath } from 'node:url';
 import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary } from './eval.mjs';
 import { CODE, unwaived } from '../system-mcp/validate.mjs';
@@ -59,7 +60,7 @@ const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.
 const argv = process.argv.slice(2);
 const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
 const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
-const REPO = path.resolve((opt('--repo') || '.').replace(/^~/, os.homedir()));
+const REPO = path.resolve(expandHome(opt('--repo') || '.'));
 const NO_AGENT = flag('--no-agent'), KEEP = flag('--keep'), KEEP_FILES = flag('--keep-files');
 // the rules hook (tools/claude-hooks/hooks.mjs edit) on or off for the agent, so a run can say whether it helps
 const RULES = opt('--rules') || 'on';

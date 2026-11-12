@@ -28,6 +28,8 @@ const TYPES = {
 
 export function serve(dir, { port = 0 } = {}) {
   const server = createServer((req, res) => {
+    // only this machine's own names: a page elsewhere that points its name here (DNS rebinding) reads nothing
+    if (!/^(127\.0\.0\.1|localhost):\d+$/.test(req.headers.host || '')) { res.writeHead(421).end(); return; }
     const at = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
     let file = join(dir, at === '/' ? '/index.html' : at);
     let stat;

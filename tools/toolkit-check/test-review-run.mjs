@@ -45,4 +45,5 @@ const stream = '{"type":"assistant","message":{"content":[{"type":"tool_use","na
 ok(skillCalled(stream) === 'figma-components-audit' && Math.abs(cost(stream) - 0.1822) < 1e-9, 'a probe names the skill called and its cost');
 ok(skillCalled('{"type":"result","total_cost_usd":0.16}') === 'none', 'a turn that called no skill is none, never an empty line');
 ok(skillCalled('{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"args":"x","skill":"humanizer"}}]}}') === 'humanizer', 'the skill is read by key, in whatever order the model wrote the input');
+ok(skillCalled('{"message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"ds-model-routing"}}]}}\n{"message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"figma-doc-generator"}}]}}') === 'ds-model-routing+figma-doc-generator', 'a skill that routes first is not the only one named');
 console.log(`test-review-run: ${n} assertions passed`);

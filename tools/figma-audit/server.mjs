@@ -222,6 +222,8 @@ const ANTHROPIC_KEY = KEY_LOOKS_REAL ? RAW_KEY : "";
 // Fix this and Ask. The audit's judgement takes its model and effort from the
 // skill (scanner/judge.json), read per call so an edit there needs no restart.
 const MODEL = "claude-sonnet-5";
+// the most one call may ask for: the page's largest is the judge's 16000, so no page spends past it
+const MAX_TOKENS = 16000;
 // USD per million tokens, input and output, from Anthropic's price list.
 // A model missing here still runs; its calls are recorded without a price.
 const PRICE = { "claude-sonnet-5": [2, 10], "claude-opus-5-5": [4, 20], "claude-opus-5": [5, 25] };
@@ -1094,7 +1096,7 @@ const server = createServer(async (req, res) => {
         method: "POST",
         headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({
-          model: (judge && judge.model) || MODEL, max_tokens: max_tokens || 2000,
+          model: (judge && judge.model) || MODEL, max_tokens: Math.max(1, Math.floor(Math.min(Number(max_tokens) || 2000, MAX_TOKENS))),
           ...(judge && judge.effort && { output_config: { effort: judge.effort } }),
           // NO SAMPLING PARAMETERS. `temperature: 0` was added here on
           // 2026-09-22 to make the judge repeatable — the same 12 candidates

@@ -15,7 +15,7 @@ The commands you run from the repo root. Each is a short script that hands over 
 | `bin/keys.conf.example` | Not a command: the `keys.conf` `bin/set-key` starts from, with the format of a line. |
 
 ```sh
-bin/check            # everything: about six minutes
+bin/check            # everything
 bin/check --quick    # the standards and the scanners only: under a minute
 ```
 

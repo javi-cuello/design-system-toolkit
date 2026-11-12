@@ -8,6 +8,8 @@ import { join, resolve, sep } from "node:path";
 export async function serveFolder(folder) {
   const root = resolve(folder);
   const site = createServer((req, res) => {
+    // only this machine's own names: a page elsewhere that points its name here (DNS rebinding) reads nothing
+    if (!/^(127\.0\.0\.1|localhost):\d+$/.test(req.headers.host || "")) { res.writeHead(421); return res.end(); }
     let f; try { f = resolve(root, "." + decodeURIComponent(new URL(req.url, "http://x").pathname)); } catch { res.writeHead(400); return res.end(); }
     if (f !== root && !f.startsWith(root + sep)) { res.writeHead(404); return res.end(); }
     if (existsSync(f) && statSync(f).isDirectory()) f = join(f, "index.html");

@@ -198,6 +198,11 @@ Fixture: planted 2026-11-11 in `skills/humanizer/references/` — a 9-line `bash
 Assert: `[G] humanizer — 2 fenced code block(s) of 8+ lines`: the loop and the untagged definition count; the long command does not (calling a shipped script is not an engine). Assert the negative on the repo as it stands: no skill gains a count, because English lines in untagged fences ("for each mode…") are not shell loops, and a fence of any other language (php, yaml, json) is paired and skipped rather than read as an untagged opener. Before the fix the check knew only `js|javascript|mjs|python` fences and saw neither planted engine.
 Walked: 2026-11-11 — the fixture above, observed; the repo's count, 0 before and after.
 
+## G6 · An awk, ruby or perl fence is a script fence; a project's own language is an example
+Fixture: planted 2026-11-12 in `skills/humanizer/references/` — a 9-line `awk` fence (a counting engine) and a 9-line `php` fence defining two functions and looping.
+Assert: `[G] humanizer — 1 fenced code block(s) of 8+ lines`: the awk engine counts, the php block does not (php, jsx, html and css are what a project writes into its own code, as kirby-cms's 23 php templates are). The repo's count stays 0. Before the fix an awk engine was paired and skipped like any other language.
+Walked: 2026-11-12 — the fixture above, observed; the repo's count, 0 before and after.
+
 ## P4 · The inlined ui-base is checked against the source it names
 Fixture: a plugin whose inlined ui-base block has (a) a changed CSS rule, and separately (b) only reworded comment text.
 Assert: (a) is an **ERROR** and exits 1 — a real rendering difference between a plugin and the baseline it claims to inline. (b) is **information** and exits 0 — the guidance text drifts as the baseline is revised, and failing on wording would make the check noise.

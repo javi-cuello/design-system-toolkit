@@ -87,3 +87,54 @@ test('a gate that throws, or will not load, is told to the session, not swallowe
     }
   }
 });
+
+/* The loop end to end, through hooks.mjs as Claude Code calls it (tools/toolkit-check/review.md point 21): one
+   session's transcript grows turn by turn, and each hook answers as the work reaches it — the plan before the edit
+   that makes the work full-size, the review before the turn ends, the close's lines, then the push. */
+test('the loop runs end to end: plan, edit, review, close, push', (t) => {
+  const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-loop-')));
+  t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+  const env = { ...process.env, TMPDIR: tmp, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off' };
+  delete env.TOOLKIT_GATES; delete env.TOOLKIT_EVAL_COPY;
+  const hook = (m, pl) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), m], { input: JSON.stringify(pl), encoding: 'utf8', env });
+  const session_id = `test-loop-${process.pid}-${Date.now()}`;
+  const transcript_path = path.join(tmp, `${session_id}.jsonl`);
+  const old = (rec) => ({ ...rec, timestamp: '2020-01-01T00:00:00.000Z' });
+  const call = (name, input, id) => ({ type: 'assistant', cwd: TOOLKIT, message: { content: [{ type: 'tool_use', id, name, input }] } });
+  const result = (id, content = 'x') => ({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content }] } });
+  const add = (...recs) => fs.appendFileSync(transcript_path, recs.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const big = { file_path: path.join(TOOLKIT, 'loop-e2e.mjs'), old_string: 'a', new_string: Array(200).fill('b').join('\n') };
+  const denied = (out) => (JSON.parse(out.stdout || '{}').hookSpecificOutput || {}).permissionDecision === 'deny';
+  const blocked = (out) => JSON.parse(out.stdout || '{}').decision === 'block' ? JSON.parse(out.stdout).reason : null;
+
+  // the work opens with the repo's check, run and read, and the user's ask
+  add(old(call('Bash', { command: 'bin/check' }, 'c1')), old(result('c1', 'skills ok\ngreen')), { type: 'user', origin: { kind: 'human' }, message: { content: 'build it' } });
+  // 1. the edit that makes it full-size, with no plan: refused
+  const pre = { session_id, transcript_path, cwd: TOOLKIT, tool_name: 'Edit', tool_input: big, tool_use_id: 'e0' };
+  // Claude Code writes the call before its PreToolUse hook runs, and a refused one comes back as an error
+  add(call('Edit', big, 'e0'));
+  let out = hook('edit', pre);
+  assert.ok(denied(out), 'an unplanned full-size edit is refused');
+  assert.match(JSON.parse(out.stdout).hookSpecificOutput.permissionDecisionReason, /planned before it is built/);
+  add({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'e0', is_error: true, content: 'refused' }] } });
+  // 2. the plan written: the same edit goes through
+  fs.writeFileSync(path.join(tmp, `toolkit-plan-${session_id}.md`), '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n');
+  add(call('Edit', big, 'e1'));
+  out = hook('edit', { ...pre, tool_use_id: 'e1' });
+  assert.ok(!denied(out) && !/failed/.test(out.stdout), `a planned edit goes through: ${out.stdout}`);
+  add(result('e1'));
+  // 3. the turn ends unreviewed: held, and the push too
+  assert.match(blocked(hook('stop', { session_id, transcript_path, cwd: TOOLKIT, last_assistant_message: 'Done.' })) || '', /^Not done yet/);
+  const push = { session_id, transcript_path, cwd: TOOLKIT, tool_name: 'Bash', tool_input: { command: 'git push' } };
+  assert.ok(denied(hook('edit', push)), 'unreviewed full-size work is not pushed');
+  // 4. a fresh read-only reviewer reports: the close's lines are owed
+  add(call('Agent', { description: 'Review the change', prompt: 'Review this diff', subagent_type: 'Explore' }, 'r1'), result('r1', 'No High findings.'));
+  assert.match(blocked(hook('stop', { session_id, transcript_path, cwd: TOOLKIT, last_assistant_message: 'Done.' })) || '', /^Reviewed full-size work ends/);
+  // 5. the close said: the turn ends, and the push goes
+  const close = 'Done.\nToolkit: nothing; checked the standards.\nOpen: nothing.\nDocs: README.md still right.';
+  assert.equal(hook('stop', { session_id, transcript_path, cwd: TOOLKIT, last_assistant_message: close, stop_hook_active: true }).stdout, '');
+  // the gate ran and closed the work (a gate that threw would also print nothing): the plan is put aside
+  assert.ok(fs.readdirSync(tmp).some((f) => f.startsWith(`toolkit-plan-${session_id}-`) && f.endsWith('.done.md')), 'the closed work\'s plan is put aside');
+  out = hook('edit', push);
+  assert.ok(!denied(out) && !/failed/.test(out.stdout), 'reviewed work is pushed');
+});

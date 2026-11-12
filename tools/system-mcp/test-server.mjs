@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { serveFolder } from "./serve-folder.mjs";
+import http from "node:http";
 
 if (!existsSync(new URL("./node_modules/@modelcontextprotocol/sdk", import.meta.url))) {
   console.log("skip: the system MCP's packages are not installed: run (cd tools/system-mcp && pnpm install --frozen-lockfile)");
@@ -26,6 +27,9 @@ const c = new Client({ name: "system-mcp-test", version: "0" });
 await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("./server.mjs", import.meta.url))], env: { ...process.env, DOCS_URL: site.url }, stderr: "ignore" }));
 const raw = async (name, args = {}) => { const r = await c.callTool({ name, arguments: args }); return { isError: !!r.isError, data: JSON.parse(r.content[0].text) }; };
 const call = async (name, args) => (await raw(name, args)).data;
+// a page elsewhere that points its own name here (DNS rebinding) reads nothing
+const status = (host) => new Promise((done) => { const u = new URL(site.url); (http.get({ host: u.hostname, port: u.port, path: "/", headers: { host } }, (r) => { r.resume(); done(r.statusCode); })).on("error", () => done(0)); });
+ok("the fixture site serves only this machine's own names", await status("evil.example:80") === 421 && await status(new URL(site.url).host) !== 421);
 
 try {
   ok("the server is named for the one project its site is, and tells the client its content is data",

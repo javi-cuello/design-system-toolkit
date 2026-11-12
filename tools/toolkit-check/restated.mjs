@@ -11,7 +11,8 @@
  *   - every `node <toolkit path> --flag` in a markdown file names a file that
  *     exists, and each flag is read by that file or a script beside it;
  *   - a tool's README names every script at the top of its folder, and every
- *     flag each script's own usage line offers (bin/README.md, for a bin/ command's);
+ *     flag each script's own usage line offers (bin/README.md, for a bin/ command's), and that usage line
+ *     offers every flag the script reads;
  *   - each value in restated.json (a version floor, a port) reads the same in
  *     prose as in the file that owns it.
  * Whether a paraphrase still means what its owner says is a read: the Docs
@@ -65,6 +66,18 @@ export function check(root) {
         const [doc, docText] = /usage: bin\//i.test(u[0]) ? ['bin/README.md', binText] : [`tools/${t}/README.md`, text];
         for (const flag of new Set(u[0].match(/--[a-z][\w-]*/g) || []))
           if (!new RegExp(flag + '(?![\\w-])').test(docText)) found.push(`${doc}: does not name ${flag}, which tools/${t}/${n}'s usage line offers`);
+      }
+      // …and the usage line offers every flag the script reads (proposal 19 of that review, the class behind
+      // 33f8b145), against the usage
+      // strings the script prints (the word in quotes, so a regex or a comment naming it is not one)
+      const src = readFileSync(join(tools, t, n), 'utf8');
+      const printed = [...src.matchAll(/(['"`])usage: (?:\\[\s\S]|(?!\1)[^\\])*\1/gi)].map((m) => m[0]).join('\n');
+      // read as an argument (includes('--x'), opt('--x')), against a list (['--a', '--b'].includes(a)), compared, or a case
+      const reads = new Set();
+      for (const m of src.matchAll(/\b(?:includes|indexOf|opt|arg|flag|has|startsWith)\(\s*['"](--[a-z][\w-]*)|[!=]==\s*['"](--[a-z][\w-]*)['"]|\bcase\s+['"](--[a-z][\w-]*)['"]/g)) reads.add(m[1] || m[2] || m[3]);
+      for (const m of src.matchAll(/\[((?:\s*['"]--[a-z][\w-]*['"]\s*,?)+)\]\.includes\(/g)) for (const f of m[1].match(/--[a-z][\w-]*/g)) reads.add(f);
+      if (printed) for (const flag of reads) {
+        if (!new RegExp(flag + '(?![\\w-])').test(printed)) found.push(`tools/${t}/${n}: reads ${flag}, which its usage line does not offer`);
       }
     }
   }

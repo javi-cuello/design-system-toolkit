@@ -1,5 +1,6 @@
 # Changelog — frontend-build
 
+- 3.1.1 (2026-11-12): the design-system scaffold carries a `pnpm-lock.yaml`, so a project started from it installs the pinned Sass (tools/toolkit-check/test-dependabot.mjs requires one per package). Cases unaffected.
 - 3.1.0 (2026-11-12): the audit pass's symptoms, done checklist and simplicity questions link knowledge sections instead of restating them (four practices added there, weighed); profiles, the knowledge list and Baseline defer to their owners; restated rules cited. A6 re-traced.
 - 3.0.0 (2026-11-11): composing a prototype in Figma, and the feedback on one, move to the new `figma-prototype` skill with their script, test, templates and cases (T14–T16, T18–T19); this skill builds and audits code only.
 - 2.21.0 (2026-11-11): Orient step 4 and the knowledge audit follow each item by its weight (toolkit-standard §D 21); a gap against a weak or contested item is a recorded choice, not a defect. T13 amended.

@@ -47,7 +47,7 @@ export const AGENT_TOOLS = ['Read', 'Grep', 'Glob', 'Edit', 'Write', 'Agent', 'T
   'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(ls:*)', 'Bash(wc:*)'];
 export const AGENT_DENIED = ['Bash(git push:*)', 'Bash(git merge:*)', 'Bash(git checkout:*)', 'Bash(git switch:*)',
   'Bash(git reset:*)', 'Bash(git rebase:*)', 'Bash(git worktree:*)', 'Bash(git branch:*)', 'Bash(claude:*)',
-  'Bash(node tools/skill-evals/*)', // the one other script that starts claude, uncapped, and writes to project repos
+  'Bash(node tools/skill-evals/*)', // starts claude uncapped and writes to project repos (route-probe.mjs, the other, has its flags fixed)
   'WebFetch', 'WebSearch'];
 
 /* The agent's brief: review.md is the one list of what is checked; this only says how a run goes. */

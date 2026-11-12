@@ -21,4 +21,10 @@ const missing = packages.filter((d) => !listed.has(d));
 assert.deepEqual(missing, [], `.github/dependabot.yml does not list ${missing.join(', ')}; add each under the npm directories`);
 const stale = [...listed].filter((d) => d !== '/' && !packages.includes(d));
 assert.deepEqual(stale, [], `.github/dependabot.yml lists ${stale.join(', ')}, which holds no package.json`);
-console.log(`ok every package.json folder (${packages.length}) is in dependabot.yml`);
+// and each pins what it installs in a lockfile (point 13), unless it is never installed, said here with why
+const NEVER_INSTALLED = { '/tools/ui-check/vendor': 'its built files are committed; the package.json records where they came from' };
+const tracked = new Set(execFileSync('git', ['-C', REPO, 'ls-files', '*pnpm-lock.yaml', '*package-lock.json'], { encoding: 'utf8' }).split('\n').map((f) => '/' + path.dirname(f)));
+const unlocked = packages.filter((d) => !NEVER_INSTALLED[d] && !tracked.has(d));
+assert.deepEqual(unlocked, [], `${unlocked.join(', ')} has a package.json and no committed lockfile: run pnpm install --lockfile-only there`);
+for (const d of Object.keys(NEVER_INSTALLED)) assert.ok(packages.includes(d), `${d} is exempt from a lockfile but holds no package.json`);
+console.log(`ok every package.json folder (${packages.length}) is in dependabot.yml, with a lockfile`);

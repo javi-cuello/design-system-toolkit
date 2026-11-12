@@ -24,6 +24,7 @@ A screen task may name its `chrome`: the modules the product's shell comes from 
 | `eval.mjs` | The pure parts: a task's shape, a parity summary read, the score (never green when the agent, parity or the stylesheet gate exited in a way its count does not explain: a crash or a timeout is named in the line's `why`), what moved since the last run, contamination — a transcript that read the original repo, or ran git where a repository was reachable or pointed it elsewhere (a `-C`, a git dir, or any `cd` or `pushd` in the command but to the copy's root, `cd src` included), scores 0 — and the grade's inputs: the design, mappings, stories, config, and the tokens, screens, baseline and backlog wherever the config puts them; they are read-only in the copy while the agent works, a run that changed any anyway scores 0 and is never graded (no build, server or gate runs over it), and what a parity run itself writes (its latest measurements, the report, the `--shots` pictures) is never one |
 | `figma.mjs`, `figma-grade.js` | A Figma task's prompt, grader and score (*Figma tasks*) |
 | `test-eval.mjs` | `eval.mjs`'s tests; run by `bin/check` |
+| `test-figma.mjs` | `figma.mjs`'s three commands with a fake grading in place of Figma; `figma-grade.js` runs only inside Figma, through `figma_execute`, and is proven by hand on a real file |
 
 ## Figma tasks
 
@@ -69,4 +70,5 @@ Before trusting a score, `--no-agent` grades the copy as prepared: with the file
 
 ```sh
 node tools/skill-evals/test-eval.mjs
+node tools/skill-evals/test-figma.mjs
 ```

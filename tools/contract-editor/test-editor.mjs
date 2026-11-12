@@ -943,10 +943,11 @@ try {
     const count = `JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /s$/.test(k) && Array.isArray(JSON.parse(localStorage.getItem(k) || 'null'))))).length`;
     const kept = await js(count);
     await named(two, was + ' Two');
-    await waitFor(tab, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was + ' Two')}`, { timeout: 10000 }).catch(() => {});
+    await waitFor(tab, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was + ' Two')}`).catch(() => {});
     ok('a draft edited in another tab is shown here as it is now', (await json()).component === was + ' Two');
     await named(tab, was);
-    await waitFor(two, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was)}`, { timeout: 10000 }).catch(() => {});
+    await waitFor(two, `JSON.parse(document.querySelector('[data-json]').value).component === ${JSON.stringify(was)}`).catch(() => {});
+    // waitFor's own 30 s: under bin/check's load a 10 s wait missed the other tab's storage event in 2 of about 5 runs (2026-11-12); alone it passed 6 of 6
     ok('and an edit here is shown there', await two.evaluate(`JSON.parse(document.querySelector('[data-json]').value).component`) === was);
     ok('the one draft kept once', await js(count) === kept);
     await two.evaluate(`document.querySelector('[data-new]').click()`);

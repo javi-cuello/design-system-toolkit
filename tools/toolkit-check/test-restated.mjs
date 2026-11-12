@@ -19,7 +19,9 @@ const out = check(tree({
   'install.sh': 'echo "install Node 22.12 or later"\n',
   'tools/toolkit-check/restated.json': reg,
   'tools/x/run.mjs': "if (argv.includes('--fast')) go();\n",
-  'tools/x/helper.mjs': "console.error('usage: node tools/x/helper.mjs [--fast] [--hidden]');\n",
+  'tools/x/helper.mjs': "console.error('usage: node tools/x/helper.mjs [--fast] [--hidden]');\nif (argv.includes('--fast') || argv.includes('--secret')) go();\nif (['--listed', '--fast'].includes(a)) go();\nswitch (a) { case '--cased': go(); }\nadopt('--adopted');\n",
+  'tools/x/esc.mjs': "die('usage: esc.mjs it\\'s two lines\\n  esc.mjs --after');\nif (argv.includes('--after')) go();\n",
+  'tools/x/scan.mjs': "const re = /usage: [^\\n]*/;\nif (argv.includes('--z')) go();\n",
   'tools/x/wrap.mjs': "die('usage: bin/x [--quiet] [--loud]');\n",
   'bin/README.md': '# bin\n\n`bin/x --quiet` runs it.\n',
   'tools/x/test-run.mjs': '',
@@ -33,6 +35,10 @@ ok('a command whose file is gone is refused', out.some((l) => /runs tools\/gone\
 ok('a tool README that leaves out a script is refused, a test file is not owed', out.some((l) => /does not name helper\.mjs/.test(l)) && !out.some((l) => /test-run\.mjs/.test(l)));
 ok('a flag a script\'s usage line offers and its README never names is refused; one it names passes',
   out.some((l) => /tools\/x\/README\.md: does not name --hidden, which tools\/x\/helper\.mjs/.test(l)) && !out.some((l) => /does not name --fast/.test(l)));
+ok('a flag a script reads that its own usage line leaves out is refused; one it offers passes',
+  out.some((l) => /tools\/x\/helper\.mjs: reads --secret, which its usage line does not offer/.test(l)) && out.some((l) => /helper\.mjs: reads --listed/.test(l)) && out.some((l) => /helper\.mjs: reads --cased/.test(l))
+  && !out.some((l) => /reads --fast|reads --adopted|reads --after/.test(l)));
+ok('a script whose only usage text is a regex or a comment is not held to it', !out.some((l) => /scan\.mjs: reads/.test(l)));
 ok('a usage line for a bin/ command is held to bin/README.md', out.some((l) => /^bin\/README\.md: does not name --loud/.test(l)) && !out.some((l) => /--quiet/.test(l)));
 ok('a registered value that differs from its owner is refused, one that agrees passes', out.some((l) => /says the Node floor is 22\.10; install\.sh says 22\.12/.test(l)) && out.filter((l) => /Node floor/.test(l)).length === 1);
 ok('a changelog and a case record are history, not checked', !out.some((l) => /old\.mjs|then\.mjs/.test(l)));

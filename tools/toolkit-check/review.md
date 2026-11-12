@@ -93,13 +93,30 @@ scripts it, once a run has found a real instance.
     packages.
 20. **Hand-offs hold.** What each producer writes (the context document, the
     snapshot, the component contract) is what its readers read, checked on
-    real output.
+    real output. The tool chain runs end to end on one project with a code
+    repo, without the Desktop Bridge: `node tools/project-check/check.mjs
+    --repo <it>` holds its stored snapshot to the token build, the specs,
+    parity and the built docs site (the pinned gate asks Figma's API which
+    version is published; parity rewrites its report when the verdict
+    changes; `git -C <it> status` is otherwise clean after, as it was for
+    two projects on 2026-11-12). A red that project already had is its own,
+    said and not fixed here. Each link names the test that holds it; a link no test
+    runs is a finding.
+    Each tool's imports and the files it reads from another tool are listed
+    (`node tools/claude-hooks/impact.mjs <file>`), so a change to one is
+    known to reach the others.
 21. **The loop runs end to end.** Session start, the rules hook, the plan,
-    review and push gates and the closing pass, together, on a scratch repo.
+    review and push gates and the closing pass, together: `test-hooks.mjs`
+    runs one session through `hooks.mjs` as Claude Code calls it; the review
+    reads it against what a real session since the last review met.
 22. **Each request finds its skill.** Realistic and near-miss prompts per
-    skill, run through `node tools/toolkit-check/route-probe.mjs` (one
-    headless turn each, about $0.17), each routes to the one skill it should;
-    a miss or a double claim is a finding.
+    skill, run through `node tools/toolkit-check/route-probe.mjs` (up to
+    three headless turns with Skill the only tool, about $0.20 each), each
+    routes to the skill it should; the skill expected is read from its
+    description first (2026-11-12: three "misses" were the probe's guess).
+    A miss or a double claim is a finding; one probe is a sample, so a miss
+    is run twice before it counts. Probes are paid outside the run's budget:
+    at most 30 in a run, about $6.
 23. **The queue is settled.** Each queued item is a toolkit lesson (fixed or
     proposed), a project's own (dropped, said so), or still open (an *Open:*
     line in its owner).
