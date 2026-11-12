@@ -425,6 +425,7 @@ async function governedSource(project, name) {
   const S = await session(project, { app: false });
   const tab = await S.acquire();
   const tokens = project.snapshot;
+  let opened = false, forced = false;
   const src = {
     governed: true, label: project.config.project, tab, lib, repo: project.repo, out: project.where.parity, mode: tier, tokens,
     value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
@@ -436,8 +437,64 @@ async function governedSource(project, name) {
     instancePattern: project.parity.instance ? (await import('../parity/pair.mjs')).rootPattern(project.parity.instance) : null,
     // another component's mapping axes, by its folder: the props an instance of it is drawn at
     axesOf: (slug) => { const x = project.targets.find((y) => y.kind === 'component' && y.folder === slug); return x && x.mapping ? x.mapping.axes || null : null; },
-    async render(all) {
+    async render(all, { reload = false } = {}) {
       const { __state, ...args } = all;
+      // the story already on screen takes new args through Storybook's own channel, with no reload of the preview
+      // (a reload is most of a read: avatar's 600 reads took 2 minutes); a forced pointer state, before or now, reloads,
+      // as a forced state would outlive the args it was forced for; so does a slot's stand-in
+      const at = src.pseudoOf[__state];
+      if (host === 'storybook' && opened && !forced && !reload && !(at && at.on)) {
+        const { call } = await import('../shared/cdp.mjs');
+        // an arg left unset (where the component's own default draws) is a word on its way in, as JSON drops undefined
+        const UNSET = '\u0000unset';
+        const ok = await call(tab, async (a) => {
+          const UNSET = '\u0000unset';
+          try {
+          const p = window.__STORYBOOK_PREVIEW__, r = p && p.currentRender;
+          if (!r || !r.story) return false;
+          const init = r.story.initialArgs || {};
+          const rendered = () => new Promise((res) => { const f = () => { p.channel.off('storyRendered', f); res(true); }; p.channel.on('storyRendered', f); setTimeout(() => res(false), 3000); });
+          // this read's args, and the story's own for every other arg now away from it: one render, not a reset and an update
+          const now = p.storyStoreValue.args.get(r.id) || {}, same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+          // as the address's args are typed: a contract's value is a word, which Storybook turns into the option it
+          // names (24, false) on the way in from the address and not from the channel; one no option names reloads
+          const want = {};
+          for (const [k, v1] of Object.entries(a)) {
+            const v0 = v1 === UNSET ? undefined : v1;
+            const t = r.story.argTypes[k] || {}, ty = t.type && t.type.name;
+            let v = v0;
+            if (typeof v === 'string' && t.options && t.options.length) { const o = t.options.find((x) => String(x) === v); if (o === undefined) return false; v = o; }
+            else if (typeof v === 'string' && ty === 'number') v = Number(v);
+            else if (typeof v === 'string' && ty === 'boolean') v = v === 'true';
+            want[k] = v;
+          }
+          for (const k of new Set([...Object.keys(now), ...Object.keys(init)])) if (!(k in want) && !same(now[k], init[k])) want[k] = init[k];
+          const moved = Object.fromEntries(Object.entries(want).filter(([k, v]) => !same(v, now[k])));
+          // Storybook's own word that the story drew, some 100 ms after the DOM first changes: a wait for the DOM to
+          // change and hold still read the last args (avatar's teal as cyan) one run in four, whatever it watched
+          let done = Promise.resolve(true);
+          if (Object.keys(moved).length) { done = rendered(); p.channel.emit('updateStoryArgs', { storyId: r.id, updatedArgs: moved }); }
+          const drawn = await done;
+          // drawn, not Storybook's error screen (the reload's open refuses that too)
+          if (!drawn || !document.body.classList.contains('sb-show-main')) return false;
+          // and what the reload's settle waits for: the fonts, and the pictures the browser is loading (a new src)
+          await document.fonts.ready;
+          await Promise.race([Promise.all([...document.images].filter((i) => !i.complete).map((i) => new Promise((res) => { i.addEventListener('load', res, { once: true }); i.addEventListener('error', res, { once: true }); }))), new Promise((res) => setTimeout(res, 5000))]);
+          // a reload draws the new args at rest; a change of args starts the CSS transitions between them
+          // (chip's colours read mid-way, as no token), so they are run to their end
+          for (const x of document.getAnimations()) if (x instanceof CSSTransition) x.finish();
+          // and React keeps the elements, with the ids the walk stamped on them for the last read (chip's
+          // label read as its own child), so they go, as a reload would take them
+          for (const n of document.querySelectorAll('[data-figma-id], [data-figma-text], [data-contract-id]')) for (const k of ['data-figma-id', 'data-figma-text', 'data-contract-id']) n.removeAttribute(k);
+          // and focus goes, as the reload's settle takes it
+          if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+          return true;
+          } catch { return false; }
+        }, Object.fromEntries(Object.entries(args).map(([k, v]) => [k, v === undefined ? UNSET : v]))).catch(() => false);
+        if (ok) return;
+      }
+      forced = !!(at && at.on) || reload;
+      opened = host === 'storybook';
       if (host === 'storybook') await S.PAGE.open(tab, { storyId: t.mapping.storyId, args, tier });
       else await S.PAGE.open(tab, [{ key: 'c', html: await S.PAGE.fragment(t.name, Object.fromEntries(Object.entries(args).filter(([, v]) => v !== undefined))) }], { tier, viewport: [project.limits.viewportWidth, project.limits.componentWindowHeight] });
       await forceAt(tab, src.pseudoOf[__state]);
@@ -506,7 +563,7 @@ async function main() {
     const show = async (all) => {
       const fill = Object.fromEntries(Object.entries(all).filter(([k]) => k in slotArgs));
       const viaChannel = Object.keys(fill).length && await call(L.tab, () => !!window.__STORYBOOK_PREVIEW__);
-      await L.render(Object.fromEntries(Object.entries(all).filter(([k]) => !(viaChannel && k in fill)).map(([k, v]) => [k, v === 'null' && nullable.has(k) ? null : v])));
+      await L.render(Object.fromEntries(Object.entries(all).filter(([k]) => !(viaChannel && k in fill)).map(([k, v]) => [k, v === 'null' && nullable.has(k) ? null : v])), { reload: !!viaChannel });
       if (!viaChannel) return;
       const got = await call(L.tab, async (args) => {
         const p = window.__STORYBOOK_PREVIEW__;
@@ -558,6 +615,7 @@ async function main() {
     // a governed mapping states which element is which Figma layer: those take Figma's ids; a compared
     // library's are paired by rule, a guess, so its parts keep the names their markup gives them
     const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
+    let remPx = null;
     const read = async (args) => {
       await show(args);
       const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb]) => {
@@ -660,21 +718,22 @@ async function main() {
         return out;
       }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
+      // each element's matched styles fetched once for all the properties this render reads of it
+      const styles = new Map();
       // a whole computed border may be a floored one (1.5px reads 1px): the cascade's, as the code audit reads it
-      for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, 'border-top-width'); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
+      for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, 'border-top-width', { cache: styles }); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
       // a box the code sizes itself (height: 24px, a minimum), which a hug would lose: the cascade's own value,
       // as the contract's minHeight/minWidth (Figma's min sizes on an auto layout)
       // written physically or logically (block-size is height in a horizontal writing mode), in px or rem
-      const remPx = await call(L.tab, () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
+      if (remPx == null) remPx = await call(L.tab, () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
       const lengthOf = (v) => { const m = /^\s*(-?[\d.]+)(px|rem)\s*$/.exec(v || ''); return m ? +(+m[1] * (m[2] === 'rem' ? remPx : 1)).toFixed(2) : null; };
       for (const e of raw) if (e.kind === 'container' && e.layout) for (const [css, field] of [['height', 'minHeight'], ['min-height', 'minHeight'], ['block-size', 'minHeight'], ['min-block-size', 'minHeight'], ['width', 'minWidth'], ['min-width', 'minWidth'], ['inline-size', 'minWidth'], ['min-inline-size', 'minWidth']]) {
-        const v = lengthOf(await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true }));
+        const v = lengthOf(await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true, cache: styles }));
         if (v && !(field in e)) e[field] = v;
       }
       // values to tokens
       const anatomy = {}, drawn = {};
       let under = null;
-      const styles = new Map();
       const asRgba = (v) => { const c = parseColour(v); return c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${c[3]})` : v; };
       // where several tokens hold a value, the one the code wrote it with: the custom properties of the css it came from
       const tok = async (kind, v, at, css = []) => {
@@ -712,8 +771,11 @@ async function main() {
             const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);
             if (hit || rest) w[ax] = (hit || rest)[0];
           }
-          if (fc && x.glyphs && x.glyphs.length) for (const p of Object.values(fc.props)) if (p.type === 'instance' || p.type === 'swap') w[p.figma] = x.glyphs[0];
+          const glyphOf = [];
+          if (fc && x.glyphs && x.glyphs.length) for (const p of Object.values(fc.props)) if (p.type === 'instance' || p.type === 'swap') { w[p.figma] = x.glyphs[0]; glyphOf.push(p.figma); }
           if (Object.keys(w).length) x.with = w;
+          // which of them name the glyph it draws: content, which the swap test below sets aside
+          if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
         }
         delete x.slug; delete x.attrs; delete x.glyphs;
         if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
@@ -751,17 +813,33 @@ async function main() {
       // two such in a row make the prop a swap, as Figma's instance swap is, and none of the rest is rendered
       const absent = p.type === 'enum' ? others.filter((v) => /^(none|)$/i.test(v)) : [];
       let alike = 0;
+      // a change only to the glyph drawn (an icon's asset, or a nested icon's swap; avatar's icon by name) is content
+      // too: else every glyph of the set was a value, and avatar's pairs and triples ran to some 30 000 reads
+      const glyphOnly = (d, got) => !d.add && !d.remove && !!d.set && Object.keys(d.set).every((sk) => {
+        const at = sk.lastIndexOf('.'), id = sk.slice(0, at);
+        if (sk.slice(at + 1) === 'asset') return true;
+        if (sk.slice(at + 1) !== 'with') return false;
+        const a = base[id].with || {}, b = got[id].with || {}, g = got[id].glyphOf || [];
+        return [...new Set([...Object.keys(a), ...Object.keys(b)])].every((q) => a[q] === b[q] || g.includes(q));
+      });
       for (const v of [...absent, ...others.filter((x) => !absent.includes(x))]) {
         const got = await read({ ...defaults, [p.code]: v });
         const d = delta(base, got);
         // a pointer state that changes nothing here (a checked switch's hover) is still a state, never a swap
-        if (!absent.includes(v) && p.type === 'enum' && p.role !== 'interaction' && !Object.keys(d).length && ++alike === 2) { props[k] = { type: 'swap', default: p.default, code: p.code, ...(props[k].shows && { shows: props[k].shows }) }; break; }
+        const same = !absent.includes(v) && p.type === 'enum' && p.role !== 'interaction' && (!Object.keys(d).length || glyphOnly(d, got));
+        // two in a row, as said: a value between them that draws more (a password field's reveal) keeps it an enum
+        alike = same ? alike + 1 : 0;
+        if (same && alike === 2) { props[k] = { type: 'swap', default: p.default, code: p.code, ...(props[k].shows && { shows: props[k].shows }) }; break; }
         renders.push([{ [k]: p.type === 'boolean' ? v : String(v) }, got]);
         if (absent.includes(v) && d.remove && !d.add) props[k].shows = d.remove;
         if (Object.keys(d).length) variants.push({ when: { [k]: p.type === 'boolean' ? v : String(v) }, ...d });
       }
       // a swap's renders are the default's: nothing to rebuild beyond it
-      if (props[k].type === 'swap') for (let i = renders.length - 1; i > 0; i--) if (k in renders[i][0] && !/^(none|)$/i.test(renders[i][0][k])) renders.splice(i, 1);
+      if (props[k].type === 'swap') {
+        for (let i = renders.length - 1; i > 0; i--) if (k in renders[i][0] && !/^(none|)$/i.test(renders[i][0][k])) renders.splice(i, 1);
+        // and its layers: a glyph value read before the second showed it a swap (avatar's arrow-down-narrow-wide)
+        variants = variants.filter((x) => !(k in x.when && !/^(none|)$/i.test(x.when[k])));
+      }
     }
     };
     await build();
