@@ -34,6 +34,10 @@ and is the main the merge was built on. A hold
 the branch's last commit says why, and the next owed run starts anyway with
 that reason in its brief. One macOS notification per run says which.
 
+*Open:* a landed merge that CI then finds red is not reverted by anything; the
+next session's `bin/check` and CI's mail are what catch it. A run killed before
+its first commit leaves the next run no hold reason.
+
 Each review should leave the next one smaller: a judgement made twice becomes
 a check, a point below that a script now holds leaves this list in the same
 change, and the run reports how many rules are still *Reviewed:* only.
