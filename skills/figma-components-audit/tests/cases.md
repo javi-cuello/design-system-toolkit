@@ -1,6 +1,6 @@
-# Eval cases — figma-components-audit (v2.46.0)
+# Eval cases — figma-components-audit (v2.47.0)
 
-**Walked: 2026-11-12 for 2.46.0** — A136 extended and run (test-probes.mjs, 58 of 58); A133 and A135 re-run unchanged, `by` and `root` being additions.
+**Walked: 2026-11-12 for 2.47.0** — A136 extended and run (test-probes.mjs, 59 of 59); A133 and A135 re-run unchanged, `keys`, `by` and `root` being additions.
 
 **Walked: 2026-11-11 against v2.44.1** — the tracking advice and two doc lines: `node tests/test-audit.mjs` 117 of 117 (one added: a styled and an unstyled layer with letter spacing, each advised by what it has), `test-probes` 54, `test-sweep` 10/10; Audit lite resynced, its test 61 passed.
 
@@ -1983,7 +1983,7 @@ Runs: node tests/test-probes.mjs — "composed: with receipt asked, …", "refer
 
 ## A136 · A composed frame counts what it judged, so a share can be made of it — WALKED 2026-11-12
 Fixture: `tests/test-probes.mjs`: a screen with one non-zero gap and a zero padding, a bound, an unbound and an image fill; a text with a style, one without and one mixed; a frame Figma marks detached from a library, one from a local component that also shares a placed instance's name, and that instance.
-Assert: `checked` is `{ values: 1, paints: 2, texts: 3 }`; the texts read `styled` true, false, true; both marked frames are `detached` `by: figma`, the named one once; a root marked detached carries `root`, and a frame matched only by name is `by: name`.
+Assert: `checked` is `{ values: 1, paints: 2, texts: 3 }`; the texts read `styled` true, false, true; both marked frames are `detached` `by: figma`, the named one once; a root marked detached carries `root`, and a frame matched only by name is `by: name`; `keys` counts placed instances by main key, an orphan under none.
 Negative: a zero value or an image counted as judged; a frame named like a component reported twice; a detached frame with an unrelated name missed.
 Recorded: 2026-11-12, the Adoption score widget's first live run, on a 115-screen product file with defects planted on a scratch copy of one screen (two detached instances, a raw rectangle, an unstyled text, a frame with raw padding, gap, radius and fill): 1,776 of 1,786 not detached, 287 of 288 texts styled, 407 of 409 paints bound. Which of the 10 detaches beyond the 2 planted are real was not yet read.
-Runs: node tests/test-probes.mjs — "composed: what was judged is counted, …", "composed: a raw text says whether …", "composed: a frame Figma marks as detached …", "composed: a root detached from a template says root; …".
+Runs: node tests/test-probes.mjs — "composed: what was judged is counted, …", "composed: a raw text says whether …", "composed: a frame Figma marks as detached …", "composed: a root detached from a template says root; …", "composed: placed instances are counted by their main's key; …".

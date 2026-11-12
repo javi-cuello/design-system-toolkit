@@ -427,12 +427,13 @@ globalThis.__FCA_PROBES_FACTORY = function () {
   // (`detachedInfo`), is `detached`, saying `by` which (`figma` or `name`) and
   // `root` when the root itself is the detached copy; a raw text says whether it has a text
   // style (`styled`). `checked` counts what was judged, bound or not (values,
-  // solid paints, texts), so a caller can turn findings into a share. Hidden
+  // solid paints, texts), so a caller can turn findings into a share, and
+  // `keys` counts placed instances by their main component's key. Hidden
   // layers are skipped.
   const FRAME_NUMS = ["paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius"];
   FCA.composedFindings = async (root, mainOf, componentNames, opts) => {
     const findings = [], seen = new Set(componentNames || []), frames = [], detached = new Set();
-    const checked = { values: 0, paints: 0, texts: 0 };
+    const checked = { values: 0, paints: 0, texts: 0 }, keys = {};
     let instances = 0;
     const at = (trail) => trail.join(" / ");
     const num = (n, k, t) => {
@@ -476,6 +477,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       instances++;
       const main = await mainOf(n);
       if (!main || (!main.parent && !main.key)) findings.push({ kind: "orphan", path: at(t), id: n.id });
+      if (main && main.key) keys[main.key] = (keys[main.key] || 0) + 1;
       if (main) { seen.add(main.name); if (main.parent && main.parent.type === "COMPONENT_SET") seen.add(main.parent.name); }
       const own = new Set(main && main.findAll ? main.findAll(() => true).map((x) => x.id) : []);
       const pre = (String(n.id).startsWith("I") ? n.id : "I" + n.id) + ";"; // an instance inside another is already I-prefixed
@@ -500,7 +502,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
       if (!r) findings.push({ kind: "no-receipt", path: root.name, id: root.id });
       else if (!r.reference) findings.push({ kind: "no-reference", path: root.name, id: root.id });
     }
-    return { frame: root.name, instances, checked, findings };
+    return { frame: root.name, instances, checked, keys, findings };
   };
   FCA.composedFrame = (frame, componentNames, opts) => FCA.composedFindings(frame, (n) => n.getMainComponentAsync(), componentNames, opts);
 

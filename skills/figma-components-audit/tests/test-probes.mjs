@@ -281,6 +281,8 @@ delete globalThis.figma;
   ]), async (x) => x.main);
   expect("composed: what was judged is counted, bound or not; zero values and images are not",
     counted.checked, { values: 1, paints: 2, texts: 3 });
+  const keyed = await FCA.composedFindings(frame("7:1", "Screen", {}, [inst("7:2", "A", { ...main("Button"), key: "kb" }), inst("7:3", "B", { ...main("Button"), key: "kb" }), inst("7:4", "C", { ...main("Card"), key: "kc" }), inst("7:5", "D", null)]), async (x) => x.main);
+  expect("composed: placed instances are counted by their main's key; an orphan has none", keyed.keys, { kb: 2, kc: 1 });
   expect("composed: a raw text says whether it carries a text style; a mixed one does",
     counted.findings.filter((f) => f.type === "TEXT").map((f) => f.path + " " + f.styled), ["Screen / Styled true", "Screen / Plain false", "Screen / Mixed true"]);
   expect("composed: a frame Figma marks as detached is detached, named like a component or not, and only once",

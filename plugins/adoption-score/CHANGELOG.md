@@ -1,6 +1,12 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.3.0] - 2026-11-12
+### Added
+- System libraries… in the widget's menu: links to the libraries that are the design system, and a Figma token kept on this computer. Each run fetches those libraries' published components (one REST call per library), and only their instances count as System components; without libraries, every library counts, as before.
+### Changed
+- The card takes the plugins' look: FigUI3's light-theme text, border, brand and status colours, 11/16 body and 13px heading, a 32px button with a 5px radius, a 13px window radius and a footer under a hairline.
+
 ## [0.2.0] - 2026-11-12
 ### Changed
 - A Scope menu (select the widget): all pages, or only the page it sits on, so an archive page can be left out.

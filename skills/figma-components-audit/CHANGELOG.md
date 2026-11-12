@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.47.0 (2026-11-12): `FCA.composedFindings` returns `keys`, the placed instances counted by their main component's key, so a caller can tell which library they come from. One assertion in `tests/test-probes.mjs`; A136 extended.
 - 2.46.0 (2026-11-12): a `detached` finding says `by` (`figma`, the detach flag, or `name`, a frame named like a component) and `root` when the screen itself is a detached copy, so a caller can leave templates and name matches out. One assertion in `tests/test-probes.mjs`; A136 extended.
 - 2.45.0 (2026-11-12): `FCA.composedFindings` returns `checked` (values, paints, texts judged), marks a raw text `styled` or not, and reads Figma's `detachedInfo` as `detached`; the Adoption score widget is its second caller. Three assertions in `tests/test-probes.mjs`; case A136.
 - 2.44.2 (2026-11-11): the composed-frame section names its caller's new home, figma-prototype's *Compose* (split from frontend-build).

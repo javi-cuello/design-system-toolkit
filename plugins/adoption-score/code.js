@@ -1,8 +1,8 @@
-// Adoption score — v0.2.0 · skill-standard v1.9.0
+// Adoption score — v0.3.0 · skill-standard v1.9.0
 // @ts-check
-// A widget that scores how closely a file's screens use its design system: library instances, detaches, colour,
+// A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
-// Data stored: the last run's counts, in the widget's synced state (see README).
+// Data stored: the token in clientStorage (this machine); the system libraries and the last run in synced state.
 
 /* adoption-score generated start — written by plugins/adoption-score/sync.mjs from skills/figma-components-audit/scripts/probes.js; never edit by hand */
 const FCA_FACTORY = function () {
@@ -401,12 +401,13 @@ const FCA_FACTORY = function () {
   // (`detachedInfo`), is `detached`, saying `by` which (`figma` or `name`) and
   // `root` when the root itself is the detached copy; a raw text says whether it has a text
   // style (`styled`). `checked` counts what was judged, bound or not (values,
-  // solid paints, texts), so a caller can turn findings into a share. Hidden
+  // solid paints, texts), so a caller can turn findings into a share, and
+  // `keys` counts placed instances by their main component's key. Hidden
   // layers are skipped.
   const FRAME_NUMS = ["paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius"];
   FCA.composedFindings = async (root, mainOf, componentNames, opts) => {
     const findings = [], seen = new Set(componentNames || []), frames = [], detached = new Set();
-    const checked = { values: 0, paints: 0, texts: 0 };
+    const checked = { values: 0, paints: 0, texts: 0 }, keys = {};
     let instances = 0;
     const at = (trail) => trail.join(" / ");
     const num = (n, k, t) => {
@@ -450,6 +451,7 @@ const FCA_FACTORY = function () {
       instances++;
       const main = await mainOf(n);
       if (!main || (!main.parent && !main.key)) findings.push({ kind: "orphan", path: at(t), id: n.id });
+      if (main && main.key) keys[main.key] = (keys[main.key] || 0) + 1;
       if (main) { seen.add(main.name); if (main.parent && main.parent.type === "COMPONENT_SET") seen.add(main.parent.name); }
       const own = new Set(main && main.findAll ? main.findAll(() => true).map((x) => x.id) : []);
       const pre = (String(n.id).startsWith("I") ? n.id : "I" + n.id) + ";"; // an instance inside another is already I-prefixed
@@ -474,7 +476,7 @@ const FCA_FACTORY = function () {
       if (!r) findings.push({ kind: "no-receipt", path: root.name, id: root.id });
       else if (!r.reference) findings.push({ kind: "no-reference", path: root.name, id: root.id });
     }
-    return { frame: root.name, instances, checked, findings };
+    return { frame: root.name, instances, checked, keys, findings };
   };
   FCA.composedFrame = (frame, componentNames, opts) => FCA.composedFindings(frame, (n) => n.getMainComponentAsync(), componentNames, opts);
 
@@ -749,19 +751,32 @@ const FCA_FACTORY = function () {
 const { widget } = figma;
 const { AutoLayout, Text, Rectangle, useSyncedState, usePropertyMenu, h } = widget;
 
+// The look is the plugins' (skill-standard §B 4): FigUI3's light-theme values, read from plugins/_shared/figui3/fig.css.
+// A widget draws on the canvas and cannot read CSS, so the values are copied here; widget font weights take hundreds,
+// so FigUI3's 450 and 550 are 400 and 500.
+const UI = {
+  bg: '#FFFFFF', border: '#E6E6E6',
+  text: '#000000E5', textSecondary: '#00000099', textTertiary: '#0000004D', textDanger: '#DC3412',
+  brand: '#0D99FF', brandHover: '#007BE5', onBrand: '#FFFFFF',
+  radiusWindow: 13, radiusControl: 5, s1: 4, s2: 8, s25: 12, s3: 16,
+  body: { fontSize: 11, lineHeight: 16, fontWeight: 400, letterSpacing: 0.055 },
+  heading: { fontSize: 13, lineHeight: 22, fontWeight: 500 },
+};
+
 // Each check is a share: what passed over what was judged. A check with nothing to judge is left out of the total.
-/** @type {{ key: string, label: string, share: (t: any) => [number, number] }[]} */
+/** @type {{ key: string, label: (t: any) => string, share: (t: any) => [number, number] }[]} */
 const CHECKS = [
-  { key: 'library', label: 'Library components', share: (t) => [t.instances - t.orphans, t.instances + t.raw] },
-  { key: 'detach', label: 'Not detached', share: (t) => [t.instances, t.instances + t.detached] },
-  { key: 'colour', label: 'Colour bound', share: (t) => [t.paints - t.unboundPaints, t.paints] },
-  { key: 'spacing', label: 'Spacing and radius bound', share: (t) => [t.values - t.unboundValues, t.values] },
-  { key: 'text', label: 'Text styles', share: (t) => [t.styledTexts, t.texts] },
+  { key: 'library', label: (t) => (t.system ? 'System components' : 'Library components'), share: (t) => [t.system ? t.systemInstances : t.instances - t.orphans, t.instances + t.raw] },
+  { key: 'detach', label: () => 'Not detached', share: (t) => [t.instances, t.instances + t.detached] },
+  { key: 'colour', label: () => 'Colour bound', share: (t) => [t.paints - t.unboundPaints, t.paints] },
+  { key: 'spacing', label: () => 'Spacing and radius bound', share: (t) => [t.values - t.unboundValues, t.values] },
+  { key: 'text', label: () => 'Text styles', share: (t) => [t.styledTexts, t.texts] },
 ];
-// Bands are a house choice, not a researched threshold (README). Each carries a word, so colour is never the only cue.
+// Bands are a house choice, not a researched threshold (README). Each carries a word, so colour is never the only cue;
+// the fills are FigUI3's success, warning and danger.
 const BANDS = [
   { min: 90, word: 'Good', fill: '#14AE5C', ink: '#FFFFFF' },
-  { min: 75, word: 'Fair', fill: '#FFCD29', ink: '#1E1E1E' },
+  { min: 75, word: 'Fair', fill: '#FFCD29', ink: '#000000E5' },
   { min: 0, word: 'Poor', fill: '#F24822', ink: '#FFFFFF' },
 ];
 const bandOf = (/** @type {number} */ pct) => BANDS.find((b) => pct >= b.min) || BANDS[BANDS.length - 1];
@@ -771,15 +786,42 @@ const SCREEN = ['FRAME', 'INSTANCE'];
 /** @returns {SceneNode[]} */
 const screensIn = (/** @type {readonly SceneNode[]} */ nodes) => nodes.flatMap((n) =>
   n.visible === false ? [] : n.type === 'SECTION' ? screensIn(n.children) : SCREEN.includes(n.type) ? [n] : []);
-
-// The scope: every page, or only the page the widget sits on (an archive or sketch page left out by moving the
-// widget to the page that matters, or by keeping it in the file's own handoff page).
+// The scope: every page, or only the page the widget sits on (a click or a menu choice happens on that page).
 const SCOPES = [{ option: 'file', label: 'All pages' }, { option: 'page', label: 'This page' }];
 
-async function scan(/** @type {string} */ scope) {
+// A library is named by a link to its file; the key is the part after /design/ or /file/ (a branch link's main file,
+// since only a main file publishes).
+/** @returns {{ fileKey: string, name: string } | null} */
+function parseLink(/** @type {string} */ link) {
+  const m = /figma\.com\/(?:design|file)\/([A-Za-z0-9]+)(?:\/branch\/[A-Za-z0-9]+)?(?:\/([^/?#]+))?/.exec(link.trim());
+  if (!m) return null;
+  let name = m[1];
+  try { if (m[2]) name = decodeURIComponent(m[2]).replace(/-/g, ' '); } catch (e) { name = m[2] || m[1]; }
+  return { fileKey: m[1], name };
+}
+
+// Every published component's key in a library, from Figma's REST API (one call per library, Tier 3).
+async function libraryKeys(/** @type {{ fileKey: string, name: string }} */ lib, /** @type {string} */ token) {
+  let res;
+  try { res = await fetch(`https://api.figma.com/v1/files/${lib.fileKey}/components`, { headers: { 'X-Figma-Token': token } }); }
+  catch (e) { throw new Error(`${lib.name}: could not reach Figma (${String((e && /** @type {any} */ (e).message) || e)})`); }
+  if (!res.ok) throw new Error(`${lib.name}: Figma answered ${res.status}${res.status === 403 ? ' (the token cannot read this library, or lacks the library_content:read scope)' : res.status === 404 ? ' (no published library at this link)' : ''}`);
+  const body = await res.json();
+  return ((body.meta && body.meta.components) || []).map((/** @type {any} */ c) => String(c.key));
+}
+
+async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, name: string }[]} */ libraries) {
   figma.skipInvisibleInstanceChildren = true;
+  /** @type {Set<string> | null} */
+  let system = null;
+  if (libraries.length) {
+    const token = await figma.clientStorage.getAsync('token');
+    if (!token) throw new Error('System libraries are set, but this computer has no token: open System libraries… in the widget’s menu.');
+    system = new Set();
+    for (const lib of libraries) for (const k of await libraryKeys(lib, token)) system.add(k);
+  }
   const FCA = FCA_FACTORY();
-  const t = { pages: 0, screens: 0, instances: 0, orphans: 0, raw: 0, detached: 0, paints: 0, unboundPaints: 0, values: 0, unboundValues: 0, texts: 0, styledTexts: 0 };
+  const t = { pages: 0, screens: 0, instances: 0, systemInstances: 0, orphans: 0, raw: 0, detached: 0, paints: 0, unboundPaints: 0, values: 0, unboundValues: 0, texts: 0, styledTexts: 0, system: !!system };
   const pages = scope === 'page' ? [figma.currentPage] : figma.root.children;
   for (const page of pages) {
     await page.loadAsync();
@@ -792,6 +834,7 @@ async function scan(/** @type {string} */ scope) {
       t.paints += r.checked.paints;
       t.values += r.checked.values;
       t.texts += r.checked.texts;
+      if (system) for (const [k, n] of Object.entries(r.keys)) if (system.has(k)) t.systemInstances += Number(n);
       for (const f of r.findings) {
         if (f.kind === 'orphan') t.orphans++;
         // a detach is one Figma marks, inside a screen: a whole screen detached from a template was meant to be,
@@ -809,42 +852,81 @@ async function scan(/** @type {string} */ scope) {
 function score(/** @type {any} */ t) {
   const rows = CHECKS.map((c) => {
     const [pass, total] = c.share(t);
-    return { key: c.key, label: c.label, pass, total, pct: total ? Math.round((100 * pass) / total) : null };
+    return { key: c.key, label: c.label(t), pass, total, pct: total ? Math.round((100 * pass) / total) : null };
   });
   const live = rows.filter((r) => r.pct !== null);
   const total = live.length ? Math.round(live.reduce((n, r) => n + /** @type {number} */ (r.pct), 0) / live.length) : null;
   return { total, rows };
 }
 
-const MUTED = '#757575', INK = '#1E1E1E', LINE = '#E6E6E6';
+// The settings window (ui.html, FigUI3): the token stays on this machine, the libraries are the file's choice.
+// The returned promise keeps the widget's code alive until the window closes.
+function openLibraries(/** @type {any[]} */ libraries, /** @type {(libs: any[]) => void} */ setLibraries, /** @type {() => void} */ clearResult) {
+  return new Promise((resolve) => {
+    figma.showUI(__html__, { themeColors: true, width: 360, height: 400, title: 'System libraries' });
+    figma.on('close', () => resolve(null));
+    figma.clientStorage.getAsync('token').then((token) => figma.ui.postMessage({ type: 'init', hasToken: !!token, links: libraries.map((l) => l.link).join('\n') }));
+    figma.ui.onmessage = async (msg) => {
+      try {
+        if (msg.type === 'save') {
+          const parsed = String(msg.links || '').split(/\s+/).filter(Boolean).map((link) => ({ link, lib: parseLink(link) }));
+          const bad = parsed.filter((p) => !p.lib).map((p) => p.link);
+          if (bad.length) { figma.ui.postMessage({ type: 'error', message: 'Not a Figma file link: ' + bad.join(', ') }); return; }
+          const token = String(msg.token || '').trim();
+          if (parsed.length && !token && !(await figma.clientStorage.getAsync('token'))) { figma.ui.postMessage({ type: 'error', message: 'A token is needed to read the libraries.' }); return; }
+          if (token) await figma.clientStorage.setAsync('token', token);
+          // one entry per library file, however many links name it
+          const seen = new Set();
+          setLibraries(parsed.filter((p) => { const k = /** @type {any} */ (p.lib).fileKey; return seen.has(k) ? false : (seen.add(k), true); }).map((p) => ({ link: p.link, .../** @type {any} */ (p.lib) })));
+          // the last run was counted against the old libraries, so it no longer describes them
+          clearResult();
+          figma.closePlugin();
+        } else if (msg.type === 'forget') {
+          await figma.clientStorage.deleteAsync('token');
+          figma.ui.postMessage({ type: 'init', hasToken: false, links: msg.links });
+        } else if (msg.type === 'cancel') figma.closePlugin();
+      } catch (e) {
+        figma.ui.postMessage({ type: 'error', message: String((e && /** @type {any} */ (e).message) || e) });
+      }
+    };
+  });
+}
+
+const txt = (/** @type {string} */ s, /** @type {any} */ type, /** @type {any} */ extra) => h(Text, { fontFamily: 'Inter', ...type, fill: UI.text, ...extra }, s);
 
 const chip = (/** @type {number} */ pct) => {
   const b = bandOf(pct);
-  return h(AutoLayout, { fill: b.fill, cornerRadius: 4, padding: { horizontal: 6, vertical: 2 } },
-    h(Text, { fontSize: 11, lineHeight: 16, fontWeight: 600, fill: b.ink }, b.word));
+  return h(AutoLayout, { fill: b.fill, cornerRadius: UI.radiusControl, height: 20, padding: { horizontal: 6 }, verticalAlignItems: 'center' },
+    txt(b.word, UI.body, { fontWeight: 500, fill: b.ink }));
 };
 
-const divider = (/** @type {string} */ key) => h(Rectangle, { key, width: 'fill-parent', height: 1, fill: LINE });
+const divider = (/** @type {string} */ key) => h(Rectangle, { key, width: 'fill-parent', height: 1, fill: UI.border });
 
-const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-parent', padding: { vertical: 8 }, spacing: 8, verticalAlignItems: 'center' },
+const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-parent', padding: { vertical: UI.s2 }, spacing: UI.s2, verticalAlignItems: 'center' },
   h(AutoLayout, { direction: 'vertical', width: 'fill-parent' },
-    h(Text, { fontSize: 13, lineHeight: 20, fill: INK }, r.label),
-    h(Text, { fontSize: 12, lineHeight: 16, fill: MUTED }, r.total ? `${r.pass.toLocaleString()} of ${r.total.toLocaleString()}` : 'nothing to check')),
+    txt(r.label, UI.body),
+    txt(r.total ? `${r.pass.toLocaleString()} of ${r.total.toLocaleString()}` : 'nothing to check', UI.body, { fill: UI.textSecondary })),
   r.pct === null
-    ? h(Text, { fontSize: 13, lineHeight: 20, fill: MUTED }, '—')
-    : h(AutoLayout, { spacing: 8, verticalAlignItems: 'center' }, h(Text, { fontSize: 13, lineHeight: 20, fontWeight: 600, fill: INK }, r.pct + '%'), chip(r.pct)));
+    ? txt('—', UI.body, { fill: UI.textTertiary })
+    : h(AutoLayout, { spacing: UI.s2, verticalAlignItems: 'center' }, txt(r.pct + '%', UI.body, { fontWeight: 500 }), chip(r.pct)));
 
 function AdoptionScore() {
   const [result, setResult] = useSyncedState('result', /** @type {any} */ (null));
   const [error, setError] = useSyncedState('error', '');
   const [scope, setScope] = useSyncedState('scope', 'file');
+  const [libraries, setLibraries] = useSyncedState('libraries', /** @type {any[]} */ ([]));
 
-  usePropertyMenu([{ itemType: 'dropdown', propertyName: 'scope', tooltip: 'Scope', selectedOption: scope, options: SCOPES }],
-    ({ propertyName, propertyValue }) => { if (propertyName === 'scope' && propertyValue) setScope(propertyValue); });
+  usePropertyMenu([
+    { itemType: 'dropdown', propertyName: 'scope', tooltip: 'Scope', selectedOption: scope, options: SCOPES },
+    { itemType: 'action', propertyName: 'libraries', tooltip: 'System libraries…' },
+  ], ({ propertyName, propertyValue }) => {
+    if (propertyName === 'scope' && propertyValue) setScope(propertyValue);
+    if (propertyName === 'libraries') return openLibraries(libraries, setLibraries, () => setResult(null));
+  });
 
   const run = async () => {
     try {
-      const t = await scan(scope);
+      const t = await scan(scope, libraries);
       setResult({ ...t, scope, at: new Date().toISOString() });
       setError('');
     } catch (e) {
@@ -857,20 +939,25 @@ function AdoptionScore() {
   const s = result ? score(result) : null;
   // the run's time in UTC, as the ISO string stores it: the widget sandbox's Intl support is not relied on
   const when = result ? String(result.at).slice(0, 16).replace('T', ' ') + ' UTC' : '';
+  const source = libraries.length ? 'System: ' + libraries.map((/** @type {any} */ l) => l.name).join(', ') : 'System: every library. Set yours in the widget’s menu.';
+  const where = result ? `${result.screens} screens on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages');
 
-  return h(AutoLayout, { direction: 'vertical', width: 360, padding: 20, spacing: 16, fill: '#FFFFFF', cornerRadius: 12, stroke: LINE, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.08 }, offset: { x: 0, y: 2 }, blur: 8 } },
-    h(Text, { fontSize: 13, lineHeight: 20, fontWeight: 600, fill: INK }, 'Adoption score'),
-    s && s.total !== null
-      ? h(AutoLayout, { spacing: 12, verticalAlignItems: 'center' },
-          h(Text, { fontSize: 40, lineHeight: 48, fontWeight: 700, fill: INK }, String(s.total)),
-          h(AutoLayout, { direction: 'vertical', spacing: 4 }, chip(s.total), h(Text, { fontSize: 12, lineHeight: 16, fill: MUTED }, 'out of 100')))
-      : h(Text, { fontSize: 12, lineHeight: 16, fill: MUTED, width: 'fill-parent' }, result ? 'Nothing to score: no screens found.' : 'Scans every page’s screens for library components, detaches, bound colour and spacing, and text styles.'),
-    s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent' }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
-    error ? h(Text, { fontSize: 12, lineHeight: 16, fill: '#F24822', width: 'fill-parent' }, 'Error: ' + error) : null,
-    h(AutoLayout, { width: 'fill-parent', spacing: 8, verticalAlignItems: 'center' },
-      h(Text, { fontSize: 12, lineHeight: 16, fill: MUTED, width: 'fill-parent' }, result ? `${result.screens} screens on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages')),
-      h(AutoLayout, { fill: '#0D99FF', cornerRadius: 6, padding: { horizontal: 12, vertical: 8 }, onClick: run, hoverStyle: { fill: '#007BE5' } },
-        h(Text, { fontSize: 12, lineHeight: 16, fontWeight: 600, fill: '#FFFFFF' }, result ? 'Run again' : 'Run scan'))));
+  return h(AutoLayout, { direction: 'vertical', width: 360, fill: UI.bg, cornerRadius: UI.radiusWindow, stroke: UI.border, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.15 }, offset: { x: 0, y: 2 }, blur: 6 } },
+    h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3, top: UI.s25, bottom: UI.s2 }, spacing: UI.s2 },
+      txt('Adoption score', UI.heading),
+      s && s.total !== null
+        ? h(AutoLayout, { spacing: UI.s25, verticalAlignItems: 'center' },
+            txt(String(s.total), { fontSize: 40, lineHeight: 48, fontWeight: 600 }),
+            h(AutoLayout, { direction: 'vertical', spacing: UI.s1 }, chip(s.total), txt('out of 100', UI.body, { fill: UI.textSecondary })))
+        : txt(result ? 'Nothing to score: no screens found.' : 'Scans the screens for system components, detaches, bound colour and spacing, and text styles.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
+      txt(source, UI.body, { fill: UI.textSecondary, width: 'fill-parent' })),
+    s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3 } }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
+    error ? h(AutoLayout, { width: 'fill-parent', padding: { horizontal: UI.s3, vertical: UI.s2 } }, txt('Error: ' + error, UI.body, { fill: UI.textDanger, width: 'fill-parent' })) : null,
+    divider('footer-line'),
+    h(AutoLayout, { width: 'fill-parent', padding: UI.s25, spacing: UI.s2, verticalAlignItems: 'center' },
+      txt(where, UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
+      h(AutoLayout, { fill: UI.brand, cornerRadius: UI.radiusControl, height: 32, padding: { horizontal: UI.s3 }, verticalAlignItems: 'center', onClick: run, hoverStyle: { fill: UI.brandHover } },
+        txt(result ? 'Run again' : 'Run scan', UI.body, { fontWeight: 500, fill: UI.onBrand }))));
 }
 
 widget.register(AdoptionScore);
