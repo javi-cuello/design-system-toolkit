@@ -50,7 +50,7 @@ fig-footer>.footer-hint{flex:1;min-width:0;align-self:center;color:var(--figma-c
 /* ui-base v4 end */
 /* plugin-specific styles below */
 /* this window's own content: the explanation under each group heading, inset like the field rows */
-.what{margin:0;padding:0 var(--spacer-3) var(--spacer-2);color:var(--figma-color-text-secondary)}
+.what{margin:0;padding:0 var(--spacer-3) var(--spacer-3);color:var(--figma-color-text-secondary)}
 </style>
 <script type="module">
 /* figui3-js generated start — FigUI3 11.11.5 dist/fig.js (MIT, plugins/_shared/figui3/LICENSE) */
@@ -259,14 +259,12 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 <body>
 <div class="panel">
   <div class="panel-body">
-    <fig-header borderless><h3>Libraries</h3></fig-header>
-    <p class="what">Paste a link to each library that is your design system, one per line. Instances from any other library, from this file's own components, or of components no longer published count as not the system. Leave it empty to count every library.</p>
-    <fig-field><label for="links">Library links</label>
-      <fig-input-text id="links" multiline placeholder="https://www.figma.com/design/…"></fig-input-text></fig-field>
-    <fig-header borderless><h3>Figma token</h3><fig-button variant="link" id="forget" hidden>Forget</fig-button></fig-header>
-    <p class="what" id="token-what">A personal access token with the <b>library_content:read</b> scope (Figma › Settings › Security › Personal access tokens). It is kept on this computer only, never in the file.</p>
-    <fig-field direction="horizontal"><label for="token">Token</label>
-      <fig-input-text id="token" type="password" placeholder="figd_…"></fig-input-text></fig-field>
+    <fig-field direction="vertical"><label for="links">Library links</label>
+      <fig-input-text id="links" multiline placeholder="One link per line"></fig-input-text></fig-field>
+    <p class="what">Instances from other libraries, or local, count against the score. Empty counts every library.</p>
+    <fig-field direction="vertical"><label for="token">Figma token</label>
+      <fig-input-text id="token" type="password" full placeholder="figd_…"></fig-input-text></fig-field>
+    <p class="what">Needs the <b>library_content:read</b> scope. Kept on this computer only. <fig-button variant="link" id="forget" hidden>Forget it</fig-button></p>
   </div>
   <fig-footer>
     <span class="footer-hint" id="status" role="status"></span>
@@ -288,9 +286,9 @@ onmessage = function (e) {
     // until FigUI3 upgrades the elements, state goes through attributes (skill-standard §B 4)
     $('links').setAttribute('value', msg.links || '');
     $('token').setAttribute('value', '');
-    $('token').setAttribute('placeholder', msg.hasToken ? 'Saved on this computer: type to replace' : 'figd_…');
+    $('token').setAttribute('placeholder', msg.hasToken ? 'Saved. Type to replace' : 'figd_…');
     $('forget').toggleAttribute('hidden', !msg.hasToken);
-    $('status').textContent = msg.hasToken ? 'Token saved' : 'No token yet';
+    $('status').textContent = '';
   } else if (msg.type === 'error') {
     $('status').textContent = 'Error: ' + msg.message;
   }

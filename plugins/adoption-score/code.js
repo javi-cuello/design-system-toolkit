@@ -1,4 +1,4 @@
-// Adoption score — v0.3.1 · skill-standard v1.9.0
+// Adoption score — v0.3.2 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -764,13 +764,13 @@ const UI = {
 };
 
 // Each check is a share: what passed over what was judged. A check with nothing to judge is left out of the total.
-/** @type {{ key: string, label: (t: any) => string, share: (t: any) => [number, number] }[]} */
+/** @type {{ key: string, label: (t: any) => string, miss: (n: number, t: any) => string, share: (t: any) => [number, number] }[]} */
 const CHECKS = [
-  { key: 'library', label: (t) => (t.system ? 'System components' : 'Library components'), share: (t) => [t.system ? t.systemInstances : t.instances - t.orphans, t.instances + t.raw] },
-  { key: 'detach', label: () => 'Not detached', share: (t) => [t.instances, t.instances + t.detached] },
-  { key: 'colour', label: () => 'Colour bound', share: (t) => [t.paints - t.unboundPaints, t.paints] },
-  { key: 'spacing', label: () => 'Spacing and radius bound', share: (t) => [t.values - t.unboundValues, t.values] },
-  { key: 'text', label: () => 'Text styles', share: (t) => [t.styledTexts, t.texts] },
+  { key: 'library', label: (t) => (t.system ? 'System components' : 'Library components'), miss: (n, t) => n.toLocaleString() + (t.system ? ' outside the system' : ' not from a library'), share: (t) => [t.system ? t.systemInstances : t.instances - t.orphans, t.instances + t.raw] },
+  { key: 'detach', label: () => 'Not detached', miss: (n) => n.toLocaleString() + ' detached', share: (t) => [t.instances, t.instances + t.detached] },
+  { key: 'colour', label: () => 'Colour bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' raw colour' : ' raw colours'), share: (t) => [t.paints - t.unboundPaints, t.paints] },
+  { key: 'spacing', label: () => 'Spacing and radius bound', miss: (n) => n.toLocaleString() + (n === 1 ? ' raw value' : ' raw values'), share: (t) => [t.values - t.unboundValues, t.values] },
+  { key: 'text', label: () => 'Text styles', miss: (n) => n.toLocaleString() + (n === 1 ? ' unstyled text' : ' unstyled texts'), share: (t) => [t.styledTexts, t.texts] },
 ];
 // Bands are a house choice, not a researched threshold (README). Each carries a word, so colour is never the only cue;
 // the fills are FigUI3's success, warning and danger.
@@ -852,7 +852,7 @@ async function scan(/** @type {string} */ scope, /** @type {{ fileKey: string, n
 function score(/** @type {any} */ t) {
   const rows = CHECKS.map((c) => {
     const [pass, total] = c.share(t);
-    return { key: c.key, label: c.label(t), pass, total, pct: total ? Math.round((100 * pass) / total) : null };
+    return { key: c.key, label: c.label(t), miss: c.miss(total - pass, t), pass, total, pct: total ? Math.round((100 * pass) / total) : null };
   });
   const live = rows.filter((r) => r.pct !== null);
   const total = live.length ? Math.round(live.reduce((n, r) => n + /** @type {number} */ (r.pct), 0) / live.length) : null;
@@ -863,7 +863,7 @@ function score(/** @type {any} */ t) {
 // The returned promise keeps the widget's code alive until the window closes.
 function openLibraries(/** @type {any[]} */ libraries, /** @type {(libs: any[]) => void} */ setLibraries, /** @type {(librariesChanged: boolean) => void} */ afterSave) {
   return new Promise((resolve) => {
-    figma.showUI(__html__, { themeColors: true, width: 360, height: 400, title: 'System libraries' });
+    figma.showUI(__html__, { themeColors: true, width: 360, height: 320, title: 'System libraries' });
     figma.on('close', () => resolve(null));
     figma.clientStorage.getAsync('token').then((token) => figma.ui.postMessage({ type: 'init', hasToken: !!token, links: libraries.map((l) => l.link).join('\n') }));
     figma.ui.onmessage = async (msg) => {
@@ -907,7 +907,8 @@ const divider = (/** @type {string} */ key) => h(Rectangle, { key, width: 'fill-
 const row = (/** @type {any} */ r) => h(AutoLayout, { key: r.key, width: 'fill-parent', padding: { vertical: UI.s2 }, spacing: UI.s2, verticalAlignItems: 'center' },
   h(AutoLayout, { direction: 'vertical', width: 'fill-parent' },
     txt(r.label, UI.body),
-    txt(r.total ? `${r.pass.toLocaleString()} of ${r.total.toLocaleString()}` : 'nothing to check', UI.body, { fill: UI.textSecondary })),
+    // the share stays a pass rate, like the total; the line under it names what failed, which is what someone fixes
+    txt(r.total ? `${r.miss} · ${r.total.toLocaleString()} checked` : 'Nothing to check', UI.body, { fill: UI.textSecondary })),
   r.pct === null
     ? txt('—', UI.body, { fill: UI.textTertiary })
     : h(AutoLayout, { spacing: UI.s2, verticalAlignItems: 'center' }, txt(r.pct + '%', UI.body, { fontWeight: 500 }), chip(r.pct)));
@@ -923,8 +924,10 @@ function AdoptionScore() {
     { itemType: 'action', propertyName: 'libraries', tooltip: 'System libraries…' },
   ], ({ propertyName, propertyValue }) => {
     if (propertyName === 'scope' && propertyValue) setScope(propertyValue);
-    if (propertyName === 'libraries') return openLibraries(libraries, setLibraries, (changed) => { setError(''); if (changed) setResult(null); });
+    if (propertyName === 'libraries') return connect();
   });
+
+  const connect = () => openLibraries(libraries, setLibraries, (changed) => { setError(''); if (changed) setResult(null); });
 
   const run = async () => {
     try {
@@ -941,8 +944,13 @@ function AdoptionScore() {
   const s = result ? score(result) : null;
   // the run's time in UTC, as the ISO string stores it: the widget sandbox's Intl support is not relied on
   const when = result ? String(result.at).slice(0, 16).replace('T', ' ') + ' UTC' : '';
-  const source = libraries.length ? 'System: ' + libraries.map((/** @type {any} */ l) => l.name).join(', ') : 'System: every library. Set yours in the widget’s menu.';
-  const where = result ? `${result.screens} screens on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages');
+  // with no libraries set, every library counts as the system: the card says so and offers the fix
+  const source = libraries.length
+    ? txt('System: ' + libraries.map((/** @type {any} */ l) => l.name).join(', '), UI.body, { fill: UI.textSecondary, width: 'fill-parent' })
+    : h(AutoLayout, { direction: 'vertical', width: 'fill-parent', spacing: UI.s1 },
+        txt('Every library counts as the system.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
+        txt('Connect your system libraries', UI.body, { fill: UI.brand, fontWeight: 500, onClick: connect, hoverStyle: { fill: UI.brandHover } }));
+  const where = result ? `${result.screens} ${result.screens === 1 ? 'screen' : 'screens'} on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages');
 
   return h(AutoLayout, { direction: 'vertical', width: 360, fill: UI.bg, cornerRadius: UI.radiusWindow, stroke: UI.border, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.15 }, offset: { x: 0, y: 2 }, blur: 6 } },
     h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3, top: UI.s25, bottom: UI.s2 }, spacing: UI.s2 },
@@ -952,7 +960,7 @@ function AdoptionScore() {
             txt(String(s.total), { fontSize: 40, lineHeight: 48, fontWeight: 600 }),
             h(AutoLayout, { direction: 'vertical', spacing: UI.s1 }, chip(s.total), txt('out of 100', UI.body, { fill: UI.textSecondary })))
         : txt(result ? 'Nothing to score: no screens found.' : 'Scans the screens for system components, detaches, bound colour and spacing, and text styles.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
-      txt(source, UI.body, { fill: UI.textSecondary, width: 'fill-parent' })),
+      source),
     s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3 } }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
     error ? h(AutoLayout, { width: 'fill-parent', padding: { horizontal: UI.s3, vertical: UI.s2 } }, txt('Error: ' + error, UI.body, { fill: UI.textDanger, width: 'fill-parent' })) : null,
     divider('footer-line'),

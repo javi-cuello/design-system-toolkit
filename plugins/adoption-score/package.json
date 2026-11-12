@@ -1,2 +1,2 @@
-{ "name": "adoption-score", "version": "0.3.1", "private": true,
+{ "name": "adoption-score", "version": "0.3.2", "private": true,
   "devDependencies": { "@figma/plugin-typings": "1.142.0", "@figma/widget-typings": "1.13.0" } }

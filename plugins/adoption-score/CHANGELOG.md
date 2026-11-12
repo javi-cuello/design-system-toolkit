@@ -1,6 +1,12 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.3.2] - 2026-11-12
+### Changed
+- With no system libraries set, the card says every library counts and offers Connect your system libraries, which opens the window.
+- The System libraries window is shorter: both fields stacked at full width, one line of help under each.
+- Each row's second line names what failed (2 detached · 7 checked) instead of what passed; the share stays a pass rate, like the total. One screen reads 1 screen.
+
 ## [0.3.1] - 2026-11-12
 ### Fixed
 - Saving System libraries clears the card's old error; it clears the last result only when the set of libraries changed, so a reordered list, a renamed link or a new token keeps it.
