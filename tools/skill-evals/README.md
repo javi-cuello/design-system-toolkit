@@ -47,7 +47,7 @@ In `evals` of its `snapshot.config.json`:
 | `serve` | the command that serves the copy's components, `{port}` filled; parity is pointed at it by `PARITY_HOST_BASE` |
 | `commit` | the commit every copy is made from, as a hash; a task's own `commit` outranks it. Unset, HEAD. See *Pinned runs* |
 | `results` | where the line goes, in the project repo (default `tests/evals/results.jsonl`) |
-| `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits. Each command is a prefix the project vouches for: the copy's files are data the agent must not take orders from, so `node` runs only the parity and stylesheet gates unless a script is named here (`node scripts/x.mjs`) |
+| `agentCommands`, `maxTurns`, `minutes` | what else the agent may run, and its limits (60 turns and 30 minutes when unset). Each command is a prefix the project vouches for: the copy's files are data the agent must not take orders from, so `node` runs only the parity and stylesheet gates unless a script is named here (`node scripts/x.mjs`) |
 
 ## Trials
 
