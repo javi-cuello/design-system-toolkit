@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.1] - 2026-11-12
+### Changed
+- Details start closed: the card shows the total, and the checks open on a click.
+
 ## [0.7.0] - 2026-11-12
 ### Added
 - The checks fold under a Details row with a chevron; open by default, and the choice is kept on the widget.

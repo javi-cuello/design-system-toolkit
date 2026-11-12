@@ -1,4 +1,4 @@
-// Adoption score — v0.7.0 · skill-standard v1.9.0
+// Adoption score — v0.7.1 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -937,7 +937,7 @@ function AdoptionScore() {
   const [result, setResult] = useSyncedState('result', /** @type {any} */ (null));
   const [error, setError] = useSyncedState('error', '');
   const [scope, setScope] = useSyncedState('scope', 'file');
-  const [open, setOpen] = useSyncedState('open', true);
+  const [open, setOpen] = useSyncedState('open', false);
   const [libraries, setLibraries] = useSyncedState('libraries', /** @type {any[]} */ ([]));
 
   usePropertyMenu([
