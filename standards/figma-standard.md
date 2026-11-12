@@ -392,7 +392,7 @@ Cite a rule as `figma-standard rule N`.
 
    *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used".
 
-43. **A style binds a variable wherever Figma lets it.** A text style binds its font family, weight, size, line height and letter spacing; an effect binds each layer's colour, offsets, blur and spread. One exception: letter spacing set in percent may stay unbound unless a mode must change it (a script that takes no tracking, [i18n](../knowledge/code/i18n.md#font-coverage)), since a bound variable is always px.
+43. **A style binds a variable wherever Figma lets it.** A text style binds its font family, weight, size, line height and letter spacing; an effect binds each layer's colour, offsets, blur and spread. One exception: letter spacing set in percent may stay unbound, because a bound variable is always px; it is bound when a mode must change it (a script that takes no tracking, [i18n](../knowledge/code/i18n.md#font-coverage)).
 
     *Why:* a style's raw value is a decision the tokens cannot reach: change the line-height token and every style keeps its own copy. Rule 29 binds a component's values; this is the same rule one level down. The exception holds because binding would cost more than it reaches: a percent tracking scales with the size, so one value serves every size and mode, where a px variable needs a value per size per mode.
 
