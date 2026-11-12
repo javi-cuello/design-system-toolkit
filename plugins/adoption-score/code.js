@@ -1,4 +1,4 @@
-// Adoption score — v0.6.0 · skill-standard v1.9.0
+// Adoption score — v0.7.0 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -749,7 +749,7 @@ const FCA_FACTORY = function () {
 /* adoption-score generated end */
 
 const { widget } = figma;
-const { AutoLayout, Text, Span, Rectangle, Ellipse, useSyncedState, usePropertyMenu, useWidgetNodeId, h } = widget;
+const { AutoLayout, Text, Span, Rectangle, Ellipse, SVG, useSyncedState, usePropertyMenu, useWidgetNodeId, h } = widget;
 
 // The look is the plugins' (skill-standard §B 4): FigUI3's light-theme values, read from plugins/_shared/figui3/fig.css.
 // A widget draws on the canvas and cannot read CSS, so the values are copied here; widget font weights take hundreds,
@@ -928,10 +928,16 @@ const radios = (/** @type {string} */ value, /** @type {(v: string) => void} */ 
         o.option === value ? h(Ellipse, { width: 6, height: 6, fill: UI.onBrand }) : null),
       txt(o.label, UI.body))));
 
+// 16px chevrons in the secondary text colour
+const chevron = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="${d}" stroke="#000000" stroke-opacity="0.6" fill="none"/></svg>`;
+const CHEVRON_DOWN = chevron('M5 7l3 3 3-3');
+const CHEVRON_UP = chevron('M5 9l3-3 3 3');
+
 function AdoptionScore() {
   const [result, setResult] = useSyncedState('result', /** @type {any} */ (null));
   const [error, setError] = useSyncedState('error', '');
   const [scope, setScope] = useSyncedState('scope', 'file');
+  const [open, setOpen] = useSyncedState('open', true);
   const [libraries, setLibraries] = useSyncedState('libraries', /** @type {any[]} */ ([]));
 
   usePropertyMenu([
@@ -980,7 +986,13 @@ function AdoptionScore() {
             h(AutoLayout, { direction: 'vertical', spacing: UI.s1 }, chip(s.total), txt('out of 100', UI.body, { fill: UI.textSecondary })))
         : result ? txt('Nothing to score: no screens found.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }) : null,
       source),
-    s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3 } }, ...s.rows.flatMap((r) => [divider('line-' + r.key), row(r)])) : null,
+    // the checks fold under the total, so a card left on the canvas can be just the number
+    s ? h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: { horizontal: UI.s3 } },
+        divider('details-line'),
+        h(AutoLayout, { width: 'fill-parent', padding: { vertical: UI.s2 }, spacing: UI.s1, verticalAlignItems: 'center', onClick: () => setOpen(!open) },
+          txt('Details', UI.body, { fontWeight: 500, width: 'fill-parent' }),
+          h(SVG, { src: open ? CHEVRON_UP : CHEVRON_DOWN })),
+        ...(open ? s.rows.flatMap((r) => [divider('line-' + r.key), row(r)]) : [])) : null,
     error ? h(AutoLayout, { width: 'fill-parent', padding: { horizontal: UI.s3, vertical: UI.s2 } }, txt('Error: ' + error, UI.body, { fill: UI.textDanger, width: 'fill-parent' })) : null,
     divider('footer-line'),
     h(AutoLayout, { direction: 'vertical', width: 'fill-parent', padding: UI.s25, spacing: UI.s25 },

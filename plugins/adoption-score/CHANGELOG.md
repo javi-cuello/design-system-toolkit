@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.7.0] - 2026-11-12
+### Added
+- The checks fold under a Details row with a chevron; open by default, and the choice is kept on the widget.
+
 ## [0.6.0] - 2026-11-12
 ### Changed
 - Bands: Good 75 and up, Fair 60 to 74, Poor below 60 (were 90 and 75), after Google's code-coverage guidelines; no design-system source publishes a pass mark.

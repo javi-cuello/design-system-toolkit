@@ -1,6 +1,6 @@
 # Adoption score
 
-A Figma widget that scores how closely a product file's screens use its design system. Place it on the canvas, press **Run scan**, and it draws a total out of 100 and a band per check; **Run again** re-scans after changes.
+A Figma widget that scores how closely a product file's screens use its design system. Place it on the canvas, press **Run scan**, and it draws a total out of 100 and a band per check, folded under **Details**; **Run again** re-scans after changes.
 
 ## Run
 
