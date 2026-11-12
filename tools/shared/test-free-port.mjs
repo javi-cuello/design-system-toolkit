@@ -18,7 +18,9 @@ for (const host of [undefined, '127.0.0.1', '::1']) {
 }
 const q = await freePort();
 const s = await hold(q, '127.0.0.1');
-ok('the first free port of the list, held ones passed over', (await freePort([q, p])) === p);
+// the free one is picked while q is held, so it is never q, and just before the probe, so a parallel test is unlikely to take it (CI, 2026-11-12: a p picked earlier failed)
+const r = await freePort();
+ok('the first free port of the list, held ones passed over', (await freePort([q, r])) === r);
 ok('none of the list free: 0', (await freePort([q])) === 0);
 await new Promise((r) => s.close(r));
 
