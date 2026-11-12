@@ -950,8 +950,8 @@ function AdoptionScore() {
   const source = libraries.length
     ? txt('System: ' + libraries.map((/** @type {any} */ l) => l.name).join(', '), UI.body, { fill: UI.textSecondary, width: 'fill-parent' })
     : h(AutoLayout, { direction: 'vertical', width: 'fill-parent', spacing: UI.s1 },
-        txt('Every library counts as the system.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
-        txt('Connect your system libraries', UI.body, { fill: UI.brand, fontWeight: 500, onClick: connect, hoverStyle: { fill: UI.brandHover } }));
+        txt('Any library counts as the system, so the score may be too high.', UI.body, { fill: UI.textSecondary, width: 'fill-parent' }),
+        txt('Connect your system libraries for an accurate score', UI.body, { fill: UI.brand, fontWeight: 500, onClick: connect, hoverStyle: { fill: UI.brandHover } }));
   const where = result ? `${result.screens} ${result.screens === 1 ? 'screen' : 'screens'} on ${result.scope === 'page' ? 'this page' : result.pages + ' pages'} · ${when}` : (scope === 'page' ? 'Scope: this page' : 'Scope: all pages');
 
   return h(AutoLayout, { direction: 'vertical', width: 360, fill: UI.bg, cornerRadius: UI.radiusWindow, stroke: UI.border, effect: { type: 'drop-shadow', color: { r: 0, g: 0, b: 0, a: 0.15 }, offset: { x: 0, y: 2 }, blur: 6 } },
