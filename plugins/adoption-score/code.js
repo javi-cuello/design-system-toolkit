@@ -1,4 +1,4 @@
-// Adoption score — v0.3.0 · skill-standard v1.9.0
+// Adoption score — v0.3.1 · skill-standard v1.9.0
 // @ts-check
 // A widget that scores how closely a file's screens use its design system: system components, detaches, colour,
 // spacing and text styles. The scan is figma-components-audit's composed-frame check, copied in below by sync.mjs.
@@ -861,7 +861,7 @@ function score(/** @type {any} */ t) {
 
 // The settings window (ui.html, FigUI3): the token stays on this machine, the libraries are the file's choice.
 // The returned promise keeps the widget's code alive until the window closes.
-function openLibraries(/** @type {any[]} */ libraries, /** @type {(libs: any[]) => void} */ setLibraries, /** @type {() => void} */ clearResult) {
+function openLibraries(/** @type {any[]} */ libraries, /** @type {(libs: any[]) => void} */ setLibraries, /** @type {(librariesChanged: boolean) => void} */ afterSave) {
   return new Promise((resolve) => {
     figma.showUI(__html__, { themeColors: true, width: 360, height: 400, title: 'System libraries' });
     figma.on('close', () => resolve(null));
@@ -879,7 +879,9 @@ function openLibraries(/** @type {any[]} */ libraries, /** @type {(libs: any[]) 
           const seen = new Set();
           const next = parsed.filter((p) => { const k = /** @type {any} */ (p.lib).fileKey; return seen.has(k) ? false : (seen.add(k), true); }).map((p) => ({ link: p.link, .../** @type {any} */ (p.lib) }));
           // the last run was counted against the old libraries, so it no longer describes them; a token alone changes nothing counted
-          if (next.map((l) => l.fileKey).join() !== libraries.map((l) => l.fileKey).join()) { setLibraries(next); clearResult(); }
+          const keysOf = (/** @type {any[]} */ ls) => ls.map((l) => l.fileKey).sort().join();
+          setLibraries(next);
+          afterSave(keysOf(next) !== keysOf(libraries));
           figma.closePlugin();
         } else if (msg.type === 'forget') {
           await figma.clientStorage.deleteAsync('token');
@@ -921,7 +923,7 @@ function AdoptionScore() {
     { itemType: 'action', propertyName: 'libraries', tooltip: 'System libraries…' },
   ], ({ propertyName, propertyValue }) => {
     if (propertyName === 'scope' && propertyValue) setScope(propertyValue);
-    if (propertyName === 'libraries') return openLibraries(libraries, setLibraries, () => { setResult(null); setError(''); });
+    if (propertyName === 'libraries') return openLibraries(libraries, setLibraries, (changed) => { setError(''); if (changed) setResult(null); });
   });
 
   const run = async () => {

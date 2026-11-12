@@ -1,6 +1,10 @@
 # Changelog — Adoption score
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.3.1] - 2026-11-12
+### Fixed
+- Saving System libraries clears the card's old error; it clears the last result only when the set of libraries changed, so a reordered list, a renamed link or a new token keeps it.
+
 ## [0.3.0] - 2026-11-12
 ### Added
 - System libraries… in the widget's menu: links to the libraries that are the design system, and a Figma token kept on this computer. Each run fetches those libraries' published components (one REST call per library), and only their instances count as System components; without libraries, every library counts, as before.
