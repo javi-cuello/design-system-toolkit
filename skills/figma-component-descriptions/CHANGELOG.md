@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.22.1 (2026-11-12): `sections.mjs`'s usage line names `--separator`, which it reads and its header documents.
 - 1.22.0 (2026-11-10): Composition lists only the parts a component places itself; a size line where an axis flips fixed and hug; `sections.mjs --recipes` generates the reference-screens Usage line. Case D25.
 - 1.21.0 (2026-11-10): `apply.js` reads each write back, so "applies and verifies in one round trip" is true: Figma's harmless rewrites pass, any other difference (the backslash it doubles in `\|`) is `ok: false` with what was stored. Case D24.
 - 1.20.1 (2026-11-06): the script's "am I the one being run" guard resolves argv[1] inside a try, so importing it from a process whose argv[1] is no file does not throw.

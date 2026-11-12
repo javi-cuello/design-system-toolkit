@@ -2,7 +2,7 @@
 /*
  * The facts this skill judges, read from a stored snapshot instead of Figma.
  *
- *   node scripts/from-snapshot.mjs --input facts-in.json [--tokens t.json]
+ *   node scripts/from-snapshot.mjs --input facts-in.json [--tokens t.json] [--parents p.json]
  *
  * `scripts/foundations.js` gathers { pages, components } from the live file
  * and hands them to `checkFacts`, which is pure. Every one of those facts is

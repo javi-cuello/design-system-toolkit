@@ -1,5 +1,6 @@
 # Changelog — figma-foundations-audit
 
+- 1.26.1 (2026-11-12): `scripts/from-snapshot.mjs`'s header names `--parents`, which it reads and SKILL.md documents.
 - 1.26.0 (2026-11-10): the Audit lite plugin carries `scripts/foundations.js` as a third launcher, copied by its `sync.mjs` and held equal by `bin/check`; a change here is followed by that sync. Case F25.
 - 1.25.3 (2026-10-31): `scripts/from-snapshot.mjs` says a missing or broken input in one line naming it, never a stack. Case F24.
 - 1.25.2 (2026-10-31): the page marker compiles with the u flag (falling back to plain), and the house marker is `^[^\p{L}\p{N}_]+`, so a page named "❖ États" is compared as États, not "tats".

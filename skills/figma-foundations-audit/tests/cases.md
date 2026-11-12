@@ -1,4 +1,4 @@
-# Eval cases — figma-foundations-audit (v1.26.0)
+# Eval cases — figma-foundations-audit (v1.26.1)
 
 **Walked: 2026-11-11 for 1.26.0** (record written in the seven-day review) — F25 executed 2026-11-10; `node tests/test-foundations.mjs` 87 of 87 re-run 2026-11-11.
 
