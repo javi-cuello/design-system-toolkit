@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.32.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.33.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -360,12 +360,19 @@ document plus a config: its files, its paths, its phase, what it builds after a
 snapshot, where its token lives. Adding a project is adding those; it is never
 editing the toolkit. Nor does any file in the toolkit name one, prose and walk
 records included: a lesson says "one project" or a fixed stand-in ("Project A"),
-so the repo can be handed to someone outside without a project in it.
+so the repo can be handed to someone outside without a project in it. The
+same holds for a customer and a private person: no tracked file, `research/`'s
+articles included, names a customer, a private project or a private person,
+carries an email address or a home path, or quotes a private
+session; it uses a neutral description ("a product library", "Project A").
 
 *Why:* a project name in shared code is a fork with extra steps, and the second
 project pays for it.
 
-*Evidence:* a scanner hard-coded one library's collection name and reported 210
+*Evidence:* the research articles, moved into the repo on 2026-11-12, named four
+projects, their file ids and package scopes, home paths and the maintainer's
+words from private sessions; the name check had passed over one of them, whose
+file name held a space. A scanner hard-coded one library's collection name and reported 210
 false findings against another; a docs site needed a per-repo config until the
 snapshot contract stated the layout once. Today the router discovers projects
 by reading the projects directory, and a repo states only where its own files
@@ -373,7 +380,9 @@ live.
 
 *Checked:* `standards/tests/scan-clause-d.py` "no ID-shaped candidates" (no project data in `skills/`);
 `bin/check` "no project is named in the toolkit" (every label, every tracked
-file); `bin/check` "no test needs this machine's home" (a test takes the repo's
+file, and `tools/toolkit-check/personal-info.mjs` for an email, a home path or
+the maintainer's name read from git config; `tools/toolkit-check/test-pre-push-names.mjs`
+"the maintainer's name, read from git config, is refused by any word of it"); `bin/check` "no test needs this machine's home" (a test takes the repo's
 path from where it runs, so it passes off the owner's Mac); `bin/check` "no tool builds a
 project's path itself" — the snapshot contract's `homeOf()` / `layout()` is the
 only path resolver. *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — §D 7's

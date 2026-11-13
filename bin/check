@@ -142,13 +142,17 @@ step "no project is named in the toolkit"
 # the names, and why a crash is a failure of its own: tools/toolkit-check/project-names.sh
 OUT=""
 NAMES=$(tools/toolkit-check/project-names.sh 2>&1) || { OUT="nothing was searched: $NAMES"; NAMES=""; }
-[ -n "$NAMES" ] && OUT="$OUT$(git ls-files | xargs grep -inE "\b($NAMES)\b" 2>/dev/null | cut -c1-200)"
+# NUL-separated: a file name with a space in it was split and never read (2026-11-13)
+[ -n "$NAMES" ] && OUT="$OUT$(git ls-files -z | xargs -0 grep -inE "\b($NAMES)\b" 2>/dev/null | cut -c1-200)"
 # a compressed fixture is read through gzip: grep sees only its bytes
 # (no projects on this machine, as in a fresh clone: nothing to look for)
 [ -n "$NAMES" ] && for gz in $(git ls-files '*.gz'); do
     gzip -dc "$gz" 2>/dev/null | grep -qiE "\b($NAMES)\b" && OUT="$OUT
 $gz: names a project inside the compressed file"
 done
+# and no personal detail: an email, a /Users/<name>/ path, the maintainer's name from git config
+PI=$(node tools/toolkit-check/personal-info.mjs 2>&1); [ $? -eq 0 ] || OUT="$OUT
+$PI"
 [ -z "$OUT" ] && ok || bad "$OUT"
 
 # The half check.mjs cannot see: a job no one has moved here yet, written in

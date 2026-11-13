@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.2.2)
+# Eval cases — design-system-research (v3.3.0)
+
+**Walked: 2026-11-13 for 3.3.0** — A27 added, traced to SKILL.md and toolkit-standard §D 6; walked against the 59 research articles as committed in the anonymisation: no project, scope, file id, home path or private quote, and `bin/check`'s name step green. A17 read: unchanged (scripts still kept out, the experiment harness removed). Others unchanged: none asserts on who a guide may name.
 
 **Walked: 2026-11-12 for 3.2.2** — path only: the collection is named as `research/` in deep mode and Step 8. A17 read against it (reads the collection's README, files by topic, no scripts): unchanged, its fixture now that folder; A15 (Step 8: the guide feeds the knowledge page, which links nothing private) unchanged. No other case names the collection's location.
 
@@ -250,3 +252,10 @@ Assert: the case is introduced as illustrative in its own sentence ("Take an ill
 Negative: an unlabelled invented case; an illustrative case whose arithmetic is wrong; "Polaris did this" attached to an invented situation.
 Observed: 2026-11-11 — the 27-guide rewrite: several agents needed worked cases no source supplied and labelled them illustrative on their own; the voice file covered invented traps but not invented cases.
 Traced: 2026-11-11 for 3.2.0 — to `references/deep-mode-voice.md` §5 *Every major claim gets a worked case*.
+
+## A27 · A guide names no customer, private project or person
+Fixture: a deep-mode guide whose worked case comes from a project the toolkit serves, with its product name, its package scope, a Figma file id from its audit path, the repo at a home path, and the maintainer's words quoted from a session.
+Assert: the guide names the project by a neutral description or a stand-in ("Project A", "a marketplace") used consistently through the piece; the package scope and file id become placeholders (`@project-a/…`, `<file-id>`); a toolkit file is cited by its repo path, never a home folder; what a session said is paraphrased with no verbatim quote and no private date; `bin/check`'s "no project is named in the toolkit" step is green.
+Negative: a project's name, a client's company, an email address, `/Users/<name>/` or `~/Projects/<label>`, or a quoted private prompt anywhere in the guide, its SVG text or its sources.
+Observed: 2026-11-13 — the research articles moved into the public repo named four projects, their ids and scopes, and quoted the maintainer from session memory; the person ruled: anonymise, keep public, and make sure it does not happen again.
+Traced: 2026-11-13 for 3.3.0 — to SKILL.md "A deep-mode guide is an article, not a store" and research/README.md.

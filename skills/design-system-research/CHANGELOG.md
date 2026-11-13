@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.3.0 (2026-11-13): research/ is public: a guide names no customer, private project or person and quotes no private session, using neutral descriptions. Case A27.
 - 3.2.2 (2026-11-12): the research collection moved into the toolkit; deep mode and Step 8 name it by path, `research/`.
 - 3.2.1 (2026-11-11): the checklist names the five-word awk beside the grep; A11 and A18 say "list of sections", not "question list".
 - 3.2.0 (2026-11-11): headings are short labels, never questions, grep-checked (§4, §13); an illustrative worked case is labelled and invents only its situation (§5). A9, A25 amended; A26 added.

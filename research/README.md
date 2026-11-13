@@ -7,6 +7,7 @@ A curated set of editorial articles on how design systems are built. Each piece 
 - One article per question. A broad survey of what the toolkit knowledge base ([`knowledge/`](../knowledge/README.md)) already holds is not an article; narrow it to the question the knowledge base cannot answer, or add the finding to the knowledge base instead.
 - Update the article that already asks a question rather than writing a second one.
 - File each article in the topic folder that fits it. A new folder only for a topic none covers.
+- research/ is public: no customer, private project or private person is named, and nothing from a private session is quoted; use neutral descriptions ("a product library", "Project A"). The rule is toolkit-standard §D 6; `bin/check` refuses a project's name, an email, a /Users/ path or the maintainer's name.
 - No scripts, raw results or experiment data. State their numbers in the prose and keep the files in the toolkit or a scratch folder.
 - Retired pieces go to `_archive/<date>/`, never deleted.
 

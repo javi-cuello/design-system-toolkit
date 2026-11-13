@@ -144,7 +144,7 @@ export function appWaivers(declared, docs) {
  * A project's accepted translations (`parity.translations`): a conversion
  * rule stated once — Figma has no margins, the scrim is the browser's
  * ::backdrop, a text box is rounded to the pixel — rather than a waiver per
- * screen, because the ruling is in the rule and not in each case (Javier,
+ * screen, because the ruling is in the rule and not in each case (the maintainer,
  * 2026-11-10; on the reference project about ninety per-screen waivers said
  * the same dozen things). Expanded for one render as app waivers are, on
  * every target the rule's `on` glob names (all when it has none), and marked

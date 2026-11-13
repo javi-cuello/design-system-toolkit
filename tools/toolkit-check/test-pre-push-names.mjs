@@ -65,5 +65,40 @@ try {
   ok('…and prints nothing, exiting 0, on an empty one', r.status === 0 && r.stdout.trim() === '', r.stdout + r.stderr);
   r = names(join(tmp, 'projects'));
   ok('…and the project\'s name, separator optional, where there is one', r.status === 0 && r.stdout.trim() === 'acme[-_. ]?web', r.stdout + r.stderr);
+  // personal-info.mjs, as bin/check's step runs it: a repo whose maintainer and remote are stand-ins
+  const pi = join(tmp, 'pi');
+  mkdirSync(join(pi, 'notes'), { recursive: true });
+  const pgit = (...a) => execFileSync('git', ['-C', pi, ...a], { encoding: 'utf8' }).trim();
+  pgit('init', '-q'); pgit('config', 'user.name', 'Ada Lovelace'); pgit('remote', 'add', 'origin', 'https://github.com/ada-love/kit.git');
+  const scan = (body, file = 'notes/a b.md') => {
+    writeFileSync(join(pi, file), body + '\n'); pgit('add', '-A');
+    const res = spawnSync('node', [join(ROOT, 'tools/toolkit-check/personal-info.mjs')], { cwd: pi, encoding: 'utf8' });
+    rmSync(join(pi, file)); pgit('add', '-A');
+    return res;
+  };
+  // built at run time, so the scan of this repo does not find its own fixtures
+  const AT = '@';
+  r = scan(`Write to jo.smith${AT}acme.io for access.`);
+  ok('an email address is refused, in a file whose name has a space', r.status === 1 && r.stdout.includes('notes/a b.md:1: an email address (jo.smith' + AT + 'acme.io)'), r.stdout + r.stderr);
+  r = scan(`Co-Authored-By: Claude <noreply${AT}anthropic.com>; reach jo${AT}example.com or a${AT}b.example.org; icon${AT}2x.png; git${AT}github.com:a/b.git`);
+  ok('…but not the commit trailer\'s noreply, an example.com/.org/.net placeholder, an @2x asset or a git@ remote', r.status === 0, r.stdout + r.stderr);
+  const U = '/' + 'Users/';
+  r = scan(`The snapshot sat in ${U}jsmith/Projects/x and ${U.toLowerCase()}kim/x.`);
+  ok('a /Users/<name>/ home path is refused, in either case', r.status === 1 && /a home path \(\/Users\/jsmith\/\)/.test(r.stdout) && /\/users\/kim\//.test(r.stdout), r.stdout + r.stderr);
+  r = scan(`Fixtures: ${U}u/p, ${U}me/notes.md, ${U}first.last/Projects; https://medium.com/users/ben/x`);
+  ok('…but not a fixture\'s placeholder home or a URL path that happens to say /users/', r.status === 0, r.stdout + r.stderr);
+  r = scan('Ruled by Lovelace on 3 October.');
+  ok('the maintainer\'s name, read from git config, is refused by any word of it', r.status === 1 && /maintainer's name \(Lovelace\)/.test(r.stdout), r.stdout + r.stderr);
+  r = scan('Asked by ádá, accents and case aside.');
+  ok('…accents and case ignored', r.status === 1, r.stdout + r.stderr);
+  r = scan('© 2026 Ada Lovelace. See https://github.com/ada-love/kit/blob/main/README.md');
+  ok('…but not in the author\'s notice or the repo\'s own address', r.status === 0, r.stdout + r.stderr);
+  r = scan(`© 2026 Ada Lovelace, ada${AT}acme.io`);
+  ok('…though an email on the notice\'s line is still refused', r.status === 1 && /an email address/.test(r.stdout) && !/maintainer/.test(r.stdout), r.stdout + r.stderr);
+  r = scan('Copyright Ada Lovelace', 'LICENSE');
+  ok('…nor in LICENSE', r.status === 0, r.stdout + r.stderr);
+  pgit('config', 'user.name', '');
+  r = scan('Ruled by Lovelace.');
+  ok('with no user.name the name is not looked for, and a notice says so', r.status === 0 && /no git user\.name/.test(r.stderr), r.stdout + r.stderr);
 } finally { rmSync(tmp, { recursive: true, force: true }); }
 console.log(`${n}/${n} passed`);
