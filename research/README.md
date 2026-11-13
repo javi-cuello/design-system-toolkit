@@ -9,6 +9,7 @@ A curated set of editorial articles on how design systems are built. Each piece 
 - File each article in the topic folder that fits it. A new folder only for a topic none covers.
 - research/ is public: no customer, private project or private person is named, and nothing from a private session is quoted; use neutral descriptions ("a product library", "Project A"). The rule is toolkit-standard §D 6; `bin/check` refuses a project's name, an email, a /Users/ path or the maintainer's name.
 - No scripts, raw results or experiment data. State their numbers in the prose and keep the files in the toolkit or a scratch folder.
+- An article added or edited goes into `index.html` in the same change, with `built` set to the day: nothing builds the page, and `bin/check` refuses an article missing from it or out of step with it.
 - Retired pieces go to `_archive/<date>/`, never deleted.
 
 The `design-system-research` skill reads this file before writing a deep-mode guide. The knowledge base never links to these articles.

@@ -155,6 +155,12 @@ PI=$(node tools/toolkit-check/personal-info.mjs 2>&1); [ $? -eq 0 ] || OUT="$OUT
 $PI"
 [ -z "$OUT" ] && ok || bad "$OUT"
 
+# Nothing builds research/index.html, so an article added without it was missing from the site
+# with nothing saying so (2026-11-13): tools/toolkit-check/research-index.mjs.
+step "the research site carries every article"
+OUT=$(node tools/toolkit-check/research-index.mjs 2>&1)
+[ $? -eq 0 ] && ok || bad "$OUT"
+
 # The half check.mjs cannot see: a job no one has moved here yet, written in
 # two projects. Warned, not failed — a twin is a decision (toolkit-standard
 # §D 2). Fired first on two parity engines, 2026-10-01.
