@@ -179,6 +179,9 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   const lines = take('maxLines'), cut = take('truncate');
   if (lines === 1 && cut) { put('overflow', 'hidden'); put('white-space', 'nowrap'); put('text-overflow', 'ellipsis'); }
   else if (lines > 1) { put('display', '-webkit-box'); put('-webkit-box-orient', 'vertical'); put('-webkit-line-clamp', String(lines)); put('overflow', 'hidden'); }
+  // a text that hugs its width grows on one line and never wraps (Figma's WIDTH_AND_HEIGHT); CSS's shrink-to-fit
+  // would wrap it at the room it has, so it is said with nowrap (rules.mjs autoResizeOf)
+  else if (e.kind === 'text' && e.width === 'hug') put('white-space', 'nowrap');
   if (take('verticalAlign') !== undefined) unread.push('verticalAlign (text set in a taller box)');
 
   for (const k of Object.keys(e)) if (!done.has(k) && !STRUCTURE.has(k)) unread.push(k);

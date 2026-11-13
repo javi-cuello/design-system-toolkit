@@ -26,6 +26,10 @@ ok('auto layout is flex: direction, gap, padding (shortest form), alignment, eac
 ok('a hugging outer box is inline-flex, as it sits in a line of text', decl({ layout: {}, width: 'hug' }, { holds: true, root: true }).display === 'inline-flex');
 ok('fill grows along the parent\'s row and stretches across its column', decl({ width: 'fill' }, { row: true }).flex === '1 1 0' && decl({ width: 'fill' }, { row: false })['align-self'] === 'stretch');
 const lit = declarations({ minHeight: 24 }, {}, names).decls[0];
+ok('a text that hugs its width never wraps (Figma\'s WIDTH_AND_HEIGHT), one that fills or is cut keeps its own',
+  decl({ kind: 'text', width: 'hug', height: 'hug' }, {})['white-space'] === 'nowrap' && decl({ kind: 'text', width: 'fill', height: 'hug' }, {})['white-space'] === undefined
+  && decl({ kind: 'container', width: 'hug', height: 'hug' }, {})['white-space'] === undefined
+  && decl({ kind: 'text', width: 'hug', height: 'hug', maxLines: 2, truncate: true }, {})['-webkit-line-clamp'] === '2');
 ok('a literal carries its reason (code-standard rule 22)', lit[2] === 'no token in the design');
 ok('a radius stays px, a length goes rem (code-standard rule 54)', decl({ radius: 6 })['border-radius'] === '6px' && decl({ width: 8 })['inline-size'] === '0.5rem');
 ok('an inside stroke out of layout is an inset ring; in layout, a border per side; outside, an outline taking no room (rule 63)',

@@ -74,12 +74,11 @@ export function battery({ styles = ['Body/md', 'Label/sm'], colour = 'Text/stron
   id = box('a minimum and a maximum', { layout: L('row'), width: 'hug', height: 'hug', minWidth: 120, maxWidth: 300 }, ['min-width', 'max-width']); filler(id, 0);
   id = box('padding per side', { layout: L('row', { padding: { top: 1, end: 2, bottom: 3, start: 4 } }), width: 'hug', height: 'hug' }, ['padding']); filler(id, 0);
   // text: its style, colour and alignment, how it resizes (its sizes, rules.mjs), and where it is cut
-  // (a text that hugs its width holds words that fit: CSS wraps it at the room it has where Figma's never wraps, a
-  // difference the table names and these cases do not claim to hold)
-  const words = 'The quick brown fox jumps over the lazy dog', few = 'Quick fox';
+  // (a text that hugs its width holds more words than its box has room for: it grows on one line on both sides)
+  const words = 'The quick brown fox jumps over the lazy dog';
   for (const [w, h] of [['hug', 'hug'], ['fill', 'hug'], [160, 'hug'], [160, 40]]) for (const textAlign of ['start', 'center', 'end']) {
-    id = box(`text: ${w} wide, ${h} high, ${textAlign}`, { layout: L('column'), width: 240, height: 'hug' }, ['text-style', 'text-fill', 'align-left-center-right', ...(w === 'hug' ? [] : [`text-autoresize-${h === 'hug' ? 'height' : 'none'}`]), ...(w === 'fill' ? ['size-fill-cross'] : [])]);
-    part(`${id}/t`, { kind: 'text', parent: id, order: 0, width: w, height: h, typography: styles[0], color: colour, textAlign, autoResize: w === 'hug' ? 'width_and_height' : h === 'hug' ? 'height' : 'none', content: w === 'hug' ? few : words });
+    id = box(`text: ${w} wide, ${h} high, ${textAlign}`, { layout: L('column'), width: 240, height: 'hug' }, ['text-style', 'text-fill', 'align-left-center-right', `text-autoresize-${w === 'hug' ? 'width-height' : h === 'hug' ? 'height' : 'none'}`, ...(w === 'fill' ? ['size-fill-cross'] : [])]);
+    part(`${id}/t`, { kind: 'text', parent: id, order: 0, width: w, height: h, typography: styles[0], color: colour, textAlign, autoResize: w === 'hug' ? 'width_and_height' : h === 'hug' ? 'height' : 'none', content: words });
   }
   for (const lines of [1, 2, 3]) {
     id = box(`text cut at ${lines} line${lines > 1 ? 's' : ''}`, { layout: L('column'), width: 120, height: 'hug' }, lines > 1 ? ['max-lines'] : ['truncation-ending']);
