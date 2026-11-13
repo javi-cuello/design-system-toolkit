@@ -46,6 +46,14 @@ ok('what a render changes against the default, as a variant layer: fields set, e
   JSON.stringify(delta({ root: { background: 'A' }, icon: { kind: 'graphic' } }, { root: { background: 'B' }, close: { kind: 'graphic' } }))
     === '{"set":{"root.background":"B"},"add":{"close":{"kind":"graphic"}},"remove":["icon"]}'
   && JSON.stringify(delta({ root: { a: 1 } }, { root: { a: 1 } })) === '{}');
+ok('a field the default has and a render lacks is set to null, so it survives JSON and the drawing drops it',
+  JSON.stringify(delta({ content: { background: 'A', shadow: 'S' } }, { content: {} })) === '{"set":{"content.background":null,"content.shadow":null}}');
+ok('a focus outline is the design\'s focus ring layer, and the corner rounded only to shape it stays the box\'s own',
+  JSON.stringify(delta({ root: { radius: 'R0', background: 'A' } }, { root: { radius: 'R12', background: 'B' }, focusRing: { kind: 'graphic', parent: 'root', radius: 'R16' } }))
+    === '{"set":{"root.background":"B"},"add":{"focusRing":{"kind":"graphic","parent":"root","radius":"R16"}}}'
+  && JSON.stringify(delta({ root: { radius: 'R0' }, focusRing: { parent: 'root' } }, { root: { radius: 'R12', width: 9 }, focusRing: { parent: 'root' } }, { root: { radius: 'R0' } })) === '{"set":{"root.width":9}}'
+  // an outline the default render has too is the box's own: its corners change as the box's do
+  && JSON.stringify(delta({ root: { radius: 'R0' }, focusRing: { parent: 'root' } }, { root: { radius: 'R12' }, focusRing: { parent: 'root' } })) === '{"set":{"root.radius":"R12"}}');
 
 // a chip as read from code: an MUI `variant` in its own words, an icon picked by name
 const code = { contract: 1, component: 'chip',
@@ -99,6 +107,12 @@ ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a fu
     ok('an option that leaves its arg unset is joined as unset, so it draws at the code\'s own default', j.arg === 'tone' && 'true' in j.values && j.values.true === undefined);
     const two = governedReading({ ...t, variants: new Map([['Selected=False, State=Rest', { args: {} }], ['Selected=True, State=Rest', { args: { selected: true, tone: 'bold' } }]]) }, b, {}).joins(figma, { selected: false, state: 'rest' });
     ok('a prop whose variants move two args is joined to the first and the second is said, never dropped in silence', two.props.selected.arg === 'selected' && two.twice.selected.join() === 'selected,tone');
+  }
+  {
+    // a boolean property no variant name carries: the mapping's own table joins it
+    const prop = { ...figma, props: { ...figma.props, showChevron: { type: 'boolean', default: false, figma: 'Show chevron' } } };
+    const j = governedReading({ ...t, mapping: { ...t.mapping, axes: { 'Show chevron': { True: { chevron: true } } } } }, b, {}).joins(prop, { selected: false, state: 'rest' }).props.showChevron;
+    ok('a boolean property no variant\'s name carries is joined by the mapping\'s own table for it', j && j.arg === 'chevron' && j.values.true === true);
   }
   ok('each pointer state is forced where its option says, else where the mapping\'s state says, inside the host\'s container',
     G.pseudoOf.hover.on === '#root .chip' && G.pseudoOf.focus.on === '#root .chip__action' && G.pseudoOf.focus.pseudo === 'focus-visible');

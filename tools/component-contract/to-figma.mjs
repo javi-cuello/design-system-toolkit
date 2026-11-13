@@ -52,6 +52,7 @@ const slotName = (e, props) => { const ref = e.kind === 'slot' && typeof e.conte
    its order of values) does not count and what a variant draws does; then the props' names and kinds and the
    component's name. Rows: { at, library, drawn, in } where `in` counts the combinations it differs in. */
 export function roundTrip(library, drawn, { limit = 256 } = {}) {
+  library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
   const diff = (a, b, at) => {
@@ -90,7 +91,28 @@ const ownId = (id, e) => {
   return last.startsWith(pre) && /^[A-Z]/.test(last.slice(pre.length)) ? [...segs.slice(0, -1), last[pre.length].toLowerCase() + last.slice(pre.length + 1)].join('/') : id;
 };
 
+/* The contract as Figma holds it: a prop the contract says is code's alone (`only: 'code'`, the contract editor's
+   "Exists in") is no property or axis of the drawing, so the combinations it moves are drawn at its default and the
+   rest of them go. Tested by test-to-figma.mjs. */
+export function figmaSide(contract) {
+  const gone = Object.entries(contract.props || {}).filter(([, p]) => p && p.only === 'code');
+  if (!gone.length) return contract;
+  const def = Object.fromEntries(gone.map(([k, p]) => [k, p.default]));
+  const props = Object.fromEntries(Object.entries(contract.props).filter(([k]) => !(k in def)));
+  const variants = (contract.variants || []).flatMap((v) => {
+    const keys = Object.keys(v.when || {}).filter((k) => k in def);
+    if (!keys.length) return [v];
+    if (keys.some((k) => v.when[k] !== def[k])) return [];
+    // one that named only code-only props at their defaults holds for every combination drawn
+    return [{ ...v, when: Object.fromEntries(Object.entries(v.when).filter(([k]) => !(k in def))) }];
+  });
+  // a combination not drawn that names one: as for a variant
+  const invalid = Array.isArray(contract.invalid) ? contract.invalid.flatMap((x) => (Object.keys(x).some((k) => k in def && x[k] !== def[k]) ? [] : [Object.fromEntries(Object.entries(x).filter(([k]) => !(k in def)))])).filter((x) => Object.keys(x).length) : contract.invalid;
+  return { ...contract, props, variants, ...(invalid !== undefined && { invalid }) };
+}
+
 export function plan(contract, { axisOrder = [] } = {}) {
+  contract = figmaSide(contract);
   const props = contract.props;
   const AXES = axisOrder.map(camel);
   // a boolean is an axis where the contract says so, or where a layer of its own styles beyond adding, removing and
@@ -140,7 +162,7 @@ export function plan(contract, { axisOrder = [] } = {}) {
     return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(ownId(id, e)) }])) };
   });
   const slots = Object.values(contract.props || {}).filter((p) => p.type === 'slot' && p.figma).map((p) => ({ figma: p.figma, settings: p.settings || null, description: p.description || '', preferred: p.preferred || [] }));
-  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
+  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), fromCode: (contract.code || {}).from === 'code', rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
 }
 
 /* What the plugin runs: the plan drawn, every value bound to the variable,
@@ -416,6 +438,11 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (e.opacity != null) await num(n, 'opacity', e.opacity);
       if (e.blend) n.blendMode = e.blend.toUpperCase();
       if (e.mask) n.isMask = true;
+      // an icon placed as an instance (a button's Icon/house) takes its colour on its paths, as one drawn as a graphic
+      // does: the instance itself has no fill, and the code's colour went nowhere
+      // read from code only (a Figma contract's instance background is its own fill override); a token, not a gradient;
+      // only one with no fill of its own: another component's box fill (an avatar's circle) is its background, not its paths'
+      if (P.fromCode && e.kind === 'instance' && typeof e.background === 'string' && n.type === 'INSTANCE' && !(Array.isArray(n.fills) && n.fills.some((f) => f.visible !== false && (f.opacity ?? 1) > 0))) recolour(n, await solid(e.background));
       if (e.rotation) n.rotation = e.rotation;
       if (['FRAME', 'COMPONENT', 'SLOT', 'VECTOR', 'ELLIPSE', 'RECTANGLE'].includes(n.type)) {
         if (e.layout) {
@@ -496,11 +523,12 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const w = c.horizontal === 'stretch' && at.end != null ? up.width - at.x - at.end : typeof e.width === 'number' ? e.width : n.width;
       const h = c.vertical === 'stretch' && at.bottom != null ? up.height - at.y - at.bottom : typeof e.height === 'number' ? e.height : n.height;
       if ('resize' in n && n.type !== 'VECTOR' && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) n.resize(px(w), px(h));
-      // pinned to its parent's end or bottom: from there
-      n.x = c.horizontal === 'max' && at.end != null ? up.width - at.end - n.width : at.x;
-      n.y = c.vertical === 'max' && at.bottom != null ? up.height - at.bottom - n.height : at.y;
+      // pinned to its parent's end or bottom: from there; centred, as code read it (centred within 0.75 px): at the centre;
+      // a Figma contract's centred layer where it sat, as its centre constraint keeps it
+      n.x = c.horizontal === 'center' && P.fromCode ? Math.round((up.width - n.width) / 2) : c.horizontal === 'max' && at.end != null ? up.width - at.end - n.width : at.x;
+      n.y = c.vertical === 'center' && P.fromCode ? Math.round((up.height - n.height) / 2) : c.vertical === 'max' && at.bottom != null ? up.height - at.bottom - n.height : at.y;
     }
-    if (e.constraints && 'constraints' in n) n.constraints = { horizontal: e.constraints.horizontal.toUpperCase(), vertical: e.constraints.vertical.toUpperCase() };
+    if (e.constraints && 'constraints' in n) n.constraints = { horizontal: (e.constraints.horizontal || 'min').toUpperCase(), vertical: (e.constraints.vertical || 'min').toUpperCase() };
   }
   for (const [n, up] of toCentre) { n.x = Math.round((up.width - n.width) / 2); n.y = Math.round((up.height - n.height) / 2); }
   // one variant is a component, never a set of one

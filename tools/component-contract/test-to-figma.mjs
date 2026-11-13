@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plan, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED } from './to-figma.mjs';
+import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -104,6 +104,21 @@ ok('the plugin code carries each variant\'s cell', /"cell":\[1,2\]/.test(pluginC
 const one = plan({ contract: 1, component: 'divider', props: {}, anatomy: { root: { kind: 'container', background: 'C/line' } }, variants: [] }, {});
 ok('a component with no axes is one variant, at the grid\'s one cell', one.variants.length === 1 && one.rows === 1 && one.cols === 1 && JSON.stringify(one.variants[0].cell) === '[0,0]');
 ok('and its drawing, a component of its own name, is held to it', verify(one, { variants: [{ variant: 'Divider', layers: { '(root)': { fill: 'C/line' } } }] }).map((r) => r.verdict).join() === 'same');
+
+// a prop the contract says is code's alone is no axis of the drawing: its other values' variants go
+{
+  const two = { contract: 1, component: 'tag', props: { size: { type: 'enum', values: ['sm', 'lg'], default: 'sm', figma: 'Size' }, graphic: { type: 'enum', values: ['none', 'cup'], default: 'none', only: 'code' } },
+    anatomy: { root: { kind: 'container', background: 'C/a' } },
+    variants: [{ when: { size: 'lg' }, set: { 'root.background': 'C/b' } }, { when: { graphic: 'cup' }, set: { 'root.background': 'C/c' } }, { when: { size: 'lg', graphic: 'none' }, set: { 'root.radius': 'R/1' } }] };
+  const f = figmaSide(two);
+  ok('a code-only prop is no axis of the drawing; a combination at its default stays, one away from it goes',
+    !('graphic' in f.props) && f.variants.length === 2 && JSON.stringify(f.variants[1].when) === '{"size":"lg"}' && plan(two).variants.length === 2);
+  ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
+  const g = figmaSide({ ...two, variants: [{ when: { graphic: 'none' }, set: { 'root.radius': 'R/1' } }], invalid: [{ size: 'lg', graphic: 'none' }, { graphic: 'cup' }] });
+  ok('a variant naming only its default holds everywhere; a combination not drawn loses it, or goes with its other values',
+    g.variants.length === 1 && JSON.stringify(g.variants[0].when) === '{}' && JSON.stringify(g.invalid) === '[{"size":"lg"}]');
+  ok('only a contract read from code recolours an instance', plan(two).fromCode === false && plan({ ...two, code: { from: 'code' } }).fromCode === true);
+}
 
 // the run's guards, run against a stand-in for Figma's file: its pages, and the plugin data each keeps
 const data = () => { const d = {}; return { getPluginData: (k) => d[k] || '', setPluginData: (k, v) => { d[k] = v; } }; };
