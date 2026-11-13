@@ -1403,10 +1403,16 @@ async function main() {
         const fe = figmaContract.anatomy[id];
         if (!fe || !fe.layout || !fe.layout.firstOnTop || !e.layout || e.layout.firstOnTop) continue;
         const gap = e.layout.gap == null ? 0 : Number(val(e.layout.gap));
-        // in any variant: a gap it sets below 0, or a child it adds or places absolutely
-        const loose = Object.values(fromCode.anatomy).some((c) => c.parent === id && c.position === 'absolute')
-          || fromCode.variants.some((v) => ((v.set || {})[`${id}.layout.gap`] != null && !(Number(val(v.set[`${id}.layout.gap`])) >= 0)) || Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && (fromCode.anatomy[f.slice(0, -9)] || {}).parent === id) || Object.values(v.add || {}).some((c) => c.parent === id && c.position === 'absolute'));
-        if (gap >= 0 && !loose) e.layout.firstOnTop = true;
+        // in any variant: a gap it sets below 0, or a child it adds or places absolutely where the design does not
+        // (a layer the design places too, a focus ring over the box, paints as the design stacks it)
+        const placedToo = (cid) => [figmaContract.anatomy, ...(figmaContract.variants || []).map((v) => v.add || {})].some((a) => (a[cid] || {}).position === 'absolute');
+        const loose = Object.entries(fromCode.anatomy).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid))
+          || fromCode.variants.some((v) => [(v.set || {})[`${id}.layout.gap`], ((v.set || {})[`${id}.layout`] || {}).gap].some((g) => g != null && !(Number(val(g)) >= 0)) ||Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && (fromCode.anatomy[f.slice(0, -9)] || {}).parent === id && !placedToo(f.slice(0, -9))) || Object.entries(v.add || {}).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)));
+        if (gap >= 0 && !loose) {
+          e.layout.firstOnTop = true;
+          // a variant that sets the whole layout (another padding at another size) stacks the same
+          for (const v of fromCode.variants) { const l = (v.set || {})[`${id}.layout`]; if (l && typeof l === 'object') l.firstOnTop = true; }
+        }
       }
       // an opacity the code writes raw (0.5 when disabled) takes the design's opacity token that holds it, where exactly
       // one the design uses does (its tokens hold percentages: 50 is 0.5, never 0.5%)
