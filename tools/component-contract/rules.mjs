@@ -53,8 +53,12 @@ export const sizeToFigma = (w) => (SIZE_ROWS.find((r) => r[0] === w) || [])[1];
 
 /* Auto layout from an element's authored declarations: flex is Figma's auto layout (figma-handoff), its direction,
    gap, padding, alignment and wrap read as they were written (a token's var() kept, for the caller to name).
+   CSS has no gap below 0 (a negative gap is invalid, dropped): its synonym is a negative start margin on every child
+   after the first (`pullProp`; to-code has every child say it on its own rule, 0 for the first in the flow and a placed part), which `next`, the second child's declarations, gives back as the gap.
    Null where the box does not lay out its children. */
-export function layoutFromCss(own) {
+export const negative = (g) => (typeof g === 'number' ? g < 0 : typeof g === 'string' && /\/-[\d.]/.test(g));
+export const pullProp = (column) => (column ? 'margin-block-start' : 'margin-inline-start');
+export function layoutFromCss(own, next = null) {
   if (!/flex/.test(word(own.display))) return null;
   const column = /column/.test(word(own['flex-direction']));
   const l = { direction: column ? 'column' : 'row' };
@@ -62,6 +66,9 @@ export function layoutFromCss(own) {
   // gap is row-gap then column-gap: along a row the gap between children is the column gap
   const gap = own[column ? 'row-gap' : 'column-gap'] ?? (both.length ? both[column ? 0 : both.length - 1] : null);
   if (gap != null && word(gap) !== 'normal') l.gap = word(gap);
+  const pull = next && word(next[pullProp(column)] ?? next[column ? 'margin-top' : 'margin-left']);
+  // (a length below 0, or a token or calc(), whose sign is its value's: the caller, which can resolve it, confirms it)
+  if (pull && (/^-/.test(pull) || /^(var|calc)\(/.test(pull)) && (l.gap == null || /^0(px|rem)?$/.test(l.gap))) { l.gap = pull; l.pulled = true; }
   const pad = sides(own);
   if (pad) l.padding = pad;
   l.align = alignFromCss(own['justify-content'], true);

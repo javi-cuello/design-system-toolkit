@@ -180,4 +180,15 @@ else console.log('skip: no stored contracts on this machine');
   ok('a state the settings give no pseudo-class is none: no house word stands in', !/:hover/.test(condition(lib, namer('chip'), 'state', 'hovered', { ...own, pseudoClasses: {} })));
 }
 
+// a gap below 0 (rules.mjs): CSS has none, so every child after the first pulls back, the first in the flow and a
+// placed part set back to 0; a variant whose gap is not below 0 says 0 for the pull, never keeps the base's
+{
+  const box = { kind: 'container', layout: { direction: 'row', gap: -8, align: 'start', crossAlign: 'start' } };
+  const c = { contract: 1, component: 'Stack', props: { loose: { type: 'boolean', default: false } }, anatomy: { root: box, dot: { kind: 'container', parent: 'root', order: 0, position: 'absolute', absolute: { x: 0, y: 0 }, width: 4, height: 4 }, a: { kind: 'container', parent: 'root', order: 1, width: 8, height: 8 }, b: { kind: 'container', parent: 'root', order: 2, width: 8, height: 8 } }, variants: [{ when: { loose: true }, set: { 'root.layout': { ...box.layout, gap: 8 } } }] };
+  const sheet = toCss(c, 'stack');
+  ok('a gap below 0 is no gap: every child after the first in the flow pulls back by it, on its own rule', !/gap: -/.test(sheet) && /\.stack > \.stack__b \{[^}]*margin-inline-start: -0\.5rem/.test(sheet));
+  ok('the first in the flow and a placed part say 0', /\.stack > \.stack__a \{[^}]*margin-inline-start: 0;/.test(sheet) && /\.stack > \.stack__dot \{[^}]*margin-inline-start: 0;/.test(sheet));
+  ok('a variant back to a gap of 0 or more says 0 for the pull, never unset, and replays the same', /data-loose[^{]*> \.stack__b \{\s*margin-inline-start: 0;/.test(sheet) && !/unset/.test(sheet) && selfCheck(c).length === 0);
+}
+
 console.log(`${n} passed`);

@@ -464,7 +464,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           // its required mark), never stacked at one point
           n.layoutMode = 'HORIZONTAL'; n.primaryAxisSizingMode = 'AUTO'; n.counterAxisSizingMode = 'AUTO'; n.counterAxisAlignItems = 'CENTER';
         // a line's length is its path's, and it has no width to give
-        } else if (px(e.width) && n.type !== 'VECTOR') n.resize(px(e.width), px(e.height) || px(e.width));
+        // (a box that fills one way still takes its length the other: the fill is set with the parent's layout)
+        } else if ((px(e.width) || px(e.height)) && n.type !== 'VECTOR') n.resize(px(e.width) || n.width, px(e.height) || px(e.width) || n.height);
         n.fills = e.background ? await paints(e.background) : [];
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
         // an ellipse has no corners: a radius a variant kept from a rectangle is not drawn

@@ -827,7 +827,7 @@ async function main() {
       // A fixed size keeps the length it renders at, which is the length written; a placed part is phase 5's.
       // where no rule sets display, the box's own (a span is inline, a div block): the computed value, which for
       // display is what was written or the element's default, never a measurement
-      const unsized = [];
+      const unsized = [], pulledBy = {};
       const shown = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, n.parentElement ? getComputedStyle(n.parentElement).display : 'block']])));
       // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
       // for an offset written as a token and for a point placed() never measured
@@ -848,7 +848,8 @@ async function main() {
             // the table does not read, auto margins between two insets), the centre the walk measured is the truth
             const measured = (e.constraints || {});
             for (const k of ['horizontal', 'vertical']) if (measured[k] === 'center' && place.constraints[k] === 'min') place.constraints[k] = 'center';
-            e.constraints = place.constraints;
+            // said as the snapshot says it: pinned top left is Figma's default, left out
+            if (place.constraints.horizontal === 'min' && place.constraints.vertical === 'min') delete e.constraints; else e.constraints = place.constraints;
             const o = place.offsets, at = { x: insets[e.id].x, y: insets[e.id].y, ...(e.absolute || {}) };
             if (o.end != null) at.end = lengthOf(o.end) ?? insets[e.id].end;
             if (o.bottom != null) at.bottom = lengthOf(o.bottom) ?? insets[e.id].bottom;
@@ -878,11 +879,27 @@ async function main() {
         }
         if (own.display == null && !loose) own.display = shown[e.id][0];
         if (up.display == null) up.display = loose ? (shown[e.parent] || [])[0] : shown[e.id][1];
-        const lay = e.layout && layoutFromCss(own);
-        if (lay) { Object.assign(e.layout, { direction: lay.direction, align: lay.align, crossAlign: lay.crossAlign }); if (lay.wrap) e.layout.wrap = true; }
+        // the second child in the flow, whose start margin says a gap below 0 (rules.mjs: CSS has none)
+        const second = e.layout && raw.filter((x) => x.parent === e.id && x.id in shown && x.position !== 'absolute' && !x.absolute).sort((x, y) => x.order - y.order)[1];
+        const next = second ? { 'margin-inline-start': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-inline-start', { raw: true, cache: styles }), 'margin-block-start': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-block-start', { raw: true, cache: styles }), 'margin-left': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-left', { raw: true, cache: styles }), 'margin-top': await authoredWidth(L.tab, `[data-contract-id="${second.id}"]`, 'margin-top', { raw: true, cache: styles }) } : null;
+        const lay = e.layout && layoutFromCss(own, next);
+        if (lay) {
+          Object.assign(e.layout, { direction: lay.direction, align: lay.align, crossAlign: lay.crossAlign }); if (lay.wrap) e.layout.wrap = true;
+          // a gap below 0, said as the second child's pull back: its length, or, written as a token, the length it
+          // renders at (the token named from the margin below)
+          // taken only where it renders below 0: a token's or a calc()'s sign is its value's (a positive nudge is no gap)
+          const at = lay.pulled && await call(L.tab, ([sel, col]) => { const n = document.querySelector(sel); return n ? parseFloat(getComputedStyle(n)[col ? 'marginBlockStart' : 'marginInlineStart']) : null; }, [`[data-contract-id="${second.id}"]`, lay.direction === 'column']);
+          if (lay.pulled && at < 0) {
+            e.layout.gap = lengthOf(lay.gap) ?? at;
+            pulledBy[e.id] = { from: second.id, props: ['margin-inline-start', 'margin-block-start', 'margin-left', 'margin-top'] };
+          }
+        }
         for (const [axis, i] of [['width', 0], ['height', 1]]) {
           const v = sizeFromCss(axis, own, up, { root: e.parent == null }).value;
           e[axis] = v === 'hug' || v === 'fill' ? v : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+          // a box that hugs but holds no part (a native control's own text, an empty slot): what it hugs is nothing
+          // Figma can hold, so the size it renders at is its size (Figma draws an empty box at 100)
+          if (v === 'hug' && ['container', 'slot'].includes(e.kind) && !e.layout && e.box && !raw.some((x) => x.parent === e.id)) e[axis] = e.box[i];
           // the outer box filling the room it is given: that room, a canvas fact, as derive records Figma's root fill
           if (e.parent == null && v === 'fill' && e.box) e.canvas = { ...(e.canvas || {}), [axis]: e.box[i] };
         }
@@ -892,9 +909,9 @@ async function main() {
       let under = null;
       const asRgba = (v) => { const c = parseColour(v); return c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${c[3]})` : v; };
       // where several tokens hold a value, the one the code wrote it with: the custom properties of the css it came from
-      const tok = async (kind, v, at, css = []) => {
+      const tok = async (kind, v, at, css = [], from = null) => {
         let r = null;
-        const el = at.slice(0, at.lastIndexOf('.'));
+        const el = from || at.slice(0, at.lastIndexOf('.'));
         for (const p of css) { const vars = await authoredVars(L.tab, `[data-contract-id="${el}"]`, p, styles); if (vars.length) { r = designTokenFor(kind, v, table, usage, under, judge, offered, vars); if (r.token) break; } }
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
         if (r.tie) ties.push({ at, token: r.token, tie: r.tie });
@@ -945,7 +962,9 @@ async function main() {
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box };
         delete x.box;
         if (x.layout) {
-          if ('gap' in x.layout) x.layout.gap = await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
+          // a gap below 0 was written as the second child's pull back: its token is there
+          const pulled = pulledBy[id];
+          if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
           if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [SIDE[k]]);
         }
         if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);

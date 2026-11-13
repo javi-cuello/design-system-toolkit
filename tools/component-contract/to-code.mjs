@@ -35,6 +35,7 @@ import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
+import { negative } from './rules.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -228,10 +229,36 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
   return { parent: e.parent, decls: [['outline', `${w} solid ${tokenNames.token(b.color)}`, undefined, 'ring'], ['outline-offset', offset, clear ? 'no token in the design' : undefined]] };
 }
 
+// the boxes whose gap is below 0 in the base or any variant (rules.mjs: CSS says it as pull-backs)
+const PULLS = new WeakMap();
+function everPulls(c) {
+  if (PULLS.has(c)) return PULLS.get(c);
+  const ids = new Set();
+  const look = (id, l) => { if (l && negative(l.gap)) ids.add(id); };
+  const kind = (id) => ((c.anatomy || {})[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).kind;
+  for (const [id, e] of Object.entries(c.anatomy || {})) look(id, e.layout);
+  for (const v of c.variants || []) {
+    for (const [id, e] of Object.entries(v.add || {})) look(id, e.layout);
+    // a variant sets a layout whole (layers.mjs applies one level)
+    for (const [f, x] of Object.entries(v.set || {})) { const m = /^(.+)\.layout$/.exec(f); if (m) look(m[1], x); }
+  }
+  // an instance's insides are its own sheet's
+  for (const id of [...ids]) if (kind(id) === 'instance') ids.delete(id);
+  PULLS.set(c, ids);
+  return ids;
+}
+
 /* Each part's declarations at one combination, as a map property → value (with its note). */
 export function drawn(c, when) {
   const a = expand(c, when);
   const out = {}, extra = [], ringNotes = {};
+  // a gap below 0 is said by pull-backs (rules.mjs): each child's start margin on its own rule (an instance's
+  // insides are its own sheet's)
+  const pulls = (p) => !!(p && p.kind !== 'instance' && p.layout && negative(p.layout.gap) && p.layout.align !== 'space-between');
+  // a box that pulls in any combination says its pull-back in every one (0 where it does not), so a variant back to a
+  // gap of 0 or more unsets it rather than keeping the base's
+  const pulling = everPulls(c);
+  const firstInFlow = (pid) => Object.entries(a).filter(([, x]) => x.parent === pid && !(x.position === 'absolute' || x.absolute)).sort((x, y) => (x[1].order ?? 0) - (y[1].order ?? 0))[0]?.[0];
   // a placed component's insides are its own stylesheet's (code-standard rule 5): this one stops at the instance
   const inside = (id) => { for (let p = a[id].parent; p; p = a[p] && a[p].parent) if (a[p] && (a[p].kind === 'instance' || (a[a[p].parent] || {}).kind === 'slot')) return true; return false; };
   for (let [id, e] of Object.entries(a)) {
@@ -266,7 +293,11 @@ export function drawn(c, when) {
     const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a));
     // the parent's own size, where it is a number: what a part that scales with it is a share of
     const box = parent ? { width: typeof parent.width === 'number' ? parent.width : null, height: typeof parent.height === 'number' ? parent.height : null } : null;
-    const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box }, tokenNames);
+    // in a box whose gap is below 0 in any combination, every child says its pull back in every one: the gap after
+    // the first in the flow, 0 for the first and for a placed part, 0 where the gap is not below 0 (a variant's own
+    // value, never an unset that would leave the base's)
+    const pull = e.parent && pulling.has(e.parent) ? (e.position === 'absolute' || e.absolute || firstInFlow(e.parent) === id || !pulls(parent) ? 0 : parent.layout.gap) : null;
+    const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     const kept = e.kind === 'instance' || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;
@@ -275,6 +306,8 @@ export function drawn(c, when) {
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note]) => [p, { v, note }])), unread: e.kind === 'instance' || slotted ? [] : unread };
   }
+  // copies of one part and a slot's children share one rule, so one pull back cannot be said for all but the first
+  for (const id of pulling) if (out[id] && pulls(a[id]) && Object.keys(a).some((k) => a[k].parent === id && (copyOf(c, k) || a[id].kind === 'slot'))) out[id].unread.push('layout.gap below 0 between copies of one part or a slot\'s children (each pulls back on its own rule; theirs is shared)');
   for (const [id, decls] of extra) if (out[id]) for (const [p, v, note, knob] of decls) out[id].decls.set(p, { v, note, knob });
   for (const [id, notes] of Object.entries(ringNotes)) if (out[id]) out[id].unread.push(...notes);
   const entry = entryOf(c);

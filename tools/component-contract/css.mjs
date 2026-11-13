@@ -21,14 +21,14 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, share } from './rules.mjs';
+import { alignToCss, share, negative, pullProp } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
 
 const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
 
-export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null } = {}, names) {
+export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null, pull = null } = {}, names) {
   const decls = [], unread = [];
   const put = (prop, value, note) => { if (value !== undefined && value !== null && !/\bundefined\b/.test(String(value))) decls.push(note ? [prop, value, note] : [prop, value]); };
   // a value as a length: a token by its custom property, a number in rem (or px where it must not scale)
@@ -37,6 +37,7 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   const done = new Set();
   const take = (k) => { done.add(k); return e[k]; };
 
+  if (pull != null) put(pullProp(!row), len(pull), literal(pull));
   const l = take('layout');
   if (l && holds) {
     // an outer box that hugs sits in its line as a word does (figma-handoff: a hugging button is inline-flex)
@@ -44,7 +45,8 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     put('flex-direction', l.direction === 'column' ? 'column' : 'row');
     if (l.wrap) put('flex-wrap', 'wrap');
     // spaced between, Figma sets the gap aside (its auto spacing); CSS would add it to the space
-    if (l.gap !== undefined && l.align !== 'space-between') put('gap', len(l.gap), literal(l.gap));
+    // a gap below 0 CSS cannot say: each child after the first pulls back by it (`pull`, rules.mjs)
+    if (l.gap !== undefined && l.align !== 'space-between' && !negative(l.gap)) put('gap', len(l.gap), literal(l.gap));
     if (l.crossGap !== undefined) put(l.direction === 'column' ? 'column-gap' : 'row-gap', len(l.crossGap), literal(l.crossGap));
     const pad = l.padding || {};
     if (SIDES.some((s) => pad[s] !== undefined)) {
