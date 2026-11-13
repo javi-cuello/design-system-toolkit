@@ -43,7 +43,8 @@ The maintainer's convention for a file holding the whole set, applied once to on
 - Each frame is a 10-column grid with automatic positioning (`gridItemsPositioning: ROW_AUTO_FLOW`, `gridAutoTracks: ROWS`), hug tracks, gaps and padding bound to the spacing tokens, children alphabetical.
 - An icon that is not Lucide's (named `… _custom`) goes to a `Custom` frame; the unsorted frame ends empty.
 
-Two Figma behaviours the run had to work around:
+Three Figma behaviours the runs had to work around:
 
 - A grid frame created through the API starts with flexible tracks and takes hug tracks only once the frame itself hugs: set the frame's sizing to hug first, then the tracks.
 - Setting an `Icon` swap again resets the colour override on the icon's vector, so re-apply the fill binding after a swap.
+- An icon whose vertical sizing is `FILL` stretches when it is moved into an auto-layout box, and its `SCALE`-constrained vector stretches with it (24×24 to 24×52, 2026-11-13). Set both sizings to `FIXED` before the move; after one, `resizeWithoutConstraints(24, 24)` and rescale the vector back.
