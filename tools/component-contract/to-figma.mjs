@@ -374,6 +374,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         if (e.color) n.fills = await paints(e.color);
         // how the box follows the words and where they sit; spacing and case where no style gives them
         if (e.autoResize) n.textAutoResize = e.autoResize.toUpperCase();
+        // a length it is given: its box at that size, the resizing said again after (resize sets it to fixed)
+        if (typeof e.width === 'number' || typeof e.height === 'number') { n.resize(typeof e.width === 'number' ? Math.max(e.width, 0.01) : n.width, typeof e.height === 'number' ? Math.max(e.height, 0.01) : n.height); if (e.autoResize) n.textAutoResize = e.autoResize.toUpperCase(); }
         if (e.verticalAlign) n.textAlignVertical = { center: 'CENTER', end: 'BOTTOM' }[e.verticalAlign] || 'TOP';
         if (e.truncate) n.textTruncation = 'ENDING';
         if (e.maxLines) n.maxLines = e.maxLines;

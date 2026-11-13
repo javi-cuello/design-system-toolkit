@@ -90,6 +90,39 @@ function sides(own) {
   return Object.keys(out).length ? out : null;
 }
 
+/* Text that resizes: Figma's textAutoResize has no CSS property; it is the text's own sizes, said once. A text whose
+   width hugs grows both ways (WIDTH_AND_HEIGHT), one whose height hugs wraps at its width (HEIGHT), one fixed both ways
+   is NONE. Truncation is its own field (`truncate`, `maxLines`), as the snapshot keeps it. Held on every stored text
+   (1,521 of 1,521, four projects, 2026-11-13). */
+/* A text style from the declarations that say it: each of its fields as `fieldsOf(name)` writes them (to-code's
+   tokenNames.textStyle), every one the element declares matching, so the style is named by what the code wrote, never
+   by a measured size two styles share. Null where none matches (the caller falls back to the values). */
+export function styleFromCss(own, styles, fieldsOf) {
+  const said = ['font-family', 'font-weight', 'font-size', 'line-height', 'letter-spacing'].filter((p) => own[p] != null);
+  if (!said.includes('font-size')) return null;
+  // (as a built sheet may write it: no space after a comma)
+  const same = (a, b) => word(a).replace(/\s*,\s*/g, ',') === word(b).replace(/\s*,\s*/g, ',');
+  const hits = styles.filter((name) => { const f = Object.fromEntries(fieldsOf(name)); return said.every((p) => same(own[p], f[p])); });
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/* Truncation, as css.mjs writes it the other way: one line cut with an ellipsis (nowrap, overflow hidden,
+   text-overflow ellipsis), or a clamp to N lines (-webkit-line-clamp, or line-clamp). Null where the text is not cut. */
+export const LINES_CSS = ['white-space', 'text-overflow', 'overflow', '-webkit-line-clamp', 'line-clamp'];
+export function linesFromCss(own) {
+  const n = parseInt(word(own['-webkit-line-clamp'] ?? own['line-clamp']), 10);
+  if (n > 0) return { maxLines: n, truncate: true };
+  // (an ellipsis cuts only where the overflow is hidden)
+  if (word(own['text-overflow']) === 'ellipsis' && /nowrap/.test(word(own['white-space'])) && /hidden|clip/.test(word(own.overflow))) return { maxLines: 1, truncate: true };
+  return null;
+}
+
+export function autoResizeOf(width, height) {
+  if (width === 'hug') return 'width_and_height';
+  if (height === 'hug') return 'height';
+  return 'none';
+}
+
 /* Placement out of the flow, from an element's authored declarations: Figma's absolute position and its constraints
    (min, max, center, stretch), as css.mjs writes them the other way: an edge's inset pins it there, both edges stretch it
    between them, an inset of 50% shifted back by half its own size centres it. The offsets are read as written (a

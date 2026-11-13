@@ -2,7 +2,8 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, ALIGN_ROWS } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, styleFromCss, ALIGN_ROWS } from './rules.mjs';
+import { tokenNames } from './to-code.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -68,6 +69,18 @@ ok('auto layout from flex: direction, gap along the flow (row-gap column-gap), p
   // Figma's scale has no CSS constraint: its synonym is a share of the parent, written where the parent's size is a number
   const sc = Object.fromEntries(declarations({ kind: 'container', position: 'absolute', constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 25, y: 4 }, width: 50, height: 10 }, { holds: false, row: true, box: { width: 200, height: 40 } }, names).decls.map(([p, v]) => [p, v]));
   ok('scale is written as shares of the parent (25 of 200 at 12.5%, 50 wide at 25%) and reads back as scale', sc['inset-inline-start'] === '12.5%' && sc['inline-size'] === '25%' && placeFromCss(sc).constraints.horizontal === 'scale');
+}
+
+// text: how it resizes is its sizes; its style is named by the declarations that say it
+ok('a text that hugs its width grows both ways, one that hugs its height wraps at its width, one fixed both ways is none',
+  autoResizeOf('hug', 'hug') === 'width_and_height' && autoResizeOf('fill', 'hug') === 'height' && autoResizeOf(120, 'hug') === 'height' && autoResizeOf(120, 40) === 'none' && autoResizeOf('fill', 40) === 'none');
+{
+  const styles = ['Label/md', 'Label/md-medium', 'Body/md'];
+  const own = Object.fromEntries(tokenNames.textStyle('Label/md-medium'));
+  ok('a text style is named by its declarations, never by a size two styles share', styleFromCss(own, styles, tokenNames.textStyle) === 'Label/md-medium'
+    && styleFromCss({}, styles, tokenNames.textStyle) === null
+    // (two styles whose declarations are the same: neither is named)
+    && styleFromCss({ 'font-size': '14px' }, ['A', 'B'], () => [['font-size', '14px']]) === null && styleFromCss({ 'font-size': '14px' }, ['A'], () => [['font-size', '14px']]) === 'A');
 }
 
 console.log(`${n}/${n} passed`);

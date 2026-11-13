@@ -1,0 +1,1982 @@
+[
+ {
+  "family": "layout",
+  "id": "layout-none",
+  "figma": "layoutMode: NONE (free positioning of children)",
+  "css": "display: block + position: absolute children",
+  "relation": "synonym",
+  "note": "No auto layout: children placed by x/y; CSS needs absolute positioning. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "layout-direction",
+  "figma": "layoutMode: HORIZONTAL | VERTICAL",
+  "css": "display: flex; flex-direction: row | column",
+  "relation": "synonym",
+  "note": "Auto layout direction maps to a flex container direction. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "layout-grid",
+  "figma": "layoutMode: GRID with gridRowCount/gridColumnCount",
+  "css": "display: grid; grid-template-rows/columns",
+  "relation": "synonym",
+  "note": "Figma grid auto layout maps to CSS grid. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-track-sizes",
+  "figma": "gridRowSizes / gridColumnSizes: GridTrackSize[]",
+  "css": "grid-template-columns: <track-size> list (px, fr)",
+  "relation": "synonym",
+  "note": "Track size types unverified (GridTrackSize page not read).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-gap",
+  "figma": "gridRowGap / gridColumnGap",
+  "css": "row-gap / column-gap",
+  "relation": "same",
+  "note": "Variable-bindable per VariableBindableNodeField. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-auto-tracks",
+  "figma": "gridAutoTracks: NONE | ROWS",
+  "css": "grid-auto-rows",
+  "relation": "synonym",
+  "note": "Implicit row creation. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-auto-flow",
+  "figma": "gridItemsPositioning: MANUAL | ROW_AUTO_FLOW",
+  "css": "grid-auto-flow: row / explicit grid-row/column",
+  "relation": "synonym",
+  "note": "Auto flow vs manual placement. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-child-span",
+  "figma": "gridRowSpan / gridColumnSpan",
+  "css": "grid-row / grid-column: span N",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-child-anchor",
+  "figma": "setGridChildPosition(row, col); gridRowAnchorIndex",
+  "css": "grid-row-start / grid-column-start",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "grid-child-align",
+  "figma": "gridChildHorizontalAlign / gridChildVerticalAlign: MIN | CENTER | MAX | AUTO",
+  "css": "justify-self / align-self: start | center | end | auto",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "padding",
+  "figma": "paddingTop/Right/Bottom/Left",
+  "css": "padding-top/right/bottom/left",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "layout",
+  "id": "item-spacing",
+  "figma": "itemSpacing",
+  "css": "gap (row-gap or column-gap along main axis)",
+  "relation": "synonym",
+  "note": "Main-axis gap; variable-bindable. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "item-spacing-auto",
+  "figma": "primaryAxisAlignItems: SPACE_BETWEEN (Figma 'Auto' gap)",
+  "css": "justify-content: space-between",
+  "relation": "synonym",
+  "note": "Figma treats space-between as a gap mode.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/justify-content"
+ },
+ {
+  "family": "layout",
+  "id": "main-align-start-center-end",
+  "figma": "primaryAxisAlignItems: MIN | CENTER | MAX",
+  "css": "justify-content: flex-start | center | flex-end",
+  "relation": "synonym",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/justify-content"
+ },
+ {
+  "family": "layout",
+  "id": "main-align-space-evenly",
+  "figma": "primaryAxisAlignItems: SPACE_EVENLY",
+  "css": "justify-content: space-evenly",
+  "relation": "same",
+  "note": "Listed in FrameNode enum.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/justify-content"
+ },
+ {
+  "family": "layout",
+  "id": "main-align-space-around",
+  "figma": "primaryAxisAlignItems: SPACE_AROUND",
+  "css": "justify-content: space-around",
+  "relation": "same",
+  "note": "Listed in FrameNode enum.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/justify-content"
+ },
+ {
+  "family": "layout",
+  "id": "cross-align",
+  "figma": "counterAxisAlignItems: MIN | CENTER | MAX",
+  "css": "align-items: flex-start | center | flex-end",
+  "relation": "synonym",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/align-items"
+ },
+ {
+  "family": "layout",
+  "id": "cross-align-baseline",
+  "figma": "counterAxisAlignItems: BASELINE",
+  "css": "align-items: baseline",
+  "relation": "same",
+  "note": "First-baseline alignment (horizontal only in Figma; unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/align-items"
+ },
+ {
+  "family": "layout",
+  "id": "wrap",
+  "figma": "layoutWrap: WRAP | NO_WRAP",
+  "css": "flex-wrap: wrap | nowrap",
+  "relation": "same",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "counter-axis-spacing",
+  "figma": "counterAxisSpacing (gap between wrapped rows)",
+  "css": "row-gap (for row direction) / column-gap",
+  "relation": "synonym",
+  "note": "Null means same as itemSpacing; variable-bindable. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "align-content",
+  "figma": "counterAxisAlignContent: AUTO | SPACE_BETWEEN",
+  "css": "align-content: normal | space-between",
+  "relation": "synonym",
+  "note": "Distribution of wrapped lines. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "reverse-z-index",
+  "figma": "itemReverseZIndex: true (first child on top)",
+  "css": "z-index per item or flex-direction reversal with order",
+  "relation": "synonym",
+  "note": "No single CSS switch; stacking order must be emulated. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "strokes-in-layout",
+  "figma": "strokesIncludedInLayout: true | false",
+  "css": "box-sizing / border width counts in layout (always for border; never for outline)",
+  "relation": "synonym",
+  "note": "Figma strokes do not take space by default; CSS borders do. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "layout-grids",
+  "figma": "layoutGrids: LayoutGrid[] (columns/rows/grid guides)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "Visual guides only; no rendering effect.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "css-direction-reverse",
+  "figma": "—",
+  "css": "flex-direction: row-reverse | column-reverse",
+  "relation": "css-only",
+  "note": "Figma has no reversed direction (only itemReverseZIndex). (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "css-order",
+  "figma": "—",
+  "css": "order",
+  "relation": "css-only",
+  "note": "Visual reordering not expressible in Figma. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "css-logical-direction",
+  "figma": "—",
+  "css": "direction: rtl / writing-mode with logical properties",
+  "relation": "css-only",
+  "note": "Figma has no RTL flip of auto layout (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "negative-gap",
+  "figma": "itemSpacing < 0 (negative gap)",
+  "css": "negative margin (gap cannot be negative)",
+  "relation": "synonym",
+  "note": "Negative itemSpacing allowed in Figma UI (unverified in API); CSS gap disallows negatives. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "css-grid-areas",
+  "figma": "—",
+  "css": "grid-template-areas",
+  "relation": "css-only",
+  "note": "Named areas not modelled in Figma grid. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "layout",
+  "id": "css-container-query",
+  "figma": "—",
+  "css": "@container / @media responsive rules",
+  "relation": "css-only",
+  "note": "Figma has no conditional layout by viewport. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "size-fixed",
+  "figma": "layoutSizingHorizontal/Vertical: FIXED (width/height)",
+  "css": "width / height: <length>",
+  "relation": "same",
+  "note": "width/height variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "sizing",
+  "id": "size-hug",
+  "figma": "layoutSizingHorizontal/Vertical: HUG (primary/counterAxisSizingMode AUTO)",
+  "css": "width/height: auto (or fit-content); flex: none",
+  "relation": "synonym",
+  "note": "Hug contents. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "size-fill-main",
+  "figma": "layoutSizingHorizontal: FILL on main axis (layoutGrow: 1)",
+  "css": "flex: 1 1 0 (flex-grow: 1)",
+  "relation": "synonym",
+  "note": "layoutGrow 0 fixed, 1 stretch. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/properties/nodes-layoutgrow/"
+ },
+ {
+  "family": "sizing",
+  "id": "size-fill-cross",
+  "figma": "layoutAlign: STRETCH (FILL on counter axis)",
+  "css": "align-self: stretch",
+  "relation": "synonym",
+  "note": "STRETCH fills counter axis excluding padding.",
+  "source": "https://developers.figma.com/docs/plugins/api/properties/nodes-layoutalign/ https://developer.mozilla.org/en-US/docs/Web/CSS/align-items"
+ },
+ {
+  "family": "sizing",
+  "id": "min-width",
+  "figma": "minWidth / minHeight",
+  "css": "min-width / min-height",
+  "relation": "same",
+  "note": "Only on auto-layout frames and children (unverified); variable-bindable.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "sizing",
+  "id": "max-width",
+  "figma": "maxWidth / maxHeight",
+  "css": "max-width / max-height",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "sizing",
+  "id": "aspect-ratio",
+  "figma": "lockAspectRatio(); targetAspectRatio",
+  "css": "aspect-ratio",
+  "relation": "synonym",
+  "note": "Figma locks during resize; CSS keeps ratio in layout. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "fill-in-grid",
+  "figma": "layoutSizing FILL inside GRID cell",
+  "css": "justify-self/align-self: stretch",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "text-autoresize-width-height",
+  "figma": "TextNode textAutoResize: WIDTH_AND_HEIGHT",
+  "css": "width: max-content; white-space: nowrap",
+  "relation": "synonym",
+  "note": "Text grows on one line. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "text-autoresize-height",
+  "figma": "textAutoResize: HEIGHT",
+  "css": "fixed width, height: auto",
+  "relation": "synonym",
+  "note": "Fixed width, wraps. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "text-autoresize-none",
+  "figma": "textAutoResize: NONE",
+  "css": "fixed width + height; overflow visible",
+  "relation": "synonym",
+  "note": "Fixed box; text can overflow. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "text-autoresize-truncate",
+  "figma": "textAutoResize: TRUNCATE",
+  "css": "overflow: hidden; text-overflow: ellipsis",
+  "relation": "synonym",
+  "note": "Legacy value; textTruncation is the newer property (deprecation unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "css-intrinsic-keywords",
+  "figma": "—",
+  "css": "min-content / max-content / fit-content()",
+  "relation": "css-only",
+  "note": "Figma only hug/fill/fixed. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "css-percent-size",
+  "figma": "—",
+  "css": "width: 50% / calc()",
+  "relation": "css-only",
+  "note": "Figma sizes are absolute px or fill. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "css-flex-basis-shrink",
+  "figma": "—",
+  "css": "flex-shrink / flex-basis",
+  "relation": "css-only",
+  "note": "Figma has no shrink control distinct from fill/hug. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "sizing",
+  "id": "css-relative-units",
+  "figma": "—",
+  "css": "rem / em / vw units",
+  "relation": "css-only",
+  "note": "Figma values are pixels. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "absolute-in-auto-layout",
+  "figma": "layoutPositioning: ABSOLUTE",
+  "css": "position: absolute (parent position: relative)",
+  "relation": "synonym",
+  "note": "Child leaves auto-layout flow. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "position-xy",
+  "figma": "x / y",
+  "css": "top / left (or inset)",
+  "relation": "synonym",
+  "note": "Relative to parent frame. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "constraint-min",
+  "figma": "constraints.horizontal/vertical: MIN",
+  "css": "left: Npx / top: Npx",
+  "relation": "synonym",
+  "note": "Pinned to left/top. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Constraints/"
+ },
+ {
+  "family": "placement",
+  "id": "constraint-max",
+  "figma": "constraints: MAX",
+  "css": "right: Npx / bottom: Npx",
+  "relation": "synonym",
+  "note": "Pinned to right/bottom. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Constraints/"
+ },
+ {
+  "family": "placement",
+  "id": "constraint-center",
+  "figma": "constraints: CENTER",
+  "css": "left: 50%; translate: -50% (or inset+margin auto)",
+  "relation": "synonym",
+  "note": "Stays centred. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Constraints/"
+ },
+ {
+  "family": "placement",
+  "id": "constraint-stretch",
+  "figma": "constraints: STRETCH",
+  "css": "left + right (or top + bottom) both set",
+  "relation": "synonym",
+  "note": "Pinned to both edges. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Constraints/"
+ },
+ {
+  "family": "placement",
+  "id": "constraint-scale",
+  "figma": "constraints: SCALE",
+  "css": "percentage left/width",
+  "relation": "synonym",
+  "note": "Scales proportionally. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Constraints/"
+ },
+ {
+  "family": "placement",
+  "id": "rotation",
+  "figma": "rotation (-180..180)",
+  "css": "transform: rotate()",
+  "relation": "synonym",
+  "note": "Figma rotates around top-left; CSS around center by default (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "flip",
+  "figma": "relativeTransform with negative scale",
+  "css": "transform: scale(-1, 1)",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "clips-content",
+  "figma": "clipsContent: true",
+  "css": "overflow: hidden (or clip)",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "mask",
+  "figma": "isMask + maskType: ALPHA | VECTOR | LUMINANCE",
+  "css": "mask-image / clip-path",
+  "relation": "synonym",
+  "note": "maskType values beyond ALPHA unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "instance-scale",
+  "figma": "InstanceNode scaleFactor",
+  "css": "transform: scale() / zoom",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/InstanceNode/"
+ },
+ {
+  "family": "placement",
+  "id": "css-sticky",
+  "figma": "—",
+  "css": "position: sticky",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "css-fixed",
+  "figma": "numberOfFixedChildren (children fixed while a scrolling frame scrolls, prototype)",
+  "css": "position: fixed",
+  "relation": "synonym",
+  "note": "Prototype 'fixed when scrolling' is not a component property (unverified). (CSS side unverified: MDN page not read) Figma keeps a frame's first N children fixed while it scrolls (FrameNode numberOfFixedChildren).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "css-z-index",
+  "figma": "—",
+  "css": "z-index",
+  "relation": "css-only",
+  "note": "Figma stacking is layer order only. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "css-overflow-scroll",
+  "figma": "overflowDirection: NONE | HORIZONTAL | VERTICAL | BOTH (a scrolling frame, prototype)",
+  "css": "overflow: auto | scroll",
+  "relation": "synonym",
+  "note": "Prototype overflow scrolling exists, not static (unverified). (CSS side unverified: MDN page not read) Figma scrolls a frame in prototypes by overflowDirection (FrameNode).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "css-margin-auto",
+  "figma": "—",
+  "css": "margin: auto / negative margins",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "placement",
+  "id": "css-anchor",
+  "figma": "—",
+  "css": "anchor positioning (position-anchor)",
+  "relation": "css-only",
+  "note": "Popovers/tooltips anchored to triggers. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-solid",
+  "figma": "fills: SOLID (color RGB + opacity)",
+  "css": "background-color / color",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-linear",
+  "figma": "fills: GRADIENT_LINEAR (gradientTransform, gradientStops)",
+  "css": "linear-gradient()",
+  "relation": "synonym",
+  "note": "Angle must be derived from gradientTransform.",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/ https://developer.mozilla.org/en-US/docs/Web/CSS/gradient"
+ },
+ {
+  "family": "fill",
+  "id": "fill-radial",
+  "figma": "fills: GRADIENT_RADIAL",
+  "css": "radial-gradient()",
+  "relation": "synonym",
+  "note": "Ellipse size/position from gradientTransform.",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/ https://developer.mozilla.org/en-US/docs/Web/CSS/gradient"
+ },
+ {
+  "family": "fill",
+  "id": "fill-angular",
+  "figma": "fills: GRADIENT_ANGULAR",
+  "css": "conic-gradient()",
+  "relation": "synonym",
+  "note": "Start angle from transform.",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/ https://developer.mozilla.org/en-US/docs/Web/CSS/gradient"
+ },
+ {
+  "family": "fill",
+  "id": "fill-diamond",
+  "figma": "fills: GRADIENT_DIAMOND",
+  "css": null,
+  "relation": "figma-only",
+  "note": "No CSS diamond gradient; approximate with layered linear-gradients.",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/ https://developer.mozilla.org/en-US/docs/Web/CSS/gradient"
+ },
+ {
+  "family": "fill",
+  "id": "gradient-stops",
+  "figma": "gradientStops: {position 0..1, color RGBA}",
+  "css": "<color> <percentage> stops",
+  "relation": "same",
+  "note": "Stop colours variable-bindable via ColorStop.boundVariables. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-image-fill",
+  "figma": "IMAGE scaleMode: FILL",
+  "css": "background-size: cover / object-fit: cover",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-image-fit",
+  "figma": "IMAGE scaleMode: FIT",
+  "css": "background-size: contain / object-fit: contain",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-image-crop",
+  "figma": "IMAGE scaleMode: CROP (imageTransform)",
+  "css": "background-size + background-position",
+  "relation": "synonym",
+  "note": "Crop transform converted to size/position. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-image-tile",
+  "figma": "IMAGE scaleMode: TILE (scalingFactor)",
+  "css": "background-repeat: repeat; background-size",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "image-filters",
+  "figma": "IMAGE filters: exposure, contrast, saturation, temperature, tint, highlights, shadows",
+  "css": "filter: contrast() saturate() (partial)",
+  "relation": "synonym",
+  "note": "Temperature/tint/highlights/shadows have no CSS filter. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-video",
+  "figma": "fills: VIDEO",
+  "css": null,
+  "relation": "figma-only",
+  "note": "CSS can't paint video as background; needs <video> element.",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-pattern",
+  "figma": "fills: PATTERN (beta; tileType RECTANGULAR/HEX)",
+  "css": "background-image repeat (rectangular only)",
+  "relation": "synonym",
+  "note": "Hexagonal tiling figma-only. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-shader",
+  "figma": "fills: SHADER (beta)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-multiple",
+  "figma": "fills: Paint[] stacked",
+  "css": "multiple background layers (comma list)",
+  "relation": "synonym",
+  "note": "Figma order bottom-to-top, CSS first-is-top (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-opacity",
+  "figma": "Paint.opacity",
+  "css": "alpha in color / color-mix()",
+  "relation": "synonym",
+  "note": "Per-paint opacity. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-blend",
+  "figma": "Paint.blendMode",
+  "css": "background-blend-mode",
+  "relation": "synonym",
+  "note": "Per-paint blend. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-visible",
+  "figma": "Paint.visible: false",
+  "css": "omit layer",
+  "relation": "synonym",
+  "note": "Hidden paint. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "fill-style",
+  "figma": "fillStyleId (color style)",
+  "css": "custom property reference",
+  "relation": "synonym",
+  "note": "Style as a named token. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "fill",
+  "id": "text-fill",
+  "figma": "TextNode fills",
+  "css": "color (solid) / background-clip: text (gradient)",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "fill",
+  "id": "color-space",
+  "figma": "SolidPaint color: RGBWithColorSpace",
+  "css": "color(display-p3 ...) / oklch()",
+  "relation": "synonym",
+  "note": "Figma color spaces sRGB/P3 (values unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "css-currentcolor",
+  "figma": "—",
+  "css": "currentColor",
+  "relation": "css-only",
+  "note": "Icon inherits text colour; Figma needs explicit binding. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "css-color-mix",
+  "figma": "—",
+  "css": "color-mix() / relative color syntax",
+  "relation": "css-only",
+  "note": "Computed colours; Figma variables hold literals or aliases. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "fill",
+  "id": "css-repeating-gradient",
+  "figma": "—",
+  "css": "repeating-linear/radial/conic-gradient()",
+  "relation": "css-only",
+  "note": "",
+  "source": "https://developer.mozilla.org/en-US/docs/Web/CSS/gradient"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-inside",
+  "figma": "strokeAlign: INSIDE",
+  "css": "box-shadow: inset 0 0 0 W / border with box-sizing: border-box",
+  "relation": "synonym",
+  "note": "Closest to CSS border inside box. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-center",
+  "figma": "strokeAlign: CENTER",
+  "css": "outline with outline-offset: -W/2",
+  "relation": "synonym",
+  "note": "No direct CSS; half-in/half-out. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-outside",
+  "figma": "strokeAlign: OUTSIDE",
+  "css": "outline / box-shadow: 0 0 0 W",
+  "relation": "synonym",
+  "note": "Does not take layout space. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-weight",
+  "figma": "strokeWeight",
+  "css": "border-width",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-per-side",
+  "figma": "strokeTopWeight/Right/Bottom/Left",
+  "css": "border-top-width etc.",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-solid",
+  "figma": "strokes: SOLID paint",
+  "css": "border-color",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-gradient",
+  "figma": "strokes: GRADIENT_* paint",
+  "css": "border-image: linear-gradient() (loses radius)",
+  "relation": "synonym",
+  "note": "border-image ignores border-radius (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-dash",
+  "figma": "dashPattern: number[]",
+  "css": "border-style: dashed | dotted",
+  "relation": "synonym",
+  "note": "CSS cannot set dash/gap lengths. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-cap",
+  "figma": "strokeCap: NONE | ROUND | SQUARE (+ arrows/markers)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "Applies to vector paths; borders have no caps; SVG stroke-linecap only.",
+  "source": "https://developers.figma.com/docs/plugins/api/StrokeCap/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-join",
+  "figma": "strokeJoin: MITER | BEVEL | ROUND",
+  "css": null,
+  "relation": "figma-only",
+  "note": "Vector paths; SVG stroke-linejoin.",
+  "source": "https://developers.figma.com/docs/plugins/api/StrokeJoin/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-miter",
+  "figma": "strokeMiterLimit",
+  "css": null,
+  "relation": "figma-only",
+  "note": "SVG stroke-miterlimit only.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-variable-width",
+  "figma": "variableWidthStrokeProperties",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-multiple",
+  "figma": "strokes: Paint[] (several)",
+  "css": "multiple box-shadow rings",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "stroke-style",
+  "figma": "strokeStyleId",
+  "css": "custom property",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "css-border-style",
+  "figma": "—",
+  "css": "border-style: double | groove | ridge | inset | outset",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "css-outline-focus",
+  "figma": "—",
+  "css": "outline + outline-offset on :focus-visible",
+  "relation": "css-only",
+  "note": "Focus ring is state-driven; Figma draws a static stroke/variant. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "stroke",
+  "id": "css-per-side-color",
+  "figma": "—",
+  "css": "border-top-color differing per side",
+  "relation": "css-only",
+  "note": "Figma strokes share one paint across sides. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "effect",
+  "id": "drop-shadow",
+  "figma": "effects: DROP_SHADOW (color, offset, radius, spread)",
+  "css": "box-shadow: x y blur spread color",
+  "relation": "same",
+  "note": "CSS blur radius vs Figma radius scale unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow"
+ },
+ {
+  "family": "effect",
+  "id": "inner-shadow",
+  "figma": "effects: INNER_SHADOW",
+  "css": "box-shadow: inset ...",
+  "relation": "same",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow"
+ },
+ {
+  "family": "effect",
+  "id": "shadow-multiple",
+  "figma": "effects: several shadows",
+  "css": "comma-separated box-shadow",
+  "relation": "same",
+  "note": "Order inversion unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow"
+ },
+ {
+  "family": "effect",
+  "id": "shadow-spread",
+  "figma": "DropShadow spread",
+  "css": "box-shadow spread-radius",
+  "relation": "same",
+  "note": "Figma accepts spread only on rect/ellipse/frames with fill+clip.",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow"
+ },
+ {
+  "family": "effect",
+  "id": "shadow-behind-node",
+  "figma": "showShadowBehindNode: true",
+  "css": null,
+  "relation": "figma-only",
+  "note": "CSS outer shadow is clipped outside border box (spec, unverified on page).",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow"
+ },
+ {
+  "family": "effect",
+  "id": "shadow-blend",
+  "figma": "shadow blendMode",
+  "css": null,
+  "relation": "figma-only",
+  "note": "box-shadow has no blend mode.",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "shadow-on-text",
+  "figma": "DROP_SHADOW on TextNode",
+  "css": "text-shadow (no spread)",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "shadow-on-vector",
+  "figma": "DROP_SHADOW on vector",
+  "css": "filter: drop-shadow()",
+  "relation": "synonym",
+  "note": "Follows alpha shape. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "layer-blur",
+  "figma": "LAYER_BLUR blurType NORMAL",
+  "css": "filter: blur()",
+  "relation": "synonym",
+  "note": " Figma's blur radius and CSS blur()'s standard deviation are not the same number (scale unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/backdrop-filter"
+ },
+ {
+  "family": "effect",
+  "id": "background-blur",
+  "figma": "BACKGROUND_BLUR",
+  "css": "backdrop-filter: blur()",
+  "relation": "synonym",
+  "note": "Baseline 2024. Figma's blur radius and CSS blur()'s standard deviation are not the same number (scale unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/ https://developer.mozilla.org/en-US/docs/Web/CSS/backdrop-filter"
+ },
+ {
+  "family": "effect",
+  "id": "progressive-blur",
+  "figma": "blurType: PROGRESSIVE (beta)",
+  "css": "backdrop-filter + mask-image gradient",
+  "relation": "synonym",
+  "note": "Approximation only. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "noise",
+  "figma": "NOISE effect (beta)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "texture",
+  "figma": "TEXTURE effect (beta)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "glass",
+  "figma": "GLASS effect (beta)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "shader-effect",
+  "figma": "SHADER effect",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "effect",
+  "id": "opacity",
+  "figma": "opacity (0..1)",
+  "css": "opacity",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "effect",
+  "id": "blend-pass-through",
+  "figma": "blendMode: PASS_THROUGH",
+  "css": "mix-blend-mode: normal without isolation",
+  "relation": "synonym",
+  "note": "Layer default; groups don't isolate. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/BlendMode/"
+ },
+ {
+  "family": "effect",
+  "id": "blend-standard",
+  "figma": "blendMode: NORMAL..LUMINOSITY (16 shared modes)",
+  "css": "mix-blend-mode: same name kebab-cased",
+  "relation": "same",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/BlendMode/ https://developer.mozilla.org/en-US/docs/Web/CSS/mix-blend-mode"
+ },
+ {
+  "family": "effect",
+  "id": "blend-plus-lighter",
+  "figma": "blendMode: LINEAR_DODGE",
+  "css": "mix-blend-mode: plus-lighter",
+  "relation": "synonym",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/BlendMode/ https://developer.mozilla.org/en-US/docs/Web/CSS/mix-blend-mode"
+ },
+ {
+  "family": "effect",
+  "id": "blend-plus-darker",
+  "figma": "blendMode: LINEAR_BURN",
+  "css": "mix-blend-mode: plus-darker",
+  "relation": "synonym",
+  "note": "plus-darker status unclear on MDN.",
+  "source": "https://developers.figma.com/docs/plugins/api/BlendMode/ https://developer.mozilla.org/en-US/docs/Web/CSS/mix-blend-mode"
+ },
+ {
+  "family": "effect",
+  "id": "effect-style",
+  "figma": "effectStyleId",
+  "css": "custom property / class",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "effect",
+  "id": "css-filter-misc",
+  "figma": "—",
+  "css": "filter: grayscale() brightness() hue-rotate()",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developer.mozilla.org/en-US/docs/Web/CSS/backdrop-filter"
+ },
+ {
+  "family": "effect",
+  "id": "css-transition",
+  "figma": "— (prototype smart animate only)",
+  "css": "transition / animation",
+  "relation": "css-only",
+  "note": "State-change motion not a node property. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "effect",
+  "id": "css-cursor",
+  "figma": "—",
+  "css": "cursor: pointer",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "corner",
+  "id": "radius-uniform",
+  "figma": "cornerRadius",
+  "css": "border-radius",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "corner",
+  "id": "radius-per-corner",
+  "figma": "topLeftRadius / topRightRadius / bottomRightRadius / bottomLeftRadius",
+  "css": "border-top-left-radius etc.",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "corner",
+  "id": "corner-smoothing",
+  "figma": "cornerSmoothing (0..1)",
+  "css": "corner-shape: superellipse(n) / squircle",
+  "relation": "synonym",
+  "note": "corner-shape is experimental, not Baseline; mapping of 0..1 to n unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/corner-shape"
+ },
+ {
+  "family": "corner",
+  "id": "radius-full",
+  "figma": "cornerRadius large (pill)",
+  "css": "border-radius: 9999px / 50%",
+  "relation": "synonym",
+  "note": "Figma clamps to half side (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "corner",
+  "id": "css-elliptical-radius",
+  "figma": "—",
+  "css": "border-radius: a / b (elliptical)",
+  "relation": "css-only",
+  "note": "Figma radii are circular. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "corner",
+  "id": "css-percent-radius",
+  "figma": "—",
+  "css": "border-radius: 50%",
+  "relation": "css-only",
+  "note": "Percent of box size. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "corner",
+  "id": "css-corner-shape-other",
+  "figma": "—",
+  "css": "corner-shape: bevel | scoop | notch",
+  "relation": "css-only",
+  "note": "Experimental.",
+  "source": "https://developer.mozilla.org/en-US/docs/Web/CSS/corner-shape"
+ },
+ {
+  "family": "text",
+  "id": "font-family",
+  "figma": "fontName.family",
+  "css": "font-family",
+  "relation": "same",
+  "note": "Variable-bindable (fontFamily). (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/ https://developers.figma.com/docs/plugins/api/VariableBindableTextField/"
+ },
+ {
+  "family": "text",
+  "id": "font-style-name",
+  "figma": "fontName.style (e.g. 'Semibold Italic')",
+  "css": "font-weight + font-style",
+  "relation": "synonym",
+  "note": "Style string must be parsed. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/ https://developers.figma.com/docs/plugins/api/VariableBindableTextField/"
+ },
+ {
+  "family": "text",
+  "id": "font-weight",
+  "figma": "fontWeight (read-only, derived from style)",
+  "css": "font-weight",
+  "relation": "synonym",
+  "note": "Bindable via fontWeight variable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/ https://developers.figma.com/docs/plugins/api/VariableBindableTextField/"
+ },
+ {
+  "family": "text",
+  "id": "font-size",
+  "figma": "fontSize",
+  "css": "font-size",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "line-height-px",
+  "figma": "lineHeight {unit: PIXELS}",
+  "css": "line-height: Npx",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/LineHeight/"
+ },
+ {
+  "family": "text",
+  "id": "line-height-percent",
+  "figma": "lineHeight {unit: PERCENT}",
+  "css": "line-height: <unitless number> (=% /100)",
+  "relation": "synonym",
+  "note": "CSS % does not inherit like Figma %; prefer unitless. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/LineHeight/"
+ },
+ {
+  "family": "text",
+  "id": "line-height-auto",
+  "figma": "lineHeight {unit: AUTO}",
+  "css": "line-height: normal",
+  "relation": "synonym",
+  "note": "Font-dependent in both. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/LineHeight/"
+ },
+ {
+  "family": "text",
+  "id": "letter-spacing-px",
+  "figma": "letterSpacing {unit: PIXELS}",
+  "css": "letter-spacing: Npx",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/LetterSpacing/"
+ },
+ {
+  "family": "text",
+  "id": "letter-spacing-percent",
+  "figma": "letterSpacing {unit: PERCENT}",
+  "css": "letter-spacing: Nem (=%/100)",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/LetterSpacing/"
+ },
+ {
+  "family": "text",
+  "id": "align-left-center-right",
+  "figma": "textAlignHorizontal: LEFT | CENTER | RIGHT",
+  "css": "text-align: left | center | right",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "align-justified",
+  "figma": "textAlignHorizontal: JUSTIFIED",
+  "css": "text-align: justify",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "align-vertical",
+  "figma": "textAlignVertical: TOP | CENTER | BOTTOM",
+  "css": "flex/align-content on text box",
+  "relation": "synonym",
+  "note": "No text property; needs container alignment. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "truncation-ending",
+  "figma": "textTruncation: ENDING (single line)",
+  "css": "overflow: hidden; text-overflow: ellipsis; white-space: nowrap",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "max-lines",
+  "figma": "maxLines (with ENDING)",
+  "css": "line-clamp: N (or -webkit-line-clamp)",
+  "relation": "synonym",
+  "note": "line-clamp not Baseline; prefixed form works.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/ https://developer.mozilla.org/en-US/docs/Web/CSS/line-clamp"
+ },
+ {
+  "family": "text",
+  "id": "case-upper",
+  "figma": "textCase: UPPER",
+  "css": "text-transform: uppercase",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextCase/"
+ },
+ {
+  "family": "text",
+  "id": "case-lower",
+  "figma": "textCase: LOWER",
+  "css": "text-transform: lowercase",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextCase/"
+ },
+ {
+  "family": "text",
+  "id": "case-title",
+  "figma": "textCase: TITLE",
+  "css": "text-transform: capitalize",
+  "relation": "synonym",
+  "note": "CSS does not lowercase the rest. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextCase/"
+ },
+ {
+  "family": "text",
+  "id": "case-small-caps",
+  "figma": "textCase: SMALL_CAPS",
+  "css": "font-variant-caps: all-small-caps",
+  "relation": "synonym",
+  "note": "Figma renders all characters as small caps.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextCase/ https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-caps"
+ },
+ {
+  "family": "text",
+  "id": "case-small-caps-forced",
+  "figma": "textCase: SMALL_CAPS_FORCED",
+  "css": "font-variant-caps: small-caps + capitalize",
+  "relation": "synonym",
+  "note": "Approximation.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextCase/ https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-caps"
+ },
+ {
+  "family": "text",
+  "id": "decoration-underline",
+  "figma": "textDecoration: UNDERLINE",
+  "css": "text-decoration-line: underline",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextDecoration/"
+ },
+ {
+  "family": "text",
+  "id": "decoration-strikethrough",
+  "figma": "textDecoration: STRIKETHROUGH",
+  "css": "text-decoration-line: line-through",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextDecoration/"
+ },
+ {
+  "family": "text",
+  "id": "decoration-style",
+  "figma": "textDecorationStyle: SOLID | WAVY | DOTTED",
+  "css": "text-decoration-style",
+  "relation": "same",
+  "note": "CSS also has double/dashed.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextDecorationStyle/ https://developer.mozilla.org/en-US/docs/Web/CSS/text-decoration-style"
+ },
+ {
+  "family": "text",
+  "id": "decoration-offset",
+  "figma": "textDecorationOffset {PIXELS|PERCENT|AUTO}",
+  "css": "text-underline-offset",
+  "relation": "same",
+  "note": "CSS values unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextDecorationOffset/"
+ },
+ {
+  "family": "text",
+  "id": "decoration-thickness",
+  "figma": "textDecorationThickness",
+  "css": "text-decoration-thickness",
+  "relation": "same",
+  "note": "Shapes unverified on both sides.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "decoration-color",
+  "figma": "textDecorationColor",
+  "css": "text-decoration-color",
+  "relation": "same",
+  "note": "Shape unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "decoration-skip-ink",
+  "figma": "textDecorationSkipInk: boolean",
+  "css": "text-decoration-skip-ink: auto | none",
+  "relation": "synonym",
+  "note": "CSS values unverified.",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "paragraph-spacing",
+  "figma": "paragraphSpacing",
+  "css": "margin-block between <p>",
+  "relation": "synonym",
+  "note": "Variable-bindable. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/ https://developers.figma.com/docs/plugins/api/VariableBindableTextField/"
+ },
+ {
+  "family": "text",
+  "id": "paragraph-indent",
+  "figma": "paragraphIndent",
+  "css": "text-indent",
+  "relation": "same",
+  "note": "Variable-bindable. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "list-spacing",
+  "figma": "listSpacing; setRangeListOptions",
+  "css": "<ul>/<ol> + li margin",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "hanging-punctuation",
+  "figma": "hangingPunctuation: true",
+  "css": "hanging-punctuation: first",
+  "relation": "synonym",
+  "note": "Safari-only (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "hanging-list",
+  "figma": "hangingList: true",
+  "css": "list-style-position: outside",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "leading-trim",
+  "figma": "leadingTrim: CAP_HEIGHT | NONE",
+  "css": "text-box: trim-both cap alphabetic",
+  "relation": "synonym",
+  "note": "Baseline 2026.",
+  "source": "https://developers.figma.com/docs/plugins/api/LeadingTrim/ https://developer.mozilla.org/en-US/docs/Web/CSS/text-box-trim"
+ },
+ {
+  "family": "text",
+  "id": "wrap-balance",
+  "figma": "textWrapStyle: BALANCE",
+  "css": "text-wrap-style: balance",
+  "relation": "same",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/TextWrapStyle/ https://developer.mozilla.org/en-US/docs/Web/CSS/text-wrap-style"
+ },
+ {
+  "family": "text",
+  "id": "wrap-pretty",
+  "figma": "textWrapStyle: PRETTY",
+  "css": "text-wrap-style: pretty",
+  "relation": "same",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/TextWrapStyle/ https://developer.mozilla.org/en-US/docs/Web/CSS/text-wrap-style"
+ },
+ {
+  "family": "text",
+  "id": "opentype",
+  "figma": "openTypeFeatures (read-only map)",
+  "css": "font-feature-settings",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "hyperlink",
+  "figma": "hyperlink",
+  "css": "<a href>",
+  "relation": "synonym",
+  "note": "Markup, not CSS. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "text-style",
+  "figma": "textStyleId",
+  "css": "class / custom properties",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "mixed-ranges",
+  "figma": "styled ranges (figma.mixed, setRange*)",
+  "css": "nested <span> with own styles",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "characters",
+  "figma": "characters",
+  "css": "text content",
+  "relation": "synonym",
+  "note": "Variable-bindable; TEXT component property. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "text",
+  "id": "css-white-space",
+  "figma": "—",
+  "css": "white-space / word-break / hyphens",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "css-font-variation",
+  "figma": "—",
+  "css": "font-variation-settings / optical sizing",
+  "relation": "css-only",
+  "note": "Figma exposes variable axes in UI (API unverified). (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "css-fluid-type",
+  "figma": "—",
+  "css": "font-size: clamp()",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "css-placeholder",
+  "figma": "—",
+  "css": "::placeholder / ::selection",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/TextNode/"
+ },
+ {
+  "family": "text",
+  "id": "css-decoration-double-dashed",
+  "figma": "—",
+  "css": "text-decoration-style: double | dashed",
+  "relation": "css-only",
+  "note": "",
+  "source": "https://developer.mozilla.org/en-US/docs/Web/CSS/text-decoration-style"
+ },
+ {
+  "family": "structure",
+  "id": "variant",
+  "figma": "componentPropertyDefinitions type VARIANT",
+  "css": "modifier class / [data-variant] attribute",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "boolean-visibility",
+  "figma": "BOOLEAN property bound to visible",
+  "css": "conditional render / [hidden]",
+  "relation": "synonym",
+  "note": "componentPropertyReferences.visible. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "text-prop",
+  "figma": "TEXT property bound to characters",
+  "css": "slot text / prop string",
+  "relation": "synonym",
+  "note": "componentPropertyReferences.characters. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "instance-swap",
+  "figma": "INSTANCE_SWAP property (preferredValues)",
+  "css": "child component prop / slot",
+  "relation": "synonym",
+  "note": "componentPropertyReferences.mainComponent. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "slot",
+  "figma": "SLOT property + SlotNode (slotSettings limits)",
+  "css": "<slot> / children",
+  "relation": "synonym",
+  "note": "limitViolations BELOW_MIN/ABOVE_MAX/HAS_NON_PREFERRED. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/ https://developers.figma.com/docs/plugins/api/SlotNode/"
+ },
+ {
+  "family": "structure",
+  "id": "nested-instance",
+  "figma": "InstanceNode inside component; exposedInstances",
+  "css": "composed child component",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/InstanceNode/"
+ },
+ {
+  "family": "structure",
+  "id": "instance-overrides",
+  "figma": "InstanceNode overrides",
+  "css": "props / inline override",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/InstanceNode/"
+ },
+ {
+  "family": "structure",
+  "id": "description",
+  "figma": "description / documentationLinks",
+  "css": null,
+  "relation": "figma-only",
+  "note": "Documentation metadata.",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "auto-layout-frame",
+  "figma": "FRAME with layoutMode",
+  "css": "<div> flex container",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "structure",
+  "id": "group",
+  "figma": "GROUP node",
+  "css": "no wrapper box; children positioned in parent",
+  "relation": "synonym",
+  "note": "No box; children positioned absolutely (unverified). (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "structure",
+  "id": "vector-shape",
+  "figma": "VECTOR / ELLIPSE / RECTANGLE nodes",
+  "css": "inline <svg> / pseudo-element",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/"
+ },
+ {
+  "family": "structure",
+  "id": "hidden-layer",
+  "figma": "visible: false",
+  "css": "display: none",
+  "relation": "synonym",
+  "note": "Variable-bindable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "structure",
+  "id": "annotations",
+  "figma": "annotations",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/node-properties/"
+ },
+ {
+  "family": "structure",
+  "id": "state-hover",
+  "figma": "variant State=Hover",
+  "css": "pseudo-class :hover",
+  "relation": "synonym",
+  "note": "Figma draws states as variants. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "state-pressed",
+  "figma": "variant State=Pressed",
+  "css": "pseudo-class :active",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "state-focus",
+  "figma": "variant State=Focus",
+  "css": "pseudo-class :focus-visible",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "state-disabled",
+  "figma": "variant/boolean Disabled",
+  "css": "pseudo-class :disabled / [aria-disabled]",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "state-checked",
+  "figma": "variant Checked",
+  "css": "pseudo-class :checked / [aria-checked]",
+  "relation": "synonym",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "css-has",
+  "figma": "—",
+  "css": ":has() / :empty / :nth-child()",
+  "relation": "css-only",
+  "note": "Structural selectors. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "css-pseudo-elements",
+  "figma": "—",
+  "css": "::before / ::after",
+  "relation": "css-only",
+  "note": "Decorative boxes without DOM. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "css-semantics",
+  "figma": "—",
+  "css": "HTML element role (button, input, label)",
+  "relation": "css-only",
+  "note": "Semantics and a11y not in Figma nodes. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/ComponentNode/"
+ },
+ {
+  "family": "structure",
+  "id": "reactions",
+  "figma": "reactions (prototype interactions)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "Navigation/overlay prototyping.",
+  "source": "https://developers.figma.com/docs/plugins/api/node-properties/"
+ },
+ {
+  "family": "variables",
+  "id": "var-color",
+  "figma": "Variable resolvedType COLOR bound to paints",
+  "css": "--token: <color>",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableResolvedDataType/"
+ },
+ {
+  "family": "variables",
+  "id": "var-float",
+  "figma": "Variable FLOAT bound to dimensions/radii/padding",
+  "css": "--token: <length>",
+  "relation": "synonym",
+  "note": "Unitless px in Figma; CSS needs unit. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableResolvedDataType/ https://developers.figma.com/docs/plugins/api/VariableBindableNodeField/"
+ },
+ {
+  "family": "variables",
+  "id": "var-string",
+  "figma": "Variable STRING (fontFamily, fontStyle, characters)",
+  "css": "--token: <string> / font-family",
+  "relation": "synonym",
+  "note": "Text content can't come from CSS var except content: in pseudo. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableResolvedDataType/"
+ },
+ {
+  "family": "variables",
+  "id": "var-boolean",
+  "figma": "Variable BOOLEAN bound to visible",
+  "css": "--flag + style queries / class",
+  "relation": "synonym",
+  "note": "No direct CSS boolean binding. (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableResolvedDataType/"
+ },
+ {
+  "family": "variables",
+  "id": "var-easing-timing",
+  "figma": "Variable EASING / TIMING",
+  "css": "--ease / --duration in transitions",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableResolvedDataType/"
+ },
+ {
+  "family": "variables",
+  "id": "var-alias",
+  "figma": "VariableAlias (value refers to another variable)",
+  "css": "--a: var(--b)",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "variables",
+  "id": "var-modes",
+  "figma": "valuesByMode (light/dark, density)",
+  "css": "@media prefers-color-scheme / [data-theme] scopes",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "variables",
+  "id": "explicit-mode",
+  "figma": "explicitVariableModes; setExplicitVariableModeForCollection",
+  "css": "scoped [data-theme] on subtree",
+  "relation": "synonym",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/node-properties/"
+ },
+ {
+  "family": "variables",
+  "id": "var-scopes",
+  "figma": "scopes: VariableScope[] (23 values)",
+  "css": null,
+  "relation": "figma-only",
+  "note": "Picker filtering only.",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableScope/"
+ },
+ {
+  "family": "variables",
+  "id": "var-code-syntax",
+  "figma": "codeSyntax {WEB, ANDROID, iOS}",
+  "css": "custom property name",
+  "relation": "synonym",
+  "note": "Declares CSS name for the variable. (CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "variables",
+  "id": "var-hidden",
+  "figma": "hiddenFromPublishing",
+  "css": null,
+  "relation": "figma-only",
+  "note": "",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "variables",
+  "id": "bound-text-fields",
+  "figma": "boundVariables on fontFamily/fontSize/fontStyle/fontWeight/letterSpacing/lineHeight/paragraphSpacing/paragraphIndent",
+  "css": "var() in typography properties",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/VariableBindableTextField/"
+ },
+ {
+  "family": "variables",
+  "id": "bound-effect",
+  "figma": "boundVariables on effect color/offset/radius/spread",
+  "css": "var() inside box-shadow",
+  "relation": "same",
+  "note": "Effect fields unverified (page not read).",
+  "source": "https://developers.figma.com/docs/plugins/api/Effect/"
+ },
+ {
+  "family": "variables",
+  "id": "bound-gradient-stop",
+  "figma": "ColorStop.boundVariables",
+  "css": "var() in gradient stops",
+  "relation": "same",
+  "note": "(CSS side unverified: no MDN page read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Paint/"
+ },
+ {
+  "family": "variables",
+  "id": "css-calc-tokens",
+  "figma": "—",
+  "css": "calc() with var()",
+  "relation": "css-only",
+  "note": "Figma variables have no expressions (unverified).",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "variables",
+  "id": "css-fallback",
+  "figma": "—",
+  "css": "var(--x, fallback)",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "variables",
+  "id": "css-property-registered",
+  "figma": "—",
+  "css": "@property typed custom properties",
+  "relation": "css-only",
+  "note": " (CSS side unverified: MDN page not read)",
+  "source": "https://developers.figma.com/docs/plugins/api/Variable/"
+ },
+ {
+  "family": "structure",
+  "id": "children-order",
+  "figma": "a frame's children order (index in children; paint order, last on top unless itemReverseZIndex)",
+  "css": "DOM order (source order; paint order follows it unless z-index or order)",
+  "relation": "same",
+  "note": "The order layers sit in is the order elements are written in; auto layout's order is flex's.",
+  "source": "https://developers.figma.com/docs/plugins/api/FrameNode/ (CSS side unverified: no MDN page read)"
+ }
+]

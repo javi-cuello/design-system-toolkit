@@ -44,14 +44,15 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS } from './rules.mjs';
+import { textStyleFields } from '../tokens/build-tokens.mjs';
+import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
 const PLACE_CSS = ['position', 'inset', 'inset-inline-start', 'inset-inline-end', 'inset-block-start', 'inset-block-end', 'left', 'right', 'top', 'bottom', 'translate', 'transform', 'width', 'height', 'inline-size', 'block-size'];
 // what a size and a layout are read from: the element's own declarations and its parent's
 const SIZING_CSS = ['display', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-self', 'justify-self', 'justify-items', 'flex', 'flex-grow', 'flex-basis', 'inline-size', 'width', 'block-size', 'height'];
 import { variantValues } from '../shared/names.js';
 import { compareNames, writeReport } from '../shared/output.mjs';
-import { cssName } from '../tokens/names.mjs';
 
 import { realpathSync } from 'node:fs';
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -816,6 +817,15 @@ async function main() {
       // as the contract's minHeight/minWidth (Figma's min sizes on an auto layout)
       // written physically or logically (block-size is height in a horizontal writing mode), in px or rem
       if (remPx == null) remPx = await call(L.tab, () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
+      // where a text is cut: the declarations of the element that holds its words; white-space as it computes, as a
+      // parent's nowrap reaches the words (an inherited property)
+      const readCut = async (e, loose) => {
+        const sel = `[data-contract-id="${loose ? e.parent : e.id}"]`, cut = {};
+        for (const p of LINES_CSS) cut[p] = await authoredWidth(L.tab, sel, p, { raw: true, cache: styles });
+        cut['white-space'] = await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).whiteSpace : null; }, sel);
+        const lines = linesFromCss(cut);
+        if (lines) Object.assign(e, lines);
+      };
       const lengthOf = (v) => { const m = /^\s*(-?[\d.]+)(px|rem)\s*$/.exec(v || ''); return m ? +(+m[1] * (m[2] === 'rem' ? remPx : 1)).toFixed(2) : null; };
       // a minimum or maximum the code writes (a set size is the size's own, read with the sizing below)
       for (const e of raw) if (['container', 'slot', 'text'].includes(e.kind)) for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
@@ -862,8 +872,10 @@ async function main() {
               // an absolutely placed box with no size of its own shrinks to fit what it holds (css2 §10.3.7), which
               // Figma says as hug where it has auto layout; a percentage of its parent, or no auto layout, is the
               // length it renders at
-              e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && e.layout ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+              // (as text shrinks to fit its words)
+              e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text') ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
             }
+            if (e.kind === 'text') { e.autoResize = autoResizeOf(e.width, e.height); await readCut(e, !(e.id in shown)); }
             continue;
           }
         }
@@ -903,6 +915,11 @@ async function main() {
           // the outer box filling the room it is given: that room, a canvas fact, as derive records Figma's root fill
           if (e.parent == null && v === 'fill' && e.box) e.canvas = { ...(e.canvas || {}), [axis]: e.box[i] };
         }
+        // how a text resizes is its sizes, said as Figma says it (rules.mjs)
+        if (e.kind === 'text') {
+          e.autoResize = autoResizeOf(e.width, e.height);
+          await readCut(e, loose);
+        }
       }
       // values to tokens
       const anatomy = {}, drawn = {}, ring = [];
@@ -925,7 +942,7 @@ async function main() {
         // design builds it: content that is only words where the design draws a text, a round empty box where
         // it draws an ellipse
         const fa = L.governed && figmaContract && figmaContract.anatomy && figmaContract.anatomy[id];
-        if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; }
+        if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; x.autoResize = autoResizeOf(x.width, x.height); }
         delete x.asText;
         // another component's instance at the props its markup shows: each axis of that component's mapping at the value
         // whose args the markup carries (an attribute with that value, or one named for a true flag), else the value
@@ -986,6 +1003,9 @@ async function main() {
         // a shadow is the library's effect style that draws it (layers matched by what they draw); none, its css
         // the effect style the code wrote (box-shadow: var(--elevation-raised)), else the one that draws the same layers
         if (x.shadow) { const said = await authoredVars(L.tab, `[data-contract-id="${id}"]`, 'box-shadow', styles); const named = said.length && (L.tokens.effects || []).find((fx) => said.some((v) => writtenAs(v, fx.name))); const k = shadowKey(cssShadows(x.shadow)); const hit = named || (L.tokens.effects || []).find((fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))) === k); x.shadow = hit ? hit.name : x.shadow; }
+        // a text style named by the declarations that say it (rules.mjs), else by its values
+        const said = x.type && x.kind === 'text' ? styleFromCss(Object.fromEntries(await Promise.all(['font-family', 'font-weight', 'font-size', 'line-height', 'letter-spacing'].map(async (p) => [p, await authoredWidth(L.tab, `[data-contract-id="${id in shown ? id : x.parent}"]`, p, { raw: true, cache: styles })]))), (L.tokens.textStyles || []).map((t) => t.name), (n) => textStyleFields(cssName('', n).slice(2))) : null;
+        if (said) { x.typography = said; delete x.type; }
         if (x.type) { const r = styleFor(x.type, L.tokens.textStyles || [], usage); if (r.tie) ties.push({ at: `${id}.typography`, token: r.token, tie: r.tie }); x.typography = r.token ?? r.value; delete x.type; }
         if (x.kind === 'text') { const p = Object.entries(props).find(([, q]) => q.type === 'string' && (args[q.code] ?? q.sample) === x.content); if (p) x.content = `{${p[0]}}`; }
         anatomy[id] = x;
