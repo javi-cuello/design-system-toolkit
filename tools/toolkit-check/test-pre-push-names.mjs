@@ -69,7 +69,7 @@ try {
   const pi = join(tmp, 'pi');
   mkdirSync(join(pi, 'notes'), { recursive: true });
   const pgit = (...a) => execFileSync('git', ['-C', pi, ...a], { encoding: 'utf8' }).trim();
-  pgit('init', '-q'); pgit('config', 'user.name', 'Ada Lovelace'); pgit('remote', 'add', 'origin', 'https://github.com/ada-love/kit.git');
+  pgit('init', '-q'); pgit('config', 'user.email', 'ada@example.com'); pgit('config', 'user.name', 'Ada Lovelace'); pgit('remote', 'add', 'origin', 'https://github.com/ada-love/kit.git');
   const scan = (body, file = 'notes/a b.md') => {
     writeFileSync(join(pi, file), body + '\n'); pgit('add', '-A');
     const res = spawnSync('node', [join(ROOT, 'tools/toolkit-check/personal-info.mjs')], { cwd: pi, encoding: 'utf8' });
@@ -97,6 +97,9 @@ try {
   ok('…though an email on the notice\'s line is still refused', r.status === 1 && /an email address/.test(r.stdout) && !/maintainer/.test(r.stdout), r.stdout + r.stderr);
   r = scan('Copyright Ada Lovelace', 'LICENSE');
   ok('…nor in LICENSE', r.status === 0, r.stdout + r.stderr);
+  pgit('config', 'user.email', 'check@localhost'); pgit('config', 'user.name', 'check');
+  r = scan('Run the check.');
+  ok('…nor a machine\'s placeholder name (CI\'s "check", its address @localhost)', r.status === 0, r.stdout + r.stderr);
   pgit('config', 'user.name', '');
   r = scan('Ruled by Lovelace.');
   ok('with no user.name the name is not looked for, and a notice says so', r.status === 0 && /no git user\.name/.test(r.stderr), r.stdout + r.stderr);

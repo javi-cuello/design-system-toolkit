@@ -5,7 +5,7 @@
 //   - an email address, except noreply@anthropic.com (the commit trailer) and example.com/.org/.net;
 //   - a home path /Users/<name>/, except the placeholders fixtures use (u, me, you, user, first.last…);
 //   - the maintainer's name: `git config user.name` whole and each word of three letters or more,
-//     accents ignored, read at run time and never written into the repo.
+//     accents ignored, read at run time and never written into the repo; none where the address is @localhost (CI's placeholder).
 // Skipped: LICENSE, a line carrying "©" or "Copyright" (the author's notice), and the owner in the
 // repo's own address (`git remote get-url origin`), where the repo is public anyway.
 // --stdin scans one text (a commit message). Exit 0 clean, 1 with hits, 2 when it could not run.
@@ -22,7 +22,8 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const git = (args, cwd) => { try { return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
 
 export function patterns(cwd = process.cwd()) {
-  const name = fold(git(['config', 'user.name'], cwd));
+  // a name whose address is @localhost is a machine's placeholder (CI's "check"), not a person's
+  const name = /@localhost$/.test(git(['config', 'user.email'], cwd)) ? '' : fold(git(['config', 'user.name'], cwd));
   if (!name) console.error('personal-info: no git user.name, so the maintainer\'s name is not looked for');
   const words = name.split(/[^\p{L}]+/u).filter((w) => w.length >= 3);
   const nameRe = words.length ? new RegExp(`\\b(?:${[name, ...words].map((w) => escape(w).replace(/\s+/g, '\\s+')).join('|')})\\b`, 'i') : null;
