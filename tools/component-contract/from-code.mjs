@@ -44,7 +44,9 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
-import { layoutFromCss, sizeFromCss } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss } from './rules.mjs';
+// what a placement is read from: the element's own position, insets and shift
+const PLACE_CSS = ['position', 'inset', 'inset-inline-start', 'inset-inline-end', 'inset-block-start', 'inset-block-end', 'left', 'right', 'top', 'bottom', 'translate', 'transform', 'width', 'height', 'inline-size', 'block-size'];
 // what a size and a layout are read from: the element's own declarations and its parent's
 const SIZING_CSS = ['display', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-self', 'justify-self', 'justify-items', 'flex', 'flex-grow', 'flex-basis', 'inline-size', 'width', 'block-size', 'height'];
 import { variantValues } from '../shared/names.js';
@@ -827,8 +829,44 @@ async function main() {
       // display is what was written or the element's default, never a measurement
       const unsized = [];
       const shown = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, n.parentElement ? getComputedStyle(n.parentElement).display : 'block']])));
+      // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
+      // for an offset written as a token and for a point placed() never measured
+      const insets = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = n.parentElement.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })));
       for (const e of raw) {
-        if (!['container', 'text', 'slot', 'instance'].includes(e.kind) || e.absolute) continue;
+        if (!['container', 'text', 'slot', 'instance', 'graphic'].includes(e.kind)) continue;
+        // placed out of the flow: its constraints and far offsets as written, through the table; its point as Figma
+        // records x and y, where it sits
+        // (the root is placed by whatever shows it, never by Figma: its size is read below)
+        if (e.id in shown && e.parent != null) {
+          const pos = {};
+          for (const p of PLACE_CSS) pos[p] = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, p, { raw: true, cache: styles });
+          const place = placeFromCss(pos);
+          // (fixed is placed against the viewport, not the parent Figma measures from: left to the walk)
+          if (place && !/fixed/.test(String(pos.position || ''))) {
+            e.position = 'absolute';
+            // where the declarations say an edge (or both) but the box sits centred and sized on its own (a transform
+            // the table does not read, auto margins between two insets), the centre the walk measured is the truth
+            const measured = (e.constraints || {});
+            for (const k of ['horizontal', 'vertical']) if (measured[k] === 'center' && place.constraints[k] === 'min') place.constraints[k] = 'center';
+            e.constraints = place.constraints;
+            const o = place.offsets, at = { x: insets[e.id].x, y: insets[e.id].y, ...(e.absolute || {}) };
+            if (o.end != null) at.end = lengthOf(o.end) ?? insets[e.id].end;
+            if (o.bottom != null) at.bottom = lengthOf(o.bottom) ?? insets[e.id].bottom;
+            e.absolute = at;
+            // pinned to both edges, its size is theirs; on an axis it is not, its own or what it holds
+            for (const [axis, to, i] of [['width', place.constraints.horizontal, 0], ['height', place.constraints.vertical, 1]]) {
+              if (to === 'stretch') { delete e[axis]; continue; }
+              if (e.kind === 'graphic') continue;
+              const v = String(pos[axis === 'width' ? 'inline-size' : 'block-size'] ?? pos[axis] ?? '').trim();
+              // an absolutely placed box with no size of its own shrinks to fit what it holds (css2 §10.3.7), which
+              // Figma says as hug where it has auto layout; a percentage of its parent, or no auto layout, is the
+              // length it renders at
+              e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && e.layout ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+            }
+            continue;
+          }
+        }
+        if (e.kind === 'graphic' || e.absolute) continue;
         const own = {}, up = {};
         // words loose in a box (no element of their own) are its anonymous child: the box is their parent
         const loose = e.kind === 'text' && !(e.id in shown);

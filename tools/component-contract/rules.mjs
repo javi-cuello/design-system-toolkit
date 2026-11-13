@@ -83,6 +83,42 @@ function sides(own) {
   return Object.keys(out).length ? out : null;
 }
 
+/* Placement out of the flow, from an element's authored declarations: Figma's absolute position and its constraints
+   (min, max, center, stretch), as css.mjs writes them the other way: an edge's inset pins it there, both edges stretch it
+   between them, an inset of 50% shifted back by half its own size centres it. The offsets are read as written (a
+   token's var() kept); the point it sits at is the caller's, as Figma records x and y whatever pins it.
+   Figma's scale constraint has no CSS constraint; its synonym is a share of the parent: the offset and the size each a
+   percentage of the parent's size (css.mjs writes it so where the parent's size is a number), and a percentage offset
+   beside a percentage size reads back as scale.
+   Null where it is in the flow. */
+export const share = (part, whole) => `${+((100 * part) / whole).toFixed(4)}%`;
+export function placeFromCss(own) {
+  if (!/^(absolute|fixed)$/.test(word(own.position))) return null;
+  const all = (word(own.inset).match(/(?:[^\s(]+|\([^)]*\))+/g) || []);
+  const [t, r = t, b = t, l = r] = all;
+  const pick = (...ks) => { for (const k of ks) if (own[k] != null && word(own[k]) !== 'auto') return word(own[k]); return null; };
+  const sizes = [word(own['inline-size'] ?? own.width), word(own['block-size'] ?? own.height)];
+  // the shift back: translate, or a transform's translate(), translate3d(), translateX() or translateY()
+  const tf = word(own.transform), one = (f) => (tf.match(new RegExp(`${f}\\(([^)]*)\\)`)) || [])[1];
+  const shift = word(own.translate) && word(own.translate) !== 'none' ? word(own.translate).split(/\s+/)
+    : (one('translate') || one('translate3d') || '').split(/[\s,]+/).filter(Boolean).length ? (one('translate') || one('translate3d')).split(/[\s,]+/)
+      : [one('translateX') || '', one('translateY') || ''];
+  const axis = (near, far, i) => {
+    const n = near ?? null, f = far ?? null;
+    if (n === '50%' && /^-50%$/.test(shift[i] || '')) return { to: 'center' };
+    if (n != null && /%$/.test(n) && /%$/.test(sizes[i])) return { to: 'scale', near: n };
+    // both edges and a size of its own is over-constrained: the far inset gives way (css2 §10.3.7, §10.6.4), unless
+    // auto margins centre it, which the caller measures
+    if (n != null && f != null && sizes[i] && !/^(auto|fit-content|max-content|min-content)$/.test(sizes[i])) return { to: 'min', near: n };
+    if (n != null && f != null) return { to: 'stretch', near: n, far: f };
+    if (f != null) return { to: 'max', far: f };
+    return { to: 'min', ...(n != null && { near: n }) };
+  };
+  const h = axis(pick('inset-inline-start', 'left') ?? (l !== 'auto' ? l : null), pick('inset-inline-end', 'right') ?? (r !== 'auto' ? r : null), 0);
+  const v = axis(pick('inset-block-start', 'top') ?? (t !== 'auto' ? t : null), pick('inset-block-end', 'bottom') ?? (b !== 'auto' ? b : null), 1);
+  return { constraints: { horizontal: h.to, vertical: v.to }, offsets: { x: h.near, end: h.far, y: v.near, bottom: v.far } };
+}
+
 const LENGTH = /^(-?[\d.]+(px|rem|em)|0|var\(--[\w-]+\)|calc\(.+\))$/;
 const word = (v) => (v == null ? '' : String(v).trim());
 const grows = (flex, grow) => {

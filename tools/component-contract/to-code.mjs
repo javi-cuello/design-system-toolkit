@@ -264,7 +264,9 @@ export function drawn(c, when) {
     const sample = id === 'root' && e.layout && e.layout.direction && typeof e.width === 'number';
     if (sample) e = { ...e, width: 'fill' };
     const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a));
-    const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors }, tokenNames);
+    // the parent's own size, where it is a number: what a part that scales with it is a share of
+    const box = parent ? { width: typeof parent.width === 'number' ? parent.width : null, height: typeof parent.height === 'number' ? parent.height : null } : null;
+    const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     const kept = e.kind === 'instance' || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;

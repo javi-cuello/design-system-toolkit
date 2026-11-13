@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, ALIGN_ROWS } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, ALIGN_ROWS } from './rules.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -48,6 +48,26 @@ ok('auto layout from flex: direction, gap along the flow (row-gap column-gap), p
   const back = layoutFromCss(own);
   ok('a layout written by css.mjs reads back the same, but for its gap: space-between drops it, as CSS would add it to the space',
     back.direction === 'row' && back.align === 'space-between' && back.crossAlign === 'center' && back.padding.end === 'var(--Spacing/4)' && back.gap === undefined);
+}
+
+// placement: what css.mjs writes for each constraint reads back as that constraint, its far offsets as written
+{
+  const back = (constraints, absolute) => placeFromCss(Object.fromEntries(declarations({ kind: 'container', position: 'absolute', constraints, absolute }, { holds: false, row: true }, names).decls.map(([p, v]) => [p, v])));
+  const all = ['min', 'max', 'center', 'stretch'];
+  ok('every constraint CSS can say comes back from css.mjs\'s CSS: an edge, the far edge, the centre, both edges',
+    all.every((h) => all.every((v) => { const b = back({ horizontal: h, vertical: v }, { x: 4, y: 8, end: 2, bottom: 6 }); return b.constraints.horizontal === h && b.constraints.vertical === v; })));
+  const s = back({ horizontal: 'stretch', vertical: 'max' }, { x: 0, y: 228, end: 0, bottom: 0 });
+  ok('pinned to both side edges and the bottom: those insets as written, the point left to the caller', s.offsets.x === '0' && s.offsets.end === '0' && s.offsets.bottom === '0' && s.offsets.y === undefined);
+  ok('in the flow is no placement; fixed is placed as absolute is; the inset shorthand reads as its four edges',
+    placeFromCss({ position: 'relative' }) === null && placeFromCss({ position: 'fixed', inset: '0' }).constraints.horizontal === 'stretch' && placeFromCss({ position: 'absolute', inset: 'auto 0 0 auto' }).constraints.vertical === 'max');
+  ok('a transform\'s translateX(-50%) or translate3d centres as translate does; both edges beside a size of its own pin the near one (css2 §10.3.7)',
+    placeFromCss({ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }).constraints.horizontal === 'center'
+    && placeFromCss({ position: 'absolute', top: '50%', transform: 'translate3d(0, -50%, 0)' }).constraints.vertical === 'center'
+    && placeFromCss({ position: 'absolute', left: '0', right: '0', width: '24px' }).constraints.horizontal === 'min'
+    && placeFromCss({ position: 'absolute', top: '50%', translate: 'none', transform: 'translateY(-50%)' }).constraints.vertical === 'center');
+  // Figma's scale has no CSS constraint: its synonym is a share of the parent, written where the parent's size is a number
+  const sc = Object.fromEntries(declarations({ kind: 'container', position: 'absolute', constraints: { horizontal: 'scale', vertical: 'min' }, absolute: { x: 25, y: 4 }, width: 50, height: 10 }, { holds: false, row: true, box: { width: 200, height: 40 } }, names).decls.map(([p, v]) => [p, v]));
+  ok('scale is written as shares of the parent (25 of 200 at 12.5%, 50 wide at 25%) and reads back as scale', sc['inset-inline-start'] === '12.5%' && sc['inline-size'] === '25%' && placeFromCss(sc).constraints.horizontal === 'scale');
 }
 
 console.log(`${n}/${n} passed`);

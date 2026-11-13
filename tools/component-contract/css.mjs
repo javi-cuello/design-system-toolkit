@@ -21,14 +21,14 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss } from './rules.mjs';
+import { alignToCss, share } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
 
 const rem = (n) => `${+(n / 16).toFixed(4)}rem`;
 
-export function declarations(e, { root = false, holds = false, row = true, anchors = false } = {}, names) {
+export function declarations(e, { root = false, holds = false, row = true, anchors = false, box = null } = {}, names) {
   const decls = [], unread = [];
   const put = (prop, value, note) => { if (value !== undefined && value !== null && !/\bundefined\b/.test(String(value))) decls.push(note ? [prop, value, note] : [prop, value]); };
   // a value as a length: a token by its custom property, a number in rem (or px where it must not scale)
@@ -148,14 +148,23 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     const c = cons || (at ? { horizontal: 'min', vertical: 'min' } : { horizontal: 'center', vertical: 'center' });
     if (!cons && !at) unread.push('constraints (none recorded: drawn centred)');
     const shift = [];
-    for (const [to, near, far, o, f, size] of [[c.horizontal, 'inset-inline-start', 'inset-inline-end', at?.x, at?.end, 'inline-size'], [c.vertical, 'inset-block-start', 'inset-block-end', at?.y, at?.bottom, 'block-size']]) {
+    for (const [to, near, far, o, f, size, k] of [[c.horizontal, 'inset-inline-start', 'inset-inline-end', at?.x, at?.end, 'inline-size', 'width'], [c.vertical, 'inset-block-start', 'inset-block-end', at?.y, at?.bottom, 'block-size', 'height']]) {
       const off = len(o ?? 0), offFar = f !== undefined ? len(f) : null;
       shift.push(to === 'center' ? '-50%' : '0');
       if (to === 'center') put(near, '50%');
       else if (to === 'max') put(far, offFar ?? '0');
       // pinned to both edges, it takes its size from them
       else if (to === 'stretch') { put(near, off); put(far, offFar ?? off); for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1); }
-      else if (to === 'scale') unread.push('constraints (scale)');
+      // scaled with its parent: CSS has no such constraint, and its synonym (rules.mjs SCALE) is a share of the parent,
+      // its offset and its size each a percentage of the parent's size
+      else if (to === 'scale') {
+        const whole = box && box[k], own = e[k];
+        if (typeof whole === 'number' && whole > 0 && typeof o === 'number' && typeof own === 'number') {
+          put(near, share(o, whole));
+          for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1);
+          put(size, share(own, whole));
+        } else unread.push(`constraints (scale: its parent's ${k} is no number, so no share of it can be written)`);
+      }
       else put(near, off);
     }
     if (shift.includes('-50%')) put('translate', shift.join(' '));
