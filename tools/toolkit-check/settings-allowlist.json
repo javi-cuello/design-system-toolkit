@@ -156,5 +156,11 @@
       "literal": "(r.sev === \"error\" ? \"🔴\" : r.sev === \"pref\" ? \"◽\" : r.bucket === \"b3\" ? \"🔵\" : \"🟡\") + (r.visible ? \"⚠️\" : \"\")",
       "reason": "the same key's glyphs, as each row takes one"
     }
+  ],
+  "tools/toolkit-check/personal-info.mjs": [
+    {
+      "literal": "/©|copyright/i",
+      "reason": "the mark of an author notice, which the personal-detail check skips on purpose: a fixed sign of the notice, not a house value"
+    }
   ]
 }
