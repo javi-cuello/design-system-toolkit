@@ -52,6 +52,18 @@ const slotName = (e, props) => { const ref = e.kind === 'slot' && typeof e.conte
    at most 256), expanded from both contracts and compared field by field, so how a contract is worded (its default,
    its order of values) does not count and what a variant draws does; then the props' names and kinds and the
    component's name. Rows: { at, library, drawn, in } where `in` counts the combinations it differs in. */
+/* A root that fills the room it is given is, in the room it was drawn or read in, that room's width (a ruling: a
+   Figma component's own frame has no parent to fill, so a fixed width is how Figma says what code says as a fill
+   of its container, and from-code reads the code in a room as wide as Figma's). Compared as that length. */
+function room(x) {
+  const r = x && x.root;
+  if (!r || !r.canvas) return x;
+  const canvas = { ...r.canvas }, root = { ...r };
+  for (const k of ['width', 'height']) if (root[k] === 'fill' && typeof canvas[k] === 'number') { root[k] = canvas[k]; delete canvas[k]; }
+  if (Object.keys(canvas).length) root.canvas = canvas; else delete root.canvas;
+  return { ...x, root };
+}
+
 export function roundTrip(library, drawn, { limit = 256 } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
@@ -75,7 +87,7 @@ export function roundTrip(library, drawn, { limit = 256 } = {}) {
       const dk = named[low(library.props[k].figma || k)] || k, dq = drawn.props[dk];
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
-    diff(expand(library, { ...variantDefaults(library), ...c }), expand(drawn, { ...variantDefaults(drawn), ...theirs }), '');
+    diff(room(expand(library, { ...variantDefaults(library), ...c })), room(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));

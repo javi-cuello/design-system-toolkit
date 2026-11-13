@@ -214,4 +214,12 @@ delete globalThis.figma;
     roundTrip(withIcon('Icon/house'), withIcon('house')).rows.length === 0 && roundTrip(withIcon('Icon/house'), withIcon('check')).rows.length === 1);
 }
 
+{
+  // a root that fills its room is that room's width (a ruling): 320 fixed is a fill read in a room 320 wide, not one 724 wide
+  const c = (root) => ({ component: 'X', props: {}, anatomy: { root }, variants: [] });
+  ok('a root filling a room as wide as the library\'s fixed width comes back the same; a wider room is a difference',
+    roundTrip(c({ width: 320, height: 'hug' }), c({ width: 'fill', height: 'hug', canvas: { width: 320 } })).rows.length === 0
+    && roundTrip(c({ width: 320, height: 'hug' }), c({ width: 'fill', height: 'hug', canvas: { width: 724 } })).rows.length === 1);
+}
+
 console.log(`${n}/${n} passed`);

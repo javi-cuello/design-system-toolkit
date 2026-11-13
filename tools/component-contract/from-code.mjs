@@ -690,8 +690,23 @@ async function main() {
     // library's are paired by rule, a guess, so its parts keep the names their markup gives them
     const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
     let remPx = null;
+    // the room the component is given: Figma's own, so a root that fills its room fills the width Figma draws it at
+    // (a canvas fact, as derive records a root fill's), and a fixed or hugging root is read in the same room. Its
+    // fixed width, else the room a root that fills is given; a width a token says is not resolved here, and the story's
+    // room stays
+    const fr = figmaContract && figmaContract.anatomy && figmaContract.anatomy.root || {};
+    const room = typeof fr.width === 'number' ? fr.width : fr.width === 'fill' && fr.canvas && typeof fr.canvas.width === 'number' ? fr.canvas.width : null;
+    if (room) notes.push(`read in a room ${room} wide, the width Figma draws the component at`);
     const read = async (args) => {
       await show(args);
+      if (room) await call(L.tab, ([sel, container, climb, w]) => {
+        let root = document.querySelector(sel); if (!root) return;
+        const holder = document.querySelector(container);
+        if (climb) while (root.parentElement && root.parentElement !== holder && root.parentElement !== document.body) root = root.parentElement;
+        const up = root.parentElement; if (!up) return;
+        // (as a block of that width, whatever the story's wrapper lays out)
+        Object.assign(up.style, { display: 'block', width: `${w}px`, minWidth: '0', maxWidth: 'none', padding: '0' });
+      }, [rootSel, L.container, !L.root, room]);
       const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -909,9 +924,13 @@ async function main() {
         for (const [axis, i] of [['width', 0], ['height', 1]]) {
           const v = sizeFromCss(axis, own, up, { root: e.parent == null }).value;
           e[axis] = v === 'hug' || v === 'fill' ? v : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+          // a root sized by the room it is read in (the room's own width, which from-code set): what it renders at, never
+          // the room's number, so a max-width, a margin or a min-width of its own still shows
+          if (e.parent == null && room && axis === 'width' && v === `${room}px` && e.box) e.width = e.box[0];
           // a box that hugs but holds no part (a native control's own text, an empty slot): what it hugs is nothing
           // Figma can hold, so the size it renders at is its size (Figma draws an empty box at 100)
-          if (v === 'hug' && ['container', 'slot'].includes(e.kind) && !e.layout && e.box && !raw.some((x) => x.parent === e.id)) e[axis] = e.box[i];
+          // (a slot holding words is a text that hugs them, not an empty box)
+          if (v === 'hug' && ['container', 'slot'].includes(e.kind) && !e.asText && !e.layout && e.box && !raw.some((x) => x.parent === e.id)) e[axis] = e.box[i];
           // the outer box filling the room it is given: that room, a canvas fact, as derive records Figma's root fill
           if (e.parent == null && v === 'fill' && e.box) e.canvas = { ...(e.canvas || {}), [axis]: e.box[i] };
         }
