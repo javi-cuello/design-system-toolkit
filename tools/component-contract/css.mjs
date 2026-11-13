@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-const ALIGN = { start: 'flex-start', center: 'center', end: 'flex-end', 'space-between': 'space-between', baseline: 'baseline', stretch: 'stretch' };
+import { alignToCss } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -51,8 +51,8 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
       const four = SIDES.map((s) => len(pad[s] ?? 0));
       put('padding', four[0] === four[2] && four[1] === four[3] ? (four[0] === four[1] ? four[0] : `${four[0]} ${four[1]}`) : four.join(' '), SIDES.some((s) => literal(pad[s])) ? NOTE : undefined);
     }
-    if (ALIGN[l.align]) put('justify-content', ALIGN[l.align]);
-    if (ALIGN[l.crossAlign]) put('align-items', ALIGN[l.crossAlign]);
+    if (alignToCss(l.align)) put('justify-content', alignToCss(l.align));
+    if (alignToCss(l.crossAlign)) put('align-items', alignToCss(l.crossAlign));
     if (l.firstOnTop) unread.push('layout.firstOnTop');
   }
 

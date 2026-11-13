@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { partName, figmaWord, camel, sentence, variantDefaults } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
+import { ALIGN_DATA, SIZE_ROWS } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
 
 import { realpathSync } from 'node:fs';
@@ -162,7 +163,7 @@ export function plan(contract, { axisOrder = [] } = {}) {
     return { name: axes.map((a) => `${a.figma}=${show(a, w[a.key])}`).join(', '), cell: cellOf(w), anatomy: Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, { ...e, name: slotName(e, contract.props || {}) ?? e.name ?? partName(ownId(id, e)) }])) };
   });
   const slots = Object.values(contract.props || {}).filter((p) => p.type === 'slot' && p.figma).map((p) => ({ figma: p.figma, settings: p.settings || null, description: p.description || '', preferred: p.preferred || [] }));
-  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), fromCode: (contract.code || {}).from === 'code', rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
+  return { name: /^[a-z][A-Za-z0-9-]*$/.test(contract.component) ? sentence(contract.component) : contract.component, slots, axes: axes.map((a) => a.figma), booleans: booleans.map((b) => ({ figma: b.figma, default: b.default })), swaps: swaps.map((x) => ({ figma: x.figma })), text: text.map((t) => ({ figma: t.figma, default: t.default })), notDrawn: Object.keys(props).filter((k) => gone(k).length).map((k) => (whole(k) ? `${props[k].figma || k} (it takes the whole component away)` : `${props[k].figma || k}=${gone(k).join(', ')} (takes the whole component away)`)), order: Object.values(props).map((p) => p.figma).filter(Boolean), fromCode: (contract.code || {}).from === 'code', align: ALIGN_DATA.toFigma, size: Object.fromEntries(SIZE_ROWS), rows: Math.max(rowKeys.length, 1), cols: last ? last.values.length : 1, variants };
 }
 
 /* What the plugin runs: the plan drawn, every value bound to the variable,
@@ -219,7 +220,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a size in pixels: a contract also says one as fill, hug or a token, which are set once the part is placed
   const px = (x) => (typeof x === 'number' ? Math.max(x, 0.01) : null);
   const num = async (node, field, n) => { const v = await V(n); const raw = typeof n === 'number' ? n : (K.values || {})[n]; if (v) node.setBoundVariable(field, v); else if (typeof raw === 'number') node[field] = raw; };
-  const ALIGN = { start: 'MIN', center: 'CENTER', end: 'MAX', 'space-between': 'SPACE_BETWEEN', baseline: 'BASELINE', stretch: 'MIN' };
+  // alignment and sizing words, from the one table every direction reads (rules.mjs), handed in as data
+  const ALIGN = P.align, SIZE = P.size;
   const styles = {}, fonts = {}, icons = {}, sets = {}, effects = {}, toEffect = [];
   const typos = [...new Set(els.map((e) => e.typography).filter(Boolean))], assets = [...new Set(els.map((e) => e.asset).filter(Boolean))];
   const [container] = await Promise.all([
@@ -309,7 +311,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
     const flowing = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
-    const sizes = [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']].map(([k, axis]) => [axis, { fill: 'FILL', hug: 'HUG' }[e[k]]])
+    const sizes = [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']].map(([k, axis]) => [axis, SIZE[e[k]]])
       .filter(([axis, want]) => want && axis in n && n[axis] !== want && (want === 'FILL' ? flowing(n.parent) : flowing(n) || n.type === 'TEXT'));
     const resize = n.type === 'TEXT' && e.autoResize && n.textAutoResize !== e.autoResize.toUpperCase();
     // a text's font is loaded only where something about it changes: a library's text is a slow load where one fails
@@ -490,8 +492,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       const flows = (x) => x && 'layoutMode' in x && x.layoutMode !== 'NONE';
       for (const [k, axis] of [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']]) {
         const sz = e[k];
-        if (sz === 'fill') { if (id !== 'root' && flows(nodes[e.parent]) && !e.absolute && e.position !== 'absolute') n[axis] = 'FILL'; }
-        else if (sz === 'hug') { if (flows(n) || n.type === 'TEXT') n[axis] = 'HUG'; }
+        if (sz === 'fill') { if (id !== 'root' && flows(nodes[e.parent]) && !e.absolute && e.position !== 'absolute') n[axis] = SIZE.fill; }
+        else if (sz === 'hug') { if (flows(n) || n.type === 'TEXT') n[axis] = SIZE.hug; }
         // a number in an auto layout, which would hug what it holds: fixed at that size
         else if (typeof sz === 'number' && flows(n)) { n[axis] = 'FIXED'; n.resize(k === 'width' ? px(sz) : n.width, k === 'height' ? px(sz) : n.height); }
         // an instance at another size than its component's (a 16 icon drawn at 12): resized, its layers following
@@ -539,6 +541,16 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // the grid the plan placed each variant in, as Figma's grid auto layout lays it out, 24 apart and 24 in; a Figma
   // without grid layout gets the same grid by hand, and the result says which, and why
   let layout = 'one variant';
+  // one variant that fills the room it is given: fixed at that room (its canvas), as a set's track would hold it
+  if (single) for (const [k, axis] of [['width', 'layoutSizingHorizontal'], ['height', 'layoutSizingVertical']]) {
+    const room = comps[0].anatomy.root[k] === 'fill' && (comps[0].anatomy.root.canvas || {})[k];
+    if (!room) continue;
+    const other = k === 'width' ? 'layoutSizingVertical' : 'layoutSizingHorizontal', was = set.layoutMode && set.layoutMode !== 'NONE' ? set[other] : null;
+    if (was) set[axis] = 'FIXED';
+    set.resize(k === 'width' ? room : set.width, k === 'height' ? room : set.height);
+    // a resize fixes both axes: the other goes back to what it was (a hug stays a hug)
+    if (was) set[other] = was;
+  }
   if (!single) {
   try {
     set.layoutMode = 'GRID';

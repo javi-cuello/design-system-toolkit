@@ -31,8 +31,8 @@ const { variantDefaults, apply, expand, partName, camel, kebab } = require('./la
 const { variantValues: valuesOf } = require('../shared/names.js');
 
 const KIND = { TEXT: 'text', INSTANCE: 'instance', SLOT: 'slot', FRAME: 'container', GROUP: 'container', COMPONENT: 'container', COMPONENT_SET: 'container', SECTION: 'container' };
-const AXIS = { MIN: 'start', CENTER: 'center', MAX: 'end', SPACE_BETWEEN: 'space-between', BASELINE: 'baseline', STRETCH: 'stretch' };
-const SIZE = { HUG: 'hug', FILL: 'fill' };
+// alignment and sizing words, from the one table every direction reads
+const { alignFromFigma, sizeFromFigma } = require('./rules.mjs');
 const TEXT_ALIGN = { LEFT: 'start', CENTER: 'center', RIGHT: 'end', JUSTIFIED: 'justify' };
 
 /* One layer, said without Figma's words. A bound value is its token's name;
@@ -50,7 +50,7 @@ function element(n, parent, known) {
   if (n.layout === 'HORIZONTAL' || n.layout === 'VERTICAL') {
     const [main, cross] = String(n.align || 'MIN/MIN').split('/');
     const pad = b.pad || n.pad;
-    e.layout = { direction: n.layout === 'HORIZONTAL' ? 'row' : 'column', gap: b.gap ?? n.gap, align: AXIS[main] || main, crossAlign: AXIS[cross] || cross };
+    e.layout = { direction: n.layout === 'HORIZONTAL' ? 'row' : 'column', gap: b.gap ?? n.gap, align: alignFromFigma(main), crossAlign: alignFromFigma(cross) };
     if (pad) e.layout.padding = { top: pad[0], end: pad[1], bottom: pad[2], start: pad[3] };
     if (n.wrap) { e.layout.wrap = true; if (n.crossGap != null) e.layout.crossGap = b.crossGap ?? n.crossGap; }
     // canvas stacking first on top (snapshot 0.62.0 on): which of two overlapping children paints over the other
@@ -58,8 +58,8 @@ function element(n, parent, known) {
   }
   if (n.sizing) {
     const [w, h] = String(n.sizing).split('/');
-    e.width = SIZE[w] || (b.w ?? n.w);
-    e.height = SIZE[h] || (b.h ?? n.h);
+    e.width = sizeFromFigma(w) || (b.w ?? n.w);
+    e.height = sizeFromFigma(h) || (b.h ?? n.h);
     // a component that fills its set: the size the set gives it, a canvas fact, as `invalid` is (a row 420 wide)
     if (!parent && (w === 'FILL' || h === 'FILL')) e.canvas = { ...(w === 'FILL' ? { width: n.w } : {}), ...(h === 'FILL' ? { height: n.h } : {}) };
   }

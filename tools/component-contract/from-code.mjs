@@ -44,6 +44,9 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
+import { layoutFromCss, sizeFromCss } from './rules.mjs';
+// what a size and a layout are read from: the element's own declarations and its parent's
+const SIZING_CSS = ['display', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-self', 'justify-self', 'justify-items', 'flex', 'flex-grow', 'flex-basis', 'inline-size', 'width', 'block-size', 'height'];
 import { variantValues } from '../shared/names.js';
 import { compareNames, writeReport } from '../shared/output.mjs';
 import { cssName } from '../tokens/names.mjs';
@@ -304,7 +307,7 @@ async function forceAt(tab, at) {
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
 }
 
-async function openSource(label, name, { rebuild, codeOnly }) {
+export async function openSource(label, name, { rebuild, codeOnly } = {}) {
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label);
   if (codeOnly && project.mode !== 'compared') throw Object.assign(new Error(`${label}: its code is built from the design (governed), so it has no component of its own to read`), { usage: true });
@@ -543,7 +546,7 @@ async function governedSource(project, name) {
           for (const x of document.getAnimations()) if (x instanceof CSSTransition) x.finish();
           // and React keeps the elements, with the ids the walk stamped on them for the last read (chip's
           // label read as its own child), so they go, as a reload would take them
-          for (const n of document.querySelectorAll('[data-figma-id], [data-figma-text], [data-contract-id]')) for (const k of ['data-figma-id', 'data-figma-text', 'data-contract-id']) n.removeAttribute(k);
+          for (const n of document.querySelectorAll('[data-figma-id], [data-figma-text], [data-contract-id], [data-contract-up]')) for (const k of ['data-figma-id', 'data-figma-text', 'data-contract-id', 'data-contract-up']) n.removeAttribute(k);
           // and focus goes, as the reload's settle takes it
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
           return true;
@@ -732,11 +735,14 @@ async function main() {
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
           if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
+          // and its box's parent, for its own declarations read beside its parent's (a size is the two together)
+          const up = (x) => { if (n.parentElement) n.parentElement.setAttribute('data-contract-up', `${n.parentElement.getAttribute('data-contract-up') || ''} ${x}`.trim()); };
+          up(id);
           // another component of the library, drawn inside this one (a chip's avatar): an instance of it, its
           // inside the other component's business; named by the library's own class (MuiAvatar-root)
           const other = parent != null && rootRe && [...n.classList, n.tagName.toLowerCase()].map((c) => (c.match(new RegExp(rootRe)) || [])[1]).find((x) => x && others[x]);
           if (other) { seen[id]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
-            n.setAttribute('data-contract-id', id);
+            n.setAttribute('data-contract-id', id); up(id);
             out.push({ id, kind: 'instance', parent, order, component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
@@ -809,9 +815,39 @@ async function main() {
       // written physically or logically (block-size is height in a horizontal writing mode), in px or rem
       if (remPx == null) remPx = await call(L.tab, () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
       const lengthOf = (v) => { const m = /^\s*(-?[\d.]+)(px|rem)\s*$/.exec(v || ''); return m ? +(+m[1] * (m[2] === 'rem' ? remPx : 1)).toFixed(2) : null; };
-      for (const e of raw) if (e.kind === 'container' && e.layout) for (const [css, field] of [['height', 'minHeight'], ['min-height', 'minHeight'], ['block-size', 'minHeight'], ['min-block-size', 'minHeight'], ['width', 'minWidth'], ['min-width', 'minWidth'], ['inline-size', 'minWidth'], ['min-inline-size', 'minWidth']]) {
+      // a minimum or maximum the code writes (a set size is the size's own, read with the sizing below)
+      for (const e of raw) if (['container', 'slot', 'text'].includes(e.kind)) for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
         const v = lengthOf(await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true, cache: styles }));
         if (v && !(field in e)) e[field] = v;
+      }
+      // layout and sizing as the code wrote them, read through the one table (rules.mjs) from the element's and its
+      // parent's authored declarations: never a measured box, which keeps no hug or fill (CSSOM gives used pixels).
+      // A fixed size keeps the length it renders at, which is the length written; a placed part is phase 5's.
+      // where no rule sets display, the box's own (a span is inline, a div block): the computed value, which for
+      // display is what was written or the element's default, never a measurement
+      const unsized = [];
+      const shown = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, n.parentElement ? getComputedStyle(n.parentElement).display : 'block']])));
+      for (const e of raw) {
+        if (!['container', 'text', 'slot', 'instance'].includes(e.kind) || e.absolute) continue;
+        const own = {}, up = {};
+        // words loose in a box (no element of their own) are its anonymous child: the box is their parent
+        const loose = e.kind === 'text' && !(e.id in shown);
+        // any other part gone from the page between the walk and now (a node a transition replaced) is not guessed at
+        if (!loose && !(e.id in shown)) { if (!unsized.includes(e.id)) { unsized.push(e.id); notes.push(`${e.id}: left the page before its sizes were read (a node the page replaced); its size is not read`); } continue; }
+        for (const p of SIZING_CSS) {
+          own[p] = loose ? null : await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, p, { raw: true, cache: styles });
+          up[p] = await authoredWidth(L.tab, loose ? `[data-contract-id="${e.parent}"]` : `[data-contract-up~="${e.id}"]`, p, { raw: true, cache: styles });
+        }
+        if (own.display == null && !loose) own.display = shown[e.id][0];
+        if (up.display == null) up.display = loose ? (shown[e.parent] || [])[0] : shown[e.id][1];
+        const lay = e.layout && layoutFromCss(own);
+        if (lay) { Object.assign(e.layout, { direction: lay.direction, align: lay.align, crossAlign: lay.crossAlign }); if (lay.wrap) e.layout.wrap = true; }
+        for (const [axis, i] of [['width', 0], ['height', 1]]) {
+          const v = sizeFromCss(axis, own, up, { root: e.parent == null }).value;
+          e[axis] = v === 'hug' || v === 'fill' ? v : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+          // the outer box filling the room it is given: that room, a canvas fact, as derive records Figma's root fill
+          if (e.parent == null && v === 'fill' && e.box) e.canvas = { ...(e.canvas || {}), [axis]: e.box[i] };
+        }
       }
       // values to tokens
       const anatomy = {}, drawn = {}, ring = [];
@@ -1307,9 +1343,8 @@ async function main() {
           // and a css border takes room too
           const edge = pe && pe.border && pe.border.inLayout ? 2 * (+val([].concat(pe.border.width)[0]) || 0) : 0;
           const fills = box && pb && box[i] >= pb[i] - pad - edge - taken - 1;
-          if (want === 'fill' && (have == null || have === 'hug' || e.kind === 'instance') && (fills || !pb)) e[dim] = want;
-          else if (want === 'hug' && (have == null || have === 'hug' || e.kind === 'instance')) e[dim] = want;
-          else if (typeof want === 'number' && box && Math.abs(box[i] - want) < 0.5 && (have == null || have === 'hug' || typeof have === 'number')) e[dim] = want;
+          // hug and fill are the code's own, read from its css above; only a number the box renders at takes the design's
+          if (typeof want === 'number' && box && Math.abs(box[i] - want) < 0.5 && (have == null || have === 'hug' || typeof have === 'number')) e[dim] = want;
         }
       }
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
