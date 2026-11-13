@@ -1042,6 +1042,50 @@ async function main() {
     // a text is the design's text prop, under its name and with its sample (a slot has no default of its own);
     // an enum with the design's values lists them in the design's order, its own default kept
     if (L.governed && figmaContract) {
+      // the boxes each layer was drawn at, under the ids the layers end with
+      let boxesBy = (base && base.drawn) || {};
+      // ids the code's markup named, renamed to the design's (a layer and everything under it), wherever an id is said
+      const renameIds = (map) => {
+        const to = (id) => { if (typeof id !== 'string') return id; for (const [a, b] of Object.entries(map)) if (id === a || id.startsWith(`${a}/`)) return b + id.slice(a.length); return id; };
+        const field = (k) => { const i = k.indexOf('.'); return i < 0 ? to(k) : to(k.slice(0, i)) + k.slice(i); };
+        const els = (o) => Object.fromEntries(Object.entries(o || {}).map(([k, e]) => [to(k), e && e.parent ? { ...e, parent: to(e.parent) } : e]));
+        fromCode.anatomy = els(fromCode.anatomy);
+        for (const v of fromCode.variants) {
+          if (v.set) v.set = Object.fromEntries(Object.entries(v.set).map(([k, x]) => [field(k), /\.parent$/.test(k) ? to(x) : x]));
+          if (v.add) v.add = els(v.add);
+          if (v.remove) v.remove = v.remove.map(to);
+        }
+        for (const p of Object.values(fromCode.props)) for (const l of ['shows', 'sets', 'swaps']) if (Array.isArray(p[l])) p[l] = p[l].map(to);
+        boxesBy = els(boxesBy);
+      };
+      const kids = (o, id) => Object.entries(o).filter(([, e]) => e.parent === id);
+      const said = (id) => fromCode.variants.some((v) => Object.keys(v.set || {}).some((k) => k.split('.')[0] === id) || Object.values(v.set || {}).includes(id) || (v.add || {})[id] || Object.values(v.add || {}).some((c) => c && c.parent === id) || (v.remove || []).includes(id));
+      // a wrapper the markup needs (a list's li) that the design does not draw, holding one layer at that layer's
+      // size and styling nothing: drawn the same without it, so its layer sits where it sits
+      for (const [id, e] of Object.entries(fromCode.anatomy)) {
+        if (e.kind !== 'container' || figmaContract.anatomy[id] || !e.parent || !figmaContract.anatomy[e.parent] || said(id)) continue;
+        if (Object.keys(e).some((k) => !['kind', 'parent', 'order', 'width', 'height', 'name'].includes(k))) continue;
+        const c = kids(fromCode.anatomy, id);
+        if (c.length !== 1 || ['width', 'height'].some((d) => typeof e[d] === 'number' && e[d] !== c[0][1][d])) continue;
+        const [cid, ce] = c[0];
+        delete fromCode.anatomy[id];
+        fromCode.anatomy[cid] = { ...ce, parent: e.parent, order: e.order };
+      }
+      // another component's instance the markup named by its component (sidebarMenuItem), where the design holds the
+      // same number of that component's instances under the same parent: each takes the design's id, in order
+      const groups = {};
+      // (one already under a design id counts too: button and button2 against the design's button and button_2)
+      for (const [id, e] of Object.entries(fromCode.anatomy)) if (e.kind === 'instance' && e.component && e.parent) (groups[`${e.parent}\u0000${e.component}`] = groups[`${e.parent}\u0000${e.component}`] || []).push(id);
+      const map = {};
+      for (const [g, ids] of Object.entries(groups)) {
+        const [parent, component] = g.split('\u0000');
+        const theirs = kids(figmaContract.anatomy, parent).filter(([, e]) => e.kind === 'instance' && e.component === component).sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0)).map(([k]) => k);
+        const ours = ids.sort((a, b) => (fromCode.anatomy[a].order ?? 0) - (fromCode.anatomy[b].order ?? 0));
+        const taken = (k) => fromCode.anatomy[k] || fromCode.variants.some((v) => (v.add || {})[k]);
+        if (ours.every((k) => figmaContract.anatomy[k]) || theirs.length !== ours.length || !theirs.every((k) => !taken(k) || ours.includes(k))) continue;
+        ours.forEach((k, i) => { if (k !== theirs[i]) map[k] = theirs[i]; });
+      }
+      if (Object.keys(map).length) renameIds(map);
       for (const [k, p] of Object.entries({ ...fromCode.props })) {
         // a slot of words, or a word prop under the code's name (button's children, the design's Label)
         if (p.type !== 'slot' && p.type !== 'string') continue;
@@ -1049,11 +1093,42 @@ async function main() {
         const fa = el && figmaContract.anatomy[el[0]];
         const fk = fa && fa.kind === 'text' && (/^\{(.+)\}$/.exec(fa.content || '') || [])[1];
         const fp = fk && figmaContract.props[fk];
-        if (!fp || fp.type !== 'string' || (fk === k ? p.type === 'string' : fromCode.props[fk])) continue;
+        if (!fp || fp.type !== 'string' || (fk === k ? p.type === 'string' : fromCode.props[fk])) {
+          // a slot the design draws as a slot of its own name (children, the design's Options slot): that slot, with
+          // the design's settings and preferred instances, as a slot's are the design's to state
+          const sl = p.type === 'slot' && Object.entries(fromCode.anatomy).find(([, e]) => e.content === `{${k}}` && e.kind === 'slot');
+          const sa = sl && figmaContract.anatomy[sl[0]];
+          const sk = sa && sa.kind === 'slot' && (/^\{(.+)\}$/.exec(sa.content || '') || [])[1];
+          const sp = sk && figmaContract.props[sk];
+          if (!sp || sp.type !== 'slot' || (sk !== k && fromCode.props[sk])) continue;
+          if (sk === k) { fromCode.props[k] = { ...sp, code: p.code, ...(p.required && { required: true }) }; continue; }
+          delete fromCode.props[k];
+          fromCode.props[sk] = { ...sp, code: p.code, ...(p.required && { required: true }) };
+          const swap = (x) => JSON.parse(JSON.stringify(x).split(`"{${k}}"`).join(`"{${sk}}"`));
+          fromCode.anatomy = swap(fromCode.anatomy); fromCode.variants = swap(fromCode.variants);
+          continue;
+        }
         delete fromCode.props[k];
         fromCode.props[fk] = { type: 'string', code: p.code, default: fp.default };
         const swap = (x) => JSON.parse(JSON.stringify(x).split(`"{${k}}"`).join(`"{${fk}}"`));
         fromCode.anatomy = swap(fromCode.anatomy); fromCode.variants = swap(fromCode.variants);
+      }
+      // a slot holds the design's sample (its Context menu items), as a text prop holds the design's sample words: the
+      // code's slot holds whatever its caller passes, so a reading has nothing of its own to put there
+      const under = (o, top) => Object.keys(o).filter((id) => { let x = o[id] && o[id].parent, n = 0; while (x && x !== top && n++ < 50) x = o[x] && o[x].parent; return x === top; });
+      for (const [id, e] of Object.entries(fromCode.anatomy)) {
+        const fe = figmaContract.anatomy[id];
+        const sample = fe && under(figmaContract.anatomy, id);
+        // all of it or none: an id the code already uses elsewhere would take the sample's children
+        if (e.kind !== 'slot' || !fe || fe.kind !== 'slot' || under(fromCode.anatomy, id).length || sample.some((k) => fromCode.anatomy[k])) continue;
+        for (const k of sample) {
+          const c = JSON.parse(JSON.stringify(figmaContract.anatomy[k]));
+          // the sample's words, not a binding to a prop of the design's this component does not have
+          const ref = typeof c.content === 'string' && /^\{(.+)\}$/.exec(c.content);
+          if (ref && !fromCode.props[ref[1]]) c.content = (figmaContract.props[ref[1]] || {}).default ?? '';
+          delete c.shownBy; delete c.text;
+          fromCode.anatomy[k] = c;
+        }
       }
       // a glyph the code draws where the design draws an icon component's instance (Icon/house): that component at the
       // code's glyph, sized as the code sizes it, so the drawing places the library's icon, not a frame
@@ -1109,7 +1184,7 @@ async function main() {
       const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
       // a size the design states that the code renders the same: hug or fill where the code sets no size of its own
       // (an instance hugs what it holds), a number where the code's box is that number
-      const boxes = (base && base.drawn) || {};
+      const boxes = boxesBy;
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id], box = boxes[id] && boxes[id].box;
         if (!fe || fe.kind !== e.kind) continue;

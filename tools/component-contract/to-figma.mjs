@@ -233,6 +233,20 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
     }
   };
   // an instance inside another made the component the contract names, at the variant its props choose
+  // a component drawn in this file, at the top of the page of its name
+  // (never on the page being drawn: that is this component's own last drawing)
+  const locals = new Map();
+  const localOf = async (name) => {
+    if (locals.has(name)) return locals.get(name);
+    // on the page of its name, where this tool draws it: one page loaded, not the file's every page
+    let hit = null;
+    const pg = figma.root.children.find((x) => x.name === name && x !== page);
+    if (pg) { await pg.loadAsync(); hit = pg.children.find((c) => (c.type === 'COMPONENT_SET' || c.type === 'COMPONENT') && c.name === name) || null; }
+    locals.set(name, hit);
+    return hit;
+  };
+  // a component the library hides from publishing (`_`, `.`) imports nowhere: one drawn here is placed without trying
+  const hiddenName = (name) => /^[_.]/.test(name);
   const swapTo = async (n, e) => {
     const main = await n.getMainComponentAsync();
     const now = main && (main.parent && main.parent.type === 'COMPONENT_SET' ? main.parent.name : main.name);
@@ -344,8 +358,12 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
       } else if (e.kind === 'instance' && e.component) {
         // another component of the library: its instance, at the size nearest the code's (the settings' size axis,
         // valued in pixels), a photo where the code shows an image (a Content axis whose options name one); not in the library, a plain frame
-        const set = sets[e.component];
-        if (set) {
+        // the library's, else one drawn in this file (a component the library hides from publishing, `_`, imports
+        // nowhere; drawn from its own code on its own page here, it is placed rather than a frame standing in)
+        const local = !sets[e.component] && (hiddenName(e.component) || !(K.variants && K.variants[e.component] && Object.keys(K.variants[e.component]).length)) ? await localOf(e.component) : null;
+        const set = sets[e.component] || (local && local.type === 'COMPONENT_SET' ? local : null);
+        if (local && local.type === 'COMPONENT') { n = local.createInstance(); await withProps(n, e); }
+        else if (set) {
           const opts = set.componentPropertyDefinitions;
           const pick = (v) => Object.entries(opts).filter(([, d]) => d.type === 'VARIANT').every(([k, d]) => {
             const val = v.variantProperties[k];
@@ -365,11 +383,13 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
           const sized = Object.keys(vs).filter((x) => sizeOf(x) !== null);
           const name = px(e.width) && sized.length ? sized.reduce((a, b) => (Math.abs(sizeOf(b) - e.width) < Math.abs(sizeOf(a) - e.width) ? b : a)) : Object.keys(vs)[0];
           // the key is the component set's when the main is a variant, the component's when it stands alone
+          const before = new Set(missing);
           const got = await tried(`${e.component} ${name}`, () => figma.importComponentSetByKeyAsync(vs[name]).catch(() => figma.importComponentByKeyAsync(vs[name])));
           const main = got && got.type === 'COMPONENT_SET' ? got.children.find((c) => c.name === name) || got.defaultVariant : got;
           if (main) n = main.createInstance();
           // its own props as the contract sets them (a feedback message's Danger, a label's words), by Figma's names
           if (main) await withProps(n, e);
+          else if (await localOf(e.component)) { for (const m of [...missing]) if (!before.has(m)) missing.delete(m); const l = await localOf(e.component); n = (l.type === 'COMPONENT_SET' ? l.defaultVariant : l).createInstance(); await withProps(n, e); }
           else { n = figma.createFrame(); n.fills = []; n.resize(px(e.width) || 24, px(e.height) || px(e.width) || 24); missing.add(`${e.component} (its key would not import)`); }
         } else { n = figma.createFrame(); n.fills = []; n.resize(px(e.width) || 24, px(e.height) || px(e.width) || 24); missing.add(`${e.component} (not found in the library)`); }
       // a slot: Figma's own, its property made with it and named after it; the variants' slots of one name are one property
