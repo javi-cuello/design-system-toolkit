@@ -573,10 +573,12 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // a layer inside an instance is the other component's: Figma links none of them to this one's props
     if (c.inner.has(id)) continue;
     const n = c.nodes[id];
-    if (e.text && refs[e.text]) n.componentPropertyReferences = { characters: refs[e.text] };
-    if (e.shownBy && refs[e.shownBy]) n.componentPropertyReferences = { ...(n.componentPropertyReferences || {}), visible: refs[e.shownBy] };
+    // a link Figma refuses is reported with its layer, as an update in place reports it, and the drawing goes on
+    const link = (r) => { try { n.componentPropertyReferences = { ...(n.componentPropertyReferences || {}), ...r }; } catch (err) { missing.add(`${e.name}'s link to ${Object.keys(r)[0]} (${String(err.message || err).split('\n')[0]})`); } };
+    if (e.text && refs[e.text]) link({ characters: refs[e.text] });
+    if (e.shownBy && refs[e.shownBy]) link({ visible: refs[e.shownBy] });
     const swappedBy = e.swapProps && n.type === 'INSTANCE' && e.swapProps.find((f) => refs[f] && defaults.get(f) === mainOf.get(n));
-    if (swappedBy) n.componentPropertyReferences = { ...(n.componentPropertyReferences || {}), mainComponent: refs[swappedBy] };
+    if (swappedBy) link({ mainComponent: refs[swappedBy] });
     else if (e.swapProps && n.type === 'INSTANCE') missing.add(`${e.name}'s swap (${e.swapProps.join(' or ')}: no default is its component)`);
     // a slot's default contents are the person's to replace, and Figma exposes none of them
     const inSlot = (x) => { for (let up = x.parent; up && up.type !== 'COMPONENT'; up = up.parent) if (up.type === 'SLOT') return true; return false; };
