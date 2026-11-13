@@ -128,6 +128,13 @@ ok('with none running, it takes the file\'s token and draws on a page of its own
 root = file(['Alpha']);
 const stale = await run(BEFORE('Chip') + `figma.root.setPluginData('to-figma-running', 'newer'); figma.currentPage.setPluginData('drawings', 'theirs'); ${FAILED} return { left: figma.currentPage.getPluginData('drawings'), token: figma.root.getPluginData('to-figma-running') };`);
 ok('a run that fails after a newer one took over touches neither that run\'s record nor its token', stale.left === 'theirs' && stale.token === 'newer');
+root = file(['Alpha']);
+{ const gone = []; figma.getNodeByIdAsync = async (id) => ({ id, removed: false, remove() { gone.push(id); } });
+  const quit = await run(BEFORE('Chip') + `__given.push('1:1', '1:2'); figma.root.setPluginData('to-figma-running', ''); try { throw new Error('any failure: its own, or a removed node'); } catch (e) { ${FAILED} return { token: figma.root.getPluginData('to-figma-running') }; }`);
+  ok('a run given up on clears the parts it made, which its page\'s record never named, and leaves the token free', gone.join() === '1:1,1:2' && quit.token === ''); }
+root = file(['Alpha']);
+const given = await run(BEFORE('Chip', 123) + 'return String(__token);');
+ok('the runner chooses the run\'s token, so it can take back its own and leave a newer run\'s alone', given === '123' && root.getPluginData('to-figma-running') === '123');
 delete globalThis.figma;
 
 // a drawing compared with the component it was derived from, field by field: what it named otherwise or left out

@@ -146,11 +146,23 @@ export function plan(contract, { axisOrder = [] } = {}) {
 /* What the plugin runs: the plan drawn, every value bound to the variable,
    style or component the contract names; what it could not bind, listed.
    Drawn on `page`, the run's own, whichever page Figma shows meanwhile. */
-const RUNTIME = async (P, K, page = figma.currentPage) => {
+const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = globalThis.__drawingStarted) => {
   const missing = new Set();
+  // what this run made, kept here and not in the page's record alone: a run the runner gave up on records nothing
+  // there, and its parts were left on the page for the next drawing to refuse
+  // and its recorder passed in, not read from a global a newer run would have replaced
+  // each variant it makes asks the token again, so a run given up on mid-build stops at its next variant too
+  const gone = () => typeof __token !== 'undefined' && figma.root.getPluginData('to-figma-running') !== String(__token);
+  const mine = (id) => { made.push(id); if (started) started(id); if (gone()) throw new Error('this drawing was given up on; it stopped'); };
   // a Figma call that never returns (seen mid-run: one text style call in twenty, while the same call alone
   // took 8 ms) is given 8 s and one retry; still nothing, it is reported as not bound and the drawing goes on
-  const tried = async (what, f) => { figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); for (let i = 0; i < 2; i++) { const r = await Promise.race([f().then((v) => ({ v }), (e) => ({ failed: String(e && e.message || e) })), new Promise((res) => setTimeout(() => res(null), 8000))]); if (r && 'v' in r) return r.v; if (r) { missing.add(`${what} (${r.failed})`); return null; } } missing.add(`${what} (no answer)`); return null; };
+  // a run whose token is gone (the runner gave up on it, or a newer drawing took the file) stops at its next call to
+  // Figma: left going, one crawled through its imports for an hour and held the file
+  const tried = async (what, f) => { if (gone()) throw new Error('this drawing was given up on; it stopped'); figma.root.setPluginData('to-figma-step', `${new Date().toISOString().slice(11, 19)} ${what}`); figma.root.setPluginData('to-figma-beat', String(Date.now())); for (let i = 0; i < 2; i++) { const r = await Promise.race([f().then((v) => ({ v }), (e) => ({ failed: String(e && e.message || e) })), new Promise((res) => setTimeout(() => res(null), 8000))]); if (r && 'v' in r) return r.v; if (r) { missing.add(`${what} (${r.failed})`); return null; } } missing.add(`${what} (no answer)`); return null; };
+  // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
+  // sixteen seconds per instance, and a side navigation of many items outran the drawing's time
+  const mains = new Map();
+  const importMain = (what, key) => { if (!mains.has(key)) mains.set(key, tried(what, () => figma.importComponentSetByKeyAsync(key).catch(() => figma.importComponentByKeyAsync(key)))); return mains.get(key); };
   // every call to Figma is made up front, side by side, then the layers are built without waiting on it:
   // with Figma in the background each call waits its turn for a slow tick, and a drawing that made its
   // hundreds of calls one after another took minutes
@@ -256,7 +268,7 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
     const fit = (name) => Object.entries(variantValues(name)).filter(([k, v]) => String((e.with || {})[k]) === v).length;
     const name = Object.keys(vs).reduce((a, b) => (fit(b) > fit(a) ? b : a));
     // the key is the component set's when the main is a variant, the component's when it stands alone
-    const got = await tried(`${e.component} ${name}`, () => figma.importComponentSetByKeyAsync(vs[name]).catch(() => figma.importComponentByKeyAsync(vs[name])));
+    const got = await importMain(`${e.component} ${name}`, vs[name]);
     const comp = got && got.type === 'COMPONENT_SET' ? got.children.find((c) => c.name === name) || got.defaultVariant : got;
     if (comp) n.swapComponent(comp); else missing.add(`${e.component} (its key would not import)`);
   };
@@ -326,7 +338,7 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
       }
       let n;
       // recorded the moment it exists, so a drawing that fails partway is this tool's to clear, not a stranger
-      if (id === 'root') { n = figma.createComponent(); page.appendChild(n); n.name = variant.name; if (globalThis.__drawingStarted) globalThis.__drawingStarted(n.id); }
+      if (id === 'root') { n = figma.createComponent(); page.appendChild(n); n.name = variant.name; mine(n.id); }
       else if (e.kind === 'text') {
         n = figma.createText(); nodes[e.parent].appendChild(n);
         const key = K.styles && K.styles[e.typography];
@@ -384,7 +396,7 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
           const name = px(e.width) && sized.length ? sized.reduce((a, b) => (Math.abs(sizeOf(b) - e.width) < Math.abs(sizeOf(a) - e.width) ? b : a)) : Object.keys(vs)[0];
           // the key is the component set's when the main is a variant, the component's when it stands alone
           const before = new Set(missing);
-          const got = await tried(`${e.component} ${name}`, () => figma.importComponentSetByKeyAsync(vs[name]).catch(() => figma.importComponentByKeyAsync(vs[name])));
+          const got = await importMain(`${e.component} ${name}`, vs[name]);
           const main = got && got.type === 'COMPONENT_SET' ? got.children.find((c) => c.name === name) || got.defaultVariant : got;
           if (main) n = main.createInstance();
           // its own props as the contract sets them (a feedback message's Danger, a label's words), by Figma's names
@@ -495,7 +507,7 @@ const RUNTIME = async (P, K, page = figma.currentPage) => {
   const single = comps.length === 1;
   const set = single ? comps[0].node : figma.combineAsVariants(comps.map((c) => c.node), page);
   set.name = P.name;
-  if (globalThis.__drawingStarted) globalThis.__drawingStarted(set.id);
+  mine(set.id);
   // the grid the plan placed each variant in, as Figma's grid auto layout lays it out, 24 apart and 24 in; a Figma
   // without grid layout gets the same grid by hand, and the result says which, and why
   let layout = 'one variant';
@@ -609,7 +621,7 @@ export function pluginCode(contract, keys, { before = '', after = '', failed = '
   // before (the update's live read, the audit), leaves Figma skipping them
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};
 const variantValues = ${variantValues.toString()};
-let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)}${before ? ', __page' : ''});\n${after}} catch (e) { ${failed} throw e; }\nreturn __res;`;
+let __res; try { __res = await (${RUNTIME.toString()})(P, ${JSON.stringify(keys)}${before ? ', __page, typeof __given !== \'undefined\' ? __given : [], typeof __started !== \'undefined\' ? __started : globalThis.__drawingStarted' : ''});\n${after}} catch (e) { ${failed} throw e; }\nreturn __res;`;
 }
 
 /* The names a plan needs keys for: its text styles and icons. */
@@ -657,7 +669,7 @@ const LOOKUP = async (want) => {
    is drawn; one an instance in this file still uses is kept, renamed as
    superseded (instances in other files are not visible from here; a scratch
    drawing is not published, so has none). */
-export const BEFORE = (name) => `await figma.loadAllPagesAsync();
+export const BEFORE = (name, token = null) => `await figma.loadAllPagesAsync();
   // one drawing at a time in the file, asked before any page is made or shown: a run the runner gave up on goes on in
   // Figma, and two at once tangled the record. A run is alive while it beats (each Figma call it makes); one silent
   // for a minute is taken as stalled. The token is taken at once, so no run starts between the asking and the taking
@@ -665,7 +677,7 @@ export const BEFORE = (name) => `await figma.loadAllPagesAsync();
   const __running = +figma.root.getPluginData('to-figma-running') || 0;
   if (__running && Date.now() - Math.max(__beat, __running) < 60000) return { refused: 'another drawing is still running in this file (last heard ' + Math.round((Date.now() - Math.max(__beat, __running)) / 1000) + ' s ago); wait for it' };
   // this run's token: a stalled run that wakes after a newer one began finds the token changed and records nothing
-  const __token = Date.now(); figma.root.setPluginData('to-figma-running', String(__token));
+  const __token = ${token === null ? 'Date.now()' : Number(token)}; figma.root.setPluginData('to-figma-running', String(__token));
   const __release = () => { if (figma.root.getPluginData('to-figma-running') === String(__token)) figma.root.setPluginData('to-figma-running', ''); };
   // each component on a page of its own name, put after the last page whose name comes before it
   let __page = figma.root.children.find((p) => p.name === ${JSON.stringify(name)});
@@ -690,13 +702,14 @@ export const BEFORE = (name) => `await figma.loadAllPagesAsync();
   if (__other.length) { __release(); return { refused: 'the ' + __page.name + ' page holds something this tool did not draw: ' + __other.map((n) => n.name).slice(0, 5).join(', ') }; }
   __page.setPluginData('drawings', JSON.stringify(__rec));
   // each node the drawing makes, recorded as it is made, so a run that fails partway is cleared by the next
-  globalThis.__drawingStarted = (id) => { if (figma.root.getPluginData('to-figma-running') !== String(__token)) return; __rec.all.push(id); __page.setPluginData('drawings', JSON.stringify(__rec)); };
+  const __given = [];
+  const __started = (id) => { if (figma.root.getPluginData('to-figma-running') !== String(__token)) return; __rec.all.push(id); __page.setPluginData('drawings', JSON.stringify(__rec)); };
   // what the page held before this run: a part made but never placed when the run fails is left on the page, so cleared
   const __pre = new Set(__page.children.map((n) => n.id));
 `;
 /* A run that throws: what it made and never placed is cleared, its record kept, the token given back; a run a newer
    one took over from touches nothing, the page and the record being that run's now. */
-export const FAILED = "if (figma.root.getPluginData('to-figma-running') === String(__token)) { __page.setPluginData('drawings', JSON.stringify(__rec)); for (const n of [...__page.children]) if (!__pre.has(n.id) && !__rec.all.includes(n.id)) n.remove(); __release(); }";
+export const FAILED = "if (figma.root.getPluginData('to-figma-running') === String(__token)) { __page.setPluginData('drawings', JSON.stringify(__rec)); for (const n of [...__page.children]) if (!__pre.has(n.id) && !__rec.all.includes(n.id)) n.remove(); __release(); } else for (const id of __given) { const n = await figma.getNodeByIdAsync(id); if (n && !n.removed) n.remove(); }";
 export const AFTER = (name) => `{
   if (figma.root.getPluginData('to-figma-running') !== String(__token)) { const mine = await figma.getNodeByIdAsync(__res.set); if (mine) mine.remove(); return { refused: 'a newer drawing began while this one was stalled; this one was discarded' }; }
   const old = __rec.by[${JSON.stringify(name)}] && await figma.getNodeByIdAsync(__rec.by[${JSON.stringify(name)}]);
@@ -1118,16 +1131,20 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     }
   }
   const t0 = Date.now();
-  // importing the library's variables is most of a drawing's time: two minutes allowed
+  // importing the library's variables and components is most of a drawing's time
   // the plugin runs a long execution only while a message is in flight: with none, it sat at one call
   // for a minute, and advanced only while another call ran. A no-op every 2 s keeps it going
   let drawing = true;
   const awake = (async () => { while (drawing) { await exec('return 1', into, 5000).catch(() => {}); await new Promise((r) => setTimeout(r, 2000)); } })();
-  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis }) : pluginCode(c, keys, { before: BEFORE(p.name), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis });
-  // an update in place given longer than a drawing: one that times out here may still be changing the library
-  const res = await exec(code, into, target ? 540000 : 120000).catch((e) => {
-    if (!target) throw e;
-    console.error(`failed: ${e.message.split('\n')[0]}${/version history/.test(e.message) ? '' : `; the library set may have been changed partway: restore the version named Before the contract editor updated ${p.name} from the version history`}`);
+  // this run's token, chosen here so the runner can take back its own and no other
+  const token = Date.now();
+  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis }) : pluginCode(c, keys, { before: BEFORE(p.name, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis });
+  // nine minutes for either: a drawing of 300 variants that import their graphics outran two in a background Figma, and a
+  // run the runner gives up on goes on in Figma, holding the file; one that times out here may still be changing it
+  const res = await exec(code, into, 540000).catch(async (e) => {
+    // a drawing given up on has its token taken back, so it stops at its next call to Figma and clears what it made
+    if (!target) { if (/timed out|plugin_timeout/i.test(e.message)) await exec(`if (figma.root.getPluginData('to-figma-running') === '${token}') figma.root.setPluginData('to-figma-running', ''); return 1;`, into, 10000).catch(() => {}); throw e; }
+    console.error(`failed: ${e.message.split('\n')[0]}${/version history|given up on/.test(e.message) ? '' : `; the library set may have been changed partway: restore the version named Before the contract editor updated ${p.name} from the version history`}`);
     process.exit(1);
   }).finally(() => { drawing = false; });
   await awake;

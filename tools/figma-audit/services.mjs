@@ -6,6 +6,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
+import http from 'node:http';
 import fs from 'node:fs';
 import { resolve, sep, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,9 +78,18 @@ export const serviceFor = (auditDir) => running().find((x) => x.data && x.port &
 
 /* A route of a service called with JSON (GET without a body): its answer, or the `error` it carries thrown, with the
    `hint` beside it on the same line (a file to reopen), since a caller prints the message and nothing else. */
+// node:http, not fetch: fetch gives up on an answer after five minutes (undici's headersTimeout), and a drawing or an
+// update in place is allowed nine; the bridge times the code out itself
 export async function call(svc, route, body) {
-  const res = await fetch(`http://127.0.0.1:${svc.port}${route}`, { method: body ? 'POST' : 'GET', headers: { Origin: `http://127.0.0.1:${svc.port}`, 'Content-Type': 'application/json' }, ...(body && { body: JSON.stringify(body) }) });
-  const j = await res.json();
+  const data = body && JSON.stringify(body);
+  const text = await new Promise((ok, fail) => {
+    const req = http.request({ host: '127.0.0.1', port: svc.port, path: route, method: body ? 'POST' : 'GET', headers: { Origin: `http://127.0.0.1:${svc.port}`, 'Content-Type': 'application/json', ...(data && { 'Content-Length': Buffer.byteLength(data) }) } }, (res) => {
+      let t = ''; res.setEncoding('utf8'); res.on('data', (c) => { t += c; }); res.on('end', () => ok(t)); res.on('error', fail);
+    });
+    req.on('error', fail);
+    req.end(data);
+  });
+  const j = JSON.parse(text);
   if (j && j.error) throw new Error([j.error, j.hint].filter(Boolean).join(': '));
   return j;
 }
