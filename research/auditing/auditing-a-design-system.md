@@ -213,7 +213,7 @@ Big systems turn this into routine. athenahealth's Forge team, handling around 1
 
 What to count, which denominator keeps it honest and how to report it is the subject of [measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md).
 
-Read analytics before you audit, and sort components by detach rate, not detach count. **A high detach rate is a question for the people detaching, not a finding against them.** *Weight: moderate.* The systems above all watch detaches, most of them reported through Figma's own blog; the analytics only shows where to look, and the reason has to come from asking.
+Read analytics before you audit, and sort components by detach rate, not detach count. **A high detach rate is a question for the people detaching, not a finding against them.** *Weight: weak.* Only athenahealth's story is about watching detaches, told on Figma's own blog; the analytics only shows where to look, and the reason has to come from asking.
 
 ---
 
