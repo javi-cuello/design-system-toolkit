@@ -65,6 +65,17 @@ const PLACED = /^(flex|align-self|order|(min-|max-)?(inline|block)-size|position
 
 /* How the stylesheet names things: the component, its parts and its props, from the project's naming. */
 // a custom element's prefix: lower case, ending in the hyphen its name needs (ds-, my-ds-)
+/* What every sheet here assumes and none says: Figma's box is the border box, and a pressable component is a bare frame
+   (its root draws no fill, padding, border or face of its own) around what the contract paints, where the browser gives a
+   <button> all of them. Layered below the components' sheets, so any value a contract states wins. A project includes it
+   once, before the sheets (the toolkit's own rendering of a library does: site.mjs). */
+export const BASE = `@layer base, components;
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  button { appearance: none; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+}
+`;
+
 export const PREFIX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-$/;
 // words from the design said in a comment: one line, and never the comment's end, so nothing after it is code
 export const said = (x) => String(x).replace(/\*\//g, '* /').replace(/[\r\n\u2028\u2029]+/g, ' ');

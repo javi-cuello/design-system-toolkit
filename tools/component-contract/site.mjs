@@ -12,14 +12,15 @@
  */
 import http from 'node:http';
 import { toElement, DOM } from './to-markup.mjs';
-import { toCss } from './to-code.mjs';
+import { toCss, BASE } from './to-code.mjs';
 
 export const ELEMENT = { kind: 'element', prefix: 'ds-' };
 
 /* The site's files, by path: { 'index.html', 'all.css', 'components/dom.js', 'components/<folder>/<folder>.js' }. */
 export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = ELEMENT } = {}) {
   const files = { 'components/dom.js': DOM };
-  let css = `${tokensCss}\n`;
+  // the base the sheets assume first (to-code's BASE), then the tokens and each component's sheet
+  let css = `${BASE}${tokensCss}\n`;
   // each component's render function, by the name its file exports (to-markup's to say, not this file's to guess)
   const fn = {};
   for (const c of Object.values(library)) {
