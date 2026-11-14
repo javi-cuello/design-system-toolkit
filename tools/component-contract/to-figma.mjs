@@ -43,7 +43,7 @@ import { variantValues } from '../shared/names.js';
 import { realpathSync } from 'node:fs';
 const req = createRequire(import.meta.url);
 const { nameOf } = req('../snapshot/graph.cjs');
-const { expand } = req('./derive.cjs');
+const { expand, atProps } = req('./derive.cjs');
 
 // a slot's layer is named as its prop is in Figma: Figma names the slot property after it
 const slotName = (e, props) => { const ref = e.kind === 'slot' && typeof e.content === 'string' && /^\{(.+)\}$/.exec(e.content); return ref ? (props[ref[1]] || {}).figma ?? null : null; };
@@ -143,6 +143,28 @@ function atDefault(x, mains) {
   return out;
 }
 
+/* A placed instance's own styling (its layout, corners, fill) is its component's root's: where the instance states the
+   same value its component's root draws at the instance's props, it is unstated, as code and a drawing leave it to
+   the component. On both sides alike; `mains` as atDefault's. */
+const OWN = ['layout', 'radius', 'background', 'border', 'shadow', 'opacity', 'overflow', 'smoothing', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight'];
+function ownStyling(x, mains) {
+  if (!x || !mains) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    const main = e && e.kind === 'instance' && mains[e.component];
+    if (!main || !OWN.some((f) => e[f] !== undefined)) continue;
+    // the component at the instance's props, as derive reads an instance's props (atProps)
+    const root = atProps(main, e.with || {}).root;
+    if (!root) continue;
+    const kept = { ...e };
+    // compared as values, whatever order their keys were written in
+    const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : 1))) : w));
+    for (const f of OWN) if (kept[f] !== undefined && key(kept[f]) === key(root[f])) delete kept[f];
+    out[id] = kept;
+  }
+  return out;
+}
+
 export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
@@ -172,7 +194,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => atDefault(iconSize(border(glyph(room(x)))), mains);
+    // ownStyling reads the instance's props before iconSize and atDefault drop any of them
+    const same = (x) => atDefault(iconSize(ownStyling(border(glyph(room(x))), mains)), mains);
     diff(same(expand(library, { ...variantDefaults(library), ...c })), same(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));

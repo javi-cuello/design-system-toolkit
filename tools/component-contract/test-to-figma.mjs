@@ -249,6 +249,16 @@ delete globalThis.figma;
     roundTrip(holder({ Size: 'Sm', Disabled: 'False' }), holder(null), { mains }).rows.length === 0
     && roundTrip(holder({ Size: 'Lg' }), holder(null), { mains }).rows.length === 1
     && roundTrip(holder({ Size: 'Sm' }), holder(null)).rows.length === 1);
+  const framed = { ...button, anatomy: { root: { kind: 'container', radius: 'Corner/8', layout: { direction: 'row' } } }, variants: [{ when: { size: 'lg' }, set: { 'root.radius': 'Corner/12' } }] };
+  const styled = (w, own) => { const h = holder(w); h.anatomy.action = { ...h.anatomy.action, ...own }; return h; };
+  ok('an instance\'s own styling equal to its component\'s root at its props is unstated; at other props, or another value, it is still a difference',
+    roundTrip(styled({ Size: 'Sm' }, { radius: 'Corner/8', layout: { direction: 'row' } }), styled(null, {}), { mains: { Button: framed } }).rows.length === 0
+    && roundTrip(styled({ Size: 'Lg' }, { radius: 'Corner/12' }), styled({ Size: 'Lg' }, {}), { mains: { Button: framed } }).rows.length === 0
+    && roundTrip(styled({ Size: 'Lg' }, { radius: 'Corner/8' }), styled({ Size: 'Lg' }, {}), { mains: { Button: framed } }).rows.length === 1);
+  const avatar = { component: 'Avatar', props: { size: { type: 'enum', values: ['24', '40'], default: '40', figma: 'Size' } }, anatomy: { root: { kind: 'container', radius: 'Corner/8', layout: { direction: 'row', gap: 8 } } }, variants: [{ when: { size: '24' }, set: { 'root.radius': 'Corner/4' } }] };
+  const placed = (own) => ({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Avatar', width: 24, height: 24, with: { Size: '24' }, ...own } }, variants: [] });
+  ok('an icon-sized instance is compared at its own Size, and a layout written in another key order is the same',
+    roundTrip(placed({ radius: 'Corner/4', layout: { gap: 8, direction: 'row' } }), placed({}), { mains: { Avatar: avatar } }).rows.length === 0);
   const tagged = { ...button, props: { ...button.props, label: { type: 'string', default: 'New', figma: 'Label' } } };
   ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: { Button: tagged } }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: { Button: tagged } }).rows.length === 0);
 }
