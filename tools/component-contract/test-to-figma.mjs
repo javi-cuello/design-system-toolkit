@@ -241,6 +241,19 @@ delete globalThis.figma;
 }
 
 {
+  // an instance's prop at its own component's default is that prop unstated: the library states it, a reading does not
+  const button = { component: 'Button', props: { size: { type: 'enum', values: ['sm', 'lg'], figmaValues: ['Sm', 'Lg'], default: 'sm', figma: 'Size' }, disabled: { type: 'boolean', default: false, figma: 'Disabled' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const holder = (w) => ({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, action: { kind: 'instance', parent: 'root', component: 'Button', ...(w && { with: w }) } }, variants: [] });
+  const mains = { Button: button };
+  ok('an instance\'s prop at its component\'s default, in its code word or Figma\'s, is the same as unstated; another value is still a difference',
+    roundTrip(holder({ Size: 'Sm', Disabled: 'False' }), holder(null), { mains }).rows.length === 0
+    && roundTrip(holder({ Size: 'Lg' }), holder(null), { mains }).rows.length === 1
+    && roundTrip(holder({ Size: 'Sm' }), holder(null)).rows.length === 1);
+  const tagged = { ...button, props: { ...button.props, label: { type: 'string', default: 'New', figma: 'Label' } } };
+  ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: { Button: tagged } }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: { Button: tagged } }).rows.length === 0);
+}
+
+{
   // a root that fills its room is that room's width (a ruling): 320 fixed is a fill read in a room 320 wide, not one 724 wide
   const c = (root) => ({ component: 'X', props: {}, anatomy: { root }, variants: [] });
   ok('a root filling a room as wide as the library\'s fixed width comes back the same; a wider room is a difference',

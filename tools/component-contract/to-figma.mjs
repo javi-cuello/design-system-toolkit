@@ -119,7 +119,31 @@ function iconSize(x) {
   return out;
 }
 
-export function roundTrip(library, drawn, { limit = Infinity } = {}) {
+/* A placed instance's prop at its own component's default is that prop unstated: the library's contract states every
+   prop of an instance, a reading only the ones it reads. `mains` is { <component name>: contract }; a prop is
+   dropped from `with` where it equals the main's default (its code word or Figma's), on both sides alike. */
+function atDefault(x, mains) {
+  if (!x || !mains) return x;
+  const low = (v) => String(v).toLowerCase();
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    const main = e && e.kind === 'instance' && e.with && mains[e.component];
+    if (!main) continue;
+    const byFigma = Object.fromEntries(Object.values(main.props || {}).map((q) => [low(q.figma || ''), q]));
+    const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
+      const q = byFigma[low(k)];
+      if (!q || q.default === undefined) return true;
+      const words = [q.default, (q.figmaValues || [])[(q.values || []).indexOf(q.default)]].filter((w) => w !== undefined).map(low);
+      // a word of an option is one in any case; a text's words are its own
+      return q.type === 'enum' || q.type === 'boolean' ? !words.includes(low(v)) : String(v) !== String(q.default);
+    }));
+    const { with: _, ...bare } = e;
+    out[id] = Object.keys(rest).length ? { ...bare, with: rest } : bare;
+  }
+  return out;
+}
+
+export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
@@ -148,7 +172,7 @@ export function roundTrip(library, drawn, { limit = Infinity } = {}) {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => iconSize(border(glyph(room(x))));
+    const same = (x) => atDefault(iconSize(border(glyph(room(x)))), mains);
     diff(same(expand(library, { ...variantDefaults(library), ...c })), same(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
