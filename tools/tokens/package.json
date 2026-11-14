@@ -3,6 +3,6 @@
   "private": true,
   "description": "The Style Dictionary the token suites run through, so they run on a machine with no project (CI).",
   "devDependencies": {
-    "style-dictionary": "5.5.3"
+    "style-dictionary": "5.8.0"
   }
 }

@@ -8,10 +8,10 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "astro": "7.4.2",
-    "sass": "1.106.1"
+    "astro": "7.4.10",
+    "sass": "1.108.2"
   },
   "devDependencies": {
-    "@babel/parser": "8.0.8"
+    "@babel/parser": "8.1.0"
   }
 }
