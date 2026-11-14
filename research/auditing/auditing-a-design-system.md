@@ -209,7 +209,7 @@ The caveats change how the numbers read:
 
 **A detach count needs its denominator.** The SLDS button icon's "more than 3,000 detaches" sounds like a crisis. Against almost a million instances it is about 0.3 percent. A component with 40 detaches out of 200 instances, 20 percent, is the one to audit first. Always divide.
 
-Big systems turn this into routine. athenahealth's Forge team, handling around 100,000 insertions a month, watched detaches and traced a spike to an auto layout bug in a container component; one of its designers put it as wanting to know why anyone detaches ([Figma, making metrics matter](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). Pinterest went further: a nightly job over the REST API scored each handoff frame by the share of its layers coming from the Gestalt library, then rolled that up by team, which ranged from about 50 percent down to 2 ([Figma, how Pinterest measures adoption](https://www.figma.com/blog/how-pinterests-design-systems-team-measures-adoption/)). Shopify's version of the same idea, coverage of components and tokens across its admin, is told in the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md#one-defensible-number).
+Big systems turn this into routine. athenahealth's Forge team, handling around 100,000 insertions a month, watched detaches and traced a spike to an auto layout bug in a container component; one of its designers put it as wanting to know why anyone detaches ([Figma, making metrics matter](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). Pinterest went further: a nightly job over the REST API scored each handoff frame by the share of its layers coming from the Gestalt library, then rolled that up by team: about 50 percent on some teams, 2 on others ([Figma, how Pinterest measures adoption](https://www.figma.com/blog/how-pinterests-design-systems-team-measures-adoption/)). Shopify's version of the same idea, coverage of components and tokens across its admin, is told in the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md#one-defensible-number).
 
 What to count, which denominator keeps it honest and how to report it is the subject of [measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md).
 
@@ -299,12 +299,12 @@ An audit that doesn't know a system's own conventions reports that system's deli
 
 Every check carries an assumption. "Fills should come from the semantic collection" assumes the audit knows which collection that is. "Text tokens should be text roles" assumes it knows how text tokens are named. A check that doesn't know falls back on what it does know, and that is usually some other library's answer.
 
-**A worked case.** One audit scanner, shared across several libraries, carried constants left over from the first library it was written for: a semantic collection called `Semantic`, and a pattern for text tokens that expected `/Text/` after another segment. It was then run on a second library of 64 component sets, whose collection is called `3. Semantic` and whose text tokens start with `Text/`.
+**A worked case.** One audit scanner, shared across several libraries, carried constants left over from the first library it was written for: a semantic collection called `Semantic`, and a pattern for text tokens that expected `/Text/` after another segment. It was then run on a second library, whose collection is called `2. Semantic` and whose text tokens start with `Text/`.
 
 Before reading on, work out what a correctly bound fill in the second library looks like to that check.
 
 <svg role="img" viewBox="0 0 680 250" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
-<title>The same scan of one library, without and with its conventions. Left: the check expects a collection named Semantic; the library's fill comes from 3. Semantic/Background/Neutral/soft; the scan raises 227 candidates, 157 of them reading expected Semantic, all wrong. Right: the check reads the library's own collection name, 3. Semantic; the scan raises 70 candidates, and the 157 are gone.</title>
+<title>The same scan of one library, without and with its conventions. Left: the check expects a collection named Semantic; the library's fill comes from 2. Semantic/Surface/Muted; the scan raises 227 candidates, 157 of them reading expected Semantic, all wrong. Right: the check reads the library's own collection name, 2. Semantic; the scan raises 70 candidates, and the 157 are gone.</title>
 <rect x="0" y="0" width="680" height="250" fill="#f7f6f2"/>
 <text x="20" y="30" font-size="14" font-weight="600" fill="#1a1a1a">Borrowed convention</text>
 <text x="360" y="30" font-size="14" font-weight="600" fill="#1a1a1a">The library's own convention</text>
@@ -313,22 +313,22 @@ Before reading on, work out what a correctly bound fill in the second library lo
 <text x="32" y="84" font-size="13" font-family="ui-monospace, monospace" fill="#1a1a1a">Semantic</text>
 <rect x="20" y="104" width="300" height="50" rx="6" fill="#ffffff" stroke="#c9c6bd"/>
 <text x="32" y="125" font-size="12" fill="#5a5850">Fill, correctly bound, comes from</text>
-<text x="32" y="144" font-size="12" font-family="ui-monospace, monospace" fill="#1a1a1a">3. Semantic/Background/Neutral/soft</text>
+<text x="32" y="144" font-size="12" font-family="ui-monospace, monospace" fill="#1a1a1a">2. Semantic/Surface/Muted</text>
 <rect x="20" y="164" width="300" height="66" rx="6" fill="#fbeee9" stroke="#d9a593"/>
 <text x="32" y="190" font-size="22" font-weight="700" fill="#8a2f12">227 candidates</text>
 <text x="32" y="214" font-size="13" fill="#8a2f12">157 read "expected Semantic", all wrong</text>
 <rect x="360" y="44" width="300" height="50" rx="6" fill="#ffffff" stroke="#c9c6bd"/>
 <text x="372" y="65" font-size="12" fill="#5a5850">Check reads the recorded collection</text>
-<text x="372" y="84" font-size="13" font-family="ui-monospace, monospace" fill="#1a1a1a">3. Semantic</text>
+<text x="372" y="84" font-size="13" font-family="ui-monospace, monospace" fill="#1a1a1a">2. Semantic</text>
 <rect x="360" y="104" width="300" height="50" rx="6" fill="#ffffff" stroke="#c9c6bd"/>
 <text x="372" y="125" font-size="12" fill="#5a5850">Same fill, same binding</text>
-<text x="372" y="144" font-size="12" font-family="ui-monospace, monospace" fill="#1a1a1a">3. Semantic/Background/Neutral/soft</text>
+<text x="372" y="144" font-size="12" font-family="ui-monospace, monospace" fill="#1a1a1a">2. Semantic/Surface/Muted</text>
 <rect x="360" y="164" width="300" height="66" rx="6" fill="#eaf3ea" stroke="#9cc29c"/>
 <text x="372" y="190" font-size="22" font-weight="700" fill="#1f5a1f">70 candidates</text>
 <text x="372" y="214" font-size="13" fill="#1f5a1f">the 157 never generated</text>
 </svg>
 
-The scan raised 227 candidates. 157 of them said `fill from 3. Semantic/Background/Neutral/soft (expected Semantic)`, against bindings that were all correct. The text-token pattern failed the same way, marking every text fill in the library as not a text role. Nothing errored. Each finding was plausible and neatly worded. Given each library's own collection name, spacing scale and text pattern, the same scan raised 70 candidates, and the 157 simply stopped being generated, because they had never been about that library.
+The scan raised 227 candidates. 157 of them said `fill from 2. Semantic/Surface/Muted (expected Semantic)`, against bindings that were all correct. The text-token pattern failed the same way, marking every text fill in the library as not a text role. Nothing errored. Each finding was plausible and neatly worded. Given each library's own collection name, spacing scale and text pattern, the same scan raised 70 candidates, and the 157 simply stopped being generated, because they had never been about that library.
 
 That is the failure to fear. A wrong finding that looks wrong gets fixed. 157 that look right teach a maintainer that the tool is noise, and the 70 real ones go down with them.
 
@@ -423,15 +423,15 @@ Researched 14 November 2026, against Figma's help centre, developer docs and blo
 
 - **Plans move fast.** Check designs launched on 4 June 2026 for Organization and Enterprise; the help page now also lists Government and K-12 Education. A June 2026 news item claimed "team plans"; Figma's help page does not list Professional, so that claim is treated as wrong.
 - **Code Connect plan.** The developer docs and help centre now list Professional, Organization and Enterprise (Dev or Full seat); earlier docs and 2026 forum reports said Organization and Enterprise only. Re-check before telling a Professional team it can map components.
-- **Figma's agent.** Announced 20 May 2026 for Full seats on Professional, Organization and Enterprise, in beta, with no credit cost during the beta. The current help page lists Starter and Education too. Credits apply at general availability.
+- **Figma's agent.** Announced 20 May 2026 for Full seats on Professional, Organization and Enterprise, in beta, with no credit cost during the beta. Plan lists have changed since; re-check the help page. Credits apply at general availability.
 - **MCP server.** The remote server is listed for all plans; the desktop server needs a Dev or Full seat on a paid plan. Rate limits by plan were not confirmed from Figma's own pricing page.
 - **Check designs and exceptions.** No ignore or exclude option as of November 2026; the forum request had no staff reply. If one ships, the advice on applying contrast suggestions changes.
 - **FigmaLint** was in beta at its July 2025 launch; its price and whether it calls an LLM were not confirmed. Other plugins found in search (Offspec, ComponentQA, Pixel Audit) were not checked and are left out.
-- **The 157-finding case** comes from one toolkit's audit test case, walked on 5 September 2026, anonymised here. It was a scripted scanner, not an LLM; the claim that agents fail the same way is inference from the mechanism, not a measured run.
+- **The 157-finding case** comes from one toolkit's audit test case and is anonymised here, with stand-in names. It was a scripted scanner, not an LLM; the claim that agents fail the same way is inference from the mechanism, not a measured run.
 - **The mode-pin check** (three false findings of four) is from the same toolkit's foundations audit notes.
 - **Figma 2019 study:** sample size not stated; 34 percent is the author's best case.
 - **Smashing ROI model:** a model with a hypothetical company; the $646,000 and $1,517,400 figures are inputs and outputs of that model.
-- **Atlassian's ESLint rule:** the docs page renders client-side and was not read in full; the package `@atlaskit/eslint-plugin-design-system` exists (16.16.0 on npm). An interview figure of a 95 percent adoption goal at Atlassian could not be opened and is left out.
+- **Atlassian's ESLint rule:** the docs page renders client-side and was not read in full; the package `@atlaskit/eslint-plugin-design-system` exists on npm. An interview figure of a 95 percent adoption goal at Atlassian could not be opened and is left out.
 - **Severity models:** no design system's own published triage model was found; the impact and effort framing is commentary.
 - **The evidence base is Western and vendor-heavy.** Every team story is from a US company or Figma itself. No user-outcome research on audits was found; the outcome evidence is Figma's 2019 task study.
 
