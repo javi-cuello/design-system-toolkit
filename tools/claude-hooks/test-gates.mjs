@@ -350,10 +350,11 @@ test('a script over work already there counts only what it adds (a formatter ove
   const dir = repo();
   fs.writeFileSync(path.join(dir, 'base.mjs'), lines(200));
   const t0 = Date.now();
-  const s = session([at(user('format it'), t0 - 1000)]);
+  // the call opens a second before the write: a file system that keeps mtimes to the second (CI's) rounds the write down
+  const s = session([at(user('format it'), t0 - 2000)]);
   assert.equal(planGate(s.id, s.file, [dir], { id: 'b2', name: 'Bash', input: { command: 'npx prettier --write .' } }, dir), null);
   fs.writeFileSync(path.join(dir, 'base.mjs'), lines(202));
-  fs.appendFileSync(s.file, [at({ ...withId(call('Bash', { command: 'npx prettier --write .' }), 'b2'), cwd: dir }, t0), at(result('b2', false), Date.now() + 1000)].map((l) => JSON.stringify(l)).join('\n') + '\n');
+  fs.appendFileSync(s.file, [at({ ...withId(call('Bash', { command: 'npx prettier --write .' }), 'b2'), cwd: dir }, t0 - 1000), at(result('b2', false), Date.now() + 1000)].map((l) => JSON.stringify(l)).join('\n') + '\n');
   assert.equal(advance(s.id, s.file, [dir]).total.files[path.join(dir, 'base.mjs')], 2);
   s.clean(); fs.rmSync(dir, { recursive: true, force: true });
 });
