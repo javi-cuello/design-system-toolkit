@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { derive, expand, selfCheck, bridge, fold } = require('./derive.cjs');
+const { derive, expand, selfCheck, bridge, fold, mainsFrom } = require('./derive.cjs');
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
@@ -256,6 +256,29 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     anatomy: { root: { kind: 'container' }, b2: { kind: 'instance', parent: 'root', component: 'Button' } },
     variants: [{ when: { second: false }, remove: ['b2'] }, { when: { title: true }, add: { 'b2/label': { kind: 'text', parent: 'b2' } } }] };
   ok('a part goes with its parent: one added inside a removed part is not drawn', !expand(orphan, { second: false, title: true })['b2/label'] && !!expand(orphan, { title: true })['b2/label']);
+}
+
+{
+  // an instance's insides are its component's: a copy of them is left out, an override kept, the instance's words its own
+  const chip = { name: 'Chip', id: '9:1', props: { Label: 'TEXT' }, links: { Label: { kind: 'characters', layers: [['Text']] } },
+    variants: [{ name: 'Chip', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', fills: ['Bg/chip'], children: [{ name: 'Text', type: 'TEXT', text: 'Label', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] };
+  const holder = (fill, words) => ({ name: 'Bar', id: '9:2', props: {}, variants: [{ name: 'Bar', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Chip', type: 'INSTANCE', instanceOf: 'Chip', props: { Label: words }, layout: 'HORIZONTAL', sizing: 'HUG/HUG', fills: ['Bg/chip'], overrides: ['fills'],
+      children: [{ name: 'Text', type: 'TEXT', text: words, textStyle: 'Label/sm', fills: [fill], sizing: 'HUG/HUG' }] }] }] });
+  const mains = mainsFrom({ Chip: chip });
+  const plain = derive(holder('Text/strong', 'Save'), ['Chip'], { mains }), over = derive(holder('Text/danger', 'Save'), ['Chip'], { mains });
+  ok('an opened instance keeps only what differs from its own component: its words are its props, an override of a fill stays',
+    !('chip/text' in plain.anatomy) && plain.anatomy.chip.with.Label === 'Save' && over.anatomy['chip/text'] && over.anatomy['chip/text'].color === 'Text/danger'
+    && 'chip/text' in derive(holder('Text/strong', 'Save'), ['Chip']).anatomy && selfCheck(holder('Text/danger', 'Save'), over, ['Chip'], { mains }).length === 0);
+}
+{
+  // an instance that hides a layer of its component (the walk records what shows) is kept whole: nothing here could say the hiding
+  const pill = { name: 'Pill', id: '9:3', props: {}, variants: [{ name: 'Pill', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Dot', type: 'FRAME', sizing: 'FIXED/FIXED', w: 6, h: 6 }, { name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] };
+  const bar = { name: 'Row', id: '9:4', props: {}, variants: [{ name: 'Row', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Pill', type: 'INSTANCE', instanceOf: 'Pill', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'],
+      children: [{ name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] }] };
+  ok('an instance hiding a layer of its component keeps all it records', 'pill/text' in derive(bar, ['Pill'], { mains: mainsFrom({ Pill: pill }) }).anatomy);
 }
 
 console.log(`${n}/${n} passed`);

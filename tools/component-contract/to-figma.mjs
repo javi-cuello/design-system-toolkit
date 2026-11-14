@@ -1119,7 +1119,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       if (comp) {
         const { compact } = req('../snapshot/spec.cjs');
         const { derive } = req('./derive.cjs');
-        const now = derive(compact(comp), Object.values(index).map((x) => x.name), contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into));
+        const now = derive(compact(comp), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
         const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now);
         back = rt.rows.length;
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
@@ -1173,7 +1173,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: only its own name is known */ }
     const entry = Object.values(index).find((x) => x.name === comp.name) || {};
     const spec = entry.platform ? { ...compact(comp), platform: entry.platform } : compact(comp);
-    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into));
+    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
     if (process.env.DEBUG) console.error('live', JSON.stringify(now));
     const sorted = (x) => (Array.isArray(x) ? x.map(sorted) : x && typeof x === 'object' ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sorted(x[k])])) : x);
     if (JSON.stringify(sorted(now)) !== JSON.stringify(sorted(JSON.parse(fs.readFileSync(baseFile, 'utf8'))))) {
@@ -1182,7 +1182,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const folder = Object.keys(index).find((k) => index[k].name === comp.name);
       const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
       const stored = folder && read('figma.json'), kept = folder && read('contract.json');
-      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into)))) !== JSON.stringify(sorted(kept));
+      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains }))) !== JSON.stringify(sorted(kept));
       console.error(older ? `refused: ${comp.name}'s snapshot is older than the toolkit's contracts, so it cannot be told whether the library changed; take a snapshot, then open it again and make the change; nothing was changed` : `refused: ${comp.name} has changed in the library since this draft was made; nothing was changed`);
       process.exit(1);
     }

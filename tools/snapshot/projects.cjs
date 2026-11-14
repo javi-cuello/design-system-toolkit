@@ -868,7 +868,41 @@ function deriveOptions(ctx, fileKey) {
  */
 function deriveOptionsFor(componentsDir, projectsDir) {
   const of = storeLibraries(componentsDir, projectsDir);
-  return of ? (folder) => deriveOptions(of.ctx, of.fileOf(folder)) : () => ({});
+  const own = of ? (folder) => deriveOptions(of.ctx, of.fileOf(folder)) : () => ({});
+  // a component's instances held to components of its own library only: one in another library is snapshotted on its
+  // own, and a contract here must not go stale when it is
+  const byFile = new Map();
+  // (a store no project registers has no library to hold its instances to: they keep all they record)
+  if (!of) return () => ({});
+  const mainsOf = (folder) => {
+    const file = of.fileOf(folder);
+    if (!byFile.has(file)) byFile.set(file, mainsIn(componentsDir, own, (d) => of.fileOf(d) === file));
+    return byFile.get(file);
+  };
+  return (folder) => ({ ...own(folder), mains: mainsOf(folder) });
+}
+/* The components a store holds, by name, for derive's `mains` (an instance's insides held to its own component):
+   each stored spec derived once, when an instance of it is first met. `optionsOf` gives a folder's own options. */
+function mainsIn(componentsDir, optionsOf = () => ({}), keep = () => true) {
+  const specs = {}, folderOf = {}, twice = new Set();
+  let dirs = [];
+  try { dirs = fs.readdirSync(componentsDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch { /* no store */ }
+  // every name the store holds, as the writers resolve an instance against it (write.cjs, check-specs, the snapshot's index)
+  const known = [];
+  for (const d of dirs) {
+    let sp = null;
+    try { sp = JSON.parse(fs.readFileSync(path.join(componentsDir, d, 'figma.json'), 'utf8')); } catch { /* no spec */ }
+    if (!sp || !sp.name) continue;
+    known.push(sp.name);
+    if (!keep(d)) continue;
+    if (sp.name in specs) twice.add(sp.name);
+    specs[sp.name] = sp; folderOf[sp.name] = d;
+  }
+  // (two folders of one name, a web and a mobile Button: neither is the component, its instances keep their insides)
+  for (const n of twice) delete specs[n];
+  // (required here, not above: derive.cjs reads this file's house settings as it loads)
+  const { mainsFrom } = require('../component-contract/derive.cjs');
+  return mainsFrom(specs, known, (name) => optionsOf(folderOf[name]));
 }
 /* The project whose store a components folder is, and each folder's library file key from the store's index. */
 function storeLibraries(componentsDir, projectsDir) {
@@ -996,7 +1030,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { appendRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { mainsIn, appendRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>

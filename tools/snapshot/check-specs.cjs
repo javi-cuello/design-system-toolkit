@@ -54,7 +54,7 @@ function checkSpecs(dir) {
     try { derived = contract.derive(onDisk, known, optionsOf(d)); } catch (e) { bad.push(`${d}: no contract can be derived — ${e.message}`); continue; }
     if (!fs.existsSync(cf)) bad.push(`${d}: no contract.json beside the spec — snapshot again, or node tools/component-contract/write.cjs`);
     else if (!same(JSON.parse(fs.readFileSync(cf, 'utf8')), derived)) bad.push(`${d}: contract.json is not what the spec derives — snapshot again, or node tools/component-contract/write.cjs`);
-    else { const off = contract.selfCheck(onDisk, derived, known); if (off.length) bad.push(`${d}: the contract does not rebuild ${off.length} variant(s), first ${off[0]}`); }
+    else { const off = contract.selfCheck(onDisk, derived, known, optionsOf(d)); if (off.length) bad.push(`${d}: the contract does not rebuild ${off.length} variant(s), first ${off[0]}`); }
   }
   return { specs, variants, full, bad };
 }

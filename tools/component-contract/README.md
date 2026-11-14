@@ -6,7 +6,7 @@ It is a layer above the snapshot, never a replacement, and a source only where i
 
 | File | What it is |
 |---|---|
-| `derive.cjs` | `derive(spec)` → the contract; `expand(contract, props)` → the anatomy one combination draws; `selfCheck(spec)` → every stored variant the contract does not rebuild (none, or it is a defect) |
+| `derive.cjs` | `derive(spec)` → the contract; `expand(contract, props)` → the anatomy one combination draws; `selfCheck(spec)` → every stored variant the contract does not rebuild (none, or it is a defect). An instance's insides are its own component's: with `mains` (`mainsFrom`, and `deriveOptionsFor` in snapshot/projects.cjs, which every writer reads), an instance the walk opened keeps only the layers that differ from its component expanded at its props; one that hides a layer of its component, one of another library, or one whose name two components share keeps all it records |
 | `layers.mjs` | `expand(contract, props)`, `apply` and `variantDefaults`: a combination drawn from the layers, one ES module that `derive.cjs` requires and the contract editor's page imports (served by its `serve.mjs`), so both draw a variant alike; and `interactionStates(settings)` and `statesOf(contract)`, a component's interaction states by one rule, which the editor and the docs site's States table both read |
 | `write.cjs` | `node tools/component-contract/write.cjs <components dir>` writes every contract beside its spec, for a store whose specs predate contracts or after `derive.cjs` changes |
 | `test-contract.mjs` | the tests, on a fixture built to hit each case below |

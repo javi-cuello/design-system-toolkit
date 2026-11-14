@@ -362,7 +362,7 @@ function read(stored) {
 }
 
 /* Each walked tree's flat anatomy, as derive() layers them and selfCheck() holds the contract to them. */
-function anatomies(trees, characters, known, L) {
+function anatomies(trees, characters, known, L, mains = null) {
   const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known) }));
   // a boolean only shows and hides: a layer its flipped tree shares with the variant it was flipped from is that
   // variant's, but for its place (a flip is walked from a detached instance, whose sizes are its own: a root 420 wide)
@@ -386,17 +386,87 @@ function anatomies(trees, characters, known, L) {
       }
     });
   }
+  if (mains) for (const f of flat) ownInsides(f.anatomy, mains);
   return flat;
+}
+
+/* An instance's insides are its component's. The walk opens an instance wherever anything in it is overridden and
+   then records all of it, its component's own layers with the override; so a contract held another component's
+   layers, or not, by whether someone overrode something. With `mains` (a component's name → its contract), each
+   opened instance is held to its own component, expanded at the instance's props: a layer inside it that is
+   exactly the component's is the component's and left out; one that differs is an override and kept, with the
+   layers above it. Only the component's own reading decides: where it has no contract, or no such layer, the layer
+   is kept. (A contract annotation of the component's own props, swappedBy, says nothing of how a layer looks.) */
+const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy']);
+const look = (e) => j(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
+function ownInsides(anatomy, mains) {
+  const low = (x) => String(x).toLowerCase();
+  for (const id of Object.keys(anatomy)) {
+    const e = anatomy[id];
+    if (!e || e.kind !== 'instance' || !e.component) continue;
+    const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));
+    if (!inner.length) continue;
+    const m = mains(e.component);
+    if (!m) continue;
+    // the instance's props onto the component's own, by their Figma names
+    const by = Object.fromEntries(Object.entries(m.props || {}).map(([k, q]) => [low(q.figma || k), k]));
+    const vals = { ...variantDefaults(m) };
+    for (const [k, v] of Object.entries(e.with || {})) {
+      const mk = by[low(String(k).split('#')[0])];
+      if (!mk) continue;
+      const q = m.props[mk];
+      // (an enum's value by Figma's own spelling of it, as the contract spells it: Secondary gray is secondary-gray)
+      const at = q.type === 'enum' && (q.figmaValues || []).findIndex((x) => low(x) === low(v));
+      vals[mk] = q.type === 'boolean' ? v === true || low(v) === 'true' : q.type === 'enum' ? (at >= 0 ? q.values[at] : q.values.find((x) => low(x) === low(v)) ?? kebab(String(v))) : v;
+    }
+    const M = expand(m, vals);
+    // a text prop's words: the instance's value for it, else the component's default
+    const words = (t) => {
+      const r = /^\{(.+)\}$/.exec(t || ''), q = r && m.props[r[1]];
+      if (!q) return t;
+      const w = Object.entries(e.with || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || r[1]));
+      return w ? w[1] : q.default ?? t;
+    };
+    // a layer of the component the instance does not draw (hidden: the walk records what shows) is an override no
+    // layer here can say: the instance is kept whole
+    if (Object.keys(M).some((mk) => mk !== 'root' && !(id + '/' + mk in anatomy))) continue;
+    const own = (k) => {
+      const mk = k.slice(id.length + 1), x = M[mk];
+      if (!x) return false;
+      const y = typeof x.content === 'string' ? { ...x, content: words(x.content) } : x;
+      return look(anatomy[k]) === look(y);
+    };
+    const kept = new Set(inner.filter((k) => !own(k)));
+    for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
+  }
+}
+
+/* A lookup of components' contracts by name, for derive's `mains`: each derived once, from its own spec, without
+   `mains` itself (a component is held to its own component's reading as that reading stands). `specs` maps a name
+   to its stored spec. */
+function mainsFrom(specs, known = [], optionsOf = () => ({})) {
+  const done = new Map(), low = (x) => String(x).toLowerCase();
+  // (a name two specs share, a web and a mobile Button, is no one component: left unresolved, its instances kept whole)
+  const count = {};
+  for (const n of Object.keys(specs)) count[low(n)] = (count[low(n)] || 0) + 1;
+  const byName = new Map(Object.entries(specs).filter(([n]) => count[low(n)] === 1).map(([n, sp]) => [low(n), [n, sp]]));
+  return (name) => {
+    // (by its whole name only: Icons/Close is not this library's Close)
+    const hit = byName.get(low(name));
+    if (!hit) return null;
+    if (!done.has(hit[0])) { try { done.set(hit[0], derive(hit[1], known, optionsOf(hit[0]))); } catch { done.set(hit[0], null); } }
+    return done.get(hit[0]);
+  };
 }
 
 /* `known` is every stored component name, so an instance of `Table - Cell / Fill`
    resolves to that set and not to `Table - Cell` (graph.cjs nameOf). */
-function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [] } = {}) {
+function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null } = {}) {
   const pointer = new Set(pointerStates.map(kebab));
   const { spec, trees, hides, characters } = read(stored);
   const figmaProps = spec.props || {};
   const L = spec.links || {};
-  const flat = anatomies(trees, characters, known, L);
+  const flat = anatomies(trees, characters, known, L, mains);
   const addresses = new Map();
   for (const t of trees) for (const e of t.list) addresses.set(keyOf(e.segs), e.segs);
   const base = flat[0];
@@ -499,7 +569,7 @@ function selfCheck(stored, contract, known = [], options = {}) {
   contract = contract || derive(stored, known, options);
   const { spec, trees, characters } = read(stored);
   const figmaProps = spec.props || {};
-  const flat = anatomies(trees, characters, known, spec.links || {});
+  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null);
   const bad = [];
   for (const [i, t] of trees.entries()) {
     const when = Object.fromEntries(Object.entries(t.when).filter(([p]) => p in figmaProps).map(([p, v]) => [camel(p), valueFor(figmaProps, p, v)]));
@@ -548,4 +618,4 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom };
