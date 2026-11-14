@@ -228,6 +228,12 @@ delete globalThis.figma;
       roundTrip(bx({ sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ width: 1 })).rows.length === 0
       && roundTrip(bx({ sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ sides: { top: 2, end: 2, bottom: 2, start: 2 } })).rows.length === 1);
   }
+  {
+    const at = (e) => ({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/x', ...e } }, variants: [] });
+    ok('an icon at Size 20 and 20 wide is the icon 20 wide; at Size 16 and 20 wide it is not',
+      roundTrip(at({ width: 20, height: 20, with: { Size: '20' } }), at({ width: 20, height: 20 })).rows.length === 0
+      && roundTrip(at({ width: 20, height: 20, with: { Size: '16' } }), at({ width: 20, height: 20 })).rows.length === 1);
+  }
   ok('another name is a difference', roundTrip(lib, { ...same, component: 'Badge-x' }).rows.some((x) => x.at === 'name'));
   const withIcon = (c) => ({ ...lib, anatomy: { ...lib.anatomy, icon: { kind: 'instance', parent: 'root', component: c } } });
   ok('an icon named by its set alone in the drawing is the library\'s Icon/house; another icon is still a difference',

@@ -105,6 +105,20 @@ function border(x) {
   return out;
 }
 
+/* An icon's size, said two ways: Figma takes the variant of its set at that size (with Size "20"), code sets the width
+   (20). Compared as the size: a `Size` that is the instance's own width and height goes, so the width says it. */
+function iconSize(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || e.kind !== 'instance' || !e.with || e.with.Size === undefined || String(e.width) !== String(e.with.Size) || String(e.height) !== String(e.with.Size)) continue;
+    const { Size, ...rest } = e.with;
+    const { with: _, ...bare } = e;
+    out[id] = Object.keys(rest).length ? { ...bare, with: rest } : bare;
+  }
+  return out;
+}
+
 export function roundTrip(library, drawn, { limit = Infinity } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
@@ -133,7 +147,9 @@ export function roundTrip(library, drawn, { limit = Infinity } = {}) {
       const dk = named[low(library.props[k].figma || k)] || k, dq = drawn.props[dk];
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
-    diff(border(glyph(room(expand(library, { ...variantDefaults(library), ...c })))), border(glyph(room(expand(drawn, { ...variantDefaults(drawn), ...theirs })))), '');
+    // the named equivalences, each the same on both sides
+    const same = (x) => iconSize(border(glyph(room(x))));
+    diff(same(expand(library, { ...variantDefaults(library), ...c })), same(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
