@@ -259,3 +259,10 @@ Assert: the guide names the project by a neutral description or a stand-in ("Pro
 Negative: a project's name, a client's company, an email address, `/Users/<name>/` or `~/Projects/<label>`, or a quoted private prompt anywhere in the guide, its SVG text or its sources.
 Observed: 2026-11-13 — the research articles moved into the public repo named four projects, their ids and scopes, and quoted the maintainer from session memory; the person ruled: anonymise, keep public, and make sure it does not happen again.
 Traced: 2026-11-13 for 3.3.0 — to SKILL.md "A deep-mode guide is an article, not a store" and research/README.md.
+
+## A28 · A guide weighs its advice on the knowledge base's scale
+Fixture: a deep-mode guide with three sections: one whose advice rests on four independent shipping systems, one on a single working audit, and one on a vendor's 2019 study of its own tool.
+Assert: each section's advice ends with `*Weight: …*` on toolkit-standard §D 21's scale (`moderate` or `strong`, `weak`, and the 2019 study dropped a level for age and again for the vendor speaking for its own product), followed by the reason; the short version says how much each part weighs; no section marks "consensus" against "judgement" instead; the skill cites §D 21 and does not restate the scale.
+Negative: advice with no weight; a weight scale defined in the skill or the voice file; the 2019 study weighed as if current.
+Observed: 2026-11-14 — a workshop draft leaned on a 2019 design-system study; the maintainer ruled that old research weighs less and that the knowledge base and research articles share one scale.
+Traced: 2026-11-14 for 3.4.0 — to SKILL.md Step 5 "Resolve to a recommendation twice" and Step 6 "Date every source", and references/deep-mode-voice.md §4 *The advice*.

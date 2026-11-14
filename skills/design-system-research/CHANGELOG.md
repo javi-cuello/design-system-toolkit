@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.4.0 (2026-11-14): each section's advice, and the short version, carry their weight on toolkit-standard §D 21's scale instead of consensus against judgement; a source over three years old on a fast-moving subject drops a level (Step 6). Case A28.
 - 3.3.0 (2026-11-13): research/ is public: a guide names no customer, private project or person and quotes no private session, using neutral descriptions. Case A27.
 - 3.2.2 (2026-11-12): the research collection moved into the toolkit; deep mode and Step 8 name it by path, `research/`.
 - 3.2.1 (2026-11-11): the checklist names the five-word awk beside the grep; A11 and A18 say "list of sections", not "question list".

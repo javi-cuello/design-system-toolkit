@@ -41,7 +41,7 @@ Sections are not numbered: a heading is a short label, and a pointer to another 
 
 **The worked case**, with its traps (section 5), and **the systems' stories**: a named system that hit this and what it did.
 
-**The advice.** What to do, as a colleague would say it, naming the place and the steps (section 10). Its one key sentence is bold so a scanner finds it. It says which parts are consensus and which are judgement, and names the constraint the advice depends on where one exists; where the evidence is split, it still lands a verdict. No label in front: never "**What to do.**", never "**Recommendation:**".
+**The advice.** What to do, as a colleague would say it, naming the place and the steps (section 10). Its one key sentence is bold so a scanner finds it. It ends by giving its weight on the scale in toolkit-standard §D 21 (`required`, `strong`, `moderate`, `weak`, `contested`), written `*Weight: moderate.*` before the sentence that gives the reason (more than one weight where its parts differ), and names the constraint the advice depends on where one exists; where the evidence is split, it still lands a verdict. No label in front: never "**What to do.**", never "**Recommendation:**".
 
 ## 5. Worked cases and traps
 
@@ -127,8 +127,8 @@ and here is what not to write. Skipped only where the topic has no lookup shape.
 ## The short version
 Everything above as plain prose that stands alone: a reader who reads only
 this can act. Not a numbered restatement; a summary someone could read aloud.
-It resolves to the reader's stated context, marks consensus against
-judgement, and says what to write down for the people downstream. A
+It resolves to the reader's stated context, says how much each part
+weighs on the §D 21 scale, and says what to write down for the people downstream. A
 change-management lesson (aliases, deprecation paths, the fact that every
 good system has renamed something) belongs here, not in a closing essay.
 

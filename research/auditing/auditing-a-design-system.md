@@ -45,7 +45,7 @@ Drift is quiet by nature. A designer detaches a button to change its padding on 
 
 Salesforce's Lightning team found this at scale. A Figma audit turned up thousands of detached instances of SLDS 2 components; their button icon alone had more than 3,000 detaches in a year, across almost a million instances. The team's write-up names the cost plainly: a detached instance stops receiving fixes to accessibility, behaviour and branding, and the drawing drifts away from the code ([Salesforce, Figma component health](https://www.salesforce.com/blog/figma-component-health/)).
 
-**For people,** the gain is time and trust. In a 2019 experiment by Figma's data science team, designers with an up-to-date library finished a task 34 percent faster than with old files, each designer acting as their own control. The author calls that the best case, because the library fitted the task exactly ([Figma, measuring the value of design systems](https://www.figma.com/blog/measuring-the-value-of-design-systems/)). An audit is what keeps a library close to that best case rather than drifting from it.
+**For people,** the gain is time and trust. In a 2019 experiment by Figma's data science team, designers with an up-to-date library finished a task 34 percent faster than with old files, each designer acting as their own control. The author calls that the best case, because the library fitted the task exactly ([Figma, measuring the value of design systems](https://www.figma.com/blog/measuring-the-value-of-design-systems/)). The study is from 2019, before variables and agents, and Figma is measuring its own product, so it now counts two levels weaker than its design would suggest. An audit is what keeps a library close to that best case rather than drifting from it.
 
 **For agents,** the gain is fewer guesses. An agent fills every gap in a file from its training data, which is mostly public web code. A bound colour becomes a token in the output; an unbound one becomes a hex value. The next section works through how.
 
@@ -115,7 +115,7 @@ The same holds for prototyping tools. An agent composing a screen in Figma, Figm
 
 > **Aside.** The trust gap is real but often misquoted. Figma's 2025 AI report, a survey of 2,500 users, found 68 percent of developers use prompts to generate code, and only 32 percent of designers and developers together say they can rely on AI output ([Figma, 2025 AI report](https://www.figma.com/blog/figma-2025-ai-report-perspectives/)). Figma's [MCP post](https://www.figma.com/blog/design-systems-ai-mcp/) shortens the first to "use AI to write code".
 
-Audit the library before you connect an agent to it, not after the first bad output. **Treat every unbound value, detached instance and default layer name as a line of code the agent will write wrong.** That a messy file yields messy generated code is consensus across Figma's own guidance and every team report found; how much cleaning improves the output has been measured only by vendors (the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md) covers what exists).
+Audit the library before you connect an agent to it, not after the first bad output. **Treat every unbound value, detached instance and default layer name as a line of code the agent will write wrong.** *Weight: moderate.* That a messy file yields messy generated code is the view of Figma's own guidance and every team report found, a vendor among them; how much cleaning improves the output has been measured only by vendors (the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md) covers what exists).
 
 ---
 
@@ -142,7 +142,7 @@ Those tests group into areas. One working audit uses these, and each catches som
 
 The first four matter most to an agent, because they are what it reads to choose and fill in a component. The last few matter most to people, because an agent rarely sees page order or icon naming. The series' [Part 1](../ai-and-docs/what-makes-a-design-system-agent-ready.md#layers-of-readiness) sets out which layers of a system carry readiness; this list is the Figma half of it.
 
-Start a first audit with token use and properties on your five most-used components, because that's where both people and agents feel drift first. **Audit the file as a whole as well as component by component, since page order and name collisions never show up in a component-by-component walk.** The area list is one working audit's, not a published standard; the order of priority is judgement.
+Start a first audit with token use and properties on your five most-used components, because that's where both people and agents feel drift first. **Audit the file as a whole as well as component by component, since page order and name collisions never show up in a component-by-component walk.** *Weight: weak.* The area list is one working audit's, not a published standard, and the order of priority is reasoning.
 
 ---
 
@@ -168,7 +168,7 @@ What it costs:
 - findings that depend on who audits, and drift between two auditors' calls;
 - no repeat run, so nothing tells the team whether a fix held.
 
-Use a hand audit for what only judgement can see, and hand everything countable to a tool. **A person should spend their audit time on intent and gaps, not on counting unbound fills.** That split is consensus among the systems found; the tools below exist because hand counting doesn't scale.
+Use a hand audit for what only judgement can see, and hand everything countable to a tool. **A person should spend their audit time on intent and gaps, not on counting unbound fills.** *Weight: weak.* One author argues that split; the tools below exist because hand counting doesn't scale.
 
 ---
 
@@ -213,7 +213,7 @@ Big systems turn this into routine. athenahealth's Forge team, handling around 1
 
 What to count, which denominator keeps it honest and how to report it is the subject of [measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md).
 
-Read analytics before you audit, and sort components by detach rate, not detach count. **A high detach rate is a question for the people detaching, not a finding against them.** The pattern of watching detaches is consensus across the systems above; the analytics only shows where to look, and the reason has to come from asking.
+Read analytics before you audit, and sort components by detach rate, not detach count. **A high detach rate is a question for the people detaching, not a finding against them.** *Weight: moderate.* The systems above all watch detaches, most of them reported through Figma's own blog; the analytics only shows where to look, and the reason has to come from asking.
 
 ---
 
@@ -261,7 +261,7 @@ What it costs:
 
 The strongest setups split the work. A script does the counting, deterministically: every unbound value, every detached instance. The agent then judges only what a script can't, and filters the script's candidates against the team's recorded decisions rather than raising its own. That keeps the countable findings stable between runs and puts the LLM's judgement where it earns its cost.
 
-Use an agent for descriptions, names and intent, and a script for anything countable. **Never let an agent's audit be the only record of what's wrong, because a list that changes between runs can't be worked through.** The split is judgement, drawn from one working audit and consistent with the series' advice on [checks versus evals](../ai-and-docs/what-keeps-an-agent-on-track.md#evals-versus-tests); no published comparison of agent and scripted audits was found.
+Use an agent for descriptions, names and intent, and a script for anything countable. **Never let an agent's audit be the only record of what's wrong, because a list that changes between runs can't be worked through.** *Weight: weak.* The split is drawn from one working audit and consistent with the series' advice on [checks versus evals](../ai-and-docs/what-keeps-an-agent-on-track.md#evals-versus-tests); no published comparison of agent and scripted audits was found.
 
 ---
 
@@ -287,7 +287,7 @@ By team, that resolves to:
 - **An Organization or Enterprise team:** analytics to choose targets, Check designs on screen files, a scripted audit of the library itself against the team's conventions, and an agent for the text.
 - **A team about to connect agents to the library:** all of the above on the components agents will reach first, plus a check that each has a Code Connect mapping.
 
-Pick by plan, then fill the gaps. **Use a deterministic check as the record, and people or agents to judge what it can't count.** The mix is judgement; its parts are each consensus for the job named.
+Pick by plan, then fill the gaps. **Use a deterministic check as the record, and people or agents to judge what it can't count.** *Weight: weak.* The mix is reasoning; each part is backed for its own job in the sections above.
 
 ---
 
@@ -346,7 +346,7 @@ Context fixes most of it, and context means three kinds of record:
 
 The rule that made the difference in the worked case is stronger than "set the defaults right": a check whose convention isn't recorded is skipped and reported as not checked, never run on a borrowed default. A borrowed default is always some other library's answer, and it fails silently. Precision beats coverage here, for the reason the Ditto team gave for its copy linter: false positives cost trust in aggregate, while a missed suggestion costs almost nothing ([Quinn Keast, AI style guides for product copy](https://quinnkeast.com/writing/what-we-learned-building-ai-style-guides-for-product-copy)).
 
-Write your library's conventions, decisions and exceptions down where the audit (and any agent) can read them, before the first scan. **If the audit can't find a convention, have it skip the check and say so, rather than guess.** Recording conventions is consensus; skip-don't-guess is judgement, proven on one run of 157 avoidable findings.
+Write your library's conventions, decisions and exceptions down where the audit (and any agent) can read them, before the first scan. **If the audit can't find a convention, have it skip the check and say so, rather than guess.** *Weight: strong.* Recording conventions is common advice, and skip-don't-guess was measured on one run of 157 avoidable findings.
 
 ---
 
@@ -366,7 +366,7 @@ Within each group, rank by cost. Commentary on design debt commonly scores items
 
 One trap sits in the counting. A finding count isn't a health score. 300 findings where 250 are one-click bindings is a healthier library than 40 where 30 are naming decisions. Show the count by group, not as one number; the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md#showing-readiness) argues the same for readiness.
 
-Hand the safe fixes to a tool the same day, and put the decisions on the system team's agenda with a recommendation each. **Order the queue by who has to act, then by how far the defect reaches.** The three groups are judgement, from one working audit's fix queue; ranking by reach and cost is common practice without a primary source behind any one formula.
+Hand the safe fixes to a tool the same day, and put the decisions on the system team's agenda with a recommendation each. **Order the queue by who has to act, then by how far the defect reaches.** *Weight: weak.* The three groups come from one working audit's fix queue; ranking by reach and cost is common practice without a primary source behind any one formula.
 
 ---
 
@@ -384,7 +384,7 @@ Teams that keep a system healthy run three rhythms at once:
 
 Figma has no equivalent gate on publishing a library, so the Figma side relies on the recurring pass. That makes the recurring pass's stability matter: it has to give the same list each run, so a finding closes when it's fixed and only then. That's another reason to keep the counting in a deterministic check and the judgement in a person or agent.
 
-Do the baseline once, put a deterministic recurring pass on a calendar, and gate whatever reaches code. **An audit that doesn't re-run can only tell you how the library was, not how it is.** Continuous checking is consensus among the systems found; the exact cadence is judgement and should follow how often the library changes.
+Do the baseline once, put a deterministic recurring pass on a calendar, and gate whatever reaches code. **An audit that doesn't re-run can only tell you how the library was, not how it is.** *Weight: moderate.* The systems found all check continuously; the exact cadence is reasoning and should follow how often the library changes.
 
 ---
 
@@ -413,7 +413,7 @@ No one method covers it. Library analytics tells you where to look (divide detac
 
 Write your conventions, decisions and exceptions down before the first scan. An audit that doesn't know them reports your choices as defects: one shared scanner raised 157 confident, wrong findings on a single library because it assumed another library's collection name, and given the right name, they never appeared. If a convention isn't recorded, the check should skip and say so, not guess.
 
-Sort the findings by who has to act (safe fixes, decisions, questions), then by reach. Do one baseline audit, then a recurring deterministic pass, and a lint gate wherever the system reaches code. Consensus covers the case for auditing, the mix of methods and continuous checking; the three-way sort, the skip-don't-guess rule and the specific cadence are judgement drawn from one working audit.
+Sort the findings by who has to act (safe fixes, decisions, questions), then by reach. Do one baseline audit, then a recurring deterministic pass, and a lint gate wherever the system reaches code. The case for auditing and continuous checking weigh moderate; skip-don't-guess weighs strong, measured on one run; the mix of methods, the three-way sort and the exact cadence weigh weak, drawn from one working audit.
 
 ---
 
