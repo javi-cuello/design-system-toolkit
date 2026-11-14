@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.35.0 (2026-11-14): §D 13: a full-size plan holds a Measure, its goal measured end to end before any part is built (`before:`), and the work ends on a `Measure:` line, before → after; `gates.mjs` refuses the plan and the close without them.
 - 2.34.0 (2026-11-14): §D 21: a source more than three years old on a fast-moving subject drops a weight a level, and drops add up; research articles weigh each section's advice on the same scale, which keeps one owner.
 - 2.33.0 (2026-11-13): §D 6: no tracked file, research/ included, names a customer, private project or person, or carries an email, a home path or a private session's words; `bin/check` adds `personal-info.mjs` and reads file names with spaces.
 - 2.32.0 (2026-11-12): §D 11: the periodic review lands its own work, through a fresh read-only reviewer, `bin/check` on the merge and the push hook; a hold lands nothing and reaches the next run.

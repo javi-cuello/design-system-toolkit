@@ -114,6 +114,8 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
   ok('a code-only prop is no axis of the drawing; a combination at its default stays, one away from it goes',
     !('graphic' in f.props) && f.variants.length === 2 && JSON.stringify(f.variants[1].when) === '{"size":"lg"}' && plan(two).variants.length === 2);
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
+  ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
+  ok('every combination is compared unless a caller cuts them, and a cut is said, never silent', roundTrip(two, two).cut === undefined && roundTrip(two, two, { limit: 1 }).cut === 1 && roundTrip(two, two, { limit: 1 }).combinations === 1);
   const g = figmaSide({ ...two, variants: [{ when: { graphic: 'none' }, set: { 'root.radius': 'R/1' } }], invalid: [{ size: 'lg', graphic: 'none' }, { graphic: 'cup' }] });
   ok('a variant naming only its default holds everywhere; a combination not drawn loses it, or goes with its other values',
     g.variants.length === 1 && JSON.stringify(g.variants[0].when) === '{}' && JSON.stringify(g.invalid) === '[{"size":"lg"}]');
@@ -208,6 +210,24 @@ delete globalThis.figma;
   slot.anatomy.label = { kind: 'slot', parent: 'root', width: 100, height: 100, content: '{children}' };
   const r = roundTrip(lib, slot);
   ok('a text drawn as an empty slot is a difference in every combination, and so are the props', r.rows.some((x) => x.at === 'label.kind' && x.library === 'text' && x.drawn === 'slot' && x.in === 2) && r.rows.some((x) => x.at === 'props'));
+  {
+    const ic = (anatomy) => ({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container' }, ...anatomy }, variants: [] });
+    const figma = (g) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house' }, 'icon/vector': { kind: 'graphic', parent: 'icon', background: 'Icon/strong', ...g } });
+    const code = (c) => ic({ icon: { kind: 'instance', parent: 'root', component: 'Icon/house', background: c } });
+    ok('an icon coloured on its glyph (Figma) and on the instance (code) is the same colour; another colour differs',
+      roundTrip(figma(), code('Icon/strong')).rows.length === 0 && roundTrip(figma(), code('Icon/soft')).rows.length === 1);
+    ok('a glyph that overrides more than its colour (its size) is compared as it is, never folded away',
+      roundTrip(figma({ width: 16.67 }), figma({ width: 20 })).rows.length === 1 && roundTrip(figma({ width: 16.67 }), code('Icon/strong')).rows.length > 0);
+  }
+  {
+    const bx = (b) => ({ contract: 1, component: 'Box', props: {}, anatomy: { root: { kind: 'container', border: { color: 'S/a', ...b } } }, variants: [] });
+    ok('a border equal on four sides is one width; a border on one side is not',
+      roundTrip(bx({ width: ['S/1', 'S/1', 'S/1', 'S/1'], sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ width: 'S/1' })).rows.length === 0
+      && roundTrip(bx({ width: ['S/1', 0, 0, 0], sides: { top: 1, end: 0, bottom: 0, start: 0 } }), bx({ width: 'S/1' })).rows.length > 0);
+    ok('an unbound weight, said by its sides alone, is that width: 1 on every side is 1, and 2 differs from it',
+      roundTrip(bx({ sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ width: 1 })).rows.length === 0
+      && roundTrip(bx({ sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ sides: { top: 2, end: 2, bottom: 2, start: 2 } })).rows.length === 1);
+  }
   ok('another name is a difference', roundTrip(lib, { ...same, component: 'Badge-x' }).rows.some((x) => x.at === 'name'));
   const withIcon = (c) => ({ ...lib, anatomy: { ...lib.anatomy, icon: { kind: 'instance', parent: 'root', component: c } } });
   ok('an icon named by its set alone in the drawing is the library\'s Icon/house; another icon is still a difference',

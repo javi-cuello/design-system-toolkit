@@ -118,7 +118,7 @@ test('the loop runs end to end: plan, edit, review, close, push', (t) => {
   assert.match(JSON.parse(out.stdout).hookSpecificOutput.permissionDecisionReason, /planned before it is built/);
   add({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'e0', is_error: true, content: 'refused' }] } });
   // 2. the plan written: the same edit goes through
-  fs.writeFileSync(path.join(tmp, `toolkit-plan-${session_id}.md`), '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n');
+  fs.writeFileSync(path.join(tmp, `toolkit-plan-${session_id}.md`), '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Measure\nbefore: node eval.mjs — 3 of 9 differ\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n');
   add(call('Edit', big, 'e1'));
   out = hook('edit', { ...pre, tool_use_id: 'e1' });
   assert.ok(!denied(out) && !/failed/.test(out.stdout), `a planned edit goes through: ${out.stdout}`);
@@ -131,7 +131,7 @@ test('the loop runs end to end: plan, edit, review, close, push', (t) => {
   add(call('Agent', { description: 'Review the change', prompt: 'Review this diff', subagent_type: 'Explore' }, 'r1'), result('r1', 'No High findings.'));
   assert.match(blocked(hook('stop', { session_id, transcript_path, cwd: TOOLKIT, last_assistant_message: 'Done.' })) || '', /^Reviewed full-size work ends/);
   // 5. the close said: the turn ends, and the push goes
-  const close = 'Done.\nToolkit: nothing; checked the standards.\nOpen: nothing.\nDocs: README.md still right.';
+  const close = 'Done.\nMeasure: 3 of 9 differ → 0.\nToolkit: nothing; checked the standards.\nOpen: nothing.\nDocs: README.md still right.';
   assert.equal(hook('stop', { session_id, transcript_path, cwd: TOOLKIT, last_assistant_message: close, stop_hook_active: true }).stdout, '');
   // the gate ran and closed the work (a gate that threw would also print nothing): the plan is put aside
   assert.ok(fs.readdirSync(tmp).some((f) => f.startsWith(`toolkit-plan-${session_id}-`) && f.endsWith('.done.md')), 'the closed work\'s plan is put aside');

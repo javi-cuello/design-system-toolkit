@@ -28,8 +28,8 @@ function session(lines, { checked = true } = {}) {
 }
 const user = (text) => ({ type: 'user', origin: { kind: 'human' }, message: { content: text } });
 const harness = (text) => ({ type: 'user', isMeta: true, origin: null, message: { content: text } });
-const PLAN_TEXT = '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n';
-const DONE = 'Done.\nToolkit: nothing; checked the standards.\nOpen: nothing.';
+const PLAN_TEXT = '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Measure\nbefore: node eval.mjs — 3 of 9 differ\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n';
+const DONE = 'Done.\nMeasure: 3 of 9 differ → 0.\nToolkit: nothing; checked the standards.\nOpen: nothing.';
 const call = (name, input) => ({ type: 'assistant', cwd: TOOLKIT, message: { content: [{ type: 'tool_use', name, input }] } });
 const edit = (rel, lines = 1) => call('Edit', { file_path: path.join(TOOLKIT, rel), old_string: 'a', new_string: Array(lines).fill('b').join('\n') });
 const review = (extra = {}) => call('Agent', { description: 'Review the gates', prompt: 'Review this diff', subagent_type: 'Explore', ...extra });
@@ -136,6 +136,20 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a subheading inside Before, and a quoted paste, still count');
   fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('green\n', '== 2 FAILED (detail above each):\n'));
   assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a red inherited check is a finding, and the plan may proceed on it');
+  // top-down (14 Nov): the goal measured end to end before a part is built
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('## Measure\nbefore: node eval.mjs — 3 of 9 differ\n', ''));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /the Measure section/, 'a plan without the end-to-end measure is refused');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('before: node eval.mjs — 3 of 9 differ', 'we will measure later'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'a heading without the before line is not a measure');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('before: node eval.mjs — 3 of 9 differ', 'before:\nTBD'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'an empty before line, with words on the next, is not a measure');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('before: node eval.mjs — 3 of 9 differ', '**Before:** `TBD`'));
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('before: node eval.mjs — 3 of 9 differ', 'before: _TBD_'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'or in underscores');
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'a placeholder in bold or code is still a placeholder');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('## Measure\nbefore: node eval.mjs — 3 of 9 differ\n', '## Measure\n').replace('## Goal\nx', '## Goal\nbefore: x'));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'the line counts only under Measure');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT);
   // the run itself, read from the transcript: a pasted line can be written after the fact
   const unrun = session([user('go'), edit('a.mjs', 200)], { checked: false });
   fs.writeFileSync(planPath(unrun.id), PLAN_TEXT);
@@ -226,8 +240,9 @@ test('review gate: a turn with full-size edits since the last review is blocked;
 test('feedback gate: a turn that ran a review ends with the toolkit question answered', () => {
   const s = session([user('build it'), edit('a.mjs', 200), review()]);
   assert.match(stopGate(s.id, s.file, REPOS, 'Done.'), /"Toolkit:" and a line starting "Open:"/);
-  assert.match(stopGate(s.id, s.file, REPOS, 'Done.\n**Toolkit:** nothing'), /^Reviewed full-size work ends with a line starting "Open:"/);
-  assert.equal(stopGate(s.id, s.file, REPOS, 'Done.\n\n**Toolkit:** nothing; checked the standards.\nOpen: nothing.\nDocs: README.md still right.'), null);
+  assert.match(stopGate(s.id, s.file, REPOS, 'Done.\n**Toolkit:** nothing'), /^Reviewed full-size work ends with a line starting "Measure:" and a line starting "Open:"/);
+  assert.match(stopGate(s.id, s.file, REPOS, 'Done.\nMeasure: 3 → 0\n**Toolkit:** nothing'), /^Reviewed full-size work ends with a line starting "Open:"/, 'the end-to-end measure, run again, closes the work (top-down, 14 Nov)');
+  assert.equal(stopGate(s.id, s.file, REPOS, 'Done.\n\nMeasure: 3 of 9 differ → 0.\n**Toolkit:** nothing; checked the standards.\nOpen: nothing.\nDocs: README.md still right.'), null);
   s.clean();
 });
 
@@ -501,7 +516,7 @@ test('closing reviewed work puts its plan aside, so the next full-size work plan
 test('a plan that falls short says what it lacks', () => {
   const s = session([user('go'), edit('a.mjs', 200)]);
   fs.writeFileSync(planPath(s.id), '# Plan\n## Goal\nx\n## Impact\nsummary\n');
-  assert.match(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: 'b' } }, TOOLKIT), /lacks the Before section and the Claims section and the Beyond scope section and the Budget section and the Review section and bin\/check's closing line under Before[\s\S]* and the answers to §D 1, §D 2 and §D 5 under Before and impact\.mjs's output/);
+  assert.match(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: 'b' } }, TOOLKIT), /lacks the Before section and the Measure section and the Claims section and the Beyond scope section and the Budget section and the Review section and bin\/check's closing line under Before[\s\S]* and the answers to §D 1, §D 2 and §D 5 under Before and a "before:" line under Measure[\s\S]* and impact\.mjs's output/);
   s.clean();
 });
 

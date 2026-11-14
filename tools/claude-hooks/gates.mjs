@@ -41,8 +41,9 @@ export const WIDE_LINES = 10;
 // skill edit "full" (version, changelog, cases).
 const WORKTREE = /^\.claude\/worktrees\//;
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
-// The plan's sections, each a heading; Before must hold bin/check's closing line, Impact impact.mjs's output.
-export const PLAN = ['Before', 'Goal', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
+// The plan's sections, each a heading; Before must hold bin/check's closing line, Measure the goal measured
+// end to end before any part is built, Impact impact.mjs's output.
+export const PLAN = ['Before', 'Goal', 'Measure', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
 
 /* Unreviewed work a session left uncommitted, kept for the next session in
    the same repo: two small halves in two sessions are one full-size change. */
@@ -573,6 +574,8 @@ const planGaps = (text, st = {}, work = []) => [...PLAN.filter((h) => !new RegEx
   // the closing line is asked for only where a repo the work touches has a check to close
   ...(!work.some((r) => fs.existsSync(path.join(r, 'bin', 'check'))) || CHECK_END.test(section(text, 'Before')) ? [] : ["bin/check's closing line under Before (\"green…\", \"== N FAILED…\" or the project's own, pasted from the run before the work)"]),
   ...(['§D 1', '§D 2', '§D 5'].every((q) => new RegExp(`${q}(?!\\d)`).test(section(text, 'Before'))) ? [] : ['the answers to §D 1, §D 2 and §D 5 under Before']),
+  // top-down: the whole goal is measured before a part is built, so parts are chosen by what the measure says (14 Nov)
+  ...(/^\W*before\W*:[ \t*_`"(-]*(?!(?:tbd|todo|later|n\/a)(?![a-z0-9]))[a-z0-9]/im.test(section(text, 'Measure')) ? [] : ['a "before:" line under Measure: the goal measured end to end before any part is built — the command and what it said']),
   ...(/\(\d+ readers?\)/.test(text) ? [] : ["impact.mjs's output under Impact (its \"(N readers)\" lines, pasted, not summarised)"])];
 
 /* PreToolUse: measures a rewrite against the file it replaces, then refuses
@@ -619,6 +622,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   return `This work is full-size (${s.why.join(', ')}), so it is planned before it is built (toolkit-standard §D 13). ${gaps ? `The plan at ${plan} lacks ${gaps.join(' and ')}; complete it` : `Write the plan to ${plan}`}, then retry this call. Sections, each a heading:\n`
     + `  ## Before — the closing line of the repo's bin/check run before the work, pasted ("green…", "== N FAILED…", or the project's own), and the answers to §D 1, §D 2 and §D 5 (does the toolkit own this job; would the next project want it; is a new reader about stored state or the present)\n`
     + `  ## Goal — what done means\n`
+    + `  ## Measure — "before:" the goal measured end to end, before any part is built: the command that runs the whole path and what it said (a count, a pass rate); the parts are chosen from what it shows, and the work ends by running it again\n`
     + `  ## Impact — the output of: node ${SHOWN}/tools/claude-hooks/impact.mjs ${files.map((f) => JSON.stringify(f)).join(' ')} <and the files still to come>; what each reader needs\n`
     + `  ## Claims — each claim the output's correctness or the work's scope rests on (a tool's limit, an API's behaviour, a file's state, what a test proves): checked (the probe run or the primary source read) or only believed, what being wrong would cost, and the check that settles a believed one before work rests on it; a "cannot" that would drop or shrink the work is probed first\n`
     + `  ## Beyond scope — what nearby is broken, missing or stale, and whether this change fixes it (no loose ends: what is not fixed is named and why)\n`
@@ -653,15 +657,16 @@ export function stopGate(session, transcript, repos, lastMessage, cwd = process.
     // the person sees this too: short, the method in §D 13
     return `Not done yet: ${s.why.join(', ')} changed since the last review (toolkit-standard §D 13). `
       + `Run the checks, then fresh read-only reviewers (Explore, never a fork, "review" in the description) on the diff (git -C ${dirs.join(' / git -C ')} diff) and the plan at ${planPath(session)}, one area each. `
-      + `Fix what is real; repeat until no new High. End with "Toolkit:", "Open:" and "Docs:" lines.`;
+      + `Fix what is real; repeat until no new High. End with "Measure:" (before → after), "Toolkit:", "Open:" and "Docs:" lines.`;
   }
   // a review still running has not closed the work: launching one is not finishing (28 Oct, the gate's first run)
   if (st.owed && !st.reviewing.length) {
     const stale = staleDocs(st, repos);
-    const missing = ['Toolkit', 'Open', ...(stale.length ? ['Docs'] : [])].filter((k) => !new RegExp(`^\\W*${k}\\W*:`, 'im').test(lastMessage || ''));
+    const missing = ['Measure', 'Toolkit', 'Open', ...(stale.length ? ['Docs'] : [])].filter((k) => !new RegExp(`^\\W*${k}\\W*:`, 'im').test(lastMessage || ''));
     if (missing.length) {
       carry(session, st); save(session, st);
       return `Reviewed full-size work ends with ${missing.map((k) => `a line starting "${k}:"`).join(' and ')} (§D 13): `
+        + `"Measure:" the plan's end-to-end measure, before → after, run again now; `
         + `"Toolkit:" what goes back to the toolkit, or "nothing"; "Open:" what is left and why, or "nothing"`
         + (stale.length ? `; "Docs:" whether each of these READMEs is updated or still right: ${stale.join(', ')}` : '') + '.';
     }

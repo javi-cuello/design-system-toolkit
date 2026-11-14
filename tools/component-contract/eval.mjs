@@ -1,0 +1,133 @@
+#!/usr/bin/env node
+/*
+ * The pipeline held to its goal, end to end: a component that goes from Figma to code, or to Figma and back, comes back
+ * the same contract. Each official contract (official.mjs) is compared by value (to-figma's roundTrip: every combination
+ * the library draws, expanded from both sides) with
+ *
+ *   browser  the contract from-code read off the code as it renders (parity/from-code/<component>.json, kept by
+ *            from-code: a run that reads the same writes nothing)
+ *   figma    the contract read back from to-figma's drawing of it by the snapshot's walk and derive
+ *            (<home>/round-trip/<component>.roundtrip.json, written by --draw)
+ *
+ * and the differing rows are counted per component and per field. The counts accepted are stored
+ * (<home>/round-trip/accepted.json); --check fails where a count rose, or a reading went, against them, and --accept
+ * stores the present ones. A count only falls by a fix: the difference is a battery case first (test-battery.mjs),
+ * then a row of the translation table (rules.mjs), then the count drops and is accepted.
+ *
+ *   node tools/component-contract/eval.mjs --project <label> [--fields] [--check | --accept]
+ *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [components…]
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { contracts } from './official.mjs';
+import { roundTrip } from './to-figma.mjs';
+
+const req = createRequire(import.meta.url);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+/* A row's field, with the element said as * (a field that differs in many elements is one cause). */
+export const fieldOf = (at) => (at.includes('.') ? `*.${at.split('.').slice(1).join('.')}` : at).replace(/\.\d+(?=\.|$)/g, '.N');
+
+/* Both legs for one project: { home, legs: { browser, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
+export function measure(where) {
+  const home = where.projectDir;
+  const readings = path.join(home, 'parity', 'from-code');
+  const drawn = path.join(home, 'round-trip');
+  const read = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+  const legs = { browser: {}, figma: {} };
+  for (const { folder, contract } of contracts(where)) {
+    const code = read(path.join(readings, `${folder}.json`));
+    if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
+    else { const r = roundTrip(contract, code.asFigma); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }) }; }
+    const back = read(path.join(drawn, `${folder}.roundtrip.json`));
+    legs.figma[folder] = back ? { rows: back.rows, combinations: back.combinations, ...(back.cut && { cut: back.cut }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
+  }
+  return { home, legs };
+}
+
+/* The counts a measure stands at, and what rose or went against the accepted ones. */
+export const counts = (legs) => Object.fromEntries(Object.entries(legs).map(([leg, cs]) => [leg, Object.fromEntries(Object.entries(cs).filter(([, x]) => x.rows).map(([c, x]) => [c, x.rows.length]))]));
+export function worse(now, accepted) {
+  const out = [];
+  for (const [leg, cs] of Object.entries(accepted || {})) for (const [c, n] of Object.entries(cs)) {
+    const m = (now[leg] || {})[c];
+    if (m === undefined) out.push(`${leg} ${c}: accepted at ${n}, now not measured`);
+    else if (m > n) out.push(`${leg} ${c}: ${n} → ${m}`);
+  }
+  // a component measured since the accept is held from its first count: accepted once, with what its rows say
+  for (const [leg, cs] of Object.entries(now)) for (const [c, m] of Object.entries(cs)) if (m > 0 && ((accepted || {})[leg] || {})[c] === undefined) out.push(`${leg} ${c}: newly measured at ${m}, not accepted yet`);
+  return out;
+}
+
+function report(label, { legs }, fields) {
+  for (const [leg, cs] of Object.entries(legs)) {
+    const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
+    const rows = m.flatMap(([, x]) => x.rows);
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => !x.rows.length).length} of ${m.length} the same, ${rows.length} differing rows${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
+    if (!fields) continue;
+    const by = {};
+    for (const r of rows) by[fieldOf(r.at)] = (by[fieldOf(r.at)] || 0) + 1;
+    for (const [f, n] of Object.entries(by).sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(4)}  ${f}`);
+  }
+}
+
+/* contract → to-figma → the scratch file → the snapshot's walk and derive → contract, per component: to-figma's own
+   --verify reads it back and writes <component>.roundtrip.json beside the contract it was given. */
+function draw(where, label, into, only) {
+  const dir = path.join(where.projectDir, 'round-trip');
+  fs.mkdirSync(dir, { recursive: true });
+  let fails = 0;
+  const failed = (folder, what, out) => { console.log(`${folder}: ${what} — ${out.trim().split('\n').pop()}`); process.exitCode = 1; if (++fails < 3) return false; console.log('three failures in a row: stopped'); process.exitCode = 1; return true; };
+  for (const { folder, contract } of contracts(where)) {
+    if (only.length && !only.includes(folder)) continue;
+    const file = path.join(dir, `${folder}.json`);
+    fs.writeFileSync(file, JSON.stringify(contract, null, 2) + '\n');
+    // the last run's reading goes first: a drawing that fails now must not be counted by the last one's rows
+    fs.rmSync(path.join(dir, `${folder}.roundtrip.json`), { force: true });
+    const run = (args) => { try { return { out: execFileSync('node', [path.join(HERE, 'to-figma.mjs'), file, ...args, '--project', label, '--into', into, '--library', file, '--folder', folder], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), ok: true }; } catch (e) { return { out: `${e.stdout || ''}${e.stderr || ''}`, ok: false }; } };
+    // a drawing still holding the file (one that failed lets go within a minute), or a connection that dropped, is waited
+    // out: 15 s, four times, then it counts as a failure
+    let d = run(['--run']);
+    for (let i = 0; i < 4 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = run(['--run']); }
+    if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
+    const v = run(['--verify']);
+    fs.unlinkSync(file);
+    fs.rmSync(path.join(dir, `${folder}.drawn.json`), { force: true });
+    const line = v.out.split('\n').find((l) => /against the library's own/.test(l));
+    if (!line) { if (failed(folder, 'not read back', v.out)) return; continue; }
+    fails = 0;
+    console.log(line);
+  }
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
+  const argv = process.argv.slice(2);
+  const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
+  const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
+  const label = opt('--project'), into = opt('--draw');
+  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept');
+  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]'); process.exit(2); }
+  const where = req('../snapshot/projects.cjs').layout(null, label);
+  if (where.error) { console.error(where.error); process.exit(2); }
+  if (into) { draw(where, label, into, argv); process.exit(); }
+  const m = measure(where);
+  report(label, m, fields);
+  const file = path.join(m.home, 'round-trip', 'accepted.json');
+  const now = counts(m.legs);
+  if (accept) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(now, null, 2) + '\n');
+    console.log(`accepted: ${path.relative(process.cwd(), file)}`);
+  } else if (check) {
+    if (!fs.existsSync(file)) { console.log(`no accepted counts at ${file}: run with --accept once`); process.exit(1); }
+    // a check that measured nothing has not passed: the project reads its components first, or rules the gate out
+    if (!Object.values(now).some((cs) => Object.keys(cs).length)) { console.log('nothing measured: no component has a reading from code or from Figma'); process.exit(1); }
+    const bad = worse(now, JSON.parse(fs.readFileSync(file, 'utf8')));
+    for (const b of bad) console.log(`  rose: ${b}`);
+    if (bad.length) { console.log('a count rose against the accepted one: fix what the rows say, or accept with a reason in the commit'); process.exit(1); }
+  }
+}

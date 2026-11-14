@@ -49,7 +49,7 @@ const { expand } = req('./derive.cjs');
 const slotName = (e, props) => { const ref = e.kind === 'slot' && typeof e.content === 'string' && /^\{(.+)\}$/.exec(e.content); return ref ? (props[ref[1]] || {}).figma ?? null : null; };
 
 /* A drawing from code held to the library's own component: each combination the library draws (its enums and booleans,
-   at most 256), expanded from both contracts and compared field by field, so how a contract is worded (its default,
+   every one: 1,440 take 0.1 s; a caller's `limit` cuts them, and the cut is said), expanded from both contracts and compared field by field, so how a contract is worded (its default,
    its order of values) does not count and what a variant draws does; then the props' names and kinds and the
    component's name. Rows: { at, library, drawn, in } where `in` counts the combinations it differs in. */
 /* A root that fills the room it is given is, in the room it was drawn or read in, that room's width (a ruling: a
@@ -64,7 +64,48 @@ function room(x) {
   return { ...x, root };
 }
 
-export function roundTrip(library, drawn, { limit = 256 } = {}) {
+/* An icon's colour, said two ways: Figma colours the one glyph inside an instance (Icon/house's vector), code colours
+   the instance (an svg filled with currentColor). Compared as the instance's: the glyph's colour moves up to an
+   instance that has none, and the glyph, whose shape is its component's, goes. Only where the instance holds that one
+   graphic and nothing else. */
+function glyph(x) {
+  if (!x) return x;
+  const out = { ...x };
+  // a glyph's own words: what says where it is, not what it draws
+  const PLACE = new Set(['kind', 'parent', 'name', 'order', 'background']);
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || e.kind !== 'instance') continue;
+    const inside = Object.keys(x).filter((k) => k.startsWith(`${id}/`));
+    const kid = inside.length === 1 && x[inside[0]].parent === id && x[inside[0]].kind === 'graphic' ? x[inside[0]] : null;
+    // only a colour moves up: a glyph that also overrides its size, or an instance with a colour of its own, is compared as it is
+    if (!kid || kid.background == null || e.background != null || Object.keys(kid).some((k) => !PLACE.has(k))) continue;
+    out[id] = { ...e, background: kid.background };
+    delete out[inside[0]];
+  }
+  return out;
+}
+
+/* A border the same on all four sides is one width: Figma's individual strokes, all equal, list it four times (a bound
+   weight) and say each side's weight again (sides, the only width an unbound weight has); code reads one border-width. */
+function border(x) {
+  if (!x) return x;
+  const out = { ...x };
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const [id, e] of Object.entries(x)) {
+    const b = e && e.border;
+    if (!b || (!Array.isArray(b.width) && !b.sides)) continue;
+    const sides = b.sides ? ['top', 'end', 'bottom', 'start'].map((k) => b.sides[k]) : null;
+    const w = Array.isArray(b.width) ? b.width : b.width !== undefined ? [b.width, b.width, b.width, b.width] : sides;
+    if (!w || !w.every((v) => same(v, w[0])) || w[0] === 0 || w[0] == null) continue;
+    // the sides say the same weight on every side, nothing more (a bound width's sides are its numbers)
+    if (sides && (!sides.every((v) => v === sides[0]) || sides[0] === 0)) continue;
+    const { sides: _, ...rest } = b;
+    out[id] = { ...e, border: { ...rest, width: w[0] } };
+  }
+  return out;
+}
+
+export function roundTrip(library, drawn, { limit = Infinity } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
   const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
@@ -79,7 +120,12 @@ export function roundTrip(library, drawn, { limit = 256 } = {}) {
   const low = (x) => String(x).toLowerCase();
   const axes = Object.entries(library.props).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
   let combos = [{}];
-  for (const [k, vs] of axes) combos = combos.flatMap((c) => vs.map((v) => ({ ...c, [k]: v }))).slice(0, limit);
+  for (const [k, vs] of axes) combos = combos.flatMap((c) => vs.map((v) => ({ ...c, [k]: v })));
+  // a combination the library does not draw (its `invalid`: a disabled button has no hover) has nothing to compare
+  const notDrawn = (c) => (library.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v)));
+  const invalid = combos.filter(notDrawn).length; combos = combos.filter((c) => !notDrawn(c));
+  // past the limit the rest are not compared, and said: a cut that is not said reads as the same
+  const cut = Math.max(0, combos.length - limit); combos = combos.slice(0, limit);
   const named = Object.fromEntries(Object.entries(drawn.props).map(([k, q]) => [low(q.figma || k), k]));
   for (const c of combos) {
     const theirs = {};
@@ -87,12 +133,12 @@ export function roundTrip(library, drawn, { limit = 256 } = {}) {
       const dk = named[low(library.props[k].figma || k)] || k, dq = drawn.props[dk];
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
-    diff(room(expand(library, { ...variantDefaults(library), ...c })), room(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
+    diff(border(glyph(room(expand(library, { ...variantDefaults(library), ...c })))), border(glyph(room(expand(drawn, { ...variantDefaults(drawn), ...theirs })))), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
-  return { combinations: combos.length, rows: [...rows.values()] };
+  return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()] };
 }
 
 // a boolean's own layer is named for the prop that shows it in its id (derive.cjs idOf: Show icon's Icon is
@@ -1066,9 +1112,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const target = opt('--patch');
   // the contract the update was made from: the library's component, read live, must still be it
   const baseFile = opt('--base');
+  // the contract to hold the read-back to, and its folder: the official one, where the caller has it (eval.mjs)
+  const libraryFile = opt('--library'), libraryFolder = opt('--folder');
   if (target && !check) run = true;
   const [report, keysFile] = argv;
-  if (!report || (!run && !check && !keysFile) || ((run || check) && (!label || !into))) { console.error('usage: to-figma.mjs <from-code report> <keys.json>            prints the plugin code\n       to-figma.mjs <from-code report> --run --project <label> --into <scratch fileKey>   draws it through the project\'s docs service\n       to-figma.mjs <contract> --patch <set id> [--base <contract>] --project <label> --into <fileKey>   updates that component set in place, refused where the set is no longer the base\n       to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey> [--patch <set id>]   reads the drawing back and holds it to the contract'); process.exit(2); }
+  if (!report || (!run && !check && !keysFile) || ((run || check) && (!label || !into))) { console.error('usage: to-figma.mjs <from-code report> <keys.json>            prints the plugin code\n       to-figma.mjs <from-code report> --run --project <label> --into <scratch fileKey>   draws it through the project\'s docs service\n       to-figma.mjs <contract> --patch <set id> [--base <contract>] --project <label> --into <fileKey>   updates that component set in place, refused where the set is no longer the base\n       to-figma.mjs <contract> --verify --project <label> --into <scratch fileKey> [--patch <set id>] [--library <contract> --folder <component folder>]   reads the drawing back and holds it to the contract, and to the library\'s own (its contract.json, or the one --library names)'); process.exit(2); }
   const r = JSON.parse(fs.readFileSync(report, 'utf8'));
   const c = r.asFigma || r;
   // with no project, the house's own axis order (audit-defaults, derived as for a library)
@@ -1109,8 +1157,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     let back = 0;
     let index = {};
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: no library component to hold it to */ }
-    const folder = !target && Object.keys(index).find((k) => index[k].name === p.name);
-    const libFile = folder && path.join(where.paths.components, folder, 'contract.json');
+    const folder = !target && (libraryFolder || Object.keys(index).find((k) => index[k].name === p.name));
+    const libFile = folder && (libraryFile || path.join(where.paths.components, folder, 'contract.json'));
     if (libFile && fs.existsSync(libFile)) {
       const setId = await exec(`await figma.loadAllPagesAsync(); const pg = figma.root.children.find((x) => x.name === ${JSON.stringify(p.name)}); const s = pg && pg.children.find((x) => (x.type === 'COMPONENT_SET' || x.type === 'COMPONENT') && x.name === ${JSON.stringify(p.name)}); return s ? s.id : null;`, into, 60000);
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
@@ -1123,7 +1171,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now);
         back = rt.rows.length;
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
-        const body = JSON.stringify({ component: p.name, combinations: rt.combinations, rows: rt.rows }, null, 2) + '\n';
+        const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows }, null, 2) + '\n';
         if (!fs.existsSync(rtOut) || fs.readFileSync(rtOut, 'utf8') !== body) fs.writeFileSync(rtOut, body);
         console.log(`${p.name} as drawn, against the library's own: ${back ? `${back} difference(s)` : 'the same'} over ${rt.combinations} combination(s) — ${path.relative(process.cwd(), rtOut)}`);
         for (const r of rt.rows.slice(0, 12)) console.log(`  ${r.at}: library ${JSON.stringify(r.library)}, drawn ${JSON.stringify(r.drawn)} (${r.in}/${rt.combinations})`);
