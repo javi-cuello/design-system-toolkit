@@ -90,9 +90,9 @@ function draw(where, label, into, only) {
     fs.rmSync(path.join(dir, `${folder}.roundtrip.json`), { force: true });
     const run = (args) => { try { return { out: execFileSync('node', [path.join(HERE, 'to-figma.mjs'), file, ...args, '--project', label, '--into', into, '--library', file, '--folder', folder], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), ok: true }; } catch (e) { return { out: `${e.stdout || ''}${e.stderr || ''}`, ok: false }; } };
     // a drawing still holding the file (one that failed lets go within a minute), or a connection that dropped, is waited
-    // out: 15 s, four times, then it counts as a failure
+    // out: 15 s, eight times (a failed one lets go within two minutes), then it counts as a failure
     let d = run(['--run']);
-    for (let i = 0; i < 4 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = run(['--run']); }
+    for (let i = 0; i < 8 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = run(['--run']); }
     if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
     const v = run(['--verify']);
     fs.unlinkSync(file);
