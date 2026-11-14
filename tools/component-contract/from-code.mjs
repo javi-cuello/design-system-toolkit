@@ -42,7 +42,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
-import { parseColour, weightName, insetStroke } from '../parity/values.mjs';
+import { parseColour, weightName, insetStroke, sideStrokes } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -80,6 +80,16 @@ const sameColour = (a, b) => { const x = parseColour(a), y = parseColour(b); ret
    for a full round. A percentage is of the box (50% rounds a square fully),
    never pixels; a length rounder than the box's longest side is full too.
    Run in the page, so it names nothing outside itself. */
+/* Another component's instance, its words: the props that put words in that component's texts, in its tree's order,
+   one for each word it shows (counted alike, else none is guessed); a word this component's own prop put there (its
+   stand-in, slotMark) is that prop, as a text's content says it: {prop}. Tested by test-from-code.mjs. */
+export function wordsOf(fc, texts, own = {}) {
+  const said = Object.values(fc.anatomy).filter((t) => t.kind === 'text' && typeof t.content === 'string').map((t) => /^\{(.+)\}$/.exec(t.content)).filter(Boolean).map((m) => fc.props[m[1]]).filter((q) => q && q.type === 'string');
+  if (!texts.length || said.length !== texts.length) return {};
+  const ownProp = (t) => { const m = /^slot·(.+)·here$/.exec(t); const k = m && Object.keys(own).find((k) => own[k].code === m[1] || k === m[1]); return k ? `{${k}}` : t; };
+  return Object.fromEntries(said.map((q, i) => [q.figma, ownProp(texts[i])]));
+}
+
 export function cornerOf(css, w, h) {
   const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
   const pct = /%$/.test(css) ? parseFloat(css) : null;
@@ -497,6 +507,12 @@ async function governedSource(project, name) {
     // another component of the library inside this one, by the project's instance pattern (parity.instance)
     instanceOf: (slug) => (project.parity.instance ? project.parity.instance.replace(/\{(?:slug|Name)\}/, slug) : null),
     instancePattern: project.parity.instance ? (await import('../parity/pair.mjs')).rootPattern(project.parity.instance) : null,
+    // another component's layers, by its folder: each contract element's selector, as its own mapping places it
+    partsOf: (slug) => {
+      const x = project.targets.find((y) => y.kind === 'component' && y.folder === slug);
+      if (!x || !x.mapping) return null;
+      try { return Object.fromEntries(Object.entries(governedReading(x, bridge(req('../snapshot/store.cjs').readSpec(project.paths.components, slug, { compact: true }))).elements()).map(([id, e]) => [id, e.selector])); } catch { return null; }
+    },
     // another component's mapping axes, by its folder: the props an instance of it is drawn at
     axesOf: (slug) => { const x = project.targets.find((y) => y.kind === 'component' && y.folder === slug); return x && x.mapping ? x.mapping.axes || null : null; },
     // its mapping's named combinations (Inverse=True, Feedback=Neutral → { inverse: true }), where it lists them instead of axes
@@ -583,7 +599,7 @@ async function main() {
   const codeOnly = argv.includes('--code-only'); if (codeOnly) argv.splice(argv.indexOf('--code-only'), 1);
   const name = argv[0];
   if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only]'); process.exit(2); }
-  const { judge, elementIn, authoredWidth, authoredVars, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
+  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
   try { L = await openSource(label, name, { rebuild, codeOnly }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
@@ -677,6 +693,12 @@ async function main() {
     let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
     const marks = Object.entries(props).filter(([, p]) => p.type === 'slot').map(([k, p]) => [slotMark(p.code), k]);
+    // for another component drawn inside this one: each of its booleans that shows a layer, by that layer's selector in its own mapping
+    const shownSel = Object.fromEntries(Object.keys(others).map((slug) => {
+      const fc = official.get(slug), parts = L.partsOf ? L.partsOf(slug) : null;
+      if (!fc || !parts) return [slug, {}];
+      return [slug, Object.fromEntries(Object.values(fc.props).filter((q) => q.type === 'boolean' && q.shows && parts[q.shows[0]]).map((q) => [q.figma, parts[q.shows[0]]]))];
+    }));
     for (const [k, p] of Object.entries(props)) if (p.type === 'slot') slotArgs[p.code] = slotMark(p.code);
 
     // one render, read as anatomy. The walk starts at the component's own root: the mapping's `root`, or
@@ -708,9 +730,10 @@ async function main() {
         // (as a block of that width, whatever the story's wrapper lays out)
         Object.assign(up.style, { display: 'block', width: `${w}px`, minWidth: '0', maxWidth: 'none', padding: '0' });
       }, [rootSel, L.container, !L.root, room]);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
+        const sideStrokes = new Function(`return ${sidesSrc}`)();
         // a colour that paints nothing: fully transparent, whatever its channels
         const clear = (c) => /rgba\(.*,\s*0\)$|transparent/.test(c);
         let root = document.querySelector(sel); if (!root) return null;
@@ -760,13 +783,32 @@ async function main() {
           // another component of the library, drawn inside this one (a chip's avatar): an instance of it, its
           // inside the other component's business; named by the library's own class (MuiAvatar-root)
           const other = parent != null && rootRe && [...n.classList, n.tagName.toLowerCase()].map((c) => (c.match(new RegExp(rootRe)) || [])[1]).find((x) => x && others[x]);
+          // another component's root, by the same test: a class the instance pattern matches and a component of the library names
+          function isRoot(el) { return !!rootRe && [...el.classList, el.tagName.toLowerCase()].some((c) => { const x = (c.match(new RegExp(rootRe)) || [])[1]; return x && others[x]; }); }
           if (other) { seen[id]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
             n.setAttribute('data-contract-id', id); up(id);
             out.push({ id, kind: 'instance', parent, order, component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
-              slug: other, attrs: Object.fromEntries([...n.attributes].map((a) => [a.name, a.value])), glyphs: [...n.querySelectorAll('svg')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) }); return; }
+              slug: other, attrs: Object.fromEntries([...n.attributes].map((a) => [a.name, a.value])),
+              // its words, in the order it shows them: each element's own text, where it is drawn
+              // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
+              // (not one of another instance nested in it, and drawn: seen, not merely present)
+              shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
+                const own = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up)) return false; return true; };
+                const seen = (m) => { const cs = getComputedStyle(m); return m.getClientRects().length && cs.visibility !== 'hidden' && +cs.opacity > 0; };
+                return [p, [...n.querySelectorAll(q)].some((m) => own(m) && seen(m))];
+              })),
+              // (its own root's included; none hidden, read to screen readers only, or of another instance nested in it)
+              texts: [n, ...n.querySelectorAll('*')].filter((t) => {
+                if (!t.getClientRects().length || ![...t.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim())) return false;
+                const cs = getComputedStyle(t), r = t.getBoundingClientRect();
+                if (cs.visibility === 'hidden' || +cs.opacity === 0 || r.width <= 1 || r.height <= 1 || t.closest('[aria-hidden="true"]')) return false;
+                for (let up = t === n ? null : t; up && up !== n; up = up.parentElement) if (isRoot(up)) return false;
+                return true;
+              }).map((t) => [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim()),
+              glyphs: [...n.querySelectorAll('svg')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) }); return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; }
           else if (kind === 'text') { e.color = s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
@@ -783,15 +825,27 @@ async function main() {
             if (px(s.borderTopLeftRadius)) { const r = n.getBoundingClientRect(); Object.assign(e, corner(s.borderTopLeftRadius, r.width, r.height)); }
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
             if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e.outline = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
-            if (s.borderTopStyle !== 'none' && px(s.borderTopWidth)) e.border = { color: s.borderTopColor, width: px(s.borderTopWidth), inLayout: true }; // a css border takes room, as a Figma stroke in the layout does
+            // a css border takes room, as a Figma stroke in the layout does: each side's width, one where all are alike
+            const EDGES = ['Top', 'Right', 'Bottom', 'Left'];
+            const bw = EDGES.map((k) => (s[`border${k}Style`] !== 'none' ? px(s[`border${k}Width`]) || 0 : 0));
+            const layers = String(s.boxShadow) === 'none' ? [] : String(s.boxShadow).split(/,(?![^(]*\))/);
+            // a stroke on some sides drawn as offset rings (css.mjs writes them so: values.mjs sideStrokes reads them back)
+            const ss = !bw.some(Boolean) && !layers.some((p) => insetStroke(p) && insetStroke(p).width > 0) ? sideStrokes(layers) : null;
+            if (bw.some(Boolean)) {
+              const color = s[`border${EDGES[bw.findIndex(Boolean)]}Color`];
+              e.border = bw.every((v) => v === bw[0]) ? { color, width: bw[0], inLayout: true } : { color, width: bw, sides: { top: bw[0], end: bw[1], bottom: bw[2], start: bw[3] }, inLayout: true };
+            }
             // a stroke drawn as an inset shadow with no offset and no blur is a border (values.mjs insetStroke, as the code audit reads it)
-            else { const st = String(s.boxShadow).split(/,(?![^(]*\))/).map(insetStroke).find((x) => x && x.width > 0); if (st) e.border = { color: st.colour, width: px(st.width) }; }
+            else if (ss) e.border = { color: ss.colour, width: ['top', 'end', 'bottom', 'start'].map((k) => px(ss.sides[k])), sides: ss.sides, ...(ss.align === 'outside' && { align: 'outside' }) };
+            else { const st = layers.map(insetStroke).find((x) => x && x.width > 0); if (st) e.border = { color: st.colour, width: px(st.width) }; }
             if (s.overflow === 'hidden') e.overflow = 'hidden';
             // its shadow: drop shadows and inner ones
-            // every shadow but an inset one with no offset or blur, which is the border read above
-            const isBorder = (p) => !!insetStroke(p);
-            const drops = String(s.boxShadow) === 'none' ? [] : String(s.boxShadow).split(/,(?![^(]*\))/).filter((p) => !isBorder(p));
+            // every shadow but the border read above: an inset one with no offset or blur, or a side's ring
+            const isBorder = (p, i) => !!insetStroke(p) || !!(ss && ss.used.includes(i));
+            const drops = layers.filter((p, i) => !isBorder(p, i));
             if (drops.length) e.shadow = drops.join(',');
+            // the side rings taken as a border, with the shadow they came from: a style that draws them itself takes them back (below)
+            if (ss) { e.shadowAll = layers.join(','); e.ringsUsed = ss.used.map((i) => layers[i]); }
             // a box no flex lays out, or one with nothing to hug, has a size of its own (a switch's thumb, an avatar's image)
             if (kind === 'container' && (!n.children.length || !/flex/.test(s.display))) { e.width = px(s.width); e.height = px(s.height); }
             // placed by code at a point inside its parent (a thumb over its track): where, so a drawing can place it so
@@ -825,7 +879,7 @@ async function main() {
         const byParent = {}; for (const e of out) if (e.parent != null) (byParent[e.parent] = byParent[e.parent] || []).push(e);
         for (const xs of Object.values(byParent)) xs.forEach((e, i) => { e.order = i; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // each element's matched styles fetched once for all the properties this render reads of it
       const styles = new Map();
@@ -990,13 +1044,15 @@ async function main() {
             const best = fit.sort((a, b) => Object.keys(b[1].args || b[1]).length - Object.keys(a[1].args || a[1]).length)[0];
             if (best) for (const part of best[0].split(', ')) { const [ax, v] = part.split('='); if (ax && v) w[ax] = v; }
           }
+          if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props));
+          for (const [p, v] of Object.entries(x.shown || {})) w[p] = v;
           const glyphOf = [];
           if (fc && x.glyphs && x.glyphs.length) for (const p of Object.values(fc.props)) if (p.type === 'instance' || p.type === 'swap') { w[p.figma] = x.glyphs[0]; glyphOf.push(p.figma); }
           if (Object.keys(w).length) x.with = w;
           // which of them name the glyph it draws: content, which the swap test below sets aside
           if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
         }
-        delete x.slug; delete x.attrs; delete x.glyphs;
+        delete x.slug; delete x.attrs; delete x.glyphs; delete x.texts; delete x.shown;
         if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
@@ -1024,7 +1080,11 @@ async function main() {
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
         if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
-        if (x.border) x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border']), width: await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width']), ...(x.border.inLayout && { inLayout: true }) };
+        if (x.border) {
+          // a width per side where the sides differ: each side's token, 0 where it draws none
+          const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width']);
+          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }) };
+        }
         // an outline is the design's focus ring: a stroke-only box stretched past this one by how far the outline's outer
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way
         if (x.outline) {
@@ -1036,7 +1096,29 @@ async function main() {
         }
         // a shadow is the library's effect style that draws it (layers matched by what they draw); none, its css
         // the effect style the code wrote (box-shadow: var(--elevation-raised)), else the one that draws the same layers
-        if (x.shadow) { const said = await authoredVars(L.tab, `[data-contract-id="${id}"]`, 'box-shadow', styles); const named = said.length && (L.tokens.effects || []).find((fx) => said.some((v) => writtenAs(v, fx.name))); const k = shadowKey(cssShadows(x.shadow)); const hit = named || (L.tokens.effects || []).find((fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color }))) === k); x.shadow = hit ? hit.name : x.shadow; }
+        if (x.shadow || x.shadowAll) {
+          const at = `[data-contract-id="${id}"]`;
+          const said = [...await authoredVars(L.tab, at, 'box-shadow', styles), ...await layerVars(L.tab, at, 'box-shadow', styles)];
+          const effects = L.tokens.effects || [];
+          const named = said.length && effects.find((fx) => said.some((v) => writtenAs(v, fx.name)));
+          const keyOf = (fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color })));
+          // a sharp offset layer read as a side's stroke may be the style's own (an inset highlight, a 1px drop): where the
+          // whole shadow is a style, or every ring taken is a layer the style the code names draws itself, it is the
+          // style's, not a border; a ring the style does not draw (a divider beside an elevation) stays the border
+          const theirs = (l) => (named.layers || []).some((nl) => /SHADOW/.test(nl.type) && keyOf({ layers: [nl] }) === shadowKey(cssShadows(l)));
+          const whole = x.shadowAll && effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadowAll)));
+          if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; delete x.border; }
+          else if (x.shadow) {
+            const hit = named || effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadow)));
+            x.shadow = hit ? hit.name : x.shadow;
+            // a ring all round inside the effect style the code names (an elevation that draws its own stroke) is the
+            // style's, not a border, where the code writes no ring of its own beside it: no inset layer of its own, and no
+            // other custom property that could hold one
+            const ownRing = () => import('../parity/values.mjs').then(({ splitTop: st }) => authoredValue(L.tab, at, 'box-shadow', styles).then((v) => st(v || '').some((p) => (/\binset\b/.test(p) && !/^\s*var\(/.test(p)) || (/var\(/.test(p) && !writtenAs((/var\(\s*(--[\w-]+)/.exec(p) || [])[1] || '', named.name)))));
+            if (named && x.border && !x.border.sides && !x.border.inLayout && (named.layers || []).some((l) => l.type === 'INNER_SHADOW' && !l.x && !l.y && !l.blur && l.spread > 0) && !(await ownRing())) delete x.border;
+          }
+        }
+        delete x.shadowAll; delete x.ringsUsed;
         // a text style named by the declarations that say it (rules.mjs), else by its values
         const said = x.type && x.kind === 'text' ? styleFromCss(Object.fromEntries(await Promise.all(['font-family', 'font-weight', 'font-size', 'line-height', 'letter-spacing'].map(async (p) => [p, await authoredWidth(L.tab, `[data-contract-id="${id in shown ? id : x.parent}"]`, p, { raw: true, cache: styles })]))), (L.tokens.textStyles || []).map((t) => t.name), (n) => textStyleFields(cssName('', n).slice(2))) : null;
         if (said) { x.typography = said; delete x.type; }

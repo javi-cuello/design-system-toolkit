@@ -44,6 +44,11 @@ export function parseColour(value) {
   if ((m = /^oklab\(\s*([-\d.e]+)\s+([-\d.e]+)\s+([-\d.e]+)(?:\s*\/\s*([\d.]+%?))?\s*\)$/i.exec(s))) {
     return oklabToLinearSrgb(+m[1], +m[2], +m[3]).map((x) => clamp(linearToSrgb(x))).concat(alpha(m[4]));
   }
+  // what Chrome keeps when the code writes oklch: its polar form, turned to OKLab's axes
+  if ((m = /^oklch\(\s*([-\d.e]+%?)\s+([-\d.e]+)\s+([-\d.e]+)(?:deg)?(?:\s*\/\s*([\d.]+%?))?\s*\)$/i.exec(s))) {
+    const L = m[1].endsWith('%') ? parseFloat(m[1]) / 100 : +m[1], C = +m[2], h = (+m[3] * Math.PI) / 180;
+    return oklabToLinearSrgb(L, C * Math.cos(h), C * Math.sin(h)).map((x) => clamp(linearToSrgb(x))).concat(alpha(m[4]));
+  }
   return null;
 }
 
@@ -52,9 +57,33 @@ export function parseColour(value) {
  *  reading of a contract from code each parsed it, twice in one file. Runs in a page too: it travels as its source. */
 export function insetStroke(layer) {
   if (!/\binset\b/.test(layer)) return null;
-  const colour = (layer.match(/(?:rgba?|oklab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
+  const colour = (layer.match(/(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
   const len = layer.replace(colour, '').match(/-?[\d.]+px/g) || [];
   return len.length >= 4 && len.slice(0, 3).every((v) => parseFloat(v) === 0) ? { width: parseFloat(len[3]), colour } : null;
+}
+
+/**
+ * A stroke on some sides, as css.mjs writes it: one shadow per side, shifted by the side's width and no blur or spread,
+ * inset for an inside stroke (shifted toward the middle) and outside otherwise (shifted out). `layers` are box-shadow's
+ * layers as strings; → { colour, align, sides: { top, end, bottom, start } (px, 0 where none), used: [layer index] },
+ * or null where they are not all one colour's rings. Self-contained: it runs in the page too, as insetStroke does.
+ */
+export function sideStrokes(layers) {
+  const sides = { top: 0, end: 0, bottom: 0, start: 0 }, used = [];
+  let colour = null, align = null;
+  layers.forEach((layer, i) => {
+    const c = (layer.match(/(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
+    const len = (layer.replace(c, '').match(/-?[\d.]+px|(?<![\w.-])0(?![\w.])/g) || []).map((v) => parseFloat(v));
+    // a clear layer draws nothing (a transition's resting placeholder): no stroke
+    if (/transparent|rgba\((?:[^,)]*,){3}\s*0\)|\/\s*0\s*\)/i.test(c || layer)) return;
+    if (len.length !== 4 || len[2] !== 0 || len[3] !== 0 || (len[0] !== 0) === (len[1] !== 0)) return;
+    const inset = /\binset\b/.test(layer), [x, y] = len;
+    const side = inset ? (y > 0 ? 'top' : y < 0 ? 'bottom' : x < 0 ? 'end' : 'start') : (y < 0 ? 'top' : y > 0 ? 'bottom' : x > 0 ? 'end' : 'start');
+    const a = inset ? 'inside' : 'outside';
+    if ((colour && c !== colour) || (align && a !== align) || sides[side]) return;
+    colour = c; align = a; sides[side] = Math.abs(x || y); used.push(i);
+  });
+  return used.length ? { colour, align, sides, used } : null;
 }
 
 /** Split on commas outside parentheses — a value list whose values have commas. */
@@ -71,7 +100,7 @@ export function splitTop(value) {
   return out;
 }
 
-export const COLOUR = /rgba?\([^)]*\)|color\([^)]*\)|oklab\([^)]*\)|#[0-9a-fA-F]{3,8}/;
+export const COLOUR = /(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-fA-F]{3,8}/;
 
 /**
  * `box-shadow` → one entry per layer: `{ inset, lengths, colour, raw }`.

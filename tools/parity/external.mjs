@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 import { collect, pairElements, selectorFor, rootPattern } from './pair.mjs';
 import { displayName } from '../shared/names.js';
 import { writeReport } from '../shared/output.mjs';
-import { parseColour, figmaWeight, insetStroke } from './values.mjs';
+import { parseColour, figmaWeight, insetStroke, splitTop } from './values.mjs';
 import { probeSource } from './probe.mjs';
 import { pseudoClasses } from '../component-contract/to-code.mjs';
 
@@ -639,7 +639,7 @@ export function cssShadows(css) {
   for (const ch of String(css)) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; } else cur += ch; }
   if (cur.trim()) parts.push(cur);
   return parts.map((p) => {
-    const color = (p.match(/rgba?\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
+    const color = (p.match(/(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
     const nums = p.replace(color, '').match(/-?[\d.]+(?=px)|\b0\b/g) || [];
     return { inset: /\binset\b/.test(p), x: +nums[0] || 0, y: +nums[1] || 0, blur: +nums[2] || 0, spread: +nums[3] || 0, color };
   });
@@ -904,6 +904,19 @@ export async function authoredVars(tab, selector, property, cache = null) {
   const levels = await matchedLevels(tab, selector, cache);
   return levels ? varChain(levels, property) : [];
 }
+
+/* The custom properties a value lists as whole layers of its own (a box-shadow that adds a ring to an effect token:
+   `inset 0 0 0 1px var(--stroke), var(--elevation-raised)` lists the elevation), each followed to where it is set. */
+export async function layerVars(tab, selector, property, cache = null) {
+  const levels = await matchedLevels(tab, selector, cache);
+  return levels ? wholeVars(winning(levels[0] || [], property, { raw: true })) : [];
+}
+/* A property's value as its winning rule writes it, var()s unresolved. */
+export async function authoredValue(tab, selector, property, cache = null) {
+  const levels = await matchedLevels(tab, selector, cache);
+  return levels ? winning(levels[0] || [], property, { raw: true }) : null;
+}
+export const wholeVars = (raw) => (raw ? splitTop(raw).map((p) => /^\s*var\(\s*(--[\w-]+)\s*\)\s*$/.exec(p)).filter(Boolean).map((m) => m[1]) : []);
 
 /* varChain, with nothing opened: `levels` are the styles of the element and
    then of each ancestor, each listed lowest precedence first. Tested by test-external.mjs. */

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark } from './from-code.mjs';
+import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -148,5 +148,13 @@ ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a fu
 ok('a prop that takes content is a slot, by its type, its starting element or a stated slot', isSlot({ summary: 'ReactNode' }) && isSlot({ summary: 'Snippet' }) && isSlot({ element: true, control: 'object' }) && isSlot({ control: 'slot' })
   && !isSlot({ control: 'object', summary: null }) && !isSlot({ control: 'text', summary: 'string' }));
 ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark('children') !== slotMark('footer') && !/\s/.test(slotMark('children')));
+
+// another component's instance: its words are the props that put words in its texts, a word one for one
+{
+  const badge = { props: { label: { type: 'string', figma: 'Label' }, tone: { type: 'enum', figma: 'Tone' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', content: '{label}' }, dot: { kind: 'graphic' } } };
+  ok('an instance\'s word is the prop its text shows', JSON.stringify(wordsOf(badge, ['New'])) === '{"Label":"New"}');
+  ok('a word this component passes down from its own prop is that prop', JSON.stringify(wordsOf(badge, [slotMark('status')], { badge: { code: 'status' } })) === '{"Label":"{badge}"}');
+  ok('words that do not count out one for one are not guessed', JSON.stringify(wordsOf(badge, ['New', 'Extra'])) === '{}' && JSON.stringify(wordsOf(badge, [])) === '{}');
+}
 
 console.log(`${n}/${n} passed`);

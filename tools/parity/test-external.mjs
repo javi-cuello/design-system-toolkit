@@ -2,7 +2,7 @@
 // tools/parity/external.mjs: the code audit's pure parts.
 import assert from 'node:assert/strict';
 import { parseColour as rgba } from './values.mjs';
-import { judge, expected, combinations, argsFor, group, where, compareProps, frameworkProps, draftEntry, joinProp, suspectMappings, tokenWords, cssShadows, shadowKey, compareTokens, readApi, elementIn, winning, invisibleBorder, storyKey, componentKey, insideAudited, contractEntry, varChain } from './external.mjs';
+import { wholeVars, judge, expected, combinations, argsFor, group, where, compareProps, frameworkProps, draftEntry, joinProp, suspectMappings, tokenWords, cssShadows, shadowKey, compareTokens, readApi, elementIn, winning, invisibleBorder, storyKey, componentKey, insideAudited, contractEntry, varChain } from './external.mjs';
 
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -119,6 +119,11 @@ ok('a token path is the same words in any separator or case, letters and digits 
 ok('a CSS shadow and a Figma effect drawing the same thing have one key; inset is part of it',
   shadowKey(cssShadows('0px 2px 4px 0px rgba(0, 0, 0, 0.1), 0px 2px 4px 0px rgba(255, 255, 255, 0.2) inset'))
     === shadowKey([{ x: 0, y: 2, blur: 4, spread: 0, color: 'rgb(0 0 0 / 0.1)' }, { inset: true, x: 0, y: 2, blur: 4, spread: 0, color: 'rgba(255,255,255,0.2)' }]));
+
+ok('a shadow Chrome reports in color(srgb) or oklch keys as the Figma layer it draws, its colour\'s zeros not read as offsets',
+  shadowKey(cssShadows('color(srgb 0 0 0 / 0.1) 0px 1px 0px 0px inset')) === shadowKey([{ inset: true, x: 0, y: 1, blur: 0, spread: 0, color: 'rgb(0 0 0 / 0.1)' }])
+  && shadowKey(cssShadows('oklch(0 0 0 / 0.1) 0px 1px 0px 0px inset')) === shadowKey([{ inset: true, x: 0, y: 1, blur: 0, spread: 0, color: 'rgb(0 0 0 / 0.1)' }]));
+ok('oklch reads as the sRGB colour it names', JSON.stringify(rgba('oklch(1 0 0)')) === '[255,255,255,1]' && JSON.stringify(rgba('oklch(62.8% 0.2577 29.23)').slice(0, 3)) === '[255,0,0]');
 
 const tg = compareTokens(
   [{ group: 'colour', name: 'a', words: ['a'], value: '#ffffff' }, { group: 'colour', name: 'b', words: ['b'], value: '#c40d22' }, { group: 'colour', name: 'c', words: ['c'], value: '#000000' },
@@ -291,5 +296,8 @@ ok('a component name keeps every word but its folder: a set whose name holds " /
   }
   ok('an axis whose options set different args is refused, since the contract keeps one arg a prop', /sets one arg/.test(refused({ storyId: 's', axes: { Role: { Primary: { variant: 'contained' }, Secondary: { kind: 'outlined' } } } })));
 }
+
+ok('a box-shadow that adds a ring to an effect style lists that style as a whole layer; a var inside a layer is no layer',
+  JSON.stringify(wholeVars('inset 0 0 0 var(--stroke-1) var(--c), var(--elevation-raised)')) === '["--elevation-raised"]' && JSON.stringify(wholeVars('var(--a)')) === '["--a"]' && wholeVars(null).length === 0);
 
 console.log(`${n}/${n} passed`);
