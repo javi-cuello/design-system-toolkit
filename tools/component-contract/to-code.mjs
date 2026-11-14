@@ -36,6 +36,7 @@ import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative } from './rules.mjs';
+const { atProps } = createRequire(import.meta.url)('./derive.cjs');
 import { cssName } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -249,9 +250,18 @@ function everPulls(c) {
 }
 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
-export function drawn(c, when) {
+export function drawn(c, when, mains = () => null) {
   const a = expand(c, when);
   const out = {}, extra = [], ringNotes = {};
+  // an instance whose insides are its component's (derive drops them) draws its glyph in the colour that component
+  // gives it at the instance's props: the same colour, said the same way, as an opened instance's recorded glyph
+  for (const [id, e] of Object.entries(a)) {
+    if (e.kind !== 'instance' || Object.values(a).some((x) => x.parent === id && x.kind === 'graphic')) continue;
+    const m = e.component && mains(e.component);
+    if (!m) continue;
+    const glyphs = [...new Set(Object.values(atProps(m, e.with)).filter((x) => x.parent === 'root' && x.kind === 'graphic' && typeof x.background === 'string').map((x) => x.background))];
+    if (glyphs.length === 1) extra.push([id, [['color', tokenNames.token(glyphs[0])]]]);
+  }
   // a gap below 0 is said by pull-backs (rules.mjs): each child's start margin on its own rule (an instance's
   // insides are its own sheet's)
   const pulls = (p) => !!(p && p.kind !== 'instance' && p.layout && negative(p.layout.gap) && p.layout.align !== 'space-between');
@@ -341,7 +351,7 @@ function cascade(rules, full, id) {
 }
 
 /* The contract's rules: the defaults, then each variant layer, each saying only what it changes. */
-export function rulesOf(c) {
+export function rulesOf(c, mains) {
   const dflt = variantDefaults(c);
   const layers = [{ when: {} }, ...(c.variants || []).filter((v) => !v.combination), ...(c.variants || []).filter((v) => v.combination)]
     .map((v, i) => ({ v, i })).sort((x, y) => Object.keys(x.v.when || {}).length - Object.keys(y.v.when || {}).length || x.i - y.i).map((x) => x.v);
@@ -349,7 +359,7 @@ export function rulesOf(c) {
   for (const v of layers) {
     const when = v.combination ? { ...v.when } : Object.fromEntries(Object.entries(v.when || {}).filter(([k, x]) => x !== dflt[k] || v.combination));
     const full = { ...dflt, ...when };
-    const now = drawn(c, full);
+    const now = drawn(c, full, mains);
     const parts = {};
     for (const [id, { decls, unread: u }] of Object.entries(now)) {
       for (const f of u) { if (!unread.has(f)) unread.set(f, new Set()); unread.get(f).add(id); }
@@ -365,7 +375,7 @@ export function rulesOf(c) {
   // CSS decides by specificity where the contract applies its layers in order, so a combination the two read
   // differently gets a rule of its own, naming every prop the grid is chosen by, which outranks every layer's
   // (as derive's per-combination entries do)
-  for (const [key, miss] of groupBy(selfCheck(c, rules), (o) => JSON.stringify(o.when))) {
+  for (const [key, miss] of groupBy(selfCheck(c, rules, mains), (o) => JSON.stringify(o.when))) {
     const when = JSON.parse(key), parts = {};
     for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset' });
     rules.push({ when, weight: Object.keys(when).length, parts });
@@ -383,12 +393,13 @@ export function combinations(c) {
 }
 
 /* The combinations whose drawn declarations the cascade does not rebuild: none, or it is a defect. */
-export function selfCheck(c, rules = rulesOf(c).rules) {
+export function selfCheck(c, rules, mains) {
+  rules ||= rulesOf(c, mains).rules;
   const dflt = variantDefaults(c);
   const out = [];
   for (const m of combinations(c)) {
     const full = { ...dflt, ...m };
-    for (const [id, { decls }] of Object.entries(drawn(c, full))) {
+    for (const [id, { decls }] of Object.entries(drawn(c, full, mains))) {
       const got = cascade(rules, full, id);
       for (const [p, d] of decls) if (!got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v });
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
@@ -420,9 +431,9 @@ export function partSeg(c, id) {
 }
 
 /* The stylesheet. */
-export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE } = {}) {
+export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains } = {}) {
   const n = namer(folder, naming);
-  const { rules, unread } = rulesOf(c);
+  const { rules, unread } = rulesOf(c, mains);
   const lines = [`/* ${BANNER} */`];
   const keys = [...new Set(rules.flatMap((r) => Object.keys(r.when)))];
   const hooks = keys.map((k) => {
@@ -503,12 +514,27 @@ if (isMain) {
   const { of } = officials(where);
   // each sheet under its library's settings (its state names, its disabled axis), the house's where none
   const settingsOf = require('../snapshot/projects.cjs').librarySettingsFor(dir);
+  // the library's components by name, for what a placed one draws inside (its insides are its own contract's): within
+  // the folder's own library, grouped as derive groups them (two libraries in one store may share a name), a name two
+  // hold (in any case) none; a store no project registers, or a draft of no known library, looks across the store
+  const lib = require('../snapshot/projects.cjs').storeLibraries(dir);
+  const fileOf = (d) => (lib ? lib.fileOf(d) : undefined);
+  const byName = new Map(), add = (k, x) => byName.set(k, byName.has(k) ? null : x);
+  for (const d of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+    try {
+      const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))), n = String(x.component).toLowerCase();
+      add(`${fileOf(d)}\0${n}`, x);
+      add(`*\0${n}`, x);
+    } catch { /* not a component */ }
+  }
+  const mainsFor = (f) => (name) => byName.get(`${!lib || (draft && fileOf(f) == null) ? '*' : fileOf(f)}\0${String(name).toLowerCase()}`) || null;
   for (const f of folders) {
     const c = draft || of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8')));
-    const { rules } = rulesOf(c);
-    const off = selfCheck(c, rules);
+    const mains = mainsFor(f);
+    const { rules } = rulesOf(c, mains);
+    const off = selfCheck(c, rules, mains);
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
-    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f) });
+    const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), mains });
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);
   }
   // a write replaces only what it wrote (code-standard rule 58): its own files, known by the banner

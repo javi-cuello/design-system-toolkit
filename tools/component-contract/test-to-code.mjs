@@ -195,4 +195,20 @@ else console.log('skip: no stored contracts on this machine');
   ok('a variant back to a gap of 0 or more says 0 for the pull, never unset, and replays the same', /data-loose[^{]*> \.stack__b \{\s*margin-inline-start: 0;/.test(sheet) && !/unset/.test(sheet) && selfCheck(c).length === 0);
 }
 
+// a placed icon whose insides are its component's (derive drops them) takes its glyph's colour from that component
+// at the instance's props, per variant, as an opened one's recorded glyph gives it
+{
+  const spin = { contract: 1, component: 'Spinner', props: { inverse: { type: 'boolean', default: false, axis: true, figma: 'Inverse' } },
+    anatomy: { root: { kind: 'container' }, spinner: { kind: 'graphic', parent: 'root', background: 'C/medium' } },
+    variants: [{ when: { inverse: true }, set: { 'spinner.background': 'C/inverse' } }] };
+  const btn = { contract: 1, component: 'Button', props: { loud: { type: 'boolean', default: false, axis: true, figma: 'Loud' } },
+    anatomy: { root: { kind: 'container', background: 'C/bg' }, spinner: { kind: 'instance', parent: 'root', component: 'Spinner', with: { Inverse: 'False' } } },
+    variants: [{ when: { loud: true }, set: { 'spinner.with': { Inverse: 'True' } } }] };
+  const mains = (n) => (n === 'Spinner' ? spin : null);
+  const sheet = toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an instance with no recorded glyph draws in its component\'s glyph colour at its props, each variant its own',
+    /> \.ds-button__spinner \{[^}]*color: var\(--c-medium\)/.test(sheet) && /data-loud[^{]*> \.ds-button__spinner \{[^}]*color: var\(--c-inverse\)/.test(sheet) && selfCheck(btn, undefined, mains).length === 0);
+  ok('without the library, no colour is guessed', !/color:/.test(toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+}
+
 console.log(`${n} passed`);

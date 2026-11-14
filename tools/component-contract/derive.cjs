@@ -400,7 +400,6 @@ function anatomies(trees, characters, known, L, mains = null) {
 const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy']);
 const look = (e) => j(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
 function ownInsides(anatomy, mains) {
-  const low = (x) => String(x).toLowerCase();
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
     if (!e || e.kind !== 'instance' || !e.component) continue;
@@ -408,37 +407,42 @@ function ownInsides(anatomy, mains) {
     if (!inner.length) continue;
     const m = mains(e.component);
     if (!m) continue;
-    // the instance's props onto the component's own, by their Figma names
-    const by = Object.fromEntries(Object.entries(m.props || {}).map(([k, q]) => [low(q.figma || k), k]));
-    const vals = { ...variantDefaults(m) };
-    for (const [k, v] of Object.entries(e.with || {})) {
-      const mk = by[low(String(k).split('#')[0])];
-      if (!mk) continue;
-      const q = m.props[mk];
-      // (an enum's value by Figma's own spelling of it, as the contract spells it: Secondary gray is secondary-gray)
-      const at = q.type === 'enum' && (q.figmaValues || []).findIndex((x) => low(x) === low(v));
-      vals[mk] = q.type === 'boolean' ? v === true || low(v) === 'true' : q.type === 'enum' ? (at >= 0 ? q.values[at] : q.values.find((x) => low(x) === low(v)) ?? kebab(String(v))) : v;
-    }
-    const M = expand(m, vals);
-    // a text prop's words: the instance's value for it, else the component's default
-    const words = (t) => {
-      const r = /^\{(.+)\}$/.exec(t || ''), q = r && m.props[r[1]];
-      if (!q) return t;
-      const w = Object.entries(e.with || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || r[1]));
-      return w ? w[1] : q.default ?? t;
-    };
+    const M = atProps(m, e.with);
     // a layer of the component the instance does not draw (hidden: the walk records what shows) is an override no
     // layer here can say: the instance is kept whole
     if (Object.keys(M).some((mk) => mk !== 'root' && !(id + '/' + mk in anatomy))) continue;
     const own = (k) => {
       const mk = k.slice(id.length + 1), x = M[mk];
-      if (!x) return false;
-      const y = typeof x.content === 'string' ? { ...x, content: words(x.content) } : x;
-      return look(anatomy[k]) === look(y);
+      return !!x && look(anatomy[k]) === look(x);
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
   }
+}
+
+/* A component as one of its instances draws it: its contract expanded at the instance's props (`with`, by Figma's
+   names; an enum by Figma's own spelling of its value), each text prop's placeholder its words there, else the
+   prop's default. One reading for derive (an instance's insides held to it) and to-code (what a placed icon draws in). */
+function atProps(m, withProps = {}) {
+  const low = (x) => String(x).toLowerCase();
+  const by = Object.fromEntries(Object.entries(m.props || {}).map(([k, q]) => [low(q.figma || k), k]));
+  const vals = { ...variantDefaults(m) };
+  for (const [k, v] of Object.entries(withProps || {})) {
+    const mk = by[low(String(k).split('#')[0])];
+    if (!mk) continue;
+    const q = m.props[mk];
+    const at = q.type === 'enum' && (q.figmaValues || []).findIndex((x) => low(x) === low(v));
+    vals[mk] = q.type === 'boolean' ? v === true || low(v) === 'true' : q.type === 'enum' ? (at >= 0 ? q.values[at] : q.values.find((x) => low(x) === low(v)) ?? kebab(String(v))) : v;
+  }
+  const M = expand(m, vals);
+  const words = (t) => {
+    const r = /^\{(.+)\}$/.exec(t || ''), q = r && m.props[r[1]];
+    if (!q) return t;
+    const w = Object.entries(withProps || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || r[1]));
+    return w ? w[1] : q.default ?? t;
+  };
+  for (const [k, x] of Object.entries(M)) if (x && typeof x.content === 'string') M[k] = { ...x, content: words(x.content) };
+  return M;
 }
 
 /* A lookup of components' contracts by name, for derive's `mains`: each derived once, from its own spec, without
@@ -618,4 +622,4 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps };
