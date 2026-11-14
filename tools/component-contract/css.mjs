@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, share, negative, pullProp, fillCss } from './rules.mjs';
+import { alignToCss, share, negative, pullProp, fillCss, rawColour as raw } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -77,7 +77,6 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   // its fills, bottom up as Figma lists them, as CSS's background layers (rules.mjs fillCss): a colour with no variable
   // written as itself, said so; a name its token's
   const bg = take('background');
-  const raw = (f) => typeof f === 'string' && /^(#|rgba?\(|hsla?\()/.test(f);
   const fill = fillCss(bg, { w: e.width, h: e.height }, (f) => (raw(f) ? f : names.token(f)));
   put('background', fill.value, [].concat(bg ?? []).some((f) => raw(f) || (f && Array.isArray(f.stops) && f.stops.some((st) => raw(st.color)))) ? NOTE : undefined);
   unread.push(...fill.unread);

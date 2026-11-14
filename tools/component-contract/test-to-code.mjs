@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE } from './to-code.mjs';
 import { declarations } from './css.mjs';
-import { fillCss } from './rules.mjs';
+import { fillCss, fillsFromCss } from './rules.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -224,6 +224,28 @@ else console.log('skip: no stored contracts on this machine');
   ok('another diagonal takes its angle on the box drawn', /^linear-gradient\(\d/.test(fillCss([g([[1, 0.5, 0], [0, 1, 0]])], { w: 200, h: 100 }, tk).value || ''));
   const hug = fillCss([g([[1, 0.5, 0], [0, 1, 0]])], { w: 'hug', h: 40 }, tk);
   ok('and on a box its content sizes it is not said, and says why', hug.value === undefined && /not a fixed number/.test(hug.unread[0]) && fillCss(['GRADIENT_RADIAL'], {}, tk).value === undefined);
+}
+
+// and back (rules.mjs fillsFromCss, from-code's reader): what fillCss wrote comes back as the fills it was written from
+{
+  const id = (x) => x;
+  const G = (t, st) => ({ type: 'GRADIENT_LINEAR', angle: Math.round(((Math.atan2(t[0][1], t[0][0]) * 180) / Math.PI + 90 + 360) % 360), transform: t, stops: st });
+  const two = [{ position: 0, color: 'rgb(1, 2, 3)' }, { position: 1, color: 'rgb(4, 5, 6)' }];
+  for (const [label, f, box] of [['a corner-to-corner gradient', [G([[0.5, -0.5, 0.5], [0.5, 0.5, 0]], two)], { w: 'hug', h: 186 }],
+    ['a top-to-bottom one with a middle stop', [G([[0, 1, 0], [-1, 0, 1]], [two[0], { position: 0.5, color: 'rgb(9, 9, 9)' }, two[1]])], {}]]) {
+    const css = fillCss(f, box, id).value;
+    ok(`${label} comes back from its CSS as Figma recorded it`, JSON.stringify(fillsFromCss('', css, box).fills) === JSON.stringify(f));
+  }
+  ok('a stop the browser gives no position sits where CSS puts it; a hint, a turn, stripes, a stop past the ends and one placed by a length are left unread, never drawn wrong',
+    JSON.stringify(fillsFromCss('', 'linear-gradient(rgb(255, 0, 0), rgb(255, 255, 255), rgb(0, 0, 255))', {}).fills[0].stops.map((st) => st.position)) === '[0,0.5,1]'
+    && ['linear-gradient(rgb(255, 0, 0), 30%, rgb(0, 0, 255))', 'linear-gradient(0.25turn, rgb(1, 1, 1), rgb(2, 2, 2))', 'repeating-linear-gradient(rgb(1, 1, 1) 0px, rgb(2, 2, 2) 4px)', 'linear-gradient(rgb(1, 1, 1) -20%, rgb(2, 2, 2) 120%)', 'linear-gradient(rgb(1, 1, 1) 0px, rgb(2, 2, 2) 40px)']
+      .every((x) => fillsFromCss('', x, {}).fills.length === 0 && fillsFromCss('', x, {}).unread.length === 1));
+  const diag = [G([[0.6, 0.4, 0], [-0.4, 0.6, 0.4]], two)];
+  const back = fillsFromCss('', fillCss(diag, { w: 200, h: 100 }, id).value, { w: 200, h: 100 }).fills[0];
+  ok('another diagonal comes back on the box it was written for, its first row the same within the angle\'s rounding',
+    !!back && back.transform[0].every((v, i) => Math.abs(v - [0.6, 0.4, 0][i]) < 2e-3) && JSON.stringify(back.stops) === JSON.stringify(two));
+  const stack = fillCss(['rgb(7, 7, 7)', 'rgba(0, 0, 0, 0.5)'], {}, id).value;
+  ok('a colour laid over another comes back as two fills, bottom up', JSON.stringify(fillsFromCss('rgb(7, 7, 7)', stack.replace(/, rgb\(7, 7, 7\)$/, ''), {}).fills) === JSON.stringify(['rgb(7, 7, 7)', 'rgba(0, 0, 0, 0.5)']));
 }
 
 console.log(`${n} passed`);

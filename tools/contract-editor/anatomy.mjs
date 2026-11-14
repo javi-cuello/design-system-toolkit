@@ -12,6 +12,7 @@
 import { camel } from './props.mjs';
 import { partName } from '../component-contract/layers.mjs';
 import { declarations, holds } from '../component-contract/css.mjs';
+import { fillCss, rawColour } from '../component-contract/rules.mjs';
 import { figmaWeight } from '../parity/values.mjs';
 
 export const KINDS = [
@@ -338,26 +339,21 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
   // the page's style object: physical sides, as the drawing reads its width and places its layers
   const PHYSICAL = { 'inline-size': 'width', 'block-size': 'height', 'min-inline-size': 'minWidth', 'min-block-size': 'minHeight', 'max-inline-size': 'maxWidth',
     'max-block-size': 'maxHeight', 'inset-inline-start': 'left', 'inset-inline-end': 'right', 'inset-block-start': 'top', 'inset-block-end': 'bottom' };
-  const styleOf = (e, at) => Object.fromEntries(declarations(e, at, names).decls.map(([p, v]) => [PHYSICAL[p] || p.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v]));
-  // a linear gradient from its paint's transform, as parity reads one (schema.mjs gradient), taken on a square box: the
-  // preview does not know a hugging box's size before it is drawn, so a diagonal on an oblong box is near, not exact
-  const gradient = (style, e) => {
-    const g = e.background && typeof e.background === 'object' && e.background.type === 'GRADIENT_LINEAR' ? e.background : null;
-    const stops = g && (g.stops || []).map((st) => [value('colours', st.color), st.position]);
-    if (!stops || !stops.length || !stops.every(([c]) => c)) return;
-    const [a, b, c] = Array.isArray(g.transform) ? g.transform[0] : [0, 1, 0];
-    const corners = [c, a + c, b + c, a + b + c], t0 = Math.min(...corners), t1 = Math.max(...corners);
-    const deg = Array.isArray(g.transform) ? (Math.atan2(a, -b) * 180) / Math.PI : g.angle;
-    style.background = `linear-gradient(${+deg.toFixed(2)}deg, ${stops.map(([col, p]) => `${col} ${+(((p - t0) / (t1 - t0 || 1)) * 100).toFixed(2)}%`).join(', ')})`;
-  };
+  const styleOf = (e, at) => { const d = declarations(e, at, names); return Object.defineProperty(Object.fromEntries(d.decls.map(([p, v]) => [PHYSICAL[p] || p.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v])), 'unsaid', { value: d.unread }); };
+  // a colour as css.mjs says it: one with no variable as itself, a name its token's value
+  const paint = (f) => (rawColour(f) ? f : names.token(f));
   const node = (p, row) => {
     const shownBy = prop(p.shownBy);
     const e = anatomy[p.uid === 'root' ? 'root' : id[p.uid]] || {};
     const kids = parts.filter((x) => x.parent === p.uid);
-    // the contract's own translation (sizes, layout, fills, strokes, type, a layer placed out of the flow pinned as its
-    // constraints say); the sketch adds what a drawing needs and code does not
+    // the contract's own translation (sizes, layout, fills and gradients as to-code writes them, strokes, type, a layer
+    // placed out of the flow pinned as its constraints say); the sketch adds what a drawing needs and code does not
     const style = styleOf(e, { root: p.uid === 'root', holds: holds(p.kind), row, anchors: true });
-    const out = { uid: p.uid, kind: p.kind, name: p.uid === 'root' ? 'Outer box' : p.name, style, children: [] };
+    let near;
+    // a fill code cannot say exactly before the box is drawn (a diagonal on a hugging box) is sketched with each side it has
+    // no size for taken as 100, through the same translation, and said to be near
+    if (style.unsaid.some((u) => /diagonal gradient on a box/.test(u))) { const side = (v) => (typeof v === 'number' ? v : typeof value('lengths', v) === 'number' ? value('lengths', v) : 100); const f = fillCss(e.background, { w: side(e.width), h: side(e.height) }, paint); if (f.value && f.value !== style.background) { style.background = f.value; near = 'its fill drawn with each side it has no size for taken as 100: the code says it once the box has a size'; } }
+    const out = { uid: p.uid, kind: p.kind, name: p.uid === 'root' ? 'Outer box' : p.name, style, children: [], ...(near && { near }) };
     // a part its on/off prop hides by default is marked with that prop: drawn as any part, its title saying so (figma-handoff: the preview)
     if (shownBy && shownBy.type === 'boolean' && !shownBy.default) out.off = shownBy.name;
     // the outer box laid out as the sketch's own block, over the parts it lays out
@@ -368,7 +364,6 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
     // Figma keeps as a percentage
     const opacity = typeof e.opacity === 'number' ? e.opacity : value('lengths', e.opacity);
     if (typeof opacity === 'number') style.opacity = String(opacity > 1 ? opacity / 100 : opacity); else delete style.opacity;
-    gradient(style, e);
     if (holds(p.kind)) {
       if (!style.alignItems) style.alignItems = 'flex-start';
       out.children = kids.map((x) => node(x, (e.layout || {}).direction !== 'column')).filter(Boolean);

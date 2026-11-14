@@ -243,6 +243,7 @@ function drawPart(n, key = (x) => x.uid) {
   if (n.picture) Object.assign(e.style, { backgroundImage: `url("${n.picture.url}")`, backgroundSize: n.picture.fit, backgroundPosition: 'center', backgroundRepeat: 'no-repeat' });
   // a part hidden by default says the prop that shows it
   if (n.off) { e.setAttribute('data-off', ''); e.title = `${n.name}: shown when ${n.off} is on`; }
+  if (n.near) e.title = `${e.title || n.name}; ${n.near}`;
   return e;
 }
 function renderPreview() {

@@ -16,6 +16,11 @@
  * normal (css-flexbox-1 §8.3); a block-level box's auto width fills its container, its auto height is its content's
  * (css2 §10.3.3, §10.6.3); an inline-level box (inline-flex) shrinks to fit.
  */
+import { splitTop, parseGradient, COLOUR } from '../parity/values.mjs';
+import { stopPositions } from '../parity/schema.mjs';
+
+/* A colour written as itself (no variable): css.mjs writes it so, and the editor's preview draws it so. */
+export const rawColour = (f) => typeof f === 'string' && /^(#|rgba?\(|hsla?\()/.test(f);
 
 /* Alignment, one row per word: the contract's, Figma's (primaryAxisAlignItems, counterAxisAlignItems), CSS's
    (justify-content, align-items). Figma has no stretch alignment: the contract's stretch is drawn at MIN, said lossy.
@@ -204,6 +209,59 @@ export function fillCss(fills, box, colour) {
   // a bottom colour under an image the template supplies stays a bare colour; one left above nothing is one too
   if (layers.length) { const last = layers[layers.length - 1], m = /^linear-gradient\((.+), \1\)$/.exec(last); if (m) layers[layers.length - 1] = m[1]; }
   return { value: layers.length ? layers.join(', ') : undefined, unread };
+}
+
+/* The way back: a box's painted background (its computed background-color and background-image) as Figma's fills,
+   bottom up. A layer that is one colour throughout (linear-gradient(c, c)) is that colour; a linear gradient is a
+   GRADIENT_LINEAR paint whose transform's first row runs t = a·u + b·v + c over the layer's unit square, the inverse
+   of gradientCss: on a w×h box CSS's direction (sin θ, −cos θ) is (a/w, b/h), scaled so the corners span t 0 to 1, so a
+   stop at p% is at p/100; a corner keyword runs corner to corner, |a| = |b|, on any box. The second row is the first
+   turned a quarter, which Figma's colours never read, and the angle the snapshot keeps is the handles'. Stop colours stay as the browser gave them, for the caller to
+   name. Null where a stop is no colour or not placed by one percentage (a hint, a turn, a length, calc()), a stop
+   lies past the ends, or a diagonal needs a box it is not given: the caller says so. */
+export function gradientFromCss(g, box) {
+  // every stop a colour: a hint (red, 30%, blue), an angle in another unit or an interpolation clause read as a stop is
+  // not one, and the layer is left unread rather than drawn wrong
+  if (!g || g.stops.length < 2 || g.stops.some((st) => !st.colour)) return null;
+  // a position in anything but one percentage (a length, calc(), a second position) is not placed on a guess
+  if (g.stops.some((st) => !/^(-?[\d.]+%)?$/.test(st.raw.replace(COLOUR, '').trim()))) return null;
+  let a, b;
+  if (typeof g.angle === 'string') {
+    const w = g.angle.replace(/^to\s+/, '').split(/\s+/);
+    const H = w.includes('right') ? 1 : w.includes('left') ? -1 : 0, V = w.includes('bottom') ? 1 : w.includes('top') ? -1 : 0;
+    [a, b] = [H, V];
+  } else {
+    const r = (g.angle * Math.PI) / 180, axis = Math.abs(Math.sin(r)) < 1e-9 || Math.abs(Math.cos(r)) < 1e-9;
+    if (!axis && !(box && box.w > 0 && box.h > 0)) return null;
+    [a, b] = axis ? [Math.sin(r), -Math.cos(r)] : [box.w * Math.sin(r), -box.h * Math.cos(r)];
+  }
+  const k = Math.abs(a) + Math.abs(b);
+  if (!k) return null;
+  const n = (x) => { const v = +x.toFixed(6); return Object.is(v, -0) ? 0 : v; };
+  [a, b] = [a / k, b / k];
+  const c = -Math.min(0, a) - Math.min(0, b), c2 = -Math.min(0, -b) - Math.min(0, a);
+  // a stop with no position where CSS puts it (CSS Images 3 §3.4.3, parity's stopPositions); Figma's positions run 0 to 1
+  const at = stopPositions(g.stops).map((st) => st.position);
+  if (at.some((x) => x < 0 || x > 100)) return null;
+  const colourOf = (raw) => (raw.match(COLOUR) || [raw])[0];
+  // the handles' angle as the snapshot records it beside the transform (its `gradient`: start to end through the
+  // inverse transform, clockwise from up, whole degrees); here the handles run along (a, b)
+  const angle = Math.round(((Math.atan2(b, a) * 180) / Math.PI + 90 + 360) % 360);
+  return { type: 'GRADIENT_LINEAR', angle, transform: [[n(a), n(b), n(c)], [n(-b), n(a), n(c2)]], stops: g.stops.map((st, i) => ({ position: +(at[i] / 100).toFixed(4), color: colourOf(st.raw) })) };
+}
+export function fillsFromCss(color, image, box, clear = (c) => !c || /^(transparent|rgba\(0, 0, 0, 0\))$/.test(c)) {
+  const fills = [], unread = [];
+  if (!clear(color)) fills.push(color);
+  const layers = !image || image === 'none' ? [] : splitTop(image).map((x) => x.trim()).reverse();
+  for (const l of layers) {
+    // (a repeating gradient is stripes, never one Figma gradient)
+    const g = /^linear-gradient\(/.test(l) ? parseGradient(l) : null;
+    const solid = g && g.stops.length === 2 && g.stops[0].raw === g.stops[1].raw && g.stops.every((st) => st.position == null && st.colour);
+    if (solid) { fills.push((g.stops[0].raw.match(COLOUR) || [g.stops[0].raw])[0]); continue; }
+    const p = g && gradientFromCss(g, box);
+    if (p) fills.push(p); else unread.push(/^url\(/.test(l) ? 'background (an image: content, the template\'s)' : `background (${l.slice(0, 40)}…: a layer no Figma paint reads)`);
+  }
+  return { fills, unread };
 }
 
 const LENGTH = /^(-?[\d.]+(px|rem|em)|0|var\(--[\w-]+\)|calc\(.+\))$/;

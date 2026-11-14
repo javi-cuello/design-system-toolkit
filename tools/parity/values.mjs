@@ -58,7 +58,7 @@ export function insetStroke(layer) {
 }
 
 /** Split on commas outside parentheses — a value list whose values have commas. */
-function splitTop(value) {
+export function splitTop(value) {
   const out = [];
   let depth = 0, cur = '';
   for (const ch of String(value)) {
@@ -71,7 +71,7 @@ function splitTop(value) {
   return out;
 }
 
-const COLOUR = /rgba?\([^)]*\)|color\([^)]*\)|oklab\([^)]*\)|#[0-9a-fA-F]{3,8}/;
+export const COLOUR = /rgba?\([^)]*\)|color\([^)]*\)|oklab\([^)]*\)|#[0-9a-fA-F]{3,8}/;
 
 /**
  * `box-shadow` → one entry per layer: `{ inset, lengths, colour, raw }`.

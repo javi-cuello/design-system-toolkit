@@ -44,7 +44,7 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -608,6 +608,7 @@ async function main() {
   // the ancestor as the design draws it: in the base anatomy, or added at some props (text input's feedback message)
   const kindIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).kind;
   for (const x of m.elements.skipped || []) if (!figmaContract || kindIn(figmaContract, x.up) !== 'instance') { console.error(`${name}'s mapping: the layer ${x.path} is no layer of the design`); process.exit(2); }
+  const layered = new Set();
   const ties = [], notes = (m.elements.skipped || []).map((x) => `${x.path}: inside another component's instance (${x.up}), which is compared in its own audit`);
   // the library's other components, by the name the code's markup gives them (a framework's, or the
   // project's instance pattern), where one name is one component (a framework's TextField is five inputs: none)
@@ -777,6 +778,8 @@ async function main() {
             const pad = { top: px(s.paddingTop), end: px(s.paddingRight), bottom: px(s.paddingBottom), start: px(s.paddingLeft) };
             if (Object.values(pad).some(Boolean)) (e.layout = e.layout || {}).padding = pad;
             if (!clear(s.backgroundColor)) e.background = s.backgroundColor;
+            // its background's layers above the colour (a gradient, a colour laid over another): read back as Figma's fills below
+            if (s.backgroundImage && s.backgroundImage !== 'none') { const r = n.getBoundingClientRect(); e.paint = { image: s.backgroundImage, w: r.width, h: r.height }; }
             if (px(s.borderTopLeftRadius)) { const r = n.getBoundingClientRect(); Object.assign(e, corner(s.borderTopLeftRadius, r.width, r.height)); }
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
             if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e.outline = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
@@ -995,7 +998,7 @@ async function main() {
         }
         delete x.slug; delete x.attrs; delete x.glyphs;
         if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
-        drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box };
+        drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {
           // a gap below 0 was written as the second child's pull back: its token is there
@@ -1003,7 +1006,19 @@ async function main() {
           if ('gap' in x.layout) x.layout.gap = pulled ? await tok('space', x.layout.gap, `${id}.gap`, pulled.props, pulled.from) : await tok('space', x.layout.gap, `${id}.gap`, ['row-gap', 'column-gap', 'gap']);
           if (x.layout.padding) for (const k of Object.keys(x.layout.padding)) x.layout.padding[k] = await tok('space', x.layout.padding[k], `${id}.padding`, [SIDE[k]]);
         }
-        if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
+        // its fills bottom up (rules.mjs fillsFromCss): the colour, then each layer over it, every colour named by its token
+        if (x.paint) {
+          const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c);
+          const named = [];
+          for (const f of fills) named.push(typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background-image'])
+            : { ...f, stops: await Promise.all(f.stops.map(async (st) => ({ ...st, color: await tok('background', st.color, `${id}.background`, ['background-image', 'background']) }))) });
+          // (once, however many renders read it)
+          for (const why of lost) if (!notes.includes(`${id}: ${why}`)) notes.push(`${id}: ${why}`);
+          // a layer over the colour that is not read: what shows is not the colour alone
+          if (lost.length) layered.add(id);
+          delete x.paint;
+          if (named.length) x.background = named.length === 1 ? named[0] : named;
+        } else if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
         if (x.icon) { x.background = await tok('icon', x.icon, `${id}.icon`, ['fill', 'color']); delete x.icon; }
         if (x.color) x.color = await tok('text', x.color, `${id}.color`, ['color']);
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
@@ -1193,12 +1208,13 @@ async function main() {
             const cv = k === 'border' && c[cid].border ? { color: c[cid].border.color, width: c[cid].border.width } : c[cid][k] ?? null;
             let verdict = JSON.stringify(fv) === JSON.stringify(cv) ? 'same token' : 'differs';
             // another token, or none, that draws the same colour
-            if (verdict === 'differs' && (k === 'background' || k === 'color') && fv) {
+            // (only a fill read whole: a layer laid over the colour changes what shows, which the colour alone does not say)
+            if (verdict === 'differs' && (k === 'background' || k === 'color') && fv && typeof cv === 'string' && !(k === 'background' && layered.has(cid))) {
               const got = k === 'color' ? c.drawn[cid].color : c.drawn[cid].background;
               if (got && judge({ color: value(fv) }, got, c.drawn[cid].under) !== 'differs') verdict = 'same on screen';
             }
             // a border the design does not draw that code draws in a colour its own fill hides, as the audit judges it
-            if (verdict === 'differs' && k === 'border' && !fv && c.drawn[cid].border && invisibleBorder({ 'border-color': c.drawn[cid].border, background: c.drawn[cid].background, under: c.drawn[cid].under })) verdict = 'same on screen';
+            if (verdict === 'differs' && k === 'border' && !fv && c.drawn[cid].border && !c.drawn[cid].layers && invisibleBorder({ 'border-color': c.drawn[cid].border, background: c.drawn[cid].background, under: c.drawn[cid].under })) verdict = 'same on screen';
             compare.push({ when, figma: fid, code: cid, field: k, figmaValue: fv, codeValue: cv, verdict });
           }
         }

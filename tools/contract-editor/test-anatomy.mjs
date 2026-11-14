@@ -129,7 +129,12 @@ ok('the preview draws a gradient, an image fill, and a slot with what it holds',
     img: { kind: 'graphic', parent: 'root', order: 1, background: 'IMAGE:FIT' },
     s: { kind: 'slot', parent: 'root', order: 2, width: 'fill', layout: { direction: 'column' } }, 's/a': { kind: 'text', parent: 's', content: 'A' } }, [], {});
   const [g, img, slot] = preview(parts, [], tokens).children;
-  assert.equal(g.style.background, 'linear-gradient(45deg, #f0c 0%, #00f 100%)', 'a gradient from its paint\'s transform, as parity reads it');
+  assert.equal(g.style.background, 'linear-gradient(to top right, #f0c 0%, #00f 100%)', 'a gradient as to-code writes it (rules.mjs fillCss): corner to corner, a corner keyword that holds on any box');
+  const diag = preview(fromAnatomy({ root: { kind: 'container' }, d: { kind: 'container', parent: 'root', order: 0, width: 'hug', height: 40, background: { type: 'GRADIENT_LINEAR', transform: [[1, 0.5, 0], [-0.5, 1, 0]], stops: [{ position: 0, color: 'C/pink' }, { position: 1, color: 'C/blue' }] } } }, [], {}), [], tokens).children[0];
+  assert.ok(/^linear-gradient\(/.test(diag.style.background) && /taken as 100/.test(diag.near), 'a diagonal on a hugging box, which code cannot say yet, is sketched with its unsized side as 100 and said to be near');
+  const g2 = { type: 'GRADIENT_LINEAR', transform: [[1, 0.5, 0], [-0.5, 1, 0]], stops: [{ position: 0, color: '#ff00cc' }, { position: 1, color: '#0000ff' }] };
+  const both = preview(fromAnatomy({ root: { kind: 'container' }, d: { kind: 'container', parent: 'root', order: 0, width: 'hug', height: 40, background: ['C/pink', g2] } }, [], {}), [], tokens).children[0];
+  assert.ok(/#ff00cc/.test(both.style.background) && /#f0c/.test(both.style.background) && both.near, 'its raw stops drawn as themselves, and a colour under it kept, the diagonal still sketched and said near');
   assert.equal(img.image, true, 'an image fill is said, the contract holding no image');
   assert.deepEqual([slot.style.flexDirection, slot.style.flex, slot.children.map((x) => x.text)], ['column', '1 1 0', ['A']], 'a slot lays out what it holds, and fills as it says');
   const pic = fromAnatomy({ root: { kind: 'container' }, g: { kind: 'instance', parent: 'root', component: 'Graphic/ghost', background: 'IMAGE:FIT' } }, [], {});
