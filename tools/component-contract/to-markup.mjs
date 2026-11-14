@@ -182,6 +182,29 @@ export function partsOf(c) {
   return parts;
 }
 
+/* A box's children in the one order every variant draws them: a part a variant adds takes the place that variant gives
+   it among the rest (an icon added before a label, the label's order set after it), not the end. Each variant (and the
+   base) says which of its children comes before which; they are put in an order that keeps every one, the base order
+   breaking ties; where two variants disagree the base order stands, and a CSS order would say the rest. */
+function inOrder(c, list) {
+  const base = [...list].sort((a, b) => (a.e.order ?? 0) - (b.e.order ?? 0));
+  const ids = base.map((p) => p.id), rank = new Map(ids.map((id, i) => [id, i]));
+  const before = new Map(ids.map((id) => [id, new Set()]));
+  for (const v of [{}, ...(c.variants || [])]) {
+    const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
+    const here = base.filter((p) => (p.base && !gone.has(p.id)) || p.id in add);
+    const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
+    for (const a of here) for (const b of here) if (at(a) < at(b)) before.get(b.id).add(a.id);
+  }
+  const out = [], done = new Set();
+  while (out.length < ids.length) {
+    const next = ids.find((id) => !done.has(id) && [...before.get(id)].every((x) => done.has(x)));
+    if (!next) return base;
+    done.add(next); out.push(next);
+  }
+  return out.map((id) => base[rank.get(id)]);
+}
+
 /* A part's condition as code, over the props' names in code: null where it is always drawn, 'false' where never. */
 function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, lang = JS) {
   const byKey = new Map(props.map((x) => [x.key, x]));
@@ -231,7 +254,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const used = new Set(); // the placed components the markup draws, each imported once
   const kids = new Map();
   for (const part of parts.values()) if (part.id !== 'root') { const up = part.e.parent || 'root'; kids.set(up, [...(kids.get(up) || []), part]); }
-  for (const list of kids.values()) list.sort((a, b) => (a.e.order ?? 0) - (b.e.order ?? 0));
+  for (const [up, list] of kids) kids.set(up, inOrder(c, list));
   const seg = (id) => partSeg(c, copyOf(c, id) || id);
   // a part's hook: its class (React) or its data-part (a web component)
   const hook = (id) => (n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]);
