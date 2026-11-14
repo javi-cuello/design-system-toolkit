@@ -43,7 +43,7 @@ import { variantValues } from '../shared/names.js';
 import { realpathSync } from 'node:fs';
 const req = createRequire(import.meta.url);
 const { nameOf } = req('../snapshot/graph.cjs');
-const { expand, atProps } = req('./derive.cjs');
+const { expand } = req('./derive.cjs');
 
 // a slot's layer is named as its prop is in Figma: Figma names the slot property after it
 const slotName = (e, props) => { const ref = e.kind === 'slot' && typeof e.content === 'string' && /^\{(.+)\}$/.exec(e.content); return ref ? (props[ref[1]] || {}).figma ?? null : null; };
@@ -85,25 +85,6 @@ function glyph(x) {
   return out;
 }
 
-/* A border the same on all four sides is one width: Figma's individual strokes, all equal, list it four times (a bound
-   weight) and say each side's weight again (sides, the only width an unbound weight has); code reads one border-width. */
-function border(x) {
-  if (!x) return x;
-  const out = { ...x };
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  for (const [id, e] of Object.entries(x)) {
-    const b = e && e.border;
-    if (!b || (!Array.isArray(b.width) && !b.sides)) continue;
-    const sides = b.sides ? ['top', 'end', 'bottom', 'start'].map((k) => b.sides[k]) : null;
-    const w = Array.isArray(b.width) ? b.width : b.width !== undefined ? [b.width, b.width, b.width, b.width] : sides;
-    if (!w || !w.every((v) => same(v, w[0])) || w[0] === 0 || w[0] == null) continue;
-    // the sides say the same weight on every side, nothing more (a bound width's sides are its numbers)
-    if (sides && (!sides.every((v) => v === sides[0]) || sides[0] === 0)) continue;
-    const { sides: _, ...rest } = b;
-    out[id] = { ...e, border: { ...rest, width: w[0] } };
-  }
-  return out;
-}
 
 /* An icon's size, said two ways: Figma takes the variant of its set at that size (with Size "20"), code sets the width
    (20). Compared as the size: a `Size` that is the instance's own width and height goes, so the width says it. */
@@ -119,15 +100,17 @@ function iconSize(x) {
   return out;
 }
 
+
 /* A placed instance's prop at its own component's default is that prop unstated: the library's contract states every
-   prop of an instance, a reading only the ones it reads. `mains` is { <component name>: contract }; a prop is
+   prop of an instance, a reading only the ones it reads. `mains` is derive's byComponentName (name → contract, a
+   name two components share none, as the pipeline resolves them); a prop is
    dropped from `with` where it equals the main's default (its code word or Figma's), on both sides alike. */
 function atDefault(x, mains) {
   if (!x || !mains) return x;
   const low = (v) => String(v).toLowerCase();
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
-    const main = e && e.kind === 'instance' && e.with && mains[e.component];
+    const main = e && e.kind === 'instance' && e.with && mains(e.component);
     if (!main) continue;
     const byFigma = Object.fromEntries(Object.values(main.props || {}).map((q) => [low(q.figma || ''), q]));
     const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
@@ -139,28 +122,6 @@ function atDefault(x, mains) {
     }));
     const { with: _, ...bare } = e;
     out[id] = Object.keys(rest).length ? { ...bare, with: rest } : bare;
-  }
-  return out;
-}
-
-/* A placed instance's own styling (its layout, corners, fill) is its component's root's: where the instance states the
-   same value its component's root draws at the instance's props, it is unstated, as code and a drawing leave it to
-   the component. On both sides alike; `mains` as atDefault's. */
-const OWN = ['layout', 'radius', 'background', 'border', 'shadow', 'opacity', 'overflow', 'smoothing', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight'];
-function ownStyling(x, mains) {
-  if (!x || !mains) return x;
-  const out = { ...x };
-  for (const [id, e] of Object.entries(x)) {
-    const main = e && e.kind === 'instance' && mains[e.component];
-    if (!main || !OWN.some((f) => e[f] !== undefined)) continue;
-    // the component at the instance's props, as derive reads an instance's props (atProps)
-    const root = atProps(main, e.with || {}).root;
-    if (!root) continue;
-    const kept = { ...e };
-    // compared as values, whatever order their keys were written in
-    const key = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : 1))) : w));
-    for (const f of OWN) if (kept[f] !== undefined && key(kept[f]) === key(root[f])) delete kept[f];
-    out[id] = kept;
   }
   return out;
 }
@@ -194,8 +155,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    // ownStyling reads the instance's props before iconSize and atDefault drop any of them
-    const same = (x) => atDefault(iconSize(ownStyling(border(glyph(room(x))), mains)), mains);
+    const same = (x) => atDefault(iconSize(glyph(room(x))), mains);
     diff(same(expand(library, { ...variantDefaults(library), ...c })), same(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
@@ -1231,7 +1191,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
         const { compact } = req('../snapshot/spec.cjs');
         const { derive } = req('./derive.cjs');
         const now = derive(compact(comp), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
-        const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now);
+        // the library's components by name, as eval.mjs compares with them: the same rules on every leg
+        const { contracts } = await import('./official.mjs');
+        const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
         back = rt.rows.length;
         const rtOut = path.join(path.dirname(report), `${path.basename(report, '.json')}.roundtrip.json`);
         const body = JSON.stringify({ component: p.name, combinations: rt.combinations, ...(rt.invalid && { invalid: rt.invalid }), ...(rt.cut && { cut: rt.cut }), rows: rt.rows }, null, 2) + '\n';

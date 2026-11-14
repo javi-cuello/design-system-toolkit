@@ -387,6 +387,8 @@ function anatomies(trees, characters, known, L, mains = null) {
       }
     });
   }
+  // the one spelling first, so an instance and its component are compared alike
+  for (const f of flat) normalForm(f.anatomy);
   if (mains) for (const f of flat) ownInsides(f.anatomy, mains);
   return flat;
 }
@@ -400,25 +402,102 @@ function anatomies(trees, characters, known, L, mains = null) {
    is kept. (A contract annotation of the component's own props, swappedBy, says nothing of how a layer looks.) */
 const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy']);
 const look = (e) => j(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
+/* An instance's own styling is its component's root's too: a field the instance states (its layout, corners, fill,
+   stroke, effect, opacity, clipping, smoothing, min and max sizes) that equals its component's root at the instance's
+   props is the component's, and left out, so code and a drawing leave it to the component and no sheet writes it
+   twice. Its size is the placement's (fill, hug, a fixed width), kept. */
+const OWN = ['layout', 'radius', 'background', 'border', 'shadow', 'opacity', 'overflow', 'smoothing', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight'];
+/* The contract's one spelling of what two readings may say two ways, for every reader (derive, from-code): a stroke
+   of one weight on all four sides is that weight (no sides). (An instance's prop at its component's default stays
+   stated: to-figma picks the variant by it, and a nested instance's default is its holder's, not its component's; the
+   comparison takes it as unstated, roundTrip's atDefault.) */
+function normalForm(anatomy) {
+  for (const [id, e] of Object.entries(anatomy)) {
+    const b = e && e.border;
+    if (!b || (!Array.isArray(b.width) && !b.sides)) continue;
+    const sides = b.sides ? ['top', 'end', 'bottom', 'start'].map((k) => b.sides[k]) : null;
+    const w = Array.isArray(b.width) ? b.width : b.width !== undefined ? [b.width, b.width, b.width, b.width] : sides;
+    const even = w && w.every((v) => j(v) === j(w[0])) && w[0] !== 0 && w[0] != null && (!sides || (sides.every((v) => v === sides[0]) && sides[0] !== 0));
+    if (even) { const { sides: _, ...rest } = b; anatomy[id] = { ...e, border: { ...rest, width: w[0] } }; }
+  }
+  return anatomy;
+}
+
+// a value as JSON with every object's keys in order: two readings write a layout's fields in different orders
+const sorted = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' && !Array.isArray(w) ? Object.fromEntries(Object.entries(w).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : w));
+// one rule for every reading of a contract: derive's (Figma), from-code's (code)
+function ownStyling(anatomy, mains) {
+  for (const e of Object.values(anatomy)) {
+    const m = e && e.kind === 'instance' && e.component && mains(e.component);
+    if (!m) continue;
+    const root = atProps(m, e.with).root;
+    if (root) for (const f of OWN) if (e[f] !== undefined && sorted(e[f]) === sorted(root[f])) delete e[f];
+  }
+  return anatomy;
+}
 function ownInsides(anatomy, mains) {
+  ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
     if (!e || e.kind !== 'instance' || !e.component) continue;
+    const m = mains(e.component);
+    if (!m) { ownGlyph(anatomy, id); continue; }
+    const M = { ...atProps(m, e.with) };
+    // a swap the instance states (Icon: folder) draws that component where the swap points: compared so, its glyph
+    // the swapped icon's own drawing, so only what an instance can override there (its colour) is compared
+    const low = (x) => String(x).toLowerCase(), swapped = [];
+    for (const [pk, q] of Object.entries(m.props || {})) {
+      if (q.type !== 'instance' || !(q.swaps || []).length) continue;
+      const w = Object.entries(e.with || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || pk));
+      if (!w) continue;
+      for (const sid of q.swaps) {
+        if (!M[sid] || !M[sid].component) continue;
+        // a swap names its target by its own name (x), or by its name in its main's folder (Icon/x); the instance placed
+        // there says which, where its name ends in that one
+        const set = M[sid].component.split('/').slice(0, -1).join('/'), v = String(w[1]), placed = (anatomy[`${id}/${sid}`] || {}).component;
+        const target = placed && (low(placed) === low(v) || low(placed).endsWith(`/${low(v)}`)) ? placed : v.includes('/') || !set ? v : `${set}/${v}`;
+        M[sid] = { ...M[sid], component: target };
+        // the target's own drawing where this library holds it (its insides are what the swap draws); else only its colour
+        const T = mains(target);
+        if (T) {
+          const tA = atProps(T, M[sid].with);
+          for (const k of Object.keys(M)) if (k.startsWith(`${sid}/`)) delete M[k];
+          for (const [tk, te] of Object.entries(tA)) if (tk !== 'root') M[`${sid}/${tk}`] = { ...te, parent: !te.parent || te.parent === 'root' ? sid : `${sid}/${te.parent}` };
+          continue;
+        }
+        swapped.push(sid);
+      }
+    }
+    // the component as placed (its swaps applied), its own nested instances' styling left to theirs, as this one's was
+    ownStyling(M, mains);
+    const SHAPE_OF = new Set(['width', 'height', 'constraints']);
     const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));
     if (!inner.length) continue;
-    const m = mains(e.component);
-    if (!m) continue;
-    const M = atProps(m, e.with);
     // a layer of the component the instance does not draw (hidden: the walk records what shows) is an override no
     // layer here can say: the instance is kept whole
     if (Object.keys(M).some((mk) => mk !== 'root' && !(id + '/' + mk in anatomy))) continue;
     const own = (k) => {
       const mk = k.slice(id.length + 1), x = M[mk];
-      return !!x && look(anatomy[k]) === look(x);
+      if (!x) return false;
+      if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
+      return look(anatomy[k]) === look(x);
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
   }
+}
+
+/* An instance of a component this library does not hold (an icon from its own set) that draws one graphic, scaled to
+   the instance on both axes: that graphic's size is its component's drawing, not an override the instance states, so
+   only what the instance overrides there (its colour) is kept. The drawing places the component by reference, and
+   code draws the glyph at the instance's size: neither says the graphic's own box. The limit: the snapshot holds no
+   drawing of such an icon to hold the box to, so a size a designer did override on that graphic goes too. */
+function ownGlyph(anatomy, id) {
+  const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));
+  const g = inner.length === 1 && anatomy[inner[0]];
+  if (!g || g.kind !== 'graphic' || g.parent !== id || !g.constraints || g.constraints.horizontal !== 'scale' || g.constraints.vertical !== 'scale') return;
+  const { width, height, constraints, ...rest } = g;
+  anatomy[inner[0]] = rest;
 }
 
 /* A component as one of its instances draws it: its contract expanded at the instance's props (`with`, by Figma's
@@ -449,6 +528,14 @@ function atProps(m, withProps = {}) {
 /* A lookup of components' contracts by name, for derive's `mains`: each derived once, from its own spec, without
    `mains` itself (a component is held to its own component's reading as that reading stands). `specs` maps a name
    to its stored spec. */
+/* A library's components by name, as every reader looks one up: its whole name in any case, and none where two share
+   a name (a web and a mobile Button). `contracts` is a list of contracts. */
+function byComponentName(contracts) {
+  const low = (x) => String(x).toLowerCase(), count = {};
+  for (const c of contracts) count[low(c.component)] = (count[low(c.component)] || 0) + 1;
+  const by = new Map(contracts.filter((c) => count[low(c.component)] === 1).map((c) => [low(c.component), c]));
+  return (name) => by.get(low(name)) || null;
+}
 function mainsFrom(specs, known = [], optionsOf = () => ({})) {
   const done = new Map(), low = (x) => String(x).toLowerCase();
   // (a name two specs share, a web and a mobile Button, is no one component: left unresolved, its instances kept whole)
@@ -623,4 +710,4 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, ownStyling, normalForm, byComponentName, ownGlyph, ownInsides };

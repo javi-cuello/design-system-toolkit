@@ -220,15 +220,6 @@ delete globalThis.figma;
       roundTrip(figma({ width: 16.67 }), figma({ width: 20 })).rows.length === 1 && roundTrip(figma({ width: 16.67 }), code('Icon/strong')).rows.length > 0);
   }
   {
-    const bx = (b) => ({ contract: 1, component: 'Box', props: {}, anatomy: { root: { kind: 'container', border: { color: 'S/a', ...b } } }, variants: [] });
-    ok('a border equal on four sides is one width; a border on one side is not',
-      roundTrip(bx({ width: ['S/1', 'S/1', 'S/1', 'S/1'], sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ width: 'S/1' })).rows.length === 0
-      && roundTrip(bx({ width: ['S/1', 0, 0, 0], sides: { top: 1, end: 0, bottom: 0, start: 0 } }), bx({ width: 'S/1' })).rows.length > 0);
-    ok('an unbound weight, said by its sides alone, is that width: 1 on every side is 1, and 2 differs from it',
-      roundTrip(bx({ sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ width: 1 })).rows.length === 0
-      && roundTrip(bx({ sides: { top: 1, end: 1, bottom: 1, start: 1 } }), bx({ sides: { top: 2, end: 2, bottom: 2, start: 2 } })).rows.length === 1);
-  }
-  {
     const at = (e) => ({ contract: 1, component: 'Chip', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/x', ...e } }, variants: [] });
     ok('an icon at Size 20 and 20 wide is the icon 20 wide; at Size 16 and 20 wide it is not',
       roundTrip(at({ width: 20, height: 20, with: { Size: '20' } }), at({ width: 20, height: 20 })).rows.length === 0
@@ -244,23 +235,13 @@ delete globalThis.figma;
   // an instance's prop at its own component's default is that prop unstated: the library states it, a reading does not
   const button = { component: 'Button', props: { size: { type: 'enum', values: ['sm', 'lg'], figmaValues: ['Sm', 'Lg'], default: 'sm', figma: 'Size' }, disabled: { type: 'boolean', default: false, figma: 'Disabled' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
   const holder = (w) => ({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, action: { kind: 'instance', parent: 'root', component: 'Button', ...(w && { with: w }) } }, variants: [] });
-  const mains = { Button: button };
+  const mains = (n) => (n === 'Button' ? button : null);
   ok('an instance\'s prop at its component\'s default, in its code word or Figma\'s, is the same as unstated; another value is still a difference',
     roundTrip(holder({ Size: 'Sm', Disabled: 'False' }), holder(null), { mains }).rows.length === 0
     && roundTrip(holder({ Size: 'Lg' }), holder(null), { mains }).rows.length === 1
     && roundTrip(holder({ Size: 'Sm' }), holder(null)).rows.length === 1);
-  const framed = { ...button, anatomy: { root: { kind: 'container', radius: 'Corner/8', layout: { direction: 'row' } } }, variants: [{ when: { size: 'lg' }, set: { 'root.radius': 'Corner/12' } }] };
-  const styled = (w, own) => { const h = holder(w); h.anatomy.action = { ...h.anatomy.action, ...own }; return h; };
-  ok('an instance\'s own styling equal to its component\'s root at its props is unstated; at other props, or another value, it is still a difference',
-    roundTrip(styled({ Size: 'Sm' }, { radius: 'Corner/8', layout: { direction: 'row' } }), styled(null, {}), { mains: { Button: framed } }).rows.length === 0
-    && roundTrip(styled({ Size: 'Lg' }, { radius: 'Corner/12' }), styled({ Size: 'Lg' }, {}), { mains: { Button: framed } }).rows.length === 0
-    && roundTrip(styled({ Size: 'Lg' }, { radius: 'Corner/8' }), styled({ Size: 'Lg' }, {}), { mains: { Button: framed } }).rows.length === 1);
-  const avatar = { component: 'Avatar', props: { size: { type: 'enum', values: ['24', '40'], default: '40', figma: 'Size' } }, anatomy: { root: { kind: 'container', radius: 'Corner/8', layout: { direction: 'row', gap: 8 } } }, variants: [{ when: { size: '24' }, set: { 'root.radius': 'Corner/4' } }] };
-  const placed = (own) => ({ component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, a: { kind: 'instance', parent: 'root', component: 'Avatar', width: 24, height: 24, with: { Size: '24' }, ...own } }, variants: [] });
-  ok('an icon-sized instance is compared at its own Size, and a layout written in another key order is the same',
-    roundTrip(placed({ radius: 'Corner/4', layout: { gap: 8, direction: 'row' } }), placed({}), { mains: { Avatar: avatar } }).rows.length === 0);
   const tagged = { ...button, props: { ...button.props, label: { type: 'string', default: 'New', figma: 'Label' } } };
-  ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: { Button: tagged } }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: { Button: tagged } }).rows.length === 0);
+  ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 0);
 }
 
 {

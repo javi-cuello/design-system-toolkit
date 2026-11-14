@@ -815,6 +815,8 @@ async function main() {
     const fr = figmaContract && figmaContract.anatomy && figmaContract.anatomy.root || {};
     const room = typeof fr.width === 'number' ? fr.width : fr.width === 'fill' && fr.canvas && typeof fr.canvas.width === 'number' ? fr.canvas.width : null;
     if (room) notes.push(`read in a room ${room} wide, the width Figma draws the component at`);
+    const { ownStyling, normalForm, byComponentName } = req('./derive.cjs');
+    const mainOf = byComponentName([...official.values()]);
     const read = async (args) => {
       await show(args);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
@@ -1223,6 +1225,9 @@ async function main() {
         anatomy[id] = x;
       }
       for (const [id, e] of ring) anatomy[`${id === 'root' ? '' : `${id}/`}focusRing`] = { ...e, order: Object.values(anatomy).filter((y) => y.parent === id).length };
+      // each combination in the one spelling, and a placed instance's own styling left to its component, as derive does
+      // each of its flats before folding them: so base and variants are cut alike
+      normalForm(anatomy); ownStyling(anatomy, mainOf);
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };

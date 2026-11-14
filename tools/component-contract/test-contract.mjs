@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { derive, expand, selfCheck, bridge, fold, mainsFrom } = require('./derive.cjs');
+const { derive, expand, selfCheck, bridge, fold, mainsFrom, ownStyling, normalForm, ownGlyph, byComponentName, ownInsides } = require('./derive.cjs');
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
 
@@ -206,7 +206,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const A1 = one.anatomy;
   ok('a corner bound to a token is said by it at 0, and an opacity by its token', A1.root.radius === 'R/0' && A1.root.opacity === 'O/half');
   ok('a stroke a side, each bound side by its token and the others by their width, drawn on its centre and taking room', JSON.stringify(A1.box.border.width) === '["S/1",0,"S/1",0]' && A1.box.border.align === 'center' && A1.box.border.inLayout === true);
-  ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is kept', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && JSON.stringify(A1['free/ring'].border) === '{"width":["S/1","S/1","S/1","S/1"]}');
+  ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is kept (one weight on every side said once)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && JSON.stringify(A1['free/ring'].border) === '{"width":"S/1"}');
   // a focus ring 4 outside its chip, stretched with it, and a badge pinned 2 in from its end: their far edges, and the
   // ring no size of its own, which would be one label's
   const pinned = derive({ name: 'Chip', id: '1:1', props: {}, variants: [{ name: 'Chip', type: 'COMPONENT', w: 81, h: 36, children: [
@@ -287,6 +287,55 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const v = { name: 'Size=Large', id: '9:1', type: 'COMPONENT', w: 100, h: 40, layout: 'HORIZONTAL', pad: [40, 0, 0, 0], gap: 0, align: 'MIN/MIN', sizing: 'FIXED/FIXED', bindings: { pad: [null, 'Spacing/0', 'Spacing/0', 'Spacing/0'] }, children: [] };
   const got = derive({ name: 'Bar', id: '9:0', props: { Size: ['Large'] }, variants: [v] }).anatomy.root.layout.padding;
   ok('an unbound side of padding is its number beside the bound sides', JSON.stringify(got) === JSON.stringify({ top: 40, end: 'Spacing/0', bottom: 'Spacing/0', start: 'Spacing/0' }));
+}
+
+
+{
+  // a placed instance's own styling equal to its component's root, at the instance's props, is the component's
+  const button = { component: 'Button', props: { size: { type: 'enum', values: ['sm', 'lg'], figmaValues: ['Sm', 'Lg'], default: 'sm', figma: 'Size' } },
+    anatomy: { root: { kind: 'container', radius: 'Corner/8', layout: { direction: 'row', gap: 8 } } }, variants: [{ when: { size: 'lg' }, set: { 'root.radius': 'Corner/12' } }] };
+  const mains = (n) => (n === 'Button' ? button : null);
+  const at = (w, own) => ownStyling({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', width: 'hug', with: w, ...own } }, mains).b;
+  ok('an instance\'s own styling equal to its component\'s root at its props is left out, its size kept; at other props, or another value, it stays',
+    at({ Size: 'Sm' }, { radius: 'Corner/8', layout: { direction: 'row', gap: 8 } }).radius === undefined && at({ Size: 'Sm' }, { radius: 'Corner/8' }).width === 'hug'
+    && at({ Size: 'Lg' }, { radius: 'Corner/12' }).radius === undefined && at({ Size: 'Lg' }, { radius: 'Corner/8' }).radius === 'Corner/8'
+    && at({ Size: 'Sm' }, { layout: { gap: 8, direction: 'row' } }).layout === undefined);
+}
+
+
+{
+  // the one spelling every reader writes: a stroke even on four sides is one weight
+  const button = { component: 'Button', props: { size: { type: 'enum', values: ['sm', 'lg'], figmaValues: ['Sm', 'Lg'], default: 'sm', figma: 'Size' }, disabled: { type: 'boolean', default: false, figma: 'Disabled' }, label: { type: 'string', default: 'New', figma: 'Label' } }, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const mains = (n) => (n === 'Button' ? button : null);
+  const nf = (e) => normalForm({ x: e }).x;
+  ok('a stroke of one weight on every side is that weight, bound or not; one on some sides keeps its sides',
+    JSON.stringify(nf({ border: { color: 'S/a', width: ['S/1', 'S/1', 'S/1', 'S/1'], sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border) === '{"color":"S/a","width":"S/1"}'
+    && nf({ border: { sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border.width === 1
+    && Array.isArray(nf({ border: { width: ['S/1', 0, 0, 0], sides: { top: 1, end: 0, bottom: 0, start: 0 } } }).border.width));
+  // the spelling settled before an instance is held to its component: a stroke recorded by its sides is its component's one weight
+  const framed = { component: 'Frame', props: {}, anatomy: { root: { kind: 'container', border: { color: 'c', width: 1 } } }, variants: [] };
+  const placed = normalForm({ f: { kind: 'instance', component: 'Frame', border: { color: 'c', sides: { top: 1, end: 1, bottom: 1, start: 1 } } } });
+  ok('an instance\'s stroke said by its sides is its component\'s one weight once both are in the one spelling', ownStyling(placed, (n) => (n === 'Frame' ? framed : null)).f.border === undefined);
+}
+
+{
+  // an icon from a set the library does not hold: its scaled graphic's box is the icon's drawing, its colour the override
+  const icon = () => ({ i: { kind: 'instance', component: 'Icon/house', width: 20, height: 20 }, 'i/v': { kind: 'graphic', parent: 'i', width: 16.67, height: 17.5, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/icon' } });
+  const a = icon(); ownGlyph(a, 'i');
+  const fixed = icon(); fixed['i/v'].constraints = { horizontal: 'min', vertical: 'min' }; ownGlyph(fixed, 'i');
+  const by = byComponentName([{ component: 'Button' }, { component: 'button' }, { component: 'Chip' }]);
+  ok('a component is found by its name in any case; a name two components share finds none', by('CHIP').component === 'Chip' && by('Button') === null);
+  // a swap names its target by its own name or by its main's folder: the instance placed there says which
+  const ib = { component: 'Icon button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['content/icon'] } }, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/icon': { kind: 'instance', parent: 'content', component: 'Icon/plus' } }, variants: [] };
+  const placedIb = (inner) => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Icon button', with: { Icon: 'x' } }, 'b/content': { kind: 'container', parent: 'b' }, 'b/content/icon': { kind: 'instance', parent: 'b/content', component: inner } }; ownInsides(x, (n) => (n === 'Icon button' ? ib : null)); return Object.keys(x).length; };
+  ok('an instance swapped to x is its component as placed, whether x is named whole or in its folder; another icon is kept', placedIb('x') === 2 && placedIb('Icon/x') === 2 && placedIb('y') === 4);
+  // a swap to a component this library holds draws that component's insides: a colour is held to its, not the default's
+  const iconC = (name, bg) => ({ component: name, props: {}, anatomy: { root: { kind: 'container' }, v: { kind: 'graphic', parent: 'root', background: bg } }, variants: [] });
+  const swapBy = { Button: { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/check' }, 'i/v': { kind: 'graphic', parent: 'i', background: 'Text/strong' } }, variants: [] }, 'Icon/alert': iconC('Icon/alert', 'Status/danger'), 'Icon/check': iconC('Icon/check', 'Text/strong') };
+  const toAlert = (bg) => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', with: { Icon: 'alert' } }, 'b/i': { kind: 'instance', parent: 'b', component: 'Icon/alert' }, 'b/i/v': { kind: 'graphic', parent: 'b/i', background: bg } }; ownInsides(x, (n) => swapBy[n] || null); return Object.keys(x).length; };
+  ok('a swapped icon\'s colour equal to the default icon\'s but not its own is an override, kept; its own colour goes', toAlert('Text/strong') === 4 && toAlert('Status/danger') === 2);
+  ok('a glyph scaled to its icon keeps only its colour; one placed by fixed constraints keeps its box',
+    JSON.stringify(a['i/v']) === '{"kind":"graphic","parent":"i","background":"C/icon"}' && fixed['i/v'].width === 16.67);
 }
 
 console.log(`${n}/${n} passed`);

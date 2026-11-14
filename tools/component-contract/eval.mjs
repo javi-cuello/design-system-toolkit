@@ -42,8 +42,8 @@ export function measure(where) {
   const drawn = path.join(home, 'round-trip');
   const read = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
   const legs = { browser: {}, self: {}, figma: {} };
-  // each component by its name, for what an instance of it draws at its defaults
-  const mains = Object.fromEntries(contracts(where).map(({ contract }) => [contract.component, contract]));
+  // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
+  const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
   const selfDir = path.join(drawn, 'self', 'from-code');
   for (const { folder, contract } of contracts(where)) {
     const code = read(path.join(readings, `${folder}.json`));

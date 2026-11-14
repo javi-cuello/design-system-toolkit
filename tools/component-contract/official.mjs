@@ -62,7 +62,9 @@ export function officials(where) {
   };
   // every official contract, by its key
   const all = () => (source === 'contract' && dir && fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => readJson(path.join(dir, f))) : []);
-  return { source, dir, fileOf, of: (c) => { const o = of(c); return o && c && o !== c ? { ...o, figma: c.figma } : o; }, all };
+  // an official contract stored by hand (source: contract) is read in the one spelling every reader writes (derive's normalForm)
+  const spelt = (o) => (o && source === 'contract' ? inOneSpelling(o) : o);
+  return { source, dir, fileOf, of: (c) => { const o = spelt(of(c)); return o && c && o !== c ? { ...o, figma: c.figma } : o; }, all };
 }
 
 /* Figma's readings, one per component folder that has one. */
@@ -73,9 +75,35 @@ export function readings(where) {
 }
 
 /* Every component's official contract, by its folder: what the tools that read a whole library read. */
+/* A contract with its anatomy, each variant's added layers and each stroke a variant sets in derive's one spelling. */
+export function inOneSpelling(c) {
+  const { normalForm } = createRequire(import.meta.url)('./derive.cjs');
+  const copy = JSON.parse(JSON.stringify(c));
+  normalForm(copy.anatomy || {});
+  for (const v of copy.variants || []) {
+    if (v.add) normalForm(v.add);
+    for (const [k, val] of Object.entries(v.set || {})) if (k.endsWith('.border') && val && typeof val === 'object') v.set[k] = normalForm({ x: { border: val } }).x.border;
+  }
+  return copy;
+}
+
 export function contracts(where) {
-  const { of } = officials(where);
-  return readings(where).map((r) => ({ folder: r.folder, contract: of(r.contract) }));
+  const { of, source } = officials(where);
+  const out = readings(where).map((r) => ({ folder: r.folder, contract: of(r.contract) }));
+  // a contract stored by hand is held to the rest as derive holds a reading: a placed instance's own styling is its component's
+  if (source === 'contract') {
+    const { ownStyling, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
+    const mainOf = byComponentName(out.map((x) => x.contract));
+    // a base instance a variant sets anything on (its props, a radius) is left whole: held to its component at the base's
+    // props alone, a value equal there and not under the variant's would be lost (derive cuts per combination instead)
+    for (const x of out) {
+      if (!x.contract) continue;
+      const touched = new Set((x.contract.variants || []).flatMap((v) => Object.keys(v.set || {}).map((k) => k.slice(0, k.lastIndexOf('.')))));
+      ownStyling(Object.fromEntries(Object.entries(x.contract.anatomy || {}).filter(([id]) => !touched.has(id))), mainOf);
+      for (const v of x.contract.variants || []) if (v.add) ownStyling(Object.fromEntries(Object.entries(v.add).filter(([id]) => !touched.has(id))), mainOf);
+    }
+  }
+  return out;
 }
 
 /* Where Figma is behind the official contracts: a component whose reading differs (`changed`), one Figma has that has no
@@ -89,7 +117,8 @@ export function behind(where) {
   for (const r of read) {
     const f = o.fileOf(r.contract.figma && r.contract.figma.key);
     if (!f || !fs.existsSync(f)) { out.push({ kind: 'new', component: r.contract.component, folder: r.folder, figma: r.contract, official: null }); continue; }
-    const official = readJson(f);
+    // in the one spelling, as Figma's reading is: a spelling is no change to ask a designer for
+    const official = inOneSpelling(readJson(f));
     // where Figma keeps the component (its node, its name there) is Figma's to say, not a difference
     const bare = (c) => ({ ...c, figma: { ...c.figma, id: null, name: null } });
     if (!same(bare(official), bare(r.contract))) out.push({ kind: 'changed', component: official.component, folder: r.folder, figma: r.contract, official });
