@@ -159,6 +159,53 @@ export function placeFromCss(own) {
   return { constraints: { horizontal: h.to, vertical: v.to }, offsets: { x: h.near, end: h.far, y: v.near, bottom: v.far } };
 }
 
+/* A fill as CSS paints it. Figma lists a layer's paints bottom up; CSS's background layers go top first, and only the
+   bottom one may be a bare colour, so a colour above another layer is a gradient of that colour alone (the synonym
+   capabilities.json names fill-multiple). An image is content the template supplies, not the sheet's.
+   A linear gradient: Figma's colour at a point (u, v) of the layer's unit square is t = a·u + b·v + c, the first row
+   of the paint's transform; on a w×h box that runs along (a/w, b/h), so CSS's angle is atan2(a/w, −b/h), and CSS
+   stretches its line corner to corner, so a stop at t falls at (t − t₀)/(t₁ − t₀) of it (parity's schema.mjs
+   `gradient`, which measures it the same way). An axis-aligned one is the same on every box; a diagonal needs the
+   box's size, unless it runs corner to corner (a corner keyword, the same on every box); otherwise, on a box whose
+   size is not a fixed number (its content's, its parent's, a token's), it is not said.
+   `colour(name)` says a stop's colour. Returns { value, unread: [why] }. */
+export function gradientCss(g, box, colour) {
+  if (!g || g.type !== 'GRADIENT_LINEAR' || !Array.isArray(g.stops) || !g.stops.length) return { unread: ['background (a gradient other than linear)'] };
+  const [a, b, c] = Array.isArray(g.transform) ? g.transform[0] : [null, null, null];
+  let deg;
+  if (a === null) { if (g.angle % 90 !== 0) return { unread: ['background (a diagonal gradient recorded without its transform)'] }; deg = g.angle; }
+  // (the snapshot rounds a transform to six places, and a handle dragged by hand is near, not exact: within a thousandth)
+  else if (Math.abs(a) < 1e-3 * Math.abs(b) || Math.abs(b) < 1e-3 * Math.abs(a)) deg = (Math.atan2(a, -b) * 180) / Math.PI;
+  // isolines along a corner-to-corner diagonal on every box: CSS's corner keyword draws them so on any box (CSS
+  // Images 3 §3.1.1: the line perpendicular to the diagonal through the other two corners)
+  else if (Math.abs(Math.abs(a) - Math.abs(b)) < 1e-3 * Math.max(Math.abs(a), Math.abs(b))) deg = `to ${b < 0 ? 'top' : 'bottom'} ${a > 0 ? 'right' : 'left'}`;
+  else if (box && typeof box.w === 'number' && typeof box.h === 'number' && box.w > 0 && box.h > 0) deg = (Math.atan2(a / box.w, -b / box.h) * 180) / Math.PI;
+  else return { unread: ['background (a diagonal gradient on a box whose size is not a fixed number)'] };
+  const corners = a === null ? [0, 1] : [c, a + c, b + c, a + b + c], t0 = Math.min(...corners), t1 = Math.max(...corners);
+  const at = (p) => (a === null ? p : (p - t0) / (t1 - t0 || 1));
+  const n = (x) => +x.toFixed(2);
+  // a stop whose colour cannot be said leaves the gradient unsaid
+  if (g.stops.some((st) => colour(st.color) == null)) return { unread: [] };
+  return { value: `linear-gradient(${typeof deg === 'string' ? deg : `${n(((deg % 360) + 360) % 360)}deg`}, ${g.stops.map((st) => `${colour(st.color)} ${n(at(st.position) * 100)}%`).join(', ')})`, unread: [] };
+}
+export function fillCss(fills, box, colour) {
+  const layers = [], unread = [];
+  const list = [].concat(fills ?? []);
+  list.forEach((f, i) => {
+    if (typeof f === 'string' && f.startsWith('IMAGE')) { unread.push('background (an image fill: the template supplies the image)'); return; }
+    // a paint the snapshot names by its type (a radial, angular or diamond gradient, a video, a pattern) or a variable
+    // it could not resolve is no colour to say
+    if (typeof f === 'string' && /^(GRADIENT_|VIDEO|PATTERN|EMOJI|VariableID:)/.test(f)) { unread.push(`background (${f.startsWith('VariableID:') ? 'a variable the snapshot could not name' : `a ${f.toLowerCase().replace(/_/g, ' ')} paint`})`); return; }
+    if (typeof f === 'string') { const v = colour(f); if (v == null) return; layers.unshift(i === 0 ? v : `linear-gradient(${v}, ${v})`); return; }
+    const g = gradientCss(f, box, colour);
+    unread.push(...g.unread);
+    if (g.value) layers.unshift(g.value);
+  });
+  // a bottom colour under an image the template supplies stays a bare colour; one left above nothing is one too
+  if (layers.length) { const last = layers[layers.length - 1], m = /^linear-gradient\((.+), \1\)$/.exec(last); if (m) layers[layers.length - 1] = m[1]; }
+  return { value: layers.length ? layers.join(', ') : undefined, unread };
+}
+
 const LENGTH = /^(-?[\d.]+(px|rem|em)|0|var\(--[\w-]+\)|calc\(.+\))$/;
 const word = (v) => (v == null ? '' : String(v).trim());
 const grows = (flex, grow) => {

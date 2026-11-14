@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, share, negative, pullProp } from './rules.mjs';
+import { alignToCss, share, negative, pullProp, fillCss } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -74,13 +74,13 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     if (v !== undefined) put(prop, len(v), literal(v));
   }
 
+  // its fills, bottom up as Figma lists them, as CSS's background layers (rules.mjs fillCss): a colour with no variable
+  // written as itself, said so; a name its token's
   const bg = take('background');
-  for (const fill of [].concat(bg ?? [])) {
-    // a colour with no variable is written as itself, said so; a name is its token's
-    if (typeof fill === 'string' && /^(#|rgba?\(|hsla?\()/.test(fill)) put('background', fill, NOTE);
-    else if (typeof fill === 'string' && !fill.startsWith('IMAGE')) put('background', names.token(fill));
-    else unread.push(typeof fill === 'string' ? 'background (an image fill: the template supplies the image)' : 'background (a gradient)');
-  }
+  const raw = (f) => typeof f === 'string' && /^(#|rgba?\(|hsla?\()/.test(f);
+  const fill = fillCss(bg, { w: e.width, h: e.height }, (f) => (raw(f) ? f : names.token(f)));
+  put('background', fill.value, [].concat(bg ?? []).some((f) => raw(f) || (f && Array.isArray(f.stops) && f.stops.some((st) => raw(st.color)))) ? NOTE : undefined);
+  unread.push(...fill.unread);
   const color = take('color');
   if (typeof color === 'string') put('color', names.token(color));
 

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE } from './to-code.mjs';
 import { declarations } from './css.mjs';
+import { fillCss } from './rules.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -209,6 +210,20 @@ else console.log('skip: no stored contracts on this machine');
   ok('an instance with no recorded glyph draws in its component\'s glyph colour at its props, each variant its own',
     /> \.ds-button__spinner \{[^}]*color: var\(--c-medium\)/.test(sheet) && /data-loud[^{]*> \.ds-button__spinner \{[^}]*color: var\(--c-inverse\)/.test(sheet) && selfCheck(btn, undefined, mains).length === 0);
   ok('without the library, no colour is guessed', !/color:/.test(toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+}
+
+// fills as CSS's background layers (rules.mjs fillCss): Figma's bottom-up list top first, a colour above another layer a
+// gradient of itself, an image the template's; a linear gradient by its transform (parity's formula)
+{
+  const tk = (x) => `var(--${x.toLowerCase().replace(/\W+/g, '-')})`;
+  ok('stacked fills are background layers, top first, the bottom one a bare colour, an image left to the template',
+    fillCss(['C/soft', 'IMAGE:FILL', 'rgb(0 0 0 / 0.5)'], {}, (f) => (f.startsWith('rgb') ? f : tk(f))).value === 'linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)), var(--c-soft)');
+  const g = (t) => ({ type: 'GRADIENT_LINEAR', transform: t, stops: [{ position: 0, color: 'A' }, { position: 1, color: 'B' }] });
+  ok('a top-to-bottom gradient is 180deg on any box', fillCss([g([[0, 1, 0], [-1, 0, 1]])], {}, tk).value === 'linear-gradient(180deg, var(--a) 0%, var(--b) 100%)');
+  ok('a corner-to-corner one is a corner keyword, the same on any box', fillCss([g([[0.5, -0.5, 0.5], [0.5, 0.5, 0]])], {}, tk).value === 'linear-gradient(to top right, var(--a) 0%, var(--b) 100%)');
+  ok('another diagonal takes its angle on the box drawn', /^linear-gradient\(\d/.test(fillCss([g([[1, 0.5, 0], [0, 1, 0]])], { w: 200, h: 100 }, tk).value || ''));
+  const hug = fillCss([g([[1, 0.5, 0], [0, 1, 0]])], { w: 'hug', h: 40 }, tk);
+  ok('and on a box its content sizes it is not said, and says why', hug.value === undefined && /not a fixed number/.test(hug.unread[0]) && fillCss(['GRADIENT_RADIAL'], {}, tk).value === undefined);
 }
 
 console.log(`${n} passed`);
