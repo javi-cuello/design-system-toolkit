@@ -865,7 +865,8 @@ async function main() {
           // a box whose only content is its words is a text, unless the mapping says its words are a layer of their own
           // the element a slot's stand-in landed in is the slot, what the caller puts there its content, not its parts
           const filled = marks.find(([m]) => text === m);
-          const kind = filled ? 'slot' : tag === 'svg' ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
+          // an icon is an svg, or the mark to-markup leaves for the project to draw one in (an empty element naming it, data-icon)
+          const kind = filled ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
           const e = { id, kind, ...(parent != null && { parent, order }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           { const r = n.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
@@ -903,7 +904,7 @@ async function main() {
                 for (let up = t === n ? null : t; up && up !== n; up = up.parentElement) if (isRoot(up)) return false;
                 return true;
               }).map((t) => [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim()),
-              glyphs: [...n.querySelectorAll('svg')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) }); return; }
+              glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) }); return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; }
           else if (kind === 'text') { e.color = s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
@@ -1572,14 +1573,15 @@ async function main() {
         const swapped = Object.values(fromCode.props).some((p) => p.type === 'swap' && (p.shows || []).includes(id));
         // else only where the design's component is that glyph, or its set holds it elsewhere in the design: an
         // instance of another kind (Avatar/Small) or a glyph outside the set (a logo) stays the code's graphic
-        const set = fe.component.split('/').slice(0, -1).join('/'), named = `${set}/${e.asset}`;
+        // a glyph named whole (to-markup's mark says Icon/house) is that name; one named alone (house) is in the design's set
+        const set = fe.component.split('/').slice(0, -1).join('/'), whole = (g) => (g.startsWith(`${set}/`) ? g : `${set}/${g}`), named = whole(e.asset);
         const held = (n) => fe.component === n || JSON.stringify(figmaContract).includes(JSON.stringify(n));
         // and every glyph a variant changes it to, held the same way, or the whole layer stays the code's graphic
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
-        if (!swapped && (!held(named) || !glyphs.every((g) => held(`${set}/${g}`)))) return;
+        if (!swapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
         e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set
-        if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = `${set}/${v.set[`${id}.asset`]}`; delete v.set[`${id}.asset`]; }
+        if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; }
       };
       for (const [id, e] of Object.entries(fromCode.anatomy)) asIcon(id, e);
       for (const v of fromCode.variants) for (const [id, e] of Object.entries(v.add || {})) asIcon(id, e);
