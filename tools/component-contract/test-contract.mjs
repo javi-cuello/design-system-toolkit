@@ -281,4 +281,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('an instance hiding a layer of its component keeps all it records', 'pill/text' in derive(bar, ['Pill'], { mains: mainsFrom({ Pill: pill }) }).anatomy);
 }
 
+// a side of padding no token binds keeps its own number beside the bound ones (a chart's bar offset 40 above, bound
+// sides around it), never null
+{
+  const v = { name: 'Size=Large', id: '9:1', type: 'COMPONENT', w: 100, h: 40, layout: 'HORIZONTAL', pad: [40, 0, 0, 0], gap: 0, align: 'MIN/MIN', sizing: 'FIXED/FIXED', bindings: { pad: [null, 'Spacing/0', 'Spacing/0', 'Spacing/0'] }, children: [] };
+  const got = derive({ name: 'Bar', id: '9:0', props: { Size: ['Large'] }, variants: [v] }).anatomy.root.layout.padding;
+  ok('an unbound side of padding is its number beside the bound sides', JSON.stringify(got) === JSON.stringify({ top: 40, end: 'Spacing/0', bottom: 'Spacing/0', start: 'Spacing/0' }));
+}
+
 console.log(`${n}/${n} passed`);

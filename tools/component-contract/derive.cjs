@@ -49,7 +49,8 @@ function element(n, parent, known) {
   }
   if (n.layout === 'HORIZONTAL' || n.layout === 'VERTICAL') {
     const [main, cross] = String(n.align || 'MIN/MIN').split('/');
-    const pad = b.pad || n.pad;
+    // a side bound to a token is said by it, an unbound side by its own number beside it (four, below)
+    const pad = Array.isArray(b.pad) ? b.pad.map((t, i) => t ?? (Array.isArray(n.pad) ? n.pad[i] : 0)) : n.pad;
     e.layout = { direction: n.layout === 'HORIZONTAL' ? 'row' : 'column', gap: b.gap ?? n.gap, align: alignFromFigma(main), crossAlign: alignFromFigma(cross) };
     if (pad) e.layout.padding = { top: pad[0], end: pad[1], bottom: pad[2], start: pad[3] };
     if (n.wrap) { e.layout.wrap = true; if (n.crossGap != null) e.layout.crossGap = b.crossGap ?? n.crossGap; }
