@@ -9,10 +9,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM } from './to-markup.mjs';
+import { siteFiles, serveSite } from './site.mjs';
 import { combinations, toCss, namer, drawn, entryOf } from './to-code.mjs';
 import { expand, variantDefaults } from './layers.mjs';
 import { cssName } from '../tokens/names.mjs';
@@ -289,33 +289,17 @@ function phpQuote(s) { return `'${s.replace(/[\\']/g, (m) => `\\${m}`)}'`; }
 if (!fs.existsSync(findChrome())) ok('Chrome is here to render the web components in (none found: install Chrome, the toolkit\'s one browser)', false);
 else {
   // the page: each component's markup, its generated sheet, and the sample's tokens as custom properties
-  const site = fs.mkdtempSync(path.join(os.tmpdir(), 'to-markup-site-'));
   const tokens = JSON.parse(fs.readFileSync(path.join(SAMPLE, 'tokens.json'), 'utf8'));
   const vars = [];
   for (const col of Object.values(tokens.collections)) for (const [name, v] of Object.entries(col.values[col.modes[0]])) vars.push(`${cssName('', name)}: ${typeof v === 'number' ? (/opacity/i.test(name) ? v : `${v}px`) : v};`);
   for (const t of tokens.textStyles) { const b = cssName('', t.name); vars.push(`${b}-font-family: ${t.family};`, `${b}-font-size: ${t.size}px;`, `${b}-font-weight: ${t.weight};`, `${b}-line-height: ${t.lineHeight}px;`, `${b}-letter-spacing: ${t.letterSpacing}px;`); }
-  fs.mkdirSync(path.join(site, 'components'));
-  fs.writeFileSync(path.join(site, 'components', 'dom.js'), DOM);
-  let css = `:root { ${vars.join(' ')} }\n`;
-  for (const c of Object.values(library)) {
-    fs.mkdirSync(path.join(site, 'components', c.folder));
-    fs.writeFileSync(path.join(site, 'components', c.folder, `${c.folder}.js`), toElement(c, c.folder, { naming: ELEMENT, library }));
-    css += toCss(c, c.folder, { naming: ELEMENT });
-  }
-  fs.writeFileSync(path.join(site, 'all.css'), css);
-  const fn = (c) => `render${c.component.replace(/(^|[^A-Za-z0-9]+)(.)/g, (_, __, x) => x.toUpperCase())}`;
-  fs.writeFileSync(path.join(site, 'index.html'), `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="all.css"></head><body><main id="stage"></main><script type="module">${Object.values(library).map((c) => `import { ${fn(c)} } from './components/${c.folder}/${c.folder}.js';`).join('')} window.R = { ${Object.values(library).map((c) => `${JSON.stringify(c.folder)}: ${fn(c)}`).join(', ')} }; window.ready = true;</script></body></html>`);
-  const server = http.createServer((req, res) => {
-    const file = path.join(site, decodeURIComponent(new URL(req.url, 'http://x').pathname));
-    if (!file.startsWith(site) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
-    res.writeHead(200, { 'content-type': file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html' });
-    res.end(fs.readFileSync(file));
-  });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const files = siteFiles(library, { tokensCss: `:root { ${vars.join(' ')} }` });
+  const css = files['all.css'];
+  const site = await serveSite(files);
   const browser = await launch({});
   try {
     const tab = await attach(await newPage(browser.endpoint));
-    await navigate(tab, `http://127.0.0.1:${server.address().port}/index.html`);
+    await navigate(tab, `${site.url}index.html`);
     for (let i = 0; i < 50 && !(await tab.evaluate('!!window.ready')); i++) await new Promise((r) => setTimeout(r, 100));
     ok('every generated web component loads as a module, through the one helper', await tab.evaluate('Object.values(window.R).every((f) => typeof f === "function")'), tab.trouble.join('\n'));
     // the probe below reads a token as the sheet does, so a misnamed one would agree with itself: every token the sheets
@@ -408,7 +392,7 @@ else {
     ok('words given it are text, never markup: nothing they say is parsed or run', await tab.evaluate(`!document.querySelector('#stage img') && !window.__xss && document.querySelector('ds-button [data-part="label"]').textContent === ${JSON.stringify(EVIL)}`));
     await tab.evaluate(`document.getElementById('stage').replaceChildren(window.R['contact-card']({ nameOption: ${JSON.stringify(EVIL)} }))`);
     ok('and so in a component that places others', await tab.evaluate(`!document.querySelector('#stage img') && document.querySelector('#stage').textContent.includes(${JSON.stringify(EVIL)})`));
-  } finally { await browser.close(); server.close(); fs.rmSync(site, { recursive: true, force: true }); }
+  } finally { await browser.close(); await site.close(); }
 }
 
 console.log(`${n} passed`);

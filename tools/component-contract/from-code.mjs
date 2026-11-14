@@ -320,9 +320,10 @@ async function forceAt(tab, at) {
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
 }
 
-export async function openSource(label, name, { rebuild, codeOnly } = {}) {
+export async function openSource(label, name, { rebuild, codeOnly, self } = {}) {
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label);
+  if (self) return selfSource(project, name);
   if (codeOnly && project.mode !== 'compared') throw Object.assign(new Error(`${label}: its code is built from the design (governed), so it has no component of its own to read`), { usage: true });
   if (codeOnly) return codeOnlySource(label, name, rebuild);
   if (project.mode === 'compared') return comparedSource(label, name, rebuild);
@@ -589,6 +590,93 @@ async function governedSource(project, name) {
   return src;
 }
 
+/*
+ * The library as the toolkit itself renders it (--self): each component's web component and sheet, from its contract,
+ * on site.mjs's page, with no project code. Read like a governed mapping (governedReading over to-markup's toParity),
+ * so what differs from the contract here is the toolkit's own translation loss; what differs only against the
+ * project's code is the project's. Its readings go to <home>/round-trip/self/from-code/, which eval.mjs's self leg reads.
+ */
+async function selfSource(project, name) {
+  const { bridge } = req('./derive.cjs');
+  const X = await import('../parity/external.mjs');
+  const { expand } = await import('../parity/project.mjs');
+  const { rootPattern } = await import('../parity/pair.mjs');
+  const { contracts } = await import('./official.mjs');
+  const { toParity, propsOf } = await import('./to-markup.mjs');
+  const { siteFiles, serveSite, ELEMENT } = await import('./site.mjs');
+  const { launch, newPage, attach, navigate, call, waitFor } = await import('../shared/cdp.mjs');
+  const { valueOf } = req('../snapshot/tokens.cjs');
+  const store = req('../snapshot/store.cjs');
+  const where = project.where;
+  const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
+  const c = Object.values(library).find((x) => x.folder === name);
+  if (!c) throw Object.assign(new Error(`${name}: no contract for it in ${project.config.project}`), { usage: true });
+  // the toolkit's page names its parts and instances its own way (data-part, ds-<folder>): none of the project's code
+  // settings (its framework's components, part and icon classes, code profile) apply to it
+  const lib = { ...project.lib, frameworkComponents: {}, code: {}, frameworkProfile: null, codeProfile: {} };
+  const tier = project.parity.tiers[0], container = '[data-parity="c"]';
+  // to-markup's mapping, its rulings (a layer another instance draws, a slot's sample, a pointer-only part) left out
+  // as a governed mapping keeps them in its waivers: what is not placed is not read
+  const mappingOf = (x) => { const m = toParity(x, x.folder, { naming: ELEMENT, library, framework: 'web-components' }); return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
+  const targetOf = (x) => { const mapping = mappingOf(x); return { mapping, variants: expand(mapping, store.readSpec(project.paths.components, x.folder, { compact: true }).variants, project.parity.variants) }; };
+  const t = targetOf(c);
+  const b = bridge(store.readSpec(project.paths.components, name, { compact: true }));
+  const G = governedReading(t, b, { stateAxis: lib.tokens && lib.tokens.stateAxis, container });
+  let elements;
+  try { elements = G.elements(); } catch (e) { throw Object.assign(new Error(`${name}'s mapping from to-markup: ${e.message}`), { usage: true }); }
+  // the tokens as the project's token build writes them (plain custom properties); its fonts are not loaded, so text
+  // is measured in the fallback font
+  const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
+  const tokensCss = (where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '');
+  if (!tokensCss) throw Object.assign(new Error(`${project.config.project}: no _tokens.scss under paths.styles to render the tokens with`), { usage: true });
+  const site = await serveSite(siteFiles(library, { tokensCss }));
+  const browser = await launch({});
+  const tab = await attach(await newPage(browser.endpoint));
+  // the code's props as a story's controls say them: to-markup's own, at their defaults
+  const own = propsOf(c, library).filter((x) => x.type !== 'event');
+  const api = { args: Object.fromEntries(own.map((x) => [x.name, x.default])), argTypes: Object.fromEntries(own.map((x) => [x.name,
+    x.type === 'enum' && (x.values || []).length ? { options: x.values, control: 'select', default: x.default }
+    : x.type === 'boolean' ? { control: 'boolean', type: 'boolean', default: x.default === true }
+    : x.type === 'number' ? { control: 'number', type: 'number', default: x.default }
+    : x.type === 'node' ? { control: 'slot' }
+    : { control: 'text', type: 'string', default: x.default ?? '' }])) };
+  const tokens = project.snapshot;
+  const src = {
+    governed: true, label: project.config.project, tab, lib, repo: project.repo, out: path.join(where.projectDir, 'round-trip', 'self'), mode: tier, tokens,
+    value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
+    textStyle: (n) => (tokens.textStyles || []).find((x) => x.name === n),
+    components: project.paths.components, story: t.mapping.storyId, container, m: { story: t.mapping.storyId }, root: t.mapping.root, pseudoOf: G.pseudoOf,
+    instanceOf: (slug) => `ds-${slug}`,
+    instancePattern: rootPattern('ds-{slug}'),
+    partsOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); if (!x) return null; try { return Object.fromEntries(Object.entries(governedReading(targetOf(x), bridge(store.readSpec(project.paths.components, slug, { compact: true }))).elements()).map(([id, e]) => [id, e.selector])); } catch { return null; } },
+    axesOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? mappingOf(x).axes || null : null; },
+    combosOf: () => null,
+    // each read on a fresh page: a forced pointer state never outlives the args it was forced for
+    statesAsArg: true,
+    async render(all) {
+      const { __state, ...args } = all;
+      // a state no pointer reaches is the markup's own prop (state="loading")
+      if (__state !== undefined && __state !== 'rest' && !src.pseudoOf[__state] && src.stateArg) args[src.stateArg] = __state;
+      await navigate(tab, `${site.url}index.html`);
+      await waitFor(tab, '!!window.ready', { timeout: 10000 }).catch((e) => { throw new Error(`the toolkit's own page did not load: ${(tab.trouble || []).join('; ') || e.message}`); });
+      await call(tab, ([folder, a, theme]) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        const s = document.createElement('section'); s.setAttribute('data-parity', 'c'); s.style.cssText = 'display:flow-root;inline-size:max-content;padding:24px';
+        s.append(window.R[folder](Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined))));
+        document.getElementById('stage').replaceChildren(s);
+        return document.fonts.ready.then(() => true);
+      }, [name, args, String(tier).toLowerCase()]);
+      await forceAt(tab, src.pseudoOf[__state]);
+    },
+    api: async () => api,
+    elements: async () => elements,
+    joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
+    argsOf: (all) => G.argsOf(all) || {},
+    close: async () => { await browser.close(); await site.close(); },
+  };
+  return src;
+}
+
 /* ---- the run ---- */
 
 async function main() {
@@ -597,12 +685,13 @@ async function main() {
   const label = opt('--project');
   const rebuild = argv.includes('--rebuild'); if (rebuild) argv.splice(argv.indexOf('--rebuild'), 1);
   const codeOnly = argv.includes('--code-only'); if (codeOnly) argv.splice(argv.indexOf('--code-only'), 1);
+  const self = argv.includes('--self'); if (self) argv.splice(argv.indexOf('--self'), 1);
   const name = argv[0];
-  if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only]'); process.exit(2); }
+  if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self]'); process.exit(2); }
   const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
-  try { L = await openSource(label, name, { rebuild, codeOnly }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
+  try { L = await openSource(label, name, { rebuild, codeOnly, self }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
   // the library's official contracts (official.mjs): Figma's readings, or the project's own where it takes the contract as its source
   const { contracts: officialContracts } = await import('./official.mjs');
   const official = new Map(officialContracts(req('../snapshot/projects.cjs').layout(null, label)).map((x) => [x.folder, x.contract]));
@@ -689,7 +778,13 @@ async function main() {
       const mapState = Object.values(joined.props || {}).find((x) => x && typeof x === 'object' && x.pseudo);
       if (mapState) L.pseudoOf = Object.fromEntries(Object.entries(mapState.pseudo).filter(([v]) => !(mapState.skip || []).includes(v)).map(([v, pseudo]) => [v, { pseudo }]));
     }
-    if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf)], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
+    // a state the code sets as a prop (loading) stays one of its values beside the forced ones: the source passes it on
+    // (the code prop is the contract's interaction prop, whatever its axis is called; its rest is its default)
+    const stateKey = L.statesAsArg && figmaContract && Object.keys(figmaContract.props || {}).find((k) => figmaContract.props[k].role === 'interaction');
+    const asArg = stateKey && props[stateKey] && props[stateKey].type === 'enum' ? props[stateKey] : null;
+    const setStates = asArg ? asArg.values.filter((v) => v !== asArg.default && v !== 'rest' && !(v in L.pseudoOf)) : [];
+    if (asArg && Object.keys(L.pseudoOf).length) { L.stateArg = asArg.code; delete props[stateKey]; }
+    if (Object.keys(L.pseudoOf).length) props.state = { type: 'enum', values: ['rest', ...Object.keys(L.pseudoOf), ...setStates], default: 'rest', role: 'interaction', pointer: Object.keys(L.pseudoOf), code: '__state' };
     let defaults = Object.fromEntries(Object.entries(props).filter(([, p]) => p.type !== 'string').map(([, p]) => [p.code, p.type === 'slot' ? slotMark(p.code) : p.default]));
     // each slot's stand-in, by the prop it stands in for: the element it lands in is the slot
     const marks = Object.entries(props).filter(([, p]) => p.type === 'slot').map(([k, p]) => [slotMark(p.code), k]);

@@ -6,6 +6,9 @@
  *
  *   browser  the contract from-code read off the code as it renders (parity/from-code/<component>.json, kept by
  *            from-code: a run that reads the same writes nothing)
+ *   self     the contract from-code read off the toolkit's own rendering of the contract (from-code --self: to-markup's
+ *            web component and to-code's sheet, no project code; <home>/round-trip/self/from-code/<component>.json,
+ *            written by --self). What differs here is the toolkit's loss; what differs only in browser is the project's
  *   figma    the contract read back from to-figma's drawing of it by the snapshot's walk and derive
  *            (<home>/round-trip/<component>.roundtrip.json, written by --draw)
  *
@@ -16,6 +19,7 @@
  *
  *   node tools/component-contract/eval.mjs --project <label> [--fields] [--check | --accept]
  *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [components…]
+ *   node tools/component-contract/eval.mjs --project <label> --self [components…]
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,17 +35,23 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 /* A row's field, with the element said as * (a field that differs in many elements is one cause). */
 export const fieldOf = (at) => (at.includes('.') ? `*.${at.split('.').slice(1).join('.')}` : at).replace(/\.\d+(?=\.|$)/g, '.N');
 
-/* Both legs for one project: { home, legs: { browser, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
+/* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
 export function measure(where) {
   const home = where.projectDir;
   const readings = path.join(home, 'parity', 'from-code');
   const drawn = path.join(home, 'round-trip');
   const read = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
-  const legs = { browser: {}, figma: {} };
+  const legs = { browser: {}, self: {}, figma: {} };
+  // each component by its name, for what an instance of it draws at its defaults
+  const mains = Object.fromEntries(contracts(where).map(({ contract }) => [contract.component, contract]));
+  const selfDir = path.join(drawn, 'self', 'from-code');
   for (const { folder, contract } of contracts(where)) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
-    else { const r = roundTrip(contract, code.asFigma); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }) }; }
+    else { const r = roundTrip(contract, code.asFigma, { mains }); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }) }; }
+    const own = read(path.join(selfDir, `${folder}.json`));
+    if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
+    else { const r = roundTrip(contract, own.asFigma, { mains }); legs.self[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }) }; }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     legs.figma[folder] = back ? { rows: back.rows, combinations: back.combinations, ...(back.cut && { cut: back.cut }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
   }
@@ -104,16 +114,34 @@ function draw(where, label, into, only) {
   }
 }
 
+/* contract → to-markup and to-code → Chrome → from-code's walk → contract, per component (from-code --self), stopping
+   after three failures in a row. */
+function readSelf(where, label, only) {
+  let fails = 0;
+  for (const { folder } of contracts(where)) {
+    if (only.length && !only.includes(folder)) continue;
+    let out, ok = true;
+    try { out = execFileSync('node', [path.join(HERE, 'from-code.mjs'), '--project', label, folder, '--self'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = `${e.stdout || ''}${e.stderr || ''}`; ok = false; }
+    // its own summary line, else the last line that is not a stack frame (what went wrong)
+    const lines = out.trim().split('\n').reverse(), last = lines.find((l) => l.startsWith(`${folder}:`)) || lines.find((l) => !/^\s+at /.test(l) && /\w{3}/.test(l)) || '';
+    console.log(`${folder}: ${ok ? last.split(' — ')[0] : `not read — ${last}`}`);
+    if (ok) { fails = 0; continue; }
+    process.exitCode = 1;
+    if (++fails >= 3) { console.log('three failures in a row: stopped'); return; }
+  }
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
-  const label = opt('--project'), into = opt('--draw');
+  const label = opt('--project'), into = opt('--draw'), self = flag('--self');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept');
-  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [components…]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (into) { draw(where, label, into, argv); process.exit(); }
+  if (self) { readSelf(where, label, argv); process.exit(); }
   const m = measure(where);
   report(label, m, fields);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
