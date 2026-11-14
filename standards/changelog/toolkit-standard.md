@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.36.0 (2026-11-14): §D 13: a plan holds an Aim and outlives its pieces: each ends with `after:` and `course:` in it, archived only at `Status: done`; new sessions see open plans.
 - 2.35.0 (2026-11-14): §D 13: a full-size plan holds a Measure, its goal measured end to end before any part is built (`before:`), and the work ends on a `Measure:` line, before → after; `gates.mjs` refuses the plan and the close without them.
 - 2.34.0 (2026-11-14): §D 21: a source more than three years old on a fast-moving subject drops a weight a level, and drops add up; research articles weigh each section's advice on the same scale, which keeps one owner.
 - 2.33.0 (2026-11-13): §D 6: no tracked file, research/ included, names a customer, private project or person, or carries an email, a home path or a private session's words; `bin/check` adds `personal-info.mjs` and reads file names with spaces.

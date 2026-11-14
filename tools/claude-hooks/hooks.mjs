@@ -178,7 +178,11 @@ const open = items && !/^nothing the script can see is open$/.test(items);
 if (mode === 'start') {
   const { stale } = await import('./standards-read.mjs');
   for (const f of stale()) fs.rmSync(f, { force: true });
-  console.log(`The toolkit's loop (toolkit-standard §D 13) is not optional. Before the work: read the standard that governs it and run the repo's check. Every project commit carries a "Toolkit:" trailer naming where its lesson went, or "none — <why>"; one that touches interface files also a "Knowledge:" trailer naming the knowledge pages it followed, or "none — <why>".${open ? `\nInherited, open now:\n${items}` : '\nNothing the closing pass can see is open.'}`);
+  // a plan another session left open is work in flight: taken up, revised or marked done, never left to lapse
+  const { openPlans, planPath } = await import('./gates.mjs');
+  const plans = openPlans(payload.session_id).map((p) => `  - "${p.title}", last changed ${p.at.toISOString().slice(0, 16).replace('T', ' ')}: ${p.path}${p.live ? ' (its session acted within the hour and may still hold it: ask before moving it)' : ''}`);
+  const planNote = plans.length ? `\nPlans still open (no "Status: done"): read each; take one up by moving it to this session's plan (mv <it> ${planPath(payload.session_id)}) and carrying on, revise it, or mark it "Status: done". One untouched for two weeks is not listed.\n${plans.join('\n')}` : '';
+  console.log(`The toolkit's loop (toolkit-standard §D 13) is not optional. Before the work: read the standard that governs it and run the repo's check. Every project commit carries a "Toolkit:" trailer naming where its lesson went, or "none — <why>"; one that touches interface files also a "Knowledge:" trailer naming the knowledge pages it followed, or "none — <why>".${open ? `\nInherited, open now:\n${items}` : '\nNothing the closing pass can see is open.'}${planNote}`);
   process.exit(0);
 }
 

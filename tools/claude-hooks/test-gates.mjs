@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lineDiff, isPush, citing } from './gates.mjs';
+import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lineDiff, isPush, citing, openPlans, planDone } from './gates.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = fs.realpathSync(path.resolve(HERE, '../..'));
@@ -28,7 +28,7 @@ function session(lines, { checked = true } = {}) {
 }
 const user = (text) => ({ type: 'user', origin: { kind: 'human' }, message: { content: text } });
 const harness = (text) => ({ type: 'user', isMeta: true, origin: null, message: { content: text } });
-const PLAN_TEXT = '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Goal\nx\n## Measure\nbefore: node eval.mjs — 3 of 9 differ\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n';
+const PLAN_TEXT = '# Plan\n## Before\ngreen\n§D 1 no owner; §D 2 yes; §D 5 stored\n## Aim\nwhat the person asked\n## Goal\nx\n## Measure\nbefore: node eval.mjs — 3 of 9 differ\n## Impact\ntoolkit: a.mjs (2 readers)\n## Claims\nnone believed\n## Beyond scope\nnone\n## Budget\n1h\n## Review\n2 agents\n';
 const DONE = 'Done.\nMeasure: 3 of 9 differ → 0.\nToolkit: nothing; checked the standards.\nOpen: nothing.';
 const call = (name, input) => ({ type: 'assistant', cwd: TOOLKIT, message: { content: [{ type: 'tool_use', name, input }] } });
 const edit = (rel, lines = 1) => call('Edit', { file_path: path.join(TOOLKIT, rel), old_string: 'a', new_string: Array(lines).fill('b').join('\n') });
@@ -136,6 +136,9 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a subheading inside Before, and a quoted paste, still count');
   fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('green\n', '== 2 FAILED (detail above each):\n'));
   assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'a red inherited check is a finding, and the plan may proceed on it');
+  // the main goal kept in sight (14 Nov): an Aim, agreed with the person, that every piece's Goal and course answer to
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('## Aim\nwhat the person asked\n', ''));
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /the Aim section/, 'a plan without its aim is refused');
   // top-down (14 Nov): the goal measured end to end before a part is built
   fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('## Measure\nbefore: node eval.mjs — 3 of 9 differ\n', ''));
   assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /the Measure section/, 'a plan without the end-to-end measure is refused');
@@ -504,19 +507,67 @@ test('a typo fixed inside a long anchor is one line, even in a standard', () => 
   s.clean();
 });
 
-test('closing reviewed work puts its plan aside, so the next full-size work plans afresh', () => {
+test('a plan outlives its pieces: each close measures again into it, and only a plan marked done is put aside', () => {
   const s = session([user('build it'), edit('a.mjs', 200), review()]);
+  const close = DONE + '\nDocs: README.md still right.';
   fs.writeFileSync(planPath(s.id), PLAN_TEXT);
-  assert.equal(stopGate(s.id, s.file, REPOS, DONE + '\nDocs: README.md still right.'), null);
-  assert.equal(fs.existsSync(planPath(s.id)), false);
-  assert.match(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: Array(150).fill('b').join('\n') } }, TOOLKIT), /Write the plan/);
-  for (const f of fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith(`toolkit-plan-${s.id}-`))) fs.rmSync(path.join(os.tmpdir(), f));
+  assert.match(String(stopGate(s.id, s.file, REPOS, close)), /stays open after this piece[\s\S]*"after:" line/, 'a piece closes only once its measure is written back into the plan');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('3 of 9 differ\n', '3 of 9 differ\nafter: node eval.mjs — 1 of 9 differ\n'));
+  assert.match(String(stopGate(s.id, s.file, REPOS, close)), /"course:" line under Goal/, 'a number written back is not enough: the course is re-assessed from it');
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('3 of 9 differ\n', '3 of 9 differ\nafter: node eval.mjs — 1 of 9 differ\n').replace('## Goal\nx', '## Goal\nx\ncourse: kept; the split shows most rows are ours'));
+  assert.equal(stopGate(s.id, s.file, REPOS, close), null);
+  assert.equal(fs.existsSync(planPath(s.id)), true, 'the plan is kept for the next piece');
+  assert.doesNotMatch(String(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: Array(150).fill('b').join('\n') } }, TOOLKIT)), /Write the plan/, 'the next piece completes the same plan, not a blank one');
+  fs.rmSync(planPath(s.id));
   s.clean();
+  const d = session([user('build it'), edit('a.mjs', 200), review()]);
+  fs.writeFileSync(planPath(d.id), 'Status: done\n' + PLAN_TEXT.replace('3 of 9 differ\n', '3 of 9 differ\nafter: 0 of 9\n'));
+  assert.equal(stopGate(d.id, d.file, REPOS, close), null);
+  assert.equal(fs.existsSync(planPath(d.id)), false, 'a plan whose whole goal is met is put aside');
+  for (const f of fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith(`toolkit-plan-${d.id}-`))) fs.rmSync(path.join(os.tmpdir(), f));
+  d.clean();
+});
+
+test('a plan is done only by a line saying so, never a sentence about when it will be', () => {
+  assert.equal(planDone('# P\nStatus: done\n'), true);
+  assert.equal(planDone('# P\n**Status:** done.\n'), true);
+  assert.equal(planDone('# P\nStatus: done once eval shows 0 of 9\n'), false);
+  assert.equal(planDone('> mark it Status: done only when the whole goal is met'), false);
+});
+
+test('the next piece reviews a kept plan before it starts', () => {
+  const s = session([user('build it'), edit('a.mjs', 200), review()]);
+  const close = DONE + '\nDocs: README.md still right.';
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('3 of 9 differ\n', '3 of 9 differ\nafter: 1 of 9\n').replace('## Goal\nx', '## Goal\nx\ncourse: kept'));
+  assert.equal(stopGate(s.id, s.file, REPOS, close), null);
+  const old = new Date(Date.now() - 60000); fs.utimesSync(planPath(s.id), old, old);
+  const next = { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: Array(150).fill('b').join('\n') } };
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /a review of the kept plan for this piece/);
+  fs.rmSync(planPath(s.id));
+  s.clean();
+});
+
+test('a new session is told of the plans other sessions left open, never its own or a finished one, marking one a session may still hold', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'plans-'));
+  fs.writeFileSync(path.join(dir, 'toolkit-plan-other.md'), '# The round trip\n## Aim\nwhat the person asked\n## Goal\nx\n');
+  fs.writeFileSync(path.join(dir, 'toolkit-plan-finished.md'), '# Old\nStatus: done\n');
+  fs.writeFileSync(path.join(dir, 'toolkit-plan-other-123.done.md'), '# Archived\n');
+  fs.writeFileSync(path.join(dir, 'toolkit-plan-me.md'), '# Mine\n');
+  const stale = path.join(dir, 'toolkit-plan-stale.md'); fs.writeFileSync(stale, '# Forgotten\n');
+  const month = new Date(Date.now() - 30 * 24 * 3600 * 1000); fs.utimesSync(stale, month, month);
+  fs.writeFileSync(path.join(dir, 'toolkit-plan-busy.md'), '# In use\n');
+  fs.writeFileSync(path.join(dir, 'toolkit-gates-busy.json'), '{}');
+  fs.writeFileSync(path.join(dir, 'toolkit-gates-other.json'), '{}');
+  const hours = new Date(Date.now() - 2 * 3600 * 1000); fs.utimesSync(path.join(dir, 'toolkit-gates-other.json'), hours, hours);
+  const open = openPlans('me', dir);
+  assert.deepEqual(open.map((p) => [p.title, p.live]).sort(), [['In use', true], ['The round trip', false]], 'a plan whose session acted within the hour is listed and marked; one whose session went quiet is offered');
+  assert.equal(planDone('Status: done\r\n'), true, 'a line ending in CRLF still says done');
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('a plan that falls short says what it lacks', () => {
   const s = session([user('go'), edit('a.mjs', 200)]);
-  fs.writeFileSync(planPath(s.id), '# Plan\n## Goal\nx\n## Impact\nsummary\n');
+  fs.writeFileSync(planPath(s.id), '# Plan\n## Aim\nwhat the person asked\n## Goal\nx\n## Impact\nsummary\n');
   assert.match(planGate(s.id, s.file, REPOS, { name: 'Edit', input: { file_path: path.join(TOOLKIT, 'b.mjs'), old_string: 'a', new_string: 'b' } }, TOOLKIT), /lacks the Before section and the Measure section and the Claims section and the Beyond scope section and the Budget section and the Review section and bin\/check's closing line under Before[\s\S]* and the answers to §D 1, §D 2 and §D 5 under Before and a "before:" line under Measure[\s\S]* and impact\.mjs's output/);
   s.clean();
 });

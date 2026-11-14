@@ -41,9 +41,10 @@ export const WIDE_LINES = 10;
 // skill edit "full" (version, changelog, cases).
 const WORKTREE = /^\.claude\/worktrees\//;
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
-// The plan's sections, each a heading; Before must hold bin/check's closing line, Measure the goal measured
+// The plan's sections, each a heading; Aim is the main goal the work serves, as agreed with the person, kept unchanged
+// from piece to piece; Before must hold bin/check's closing line, Measure the goal measured
 // end to end before any part is built, Impact impact.mjs's output.
-export const PLAN = ['Before', 'Goal', 'Measure', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
+export const PLAN = ['Before', 'Aim', 'Goal', 'Measure', 'Impact', 'Claims', 'Beyond scope', 'Budget', 'Review'];
 
 /* Unreviewed work a session left uncommitted, kept for the next session in
    the same repo: two small halves in two sessions are one full-size change. */
@@ -568,7 +569,11 @@ function checked(st, id, rec) {
   const repo = st.checks[id]; delete st.checks[id];
   if (repo !== undefined && !st.checkedAt[repo]) st.checkedAt[repo] = rec.timestamp || new Date().toISOString();
 }
-const planGaps = (text, st = {}, work = []) => [...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 'im').test(text)).map((h) => `the ${h} section`),
+const planGaps = (text, st = {}, work = [], changed = Infinity) => [
+  // a plan kept from a piece already closed: reviewed for this one before it starts (its Goal for this piece, its Impact on
+  // the files this one touches, its Measure), or marked done and a new one written
+  ...(st.closedAt && changed < Date.parse(st.closedAt) ? [`a review of the kept plan for this piece: it was written for work closed at ${st.closedAt}; update its Goal, Measure and Impact for this piece under the same Aim (or, if this work serves another aim, mark it "Status: done" and write a new plan)`] : []),
+  ...PLAN.filter((h) => !new RegExp(`^#+\\s*${h}\\b`, 'im').test(text)).map((h) => `the ${h} section`),
   ...work.filter((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))).map((r) => `a bin/check run in ${r} whose closing line came back (pasted text alone is not a run; output redirected to a file, or cut to a preview, hides that line: pipe it through tail; run it as the command, not behind time or env)`),
   ...(work.some((r) => st.checkedAt?.[r] && st.firstEdit?.[r] && st.checkedAt[r] > st.firstEdit[r]) && !/^\W*late\W*:/im.test(section(text, 'Before')) ? ['a "late:" line under Before: the check ran after the work\'s first edit, so say what that edit may have hidden'] : []),
   // the closing line is asked for only where a repo the work touches has a check to close
@@ -593,7 +598,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   advance(session, transcript, repos, st);
   // the repos the work is in: those its files are in, and the one this call writes
   const work = [...new Set([...Object.keys(st.total.files), ...writes(call, cwd)].map((f) => where(f, repos)?.repo).filter(Boolean))];
-  const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8'), st, work) : null;
+  const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8'), st, work, fs.statSync(plan).mtimeMs) : null;
   const planned = gaps !== null && !gaps.length;
   inherit(st, session, repos, cwd);
   // a push carries the work out of reach of the review: unreviewed full-size work stays home
@@ -621,6 +626,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   const files = Object.keys(pending.total.files);
   return `This work is full-size (${s.why.join(', ')}), so it is planned before it is built (toolkit-standard §D 13). ${gaps ? `The plan at ${plan} lacks ${gaps.join(' and ')}; complete it` : `Write the plan to ${plan}`}, then retry this call. Sections, each a heading:\n`
     + `  ## Before — the closing line of the repo's bin/check run before the work, pasted ("green…", "== N FAILED…", or the project's own), and the answers to §D 1, §D 2 and §D 5 (does the toolkit own this job; would the next project want it; is a new reader about stored state or the present)\n`
+    + `  ## Aim — the main goal this work serves, as agreed with the person, kept as it is from piece to piece unless they agree to change it: what every Goal and course is held to\n`
     + `  ## Goal — what done means\n`
     + `  ## Measure — "before:" the goal measured end to end, before any part is built: the command that runs the whole path and what it said (a count, a pass rate); the parts are chosen from what it shows, and the work ends by running it again\n`
     + `  ## Impact — the output of: node ${SHOWN}/tools/claude-hooks/impact.mjs ${files.map((f) => JSON.stringify(f)).join(' ')} <and the files still to come>; what each reader needs\n`
@@ -631,15 +637,39 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     + `Then tell the user the plan in a few lines and carry on: it is the work's contract, not a request for approval.`;
 }
 
-/* A closed piece of work: its window empties and its plan is put aside, so
-   the next full-size work plans afresh. */
+/* A closed piece of work: its window empties; its plan is kept for the next piece, which reviews it first, and put
+   aside only once it says Status: done. */
 function close(session, st) {
   st.since = empty(); st.total = empty(); st.docs = [];
   st.checks = {}; st.checkedAt = {}; st.firstEdit = {}; // the next piece of work runs its own check
   st.closedAt = new Date().toISOString();
+  // the plan outlives a piece of work: it is put aside only once it says its whole goal is met (Status: done), so
+  // each piece reviews and re-measures the same plan rather than starting a blank one (14 Nov)
   const plan = planPath(session);
-  try { if (fs.existsSync(plan)) fs.renameSync(plan, plan.replace(/\.md$/, `-${Date.now()}.done.md`)); } catch { /* left in place: it still holds */ }
+  try { if (fs.existsSync(plan) && planDone(fs.readFileSync(plan, 'utf8'))) fs.renameSync(plan, plan.replace(/\.md$/, `-${Date.now()}.done.md`)); } catch { /* left in place: it still holds */ }
 }
+// a line that says only that ("Status: done"), never a sentence about when it will be
+export const planDone = (text) => /^[ \t>*_#-]*status[ \t*_]*:[ \t*_]*done[ \t*_.\r]*$/im.test(text || '');
+// a plan that measured its piece again: an "after:" line under Measure, written since the piece began
+const remeasured = (text) => /^\W*after\W*:[ \t*_`"(-]*[a-z0-9]/im.test(section(text, 'Measure'));
+// and the course re-assessed from it: a "course:" line under Goal, what the measure says of the direction (kept, corrected, why)
+const reassessed = (text) => /^\W*course\W*:[ \t*_`"(-]*[a-z0-9]/im.test(section(text, 'Goal'));
+
+/* Plans other sessions left open (no Status: done), oldest first: each is taken up, revised or marked done. */
+export function openPlans(session, dir = os.tmpdir()) {
+  let names = [];
+  try { names = fs.readdirSync(dir); } catch { return []; }
+  return names.filter((f) => /^toolkit-plan-.+\.md$/.test(f) && !f.endsWith('.done.md') && f !== path.basename(planPath(session)))
+    .map((f) => { const p = path.join(dir, f); try { const text = fs.readFileSync(p, 'utf8'); return planDone(text) ? null : { path: p, at: fs.statSync(p).mtime, title: (text.match(/^#\s+(.+)$/m) || [])[1] || f }; } catch { return null; } })
+    .filter((p) => p && Date.now() - p.at < OPEN_FOR).map((p) => ({ ...p, live: live(p.path, dir) })).sort((a, b) => a.at - b.at);
+}
+// a plan whose session wrote its state within the hour may be in use there: it is listed, marked, never offered to move
+const live = (plan, dir) => { const id = path.basename(plan).replace(/^toolkit-plan-|\.md$/g, ''); try { return Date.now() - fs.statSync(path.join(dir, `toolkit-gates-${id}.json`)).mtimeMs < LIVE_FOR; } catch { return false; } };
+const LIVE_FOR = 3600 * 1000;
+// a plan untouched for two weeks is no longer work in flight: it is not handed on
+const OPEN_FOR = 14 * 24 * 3600 * 1000;
+// a file system that keeps mtimes to the second can stamp a write just after an edit as before it
+const SLACK = 2000;
 
 
 /* Stop: a turn that edited, whose edits since the last review are full-size,
@@ -670,7 +700,16 @@ export function stopGate(session, transcript, repos, lastMessage, cwd = process.
         + `"Toolkit:" what goes back to the toolkit, or "nothing"; "Open:" what is left and why, or "nothing"`
         + (stale.length ? `; "Docs:" whether each of these READMEs is updated or still right: ${stale.join(', ')}` : '') + '.';
     }
-    // the work is closed: the next full-size work plans afresh
+    // the plan stays: this piece's measure is written into it, and its goal reviewed, before the piece closes
+    const plan = planPath(session);
+    const began = Math.min(...Object.values(st.firstEdit || {}).map((t) => Date.parse(t)).filter(Number.isFinite));
+    let text = null, changed = 0;
+    try { text = fs.readFileSync(plan, 'utf8'); changed = fs.statSync(plan).mtimeMs; } catch { /* no plan: nothing to update */ }
+    if (text !== null && (!remeasured(text) || (!planDone(text) && !reassessed(text)) || (Number.isFinite(began) && changed + SLACK < began))) {
+      carry(session, st); save(session, st);
+      return `The plan at ${plan} stays open after this piece (§D 13): measure again and write it under Measure as an "after:" line (the command and what it said now); then re-assess the course from it against the Aim and write a "course:" line under Goal (what the measure says of the direction toward the Aim: kept or corrected, and why), and update the Goal to match (what is done, what changed, what is next); mark it "Status: done" only when the whole goal is met. Then end again with the "Measure:", "Toolkit:", "Open:" and "Docs:" lines.`;
+    }
+    // the work is closed: the next full-size piece reviews the kept plan before it starts
     st.owed = false; close(session, st);
   }
   // small work that is committed closes its window: a day of small fixes must not add up to a review of work already shipped
