@@ -63,6 +63,12 @@ What principles are for once everyone agrees on them.
 - [Marking AI-generated content](principles/marking-ai-generated-content.md)
 - [When design principles conflict](principles/when-design-principles-conflict.md)
 
+## Auditing
+
+Checking a library against its own rules, for people and for agents.
+
+- [Auditing a design system for people and agents](auditing/auditing-a-design-system.md)
+
 ## AI and documentation
 
 Making a system readable to people and to agents. The nine articles form one series, *The agent-ready design system*, read in this order; each part owns one question and links to the parts before and after it.
