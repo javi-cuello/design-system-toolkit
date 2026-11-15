@@ -235,10 +235,12 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
   if (!out.every((v) => typeof v === 'number' && v === out[0])) return null;
   const width = Array.isArray(b.width) ? b.width[0] : b.width ?? 1;
   const w = typeof width === 'string' ? tokenNames.token(width) : `${width}px`;
-  const clear = -out[0] + (b.align === 'outside' ? (typeof width === 'number' ? width : 0) : 0);
-  const offset = typeof width === 'number' && b.align !== 'center' ? `${clear - (b.align === 'outside' ? 0 : width)}px` : `calc(${clear}px - ${b.align === 'center' ? `${w} / 2` : w})`;
+  // the layer's edge stands `edge` outside the box; its stroke inside that edge, across it or outside it: the outline
+  // starts where the stroke does (outline-offset), and its corners follow the box's grown by the edge
+  const edge = -out[0], clear = edge;
+  const offset = b.align === 'outside' ? `${edge}px` : typeof width === 'number' && b.align !== 'center' ? `${edge - width}px` : `calc(${edge}px - ${b.align === 'center' ? `${w} / 2` : w})`;
   // the outline reads the ring knob first, which a component sets to 0 on a part it rings itself (the scaffold's focus.ring)
-  return { parent: e.parent, decls: [['outline', `${w} solid ${tokenNames.token(b.color)}`, undefined, 'ring'], ['outline-offset', offset, clear ? 'no token in the design' : undefined]] };
+  return { parent: e.parent, clear, decls: [['outline', `${w} solid ${tokenNames.token(b.color)}`, undefined, 'ring'], ['outline-offset', offset, clear ? 'no token in the design' : undefined]] };
 }
 
 // the boxes whose gap is below 0 in the base or any variant (rules.mjs: CSS says it as pull-backs)
@@ -302,8 +304,14 @@ export function drawn(c, when, mains = () => null) {
     if (entry && (id === entry.value || id === entry.placeholder)) continue;
     const ring = ringOf(c, when, id, e, a);
     if (ring) {
-      extra.push([ring.parent, ring.decls]);
-      if (e.radius !== undefined && e.radius !== a[ring.parent].radius) (ringNotes[ring.parent] ||= []).push(`the focus ring's corners (${e.radius}): an outline follows its box's own`);
+      // an outline follows its box's corners: a box that paints nothing (a bare frame around what it holds) takes the
+      // ring's corners less the ring's clearance while focused, which shows only as the ring; one that paints keeps its own
+      // (nor clips what it holds, nor is drawn as a shape or a mask: rounding those would show); a ring rounder by no more
+      // than its clearance, or of mixed corners, keeps the note
+      const P = a[ring.parent], bare = !P.background && !P.border && !P.shadow && P.overflow !== 'hidden' && !P.shape && !P.mask;
+      const corners = e.radius !== undefined && e.radius !== P.radius && bare && (typeof e.radius === 'number' ? (e.radius > ring.clear ? `${e.radius - ring.clear}px` : null) : typeof e.radius === 'string' && e.radius !== 'mixed' ? (ring.clear ? `calc(${tokenNames.token(e.radius)} - ${ring.clear}px)` : tokenNames.token(e.radius)) : null);
+      extra.push([ring.parent, corners ? [...ring.decls, ['border-radius', corners]] : ring.decls]);
+      if (e.radius !== undefined && e.radius !== P.radius && !corners) (ringNotes[ring.parent] ||= []).push(`the focus ring's corners (${e.radius}): an outline follows its box's own`);
       continue;
     }
     const parent = e.parent ? a[e.parent] : null;

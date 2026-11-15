@@ -122,6 +122,12 @@ const ringed = { ...chip, variants: [...chip.variants, { when: { state: 'hover' 
 ringed.variants.push({ when: { state: 'focus' }, add: { ring: { kind: 'graphic', parent: 'root', position: 'absolute', absolute: { x: -4, y: -4, end: -4, bottom: -4 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/colour', width: [2, 2, 2, 2] } } } });
 const rcss = toCss(ringed, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('a ring layer is an outline on what it rings, offset 4 less 2, read through the ring knob, and no element of its own', /\.ds-chip:where\(:is\(:focus-visible, :has\(:focus-visible\)\)\) \{\s*outline: var\(--ds-ring, 2px solid var\(--focus-colour\)\);\s*outline-offset: 2px;/.test(rcss) && !rcss.includes('__ring'));
+// the ring's corners: a box that paints nothing takes them less the clearance while focused; one that paints keeps its own
+const cornered = (root) => { const r = JSON.parse(JSON.stringify(ringed)); r.anatomy.root = { ...r.anatomy.root, ...root }; delete r.anatomy.root.background; Object.assign(r.anatomy.root, root); r.variants.at(-1).add.ring.radius = 'Corner/16'; return toCss(r, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }); };
+ok('a bare box takes the ring\'s corners less its clearance while focused; a painted one keeps its own and says so', /outline-offset: 2px;[^}]*border-radius: calc\(var\(--corner-16\) - 4px\)/.test(cornered({})) && !/calc\(var\(--corner-16\)/.test(cornered({ background: 'C/x' })) && /focus ring's corners/.test(cornered({ background: 'C/x' })));
+ok('a bare box that clips what it holds keeps its corners at focus', !/calc\(var\(--corner-16\)/.test(cornered({ overflow: 'hidden' })));
+const outside = JSON.parse(JSON.stringify(ringed)); outside.variants.at(-1).add.ring.border.align = 'outside';
+ok('a ring stroked outside its layer starts at the layer\'s edge: offset 4, not 6', /outline-offset: 4px;/.test(toCss(outside, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 // the disabled dim on the root reads the dim knob, so a holder that dims sets it to 1 and its parts dim once (code-standard rule 62)
 const dimmed = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('the disabled dim on the root reads the dim knob first, and sets it on what the root holds', /opacity: var\(--ds-dim, var\(--state-disabled-opacity\)\);/.test(dimmed) && /\) > \* \{ --ds-dim: 1; \}/.test(dimmed));
