@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.15.1 (2026-11-15): the template's project block carries no port (a copied 9232 clashed with a running dashboard) and its naming-preferences block is `{}` (the placeholder failed the standards check). Template only.
 - 2.15.0 (2026-11-11): keeps the project's other documents: the product file, recording a decision in §6 and retiring one, and guidance pages, with both templates; moved from figma-prototype, which now runs this skill for them; the description names them.
 - 2.14.1 (2026-11-11): reviewed: §6 names the `validate` scope the push check reads; the sample row is skipped by every reader and a first ruling lands under it. Template only.
 - 2.14.0 (2026-11-11): the template's §6 is the project's one decision log: Scope Library, Product, Pattern or Screen; optional *Confirms or overrides* and *Checked by*; a retired row struck through. Template only.

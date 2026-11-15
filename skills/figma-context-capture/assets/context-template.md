@@ -109,14 +109,15 @@ prose all differ. Fill them first.
 switches outputs on and off (`design`: handoff spec and tracker; `build`: adds
 parity; `maintenance`: drops the tracker). Optional: `port`, where the
 figma-audit service serves the docs site and audit (9223–9232, one per
-project), `editorPort`, where the contract editor serves the library and the
+project: add it only with a port no other project's document holds; a copied
+one crash-loops the dashboard that already has it), `editorPort`, where the contract editor serves the library and the
 docs site links to it (9250 when absent; one per project where two run at
 once), and `publish` (`password` or `public`), who may read the published
 site. Read through the snapshot contract (snapshot-standard rule 18); stated
 nowhere else.
 
 ```json project
-{"name": "{Display name}", "phase": "design", "port": 9232}
+{"name": "{Display name}", "phase": "design"}
 ```
 
 **Snapshot routing** — which Figma files this project owns, and therefore
@@ -168,12 +169,13 @@ string, or `[]` is a wrong scale, and the audit ignores one that is not numbers.
 **Naming preferences** — only where this project names things differently
 from the house (`standards/naming-preferences.json`): separators, the private
 prefix, property case, the boolean prefix, the words a text or swap property
-avoids. One block for the project, not per library, and never a `naming`
+avoids. One block for the project, not per library, holding only real keys (a
+placeholder value fails the standards check; `{}` takes the house's), and never a `naming`
 section in the audit settings; leave it out to take the house's. A name that
 departs from a preference is filed as one, not as a defect.
 
 ```json naming-preferences
-{ "booleanPrefix": "{only what differs from the house}" }
+{}
 ```
 
 - **variable-audit** — source file · collection keys (with any hidden-by-design noted as defect-if-bound) · consumer files · exclusions
