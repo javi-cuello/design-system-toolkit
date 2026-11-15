@@ -10,25 +10,25 @@
 //
 // The choices (each asked when the context document does not record it):
 //   --scope ui|content          product UI only, or UI plus long-form content
-//   --ratio 1.125|1.2 --base 16 the single step and the body size in px
+//   --list 12,14,16,…  or  --ratio 1.125|1.2, with --base 16   the published sizes, or the ratio that makes them
 //   --line-height grid|role     role ratio stepped onto 4px, or the role ratio in whole px
 //   --families "text=Inter,display=Inter Display"   (code=… optional)
 //   --weights body=400,label=500,heading=600,display=500,code=400
 //   --labels 12,14,16           label sizes, each on the list
 //   --primitives "<name>" --collection "Text styles"   shared primitives; the responsive one
 //   --phone yes|no              a Mobile mode: body holds, headings step down the list
+//   --display 1  --display-cut none|28  --drop none|26,42  --exception none|46=48
+//   --phone-hold auto|18  --phone-sizes none|Display/lg=36   recorded like the rest, so a recorded run asks nothing
 // Tuning (defaults are the knowledge base's):
-//   --root 16  --round 2|1  --below 2  --above 9  --display 1
-//   --exception 46=48,74=72     a rounded formula size replaced by a chosen one, named
-//   --drop 26,32,42             rounded sizes left off the published list
+//   --root 16  --round 2|1  --below 2  --above 9
 //   --content-body lg|md        which body style long-form content reads in (default lg)
 //   --line-heights label=1.2,Heading/xl=1.1   ratio per role or per style
 //   --tracking Heading/lg=0     per role or per style, in percent
 //   --caps Label/sm             styles set in capitals (tracked +5%)
-//   --display-cut 28            from this size headings use the display family, tracking 0
-//   --phone-hold 18  --phone-steps 1  --phone-sizes Display=36
+//   --phone-steps 1
 
 import { fileURLToPath } from 'node:url';
+import { realpathSync } from 'node:fs';
 
 // ---------------------------------------------------------------- defaults
 // Each value is the knowledge base's; the source is named beside it.
@@ -62,9 +62,12 @@ export const CHOICES = [
   { keys: ['scope'], question: 'Product UI only, or UI plus long-form content?',
     recommended: () => 'ui',
     why: 'one-type-scale: one list; content walks every other step, checked against reading sites' },
-  { keys: ['ratio', 'base'], question: 'Ratio and base size?',
-    recommended: () => ({ ratio: 1.125, base: 16 }),
-    why: 'visual.md: a small ratio, 1.125 or 1.2, for the single step' },
+  { keys: ['sizes'], question: 'Which sizes: a published list, or a ratio and base?',
+    recommended: a => (a.scope === 'content' ? { ratio: 1.125, base: 16 } : { list: PRODUCTIVE, base: 16 }),
+    why: "visual.md, Typography: product UI takes a productive ramp in Carbon's shape (12, 14, 16, 18, 20, 24, 28, 32…); a site with long-form content takes a geometric scale, 1.125 or 1.2" },
+  { keys: ['display', 'displayCut', 'drop', 'exceptions'], question: 'How many display sizes at the top, from what size headings use the display cut (none for no cut), and any sizes to drop or name as exceptions?',
+    recommended: () => ({ display: 1, displayCut: 'none', drop: 'none', exceptions: 'none' }),
+    why: 'one-type-scale: publish the rounded list and name every off-formula size; the display cut switches at a named size' },
   { keys: ['lineHeight'], question: 'Line height: the role ratio rounded to 4px, or the role ratio in whole px?',
     recommended: a => (a.scope === 'content' ? 'role' : 'grid'),
     why: 'run: product UI on 4px (12/16, 14/20, 16/24), a choice visual.md says to name; content keeps the ratio' },
@@ -80,18 +83,23 @@ export const CHOICES = [
   { keys: ['primitives', 'collection'], question: 'Which shared primitives collection holds the type primitives, and what is the responsive collection called?',
     recommended: () => ({ primitives: '?', collection: 'Text styles' }),
     why: 'run: primitives (family, weight, size) go in the global collection that also holds spacing, never a type-only one; the responsive collection is named for what it holds' },
-  { keys: ['phone'], question: 'A phone mode (body holds, headings step down the same list)?',
-    recommended: () => true,
+  { keys: ['phone', 'phoneHold', 'phoneSizes'], question: 'A phone mode (body holds, headings step down the same list), what holds, and any phone size set by hand?',
+    recommended: () => ({ phone: true, phoneHold: 'auto', phoneSizes: 'none' }),
     why: 'type-on-a-phone: protect the bottom of the scale, compress the top, check collisions' },
 ];
 
 /** The questions still owed for these answers, each with its recommended answer. */
 export function questions(answers = {}) {
-  return CHOICES.filter(c => c.keys.some(k => answers[k] == null))
+  const noPhone = answers.phone === false || answers.phone === 'no';
+  const has = k => (k === 'sizes' ? answers.base != null && (answers.list != null || answers.ratio != null)
+    : (noPhone && (k === 'phoneHold' || k === 'phoneSizes')) || answers[k] !== undefined);
+  return CHOICES.filter(c => c.keys.some(k => !has(k)))
     .map(c => ({ keys: c.keys, question: c.question, recommended: c.recommended(answers), why: c.why }));
 }
 
 const RATIOS = [1.125, 1.2];
+// visual.md, Typography: the productive ramp in Carbon's shape, the recommended product-UI list
+const PRODUCTIVE = [12, 14, 16, 18, 20, 24, 28, 32];
 const ROLES = ['body', 'code', 'label', 'heading', 'display'];
 // a family primitive is named by role, never by classification (run: never Font/Family/sans)
 const FAMILY = { text: 'Font/Family/text', display: 'Font/Family/display', code: 'Font/Family/code' };
@@ -124,7 +132,12 @@ export function gridLineHeight(ratio, size, step = DEFAULTS.gridStep) {
 // ---------------------------------------------------------------- the list
 function buildList(o) {
   const formula = [];
-  for (let n = -o.below; n <= o.above; n++) {
+  if (o.list) {
+    const l = [...new Set(o.list)].sort((a, b) => a - b);
+    const bi = l.indexOf(o.base);
+    if (bi < 0) fail(`base ${o.base} is not on the list (${l.join(', ')})`);
+    l.forEach((px, i) => formula.push({ n: i - bi, exact: px, rounded: px }));
+  } else for (let n = -o.below; n <= o.above; n++) {
     const exact = o.base * Math.pow(o.ratio, n);
     formula.push({ n, exact: Math.round(exact * 100) / 100, rounded: roundTo(exact, o.round) });
   }
@@ -157,7 +170,7 @@ function buildList(o) {
   const list = [...seen.values()].sort((a, b) => a.px - b.px);
   for (let i = 1; i < list.length; i++) list[i].ratioToPrevious = round4(list[i].px / list[i - 1].px);
 
-  // primitives: plain numbers, base = 100, below it 75, 50, 25 (Polaris's convention, naming-text-styles)
+  // primitives: plain numbers, base = 100; 75 below it is Polaris's (naming-text-styles), 50 and 25 the toolkit's extension
   const bi = list.findIndex(s => s.px === o.base);
   const belowNames = [75, 50, 25];
   if (bi > belowNames.length) fail(`${bi} sizes under the base: primitives number at most ${belowNames.length} below it (75, 50, 25)`);
@@ -221,25 +234,27 @@ function buildStyles(o, list) {
   const plan = [];
   for (const l of o.labels) if (!sizes.includes(l)) fail(`label size ${l} is not on the list (${sizes.join(', ')})`);
   sizeWords(o.labels.length).forEach((w, i) => plan.push(['label', `Label/${w}`, o.labels[i]]));
+  if (bi > 0) plan.push(['body', 'Body/sm', at(bi - 1)]);
   plan.push(['body', 'Body/md', o.base]);
   plan.push(['body', 'Body/lg', at(bi + 1)]);
 
   const content = o.scope === 'content';
   const contentBodySize = o.contentBody === 'lg' ? at(bi + 1) : o.base;
-  plan.push(['code', 'Code', content ? at(sizes.indexOf(contentBodySize) - 1) : o.base]);
+  if (o.families.code) plan.push(['code', 'Code', content ? at(sizes.indexOf(contentBodySize) - 1) : o.base]);
 
-  const upper = sizes.slice(bi + 1);
+  // in content, h4 is a heading at the reading body; in product UI headings start above Body/lg
+  const upper = sizes.slice(content ? bi + 1 : bi + 2);
   if (upper.length <= o.display) fail(`${upper.length} sizes above the base leave no headings beside ${o.display} display`);
   const headings = upper.slice(0, upper.length - o.display);
   const displays = upper.slice(upper.length - o.display);
   sizeWords(headings.length).forEach((w, i) => plan.push(['heading', `Heading/${w}`, headings[i]]));
-  const dw = displays.length === 1 ? [''] : sizeWords(displays.length).map(w => `/${w}`);
+  const dw = displays.length === 1 ? ['/lg'] : sizeWords(displays.length).map(w => `/${w}`);
   displays.forEach((s, i) => plan.push(['display', `Display${dw[i]}`, s]));
 
   for (const key of [...Object.keys(o.lineHeights), ...Object.keys(o.weights), ...Object.keys(o.tracking), ...o.caps, ...Object.keys(o.phoneSizes)]) {
     if (!ROLES.includes(key) && !plan.some(p => p[1] === key)) fail(`"${key}" is neither a role nor a style (${plan.map(p => p[1]).join(', ')})`);
   }
-  for (const r of ROLES) if (o.weights[r] == null) fail(`weights: none given for the ${r} role`);
+  for (const r of ROLES) if (o.weights[r] == null && plan.some(p => p[0] === r)) fail(`weights: none given for the ${r} role`);
   return { plan, contentBodySize };
 }
 
@@ -285,7 +300,8 @@ function contentMap(o, built, plan, contentBodySize) {
 // ---------------------------------------------------------------- phone
 function phoneMode(o, list, plan, content) {
   const sizes = list.map(s => s.px);
-  const hold = o.phoneHold ?? (content ? content.body : sizes[sizes.indexOf(o.base) + 1]);
+  // auto: hold up to the reading body (content) or Body/lg (UI), below the lowest heading, so no heading holds beside one that steps onto it
+  const hold = o.phoneHold !== 'auto' && o.phoneHold != null ? o.phoneHold : (content ? content.body : sizes[sizes.indexOf(o.base) + 1]);
   const rows = plan.map(([role, name, size]) => {
     let px = size;
     if ((role === 'heading' || role === 'display') && size > hold) px = sizes[Math.max(0, sizes.indexOf(size) - o.phoneSteps)];
@@ -359,11 +375,23 @@ export function generate(input = {}) {
   const o = {
     ...DEFAULTS,
     exceptions: {}, drop: [], caps: [], lineHeights: {}, tracking: {},
-    displayCut: null, phoneHold: null, phoneSteps: 1, phoneSizes: {},
+    displayCut: null, phoneHold: 'auto', phoneSteps: 1, phoneSizes: {},
     ...input,
   };
+  const none = v => v === 'none' || v == null;
+  if (none(o.displayCut)) o.displayCut = null;
+  if (none(o.drop)) o.drop = [];
+  if (none(o.exceptions)) o.exceptions = {};
+  if (none(o.phoneSizes)) o.phoneSizes = {};
+  if (o.phone === 'yes' || o.phone === 'no') o.phone = o.phone === 'yes';
+  if (typeof o.phone !== 'boolean') fail(`phone ${o.phone}: yes or no`);
+  if (!Number.isInteger(o.display) || o.display < 0) fail(`display ${o.display}: a whole number of display sizes, 0 or more`);
+  if (o.phoneHold != null && o.phoneHold !== 'auto' && !(Number.isFinite(o.phoneHold) && o.phoneHold > 0)) fail(`phone-hold ${o.phoneHold}: auto or a px size`);
+  if (o.list && o.ratio != null) fail('give a published list or a ratio, not both');
+  if (o.list && !(o.list.length && o.list.every(px => Number.isFinite(px) && px > 0))) fail(`list ${o.list}: px sizes above 0`);
+  if (o.list && (o.drop.length || Object.keys(o.exceptions).length)) fail('drop and exception apply to a ratio; a published list states its sizes directly');
   if (!['ui', 'content'].includes(o.scope)) fail(`scope ${o.scope}: ui or content`);
-  if (!RATIOS.includes(o.ratio)) fail(`ratio ${o.ratio}: the knowledge base gives 1.125 or 1.2 for the single step (visual.md, type for UI and long-form content)`);
+  if (!o.list && !RATIOS.includes(o.ratio)) fail(`ratio ${o.ratio}: the knowledge base gives 1.125 or 1.2 for the single step (visual.md, type for UI and long-form content)`);
   if (![1, 2].includes(o.round)) fail(`round ${o.round}: 1 or 2 (px)`);
   if (!Number.isInteger(o.base) || o.base < 12) fail(`base ${o.base}: a whole px size of at least 12`);
   if (!['role', 'grid'].includes(o.lineHeight)) fail(`line-height ${o.lineHeight}: grid or role`);
@@ -387,7 +415,7 @@ export function generate(input = {}) {
   if (o.lineHeight === 'grid') warnings.push('line heights are stepped onto 4px: a named choice, and the ratio drifts per size and mode (visual.md, when Figma needs the line height in px)');
 
   const out = {
-    options: { scope: o.scope, ratio: o.ratio, base: o.base, root: o.root, round: o.round, below: o.below, above: o.above, labels: o.labels, display: o.display, contentBody: content ? o.contentBody : undefined, lineHeight: o.lineHeight, displayCut: o.displayCut, phone: o.phone },
+    options: { scope: o.scope, list: o.list, ratio: o.list ? undefined : o.ratio, base: o.base, root: o.root, round: o.round, below: o.below, above: o.above, labels: o.labels, display: o.display, contentBody: content ? o.contentBody : undefined, lineHeight: o.lineHeight, displayCut: o.displayCut, phone: o.phone },
     formula: built.formula,
     list: built.list,
     exceptions: built.exceptions,
@@ -412,7 +440,7 @@ export function table(r) {
   }
   const L = [];
   const o = r.options;
-  L.push(`Type scale: ${o.base}px × ${o.ratio}ⁿ, rounded to ${o.round}px, ${o.scope === 'content' ? 'UI plus long-form content' : 'product UI only'}, line height ${o.lineHeight === 'grid' ? 'by role, stepped onto 4px' : 'by role, whole px'}`);
+  L.push(`Type scale: ${o.list ? `the published list ${o.list.join(', ')}` : `${o.base}px × ${o.ratio}ⁿ, rounded to ${o.round}px`}, ${o.scope === 'content' ? 'UI plus long-form content' : 'product UI only'}, line height ${o.lineHeight === 'grid' ? 'by role, stepped onto 4px' : 'by role, whole px'}`);
   L.push('', '| Primitive | px | rem | Formula | Ratio to previous |', '|---|---|---|---|---|');
   for (const s of r.list) L.push(`| ${s.name} | ${s.px} | ${s.rem} | ${s.exception ? `${s.formula} (exception)` : s.formula} | ${s.ratioToPrevious ?? ''} |`);
   if (r.exceptions.length) L.push('', 'Named exceptions: ' + r.exceptions.map(e => `${e.published} where the formula gives ${e.formula} (rounded ${e.rounded})`).join('; '));
@@ -469,6 +497,7 @@ export function parseArgs(argv) {
     switch (a) {
       case '--scope': o.scope = v(); break;
       case '--ratio': o.ratio = Number(v()); break;
+      case '--list': o.list = list(); break;
       case '--base': o.base = Number(v()); break;
       case '--line-height': o.lineHeight = v(); break;
       case '--families': o.families = pairs(v(), false); break;
@@ -481,17 +510,17 @@ export function parseArgs(argv) {
       case '--round': o.round = Number(v()); break;
       case '--below': o.below = Number(v()); break;
       case '--above': o.above = Number(v()); break;
-      case '--exception': o.exceptions = pairs(v()); break;
-      case '--drop': o.drop = list(); break;
+      case '--exception': { const x = v(); o.exceptions = x === 'none' ? 'none' : pairs(x); break; }
+      case '--drop': { const x = v(); o.drop = x === 'none' ? 'none' : x.split(',').map(Number); break; }
       case '--display': o.display = Number(v()); break;
       case '--content-body': o.contentBody = v(); break;
       case '--line-heights': o.lineHeights = pairs(v()); break;
       case '--tracking': o.tracking = pairs(v()); break;
       case '--caps': o.caps = v().split(','); break;
-      case '--display-cut': o.displayCut = Number(v()); break;
-      case '--phone-hold': o.phoneHold = Number(v()); break;
+      case '--display-cut': { const x = v(); o.displayCut = x === 'none' ? 'none' : Number(x); break; }
+      case '--phone-hold': { const x = v(); o.phoneHold = x === 'auto' ? 'auto' : Number(x); break; }
       case '--phone-steps': o.phoneSteps = Number(v()); break;
-      case '--phone-sizes': o.phoneSizes = pairs(v()); break;
+      case '--phone-sizes': { const x = v(); o.phoneSizes = x === 'none' ? 'none' : pairs(x); break; }
       case '--table': asTable = true; break;
       default: fail(`unknown option ${a}`);
     }
@@ -499,7 +528,7 @@ export function parseArgs(argv) {
   return { options: o, asTable };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && (() => { try { return realpathSync(process.argv[1]); } catch { return null; } })() === realpathSync(fileURLToPath(import.meta.url))) {
   try {
     const { options, asTable } = parseArgs(process.argv.slice(2));
     const r = generate(options);

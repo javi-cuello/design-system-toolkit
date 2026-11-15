@@ -15,18 +15,19 @@ const RULED = {
   families: { text: 'Text Face', display: 'Text Face Display' },
   weights: { body: 400, label: 500, heading: 600, display: 500, code: 400 },
   labels: [12, 14, 16], primitives: 'Global primitives', collection: 'Text styles', phone: true,
+  display: 1, displayCut: 'none', drop: 'none', exceptions: 'none', phoneHold: 'auto', phoneSizes: 'none',
 };
 // the knowledge base's worked example (research/foundations/type-on-a-phone.md)
-const WORKED = { ...RULED, scope: 'content', lineHeight: 'role', above: 13, drop: [26, 32, 42, 52, 58, 66], exceptions: { 46: 48, 74: 72 }, displayCut: 28 };
+const WORKED = { ...RULED, families: { ...RULED.families, code: 'Code Face' }, scope: 'content', lineHeight: 'role', above: 13, drop: [26, 32, 42, 52, 58, 66], exceptions: { 46: 48, 74: 72 }, displayCut: 28 };
 const style = (r, name, mode = 'desktop') => {
   const s = r.styles[mode].find(x => x.name === name);
   assert.ok(s, `no style ${name}`);
   return s;
 };
 
-t('no recorded preferences: eight questions, nothing generated', () => {
+t('no recorded preferences: nine questions, nothing generated', () => {
   const r = generate({});
-  assert.equal(r.questions.length, 8);
+  assert.equal(r.questions.length, 9);
   assert.equal(r.styles, undefined);
   assert.equal(r.list, undefined);
   assert.deepEqual(r.questions.map(q => q.keys.join('+')), CHOICES.map(c => c.keys.join('+')));
@@ -36,7 +37,7 @@ t('the CLI exits 2 with the questions when a choice is missing', () => {
   let code = 0, out = '';
   try { execFileSync('node', [SCRIPT, '--scope', 'ui'], { encoding: 'utf8' }); } catch (e) { code = e.status; out = e.stdout; }
   assert.equal(code, 2);
-  assert.equal(JSON.parse(out).questions.length, 7);
+  assert.equal(JSON.parse(out).questions.length, 8);
 });
 
 t('every choice recorded: no questions, a scale', () => {
@@ -98,7 +99,7 @@ t('family primitives by role, never by classification; display binds the display
   const fam = r.variables.primitives.families.map(f => f.name);
   assert.ok(fam.includes('Font/Family/text') && fam.includes('Font/Family/display'));
   assert.ok(!fam.some(f => /sans|serif/i.test(f)));
-  const d = style(r, 'Display');
+  const d = style(r, 'Display/lg');
   assert.equal(d.family, 'Font/Family/display');
   assert.equal(d.tracking.figma, '0%');
 });
@@ -142,8 +143,12 @@ t('phone: body holds, headings step down the list, title near 1.6x the body, no 
   assert.deepEqual(r.phone.checks.zoom, []);
 });
 
+t('recommended answers give no phone collision', () => {
+  assert.deepEqual(generate(RULED).phone.checks.collisions, []);
+});
+
 t('phone collision is reported when two levels land on one size', () => {
-  const r = generate(RULED); // UI only: every heading is a level, and the lowest steps onto the held one
+  const r = generate({ ...RULED, phoneSizes: { 'Heading/xs': 18 } }); // the lowest heading already steps onto 18
   assert.ok(r.phone.checks.collisions.length > 0);
   const r2 = generate({ ...WORKED, phoneSizes: { 'Heading/md': 20 } });
   assert.ok(r2.phone.checks.collisions.some(c => c.levels.includes('h2') && c.levels.includes('h3')));
@@ -167,6 +172,48 @@ t('refuses a ratio the knowledge base does not give', () => {
 t('t-shirt words centre on md', () => {
   assert.deepEqual(sizeWords(6), ['2xs', 'xs', 'sm', 'md', 'lg', 'xl']);
   assert.deepEqual(sizeWords(3), ['sm', 'md', 'lg']);
+});
+
+// a real run: Project A's rulings (2026-11-15), a published list, the Figma scale it built
+const PROJECT_A = {
+  ...RULED, list: [12, 14, 16, 18, 20, 24, 32, 40], ratio: undefined, families: { text: 'Inter', display: 'Inter Display' },
+  weights: { body: 400, label: 500, heading: 600, display: 400 }, displayCut: 'none',
+};
+
+t("a published list reproduces Project A's scale", () => {
+  const r = generate(PROJECT_A);
+  assert.equal(r.questions, undefined);
+  const got = r.styles.desktop.map(s => `${s.name} ${s.size}`);
+  assert.deepEqual(got, ['Label/sm 12', 'Label/md 14', 'Label/lg 16', 'Body/sm 14', 'Body/md 16', 'Body/lg 18',
+    'Heading/sm 20', 'Heading/md 24', 'Heading/lg 32', 'Display/lg 40']);
+  for (const [name, px] of [['Display/lg', 32], ['Heading/lg', 24], ['Heading/md', 20], ['Heading/sm', 18], ['Body/lg', 18]]) assert.equal(style(r, name, 'phone').size, px, name);
+  assert.deepEqual(r.phone.checks.collisions, []);
+  assert.throws(() => generate({ ...PROJECT_A, drop: [14] }), /published list/);
+});
+
+t('a fully recorded run asks nothing', () => {
+  assert.deepEqual(questions(PROJECT_A), []);
+  assert.deepEqual(questions(RULED), []);
+  const { phoneHold, phoneSizes, ...noPhone } = { ...RULED, phone: false };
+  assert.deepEqual(questions(noPhone), []);
+});
+
+t('a sentinel where a number belongs is refused, never read as NaN', () => {
+  assert.throws(() => generate({ ...PROJECT_A, display: 'none' }), /display none/);
+  assert.throws(() => generate({ ...PROJECT_A, phoneHold: 'none' }), /phone-hold none/);
+  assert.throws(() => generate({ ...PROJECT_A, ratio: 1.5 }), /not both/);
+  assert.throws(() => generate({ ...PROJECT_A, list: [12, 0, 14] }), /above 0/);
+  assert.equal(generate({ ...PROJECT_A, phone: 'no' }).styles.phone, undefined);
+});
+
+t('the CLI takes every choice with none and auto, and asks nothing', () => {
+  const out = execFileSync('node', [SCRIPT, '--scope', 'ui', '--list', '12,14,16,18,20,24,32,40', '--base', '16', '--line-height', 'grid',
+    '--families', 'text=Inter,display=Inter Display', '--weights', 'body=400,label=500,heading=600,display=400', '--labels', '12,14,16',
+    '--primitives', 'Global', '--collection', 'Text styles', '--phone', 'yes', '--display', '1', '--display-cut', 'none', '--drop', 'none',
+    '--exception', 'none', '--phone-hold', 'auto', '--phone-sizes', 'none'], { encoding: 'utf8' });
+  const r = JSON.parse(out);
+  assert.equal(r.questions, undefined);
+  assert.equal(style(r, 'Display/lg', 'phone').size, 32);
 });
 
 console.log(`${n} passed`);

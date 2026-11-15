@@ -1,19 +1,19 @@
-# Eval cases — type-scale (v1.0.0)
+# Eval cases — type-scale (v1.1.0)
 
-**Walked: 2026-11-15 — pass (12/12).** `node tests/test-generate.mjs` 19/19. Failing direction checked: a grid tie rounding up gives 12/20 and fails A3; a default label weight of 400 fails A8. A1 is also traced to SKILL.md's *Ask before generating*.
+**Walked: 2026-11-15 — pass (13/13).** `node tests/test-generate.mjs` 24/24. Review findings closed: `none` for a number is refused (it had made every heading a display), `--phone no` asks nothing more. Failing direction checked: a grid tie rounding up gives 12/20 and fails A3; a default label weight of 400 fails A8. A1 is also traced to SKILL.md's *Ask before generating*.
 
 Evidence marked "the 2026-11-15 run" is the maintainer's build of a project's type scale in Figma that day (Project A). The maintainer's feedback from it became recommended answers here, never silent defaults.
 
 ## A1 · No recorded preferences: the skill asks before it generates
-Fixture: a context document whose §6 records none of the eight choices; the engine called with none.
-Assert: eight questions come back, each with its recommended answer, and no list or styles; the CLI exits 2. Negative: nothing is generated from recommendations alone.
+Fixture: a context document whose §6 records none of the nine choices; the engine called with none.
+Assert: nine questions come back, each with its recommended answer, and no list or styles; the CLI exits 2. Negative: nothing is generated from recommendations alone.
 Evidence: maintainer instruction, 2026-11-15: the skill asks about preferences rather than applying defaults.
-Runs: node tests/test-generate.mjs — "no recorded preferences: eight questions, nothing generated"; node tests/test-generate.mjs — "the CLI exits 2 with the questions when a choice is missing"
+Runs: node tests/test-generate.mjs — "no recorded preferences: nine questions, nothing generated"; node tests/test-generate.mjs — "the CLI exits 2 with the questions when a choice is missing"
 
 ## A2 · Every preference recorded: the skill asks nothing
-Fixture: a context document whose §6 records all eight choices, passed as options.
+Fixture: a context document whose §6 records all nine choices, passed as options (`none` and `auto` count as answers).
 Assert: no questions; a scale is returned. With one choice missing, only that one question is asked.
-Runs: node tests/test-generate.mjs — "every choice recorded: no questions, a scale"; node tests/test-generate.mjs — "one choice missing: only that question is asked"
+Runs: node tests/test-generate.mjs — "every choice recorded: no questions, a scale"; node tests/test-generate.mjs — "a fully recorded run asks nothing"; node tests/test-generate.mjs — "the CLI takes every choice with none and auto, and asks nothing"; node tests/test-generate.mjs — "one choice missing: only that question is asked"
 
 ## A3 · Product UI line heights: the role ratio rounded to 4px, offered first
 Fixture: product UI scope; sizes 40, 32, 24, 20, 18, 16, 14, 12 and labels 16, 14, 12 at their role ratios.
@@ -29,7 +29,7 @@ Runs: node tests/test-generate.mjs — "variables mirror style names in the name
 
 ## A5 · Family primitives by role; display binds the display family
 Fixture: families text and display given.
-Assert: family primitives are `Font/Family/text` and `Font/Family/display`; none is named by classification (`sans`, `serif`); the Display style binds `Font/Family/display` with 0% tracking.
+Assert: family primitives are `Font/Family/text` and `Font/Family/display`; none is named by classification (`sans`, `serif`); the Display/lg style binds `Font/Family/display` with 0% tracking.
 Evidence: the 2026-11-15 run.
 Runs: node tests/test-generate.mjs — "family primitives by role, never by classification; display binds the display family at 0 tracking"
 
@@ -62,11 +62,17 @@ Assert: h1 48, h2 28, h3 22, h4 18. The strict stride's h2 (36, twice the body) 
 Runs: node tests/test-generate.mjs — "content takes reading-site sizes, not the strict stride: 48, 28, 22, 18"
 
 ## A11 · Phone mode: body holds, headings step down, collisions reported
-Fixture: the worked example with a phone mode; then h2 forced onto h3's phone size; then product UI with every heading a level.
-Assert: body, labels and code hold; the page title goes to 28, h2 to 22, h3 to 20; no collision, no zoom failure. A forced collision, and the product-UI case where the lowest heading steps onto the held one, are reported. Negative: body text never shrinks.
-Runs: node tests/test-generate.mjs — "phone: body holds, headings step down the list, title near 1.6x the body, no collision"; node tests/test-generate.mjs — "phone collision is reported when two levels land on one size"
+Fixture: the worked example with a phone mode; then h2 forced onto h3's phone size; then product UI on the recommended answers, and with one heading forced onto the lowest's phone size.
+Assert: body, labels and code hold; the page title goes to 28, h2 to 22, h3 to 20; no collision, no zoom failure. The recommended answers give no collision; both forced collisions are reported. Negative: body text never shrinks.
+Runs: node tests/test-generate.mjs — "phone: body holds, headings step down the list, title near 1.6x the body, no collision"; node tests/test-generate.mjs — "recommended answers give no phone collision"; node tests/test-generate.mjs — "phone collision is reported when two levels land on one size"
 
 ## A12 · Tracking in half-percent steps; an unsupported ratio is refused
 Fixture: a full run; then ratio 1.25.
 Assert: every style's tracking is a multiple of 0.5% and no tighter than −2%; 14px is −0.5% (−0.005em in CSS). Negative: ratio 1.25 is refused, since the knowledge base gives 1.125 or 1.2 for the single step.
 Runs: node tests/test-generate.mjs — "tracking in half-percent steps from the anchors, capped at -2%"; node tests/test-generate.mjs — "refuses a ratio the knowledge base does not give"
+
+## A13 · A published list reproduces a real scale
+Fixture: Project A's rulings (2026-11-15): list 12, 14, 16, 18, 20, 24, 32, 40 on 16; Inter and Inter Display; one display, no cut; phone hold auto.
+Assert: Label/sm–lg 12, 14, 16; Body/sm–lg 14, 16, 18; Heading/sm, md, lg 20, 24, 32; Display/lg 40. On a phone Display/lg 32, Heading/lg 24, Heading/md 20, Heading/sm 18, Body/lg holds at 18; no collision. Negative: a drop or exception beside a list is refused.
+Evidence: the 2026-11-15 run; the 1.0.0 engine could not take a published list, so this scale had no way through it.
+Runs: node tests/test-generate.mjs — "a published list reproduces Project A's scale"; node tests/test-generate.mjs — "a sentinel where a number belongs is refused, never read as NaN"
