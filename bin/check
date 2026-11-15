@@ -207,7 +207,10 @@ OUT=$(node tools/figma-audit/test-rows.mjs 2>&1)
 # A project with no stored library yet (a new one, before its first snapshot)
 # has nothing for the library suites to read: a skip, said, never a red that
 # blocks every other project's push.
-has_library() { node -e "const p=require('./tools/snapshot/projects.cjs');const fs=require('fs');const w=p.layout(undefined,process.argv[1]);const d=w&&w.paths&&w.paths.components;process.exit(typeof d==='string'&&fs.existsSync(d)&&fs.readdirSync(d).length?0:1)" "$1"; }
+# Exit 0: a library; 1: none stored yet; 2: the project cannot be read (said).
+has_library() { node -e "const p=require('./tools/snapshot/projects.cjs');const fs=require('fs');const w=p.layout(undefined,process.argv[1]);if(!w||w.error){console.log(w?w.error:'no layout');process.exit(2)}const d=w.paths&&w.paths.components;process.exit(typeof d==='string'&&fs.existsSync(d)&&fs.readdirSync(d).length?0:1)" "$1"; }
+# Runs the step's suite only where there is a library: a skip for none, a failure for a project that cannot be read.
+library_or_skip() { LIB=$(has_library "$1"); case $? in 0) return 0;; 1) skip "$1 has no stored library yet";; *) bad "$1: $LIB";; esac; return 1; }
 HOMES=$(node tools/snapshot/projects.cjs homes) || { step "the project list reads"; bad "projects.cjs homes failed: no project's site or specs were checked"; }
 TAB=$(printf '\t')
 while IFS="$TAB" read -r label home; do
@@ -219,7 +222,7 @@ while IFS="$TAB" read -r label home; do
     # the system MCP over the same built site, every tool called as a client would (tools/system-mcp/smoke.mjs); run by
     # nothing until 2026-10-31. Its packages are its own install: without them a skip, never a pass.
     step "system MCP: $label"
-    has_library "$label" || { skip "$label has no stored library yet"; continue; }
+    library_or_skip "$label" || continue
     OUT=$(node tools/system-mcp/smoke.mjs "$d" 2>&1)
     RC=$?
     if [ $RC -eq 0 ]; then ok; elif [ $RC -eq 77 ]; then skip "$OUT"; else bad "$(printf '%s' "$OUT" | tail -8)"; fi
@@ -307,7 +310,7 @@ while IFS="$TAB" read -r label home; do
     # no project: the list is empty, and the here-document still gives one empty line
     [ -n "$label" ] || continue
     step "contract editor: $label"
-    has_library "$label" || { skip "$label has no stored library yet"; continue; }
+    library_or_skip "$label" || continue
     OUT=$(node tools/contract-editor/test-editor.mjs --project "$label" 2>&1)
     RC=$?
     [ $RC -eq 77 ] && { skip "$(printf '%s\n' "$OUT" | grep -m1 '^skip:')"; continue; }
