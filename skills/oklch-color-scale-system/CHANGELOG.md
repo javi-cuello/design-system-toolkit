@@ -1,5 +1,6 @@
 # Changelog — oklch-color-scale-system
 
+- 2.3.1 (2026-11-15): the reference sources are engine fixtures, not palette picks: a light hue among them goes through the mode-and-peak table. Guidance only; output unchanged. Case A16.
 - 2.3.0 (2026-11-01): `modeDescriptions`, `--light-name`/`--dark-name`/`--dark-gen-mode` (two-mode blocks); yellow `--tail-rate`, recorded, cleared by `--collide-with`/`--table`, solved by `recover.js`, whose `oklchText` rule, `null` and warnings change output for some default ramps.
 - 2.2.1 (2026-10-31): reviewed: `--collide-mode` generates the other colour in its own mode; SKILL.md says which options it shares. Case A13.
 - 2.2.0 (2026-10-31): `--collide-with` and `hueCollisions()` report steps 9–12 within 3° of another scale; the hex-to-L round-trip is a suite check, no longer a step done by hand. Output unchanged without the flag. Case A13.

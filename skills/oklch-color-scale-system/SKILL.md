@@ -5,7 +5,7 @@ description: Generates perceptually consistent 12-step OKLCH color scales for UI
 
 # OKLCH Color Scale System
 
-**Version 2.3.0** — history in CHANGELOG.md.
+**Version 2.3.1** — history in CHANGELOG.md.
 
 A principled system for generating perceptually consistent 12-step color scales for UI design systems, built on the OKLCH color space.
 
@@ -582,7 +582,7 @@ Three things determine whether a source color produces a clean scale. (For recom
 
 **Quick check:** paste the hex into [oklch.com](https://oklch.com) and verify L, C, H before generating. If it looks like the right color at a natural saturation and brightness, it will produce a good scale.
 
-**Reference sources (all validated):**
+**Reference sources (all validated):** validated means the engine reproduces them (the suite pins them), not that each is a palette pick at the default settings. A palette takes each source through the mode-and-peak decision table under "Before generating a scale": the yellow, lime, teal (cyan) and orange rows are naturally-light hues, so in plain free mode their solid step lands at L 0.52 and reads brown (`#CA8A04` free gives step 9 `#965800`), which is no warning amber. Give them `--peak`, or anchored where a chosen hex must appear (case A16).
 
 | Color | Hex | L | C | H |
 |---|---|---|---|---|
