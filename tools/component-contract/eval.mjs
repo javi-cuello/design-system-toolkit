@@ -33,10 +33,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { contracts } from './official.mjs';
+import { contracts, hashOf } from './official.mjs';
 import { roundTrip } from './to-figma.mjs';
 
 const req = createRequire(import.meta.url);
@@ -45,8 +44,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 /* A row's field, with the element said as * (a field that differs in many elements is one cause). */
 export const fieldOf = (at) => (at.includes('.') ? `*.${at.split('.').slice(1).join('.')}` : at).replace(/\.\d+(?=\.|$)/g, '.N');
 
-/* A contract's fingerprint: a reading taken of another is stale. */
-export const hashOf = (contract) => createHash('sha1').update(JSON.stringify(contract)).digest('hex').slice(0, 12);
+export { hashOf };
 /* When each reading was taken, of which contract: <home>/round-trip/taken.json, { self|figma: { <component>: { hash, kept? } } }. */
 const takenFile = (home) => path.join(home, 'round-trip', 'taken.json');
 const readTaken = (home) => { try { return JSON.parse(fs.readFileSync(takenFile(home), 'utf8')); } catch { return {}; } };
@@ -96,7 +94,8 @@ export function measure(where) {
   for (const { folder, contract } of contracts(where)) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
-    else { const r = roundTrip(contract, code.asFigma, { mains }); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }) }; }
+    // from-code fingerprints a reading from code with the contract it read against (`of`)
+    else { const r = roundTrip(contract, code.asFigma, { mains }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : null; legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
     else { const r = roundTrip(contract, own.asFigma, { mains }), st = stale('self', folder, contract); legs.self[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }

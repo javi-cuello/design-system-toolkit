@@ -20,6 +20,10 @@ import { fileURLToPath } from 'node:url';
 import { libraryOf } from '../parity/project.mjs';
 
 import { realpathSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+
+/* A contract's fingerprint: a reading taken of another contract than today's is stale (eval.mjs). */
+export const hashOf = (contract) => createHash('sha1').update(JSON.stringify(contract)).digest('hex').slice(0, 12);
 const require = createRequire(import.meta.url);
 const projects = require('../snapshot/projects.cjs');
 

@@ -30,6 +30,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ asFigma: { ...c, anatomy: { root: { kind: 'container', background: 'C/b' } } } }));
   m = measure(where);
   ok('a reading that differs is a row with both values', m.legs.browser.tag.rows.length === 1 && m.legs.browser.tag.rows[0].library === 'C/a' && m.legs.browser.tag.rows[0].drawn === 'C/b');
+  ok('a reading from code with no fingerprint is stale', /before readings were fingerprinted/.test(m.legs.browser.tag.stale));
+  fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ of: hashOf(c), asFigma: c }));
+  ok('a reading from code taken against today\'s contract is current', !measure(where).legs.browser.tag.stale);
   // the self leg: a reading with no fingerprint, or of another contract, is measured and said stale; one of today's is not
   const selfDir = path.join(home, 'round-trip', 'self', 'from-code');
   fs.mkdirSync(selfDir, { recursive: true });
