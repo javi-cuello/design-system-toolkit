@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.47.1)
+# Eval cases — figma-components-audit (v2.47.2)
+
+**Walked: 2026-11-15 for 2.47.2** — `node tests/test-audit.mjs` 121 of 121: a frame at opacity 0 bound to a variable that is 0 in every mode hides its text from the contrast check; it fails with the fix reverted, and the same frame bound to a variable that shows in some mode stays judged. Review: an alias now counts as zero only when every mode of its target is 0. Met real input: the Button set's loading label, bound to `State/Loading/opacity`, no longer raised on a live re-scan.
 
 **Walked: 2026-11-15 for 2.47.1** — `node tests/test-audit.mjs` 119 of 119: the token probe's label binds `fontWeight` and must not fire, and the contrast fixture gains a pale text inside an opacity-0 frame that must not be judged; with either fix reverted, its own assertion fails; two more keep text judged where an opacity bound to a variable may show it: under a bound-0 parent, and a text whose own bound opacity is 0 (judged as shown, not blended to 1:1). Review: the bound-opacity case and three stale doc lines, fixed. Audit lite resynced. Met real input: a project's Button set, 48 variants, both false findings gone on re-run.
 

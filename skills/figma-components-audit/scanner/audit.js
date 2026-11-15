@@ -25,7 +25,8 @@
 //               rules read.
 //   T           the TOKENS object; SCALES and TARGETS as the caller prepends
 //               them.
-//   resolveVar  async id -> { name, collection } | null. Live, a cached read
+//   resolveVar  async id -> { name, collection, key, zero } | null (zero: every mode resolves to 0;
+//               the contrast walk reads it only live, where a variant has findAll). Live, a cached read
 //               of the variable and its collection; headless, a map.
 //   file        { collections: [{ modes: [{ name }] }], variables, pages,
 //               textStyles, effectStyles } — the library-level counts the
@@ -398,10 +399,12 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // instances too (a label usually lives in one). A text with no opaque
       // surface under it inside the component is not judged: its surface is
       // wherever the consumer places it. A mixed size or fill is skipped.
+      let hidden=new Set();
       const shade=(n,path,bg)=>{
         // opacity 0 draws nothing, children included: a label kept for width under a spinner is not read.
-        // An opacity bound to a variable may be 1 in another mode, so that layer is still judged
-        if(n.type==="SLOT"||n.visible===false||(n.opacity===0&&!b(n,"opacity"))) return;
+        // An opacity bound to a variable may be 1 in another mode, so that layer is still judged,
+        // unless the variable is 0 in every mode (`hidden`, resolved before the walk)
+        if(n.type==="SLOT"||n.visible===false||(n.opacity===0&&(!b(n,"opacity")||hidden.has(n)))) return;
         if(n.type==="TEXT"&&!curDisabled&&bg&&typeof n.fontSize==="number"){
           const f=solid(n);
           if(f&&f.color){ const a=def(f.opacity,1)*(n.opacity===0&&b(n,"opacity")?1:def(n.opacity,1)); // a bound 0 is judged as shown
@@ -419,7 +422,10 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       for(const v of vs){ curV=v.name;
         // Its disabled axis True, in any case ("true" happens), from the settings.
         curDisabled=!!(TOK.disabledAxis&&(v.name||"").split(",").some(x=>x.trim().toLowerCase()===(TOK.disabledAxis+"=true").toLowerCase()));
-        await walk(v,""); shade(v,"",null); }
+        await walk(v,"");
+        hidden=new Set();
+        for(const h of (v.findAll?v.findAll(x=>x.opacity===0&&b(x,"opacity")):[])){ const t=await resolveVar(h.boundVariables.opacity.id); if(t&&t.zero) hidden.add(h); }
+        shade(v,"",null); }
       // figma-standard rule 50: a library meant to mirror keeps order in auto
       // layout and names sides by role. Only with rtlLanguages: a project that
       // never mirrors gets none of these, since every library has a left padding.
@@ -1030,7 +1036,10 @@ if (typeof figma === "undefined") return checkFacts;
 
 await figma.loadAllPagesAsync();
 const idc={};
-async function tn(id){if(idc[id])return idc[id];const v=await figma.variables.getVariableByIdAsync(id);const c=v?await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId):null;return idc[id]=v?{name:v.name,collection:c&&c.name,key:c&&c.key}:null;}
+async function tn(id,depth=0){if(idc[id])return idc[id];const v=await figma.variables.getVariableByIdAsync(id);const c=v?await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId):null;if(!v)return idc[id]=null;
+  // zero: every mode resolves to 0, an alias only when every mode of its target does (any mode may be active), so a layer bound to it never shows
+  let zero=true;for(const x of Object.values(v.valuesByMode)){const z=x&&x.type==="VARIABLE_ALIAS"?(depth<4&&(await tn(x.id,depth+1))?.zero===true):x===0;if(!z){zero=false;break;}}
+  return idc[id]={name:v.name,collection:c&&c.name,key:c&&c.key,zero};}
 const pages=[];
 for(const p of figma.root.children){
   await p.loadAsync();

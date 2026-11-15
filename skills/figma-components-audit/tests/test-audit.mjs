@@ -453,6 +453,16 @@ expect("a layer that is the same in every variant still fires when some forget i
   const d = fresh(); const ds = find(d, "Chip"); ds.children[0].name = "Feedback=Neutral, Disabled=True";
   ds.children[0].children.push(leaf("TEXT", "Pale", { fills: paint(0.8, 0.8, 0.8), fontSize: 14 }));
   expect("disabled text is exempt (WCAG 1.4.3)", rows(await run(d, { tokens: Object.assign({}, d.settings.tokens, { disabledAxis: "Disabled" }) }), "Chip").filter((x) => / accessibility \| Text .* contrast/.test(x)), []);
+  const fz = fresh(); const zv = find(fz, "Chip").children[0];
+  zv.children.push(leaf("FRAME", "Content", { opacity: 0, boundVariables: { opacity: { type: "VARIABLE_ALIAS", id: "z0" } }, layoutMode: "HORIZONTAL", children: [leaf("TEXT", "Hidden in every mode", { fills: paint(0.95, 0.95, 0.95), fontSize: 14 })] }));
+  const all = (n) => [n, ...(n.children || []).flatMap(all)];
+  zv.findAll = (f) => all(zv).slice(1).filter(f);
+  fz.vars = Object.assign({}, fz.vars, { z0: { name: "State/Loading/opacity", collection: "Semantic", key: "k", zero: true } });
+  expect("an opacity bound to a variable that is 0 in every mode hides its text, which is not judged",
+    keyed(await run(fz), "Chip", /^accessibility\|contrast\|/).length, 0);
+  fz.vars.z0 = Object.assign({}, fz.vars.z0, { zero: false });
+  expect("and one that shows in some mode keeps its text judged",
+    keyed(await run(fz), "Chip", /^accessibility\|contrast\|/).length, 1);
 }
 // ---- figma-standard rule 33: a frame that holds layers uses auto layout --
 {
