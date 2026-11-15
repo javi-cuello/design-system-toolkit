@@ -54,8 +54,7 @@ const correct = [
   fileFindings.some((f) => f.checked) && { label: 'Other libraries', value: fileFindings.reduce((n, f) => n + (f.open || 0), 0), ok: !fileFindings.some((f) => f.open), note: fileFindings.filter((f) => f.open).map((f) => f.name).join(', ') || 'None open', href: '/audits/' },
   hasAudit && { label: 'Library findings', value: unplacedTotal, ok: unplacedTotal === 0, note: unplacedTotal ? `On ${unplacedBy.slice(0, 2).map(([w]) => w).join(', ')}${unplacedBy.length > 2 ? ' and more' : ''}` : 'None open', href: '/audits/' },
 ].filter(Boolean);
-// The tokens and icon libraries, checked from the snapshot: a row each in a
-// small table under the strip, not tiles beside the library's measures.
+// The tokens and icon libraries, checked from the snapshot: one tile, the queue lists them.
 // 2b. In step with the code: the code audit's verdicts, as Parity › Overview
 // counts them, and the token values it compared. Only where a code audit ran.
 const parity = shows.parity && codeAudit ? parityRows(mapped(codeAudit, statusMarker)) : [];

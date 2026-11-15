@@ -193,5 +193,5 @@ Runs: node tests/test-foundations.mjs — "tokens: letter spacing in percent may
 - **Fixture:** `tests/test-foundations.mjs`, the tokens block: `Caption` binds `Size/8`; no component uses `Caption`.
 - **Assert:** `tokens-unused` lists `Grey/2` alone under Primitives; `Size/8` is reached through `Caption`.
 - **Negative:** before the fix, `Size/8` was raised as unused (the assertion failed, 87 of 88).
-- **Traced:** a project's font-size primitives, reached through a text-styles collection by heading and display styles no component drew, were raised as unused; figma-standard rule 42 counts any style.
+- **Traced:** a project's font-size primitives, reached through a text-styles collection by heading and display styles no component drew, were raised as unused; figma-standard rule 42 counts any style. Run 2026-11-16, `tokenChecks` on that project's stored tokens with no component use at all: no `Font/Size` token raised (17 others in its Global collection still are, radii and spacing nothing binds).
 
