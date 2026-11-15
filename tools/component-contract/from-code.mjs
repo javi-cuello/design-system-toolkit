@@ -339,10 +339,10 @@ async function forceAt(tab, at) {
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});
 }
 
-export async function openSource(label, name, { rebuild, codeOnly, self } = {}) {
+export async function openSource(label, name, { rebuild, codeOnly, self, second } = {}) {
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label);
-  if (self) return selfSource(project, name);
+  if (self) return selfSource(project, name, { second });
   if (codeOnly && project.mode !== 'compared') throw Object.assign(new Error(`${label}: its code is built from the design (governed), so it has no component of its own to read`), { usage: true });
   if (codeOnly) return codeOnlySource(label, name, rebuild);
   if (project.mode === 'compared') return comparedSource(label, name, rebuild);
@@ -615,7 +615,7 @@ async function governedSource(project, name) {
  * so what differs from the contract here is the toolkit's own translation loss; what differs only against the
  * project's code is the project's. Its readings go to <home>/round-trip/self/from-code/, which eval.mjs's self leg reads.
  */
-async function selfSource(project, name) {
+async function selfSource(project, name, { second = false } = {}) {
   const { bridge } = req('./derive.cjs');
   const X = await import('../parity/external.mjs');
   const { expand } = await import('../parity/project.mjs');
@@ -628,8 +628,19 @@ async function selfSource(project, name) {
   const store = req('../snapshot/store.cjs');
   const where = project.where;
   const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
-  const c = Object.values(library).find((x) => x.folder === name);
+  let c = Object.values(library).find((x) => x.folder === name);
   if (!c) throw Object.assign(new Error(`${name}: no contract for it in ${project.config.project}`), { usage: true });
+  // --second: the round trip again, from what the first came back as (round-trip/self/from-code), so what a second
+  // trip changes is the translation not settling (idempotence); the reader and its design stay the same. Only what the
+  // first trip built is taken (its anatomy and variants): its props keep the contract's (their Figma values, which
+  // booleans are axes, what is invalid, when a part shows), since the reading's are said in Figma's convention and the
+  // render pairs each variant with the spec by them; the props are the self leg's to measure
+  if (second) {
+    let first = null;
+    try { first = JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', 'self', 'from-code', `${name}.json`), 'utf8')).asFigma; } catch { /* below */ }
+    if (!first) throw Object.assign(new Error(`${name}: no first self reading to go round again from (eval.mjs --self)`), { usage: true });
+    c = library[c.component] = { ...c, anatomy: first.anatomy, variants: first.variants || [] };
+  }
   // the toolkit's page names its parts and instances its own way (data-part, ds-<folder>): none of the project's code
   // settings (its framework's components, part and icon classes, code profile) apply to it
   const lib = { ...project.lib, frameworkComponents: {}, code: {}, frameworkProfile: null, codeProfile: {} };
@@ -661,7 +672,7 @@ async function selfSource(project, name) {
     : { control: 'text', type: 'string', default: x.default ?? '' }])) };
   const tokens = project.snapshot;
   const src = {
-    governed: true, label: project.config.project, tab, lib, repo: project.repo, out: path.join(where.projectDir, 'round-trip', 'self'), mode: tier, tokens,
+    governed: true, label: project.config.project, tab, lib, repo: project.repo, out: path.join(where.projectDir, 'round-trip', second ? 'self2' : 'self'), mode: tier, tokens,
     value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
     textStyle: (n) => (tokens.textStyles || []).find((x) => x.name === n),
     components: project.paths.components, story: t.mapping.storyId, container, m: { story: t.mapping.storyId }, root: t.mapping.root, pseudoOf: G.pseudoOf,
@@ -704,13 +715,14 @@ async function main() {
   const label = opt('--project');
   const rebuild = argv.includes('--rebuild'); if (rebuild) argv.splice(argv.indexOf('--rebuild'), 1);
   const codeOnly = argv.includes('--code-only'); if (codeOnly) argv.splice(argv.indexOf('--code-only'), 1);
-  const self = argv.includes('--self'); if (self) argv.splice(argv.indexOf('--self'), 1);
+  const second = argv.includes('--second'); if (second) argv.splice(argv.indexOf('--second'), 1);
+  const self = argv.includes('--self') || second; if (argv.includes('--self')) argv.splice(argv.indexOf('--self'), 1);
   const name = argv[0];
-  if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self]'); process.exit(2); }
+  if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self | --second]'); process.exit(2); }
   const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
-  try { L = await openSource(label, name, { rebuild, codeOnly, self }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
+  try { L = await openSource(label, name, { rebuild, codeOnly, self, second }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
   // the library's official contracts (official.mjs): Figma's readings, or the project's own where it takes the contract as its source
   const { contracts: officialContracts } = await import('./official.mjs');
   const official = new Map(officialContracts(req('../snapshot/projects.cjs').layout(null, label)).map((x) => [x.folder, x.contract]));

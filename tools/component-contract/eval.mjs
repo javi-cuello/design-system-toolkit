@@ -21,11 +21,14 @@
  *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [components…]
  *   node tools/component-contract/eval.mjs --project <label> --self [--twice] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --causes
+ *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
  * part missing or extra is one cause at its root, `causes`); a reading taken of another contract than today's, or kept
  * from an earlier drawing, is stale and said (taken.json). --twice reads the self leg twice and fails where a reading
- * differs: a measure is trusted only where it repeats.
+ * differs: a measure is trusted only where it repeats. --second goes round the self leg again from what the first came
+ * back as (from-code --second, <home>/round-trip/self2/from-code/), and the `second` leg holds that to the first: a row
+ * there is the translation not settling, a cause the first leg's count cannot show.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -83,7 +86,7 @@ export function measure(where) {
   const readings = path.join(home, 'parity', 'from-code');
   const drawn = path.join(home, 'round-trip');
   const read = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
-  const legs = { browser: {}, self: {}, figma: {} };
+  const legs = { browser: {}, self: {}, second: {}, figma: {} };
   const taken = readTaken(home);
   // a reading of another contract than today's, or one kept when its drawing went unanswered, is stale: measured, said apart
   const stale = (leg, folder, contract) => { const t = (taken[leg] || {})[folder]; return !t ? 'taken before readings were fingerprinted' : t.kept ? 'kept from an earlier drawing (an import went unanswered)' : t.hash !== hashOf(contract) ? 'its contract changed since' : null; };
@@ -97,6 +100,16 @@ export function measure(where) {
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
     else { const r = roundTrip(contract, own.asFigma, { mains }), st = stale('self', folder, contract); legs.self[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    // the second trip, held to the first: what it changes is the translation not settling (idempotence)
+    const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
+    if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
+    else {
+      // held to the first reading as it stands: one taken again since the second trip went round is stale
+      // only the combinations the library draws (a reading carries no invalid list of its own)
+      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains }), t = (taken.second || {})[folder];
+      const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : null;
+      legs.second[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+    }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     const st = back && stale('figma', folder, contract);
     legs.figma[folder] = back ? { rows: back.rows, combinations: back.combinations, ...(back.cut && { cut: back.cut }), ...(st && { stale: st }) } : { skipped: 'not drawn and read back (eval.mjs --draw)' };
@@ -180,16 +193,22 @@ function draw(where, label, into, only, retry = true) {
 
 /* contract → to-markup and to-code → Chrome → from-code's walk → contract, per component (from-code --self), stopping
    after three failures in a row. */
-function readSelf(where, label, only) {
+function readSelf(where, label, only, second = false) {
   let fails = 0;
   for (const { folder, contract } of contracts(where)) {
     if (only.length && !only.includes(folder)) continue;
     let out, ok = true;
-    try { out = execFileSync('node', [path.join(HERE, 'from-code.mjs'), '--project', label, folder, '--self'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = `${e.stdout || ''}${e.stderr || ''}`; ok = false; }
+    try { out = execFileSync('node', [path.join(HERE, 'from-code.mjs'), '--project', label, folder, second ? '--second' : '--self'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = `${e.stdout || ''}${e.stderr || ''}`; ok = false; }
     // its own summary line, else the last line that is not a stack frame (what went wrong)
     const lines = out.trim().split('\n').reverse(), last = lines.find((l) => l.startsWith(`${folder}:`)) || lines.find((l) => !/^\s+at /.test(l) && /\w{3}/.test(l)) || '';
     console.log(`${folder}: ${ok ? last.split(' — ')[0] : `not read — ${last}`}`);
-    if (ok) { fails = 0; noteTaken(where.projectDir, 'self', folder, contract); continue; }
+    if (ok) {
+      fails = 0;
+      if (!second) noteTaken(where.projectDir, 'self', folder, contract);
+      // the second trip is fingerprinted with the first reading it went round from
+      else { try { noteTaken(where.projectDir, 'second', folder, JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', 'self', 'from-code', `${folder}.json`), 'utf8')).asFigma); } catch { /* no first reading: from-code refused it */ } }
+      continue;
+    }
     process.exitCode = 1;
     if (++fails >= 3) { console.log('three failures in a row: stopped'); return; }
   }
@@ -216,13 +235,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
-  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), byCause = flag('--causes'), twice = flag('--twice');
-  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [components…]'); process.exit(2); }
+  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
+  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [components…]\n       eval.mjs --project <label> --second [components…]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (into) { draw(where, label, into, argv); process.exit(); }
+  if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
   if (self && twice) { process.exit(readTwice(where, label, argv)); }
   if (self) { readSelf(where, label, argv); process.exit(); }
+  if (second) { readSelf(where, label, argv, true); process.exit(); }
   const m = measure(where);
   report(label, m, fields, byCause);
   const file = path.join(m.home, 'round-trip', 'accepted.json');

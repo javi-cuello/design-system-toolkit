@@ -42,6 +42,21 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a reading of today\'s contract is current; one kept from an earlier drawing is stale', !m.legs.self.tag.stale && /kept from an earlier drawing/.test(m.legs.figma.tag.stale));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf({ ...c, component: 'Old' }) } } }));
   ok('a reading of another contract is stale', /contract changed/.test(measure(where).legs.self.tag.stale));
+  // the second trip is held to the first, not to the contract: a change there is the translation not settling
+  ok('no second reading: the second leg is not measured, and said why', /not read a second time/.test(measure(where).legs.second.tag.skipped));
+  fs.mkdirSync(path.join(home, 'round-trip', 'self2', 'from-code'), { recursive: true });
+  fs.writeFileSync(path.join(selfDir, 'tag.json'), JSON.stringify({ asFigma: { ...c, anatomy: { root: { kind: 'container', background: 'C/b' } } } }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'self2', 'from-code', 'tag.json'), JSON.stringify({ asFigma: { ...c, anatomy: { root: { kind: 'container', background: 'C/b' } } } }));
+  m = measure(where);
+  ok('a second trip that comes back as the first is no row, however far both are from the contract', m.legs.second.tag.rows.length === 0 && m.legs.self.tag.rows.length === 1);
+  const firstNow = { ...c, anatomy: { root: { kind: 'container', background: 'C/b' } } };
+  fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c) } }, second: { tag: { hash: hashOf(firstNow) } } }));
+  ok('a second trip of the first reading as it stands is current', !measure(where).legs.second.tag.stale);
+  fs.writeFileSync(path.join(selfDir, 'tag.json'), JSON.stringify({ asFigma: { ...c, anatomy: { root: { kind: 'container', background: 'C/c' } } } }));
+  ok('a first reading taken again since makes the second trip stale', /first reading was taken again/.test(measure(where).legs.second.tag.stale));
+  fs.writeFileSync(path.join(selfDir, 'tag.json'), JSON.stringify({ asFigma: firstNow }));
+  fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: 'old' } }, second: { tag: { hash: hashOf(firstNow) } } }));
+  ok('a second trip on a first reading of another contract is stale too', /first reading is stale/.test(measure(where).legs.second.tag.stale));
   fs.rmSync(home, { recursive: true, force: true });
 }
 
