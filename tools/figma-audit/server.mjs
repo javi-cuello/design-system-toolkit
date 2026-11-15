@@ -1263,6 +1263,8 @@ server.listen(PORT, "127.0.0.1", () => {
       let index = {};
       try { index = JSON.parse(await readFile(P.index, "utf8")).components || {}; } catch { index = {}; }
       const nameOf = (folder) => (index[folder] && index[folder].name) || folder;
+      // A project in design has no code to break (breaking.mjs `asRead`).
+      const code = where.phase !== "design";
       // First the upkeep (breaking.mjs `upkeep`): rows filed under an old key
       // take the key's present form, and rows no live grade raises are
       // closed saying why, so the filing below finds what is already there.
@@ -1270,7 +1272,7 @@ server.listen(PORT, "127.0.0.1", () => {
         if (!existsSync(r.path)) continue;
         await inOrder(r.key, async () => {
           const data = await readData(r.key);
-          const { rekey, close } = breaking.upkeep(log, data, { libOf, lib: r.key });
+          const { rekey, close } = breaking.upkeep(log, data, { libOf, lib: r.key, code });
           if (!rekey.length && !close.length) return;
           const out = await applyRows(data, { owner: breaking.OWNER, fileKey: r.key, origin: "snapshot", rekey, close });
           await writeData(data, r.key);
@@ -1281,7 +1283,7 @@ server.listen(PORT, "127.0.0.1", () => {
       for (const r of records) {
         try { for (const k of breaking.filedKeys(JSON.parse(await readFile(r.path, "utf8")))) filed.add(k); } catch { /* no record yet */ }
       }
-      for (const [lib, findings] of breaking.breakingFindings(log, { libOf, nameOf, filed })) {
+      for (const [lib, findings] of breaking.breakingFindings(log, { libOf, nameOf, filed, code })) {
         await inOrder(lib, async () => {
           const data = await readData(lib);
           const out = await applyRows(data, { owner: breaking.OWNER, fileKey: lib, origin: "snapshot", findings });

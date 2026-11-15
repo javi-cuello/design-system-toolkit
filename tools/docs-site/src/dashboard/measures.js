@@ -45,7 +45,12 @@ export function renderLibrary(lib) {
       ? "Checked from the snapshot, with no audit to run."
       : "No snapshot of this file yet: it is checked from the first one stored.";
   } else {
-    document.getElementById("measuredLine").textContent = "No audit of this file yet.";
+    // Rows with no run behind them were filed from the snapshot's change log
+    // (breaking.mjs); "no audit" above a queue that lists them read as a
+    // contradiction (maintainer, 15 November 2026).
+    document.getElementById("measuredLine").textContent = Object.keys(state).length
+      ? "No audit of this file yet: the rows below were filed from its snapshots' changes."
+      : "No audit of this file yet.";
   }
 }
 export function renderQueuePane(metrics, runs) {

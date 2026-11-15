@@ -38,6 +38,17 @@ ok("an entry from before grades were stored files nothing", f.every((x) => x.key
 ok("the component is named as a designer reads it, tokens as Tokens", f[0].where === "Button" && f[2].where === "Tokens");
 ok("each says for whom it breaks", /^Breaking for Figma files and code:/.test(f[0].check) && /^Breaking for code:/.test(f[1].check));
 ok("losing work in a Figma file is an error; a code break a warning", f[0].sev === "error" && f[1].sev === "warn");
+// 2026-11-15: a design-phase project (no code) was asked to decide "Breaking
+// for code", and a resize, which loses nobody's work, was filed as an error.
+{
+  const d = breakingFindings(log, { libOf, nameOf, code: false }).get("KEY1") || [];
+  ok("with no code, a code-only break is not filed, and the rest say Figma files alone",
+    d.length === 2 && !d.some((x) => /option-renamed/.test(x.key)) && d.every((x) => /^Breaking for Figma files:/.test(x.check)));
+  const r = breakingFindings([{ at: "2026-11-15T10:00:00.000Z", file: "KEY1", grade: { level: "BREAKING", changes: [change("size-changed", "major", "minor", "button", "its size changed")] } }], { libOf, nameOf }).get("KEY1");
+  ok("a resize is a warning: instances keep their work", r.length === 1 && r[0].sev === "warn");
+  const rec = { rows: { "3.1": { owner: OWNER, key: keyOf("2026-10-01T10:00:00.000Z", log[0].grade.changes[1]), done: false } } };
+  ok("with no code, an open code-only row is closed by the upkeep", upkeep(log, rec, { libOf, lib: "KEY1", code: false }).close.length === 1 && upkeep(log, rec, { libOf, lib: "KEY1" }).close.length === 0);
+}
 ok("every one is a decision", f.every((x) => x.bucket === 3 && x.rec.length === 2));
 
 // Filed through the one writer, and never twice.
@@ -195,10 +206,11 @@ ok("a later log write closes nothing", r.closed === 0 && Object.values(record.ro
     const log = JSON.parse(readFileSync(where.paths.changes, "utf8"));
     const lo = libOfFor(contract.entries(where.files && where.files.library), [...records.keys()].map((key) => ({ key })));
     const rows = [...records.values()].flatMap((r) => Object.values(r.rows || {}).filter((x) => x && x.owner === OWNER)).length;
-    const raised = [...breakingFindings(log, { libOf: lo }).values()].flat().length;
+    const code = where.phase !== "design";
+    const raised = [...breakingFindings(log, { libOf: lo, code }).values()].flat().length;
     console.log(`   ${p.name}: ${rows} router rows, ${raised} majors raised by live grades`);
     compared += rows + raised;
-    problems.push(...unmatched(log, records, { libOf: lo }).map((m) => `${p.name}: ${m}`));
+    problems.push(...unmatched(log, records, { libOf: lo, code }).map((m) => `${p.name}: ${m}`));
     read++;
   }
   if (contract.projects().list.length) ok(`every project's filed rows match its stored grades (${read} logs read, ${compared} rows and raised majors compared)${problems.length ? "\n  " + problems.join("\n  ") : ""}`, read > 0 && read === contract.projects().list.length - noLog.length - noRecord.length && compared > 0 && problems.length === 0);

@@ -45,6 +45,16 @@ export const OWNER = "figma-snapshot-router";
 // docs site's Changes page say it the same way.
 const AUDIENCE = (c) => store.gradeOf([c]).audience;
 
+// A change as a project reads it: one with no code yet (phase "design",
+// snapshot/projects.cjs) has no code to break, so a code grade is dropped
+// before anything is filed. "Breaking for code" on a library with no code
+// was a question nobody could answer (maintainer, 15 November 2026).
+const asRead = (c, code) => (code === false ? { ...c, code: null } : c);
+const breaks = (c) => c.figma === "major" || c.code === "major";
+// A change that loses nobody's work: instances keep every value and override,
+// and only the layout around them may need a look. Filed as a warning.
+const KEEPS_WORK = new Set(["size-changed"]);
+
 // The rules whose wording lists what they touched, and those whose wording
 // leads with the one thing they are about ("Semantic: 3 — a, b, c").
 const LISTS = new Set(["layer-removed", "layer-renamed", "layer-added", "nested-repointed"]);
@@ -73,14 +83,15 @@ export const breakingFix = (what, audience, day) =>
  * filed    the keys this owner has already filed, in any record
  * Returns  Map(libKey → findings[])
  */
-export function breakingFindings(entries, { libOf, nameOf = (f) => f, filed = new Set() }) {
+export function breakingFindings(entries, { libOf, nameOf = (f) => f, filed = new Set(), code = true }) {
   const out = new Map();
   for (const e of entries || []) {
     if (!e || e.via === "backfill" || !e.grade || e.grade.from || !Array.isArray(e.grade.changes)) continue;
     const lib = libOf(e.file);
     if (!lib) continue;
-    for (const c of e.grade.changes) {
-      if (c.figma !== "major" && c.code !== "major") continue;
+    for (const c0 of e.grade.changes) {
+      const c = asRead(c0, code);
+      if (!breaks(c)) continue;
       const key = keyOf(e.at, c);
       if (filed.has(key)) continue;
       filed.add(key);
@@ -91,7 +102,7 @@ export function breakingFindings(entries, { libOf, nameOf = (f) => f, filed = ne
         // Losing someone's work in their own file is the louder of the two:
         // nothing in Figma says it happened. A code break fails a build or a
         // publish, or shows on the page.
-        sev: c.figma === "major" ? "error" : "warn",
+        sev: c.figma === "major" && !KEEPS_WORK.has(c.rule) ? "error" : "warn",
         check: "Breaking for " + AUDIENCE(c) + ": " + c.what,
         // The question says what changed and what it does to the people who
         // use it; "component-removed: breaking" named the rule and nothing else.
@@ -124,14 +135,14 @@ export const libOfFor = (routes, records) => (f) => {
  * row closed as "no longer raised" while it does was false for three of six
  * closed router rows (review of 2 October 2026, round 3, S4).
  */
-function raisedBy(entries, libOf) {
+function raisedBy(entries, libOf, code = true) {
   const out = new Map();
   for (const e of entries || []) {
     if (!e || !e.grade || !Array.isArray(e.grade.changes)) continue;
     const lib = libOf(e.file);
     if (!lib) continue;
     const m = out.get(lib) || out.set(lib, new Map()).get(lib);
-    for (const c of e.grade.changes) if (c.figma === "major" || c.code === "major") { const k = keyOf(e.at, c); if (!m.has(k) || !m.get(k).live) m.set(k, { live: e.via !== "backfill" && !e.grade.from, e }); }
+    for (const c0 of e.grade.changes) { const c = asRead(c0, code); if (!breaks(c)) continue; const k = keyOf(e.at, c); if (!m.has(k) || !m.get(k).live) m.set(k, { live: e.via !== "backfill" && !e.grade.from, e }); }
   }
   return out;
 }
@@ -152,8 +163,8 @@ const afterWhy = (e) => `${AFTER} (backfill-changes.cjs, across ${e.grade.from}.
  * worded so; a change a live grade raises that no row was filed for.
  *   records  Map(libKey → record)
  */
-export function unmatched(entries, records, { libOf }) {
-  const raised = raisedBy(entries, libOf);
+export function unmatched(entries, records, { libOf, code = true }) {
+  const raised = raisedBy(entries, libOf, code);
   const out = [];
   for (const [lib, record] of records) {
     const all = raised.get(lib) || new Map();
@@ -180,8 +191,8 @@ export function unmatched(entries, records, { libOf }) {
  *   record  one audit record; lib its key
  * Returns { rekey: [[from, to]], close: [{ key, why }] }
  */
-export function upkeep(entries, record, { libOf, lib }) {
-  const all = raisedBy(entries, libOf).get(lib) || new Map();
+export function upkeep(entries, record, { libOf, lib, code = true }) {
+  const all = raisedBy(entries, libOf, code).get(lib) || new Map();
   const rekey = [], close = [];
   for (const r of Object.values((record && record.rows) || {})) {
     if (!r || r.owner !== OWNER || typeof r.key !== "string") continue;

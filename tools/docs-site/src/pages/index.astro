@@ -6,23 +6,20 @@
 // the few figures that answer it, every one with its target, and a link to
 // where its detail lives. Figma alone answers every question; a codebase adds
 // its side to the same cards (the ladder's code checks).
-import ChangeLevel from '../components/ChangeLevel.astro';
 import Base from '../layouts/Base.astro';
 import Ladder from '../components/Ladder.astro';
 import KpiStrip from '../components/KpiStrip.astro';
 import UpdatedBy from '../components/UpdatedBy.astro';
-import AttentionTable from '../components/AttentionTable.astro';
 import Activity from '../components/Activity.astro';
-import Time from '../components/Time.astro';
 import { project, shows, codeAudit, statusMarker } from '../lib/project.js';
 import { mapped, parityRows, inStep } from '../lib/parity.js';
 import { hasSnapshot } from '../lib/snapshot.js';
-import { hasAudit, openFindings, openErrors, openBreaking, auditedAt, attention, rows, unplacedBy, fileFindings, GROUP_LABEL } from '../lib/tracker.js';
+import { hasAudit, openFindings, openErrors, openBreaking, rows, unplacedBy, fileFindings, GROUP_LABEL } from '../lib/tracker.js';
 import { health } from '../lib/measures.js';
 import { dashboardStatic } from '../dashboard/data.js';
-import { changeRows, title, link, cap } from '../lib/changes.js';
+import { changeRows } from '../lib/changes.js';
 import { tokensPublished, tokensDescribed, tokenCollections, deprecated, deprecatedClear } from '../lib/readiness.js';
-import { base, day, num, plural } from '../lib/format.js';
+import { base, day, plural } from '../lib/format.js';
 
 const PHASE = { design: 'In design', build: 'In build', maintenance: 'In maintenance' };
 
@@ -49,10 +46,12 @@ const unplacedTotal = unplacedBy.reduce((n, [, c]) => n + c, 0);
 const correct = [
   // Findings, not components: the Components page counts the components
   // they sit on, under its own name.
-  hasAudit && { label: 'Error findings open', value: openErrors, ok: openErrors === 0, note: `Of ${plural(openFindings, 'finding')} open in all`, href: '/audits/', lead: true },
+  hasAudit && { label: 'Errors open', value: openErrors, ok: openErrors === 0, note: `Of ${plural(openFindings, 'finding')} open in all`, href: '/audits/', lead: true },
   ...cells('coverage'), ...cells('contrast'), ...cells('structure'),
   // Findings about the library rather than one component (page order,
   // variable links, styles): no component's ladder carries them.
+  // The tokens and icon libraries' open findings, one figure; the queue lists them.
+  fileFindings.some((f) => f.checked) && { label: 'Other libraries', value: fileFindings.reduce((n, f) => n + (f.open || 0), 0), ok: !fileFindings.some((f) => f.open), note: fileFindings.filter((f) => f.open).map((f) => f.name).join(', ') || 'None open', href: '/audits/' },
   hasAudit && { label: 'Library findings', value: unplacedTotal, ok: unplacedTotal === 0, note: unplacedTotal ? `On ${unplacedBy.slice(0, 2).map(([w]) => w).join(', ')}${unplacedBy.length > 2 ? ' and more' : ''}` : 'None open', href: '/audits/' },
 ].filter(Boolean);
 // The tokens and icon libraries, checked from the snapshot: a row each in a
@@ -89,16 +88,6 @@ const safe = [
   latestEntry && { label: 'Breaking for Figma files, last snapshot', value: breaking, ok: undefined, note: `On ${day(latestEntry.at)}`, href: '/changes' },
   { label: 'Deprecations clear', value: deprecated.length ? deprecatedClear : 'None', of: deprecated.length ? deprecated.length : undefined, ok: deprecatedClear === deprecated.length, note: deprecated.length === 0 ? 'Nothing deprecated' : `${deprecated.length - deprecatedClear} name no replacement`, href: '/overview/ai-readiness#deprecated' },
 ].filter(Boolean);
-// 5. Activity: what the snapshots and audits changed over the past year,
-// three charts behind one control (Activity.astro), after the cards.
-const latest = changeRows.flatMap((r) => r.items.map((it) => ({ ...it, at: r.at }))).slice(0, 5);
-// A column whose every row says the same thing singles nothing out: it is
-// dropped and said once above the table.
-const LEVEL = (l) => (l === 'major' ? 'Breaking' : l ? cap(l) : 'Not graded');
-const COLS = [['type', 'Type', (v) => v || 'No type', 'type'], ['figma', 'Figma files', LEVEL, 'Figma files'], ['code', 'Code', LEVEL, 'code']];
-const uniform = latest.length > 1 ? COLS.filter(([k]) => latest.every((it) => it[k] === latest[0][k])) : [];
-const varied = COLS.filter((c) => !uniform.includes(c));
-const uniformNote = uniform.length ? `The same for all ${latest.length} — ${uniform.map(([k, , say, phrase]) => `${phrase}: ${say(latest[0][k])}`).join('; ')}.` : '';
 // One card per question the overview answers, titled as the answer it gives
 // (a statement, not a question); its link names the page it opens.
 const QUESTIONS = [
@@ -127,51 +116,8 @@ const QUESTIONS = [
       {QUESTIONS.map(([id, heading, caption, list, href, linkText]) => (
         <section class="panel" aria-labelledby={id}>
           <header class="panel__head"><h2 id={id}>{heading}</h2><a href={`${base}${href}`}>{linkText} →</a><p class="panel__caption">{caption}</p></header>
-          <KpiStrip items={list.map((k) => ({ ...k, tone: k.ok === true ? 'good' : k.ok === false ? 'warn' : 'plain' }))} />
-          {id === 'correct' && fileFindings.length > 0 && <>
-            <h3 class="panel__sub" id="other-libraries">Other libraries</h3>
-            <div class="table-wrap" data-scrolls>
-              <table class="table">
-                <caption class="visually-hidden">Findings open in the tokens and icon libraries</caption>
-                <thead><tr><th scope="col">Library</th><th scope="col">Checks</th><th scope="col" class="num">Findings open</th></tr></thead>
-                <tbody>
-                  {fileFindings.map((f) => (
-                    <tr>
-                      <th scope="row">{f.name}</th>
-                      <td class="muted">{f.checked ? (f.roles.includes('tokens') ? 'Tokens' : 'Icons') : 'Checked at its next snapshot'}</td>
-                      <td class="num">{!f.checked ? <span class="muted">Not checked</span> : f.open ? <a href={`${base}/audits/#queue?lib=${f.key}`}>{num(f.open)}</a> : <span class="muted">None</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>}
-          {id === 'correct' && attention.length > 0 && <>
-            <h3 class="panel__sub">Most errors</h3>
-            <AttentionTable limit={5} />
-          </>}
-          {id === 'safe' && latest.length > 0 && <>
-            <h3 class="panel__sub" id="latest-changes">Latest changes</h3>
-            {uniformNote && <p class="section__note">{uniformNote}</p>}
-            <div class="table-wrap" data-scrolls>
-              <table class="table changes">
-                <caption class="visually-hidden">The five latest changes, as the Changes page lists them</caption>
-                <thead><tr><th scope="col">Date</th><th scope="col" class="changes__what">Change</th>{varied.map(([, l]) => <th scope="col">{l}</th>)}</tr></thead>
-                <tbody>
-                  {latest.map((it) => (
-                    <tr>
-                      <td class="muted changes__date"><Time at={it.at} short /></td>
-                      <td class="changes__what">
-                        <span class="changes__subject">{it.folder ? (link(it.folder) ? <a href={link(it.folder)}>{title(it.folder)}</a> : title(it.folder)) : 'Tokens'}</span>
-                        {it.label && <span class="changes__label">{it.label}</span>}
-                      </td>
-                      {varied.map(([k, label]) => k === 'type' ? <td>{it.type ? <span class="pill">{it.type}</span> : <span class="muted">No type</span>}</td> : <ChangeLevel level={it[k]} label={label} />)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>}
+          {/* One width and one figure size per tile: the overview ranks by card, not by tile. */}
+          <KpiStrip items={list.map((k) => ({ ...k, lead: false, tone: k.ok === true ? 'good' : k.ok === false ? 'warn' : 'plain' }))} />
         </section>
       ))}
 
