@@ -4,7 +4,7 @@ import '../styles/system.css';
 import '../styles/site.scss';
 import { project, shows, language, codeAudit } from '../lib/project.js';
 
-import { meta, icons, iconLibrary, iconGroups, assetGroups, snapshot, componentGroups, collectionPages, slug } from '../lib/snapshot.js';
+import { meta, icons, iconLibrary, assetGroups, snapshot, componentGroups, collectionPages, slug } from '../lib/snapshot.js';
 import { base, date } from '../lib/format.js';
 import { platformLabel } from '../dashboard/labels.js';
 
@@ -56,16 +56,17 @@ const sections = [
   // How the code stands against the design: which components each side has,
   // and, for code built elsewhere, what differs (the code audit). It lands on
   // the scorecard once a code audit exists, else on which components each
-  // side has. Always shown, code or not, as Audits is: each page's empty
-  // state says what to set up, and a section reached by no link is lost.
-  ['parity', codeAudit ? '/parity/overview' : '/parity', 'Parity'],
+  // side has. Shown in the build and maintenance phases, code or not: each
+  // page's empty state says what to set up.
+  // A design-phase project has no code to compare, so it has no Parity tab.
+  shows.parity && ['parity', codeAudit ? '/parity/overview' : '/parity', 'Parity'],
   // Always, audit or not: the page says "none recorded yet" and how to run
   // one, which a project with no record needs more than one that has it.
   ['audits', '/audits', 'Audits'],
   // What each snapshot changed, all of it; the overview shows the last few.
   ['changes', '/changes', 'Changes'],
 ].filter(Boolean) as string[][];
-const sidebar = (section === 'icons' && (assetGroups.length > 0 || iconGroups.length > 0)) || section === 'foundations' || section === 'components' || section === 'audits' || section === 'parity' || section === 'overview';
+const sidebar = (section === 'icons' && assetGroups.length > 0) || section === 'foundations' || section === 'components' || section === 'audits' || section === 'parity' || section === 'overview';
 // The Tracker: how far along, then what is holding something.
 // The overview and a page per question it asks: Components (the ladder),
 // Progress (Complete, in design only), AI readiness (Understandable); Correct
@@ -78,7 +79,9 @@ const parityPages = [['Overview', '/parity/overview'], ['Coverage', '/parity'], 
 // "On this page", drawn by the script from the page's own headings: on the
 // list sections and on Changes (a section per day, long enough that the list
 // is how a day is reached). Not on the home page: its cards are the page.
-const pageNav = (sidebar || section === 'changes') && rel !== '/';
+// The icons page lists its groups in this rail alone: a sidebar of the same
+// groups beside it was the list twice.
+const pageNav = (sidebar || section === 'changes' || section === 'icons') && rel !== '/';
 // The Audits page's views, addressed by hash (the dashboard routes them).
 const auditViews = [['Queue', '#queue'], ['History', '#history'], ['About', '#about']];
 // A repo stamps the moment (snapshotAt); the toolkit's store keeps the day.
@@ -135,7 +138,7 @@ import themeScript from '../scripts/theme.js?raw';
                 ) : section === 'foundations' ? (
                   <ul>{foundations.map(([label, href, , child]) => <li class:list={[child && 'nav__child']}><a {...link(href as string)}>{label}</a></li>)}</ul>
                 ) : section === 'icons' ? (
-                  <ul>{[['Icons', '/icons'], ...assetGroups.map((g) => [g.title, `/icons/${g.slug}`])].map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}{!assetGroups.length && iconGroups.map((g) => <li class="nav__child"><a href={`${base}/icons/#group-${slug(g.title)}`}>{g.title}</a></li>)}</ul>
+                  <ul>{[['Icons', '/icons'], ...assetGroups.map((g) => [g.title, `/icons/${g.slug}`])].map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
                 ) : section === 'overview' ? (
                   <ul>{overviewPages.map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
                 ) : section === 'parity' ? (

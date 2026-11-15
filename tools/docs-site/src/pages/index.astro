@@ -59,8 +59,8 @@ const correct = [
 // small table under the strip, not tiles beside the library's measures.
 // 2b. In step with the code: the code audit's verdicts, as Parity › Overview
 // counts them, and the token values it compared. Only where a code audit ran.
-const parity = codeAudit ? parityRows(mapped(codeAudit, statusMarker)) : [];
-const tokenKinds = Object.values((codeAudit && codeAudit.tokens) || {});
+const parity = shows.parity && codeAudit ? parityRows(mapped(codeAudit, statusMarker)) : [];
+const tokenKinds = Object.values((shows.parity && codeAudit && codeAudit.tokens) || {});
 const tokensChecked = tokenKinds.reduce((n, k) => n + (k.checked || 0), 0);
 const tokensOff = tokenKinds.reduce((n, k) => n + (k.differs || 0) + (k.missing || 0), 0);
 const code = parity.length ? [
