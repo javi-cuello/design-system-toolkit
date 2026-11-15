@@ -477,8 +477,13 @@ function ownInsides(anatomy, mains) {
     const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));
     if (!inner.length) continue;
     // a layer of the component the instance does not draw (hidden: the walk records what shows) is an override no
-    // layer here can say: the instance is kept whole
-    if (Object.keys(M).some((mk) => mk !== 'root' && !(id + '/' + mk in anatomy))) continue;
+    // layer here can say: the instance is kept whole. A layer inside a nested instance this one draws is not hidden: that
+    // instance's insides are its own component's (left out above, as an icon's glyph is), not missing; unless the walk
+    // opened that instance (it records an instance's insides only where one is overridden, and then only those that
+    // show), when a layer missing there is hidden after all
+    const opened = (up) => Object.keys(anatomy).some((k) => k.startsWith(`${id}/${up}/`));
+    const delegated = (mk) => mk.split('/').slice(0, -1).some((_, i, a) => { const up = a.slice(0, i + 1).join('/'); return M[up] && M[up].kind === 'instance' && id + '/' + up in anatomy && !opened(up); });
+    if (Object.keys(M).some((mk) => mk !== 'root' && !(id + '/' + mk in anatomy) && !delegated(mk))) continue;
     const own = (k) => {
       const mk = k.slice(id.length + 1), x = M[mk];
       if (!x) return false;

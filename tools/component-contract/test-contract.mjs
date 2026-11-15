@@ -280,6 +280,28 @@ ok('combinations too many to list are said to be unlisted, never left to read as
       children: [{ name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] }] };
   ok('an instance hiding a layer of its component keeps all it records', 'pill/text' in derive(bar, ['Pill'], { mains: mainsFrom({ Pill: pill }) }).anatomy);
 }
+{
+  // a layer inside a nested instance the walk did not open (an icon's glyph) is that instance's own, not hidden: the outer
+  // instance is not kept whole for it; one the walk opened and found a layer missing in is hidden after all
+  // Tag's own Pill draws its dot larger than Pill does, so Tag at its props draws pill/dot; a Row's Tag instance the walk
+  // opened (its words recoloured) with its Pill left closed records no pill/dot, which is the Pill's to draw
+  const tag = () => ({ name: 'Tag', id: '9:5', props: {}, variants: [{ name: 'Tag', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Pill', type: 'INSTANCE', instanceOf: 'Pill', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['size'], children: [
+      { name: 'Dot', type: 'FRAME', sizing: 'FIXED/FIXED', w: 8, h: 8 }, { name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] },
+    { name: 'Text', type: 'TEXT', text: 'Tag', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] });
+  const shell = (open, dot = false, words = 'Text/danger') => ({ name: 'Row', id: '9:6', props: {}, variants: [{ name: 'Row', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Tag', type: 'INSTANCE', instanceOf: 'Tag', layout: 'HORIZONTAL', sizing: 'HUG/HUG', overrides: ['fills'], children: [
+      { name: 'Pill', type: 'INSTANCE', instanceOf: 'Pill', layout: 'HORIZONTAL', sizing: 'HUG/HUG', ...(open && { overrides: ['fills'], children: [
+        ...(dot ? [{ name: 'Dot', type: 'FRAME', sizing: 'FIXED/FIXED', w: 8, h: 8 }] : []), { name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/danger'], sizing: 'HUG/HUG' }] }) },
+      { name: 'Text', type: 'TEXT', text: 'Tag', textStyle: 'Label/sm', fills: [words], sizing: 'HUG/HUG' }] }] }] });
+  const pill = { name: 'Pill', id: '9:3', props: {}, variants: [{ name: 'Pill', type: 'COMPONENT', layout: 'HORIZONTAL', sizing: 'HUG/HUG', children: [
+    { name: 'Dot', type: 'FRAME', sizing: 'FIXED/FIXED', w: 6, h: 6 }, { name: 'Text', type: 'TEXT', text: 'Pill', textStyle: 'Label/sm', fills: ['Text/strong'], sizing: 'HUG/HUG' }] }] };
+  const mains = mainsFrom({ Pill: pill, Tag: tag() });
+  // opened: its words equal Tag's, so only an instance kept whole keeps them; the Pill's dot missing is hidden, present is not
+  const closed = derive(shell(false), ['Tag'], { mains }).anatomy, hidden = derive(shell(true, false, 'Text/strong'), ['Tag'], { mains }).anatomy, shown = derive(shell(true, true, 'Text/strong'), ['Tag'], { mains }).anatomy;
+  ok('an outer instance is not kept whole for a layer inside a nested instance left closed; it is for one hidden in a nested instance opened',
+    closed['tag/text'] && closed['tag/text'].color === 'Text/danger' && !('tag/pill' in closed) && 'tag/text' in hidden && !('tag/text' in shown));
+}
 
 // a side of padding no token binds keeps its own number beside the bound ones (a chart's bar offset 40 above, bound
 // sides around it), never null
