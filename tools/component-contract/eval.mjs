@@ -87,23 +87,35 @@ function report(label, { legs }, fields) {
 
 /* contract → to-figma → the scratch file → the snapshot's walk and derive → contract, per component: to-figma's own
    --verify reads it back and writes <component>.roundtrip.json beside the contract it was given. */
-function draw(where, label, into, only) {
+function draw(where, label, into, only, retry = true) {
   const dir = path.join(where.projectDir, 'round-trip');
   fs.mkdirSync(dir, { recursive: true });
   let fails = 0;
+  // a drawing an import went unanswered in measures the library's silence, not the translation: its last reading stays,
+  // and it is drawn once more after the rest
+  const unanswered = [];
   const failed = (folder, what, out) => { console.log(`${folder}: ${what} — ${out.trim().split('\n').pop()}`); process.exitCode = 1; if (++fails < 3) return false; console.log('three failures in a row: stopped'); process.exitCode = 1; return true; };
   for (const { folder, contract } of contracts(where)) {
     if (only.length && !only.includes(folder)) continue;
     const file = path.join(dir, `${folder}.json`);
     fs.writeFileSync(file, JSON.stringify(contract, null, 2) + '\n');
     // the last run's reading goes first: a drawing that fails now must not be counted by the last one's rows
-    fs.rmSync(path.join(dir, `${folder}.roundtrip.json`), { force: true });
+    const reading = path.join(dir, `${folder}.roundtrip.json`), last = fs.existsSync(reading) ? fs.readFileSync(reading) : null;
+    fs.rmSync(reading, { force: true });
     const run = (args) => { try { return { out: execFileSync('node', [path.join(HERE, 'to-figma.mjs'), file, ...args, '--project', label, '--into', into, '--library', file, '--folder', folder], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), ok: true }; } catch (e) { return { out: `${e.stdout || ''}${e.stderr || ''}`, ok: false }; } };
     // a drawing still holding the file (one that failed lets go within a minute), or a connection that dropped, is waited
     // out: 15 s, eight times (a failed one lets go within two minutes), then it counts as a failure
     let d = run(['--run']);
     for (let i = 0; i < 8 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = run(['--run']); }
     if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
+    if (/\(no answer/.test(d.out)) {
+      fs.unlinkSync(file);
+      if (last) fs.writeFileSync(reading, last);
+      unanswered.push(folder);
+      console.log(`${folder}: an import went unanswered, ${last ? 'its last reading kept' : 'no reading yet'}${retry ? '; drawn again after the rest' : ''}`);
+      if (!retry) process.exitCode = 1;
+      continue;
+    }
     const v = run(['--verify']);
     fs.unlinkSync(file);
     fs.rmSync(path.join(dir, `${folder}.drawn.json`), { force: true });
@@ -112,6 +124,7 @@ function draw(where, label, into, only) {
     fails = 0;
     console.log(line);
   }
+  if (retry && unanswered.length) draw(where, label, into, unanswered, false);
 }
 
 /* contract → to-markup and to-code → Chrome → from-code's walk → contract, per component (from-code --self), stopping
