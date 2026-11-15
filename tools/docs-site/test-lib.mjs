@@ -39,6 +39,7 @@ ok('the base path is the site\'s, without its trailing slash', F.base === '/docs
 // a set's name on its page
 ok('a part drops the page\'s title, its separator and Figma\'s private underscore', F.partName('Tabs - Tab item', 'Tabs') === 'Tab item' && F.partName('_Tabs/Tab item', 'Tabs') === 'Tab item');
 ok('the title is cut only on a word boundary', F.partName('Tables/Cell', 'Table') === 'Cell' && F.partName('Tablet frame', 'Table') === 'Tablet frame');
+ok('a part named for its family with a space keeps its whole name (figma-standard rule 9)', F.partName('Tab bar item', 'Tab bar') === 'Tab bar item' && F.partName('_Card header', 'Card') === 'Card header');
 ok('a part named as its page keeps its name rather than becoming nothing', F.partName('Tabs', 'Tabs') === 'Tabs');
 ok('a status marker leading the name is not part of it', F.partName('🚧 Tabs - Tab item', 'Tabs') === 'Tab item');
 

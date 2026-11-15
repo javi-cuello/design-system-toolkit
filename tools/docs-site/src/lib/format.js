@@ -51,8 +51,10 @@ export const md = (t) => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace
 export const partName = (name, title) => {
   // without the status marker leading any segment, whatever the project's is (figma-standard rule 13), then the private prefix
   const bare = displayName(name).replace(/^_/, '').trim();
-  // the page's title is cut only on a word boundary: `Tables/Cell` does not start with `Table`
-  const rest = bare.startsWith(title) && !/[\p{L}\p{N}]/u.test(bare[title.length] || '') ? bare.slice(title.length).replace(/^[\s/\u2013-]+/, '') : bare;
+  // the page's title is cut only before a separator (`/`, ` - `, `–`): `Tables/Cell` does not
+  // start with `Table`, and a part named for its family with a space (`Tab bar item`,
+  // figma-standard rule 9) keeps its whole name, since `item` alone names nothing
+  const rest = bare.startsWith(title) && /^\s*[/\u2013-]/.test(bare.slice(title.length)) ? bare.slice(title.length).replace(/^[\s/\u2013-]+/, '') : bare;
   return rest || bare;
 };
 
