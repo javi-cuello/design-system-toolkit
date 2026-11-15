@@ -73,7 +73,8 @@ function element(n, parent, known) {
   const four = (bound, own) => (Array.isArray(bound) ? bound.map((t, i) => t ?? (Array.isArray(own) ? own[i] : own ?? 0)) : bound ?? own);
   if (n.radius || b.radius) e.radius = four(b.radius, n.radius);
   if (n.fills && n.fills.length) e[n.type === 'TEXT' ? 'color' : 'background'] = n.fills.length === 1 ? n.fills[0] : n.fills;
-  // a weight bound with no stroke painted is kept too: the library keeps it for the variant that paints one
+  // a weight bound with no stroke painted is read here too; normalForm then says it as no stroke (nothing draws it), and a
+  // variant that paints one states its whole stroke
   if ((n.strokes && n.strokes.length) || b.strokeWeight) {
     e.border = n.strokes && n.strokes.length ? { color: n.strokes.length === 1 ? n.strokes[0] : n.strokes } : {};
     if (b.strokeWeight) e.border.width = four(b.strokeWeight, n.strokeSides);
@@ -414,6 +415,8 @@ const OWN = ['layout', 'radius', 'background', 'border', 'shadow', 'opacity', 'o
 function normalForm(anatomy) {
   for (const [id, e] of Object.entries(anatomy)) {
     const b = e && e.border;
+    // a stroke with a weight and no paint draws nothing: no stroke at all, as code and the drawing read it
+    if (b && typeof b === 'object' && b.color == null) { const { border: _, ...rest } = e; anatomy[id] = rest; continue; }
     if (!b || (!Array.isArray(b.width) && !b.sides)) continue;
     const sides = b.sides ? ['top', 'end', 'bottom', 'start'].map((k) => b.sides[k]) : null;
     const w = Array.isArray(b.width) ? b.width : b.width !== undefined ? [b.width, b.width, b.width, b.width] : sides;

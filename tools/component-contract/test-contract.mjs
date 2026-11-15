@@ -206,7 +206,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const A1 = one.anatomy;
   ok('a corner bound to a token is said by it at 0, and an opacity by its token', A1.root.radius === 'R/0' && A1.root.opacity === 'O/half');
   ok('a stroke a side, each bound side by its token and the others by their width, drawn on its centre and taking room', JSON.stringify(A1.box.border.width) === '["S/1",0,"S/1",0]' && A1.box.border.align === 'center' && A1.box.border.inLayout === true);
-  ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is kept (one weight on every side said once)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && JSON.stringify(A1['free/ring'].border) === '{"width":"S/1"}');
+  ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is no stroke (nothing draws it)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && A1['free/ring'].border === undefined);
   // a focus ring 4 outside its chip, stretched with it, and a badge pinned 2 in from its end: their far edges, and the
   // ring no size of its own, which would be one label's
   const pinned = derive({ name: 'Chip', id: '1:1', props: {}, variants: [{ name: 'Chip', type: 'COMPONENT', w: 81, h: 36, children: [
@@ -310,8 +310,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const nf = (e) => normalForm({ x: e }).x;
   ok('a stroke of one weight on every side is that weight, bound or not; one on some sides keeps its sides',
     JSON.stringify(nf({ border: { color: 'S/a', width: ['S/1', 'S/1', 'S/1', 'S/1'], sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border) === '{"color":"S/a","width":"S/1"}'
-    && nf({ border: { sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border.width === 1
-    && Array.isArray(nf({ border: { width: ['S/1', 0, 0, 0], sides: { top: 1, end: 0, bottom: 0, start: 0 } } }).border.width));
+    && nf({ border: { color: 'S/a', sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border.width === 1
+    && Array.isArray(nf({ border: { color: 'S/a', width: ['S/1', 0, 0, 0], sides: { top: 1, end: 0, bottom: 0, start: 0 } } }).border.width));
+  ok('a stroke with a weight and no paint is no stroke', nf({ border: { width: 'S/4' } }).border === undefined);
   // the spelling settled before an instance is held to its component: a stroke recorded by its sides is its component's one weight
   const framed = { component: 'Frame', props: {}, anatomy: { root: { kind: 'container', border: { color: 'c', width: 1 } } }, variants: [] };
   const placed = normalForm({ f: { kind: 'instance', component: 'Frame', border: { color: 'c', sides: { top: 1, end: 1, bottom: 1, start: 1 } } } });

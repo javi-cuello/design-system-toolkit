@@ -82,7 +82,7 @@ export function inOneSpelling(c) {
   normalForm(copy.anatomy || {});
   for (const v of copy.variants || []) {
     if (v.add) normalForm(v.add);
-    for (const [k, val] of Object.entries(v.set || {})) if (k.endsWith('.border') && val && typeof val === 'object') v.set[k] = normalForm({ x: { border: val } }).x.border;
+    for (const [k, val] of Object.entries(v.set || {})) if (k.endsWith('.border') && val && typeof val === 'object') v.set[k] = normalForm({ x: { border: val } }).x.border ?? null;
   }
   return copy;
 }
