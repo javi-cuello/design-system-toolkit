@@ -266,7 +266,7 @@
      the dashboard's scope, since the dashboard and every docs page draw it.
      The colour says the kind; the word always says it too. A neutral tag (a
      change's type, Deprecated) is the same shape on a quiet fill (.pill). */
-  .sev, .visible-flag, .owner-tag, .stamp, .cleared-count, .freshness, .weight, .changed-count, .pill {
+  .sev, .visible-flag, .owner-tag, .stamp, .freshness, .weight, .changed-count, .pill {
     display: inline-block;
     font-size: var(--text-xs); font-weight: 600;
     padding: var(--space-2) var(--space-8); border-radius: var(--radius-4);
