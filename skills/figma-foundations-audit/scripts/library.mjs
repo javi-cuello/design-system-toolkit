@@ -65,10 +65,12 @@ export function tokenChecks({ tokens, source, used = new Set() }) {
   }
 
   // Unused (figma-standard rule 42): no component in a components library binds it, no style binds
-  // it, and no used token aliases it. Name matched, as specs record names.
+  // it, and no used token aliases it. Name matched, as specs record names. Any style counts, used by
+  // a component or not: a style is published for designers' screens too, and a font size reached
+  // only through a heading style no component draws was raised as unused (case F27).
   const reach = new Set();
-  for (const s of tokens.textStyles || []) if (used.has(s.name)) for (const b of Object.values(s.bound || {})) reach.add(b.name);
-  for (const s of tokens.effects || []) if (used.has(s.name)) for (const l of s.layers || []) for (const b of Object.values(l.bound || {})) reach.add(b.name);
+  for (const s of tokens.textStyles || []) for (const b of Object.values(s.bound || {})) reach.add(b.name);
+  for (const s of tokens.effects || []) for (const l of s.layers || []) for (const b of Object.values(l.bound || {})) reach.add(b.name);
   for (const c of cols) for (const n of namesOf(tokens.collections[c])) if (used.has(n)) reach.add(n);
   for (let grew = true; grew;) {
     grew = false;

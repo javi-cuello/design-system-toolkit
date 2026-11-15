@@ -187,3 +187,11 @@ Runs: node plugins/audit-lite/sync.mjs --check && node plugins/audit-lite/tests/
 Fixture: F20's tokens file with a second text style, `Caption`, binding family, size, weight and line height and leaving letter spacing unbound at 2%; `Body` leaves it unbound in px.
 Assert: the letter-spacing row names `Body` only (figma-standard rule 43's exception: a bound variable is px, so a percent tracking stays on the style).
 Runs: node tests/test-foundations.mjs — "tokens: letter spacing in percent may stay unbound, since Figma binds it only as px; in px it is raised"
+
+## F27 · A style's bindings count as use, whether or not a component uses the style — *executed* 2026-11-16
+
+- **Fixture:** `tests/test-foundations.mjs`, the tokens block: `Caption` binds `Size/8`; no component uses `Caption`.
+- **Assert:** `tokens-unused` lists `Grey/2` alone under Primitives; `Size/8` is reached through `Caption`.
+- **Negative:** before the fix, `Size/8` was raised as unused (the assertion failed, 87 of 88).
+- **Traced:** a project's font-size primitives, reached through a text-styles collection by heading and display styles no component drew, were raised as unused; figma-standard rule 42 counts any style.
+

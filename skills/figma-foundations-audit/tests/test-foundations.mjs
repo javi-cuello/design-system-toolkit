@@ -549,13 +549,13 @@ expect("and checkFacts reads the adapter's facts unchanged",
   const tokens = {
     _meta: { sources: { T: { owns: { collections: ["Primitives", "Semantic"], textStyles: ["Body", "Caption"], effects: ["Raised"] } }, C: { owns: { collections: ["Local"] } } } },
     collections: {
-      Primitives: col({ "Grey/1": "#eee", "Grey/2": "#ccc", "Size/4": 4 }, { hidden: ["Grey/1", "Grey/2"], descriptions: { "Size/4": "Small gaps" } }),
+      Primitives: col({ "Grey/1": "#eee", "Grey/2": "#ccc", "Size/4": 4, "Size/8": 8 }, { hidden: ["Grey/1", "Grey/2"], descriptions: { "Size/4": "Small gaps", "Size/8": "Caption text" } }),
       Semantic: col({ "Text/Base/base": 0, "Text/Base/soft": 0, "Text/Primary/base": 0, "Text/Primary/soft": 0, "Text/Brand/base": 0, "Text/brand/Base": 0, "Icon/x": 0, "Icon/Big/y": 0 },
         { alias: { "Text/Base/base": "Grey/1" }, descriptions: { "Text/Base/base": "Body copy" } }),
       Local: col({ "Only/here": 0 }),
     },
     textStyles: [{ name: "Body", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/4" }, fontWeight: { name: "w" } }, authored: { letterSpacing: { unit: "PIXELS", value: 0 } } },
-      { name: "Caption", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/4" }, fontWeight: { name: "w" }, lineHeight: { name: "l" } }, authored: { letterSpacing: { unit: "PERCENT", value: 2 } } }],
+      { name: "Caption", bound: { fontFamily: { name: "f" }, fontSize: { name: "Size/8" }, fontWeight: { name: "w" }, lineHeight: { name: "l" } }, authored: { letterSpacing: { unit: "PERCENT", value: 2 } } }],
     effects: [{ name: "Raised", layers: [{ bound: { color: { name: "c" }, x: {}, y: {}, blur: {}, spread: {} } }] }],
   };
   const used = namesUsed([{ fills: ["Text/Base/base"], textStyle: "Body", children: [{ gap: "Text/Primary/base" }] }]);
@@ -567,7 +567,7 @@ expect("and checkFacts reads the adapter's facts unchanged",
     by("tokens-description").map((f) => f.where + ": " + f.check), ["Semantic: 7 published tokens have no description, so people and agents picking a token cannot tell it from its neighbours"]);
   expect("and a row states the problem before the names it covers, never the names alone",
     r.findings.every((f) => f.fix[0].startsWith(f.check + ": ")), true);
-  expect("tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used",
+  expect("tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used, the style used by a component or not (Caption, case F27)",
     by("tokens-unused").map((f) => f.where + ": " + names(f)), ["Primitives: Grey/2.", "Semantic: Text/Base/soft, Text/Primary/soft, Text/Brand/base, Text/brand/Base, Icon/x, Icon/Big/y."]);
   expect("tokens: a style field Figma can bind and the style leaves loose is raised, one row per field",
     by("tokens-style-binding").map((f) => f.where + " " + f.key.split("|")[2]), ["Text styles lineHeight", "Text styles letterSpacing"]);
