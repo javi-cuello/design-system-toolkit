@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf } from './from-code.mjs';
+import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -157,4 +157,9 @@ ok('a slot\'s stand-in is one word per prop, which no component draws', slotMark
   ok('words that do not count out one for one are not guessed', JSON.stringify(wordsOf(badge, ['New', 'Extra'])) === '{}' && JSON.stringify(wordsOf(badge, [])) === '{}');
 }
 
+{
+  const value = (t) => ({ 'S/0': 0, 'S/4': 4 })[t];
+  const e = zeroTokens({ layout: { direction: 'row' } }, { layout: { padding: { top: 'S/0', end: 'S/0', bottom: 'S/0', start: 'S/4' } } }, value);
+  ok('a padding the code leaves unset takes the design\'s zero tokens; a side the design pads stays the code\'s 0', JSON.stringify(e.layout.padding) === '{"top":"S/0","end":"S/0","bottom":"S/0","start":0}');
+}
 console.log(`${n}/${n} passed`);

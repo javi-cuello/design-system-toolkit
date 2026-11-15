@@ -183,6 +183,25 @@ export function usageIn(contracts) {
   return n;
 }
 
+/* A value the code draws as the design does, written raw or left unset (a 0 padding, no radius), takes the design's
+   token for it: the drawing binds what the design binds. `value` is a token's value by its name. */
+export function zeroTokens(e, fe, value) {
+  const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
+  const unbound = (v) => v == null || typeof v === 'number';
+  const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
+  const at = (o, path) => path.reduce((x, k) => (x == null ? x : x[k]), o);
+  const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
+  for (const path of [['radius'], ['layout', 'gap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])]) {
+    const want = at(fe, path), have = at(e, path);
+    if (typeof want !== 'string' || !want.includes('/') || !unbound(have)) continue;
+    if (path[0] === 'layout' && !e.layout) continue;
+    // a padding the code leaves unset is 0 on every side: each side said, not only those the design binds
+    if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
+    if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
+  }
+  return e;
+}
+
 /* What a render changes against the default one, as a variant layer's set/add/remove. A field the default has and
    this render lacks (a tertiary button's fill and shadow) is set to null: left undefined, JSON dropped it and the
    drawing kept the default's. */
@@ -1643,16 +1662,27 @@ async function main() {
           if (typeof want === 'number' && box && Math.abs(box[i] - want) < 0.5 && (have == null || have === 'hug' || typeof have === 'number')) e[dim] = want;
         }
       }
+      const zeroFill = (e, fe) => zeroTokens(e, fe, L.value);
       for (const [id, e] of Object.entries(fromCode.anatomy)) {
         const fe = figmaContract.anatomy[id];
-        if (!fe || fe.kind !== e.kind) continue;
-        for (const path of fields) {
-          const want = at(fe, path), have = at(e, path);
-          if (typeof want !== 'string' || !want.includes('/') || !unbound(have)) continue;
-          if (path[0] === 'layout' && !e.layout) continue;
-          // a padding the code leaves unset is 0 on every side: each side said, not only those the design binds
-          if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
-          if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
+        if (fe && fe.kind === e.kind) zeroFill(e, fe);
+      }
+      // and what a variant layer adds or sets whole (a layout set in one variant), held to the design's same part
+      // the design's same part in its variant of the same props where it has one (its own tokens there), else its base
+      const sameWhen = (a, b) => JSON.stringify(Object.entries(a || {}).sort()) === JSON.stringify(Object.entries(b || {}).sort());
+      const designOf = (id, when) => {
+        const dv = (figmaContract.variants || []).find((x) => sameWhen(x.when, when));
+        if (dv && (dv.add || {})[id]) return dv.add[id];
+        const base = figmaContract.anatomy[id] || (figmaContract.variants || []).map((x) => (x.add || {})[id]).find(Boolean);
+        const layout = dv && (dv.set || {})[`${id}.layout`];
+        return base && layout && typeof layout === 'object' ? { ...base, layout } : base;
+      };
+      for (const v of fromCode.variants || []) {
+        for (const [id, e] of Object.entries(v.add || {})) { const fe = designOf(id, v.when); if (fe && fe.kind === e.kind) zeroFill(e, fe); }
+        for (const [k, val] of Object.entries(v.set || {})) {
+          if (!k.endsWith('.layout') || !val || typeof val !== 'object') continue;
+          const id = k.slice(0, -'.layout'.length), fe = designOf(id, v.when), holder = { layout: val };
+          if (fe) { zeroFill(holder, fe); v.set[k] = holder.layout; }
         }
       }
       // stacking first on top, as the design does, where the children cannot overlap (no negative gap, none placed
