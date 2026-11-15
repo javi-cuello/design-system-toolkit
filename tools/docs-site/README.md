@@ -34,8 +34,8 @@ The phase is the `project` block in the project's context document.
 
 | Phase | Shows |
 |---|---|
-| `design` | A handoff spec: guidance from each component's Figma description, the design preview (default variant, exported by the plugin), properties, tokens per layer, status from the page marker, and what changed in the last snapshot |
-| `build` | The same, plus live previews from the project's built Storybook and whether each component is in code |
+| `design` | A handoff spec: guidance from each component's Figma description, the design preview (default variant, exported by the plugin), properties, tokens per layer, status from the page marker, and what changed in the last snapshot. No Parity tab: there is no code to compare |
+| `build` | The same, plus live previews from the project's built Storybook and whether each component is in code, and the Parity tab |
 | `maintenance` | As build |
 
 A component's status is its page marker, read through the project's legend

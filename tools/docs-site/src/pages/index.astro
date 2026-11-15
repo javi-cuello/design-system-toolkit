@@ -112,7 +112,7 @@ const QUESTIONS = [
 <Base title="Overview">
   <p class="eyebrow">{project.name} · {PHASE[project.phase]}</p>
   <h1>Overview</h1>
-  <UpdatedBy from={codeAudit ? ['snapshot', 'audit', 'code'] : ['snapshot', 'audit']} />
+  <UpdatedBy from={shows.parity && codeAudit ? ['snapshot', 'audit', 'code'] : ['snapshot', 'audit']} />
   <p class="lede">Where the library stands: how many components are Stable, then one card for each question an owner asks of it, each linked to the page that holds the detail.</p>
 
   {!hasSnapshot ? (
