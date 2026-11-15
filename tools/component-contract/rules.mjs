@@ -136,6 +136,26 @@ export function autoResizeOf(width, height) {
    percentage of the parent's size (css.mjs writes it so where the parent's size is a number), and a percentage offset
    beside a percentage size reads back as scale.
    Null where it is in the flow. */
+/* Corner smoothing (Figma's 0–1, iOS-like at 0.6) as CSS corner-shape: superellipse(K), Chromium 139 on; a browser
+   without it ignores the declaration and draws the circular corner the radius alone gives. Figma's smoothed corner is
+   an arc joined to its sides by Bézier curves, not a superellipse (figma.com/blog/desperately-seeking-squircles), so the
+   look is an approximation; the value round-trips exactly. K by smooth-corners' mapping
+   (lixiaolin94.github.io/smooth-corners-web), its radius compensation left out so the radius stays the design's:
+   d = 1 − 1/√2, u = 1 − d/(1 + s), n = ln 2 / ln(1/u), K = log₂ n. */
+const SMOOTH_D = 1 - 1 / Math.SQRT2;
+export function smoothingToCss(s) {
+  if (typeof s !== 'number' || !(s > 0) || s > 1) return null;
+  const u = 1 - SMOOTH_D / (1 + s), n = Math.LN2 / Math.log(1 / u);
+  return `superellipse(${+Math.log2(n).toFixed(4)})`;
+}
+export function smoothingFromCss(v) {
+  // squircle is superellipse(2), CSS's own keyword for it
+  const m = /^\s*squircle\s*$/.test(String(v || '')) ? [, '2'] : /superellipse\(\s*([\d.]+(?:e[-+]?\d+)?)\s*\)/i.exec(String(v || ''));
+  if (!m) return null;
+  const n = 2 ** +m[1], u = Math.exp(-Math.LN2 / n), s = SMOOTH_D / (1 - u) - 1;
+  return s > 0.005 ? +s.toFixed(2) : null;
+}
+
 export const share = (part, whole) => `${+((100 * part) / whole).toFixed(4)}%`;
 export function placeFromCss(own) {
   if (!/^(absolute|fixed)$/.test(word(own.position))) return null;

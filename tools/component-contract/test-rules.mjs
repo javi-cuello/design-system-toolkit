@@ -2,7 +2,7 @@
 // tools/component-contract/rules.mjs: the translation table, each row read both ways.
 import assert from 'node:assert/strict';
 import { declarations } from './css.mjs';
-import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, styleFromCss, ALIGN_ROWS } from './rules.mjs';
+import { alignFromFigma, alignToFigma, alignToCss, alignFromCss, sizeFromFigma, sizeToFigma, sizeFromCss, layoutFromCss, placeFromCss, autoResizeOf, styleFromCss, ALIGN_ROWS, smoothingToCss, smoothingFromCss } from './rules.mjs';
 import { tokenNames } from './to-code.mjs';
 
 let n = 0;
@@ -82,5 +82,9 @@ ok('a text that hugs its width grows both ways, one that hugs its height wraps a
     // (two styles whose declarations are the same: neither is named)
     && styleFromCss({ 'font-size': '14px' }, ['A', 'B'], () => [['font-size', '14px']]) === null && styleFromCss({ 'font-size': '14px' }, ['A'], () => [['font-size', '14px']]) === 'A');
 }
+
+ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 and the plain circle say no smoothing',
+  [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].every((v) => smoothingFromCss(smoothingToCss(v)) === v)
+  && smoothingToCss(0) === null && smoothingToCss(undefined) === null && smoothingFromCss('round') === null && smoothingFromCss('superellipse(1)') === null && smoothingFromCss('squircle') === smoothingFromCss('superellipse(2)') && smoothingFromCss('superellipse(2e0)') === smoothingFromCss('superellipse(2)'));
 
 console.log(`${n}/${n} passed`);

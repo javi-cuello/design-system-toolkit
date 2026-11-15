@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { toCss, rulesOf, selfCheck, namer, condition, controlOf, HOUSE } from './to-code.mjs';
 import { declarations } from './css.mjs';
-import { fillCss, fillsFromCss } from './rules.mjs';
+import { fillCss, fillsFromCss, smoothingToCss } from './rules.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -40,9 +40,11 @@ ok('an inside stroke out of layout is an inset ring; in layout, a border per sid
 ok('one inside edge is one inset shadow shifted from that edge, beside the effect style', decl({ border: { color: 'C/line', width: [0, 0, 1, 0], sides: { bottom: 1 } }, shadow: 'Elevation/Raised' })['box-shadow'] === 'inset 0 -1px 0 0 var(--c-line), var(--elevation-raised)');
 const centred = decl({ position: 'absolute', absolute: { x: 0, y: 0 }, constraints: { horizontal: 'center', vertical: 'center' } });
 ok('a part centred out of the flow is pinned at the middle and moved back by half its size', centred['inset-inline-start'] === '50%' && centred.translate === '-50% -50%');
+ok('smoothing is corner-shape on any corner (a square or mixed one keeps the value), none at 0', decl({ radius: 8, smoothing: 0.6 })['corner-shape'] === smoothingToCss(0.6) && decl({ smoothing: 0.6 })['corner-shape'] === smoothingToCss(0.6) && decl({ radius: [0, 8, 8, 0], smoothing: 0.6 })['corner-shape'] === smoothingToCss(0.6) && !('corner-shape' in decl({ radius: 8, smoothing: 0 })));
+ok('smoothing CSS cannot say is named, not dropped', declarations({ smoothing: 2 }, {}, names).unread.some((f) => /smoothing/.test(f)));
 ok('a box holding a part out of the flow is its containing block', decl({}, { anchors: true }).position === 'relative');
 const { unread } = declarations({ smoothing: 0.6, background: 'IMAGE:FILL', mystery: 1, parent: 'root', order: 2 }, {}, names);
-ok('what CSS cannot say is named, the markup\'s own fields are not', unread.some((f) => /smoothing/.test(f)) && unread.some((f) => /image/.test(f)) && unread.includes('mystery') && !unread.includes('parent') && !unread.includes('order'));
+ok('what CSS cannot say is named, the markup\'s own fields are not', unread.some((f) => /image/.test(f)) && unread.includes('mystery') && !unread.includes('parent') && !unread.includes('order'));
 
 // the rules: one per layer, saying only what it changes, the cascade rebuilding every combination
 const chip = { contract: 1, component: 'Chip',

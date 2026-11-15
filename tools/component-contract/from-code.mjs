@@ -44,7 +44,7 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
-import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss } from './rules.mjs';
+import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
 // what a placement is read from: the element's own position, insets and shift
@@ -942,6 +942,9 @@ async function main() {
             // its background's layers above the colour (a gradient, a colour laid over another): read back as Figma's fills below
             if (s.backgroundImage && s.backgroundImage !== 'none') { const r = n.getBoundingClientRect(); e.paint = { image: s.backgroundImage, w: r.width, h: r.height }; }
             if (px(s.borderTopLeftRadius)) { const r = n.getBoundingClientRect(); Object.assign(e, corner(s.borderTopLeftRadius, r.width, r.height)); }
+            // a corner's shape where it is not the plain circle, on whichever corner says one (rules.mjs reads it back as
+            // smoothing; to-code writes it on all four, a square corner included)
+            { const sh = ['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((c) => s.getPropertyValue(`corner-${c}-shape`)).find((v) => v && v !== 'round'); if (sh) e.cornerShape = sh; }
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
             if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e.outline = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
             // a css border takes room, as a Figma stroke in the layout does: each side's width, one where all are alike
@@ -1199,6 +1202,7 @@ async function main() {
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
         if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
+        if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {
           // a width per side where the sides differ: each side's token, 0 where it draws none
           const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width']);

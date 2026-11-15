@@ -21,7 +21,7 @@
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
-import { alignToCss, share, negative, pullProp, fillCss, rawColour as raw } from './rules.mjs';
+import { alignToCss, share, negative, pullProp, fillCss, rawColour as raw, smoothingToCss } from './rules.mjs';
 // what a part's markup says, not its styles: the template's, never a declaration
 const STRUCTURE = new Set(['kind', 'parent', 'order', 'name', 'content', 'component', 'with', 'swappedBy', 'inner', 'text', 'autoResize', 'canvas', 'figma']);
 const NOTE = 'no token in the design';
@@ -138,7 +138,11 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   const rotation = take('rotation');
   if (rotation) put('rotate', `${rotation}deg`);
   if (take('mask')) unread.push('mask');
-  if (take('smoothing') !== undefined) unread.push('smoothing (corner smoothing: CSS rounds corners as circles)');
+  // corner smoothing as corner-shape (rules.mjs: an approximation of Figma's curve; a browser without corner-shape draws
+  // the plain circle), written whatever the radius: on a square corner it draws nothing, as in Figma, and keeps the value
+  const smoothing = take('smoothing'), shapeCss = smoothingToCss(smoothing);
+  if (shapeCss) put('corner-shape', shapeCss);
+  else if (smoothing !== undefined && smoothing !== 0) unread.push(`smoothing (${smoothing}: no corner-shape says it)`);
 
   // a part out of its parent's flow, pinned as its constraints say (an edge, both edges, or the centre)
   const position = take('position'), at = take('absolute'), cons = take('constraints');
