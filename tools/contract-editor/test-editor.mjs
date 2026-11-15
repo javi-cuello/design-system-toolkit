@@ -1050,6 +1050,8 @@ try {
     // one of the project's icons placed: drawn at a size it has, coloured by its glyph, never hugged
     {
       const icons = (await (await fetch(url + 'project.json?label=' + label)).json()).icons || [];
+      // (the parts it had before: a library component may place the same icon itself)
+      const had = new Set(Object.keys((await json()).anatomy));
       await js(`document.querySelector('[data-view="anatomy"]').click()`);
       await js(`document.querySelector('[data-part-block="instance"]').click()`);
       await setPartName('Mark');
@@ -1061,14 +1063,14 @@ try {
       await js(`${insp('[data-picker="Colour"]')}.click()`);
       const colour = await js(`(() => { const o = document.querySelector('.ce-picker__pop:popover-open [role=option]'); o.click(); return o.dataset.value; })()`);
       const c = await json();
-      const at = Object.keys(c.anatomy).find((k) => c.anatomy[k].component === icon);
+      const at = Object.keys(c.anatomy).find((k) => !had.has(k) && c.anatomy[k].component === icon);
       ok('an icon placed is written at its first size, its colour on its glyph inside it, as a snapshot records it',
         !!at && c.anatomy[at].width === c.anatomy[at].height && c.anatomy[at].with.Size === String(c.anatomy[at].width) && c.anatomy[`${at}/icon`] && c.anatomy[`${at}/icon`].parent === at && typeof c.anatomy[`${at}/icon`].background === 'string' && !!colour);
       // the library's own again, the placed icon discarded
       await js(`document.querySelector('[data-view="props"]').click()`);
       await js(`[...document.querySelectorAll('[data-nav-list] [data-open]')].find((b) => b.dataset.open === ${JSON.stringify(name)}).click()`);
       if (await dialogOpen()) await js(`${inDialog('[data-dialog-delete]')}.click()`);
-      ok('and discarded, the component is the library\'s again', !Object.values((await json()).anatomy).some((e) => e.component === icon));
+      ok('and discarded, the component is the library\'s again', !Object.entries((await json()).anatomy).some(([k, e]) => !had.has(k) && e.component === icon));
     }
     // a library component's preview draws its placed components with their values, and the project's icons
     if (fixtures) {
