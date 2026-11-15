@@ -219,7 +219,7 @@ Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKIL
 
 ## C19 · An icon library is routed as icons — 2026-11-15
 
-**Input:** a project with a foundations file, a components file and a file whose published components are all icons (1,756 icon sets, no controls).
-**Expected:** the summary at step 2 proposes `"roles": ["icons"]` for the icon file, and the `snapshot-routing` block written carries it; the docs site then shows an Icons tab of its own.
-**Fails if:** the icon file is routed `components` (the docs site puts its icons under Foundations, with no Icons tab), or the role is written without being proposed at step 2.
-**Walked 2026-11-15:** the live run this case comes from routed the icon file `components`; with SKILL.md's new sentence the role is stated where pass A infers roles, and the template says what it buys.
+Fixture: a project with a foundations file, a components file and a file whose published components are all icons (1,756 icon sets, no controls).
+Assert: the summary at step 2 proposes `"roles": ["icons"]` for the icon file, and the `snapshot-routing` block written carries it; the docs site then shows an Icons tab of its own.
+Negative: the icon file is routed `components` (the docs site puts its icons under Foundations, with no Icons tab), or the role is written without being proposed at step 2.
+Traced: 2026-11-15 — the live run this case comes from routed the icon file `components`; with SKILL.md's new sentence the role is stated where pass A infers roles, and the template says what it buys.
