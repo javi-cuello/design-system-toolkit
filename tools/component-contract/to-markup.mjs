@@ -32,7 +32,7 @@ import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel } from './layers.mjs';
 
 const require = createRequire(import.meta.url);
-const { atProps } = require('./derive.cjs');
+const { atProps, asPlaced } = require('./derive.cjs');
 export const BANNER = "Generated from the component's contract by the toolkit's to-markup. A gap marked frontend-build: is that skill's to fill; once filled, take this line out and the file is the project's.";
 export const FRAMEWORKS = ['react', 'web-components', 'kirby'];
 // the naming each framework's markup is written to: a React root is the native element, a class its hook; a web
@@ -266,9 +266,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const textOf = (id, e) => { const x = props.find((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id)); return x ? { code: ref(x.name) } : { lit: e.content || '' }; };
   const busy = props.find((x) => x.busy && x.busy.length);
   const busyCode = busy && busy.busy.map((v) => `${ref(busy.name)} === ${lang.str(v)}`).join(' || ');
-  const node = (part, holds) => {
+  const node = (part, holds, fill = false) => {
     const { id, e } = part;
-    if (part.ring || part.inside || part.slotted) return null;
+    // (`fill`: what this component puts in a placed component's slot, drawn as that slot's content)
+    if (part.ring || ((part.inside || part.slotted) && !fill)) return null;
     if (entry && (id === entry.value || id === entry.placeholder)) return id === entry.value || !at(c, entry.value) ? input() : null;
     if (part.pointerOnly) { gaps.push(`${partName(id)} is drawn only at a pointer state: the stylesheet's, or frontend-build's to add`); return { comment: `frontend-build: ${partName(id)}, drawn only at a pointer state` }; }
     const { when, unknown, known } = conditionOf(c, part, props, holds, lang);
@@ -283,7 +284,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       gaps.push(`${partName(id)}: draw the icon ${icon ? `its ${icon.name} names` : e.component}, as the project draws icons`);
       out = { tag: 'span', attrs: [...hook(id), ['data-icon', icon ? { code: ref(icon.name) } : { lit: e.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (slot) {
-      out = { tag, attrs: hook(id), children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
+      // marked as a slot, so a reading of a component that fills it finds it (from-code)
+      out = { tag, attrs: [...hook(id), ...(slot.slot === id ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
     } else if (e.kind === 'instance') {
       const placed = library[e.component], theirs = propsOf(placed, library, lang, settings);
       const given = Object.entries(e.with || {}).map(([fig, v]) => {
@@ -310,6 +312,19 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         gaps.push(`${partName(id)}: its aria-label is the icon's name until frontend-build says what it does`);
         given.push(['aria-label', { lit: String(icon ? icon[1].lit : placed.component) }]);
       }
+      // what this component puts in the placed one's slot (a menu's items): that slot's content, each drawn as its own
+      // component; a snippet's slot takes no markup from its caller, so there it is frontend-build's
+      for (const x of theirs.filter((y) => y.type === 'node' && y.slot)) {
+        const { back } = asPlaced(atProps(placed, e.with)), key = Object.keys(back).find((k) => back[k] === x.slot) || x.slot;
+        const under = kids.get(`${id}/${key}`) || [];
+        if (!under.length) continue;
+        if (lang.php) { gaps.push(`${partName(id)}: what it puts in ${placed.component}'s ${x.name} (a snippet takes no markup there)`); continue; }
+        // under the instance's own condition (known), so an item repeats none of it
+        const items = under.map((k) => node(k, known, true)).filter(Boolean);
+        if (!items.length) continue;
+        for (let i = given.length - 1; i >= 0; i--) if (given[i][0] === x.name) given.splice(i, 1);
+        given.push([x.name, { nodes: items }]);
+      }
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
       out = { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name) };
       used.add(placed.component);
@@ -318,7 +333,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     } else if (e.kind === 'text') {
       out = { tag, attrs: hook(id), children: [textOf(id, e)] };
     } else {
-      out = { tag, attrs: hook(id), children: (kids.get(id) || []).map((k) => node(k, known)).filter(Boolean) };
+      out = { tag, attrs: hook(id), children: (kids.get(id) || []).map((k) => node(k, known, fill)).filter(Boolean) };
     }
     return when ? { when, node: out } : out;
   };
@@ -364,7 +379,7 @@ function jsxOf(item, depth) {
   if (item.when) return `${pad}{${/\|\|/.test(item.when) ? `(${item.when})` : item.when} && (\n${jsxOf(item.node, depth + 1)}\n${pad})}`;
   if (item.code !== undefined) return `${pad}{${item.code}}`;
   if (item.lit !== undefined) return `${pad}{${str(item.lit)}}`;
-  const attr = ([k, v]) => (v.lit === true ? ` ${k}` : typeof v.lit === 'boolean' || typeof v.lit === 'number' ? ` ${k}={${v.lit}}` : v.lit !== undefined ? ` ${k}=${/^[^"{}<>&\\\n\r\t]*$/.test(v.lit) ? str(v.lit) : `{${str(v.lit)}}`}` : ` ${k}={${v.code}}`);
+  const attr = ([k, v]) => (v.nodes ? ` ${k}={<>\n${v.nodes.map((x) => jsxOf(x, depth + 2)).join('\n')}\n${pad}  </>}` : v.lit === true ? ` ${k}` : typeof v.lit === 'boolean' || typeof v.lit === 'number' ? ` ${k}={${v.lit}}` : v.lit !== undefined ? ` ${k}=${/^[^"{}<>&\\\n\r\t]*$/.test(v.lit) ? str(v.lit) : `{${str(v.lit)}}`}` : ` ${k}={${v.code}}`);
   if (item.placed) {
     // its class and its layer name; data-part is the element's own, and a placed component renders its own root
     const own = item.hook.filter(([k]) => k === 'className' || k === 'data-figma-name');
@@ -432,7 +447,7 @@ function hOf(item, depth) {
   if (item.when) return `${pad}(${item.when}) && ${hOf(item.node, depth).trimStart()}`;
   if (item.code !== undefined) return `${pad}${item.code}`;
   if (item.lit !== undefined) return `${pad}${str(item.lit)}`;
-  const obj = (list) => `{ ${list.map(([k, v]) => `${IDENT.test(k) ? k : str(k)}: ${v.lit !== undefined ? str(v.lit) : v.code}`).join(', ')} }`;
+  const obj = (list) => `{ ${list.map(([k, v]) => `${IDENT.test(k) ? k : str(k)}: ${v.nodes ? `[${v.nodes.map((x) => hOf(x, 0)).join(', ')}]` : v.lit !== undefined ? str(v.lit) : v.code}`).join(', ')} }`;
   if (item.placed) return `${pad}${fnOf(item.placed)}(${obj(item.attrs)}, ${obj(item.hook)})`;
   const attrs = item.spread ? `{ ${item.spread}${item.attrs.length ? `, ${obj(item.attrs).slice(2, -2)}` : ''} }` : obj(item.attrs);
   if (!item.children.length) return `${pad}h(${str(item.tag)}, ${attrs})`;
@@ -617,10 +632,22 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
   const layers = {};
   const mains = (name) => library[name] || null;
+  // what this component puts in a placed component's slot, at any depth there: that slot's selector, then each box's own
+  // hook down to it; inside an instance it puts there, that instance's own (not read here)
+  const fillSelector = (id) => {
+    const chainUp = [];
+    for (let up = id; up; up = (parts.get(up) || {}).e?.parent) {
+      const e = (parts.get(up) || {}).e || {}, p = (parts.get(e.parent) || {}).e || {};
+      chainUp.unshift(up);
+      if (p.kind === 'slot') { const s = nestedSelector(c, n, e.parent, mains); if (!s) return null; if (chainUp.slice(0, -1).some((k) => ((parts.get(k) || {}).e || {}).kind === 'instance')) return null; return [s, ...chainUp.map((k) => n.part(partSeg(c, copyOf(c, k) || k)))].join(' > '); }
+    }
+    return null;
+  };
   for (const x of parts.values()) {
     if (x.id === 'root') continue;
     // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
-    const nested = x.inside && nestedSelector(c, n, x.id, mains);
+    // and what it puts in a placed component's slot (a menu's items), by its own hook under that slot
+    const nested = (x.inside && x.slotted && fillSelector(x.id)) || (x.inside && nestedSelector(c, n, x.id, mains));
     layers[pathOf(x.id)] = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }

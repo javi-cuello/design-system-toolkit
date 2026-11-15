@@ -102,7 +102,7 @@ ok('a placed icon is the one the instance draws, and the placed control is named
 ok('a placed field is given its Value only where it is drawn holding one, and then as its first value, never a controlled one', /<Field className="ds-stepper__find" \/>/.test(stepper) && !/ value=/.test(stepper));
 ok('a part inside a box drawn under the same condition is not asked it again', /<div className="ds-stepper__more">\n\s*<span className="ds-stepper__hint">/.test(stepper));
 ok('a part a "not not" would draw is drawn by the value itself', /\{showNote && \(/.test(stepper) && !/!!/.test(stepper));
-ok('a slot a boolean shows is found under its own name, never a placed component\'s slot of the same name', /<div className="ds-stepper__show-more-actions-slot">\{actionsSlot\}<\/div>/.test(stepper));
+ok('a slot a boolean shows is found under its own name, never a placed component\'s slot of the same name', /<div className="ds-stepper__show-more-actions-slot" data-slot="actionsSlot">\{actionsSlot\}<\/div>/.test(stepper));
 ok('a part a pointer state takes away stays, a gap saying so', /chevron-down/.test(stepper) && /frontend-build: Chevron is taken away at a pointer state/.test(stepper));
 ok('every placed component the markup draws is imported, and only those', /import \{ IconButton \}/.test(stepper) && /import \{ Field \}/.test(stepper) && (stepper.match(/^import \{/gm) || []).length === 2);
 ok('a component with no props of its own has no empty type for them', /export type NoteProps = ComponentPropsWithRef<"span">;/.test(toReact({ component: 'Note', props: {}, anatomy: { root: { kind: 'container' } } }, 'note', { naming: CLASS, library: {} })) && !/type Own = \{\s*\};/.test(toReact({ component: 'Note', props: {}, anatomy: { root: { kind: 'container' } } }, 'note', { naming: CLASS, library: {} })));
@@ -179,6 +179,24 @@ const fieldParity = toParity(evil, 'quotes-field', { naming: CLASS, framework: '
 ok('its mapping fills the input to draw has-a-value, and maps both texts to the input the sheet styles', JSON.stringify(fieldParity.axes.Filled) === JSON.stringify({ True: { defaultValue: 'Ada' }, False: {} }) && fieldParity.layers['Field > Placeholder'] === '.ds-quotes-field > .ds-quotes-field__field > .ds-quotes-field__input');
 const sheet = toCss(evil, 'quotes-field', { naming: CLASS });
 ok('and to-code styles that input and its placeholder by the same selectors: the hooks are one', sheet.includes(`${fieldParity.layers['Field > Value']} {`) && sheet.includes(`${fieldParity.layers['Field > Value']}::placeholder {`));
+
+/* ── what a component puts in a placed component's slot (a menu's items) ── */
+{
+  const item = { contract: 1, component: 'Item', props: { label: { type: 'string', default: 'Item', figma: 'Label', sets: ['text'] } }, anatomy: { root: { kind: 'container' }, text: { kind: 'text', parent: 'root', content: '{label}' } }, variants: [] };
+  const menu = { contract: 1, component: 'Menu', props: { items: { type: 'slot', figma: 'Items' } }, anatomy: { root: { kind: 'container' }, list: { kind: 'slot', parent: 'root', content: '{items}' } }, variants: [] };
+  const bar = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, menu: { kind: 'instance', parent: 'root', component: 'Menu', with: {} }, 'menu/list': { kind: 'slot', parent: 'menu', content: '{items}' }, 'menu/list/item': { kind: 'instance', parent: 'menu/list', component: 'Item', with: { Label: 'One' }, order: 0 }, 'menu/list/item_2': { kind: 'instance', parent: 'menu/list', component: 'Item', with: { Label: 'Two' }, order: 1 } }, variants: [] };
+  const lib = { Item: { ...item, folder: 'item' }, Menu: { ...menu, folder: 'menu' }, Bar: { ...bar, folder: 'bar' } };
+  const el = toElement(bar, 'bar', { naming: ELEMENT, library: lib });
+  ok('what a component puts in a placed component\'s slot is that slot\'s content, each its own component', /renderMenu\(\{[^}]*items: \[renderItem\(\{ label: "One" \}[^\]]*renderItem\(\{ label: "Two" \}/.test(el) && /import \{ renderItem \}/.test(el));
+  ok('and in React, the slot prop holds them', /<Menu[^>]*items=\{<>[\s\S]*<Item[^>]*label="One"[\s\S]*<\/>\}/.test(toReact(bar, 'bar', { naming: CLASS, library: lib })));
+  const grouped = { ...bar, props: { big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, anatomy: { ...bar.anatomy, 'menu/list/group': { kind: 'container', parent: 'menu/list', order: 2 }, 'menu/list/group/item': { kind: 'instance', parent: 'menu/list/group', component: 'Item', with: { Label: 'Three' } } },
+    variants: [{ when: { big: true }, add: {} }] };
+  const g = toElement(grouped, 'bar', { naming: ELEMENT, library: lib });
+  ok('a box it puts there keeps what it holds', /h\("div", \{ "data-part": "group" \},\s*renderItem\(\{ label: "Three" \}/.test(g) && toParity(grouped, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Group > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="group"] > [data-part="menu-list-group-item"]');
+  const titled = { contract: 1, component: 'Panel', props: { title: { type: 'slot', figma: 'Title' } }, anatomy: { root: { kind: 'container' }, head: { kind: 'slot', parent: 'root', content: '{title}' } }, variants: [] };
+  ok('a slot is marked by its contract name, whatever its name in code', /"data-slot": "title"/.test(toElement(titled, 'panel', { naming: ELEMENT, library: {} })));
+  ok('the mapping reads them under that slot', toParity(bar, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="item"]');
+}
 
 /* ── the mapping and the stories ── */
 const parity = toParity(library.Button, 'button', { naming: CLASS, library });

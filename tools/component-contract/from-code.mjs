@@ -846,7 +846,7 @@ async function main() {
     const fr = figmaContract && figmaContract.anatomy && figmaContract.anatomy.root || {};
     const room = typeof fr.width === 'number' ? fr.width : fr.width === 'fill' && fr.canvas && typeof fr.canvas.width === 'number' ? fr.canvas.width : null;
     if (room) notes.push(`read in a room ${room} wide, the width Figma draws the component at`);
-    const { ownStyling, ownInsides, normalForm, byComponentName } = req('./derive.cjs');
+    const { ownStyling, ownInsides, normalForm, byComponentName, placedAs, placedMatch } = req('./derive.cjs');
     const mainOf = byComponentName([...official.values()]);
     // the instances the design keeps whole (one hides a layer no prop shows): there it keeps layers equal to its component's,
     // which a partial cut would drop; known as the ones that cut drops something from
@@ -918,10 +918,12 @@ async function main() {
           // the element a slot's stand-in landed in is the slot, what the caller puts there its content, not its parts
           const filled = marks.find(([m]) => text === m);
           // an icon is an svg, or the mark to-markup leaves for the project to draw one in (an empty element naming it, data-icon)
-          const kind = filled ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
+          // a placed component's slot this one fills (to-markup marks its slots, data-slot): a slot, what is put in it read
+          const fills = inside && n.getAttribute('data-slot');
+          const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
           const figmaName = n.getAttribute('data-figma-name');
-          const e = { id, kind, ...(parent != null && { parent, order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           { const r = n.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
@@ -1019,7 +1021,7 @@ async function main() {
           out.push(e);
           // a box's children, and its own words where it has them beside its children (a label written straight
           // into a link beside its icon): a text part of its own, where it sits among them
-          if (kind === 'container') {
+          if (kind === 'container' || fills) {
             let i = 0, said = false;
             for (const c of n.childNodes) {
               if (c.nodeType === 1) walk(c, id, i++, inside);
@@ -1294,6 +1296,15 @@ async function main() {
       // each combination in the one spelling, and a placed instance's own styling left to its component, as derive does
       // each of its flats before folding them: so base and variants are cut alike
       // and a layer read inside it that equals its component's there (a contract keeps an override only where it differs)
+      // (a zero the code leaves unsaid inside it is its component's own token there, as zeroTokens says it of this one's)
+      for (const [hid, h] of Object.entries(anatomy)) {
+        const hm = h.kind === 'instance' && mainOf(h.component);
+        if (!hm) continue;
+        const inner = Object.fromEntries(Object.keys(anatomy).filter((k) => k.startsWith(`${hid}/`)).map((k) => [k.slice(hid.length + 1), anatomy[k]]));
+        if (!Object.keys(inner).length) continue;
+        const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
+        for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) zeroTokens(e, M[match[rel]], L.value);
+      }
       normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
