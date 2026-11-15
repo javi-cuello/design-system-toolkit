@@ -846,8 +846,21 @@ async function main() {
     const fr = figmaContract && figmaContract.anatomy && figmaContract.anatomy.root || {};
     const room = typeof fr.width === 'number' ? fr.width : fr.width === 'fill' && fr.canvas && typeof fr.canvas.width === 'number' ? fr.canvas.width : null;
     if (room) notes.push(`read in a room ${room} wide, the width Figma draws the component at`);
-    const { ownStyling, normalForm, byComponentName } = req('./derive.cjs');
+    const { ownStyling, ownInsides, normalForm, byComponentName } = req('./derive.cjs');
     const mainOf = byComponentName([...official.values()]);
+    // the instances the design keeps whole (one hides a layer no prop shows): there it keeps layers equal to its component's,
+    // which a partial cut would drop; known as the ones that cut drops something from
+    const wholeIn = new Set();
+    if (figmaContract) {
+      const all = Object.assign({}, ...[...(figmaContract.variants || [])].reverse().map((v) => v.add || {}), figmaContract.anatomy);
+      for (const [id, x] of Object.entries(all)) {
+        if (x.kind !== 'instance' || !mainOf(x.component)) continue;
+        const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
+        const n = Object.keys(sub).length;
+        ownInsides(sub, mainOf, { partial: true });
+        if (Object.keys(sub).length < n) wholeIn.add(id);
+      }
+    }
     const read = async (args) => {
       await show(args);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
@@ -883,14 +896,20 @@ async function main() {
           const h = mid(r.left, r.width, pr.left, pr.width), v = mid(r.top, r.height, pr.top, pr.height);
           return { absolute: { x: px(r.left - pr.left), y: px(r.top - pr.top) }, ...((h || v) && { constraints: { horizontal: h ? 'center' : 'min', vertical: v ? 'center' : 'min' } }) };
         };
-        const walk = (n, parent, order) => {
+        const walk = (n, parent, order, inside = false) => {
           const s = getComputedStyle(n);
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
           // the mapping names at no opacity is drawn and see-through (a loading button's label keeps its width)
           if (s.display === 'none' || s.visibility === 'hidden' || (+s.opacity === 0 && !n.hasAttribute('data-figma-id'))) return;
+          // inside a placed component, only a layer the mapping names is this one's (an override the contract keeps there);
+          // the rest is that component's own, read in its own audit
+          // (`inside`: the placed instance's id) a layer the mapping names under that instance; another component's root
+          // there is that one's, never searched (one level deep); a mapped element the mapping places elsewhere is not this one's
+          if (inside && !String(n.getAttribute('data-figma-id') || '').startsWith(`${inside}/`)) { if (isRoot(n)) return; let i = 0; for (const c of n.children) walk(c, parent, i++, inside); return; }
           const tag = n.tagName.toLowerCase();
           // an element the mapping states is a Figma layer takes that layer's id; else its place and its part's name
           let id = parent == null ? 'root' : n.getAttribute('data-figma-id') || `${parent === 'root' ? '' : `${parent}/`}${slot(n)}`;
+          const counted = id;
           seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
           // its own words, as drawn: a thin space is a character (MUI's required mark is "\u2009*", two text nodes)
           const plain = (t) => t.replace(/[ \n\t\r]+/g, ' ');
@@ -902,7 +921,7 @@ async function main() {
           const kind = filled ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
           const figmaName = n.getAttribute('data-figma-name');
-          const e = { id, kind, ...(parent != null && { parent, order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           { const r = n.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
@@ -916,9 +935,12 @@ async function main() {
           const other = parent != null && rootRe && [...n.classList, n.tagName.toLowerCase()].map((c) => (c.match(new RegExp(rootRe)) || [])[1]).find((x) => x && others[x]);
           // another component's root, by the same test: a class the instance pattern matches and a component of the library names
           function isRoot(el) { return !!rootRe && [...el.classList, el.tagName.toLowerCase()].some((c) => { const x = (c.match(new RegExp(rootRe)) || [])[1]; return x && others[x]; }); }
-          if (other) { seen[id]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
+          // named by the component it places where the mapping names it not (a layer the mapping states keeps its id: a
+          // boolean's part, showMenuContextMenu, is no contextMenu)
+          if (other && !n.hasAttribute('data-figma-id')) { seen[counted]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id]; }
+          if (other) {
             n.setAttribute('data-contract-id', id); up(id);
-            out.push({ id, kind: 'instance', parent, order, ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            out.push({ id, kind: 'instance', parent, order, ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
@@ -939,7 +961,12 @@ async function main() {
                 for (let up = t === n ? null : t; up && up !== n; up = up.parentElement) if (isRoot(up)) return false;
                 return true;
               }).map((t) => [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim()),
-              glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) }); return; }
+              glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) });
+            // the layers the mapping names inside it, one level of placing deep, where the mapping names it too (an
+            // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
+            // (each at its place among the component's own drawn children, which this reading does not all read)
+            if (!inside && n.hasAttribute('data-figma-id')) { let i = 0; for (const c of n.children) { const cs = getComputedStyle(c); if (cs.display === 'none' || cs.visibility === 'hidden') continue; walk(c, id, i++, id); } }
+            return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; }
           else if (kind === 'text') { e.color = s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
@@ -995,8 +1022,9 @@ async function main() {
           if (kind === 'container') {
             let i = 0, said = false;
             for (const c of n.childNodes) {
-              if (c.nodeType === 1) walk(c, id, i++);
-              else if (c.nodeType === 3 && text && !said && plain(c.textContent).replace(/ /g, '')) {
+              if (c.nodeType === 1) walk(c, id, i++, inside);
+              // (inside a placed instance, only words the mapping names: the rest are that component's)
+              else if (c.nodeType === 3 && text && !said && (!inside || n.hasAttribute('data-figma-text')) && plain(c.textContent).replace(/ /g, '')) {
                 said = true;
                 let tid = n.getAttribute('data-figma-text') || `${id === 'root' ? '' : `${id}/`}text`;
                 seen[tid] = (seen[tid] || 0) + 1; if (seen[tid] > 1) tid += seen[tid];
@@ -1011,7 +1039,8 @@ async function main() {
         walk(root, null, 0);
         // an order counts only the siblings drawn
         const byParent = {}; for (const e of out) if (e.parent != null) (byParent[e.parent] = byParent[e.parent] || []).push(e);
-        for (const xs of Object.values(byParent)) xs.forEach((e, i) => { e.order = i; });
+        // (one inside a placed component keeps its place among that component's own, most of which are not read here)
+        for (const xs of Object.values(byParent)) xs.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; });
         return out;
       }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
@@ -1264,7 +1293,8 @@ async function main() {
       for (const [id, e] of ring) anatomy[`${id === 'root' ? '' : `${id}/`}focusRing`] = { ...e, order: Object.values(anatomy).filter((y) => y.parent === id).length };
       // each combination in the one spelling, and a placed instance's own styling left to its component, as derive does
       // each of its flats before folding them: so base and variants are cut alike
-      normalForm(anatomy); ownStyling(anatomy, mainOf);
+      // and a layer read inside it that equals its component's there (a contract keeps an override only where it differs)
+      normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };

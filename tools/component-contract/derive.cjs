@@ -480,7 +480,9 @@ let M = { ...atProps(m, e.with) };
   return { M, swapped, back: placed.back };
 }
 
-function ownInsides(anatomy, mains) {
+/* `partial`: a reading that holds only some of an instance's layers (from-code reads the ones a contract keeps): no layer
+   it lacks says the instance hides one, so none is kept whole for it; each it holds goes where it equals its component's */
+function ownInsides(anatomy, mains, { partial = false, whole = new Set() } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
@@ -500,7 +502,8 @@ function ownInsides(anatomy, mains) {
     const drawnAs = new Set(Object.values(match));
     const opened = (up) => Object.values(match).some((mk) => mk.startsWith(`${up}/`));
     const delegated = (mk) => mk.split('/').slice(0, -1).some((_, i, a) => { const up = a.slice(0, i + 1).join('/'); return M[up] && M[up].kind === 'instance' && drawnAs.has(up) && !opened(up); });
-    if (Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk))) continue;
+    // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
+    if (whole.has(id) || (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk)))) continue;
     const own = (k) => {
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x) return false;
