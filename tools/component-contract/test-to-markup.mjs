@@ -54,6 +54,14 @@ ok('a part a variant adds before the rest is drawn there, not after them', /"dat
 const pill = { component: 'Pill', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20' } }, variants: [{ when: { size: 'xs' }, set: { 'icon.swappedBy': 'icon16' } }], folder: 'pill' };
 const holder = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, pill: { kind: 'instance', parent: 'root', component: 'Pill', with: { 'Icon (20)': 'plus', 'Icon (16)': 'x', Size: 'xs' } } }, variants: [], folder: 'row' };
 ok('a placed component with a swap per size is given the one its size draws (xs: Icon (16))', /renderPill\(\{ icon: "x"/.test(toElement(holder, 'row', { naming: ELEMENT, library: { Pill: pill, Row: holder } })));
+const renamed = { component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Icon' } }, variants: [], folder: 'tag' };
+ok('a layer whose name its id does not give back carries the design\'s name (data-figma-name)', /"data-part": "mark", "data-figma-name": "Icon"/.test(toElement(renamed, 'tag', { naming: ELEMENT, library: {} })));
+const quoted = { ...renamed, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Say "hi" {x}' }, label: { kind: 'text', parent: 'root', content: 'Tag' } } };
+const placedNamed = { component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, lead: { kind: 'instance', parent: 'root', component: 'Pill', name: 'Leading pill' } }, variants: [], folder: 'row' };
+ok('the name travels in React too, braced where it holds quotes, on a placed component, and a part with no name has none',
+  /data-figma-name=\{"Say \\"hi\\" \{x\}"\}/.test(toReact(quoted, 'tag', { naming: CLASS, library: {} }))
+  && /<Pill className="[^"]*" data-figma-name="Leading pill"/.test(toReact(placedNamed, 'row', { naming: CLASS, library: { Pill: pill, Row: placedNamed } }))
+  && (toReact(quoted, 'tag', { naming: CLASS, library: {} }).match(/data-figma-name/g) || []).length === 1);
 ok('no condition loses its brackets to the not before it', folders.every((f) => !/!\w+ ===/.test(toReact(library[Object.keys(library).find((k) => library[k].folder === f)], f, { naming: CLASS, library }))));
 
 /* ── what a real library taught it: a contract for each shape, as the snapshot writes them ── */

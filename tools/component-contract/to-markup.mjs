@@ -258,7 +258,10 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   for (const [up, list] of kids) kids.set(up, inOrder(c, list));
   const seg = (id) => partSeg(c, copyOf(c, id) || id);
   // a part's hook: its class (React) or its data-part (a web component)
-  const hook = (id) => (n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]);
+  // and the design's own name for a layer whose name its id does not give back (Icon on a part called show-icon-icon), so
+  // reading the code back names it as the design does
+  const nameAttr = (id) => { const nm = ((parts.get(id) || {}).e || {}).name; return nm ? [['data-figma-name', { lit: nm }]] : []; };
+  const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id)];
   const named = (key) => props.find((x) => x.key === key);
   const textOf = (id, e) => { const x = props.find((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id)); return x ? { code: ref(x.name) } : { lit: e.content || '' }; };
   const busy = props.find((x) => x.busy && x.busy.length);
@@ -363,8 +366,9 @@ function jsxOf(item, depth) {
   if (item.lit !== undefined) return `${pad}{${str(item.lit)}}`;
   const attr = ([k, v]) => (v.lit === true ? ` ${k}` : typeof v.lit === 'boolean' || typeof v.lit === 'number' ? ` ${k}={${v.lit}}` : v.lit !== undefined ? ` ${k}=${/^[^"{}<>&\\\n\r\t]*$/.test(v.lit) ? str(v.lit) : `{${str(v.lit)}}`}` : ` ${k}={${v.code}}`);
   if (item.placed) {
-    const cls = item.hook.find(([k]) => k === 'className');
-    return `${pad}<${pascal(item.placed.component)}${cls ? attr(cls) : ''}${item.attrs.map(attr).join('')} />`;
+    // its class and its layer name; data-part is the element's own, and a placed component renders its own root
+    const own = item.hook.filter(([k]) => k === 'className' || k === 'data-figma-name');
+    return `${pad}<${pascal(item.placed.component)}${own.map(attr).join('')}${item.attrs.map(attr).join('')} />`;
   }
   const open = `<${item.tag}${(item.spread || '')}${item.attrs.map(attr).join('')}`;
   if (item.tag === 'input' || !item.children.length) return `${pad}${open}${item.tag === 'input' ? ' />' : `></${item.tag}>`}`;
