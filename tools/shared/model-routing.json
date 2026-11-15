@@ -164,6 +164,22 @@
   },
   {
     "keys": [
+      "type-scale"
+    ],
+    "task": "Type scale generation",
+    "skills": [
+      "type-scale"
+    ],
+    "model": "Sonnet",
+    "effort": "Default",
+    "agent": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "why": "Asking recorded choices and running a script; the judgement is which sizes to drop"
+  },
+  {
+    "keys": [
       "figma-context-capture"
     ],
     "task": "Capturing a project's conventions",

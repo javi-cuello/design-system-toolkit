@@ -33,6 +33,7 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [figma-context-capture](figma-context-capture/SKILL.md) | Reads a library's conventions into the project's context document, which every other skill reads, and keeps the project's other documents: the product file, its decisions and guidance pages. |
 | **Tokens and colour** | |
 | [oklch-color-scale-system](oklch-color-scale-system/SKILL.md) | Generates perceptually even 12-step OKLCH colour scales, light and dark. |
+| [type-scale](type-scale/SKILL.md) | Generates a type scale (sizes, line heights, weights, tracking, names, a phone mode), asking the project's choices first. |
 | **Code** | |
 | [frontend-build](frontend-build/SKILL.md) | Builds and audits an interface against the design and code standards. |
 | [figma-prototype](figma-prototype/SKILL.md) | Composes a screen or flow in Figma from the library for a designer to continue, and routes the feedback on it. |
