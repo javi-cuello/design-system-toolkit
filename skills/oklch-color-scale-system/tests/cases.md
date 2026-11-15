@@ -1,4 +1,6 @@
-# Eval cases — oklch-color-scale-system (v2.3.1)
+# Eval cases — oklch-color-scale-system (v2.3.2)
+
+**Walked: 2026-11-15 for 2.3.2** — an alpha description names the suffixed solid step; `node tests/test-oklch.js` 693/693 (two new checks, one pinned string updated); A1–A16 hold as written.
 
 **Walked: 2026-11-15 for 2.3.1** — guidance only; A16 added and walked by running it (below). `node tests/test-oklch.js` 691/691; A1–A15 hold as written.
 

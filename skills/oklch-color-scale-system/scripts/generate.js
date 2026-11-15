@@ -1073,10 +1073,10 @@ function generateNeutralAlpha(scaleSteps, opts) {
     // naming" — an alpha step isn't verbatim anything, it's a base/alpha pair engineered
     // to visually match a solid step when composited, so the source/anchor concept
     // doesn't apply to it the way it does to a solid step).
-    const description = `${cssValue} · base ${usedBase} · alpha ${roundedAlpha} · composites to ${name}/${step.step} · ${modeLabel}`;
+    const description = `${cssValue} · base ${usedBase} · alpha ${roundedAlpha} · composites to ${name}/${step.step}${step.figmaSuffix || ''} · ${modeLabel}`;
     // Same content minus the light/dark token — for the "Light:"/"Dark:" heading layout,
     // where a heading already states the mode and repeating it inside the line is noise.
-    const descriptionLine = `${cssValue} · base ${usedBase} · alpha ${roundedAlpha} · composites to ${name}/${step.step} · ${modeLabelLine}`;
+    const descriptionLine = `${cssValue} · base ${usedBase} · alpha ${roundedAlpha} · composites to ${name}/${step.step}${step.figmaSuffix || ''} · ${modeLabelLine}`;
     return { step: step.step, base: usedBase, alpha: roundedAlpha, css: cssValue,
              figmaDescription: description, figmaDescriptionLine: descriptionLine };
   });
@@ -1130,8 +1130,8 @@ function generateChromaticAlpha(scaleSteps, floor, opts) {
     // land outside 0-255 before clamping.
     const baseRgb = hexToRgb255(baseHex);
     const cssValue = `rgb(${baseRgb[0]} ${baseRgb[1]} ${baseRgb[2]} / ${alphaPct(roundedAlpha)})`;
-    const description = `${cssValue} · base ${baseHex} · alpha ${roundedAlpha} · composites to ${name}/${step.step} · ${modeLabel}`;
-    const descriptionLine = `${cssValue} · base ${baseHex} · alpha ${roundedAlpha} · composites to ${name}/${step.step} · ${modeLabelLine}`;
+    const description = `${cssValue} · base ${baseHex} · alpha ${roundedAlpha} · composites to ${name}/${step.step}${step.figmaSuffix || ''} · ${modeLabel}`;
+    const descriptionLine = `${cssValue} · base ${baseHex} · alpha ${roundedAlpha} · composites to ${name}/${step.step}${step.figmaSuffix || ''} · ${modeLabelLine}`;
     return { step: step.step, base: baseHex, alpha: roundedAlpha, css: cssValue,
              figmaDescription: description, figmaDescriptionLine: descriptionLine };
   });

@@ -5,7 +5,7 @@ description: Generates perceptually consistent 12-step OKLCH color scales for UI
 
 # OKLCH Color Scale System
 
-**Version 2.3.1** — history in CHANGELOG.md.
+**Version 2.3.2** — history in CHANGELOG.md.
 
 A principled system for generating perceptually consistent 12-step color scales for UI design systems, built on the OKLCH color space.
 
@@ -889,10 +889,10 @@ oklch(0.2106 0.0183 202.01) · source #2DAFB8 · free mode
 
 **The anchor step's description says `verbatim`, never a ceiling label — even in a ceilinged family.** The anchor is always exempt from the ceiling by construction (see Anchored mode above), so labeling it `capped` or `uncapped` would misrepresent what actually happened to that specific variable — it implies the ceiling logic touched this step's chroma, when it didn't touch it at all. Every other step in the same ceilinged-family scale still shows the real `capped`/`uncapped` status accurately.
 
-**Alpha variables follow neither the naming nor the description convention above — they get their own.** An alpha step isn't "verbatim" or "source-derived" the way a solid step is; it's a composited value (base + opacity) engineered to *reproduce* a solid step's appearance, not a direct read of the source color. Applying `-source`/`-anchor` suffixes to alpha variables would be actively wrong — even the alpha step matching the anchor's position isn't itself verbatim anything, it's a base/alpha pair chosen to visually match the anchor when composited. **Alpha variables get no `-source`/`-anchor` suffix, ever, regardless of mode.** Their description instead records what they composite onto and against what: base color, alpha value, and which solid variable they're meant to visually match —
+**Alpha variables follow neither the naming nor the description convention above — they get their own.** An alpha step isn't "verbatim" or "source-derived" the way a solid step is; it's a composited value (base + opacity) engineered to *reproduce* a solid step's appearance, not a direct read of the source color. Applying `-source`/`-anchor` suffixes to alpha variables would be actively wrong — even the alpha step matching the anchor's position isn't itself verbatim anything, it's a base/alpha pair chosen to visually match the anchor when composited. **Alpha variables get no `-source`/`-anchor` suffix, ever, regardless of mode.** The solid step they composite to keeps its own, so the description names it in full (`composites to neutral/9-source`). Their description records what they composite onto and against what: base color, alpha value, and which solid variable they're meant to visually match —
 
 ```
-oklch(0.20 0.00 0 / 64.38%) · base #161616 · alpha 0.643777 · composites to neutral/9 · grey mode
+oklch(0.20 0.00 0 / 64.38%) · base #161616 · alpha 0.643777 · composites to neutral/9-source · grey mode
 ```
 
 **The description leads with a ready-to-use CSS value**, mirroring the `${oklch} · ${provenance}` shape of a solid step, so both schemas read the same way and any tool parsing descriptions finds a value in the same position. The alpha is carried as a **2-decimal percentage, never a whole percent** — the ≥2-decimal rule above governs anything that *renders* these tokens, documentation included. Rounding step 6 of the light neutral ramp from `0.2961` to `30%` composites to 185 instead of 186, and 7 of the 11 non-endpoint steps move by 1/255 the same way: exactly the seam the alpha scale exists to prevent.

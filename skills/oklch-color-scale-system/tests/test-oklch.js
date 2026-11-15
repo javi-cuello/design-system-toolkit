@@ -676,7 +676,7 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   const grey = generateScale('#6A6A6A', 'grey', { dark: false });
   const greyAlpha = generateAlphaScale(grey, 'grey');
   check('alpha description present on neutral alpha steps', typeof greyAlpha[8].figmaDescription === 'string' && greyAlpha[8].figmaDescription.length > 0);
-  check('alpha description matches the specified format', greyAlpha[8].figmaDescription === 'oklch(0.20 0.00 0 / 64.38%) · base #161616 · alpha 0.643777 · composites to grey/9 · grey mode', greyAlpha[8].figmaDescription);
+  check('alpha description matches the specified format', greyAlpha[8].figmaDescription === 'oklch(0.20 0.00 0 / 64.38%) · base #161616 · alpha 0.643777 · composites to grey/9-source · grey mode', greyAlpha[8].figmaDescription);
   // The CSS form leads the description, mirroring the solid steps' `${oklch} · ${provenance}`.
   check('neutral alpha css uses the published nominal base OKLCH', greyAlpha[8].css === 'oklch(0.20 0.00 0 / 64.38%)', greyAlpha[8].css);
   // Endpoint rule swaps the base, so the nominal OKLCH must swap with it.
@@ -798,6 +798,12 @@ const NEUTRAL_ALPHA_DARK  = [0.0714,0.0952,0.123,0.1508,0.1825,0.2857,0.3929,0.5
   const blue = generateScale('#1A6FBF', 'free', { dark: false });
   const blueAlpha = generateAlphaScale(blue, 'blue');
   check('chromatic alpha description composites to the correct name/step', blueAlpha[8].figmaDescription.includes('composites to blue/9'), blueAlpha[8].figmaDescription);
+
+  // The solid step's variable carries its -source/-anchor suffix, so the alpha names it with it.
+  const marked = blue.steps.find(st => st.figmaSuffix);
+  check('alpha description names the suffixed solid step', blueAlpha[marked.step - 1].figmaDescription.includes('composites to blue/' + marked.step + marked.figmaSuffix + ' '), blueAlpha[marked.step - 1].figmaDescription);
+  const plain = blueAlpha.find(a => a.step !== marked.step);
+  check('alpha description leaves an unmarked step bare', plain.figmaDescription.includes('composites to blue/' + plain.step + ' '), plain.figmaDescription);
 
   const noName = generateAlphaScale(blue); // no name provided — should fall back to family, not crash
   check('alpha description falls back to family name when none is given', noName[8].figmaDescription.includes('composites to blue/9'), noName[8].figmaDescription);

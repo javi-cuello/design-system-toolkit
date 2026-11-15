@@ -1,6 +1,6 @@
 # Changelog — figma-components-audit
 
-- 2.47.2 (2026-11-15): an opacity bound to a variable that is 0 in every mode hides its layer, so its text is not judged for contrast; the live resolver reports `zero`. 2.47.1 judged every bound opacity, and the same Button's loading label (bound to a 0-in-both-modes `State/Loading/opacity`) came back at 1.1:1.
+- 2.47.2 (2026-11-15): an opacity bound to a variable that is 0 in every mode hides its layer, so its text is not judged for contrast (live resolver: `zero`). Fixes a 1.1:1 false hit 2.47.1 still raised.
 - 2.47.1 (2026-11-15): two false findings gone: a font weight bound to a number variable (`fontWeight`) is bound, and text in an opacity-0 layer (a label kept for width under a spinner) is not judged for contrast. From a live run on a project's Button.
 - 2.47.0 (2026-11-12): `FCA.composedFindings` returns `keys`, the placed instances counted by their main component's key, so a caller can tell which library they come from. One assertion in `tests/test-probes.mjs`; A136 extended.
 - 2.46.0 (2026-11-12): a `detached` finding says `by` (`figma`, the detach flag, or `name`, a frame named like a component) and `root` when the screen itself is a detached copy, so a caller can leave templates and name matches out. One assertion in `tests/test-probes.mjs`; A136 extended.
