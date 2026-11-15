@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.8.8] - 2026-11-15
+### Fixed
+- The generated block carries figma-components-audit 2.47.1: a weight bound to a number variable counts as bound, and text inside an opacity-0 layer is not judged for contrast.
+
 ## [0.8.7] - 2026-11-12
 ### Changed
 - The generated block carries figma-components-audit 2.47.0's probes: the composed-frame check counts placed instances by main key.

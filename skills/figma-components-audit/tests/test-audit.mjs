@@ -224,7 +224,7 @@ expect("a layer that is the same in every variant still fires when some forget i
   const v = leaf("COMPONENT", "Size=md", { layoutMode: "HORIZONTAL", paddingTop: 96, paddingBottom: 12, paddingLeft: 0, paddingRight: 0,
     itemSpacing: 0, topLeftRadius: 6, children: [
       leaf("RECTANGLE", "Dot", { fills: paint(0, 0, 0), boundVariables: { fills: [alias("good")] } }),
-      leaf("TEXT", "Label", { textStyleId: "S:1", fills: paint(0, 0, 0), boundVariables: { fills: [alias("good")], fontFamily: alias("good"), fontSize: alias("good"), fontStyle: alias("good") } }),
+      leaf("TEXT", "Label", { textStyleId: "S:1", fills: paint(0, 0, 0), boundVariables: { fills: [alias("good")], fontFamily: alias("good"), fontSize: alias("good"), fontWeight: alias("good") } }), // a numeric weight binding is a binding
       leaf("VECTOR", "Check", { strokes: stroke, strokeWeight: 1.5, boundVariables: { strokes: [alias("good")] } }),
       leaf("VECTOR", "Tick", { strokes: stroke, strokeWeight: 1.5, boundVariables: { strokes: [alias("good")], strokeWeight: alias("good") } }),
       leaf("FRAME", "Leak", { fills: paint(0, 0, 0), boundVariables: { fills: [alias("bad")] } }),
@@ -438,7 +438,15 @@ expect("a layer that is the same in every variant still fires when some forget i
   v.children.push(leaf("TEXT", "Pale", { fills: paint(0.8, 0.8, 0.8), fontSize: 14 }));
   v.children.push(leaf("TEXT", "Ink", { fills: paint(0.1, 0.1, 0.1), fontSize: 14 }));
   v.children.push(leaf("TEXT", "Big grey", { fills: paint(0.5, 0.5, 0.5), fontSize: 28 }));
+  v.children.push(leaf("FRAME", "Content", { opacity: 0, layoutMode: "HORIZONTAL", children: [leaf("TEXT", "Kept for width", { fills: paint(0.95, 0.95, 0.95), fontSize: 14 })] })); // invisible: not judged
   const r = await run(fx);
+  const fb = fresh(); const fv = find(fb, "Chip").children[0];
+  fv.children.push(leaf("FRAME", "Content", { opacity: 0, boundVariables: { opacity: { type: "VARIABLE_ALIAS", id: "x" } }, layoutMode: "HORIZONTAL", children: [leaf("TEXT", "Shown in a mode", { fills: paint(0.95, 0.95, 0.95), fontSize: 14 })] }));
+  expect("an opacity bound to a variable may show in another mode, so its text is still judged",
+    keyed(await run(fb), "Chip", /^accessibility\|contrast\|/).length, 1);
+  const ft = fresh(); find(ft, "Chip").children[0].children.push(leaf("TEXT", "Ink in a mode", { opacity: 0, boundVariables: { opacity: { type: "VARIABLE_ALIAS", id: "x" } }, fills: paint(0.1, 0.1, 0.1), fontSize: 14 }));
+  expect("a text whose own opacity is bound and 0 here is judged as shown, not blended away to 1:1",
+    keyed(await run(ft), "Chip", /^accessibility\|contrast\|/).length, 0);
   expect("figma-standard rule 32: text under 4.5:1 on its opaque surface is raised; dark text and large text over 3:1 are not",
     keyed(r, "Chip", /^accessibility\|contrast\|/), ['Chip | error accessibility | Text "Pale" has 1.3:1 contrast against its surface, below the 4.5:1 minimum, so many people cannot read it, in 1 variant']);
   expect("and the measure counts every text layer judged and every pass", [r.measures.contrastTotal, r.measures.contrastPass], [3, 2]);

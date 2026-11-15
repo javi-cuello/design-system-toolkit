@@ -13,7 +13,7 @@ Where a reason cites no incident, it states the mechanism instead. Rules that ar
 - **[scanner]** Every non-zero padding, gap, and per-corner radius is bound to a variable. Raw values are defects. (Which collection and which scale: system.)
 - **[scanner]** Every visible fill and stroke colour is bound. (Semantic-vs-primitive policy: system.)
 - **[scanner]** Stroke weight binds via the four per-side properties (`strokeTopWeight` etc.) or the shorthand; reading only the shorthand false-positives on correctly bound strokes — check all five.
-- **[scanner]** Every text node carries a text style AND bound `fontFamily`, `fontSize`, `fontStyle` (weight is the most-missed).
+- **[scanner]** Every text node carries a text style AND bound `fontFamily`, `fontSize` and a weight, as `fontStyle` or a number variable on `fontWeight` (weight is the most-missed).
 - **[scanner]** Bindings resolve to an allow-listed collection **key** — names are not unique across libraries. (The allow-list itself: system.)
 - **[scanner]** Gap exemptions: `SPACE_BETWEEN` gaps are ignored entirely; a single-child (inert) unbound gap is hygiene, not error.
 - **[scanner]** `SLOT` nodes and `INSTANCE` subtrees are out of scope.

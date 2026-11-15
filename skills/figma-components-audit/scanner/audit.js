@@ -70,7 +70,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const RAW={spacing:"so a change to the spacing tokens never reaches it",radius:"so a change to the radius tokens never reaches it",
     colour:"so it ignores the theme's modes and every colour change made in the library",type:"so a change to the type tokens never reaches it",
     stroke:"so a change to the stroke tokens never reaches it"};
-  const FIELD={fills:"fill",strokes:"stroke colour",effects:"effect",opacity:"opacity",itemSpacing:"gap",strokeWeight:"stroke weight",
+  const FIELD={fontWeight:"font weight",fills:"fill",strokes:"stroke colour",effects:"effect",opacity:"opacity",itemSpacing:"gap",strokeWeight:"stroke weight",
     strokeTopWeight:"top stroke weight",strokeBottomWeight:"bottom stroke weight",strokeLeftWeight:"left stroke weight",strokeRightWeight:"right stroke weight"};
   const fieldName=f=>FIELD[f]||SAY[f]||f;
   const bindTo=(label,v,s,scale)=>s?(s.includes(v)?"Bind the "+label+" to the "+scale+" variable for "+v+".":"Bind the "+label+" to the nearest "+scale+" step, "+near(v,s)+", or record why it is "+v+"."):"Bind the "+label+" to a "+scale+" variable.";
@@ -327,7 +327,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
                   advice:"Rebind the "+fieldName(field)+" to the matching variable in the project's own library."}); }
           if(n.type==="TEXT"){
             if(!n.textStyleId) F.push({sev:"error",rule:"tokens",key:"tokens|textStyle|"+at,text:n.name+" has no text style, "+RAW.type,advice:"Apply the text style this text is meant to use."});
-            for(const k of ["fontFamily","fontSize","fontStyle"]) if(!b(n,k)) F.push({sev:"error",rule:"tokens",key:"tokens|"+k+"|"+at,text:n.name+" has an unbound "+SAY[k]+", "+RAW.type,
+            // a weight is bound as a string style or a number (Font/Weight/medium = 500); either is a binding
+            for(const k of ["fontFamily","fontSize","fontStyle"]) if(!b(n,k)&&!(k==="fontStyle"&&b(n,"fontWeight"))) F.push({sev:"error",rule:"tokens",key:"tokens|"+k+"|"+at,text:n.name+" has an unbound "+SAY[k]+", "+RAW.type,
               advice:"Apply a text style whose "+SAY[k]+" is bound, or bind the "+SAY[k]+" to its typography variable."});
           }
           if(path) M.layers++;
@@ -398,10 +399,12 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // surface under it inside the component is not judged: its surface is
       // wherever the consumer places it. A mixed size or fill is skipped.
       const shade=(n,path,bg)=>{
-        if(n.type==="SLOT"||n.visible===false) return;
+        // opacity 0 draws nothing, children included: a label kept for width under a spinner is not read.
+        // An opacity bound to a variable may be 1 in another mode, so that layer is still judged
+        if(n.type==="SLOT"||n.visible===false||(n.opacity===0&&!b(n,"opacity"))) return;
         if(n.type==="TEXT"&&!curDisabled&&bg&&typeof n.fontSize==="number"){
           const f=solid(n);
-          if(f&&f.color){ const a=def(f.opacity,1)*def(n.opacity,1);
+          if(f&&f.color){ const a=def(f.opacity,1)*(n.opacity===0&&b(n,"opacity")?1:def(n.opacity,1)); // a bound 0 is judged as shown
             const c={r:f.color.r*a+bg.r*(1-a), g:f.color.g*a+bg.g*(1-a), b:f.color.b*a+bg.b*(1-a)};
             const large=n.fontSize>=24||(n.fontSize>=18.66&&typeof n.fontWeight==="number"&&n.fontWeight>=700);
             const need=large?3:4.5, got=contrastRatio(c,bg);

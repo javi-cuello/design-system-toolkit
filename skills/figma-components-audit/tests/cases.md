@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.47.0)
+# Eval cases — figma-components-audit (v2.47.1)
+
+**Walked: 2026-11-15 for 2.47.1** — `node tests/test-audit.mjs` 119 of 119: the token probe's label binds `fontWeight` and must not fire, and the contrast fixture gains a pale text inside an opacity-0 frame that must not be judged; with either fix reverted, its own assertion fails; two more keep text judged where an opacity bound to a variable may show it: under a bound-0 parent, and a text whose own bound opacity is 0 (judged as shown, not blended to 1:1). Review: the bound-opacity case and three stale doc lines, fixed. Audit lite resynced. Met real input: a project's Button set, 48 variants, both false findings gone on re-run.
 
 **Walked: 2026-11-12 for 2.47.0** — A136 extended and run (test-probes.mjs, 59 of 59); A133 and A135 re-run unchanged, `keys`, `by` and `root` being additions.
 
