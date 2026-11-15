@@ -32,6 +32,7 @@ import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel } from './layers.mjs';
 
 const require = createRequire(import.meta.url);
+const { atProps } = require('./derive.cjs');
 export const BANNER = "Generated from the component's contract by the toolkit's to-markup. A gap marked frontend-build: is that skill's to fill; once filled, take this line out and the file is the project's.";
 export const FRAMEWORKS = ['react', 'web-components', 'kirby'];
 // the naming each framework's markup is written to: a React root is the native element, a class its hook; a web
@@ -292,10 +293,13 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         const i = (x.p.figmaValues || []).indexOf(v), lit = i >= 0 ? x.p.values[i] : v;
         return x.type === 'enum' && !x.values.includes(lit) ? null : [x.name, { lit }];
       }).filter(Boolean);
-      // one icon for a swap Figma keeps per size: the one the instance draws (its glyph's own name), else the first
+      // one icon for a swap Figma keeps per size: the one the instance draws (its glyph's own name, where its insides are
+      // stated), else the swap its component draws that part by at the instance's props (Size xs: Icon (16)), else the first
       for (const x of theirs.filter((y) => y.figmas)) {
         const drawnAs = String((at(c, `${id}/${x.p.swaps[0]}`) || {}).component || '').split('/').pop();
-        const mine = given.filter(([k]) => k === x.name), keep = mine.find(([, v]) => String(v.lit) === drawnAs) || mine[0];
+        const by = (atProps(placed, e.with)[x.p.swaps[0]] || {}).swappedBy, byFigma = by && (placed.props[by] || {}).figma;
+        const byValue = byFigma && (e.with || {})[byFigma];
+        const mine = given.filter(([k]) => k === x.name), keep = mine.find(([, v]) => String(v.lit) === drawnAs) || (byValue !== undefined && mine.find(([, v]) => String(v.lit) === String(byValue))) || mine[0];
         for (const g of mine) if (g !== keep) given.splice(given.indexOf(g), 1);
       }
       if (iconOnlyOf(placed)) {
