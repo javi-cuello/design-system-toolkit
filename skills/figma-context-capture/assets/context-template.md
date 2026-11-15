@@ -126,7 +126,8 @@ which snapshots the router accepts for it (snapshot-standard rules 3 and
 this folder. Keys are enough to start: each file stamps its own id on its
 first snapshot, the router refuses that first payload and prints the id, and
 the id goes here beside its key. A second component library that is another
-platform's carries `"platform"`.
+platform's carries `"platform"`. An icon library takes `"roles": ["icons"]`, which gives it its own Icons tab
+on the docs site.
 
 ```json snapshot-routing
 {

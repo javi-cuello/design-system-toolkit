@@ -4,7 +4,7 @@ import '../styles/system.css';
 import '../styles/site.scss';
 import { project, shows, language, codeAudit } from '../lib/project.js';
 
-import { meta, icons, iconLibrary, assetGroups, snapshot, componentGroups, collectionPages, slug } from '../lib/snapshot.js';
+import { meta, icons, iconLibrary, iconGroups, assetGroups, snapshot, componentGroups, collectionPages, slug } from '../lib/snapshot.js';
 import { base, date } from '../lib/format.js';
 import { platformLabel } from '../dashboard/labels.js';
 
@@ -65,7 +65,7 @@ const sections = [
   // What each snapshot changed, all of it; the overview shows the last few.
   ['changes', '/changes', 'Changes'],
 ].filter(Boolean) as string[][];
-const sidebar = (section === 'icons' && assetGroups.length > 0) || section === 'foundations' || section === 'components' || section === 'audits' || section === 'parity' || section === 'overview';
+const sidebar = (section === 'icons' && (assetGroups.length > 0 || iconGroups.length > 0)) || section === 'foundations' || section === 'components' || section === 'audits' || section === 'parity' || section === 'overview';
 // The Tracker: how far along, then what is holding something.
 // The overview and a page per question it asks: Components (the ladder),
 // Progress (Complete, in design only), AI readiness (Understandable); Correct
@@ -135,7 +135,7 @@ import themeScript from '../scripts/theme.js?raw';
                 ) : section === 'foundations' ? (
                   <ul>{foundations.map(([label, href, , child]) => <li class:list={[child && 'nav__child']}><a {...link(href as string)}>{label}</a></li>)}</ul>
                 ) : section === 'icons' ? (
-                  <ul>{[['Icons', '/icons'], ...assetGroups.map((g) => [g.title, `/icons/${g.slug}`])].map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
+                  <ul>{[['Icons', '/icons'], ...assetGroups.map((g) => [g.title, `/icons/${g.slug}`])].map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}{!assetGroups.length && iconGroups.map((g) => <li class="nav__child"><a href={`${base}/icons/#group-${slug(g.title)}`}>{g.title}</a></li>)}</ul>
                 ) : section === 'overview' ? (
                   <ul>{overviewPages.map(([label, href]) => <li><a {...link(href)}>{label}</a></li>)}</ul>
                 ) : section === 'parity' ? (

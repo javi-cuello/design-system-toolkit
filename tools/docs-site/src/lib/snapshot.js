@@ -314,7 +314,8 @@ const sourcesOf = () => (meta && meta.sources) || {};
 const assetIdents = new Set(assetFiles.map((k) => contract.fileIdent(libraryFiles, k, sourcesOf())));
 const isAsset = (s) => assetIdents.has(contract.fileIdent(libraryFiles, index.components[s.folder]?.file, sourcesOf()));
 /** The icon library as the file names it ("05. " numbering dropped, as for collections), or null. */
-export const iconLibrary = assetFiles.length ? { name: fileName(assetFiles[0]).replace(/^\s*\d+[.)]\s*/, '') } : null;
+// A leading file code ("FW2 - ") is dropped too: it orders files in Figma, it is not the library's name.
+export const iconLibrary = assetFiles.length ? { name: fileName(assetFiles[0]).replace(/^\s*(?:\d+[.)]|[A-Z]{1,4}\d+\s*[-–—])\s*/, '') } : null;
 // One gallery per page of that file, in the file's page order.
 const assetPageOrder = Object.entries(sourcesOf()).filter(([f]) => assetIdents.has(contract.fileIdent(libraryFiles, f, sourcesOf()))).flatMap(([, s]) => s.pages || []);
 const assetSpecs = specs.filter((s) => isAsset(s) && !isPrivateName(s.name));

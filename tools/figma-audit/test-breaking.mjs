@@ -168,10 +168,12 @@ ok("a later log write closes nothing", r.closed === 0 && Object.values(record.ro
 {
   const { createRequire } = await import("node:module");
   const { readFileSync, existsSync } = await import("node:fs");
+  const { dirname } = await import("node:path");
   const contract = createRequire(import.meta.url)("../snapshot/projects.cjs");
   const problems = [];
   let read = 0, compared = 0;
   const noLog = [];
+  const noRecord = [];
   // no project at all (a fresh clone, CI): nothing to compare, said as a skip, never a pass
   if (!contract.projects().list.length) console.log("skip: no project is registered, so no filed rows were compared with stored grades");
   else for (const p of contract.projects().list) {
@@ -181,6 +183,11 @@ ok("a later log write closes nothing", r.closed === 0 && Object.values(record.ro
     if (!existsSync(where.paths.changes)) { noLog.push(p.name); continue; }
     const records = new Map();
     for (const r of contract.auditRecords(where)) if (existsSync(r.path)) records.set(r.key, JSON.parse(readFileSync(r.path, "utf8")));
+    // A project with no audit folder at all keeps no record (its audits are
+    // reported in the session only): said, like no log. One whose folder is
+    // there but holds no record it can read still fails below.
+    const recs = contract.auditRecords(where);
+    if (!recs.length || !existsSync(dirname(recs[0].path))) { noRecord.push(p.name); continue; }
     // A project whose records were not read compares nothing and passes:
     // the case passed for a project with no router rows (round 3, S14). So
     // each says what it compared, and one that read no record is a failure.
@@ -194,8 +201,9 @@ ok("a later log write closes nothing", r.closed === 0 && Object.values(record.ro
     problems.push(...unmatched(log, records, { libOf: lo }).map((m) => `${p.name}: ${m}`));
     read++;
   }
-  if (contract.projects().list.length) ok(`every project's filed rows match its stored grades (${read} logs read, ${compared} rows and raised majors compared)${problems.length ? "\n  " + problems.join("\n  ") : ""}`, read > 0 && read === contract.projects().list.length - noLog.length && compared > 0 && problems.length === 0);
+  if (contract.projects().list.length) ok(`every project's filed rows match its stored grades (${read} logs read, ${compared} rows and raised majors compared)${problems.length ? "\n  " + problems.join("\n  ") : ""}`, read > 0 && read === contract.projects().list.length - noLog.length - noRecord.length && compared > 0 && problems.length === 0);
   if (noLog.length) console.log(`skip: no change log yet in ${noLog.join(", ")}, so its rows were not compared`);
+  if (noRecord.length) console.log(`skip: no audit record on disk in ${noRecord.join(", ")}, so nothing filed was compared`);
 }
 
 // A row the router closed as no longer raised, while a live grade raises it,

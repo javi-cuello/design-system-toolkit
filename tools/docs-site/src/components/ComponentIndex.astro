@@ -32,8 +32,8 @@ const sections = groups.map((g) => ({
   <p class="lede">{count} components{categories.length ? ', grouped as the Figma file groups them' : ''}.</p>
   <Filter placeholder={`Filter ${count} components`} searchLabel="Filter components" />
   </>}
-    {sections.map((g) => (
-      <section class="group" data-filter-part id={g.id} aria-labelledby={g.label ? `${g.id}-h` : undefined}>
+    {sections.map((g) => { const Group = g.label ? 'section' : 'div'; return (
+      <Group class="group" data-filter-part id={g.id} aria-labelledby={g.label ? `${g.id}-h` : undefined}>
         {g.label && <h2 id={`${g.id}-h`}>{g.label} <span class="group__count">{g.pages.length}<span class="visually-hidden"> {g.pages.length === 1 ? 'component' : 'components'}</span></span></h2>}
         <ul class="cards">
           {g.pages.map((p) => (
@@ -53,6 +53,6 @@ const sections = groups.map((g) => ({
             </li>
           ))}
         </ul>
-      </section>
-    ))}
+      </Group>
+    ); })}
 </Base>

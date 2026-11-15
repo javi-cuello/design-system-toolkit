@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.15.0)
+# Eval cases — figma-context-capture (v2.15.2)
+
+**Walked: 2026-11-15 for 2.15.2** — C19 added and walked against the live failure below; C1–C18 untouched by a one-sentence role rule; `node tests/test-passes.mjs` 78/78.
 
 **Walked: 2026-11-15 for 2.15.1** — the template's project block (no port) and naming-preferences block (`{}`) only; C7–C9's template shape holds; `node tests/test-passes.mjs` 78/78. Found live: a new project copied 9232 and crash-looped another project's dashboard, and the placeholder failed check-standards.
 
@@ -214,3 +216,10 @@ Fixture: a project whose §5 snapshot routing names a screens file with three st
 Assert: pass M asks which screen types exist, the template each starts from, their required states and where the shell config lives; the empty screen is put as a hypothesis ("is empty a required state of every list?"); §3's Screens table holds only those answers, `[TBD]` where unanswered, and names no region, example screen or component other than the type's template.
 Negative: a table of each screen's regions and components copied from the stored screens; a required state recorded from a screen name without asking; the item asked of a project with no screens file.
 Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKILL.md step 2 and the template's §3.
+
+## C19 · An icon library is routed as icons — 2026-11-15
+
+**Input:** a project with a foundations file, a components file and a file whose published components are all icons (1,756 icon sets, no controls).
+**Expected:** the summary at step 2 proposes `"roles": ["icons"]` for the icon file, and the `snapshot-routing` block written carries it; the docs site then shows an Icons tab of its own.
+**Fails if:** the icon file is routed `components` (the docs site puts its icons under Foundations, with no Icons tab), or the role is written without being proposed at step 2.
+**Walked 2026-11-15:** the live run this case comes from routed the icon file `components`; with SKILL.md's new sentence the role is stated where pass A infers roles, and the template says what it buys.
