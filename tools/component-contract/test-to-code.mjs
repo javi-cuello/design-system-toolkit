@@ -220,6 +220,35 @@ else console.log('skip: no stored contracts on this machine');
   ok('without the library, no colour is guessed', !/color:/.test(toCss(btn, 'button', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
 }
 
+// an override inside a placed component is written on that component's own part, through the instance, and only what
+// differs from the component at the instance's props; a layer it has under no such name is said, not guessed
+{
+  const tag = { contract: 1, component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, text: { kind: 'text', parent: 'root', color: 'C/strong', typography: 'Label/sm' } }, variants: [] };
+  const card = { contract: 1, component: 'Card', props: {}, anatomy: { root: { kind: 'container' }, tag: { kind: 'instance', parent: 'root', component: 'Tag', with: {} }, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/danger', typography: 'Label/sm' }, 'tag/gone': { kind: 'text', parent: 'tag', color: 'C/x', order: 1 } }, variants: [] };
+  const mains = (n) => (n === 'Tag' ? tag : null);
+  const sheet = toCss(card, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override inside a placed component is its own part\'s, through the instance, only what differs',
+    /\.ds-card > \.ds-card__tag > \.ds-tag__text \{\s*color: var\(--c-danger\);\s*\}/.test(sheet) && selfCheck(card, rulesOf(card, mains).rules, mains).length === 0);
+  ok('a layer the placed component has under no such name is said', /an override on gone, a layer Tag has under no such name/.test(sheet));
+  // a variant where the override is gone says the component's own value, not the base's override
+  const loud = { ...card, props: { loud: { type: 'boolean', default: false, axis: true, figma: 'Loud' } }, anatomy: { ...card.anatomy }, variants: [{ when: { loud: true }, set: { 'tag/text.color': 'C/strong' } }] };
+  delete loud.anatomy['tag/gone'];
+  const ls = toCss(loud, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override a variant drops gives the property back to the component\'s value there', /data-loud[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);/.test(ls) && selfCheck(loud, rulesOf(loud, mains).rules, mains).length === 0);
+  const gone = { ...loud, variants: [{ when: { loud: true }, remove: ['tag/text'] }] };
+  ok('an override on a layer a variant drops (drawn as its component) gives the property back there', /data-loud[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);/.test(toCss(gone, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })) && selfCheck(gone, rulesOf(gone, mains).rules, mains).length === 0);
+  const two2 = { ...loud, props: { ...loud.props, big: { type: 'boolean', default: false, axis: true, figma: 'Big' } }, variants: [{ when: { loud: true }, set: { 'tag/text.color': 'C/x' } }, { when: { loud: true, big: true }, remove: ['tag/text'] }] };
+  const t2 = toCss(two2, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('what a variant rule gave a layer a later combination drops goes back to the component\'s own; nowhere else is it restated', selfCheck(two2, rulesOf(two2, mains).rules, mains).length === 0 && /data-big[^{]*> \.ds-tag__text \{\s*color: var\(--c-strong\);\s*\}/.test(t2) && (t2.match(/\.ds-tag__text \{/g) || []).length === 3);
+  // what the component declares that the instance does not is unset
+  const bare = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': { kind: 'text', parent: 'tag', color: 'C/strong' } } };
+  ok('a declaration the instance takes away is unset', /\.ds-tag__text \{[^}]*font[\w-]*: unset;/.test(toCss(bare, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains })));
+  // an override inside one of several copies is said, never written on every copy
+  const two = { ...card, anatomy: { root: card.anatomy.root, tag: card.anatomy.tag, 'tag/text': card.anatomy['tag/text'], tag_2: { ...card.anatomy.tag, order: 1 } } };
+  const ts = toCss(two, 'card', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override inside one of several copies is said, not written on all', !/\.ds-tag__text/.test(ts.split('@layer')[1]) && /inside one of several copies of Tag/.test(ts));
+}
+
 // fills as CSS's background layers (rules.mjs fillCss): Figma's bottom-up list top first, a colour above another layer a
 // gradient of itself, an image the template's; a linear gradient by its transform (parity's formula)
 {

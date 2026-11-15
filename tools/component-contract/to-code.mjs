@@ -36,7 +36,8 @@ import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative } from './rules.mjs';
-const { atProps } = createRequire(import.meta.url)('./derive.cjs');
+const { atProps, asPlaced, placedMatch, placedAs } = createRequire(import.meta.url)('./derive.cjs');
+const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -85,7 +86,7 @@ export function namer(folder, naming = { kind: 'class', prefix: '', part: '__' }
   // a custom element's name has a hyphen, and the prefix is what gives it one: with none, `button` would be every button
   if (element && !PREFIX.test(naming.prefix || '')) throw new Error('element naming needs a prefix that ends in a hyphen, such as "ds-": a custom element\'s name has one');
   return {
-    element,
+    element, folder, naming,
     root: element ? block : `.${block}`,
     part: (seg) => (element ? `[data-part="${seg}"]` : `.${block}${naming.part || '__'}${seg}`),
     attr: (key) => propAttr(key, { ...naming, kind: element ? 'element' : 'class' }),
@@ -262,10 +263,57 @@ function everPulls(c) {
   return ids;
 }
 
+/* The placed instance a part is inside, where it is inside exactly one and no slot: the component whose own part it is. */
+function hostOf(a, id) {
+  let host = null;
+  if ((a[(a[id] || {}).parent] || {}).kind === 'slot') return null;
+  for (let p = a[id] && a[id].parent; p; p = a[p] && a[p].parent) {
+    if (!a[p]) return null;
+    if ((a[a[p].parent] || {}).kind === 'slot') return null;
+    if (a[p].kind === 'instance') { if (host) return null; host = p; }
+  }
+  return host;
+}
+
+/* Every layer any combination records, as chain names it: the base's, else the first variant's that adds it (findAdded). */
+const allOf = (c) => Object.assign({}, ...[...(c.variants || [])].reverse().map((v) => v.add || {}), c.anatomy);
+
+/* A layer inside a placed instance against its component's own part at the instance's props: the declarations each
+   writes, what differs, and what the component draws that the instance takes away; null where no part matches. */
+function overrideOf(a, host, rel, m, mains, B = a) {
+  if (!a[host]) return null;
+  // the component as placed (swaps applied, as derive compares it); a layer derive dropped here (equal to the
+  // component's) is matched by its name at the defaults (B), and draws as the component does
+  const { M } = placedAs(a, host, m, mains), e = a[`${host}/${rel}`], own = M[placedOf(e ? a : B, host, M)[rel]];
+  if (!own) return null;
+  const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null });
+  // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
+  const placedOnly = (ds) => (own.kind === 'instance' ? ds.filter(([p]) => PLACED.test(p)) : ds);
+  const theirs = new Map(placedOnly(declarations(own, ctx(own, M[own.parent]), tokenNames).decls).map(([p, v]) => [p, v]));
+  if (!e) return { mine: [...theirs], theirs, removed: [], changed: [] };
+  // the instance lays its insides out as its component's root does, where it states no layout of its own
+  const mine = placedOnly(declarations(e, ctx(e, e.parent === host ? { ...M.root, ...a[host], layout: (a[host] || {}).layout || M.root.layout } : a[e.parent]), tokenNames).decls);
+  const said = new Set(mine.map(([p]) => p));
+  const removed = [...theirs.keys()].filter((p) => !said.has(p));
+  return { mine, theirs, removed, changed: [...mine.filter(([p, v]) => theirs.get(p) !== v), ...removed.map((p) => [p, 'unset'])] };
+}
+
+/* The layers recorded inside a placed instance, each matched to the part of its component it is (derive's placedMatch). */
+const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${host}/`)).map((k) => [k.slice(host.length + 1), a[k]])));
+
+/* Whether a part is inside a placed component this library holds, so named as that component's own. */
+const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component);
+  if (!m || (a[id].parent === h && a[id].kind === 'graphic') || copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h)) return false;
+  return !!placedOf(a, h, placedAs(a, h, m, mains).M)[id.slice(h.length + 1)]; };
+
 /* Each part's declarations at one combination, as a map property → value (with its note). */
 export function drawn(c, when, mains = () => null) {
   const a = expand(c, when);
   const out = {}, extra = [], ringNotes = {};
+  // the component at its defaults: what the base rule writes, which every other combination inherits
+  const B = expand(c, variantDefaults(c));
+  // every layer any combination records, as chain names it (the base's, and what variants add)
+  const ALL = allOf(c);
   // an instance whose insides are its component's (derive drops them) draws its glyph in the colour that component
   // gives it at the instance's props: the same colour, said the same way, as an opened instance's recorded glyph
   for (const [id, e] of Object.entries(a)) {
@@ -288,7 +336,27 @@ export function drawn(c, when, mains = () => null) {
     if (inside(id)) {
       // save the colour the instance's glyph is drawn in, which the placing component sets on it: an icon draws
       // in its element's color (currentColor), so the colour is the instance's
-      if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') extra.push([e.parent, [['color', tokenNames.token(e.background)]]]);
+      if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') { extra.push([e.parent, [['color', tokenNames.token(e.background)]]]); continue; }
+      // an override inside a placed component this library holds (derive keeps only a part that differs from that
+      // component drawn at the instance's props): what it changes there, on that component's own part, reached through
+      // the instance (chain); one level of placing deep, a part the placed component no longer has said, not guessed
+      const host = hostOf(a, id), m = host && a[host].component && mains(a[host].component);
+      if (!m) continue;
+      const rel = id.slice(host.length + 1);
+      // the selector names the part by the component the instance places in its base (chain): a variant that places
+      // another there is said, not written under the first one's names
+      if ((ALL[host] || {}).component !== a[host].component) { out[id] = { decls: new Map(), unread: [`an override on ${rel}, inside ${a[host].component}, which a variant places where ${(ALL[host] || {}).component} is`] }; continue; }
+      // a numbered copy takes its first's class and place (nth-child), and its first's rule styles every copy: an
+      // override on one of them is said, not written on all
+      if (copyOf(c, host) || Object.keys(a).some((k) => k !== host && copyOf(c, k) === host)) { out[id] = { decls: new Map(), unread: [`an override on ${rel}, inside one of several copies of ${a[host].component}`] }; continue; }
+      const over = overrideOf(a, host, rel, m, mains);
+      if (!over) { out[id] = { decls: new Map(), unread: [`an override on ${rel}, a layer ${a[host].component} has under no such name (renamed in the instance, or gone)`] }; continue; }
+      // what differs here, and what differs at the defaults (the base rule writes it, so every combination says it: where
+      // it no longer differs, the placed component's own value, not the base's override)
+      const at = B[id] && overrideOf(B, host, rel, m, mains), base = new Set(at ? at.changed.map(([p]) => p) : []);
+      // what the component declares that the instance does not goes back to what an undeclared property is (unset)
+      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p)), ...over.removed.map((p) => [p, 'unset'])];
+      if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
       continue;
     }
     // a slot's children are samples of what a caller puts there: the first says where any child sits, as
@@ -334,6 +402,17 @@ export function drawn(c, when, mains = () => null) {
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note]) => [p, { v, note }])), unread: e.kind === 'instance' || slotted ? [] : unread };
+  }
+  // an override the defaults write on a layer this combination no longer records (derive dropped it, as it draws as its
+  // component does): the component's own value here, so the base rule's override does not hold where it is gone
+  // whatever a rule gave it goes back to the component's own value (`given`: written only where a rule set it), the rest
+  // to unset (rulesOf); nowhere set, nothing is written, so the component's own sheet, its states included, holds
+  for (const id of Object.keys(ALL)) {
+    if (id in a || out[id]) continue;
+    const host = hostOf(ALL, id), m = host && a[host] && ALL[host].component === a[host].component && mains(a[host].component);
+    if (!m || (ALL[id].parent === host && ALL[id].kind === 'graphic' && typeof ALL[id].background === 'string') || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
+    const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
+    if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
   }
   // copies of one part and a slot's children share one rule, so one pull back cannot be said for all but the first
   for (const id of pulling) if (out[id] && pulls(a[id]) && Object.keys(a).some((k) => a[k].parent === id && (copyOf(c, k) || a[id].kind === 'slot'))) out[id].unread.push('layout.gap below 0 between copies of one part or a slot\'s children (each pulls back on its own rule; theirs is shared)');
@@ -384,7 +463,7 @@ export function rulesOf(c, mains) {
       for (const f of u) { if (!unread.has(f)) unread.set(f, new Set()); unread.get(f).add(id); }
       const given = cascade(rules, full, id);
       const own = new Map();
-      for (const [p, d] of decls) if (!given.has(p) || given.get(p).v !== d.v) own.set(p, d);
+      for (const [p, d] of decls) if (d.given ? given.has(p) && given.get(p).v !== d.v : !given.has(p) || given.get(p).v !== d.v) own.set(p, d);
       // a property the rules before it set that this combination does not draw goes back to the element's own
       for (const [p] of given) if (!decls.has(p) && given.get(p).v !== 'unset') own.set(p, { v: 'unset' });
       if (own.size) parts[id] = own;
@@ -420,7 +499,7 @@ export function selfCheck(c, rules, mains) {
     const full = { ...dflt, ...m };
     for (const [id, { decls }] of Object.entries(drawn(c, full, mains))) {
       const got = cascade(rules, full, id);
-      for (const [p, d] of decls) if (!got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v });
+      for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v });
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
   }
@@ -428,7 +507,7 @@ export function selfCheck(c, rules, mains) {
 }
 
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
-function chain(c, n, id, rootCond) {
+function chain(c, n, id, rootCond, mains = () => null) {
   const [own, pseudo = ''] = id.split('::');
   const entry = entryOf(c);
   const segs = [];
@@ -437,9 +516,21 @@ function chain(c, n, id, rootCond) {
   if (own.endsWith('/*')) { segs.push('*'); at = own.slice(0, -2); }
   for (; at && at !== 'root'; at = (c.anatomy[at] || findAdded(c, at) || {}).parent) segs.unshift(at);
   const seg = (s) => (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + through(n, ((c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance' && (c.anatomy[s] || findAdded(c, s)).component), heldIn(c, s)));
+  // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
+  const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
+  const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && mains((c.anatomy[host] || findAdded(c, host)).component);
+  if (m) {
+    const n2 = namer(m.folder || folderOf(m.component), n.naming);
+    const all = allOf(c);
+    const { M, back } = placedAs(all, host, m, mains), match = placedOf(all, host, M);
+    const inner = segs.slice(hostAt + 1).map((s) => { const rel = s.slice(host.length + 1); return n2.part(partSeg(m, back[match[rel]] || rel)); });
+    return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.slice(0, hostAt + 1).map(seg), ...inner].join(' > ') + (pseudo ? `::${pseudo}` : '');
+  }
   return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.map(seg)].join(' > ') + (pseudo ? `::${pseudo}` : '');
 }
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
+/* A part inside a placed component this library holds, by that component's own names under the instance; else null. */
+export const nestedSelector = (c, n, id, mains) => (hostIn(c, id, mains) ? chain(c, n, id, '', mains) : null);
 export const selectorOf = (c, n, id) => (id === 'root' ? n.root + through(n, c.component, placedIn(c)) : chain(c, n, id, ''));
 const findAdded = (c, id) => (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
 // a part's name in a selector: its id's last part, the whole id where two parts would share it
@@ -464,7 +555,8 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
   });
   if (hooks.length) lines.push(`/* Chosen by: ${said(hooks.join('; '))}. */`);
   const parts = [...new Set(rules.flatMap((r) => Object.keys(r.parts)))].filter((id) => id !== 'root');
-  const named = (id) => (id.endsWith('/*') ? `${n.part(partSeg(c, id.slice(0, -2)))} > * (any child)` : entryOf(c) && id.startsWith(entryOf(c).input) ? `${n.part('input')} (an <input>; ${entryOf(c).placeholder} is its ::placeholder)` : n.part(partSeg(c, id)));
+  const nested = (id) => chain(c, n, id, '', mains).split(' > ').pop();
+  const named = (id) => (hostIn(c, id, mains) ? `${nested(id)} (the placed component's own part)` : id.endsWith('/*') ? `${n.part(partSeg(c, id.slice(0, -2)))} > * (any child)` : entryOf(c) && id.startsWith(entryOf(c).input) ? `${n.part('input')} (an <input>; ${entryOf(c).placeholder} is its ::placeholder)` : n.part(partSeg(c, id)));
   if (parts.length) lines.push(`/* Parts: ${said([...new Set(parts.map((id) => id.split('::')[0]))].map((id) => `${id} ${named(id)}`).join(', '))}. */`);
   if (unread.size) lines.push(`/* Not written, as CSS cannot say it: ${said([...unread].map(([f, ids]) => `${f} on ${[...ids].join(', ')}`).join('; '))}. */`);
   lines.push('', `@layer ${layer} {`);
@@ -478,7 +570,7 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
     // condition reaching a control two boxes down would otherwise outweigh an attribute and reorder the cascade
     const rootCond = Object.entries(r.when).map(([k, v]) => `:where(${condition(c, n, k, v, settings)})`).join('');
     for (const [id, decls] of Object.entries(r.parts)) {
-      lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond)} {`);
+      lines.push(`  ${id === 'root' ? n.root + rootCond + through(n, c.component, placedIn(c)) : chain(c, n, id, rootCond, mains)} {`);
       let dimmed = false, undimmed = false;
       for (const [p, { v, note, knob: k }] of decls) {
         const dims = id === 'root' && p === 'opacity' && dis && r.when[dis] === true && v !== 'unset';
@@ -542,6 +634,7 @@ if (isMain) {
   for (const d of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
     try {
       const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))), n = String(x.component).toLowerCase();
+      x.folder ||= d;
       add(`${fileOf(d)}\0${n}`, x);
       add(`*\0${n}`, x);
     } catch { /* not a component */ }

@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { namer, partSeg, copyOf, entryOf, controlOf, selectorOf, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
+import { namer, partSeg, copyOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel } from './layers.mjs';
 
@@ -616,9 +616,12 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
   const layers = {};
+  const mains = (name) => library[name] || null;
   for (const x of parts.values()) {
     if (x.id === 'root') continue;
-    layers[pathOf(x.id)] = x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
+    // a part the contract keeps inside a placed component is an override there: read where the sheet writes it
+    const nested = x.inside && nestedSelector(c, n, x.id, mains);
+    layers[pathOf(x.id)] = nested ? nested : x.inside ? { skip: `drawn by ${((parts.get(x.inside) || {}).e || {}).component}, compared in its own mapping` }
       : x.slotted ? { skip: 'a sample of what a caller puts in the slot' }
       : x.pointerOnly && !x.ring ? { skip: 'drawn only at a pointer state: frontend-build adds it' }
       : partSelector(c, n, x.id, x);
@@ -708,7 +711,7 @@ if (process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); }
   const settingsOf = require('../snapshot/projects.cjs').librarySettingsFor(dir);
   const stored = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => fs.existsSync(path.join(dir, f, 'contract.json'))).sort() : [];
   const library = {}, folderOf = {};
-  for (const f of stored) { const x = of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8'))); library[x.component] = x; folderOf[f] = x; }
+  for (const f of stored) { const x = of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8'))); x.folder ||= f; library[x.component] = x; folderOf[f] = x; }
   const draft = contractFlag && JSON.parse(fs.readFileSync(path.resolve(contractFlag), 'utf8'));
   const only = args.filter((a) => !a.startsWith('--'));
   const jobs = draft ? [[require('../snapshot/store.cjs').folderOf(draft.component, platform), draft]] : stored.filter((f) => !only.length || only.includes(f)).map((f) => [f, folderOf[f]]);

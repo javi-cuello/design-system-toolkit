@@ -438,6 +438,48 @@ function ownStyling(anatomy, mains) {
   }
   return anatomy;
 }
+/* A placed component as one of its instances draws it: at the instance's props, each swap it states applied (the
+   target's own drawing where the library holds it), its own nested instances' styling left to theirs, and each part
+   keyed as the instance names its layer (asPlaced). `swapped`: the swapped parts whose drawing is not the library's;
+   `back`: each key to the component's own. */
+function placedAs(anatomy, id, m, mains) {
+const e = anatomy[id];
+let M = { ...atProps(m, e.with) };
+  // a swap the instance states (Icon: folder) draws that component where the swap points: compared so, its glyph
+  // the swapped icon's own drawing, so only what an instance can override there (its colour) is compared
+  const low = (x) => String(x).toLowerCase(), swapped = [];
+  for (const [pk, q] of Object.entries(m.props || {})) {
+    if (q.type !== 'instance' || !(q.swaps || []).length) continue;
+    const w = Object.entries(e.with || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || pk));
+    if (!w) continue;
+    for (const sid of q.swaps) {
+      if (!M[sid] || !M[sid].component) continue;
+      // a swap names its target by its own name (x), or by its name in its main's folder (Icon/x); the instance placed
+      // there says which, where its name ends in that one
+      const set = M[sid].component.split('/').slice(0, -1).join('/'), v = String(w[1]), placed = (anatomy[`${id}/${sid}`] || {}).component;
+      const target = placed && (low(placed) === low(v) || low(placed).endsWith(`/${low(v)}`)) ? placed : v.includes('/') || !set ? v : `${set}/${v}`;
+      M[sid] = { ...M[sid], component: target };
+      // the target's own drawing where this library holds it (its insides are what the swap draws); else only its colour
+      const T = mains(target);
+      if (T) {
+        const tA = atProps(T, M[sid].with);
+        for (const k of Object.keys(M)) if (k.startsWith(`${sid}/`)) delete M[k];
+        for (const [tk, te] of Object.entries(tA)) if (tk !== 'root') M[`${sid}/${tk}`] = { ...te, parent: !te.parent || te.parent === 'root' ? sid : `${sid}/${te.parent}` };
+        continue;
+      }
+      swapped.push(sid);
+    }
+  }
+  // the component as placed (its swaps applied), its own nested instances' styling left to theirs, as this one's was;
+  // each part under the name its layer has in the instance (a part a boolean shows is named for it in its own
+  // contract, for its layer alone here)
+  const placed = asPlaced(M), keyOf = Object.fromEntries(Object.entries(placed.back).map(([k, v]) => [v, k]));
+  M = placed.M;
+  for (let i = 0; i < swapped.length; i++) swapped[i] = keyOf[swapped[i]] || swapped[i];
+  ownStyling(M, mains);
+  return { M, swapped, back: placed.back };
+}
+
 function ownInsides(anatomy, mains) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
@@ -445,34 +487,7 @@ function ownInsides(anatomy, mains) {
     if (!e || e.kind !== 'instance' || !e.component) continue;
     const m = mains(e.component);
     if (!m) { ownGlyph(anatomy, id); continue; }
-    const M = { ...atProps(m, e.with) };
-    // a swap the instance states (Icon: folder) draws that component where the swap points: compared so, its glyph
-    // the swapped icon's own drawing, so only what an instance can override there (its colour) is compared
-    const low = (x) => String(x).toLowerCase(), swapped = [];
-    for (const [pk, q] of Object.entries(m.props || {})) {
-      if (q.type !== 'instance' || !(q.swaps || []).length) continue;
-      const w = Object.entries(e.with || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || pk));
-      if (!w) continue;
-      for (const sid of q.swaps) {
-        if (!M[sid] || !M[sid].component) continue;
-        // a swap names its target by its own name (x), or by its name in its main's folder (Icon/x); the instance placed
-        // there says which, where its name ends in that one
-        const set = M[sid].component.split('/').slice(0, -1).join('/'), v = String(w[1]), placed = (anatomy[`${id}/${sid}`] || {}).component;
-        const target = placed && (low(placed) === low(v) || low(placed).endsWith(`/${low(v)}`)) ? placed : v.includes('/') || !set ? v : `${set}/${v}`;
-        M[sid] = { ...M[sid], component: target };
-        // the target's own drawing where this library holds it (its insides are what the swap draws); else only its colour
-        const T = mains(target);
-        if (T) {
-          const tA = atProps(T, M[sid].with);
-          for (const k of Object.keys(M)) if (k.startsWith(`${sid}/`)) delete M[k];
-          for (const [tk, te] of Object.entries(tA)) if (tk !== 'root') M[`${sid}/${tk}`] = { ...te, parent: !te.parent || te.parent === 'root' ? sid : `${sid}/${te.parent}` };
-          continue;
-        }
-        swapped.push(sid);
-      }
-    }
-    // the component as placed (its swaps applied), its own nested instances' styling left to theirs, as this one's was
-    ownStyling(M, mains);
+    const { M, swapped } = placedAs(anatomy, id, m, mains);
     const SHAPE_OF = new Set(['width', 'height', 'constraints']);
     const inner = Object.keys(anatomy).filter((k) => k.startsWith(id + '/'));
     if (!inner.length) continue;
@@ -481,11 +496,13 @@ function ownInsides(anatomy, mains) {
     // instance's insides are its own component's (left out above, as an icon's glyph is), not missing; unless the walk
     // opened that instance (it records an instance's insides only where one is overridden, and then only those that
     // show), when a layer missing there is hidden after all
-    const opened = (up) => Object.keys(anatomy).some((k) => k.startsWith(`${id}/${up}/`));
-    const delegated = (mk) => mk.split('/').slice(0, -1).some((_, i, a) => { const up = a.slice(0, i + 1).join('/'); return M[up] && M[up].kind === 'instance' && id + '/' + up in anatomy && !opened(up); });
-    if (Object.keys(M).some((mk) => mk !== 'root' && !(id + '/' + mk in anatomy) && !delegated(mk))) continue;
+    const match = placedMatch(M, Object.fromEntries(inner.map((k) => [k.slice(id.length + 1), anatomy[k]])));
+    const drawnAs = new Set(Object.values(match));
+    const opened = (up) => Object.values(match).some((mk) => mk.startsWith(`${up}/`));
+    const delegated = (mk) => mk.split('/').slice(0, -1).some((_, i, a) => { const up = a.slice(0, i + 1).join('/'); return M[up] && M[up].kind === 'instance' && drawnAs.has(up) && !opened(up); });
+    if (Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk))) continue;
     const own = (k) => {
-      const mk = k.slice(id.length + 1), x = M[mk];
+      const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x) return false;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
       return look(anatomy[k]) === look(x);
@@ -493,6 +510,50 @@ function ownInsides(anatomy, mains) {
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
   }
+}
+
+/* A component's parts keyed as an instance of it names them: its own contract names a part by its layer's address, and
+   where that cannot say the layer's name back (a part a boolean shows is named for the prop too: showIconIcon) it
+   records the name; an instance's walk names that layer by its name alone (icon). Each segment so renamed, unless two
+   parts would meet under one key, when both keep their own. `back` maps each key to the component's own. */
+function asPlaced(M) {
+  // built from the top down: a part keeps its own name where its renamed one would meet another's, and what is under it
+  // follows its parent's key, so a key and its parent's always agree
+  const last = (mk) => { const x = M[mk], s = mk.slice(mk.lastIndexOf('/') + 1); return x && x.name ? camel(x.name) : s; };
+  const memo = new Map();
+  const keyOf = (mk) => {
+    if (mk === 'root' || !mk.includes('/') && !M[mk]) return mk;
+    if (memo.has(mk)) return memo.get(mk);
+    const up = mk.includes('/') ? mk.slice(0, mk.lastIndexOf('/')) : null, base = up ? `${keyOf(up)}/` : '';
+    const sibs = Object.keys(M).filter((o) => o !== mk && o !== 'root' && (o.includes('/') ? o.slice(0, o.lastIndexOf('/')) : null) === up);
+    const mine = last(mk), meets = sibs.some((o) => last(o) === mine || o.slice(o.lastIndexOf('/') + 1) === mine);
+    const k = base + (meets ? mk.slice(mk.lastIndexOf('/') + 1) : mine);
+    memo.set(mk, k);
+    return k;
+  };
+  const out = {}, back = {};
+  for (const [mk, x] of Object.entries(M)) {
+    const k = keyOf(mk);
+    out[k] = x.parent && x.parent !== 'root' ? { ...x, parent: keyOf(x.parent) } : x;
+    back[k] = mk;
+  }
+  return { M: out, back };
+}
+
+/* Each layer an instance records inside it (`inner`, keyed by its address under the instance) matched to the part of
+   its component it is (`M`, as asPlaced keys it): by name, else, for a layer renamed in the instance, by its place:
+   the one part of the same kind at the same order under the part its parent matched, that no layer here names. */
+function placedMatch(M, inner) {
+  const match = {}, taken = new Set(Object.keys(inner).filter((k) => M[k]));
+  for (const k of Object.keys(inner).sort((x, y) => x.split('/').length - y.split('/').length)) {
+    if (M[k]) { match[k] = k; continue; }
+    const up = k.includes('/') ? k.slice(0, k.lastIndexOf('/')) : 'root', mp = up === 'root' ? 'root' : match[up];
+    // a slot's children are what a caller puts there, never its sample renamed
+    if (!mp || (M[mp] && M[mp].kind === 'slot')) continue;
+    const e = inner[k], at = Object.keys(M).filter((mk) => mk !== 'root' && (M[mk].parent || 'root') === mp && M[mk].kind === e.kind && (M[mk].order ?? 0) === (e.order ?? 0) && !taken.has(mk));
+    if (at.length === 1) { match[k] = at[0]; taken.add(at[0]); }
+  }
+  return match;
 }
 
 /* An instance of a component this library does not hold (an icon from its own set) that draws one graphic, scaled to
@@ -718,4 +779,4 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, ownStyling, normalForm, byComponentName, ownGlyph, ownInsides };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, ownStyling, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs };

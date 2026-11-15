@@ -303,6 +303,23 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     closed['tag/text'] && closed['tag/text'].color === 'Text/danger' && !('tag/pill' in closed) && 'tag/text' in hidden && !('tag/text' in shown));
 }
 
+// a placed component's part named for the boolean that shows it (showIconIcon, its layer Icon) or renamed in the
+// instance (Glyph) is matched to the layer the instance records: equal, it goes; an override on it stays
+{
+  const b = { contract: 1, component: 'Button', props: { showIcon: { type: 'boolean', default: false, figma: 'Show icon', shows: ['content/showIconIcon'] } },
+    anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root', background: 'C/bg' }, 'content/label': { kind: 'text', parent: 'content', color: 'C/text', order: 1 } },
+    variants: [{ when: { showIcon: true }, add: { 'content/showIconIcon': { kind: 'container', parent: 'content', name: 'Icon', background: 'C/icon', order: 0 } } }] };
+  const placed = (icon, label, at = 'icon') => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', with: { 'Show icon': true } }, 'b/content': { kind: 'container', parent: 'b', background: 'C/bg', order: 0 }, [`b/content/${at}`]: { kind: 'container', parent: 'b/content', background: icon, order: 0 }, 'b/content/label': { kind: 'text', parent: 'b/content', color: label, order: 1 } }; ownInsides(x, (n) => (n === 'Button' ? b : null)); return Object.keys(x).filter((k) => k.startsWith('b/')); };
+  ok('a boolean-named part matches its layer: equal insides go, an override on it stays alone',
+    placed('C/icon', 'C/text').length === 0 && JSON.stringify(placed('C/red', 'C/text')) === JSON.stringify(['b/content', 'b/content/icon']));
+  ok('a layer renamed in the instance matches its part by place', placed('C/icon', 'C/text', 'glyph').length === 0 && JSON.stringify(placed('C/red', 'C/text', 'glyph')) === JSON.stringify(['b/content', 'b/content/glyph']));
+  const { asPlaced } = require('./derive.cjs');
+  const P = asPlaced({ root: { kind: 'container' }, 'content/icon': { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'root', name: 'Icon' }, 'content/showIconIcon/glyph': { kind: 'graphic', parent: 'content/showIconIcon' } }).M;
+  const Q = asPlaced({ root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'content', name: 'Icon' }, 'content/showIconIcon/v': { kind: 'graphic', parent: 'content/showIconIcon' } });
+  ok('a part named for its boolean is keyed by its layer\'s name, and what is under it follows', Q.M['content/icon'] && Q.M['content/icon/v'] && Q.M['content/icon/v'].parent === 'content/icon' && Q.back['content/icon'] === 'content/showIconIcon');
+  ok('two parts that would meet under one name keep their own, and what is under one follows its key', P['content/showIconIcon/glyph'] && P['content/showIconIcon/glyph'].parent === 'content/showIconIcon' && P['content/icon']);
+}
+
 // a side of padding no token binds keeps its own number beside the bound ones (a chart's bar offset 40 above, bound
 // sides around it), never null
 {
