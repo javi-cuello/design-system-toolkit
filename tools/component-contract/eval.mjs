@@ -108,7 +108,9 @@ function draw(where, label, into, only, retry = true) {
     let d = run(['--run']);
     for (let i = 0; i < 8 && !d.ok && /still running in this file|Unable to establish connection/.test(d.out); i++) { execFileSync('sleep', ['15']); d = run(['--run']); }
     if (!d.ok) { fs.unlinkSync(file); if (failed(folder, 'not drawn', d.out)) return; continue; }
-    if (/\(no answer/.test(d.out)) {
+    // a library import (a component, icon, style or variable) unanswered; a font that never loads is the machine's, and
+    // stays a row of the reading
+    if (d.out.split(/, |: |\n/).some((x) => /\(no answer/.test(x) && !/^(font of |Inter \()/.test(x.trim()))) {
       fs.unlinkSync(file);
       if (last) fs.writeFileSync(reading, last);
       unanswered.push(folder);
