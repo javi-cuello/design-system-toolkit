@@ -115,6 +115,13 @@ function atDefault(x, mains) {
     const byFigma = Object.fromEntries(Object.values(main.props || {}).map((q) => [low(q.figma || ''), q]));
     const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
       const q = byFigma[low(k)];
+      // a swap at the icon its component draws there (Icon (16): house where the part is Icon/house) is its default too
+      if (q && q.type === 'instance' && q.default === undefined) {
+        // the icon the main draws there at the instance's own props; a part those props hide, the one any variant draws
+        const part = (q.swaps || [])[0], at = part && (req('./derive.cjs').atProps(main, e.with)[part] || {}).component;
+        const drawn = at || (part && ([main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].map((a) => a[part]).find((y) => y && y.component) || {}).component);
+        return !drawn || (low(drawn) !== low(v) && !low(drawn).endsWith(`/${low(v)}`));
+      }
       if (!q || q.default === undefined) return true;
       const words = [q.default, (q.figmaValues || [])[(q.values || []).indexOf(q.default)]].filter((w) => w !== undefined).map(low);
       // a word of an option is one in any case; a text's words are its own
@@ -266,7 +273,10 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a main imported once per key, its answer kept: each instance asking again made a key that would not answer cost
   // sixteen seconds per instance, and a side navigation of many items outran the drawing's time
   const mains = new Map();
-  const importMain = (what, key) => { if (!mains.has(key)) mains.set(key, tried(what, () => figma.importComponentSetByKeyAsync(key).catch(() => figma.importComponentByKeyAsync(key)))); return mains.get(key); };
+  // a key is a set's or a component's: both asked at once, the first that answers taken (asked one after the other, a
+  // set import given a component's key was seen never to answer, neither resolving nor failing, and held the drawing)
+  const either = (key) => new Promise((ok, no) => { let failed = 0; for (const f of [() => figma.importComponentSetByKeyAsync(key), () => figma.importComponentByKeyAsync(key)]) f().then(ok, () => { if (++failed === 2) no(new Error('neither a set nor a component by that key')); }); });
+  const importMain = (what, key) => { if (!mains.has(key)) mains.set(key, tried(what, () => either(key))); return mains.get(key); };
   // every call to Figma is made up front, side by side, then the layers are built without waiting on it:
   // with Figma in the background each call waits its turn for a slow tick, and a drawing that made its
   // hundreds of calls one after another took minutes
@@ -280,7 +290,16 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // side by side, then once more one at a time for any that went unanswered side by side
   const imp = (n) => figma.variables.importVariableByKeyAsync(lib[n]);
   await Promise.all([...names].map(async (n) => { vars[n] = lib[n] ? await Promise.race([imp(n).catch(() => null), new Promise((r) => setTimeout(() => r(null), 8000))]) : null; }));
-  for (const n of names) if (lib[n] && !vars[n]) vars[n] = await tried(n, () => imp(n));
+  // three in a row with no answer: the library is not answering this file, and each more would cost 16 s (a drawing of
+  // thirty variables outran its nine minutes); the rest are said as not bound
+  let silent = 0;
+  for (const n of names) {
+    if (!lib[n] || vars[n]) continue;
+    if (silent >= 3) { missing.add(`${n} (no answer: the library answered none of the last three)`); continue; }
+    vars[n] = await tried(n, () => imp(n));
+    // (one that failed outright is that variable's, not the library's silence)
+    silent = vars[n] ? 0 : missing.has(`${n} (no answer)`) ? silent + 1 : 0;
+  }
   const V = async (n) => { if (typeof n !== 'string' || !n.includes('/')) return null; if (!vars[n]) missing.add(n); return vars[n] || null; };
   // unbound, a value is drawn as the token's own value from the snapshot (K.values), never grey or square:
   // the drawing looks right, and the report still says what is not bound
@@ -340,7 +359,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         const cname = Object.keys(K.variants || {}).find(is);
         if (!cname) { missing.add(`${k}=${v} (not found in the library)`); continue; }
         const first = Object.values(K.variants[cname])[0];
-        const got = await tried(`${cname}`, () => figma.importComponentSetByKeyAsync(first).catch(() => figma.importComponentByKeyAsync(first)));
+        const got = await tried(`${cname}`, () => either(first));
         const same = (c) => cur && cur.variantProperties && c.variantProperties && Object.entries(cur.variantProperties).every(([pk, pv]) => c.variantProperties[pk] === pv);
         const to = got && got.type === 'COMPONENT_SET' ? got.children.find(same) || got.defaultVariant : got;
         if (to) n.setProperties({ [key]: to.id }); else missing.add(`${k}=${v} (its key would not import)`);
@@ -687,8 +706,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     // a preferred instance is the snapshot's key of a component set or a component, which Figma takes with its type
     const preferred = [];
     for (const k of sl.preferred) {
-      const got = await figma.importComponentSetByKeyAsync(k).then(() => 'COMPONENT_SET', () => figma.importComponentByKeyAsync(k).then(() => 'COMPONENT', () => null));
-      if (got) preferred.push({ type: got, key: k }); else missing.add(`${sl.figma}'s preferred instance ${k} (its key would not import)`);
+      // given the same time as any import: one that never answers is said, not waited on
+      const got = await tried(`${sl.figma}'s preferred instance ${k}`, () => either(k).then((n) => n.type));
+      if (got) preferred.push({ type: got, key: k });
     }
     const edit = { ...(sl.settings ? { slotSettings: sl.settings } : {}), ...(sl.description ? { description: sl.description } : {}), ...(preferred.length ? { preferredValues: preferred } : {}) };
     if (Object.keys(edit).length) set.editComponentProperty(key, edit);
