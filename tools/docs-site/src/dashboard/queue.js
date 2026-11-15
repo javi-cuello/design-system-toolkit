@@ -459,7 +459,8 @@ function applyOwnerFilter() {
     const open = document.querySelectorAll("#" + bucket + " > [data-row]:not([hidden])").length;
     const closed = document.querySelectorAll("#clearedRows-" + bucket + " > [data-row]:not([hidden])").length;
     openShown += open;
-    document.getElementById("clearedCount-" + bucket).textContent = closed;
+    // a plain disclosure line, not a second bucket number beside the bucket's own
+    document.getElementById("clearedCount-" + bucket).textContent = closed === 1 ? "1 closed row" : closed + " closed rows";
     document.getElementById("cleared-" + bucket).hidden = closed === 0;
     sec.hidden = narrowed && !open && !closed;
   }

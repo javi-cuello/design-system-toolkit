@@ -423,11 +423,11 @@
   /* ---- fix queue ---- */
 
   .cleared-summary {
-    display: flex; align-items: baseline; gap: var(--space-8); cursor: pointer;
-    font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
-    color: var(--fg-muted); list-style: none;
+    display: inline-flex; align-items: baseline; cursor: pointer;
+    font-size: var(--text-sm); color: var(--fg-muted); list-style: none;
   }
   .cleared-summary::-webkit-details-marker { display: none; }
+  @media (hover: hover) { .cleared-summary:hover { color: var(--fg); } }
   .cleared-summary::after {
     content: "▸"; margin-inline-start: var(--space-4); color: var(--fg-soft); font-size: var(--text-sm);
   }
