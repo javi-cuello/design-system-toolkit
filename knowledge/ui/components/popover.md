@@ -67,12 +67,12 @@ A popover shows a little information or a few related controls next to the one e
 - [required] The caret is revealed by `Show caret`, and the close button by `Show close button` (figma-standard rule 21); [popovers](#popovers) says when each is wanted.
 
 **Variants and states**
-- [moderate] `Placement` is an axis naming the side the popover opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, never `Left` or `Right` (figma-standard rule 21, and rule 50 where the project mirrors). Radix places by `side` (`top`, `right`, `bottom`, `left`) and `align` (`start`, `center`, `end`) ([Radix Popper source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx)); Primer's `caret` takes twelve values, a side and an end ([Primer Popover source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Popover/Popover.tsx)).
+- [moderate] `Placement` is an axis naming the side the popover opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, never `Left` or `Right` (figma-standard rule 21, and figma-standard rule 50 where the project mirrors). Radix places by `side` (`top`, `right`, `bottom`, `left`) and `align` (`start`, `center`, `end`) ([Radix Popper source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx)); Primer's `caret` takes twelve values, a side and an end ([Primer Popover source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Popover/Popover.tsx)).
 - [weak] Alignment along the side (start, centre, end) is drawn only where the library's frames need it; four `Placement` values cover most screens, and code computes the rest.
 - [weak] No `State` axis: the surface takes no hover, press or focus; its controls carry their own (beyond figma-standard rule 35). The trigger shows the popover open with its own `Open` value ([button: *In Figma*](button.md#in-figma)).
 
 **Tokens**
-- [required] Fill, border, radius, shadow, padding and gap are bound to variables, semantic and never primitive, the caret taking the surface's fill and border (figma-standard rules 24 and 29); text fills take text-role tokens (rule 28).
+- [required] Fill, border, radius, shadow, padding and gap are bound to variables, semantic and never primitive, the caret taking the surface's fill and border (figma-standard rules 24 and 29); text fills take text-role tokens (figma-standard rule 28).
 - [required] The maximum width is a token, so code reads the same number ([popovers](#popovers) keeps it small); component tokens, where the project has them, are `Component/Popover/<Element>/<property>` (figma-standard rule 49).
 
 **Check**

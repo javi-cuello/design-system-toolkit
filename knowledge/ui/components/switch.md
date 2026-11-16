@@ -59,7 +59,7 @@ A switch turns one setting on or off, and the change takes effect the moment it 
 - [required] The thumb's position comes from the track's auto-layout alignment (start for off, end for on), never a fixed x, so a right-to-left page mirrors which end means on, where the project mirrors (figma-standard rule 50).
 
 **Properties**
-- [required] `Label` is a text property; `Show description` is a boolean directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)); rule 21 keeps `Has` for content the component holds.
+- [required] `Label` is a text property; `Show description` is a boolean directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds.
 - [required] The state text, where the library draws it, is revealed by a `Show state text` boolean directly above two text properties, `On label` and `Off label`, in sentence case for the code's props (Primer's `buttonLabelOn` and `buttonLabelOff`, Carbon's `labelB` and `labelA`), so a project can say "Show" and "Hide" (figma-standard rules 5, 18, 21 and 37).
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 

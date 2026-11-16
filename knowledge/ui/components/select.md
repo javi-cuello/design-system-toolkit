@@ -57,8 +57,8 @@ A select is a closed field that opens a list for one choice from more options th
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, then the `Field` holding `Value` and the chevron `Icon`, then `Description` and `Error`; the field fills its container's width and the value truncates only by design (figma-standard rule 33).
-- [required] Each layer is named for its role, the same in every variant: `Label`, `Field`, `Value`, `Icon`, `Description`, `Error` (figma-standard rule 10); the value layer keeps one name whether it shows a value or the placeholder.
+- [required] Auto layout throughout: `Label`, then the `Field` holding `Value` and the chevron `Icon`, then `Description` and `Error message`; the field fills its container's width and the value truncates only by design (figma-standard rule 33).
+- [required] Each layer is named for its role, the same in every variant: `Label`, `Field`, `Value`, `Icon`, `Description`, `Error message` (figma-standard rule 10); the value layer keeps one name whether it shows a value or the placeholder.
 - [required] The chevron trails in auto-layout order, never pinned to the right edge, so a right-to-left page puts it at the inline end, where the project mirrors (figma-standard rule 50; design-standard rule 9 for its inset).
 
 **Properties**
@@ -101,7 +101,7 @@ A select is a closed field that opens a list for one choice from more options th
   | `Size` | `size` |
   | `Has value=False` | the empty first option selected; `Placeholder` is its text |
   | `Has value=True` | `value`; `Value` is the chosen option's text |
-  | `Validation=Error` | `aria-invalid="true"` and `Error` tied with `aria-describedby`; styled from `:user-invalid` or the attribute |
+  | `Validation=Error` | `aria-invalid="true"` and `Error message` tied with `aria-describedby`; styled from `:user-invalid` or the attribute |
   | `Disabled=True` | `disabled` on the `select` |
   | `State=Hover`, `Press`, `Focus` | `:hover`, `:active`, `:focus-visible`, set by the browser |
   | `State=Open` | custom listbox only: `aria-expanded="true"`; a native select has no frame to match |

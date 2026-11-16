@@ -154,7 +154,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 ## In code
 
 **Element**
-- [required] A `nav` labelled "Breadcrumb" holding an `ol` of links, the current page as text with `aria-current="page"`; the component itself needs no script, rule 8's visual kind, and the one line that starts the row at its end is a page enhancement the trail works without (code-standard rules 8 and 20; [breadcrumbs](#breadcrumbs), [breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
+- [required] A `nav` labelled "Breadcrumb" holding an `ol` of links, the current page as text with `aria-current="page"`; the component itself needs no script, code-standard rule 8's visual kind, and the one line that starts the row at its end is a page enhancement the trail works without (code-standard rules 8 and 20; [breadcrumbs](#breadcrumbs), [breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
 
 **Props**
 - [strong] The trail takes its items, the `nav`'s label, a size and a separator: Carbon (`aria-label` defaulting to "Breadcrumb", `size`, `noTrailingSlash`), Primer (`variant`, `overflow`) and MUI (`separator`, `maxItems`) ([Carbon Breadcrumb source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/Breadcrumb.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)).

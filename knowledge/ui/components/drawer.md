@@ -66,15 +66,15 @@ A drawer slides in from an edge of the viewport and spans its height, holding a 
 - [required] A back button in the header, for a drawer with a step inside, is an icon button instance revealed by `Show back button` (figma-standard rules 21 and 27; one drawer with a back step rather than a second drawer, [drawers and side sheets](#drawers-and-side-sheets)).
 
 **Variants and states**
-- [strong] `Position` is an axis with the values `Trailing`, `Leading` and `Bottom`, never `Left` or `Right` (figma-standard rule 21, and rule 50 where the project mirrors): Fluent's `position` is `start|end|bottom` ([Fluent Drawer types](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/shared/DrawerBase.types.ts)), MUI's `anchor` and Primer's `position` name the physical sides ([MUI Drawer types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.d.ts), [Primer Dialog source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Dialog/Dialog.tsx)).
+- [strong] `Position` is an axis with the values `Trailing`, `Leading` and `Bottom`, never `Left` or `Right` (figma-standard rule 21, and figma-standard rule 50 where the project mirrors): Fluent's `position` is `start|end|bottom` ([Fluent Drawer types](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/shared/DrawerBase.types.ts)), MUI's `anchor` and Primer's `position` name the physical sides ([MUI Drawer types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.d.ts), [Primer Dialog source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Dialog/Dialog.tsx)).
 - [moderate] Width is a `Size` axis with t-shirt values, largest first (figma-standard rule 6); Fluent's `size` runs `small`, `medium`, `large` and `full` ([Fluent Drawer types](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/shared/DrawerBase.types.ts)).
 - [weak] `Modal` is a True/False variant, drawing the backdrop and the elevation only where it is True, since the two kinds look different; the choice is stated per drawer in the design ([drawers and side sheets](#drawers-and-side-sheets); figma-standard rule 21 names it a bare word).
 - [weak] No `State` axis: the surface takes no hover, press or focus; its buttons carry their own (beyond figma-standard rule 35).
 - [required] The axes run `Size → Position → Modal`: `Size` first, then the drawer's own axes, `Modal` listing its default value first (figma-standard rule 1).
 
 **Tokens**
-- [required] Fill, border, shadow, padding, gap and the backdrop's colour are bound to variables, semantic and never primitive (figma-standard rules 24 and 29); text fills take text-role tokens (rule 28).
-- [required] Each `Size` value's width is a token, so code reads the same number (figma-standard rule 29); component tokens, where the project has them, are `Component/Drawer/<Element>/<property>` (rule 49).
+- [required] Fill, border, shadow, padding, gap and the backdrop's colour are bound to variables, semantic and never primitive (figma-standard rules 24 and 29); text fills take text-role tokens (figma-standard rule 28).
+- [required] Each `Size` value's width is a token, so code reads the same number (figma-standard rule 29); component tokens, where the project has them, are `Component/Drawer/<Element>/<property>` (figma-standard rule 49).
 
 **Check**
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis, property and slot for the parity report.

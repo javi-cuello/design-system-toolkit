@@ -41,7 +41,7 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const either = (w) => "[" + w[0].toLowerCase() + w[0].toUpperCase() + "]" + esc(w.slice(1));
 const lineOf = (text, i) => text.slice(0, i).split("\n").length;
 // Fenced blocks are examples; blanked line for line so reported line numbers stay true.
-const dirty = new Set(git(["status", "--porcelain"]).split("\n").filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, "")));
+const dirty = new Set(git(["status", "--porcelain", "-uall"]).split("\n").filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, "")));
 // A context document may sit in its project's own repo: asked of that repo.
 const isDirty = (file) => {
   const rel = relative(ROOT, file);
@@ -163,7 +163,10 @@ const stems = [...new Set(exact.map(([w]) => (w.match(/^(.*\S) \d+$/) || [])[1])
 const LEGACY = stems.length ? new RegExp(stems.map((st) => "\\b" + either(st) + "s? \\*{0,2}\\d").join("|"), "g") : null;
 // A retired standard's name is refused in a fenced block too: a file tree in a README is not an example of it.
 const RETIRED = retired.length ? new RegExp(retired.map((n) => "\\b" + either(n.replace(/s$/, "")).split("-").join("[- ]") + "s?\\b(?!-)").join("|"), "g") : null;
-const files = git(["ls-files"]).split("\n").filter((f) => f && has(f)
+// Untracked knowledge pages too, as the knowledge checks below read them: 20 component pages passed this check
+// untracked with 18 bare rule numbers (2026-11-16). Only knowledge/, so another session's scratch file elsewhere
+// cannot fail this one; the heal skips them, since `dirty` lists untracked files one by one (-uall).
+const files = [...new Set(git(["ls-files"]).split("\n").concat(git(["ls-files", "--others", "--exclude-standard", "knowledge"]).split("\n")))].filter((f) => f && has(f)
   && /\.(md|mjs|cjs|js|sh|py|astro|html|json|ya?ml)$/.test(f)
   // History is reference; a test quotes wrong forms on purpose; an audit record is tool output, rewritten on its next run;
   // research/ is dated essays outside the knowledge base, citing rules as they stood when written: never checked, never healed.

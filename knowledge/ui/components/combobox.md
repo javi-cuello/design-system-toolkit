@@ -57,12 +57,12 @@ A combobox is a text field with a list of suggestions: the person types to narro
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, then the `Field` holding `Value` and the trailing `Icon` button, then `Description` and `Error`; the field fills its container (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, then the `Field` holding `Value` and the trailing `Icon` button, then `Description` and `Error message`; the field fills its container (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the popup is a part named for its family and last word, `Combobox list`, with its rows `Combobox option`, and inside the field's frames it keeps the last word, `List` (figma-standard rule 9).
 - [required] The button sits last in auto-layout order, never pinned to the right edge, so a right-to-left page puts it at the inline end, where the project mirrors (figma-standard rules 33 and 50).
 
 **Properties**
-- [required] `Label`, `Value`, `Placeholder`, `Description` and `Error` are text properties named as the code's props are; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37).
+- [required] `Label`, `Value`, `Placeholder`, `Description` and `Error message` are text properties named as the code's props are; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37).
 - [required] `Has value` says whether text is in the field, the form figma-standard rule 21 gives content the component holds.
 - [required] Each option's text lives in the list's slot, named for what it hosts (`Options slot`), never in text overrides on nested option instances, since options change variant as the active one moves (figma-standard rule 38).
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
@@ -101,14 +101,14 @@ A combobox is a text field with a list of suggestions: the person types to narro
   |---|---|
   | `Size` | `size` |
   | `Has value` | the input's value is not empty; `Placeholder` shows otherwise |
-  | `Validation=Error`, `Error` | `aria-invalid="true"`, and the error message tied with `aria-describedby` |
+  | `Validation=Error`, `Error message` | `aria-invalid="true"`, and the `errorMessage` prop's text tied with `aria-describedby` |
   | `Disabled=True` | `disabled` on the input |
   | `State=Hover`, `Press`, `Focus` | `:hover`, `:active`, `:focus-visible`, set by the browser |
   | `State=Open` | `aria-expanded="true"` on the input, the listbox shown |
   | list contents (options, no match, loading) | the listbox's children, and the count in the status region |
   | option active | the option whose id is in `aria-activedescendant` |
   | option selected | `aria-selected="true"` |
-  | `Label`, `Description` | the `label`; the hint tied with `aria-describedby` (code-standard rule 15) |
+  | `Label`, `Description` | `label` and `description` props: the `label` element, and the description tied with `aria-describedby` (code-standard rule 15) |
   | `Show description` | whether a hint is passed |
   | `Value`, `Placeholder` | the input's `value` and `placeholder` |
   | `Options slot` | the listbox's options |

@@ -146,6 +146,15 @@ ok("a bare part citation resolves to its standard, and a handle of the wrong kin
   /cites toolkit-standard §D 99/.test(r.stdout) && /cites toolkit-standard §C 1/.test(r.stdout) && /cites toolkit-standard §D A/.test(r.stdout));
 d = tree({ files: { "docs/a.md": "As rule 2 says.\n" } });
 ok("outside standards/, a rule number that names no standard is refused", /docs\/a\.md:1: "rule 2" names no standard/.test(run(d).stdout));
+d = tree(); mkdirSync(join(d, "knowledge/new"), { recursive: true }); writeFileSync(join(d, "knowledge/new/p.md"), "As rule 2 says.\n"); writeFileSync(join(d, "scratch.md"), "As rule 2 says.\n");
+r = run(d);
+ok("…and in a knowledge page not yet added to git, but not another untracked file", /knowledge\/new\/p\.md:1: "rule 2" names no standard/.test(r.stdout) && !/scratch\.md/.test(r.stdout));
+d = tree({ history: HISTORY("figma-standard", "1.0.0", MAP) }); mkdirSync(join(d, "knowledge/new"), { recursive: true }); writeFileSync(join(d, "knowledge/new/p.md"), "Per old rule 5.\n");
+run(d, true);
+const untouched = readFileSync(join(d, "knowledge/new/p.md"), "utf8").includes("old rule 5");
+d = tree({ history: HISTORY("figma-standard", "1.0.0", MAP), files: { "knowledge/new/p.md": "Per old rule 5.\n" } });
+run(d, true);
+ok("…and the heal never rewrites an untracked page inside a new folder, though it heals the same page committed", untouched && readFileSync(join(d, "knowledge/new/p.md"), "utf8").includes("figma-standard rule 2"));
 d = tree({ history: HISTORY("figma-standard", "1.0.0", MAP), files: { "research/a.md": "As rule 2 says, per old rule 5.\n", "research/index.html": "<p>As rule 2 says.</p>\n" } });
 r = run(d, true);
 ok("research/ is dated essays outside the knowledge base: not checked, not healed", r.status === 0 && !/research\//.test(r.stdout) && /per old rule 5/.test(readFileSync(join(d, "research/a.md"), "utf8")));

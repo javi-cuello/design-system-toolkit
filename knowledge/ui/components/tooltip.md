@@ -68,11 +68,11 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - [weak] Whether the tooltip names its trigger or describes it is an annotation on the frame that places it, not a property: it changes nothing drawn.
 
 **Variants and states**
-- [moderate] `Placement` is an axis naming the side the tooltip opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, never `Left` or `Right` (figma-standard rule 21, and rule 50 where the project mirrors). SDS draws `Placement` as `Top`, `Bottom`, `Left` and `Right` ([SDS Tooltip.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Tooltip.figma.ts)); Primer's `direction` takes eight compass values ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx)).
+- [moderate] `Placement` is an axis naming the side the tooltip opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, never `Left` or `Right` (figma-standard rule 21, and figma-standard rule 50 where the project mirrors). SDS draws `Placement` as `Top`, `Bottom`, `Left` and `Right` ([SDS Tooltip.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Tooltip.figma.ts)); Primer's `direction` takes eight compass values ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx)).
 - [weak] No `State` axis and no hover or focus frame: the tooltip has no interaction of its own; its trigger's Hover and Focus variants are where it shows (beyond figma-standard rule 35).
 
 **Tokens**
-- [required] Fill, radius, padding and the caret are bound to variables, semantic and never primitive (figma-standard rules 24 and 29); the text takes a text-role token (rule 28) and meets contrast on the tooltip's fill in every mode (rule 32), which an inverted tooltip must check in both.
+- [required] Fill, radius, padding and the caret are bound to variables, semantic and never primitive (figma-standard rules 24 and 29); the text takes a text-role token (figma-standard rule 28) and meets contrast on the tooltip's fill in every mode (figma-standard rule 32), which an inverted tooltip must check in both.
 - [required] The maximum width is a token, so code wraps at the same point; component tokens, where the project has them, are `Component/Tooltip/<Element>/<property>` (figma-standard rule 49).
 
 **Check**

@@ -41,7 +41,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - [required] A visual component, a custom element with text and no script: `<ds-badge tone="error">Failed</ds-badge>` (code-standard rule 8).
 - [required] Tone is an attribute holding one of the project's tones, each status mapped to one; the icon is `aria-hidden` beside the text (code-standard rules 9 and 18).
 - [required] A dot-only badge keeps its text for assistive technology in a `visually-hidden` span ([accessibility: *Hidden content*](../../code/accessibility.md#hidden-content)).
-- [required] Colours are tokens (code-standard rule 22; [tokens: *Three tiers*](../../code/tokens.md#three-tiers)).
+- [required] Colours are tokens, or a literal that carries its reason (code-standard rule 22; [tokens: *Three tiers*](../../code/tokens.md#three-tiers)).
 - [weak] One colour token per tone, never one per status (beyond code-standard rule 22; after Carbon's attention levels).
 - [weak] Never a `button` or link; a badge that opens something is a button component with a badge look.
 
@@ -63,10 +63,10 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
-- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`: the words the Build's `tone="error"` uses, so Figma, the attribute and the token say the same. SDS's `Scheme` offers `Danger`, `Positive`, `Warning`, `Neutral`; Primer's `variant` ten values; Atlassian's `appearance` adds workflow words (`inprogress`, `moved`, `new`, `removed`).
-- [weak] A `Feedback` value is a tone, never a status: each status in the vocabulary takes a tone, which tone each attention level uses being the project's choice, so twelve statuses share a few values and the status's own word is the `Label` (beyond figma-standard rule 22; [*Status badges and pills*](#status-badges-and-pills), after Carbon's attention levels).
+- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's tone token words (figma-standard rule 22), mapped to the code's `tone` attribute: the axis takes figma-standard rule 1's slot name, the values the code's words, such as `Info`, `Success`, `Warning`, `Error`: the words the Build's `tone="error"` uses, so Figma, the attribute and the token say the same. SDS's `Scheme` offers `Danger`, `Positive`, `Warning`, `Neutral`; Primer's `variant` ten values; Atlassian's `appearance` adds workflow words (`inprogress`, `moved`, `new`, `removed`).
+- [weak] A `Feedback` value is a tone, never a status: each status in the vocabulary takes one tone, and the project decides which tone each attention level uses, so twelve statuses share a few values and the status's own word is the `Label` (beyond figma-standard rule 22; [*Status badges and pills*](#status-badges-and-pills), after Carbon's attention levels).
 - [moderate] An `Emphasis` axis, `Subtle` then `Bold`, where the product uses both: Atlassian's `isBold` and SDS's `Variant` (`primary`, `secondary`) do this.
-- [required] Sizes are `Size` with t-shirt values, largest first (figma-standard rule 6); Primer offers `small` and `large`. The full order is `Size → Emphasis → Feedback`, `Emphasis` in rule 1's role slot (figma-standard rule 1).
+- [required] Sizes are `Size` with t-shirt values, largest first (figma-standard rule 6); Primer offers `small` and `large`. The full order is `Size → Emphasis → Feedback`, `Emphasis` in figma-standard rule 1's role slot (figma-standard rule 1).
 - [required] No `State` axis: the badge is not interactive, so a `State` would hold `Rest` alone, an axis with no choice (figma-standard rule 35).
 
 **Tokens**

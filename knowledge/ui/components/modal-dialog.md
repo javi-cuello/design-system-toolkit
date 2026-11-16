@@ -287,7 +287,7 @@ A modal dialog puts a short task or decision over the page and keeps the person 
 - [weak] A dialog whose content changes while it is open is drawn at its fixed height, so the frame shows the body scrolling rather than the box growing ([maximum height and position](#maximum-height-and-position)).
 
 **Tokens**
-- [required] The surface's fill, radius, padding, gap, border and shadow, and the backdrop's colour, are bound to variables, semantic and never primitive (figma-standard rules 24 and 29); text fills take text-role tokens (rule 28) and meet contrast on the surface in every mode (rule 32).
+- [required] The surface's fill, radius, padding, gap, border and shadow, and the backdrop's colour, are bound to variables, semantic and never primitive (figma-standard rules 24 and 29); text fills take text-role tokens (figma-standard rule 28) and meet contrast on the surface in every mode (figma-standard rule 32).
 - [required] Where the project has component tokens, they are named `Component/Dialog/<Element>/<property>` and alias semantic ones (figma-standard rule 49).
 
 **Check**
