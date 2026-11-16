@@ -718,7 +718,10 @@ async function selfSource(project, name, { second = false } = {}) {
     let first = null;
     try { first = JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', 'self', 'from-code', `${name}.json`), 'utf8')).asFigma; } catch { /* below */ }
     if (!first) throw Object.assign(new Error(`${name}: no first self reading to go round again from (eval.mjs --self)`), { usage: true });
-    c = library[c.component] = { ...c, anatomy: first.anatomy, variants: first.variants || [] };
+    // (a string with no default draws its layer's words in the design: the reading binds the layer to it, so the words
+    // are the design's, kept as its default)
+    const props = Object.fromEntries(Object.entries(c.props || {}).map(([k, p]) => { const t = p.type === 'string' && p.default == null && (c.anatomy[(p.sets || [])[0]] || {}).content; return [k, typeof t === 'string' && !/^\{.+\}$/.test(t) ? { ...p, default: t } : p]; }));
+    c = library[c.component] = { ...c, props, anatomy: first.anatomy, variants: first.variants || [] };
   }
   // the toolkit's page names its parts and instances its own way (data-part, ds-<folder>): none of the project's code
   // settings (its framework's components, part and icon classes, code profile) apply to it
@@ -743,12 +746,16 @@ async function selfSource(project, name, { second = false } = {}) {
   const tab = await attach(await newPage(browser.endpoint));
   // the code's props as a story's controls say them: to-markup's own, at their defaults
   const own = propsOf(c, library).filter((x) => x.type !== 'event');
-  const api = { args: Object.fromEntries(own.map((x) => [x.name, x.default])), argTypes: Object.fromEntries(own.map((x) => [x.name,
+  // a text entry's has-value is its input's, no prop of the markup's (to-markup folds it): the story says it as a
+  // boolean that fills the value when on, so the reading has it under the design's name
+  const entry = (await import('./to-code.mjs')).entryOf(c), valueProp = entry && own.find((x) => x.type === 'value');
+  const flag = valueProp && !own.some((x) => x.name === camel(entry.flag)) && { name: camel(entry.flag), on: entry.on, value: valueProp.name, sample: (c.props[Object.keys(c.props).find((k) => (c.props[k].sets || []).includes(entry.value))] || {}).default || 'Value' };
+  const api = { args: { ...Object.fromEntries(own.map((x) => [x.name, x.default])), ...(flag && { [flag.name]: !flag.on, [flag.value]: '' }) }, argTypes: { ...(flag && { [flag.name]: { control: 'boolean', type: 'boolean', default: !flag.on } }), ...Object.fromEntries(own.map((x) => [x.name,
     x.type === 'enum' && (x.values || []).length ? { options: x.values, control: 'select', default: x.default }
     : x.type === 'boolean' ? { control: 'boolean', type: 'boolean', default: x.default === true }
     : x.type === 'number' ? { control: 'number', type: 'number', default: x.default }
     : x.type === 'node' ? { control: 'slot' }
-    : { control: 'text', type: 'string', default: x.default ?? '' }])) };
+    : { control: 'text', type: 'string', default: x.default ?? '' }])) } };
   const tokens = project.snapshot;
   const src = {
     governed: true, label: project.config.project, tab, lib, repo: project.repo, out: path.join(where.projectDir, 'round-trip', second ? 'self2' : 'self'), mode: tier, tokens,
@@ -766,6 +773,9 @@ async function selfSource(project, name, { second = false } = {}) {
       const { __state, ...args } = all;
       // a state no pointer reaches is the markup's own prop (state="loading")
       if (__state !== undefined && __state !== 'rest' && !src.pseudoOf[__state] && src.stateArg) args[src.stateArg] = __state;
+      // the has-value flag is the input's: on, it holds its value (the sample where none is given); off, it is left as given,
+      // empty unless the mapping's own has-value state gives it one (the story's value starts empty)
+      if (flag && flag.name in args) { if (args[flag.name] === flag.on && !args[flag.value]) args[flag.value] = flag.sample; delete args[flag.name]; }
       await navigate(tab, `${site.url}index.html`);
       await waitFor(tab, '!!window.ready', { timeout: 10000 }).catch((e) => { throw new Error(`the toolkit's own page did not load: ${(tab.trouble || []).join('; ') || e.message}`); });
       await call(tab, ([folder, a, theme]) => {
@@ -874,7 +884,8 @@ async function main() {
       const must = a.required ? { required: true } : {};
       if (a.options && a.options.length) props[camel(k)] = { type: 'enum', values: a.options.map(String), default: String(a.default ?? start ?? a.options[0]), code: k, ...must, ...(a.default == null && { undeclared: true }) };
       else if (a.control === 'boolean' || a.type === 'boolean') props[camel(k)] = { type: 'boolean', default: a.default === true || (a.default == null && start === true), code: k, ...must };
-      else if ((a.control === 'text' || a.type === 'string') && typeof start === 'string') props[camel(k)] = { type: 'string', code: k, sample: start, ...must };
+      // (its sample, the words that bind a text to it: the story's, else its own default where the story starts it empty)
+      else if ((a.control === 'text' || a.type === 'string') && typeof start === 'string') props[camel(k)] = { type: 'string', code: k, sample: start || (typeof a.default === 'string' ? a.default : start), ...must };
       else if (a.control === 'number' || a.type === 'number') props[camel(k)] = { type: 'number', code: k, ...((a.default ?? start) != null && { default: a.default ?? start }), ...must };
       // content a caller passes (a ReactNode, a snippet, a template): a slot, found where a stand-in for it lands
       else if (isSlot(a)) props[camel(k)] = { type: 'slot', code: k, ...must };
@@ -951,7 +962,10 @@ async function main() {
         // (as a block of that width, whatever the story's wrapper lays out)
         Object.assign(up.style, { display: 'block', width: `${w}px`, minWidth: '0', maxWidth: 'none', padding: '0' });
       }, [rootSel, L.container, !L.root, room]);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc]) => {
+      // a text entry the design draws as two texts (to-code's entryOf): the <input> is its Placeholder until it holds a
+      // value, then its Value; the ids, for the walk
+      const entry = figmaContract ? (await import('./to-code.mjs')).entryOf(figmaContract) : null, entryIds = entry ? [entry.placeholder, entry.value] : null;
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -977,6 +991,8 @@ async function main() {
           const h = mid(r.left, r.width, pr.left, pr.width), v = mid(r.top, r.height, pr.top, pr.height);
           return { absolute: { x: px(r.left - pr.left), y: px(r.top - pr.top) }, ...((h || v) && { constraints: { horizontal: h ? 'center' : 'min', vertical: v ? 'center' : 'min' } }) };
         };
+        // a CSS order counts where the browser lays it out: the part's own parent box, a flex or grid one
+        const placedBy = (n, s, parent) => !!+s.order && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(getComputedStyle(n.parentElement).display);
         const walk = (n, parent, order, inside = false) => {
           const s = getComputedStyle(n);
           // not drawn: hidden, or a native control MUI keeps for its behaviour at no opacity (a switch's input); a layer
@@ -990,21 +1006,24 @@ async function main() {
           const tag = n.tagName.toLowerCase();
           // an element the mapping states is a Figma layer takes that layer's id; else its place and its part's name
           let id = parent == null ? 'root' : n.getAttribute('data-figma-id') || `${parent === 'root' ? '' : `${parent}/`}${slot(n)}`;
+          // a text entry: its words are its value, else its placeholder, and it is the design's text for whichever it shows
+          const entryEl = (tag === 'input' && !/^(checkbox|radio|range|file|color|button|submit|reset|hidden|image)$/.test(n.type)) || tag === 'textarea';
+          if (entryEl && entryIds && parent != null) id = n.value ? entryIds[1] : entryIds[0];
           const counted = id;
           seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id];
           // its own words, as drawn: a thin space is a character (MUI's required mark is "\u2009*", two text nodes)
           const plain = (t) => t.replace(/[ \n\t\r]+/g, ' ');
-          const text = [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => plain(x.textContent)).join('').replace(/^ +| +$/g, '');
+          const text = entryEl ? plain(n.value || n.placeholder || '').trim() : [...n.childNodes].filter((x) => x.nodeType === 3 && plain(x.textContent).replace(/ /g, '')).map((x) => plain(x.textContent)).join('').replace(/^ +| +$/g, '');
           // a box whose only content is its words is a text, unless the mapping says its words are a layer of their own
           // the element a slot's stand-in landed in is the slot, what the caller puts there its content, not its parts
           const filled = marks.find(([m]) => text === m);
           // an icon is an svg, or the mark to-markup leaves for the project to draw one in (an empty element naming it, data-icon)
           // a placed component's slot this one fills (to-markup marks its slots, data-slot): a slot, what is put in it read
           const fills = inside && n.getAttribute('data-slot');
-          const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && !n.hasAttribute('data-figma-text') ? 'text' : 'container';
+          const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && (entryEl || !n.hasAttribute('data-figma-text')) ? 'text' : 'container';
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
           const figmaName = n.getAttribute('data-figma-name');
-          const e = { id, kind, ...(parent != null && { parent, order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           { const r = n.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
@@ -1023,7 +1042,7 @@ async function main() {
           if (other && !n.hasAttribute('data-figma-id')) { seen[counted]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id]; }
           if (other) {
             n.setAttribute('data-contract-id', id); up(id);
-            out.push({ id, kind: 'instance', parent, order, ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            out.push({ id, kind: 'instance', parent, order, ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
@@ -1055,7 +1074,7 @@ async function main() {
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; }
-          else if (kind === 'text') { e.color = s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
+          else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             if (/flex/.test(s.display)) {
               const A = { 'flex-start': 'start', start: 'start', normal: 'start', center: 'center', 'flex-end': 'end', end: 'end', 'space-between': 'space-between', stretch: 'stretch' };
@@ -1126,9 +1145,10 @@ async function main() {
         // an order counts only the siblings drawn
         const byParent = {}; for (const e of out) if (e.parent != null) (byParent[e.parent] = byParent[e.parent] || []).push(e);
         // (one inside a placed component keeps its place among that component's own, most of which are not read here)
-        for (const xs of Object.values(byParent)) xs.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; });
+        // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
+        for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // each element's matched styles fetched once for all the properties this render reads of it
       const styles = new Map();
@@ -1854,6 +1874,8 @@ async function main() {
       for (const v of fromCode.variants || []) {
         for (const [id, e] of Object.entries(v.add || {})) { const fe = designOf(id, v.when); if (fe && fe.kind === e.kind) zeroFill(e, fe); }
         for (const [k, val] of Object.entries(v.set || {})) {
+          // a corner a variant takes away (null), where the design binds a zero corner: that token
+          if (k.endsWith('.radius') && (val == null || val === 0)) { const fe = designOf(k.slice(0, -'.radius'.length), v.when), holder = {}; if (fe) { zeroFill(holder, fe); if (holder.radius !== undefined) v.set[k] = holder.radius; } continue; }
           if (!k.endsWith('.layout') || !val || typeof val !== 'object') continue;
           const id = k.slice(0, -'.layout'.length), fe = designOf(id, v.when), holder = { layout: val };
           if (fe) { zeroFill(holder, fe); v.set[k] = holder.layout; }

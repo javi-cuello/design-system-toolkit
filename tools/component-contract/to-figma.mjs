@@ -190,7 +190,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(room(x))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
-    diff(pinned(ranked(a, b), b), pinned(ranked(b, a), a), '');
+    diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
@@ -205,6 +205,15 @@ function spread(x) {
   for (const [id, e] of Object.entries(x)) if (e && e.layout && e.layout.align === 'space-between' && 'gap' in e.layout) { const { gap: _, ...l } = e.layout; out[id] = { ...e, layout: l }; }
   return out;
 }
+/* Which swap prop drives a layer (swappedBy) is how the design ties a layer to its prop, used above (atDefault) and
+   ignored by derive's own comparison: code has no such tie to read back, so where one side says none it is no value;
+   where both say one (a drawing read back from Figma), a different one is a difference. */
+function unswapped(x, other) {
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) if (e && e.swappedBy != null && !(other[id] && other[id].swappedBy != null)) { const { swappedBy: _, ...rest } = e; out[id] = rest; }
+  return out;
+}
+
 /* A child's order as its place among its siblings: Figma's numbers can tie or skip where variants combine (an icon and
    an avatar both 0, the texts 1), a reading's run 0..n; the place is what is drawn. Ties keep their listed order. Only
    the siblings both sides draw are placed: one missing on one side is its own row, not a shift of every place after it. */

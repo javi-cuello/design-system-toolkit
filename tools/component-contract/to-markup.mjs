@@ -94,7 +94,8 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
     if (entry && (p.sets || []).includes(entry.placeholder)) { out.push({ ...base, type: 'string', default: p.default ?? '', input: 'placeholder' }); continue; }
     if (p.type === 'enum') out.push({ ...base, type: 'enum', values: p.values || [], default: p.default, attr: true });
     else if (p.type === 'boolean') out.push({ ...base, type: 'boolean', default: p.default === true, native: key === dis && !!(control || entry), attr: !(key === dis && (control || entry)) });
-    else if (p.type === 'string') out.push({ ...base, type: 'string', default: p.default ?? '' });
+    // a string with no default of its own draws its layer's words (a placeholder's "Search")
+    else if (p.type === 'string') { const t = (c.anatomy[(p.sets || [])[0]] || {}).content; out.push({ ...base, type: 'string', default: p.default ?? (typeof t === 'string' && !/^\{.+\}$/.test(t) ? t : '') }); }
     else if (p.type === 'number') out.push({ ...base, type: 'number', default: Number.isFinite(Number(p.default)) ? Number(p.default) : 0 });
     else if (p.type === 'instance') out.push({ ...base, ...swapOf(c, p, library, lang) });
     else if (p.type === 'slot') out.push({ ...base, type: 'node', slot: slotPartOf(c, key) });
@@ -175,7 +176,9 @@ export function partsOf(c) {
     // words a variant sets on a base text (a label's * that reads Optional where it is not required)
     if (!byPointer) for (const [k, w] of Object.entries(v.set || {})) {
       const m = /^(.+)\.content$/.exec(k), at = m && parts.get(m[1]);
-      if (at && at.base && typeof w === 'string' && !/^\{.*\}$/.test(w) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
+      // (or another string prop that sets this text, put in its place: a value text where a placeholder was)
+      const swap = typeof w === 'string' && (/^\{(.+)\}$/.exec(w) || [])[1], swaps = swap && ((c.props || {})[swap] || {}).type === 'string' && ((c.props[swap].sets || []).includes(m && m[1]));
+      if (at && at.base && typeof w === 'string' && (swaps || !/^\{.*\}$/.test(w)) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
     }
   }
   for (const part of parts.values()) {
@@ -200,7 +203,7 @@ function inOrder(c, list) {
   const before = new Map(ids.map((id) => [id, new Set()]));
   for (const v of [{}, ...(c.variants || [])]) {
     const gone = new Set(v.remove || []), set = v.set || {}, add = v.add || {};
-    const here = base.filter((p) => (p.base && !gone.has(p.id)) || p.id in add);
+    const here = base.filter((p) => (p.base && !gone.has(p.id)) || p.id in add || (`${p.id}.order` in set && !gone.has(p.id)));
     const at = (p) => set[`${p.id}.order`] ?? (add[p.id] || {}).order ?? p.e.order ?? 0;
     for (const a of here) for (const b of here) if (at(a) < at(b)) before.get(b.id).add(a.id);
   }
@@ -290,8 +293,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // a text's words: its property's, else its own, else, where a variant puts it back with other words (a label's * that
   // reads Optional when not required), those there, the later variant first
   const textOf = (id, e, words = []) => {
-    const x = props.find((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id));
-    if (x) return { code: ref(x.name) };
+    // one text two string props set (a placeholder, and the value a variant shows instead): the one no variant swaps in,
+    // and each variant's own where it is drawn
+    const xs = props.filter((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id));
+    if (xs.length) {
+      const swapped = (w) => xs.find((y) => `{${y.key}}` === w);
+      const first = xs.find((y) => `{${y.key}}` === e.content) || xs.find((y) => !words.some(([, w]) => swapped(w) === y)) || xs[0];
+      let code = ref(first.name);
+      for (const [when, w] of words) { const y = swapped(w), t = y && testOf(when); if (!t) continue; code = t === 'true' ? ref(y.name) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${ref(y.name)} : ${code}`; }
+      return { code };
+    }
     let code = lang.str(e.content || ''), any = false;
     for (const [when, w] of words) { const t = testOf(when); if (!t) continue; code = t === 'true' ? lang.str(w) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${lang.str(w)} : ${any ? `(${code})` : code}`; any = true; }
     return any ? { code } : { lit: e.content || '' };

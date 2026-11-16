@@ -262,6 +262,8 @@ delete globalThis.figma;
     const foot = { horizontal: 'min', vertical: 'max' };
     ok('a part pinned to the bottom is compared by its bottom, not the y its parent\'s height gives', roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', foot, { x: 0, y: 280, bottom: 0 })).rows.length === 0 && roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', foot, { x: 0, y: 300, bottom: 8 })).rows.length === 1);
     ok('an axis pinned differently is one constraints row, its offsets not repeated', roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', { horizontal: 'min', vertical: 'min' }, { x: 0, y: 0 })).rows.length === 1); }
+  { const sw = (by) => ({ component: 'B', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/x', ...(by && { swappedBy: by }) } }, variants: [] });
+    ok('which swap drives a layer is the design\'s own tie, no value code reads back', roundTrip(sw('i16'), sw(null)).rows.length === 0 && roundTrip(sw('i16'), sw('i20')).rows.length === 1); }
   ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 0);
 }
 
