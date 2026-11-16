@@ -265,8 +265,13 @@ export function zeroTokens(e, fe, value) {
   const put = (o, path, v) => { let x = o; for (const k of path.slice(0, -1)) x = x[k] = x[k] || {}; x[path.at(-1)] = v; };
   for (const path of [['radius'], ['layout', 'gap'], ...['top', 'end', 'bottom', 'start'].map((k) => ['layout', 'padding', k])]) {
     const want = at(fe, path), have = at(e, path);
-    if (typeof want !== 'string' || !want.includes('/') || !unbound(have)) continue;
     if (path[0] === 'layout' && !e.layout) continue;
+    // a 0 the design leaves unbound, where the code says none: 0 on that side (a slot's padding), as the code renders it
+    if (want === 0 && have == null) {
+      if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
+      put(e, path, 0); continue;
+    }
+    if (typeof want !== 'string' || !want.includes('/') || !unbound(have)) continue;
     // a padding the code leaves unset is 0 on every side: each side said, not only those the design binds
     if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
     if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
@@ -1257,6 +1262,8 @@ async function main() {
         // leaves the next property to say
         for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const vars = part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         if (!r && !guess) return v;
+        // a bare 0 is no token by value (Spacing/0 and a raw 0 look alike): zeroTokens gives it the design's where it binds one
+        if (!r && (kind === 'space' || kind === 'radius') && parseFloat(v) === 0) return 0;
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
         if (r.tie) ties.push({ at, token: r.token, tie: r.tie });
         return r.token ?? (['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(r.value) : r.value);

@@ -64,6 +64,28 @@ function room(x) {
   return { ...x, root };
 }
 
+/* A placed part's position by what pins it: Figma stores x, y, end and bottom for every part, but only the pinned
+   edge is a value: pinned to the far edge (max), the distance to it, x or y following from the parent's size; to the
+   near edge (min), the distance from it. Centred in a parent that hugs, the offset follows from what the parent holds
+   (a spinner over a button's words): no value; in a parent of fixed size, or one that fills, it stays. Where the sides pin an axis
+   differently, the constraints row is the difference and that axis's offsets are not repeated. Tested by
+   test-to-figma.mjs. */
+function pinned(x, other) {
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || !e.absolute || !e.constraints) continue;
+    const at = { ...e.absolute }, up = x[e.parent] || {}, theirs = ((other[id] || {}).constraints) || {};
+    for (const [to, near, far, size, ax] of [[e.constraints.horizontal, 'x', 'end', 'width', 'horizontal'], [e.constraints.vertical, 'y', 'bottom', 'height', 'vertical']]) {
+      if (theirs[ax] !== to) { delete at[near]; delete at[far]; }
+      else if (to === 'max') delete at[near];
+      else if (to === 'min') delete at[far];
+      else if (to === 'center' && (up[size] === 'hug' || up[size] === undefined)) { delete at[near]; delete at[far]; }
+    }
+    out[id] = { ...e, absolute: at };
+  }
+  return out;
+}
+
 /* An icon's colour, said two ways: Figma colours the one glyph inside an instance (Icon/house's vector), code colours
    the instance (an svg filled with currentColor). Compared as the instance's: the glyph's colour moves up to an
    instance that has none, and the glyph, whose shape is its component's, goes. Only where the instance holds that one
@@ -168,7 +190,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(room(x))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
-    diff(ranked(a, b), ranked(b, a), '');
+    diff(pinned(ranked(a, b), b), pinned(ranked(b, a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));

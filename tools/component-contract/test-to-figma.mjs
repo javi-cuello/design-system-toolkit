@@ -255,6 +255,13 @@ delete globalThis.figma;
     ok('a child\'s order is its place among its siblings: ties and gaps are the same places; another place is a difference', roundTrip(box(0, 'start', [0, 0, 2]), box(0, 'start', [0, 1, 2])).rows.length === 0 && roundTrip(box(0, 'start', [1, 0]), box(0, 'start', [0, 1])).rows.length === 2);
     const less = box(0, 'start', [0, 1]); delete less.anatomy.c0;
     ok('a sibling one side lacks is its own row, not a shift of every place after it', roundTrip(box(0, 'start', [0, 1]), less).rows.length === 1); }
+  { const placed = (rootW, cons, at) => ({ component: 'Spin', props: {}, anatomy: { root: { kind: 'container', width: rootW, layout: { direction: 'row' } }, dot: { kind: 'container', parent: 'root', order: 0, constraints: cons, absolute: at } }, variants: [] });
+    const mid = { horizontal: 'center', vertical: 'center' };
+    ok('a part centred in a parent that hugs has no offset to compare', roundTrip(placed('hug', mid, { x: 21, y: 4 }), placed('hug', mid, { x: 20.14, y: 4.5 })).rows.length === 0);
+    ok('a part centred in a parent of fixed size, or one that fills, keeps its offset', roundTrip(placed(100, mid, { x: 40, y: 4 }), placed(100, mid, { x: 30, y: 4 })).rows.length === 1 && roundTrip(placed('fill', mid, { x: 10, y: 4 }), placed('fill', mid, { x: 60, y: 4 })).rows.length === 1);
+    const foot = { horizontal: 'min', vertical: 'max' };
+    ok('a part pinned to the bottom is compared by its bottom, not the y its parent\'s height gives', roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', foot, { x: 0, y: 280, bottom: 0 })).rows.length === 0 && roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', foot, { x: 0, y: 300, bottom: 8 })).rows.length === 1);
+    ok('an axis pinned differently is one constraints row, its offsets not repeated', roundTrip(placed('hug', foot, { x: 0, y: 300, bottom: 0 }), placed('hug', { horizontal: 'min', vertical: 'min' }, { x: 0, y: 0 })).rows.length === 1); }
   ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 0);
 }
 

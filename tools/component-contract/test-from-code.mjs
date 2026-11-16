@@ -198,4 +198,13 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
+{
+  const value = (t) => (t === 'Spacing/0' ? 0 : 8);
+  const e = zeroTokens({ layout: { direction: 'row', gap: 0 } }, { layout: { gap: 0, padding: { top: 0, end: 0, bottom: 0, start: 0 } } }, value);
+  ok('a 0 the design leaves unbound stays 0; the zero padding the code leaves unset is said', e.layout.gap === 0 && e.layout.padding && e.layout.padding.start === 0);
+  const w = zeroTokens({ layout: { direction: 'row', gap: 'Spacing/0' } }, { layout: { gap: 0 } }, value);
+  ok('a zero token the code wrote stays that token, against a design that leaves it unbound', w.layout.gap === 'Spacing/0');
+  const f = zeroTokens({ layout: { direction: 'row', gap: 'Spacing/8' } }, { layout: { gap: 0 } }, value);
+  ok('a gap the code sets above 0 stays what it is', f.layout.gap === 'Spacing/8');
+}
 console.log(`${n}/${n} passed`);
