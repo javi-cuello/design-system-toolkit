@@ -8,6 +8,8 @@ The gates hold the code a project ships. An eval holds the agent that writes it:
 
 `--rules` runs the agent with the rules hook (`tools/claude-hooks/hooks.mjs edit`) on, the default, or off (the gates are always off in an eval copy: an eval measures the skill, not the process); each line records which, and a run is compared with the last clean one under the same setting (a void run — contaminated, or one that changed the grade's inputs — is never the baseline; a failed build is).
 
+Under `--rules on` each line also records `knowledge`: the knowledge pages the hook told the agent to read (toolkit-standard §D 21), the ones it opened, and the ones it `skipped`; the run prints the skipped ones. Read over every eval transcript kept on 2026-11-16, 3 of 41 runs had opened any page the hook named.
+
 `--brief` names the file that holds the design in the agent's prompt: the snapshot (`figma.json`) or the component's contract (`contract.json`, tools/component-contract). Both stay in the copy, because parity grades against the snapshot; each line records which of the two the agent opened, so a contract that was not enough shows as a run that read the snapshot too.
 
 ## Screen tasks

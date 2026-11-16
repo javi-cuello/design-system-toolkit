@@ -142,8 +142,9 @@ export function chromeFinding(written, read, chrome) {
 /* "51170 assertions matched, 2102 waived, 0 did not" — null when absent, which
    is a run that did not reach its verdict, never a pass. */
 export function parseParity(text) {
-  const m = String(text || '').match(/(\d+) assertions matched, (\d+) waived, (\d+) did not/);
-  return m ? { matched: +m[1], waived: +m[2], didNot: +m[3] } : null;
+  // parity added a translated count (0334b10d), which voided every parity eval: matched with it or without
+  const m = String(text || '').match(/(\d+) assertions matched, (?:(\d+) translated, )?(\d+) waived(?: \([^)]*\))?, (\d+) did not/);
+  return m ? { matched: +m[1], ...(m[2] != null ? { translated: +m[2] } : {}), waived: +m[3], didNot: +m[4] } : null;
 }
 
 /* The stylesheet gate's count: "N finding(s)", or 0 when it exited green;
@@ -332,6 +333,29 @@ export function opened(transcriptLines, files) {
     }
   }
   return Object.keys(files).filter((k) => hit.has(k));
+}
+
+/* The knowledge pages the rules hook named (toolkit-standard §D 21: "read
+   these knowledge pages before the first line") and which the agent then
+   opened by any tool whose input names one: a page named and never opened is
+   guidance the agent built without (the maintainer, 2026-11-16: "make sure
+   the components KB is not ignored"). Paths are relative to the toolkit. */
+export const WRITERS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'];
+export const KB_MARKER = 'read these knowledge pages before the first line';
+export function knowledgeRead(transcriptLines) {
+  const named = [], hit = new Set(), inputs = [];
+  for (const line of transcriptLines) {
+    let row; try { row = JSON.parse(line); } catch { continue; }
+    // a write that only cites a page (a comment, a Knowledge: trailer) has not opened it
+    for (const c of (row.message && row.message.content) || []) if (c.type === 'tool_use' && !WRITERS.includes(c.name)) inputs.push(JSON.stringify(c.input || {}));
+    if (row.type !== 'attachment') continue;
+    const text = JSON.stringify(row.attachment || {}).replace(/\\n/g, '\n');
+    const at = text.indexOf(KB_MARKER);
+    if (at < 0) continue;
+    for (const m of text.slice(at).matchAll(/\n {2}\S*?(knowledge\/[\w./-]+\.md)/g)) if (!named.includes(m[1])) named.push(m[1]);
+  }
+  for (const i of inputs) for (const p of named) if (i.includes(p)) hit.add(p);
+  return { named, read: named.filter((p) => hit.has(p)), skipped: named.filter((p) => !hit.has(p)) };
 }
 
 // A Figma task's grade, from what tools/skill-evals/figma-grade.js returned:

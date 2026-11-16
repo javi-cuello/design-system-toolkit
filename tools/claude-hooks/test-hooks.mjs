@@ -38,6 +38,10 @@ test('an interface file names the knowledge pages to read before the first line,
   const session_id = `test-${process.pid}-${Date.now()}-kb`;
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'kb-'));
   const edit = (f) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), 'edit'], { input: JSON.stringify({ session_id, cwd: repo, tool_name: 'Write', tool_input: { file_path: path.join(repo, f) } }), encoding: 'utf8', env: { ...process.env, TOOLKIT_EVAL_COPY: repo } });
+  // the component's own page is read first: the first write is refused once, naming it
+  const refused = JSON.parse(edit('src/people/delete-dialog.tsx').stdout).hookSpecificOutput;
+  assert.equal(refused.permissionDecision, 'deny');
+  assert.match(refused.permissionDecisionReason, /^Read this component's knowledge page first[\s\S]*knowledge\/ui\/components\/modal-dialog\.md/);
   const first = JSON.parse(edit('src/people/delete-dialog.tsx').stdout).hookSpecificOutput.additionalContext;
   assert.match(first, /^First change in this area/);
   assert.match(first, /read these knowledge pages before the first line[\s\S]*knowledge\/ui\/patterns\/dialogs\.md[\s\S]*knowledge\/ui\/design\/visual\.md/);
@@ -50,6 +54,39 @@ test('an interface file names the knowledge pages to read before the first line,
   assert.equal(edit('src/people/delete-dialog.tsx').stdout, '');
   // a script that draws nothing names no page
   assert.doesNotMatch(edit('src/lib/rules.ts').stdout, /knowledge/);
+  fs.rmSync(repo, { recursive: true, force: true });
+  fs.rmSync(path.join(os.tmpdir(), `toolkit-rules-${session_id}`), { force: true });
+});
+
+test('a component page already opened in the session is not asked for again', () => {
+  const session_id = `test-${process.pid}-${Date.now()}-kbopen`;
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'kb-'));
+  const transcript_path = path.join(repo, 't.jsonl');
+  const write = (t) => { fs.writeFileSync(transcript_path, t); return spawnSync('node', [path.join(HERE, 'hooks.mjs'), 'edit'], { input: JSON.stringify({ session_id, cwd: repo, transcript_path, tool_name: 'Write', tool_input: { file_path: path.join(repo, 'src/ds/tooltip/tooltip.tsx') } }), encoding: 'utf8', env: { ...process.env, TOOLKIT_EVAL_COPY: repo, TOOLKIT_GATES: 'off' } }); };
+  const read = JSON.stringify({ message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: `${TOOLKIT}/knowledge/ui/components/tooltip.md` } }] } });
+  const out = JSON.parse(write(read + '\n').stdout).hookSpecificOutput;
+  assert.equal(out.permissionDecision, undefined);
+  assert.match(out.additionalContext, /tooltip\.md/);
+  // once found opened, it is remembered: the same call with the transcript emptied is not refused
+  assert.equal(write('').stdout, '');
+  // a write that only cites the page has not opened it (a fresh session, so nothing is remembered)
+  const cite = JSON.stringify({ message: { content: [{ type: 'tool_use', name: 'Write', input: { file_path: 'x.tsx', content: `// ${TOOLKIT}/knowledge/ui/components/tooltip.md` } }] } });
+  fs.rmSync(path.join(os.tmpdir(), `toolkit-rules-${session_id}`), { force: true });
+  assert.equal(JSON.parse(write(cite + '\n').stdout).hookSpecificOutput.permissionDecision, 'deny');
+  // a subagent's prompt that names the page has not opened it
+  const task = JSON.stringify({ message: { content: [{ type: 'tool_use', name: 'Agent', input: { prompt: `read ${TOOLKIT}/knowledge/ui/components/tooltip.md` } }] } });
+  fs.rmSync(path.join(os.tmpdir(), `toolkit-rules-${session_id}`), { force: true });
+  assert.equal(JSON.parse(write(task + '\n').stdout).hookSpecificOutput.permissionDecision, 'deny');
+  // control: the same call with the page unopened is refused
+  fs.rmSync(path.join(os.tmpdir(), `toolkit-rules-${session_id}`), { force: true });
+  assert.equal(JSON.parse(write('').stdout).hookSpecificOutput.permissionDecision, 'deny');
+  // the main session's refusal is spent; a subagent's own first write is still asked once
+  const retry = write('');
+  assert.equal(retry.status, 0);
+  assert.ok(retry.stdout, 'the retry prints the rule list');
+  assert.notEqual(JSON.parse(retry.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  const sub = spawnSync('node', [path.join(HERE, 'hooks.mjs'), 'edit'], { input: JSON.stringify({ session_id, agent_id: 'sub-1', cwd: repo, transcript_path, tool_name: 'Write', tool_input: { file_path: path.join(repo, 'src/ds/tooltip/tooltip.tsx') } }), encoding: 'utf8', env: { ...process.env, TOOLKIT_EVAL_COPY: repo, TOOLKIT_GATES: 'off' } });
+  assert.equal(JSON.parse(sub.stdout).hookSpecificOutput.permissionDecision, 'deny');
   fs.rmSync(repo, { recursive: true, force: true });
   fs.rmSync(path.join(os.tmpdir(), `toolkit-rules-${session_id}`), { force: true });
 });

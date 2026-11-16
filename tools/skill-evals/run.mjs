@@ -49,7 +49,7 @@ import net from 'node:net';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { expandHome } from '../shared/real-path.mjs';
 import { fileURLToPath } from 'node:url';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, inputs, changed, comparable, gradingPaths, gradingOutputs, inside, opened, knowledgeRead, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary } from './eval.mjs';
 import { CODE, unwaived } from '../system-mcp/validate.mjs';
 import { serveFolder } from '../system-mcp/serve-folder.mjs';
 import { realPath } from '../shared/real-path.mjs';
@@ -211,6 +211,8 @@ for (const t of tasks) {
       const transcript = tr ? fs.readFileSync(tr, 'utf8') : '';
       agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir(), { copy, gitReachable: spawnSync('git', ['-C', copy, 'rev-parse', '--git-dir'], { stdio: 'ignore' }).status === 0 }) : ['no transcript found to check'];
       agent.rulesFired = RULES === 'on' ? transcript.includes('First change in this area') : null;
+      // the knowledge pages the hook named, and which the agent opened (toolkit-standard §D 21)
+      agent.knowledge = RULES === 'on' ? knowledgeRead(transcript.split('\n')) : null;
       // a context-on run where the agent never asked the system is still its result, and is said so
       agent.askedSystem = contextOf(t) === 'on' ? transcript.includes('"name":"mcp__system__') : null;
       // only what was there before: a story or spec the agent adds for its new screen is not the parity grade's, and this grade reads none of them
@@ -250,6 +252,8 @@ for (const t of tasks) {
       agent.contaminated = tr ? contamination(transcript.split('\n'), REPO, os.homedir(), { copy, gitReachable: spawnSync('git', ['-C', copy, 'rev-parse', '--git-dir'], { stdio: 'ignore' }).status === 0 }) : ['no transcript found to check'];
       // a rules run where the hook never spoke measured nothing about the rules (the first two did exactly that)
       agent.rulesFired = RULES === 'on' ? transcript.includes('First change in this area') : null;
+      // the knowledge pages the hook named, and which the agent opened (toolkit-standard §D 21)
+      agent.knowledge = RULES === 'on' ? knowledgeRead(transcript.split('\n')) : null;
       agent.askedSystem = contextOf(t) === 'on' ? transcript.includes('"name":"mcp__system__') : null;
       agent.opened = opened(transcript.split('\n'), briefFiles);
       const after = inputs(copy, gradingPaths(config), gradingOutputs(config));
@@ -285,7 +289,7 @@ for (const t of tasks) {
       const s = vo || validateScore(written, findings, { system: inSystem, agentExit: NO_AGENT ? 0 : agent.exit });
       if (graderSaid) s.why = s.why.replace('validate did not report', `validate did not report (${graderSaid})`);
       record = { at: new Date().toISOString(), task: t.id, grade: 'validate', commit, pinned: pin !== 'HEAD', toolkit: TOOLKIT_COMMIT,
-        agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, context: NO_AGENT ? null : CONTEXT, askedSystem: agent.askedSystem ?? null, ...s,
+        agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, knowledge: NO_AGENT ? null : agent.knowledge ?? null, context: NO_AGENT ? null : CONTEXT, askedSystem: agent.askedSystem ?? null, ...s,
         // each finding as validate printed it: a count says the agent missed, this says what (the first baseline could not tell)
         written: written.length, inSystem: inSystem.length, findings: findings ? findings.length : null, found: findings ? findings.slice(0, 40).map((f) => `${f.file}:${f.line} ${f.kind}: ${f.found}`) : null, kinds: findings ? Object.fromEntries([...new Set(findings.map((f) => f.kind))].map((k) => [k, findings.filter((f) => f.kind === k).length])) : null,
         turns: agent.turns, costUsd: agent.costUsd, minutes: Math.round((Date.now() - t0) / 6000) / 10, note: agent.result };
@@ -307,7 +311,7 @@ for (const t of tasks) {
     const parity = parseParity(p.stdout);
     const s = vo || (built.status === 0 ? score({ parity, styleFindings: findings, exits: { ...(NO_AGENT ? {} : { agent: agent.exit }), parity: p.status ?? p.signal, styles: st.status ?? st.signal } }) : { score: 0, green: false, why: `the build failed: ${((built.stderr || built.stdout || '').trim().split('\n').pop() || '').slice(0, 120)}` });
     record = { at: new Date().toISOString(), task: t.id, commit, pinned: pin !== 'HEAD', toolkit: TOOLKIT_COMMIT,
-      agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, brief: NO_AGENT ? null : BRIEF || null, context: NO_AGENT ? null : contextOf(t), askedSystem: agent.askedSystem ?? null, opened: agent.opened ?? null, ...s, matched: parity?.matched ?? 0, waived: parity?.waived ?? 0, didNot: parity?.didNot ?? 0, styleFindings: findings,
+      agent: !NO_AGENT, rules: NO_AGENT ? null : RULES, rulesFired: NO_AGENT ? null : agent.rulesFired, knowledge: NO_AGENT ? null : agent.knowledge ?? null, brief: NO_AGENT ? null : BRIEF || null, context: NO_AGENT ? null : contextOf(t), askedSystem: agent.askedSystem ?? null, opened: agent.opened ?? null, ...s, matched: parity?.matched ?? 0, translated: parity?.translated ?? 0, waived: parity?.waived ?? 0, didNot: parity?.didNot ?? 0, styleFindings: findings,
       turns: agent.turns, costUsd: agent.costUsd, minutes: Math.round((Date.now() - t0) / 6000) / 10, note: agent.result };
     }
   } finally {
@@ -322,6 +326,8 @@ for (const t of tasks) {
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
   const last = baselineOf(lines, record);
   if (record.agent) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.appendFileSync(file, JSON.stringify(record) + '\n'); }
+  const kb = record.knowledge;
+  if (kb && kb.named.length) console.log(`${t.id}: knowledge pages named ${kb.named.length}, opened ${kb.read.length}${kb.skipped.length ? `; never opened: ${kb.skipped.join(', ')}` : ''}`);
   if (record.grade === 'validate') { console.log(`${t.id}${record.agent ? ` (rules ${record.rules}, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.written} file(s) written, ${record.findings ?? '?'} validate finding(s)${record.kinds && record.findings ? ` (${Object.entries(record.kinds).map(([k, n]) => `${n} ${k}`).join(', ')})` : ''}${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${record.of ? `trial ${record.trial} of ${record.of}` : compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`); continue; }
   console.log(`${t.id}${record.agent ? ` (rules ${record.rules}${record.context ? `, context ${record.context}${record.context === 'on' ? `, ${record.askedSystem ? 'asked' : 'never asked'} the system` : ''}` : ''}${record.brief ? `, brief ${record.brief}, opened ${record.opened.join(' and ') || 'neither'}` : ''})` : ''}: score ${record.score}${record.green ? ' (green)' : ''} — ${record.matched} matched, ${record.didNot} did not, ${record.styleFindings ?? '?'} stylesheet finding(s)${record.why ? ` — ${record.why}` : ''}; ${record.turns ?? '-'} turns, ${record.costUsd ?? '-'} USD, ${record.minutes} min; ${record.of ? `trial ${record.trial} of ${record.of}` : compare(last, record)}${record.rules === 'on' && !record.rulesFired ? ' — WARNING: the rules hook never fired, so this is not a rules-on run' : ''}${KEEP ? ` — copy kept at ${copy}` : ''}`);
   }

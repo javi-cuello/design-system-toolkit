@@ -67,6 +67,20 @@ function ecosystemDirs() {
    tools/skill-evals can measure the hook (the gates are off there);
    TOOLKIT_RULES=off turns the rule list off. */
 
+// whether a tool call in the session's transcript names the page (a Read, a cat, a grep over it); a write that only
+// cites it, or a subagent's prompt that names it, has not opened it. A transcript too big to read counts as unopened: the refusal is once, so it costs one retry.
+const WRITERS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Agent', 'Task'];
+function openedIn(transcript, page) {
+  let text = '';
+  try { text = fs.readFileSync(transcript, 'utf8'); } catch { return false; }
+  for (const line of text.split('\n')) {
+    if (!line.includes(page) || !line.includes('"tool_use"')) continue;
+    let row; try { row = JSON.parse(line); } catch { continue; }
+    for (const c of (row.message && row.message.content) || []) if (c.type === 'tool_use' && !WRITERS.includes(c.name) && JSON.stringify(c.input || {}).includes(page)) return true;
+  }
+  return false;
+}
+
 if (mode === 'edit') {
   // The plan gate (gates.mjs) first: a refused call needs no rule list.
   // A gate that throws would exit 1, which Claude Code lets through with a one-line notice the session never
@@ -112,6 +126,23 @@ if (mode === 'edit') {
   const fresh = [...found].filter(([k]) => !seen.has(k));
   // a page is named once a session, so a later dialog still names dialogs.md
   const read = [...pages].filter((p) => !seen.has(`knowledge:${p}`));
+  // A component's own page is the one an agent most needs and, named among a dozen, the one it skipped (3 of 41
+  // eval runs opened any named page, 2026-11-16): the first write to that component is refused once until the page
+  // has been opened in this session. Once, so a page that cannot be read never blocks the work.
+  // per agent: a subagent's refusal does not spend the main session's, nor one subagent's another's. Whether a
+  // subagent's own reads reach this transcript is not checked; if not, it is refused once more than it needs.
+  const who = payload.agent_id || 'main';
+  const asked = [...pages].filter((p) => p.startsWith('knowledge/ui/components/') && !seen.has(`kb-refused:${who}:${p}`) && !seen.has(`kb-opened:${who}:${p}`));
+  const opened = asked.filter((p) => openedIn(payload.transcript_path, p));
+  for (const p of opened) seen.add(`kb-opened:${who}:${p}`);
+  const unopened = asked.filter((p) => !opened.includes(p));
+  if (opened.length) fs.writeFileSync(seenFile, [...seen].join('\n'));
+  if (unopened.length) {
+    for (const p of unopened) seen.add(`kb-refused:${who}:${p}`);
+    fs.writeFileSync(seenFile, [...seen].join('\n'));
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `Read this component's knowledge page first, then retry: it holds how the component is designed, built in Figma, aligned with code and coded (toolkit-standard §D 21).\n${unopened.map((p) => `  ${SHOWN}/${p}`).join('\n')}` } }));
+    process.exit(0);
+  }
   if (!fresh.length && !read.length) say('');
   for (const [k] of fresh) seen.add(k);
   for (const p of read) seen.add(`knowledge:${p}`);

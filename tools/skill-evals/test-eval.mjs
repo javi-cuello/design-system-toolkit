@@ -2,7 +2,7 @@
 // tools/skill-evals/eval.mjs: what a task must say, how a parity summary reads, what
 // a run scores, and what changed since the task's last run. Run by bin/check.
 import assert from 'node:assert/strict';
-import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary, figmaScore } from './eval.mjs';
+import { taskProblems, parseParity, score, styleCount, compare, contamination, gradingInput, comparable, inputs, changed, gradingPaths, gradingOutputs, inside, opened, knowledgeRead, agentTools, DATA_RULE, lock, unlock, voided, codeFiles, validateScore, chromeFinding, SYSTEM, pinOf, COMMIT, sameCommit, baselineOf, configDrift, summarise, compareSummary, figmaScore } from './eval.mjs';
 import { CODE } from '../system-mcp/validate.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -71,6 +71,7 @@ ok('a task names its id, target, the files removed and a real prompt; one that r
 
 ok('a parity summary reads its three counts; a run that never reached one reads null',
   JSON.stringify(parseParity('...\n412 assertions matched, 3 waived, 7 did not — 12 renders')) === JSON.stringify({ matched: 412, waived: 3, didNot: 7 })
+  && JSON.stringify(parseParity('\n76 assertions matched, 4 translated, 2 waived (1 of them as data, unbounded), 0 did not — 6 renders of tag')) === JSON.stringify({ matched: 76, translated: 4, waived: 2, didNot: 0 })
   && parseParity('the app did not come up') === null);
 
 ok('the score is the share that matched; green needs no difference and no stylesheet finding; nothing measured is zero, never perfect',
@@ -188,6 +189,19 @@ ok('which brief files the agent opened, by any tool that names them, read off it
   JSON.stringify(opened([tu('Read', { file_path: '/c/src/ds/card/contract.json' }), tu('Bash', { command: 'cat src/ds/card/figma.json | head' }), tu('Grep', { pattern: 'x', path: '/c/src/ds/chip/figma.json' })],
     { contract: 'src/ds/card/contract.json', snapshot: 'src/ds/card/figma.json' })) === JSON.stringify(['contract', 'snapshot'])
   && opened([tu('Read', { file_path: '/c/src/ds/card/card.tsx' })], { contract: 'src/ds/card/contract.json', snapshot: 'src/ds/card/figma.json' }).length === 0);
+
+// the hook's words as a real transcript holds them: an attachment row, its newlines escaped once more inside the JSON
+const hookRow = (pages) => JSON.stringify({ type: 'attachment', attachment: { type: 'hook_additional_context', content: [`First change in this area.\n\nInterface work (toolkit-standard §D 21): read these knowledge pages before the first line, and name them:\n${pages.map((p) => `  /t/${p}`).join('\n')}`] } });
+{
+  const k = knowledgeRead([hookRow(['knowledge/ui/components/badge.md', 'knowledge/ui/design/ux.md']), tu('Read', { file_path: '/t/knowledge/ui/components/badge.md' }), hookRow(['knowledge/ui/components/badge.md'])]);
+  ok('the knowledge pages the hook named, once each, and which the agent opened',
+    JSON.stringify(k) === JSON.stringify({ named: ['knowledge/ui/components/badge.md', 'knowledge/ui/design/ux.md'], read: ['knowledge/ui/components/badge.md'], skipped: ['knowledge/ui/design/ux.md'] }));
+  ok('…and a write that only cites a page has not opened it',
+    knowledgeRead([hookRow(['knowledge/ui/components/chip.md']), tu('Write', { file_path: 'tag.php', content: '<!-- knowledge/ui/components/chip.md -->' })]).read.length === 0);
+  // control: the same words outside an attachment (an agent quoting them) name nothing
+  ok('…and the words in a tool call are not the hook naming a page',
+    knowledgeRead([tu('Write', { file_path: 'x.md', content: 'read these knowledge pages before the first line\n  knowledge/ui/x.md' })]).named.length === 0);
+}
 
 const jb = { paths: { parity: 'tests/parity/report.json' }, parity: { baseline: { dir: 'tests/parity/measured' }, shots: 'tests/parity/shots/' } };
 ok('a parity run\'s own output under tests/parity is not a grade input; the accepted set and the fixtures beside it are',
