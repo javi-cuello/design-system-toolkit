@@ -186,7 +186,7 @@ export function placeFromCss(own) {
 
 /* A fill as CSS paints it. Figma lists a layer's paints bottom up; CSS's background layers go top first, and only the
    bottom one may be a bare colour, so a colour above another layer is a gradient of that colour alone (the synonym
-   capabilities.json names fill-multiple). An image is content the template supplies, not the sheet's.
+   capabilities.json names fill-multiple). An image is the project's, set as --image on the component; the sheet holds its place and its fit.
    A linear gradient: Figma's colour at a point (u, v) of the layer's unit square is t = a·u + b·v + c, the first row
    of the paint's transform; on a w×h box that runs along (a/w, b/h), so CSS's angle is atan2(a/w, −b/h), and CSS
    stretches its line corner to corner, so a stop at t falls at (t − t₀)/(t₁ − t₀) of it (parity's schema.mjs
@@ -213,11 +213,19 @@ export function gradientCss(g, box, colour) {
   if (g.stops.some((st) => colour(st.color) == null)) return { unread: [] };
   return { value: `linear-gradient(${typeof deg === 'string' ? deg : `${n(((deg % 360) + 360) % 360)}deg`}, ${g.stops.map((st) => `${colour(st.color)} ${n(at(st.position) * 100)}%`).join(', ')})`, unread: [] };
 }
+// a clear one-pixel image: an image layer's place held until the project gives the image
+export const CLEAR = 'url("data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBAAA=")';
 export function fillCss(fills, box, colour) {
   const layers = [], unread = [];
   const list = [].concat(fills ?? []);
   list.forEach((f, i) => {
-    if (typeof f === 'string' && f.startsWith('IMAGE')) { unread.push('background (an image fill: the template supplies the image)'); return; }
+    // an image fill: the image is the project's, set as --image on the component (an illustration's own asset); until it
+    // is, a clear pixel holds its place. Sized as Figma fits it: FIT inside the box, FILL and CROP over it, TILE repeated
+    if (typeof f === 'string' && f.startsWith('IMAGE')) {
+      const how = f.split(':')[1] || 'FILL';
+      layers.unshift(`var(--image, ${CLEAR}) ${how === 'TILE' ? 'repeat' : `center / ${how === 'FIT' ? 'contain' : 'cover'} no-repeat`}`);
+      return;
+    }
     // a paint the snapshot names by its type (a radial, angular or diamond gradient, a video, a pattern) or a variable
     // it could not resolve is no colour to say
     if (typeof f === 'string' && /^(GRADIENT_|VIDEO|PATTERN|EMOJI|VariableID:)/.test(f)) { unread.push(`background (${f.startsWith('VariableID:') ? 'a variable the snapshot could not name' : `a ${f.toLowerCase().replace(/_/g, ' ')} paint`})`); return; }
@@ -226,7 +234,7 @@ export function fillCss(fills, box, colour) {
     unread.push(...g.unread);
     if (g.value) layers.unshift(g.value);
   });
-  // a bottom colour under an image the template supplies stays a bare colour; one left above nothing is one too
+  // a bottom colour under an image stays a bare colour; one left above nothing is one too
   if (layers.length) { const last = layers[layers.length - 1], m = /^linear-gradient\((.+), \1\)$/.exec(last); if (m) layers[layers.length - 1] = m[1]; }
   return { value: layers.length ? layers.join(', ') : undefined, unread };
 }
@@ -269,11 +277,15 @@ export function gradientFromCss(g, box) {
   const angle = Math.round(((Math.atan2(b, a) * 180) / Math.PI + 90 + 360) % 360);
   return { type: 'GRADIENT_LINEAR', angle, transform: [[n(a), n(b), n(c)], [n(-b), n(a), n(c2)]], stops: g.stops.map((st, i) => ({ position: +(at[i] / 100).toFixed(4), color: colourOf(st.raw) })) };
 }
-export function fillsFromCss(color, image, box, clear = (c) => !c || /^(transparent|rgba\(0, 0, 0, 0\))$/.test(c)) {
+export function fillsFromCss(color, image, box, clear = (c) => !c || /^(transparent|rgba\(0, 0, 0, 0\))$/.test(c), { size = '', repeat = '' } = {}) {
   const fills = [], unread = [];
   if (!clear(color)) fills.push(color);
   const layers = !image || image === 'none' ? [] : splitTop(image).map((x) => x.trim()).reverse();
-  for (const l of layers) {
+  // each layer's size and repeat, bottom up as the layers are (CSS repeats a shorter list)
+  const per = (v, i, n) => { const xs = v ? splitTop(v).map((x) => x.trim()) : []; return xs.length ? xs[(n - 1 - i) % xs.length] : ''; };
+  for (const [i, l] of layers.entries()) {
+    // an image: Figma's image fill, by how it is sized (fillCss writes it so)
+    if (/^url\(/.test(l)) { const sz = per(size, i, layers.length), rp = per(repeat, i, layers.length); fills.push(/^repeat\b/.test(rp) && !/no-repeat/.test(rp) && !/contain|cover/.test(sz) ? 'IMAGE:TILE' : sz === 'contain' ? 'IMAGE:FIT' : 'IMAGE:FILL'); continue; }
     // (a repeating gradient is stripes, never one Figma gradient)
     const g = /^linear-gradient\(/.test(l) ? parseGradient(l) : null;
     const solid = g && g.stops.length === 2 && g.stops[0].raw === g.stops[1].raw && g.stops.every((st) => st.position == null && st.colour);

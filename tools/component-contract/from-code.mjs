@@ -1014,7 +1014,7 @@ async function main() {
             if (Object.values(pad).some(Boolean)) (e.layout = e.layout || {}).padding = pad;
             if (!clear(s.backgroundColor)) e.background = s.backgroundColor;
             // its background's layers above the colour (a gradient, a colour laid over another): read back as Figma's fills below
-            if (s.backgroundImage && s.backgroundImage !== 'none') { const r = n.getBoundingClientRect(); e.paint = { image: s.backgroundImage, w: r.width, h: r.height }; }
+            if (s.backgroundImage && s.backgroundImage !== 'none') { const r = n.getBoundingClientRect(); e.paint = { image: s.backgroundImage, size: s.backgroundSize, repeat: s.backgroundRepeat, w: r.width, h: r.height }; }
             if (px(s.borderTopLeftRadius)) { const r = n.getBoundingClientRect(); Object.assign(e, corner(s.borderTopLeftRadius, r.width, r.height)); }
             // a corner's shape where it is not the plain circle, on whichever corner says one (rules.mjs reads it back as
             // smoothing; to-code writes it on all four, a square corner included)
@@ -1278,9 +1278,9 @@ async function main() {
         }
         // its fills bottom up (rules.mjs fillsFromCss): the colour, then each layer over it, every colour named by its token
         if (x.paint) {
-          const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c);
+          const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c, { size: x.paint.size, repeat: x.paint.repeat });
           const named = [];
-          for (const f of fills) named.push(typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background-image'])
+          for (const f of fills) named.push(typeof f === 'string' && /^IMAGE:/.test(f) ? f : typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background-image'])
             : { ...f, stops: await Promise.all(f.stops.map(async (st) => ({ ...st, color: await tok('background', st.color, `${id}.background`, ['background-image', 'background']) }))) });
           // (once, however many renders read it)
           for (const why of lost) if (!notes.includes(`${id}: ${why}`)) notes.push(`${id}: ${why}`);

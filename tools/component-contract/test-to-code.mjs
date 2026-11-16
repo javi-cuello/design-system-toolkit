@@ -43,8 +43,11 @@ ok('a part centred out of the flow is pinned at the middle and moved back by hal
 ok('smoothing is corner-shape on any corner (a square or mixed one keeps the value), none at 0', decl({ radius: 8, smoothing: 0.6 })['corner-shape'] === smoothingToCss(0.6) && decl({ smoothing: 0.6 })['corner-shape'] === smoothingToCss(0.6) && decl({ radius: [0, 8, 8, 0], smoothing: 0.6 })['corner-shape'] === smoothingToCss(0.6) && !('corner-shape' in decl({ radius: 8, smoothing: 0 })));
 ok('smoothing CSS cannot say is named, not dropped', declarations({ smoothing: 2 }, {}, names).unread.some((f) => /smoothing/.test(f)));
 ok('a box holding a part out of the flow is its containing block', decl({}, { anchors: true }).position === 'relative');
-const { unread } = declarations({ smoothing: 0.6, background: 'IMAGE:FILL', mystery: 1, parent: 'root', order: 2 }, {}, names);
-ok('what CSS cannot say is named, the markup\'s own fields are not', unread.some((f) => /image/.test(f)) && unread.includes('mystery') && !unread.includes('parent') && !unread.includes('order'));
+const { unread } = declarations({ smoothing: 0.6, background: 'GRADIENT_RADIAL', mystery: 1, parent: 'root', order: 2 }, {}, names);
+ok('what CSS cannot say is named, the markup\'s own fields are not', unread.some((f) => /radial/.test(f)) && unread.includes('mystery') && !unread.includes('parent') && !unread.includes('order'));
+ok('an image fill is the project\'s --image, sized as Figma fits it, over its colour; a clear pixel until it is given',
+  /^var\(--image, url\("data:image\/gif;base64,[^"]+"\)\) center \/ contain no-repeat$/.test(decl({ background: 'IMAGE:FIT' }).background)
+  && /cover no-repeat, var\(--c-soft\)$/.test(decl({ background: ['C/soft', 'IMAGE:FILL'] }).background) && / repeat$/.test(decl({ background: 'IMAGE:TILE' }).background));
 
 // the rules: one per layer, saying only what it changes, the cascade rebuilding every combination
 const chip = { contract: 1, component: 'Chip',
@@ -250,11 +253,12 @@ else console.log('skip: no stored contracts on this machine');
 }
 
 // fills as CSS's background layers (rules.mjs fillCss): Figma's bottom-up list top first, a colour above another layer a
-// gradient of itself, an image the template's; a linear gradient by its transform (parity's formula)
+// gradient of itself, an image the project's --image; a linear gradient by its transform (parity's formula)
 {
   const tk = (x) => `var(--${x.toLowerCase().replace(/\W+/g, '-')})`;
-  ok('stacked fills are background layers, top first, the bottom one a bare colour, an image left to the template',
-    fillCss(['C/soft', 'IMAGE:FILL', 'rgb(0 0 0 / 0.5)'], {}, (f) => (f.startsWith('rgb') ? f : tk(f))).value === 'linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)), var(--c-soft)');
+  ok('stacked fills are background layers, top first, the bottom one a bare colour, an image the project\'s --image between',
+    /^linear-gradient\(rgb\(0 0 0 \/ 0\.5\), rgb\(0 0 0 \/ 0\.5\)\), var\(--image, url\([^)]+\)\) center \/ cover no-repeat, var\(--c-soft\)$/.test(fillCss(['C/soft', 'IMAGE:FILL', 'rgb(0 0 0 / 0.5)'], {}, (f) => (f.startsWith('rgb') ? f : tk(f))).value));
+  ok('and back: an image layer is Figma\'s image fill by how it is sized', JSON.stringify(fillsFromCss('rgb(1, 2, 3)', 'url("a"), url("b")', {}, undefined, { size: 'contain, cover', repeat: 'no-repeat' }).fills) === '["rgb(1, 2, 3)","IMAGE:FILL","IMAGE:FIT"]');
   const g = (t) => ({ type: 'GRADIENT_LINEAR', transform: t, stops: [{ position: 0, color: 'A' }, { position: 1, color: 'B' }] });
   ok('a top-to-bottom gradient is 180deg on any box', fillCss([g([[0, 1, 0], [-1, 0, 1]])], {}, tk).value === 'linear-gradient(180deg, var(--a) 0%, var(--b) 100%)');
   ok('a corner-to-corner one is a corner keyword, the same on any box', fillCss([g([[0.5, -0.5, 0.5], [0.5, 0.5, 0]])], {}, tk).value === 'linear-gradient(to top right, var(--a) 0%, var(--b) 100%)');
