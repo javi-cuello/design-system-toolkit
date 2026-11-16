@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.8.0 (2026-11-17): figures are checked by count (no stretch of over 1,000 words without one before the back matter, an awk in voice §6 and the checklist), and a setup in a tool is shown as a labelled sketch plus numbered steps. Case A32.
 - 3.7.1 (2026-11-16): review fixes: included neighbouring topics count toward the two to five axes; A31 names deep mode, and light mode keeps the list to a line or two.
 - 3.7.0 (2026-11-16): Step 1 looks past the prompt before searching: it lists the neighbouring topics the decision depends on, includes those that change the answer and names those left out. Case A31.
 - 3.6.0 (2026-11-16): Step 1 takes the topic's `weak` knowledge items first, as the research queue (toolkit-standard 2.41.0 §D 21). Case A30.

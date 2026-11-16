@@ -295,3 +295,11 @@ Assert: before the first search, Step 1 lists the neighbouring topics the decisi
 Negative: a run whose axes are only the words of the prompt, with an adjacent topic added only after the person asks.
 Observed: 2026-11-16 — the spacing-token run launched four threads from the ticket's words; the maintainer asked mid-run for components and layouts and for a check of further topics, which became a fifth thread.
 Traced: 2026-11-16 for 3.7.0 — to SKILL.md Step 1, "Then look past the prompt before searching".
+
+## A32 · Figures are counted, and a tool setup is drawn
+Fixture: deep mode, a guide on a visual subject whose advice includes a setup in Figma (variables, scoping, binding).
+Assert: before delivery the voice file's §6 figure-gap `awk` prints nothing, or each line it prints is named in the reply as a section with nothing to draw; every main section with a visual subject draws its running example; the Figma setup appears as a sketch labelled as one, with an as-of date, followed by numbered steps of one action each.
+Negative: a guide delivered with a stretch of over 1,000 words and no figure, or a tool setup given only in prose.
+Observed: 2026-11-17 — the spacing guide shipped with one figure in about 8,000 words (the awk prints 1,358 and 5,382); the maintainer asked for more images and a visual Figma setup. With twelve more figures and eight setup steps it prints nothing.
+Traced: 2026-11-17 for 3.8.0 — to deep-mode-voice.md §6 and SKILL.md's quality checklist.
+Walked live: 2026-11-17 on research/foundations/spacing-tokens-by-intent.md: the awk prints nothing; the Figma variables panel and binding are labelled sketches dated November 2026, followed by eight numbered steps.
