@@ -296,4 +296,7 @@ else console.log('skip: no stored contracts on this machine');
 { const { placeFromCss } = await import('./rules.mjs');
   const p = placeFromCss({ position: 'absolute', 'inset-block-start': 'unset', 'inset-block-end': '0px', 'inset-inline-start': '0px' });
   ok('an inset a variant sets to unset is no pin: the part is pinned by the other edge', p && p.constraints && p.constraints.vertical === 'max'); }
+ok('a root with no auto layout is a box: a custom element is inline and 0 wide', decl({ kind: 'container', width: 40, height: 40 }, { root: true }).display === 'block');
+ok('a placed component that hugs keeps its own size against its main\'s sheet', decl({ kind: 'instance', width: 'hug' }, { row: true })['inline-size'] === 'fit-content' && decl({ kind: 'instance', width: 'hug' }, { row: true }).flex === 'none');
+ok('a placed component stretched by its insets takes no size from its main', decl({ kind: 'instance', width: 200, absolute: { x: 0, y: 0, end: 0 }, constraints: { horizontal: 'stretch', vertical: 'min' } }, {})['inline-size'] === 'auto');
 console.log(`${n} passed`);

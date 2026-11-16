@@ -211,6 +211,52 @@ export function carries(attrs, k, v) {
   return Object.entries(attrs).some(([n, x]) => n.startsWith('data-') && !/^data-(contract-id|figma-)/.test(n) && x === String(v));
 }
 
+/* An axis's value from the attributes an element carries: the value whose args it all carries, else the one that asks
+   for none. The host's own attributes first; only where they say none, an inner control's disabled (a loading button
+   whose <button> is disabled because it is busy stays loading). Tested by test-from-code.mjs. */
+export function axisValueOf(vals, attrs, innerDisabled = false) {
+  const fits = (h) => Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => h(k, v)));
+  const hit = fits((k, v) => carries(attrs, k, v)) || (innerDisabled ? fits((k, v) => carries({ ...attrs, disabled: '' }, k, v)) : undefined);
+  const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);
+  return (hit || rest || [])[0];
+}
+
+/* An icon the code takes by name (a string) where the design swaps an instance: the design's swap, one per size where
+   the code merged them (to-markup's one `icon` for Icon (16) and Icon (20)); never a key the design holds as another
+   kind. Returns the props, changed in place. Tested by test-from-code.mjs. */
+export function asDesignSwaps(props, design) {
+  for (const [k, p] of Object.entries(props)) {
+    if (p.type !== 'string' || (design[k] && design[k].type !== 'instance')) continue;
+    const swaps = Object.entries(design).filter(([dk, q]) => q.type === 'instance' && (dk === k || dk.replace(/\d+$/, '') === k));
+    if (!swaps.length) continue;
+    delete props[k];
+    for (const [dk, q] of swaps) props[dk] = { type: 'instance', figma: q.figma, ...(q.swaps && { swaps: q.swaps }), code: p.code };
+  }
+  return props;
+}
+
+/* The swaps a placed component's glyph goes to, by Figma name: the one that drives a layer drawn at these props (a
+   button's Icon (16) or Icon (20), by its size, never both), or one that names no layer; a prop no drawn layer of
+   which it drives keeps its default. Tested by test-from-code.mjs. */
+export function glyphSwaps(fc, w) {
+  const M = atProps(fc, w), out = [];
+  for (const [k, p] of Object.entries(fc.props)) if (p.type === 'instance' || p.type === 'swap') {
+    const drives = (p.swaps || []).some((l) => M[l] && (M[l].swappedBy ? M[l].swappedBy === k : !Object.entries(fc.props).some(([k2, q]) => k2 !== k && (q.swaps || []).includes(l))));
+    if (drives || !(p.swaps || []).length) out.push(p.figma);
+  }
+  return out;
+}
+
+/* A box read back as the shape the design draws there, changed in place: a full-round empty box where the design has
+   an ellipse; an empty box with no auto layout where it has another shape, not an icon (a divider, a swatch:
+   to-markup writes a shape as an empty element, which draws as a box). Tested by test-from-code.mjs. */
+export function asShape(x, fa, hasChildren) {
+  if (x.kind !== 'container' || !fa || fa.kind !== 'graphic' || hasChildren) return x;
+  if (fa.shape === 'ellipse') { if (x.full) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; } }
+  else if (!fa.icon && !x.layout) { x.kind = 'graphic'; if (fa.shape) x.shape = fa.shape; delete x.layout; }
+  return x;
+}
+
 export function zeroTokens(e, fe, value) {
   const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
   const unbound = (v) => v == null || typeof v === 'number';
@@ -1237,12 +1283,8 @@ async function main() {
           // variant); a flag by its presence. Never class, style or the walk's own marks
           const has = (k, v) => carries(x.attrs, k, v);
           if (axes) for (const [ax, vals] of Object.entries(axes)) {
-            const fits = (h) => Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => h(k, v)));
-            // (the host's own attributes first; only where they say none, an inner control's disabled: a loading button
-            // whose <button> is disabled because it is busy stays loading)
-            const hit = fits(has) || (x.innerDisabled ? fits((k, v) => carries({ ...x.attrs, disabled: '' }, k, v)) : undefined);
-            const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);
-            if (hit || rest) w[ax] = (hit || rest)[0];
+            const got = axisValueOf(vals, x.attrs, x.innerDisabled);
+            if (got != null) w[ax] = got;
           }
           // a mapping that names whole combinations: the one whose args the markup carries, the most of them, by its name
           const combos = !axes && L.combosOf ? L.combosOf(x.slug) : null;
@@ -1256,22 +1298,13 @@ async function main() {
           const glyphOf = [];
           // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
           // size, never both; a prop no drawn layer of which it drives is left its default
-          if (fc && x.glyphs && x.glyphs.length) {
-            const M = atProps(fc, w);
-            for (const [k, p] of Object.entries(fc.props)) if (p.type === 'instance' || p.type === 'swap') {
-              const drives = (p.swaps || []).some((l) => M[l] && (M[l].swappedBy ? M[l].swappedBy === k : !Object.entries(fc.props).some(([k2, q]) => k2 !== k && (q.swaps || []).includes(l))));
-              if (drives || !(p.swaps || []).length) { w[p.figma] = x.glyphs[0]; glyphOf.push(p.figma); }
-            }
-          }
+          if (fc && x.glyphs && x.glyphs.length) for (const f of glyphSwaps(fc, w)) { w[f] = x.glyphs[0]; glyphOf.push(f); }
           if (Object.keys(w).length) x.with = w;
           // which of them name the glyph it draws: content, which the swap test below sets aside
           if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
         }
         delete x.slug; delete x.attrs; delete x.innerDisabled; delete x.glyphs; delete x.texts; delete x.shown;
-        if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
-        // and an empty box where the design draws a rectangle (a divider, a swatch): to-markup writes a shape as an empty
-        // element, which draws as a box; it is the shape, its corners its own
-        else if (x.kind === 'container' && fa && fa.kind === 'graphic' && fa.shape !== 'ellipse' && !fa.icon && !x.layout && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; if (fa.shape) x.shape = fa.shape; delete x.layout; }
+        asShape(x, fa, raw.some((r) => r.parent === id));
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {
@@ -1884,15 +1917,7 @@ async function main() {
     // code's own names, and none is the code's alone for having another name. A prop the mapping joins, or one
     // sharing its code prop with one the design has (a swap's half beside its boolean), is the design's too
     if (L.governed && figmaContract) {
-      // an icon the code takes by name (a string) where the design swaps an instance: the design's swap, one per size
-      // where the code merged them (to-markup's one `icon` for Icon (16) and Icon (20))
-      for (const [k, p] of Object.entries(shaped.contract.props)) {
-        if (p.type !== 'string' || (figmaContract.props[k] && figmaContract.props[k].type !== 'instance')) continue;
-        const swaps = Object.entries(figmaContract.props).filter(([dk, q]) => q.type === 'instance' && (dk === k || dk.replace(/\d+$/, '') === k));
-        if (!swaps.length) continue;
-        delete shaped.contract.props[k];
-        for (const [dk, q] of swaps) shaped.contract.props[dk] = { type: 'instance', figma: q.figma, ...(q.swaps && { swaps: q.swaps }), code: p.code };
-      }
+      asDesignSwaps(shaped.contract.props, figmaContract.props);
       const sq = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
       const theirs = new Set(Object.entries(figmaContract.props).flatMap(([k, p]) => [k, sq(p.figma || k)]));
       const joined = new Set(Object.values((side.map || {}).props || {}).map((x) => (typeof x === 'string' ? x : x && (x.arg || x.code))).filter(Boolean));

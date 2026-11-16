@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries } from './from-code.mjs';
+import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -181,4 +181,21 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('a text inside a placed component, mapped to its root, is that root\'s words', elementOfLayer(inner, 'footer/button/label', 'text', R, others)[1] === true);
 }
 
+{
+  const state = { default: {}, loading: { loading: true }, disabled: { disabled: true } };
+  ok('an axis takes the value whose args the host carries', axisValueOf(state, { loading: '' }) === 'loading');
+  ok('an inner control\'s disabled counts only where the host says none: a busy loading button stays loading', axisValueOf(state, { loading: '' }, true) === 'loading' && axisValueOf(state, {}, true) === 'disabled');
+  ok('no args carried is the value that asks for none', axisValueOf(state, {}) === 'default');
+  const design = { icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon'] }, label: { type: 'text', figma: 'Label' }, label2: { type: 'instance', figma: 'Label 2' } };
+  const got = asDesignSwaps({ icon: { type: 'string', code: 'icon' }, label: { type: 'string', code: 'label' } }, design);
+  ok('a string icon the writer merged reads back as each size\'s swap', got.icon16?.type === 'instance' && got.icon20?.code === 'icon' && !got.icon);
+  ok('a string the design holds as text stays text, though an instance shares its name', got.label?.type === 'string' && !got.label2);
+}
+{
+  const btn = { props: { size: { type: 'enum', values: ['sm', 'md'], default: 'md' }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon16'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon20'] } },
+    anatomy: { root: { kind: 'container' }, icon20: { kind: 'instance', parent: 'root' } }, variants: [{ when: { size: 'sm' }, remove: ['icon20'], add: { icon16: { kind: 'instance', parent: 'root' } } }] };
+  ok('a glyph goes to the swap drawn at the size it is placed at, never both', JSON.stringify(glyphSwaps(btn, { size: 'sm' })) === '["Icon (16)"]' && JSON.stringify(glyphSwaps(btn, { size: 'md' })) === '["Icon (20)"]');
+  ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
+  ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
+}
 console.log(`${n}/${n} passed`);

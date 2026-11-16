@@ -57,12 +57,17 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     if (alignToCss(l.crossAlign)) put('align-items', alignToCss(l.crossAlign));
     if (l.firstOnTop) unread.push('layout.firstOnTop');
   }
+  // a root with no auto layout is a box all the same: a custom element is inline by default, 0 wide, so a part
+  // centred at 50% of it lands at its start
+  else if (root) put('display', e.width === undefined || e.width === 'hug' ? 'inline-block' : 'block');
 
   // fill, hug or a size: hug is the box's own, fill grows along the parent's flow or stretches across it
   for (const [k, prop, along] of [['width', 'inline-size', row], ['height', 'block-size', !row]]) {
     const v = take(k);
     // an outer box that hugs keeps its own width where a parent would stretch it
     if (v === 'hug' && root && k === 'width' && l && holds) put('inline-size', 'fit-content');
+    // a placed component that hugs takes its own main's size, never one the main's sheet gives it to fill
+    if (v === 'hug' && !root && e.kind === 'instance' && k === 'width') { put('inline-size', 'fit-content'); if (along) put('flex', 'none'); }
     if (v === undefined || v === 'hug') continue;
     // filled across and capped (a dialog's panel to 556): stretched, the cap would pin it to the start, so it takes
     // the full size instead and sits where its parent aligns it, as Figma has it
@@ -159,7 +164,7 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
       if (to === 'center') put(near, '50%');
       else if (to === 'max') put(far, offFar ?? '0');
       // pinned to both edges, it takes its size from them
-      else if (to === 'stretch') { put(near, off); put(far, offFar ?? off); for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1); }
+      else if (to === 'stretch') { put(near, off); put(far, offFar ?? off); for (let i = decls.length - 1; i >= 0; i--) if (decls[i][0] === size) decls.splice(i, 1); if (e.kind === 'instance') put(size, 'auto'); }
       // scaled with its parent: CSS has no such constraint, and its synonym (rules.mjs SCALE) is a share of the parent,
       // its offset and its size each a percentage of the parent's size
       else if (to === 'scale') {

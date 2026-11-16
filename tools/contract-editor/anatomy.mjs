@@ -358,6 +358,7 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
     if (shownBy && shownBy.type === 'boolean' && !shownBy.default) out.off = shownBy.name;
     // the outer box laid out as the sketch's own block, over the parts it lays out
     if (p.uid === 'root' && style.display === 'inline-flex') style.display = 'flex';
+    if (p.uid === 'root' && style.display === 'inline-block') style.display = 'block';
     if (style.position === 'absolute') style.zIndex = 1;
     else if (!holds(p.kind)) delete style.position;
     // a part a variant hides by its opacity keeps its room, unseen; a token (a disabled state's) by its value, which
