@@ -57,7 +57,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, then the `Field` holding `Value` and the trailing `Icon` button, then `Description` and `Error message`; the field fills its container (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the trailing `Icon` button (the hint and the message above the field, as [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary) set); the field fills its container (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the popup is a part named for its family and last word, `Combobox list`, with its rows `Combobox option`, and inside the field's frames it keeps the last word, `List` (figma-standard rule 9).
 - [required] The button sits last in auto-layout order, never pinned to the right edge, so a right-to-left page puts it at the inline end, where the project mirrors (figma-standard rules 33 and 50).
 
@@ -69,6 +69,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 
 **Variants and states**
 - [required] The field's axes run `Size → Has value → Validation → Disabled → State`; `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest; `State` runs `Rest → Focus → Hover → Press → Open`, `Open` drawn with the focus ring, since the input keeps focus while the list shows (figma-standard rules 1 to 4).
+- [weak] **`Press` stays**, where the [text input](text-input.md#in-figma) drops it: pressing a combobox's field opens the list, a change of its own, not only focus. MUI's input opens the popup on mouse down (`handleInputMouseDown`, [MUI useAutocomplete source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/useAutocomplete/useAutocomplete.js)).
 - [moderate] Open is one value on the field's `State`, not a boolean beside it ([research: *Open menu triggers*](../../../research/components-and-naming/what-the-state-axis-models.md#open-menu-triggers)); the field owns whether the list shows (figma-standard rule 7).
 - [weak] The list's contents (options, no match, loading, "Create 'design-ops'") are one axis on `Combobox list`, not on the field, so the field's set does not multiply by every list state and no frame shows two at once (figma-standard rule 2's reasoning). The states themselves are in [combobox and autocomplete: *How*](#combobox-and-autocomplete).
 - [strong] An option's active and selected looks are an axis on `Combobox option`, active drawn distinctly from selected: the APG tells them apart as `aria-activedescendant` and `aria-selected`, and GOV.UK's research found people confusing focused with selected items in selects ([select (dropdown): *How*](select.md#select-dropdown)).

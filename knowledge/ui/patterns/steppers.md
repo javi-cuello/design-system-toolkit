@@ -136,7 +136,7 @@ How a person keeps their bearings in a task that spans several screens or takes 
 - The job fails at 80% with "Error" → name the cause the job reported and whether anything was saved.
 
 **Accessibility**
-- [required] 4.1.3 Status Messages (milestones and the end announced, not every percent), 2.2.2 Pause, Stop, Hide (an animated indicator that runs more than five seconds sits beside information that conveys the same status, or can be stopped), 2.3.3 Animation from Interactions and reduced motion, 1.4.11 (the bar's fill meets 3:1).
+- [required] 4.1.3 Status Messages (milestones and the end announced, not every percent), 2.2.2 Pause, Stop, Hide (an animated indicator that runs more than five seconds beside other content can be stopped or hidden; WCAG's "loading" example is exempt because the animation "is the only content on the page", [Understanding 2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html), and Note 4 exempts a preload animation "if interaction cannot occur during that phase for all users", [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pause-stop-hide)), 2.3.3 Animation from Interactions and reduced motion, 1.4.11 (the bar's fill meets 3:1).
 
 **Build**
 - [required] *Elements:* native `progress` with `value` and `max` for countable work and without `value` when indeterminate ([MDN progress](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/progress)), labelled by `label` or `aria-labelledby`; the text inside the element is only a fallback, not its name (MDN). The count in words sits beside it.

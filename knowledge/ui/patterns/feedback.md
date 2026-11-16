@@ -28,7 +28,7 @@ How an interface tells people what happened, what state something is in, and wha
 **Cases**
 - A save on a settings form fails because the server is down → a banner at the top of the form region saying what was not saved and that the form keeps the input, not a toast: the person must act, and a toast can vanish before they read it.
 - A background export finishes while the person is on another page → a toast with no action, plus an entry in the notifications centre: global, passive, and findable again.
-- A field's value is too long → an inline error under the field, never a banner or toast: the scope is one field (GOV.UK keeps validation out of its [notification banner](https://design-system.service.gov.uk/components/notification-banner/)).
+- A field's value is too long → an inline error on the field, never a banner or toast: the scope is one field (GOV.UK keeps validation out of its [notification banner](https://design-system.service.gov.uk/components/notification-banner/)).
 - Deleting a project → a confirmation dialog with buttons named for the outcome ("Delete project", "Keep project"); deleting a draft comment → do it and offer undo. Undo or confirmation is [interaction: undo or confirmation](../design/interaction.md#undo-or-confirmation).
 - Three messages compete on one page → keep the most severe in its component, fold the rest into it or into the notifications centre; GOV.UK combines banners into one and Carbon shows one banner at a time.
 
@@ -59,10 +59,10 @@ How an interface tells people what happened, what state something is in, and wha
 - [weak] Don't use for news unrelated to what is on screen.
 
 **How**
-- [weak] Next to the cause: under a field, at the top of a region, in the row. Carbon: "Place inline notifications near their related items"; keep the message under two lines.
+- [weak] Next to the cause: on a field, at the top of a region, in the row. Carbon: "Place inline notifications near their related items"; keep the message under two lines.
 - [weak] Persist until resolved or dismissed (Carbon). A validation message clears when the input is fixed; timing is [interaction: validation timing](../design/interaction.md#error-prevention-and-validation-timing).
 - [weak] Wording: what is wrong and how to fix it, as [content: error messages](../design/content.md#error-messages) sets out.
-- [required] Reserve the message's line under a field, or accept the shift below the field only; a message never pushes the control the person is using (design-standard rule 2).
+- [required] A message never pushes the control the person is using (design-standard rule 2): a field's message, above it by the toolkit's default ([forms: *Error messages and the error summary*](forms.md#error-messages-and-the-error-summary)), appears on submit, or its line is reserved.
 - [weak] A form with several errors also gets a summary ([forms: error messages and the error summary](forms.md#error-messages-and-the-error-summary)).
 
 **Cases**
@@ -77,7 +77,7 @@ How an interface tells people what happened, what state something is in, and wha
 
 **Build**
 - [required] A field message is a description: `aria-describedby` on the control, `aria-invalid="true"` while in error ([HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup); code-standard rule 15).
-- [weak] Its line under the field is reserved, or the shift lands only below the field ([performance: *Layout stability in code*](../../code/performance.md#layout-stability-in-code)).
+- [weak] It appears on submit, or its line is reserved, so the field never moves while in use ([performance: *Layout stability in code*](../../code/performance.md#layout-stability-in-code)).
 - [required] A region message is a `p` or `div` at the region's top with a tone attribute; it is in the server HTML when the state is known at render (code-standard rule 20).
 - [required] A message inserted later into a region is announced through a separate live status line, not by putting `aria-live` on the message ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)).
 - [required] The error state is styled from `[aria-invalid="true"]`, never a class (code-standard rule 6).

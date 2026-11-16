@@ -33,7 +33,7 @@ A popover shows a little information or a few related controls next to the one e
 **Cases**
 - A "Columns" popover with ten checkboxes → each change applies at once and persists when the popover is light-dismissed.
 - A popover that opens a second popover for "Advanced" → expand the advanced options inside the same popover, or use a dialog.
-- A validation error shown in a popover by the field → an inline error under the field; a popover can be dismissed and missed.
+- A validation error shown in a popover by the field → an inline error on the field; a popover can be dismissed and missed.
 
 **Accessibility**
 - [required] 2.1.1: Escape closes and focus returns to the trigger; the trigger exposes `aria-expanded`.

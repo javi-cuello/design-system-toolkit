@@ -133,7 +133,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [weak] Long explanations go in the page, before the question.
 
 **How**
-- [moderate] **Where.** Under the label, above the field; it is read before the person types and stays while they do. Never in a placeholder ([GOV.UK](https://design-system.service.gov.uk/components/text-input/): no placeholder "for hints or examples").
+- [contested] **Where.** Under the label, above the field, as GOV.UK does; it is read before the person types and stays while they do. SDS and Primer place it after the control instead ([label: *Where the hint sits*](../components/label.md#overview)); the toolkit keeps it above, so a sighted reader meets it before the field, as a screen reader does through `aria-describedby`. Never in a placeholder ([GOV.UK](https://design-system.service.gov.uk/components/text-input/): no placeholder "for hints or examples").
 - [weak] **Length.** "Keep hint text to a single short sentence, without any full stops" ([GOV.UK](https://design-system.service.gov.uk/components/text-input/)). More than that is body text above the label ([GOV.UK question pages](https://design-system.service.gov.uk/patterns/question-pages/)).
 - [moderate] **When.** Add a hint for a format ("For example, QQ 12 34 56 C"), a constraint ("Must be 12 characters or more"), or a reason ("We'll only use this to send your receipt") ([Silver](https://adamsilver.io/blog/form-design-from-zero-to-hero-all-in-one-blog-post/): explain "why you're asking"). Leave it out when the label is enough.
 - [moderate] **Rules up front.** State every rule a value must meet before the person types, not first in an error ([NN/g](https://www.nngroup.com/articles/web-form-design/): "state the exact instructions").
@@ -149,7 +149,8 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [required] Implementation: code-standard rule 15 (`aria-describedby`, never inside the label). In Figma: figma-standard rules 26 and 32 for hint text size and contrast.
 
 **Build**
-- [required] The hint is an element with an `id` between the `label` and the control, listed first in the control's `aria-describedby` (the error's `id` follows it); never inside the `label`, a `title` or a `placeholder` (code-standard rule 15).
+- [required] The hint is an element with an `id` listed in the control's `aria-describedby`; never inside the `label`, a `title` or a `placeholder` (code-standard rule 15).
+- [contested] In the DOM the hint follows the visual side: between the `label` and the control where it is drawn above, as the toolkit's default is (*Where*, above), and listed first in `aria-describedby`, the error's `id` after it.
 - [weak] On a group, `aria-describedby` goes on the `fieldset`.
 - [weak] A toggletip is a `button` that shows its text on click, built as [accessibility: tooltips and toggletips](../../code/accessibility.md#tooltips-and-toggletips) says.
 - [weak] The hint's markup sits with the rest in [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup); the message after it in [*Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation).

@@ -56,18 +56,24 @@ const PATTERNS = [
 ];
 
 // a word of the path → the component page it names, listed before the patterns: the component is what is being built.
-// Only a word that names one component: details, range, sheet, toggle and dropdown each name others too (DateRangePicker, ActionSheet)
+// Only a word that names one component: details, range, sheet, toggle and dropdown each name others too (DateRangePicker, ActionSheet);
+// so do loader (a data loader), search alone (a results page) and inputs (a folder of every input)
 const COMPONENTS = [
   [/^(button|btn|fab)s?$/, 'button'], [/^links?$/, 'link'], [/^tabs?$/, 'tabs'], [/^breadcrumbs?$/, 'breadcrumbs'],
   [/^(dialog|modal)s?$/, 'modal-dialog'], [/^drawers?$/, 'drawer'], [/^popovers?$/, 'popover'], [/^(tooltip|toggletip)s?$/, 'tooltip'],
   [/^accordions?$/, 'accordion'], [/^checkbox(es)?$/, 'checkbox'], [/^radios?$/, 'radio'], [/^switch(es)?$/, 'switch'],
   [/^selects?$/, 'select'], [/^(combobox|autocomplete)s?$/, 'combobox'], [/^segmented$/, 'segmented-control'], [/^sliders?$/, 'slider'],
   [/^(toast|snackbar)s?$/, 'toast'], [/^(alert|banner|callout)s?$/, 'alert'], [/^(badge|pill)s?$/, 'badge'], [/^(chip|tag)s?$/, 'chip'],
+  [/^(input|textfield|textinput)$/, 'text-input'], [/^textareas?$/, 'text-area'], [/^(searchbox|searchfield|searchinput|searchbar)$/, 'search-input'],
+  [/^labels?$/, 'label'], [/^(feedbackmessage|fielderror|errormessage|helpertext|inlinemessage)s?$/, 'feedback-message'],
+  [/^(progress|progressbar|progressindicator)$/, 'progress-indicator'], [/^spinners?$/, 'spinner'],
 ];
 
 export function pagesFor(rel) {
   const words = rel.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().split(/[/\-_.]+/).filter(Boolean);
-  const patterns = COMPONENTS.filter(([re]) => words.some((w) => re.test(w))).map(([, c]) => `knowledge/ui/components/${c}.md`)
+  // a two-word name split by its case or a hyphen (TextArea, field-error) is also read joined
+  const joined = words.concat(words.slice(1).map((w, i) => words[i] + w));
+  const patterns = COMPONENTS.filter(([re]) => joined.some((w) => re.test(w))).map(([, c]) => `knowledge/ui/components/${c}.md`)
     .concat(PATTERNS.filter(([re]) => words.some((w) => re.test(w))).map(([, p]) => `knowledge/ui/patterns/${p}.md`));
   const base = /\.(s[ac]ss|css)$/.test(rel) ? STYLE : MARKUP.concat(/\.(m?js|jsx|tsx|vue|svelte|astro)$/.test(rel) ? ['knowledge/code/javascript.md'] : []);
   return [...new Set(patterns.concat(base))];

@@ -487,7 +487,7 @@ The fundamentals of interface text, for building a page or a design and for audi
 
 **Cases:**
 - A gallery of button previews, each captioned "Button, primary, hover" → `alt=""`; the caption already says it.
-- A screenshot showing the only example of an error state → "Error state: red border and the message 'Enter an email address' under the field".
+- A screenshot showing the only example of an error state → "Error state: red border and the message 'Enter an email address' above the field".
 - A bar chart of findings per area → a data table beside it, and short alt naming what it shows.
 
 **Accessibility:** 1.1.1 Non-text Content (A) wants a text alternative that serves the equivalent purpose and decoration ignorable ([W3C](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html)). Implementation (empty alt for decoration, names for icon-only controls) is code-standard rule 18.

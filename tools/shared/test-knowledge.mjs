@@ -35,8 +35,14 @@ ok('a path\'s words name its component page before its pattern: a tooltip, a but
   && p('src/ui/icon-button.scss')[0] === 'button.md' && p('src/SegmentedControl.vue').includes('segmented-control.md')
   && !p('src/table.tsx').some((x) => x === 'tabs.md')
   && !['src/OrderDetails.tsx', 'src/DateRangePicker.tsx', 'src/ActionSheet.tsx', 'src/ThemeToggle.tsx'].some((f) => pagesFor(f).some((x) => x.includes('/components/'))));
-const comps = 'src/button-link-tabs-breadcrumbs-dialog-drawer-popover-tooltip-accordion-checkbox-radio-switch-select-combobox-segmented-slider-toast-alert-badge-chip.tsx';
+const comps = 'src/button-link-tabs-breadcrumbs-dialog-drawer-popover-tooltip-accordion-checkbox-radio-switch-select-combobox-segmented-slider-toast-alert-badge-chip-input-textarea-searchbox-label-feedback-message-progress-spinner.tsx';
 ok('every component page has a word that names it, and every one named exists',
   pagesFor(comps).filter((x) => x.includes('/components/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/components')).filter((f) => f.endsWith('.md') && f !== 'README.md').length
   && pagesFor(comps).every((x) => fs.existsSync(path.join(TK, x))));
+ok('a two-word component name is read joined: TextArea, FieldError, ProgressBar, a search input',
+  p('src/TextArea.tsx')[0] === 'text-area.md' && p('src/field-error.tsx')[0] === 'feedback-message.md'
+  && p('src/ProgressBar.vue')[0] === 'progress-indicator.md' && p('src/search-input.scss').includes('search-input.md')
+  && !p('src/area-chart.tsx').some((x) => x === 'text-area.md'));
+ok('…and a word that names other things names no component: a data loader, a results page, a folder of inputs',
+  !['src/data/loader.ts', 'src/pages/SearchResults.tsx', 'src/inputs/date-picker.tsx'].some((f) => pagesFor(f).some((x) => /spinner|search-input|text-input/.test(x))));
 console.log(`${n}/${n} passed`);

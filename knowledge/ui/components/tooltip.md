@@ -32,7 +32,7 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - [moderate] **Not the `title` attribute** for anything a keyboard user needs; Primer's [truncate accessibility](https://primer.style/product/components/truncate/accessibility/) notes `title` tooltips have "no browser-native mechanism" for keyboard users.
 
 **Cases**
-- Password rules in a tooltip on the password field → visible hint text under the field (NN/g's Amtrak example).
+- Password rules in a tooltip on the password field → visible hint text on the field (NN/g's Amtrak example).
 - A tooltip with a "Learn more" link → a toggletip opened by click, so the link can be reached.
 - A truncated table cell with its full text in `title` → wrap the text or give an explicit expand control ([`disclosure.md`](../patterns/disclosure.md), *Show more and truncation*).
 - A tooltip explaining why a button is disabled → unreachable by keyboard on a `disabled` button; put the reason in text ([button: disabled buttons](button.md#disabled-buttons)).

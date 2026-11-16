@@ -94,7 +94,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - [weak] Chips sit inside or directly above the field, in the order entered; the text cursor follows the last chip.
 - [weak] A value commits on Enter or on choosing a suggestion; comma or Tab committing is a choice to state in the design and keep everywhere.
 - [moderate] Each chip has its own remove button with a name ("Remove Ada Lovelace"); Backspace in the empty field selects, then removes, the last chip, as a shortcut beside the button, never instead of it. Primer's token also removes on Backspace or Delete when focused ([Primer Token](https://primer.style/product/components/token/)).
-- [moderate] A duplicate or invalid value is refused with a message under the field, not silently dropped ([forms: error messages and the error summary](../patterns/forms.md#error-messages-and-the-error-summary)).
+- [moderate] A duplicate or invalid value is refused with a message on the field, not silently dropped ([forms: error messages and the error summary](../patterns/forms.md#error-messages-and-the-error-summary)).
 - [weak] Values that differ in kind (a person, a team) may carry an avatar or icon, and keep the text.
 
 **Cases**
