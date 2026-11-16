@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM } from './to-markup.mjs';
+import { toReact, toElement, toSnippet, toGallery, toParity, toStories, partsOf, propsOf, filesFor, namingFault, partSelector, storyIdOf, storybookOf, BANNER, DOM, unexposed } from './to-markup.mjs';
 import { siteFiles, serveSite } from './site.mjs';
 import { combinations, toCss, namer, drawn, entryOf } from './to-code.mjs';
 import { expand, variantDefaults } from './layers.mjs';
@@ -67,6 +67,9 @@ ok('a glyph a variant changes is the one its condition draws', /"data-icon": \(t
   const org2 = { ...org, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'sw/box': { kind: 'container', parent: 'sw' }, 'sw/box/t': { kind: 'container', parent: 'sw/box' }, 'sw/box/t/x': { kind: 'text', parent: 'sw/box/t', content: 'b' }, 'sw/icon': { kind: 'instance', parent: 'sw', component: 'Icon/case' } } };
   const out2 = toElement(org2, 'org', { naming: ELEMENT, library: { Switcher: sw2, Org: org2 } });
   ok('an override under one already named is not named again, and a field only a hover state changes is still a gap', /Box: drawn here/.test(out2) && !/X: drawn here/.test(out2) && /Icon: drawn here/.test(out2));
+  { const sw3 = { ...sw, props: { size: { type: 'enum', values: ['s', 'l'], default: 's', figma: 'Size' } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/dot' } }, variants: [{ when: { size: 'l' }, set: { 'icon.content': 'x' } }] };
+    const org3 = { ...org, anatomy: { root: { kind: 'container' }, sw: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'sw/icon': { kind: 'instance', parent: 'sw', component: 'Icon/case' } } };
+    ok('a variant that sets one field of a part passes that field only: another component there is still an override', unexposed(org3, 'sw/icon', (n) => (n === 'Switcher' ? sw3 : null)) === 'part'); }
   ok('an override a placed component has no prop for is named as a gap, never dropped without a word', /Icon: drawn here inside Sw, which has no prop for it/i.test(toElement(org, 'org', { naming: ELEMENT, library: { Switcher: sw, Org: org } }))); }
 const renamed = { component: 'Tag', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', name: 'Icon' } }, variants: [], folder: 'tag' };
 ok('a layer whose name its id does not give back carries the design\'s name (data-figma-name)', /"data-part": "mark", "data-figma-name": "Icon"/.test(toElement(renamed, 'tag', { naming: ELEMENT, library: {} })));
