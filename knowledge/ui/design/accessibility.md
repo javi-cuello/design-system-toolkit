@@ -103,7 +103,7 @@ Use Figma's native annotations, which the API can read, or the [GitHub Annotatio
 **How:** [Carbon](https://carbondesignsystem.com/guidelines/accessibility/keyboard/) gives the default: header, main navigation, content "(from left to right, top to bottom)", footer. Annotate the exceptions:
 - [weak] **Multi-column forms:** by row or by column ([Carbon checkbox](https://carbondesignsystem.com/components/checkbox/accessibility)).
 - [weak] **Cards with more than one action:** which comes first.
-- [required] **Dialogs:** the first stop on open and the return on close, chosen as [dialogs: focus](../patterns/dialogs.md#focus-in-trapped-returned) sets out ([2.4.3](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html)).
+- [required] **Dialogs:** the first stop on open and the return on close, chosen as [focus](../components/modal-dialog.md#focus-in-trapped-returned) sets out ([2.4.3](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html)).
 - [required] **Layouts reordered between breakpoints:** reading order holds at every width (code-standard rule 2).
 - [weak] **Sticky headers, footers and banners:** their height at 320px as well as desktop, and whether a banner overlays content or pushes it down.
 
@@ -273,7 +273,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 
 **How:** the W3C note [*Making Content Usable for People with Cognitive and Learning Disabilities*](https://www.w3.org/TR/coga-usable/) (COGA) covers barriers WCAG 2.x does not, and is "not required for conformance". Ask its eight objectives at review of a new template or flow: understand what things are and how to use them; find what they need; clear content; avoid and correct mistakes; help users focus; processes that do not rely on memory; help and support; adaptation and personalisation. In design terms:
 - [weak] **Memory:** show what was chosen earlier (a summary panel, steps with their answers).
-- [weak] **Focus:** one primary action per view ([actions: button hierarchy](../patterns/actions.md#button-hierarchy)); progressive disclosure for the rest.
+- [weak] **Focus:** one primary action per view ([button hierarchy](../components/button.md#button-hierarchy)); progressive disclosure for the rest.
 - [weak] **Plain language:** [content: plain language and reading level](content.md#plain-language-and-reading-level); instructions before the field, never only in the error.
 - [required] **Consistent help** ([3.2.6](https://www.w3.org/WAI/WCAG22/Understanding/consistent-help.html)): contact details, a contact form, self-help or chat that repeat across pages keep the same order relative to other content. Help is not required; moving it fails. Put it in the template.
 - [required] **Redundant entry** ([3.3.7](https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html)): what was given earlier in the same process is filled in or selectable, unless re-entry is essential, for security, or no longer valid.
@@ -348,7 +348,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 - [required] A session that can expire has a designed warning and a one-action extend (WCAG 2.2.1).
 - [strong] Nothing the user must read or act on disappears by itself.
 
-**How:** [2.2.1](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html): each limit can be turned off, adjusted to at least ten times the default, or warned of with at least 20 seconds to extend by a simple action, at least ten times. Real-time events, limits whose extension "would invalidate the activity" and limits over 20 hours are exempt. A toast that vanishes after five seconds is a time limit on reading it ([feedback: toasts](../patterns/feedback.md#toasts)).
+**How:** [2.2.1](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html): each limit can be turned off, adjusted to at least ten times the default, or warned of with at least 20 seconds to extend by a simple action, at least ten times. Real-time events, limits whose extension "would invalidate the activity" and limits over 20 hours are exempt. A toast that vanishes after five seconds is a time limit on reading it ([toasts](../components/toast.md#toasts)).
 
 **Cases:**
 - "Row dismissed. Undo" auto-hides after five seconds → keep it until dismissed; it carries an action.

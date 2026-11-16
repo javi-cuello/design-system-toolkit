@@ -4,8 +4,9 @@
  *
  *   uiFile(rel)    → whether a project file (repo-relative) draws an interface
  *   pagesFor(rel)  → the knowledge pages for an interface file: the
- *                    fundamentals its kind of file needs, and each pattern its
- *                    path names (the caller has decided it is interface work)
+ *                    fundamentals its kind of file needs, and each component
+ *                    and pattern its path names (the caller has decided it is
+ *                    interface work)
  *
  * One notion of "UI work" for the edit hook (tools/claude-hooks), which names
  * the pages beside the first change, and the push check (tools/project-check),
@@ -54,9 +55,20 @@ const PATTERNS = [
   [/^(inspector|properties|property)/, 'property-editors'],
 ];
 
+// a word of the path → the component page it names, listed before the patterns: the component is what is being built.
+// Only a word that names one component: details, range, sheet, toggle and dropdown each name others too (DateRangePicker, ActionSheet)
+const COMPONENTS = [
+  [/^(button|btn|fab)s?$/, 'button'], [/^links?$/, 'link'], [/^tabs?$/, 'tabs'], [/^breadcrumbs?$/, 'breadcrumbs'],
+  [/^(dialog|modal)s?$/, 'modal-dialog'], [/^drawers?$/, 'drawer'], [/^popovers?$/, 'popover'], [/^(tooltip|toggletip)s?$/, 'tooltip'],
+  [/^accordions?$/, 'accordion'], [/^checkbox(es)?$/, 'checkbox'], [/^radios?$/, 'radio'], [/^switch(es)?$/, 'switch'],
+  [/^selects?$/, 'select'], [/^(combobox|autocomplete)s?$/, 'combobox'], [/^segmented$/, 'segmented-control'], [/^sliders?$/, 'slider'],
+  [/^(toast|snackbar)s?$/, 'toast'], [/^(alert|banner|callout)s?$/, 'alert'], [/^(badge|pill)s?$/, 'badge'], [/^(chip|tag)s?$/, 'chip'],
+];
+
 export function pagesFor(rel) {
   const words = rel.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().split(/[/\-_.]+/).filter(Boolean);
-  const patterns = PATTERNS.filter(([re]) => words.some((w) => re.test(w))).map(([, p]) => `knowledge/ui/patterns/${p}.md`);
+  const patterns = COMPONENTS.filter(([re]) => words.some((w) => re.test(w))).map(([, c]) => `knowledge/ui/components/${c}.md`)
+    .concat(PATTERNS.filter(([re]) => words.some((w) => re.test(w))).map(([, p]) => `knowledge/ui/patterns/${p}.md`));
   const base = /\.(s[ac]ss|css)$/.test(rel) ? STYLE : MARKUP.concat(/\.(m?js|jsx|tsx|vue|svelte|astro)$/.test(rel) ? ['knowledge/code/javascript.md'] : []);
   return [...new Set(patterns.concat(base))];
 }

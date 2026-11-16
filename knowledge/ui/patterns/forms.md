@@ -379,7 +379,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [required] A native `<button type="submit">` whose text is the outcome (code-standard rule 8); a secondary submit is another button with `name="action" value="draft"`, and Cancel is a link.
 - [required] Enter in a field presses the form's first submit button in tree order, so the primary comes first in the DOM (HTML).
 - [required] Never `disabled` on load; disabled, where truly needed, is the control's own (code-standard rule 9, code-standard rule 62).
-- [weak] A second click while the request runs is ignored by a flag on the form, and the button shows progress ([actions: loading buttons](actions.md#loading-buttons); [HTML semantics: *Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation)).
+- [weak] A second click while the request runs is ignored by a flag on the form, and the button shows progress ([loading buttons](../components/button.md#loading-buttons); [HTML semantics: *Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation)).
 - [required] The warning style is a variant attribute on the wrapper (`variant="danger"`), never a class (code-standard rule 9).
 
 **Check**

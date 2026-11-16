@@ -357,20 +357,20 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 ## Emphasis and the attention budget
 
 **What good looks like**
-- [weak] One primary action per view; a region the person opened (a dialog, a side panel) may have its own ([actions: button hierarchy](../patterns/actions.md#button-hierarchy)).
+- [strong] One primary action per view; a region the person opened (a dialog, a side panel) may have its own ([button hierarchy](../components/button.md#button-hierarchy)).
 - [weak] The accent colour appears where action is, and rarely elsewhere.
-- [weak] Button roles are visibly ranked, as [actions: button hierarchy](../patterns/actions.md#button-hierarchy) maps them.
+- [weak] Button roles are visibly ranked, as [button hierarchy](../components/button.md#button-hierarchy) maps them.
 - [weak] When the important thing does not stand out, its neighbours are turned down.
 
 **How**
-- [weak] How many primaries and which button roles is [actions: button hierarchy](../patterns/actions.md#button-hierarchy); this section is the budget the buttons spend from.
+- [weak] How many primaries and which button roles is [button hierarchy](../components/button.md#button-hierarchy); this section is the budget the buttons spend from.
 - [weak] Order of levers, cheapest first: position, weight, colour, size. Colour spends the most budget.
 - [weak] [Carbon](https://carbondesignsystem.com/elements/color/overview/): grey is dominant, blue is action, "Additional colors are used sparingly and purposefully."
 - [weak] Refactoring UI's "De-emphasize to emphasize" (commentary, title only): mute secondary text and actions before enlarging the primary.
 
 **Cases**
 - A toolbar with Save, Publish and Export all filled → Publish primary, Save secondary, Export tertiary or in a menu.
-- A dashboard with a primary button in each of four panels → one primary for the view; the panels' actions take a quieter role ([actions: button hierarchy](../patterns/actions.md#button-hierarchy)).
+- A dashboard with a primary button in each of four panels → one primary for the view; the panels' actions take a quieter role ([button hierarchy](../components/button.md#button-hierarchy)).
 - Every table row has a filled "Edit" button → a text button or an icon button with a name; forty filled buttons spend the budget forty times.
 - The primary action is lost among bold headings and coloured badges → turn down the badges and heading weight first.
 - A destructive "Delete" styled as primary on a settings page → secondary or destructive variant, separated from the safe action.
@@ -386,7 +386,7 @@ Which fill each surface takes (the page, a sidebar, a card, a menu or popover, a
 - *Script:* could count primary or accent-filled buttons per page or frame against a project threshold, and flag two prominent buttons side by side.
 - *Judgement:* is the one emphasised thing the right one, and can a first-time reader find it in a second?
 
-**Sources:** Carbon and Refactoring UI as above; the one-primary sources and their disagreement are in [actions: button hierarchy](../patterns/actions.md#button-hierarchy).
+**Sources:** Carbon and Refactoring UI as above; the one-primary sources and their disagreement are in [button hierarchy](../components/button.md#button-hierarchy).
 
 ---
 
@@ -789,7 +789,7 @@ A material is a surface fill that lets what is behind it through, blurred: a fro
 - A blue ring on a blue primary button → near 1:1 and invisible; a two-colour ring or a white inner band.
 - An input focused only under `:focus-visible` → mouse users get nothing; inputs use `:focus`.
 - A selected segment shown only by a lighter background → add weight, a check or a stronger fill at 3:1 against the unselected segments.
-- A disabled submit button on an incomplete form → [actions: disabled buttons](../patterns/actions.md#disabled-buttons).
+- A disabled submit button on an incomplete form → [disabled buttons](../components/button.md#disabled-buttons).
 - A grey-to-blue border recolour as the only focus cue on an input → often near 1.4:1; thicken the border as well.
 
 **Accessibility**

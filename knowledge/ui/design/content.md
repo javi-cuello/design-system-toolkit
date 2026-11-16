@@ -264,7 +264,7 @@ The fundamentals of interface text, for building a page or a design and for audi
 - [moderate] Undo first; confirm only the rare, serious or irreversible ([interaction: undo or confirmation](interaction.md#undo-or-confirmation)).
 - [weak] Destructive words name the object, the consequence and the count; buttons name the outcome, never Yes/No/OK.
 
-**How:** the confirmation dialog's title, body, buttons and focus are [dialogs: confirmation dialogs](../patterns/dialogs.md#confirmation-dialogs); a destructive button's label and style are [actions: destructive actions](../patterns/actions.md#destructive-actions). This file's part is the words: "This can't be undone" only when true, and the same verb in the trigger, the dialog and the result.
+**How:** the confirmation dialog's title, body, buttons and focus are [confirmation dialogs](../components/modal-dialog.md#confirmation-dialogs); a destructive button's label and style are [actions: destructive actions](../patterns/actions.md#destructive-actions). This file's part is the words: "This can't be undone" only when true, and the same verb in the trigger, the dialog and the result.
 
 **Cases:**
 - A page says "Delete" on the trigger and "Remove" in the dialog for one action → one verb throughout (*Terminology*).

@@ -178,7 +178,7 @@ Negative: a run that delivers only the guide, or copies the topic into a second 
 Traced: 2026-10-11 for 2.6.0 — to SKILL.md Step 8.
 
 ## A16 · Research starts where the knowledge base left off
-Fixture: a run on "when should a button show a loading spinner", inside the toolkit repo, where `knowledge/ui/patterns/actions.md` *Loading buttons* already cites Carbon and Primer.
+Fixture: a run on "when should a button show a loading spinner", inside the toolkit repo, where `knowledge/ui/components/button.md` *Loading buttons* already cites Carbon and Primer.
 Assert: before searching, the run reads that section and its sources, re-opens the ones it leans on, aims the search at what the section lacks (a delay threshold, double-submit, systems not yet cited), and corrects a cited claim that no longer holds in that section.
 Negative: a run that searches from scratch and re-cites what the section already had, or keeps its own list of sources.
 Traced: 2026-10-12 for 2.7.0 — to SKILL.md Step 1.

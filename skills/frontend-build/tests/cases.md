@@ -267,6 +267,7 @@ Walked live: 2026-10-11 for 2.1.0 — `grep -rnE "outline-offset: [0-9]|outline:
 Fixture: "how should this form mark required fields?"
 Assert: the answer consults `knowledge/ui/patterns/forms.md` (toolkit repo) and cites it, and the skill holds no copy of that guidance: its only reference is `audit/` (the judgement pass); how to write the code is `knowledge/code/`.
 Traced: 2026-10-11 for 2.1.0 — to `SKILL.md`'s knowledge paragraph and *Where the rest is*; `ls references` shows `audit` only (2.2.0).
+Traced: 2026-11-16 for 3.2.0 — the knowledge paragraph names `knowledge/ui/components/` beside the patterns, and a component question ("what states does our button need?") is answered from `knowledge/ui/components/button.md`; `ls references` still shows `audit` only.
 
 ## A7 · An audit of a real build runs end to end: checks, then the judgement pass on screenshots
 Fixture: a live docs site, two page types (an overview page and the audit queue), at 1280 and 390 wide.

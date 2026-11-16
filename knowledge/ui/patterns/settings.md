@@ -121,7 +121,7 @@ How a product lets people set it up for themselves: how a settings area is struc
 **How**
 - [weak] **Detect and suggest,** above the full list, and let people override, since detection is unreliable (Friedman). The browser reports its zone through `Intl.DateTimeFormat().resolvedOptions().timeZone` ([MDN resolvedOptions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/resolvedOptions)).
 - [weak] **People pick a city or country, not an offset:** list places, show each one's current local time and offset beside it, and sort alphabetically, not by offset (Friedman).
-- [weak] **Search as you type** by city, country or offset, with a placeholder that invites typing rather than scrolling (Friedman); this is a combobox ([selection: combobox and autocomplete](selection.md#combobox-and-autocomplete)).
+- [weak] **Search as you type** by city, country or offset, with a placeholder that invites typing rather than scrolling (Friedman); this is a combobox ([combobox and autocomplete](../components/combobox.md#combobox-and-autocomplete)).
 - [weak] **GMT reads better than UTC** in labels; local abbreviations (CEST, PST) help where known (Friedman).
 - [weak] **Keep the zone list current;** zones change (Friedman).
 

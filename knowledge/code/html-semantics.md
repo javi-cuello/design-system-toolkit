@@ -326,7 +326,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **How**
 - [required] **`details`.** "Only one of the grouped `<details>` elements can be open at a time" when they share a `name` ([MDN `details`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details)). It gives open state, keyboard and exclusivity, and nothing else: Escape and a click outside are the script's (code-standard rule 19).
-- [strong] **Accordion.** Where the sections need headings in the outline, an "Expand all" control or `role="region"` panels, `details` stops being enough: each header is a `button type="button"` with `aria-expanded` and `aria-controls`, the only element inside a heading at the outline's level ([APG accordion](https://www.w3.org/WAI/ARIA/apg/patterns/accordion/)), and the panel is shown and hidden with `hidden="until-found"`, so find-in-page and a fragment link still open it ([accessibility: hidden content](accessibility.md#hidden-content)). Rendered open, with no buttons, until the script runs (code-standard rule 20). Choosing it is [disclosure: accordions](../ui/patterns/disclosure.md#accordions).
+- [strong] **Accordion.** Where the sections need headings in the outline, an "Expand all" control or `role="region"` panels, `details` stops being enough: each header is a `button type="button"` with `aria-expanded` and `aria-controls`, the only element inside a heading at the outline's level ([APG accordion](https://www.w3.org/WAI/ARIA/apg/patterns/accordion/)), and the panel is shown and hidden with `hidden="until-found"`, so find-in-page and a fragment link still open it ([accessibility: hidden content](accessibility.md#hidden-content)). Rendered open, with no buttons, until the script runs (code-standard rule 20). Choosing it is [accordions](../ui/components/accordion.md#accordions).
   ```html
   <h3><button type="button" aria-expanded="false" aria-controls="p-delivery">Delivery</button></h3>
   <div id="p-delivery" hidden="until-found">…</div>
@@ -338,7 +338,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
   <button type="button" popovertarget="filters">Filters</button>
   <dialog id="filters" popover aria-labelledby="filters-h"><h2 id="filters-h">Filters</h2>…</dialog>
   ```
-- [weak] Choosing the surface is [dialogs: choosing the surface](../ui/patterns/dialogs.md#choosing-the-surface); choosing disclosure is [disclosure: details and summary](../ui/patterns/disclosure.md#details-and-summary).
+- [weak] Choosing the surface is [dialogs: choosing the surface](../ui/patterns/dialogs.md#choosing-the-surface); choosing disclosure is [details and summary](../ui/components/accordion.md#details-and-summary).
 
 **Cases**
 - A modal opens only from a script click handler → no script, no modal; add `popover` and `popovertarget`, then enhance to `showModal()`.
@@ -418,7 +418,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
   ```
 - [moderate] **The summary** is a `div` with `tabindex="-1"` at the top of `main`, headed, holding a list of links whose `href` is each field's `id` (`#dob-day` for the first part of a date). On a server render, the page focuses it on load; after a scripted submit, `summary.focus()`. The page `title` gains "Error: " either way.
 - [weak] **Own messages.** The script adds `novalidate` to the form, runs `checkValidity()` on submit, writes the messages and the summary itself, and leaves the markup constraints for the no-script path ([javascript: the platform before a library](javascript.md#the-platform-before-a-library)).
-- [required] **One submit.** Ignore a second submit while the first is in flight (a flag on the form, cleared on the response), and keep the button enabled (code-standard rule 9, code-standard rule 62); a slow request shows its progress on the button ([actions: loading buttons](../ui/patterns/actions.md#loading-buttons)).
+- [required] **One submit.** Ignore a second submit while the first is in flight (a flag on the form, cleared on the response), and keep the button enabled (code-standard rule 9, code-standard rule 62); a slow request shows its progress on the button ([loading buttons](../ui/components/button.md#loading-buttons)).
 - [required] **Values survive.** The server re-renders every field with the submitted value (except a password); a scripted re-render restores values and focus (code-standard rule 14).
 - [weak] What the messages say and when they appear is [forms: error messages and the error summary](../ui/patterns/forms.md#error-messages-and-the-error-summary) and [forms: validation timing](../ui/patterns/forms.md#validation-timing).
 

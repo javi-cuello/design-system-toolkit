@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.38.0 (2026-11-16): §D 21: a component has one knowledge page, `knowledge/ui/components/<name>.md`, in one shape (Overview, topic sections, In Figma, In code); its sections move out of the pattern pages, and `check-standards` holds the shape.
 - 2.37.0 (2026-11-16): §D 0 question 4: a cache that skips unchanged work hashes every input its reader touches, shared ones included, and a probe shows it selective; three reviews of the self leg's fingerprint each found an input it missed (token ties across the library, house settings, fonts).
 - 2.36.0 (2026-11-14): §D 13: a plan holds an Aim and outlives its pieces: each ends with `after:` and `course:` in it, archived only at `Status: done`; new sessions see open plans.
 - 2.35.0 (2026-11-14): §D 13: a full-size plan holds a Measure, its goal measured end to end before any part is built (`before:`), and the work ends on a `Measure:` line, before → after; `gates.mjs` refuses the plan and the close without them.

@@ -78,7 +78,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 **Build**
 - [strong] Every date or time is `<time datetime="2026-10-09T14:02+01:00">9 Oct 2026, 14:02</time>`: the machine value carries the offset; the text comes from `Intl.DateTimeFormat` with `dateStyle`/`timeStyle` and, when zones matter, `timeZoneName: "short"` ([i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)).
 - [weak] Relative times come from `Intl.RelativeTimeFormat` in the browser, from the `datetime` attribute, so a cached page does not freeze "2 minutes ago" in the server's zone; exports and printed pages render the absolute form.
-- [required] The exact timestamp on a relative time is reachable by keyboard and touch: visible in the record's detail, or a tooltip that opens on focus ([dialogs: tooltips](dialogs.md#tooltips)); never `title` alone.
+- [required] The exact timestamp on a relative time is reachable by keyboard and touch: visible in the record's detail, or a tooltip that opens on focus ([tooltips](../components/tooltip.md#tooltips)); never `title` alone.
 - [weak] Ranges are two `time` elements joined by "to", not a hyphen.
 - [required] A check that compares formatted dates pins its locale and time zone (code-standard rule 35).
 

@@ -288,7 +288,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [required] Tooltip text at 4.5:1; announced through the focused point's name, not a live region on every move (WCAG 1.4.3).
 
 **Build**
-- [required] The tooltip and guide line are one component, positioned from the point's coordinates and clamped to the plot's box; detail on hover and focus comes from one handler (code-standard rule 36; [accessibility: *Tooltips and toggletips*](../../code/accessibility.md#tooltips-and-toggletips), [dialogs: tooltips](dialogs.md#tooltips)).
+- [required] The tooltip and guide line are one component, positioned from the point's coordinates and clamped to the plot's box; detail on hover and focus comes from one handler (code-standard rule 36; [accessibility: *Tooltips and toggletips*](../../code/accessibility.md#tooltips-and-toggletips), [tooltips](../components/tooltip.md#tooltips)).
 - [moderate] Focusable points use a roving tabindex: one tab stop, arrow keys move, each point's accessible name holds its values ([accessibility: *Composite widgets and roving tabindex*](../../code/accessibility.md#composite-widgets-and-roving-tabindex)); the focus ring is the shared one ([accessibility: *Visible focus*](../../code/accessibility.md#visible-focus)).
 - [required] Escape dismisses; the tooltip is `pointer-events` reachable so the pointer can enter it (WCAG 1.4.13).
 - [weak] Labels inserted with `textContent`, never `innerHTML` ([javascript: *Escaping and templating safely*](../../code/javascript.md#escaping-and-templating-safely)).

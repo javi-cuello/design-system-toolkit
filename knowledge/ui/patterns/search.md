@@ -181,7 +181,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 **Build**
 - [moderate] The results page reads `q` on the server: `<title>` and the `h1` echo the query and count, the box is rendered with `value` set ([HTML semantics: *Document metadata*](../../code/html-semantics.md#document-metadata)).
 - [moderate] Results are an `ol` of items, each a heading-level link, its location (a breadcrumb or section name) and an excerpt ([HTML semantics: *Search and filter forms*](../../code/html-semantics.md#search-and-filter-forms)).
-- [required] Groups by type are `section`s named by their headings, each with its count; tabs only under design-standard rule 3 ([navigation: tabs](navigation.md#tabs)).
+- [required] Groups by type are `section`s named by their headings, each with its count; tabs only under design-standard rule 3 ([tabs](../components/tabs.md#tabs)).
 - [required] The no-results block renders only when the finished query returned nothing, never while loading (code-standard rule 12); its spelling suggestion is a link to `?q=<suggestion>`.
 - [weak] A list search's empty list is [filtering: empty result](filtering.md#empty-result).
 

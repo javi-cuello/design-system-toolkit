@@ -46,7 +46,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 ## Facet controls
 
 **Use when / don't use**
-- [required] **Segmented buttons** for a single-choice facet of up to four values, all in sight (design-standard rule 4; the count's sources are in [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice); the component is [selection: segmented control](selection.md#segmented-control)).
+- [required] **Segmented buttons** for a single-choice facet of up to four values, all in sight (design-standard rule 4; the count's sources are in [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice); the component is [segmented control](../components/segmented-control.md#segmented-control)).
 - [required] **A menu** past four values, showing the current choice and each value's count (design-standard rule 4, design-standard rule 11).
 - [moderate] **Checkboxes** when a facet allows several values at once (levels: Error and Warning), in a sidebar group, or in a menu of checkable items; within a facet they combine by OR.
 - [weak] **A toggle** (switch or checkbox) for a facet with one meaningful state ("Show resolved").
@@ -441,7 +441,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 **Use when / don't use**
 - [moderate] Use quick presets when a few combinations cover most visits ("My open findings", "Errors this week"): one click sets several facets at once. Baymard finds that promoting popular filters above the list gives readers a shortcut, especially on phones where the filters sit behind a button, and that 61% of benchmarked sites do not ([Baymard, promoting product filters](https://baymard.com/research-articles/promoting-product-filters)).
 - [weak] A preset is set by the team that designs the screen; a combination the reader names and keeps is a saved view (*Saved views*, next). Jira's saved filters are the second kind: "saving filters will allow you to save, reuse, and easily access them later" ([Atlassian, save your filters](https://support.atlassian.com/jira-software-cloud/docs/save-your-filters-in-business-projects/)).
-- [weak] A one-facet shortcut is not a preset; it is that facet's control, made visible (a segmented facet or [filter chips](chips.md#filter-chips)).
+- [weak] A one-facet shortcut is not a preset; it is that facet's control, made visible (a segmented facet or [filter chips](../components/chip.md#filter-chips)).
 - [weak] Don't add presets the reader cannot see inside: a preset that hides which filters it set breaks *show state*.
 
 **How**

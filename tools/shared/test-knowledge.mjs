@@ -29,4 +29,14 @@ const all = 'src/dialog-upload-form-settings-nav-sidebar-menu-pager-search-filte
 ok('every page named exists, and every pattern page has a word that names it',
   ['src/a.scss', all].flatMap(pagesFor).every((x) => fs.existsSync(path.join(TK, x)))
   && pagesFor(all).filter((x) => x.includes('/patterns/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/patterns')).filter((f) => f.endsWith('.md')).length);
+// 2026-11-16: a component's page comes first, and every component page has a word that names it.
+ok('a path\'s words name its component page before its pattern: a tooltip, a button, a segmented control',
+  p('src/components/Tooltip.tsx')[0] === 'tooltip.md' && p('src/components/Tooltip.tsx').includes('dialogs.md')
+  && p('src/ui/icon-button.scss')[0] === 'button.md' && p('src/SegmentedControl.vue').includes('segmented-control.md')
+  && !p('src/table.tsx').some((x) => x === 'tabs.md')
+  && !['src/OrderDetails.tsx', 'src/DateRangePicker.tsx', 'src/ActionSheet.tsx', 'src/ThemeToggle.tsx'].some((f) => pagesFor(f).some((x) => x.includes('/components/'))));
+const comps = 'src/button-link-tabs-breadcrumbs-dialog-drawer-popover-tooltip-accordion-checkbox-radio-switch-select-combobox-segmented-slider-toast-alert-badge-chip.tsx';
+ok('every component page has a word that names it, and every one named exists',
+  pagesFor(comps).filter((x) => x.includes('/components/')).length === fs.readdirSync(path.join(TK, 'knowledge/ui/components')).filter((f) => f.endsWith('.md') && f !== 'README.md').length
+  && pagesFor(comps).every((x) => fs.existsSync(path.join(TK, x))));
 console.log(`${n}/${n} passed`);

@@ -1,6 +1,6 @@
 # Menus: the top menu bar, dropdowns, mega menus, mobile and sticky menus, and the account menu
 
-How a site or tool lays out its top-level navigation menu: the bar across the top, the dropdowns that open from it, mega menus for large sites, the menu on small screens, a bar that stays in view as the page scrolls, what happens when the bar runs out of room, and the account menu. It serves the principles *discoverable* (what can be reached is in sight wherever there is room for it), *show state* (the reader can tell where they are), *consistent, not uniform* (the bar is the same on every page) and *for everyone, in any context* (it works without a pointer that hovers). It applies design-standard rule 2 (the bar holds still when the reader switches what they look at). This page owns global navigation, mega menus and mobile navigation, which navigation.md now only points to; navigation.md keeps breadcrumbs, tabs, in-page navigation, skip links and the Back button. Side navigation is [`sidebars.md`](sidebars.md)'s; menus of actions and the overflow of actions are [`actions.md`](actions.md)'s ([split buttons and overflow menus](actions.md#split-buttons-and-overflow-menus)); drawers are [`dialogs.md`](dialogs.md)'s.
+How a site or tool lays out its top-level navigation menu: the bar across the top, the dropdowns that open from it, mega menus for large sites, the menu on small screens, a bar that stays in view as the page scrolls, what happens when the bar runs out of room, and the account menu. It serves the principles *discoverable* (what can be reached is in sight wherever there is room for it), *show state* (the reader can tell where they are), *consistent, not uniform* (the bar is the same on every page) and *for everyone, in any context* (it works without a pointer that hovers). It applies design-standard rule 2 (the bar holds still when the reader switches what they look at). This page owns global navigation, mega menus and mobile navigation, which navigation.md now only points to; navigation.md keeps breadcrumbs, tabs, in-page navigation, skip links and the Back button. Side navigation is [`sidebars.md`](sidebars.md)'s; menus of actions and the overflow of actions are [`actions.md`](actions.md)'s ([split buttons and overflow menus](../components/button.md#split-buttons-and-overflow-menus)); drawers are [`dialogs.md`](dialogs.md)'s.
 
 One distinction runs through the page: a **navigation menu** is a list of links that change the address; an **action menu** is a list of commands. The first is built as links behind disclosure buttons; only the second is ever an ARIA `menu` ([APG disclosure navigation example](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/)).
 
@@ -24,7 +24,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 
 **Cases**
 - A docs site has Components, Foundations, Patterns, Guides, Changes and "New component" in the bar → move "New component" out; it is an action, and mixing it with destinations makes the reader read every item twice.
-- The bar marks "Components" on the index but nothing on a component's page → keep the section marked on every page under it, and mark the page itself in the breadcrumb ([navigation: breadcrumbs](navigation.md#breadcrumbs)).
+- The bar marks "Components" on the index but nothing on a component's page → keep the section marked on every page under it, and mark the page itself in the breadcrumb ([breadcrumbs](../components/breadcrumbs.md#breadcrumbs)).
 - A section has twelve sub-pages and the designer wants them all in the bar → keep the section in the bar and give the twelve a side navigation ([sidebars: navigation sidebar](sidebars.md#navigation-sidebar)).
 - Eight sections fit at 1440px and wrap at 1100px → collapse the lowest-traffic ones into a "More" item from the width they stop fitting, never a second row.
 - Search sits as an icon in the utility group on a docs site where search is the main way in → a visible box ([search: the box](search.md#the-box-visible-wide-and-labelled)).
@@ -155,7 +155,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 
 **Build**
 - [weak] *Elements:* the same `nav` and `ul` as the wide bar, with a `button` before the list that shows only below the collapse width; one list serves both widths, restyled by a media or container query, never a second copy of the links. Second levels as `details` or disclosure buttons.
-- [strong] *ARIA and keyboard:* the APG disclosure pattern: the Menu button carries `aria-expanded` and `aria-controls` pointing at the list; Enter or Space toggles; Escape closes and returns focus. A full-screen menu that hides the page behind it is a modal `dialog` with its focus contract ([dialogs: focus](dialogs.md#focus-in-trapped-returned)); a menu that opens below the bar, pushing the page, is a plain disclosure. Not `role="menu"`.
+- [strong] *ARIA and keyboard:* the APG disclosure pattern: the Menu button carries `aria-expanded` and `aria-controls` pointing at the list; Enter or Space toggles; Escape closes and returns focus. A full-screen menu that hides the page behind it is a modal `dialog` with its focus contract ([focus](../components/modal-dialog.md#focus-in-trapped-returned)); a menu that opens below the bar, pushing the page, is a plain disclosure. Not `role="menu"`.
 - [required] *States:* `aria-expanded` on the button, `hidden` on the closed list below the collapse width; the button itself `hidden` above it; `aria-current` on the current link inside (WCAG 4.1.2).
 - [required] *Rules:* code-standard rule 20 (without script the links show and the button is absent; GOV.UK ships its toggle `hidden` until the script runs), code-standard rule 17, code-standard rule 18 (if the button is icon-only, it is named; prefer the visible word), code-standard rule 64, code-standard rule 2, code-standard rule 36.
 - [weak] *Bottom bar:* a `nav` of links, each an icon with its text, `aria-current` on the current one, padded for the device's safe area. The collapse width is measured from the items and written once as a breakpoint token.
@@ -210,7 +210,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 **Use when / don't use**
 - [weak] Use when the section links outgrow the bar at some widths but showing them all at the widest is right: the links that do not fit move into a "More" dropdown at the end of the list, the most used staying in sight.
 - [moderate] Friedman's sticky-menu guidance caps the bar at about five items and puts the rest in an overflow ([Smashing, Friedman 2023](https://www.smashingmagazine.com/2023/05/sticky-menus-ux-guidelines/)); Carbon collapses header links into the left panel's menu on narrow screens ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)).
-- [weak] Don't use "More" to hold actions (that is an overflow of actions, [actions: split buttons and overflow menus](actions.md#split-buttons-and-overflow-menus)), or as a permanent home for sections nobody prioritised; a section that always sits in "More" should be cut or merged.
+- [weak] Don't use "More" to hold actions (that is an overflow of actions, [split buttons and overflow menus](../components/button.md#split-buttons-and-overflow-menus)), or as a permanent home for sections nobody prioritised; a section that always sits in "More" should be cut or merged.
 - [weak] Don't use it below the mobile collapse width; there the whole bar becomes the Menu button.
 
 **How**
@@ -267,7 +267,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [strong] *ARIA and keyboard:* [APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/): `aria-haspopup="menu"`, `aria-expanded`; Enter, Space or Down open it and focus the first item; Escape closes and returns focus. The identity header is not an item: it sits outside the `menu` or as a `presentation` row.
 - [required] *States:* `aria-expanded` on the trigger (WCAG 4.1.2).
 - [required] *Rules:* code-standard rule 18 (an avatar-only trigger is named), code-standard rule 20 ("Sign out" is a POST form that works without script).
-- [weak] *Detail:* [actions: split buttons and overflow menus](actions.md#split-buttons-and-overflow-menus).
+- [weak] *Detail:* [split buttons and overflow menus](../components/button.md#split-buttons-and-overflow-menus).
 
 **Check**
 - *Script:* could open the account menu on each page type and assert it is in the same place, names the account, and ends with "Sign out".

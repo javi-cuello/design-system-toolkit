@@ -40,11 +40,11 @@ This file holds the UX area's fundamentals for building and auditing a design or
 - [weak] An object that appears in two places links between them.
 - [weak] Tabs choose which independent thing one screen is about; links move between screens.
 
-**How.** Label groups with the reader's nouns; a label must let the reader predict what is inside. Keep depth shallow: if a reader must know which tool produced a fact to find it, the structure follows the toolkit's seams and not the reader's. The parts are patterns: global and local navigation ([menus: top menu bar](../patterns/menus.md#top-menu-bar), [sidebars: navigation sidebar](../patterns/sidebars.md#navigation-sidebar)), breadcrumbs ([navigation: breadcrumbs](../patterns/navigation.md#breadcrumbs)), tabs, which choose what one screen is about ([navigation: tabs](../patterns/navigation.md#tabs); design-standard rule 3 for the bar under them), and mega menus ([menus: mega menus](../patterns/menus.md#mega-menus)).
+**How.** Label groups with the reader's nouns; a label must let the reader predict what is inside. Keep depth shallow: if a reader must know which tool produced a fact to find it, the structure follows the toolkit's seams and not the reader's. The parts are patterns: global and local navigation ([menus: top menu bar](../patterns/menus.md#top-menu-bar), [sidebars: navigation sidebar](../patterns/sidebars.md#navigation-sidebar)), breadcrumbs ([breadcrumbs](../components/breadcrumbs.md#breadcrumbs)), tabs, which choose what one screen is about ([tabs](../components/tabs.md#tabs); design-standard rule 3 for the bar under them), and mega menus ([menus: mega menus](../patterns/menus.md#mega-menus)).
 
 **Cases**
 - An audit finding names a component, and the component's page does not link back to its findings → add both links; an object in two tools without a link between them is a bug: the journey has been cut along the tools' seams.
-- Tabs used to filter one table, or tabs that change the address built as panel tabs → [navigation: tabs](../patterns/navigation.md#tabs).
+- Tabs used to filter one table, or tabs that change the address built as panel tabs → [tabs](../components/tabs.md#tabs).
 
 **Accessibility.** 1.3.1 Info and Relationships (A): groups and hierarchy are in the markup, which is code-standard rules 1 and 3. 2.4.5 Multiple Ways (AA): more than one way to reach a page in a set (navigation and search, or navigation and an index). 2.4.8 Location (AAA) is met by breadcrumbs and the marked current page (code-standard rule 64). 3.2.3 Consistent Navigation (AA): repeated navigation keeps its order.
 
@@ -55,7 +55,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 
 **Check.** *Script:* could check that every page is reachable from navigation; the navigation patterns carry their own checks. *Judgement:* does the grouping match how readers think about the subject?
 
-**Sources.** As linked; where sources disagree on tabs, [navigation: tabs](../patterns/navigation.md#tabs).
+**Sources.** As linked; where sources disagree on tabs, [tabs](../components/tabs.md#tabs).
 
 ---
 
@@ -346,11 +346,11 @@ This file holds the UX area's fundamentals for building and auditing a design or
 
 **What good looks like**
 - [weak] Each screen has one thing it must make obvious, and that thing gets the emphasis.
-- [weak] One primary action per view.
+- [strong] One primary action per view.
 - [weak] Accent and status colours are spent only where they mean something.
 - [weak] The visual order of emphasis matches the information order.
 
-**How.** Name the one thing per screen (the next piece of work, what got worse, what blocks a release) and give it the only primary emphasis. One primary action per view ([actions: button hierarchy](../patterns/actions.md#button-hierarchy)). Save highlight colour for high-action moments, as Spectrum 2 does ([Adobe, 2023](https://blog.adobe.com/en/publish/2023/12/12/adobe-unveils-spectrum-2-design-system-reimagining-user-experience-over-100-adobe-applications)). Status colours mark status, never decoration (the visual file). Order headings by importance and keep the outline in order. Without a stated rule emphasis inflates, because every stakeholder lobbies for theirs; write the screen's one thing next to its need line.
+**How.** Name the one thing per screen (the next piece of work, what got worse, what blocks a release) and give it the only primary emphasis. One primary action per view ([button hierarchy](../components/button.md#button-hierarchy)). Save highlight colour for high-action moments, as Spectrum 2 does ([Adobe, 2023](https://blog.adobe.com/en/publish/2023/12/12/adobe-unveils-spectrum-2-design-system-reimagining-user-experience-over-100-adobe-applications)). Status colours mark status, never decoration (the visual file). Order headings by importance and keep the outline in order. Without a stated rule emphasis inflates, because every stakeholder lobbies for theirs; write the screen's one thing next to its need line.
 
 **Cases**
 - An audit dashboard colours every row by severity, badges every card and puts a primary button in each → keep severity as a mark, make one summary ("4 new blockers since the last audit") the emphasis, and one primary action.
@@ -377,7 +377,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 - [weak] Permission is asked at the moment the reason is clear, never on first launch by default.
 - [weak] People can change notification settings inside the product.
 
-**How.** Write a scale of urgency for the product (Apple's four interruption levels run from Passive to Critical) and give each notification type one level ([Apple Managing notifications](https://developer.apple.com/design/human-interface-guidelines/managing-notifications): "Build trust by accurately representing the urgency of each notification"). Default to Passive: show it on the page. Interrupt only for what blocks the reader's work. Get permission before sending any notification, and ask "when people first access the specific function" that needs it ([Apple Onboarding](https://developer.apple.com/design/human-interface-guidelines/onboarding)). Offer settings in the product. Keep to two in-page alerts at a time ([Primer feature onboarding](https://primer.style/product/ui-patterns/feature-onboarding/)). How long a toast stays and how it is dismissed is [feedback: toasts](../patterns/feedback.md#toasts); the notifications centre is [feedback: notifications centre](../patterns/feedback.md#notifications-centre).
+**How.** Write a scale of urgency for the product (Apple's four interruption levels run from Passive to Critical) and give each notification type one level ([Apple Managing notifications](https://developer.apple.com/design/human-interface-guidelines/managing-notifications): "Build trust by accurately representing the urgency of each notification"). Default to Passive: show it on the page. Interrupt only for what blocks the reader's work. Get permission before sending any notification, and ask "when people first access the specific function" that needs it ([Apple Onboarding](https://developer.apple.com/design/human-interface-guidelines/onboarding)). Offer settings in the product. Keep to two in-page alerts at a time ([Primer feature onboarding](https://primer.style/product/ui-patterns/feature-onboarding/)). How long a toast stays and how it is dismissed is [toasts](../components/toast.md#toasts); the notifications centre is [feedback: notifications centre](../patterns/feedback.md#notifications-centre).
 
 **Cases**
 - "The audit finished" pops a modal → Passive: update the page and show a status message; no modal.

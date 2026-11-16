@@ -202,7 +202,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] An empty cell means one thing in a table, and the reader can tell it from zero, unknown and not applicable.
 
 **How**
-- [weak] By type: text left; quantities right in tabular figures ([data: numbers](data.md#numbers)); identifiers that look numeric left; dates in one format ([data: dates and times](data.md#dates-and-times)); status as a short label or badge, left ([feedback: status badges and pills](feedback.md#status-badges-and-pills)); a link only on the identifier; row actions last, one visible and the rest in a menu (Primer: "Do not pull out more than 1 action").
+- [weak] By type: text left; quantities right in tabular figures ([data: numbers](data.md#numbers)); identifiers that look numeric left; dates in one format ([data: dates and times](data.md#dates-and-times)); status as a short label or badge, left ([status badges and pills](../components/badge.md#status-badges-and-pills)); a link only on the identifier; row actions last, one visible and the rest in a menu (Primer: "Do not pull out more than 1 action").
 - [moderate] Long text: Primer prefers wrapping to truncation; Polaris says "Wrap instead of truncate" because rows that start alike look the same when cut. Prose longer than a line or two belongs on the record page (*Truncation*).
 - [weak] Empty cells: Primer says "By default, leave empty cells blank … Just don't use a character like "x" or "-". It creates a weird experience for assistive technologies like screen readers." The toolkit follows it: blank for "no value", and a word where the reason matters to the reader ("None", "Not measured", "Not applicable"), so a screen reader announces a meaning rather than "dash".
 - [weak] Zero, missing and not applicable are three values, owned by [data: numbers](data.md#numbers): a count column shows "0", never blank; missing data is "Not measured", never "0".
@@ -239,7 +239,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **How**
 - [weak] Mark the exception, not the norm. In a column where most rows are "missing", a red ✕ in every row is noise; mark the rows that have it (✓), leave the others blank, and say the norm in the header or caption ("Usage written: 3 of 40"). When most rows have it, mark the few that do not.
-- [weak] Status vocabulary: one short label per state, in a fixed list ([feedback: status badges and pills](feedback.md#status-badges-and-pills)). A long status label repeated on every row moves its repeated words into the header: "Code generation" as the header, "Ready" or "Blocked" in the cells, not "Not ready for code generation" forty times (Datawrapper: "bring repeating words in the column header").
+- [weak] Status vocabulary: one short label per state, in a fixed list ([status badges and pills](../components/badge.md#status-badges-and-pills)). A long status label repeated on every row moves its repeated words into the header: "Code generation" as the header, "Ready" or "Blocked" in the cells, not "Not ready for code generation" forty times (Datawrapper: "bring repeating words in the column header").
 - [weak] A status the same in every row is the state of the set, not of a row: say it once above the table and drop the column (*What earns a column*), or group rows by status so each status is said once in a group header (*Grouping and header hierarchy*).
 - [weak] A status needing attention gets the colour and icon; neutral and good states stay quiet (*Colour in cells*).
 - [required] Pair a status with what to do about it on the record page or in a described-by text; a cell is a label, not a message (design-standard rule 10 for the message).
@@ -769,7 +769,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **Use when / don't use**
 - [weak] A table belongs in the page's main content. Carbon: "Data tables should be placed in a page’s main content area and given plenty of space to display data without truncation", and "Avoid placing data tables inside data tables or smaller containers where the information can feel cramped or needs truncation" ([Carbon data table](https://carbondesignsystem.com/components/data-table/usage/)).
-- [weak] In a dialog, a short table that supports one decision (the five items a bulk action will change); a table people sort, page or act on is a page ([dialogs: size and scrolling](dialogs.md#size-and-scrolling)).
+- [weak] In a dialog, a short table that supports one decision (the five items a bulk action will change); a table people sort, page or act on is a page ([size and scrolling](../components/modal-dialog.md#size-and-scrolling)).
 - [weak] In a dashboard card, a preview of a few rows that answers "what needs attention?", with the full table one link away ([dashboards: summary before detail](../profiles/dashboards.md#summary-before-detail-layout-and-hierarchy)).
 
 **How**

@@ -43,7 +43,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [moderate] Nothing changes silently.
 
 **How:**
-- [weak] The least intrusive response that is enough, next to its cause; which component that is (badge, inline, banner, toast, dialog) is [feedback: choosing the feedback](../patterns/feedback.md#choosing-the-feedback), and toasts are [feedback: toasts](../patterns/feedback.md#toasts).
+- [weak] The least intrusive response that is enough, next to its cause; which component that is (badge, inline, banner, toast, dialog) is [feedback: choosing the feedback](../patterns/feedback.md#choosing-the-feedback), and toasts are [toasts](../components/toast.md#toasts).
 - [weak] A response outside the viewport is no response.
 
 **Cases**
@@ -62,7 +62,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 **Check:** *Script*: could perform each action and assert a DOM change within a bound, a status in a live region, inside the viewport. *Judgement*: does the message say what happened and what to do, at a proportionate intrusiveness?
 
-**Sources:** [NN/g, visibility of system status](https://www.nngroup.com/articles/visibility-system-status/) ("a lack of information often equates to a lack of control"). Where Primer and Carbon differ on toasts: [feedback: toasts](../patterns/feedback.md#toasts).
+**Sources:** [NN/g, visibility of system status](https://www.nngroup.com/articles/visibility-system-status/) ("a lack of information often equates to a lack of control"). Where Primer and Carbon differ on toasts: [toasts](../components/toast.md#toasts).
 
 ## Response times and perceived performance
 
@@ -83,7 +83,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 - [weak] Delay the indicator; once shown, keep it long enough not to flicker. No system read publishes a spinner minimum; Adobe Commerce holds a progress bar at least 3 s ("To avoid flickering, the minimum time displayed of progress bar should be 3 seconds"). Pick one short minimum for the product and use it everywhere.
 - [strong] The press itself answers in the next frame, before any network work: web.dev's INP guidance keeps an event callback to "just the logic required to apply visual updates for the next frame" ([optimize INP](https://web.dev/articles/optimize-inp)).
-- [weak] Which indicator (skeleton, spinner, progress) and how it is drawn is [feedback: loading](../patterns/feedback.md#loading); a button's own loading state is [actions: loading buttons](../patterns/actions.md#loading-buttons).
+- [weak] Which indicator (skeleton, spinner, progress) and how it is drawn is [feedback: loading](../patterns/feedback.md#loading); a button's own loading state is [loading buttons](../components/button.md#loading-buttons).
 
 **Cases**
 - A filter on 200 rows answers in 150 ms → no indicator.
@@ -172,7 +172,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 **How:**
 - [moderate] Commit, then Undo beside the change, kept until dismissed; deletes become soft-deletes.
 - [moderate] Confirm permanent deletion, sending to others, external side effects.
-- [weak] The confirmation dialog itself (title, consequence, outcome-named buttons, focus on the safe one) is [dialogs: confirmation dialogs](../patterns/dialogs.md#confirmation-dialogs); its wording is [content: confirmations and destructive wording](content.md#confirmations-and-destructive-wording).
+- [weak] The confirmation dialog itself (title, consequence, outcome-named buttons, focus on the safe one) is [confirmation dialogs](../components/modal-dialog.md#confirmation-dialogs); its wording is [content: confirmations and destructive wording](content.md#confirmations-and-destructive-wording).
 - [weak] Undo shows its result, even off screen, and says what it undoes ([Apple](https://developer.apple.com/design/human-interface-guidelines/undo-and-redo)).
 
 **Cases**
@@ -233,19 +233,19 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [required] A modal only when the person must decide or finish something short, or to show an item's detail or an explanation (design-standard rule 13), and opened by them; everything else stays in the page.
 - [weak] Which surface, and how a modal is focused, dismissed and sized, is [dialogs](../patterns/dialogs.md#choosing-the-surface).
 
-**How:** take the least interrupting surface that does the job ([dialogs: choosing the surface](../patterns/dialogs.md#choosing-the-surface)); a modal takes focus, keeps it and gives it back ([dialogs: focus](../patterns/dialogs.md#focus-in-trapped-returned)), closes on Escape and never opens another ([dialogs: Escape, backdrop click and one at a time](../patterns/dialogs.md#escape-backdrop-click-and-one-at-a-time)).
+**How:** take the least interrupting surface that does the job ([dialogs: choosing the surface](../patterns/dialogs.md#choosing-the-surface)); a modal takes focus, keeps it and gives it back ([focus](../components/modal-dialog.md#focus-in-trapped-returned)), closes on Escape and never opens another ([Escape, backdrop click and one at a time](../components/modal-dialog.md#escape-backdrop-click-and-one-at-a-time)).
 
 **Cases**
 - A session-expiry warning → a justified system modal, since time is running out (2.2.1).
 
-**Accessibility:** 2.1.2 No Keyboard Trap (A), 2.4.3 Focus Order (A), 2.4.11 Focus Not Obscured (AA), as worked out in [dialogs](../patterns/dialogs.md#focus-in-trapped-returned). Code: code-standard rule 20 (opens without script), code-standard rule 19 (`details` gives no Escape).
+**Accessibility:** 2.1.2 No Keyboard Trap (A), 2.4.3 Focus Order (A), 2.4.11 Focus Not Obscured (AA), as worked out in [dialogs](../components/modal-dialog.md#focus-in-trapped-returned). Code: code-standard rule 20 (opens without script), code-standard rule 19 (`details` gives no Escape).
 
 **Build:**
 - [required] A modal is a `dialog` opened with `showModal()`: the browser makes the page inert, closes on Escape and returns focus; no focus-trap library ([HTML semantics: disclosure, dialogs and popovers](../../code/html-semantics.md#disclosure-dialogs-and-popovers)).
 - [required] It opens without script through `popovertarget` and is enhanced to `showModal()` (code-standard rule 20); `details` gives no Escape (code-standard rule 19).
 - [weak] Where focus goes on open and close is [accessibility: focus management](../../code/accessibility.md#focus-management).
 
-**Check:** *Script*: see [dialogs: focus](../patterns/dialogs.md#focus-in-trapped-returned). *Judgement*: did the task need a modal?
+**Check:** *Script*: see [focus](../components/modal-dialog.md#focus-in-trapped-returned). *Judgement*: did the task need a modal?
 
 **Sources:** APG, Carbon and Apple, as linked in [dialogs](../patterns/dialogs.md#choosing-the-surface).
 
@@ -299,7 +299,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 - [required] Why a reason nearby: WCAG exempts inactive components from contrast, so disabled is hard to read by design, and it usually leaves the tab order, so keyboard and screen-reader users may never meet it. The reason goes in adjacent text, not a hover tooltip.
 - [weak] A count that cannot be computed is hidden, never a false zero (Primer).
-- [weak] A submit button stays enabled; validation says what is missing ([actions: disabled buttons](../patterns/actions.md#disabled-buttons)).
+- [weak] A submit button stays enabled; validation says what is missing ([disabled buttons](../components/button.md#disabled-buttons)).
 
 **Cases**
 - Filter options at zero, an empty menu, a filter that can never apply → [filtering: unavailable options](../patterns/filtering.md#unavailable-options).
@@ -328,8 +328,8 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [required] One bar per list (design-standard rule 3).
 
 **How:**
-- [required] **Tabs**: views of one context, never to filter one table (design-standard rule 3; [navigation: tabs](../patterns/navigation.md#tabs)).
-- [required] **Segmented**: two to four short choices that apply at once (design-standard rule 4, `interface.maxSegments`); not navigation ([selection: segmented control](../patterns/selection.md#segmented-control)).
+- [required] **Tabs**: views of one context, never to filter one table (design-standard rule 3; [tabs](../components/tabs.md#tabs)).
+- [required] **Segmented**: two to four short choices that apply at once (design-standard rule 4, `interface.maxSegments`); not navigation ([segmented control](../components/segmented-control.md#segmented-control)).
 - [required] **Menu**: past four, each option counted, opening on what "all" covers (design-standard rules 4, 11, 12; [filtering: facet controls](../patterns/filtering.md#facet-controls)).
 - [weak] **Radios**: a value saved with a form; **checkboxes**: several values at once; which value control by option count is [selection: choosing the control](../patterns/selection.md#choosing-the-control).
 - [required] Order and narrow facets as design-standard rule 6 sets out ([filtering: faceted narrowing and order](../patterns/filtering.md#faceted-narrowing-and-order)).
@@ -344,7 +344,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 **Build:**
 - [strong] Tabs are the APG tabs pattern, or links with `aria-current` when they change the address ([accessibility: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex); code-standard rule 64).
-- [strong] A segmented control that applies at once is a named `role="group"` of buttons with `aria-pressed`, or radios styled as segments inside a filter bar's GET form ([selection: segmented control](../patterns/selection.md#segmented-control) owns the build); a choice saved with a Save button is radios, not segments.
+- [strong] A segmented control that applies at once is a named `role="group"` of buttons with `aria-pressed`, or radios styled as segments inside a filter bar's GET form ([segmented control](../components/segmented-control.md#segmented-control) owns the build); a choice saved with a Save button is radios, not segments.
 - [required] A menu of values is a `select`, or a `popover` listbox when it needs counts and type-ahead; counts sit outside the option's name (code-standard rule 15).
 - [required] Radios and checkboxes in a form are `fieldset` and `legend` ([HTML semantics: forms markup](../../code/html-semantics.md#forms-markup)).
 
@@ -460,7 +460,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 
 **How:**
 - [moderate] Row actions show at rest or behind a visible "More" per row; keyboard and touch have no hover.
-- [moderate] A tooltip repeats or explains, and is never the only reason for a disabled state; what hover shows, focus shows. How tooltips behave, and how one names an icon button, is [dialogs: tooltips](../patterns/dialogs.md#tooltips).
+- [moderate] A tooltip repeats or explains, and is never the only reason for a disabled state; what hover shows, focus shows. How tooltips behave, and how one names an icon button, is [tooltips](../components/tooltip.md#tooltips).
 - [required] Hover or focus content: Escape dismisses it without moving pointer or focus; the pointer can move onto it; it stays until trigger leaves, dismissal, or invalidity (WCAG 1.4.13).
 - [moderate] Menus open on click; truncated text has its full value reachable another way.
 

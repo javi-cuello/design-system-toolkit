@@ -15,7 +15,7 @@ The rules a script cannot settle, by handle; read each before raising a finding 
 - **Visual:** design-standard rules 7, 8 and 9.
 - **Content:** design-standard rules 10 and 11.
 - **Accessibility:** on a design, figma-standard rules 26, 31 and 32 (checked by `figma-components-audit`); on a build, code-standard rules 2, 14–19 and 64.
-- **The depth:** the fundamentals in `knowledge/ui/design/` and the patterns in `knowledge/ui/patterns/` (toolkit repo) that the screen uses, each section's *Check* line and its cases. A practice there is the default the screen is held to: a deviation is a finding cited by page and section, unless the project records a ruling; only a rule is cited as a breach.
+- **The depth:** the fundamentals in `knowledge/ui/design/`, the components in `knowledge/ui/components/` and the patterns in `knowledge/ui/patterns/` (toolkit repo) that the screen uses, each section's *Check* line and its cases. A practice there is the default the screen is held to: a deviation is a finding cited by page and section, unless the project records a ruling; only a rule is cited as a breach.
 - **The profile** the page belongs to (design-standard's *Application profiles* names each and its page in `knowledge/ui/profiles/`), and what it says such a page must specify.
 
 ## 3. code-standard's *needs a read* rules

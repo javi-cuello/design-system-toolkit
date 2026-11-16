@@ -109,7 +109,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 
 **How**
 - [required] **Live swaps and re-renders** keep the reader's place (code-standard rule 14); how to swap, key items by id and restore focus and scroll in a script is [javascript: re-rendering without losing focus or scroll](javascript.md#re-rendering-without-losing-focus-or-scroll). What this section adds is where focus goes when the thing that had it is gone.
-- [required] **Dialogs.** `showModal()` makes the rest of the page inert and the browser returns focus to the previously focused element on close ([HTML `dialog`](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element)); `autofocus` goes on the element the reader is expected to use first. Where the trigger is gone on close, focus "is set on another element that provides logical work flow" ([APG modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)). Which element is a design decision: [dialogs: focus in, trapped, returned](../ui/patterns/dialogs.md#focus-in-trapped-returned).
+- [required] **Dialogs.** `showModal()` makes the rest of the page inert and the browser returns focus to the previously focused element on close ([HTML `dialog`](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element)); `autofocus` goes on the element the reader is expected to use first. Where the trigger is gone on close, focus "is set on another element that provides logical work flow" ([APG modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)). Which element is a design decision: [focus in, trapped, returned](../ui/components/modal-dialog.md#focus-in-trapped-returned).
 - [moderate] **Skip links.** The first focusable element, `href="#main"` to an `id` on `main`, visible on focus ([WebAIM, skip navigation](https://webaim.org/techniques/skipnav/)); design and wording are [navigation: skip links](../ui/patterns/navigation.md#skip-links).
 - [moderate] **Route changes without a page load.** Update the title and move focus to the new `h1` (with `tabindex="-1"`), as a page load would put the reader at the top.
 
@@ -145,7 +145,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
     e.preventDefault(); select(items[(j + n) % n]);   // moves tabindex 0, focuses, selects
   });
   ```
-- [strong] **Tabs** ([APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)): `tablist`, `tab` with `aria-selected` and `aria-controls`, `tabpanel` labelled by its tab. Left and Right wrap; Home and End are optional. "It is recommended that tabs activate automatically when they receive focus as long as their associated tab panels are displayed without noticeable latency"; otherwise Enter or Space activates. Tabs that change the address are links with `aria-current`, not this pattern ([navigation: tabs](../ui/patterns/navigation.md#tabs)).
+- [strong] **Tabs** ([APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)): `tablist`, `tab` with `aria-selected` and `aria-controls`, `tabpanel` labelled by its tab. Left and Right wrap; Home and End are optional. "It is recommended that tabs activate automatically when they receive focus as long as their associated tab panels are displayed without noticeable latency"; otherwise Enter or Space activates. Tabs that change the address are links with `aria-current`, not this pattern ([tabs](../ui/components/tabs.md#tabs)).
 - [strong] **Menu button** ([APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/)): Enter, Space and optionally Down Arrow open the menu on its first item, Up Arrow on its last; inside, the menu pattern's arrows, Escape returns to the button.
 - [strong] **Listbox** ([APG listbox](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/)): Up and Down move; "Type-ahead is recommended for all listboxes, especially those with more than seven options".
 - [strong] **Site navigation** uses the APG disclosure pattern (its "Disclosure Navigation Menu" example, [APG disclosure](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/)): a `button` with `aria-expanded` and a list of links, no menu role and no arrow-key contract.
@@ -193,7 +193,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - [required] **Unavailable items** keep their place with `aria-disabled="true"`, so arrows still reach them and the reason can be heard (design-standard rule 5; code-standard rules 9 and 62).
 - [weak] **Split button**: the default action is its own `button` named for that action; the arrow is a second, named menu button ("More merge options"), never one control with two hit areas.
 - [strong] **Toolbar** ([APG toolbar](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/)): `role="toolbar"` named by `aria-label` or `aria-labelledby`, a roving tabindex across its controls (the handler in [composite widgets](#composite-widgets-and-roving-tabindex)); toggles in it carry `aria-pressed`. A bulk-action bar is a toolbar whose name includes the count.
-- [weak] When to use each is [actions: split buttons and overflow menus](../ui/patterns/actions.md#split-buttons-and-overflow-menus) and [actions: toolbars and bulk actions](../ui/patterns/actions.md#toolbars-and-bulk-actions).
+- [weak] When to use each is [split buttons and overflow menus](../ui/components/button.md#split-buttons-and-overflow-menus) and [actions: toolbars and bulk actions](../ui/patterns/actions.md#toolbars-and-bulk-actions).
 
 **Cases**
 - A "More" menu built on `details` stays open on Escape and on a click elsewhere → a `popover` list, or add both in the script (code-standard rule 19).
@@ -228,7 +228,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - [required] **Show and hide** on `pointerenter` and `focusin`, after a short delay; hide on `pointerleave` from both trigger and tip, on `focusout`, and on Escape without moving focus (1.4.13). The tip text exists in the page from the start so the name is there before any hover.
 - [strong] **Not `title`** for anything a keyboard or touch user needs: it shows on hover only ([keyboard access](#keyboard-access-and-modified-clicks)).
 - [moderate] **Toggletip**: a `button` with `popovertarget` and `aria-expanded`, opening a `popover` placed after it in the DOM, so Tab reaches any link inside next ([HTML semantics: *Disclosure, dialogs and popovers*](html-semantics.md#disclosure-dialogs-and-popovers)).
-- [weak] When to use either is [dialogs: tooltips](../ui/patterns/dialogs.md#tooltips) and [actions: icon-only buttons](../ui/patterns/actions.md#icon-only-buttons).
+- [weak] When to use either is [tooltips](../ui/components/tooltip.md#tooltips) and [icon-only buttons](../ui/components/button.md#icon-only-buttons).
 
 **Cases**
 - A tooltip on a `disabled` button explaining why → the button cannot take focus, so keyboard users never see it; put the reason in visible text tied by `aria-describedby`, or use `aria-disabled` (code-standard rule 62).
@@ -349,7 +349,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 **Cases**
 - Five field error messages carry `aria-live` and mount with their text → nothing is announced; they are descriptions (`aria-describedby`), read on focus, and the error summary takes focus on submit (the [candidate](candidates.md) "`aria-live` on an element that mounts with its content announces nothing").
 - A filtered list's container is `aria-live="polite"` → the reader hears every card; move the live region to a count line.
-- "Saved" appears as a toast and disappears → put it in a persistent `role="status"` element, and leave it long enough to be read ([feedback: toasts](../ui/patterns/feedback.md#toasts)).
+- "Saved" appears as a toast and disappears → put it in a persistent `role="status"` element, and leave it long enough to be read ([toasts](../ui/components/toast.md#toasts)).
 - A session-timeout warning → `role="alert"` (or a modal dialog if action is required); it must interrupt.
 
 **Accessibility**
@@ -459,7 +459,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
     e.preventDefault(); swap(link.href);
   });
   ```
-- [moderate] **Don't disable the submit button until valid**: a disabled button cannot be focused, so a keyboard user cannot find out why; let it submit and show the errors ([actions: disabled buttons](../ui/patterns/actions.md#disabled-buttons)).
+- [moderate] **Don't disable the submit button until valid**: a disabled button cannot be focused, so a keyboard user cannot find out why; let it submit and show the errors ([disabled buttons](../ui/components/button.md#disabled-buttons)).
 
 **Cases**
 - A row-click script → a stretched link, which needs no modifier handling at all (code-standard rule 21's evidence).

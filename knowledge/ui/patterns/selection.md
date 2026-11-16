@@ -1,11 +1,11 @@
 # Selection controls
 
-How a person picks one value or several: checkboxes, radio buttons, switches, selects, visible listboxes, comboboxes, segmented controls, multi-selects, dual listboxes, select all and clear all, date entry, time entry, and sliders. It serves the principles *discoverable* (few choices stay in sight), *as little as possible, and no simpler* (the lightest control that holds the set) and *people in control* (nothing changes until the person expects it to). It applies design-standard rule 4 (a facet of up to four choices is segmented, a longer one a menu), design-standard rule 5 (an option that leads nowhere is disabled, not hidden) and design-standard rule 12 (a collapsed filter menu names what "all" covers). Which control switches content, view or value in general is [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice); whether a change saves itself or waits for a button is [interaction: saving](../design/interaction.md#saving-explicit-or-automatic); a filter bar's layout and facet controls are [filtering](filtering.md#facet-controls)'s. This page owns the value controls and the segmented control component. Chips are [chips](chips.md)'s: filter, choice and input chips, removal and overflow, and how they differ from badges and tags; a choice chip is built as a segmented control (below).
+How a person picks one value or several: choosing the control, visible listboxes, option tiles, multi-selects, dual listboxes, select all and clear all, date entry and time entry. It serves the principles *discoverable* (few choices stay in sight), *as little as possible, and no simpler* (the lightest control that holds the set) and *people in control* (nothing changes until the person expects it to). It applies design-standard rule 4 (a facet of up to four choices is segmented, a longer one a menu), design-standard rule 5 (an option that leads nowhere is disabled, not hidden) and design-standard rule 12 (a collapsed filter menu names what "all" covers). Which control switches content, view or value in general is [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice); whether a change saves itself or waits for a button is [interaction: saving](../design/interaction.md#saving-explicit-or-automatic); a filter bar's layout and facet controls are [filtering](filtering.md#facet-controls)'s. The controls with pages of their own are [checkbox](../components/checkbox.md), [radio](../components/radio.md), [switch](../components/switch.md), [select](../components/select.md), [combobox](../components/combobox.md), [segmented control](../components/segmented-control.md) and [slider](../components/slider.md). Chips are [chips](chips.md)'s: filter, choice and input chips, removal and overflow, and how they differ from badges and tags; a choice chip is built as a segmented control.
 
 ## Choosing the control
 
 **Use when / don't use**
-- [weak] Use before drawing any control that picks a value: it decides which section below applies. Choosing between tabs, a segmented control and a menu for a view or a filter is [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice).
+- [weak] Use before drawing any control that picks a value: it decides which control's page applies ([checkbox](../components/checkbox.md), [radio](../components/radio.md), [switch](../components/switch.md), [select](../components/select.md), [combobox](../components/combobox.md), [segmented control](../components/segmented-control.md), [slider](../components/slider.md)) or which section below. Choosing between tabs, a segmented control and a menu for a view or a filter is [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice).
 
 **How**
 
@@ -35,7 +35,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - [required] 1.3.1 Info and Relationships (a group's question is its `legend` or name), 2.1.1 Keyboard, 3.2.2 On Input (a control in a form changes nothing until submit).
 
 **Build**
-- [required] Each row of the table has one native starting point: radios and checkboxes are `input`s in a `fieldset`, a select is `select`, a switch is a checkbox with `role="switch"`, a segmented control is a `role="group"` of `button`s with `aria-pressed` (radios styled as segments inside a filter form, *Segmented control*), and a combobox or multi-select enhances a `select`, a `datalist` or a checkbox list (code-standard rule 8).
+- [required] Each row of the table has one native starting point: radios and checkboxes are `input`s in a `fieldset`, a select is `select`, a switch is a checkbox with `role="switch"`, a segmented control is a `role="group"` of `button`s with `aria-pressed` (radios styled as segments inside a filter form, [segmented control](../components/segmented-control.md#segmented-control)), and a combobox or multi-select enhances a `select`, a `datalist` or a checkbox list (code-standard rule 8).
 - [weak] Controls that differ in kind are separate components, never variants of one ([figma-handoff: variants to attributes](../../code/figma-handoff.md#variants-to-attributes)).
 - [weak] The enhanced controls' roles, states and keys are [accessibility: selection controls past the native set](../../code/accessibility.md#selection-controls-past-the-native-set).
 
@@ -44,167 +44,6 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Judgement:* does the choice act now or wait for a submit, and how many values can hold at once?
 
 **Sources:** NN/g, Baymard and GOV.UK as linked. The counts disagree at the edges. NN/g puts the radio-to-list boundary at five; [Baymard](https://baymard.com/blog/drop-down-usability) calls a drop-down "a poor choice for offering fewer than 5 or more than 10 options"; GOV.UK sets no count and treats a select as "a last resort". The toolkit takes five as the radio ceiling, fifteen as the select ceiling, and prefers radios over a select whenever there is room, as [NN/g's 2004 guideline 8](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/) does ("If possible, use radio buttons rather than drop-down menus"). This section owns the counts for value controls; the segment limit is design-standard rule 4.
-
-## Checkbox
-
-**Use when / don't use**
-- [strong] Use for any number of choices from a list, including none, in a form saved with a button.
-- [moderate] Use a single checkbox for one setting saved with the form, or an agreement ("I agree to the terms").
-- [strong] Don't use when only one choice may hold; that is radios ([GOV.UK checkboxes](https://design-system.service.gov.uk/components/checkboxes/)).
-- [strong] Don't use as an action that happens on click ([NN/g, guideline 12](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/)); that is a switch or a button.
-
-**How**
-- [moderate] **Label to the right** of the box, and the label is part of the target: clicking the text toggles the box ([Carbon checkbox](https://carbondesignsystem.com/components/checkbox/usage/); [NN/g guideline 11](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/)).
-- [strong] **Group** related boxes in a `fieldset` whose `legend` asks the question ("How would you like to be contacted?"). On a one-question page the legend is the page heading ([GOV.UK](https://design-system.service.gov.uk/components/checkboxes/)). Add the hint "Select all that apply" only when people are likely to pick one by habit.
-- [moderate] **Stack vertically**, one per line ([NN/g guideline 6](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/); [Carbon](https://carbondesignsystem.com/components/checkbox/usage/): "When possible, arrange the checkbox and radio button groups vertically").
-- [weak] **Wording** positive and active: "Send me updates", never "Don't send me updates" ([NN/g guideline 7](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/)).
-- [weak] **Order** alphabetical by default, or most to least common where research shows a few answers dominate ([GOV.UK](https://design-system.service.gov.uk/components/checkboxes/)).
-- [weak] **"None of these"** where none is a valid answer: last, after an "or" divider, and exclusive (checking it clears the others) ([GOV.UK](https://design-system.service.gov.uk/components/checkboxes/)).
-- [moderate] **Indeterminate and select all.** A parent box over a sublist shows checked when all children are, empty when none are, and indeterminate when some are; checking the parent checks every child, unchecking clears them ([Carbon](https://carbondesignsystem.com/components/checkbox/usage/)). Indeterminate is a display state only: clicking an indeterminate parent checks all. Leave out the parent in a filter where "all" and "none" mean the same ([Carbon dropdown](https://carbondesignsystem.com/components/dropdown/usage/)).
-- [weak] **States:** unchecked, checked, indeterminate, each with hover, focus, disabled and error.
-
-**Cases**
-- A form shows six interests as checkboxes in two columns → one column; two columns break the scan and the reader misses the second ([NN/g guideline 6](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/)).
-- A table has a header checkbox to select rows and 3 of 20 are ticked → the header shows indeterminate; clicking it selects all 20, and the action bar says how many are selected.
-- "Do not share my data" ticked by default → reword to "Share my data with partners", unticked; a negative label makes the person reason through a double negative.
-- A checkbox labelled "Dark mode" applies the theme on click inside a settings page with no Save → a switch; a checkbox that acts at once breaks its promise.
-- A list of dietary needs has no way to say "none" → add "None of these" last, behind a divider, exclusive; otherwise a person with no needs cannot answer a required question.
-
-**Accessibility**
-- [required] 1.3.1 Info and Relationships: the group's question is the `legend`. 3.3.2 Labels or Instructions: each box has its own label. 4.1.2 Name, Role, Value: the indeterminate state is exposed as mixed ([W3C APG checkbox](https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/): `aria-checked="mixed"`; a native box sets its `indeterminate` property). 2.1.1 Keyboard: Space toggles. 2.5.8 Target Size: the label extends the target.
-- [required] Implementation: code-standard rule 8 (the native `input type="checkbox"` inside the wrapper), code-standard rule 9 and code-standard rule 62 (disabled is the control's own), code-standard rule 15 (a hint is a description), code-standard rule 16 (native controls follow the theme). In a Figma component: figma-standard rule 26, figma-standard rule 31 (checked, indeterminate, hover, focus and disabled each draw differently), figma-standard rule 32.
-
-**Build**
-- [required] A native `<input type="checkbox">` inside the wrapper with its `label` after it, the group in a `fieldset` with a `legend` (code-standard rule 8; [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
-- [required] States are pseudo-classes: `:checked`, `:indeterminate`, `:focus-visible`, `:user-invalid`, and `:disabled` dimmed on the host through `:has(> :disabled)` (code-standard rule 9, code-standard rule 62).
-- [required] A custom look draws on the input itself (`appearance: none`) so it keeps focus and its form value; never a hidden input behind a drawn `span`. Native boxes follow the theme (code-standard rule 16).
-- [required] Indeterminate is the `indeterminate` property, set by the script; the parent and its children change in one handler ([accessibility: selection controls past the native set](../../code/accessibility.md#selection-controls-past-the-native-set)).
-- [weak] "None of these" clears the others in a `change` handler; without script the server rejects the combination with an error.
-
-**Check**
-- *Script:* could check that every checkbox has a programmatic label, that a group of two or more sits in a `fieldset` with a `legend` or a labelled `role="group"`, that clicking a parent sets every child, and that no checkbox `change` causes navigation or a request without a submit.
-- *Judgement:* Is the wording positive, and does a valid "none" answer exist?
-
-**Sources:** GOV.UK, Carbon and NN/g as linked; they agree on every point used here.
-
-## Radio buttons
-
-**Use when / don't use**
-- [moderate] Use for exactly one choice from two to about five, inside a form saved with a button.
-- [moderate] Use in preference to a select whenever there is room, since all options stay in sight ([NN/g guideline 8](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/)).
-- [strong] Don't use when more than one may hold; that is checkboxes ([GOV.UK radios](https://design-system.service.gov.uk/components/radios/)).
-- [moderate] Don't use for a view or filter that applies at once; that is a segmented control (below).
-
-**How**
-- [moderate] **Stacked vertically**, one per line. Inline only for two short options such as Yes and No, and they stack again on a small screen ([GOV.UK radios](https://design-system.service.gov.uk/components/radios/)).
-- [strong] **Grouped** in a `fieldset` with a `legend` that asks the question; the same heading rule as checkboxes.
-- [contested] **Selection at start.** In a question, preselect nothing. Once a radio is chosen the person cannot return to "no answer", so offer "I do not know" or "None of the above" where they are valid ([GOV.UK](https://design-system.service.gov.uk/components/radios/)). In a settings form, the current value is shown checked; that is the state, not a preselection.
-- [weak] **Order** alphabetical by default, or by frequency; an "or" divider before an option that stands apart ([GOV.UK](https://design-system.service.gov.uk/components/radios/)).
-- [weak] **Conditional reveal** only for a simple follow-up question, never for inline radios, and never to show anything other than a question; anything longer goes on the next page ([GOV.UK](https://design-system.service.gov.uk/components/radios/)).
-- [weak] **States:** unselected, selected, each with hover, focus, disabled and error.
-
-**Cases**
-- Seven delivery options as radios → keep radios if the page has room and the options must be compared on price and time; a select hides the comparison behind a click. Past fifteen, a select.
-- "Yes / No" with the first preselected → remove the preselection; GOV.UK found it makes people miss the question and submit the wrong answer.
-- A "Country" question with 190 radios → a combobox with autocomplete; nobody scans 190 options ([Baymard](https://baymard.com/blog/drop-down-usability)).
-- A settings page shows the theme as three radios and applies each on click with no Save → make it a segmented control, or keep radios and add a Save; radios promise a submit ([NN/g guideline 12](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/)).
-- A "How did you hear about us?" question with "Other" → reveal one text field under "Other"; a simple follow-up is what conditional reveal is for.
-
-**Accessibility**
-- [required] 1.3.1: the question is the `legend`. 2.1.1: Tab enters the group once, arrow keys move and select, Space selects the focused radio ([W3C APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/)); native radios with a shared `name` do this already. 3.2.2 On Input: selecting a radio never navigates or submits. 4.1.2: the checked state is exposed.
-- [required] Implementation: code-standard rule 8 (native `input type="radio"`), code-standard rule 9, code-standard rule 15, code-standard rule 20 (the form submits without script). In Figma: figma-standard rules 26, 31 and 32.
-
-**Build**
-- [required] Native `<input type="radio">`s sharing a `name` in a `fieldset` with a `legend`; the browser gives one tab stop and arrow-key selection, so no roving script ([APG radio group](https://www.w3.org/WAI/ARIA/apg/patterns/radio/)).
-- [contested] No `checked` in a question; in a settings form, `checked` from the stored value.
-- [required] A conditional follow-up follows its radio in the DOM, shown by default; the script hides it on load and toggles `hidden` on `change` (code-standard rule 17, code-standard rule 20).
-- [required] No `change` handler that submits or navigates (WCAG 3.2.2).
-- [required] States from `:checked`, `:focus-visible` and `:disabled` (code-standard rule 9); markup in [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup).
-
-**Check**
-- *Script:* tools/ui-check/check.mjs does not limit radios: design-standard rule 4 counts only button groups (`aria-pressed` buttons or `button[role="radio"]`), and treats native radio inputs as a form question. A script could check that radios in a question start unchecked, that every group has a `legend`, and that a `change` causes no navigation.
-- *Judgement:* Is this a value saved with a form, or a view that should apply at once?
-
-**Sources:** GOV.UK says never preselect; [NN/g's 2004 guideline 9](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/) says "Always offer a default selection". The toolkit follows GOV.UK for questions, because its reasons are tested failures (missed questions, wrong answers), and keeps the checked current value for settings, where NN/g's concern (a group that never shows a state) applies.
-
-## Switch (toggle)
-
-**Use when / don't use**
-- [moderate] Use for a single setting with two opposing states that takes effect the moment it flips ([NN/g, Kendrick 2018](https://www.nngroup.com/articles/toggle-switch-guidelines/); [Primer toggle switch](https://primer.style/product/components/toggle-switch/guidelines/): "instant-save controls for boolean settings").
-- [contested] Don't use inside a form that is saved with a button: people cannot tell whether the switch has acted ([NN/g](https://www.nngroup.com/articles/toggle-switch-guidelines/)). Use a checkbox there.
-- [weak] Don't use for more than two states, or for states that are not opposites ([Carbon toggle](https://carbondesignsystem.com/components/toggle/usage/)).
-- [weak] Don't use for an agreement or a choice that needs confirming.
-
-**How**
-- [moderate] **Label** names the setting that is on when the switch is on: "Email notifications", "Show line numbers". Not a command ("Turn on notifications"), which reads wrong once on, and not the state alone. NN/g's test: say the label with "on" and "off" after it; if either sounds wrong, rewrite it ([NN/g](https://www.nngroup.com/articles/toggle-switch-guidelines/)).
-- [moderate] **State text** "On" / "Off" beside the switch where the track alone is ambiguous ([Carbon](https://carbondesignsystem.com/components/toggle/usage/): three words or fewer; [Primer](https://primer.style/product/components/toggle-switch/guidelines/)).
-- [weak] **Feedback.** The new state shows at once. If saving takes time or fails, say so beside the switch ("Saving…", "Couldn't save. Retry") and return it to its old state on failure (`../design/interaction.md` *Saving*).
-- [weak] **Grouped settings** are a list of switches, each its own row with its own label; never a switch that governs others without saying so.
-- [weak] **States:** off, on, each with hover, focus, disabled; a pending state if saving is not instant.
-
-**Cases**
-- A profile form mixes switches with text fields and a Save button → replace the switches with checkboxes; NN/g's mixed-form failure ([Primer saving](https://primer.style/ui-patterns/saving) says the same: never mix save patterns in one form).
-- A switch labelled "Enable" beside a section heading → label it with the setting ("Weekly summary email"); "Enable" names nothing when read alone.
-- A switch for "Delete account data" → a button with a confirmation; a switch is for reversible settings, not consequential actions.
-- A theme switch with three values (light, dark, system) → a segmented control; a switch holds two states.
-- A switch flips, the request fails, and the switch stays on → revert it and say why; a switch that shows a state the system does not have breaks *show state*.
-
-**Accessibility**
-- [required] 4.1.2: a switch exposes its state; a native checkbox with `role="switch"` reads as on and off. 3.2.2 On Input: flipping it changes a setting, never the context (no navigation, no new window). 1.4.1 Use of Color: on and off differ by thumb position, not colour alone. 1.4.11 Non-text Contrast (a [code candidate](../../code/candidates.md)) for the track and thumb.
-- [required] Implementation: code-standard rule 8 (the native control carries the state), code-standard rule 9, code-standard rule 14 (if the save re-renders the region, focus stays on the switch). In Figma: figma-standard rule 31 (on and off differ beyond colour; focus visible), figma-standard rules 26 and 32.
-
-**Build**
-- [required] `<input type="checkbox" role="switch">` with a `label` that never changes with the state; visible "On" and "Off" text is `aria-hidden`, since `checked` is announced ([accessibility: selection controls past the native set](../../code/accessibility.md#selection-controls-past-the-native-set)).
-- [required] On and off are `:checked`; a pending save is `aria-busy="true"` on the host, styled from that attribute (code-standard rule 9).
-- [weak] The `change` handler saves; on failure it restores `checked` and writes the reason into a `role="status"` element beside the switch that was in the page from the start ([accessibility: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages)).
-- [required] Without script, the switch sits in a small form whose submit the script removes (code-standard rule 20); a re-render keeps focus on it (code-standard rule 14).
-
-**Check**
-- *Script:* could check that no `form` with a submit button contains a `role="switch"`, that every switch has a name, and that a switch's state change does not navigate.
-- *Judgement:* Does the setting take effect now, and does the label read right with "on" and "off" after it?
-
-**Sources:** NN/g and Primer keep switches out of submitted forms; [Carbon](https://carbondesignsystem.com/components/toggle/usage/) says toggles "are commonly used in forms" while also requiring "instant application". The toolkit follows NN/g and Primer, because a form's Save button and an instant switch make contradictory promises in one view. Primer asks for a label "describing the action" and warns against "state-descriptive labels"; NN/g asks for what the control does when on. Both are met by naming the setting.
-
-## Select (dropdown)
-
-**Use when / don't use**
-- [moderate] Use for one choice from about six to fifteen options, where space is short and the options need no side-by-side comparison.
-- [moderate] Don't use for fewer than about five; radios show them without a click ([Baymard](https://baymard.com/blog/drop-down-usability): 55% of test users opened an optional drop-down just to see its contents). [Carbon dropdown](https://carbondesignsystem.com/components/dropdown/usage/): never for two options.
-- [weak] Don't use when options must be compared (plans, delivery choices); radios with descriptions keep all in view.
-- [moderate] Don't use for very long lists or values the person knows by heart (country, date of birth): a combobox or text fields ([NN/g, Li 2017](https://www.nngroup.com/articles/drop-down-menus/)).
-- [moderate] Don't use a multiple select; use checkboxes ([GOV.UK select](https://design-system.service.gov.uk/components/select/)).
-
-**How**
-- [moderate] **Native `select`** first. GOV.UK's research lists failures with selects: people "tried to type into the select", "confused focused items with selected items", could not close it, or did not know to scroll ([GOV.UK](https://design-system.service.gov.uk/components/select/)). A custom listbox repeats each of those unless it is built to the APG pattern.
-- [moderate] **Placeholder option.** In a form question, nothing is preselected ([GOV.UK](https://design-system.service.gov.uk/components/select/)): the first option is empty in value and says what to choose ("Choose a country"), and the field is required where an answer is. That option carries no information beyond the instruction ([Carbon](https://carbondesignsystem.com/components/dropdown/usage/): "Do not put important information in placeholder text"). A filter menu instead opens on the option that names what "all" covers (design-standard rule 12).
-- [moderate] **Label** visible above, like any field ([forms: labels](forms.md#labels)). A select without a visible label is read by tools/ui-check/check.mjs as a filter menu.
-- [weak] **Order** by the person's logic: frequency, size, or time; alphabetical when there is none.
-- [required] **Unavailable options** stay in place, disabled (design-standard rule 5).
-- [required] **Chevron** inside the field keeps the field's inset (design-standard rule 9; [visual: iconography](../design/visual.md#iconography)).
-
-**Cases**
-- "Title: Mr / Mrs / Ms" as a select → drop the field, or radios if it is truly needed; Baymard's test users opened short drop-downs just to scan them.
-- A 4-option "Sort by" in a filter bar → segmented, since it applies at once and holds four (design-standard rule 4).
-- A select that navigates the moment an option is chosen → apply on a button, or announce the behaviour first; WCAG 3.2.2 forbids an unannounced change of context ([W3C](https://www.w3.org/WAI/WCAG22/Understanding/on-input.html), failure F36 for auto-submit).
-- A "State" select on an address form → offer address lookup or a text field with autocomplete; Baymard found typing beats scrolling a state list.
-- A select whose only remaining option after another choice is "Standard" → show "Standard" as text ([Baymard](https://baymard.com/blog/drop-down-usability)).
-
-**Accessibility**
-- [required] 1.3.1 and 3.3.2: a visible, associated label. 3.2.2 On Input: changing the option never navigates or submits without warning. 2.1.1: a native select is keyboard-operable as shipped; a custom one follows the APG select-only combobox ([W3C APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)).
-- [required] Implementation: code-standard rule 8 (wrap the native `select`), code-standard rule 16 (its menu follows the theme), code-standard rule 20 (a filter select submits a GET form without script). In Figma: figma-standard rules 26, 31 and 32.
-
-**Build**
-- [required] A native `select` inside the wrapper (code-standard rule 8). In a question, the first option is `<option value="">Choose a country</option>` and the `select` is `required`.
-- [required] Groups are `optgroup`; an unavailable option is `<option disabled>`, kept in place (design-standard rule 5).
-- [required] The chevron is drawn on the `select` itself (`appearance: none` with a background image and inline-end padding from tokens), so the native popup and keyboard stay; `color-scheme` themes the popup (code-standard rule 16).
-- [required] A filter select sits in a GET form with a submit the script removes (code-standard rule 20); the script applies the filter in place on `change`, never navigating away.
-- [weak] Markup in [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup).
-
-**Check**
-- *Script:* tools/ui-check/check.mjs: design-standard rule 5 and design-standard rule 12 on selects without a visible label (it treats them as filter menus). It could also count options and flag a labelled form select of four or fewer, flag `select[multiple]`, and flag a `change` handler that navigates.
-- *Judgement:* Would radios fit, and must these options be compared?
-
-**Sources:** NN/g, Baymard and GOV.UK agree on avoiding selects for short and very long lists; they differ only on the exact count (above).
 
 ## Visible listbox
 
@@ -217,7 +56,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 
 **How**
 - [weak] **Height** shows every option where they fit, so nothing hides below a scroll; past about ten rows it scrolls, and the selected option is scrolled into view when the list renders.
-- [weak] **Selected** draws differently from focused and from rest by more than colour, the same distinction a select's popup needs ([select](#select-dropdown)).
+- [weak] **Selected** draws differently from focused and from rest by more than colour, the same distinction a select's popup needs ([select](../components/select.md#select-dropdown)).
 - [weak] **Acts** like a select: in a form it waits for the submit; as a view switcher it applies at once and never changes context.
 - [weak] **Several picks** are a filtered checkbox list, not a `select multiple` ([multi-select](#multi-select)). If a listbox of picks must scroll, show what is picked above it, as NN/g advises: "show selected items above the listbox as tokens or highlight the selected items in a nonscrollable list".
 - [moderate] **Option names** short, and not all starting with the same word ([APG listbox](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/): "Avoiding very long option names facilitates understandability and perceivability for screen reader users").
@@ -245,95 +84,13 @@ Two questions decide almost every case: **how many values can hold at once**, an
 
 **Sources:** NN/g, APG and MDN as linked; they agree. NN/g notes listboxes are "relatively seldom used"; the toolkit keeps them for frequent choices, where their low interaction cost pays for the space.
 
-## Combobox and autocomplete
-
-**Use when / don't use**
-- [moderate] Use for one choice from a very long list (countries, people, components), or a list the person knows well enough to type ([Baymard](https://baymard.com/blog/drop-down-usability): autocomplete is "a well-performing alternative to a drop-down" for country).
-- [weak] Use where the value may be new as well as chosen (a tag, a label) ([Carbon combo box](https://carbondesignsystem.com/components/dropdown/usage/): "select from a list of suggested options or type in their own custom value").
-- [weak] Don't use for a short list; radios or a select are simpler.
-- [weak] Don't use when any free text is acceptable and no validation is needed; a plain text field is simpler still.
-
-**How**
-- [moderate] **Model.** A text input with a popup list ([W3C APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)). Pick one of the APG's autocomplete behaviours and keep it: list with manual selection (suggestions shown, the person picks) is the safe default; inline completion and automatic selection suit expert tools.
-- [weak] **Matching.** Match anywhere in the option text, accept common synonyms and abbreviations ("UK" finds "United Kingdom"), and ignore case and accents.
-- [moderate] **Keyboard.** Down Arrow enters the list, Enter accepts, Escape closes the popup; Alt + Down opens it without moving focus ([APG](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)).
-- [weak] **No results.** Say so in the popup ("No countries match 'Atl'"), never an empty box.
-- [moderate] **Without script.** Start from a native `select` or a text input with a `datalist` and enhance it, so the form still works.
-- [weak] **Small screens.** The popup sits below the field and the field scrolls into view above the on-screen keyboard.
-- [weak] **States:** empty, typing with suggestions, no match, selected, error, disabled.
-
-**Cases**
-- A country field as a 250-option select → a combobox enhancing the select; Baymard and NN/g both favour typing for countries.
-- A people picker that only finds names from their start ("Ann" misses "Mary-Ann") → match anywhere in the string.
-- A combobox that selects the first suggestion on blur → leave the typed text and show an error on submit if it matches nothing; silent selection fills in a value the person never chose.
-- A tag field that accepts new values → show "Create 'design-ops'" as the last option, so creating is explicit.
-
-**Accessibility**
-- [required] 4.1.2: `role="combobox"` with `aria-expanded`, `aria-controls` and `aria-activedescendant` on the active option, per the APG. 4.1.3 Status Messages: the number of results is announced in a polite live region. 2.1.1: the keys above. 1.3.5 Identify Input Purpose where the field asks about the person (a country of residence takes `autocomplete="country-name"`).
-- [required] Implementation: code-standard rule 8 (behaviour-heavy only after native options are ruled out), code-standard rule 19 (Escape and light dismiss are built, not assumed), code-standard rule 20 (works without script). A composite role shipped with its keyboard is a [code candidate](../../code/candidates.md). In Figma: figma-standard rules 26, 31 and 32.
-
-**Build**
-- [moderate] Start from a native `select` or an `input` with a `datalist`, then enhance to the APG combobox: focus stays in the `input`, `aria-activedescendant` moves through the `listbox` ([accessibility: selection controls past the native set](../../code/accessibility.md#selection-controls-past-the-native-set)).
-- [moderate] The result count goes into a polite status element present from load ([accessibility: live regions and status messages](../../code/accessibility.md#live-regions-and-status-messages)).
-- [weak] Matching ignores case and accents with `Intl.Collator` at `sensitivity: 'base'` in the model, never a lower-cased string comparison ([i18n: locale-aware sorting](../../code/i18n.md#locale-aware-sorting)).
-- [weak] A remote search is debounced and aborts the previous request ([javascript: debouncing input](../../code/javascript.md#debouncing-input)).
-- [required] Escape and a click outside close the popup in the script (code-standard rule 19); nothing is selected on blur; with scripts off the form still submits (code-standard rule 20).
-
-**Check**
-- *Script:* could check `role="combobox"` with `aria-expanded` and `aria-controls`, that Escape closes the popup, that a no-match message appears, and that the field is a working native control with script disabled.
-- *Judgement:* Is the list long enough to need typing, and does matching find what people type?
-
-**Sources:** APG, Baymard and Carbon as linked; they agree.
-
-## Segmented control
-
-**Use when / don't use**
-- [required] Use for a facet of two to four short choices that apply at once: a view, a filter, a sort (design-standard rule 4).
-- [weak] Don't use inside a form that saves with a button; radios carry that promise ([Primer segmented control](https://primer.style/product/components/segmented-control/guidelines/): "similar to radio inputs but without needing form submission").
-- [required] Don't use past four choices; a menu with counts (design-standard rule 4, design-standard rule 11).
-- [weak] Don't use as navigation between pages; that is tabs or links (`navigation.md`).
-
-**How**
-- [weak] One choice is always selected; a filter control has a segment that shows everything ([Primer](https://primer.style/product/components/segmented-control/guidelines/)). The selection applies on click.
-- [weak] Labels short and of similar length; icons only with a text name for assistive tech ([Primer](https://primer.style/product/components/segmented-control/guidelines/): "must have a text label, even if the label is only accessible to screen readers").
-- [weak] On a small screen, a control that no longer fits becomes a menu ([Primer](https://primer.style/product/components/segmented-control/guidelines/)); it never wraps.
-- [required] The control keeps its size when its selection changes (design-standard rule 2).
-- [weak] **States:** selected and unselected, each with hover, focus, disabled.
-
-**Cases**
-- Five sort orders as segments → a menu; Primer would allow five, design-standard rule 4 does not.
-- Light, Dark, System for a preview → segmented; three choices applying at once.
-- A segmented control in a settings form with Save → radios; segments promise immediacy.
-- A segment for a filter value with no matching rows → disabled in place (design-standard rule 5).
-
-**Accessibility**
-- [required] 1.3.1 and 4.1.2: a group of `button`s with `aria-pressed`, or a radio group; one tab stop with arrows inside if a radio group. 3.2.2: selection changes content, never context.
-- [required] Implementation: code-standard rule 8, code-standard rule 9 (selected is a state of the native control), code-standard rule 15 (a count is a description). In Figma: figma-standard rule 31 (selected draws differently from rest by more than colour), figma-standard rules 26 and 32.
-
-**Build**
-- [required] A `role="group"` with a name, holding `<button type="button" aria-pressed>`s; selected is styled from `[aria-pressed="true"]` (code-standard rule 9). That is the view switch outside any form. A segmented facet inside a filter bar's GET form is radios in a `fieldset` styled as segments, so it submits without script ([filtering: facet controls](filtering.md#facet-controls)).
-  ```html
-  <div role="group" aria-label="View">
-    <button type="button" aria-pressed="true">Table</button>
-    <button type="button" aria-pressed="false">Cards</button></div>
-  ```
-- [moderate] One handler sets `aria-pressed` on every segment and changes the view, so exactly one is pressed ([accessibility: composite widgets and roving tabindex](../../code/accessibility.md#composite-widgets-and-roving-tabindex)).
-- [weak] The choice lives in the address, so the no-script version is links or a GET form ([javascript: state in the address and history](../../code/javascript.md#state-in-the-address-and-history)).
-- [required] An icon-only segment has a name (code-standard rule 18); a count is a description (code-standard rule 15).
-
-**Check**
-- *Script:* tools/ui-check/check.mjs: design-standard rule 4 (more than four segments). It could also check that exactly one segment is pressed.
-- *Judgement:* Does this apply at once, or is it a form value?
-
-**Sources:** Primer as linked; the count and its sources are in [interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice).
-
 ## Option tiles and picking a kind in a dialog
 
 **Use when / don't use**
 - [moderate] Use option tiles (radio cards) when the person picks one of two to six kinds and each needs more than a word to tell apart: a title and one line of description, or an icon that shows the kind. Carbon: "Selectable tiles are used to present different options for users to select from"; "Use single-select tiles when the user can only select one tile" ([Carbon tile](https://carbondesignsystem.com/components/tile/usage/)). Radix ships them as RadioCards, "interactive cards where only one can be selected at a time" ([Radix radio cards](https://www.radix-ui.com/themes/docs/components/radio-cards)); shadcn's choice card wraps a radio item, a title and a description in one label ([shadcn radio group](https://ui.shadcn.com/docs/components/radio-group)).
-- [weak] Don't use tiles for short values that need no explanation: those are radios (in a form) or a segmented control (applying at once, [segmented control](#segmented-control)). Apple's segmented control in an inspector chooses "attributes" of an object ([Apple segmented controls](https://developer.apple.com/design/human-interface-guidelines/segmented-controls)).
+- [weak] Don't use tiles for short values that need no explanation: those are radios (in a form) or a segmented control (applying at once, [segmented control](../components/segmented-control.md#segmented-control)). Apple's segmented control in an inspector chooses "attributes" of an object ([Apple segmented controls](https://developer.apple.com/design/human-interface-guidelines/segmented-controls)).
 - [weak] Don't use tiles past about six kinds; a select (Apple's pop-up button, "a flat list of mutually exclusive options", "when space is limited", [Apple pop-up buttons](https://developer.apple.com/design/human-interface-guidelines/pop-up-buttons)) with the description in the option or under the field.
-- [weak] Choice chips are for picking among values in place, not for a form's kind ([chips: choice chips](chips.md#choice-chips)); Material's segmented button covers "two and five items. For more complex choices, or more than five items, use chips" ([Android segmented button](https://developer.android.com/develop/ui/compose/components/segmented-button)), and is deprecated in Material 3 Expressive for the connected button group.
+- [weak] Choice chips are for picking among values in place, not for a form's kind ([choice chips](../components/chip.md#choice-chips)); Material's segmented button covers "two and five items. For more complex choices, or more than five items, use chips" ([Android segmented button](https://developer.android.com/develop/ui/compose/components/segmented-button)), and is deprecated in Material 3 Expressive for the connected button group.
 
 **How**
 - [weak] **The kind first, then its fields.** When the kind decides what the rest of the dialog asks, pick it first and show only its fields after; Figma picks a property's type before its "Create component property" modal opens, and the modal then holds only a name, a default that depends on the type, and "Create property" ([Figma, explore component properties](https://help.figma.com/hc/en-us/articles/5579474826519-Explore-component-properties)). In one dialog: the kind as tiles or a segmented control at the top, the fields under it, the commit button at the bottom ([property editors](property-editors.md#property-editors)).
@@ -447,7 +204,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - [weak] Use clear all once two or more options are picked ([multi-select](#multi-select)). Clearing a filter bar's applied filters is [filtering: applied filters and clear all](filtering.md#applied-filters-and-clear-all); selecting rows in a table, across pages, is [tables: selection and bulk actions](tables.md#selection-and-bulk-actions).
 
 **How**
-- [weak] **Select all** is a parent checkbox first in the list, set off from the options by a divider, and named for the set: "All permissions (12)". Its three states and click behaviour are the [checkbox](#checkbox)'s indeterminate parent; this section does not repeat them.
+- [weak] **Select all** is a parent checkbox first in the list, set off from the options by a divider, and named for the set: "All permissions (12)". Its three states and click behaviour are the [checkbox](../components/checkbox.md#checkbox)'s indeterminate parent; this section does not repeat them.
 - [weak] **Clear all** sits with the count of picks, in the field or the list's heading: Carbon's multiselect shows a tag "containing the total number of selected options" that "also provides a functionality to clear all the selected options" ([Carbon](https://carbondesignsystem.com/components/dropdown/usage/)).
 - [weak] **With a filter typed into the list,** select all acts on the options that match, and its label says so: "Select all 6 matching". Clearing the filter keeps the picks and shows the ones it hid. A filter is the person saying what "all" means; selecting options they cannot see is a surprise (toolkit commentary).
 - [required] **Disabled options** are skipped by select all and stay in place (design-standard rule 5).
@@ -556,45 +313,3 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Judgement:* Can any time be chosen, or only some?
 
 **Sources:** Carbon, GOV.UK, MDN and NN/g as linked; NN/g's advice is about dates and is applied to times by analogy. Carbon writes "AM" and "PM" ("Use uppercase letters and no periods"); GOV.UK writes "5:30pm". The toolkit follows the project's dialect: GOV.UK for British English, where its style guide is the house reference, Carbon's form where a product follows US convention.
-
-## Slider
-
-**Use when / don't use**
-- [weak] Use for an approximate value in a moderate range where the person adjusts by feel and sees the result at once: volume, a zoom level, a price band in a filter.
-- [weak] Don't use when the exact value matters; a number field is faster and precise ([NN/g steppers, Zhou 2018](https://www.nngroup.com/articles/input-steppers/): allow typing when "the exact value is important").
-- [weak] Don't use for very large ranges (1–1000) or tiny ones (1–3) ([Carbon slider](https://carbondesignsystem.com/components/slider/usage/)).
-- [weak] Don't use for values that are not numbers ([Carbon](https://carbondesignsystem.com/components/slider/usage/)).
-
-**How**
-- [weak] Pair the slider with a number input that shows and accepts the value ([Carbon](https://carbondesignsystem.com/components/slider/usage/)); a range slider has two.
-- [weak] Show the minimum, maximum and unit; the current value is always visible, not only while dragging.
-- [required] Clicking the track moves the thumb there, so dragging is never the only way ([WCAG 2.5.7 Understanding](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html)).
-- [moderate] Arrow keys step by one; a larger step with Shift or Page Up and Down; Home and End jump to the limits.
-- [weak] A slider that filters waits for release before it re-queries, so the list does not jump at every step.
-
-**Cases**
-- A "quantity" slider from 1 to 100 → a number input; the exact count matters.
-- A price filter from 0 to 5,000 → a range slider with two number inputs beside it; people often know their ceiling exactly.
-- A brightness setting with no visible value → show the percentage beside it; a slider without a value hides state.
-- A slider operable only by dragging the thumb → make the track clickable and the thumb keyboard-operable; 2.5.7 requires a single-pointer path.
-
-**Accessibility**
-- [required] 2.5.7 Dragging Movements (AA): a single-pointer alternative (track click, or the paired input). 4.1.2: a native `input type="range"`, or `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax` and `aria-valuetext` when the number needs a unit. 2.1.1: the keys above. 2.5.8: the thumb meets the target size.
-- [required] Implementation: code-standard rule 8 (wrap the native range input), code-standard rule 16 (it follows the theme). In Figma: figma-standard rule 26 (the thumb), figma-standard rules 31 and 32.
-
-**Build**
-- [required] A native `<input type="range">` with `min`, `max` and `step`, paired with a labelled number field; the browser gives arrows, Home and End and a clickable track (code-standard rule 8).
-  ```html
-  <label for="price-max">Maximum price (£)</label>
-  <input id="price-max" type="range" min="0" max="5000" step="50" value="2000">
-  <input id="price-max-n" inputmode="numeric" value="2000" aria-label="Maximum price in pounds">
-  ```
-- [moderate] One `input` handler keeps the two in step; a filter re-queries on `change`, which fires on release.
-- [required] A unit or a word for the value goes in `aria-valuetext`; a range of two is two labelled range inputs (minimum and maximum), since HTML has no two-thumb slider ([accessibility: selection controls past the native set](../../code/accessibility.md#selection-controls-past-the-native-set)).
-- [required] Track and thumb follow the theme (`accent-color`, code-standard rule 16); the thumb's size is a token that meets the target size.
-
-**Check**
-- *Script:* could check that every range input has a name and an associated visible value or number input, and that a click on the track changes the value.
-- *Judgement:* Does the person need an exact number here?
-
-**Sources:** Carbon, NN/g and W3C as linked; they agree.

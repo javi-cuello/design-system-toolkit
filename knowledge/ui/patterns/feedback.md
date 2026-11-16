@@ -1,6 +1,6 @@
 # Feedback: messages, status, loading, empty and error states
 
-How an interface tells people what happened, what state something is in, and what to do next: choosing among an inline message, a banner, a toast, a dialog and a status badge; loading indicators; empty states; error pages; success confirmations; and a notifications centre. It serves design-standard's principles *show state and give feedback*, *people in control, mistakes forgiven* and *honest*, applies design-standard rule 10 (a message says what changed and what it does to people) to every message here, and design-standard rule 2 (the layout holds still) to every message that appears and goes. It owns toasts, loading indicators, empty states and the notifications centre; other pages link here, and nothing here is a rule.
+How an interface tells people what happened, what state something is in, and what to do next: choosing among an inline message, a banner, a toast, a dialog and a status badge; loading indicators; empty states; error pages; success confirmations; and a notifications centre. It serves design-standard's principles *show state and give feedback*, *people in control, mistakes forgiven* and *honest*, applies design-standard rule 10 (a message says what changed and what it does to people) to every message here, and design-standard rule 2 (the layout holds still) to every message that appears and goes. Toasts, banners and alerts, and status badges are components with pages of their own: [`../components/toast.md`](../components/toast.md), [`../components/alert.md`](../components/alert.md), [`../components/badge.md`](../components/badge.md). This page owns loading indicators, empty states and the notifications centre; other pages link here, and nothing here is a rule.
 
 ## Choosing the feedback
 
@@ -22,7 +22,7 @@ How an interface tells people what happened, what state something is in, and wha
 
 - [strong] Place the message next to its cause. Primer's [notification messaging](https://primer.style/ui-patterns/notification-messaging): "Whenever possible, place messages near the action they are related to."
 - [moderate] An indicator is passive and attached to an element; a validation is attached to input; a notification is about the system and is either passive or action-required ([NN/g, indicators, validations and notifications](https://www.nngroup.com/articles/indicators-validations-notifications/)). Name which of the three a message is before choosing its component.
-- [moderate] A dialog is for a decision the person must make before continuing. Carbon's [notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/): "Only use a modal when the message is critical and needs the user's immediate attention or action." The dialog's behaviour is [dialogs: focus](dialogs.md#focus-in-trapped-returned).
+- [moderate] A dialog is for a decision the person must make before continuing. Carbon's [notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/): "Only use a modal when the message is critical and needs the user's immediate attention or action." The dialog's behaviour is [focus](../components/modal-dialog.md#focus-in-trapped-returned).
 - [weak] Four severities, one vocabulary across every component: information, success, warning, error ([Carbon](https://carbondesignsystem.com/patterns/notification-pattern/)). Each severity has one colour role, one icon and one heading word, used everywhere.
 
 **Cases**
@@ -33,7 +33,7 @@ How an interface tells people what happened, what state something is in, and wha
 - Three messages compete on one page → keep the most severe in its component, fold the rest into it or into the notifications centre; GOV.UK combines banners into one and Carbon shows one banner at a time.
 
 **Accessibility**
-- [required] 4.1.3 Status Messages: a message that appears without moving focus is exposed through a role or property ([W3C Understanding 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html)). code-standard lists 4.1.3 among its candidates; until it is a rule, see each section below.
+- [required] 4.1.3 Status Messages: a message that appears without moving focus is exposed through a role or property ([W3C Understanding 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html)). code-standard lists 4.1.3 among its candidates; until it is a rule, see each message's own page or section ([toast](../components/toast.md), [alert](../components/alert.md), [badge](../components/badge.md), and the sections below).
 - [required] 1.4.1 Use of Color: severity is never colour alone; it carries an icon and a word.
 - [required] 3.3.1 Error Identification: an error is described in text.
 - [required] Focus after a message replaces content is code-standard rule 14.
@@ -50,86 +50,6 @@ How an interface tells people what happened, what state something is in, and wha
 - *Judgement*: is this the least intrusive component that is enough, and is it next to its cause?
 
 **Sources.** Lightning, Primer, Carbon and NN/g agree on ordering by intrusiveness and placing near the cause. Primer is the most sceptical of toasts; the toolkit follows it and makes inline the default.
-
-## Toasts
-
-**Use when / don't use**
-- [moderate] Use for brief, passive, product-level news that does not belong to a place on the page: an export finished, a setting saved elsewhere.
-- [moderate] Don't use for an error the person must fix, a field message, anything critical, or the only record of something.
-- [weak] Don't use when the action and its effect share a screen; show the effect there instead.
-
-**How**
-- [weak] At most two lines of text. Carbon's ceiling is three ([notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/)); the toolkit sets two because a toast may leave before a slow reader finishes.
-- [weak] No essential action. An Undo is the one action a toast may carry, and then it has no timer: Carbon says a toast with an action "should remain on screen until the user dismisses it".
-- [required] Auto-dismiss only when the same information can be found elsewhere (the notifications centre, the changed record, an activity log). W3C's [Understanding 2.2.1](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html) treats a disappearing message as a time limit unless the user can get the information another way.
-- [contested] One at a time. A second toast replaces the first or queues behind it; Carbon stacks them newest on top, and the toolkit does not, because a stack of vanishing messages is unreadable. No source gives a duration; set one in the project's context document and keep a close button on every toast.
-- [required] One region, in one corner, for the whole product. The toast never covers the control the person is using or the focused element (2.4.11).
-- [weak] Wording: what happened, in the past tense, with the object named: "Report exported to Downloads". No "Success!".
-- [weak] Small screens: full width at the bottom, above any bottom navigation.
-
-**Cases**
-- "Changes saved" after an explicit Save on the same screen → drop the toast and show the saved state beside the button: the effect is evident (see *Success confirmation*).
-- A toast offering "Retry" for a failed upload → make it an inline message on the upload row: an action makes it essential.
-- Bulk delete from a list in view → no toast: the list shows the change, and an inline message above it says "40 findings deleted. Undo", kept until dismissed. Deleting from a page that then closes leaves nothing on screen → a toast with Undo, no timer, dismissed by the person or replaced by the next action; the deletion is committed when it closes.
-- A connection drop → a banner, not a toast: it is a condition that persists, and the person must know while it lasts.
-
-**Accessibility**
-- [required] 4.1.3: the toast region is a persistent `role="status"` (or `role="alert"` only for the rare urgent case) present on load, and the text is inserted into it. code-standard's candidate notes that `aria-live` on an element that mounts with its content announces nothing.
-- [required] 2.2.1 Timing Adjustable: a timed toast whose content exists nowhere else fails unless the person can turn off, adjust or extend the timer.
-- [required] 2.1.1 Keyboard: a toast with Undo is reachable by keyboard without hunting; an icon-only close is code-standard rule 18.
-
-**Build**
-- [required] One toast region per product, a `role="status"` element in the page from load; the script writes text into it, never mounts the region with its content ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)).
-  ```html
-  <div role="status" data-toasts></div>   <!-- in the layout, empty, from the start -->
-  ```
-- [required] A toast with Undo has no timer and keeps the Undo `button` reachable; every toast has a named close button (code-standard rule 18).
-- [strong] A timed toast pauses on hover and focus, and its duration is one token in the project (WCAG 2.2.1).
-- [required] Positioned with `position: fixed` and logical insets, clear of safe areas ([responsive: *Safe areas*](../../code/responsive.md#safe-areas)); it never covers the focused element (2.4.11).
-- [weak] Enters with `transform` and `opacity`, still under reduced motion ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
-
-**Check**
-- *Script* could: find the toast region and confirm it is a live region present before any toast; flag a toast containing a button that auto-dismisses; flag toast text over two lines at the toast's width; flag an error that appears only in a toast.
-- *Judgement*: is this message global enough to be a toast, and can it be found again?
-
-**Sources.** Carbon allows three lines and stacking; Primer steers away from toasts; Lightning ties them to user actions. The toolkit goes with Primer's caution and W3C's 2.2.1 reading: two lines, one at a time, timed only when findable elsewhere.
-
-## Banners and alerts
-
-**Use when / don't use**
-- [moderate] Use a banner for something about the whole page or the whole product: an outage, a deadline, a stale data source, the outcome of the person's last action when they have not finished.
-- [weak] Use an alert (an inline message with a severity) inside a region when the scope is that region.
-- [weak] Don't use a banner for validation errors (GOV.UK [notification banner](https://design-system.service.gov.uk/components/notification-banner/)), for marketing, or for information directly relevant to the page's task, which belongs in the content.
-
-**How**
-- [moderate] One banner per page. Combine messages or show only the most important (GOV.UK; Carbon: "Only show one banner at a time").
-- [moderate] Page banner: immediately before the page `h1`, as wide as the content (GOV.UK). Product banner: directly below the main header, scrolling with the page, not sticky ([Carbon](https://carbondesignsystem.com/patterns/notification-pattern/)).
-- [required] Severity drives colour role, icon and a heading word, so meaning never rests on colour (GOV.UK asks for a heading such as "Success" for this reason; WCAG 1.4.1).
-- [weak] Dismissible or not: a banner about a condition that still holds (outage, stale data, read-only mode) is not dismissible; it leaves when the condition ends. A banner of information the person has read is dismissible, and stays dismissed for that person. GOV.UK lists dismissal as an open question; this split is the toolkit's commentary.
-- [weak] Body: the problem and its cause, then what the person can do, in one to two sentences. Atlassian's [error messages](https://atlassian.design/foundations/content/designing-messages/error-messages) asks for one to two sentences and not to invent a cause.
-- [required] Reserve its space or place it above the controls so its arrival or dismissal does not move them (design-standard rule 2).
-
-**Cases**
-- A dashboard's audit source failed but the snapshot loaded → a warning banner naming what is missing and how old the rest is; the sections that depend on the audit show "not measured", never zero ([ux: degraded states](../design/ux.md#degraded-offline-and-error-states)).
-- A banner and an error summary on the same page → keep the error summary; GOV.UK says not to show both.
-- A success banner after a multi-step journey ends → a confirmation page instead; GOV.UK prefers one at the end of a linear service.
-
-**Accessibility**
-- [required] 1.3.1 and 2.4.1: a banner is a `role="region"` labelled by its heading so it can be found by landmark navigation (GOV.UK). A success banner that appears after a redirect takes focus on load (GOV.UK uses `role="alert"` for it); moving focus is code-standard rule 14's territory.
-- [required] 1.4.1 and 1.4.3: icon and heading carry the severity; text contrast is figma-standard rule 32 in a component.
-
-**Build**
-- [required] A banner is a `section` named by its heading (`aria-labelledby`), so it is a region landmark; rendered by the server before the `h1` where it can be ([HTML semantics: *Landmarks*](../../code/html-semantics.md#landmarks)).
-- [required] Tone as an attribute (`tone="warning"`), with an `aria-hidden` icon and a visible heading word (code-standard rules 9 and 18).
-- [weak] A banner inserted after load overlays or takes reserved space, never pushes the controls ([performance: *Layout stability in code*](../../code/performance.md#layout-stability-in-code)).
-- [required] Dismissal hides it with `hidden` and remembers it per person on the server or in storage; a condition banner has no close button (code-standard rule 17).
-- [weak] A success banner after a redirect takes focus on load with `tabindex="-1"` ([accessibility: *Focus management*](../../code/accessibility.md#focus-management)).
-
-**Check**
-- *Script* could: count banners per page (more than one is a finding); confirm each has a heading and an accessible region name; flag a banner placed after the `h1` or inside the main content flow on a page that has one.
-- *Judgement*: is the condition still true while the banner shows, and could the message live in the content instead?
-
-**Sources.** GOV.UK and Carbon agree on one at a time and on placement; neither settles dismissal, so the toolkit splits it by whether the condition persists.
 
 ## Inline messages
 
@@ -168,44 +88,6 @@ How an interface tells people what happened, what state something is in, and wha
 
 **Sources.** Carbon and GOV.UK agree; the wording sources are in [content: error messages](../design/content.md#error-messages).
 
-## Status badges and pills
-
-**Use when / don't use**
-- [weak] Use to show the state of an object in a list, table or header: Draft, Published, Failed, Needs review.
-- [weak] Use a count badge for tallies; use a tag for descriptive metadata ([Atlassian lozenge](https://atlassian.design/components/lozenge/usage)).
-- [weak] Don't make a status badge interactive; a badge that opens a menu is a button styled as one.
-- [weak] Don't use semantic colours for decoration or for user-chosen categories (Atlassian's accent colours exist for that).
-
-**How**
-- [required] Colour plus text, and an icon where the status must be scanned at density. Carbon's [status indicator pattern](https://carbondesignsystem.com/patterns/status-indicator-pattern/): rely on at least two of colour, shape and symbol, and add text; "Relying solely on color to convey status is insufficient" (WCAG 1.4.1).
-- [weak] A fixed vocabulary: list every status the product uses, each with one label, one colour role and one icon, in the project's context document. The same state never has two names on two screens, and two states never share a colour.
-- [weak] Short labels in sentence case (Atlassian: "Don't use long labels"; it truncates past 200px by default). One or two words.
-- [weak] Three attention levels at most: high (act now: error), medium (no action needed: in progress), low (something changed or is ready) ([Carbon](https://carbondesignsystem.com/patterns/status-indicator-pattern/)).
-- [weak] A dot-only status is allowed only in a dense column whose header names the status, and with the text available to assistive technology.
-
-**Cases**
-- A table uses green "Active", green "Live" and green "Published" for one state on three pages → one name, one badge, everywhere: the vocabulary is the design.
-- A badge says "Error" in red with no explanation → keep the badge, and put the cause in the row's detail or a described-by text; a badge is a label, the message lives elsewhere.
-- Twelve statuses in a workflow → group them into the three attention levels for colour, keep twelve labels; more colours than levels stop meaning anything.
-- A grey "Disabled" badge at low contrast → disabled controls are exempt from 1.4.3, but a status badge is text and is not: it meets figma-standard rule 32.
-
-**Accessibility**
-- [required] 1.4.1: text or icon beside colour. 1.4.11: a status shape needs 3:1 against its background; 1.4.3 for its text.
-- [required] A dot-only badge needs text in the accessible name or a visually hidden label; an icon-only badge is code-standard rule 18.
-
-**Build**
-- [required] A visual component, a custom element with text and no script: `<ds-badge tone="error">Failed</ds-badge>` (code-standard rule 8).
-- [required] Tone is an attribute mapped to the project's status vocabulary; the icon is `aria-hidden` beside the text (code-standard rules 9 and 18).
-- [required] A dot-only badge keeps its text for assistive technology in a `visually-hidden` span ([accessibility: *Hidden content*](../../code/accessibility.md#hidden-content)).
-- [required] Colours are tokens, one per attention level, never per status (code-standard rule 22; [tokens: *Three tiers*](../../code/tokens.md#three-tiers)).
-- [weak] Never a `button` or link; a badge that opens something is a button component with a badge look.
-
-**Check**
-- *Script* could: collect every badge's text on a site and flag a text with two colours or a colour with two meanings; flag a badge with no text node and no accessible name.
-- *Judgement*: is the vocabulary one list, and does each status say something the reader acts on?
-
-**Sources.** Carbon asks for three cues where Atlassian asks for text and an optional icon; the toolkit requires text always and an icon at density.
-
 ## Loading
 
 **Use when / don't use**
@@ -218,7 +100,7 @@ How an interface tells people what happened, what state something is in, and wha
 - [strong] Skeletons mirror the real layout, built from the same layout component and sized to the expected rows, so nothing moves when content arrives ([NN/g skeleton screens](https://www.nngroup.com/articles/skeleton-screens/): for waits under about ten seconds; a frame-only skeleton reads as broken). Cross-fade to the data with no blank frame between (Lightning's [loading](http://spring-20.lightningdesignsystem.com/guidelines/loading/)).
 - [weak] Place the indicator where the content will be; replace a row of adjacent spinners with one (Primer). Load parts as they arrive.
 - [weak] Never show "No results" while loading. Loading, empty and error are three states with three designs.
-- [weak] A button that starts the work shows its own state, or none: [actions: loading buttons](actions.md#loading-buttons). The indicator for a region belongs to the region, not to the button that asked for it.
+- [weak] A button that starts the work shows its own state, or none: [loading buttons](../components/button.md#loading-buttons). The indicator for a region belongs to the region, not to the button that asked for it.
 - [weak] Keep what is on screen during an update: a filter that refetches dims or marks the old rows busy rather than swapping them for a skeleton; a skeleton is for content not yet seen.
 
 **Cases**
@@ -244,7 +126,7 @@ How an interface tells people what happened, what state something is in, and wha
 - [required] The updating region carries `aria-busy="true"` until done; one `role="status"` line says "Loading results" and then "24 results" ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)).
 - [weak] A spinner on its own is `aria-hidden` with the status line beside it carrying a specific label (Primer: "loading status checks"), not a bare "Loading".
 - [required] Measured work is `<progress value max>` with a label; unmeasured is `<progress>` with no `value` ([MDN `progress`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/progress)).
-- [weak] The indicator appears after the project's threshold, not at once, and once shown holds a short minimum: one timer, as in [interaction: response times](../design/interaction.md#response-times-and-perceived-performance) and the button version in [actions: loading buttons](actions.md#loading-buttons).
+- [weak] The indicator appears after the project's threshold, not at once, and once shown holds a short minimum: one timer, as in [interaction: response times](../design/interaction.md#response-times-and-perceived-performance) and the button version in [loading buttons](../components/button.md#loading-buttons).
 - [contested] Shimmer stops under `prefers-reduced-motion`; a spinner slows or turns still ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
 - [weak] A framework's loading boundary (React's `Suspense`) is this section's loading branch: its fallback is the skeleton, and boundaries follow the design's loading sequence, not every component. React: "Suspense boundaries should not be more granular than the loading sequence that you want the user to experience." An update that would swap visible content for a fallback runs as a transition, so the old content stays (React: "Replacing visible UI with a fallback creates a jarring user experience").
 - [weak] Loading, empty and error are three render branches; empty never renders while a request is pending.
@@ -374,7 +256,7 @@ How an interface tells people what happened, what state something is in, and wha
 ## Notifications centre
 
 **Use when / don't use**
-- [weak] Use when a product sends many system-generated messages, or when timed toasts need a place to be found again (*Toasts*).
+- [weak] Use when a product sends many system-generated messages, or when timed toasts need a place to be found again ([toast](../components/toast.md#toasts)).
 - [weak] Don't use as the only route for anything urgent; don't add one for a product that sends a few messages a week.
 
 **How**
