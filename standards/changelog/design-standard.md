@@ -1,5 +1,6 @@
 # History — design-standard
 
+- 1.5.0 (2026-11-16): rule 14: a `weak` knowledge item is not used, and a `contested` one is decided and reported (toolkit-standard 2.41.0 §D 21).
 - 1.4.0 (2026-11-11): rule 14 follows each knowledge item as far as its weight carries (toolkit-standard §D 21); a weak or contested one is a starting point, kept or changed in the report.
 - 1.3.1 (2026-11-11): *Application profiles* names the new editorial profile (`knowledge/ui/profiles/editorial.md`); no rule changed.
 - 1.3.0 (2026-11-02): rule 14 — with no design file, the knowledge base is the design; reference sites fill only what it leaves open.

@@ -277,6 +277,16 @@ ok("…and In Figma's parts missing or out of order", /bad\.md: component sectio
 ok("…and an item under a Figma part with no weight", /bad\.md:\d+: an item carries no weight/.test(cOut));
 ok("…and Alignment with code missing a part", /ali\.md: component section "Alignment with code" holds Structure, Mapping, States, Differences, Check, Sources/.test(cOut));
 ok("…and the folder's README is not a component page", !/components\/README\.md/.test(cOut));
+// 2026-11-16: one item word for word on three component pages is a rule restated (toolkit-standard §D 21);
+// the same lead line over a different table is the page's own item.
+{
+  const page = (extra) => "# P\n\n## Overview\n\n**Use when / don't use**\n**Anatomy**\n\n## Topic\n\n**Build**\n\n## In Figma\n\n**Layers**\n**Properties**\n- [required] Every property drives a layer (rule 30).\n**Variants and states**\n**Tokens**\n**Check**\n**Sources.** s\n\n## Alignment with code\n\n**Structure**\n**Mapping**\n- [required] Each axis maps to one prop:\n\n  | Figma | Code |\n  |---|---|\n  | " + extra + " | x |\n**States**\n**Differences**\n**Check**\n**Sources.** s\n\n" + COD;
+  const rOut = run(tree({ files: { "knowledge/ui/components/a.md": page("A"), "knowledge/ui/components/b.md": page("B"), "knowledge/ui/components/c.md": page("C") } })).stdout;
+  ok("an item word for word on three component pages is refused", /the same item on 3 component pages, "- \[required\] Every property drives a layer/.test(rOut));
+  ok("…but a shared lead line over each page's own table is not", !/the same item on 3 component pages, "- \[required\] Each axis maps/.test(rOut));
+  const twoOut = run(tree({ files: { "knowledge/ui/components/a.md": page("A"), "knowledge/ui/components/b.md": page("B") } })).stdout;
+  ok("…and two pages sharing one is allowed", !/the same item on/.test(twoOut));
+}
 // 2026-11-11: every knowledge item carries a weight; a Case is not an item (toolkit-standard §D 21).
 d = tree({ files: { "knowledge/ui/w.md": "# W\n\n## S\n\n**How**\n- [strong] **Weighed.** x\n- **Bare.** y\n- [maybe] z\n\n**Cases**\n- a case → a fix\n\n```\n- **In a fence.** q\n```\n" } });
 const wOut = run(d).stdout;

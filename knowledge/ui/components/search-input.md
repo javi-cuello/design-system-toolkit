@@ -121,7 +121,7 @@ A search input is the one-line field a person types a query into, to search a si
 - [weak] `Show submit button` where the project has both submitted and instant searches; `Show label` where it shows a visible label in some places.
 
 **Variants and states**
-- [required] Axes in the order `Size → Has value → Disabled → State` (figma-standard rule 1); `Disabled` pairs only with Rest (figma-standard rules 2 and 3); `State` runs `Rest → Focus → Hover`, as on the text input ([text input: *In Figma*](text-input.md#in-figma); figma-standard rule 4).
+- [required] Axes in the order `Size → Has value → Disabled → State` (figma-standard rule 1); `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 2 and 3); `State` runs `Rest → Focus → Hover`, as on the text input ([text input: *In Figma*](text-input.md#in-figma); figma-standard rule 4).
 - [weak] No `Validation` axis by default: a search query is not validated, and neither SDS's nor Carbon's kit draws an error (Code Connect files above). A project whose search rejects input adds it as the text input has it.
 - [weak] No `Open` state: suggestions are the combobox's popup ([when a search becomes a combobox](#when-a-search-becomes-a-combobox)). Carbon's `Expandable` and `Expanded` are drawn only where the project ships `ExpandableSearch`, as a set of its own (Carbon Search.figma.ts, above).
 - [required] Sizes are `Size` with t-shirt values, largest first, matching the bar's controls (figma-standard rule 6).

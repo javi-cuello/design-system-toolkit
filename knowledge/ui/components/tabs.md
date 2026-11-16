@@ -65,11 +65,10 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 
 **Properties**
 - [required] `Label` is a text property; the icon is an instance swap `Icon` with `Show icon` directly above it, and the count a text property `Count` with `Show count` above it (figma-standard rules 5, 21 and 37).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] On the item, the axes run `Size → Selected → Disabled → State`; `Selected` is a True/False variant, a bare word, `False` first (figma-standard rules 1 and 21).
-- [required] `State` runs `Rest → Focus → Hover → Press`; each draws differently from Rest and Focus shows a ring; `Disabled` pairs only with Rest (figma-standard rules 2, 4, 31 and 39).
+- [required] `State` runs `Rest → Focus → Hover → Press`; each draws differently from Rest and Focus shows a ring; `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 2, 4, 31 and 39).
 - [moderate] Selection lives on each `Tab`, not on the row: a component cannot change the variant of what fills its slot, so a frame can hold two selected tabs and the designer keeps one. The toolkit's state-axis research records the same trade for Primer's `SegmentedControl.Button` (*What the State axis models*, research folder; figma-standard rule 38).
 - [required] Sizes, where the tabs have them, are `Size` with t-shirt values, largest first (figma-standard rule 6).
 

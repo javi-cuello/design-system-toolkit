@@ -78,3 +78,20 @@ export function pagesFor(rel) {
   const base = /\.(s[ac]ss|css)$/.test(rel) ? STYLE : MARKUP.concat(/\.(m?js|jsx|tsx|vue|svelte|astro)$/.test(rel) ? ['knowledge/code/javascript.md'] : []);
   return [...new Set(patterns.concat(base))];
 }
+
+/* A Figma component's name → its knowledge page, or null where none names it: "Text input",
+   "_Feedback message", "Checkbox control". The whole name is tried joined first, then each pair of
+   words and each word from the last: in English the head noun comes last, so "Alert dialog" is a
+   dialog and "Input label" a label. `aliases` maps a project's own names (from its context document)
+   to a page name. A set no page names is "no page" to the caller, never a finding. */
+export function componentPage(name, aliases = {}) {
+  const words = String(name).replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+  const own = Object.entries(aliases).find(([k]) => k.toLowerCase().replace(/[^a-z0-9]+/g, '') === words.join(''));
+  if (own) return `knowledge/ui/components/${own[1].replace(/\.md$/, '')}.md`;
+  // a group of buttons is the actions pattern's, not the button page's (button.md hands groups there); a checkbox
+  // or radio group is its own page's
+  if (/^button(group|set)s?$/.test(words.join(''))) return null;
+  const tries = [words.join('')].concat(words.slice(1).map((w, i) => words[i] + w).reverse(), [...words].reverse());
+  for (const w of tries) { const hit = COMPONENTS.find(([re]) => re.test(w)); if (hit) return `knowledge/ui/components/${hit[1]}.md`; }
+  return null;
+}

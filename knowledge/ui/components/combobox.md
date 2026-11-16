@@ -57,7 +57,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the trailing `Icon` button (the hint and the message above the field, as [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary) set); the field fills its container (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the trailing `Icon` button (the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the popup is a part named for its family and last word, `Combobox list`, with its rows `Combobox option`, and inside the field's frames it keeps the last word, `List` (figma-standard rule 9).
 - [required] The button sits last in auto-layout order, never pinned to the right edge, so a right-to-left page puts it at the inline end, where the project mirrors (figma-standard rules 33 and 50).
 
@@ -65,10 +65,9 @@ A combobox is a text field with a list of suggestions: the person types to narro
 - [required] `Label`, `Value`, `Placeholder`, `Description` and `Error message` are text properties named as the code's props are; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37).
 - [required] `Has value` says whether text is in the field, the form figma-standard rule 21 gives content the component holds.
 - [required] Each option's text lives in the list's slot, named for what it hosts (`Options slot`), never in text overrides on nested option instances, since options change variant as the active one moves (figma-standard rule 38).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
-- [required] The field's axes run `Size → Has value → Validation → Disabled → State`; `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest; `State` runs `Rest → Focus → Hover → Press → Open`, `Open` drawn with the focus ring, since the input keeps focus while the list shows (figma-standard rules 1 to 4).
+- [required] The field's axes run `Size → Has value → Validation → Disabled → State`; `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable; `State` runs `Rest → Focus → Hover → Press → Open`, `Open` drawn with the focus ring, since the input keeps focus while the list shows (figma-standard rules 1 to 4).
 - [weak] **`Press` stays**, where the [text input](text-input.md#in-figma) drops it: pressing a combobox's field opens the list, a change of its own, not only focus. MUI's input opens the popup on mouse down (`handleInputMouseDown`, [MUI useAutocomplete source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/useAutocomplete/useAutocomplete.js)).
 - [moderate] Open is one value on the field's `State`, not a boolean beside it ([research: *Open menu triggers*](../../../research/components-and-naming/what-the-state-axis-models.md#open-menu-triggers)); the field owns whether the list shows (figma-standard rule 7).
 - [weak] The list's contents (options, no match, loading, "Create 'design-ops'") are one axis on `Combobox list`, not on the field, so the field's set does not multiply by every list state and no frame shows two at once (figma-standard rule 2's reasoning). The states themselves are in [combobox and autocomplete: *How*](#combobox-and-autocomplete).

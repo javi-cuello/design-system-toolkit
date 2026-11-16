@@ -132,7 +132,6 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 **Properties**
 - [required] `Label` is a text property; the separator is an instance swap `Separator` with `Show separator` directly above it (figma-standard rules 5, 21 and 37).
 - [weak] A sideways chevron is a placed icon button after the label, revealed by a `Show` boolean and carrying its own accessible name ([sideways breadcrumbs](#sideways-breadcrumbs); figma-standard rules 21 and 40).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] On the item, `Current` is a True/False variant, a bare word, before `State` (figma-standard rules 1 and 21).

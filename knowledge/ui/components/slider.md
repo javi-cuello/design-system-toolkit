@@ -64,11 +64,10 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 
 **Properties**
 - [required] `Label` and `Value` are text properties; `Show description` sits directly above `Description` (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SliderField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SliderField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds and writes `Show` for a boolean that reveals a layer.
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 - [weak] A range slider is the same component at `Range=True`, never a set of its own and never two sliders laid over each other: it changes the thumbs, their names and the value text, more than one subtree, so it is a variant, not a boolean (figma-standard rule 35).
 
 **Variants and states**
-- [required] Axes run `Size → Range → Validation → Disabled → State`; `Range` is a True/False variant, `False` first; `Validation` lists `None` then `Error`; `State` runs `Rest → Focus → Hover → Press`, drawn on the thumb; Disabled pairs only with Rest (figma-standard rules 1 to 4, 21 and 31). SDS folds Disabled into `State` (`State=Disabled` maps to `isDisabled`), which figma-standard rule 1 keeps as its own axis.
+- [required] Axes run `Size → Range → Validation → Disabled → State`; `Range` is a True/False variant, `False` first; `Validation` lists `None` then `Error`; `State` runs `Rest → Focus → Hover → Press`, drawn on the thumb; Disabled pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 4, 21 and 31). SDS folds Disabled into `State` (`State=Disabled` maps to `isDisabled`), which figma-standard rule 1 keeps as its own axis.
 - [moderate] `Validation=Error` where the value can be invalid: Carbon draws error and warning states for a required slider left empty or a value out of range.
 - [weak] Where no number input shows the value, the Hover, Focus and Press frames show it in a tooltip over the thumb (Carbon).
 

@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.41.0 (2026-11-16): §D 21: evidence and how-to only, no toolkit reasoning; `weak` is the research queue, never acted on; restated rules cut; a house rule wrong on the facts is fixed, a departure by choice shown to every reader.
 - 2.40.0 (2026-11-16): §D 21: the edit hook refuses the first write to a component once until its knowledge page has been opened; eval transcripts showed 3 of 41 runs opening any page the hook named.
 - 2.39.0 (2026-11-16): §D 21: a component page holds an **Alignment with code** section (structure, mapping, states, differences) between In Figma and In code; the mapping table moves there from In code; component research covers it by default.
 - 2.38.0 (2026-11-16): §D 21: a component has one knowledge page, `knowledge/ui/components/<name>.md`, in one shape (Overview, topic sections, In Figma, In code); its sections move out of the pattern pages, and `check-standards` holds the shape.

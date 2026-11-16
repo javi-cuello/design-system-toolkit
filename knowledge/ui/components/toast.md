@@ -67,7 +67,6 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [required] `Title` and `Message` are text properties (figma-standard rule 37); `Show icon` reveals the tone's icon and `Show action` the action button (figma-standard rules 5 and 21).
 - [moderate] The icon follows the tone and is drawn in each `Feedback` variant, not offered as a swap, as on the [alert](alert.md#in-figma), whose tones the toast shares.
 - [weak] No boolean for the close button: every toast has one ([*Toasts*](#toasts), Build). Figma's Simple Design System gives its notification a `Dismissible` boolean ([SDS Notification.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Notification.figma.ts)) because the same component serves in-page messages, which may not be dismissible.
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the alert's and the badge's. With `State` (below) its order is `Feedback → State` (figma-standard rule 1).

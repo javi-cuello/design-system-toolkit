@@ -59,7 +59,6 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - [required] `Title` and `Body` are text properties, in the code's words: Primer says `title` and `description`, SDS `Title` and `Body` (figma-standard rules 21 and 37).
 - [moderate] The icon follows the tone and is drawn in each `Feedback` variant, not offered as a swap: Primer's `Banner` picks its icon from `variant` (`critical` a stop sign, `warning` an alert sign), and MUI's `iconMapping` maps an icon to each severity.
 - [required] `Show close button` reveals the close; `Show actions slot` reveals the `Actions slot` (figma-standard rules 5 and 21). SDS's `Dismissible` is a bare word, which figma-standard rule 21 keeps for a boolean that switches a style and reveals nothing.
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the toast's and the badge's. Unless colour is split off (below), it is the alert's only axis, so its order is `Feedback` alone. The systems' words differ: Primer `critical`, `info`, `success`, `upsell`, `warning`; MUI `success`, `info`, `warning`, `error`; Carbon adds `info-square` and `warning-alt`.

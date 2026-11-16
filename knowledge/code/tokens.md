@@ -46,7 +46,7 @@ component   --button-bg: var(--colour-action-primary);  a knob; optional
 
 **How**
 
-An illustrative Button, built to show the whole taxonomy at once: axes `Role=Primary/Outline`, `Feedback=None/Danger`, `State=Rest/Hover/Press/Focus`, layers `Container`, `Label`, `Icon`. Most buttons need none of this tier (see *Three tiers*); the example earns it with a second brand whose primary button differs from its other controls.
+An illustrative Button, built to show the whole taxonomy at once: axes `Variant=Primary/Outline`, `Feedback=None/Danger`, `State=Rest/Hover/Press/Focus`, layers `Container`, `Label`, `Icon`. Most buttons need none of this tier (see *Three tiers*); the example earns it with a second brand whose primary button differs from its other controls.
 
 ```
 Figma, 05. Semantic - Brand, group Component/Button     aliases (Light and Dark)

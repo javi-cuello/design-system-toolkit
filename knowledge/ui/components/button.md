@@ -334,7 +334,6 @@ The threshold is [interaction: response times](../design/interaction.md#response
 
 **Properties**
 - [required] `Label` is a text property; each icon is an instance swap named for what it holds and where (`Leading icon`), revealed by a boolean directly above it (`Show leading icon`) (figma-standard rules 5, 21 and 37).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 - [required] The icon-only button exposes a text property or an annotation for its accessible name, and its description says the name is required (figma-standard rule 40).
 - [strong] Property names follow the code's props, so the mapping is one line per prop: SDS maps `Variant`, `Size`, `Label` and its two icons straight onto `variant`, `size` and children, though its own icon names (`Icon Start`, `Has Icon Start`) are ones figma-standard rule 21 does not use ([SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)); Polaris collapsed seven booleans into the enums `variant` and `tone` so each maps as one axis ([Polaris v12 migration](https://github.com/Shopify/polaris-react/blob/main/polaris.shopify.com/content/version-guides/migrating-from-v11-to-v12.mdx)).
 
@@ -346,8 +345,8 @@ The threshold is [interaction: response times](../design/interaction.md#response
   - The merged set stays small enough to open: the same library's Button (108 variants) and Icon button (45) would have made 153, 222 had icon-only taken every role.
 - [required] Merged or not, the icon-only form exposes its accessible name as a text property or a Dev Mode annotation, and its description says the name and the tooltip are required (figma-standard rules 25 and 40; [icon-only buttons](#icon-only-buttons)).
 - [strong] A bare clickable glyph is the icon button's `Ghost` role, never a component of its own, and a compact button is a `Size` value, never a component: Material 3, Primer, Atlassian, Carbon, Spectrum and Radix all draw the bare icon as their quietest icon-button appearance ([compact buttons and bare icons](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#compact-buttons-and-bare-icons)). It keeps a 24px target (figma-standard rule 26).
-- [weak] A button that only looks different in one place (a campaign call to action) is a flavour named with ` - ` (`Button - CTA`) when it is built separately, or a value on `Role` when it fills the grid (figma-standard rule 20; [new looks as theme variants](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#new-looks-as-theme-variants)).
-- [required] Axes in the order `Size → Role → Disabled → State`, `State` last, `Disabled` a True/False variant directly before it; Disabled pairs only with Rest, and its variant sits right after its Rest sibling (figma-standard rules 1 to 3).
+- [weak] A button that only looks different in one place (a campaign call to action) is a flavour named with ` - ` (`Button - CTA`) when it is built separately, or a value on `Variant` when it fills the grid (figma-standard rule 20; [new looks as theme variants](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#new-looks-as-theme-variants)).
+- [required] Axes in the order `Size → Variant → Disabled → State`, `State` last, `Disabled` a True/False variant directly before it; Disabled pairs only with Rest, and with Focus too where the code keeps it focusable, and its variant sits right after its Rest sibling (figma-standard rules 1 to 3).
 - [required] `State` runs `Rest → Focus → Hover → Press → Loading`; each draws differently from Rest and Focus shows a ring (figma-standard rules 4, 31 and 39).
 - [strong] Loading is the last value of `State`, not a boolean beside it: with 18 combinations before states, a value makes 108 variants and a boolean 180, 72 of them impossible (loading and hovered). Every library surveyed reaches it as a boolean prop in code, so the Figma value maps to a prop ([component-driven.dev on Figma booleans](https://www.component-driven.dev/articles/boolean-flags-in-figma) reaches the same count; the libraries are in *In code*; figma-standard rule 4).
 - [strong] The Loading frame is drawn in Rest's colours at Rest's width, with the label faded, never in Disabled's grey: a busy button must stay readable and must not move the layout (figma-standard rule 48; [Fluent issue #29724](https://github.com/microsoft/fluentui/issues/29724) records teams refusing disabled styling for loading).
@@ -377,7 +376,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 
   | Figma | Code |
   |---|---|
-  | `Role` | `variant` |
+  | `Variant` | `variant` |
   | `Size` | `size` |
   | `State=Rest` | nothing |
   | `State=Hover`, `Press` | `:hover`, `:active`, set by the browser |

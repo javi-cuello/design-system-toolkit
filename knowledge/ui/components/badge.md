@@ -60,7 +60,6 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 
 **Properties**
 - [required] `Label` is a text property; `Show icon` sits directly above `Icon` (figma-standard rules 5, 21 and 37). The icon is a swap because each status in the vocabulary has its own icon, while the tone is shared by several statuses ([*Status badges and pills*](#status-badges-and-pills)).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's tone token words (figma-standard rule 22), mapped to the code's `tone` attribute: the axis takes figma-standard rule 1's slot name, the values the code's words, such as `Info`, `Success`, `Warning`, `Error`: the words the Build's `tone="error"` uses, so Figma, the attribute and the token say the same. SDS's `Scheme` offers `Danger`, `Positive`, `Warning`, `Neutral`; Primer's `variant` ten values; Atlassian's `appearance` adds workflow words (`inprogress`, `moved`, `new`, `removed`).

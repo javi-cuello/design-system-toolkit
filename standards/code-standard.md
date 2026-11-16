@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.33.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.34.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -30,7 +30,7 @@
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the independent review of the change that touches it (the closing pass, `bin/closing`).
 
-3. **Every band is a landmark holding one container.** A page is a stack of full-bleed bands — `header`, `section`, `article`, `footer` — and each holds exactly one shared container element that owns the max width, the horizontal padding and the alignment of what is inside it. Blocks inside take their width from their role (a heading's measure, a content column), never from margin arithmetic against the viewport.
+3. **Every band holds one container.** A page is a stack of full-bleed bands — `header`, `section`, `article`, `footer` — and each holds exactly one shared container element that owns the max width, the horizontal padding and the alignment of what is inside it. Blocks inside take their width from their role (a heading's measure, a content column), never from margin arithmetic against the viewport.
 
    *Why:* the container is the one place the design's grid lives in code. Every page built without it re-derives the same numbers with `calc(50% - …)` and drifts by a few pixels from its neighbours; with it, a change to the grid is one edit.
 
@@ -80,7 +80,7 @@
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the independent review of the change that touches it (the closing pass, `bin/closing`).
 
-9. **A variant axis is an attribute; a state is a pseudo-class; disabled is the control's own.** Figma's variant axes map to attributes on the component's root (the custom element, or under class naming the native element), with two exceptions that are not negotiable: `State` (rest/hover/focus/press) is `:hover`, `:focus-visible`, `:active`, because an attribute would let a template claim a state the control is not in; `Disabled` is the native `disabled` or `aria-disabled`, so the browser keeps it out of the tab order and out of form submission. An axis whose name collides with an HTML or ARIA attribute is renamed (`Role` → `variant`, because `role` is ARIA's).
+9. **A variant axis is an attribute; a state is a pseudo-class; disabled is the control's own.** Figma's variant axes map to attributes on the component's root (the custom element, or under class naming the native element), with two exceptions that are not negotiable: `State` (rest/hover/focus/press) is `:hover`, `:focus-visible`, `:active`, because an attribute would let a template claim a state the control is not in; `Disabled` is the native `disabled`, which the browser keeps out of the tab order and out of form submission, or `aria-disabled`, which leaves the control focusable so it can explain itself. An axis whose name collides with an HTML or ARIA attribute is renamed (`Role` → `variant`, because `role` is ARIA's).
 
    *Why:* the template must not be able to lie about what the control is doing.
 
@@ -175,7 +175,7 @@
 
     *Evidence:* one project's collapsed description showed in full with its "Read more" button under it, because the block was a flex column. **Mechanical.** *Checked:* `tools/css-lint/check.mjs` "gate('hidden beats the sheet', 17" (each project's check calls it).
 
-18. **Icon-only controls have names; decorative images have empty alt.** An icon-only button or link carries `aria-label`; the glyph is `aria-hidden`; logos and illustrations are `alt=""`. A component that takes an icon-only shape requires the label rather than defaulting it.
+18. **Icon-only controls have names; decorative images have empty alt.** An icon-only button or link carries `aria-label`; the glyph is `aria-hidden`; decorative images, a decorative illustration among them, are `alt=""`, while a logo or an image that is a link or a button takes `alt` naming what it is or where it goes (WCAG 1.1.1). A component that takes an icon-only shape requires the label rather than defaulting it.
 
     *Why:* the glyph says nothing to a screen reader, and a defaulted empty label is a silent omission.
 

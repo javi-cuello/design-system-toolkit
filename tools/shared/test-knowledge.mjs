@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { uiFile, pagesFor } from './knowledge.mjs';
+import { uiFile, pagesFor, componentPage } from './knowledge.mjs';
 
 const TK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 let n = 0;
@@ -45,4 +45,14 @@ ok('a two-word component name is read joined: TextArea, FieldError, ProgressBar,
   && !p('src/area-chart.tsx').some((x) => x === 'text-area.md'));
 ok('…and a word that names other things names no component: a data loader, a results page, a folder of inputs',
   !['src/data/loader.ts', 'src/pages/SearchResults.tsx', 'src/inputs/date-picker.tsx'].some((f) => pagesFor(f).some((x) => /spinner|search-input|text-input/.test(x))));
+// 2026-11-16: a Figma component's name finds its page, the whole name before its words, and none where no page names it.
+const c = (x) => (componentPage(x) || '').replace('knowledge/ui/components/', '');
+ok('a Figma name finds its page: spaces, a private prefix, a part of a set, the whole name before a word',
+  c('Text input') === 'text-input.md' && c('_Feedback message') === 'feedback-message.md' && c('Checkbox control') === 'checkbox.md'
+  && c('Search input') === 'search-input.md' && c('Icon button') === 'button.md' && c('Tab bar item') === 'tabs.md' && c('Progress indicator') === 'progress-indicator.md');
+ok('…the head noun, last in English, wins over a modifier', c('Alert dialog') === 'modal-dialog.md' && c('Input label') === 'label.md'
+  && c('Link button') === 'button.md' && c('Tag input') === 'text-input.md');
+ok('…and a project\'s own name routes through its aliases', (componentPage('Notice', { Notice: 'alert' }) || '').endsWith('/alert.md') && componentPage('Notice') === null);
+ok('…and a button group is no component page, a radio group is the radio page', componentPage('Button group') === null && c('Radio group') === 'radio.md' && c('Tab bar') === 'tabs.md');
+ok('…and a name no page holds is no page, not a guess', componentPage('Avatar') === null && componentPage('Card header') === null);
 console.log(`${n}/${n} passed`);

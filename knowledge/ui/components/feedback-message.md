@@ -86,7 +86,6 @@ A feedback message is the short line on one form field that says what is wrong w
 **Properties**
 - [weak] `Text` is a text property (figma-standard rule 37); the icon is fixed by the type, not an instance swap a designer could set to the wrong glyph (toolkit reasoning beyond figma-standard rule 21).
 - [required] On a field: `Show error message` directly above `Error message` (figma-standard rules 5 and 21), with the field's `Validation` axis choosing the look.
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [moderate] One axis for the type, named in the project's token words (figma-standard rule 22): `Feedback` with `Error`, then `Warning`, `Success` and `Info` as the code has them (figma-standard rule 1 places a `Feedback` axis after `Size`). Primer names it `variant` ([Primer InlineMessage.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/InlineMessage/InlineMessage.figma.tsx)).

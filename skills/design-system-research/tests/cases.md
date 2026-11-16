@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.5.0)
+# Eval cases — design-system-research (v3.6.0)
+
+**Walked: 2026-11-16 for 3.6.0** — A30 added, traced to Step 1; the other cases read against the added sentence, which changes no step.
 
 **Walked: 2026-11-16 for 3.5.0** — A29 added and observed on the checkbox run; the other cases read against the new Step 1 paragraph, which adds an axis and changes none of their assertions.
 
@@ -276,3 +278,9 @@ Assert: the run reads at least two libraries' source or Code Connect files for h
 Negative: a Figma schema recommended from kits' drawings alone; alignment with code left out because the question did not name it.
 Observed: 2026-11-16 — the checkbox run found the control-and-field split and the disabled-error exclusion only by reading SDS's and Carbon's source; the maintainer then asked that alignment with code be part of the default research.
 Traced: 2026-11-16 for 3.5.0 — to SKILL.md Step 1, "A component's alignment with code is always one of the axes".
+
+## A30 · A run on a topic takes its weak items first
+Fixture: a light-mode question on a topic whose knowledge section holds `[weak]` items.
+Assert: Step 1 lists the section's `weak` items as the research queue and aims the first searches at them; what it finds is written to the item with its source, and the weight set again (toolkit-standard §D 21).
+Negative: a run that cites a `weak` item as settled guidance in its answer.
+Traced: 2026-11-16 for 3.6.0 — to SKILL.md Step 1.

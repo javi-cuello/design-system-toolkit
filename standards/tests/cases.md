@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-16, for toolkit-standard 2.41.0, design-standard 1.5.0, code-standard 1.34.0 and figma-standard 2.24.0** — S22 re-run (`node tools/toolkit-check/check-standards.mjs`: clean) after §D 21's new bar and the cut of one line restated on 21 component pages; S18 reads §D 0 question 13's new wording through `closing.mjs`. The four facts fixed (code-standard rules 3, 9 and 18, figma-standard rule 2) and rule 1's slot renamed read against the cases citing them (none asserts the old wording) and against the knowledge pages applying them: four lines calling every band a landmark and fourteen component pages pairing Disabled with Rest alone were corrected in the same change.
+
 **Walked: 2026-11-12, for toolkit-standard 2.31.1** — §D 21's "(beyond <rule>)" clause read against S22: it adds a citation form, not a weight; S22's fixture holds (`grep -rn '(beyond ' knowledge` lists 14 items, none `[required]`).
 
 **Walked: 2026-11-11, for toolkit-standard 2.27.0 and design-standard 1.4.0** — S22 added for §D 21's weights (the fixture run, 93 passed); rule 14's weight clause is walked in frontend-build's T13. Others read against the change, none affected.

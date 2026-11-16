@@ -49,7 +49,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 **Accessibility.** 1.3.1 Info and Relationships (A): groups and hierarchy are in the markup, which is code-standard rules 1 and 3. 2.4.5 Multiple Ways (AA): more than one way to reach a page in a set (navigation and search, or navigation and an index). 2.4.8 Location (AAA) is met by breadcrumbs and the marked current page (code-standard rule 64). 3.2.3 Consistent Navigation (AA): repeated navigation keeps its order.
 
 **Build.**
-- [required] Global and local navigation are `nav` landmarks, each with an accessible name, and every band is a landmark holding one container (code-standard rules 1 and 3).
+- [required] Global and local navigation are `nav` landmarks, each with an accessible name, and every band holds one container (code-standard rules 1 and 3).
 - [required] The current page is `aria-current="page"`, its section `aria-current="true"`, and the selected look is styled off the attribute (code-standard rule 64).
 - [weak] Markup: [HTML semantics: landmarks](../../code/html-semantics.md#landmarks) and [navigation markup](../../code/html-semantics.md#navigation-markup).
 

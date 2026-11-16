@@ -168,11 +168,10 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 **Properties**
 - [required] `Label` is a text property; `Show icon` sits directly above `Icon`, and on an input chip `Show avatar` above `Avatar` (figma-standard rules 5, 21 and 37).
 - [required] `Show remove button` reveals the remove button. SDS names it `Removable` ([SDS Tag.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/tag/Tag.figma.ts)); figma-standard rule 21 writes `Show` for a boolean that reveals a layer.
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [weak] Filter chip and input chip are two sets: one is a toggle, the other a value with a button, and one `Type` axis across them would pair states one side cannot have (figma-standard rule 2).
-- [required] The filter chip's axes run `Size → Selected → Disabled → State`, `State` as `Rest → Focus → Hover → Press`; Disabled pairs only with Rest (figma-standard rules 1 to 4).
+- [required] The filter chip's axes run `Size → Selected → Disabled → State`, `State` as `Rest → Focus → Hover → Press`; Disabled pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 4).
 - [required] Selected differs from unselected by the check and the fill, never colour alone, and each state differs from its Rest sibling (figma-standard rule 31; WCAG 1.4.1).
 - [weak] The input chip has no `Selected`; its states are the remove button's, an instance carrying its own, plus Focus on the chip where the chip itself takes focus, as Primer's token does for Backspace ([Primer Token](https://primer.style/product/components/token/)).
 - [required] Sizes are `Size` with t-shirt values, largest first (figma-standard rule 6).

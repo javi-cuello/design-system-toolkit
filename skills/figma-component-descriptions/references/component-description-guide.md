@@ -209,7 +209,7 @@ Components matching the Internal prefix are private building blocks, not consume
 ### Button: multi-axis component with composition and variant order
 
 ```markdown
-A button triggers an action or event. The Role axis defines visual hierarchy: Primary for the main action, Secondary for supporting actions, Tertiary for low-emphasis actions, and Ghost for minimal prominence.
+A button triggers an action or event. The Variant axis defines visual hierarchy: Primary for the main action, Secondary for supporting actions, Tertiary for low-emphasis actions, and Ghost for minimal prominence.
 
 ## Behaviour
 - The Loading state indicates the action is in progress

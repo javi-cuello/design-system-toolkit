@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.47.2)
+# Eval cases — figma-components-audit (v2.48.0)
+
+**Walked: 2026-11-16 for 2.48.0** — A137 walked live on a project's web-components library by a fresh read-only agent following step 4b (result under the case); A138 traced; `node tools/shared/test-knowledge.mjs` 14 of 14 for the name-to-page lookup. The other cases do not read step 4b.
 
 **Walked: 2026-11-15 for 2.47.2** — `node tests/test-audit.mjs` 121 of 121: a frame at opacity 0 bound to a variable that is 0 in every mode hides its text from the contrast check; it fails with the fix reverted, and the same frame bound to a variable that shows in some mode stays judged. Review: an alias now counts as zero only when every mode of its target is 0. Met real input: the Button set's loading label, bound to `State/Loading/opacity`, no longer raised on a live re-scan.
 
@@ -1991,3 +1993,15 @@ Assert: `checked` is `{ values: 1, paints: 2, texts: 3 }`; the texts read `style
 Negative: a zero value or an image counted as judged; a frame named like a component reported twice; a detached frame with an unrelated name missed.
 Recorded: 2026-11-12, the Adoption score widget's first live run, on a 115-screen product file with defects planted on a scratch copy of one screen (two detached instances, a raw rectangle, an unstyled text, a frame with raw padding, gap, radius and fill): 1,776 of 1,786 not detached, 287 of 288 texts styled, 407 of 409 paints bound. Which of the 10 detaches beyond the 2 planted are real was not yet read.
 Runs: node tests/test-probes.mjs — "composed: what was judged is counted, …", "composed: a raw text says whether …", "composed: a frame Figma marks as detached …", "composed: a root detached from a template says root; …", "composed: placed instances are counted by their main's key; …".
+
+## A137 · A component is read against its knowledge page, by the item's weight
+Fixture: a library holding a Text input whose message layer is `Message` and hint `Information message` with no text properties, a Checkbox with `Selected=False|True` and no `Validation`, a Button whose emphasis axis is `Type` under a project ruling, and a `_Label` the field dims when disabled; the toolkit's `knowledge/` present.
+Assert: step 4b finds each set's page by name (`componentPage`), reads every variant, and raises the `required` departures as errors (the message and hint names and text properties, `Checked` with `Indeterminate`, `Validation`), the `strong` ones as questions in Decide (`Has value`, `Show label`); the ruled `Type` axis is a disagreement in Decide, not a defect; nothing is raised from a `weak` or `contested` item (Read-only, the side the message sits on); each row's source is `knowledge` with page and item.
+Negative: a finding read from the default variant alone (a mark layer reported missing that the checked variants draw), or a project's own name raised as an error.
+Walked live: 2026-11-16, by a fresh read-only agent on the web-components library hand-checked the same day (13 sets, every variant). It raised 16 of the 20 hand-verified departures (missed: Alert `Body` and `Show close button`, the tab `Indicator`, Spinner `Size`), no disagreement, and one real defect the hand check missed (the label's `Required=False` variant shows the asterisk). It also raised optional parts the set lacks (an actions slot, affixes, a resize handle) and the contested message side as errors; step 4b and five pages were amended the same day so neither is raised.
+
+## A138 · Without the knowledge base the audit runs as before and says so
+Fixture: the same library, audited where `knowledge/` is absent (a copy of the skill alone).
+Assert: steps 1 to 6 run unchanged; the Scope line says "component knowledge: not available"; no row has the source `knowledge`.
+Negative: a run that stops, guesses component names from memory, or raises a page's item as a universal rule.
+Traced: 2026-11-16 for 2.48.0 — to SKILL.md step 4b and *The two axes*.

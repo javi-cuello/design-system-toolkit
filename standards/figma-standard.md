@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.23.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.24.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -10,7 +10,7 @@ Cite a rule as `figma-standard rule N`.
 
 ## Components and variants
 
-1. **Axis order**: props/booleans first, then `Size → Role → Feedback/… → Disabled → State`. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis lists `None` first, then the problems (`Error`).
+1. **Axis order**: props/booleans first, then `Size → Variant → Feedback/… → Disabled → State`. `State` always last; `Disabled` a VARIANT False/True immediately before it. A True/False axis lists its default first, so the panel opens on what a designer gets; a validation axis lists `None` first, then the problems (`Error`).
 
    *Why:* one canon keeps property panels predictable across projects.
 
@@ -18,7 +18,7 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — props before variants, and the order of the axes before Disabled, which no script compares.
 
-2. **Sparse grids**: omit semantically impossible combinations — Disabled pairs only with Rest, and a selection cannot contradict itself. Sparseness on a *content* axis is a gap unless ruled.
+2. **Sparse grids**: omit semantically impossible combinations — Disabled pairs only with Rest (with Focus too where the code keeps the disabled control focusable, `aria-disabled`, since it then takes focus and shows the ring), and a selection cannot contradict itself. Sparseness on a *content* axis is a gap unless ruled.
 
    *Why:* a grid cell for an impossible state documents a lie.
 
@@ -26,7 +26,7 @@ Cite a rule as `figma-standard rule N`.
 
 3. **Variant order inside a set: the `Disabled=True` variant sits immediately after its `State=Rest` sibling**, before the other states — each selected/boolean group reads Rest → Disabled → Focus → Hover → Press.
 
-    *Why:* Disabled is the rest state's counterpart, not a sixth interactive state — it pairs only with Rest (rule 2) — so placing it beside Rest makes each group read as "the control, its disabled form, then its interactive states", on the canvas and in the variant picker alike. Buried after Press, the sparse grid reads as a gap instead of a pattern.
+    *Why:* Disabled is the rest state's counterpart, not a sixth interactive state — it pairs with Rest, and with Focus only where the control stays focusable (rule 2) — so placing it beside Rest makes each group read as "the control, its disabled form, then its interactive states", on the canvas and in the variant picker alike. Buried after Press, the sparse grid reads as a gap instead of a pattern.
 
     Maintainer-decreed 2026-08-13, and checked live the same day against one registered project's web library: 28 of 28 sets carrying both `Disabled` and `State` place every `Disabled=True` variant at exactly its Rest sibling's index + 1, no exception. Since 2026-10-08 the components audit checks every set on every run.
 
@@ -425,7 +425,7 @@ Cite a rule as `figma-standard rule N`.
     | A layer only one variant has | `Component/Avatar/Icon/icon` |
     | A status of a layer (`Status=Current`) | `Component/Progress indicator/Dot/background-current` |
     | A state | `Component/Tabs/Indicator/background-hover` |
-    | Two axes and a state (`Role=Primary`, `Feedback=Danger`) | `Component/Button/Container/background-primary-danger-press` |
+    | Two axes and a state (`Variant=Primary`, `Feedback=Danger`) | `Component/Button/Container/background-primary-danger-press` |
     | A nested part (rule 9's last word) | `Component/Date picker/Day/background-selected` |
     | Gradient stops | `Component/Chat layer/Container/background-start`, `…/background-end` |
     | Sizing, in a components-only collection, for a family | `Input/Field/width-default` |

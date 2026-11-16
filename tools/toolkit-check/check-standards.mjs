@@ -300,6 +300,15 @@ for (const f of knowledgePages) {
     if (anchor && to.endsWith(".md") && !slugs(read(to)).has(decodeURIComponent(anchor))) problems.push(`${f}: a knowledge page links ${target}#${anchor}, a heading ${to} does not have`);
   }
 }
+// An item word for word on three or more component pages says nothing particular to any of them: it is a
+// standard's rule restated, which §D 21 cuts (one line sat on 21 pages, 2026-11-16).
+{
+  const seen = new Map();
+  for (const f of knowledgePages.filter((x) => /^knowledge\/ui\/components\/(?!README\.md$)/.test(x)))
+    // an item is its bullet and what it carries below it (a nested list, a mapping table), up to the next line at its own level
+    for (const l of new Set(read(f).split(/\n(?=\S)/).filter((l) => /^- \[(required|strong|moderate|weak|contested)\] /.test(l)).map((l) => l.trimEnd()))) seen.set(l, (seen.get(l) || []).concat(f));
+  for (const [l, fs] of seen) if (fs.length >= 3) problems.push(`${fs.join(", ")}: the same item on ${fs.length} component pages, "${l.slice(0, 80)}…": a rule restated says nothing of the component; cut it, or say what is particular to each (toolkit-standard §D 21)`);
+}
 
 // ─── settings (§C clause F) ──────────────────────────────────────────────────
 const settingsPath = "standards/audit-settings.json";

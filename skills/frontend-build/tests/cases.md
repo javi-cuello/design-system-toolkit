@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v3.1.0)
+# Eval cases — frontend-build (v3.3.0)
+
+**Walked: 2026-11-16 for 3.3.0** — T13 amended and re-traced to §D 21's `weak` row and design-standard rule 14; the other cases do not read weights.
 
 **Walked: 2026-11-12 for 3.1.0** — A6 re-traced: `references/` still holds `audit/` only, and `audit-pass.md` now links knowledge sections for its symptoms, checklist and simplicity questions (each anchor resolves) rather than copying them; A7 reads the same file and holds; the rest read against the cited lines, none affected.
 
@@ -225,9 +227,9 @@ Walked live: 2026-10-30 — as the 2.7.0 line above records.
 
 ## T13 · With no design file, the knowledge base is the design — *traced*
 Fixture: "build a site to browse these articles; look at Smashing Magazine and the Figma blog for layouts", no Figma file.
-Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values as far as each item's weight carries (amended 2.21.0: a `weak` or `contested` item is a starting point the report says it kept or changed); a reference site supplies only what they leave open, and the report back names each such value.
+Assert: before writing, the session walks the knowledge pages the screen uses (visual's type and layout, the documentation profile, navigation and content) and takes their values as far as each item's weight carries (amended 3.3.0: a `weak` item is not used, a `contested` one is decided and the report says which way); a reference site supplies only what they leave open, and the report back names each such value.
 Negative: a page whose type, measure and palette come from the reference sites with no knowledge pass.
-Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14. Re-traced 2026-11-11 for 2.21.0 — to toolkit-standard §D 21's weights.
+Traced: 2026-11-02 for 2.10.0 — to SKILL.md *Orient before writing anything* step 4 and design-standard rule 14. Re-traced 2026-11-11 for 2.21.0 — to toolkit-standard §D 21's weights. Re-traced 2026-11-16 for 3.3.0 — to §D 21's `weak` row (not acted on) and design-standard rule 14.
 
 ## T7 · Native interactive wraps the control, never replaces it — *traced*
 Fixture: "add a disabled state to our `ds-button`."

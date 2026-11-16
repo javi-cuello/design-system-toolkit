@@ -122,7 +122,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
   <section aria-labelledby="h-results"><h2 id="h-results">Results</h2>…</section>
   ```
 - [required] **Search.** `<search>` "defines a search landmark. This removes the need for adding `role=search` to a `<form>` element" ([MDN `search`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/search)).
-- [required] **Bands.** The page is a stack of bands, each a landmark holding one container (code-standard rule 3); the container is a `div` or custom element inside the band, never another landmark.
+- [required] **Bands.** The page is a stack of bands, each holding one container (code-standard rule 3); the container is a `div` or custom element inside the band, never another landmark. A band is a landmark only where its element maps to one: `article` never does, and a `section` only once it is named (the landmark table below).
 
 **Cases**
 - A hero `<header>` sits between the site header and `main` → two banner landmarks, and the hero is outside the main content; move it to be the first band inside `main`, where a `header` is no longer a banner.
@@ -133,7 +133,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 
 **Accessibility**
 - [required] WCAG 2.2 1.3.1 Info and Relationships, 2.4.1 Bypass Blocks ([Understanding 2.4.1](https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html)), 4.1.2 Name, Role, Value for the names.
-- [required] code-standard rule 1 (landmarks present and labelled), code-standard rule 3 (every band a landmark holding one container); the skip link that pairs with landmarks is [navigation: skip links](../ui/patterns/navigation.md#skip-links), built as [accessibility: focus management](accessibility.md#focus-management).
+- [required] code-standard rule 1 (landmarks present and labelled), code-standard rule 3 (every band holds one container); the skip link that pairs with landmarks is [navigation: skip links](../ui/patterns/navigation.md#skip-links), built as [accessibility: focus management](accessibility.md#focus-management).
 
 **Check**
 - *Script:* `tools/parity/pages.mjs` structure reports "<n> <main> elements" and "unnamed <nav>", "unnamed <aside>", "unnamed <section>". Could add: more than one `header` or `footer` whose nearest sectioning ancestor is `body`, and text nodes outside any landmark.

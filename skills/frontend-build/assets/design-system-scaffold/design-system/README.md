@@ -60,7 +60,7 @@ A design's variant axes become attributes, with two exceptions:
   element, reading `--__PREFIX__-dim` before the token, which a dimming
   parent sets to 1 for what it holds (see `_button.sass`).
 
-One axis usually cannot keep its name: `Role` becomes `variant`, because
+An axis a library named `Role` cannot keep its name: it becomes `variant`, because
 `role` is ARIA's attribute and `role="primary"` would tell a screen reader
 the button has a role called primary.
 

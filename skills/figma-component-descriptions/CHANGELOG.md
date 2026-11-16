@@ -1,5 +1,6 @@
 # Changelog — figma-component-descriptions
 
+- 1.22.2 (2026-11-16): the guide's Button example names its emphasis axis `Variant`, as figma-standard 2.24.0 rule 1 does; no rule changed.
 - 1.22.1 (2026-11-12): `sections.mjs`'s usage line names `--separator`, which it reads and its header documents.
 - 1.22.0 (2026-11-10): Composition lists only the parts a component places itself; a size line where an axis flips fixed and hug; `sections.mjs --recipes` generates the reference-screens Usage line. Case D25.
 - 1.21.0 (2026-11-10): `apply.js` reads each write back, so "applies and verifies in one round trip" is true: Figma's harmless rewrites pass, any other difference (the backslash it doubles in `\|`) is `ok: false` with what was stored. Case D24.

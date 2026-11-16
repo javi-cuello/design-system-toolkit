@@ -132,7 +132,6 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 
 **Properties**
 - [required] `Label`, `Value` and `Helper text` are text properties; `Show value` and `Show helper text` reveal them, each directly above the property it reveals (figma-standard rules 5, 21 and 37). Carbon's Figma set exposes `Label text`, `Helper text`, `Error text` and `Success text` ([Carbon ProgressBar Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/ProgressBar/ProgressBar.figma.ts)).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [strong] No `State` axis: nothing is hovered, pressed or focused, and figma-standard rules 36 and 39 ask states and focus of interactive components only. Carbon's, Primer's and MUI's code expose none ([Carbon ProgressBar source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/ProgressBar/ProgressBar.tsx); [Primer ProgressBar accessibility](https://primer.style/product/components/progress-bar/accessibility/): it "does not receive keyboard focus").

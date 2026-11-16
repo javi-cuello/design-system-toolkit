@@ -80,7 +80,7 @@ A text area takes free text longer than one line: a description, a message, a re
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, `Description`, `Error message`, the `Field` holding `Value` and the `Resize handle`, then `Count` under the field (the hint and the message above it, as [forms: *Error messages*](../patterns/forms.md#error-messages-and-the-error-summary) sets); the field fills its container's width and `Value` wraps inside it (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, the `Field` holding `Value` and the `Resize handle`, then `Count` under the field (the hint and the message above it is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container's width and `Value` wraps inside it (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the text input's names where the part is the same ([text input: *In Figma*](text-input.md#in-figma)).
 - [weak] The field's height is drawn at the rows the component defaults to, with the value wrapping and clipping inside it; `Value` is not hugged, so the frame does not grow with the text as a fixed-rows field does not (toolkit reasoning).
 
@@ -88,10 +88,9 @@ A text area takes free text longer than one line: a description, a message, a re
 - [required] `Label`, `Value`, `Placeholder`, `Description`, `Count` and `Error message` are text properties; `Show description` and `Show count` sit directly above what they reveal (figma-standard rules 5, 21 and 37).
 - [strong] `Has value` and `Show label` as on the text input: SDS's `Value Type` and `Has Label` ([SDS TextareaField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/TextareaField.figma.ts)), Primer's `text type` and `label?` ([Primer Textarea.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.figma.tsx)), Carbon's `Text filled` and `Show label` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
 - [weak] `Show resize handle` where the project lets some text areas resize and others not; otherwise the handle is always drawn or never.
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
-- [required] The text input's axes and order, `Has value → Validation → Read-only → Disabled → State`, without `Size` unless the code has one; `Disabled` pairs only with Rest (figma-standard rules 1 to 3; [text input: *In Figma*](text-input.md#in-figma)).
+- [required] The text input's axes and order, `Has value → Validation → Read-only → Disabled → State` (`Read-only` only where the code has it), without `Size` unless the code has one; `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 3; [text input: *In Figma*](text-input.md#in-figma)).
 - [weak] Over the limit is `Validation=Error` with the count in the error style, not a value of its own: Primer turns over-limit into its error status (source above).
 - [weak] No `Size` axis by default: none of SDS, Primer, Carbon or React Aria gives its text area a size prop (sources above); rows set its height in code.
 

@@ -11,7 +11,8 @@ A switch turns one setting on or off, and the change takes effect the moment it 
 **Anatomy**
 - [strong] A track holding a thumb that moves from one end to the other, a label naming the setting, and optional "On" and "Off" text beside the track. Carbon's `Toggle` defaults its side labels to `labelA="Off"` and `labelB="On"` ([Carbon Toggle source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Toggle/Toggle.tsx)); Primer's `ToggleSwitch` to `buttonLabelOn` and `buttonLabelOff`, "On" and "Off" ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)); SDS adds a `Description` under the label ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)).
 - [weak] A save status line beside it for a save that takes time or fails, part of the component's layout rather than a toast ([switch (toggle): *How*](#switch-toggle)).
-- [required] A focus ring visible on the focused control (WCAG 2.4.7; figma-standard rule 39); a target of at least 24 by 24, label included (figma-standard rule 26; WCAG 2.5.8).
+- [required] The label is part of the target: a click on it toggles the switch, as a `label` bound to its input does in HTML, so under WCAG 2.5.8 the track and its label together are the target; figma-standard rule 26 departs: it asks the bare track set for 24 by 24 on its own.
+- [required] Focus shows a visible ring around the track (WCAG 2.4.7; figma-standard rule 39).
 
 ## Switch (toggle)
 
@@ -61,11 +62,10 @@ A switch turns one setting on or off, and the change takes effect the moment it 
 **Properties**
 - [required] `Switch field` has `Label` as a text property and `Show description` directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds.
 - [required] The state text, where the library draws it, sits on `Switch field`, revealed by a `Show state text` boolean directly above two text properties, `On label` and `Off label`, in sentence case for the code's props (Primer's `buttonLabelOn` and `buttonLabelOff`, Carbon's `labelB` and `labelA`), so a project can say "Show" and "Hide" (figma-standard rules 5, 18, 21 and 37).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] On is a True/False axis named after the code's `checked`, `False` first (figma-standard rules 1 and 21). SDS draws it as `Value Type` with a `Checked` value mapped to `defaultSelected` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)).
-- [required] Both sets have the axes `Size → Checked → Disabled → State`; `Disabled` pairs only with Rest and sits right after it; `State` runs `Rest → Focus → Hover → Press → Loading` (figma-standard rules 1 to 4).
+- [required] Both sets have the axes `Size → Checked → Disabled → State`; `Disabled` pairs only with Rest and sits right after it, and pairs with Focus too where the code keeps it focusable; `State` runs `Rest → Focus → Hover → Press → Loading` (figma-standard rules 1 to 4).
 - [moderate] Loading is the last `State` value where the project saves switches live, never a boolean beside the states (figma-standard rule 4); Primer's switch carries a `loading` prop and a `loadingLabel` announced after `loadingLabelDelay` ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)), and [switch (toggle): *How*](#switch-toggle) asks for a pending state. Whether the library needs it is figma-standard rule 36's judgement.
 - [required] The field owns its switch's state: it sets the nested `Switch`'s variant from its own axes, `Loading` included, and does not expose the instance (figma-standard rule 7), as [checkbox: *In Figma*](checkbox.md#in-figma) sets out.
 - [required] On and off differ by the thumb's position as well as colour (WCAG 1.4.1; figma-standard rule 31).

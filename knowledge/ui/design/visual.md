@@ -32,7 +32,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 - [required] Implementation: code-standard rules 2, 3, 11, 46 and 54.
 
 **Build**
-- [required] The page grid is stated once, as a container component that owns max width and gutters (code-standard rules 11 and 46); each band is a landmark holding one container (code-standard rule 3).
+- [required] The page grid is stated once, as a container component that owns max width and gutters (code-standard rules 11 and 46); each band holds one container (code-standard rule 3).
 - [required] Breakpoints are Sass variables in rem with `@mixin from($bp)` (code-standard rule 54); a visual reorder never changes DOM order (code-standard rule 2).
 - [weak] Detail: [responsive: intrinsic layout first](../../code/responsive.md#intrinsic-layout-first), [one page grid and one container element](../../code/responsive.md#one-page-grid-and-one-container-element) and [breakpoints](../../code/responsive.md#breakpoints).
 

@@ -281,7 +281,7 @@
       "sizeAxis": "name of the size variant property (figma-standard rule 6)",
       "sizeAxisMatch": "regular expression for property names that are size properties under another name (figma-standard rule 6)",
       "sizeShared": "true to ask where one size name is drawn at different heights across components (figma-standard rule 6)",
-      "emphasisAxes": "the axes that sit between the size axis and the disabled axis, in order (figma-standard rule 1's Role → Feedback/…)"
+      "emphasisAxes": "the axes that sit between the size axis and the disabled axis, in order (figma-standard rule 1's Variant → Feedback/…)"
     },
     "pages": {
       "statusMarker": "leading page and component marker of work in progress, stripped from generated text (figma-standard rule 13)",

@@ -63,7 +63,6 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 **Properties**
 - [required] The text is a text property named for what it holds, `Label`; Figma's Simple Design System names it `Text` and maps it to the link's children ([SDS TextLink.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/text/TextLink.figma.ts); figma-standard rules 21 and 37).
 - [required] The icon is an instance swap, `Icon`, revealed by `Show icon` directly above it (figma-standard rules 5 and 21).
-- [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] `State` runs `Rest → Focus → Hover → Press`; each draws differently from Rest and Focus shows a ring (figma-standard rules 4, 31 and 39).
