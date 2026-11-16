@@ -1142,8 +1142,10 @@ async function main() {
               // an absolutely placed box with no size of its own shrinks to fit what it holds (css2 §10.3.7), which
               // Figma says as hug where it has auto layout; a percentage of its parent, or no auto layout, is the
               // length it renders at
-              // (as text shrinks to fit its words)
-              e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text') ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
+              // (as text shrinks to fit its words, and a placed component its own main, which sizes it, where the design's
+              // part hugs on that axis: else the size it renders at, so one drawn at the wrong size still shows)
+              const designHugs = e.kind === 'instance' && figmaContract && [figmaContract.anatomy || {}, ...(figmaContract.variants || []).map((w) => w.add || {})].some((a) => a[e.id] && a[e.id][axis] === 'hug');
+              e[axis] = (!v || /^(auto|fit-content|max-content|min-content)$/.test(v)) && (e.layout || e.kind === 'text' || designHugs) ? 'hug' : lengthOf(v) ?? (e.box ? e.box[i] : e[axis]);
             }
             if (e.kind === 'text') { e.autoResize = autoResizeOf(e.width, e.height); await readCut(e, !(e.id in shown)); }
             continue;
@@ -1200,13 +1202,15 @@ async function main() {
       let under = null;
       const asRgba = (v) => { const c = parseColour(v); return c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${c[3]})` : v; };
       // where several tokens hold a value, the one the code wrote it with: the custom properties of the css it came from
-      const tok = async (kind, v, at, css = [], from = null) => {
+      // (`guess` false: only a token the code's own var names, never one found by value: a box 320 wide is no token)
+      const tok = async (kind, v, at, css = [], from = null, guess = true) => {
         let r = null;
         const el = from || at.slice(0, at.lastIndexOf('.'));
         // (`box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
         for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const vars = part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
+        if (!r && !guess) return v;
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
         if (r.tie) ties.push({ at, token: r.token, tie: r.tie });
         return r.token ?? (['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(r.value) : r.value);
@@ -1299,6 +1303,8 @@ async function main() {
         }
         if (x.color) x.color = await tok('text', x.color, `${id}.color`, ['color']);
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
+        // a size the code wrote as a token (a column span, the screen's width): that token
+        for (const [axis, css] of [['width', ['inline-size', 'width']], ['height', ['block-size', 'height']]]) if (typeof x[axis] === 'number') x[axis] = await tok('size', x[axis], `${id}.${axis}`, css, null, false);
         if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
@@ -1878,6 +1884,15 @@ async function main() {
     // code's own names, and none is the code's alone for having another name. A prop the mapping joins, or one
     // sharing its code prop with one the design has (a swap's half beside its boolean), is the design's too
     if (L.governed && figmaContract) {
+      // an icon the code takes by name (a string) where the design swaps an instance: the design's swap, one per size
+      // where the code merged them (to-markup's one `icon` for Icon (16) and Icon (20))
+      for (const [k, p] of Object.entries(shaped.contract.props)) {
+        if (p.type !== 'string' || (figmaContract.props[k] && figmaContract.props[k].type !== 'instance')) continue;
+        const swaps = Object.entries(figmaContract.props).filter(([dk, q]) => q.type === 'instance' && (dk === k || dk.replace(/\d+$/, '') === k));
+        if (!swaps.length) continue;
+        delete shaped.contract.props[k];
+        for (const [dk, q] of swaps) shaped.contract.props[dk] = { type: 'instance', figma: q.figma, ...(q.swaps && { swaps: q.swaps }), code: p.code };
+      }
       const sq = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
       const theirs = new Set(Object.entries(figmaContract.props).flatMap(([k, p]) => [k, sq(p.figma || k)]));
       const joined = new Set(Object.values((side.map || {}).props || {}).map((x) => (typeof x === 'string' ? x : x && (x.arg || x.code))).filter(Boolean));

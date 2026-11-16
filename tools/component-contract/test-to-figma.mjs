@@ -250,6 +250,11 @@ delete globalThis.figma;
   ok('a swap another prop drives the layer for at the instance\'s props draws nothing and is not compared; the one that drives it is', (() => { const m = { mains: (n) => (n === 'Button' ? twoSwaps : null) };
     return roundTrip(holder({ Size: 'xs', 'Icon (20)': 'x', 'Icon (16)': 'x' }), holder({ Size: 'xs', 'Icon (16)': 'x' }), m).rows.length === 0
       && roundTrip(holder({ Size: 'xs', 'Icon (16)': 'x' }), holder({ Size: 'xs', 'Icon (16)': 'house' }), m).rows.length === 1; })());
+  { const box = (gap, align, orders) => ({ component: 'Bar', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', gap, align } }, ...Object.fromEntries(orders.map((o, i) => [`c${i}`, { kind: 'container', parent: 'root', order: o }])) }, variants: [] });
+    ok('a gap under space-between is no value: Figma spaces the children itself', roundTrip(box(12, 'space-between', [0, 1]), box('Spacing/0', 'space-between', [0, 1])).rows.length === 0 && roundTrip(box(12, 'start', [0, 1]), box('Spacing/0', 'start', [0, 1])).rows.length === 1);
+    ok('a child\'s order is its place among its siblings: ties and gaps are the same places; another place is a difference', roundTrip(box(0, 'start', [0, 0, 2]), box(0, 'start', [0, 1, 2])).rows.length === 0 && roundTrip(box(0, 'start', [1, 0]), box(0, 'start', [0, 1])).rows.length === 2);
+    const less = box(0, 'start', [0, 1]); delete less.anatomy.c0;
+    ok('a sibling one side lacks is its own row, not a shift of every place after it', roundTrip(box(0, 'start', [0, 1]), less).rows.length === 1); }
   ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 0);
 }
 

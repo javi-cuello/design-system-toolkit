@@ -161,7 +161,8 @@ export function placeFromCss(own) {
   if (!/^(absolute|fixed)$/.test(word(own.position))) return null;
   const all = (word(own.inset).match(/(?:[^\s(]+|\([^)]*\))+/g) || []);
   const [t, r = t, b = t, l = r] = all;
-  const pick = (...ks) => { for (const k of ks) if (own[k] != null && word(own[k]) !== 'auto') return word(own[k]); return null; };
+  // (unset, initial and revert at the winning rule are an inset's initial value, auto: a variant's rule taking a pin away)
+  const pick = (...ks) => { for (const k of ks) if (own[k] != null && !/^(auto|unset|initial|revert|revert-layer)$/.test(word(own[k]))) return word(own[k]); return null; };
   const sizes = [word(own['inline-size'] ?? own.width), word(own['block-size'] ?? own.height)];
   // the shift back: translate, or a transform's translate(), translate3d(), translateX() or translateY()
   const tf = word(own.transform), one = (f) => (tf.match(new RegExp(`${f}\\(([^)]*)\\)`)) || [])[1];

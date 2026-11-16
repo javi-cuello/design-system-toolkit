@@ -166,13 +166,31 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => atDefault(iconSize(glyph(room(x))), mains);
-    diff(same(expand(library, { ...variantDefaults(library), ...c })), same(expand(drawn, { ...variantDefaults(drawn), ...theirs })), '');
+    const same = (x) => spread(atDefault(iconSize(glyph(room(x))), mains));
+    const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
+    diff(ranked(a, b), ranked(b, a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));
   if (kinds(library) !== kinds(drawn)) add('props', kinds(library), kinds(drawn));
   if (library.component !== drawn.component) add('name', library.component, drawn.component);
   return { combinations: combos.length, ...(invalid && { invalid }), ...(cut && { cut }), rows: [...rows.values()] };
+}
+
+/* A gap Figma does not draw: with space-between it spaces the children itself, its stored item spacing unused (css.mjs
+   writes none), so it is no value of either side. Tested by test-to-figma.mjs. */
+function spread(x) {
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) if (e && e.layout && e.layout.align === 'space-between' && 'gap' in e.layout) { const { gap: _, ...l } = e.layout; out[id] = { ...e, layout: l }; }
+  return out;
+}
+/* A child's order as its place among its siblings: Figma's numbers can tie or skip where variants combine (an icon and
+   an avatar both 0, the texts 1), a reading's run 0..n; the place is what is drawn. Ties keep their listed order. Only
+   the siblings both sides draw are placed: one missing on one side is its own row, not a shift of every place after it. */
+function ranked(x, other) {
+  const out = { ...x }, by = {};
+  Object.entries(x).forEach(([id, e], i) => { if (e && e.parent != null && typeof e.order === 'number' && other[id]) (by[e.parent] ||= []).push([id, e.order, i]); });
+  for (const xs of Object.values(by)) xs.sort((a, b) => a[1] - b[1] || a[2] - b[2]).forEach(([id], k) => { out[id] = { ...out[id], order: k }; });
+  return out;
 }
 
 // a boolean's own layer is named for the prop that shows it in its id (derive.cjs idOf: Show icon's Icon is

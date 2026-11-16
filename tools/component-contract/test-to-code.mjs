@@ -293,4 +293,7 @@ else console.log('skip: no stored contracts on this machine');
 { const { BASE } = await import('./to-code.mjs');
   const rule = (BASE.match(/input:not\(\[type=checkbox\], \[type=radio\]\), textarea \{[^}]*\}/) || [''])[0];
   ok('the base sheet takes a text field\'s own border, padding and background away, leaves a checkbox or radio its mark, and keeps the focus outline', /border: 0/.test(rule) && /padding: 0/.test(rule) && /background: none/.test(rule) && !/outline/.test(rule)); }
+{ const { placeFromCss } = await import('./rules.mjs');
+  const p = placeFromCss({ position: 'absolute', 'inset-block-start': 'unset', 'inset-block-end': '0px', 'inset-inline-start': '0px' });
+  ok('an inset a variant sets to unset is no pin: the part is pinned by the other edge', p && p.constraints && p.constraints.vertical === 'max'); }
 console.log(`${n} passed`);
