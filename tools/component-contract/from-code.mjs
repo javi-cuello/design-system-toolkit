@@ -1213,7 +1213,8 @@ async function main() {
         // where a governed mapping gives the design's layer, a part the code draws the same way is built as the
         // design builds it: content that is only words where the design draws a text, a round empty box where
         // it draws an ellipse
-        const fa = L.governed && figmaContract && figmaContract.anatomy && figmaContract.anatomy[id];
+        // (in the base anatomy, or added at some props: a divider an action bar draws only with two actions)
+        const fa = L.governed && figmaContract && figmaContract.anatomy && (figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean));
         if (x.kind === 'slot' && x.asText && fa && fa.kind === 'text') { x.kind = 'text'; x.color = x.asText.color; x.type = x.asText.type; x.textAlign = x.asText.textAlign; x.autoResize = autoResizeOf(x.width, x.height); }
         delete x.asText;
         // another component's instance at the props its markup shows: each axis of that component's mapping at the value
@@ -1248,6 +1249,9 @@ async function main() {
         }
         delete x.slug; delete x.attrs; delete x.glyphs; delete x.texts; delete x.shown;
         if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
+        // and an empty box where the design draws a rectangle (a divider, a swatch): to-markup writes a shape as an empty
+        // element, which draws as a box; it is the shape, its corners its own
+        else if (x.kind === 'container' && fa && fa.kind === 'graphic' && fa.shape !== 'ellipse' && !fa.icon && !x.layout && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; if (fa.shape) x.shape = fa.shape; delete x.layout; }
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
         if (x.layout) {

@@ -68,12 +68,13 @@ const PLACED = /^(flex|align-self|order|(min-|max-)?(inline|block)-size|position
 // a custom element's prefix: lower case, ending in the hyphen its name needs (ds-, my-ds-)
 /* What every sheet here assumes and none says: Figma's box is the border box, and a pressable component is a bare frame
    (its root draws no fill, padding, border or face of its own) around what the contract paints, where the browser gives a
-   <button> all of them. Layered below the components' sheets, so any value a contract states wins. A project includes it
+   <button> all of them, and a text field its border, padding and background. Layered below the components' sheets, so any value a contract states wins. A project includes it
    once, before the sheets (the toolkit's own rendering of a library does: site.mjs). */
 export const BASE = `@layer base, components;
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
   button { appearance: none; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+  input:not([type=checkbox], [type=radio]), textarea { appearance: none; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; }
 }
 `;
 

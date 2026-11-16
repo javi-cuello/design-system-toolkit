@@ -285,4 +285,8 @@ else console.log('skip: no stored contracts on this machine');
   ok('a colour laid over another comes back as two fills, bottom up', JSON.stringify(fillsFromCss('rgb(7, 7, 7)', stack.replace(/, rgb\(7, 7, 7\)$/, ''), {}).fills) === JSON.stringify(['rgb(7, 7, 7)', 'rgba(0, 0, 0, 0.5)']));
 }
 
+// a text field draws none of the browser's own face: the contract states its border, padding and background
+{ const { BASE } = await import('./to-code.mjs');
+  const rule = (BASE.match(/input:not\(\[type=checkbox\], \[type=radio\]\), textarea \{[^}]*\}/) || [''])[0];
+  ok('the base sheet takes a text field\'s own border, padding and background away, leaves a checkbox or radio its mark, and keeps the focus outline', /border: 0/.test(rule) && /padding: 0/.test(rule) && /background: none/.test(rule) && !/outline/.test(rule)); }
 console.log(`${n} passed`);
