@@ -38,7 +38,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip } from './to-figma.mjs';
-import { partsOf, unexposed } from './to-markup.mjs';
+import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
 
 const req = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -89,14 +89,24 @@ export function leftToCode(contract, mainOf = null) {
   // and a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
   const parts = partsOf(contract);
   const ids = [...parts.values()].filter((p) => (p.pointerOnly && !p.ring) || (p.slotted && !(parts.get(p.slotted) || {}).inside) || (mainOf && !!unexposed(contract, p.id, mainOf))).map((p) => p.id);
+  // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
+  // (per text, the words its pointer states draw: a row is theirs only where the design side holds one of them, as rows
+  // merge every combination under one place)
+  const only = new Map(), words = new Map();
+  for (const v of contract.variants || []) for (const [k, w] of Object.entries(v.set || {})) if (k.endsWith('.content')) {
+    const p = pointerWords(contract, v.when);
+    only.set(k, (only.get(k) ?? true) && p);
+    if (p) words.set(k, [...(words.get(k) || []), w]);
+  }
+  const said = (at, row) => only.get(at) && row && (words.get(at) || []).includes(row.library);
   const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unexposed(contract, p.id, mainOf)]).filter(([, w]) => w) : []);
   // (of such an override, only what markup would pass: the part itself, its kind, component, words and props; its
   // styles the sheet reaches, and a name the reading gives it is the reader's)
   const passed = new Set(['', 'kind', 'component', 'content', 'with']);
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
-  return (at) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
 }
-const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at)), left: rows.filter((r) => isLeft(r.at)) });
+const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
 export function measure(where) {

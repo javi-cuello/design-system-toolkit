@@ -250,6 +250,17 @@ export function glyphSwaps(fc, w) {
 /* A box read back as the shape the design draws there, changed in place: a full-round empty box where the design has
    an ellipse; an empty box with no auto layout where it has another shape, not an icon (a divider, a swatch:
    to-markup writes a shape as an empty element, which draws as a box). Tested by test-from-code.mjs. */
+/* The prop a read text binds to: one whose words it holds; of two holding the same words (a value's and a suffix's
+   "Label"), the one the design sets this layer with: the design prop the mapping joins to it (`joined`, design key to
+   its code prop), else of the same name. Tested by test-from-code.mjs. */
+export function boundText(content, id, props, args, design, joined = {}) {
+  const hits = Object.entries(props).filter(([, q]) => q.type === 'string' && (args[q.code] ?? q.sample) === content);
+  // (effectiveProps' shapes: a drivable prop's code name; a text's { code, fixed }; one no code prop joins, { missing })
+  const codeOf = (k) => { const j = joined[k]; return typeof j === 'string' ? j : j && typeof j === 'object' && (j.code || j.arg) ? j.code || j.arg : j && j.missing ? null : k; };
+  const sets = (q) => Object.entries((design || {}).props || {}).some(([k, d]) => codeOf(k) === q.code && (d.sets || []).includes(id));
+  return (hits.find(([, q]) => sets(q)) || hits[0] || [])[0];
+}
+
 export function asShape(x, fa, hasChildren) {
   if (x.kind !== 'container' || !fa || fa.kind !== 'graphic' || hasChildren) return x;
   if (fa.shape === 'ellipse') { if (x.full) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; } }
@@ -894,6 +905,8 @@ async function main() {
     // the pointer states the mapping says how to force: a State prop of the contract's own kind (role
     // interaction), read like any other prop. A governed mapping states them per variant; a compared one
     // through its joins, where the rules supply a state's pseudo classes when a person gave none
+    // (the mapping's joins, design key to code prop: which prop a read text binds to, where names differ)
+    const joinedProps = figmaContract ? (((L.joins(figmaContract, story.argTypes) || {}).map || {}).props || {}) : {};
     if (!Object.keys(L.pseudoOf).length && figmaContract) {
       const joined = L.joins(figmaContract, story.argTypes).map;
       const mapState = Object.values(joined.props || {}).find((x) => x && typeof x === 'object' && x.pseudo);
@@ -1437,7 +1450,8 @@ async function main() {
         const said = x.type && x.kind === 'text' ? styleFromCss(Object.fromEntries(await Promise.all(['font-family', 'font-weight', 'font-size', 'line-height', 'letter-spacing'].map(async (p) => [p, await authoredWidth(L.tab, `[data-contract-id="${id in shown ? id : x.parent}"]`, p, { raw: true, cache: styles })]))), (L.tokens.textStyles || []).map((t) => t.name), (n) => textStyleFields(cssName('', n).slice(2))) : null;
         if (said) { x.typography = said; delete x.type; }
         if (x.type) { const r = styleFor(x.type, L.tokens.textStyles || [], usage); if (r.tie) ties.push({ at: `${id}.typography`, token: r.token, tie: r.tie }); x.typography = r.token ?? r.value; delete x.type; }
-        if (x.kind === 'text') { const p = Object.entries(props).find(([, q]) => q.type === 'string' && (args[q.code] ?? q.sample) === x.content); if (p) x.content = `{${p[0]}}`; }
+        // (two props holding the same words, a value's and a suffix's "Label": the one the design has set this layer first)
+        if (x.kind === 'text') { const k = boundText(x.content, id, props, args, figmaContract, joinedProps); if (k) x.content = `{${k}}`; }
         anatomy[id] = x;
       }
       for (const [id, e] of ring) anatomy[`${id === 'root' ? '' : `${id}/`}focusRing`] = { ...e, order: Object.values(anatomy).filter((y) => y.parent === id).length };

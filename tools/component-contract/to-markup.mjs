@@ -121,6 +121,9 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
   for (const x of out) if (TAKEN.has(x.name) || lang.taken.has(x.name)) { x.renamed = x.name; x.name = x.name === 'role' && !names.has('variant') ? 'variant' : x.name === 'role' && !names.has('appearance') ? 'appearance' : free(`${x.name}Option`); names.add(x.name); }
   return out;
 }
+/* A combination that is a pointer state (a hover, a focus; partsOf's own test): what is drawn there no markup holds. */
+export const pointerWords = (c, when) => Object.entries(when || {}).some(([k, v]) => ((c.props || {})[k] || {}).role === 'interaction' && (((c.props || {})[k] || {}).pointer || []).includes(v));
+
 /* A part inside a placed component that no prop of that component carries (an avatar's icon shown in a switcher
    that has no prop for it): an override the markup cannot pass, so the generated code leaves it to the developer,
    named as a gap. `mainOf` is a component's contract by its name. Tested by test-to-markup.mjs. */
@@ -133,8 +136,7 @@ export function unexposed(c, id, mainOf) {
   const own = (main.anatomy || {})[rel], props = Object.values(main.props || {});
   // a part the component draws in one of its variants is passed by that variant's prop, and a field a variant sets, by
   // that field's; never a pointer state's (hover is no value markup passes)
-  const pointer = (v) => Object.entries(v.when || {}).some(([k, x]) => ((main.props || {})[k] || {}).pointer && main.props[k].pointer.includes(x));
-  const passing = (main.variants || []).filter((v) => !pointer(v));
+  const passing = (main.variants || []).filter((v) => !pointerWords(main, v.when));
   if (passing.some((v) => (v.add || {})[rel])) return false;
   const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}));
   // a part the component does not draw at all: nothing in the markup can pass it ('part', its insides with it)
@@ -202,6 +204,8 @@ export function partsOf(c) {
       if (at.base && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) && (e.content !== at.e.content || at.words.length)) at.words.push([when, e.content]);
     }
     for (const id of v.remove || []) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
+    // words a pointer state sets on a base text (a field's "Search" at focus): marked, for textOf's gap
+    if (byPointer) for (const k of Object.keys(v.set || {})) { const m = /^(.+)\.content$/.exec(k); if (m && parts.has(m[1])) parts.get(m[1]).pointerWords = true; }
     // words a variant sets on a base text (a label's * that reads Optional where it is not required)
     if (!byPointer) for (const [k, w] of Object.entries(v.set || {})) {
       const m = /^(.+)\.content$/.exec(k), at = m && parts.get(m[1]);
@@ -322,13 +326,18 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // a text's words: its property's, else its own, else, where a variant puts it back with other words (a label's * that
   // reads Optional when not required), those there, the later variant first
   const textOf = (id, e, words = []) => {
+    // words a pointer state draws (a field's "Search" at focus): no markup holds them, so a gap, never a silent drop
+    if ((parts.get(id) || {}).pointerWords) gaps.push(`${partName(id)}'s words change at a pointer state: frontend-build's to add, or the design's to drop`);
     // one text two string props set (a placeholder, and the value a variant shows instead): the one no variant swaps in,
     // and each variant's own where it is drawn
     const xs = props.filter((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id));
     if (xs.length) {
       const swapped = (w) => xs.find((y) => `{${y.key}}` === w);
       const first = xs.find((y) => `{${y.key}}` === e.content) || xs.find((y) => !words.some(([, w]) => swapped(w) === y)) || xs[0];
-      let code = ref(first.name);
+      // (a literal the text holds where every prop setting it is swapped in by a variant, a date field's "Select a
+      // date", is drawn as it stands where none is)
+      const literal = e.content && !/^\{[^}]*\}$/.test(e.content) && xs.every((y) => words.some(([, w]) => swapped(w) === y));
+      let code = literal ? lang.str(e.content) : ref(first.name);
       let nested = false;
       for (const [when, w] of words) { const y = swapped(w), t = y && testOf(when); if (!t) continue; code = t === 'true' ? ref(y.name) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${ref(y.name)} : ${nested ? `(${code})` : code}`; nested = true; }
       return { code };

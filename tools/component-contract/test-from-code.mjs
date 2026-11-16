@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape } from './from-code.mjs';
+import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -207,4 +207,12 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   const f = zeroTokens({ layout: { direction: 'row', gap: 'Spacing/8' } }, { layout: { gap: 0 } }, value);
   ok('a gap the code sets above 0 stays what it is', f.layout.gap === 'Spacing/8');
 }
+
+{ const props = { selectedDate: { type: 'string', code: 'selectedDate', sample: 'Label' }, unit: { type: 'string', code: 'unit', sample: 'Label' } };
+  const design = { props: { value: { figma: 'Value', sets: ['field/value'] }, suffix: { sets: ['field/suffix'] } } };
+  const joined = { value: { code: 'selectedDate', fixed: undefined }, suffix: { code: 'unit', fixed: undefined } };
+  ok('a text two props share words with binds to the one the design sets that layer with, through the mapping\'s joins where code names differ',
+    boundText('Label', 'field/suffix', props, {}, design, joined) === 'unit' && boundText('Label', 'field/value', props, {}, design, joined) === 'selectedDate'
+    && boundText('Label', 'field/suffix', { suffix: { type: 'string', code: 'suffix', sample: 'Label' }, value: { type: 'string', code: 'value', sample: 'Label' } }, {}, design) === 'suffix'
+    && boundText('Other', 'field/suffix', props, {}, design, joined) === undefined); }
 console.log(`${n}/${n} passed`);
