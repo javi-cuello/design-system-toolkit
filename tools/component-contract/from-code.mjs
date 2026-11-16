@@ -42,7 +42,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
-import { parseColour, weightName, insetStroke, sideStrokes } from '../parity/values.mjs';
+import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars } from '../parity/values.mjs';
 import { camel, sentence } from './layers.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -770,7 +770,7 @@ async function main() {
   // the ancestor as the design draws it: in the base anatomy, or added at some props (text input's feedback message)
   const kindIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).kind;
   for (const x of m.elements.skipped || []) if (!figmaContract || kindIn(figmaContract, x.up) !== 'instance') { console.error(`${name}'s mapping: the layer ${x.path} is no layer of the design`); process.exit(2); }
-  const layered = new Set();
+  const layered = new Set(), ownIcon = new Set();
   const ties = [], notes = (m.elements.skipped || []).map((x) => `${x.path}: inside another component's instance (${x.up}), which is compared in its own audit`);
   // the library's other components, by the name the code's markup gives them (a framework's, or the
   // project's instance pattern), where one name is one component (a framework's TextField is five inputs: none)
@@ -1198,7 +1198,10 @@ async function main() {
       const tok = async (kind, v, at, css = [], from = null) => {
         let r = null;
         const el = from || at.slice(0, at.lastIndexOf('.'));
-        for (const p of css) { const vars = await authoredVars(L.tab, `[data-contract-id="${el}"]`, p, styles); if (vars.length) { r = designTokenFor(kind, v, table, usage, under, judge, offered, vars); if (r.token) break; } }
+        // (`box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
+        // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
+        // leaves the next property to say
+        for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const vars = part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
         if (r.tie) ties.push({ at, token: r.token, tie: r.tie });
         return r.token ?? (['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(r.value) : r.value);
@@ -1266,16 +1269,24 @@ async function main() {
           delete x.paint;
           if (named.length) x.background = named.length === 1 ? named[0] : named;
         } else if (x.background) x.background = await tok('background', x.background, `${id}.background`, ['background-color', 'background']);
-        if (x.icon) { x.background = await tok('icon', x.icon, `${id}.icon`, ['fill', 'color']); delete x.icon; }
+        if (x.icon) {
+          x.background = await tok('icon', x.icon, `${id}.icon`, ['fill', 'color']); delete x.icon;
+          // a glyph whose colour the code sets on it, in any render: else it is the colour around it (asIcon)
+          const at = `[data-contract-id="${id}"]`;
+          // (a reset that hands it on, svg { fill: currentColor } or color: inherit, or a stroke icon's fill: none, sets none of its own)
+          const sets = (v) => v != null && !/^\s*(currentcolor|inherit|unset|initial|revert|none|transparent)\s*$/i.test(v);
+          if (sets(await authoredValue(L.tab, at, 'color', styles)) || sets(await authoredValue(L.tab, at, 'fill', styles))) ownIcon.add(id);
+        }
         if (x.color) x.color = await tok('text', x.color, `${id}.color`, ['color']);
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
         if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {
-          // a width per side where the sides differ: each side's token, 0 where it draws none
-          const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width']);
-          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }) };
+          // a width per side where the sides differ: each side's token, 0 where it draws none. The token is the one the code
+          // wrote, in a border or in the inset shadow to-code draws a stroke inside the box with (Figma's inside stroke)
+          const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width', 'box-shadow:width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width', 'box-shadow:width']);
+          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'box-shadow:colour']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }) };
         }
         // an outline is the design's focus ring: a stroke-only box stretched past this one by how far the outline's outer
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way
@@ -1689,6 +1700,11 @@ async function main() {
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
         if (!swapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
         e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
+        // a colour it only takes from around it is no override of the placed icon: the design leaves it the icon's own
+        // (where the design sets the icon's colour, on it or inside it, the code's is read as drawn and compared)
+        const under = (k) => k === id || k.startsWith(`${id}/`);
+        const designSets = Object.entries(figmaContract.anatomy).some(([k, x]) => under(k) && x.background != null) || (figmaContract.variants || []).some((v) => Object.keys(v.set || {}).some((k) => under(k.split('.')[0]) && /\.background$/.test(k)) || Object.entries(v.add || {}).some(([k, x]) => under(k) && x.background != null));
+        if (!ownIcon.has(id) && !designSets) { delete e.background; for (const v of fromCode.variants) if (v.set) delete v.set[`${id}.background`]; }
         // a variant that changes the glyph (an alert's error icon) changes the component in the same set
         if (!swapped) for (const v of fromCode.variants) if (v.set && typeof v.set[`${id}.asset`] === 'string') { v.set[`${id}.component`] = whole(v.set[`${id}.asset`]); delete v.set[`${id}.asset`]; }
       };

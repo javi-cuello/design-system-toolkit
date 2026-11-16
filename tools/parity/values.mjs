@@ -62,6 +62,24 @@ export function insetStroke(layer) {
   return len.length >= 4 && len.slice(0, 3).every((v) => parseFloat(v) === 0) ? { width: parseFloat(len[3]), colour } : null;
 }
 
+/** One `box-shadow` as written, var()s unresolved: the custom properties its inset stroke layer (`inset 0 0 0 <width>
+ *  <colour>`, the order css.mjs writes) names its width and colour with → { width: [name], colour: [name] }, each
+ *  empty where that part was written as a value, or null where no layer is such a stroke. What the code meant where
+ *  two tokens hold one value (Stroke/2 and the focus ring's width are both 2px). */
+export function insetStrokeVars(raw) {
+  if (!raw) return null;
+  const top = (str, sep) => { const out = []; let d = 0, cur = ''; for (const ch of str) { if (ch === '(') d++; if (ch === ')') d--; if (d === 0 && sep.test(ch)) { if (cur.trim()) out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
+  const name = (t) => { const m = t && /^var\(\s*(--[\w-]+)/.exec(t); return m ? [m[1]] : []; };
+  for (const layer of top(raw, /,/)) {
+    const words = top(layer, /\s/);
+    if (!words.includes('inset')) continue;
+    const rest = words.filter((w) => w !== 'inset');
+    if (rest.length !== 5 || !rest.slice(0, 3).every((w) => /^0(px)?$/.test(w))) continue;
+    return { width: name(rest[3]), colour: name(rest[4]) };
+  }
+  return null;
+}
+
 /**
  * A stroke on some sides, as css.mjs writes it: one shadow per side, shifted by the side's width and no blur or spread,
  * inset for an inside stroke (shifted toward the middle) and outside otherwise (shifted out). `layers` are box-shadow's

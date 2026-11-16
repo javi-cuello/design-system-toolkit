@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // node tools/parity/test-values.mjs — from the toolkit root.
 import assert from 'node:assert/strict';
-import { figmaWeight, weightName, WEIGHTS, sideStrokes } from './values.mjs';
+import { figmaWeight, weightName, WEIGHTS, sideStrokes, insetStrokeVars } from './values.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -34,6 +34,14 @@ ok('the table cannot be changed by a caller', Object.isFrozen(WEIGHTS));
     && JSON.stringify(sideStrokes([`${c} 0px 1px 0px 0px inset`, `rgb(9, 9, 9) 0px -1px 0px 0px inset`]).used) === '[0]');
   ok('a clear layer is no stroke, and black is not clear', sideStrokes(['rgba(0, 0, 0, 0) 0px 1px 0px 0px']) === null && sideStrokes(['rgb(0, 0, 0) 0px 1px 0px 0px']).sides.bottom === 1);
   ok('a colour Chrome keeps as oklch is read whole, its zeros not taken for lengths', sideStrokes(['oklch(0 0 0) 0px 1px 0px 0px inset']).sides.top === 1 && sideStrokes(['oklch(0 0 0) 0px 1px 0px 0px inset']).colour === 'oklch(0 0 0)');
+}
+
+// the tokens an inset stroke was written with: where two hold its value, the one the code meant
+{
+  const v = insetStrokeVars('inset 0 0 0 var(--stroke-2) var(--colour-stroke-neutral-selected)');
+  ok('an inset stroke names the token its width and its colour were written with', v.width[0] === '--stroke-2' && v.colour[0] === '--colour-stroke-neutral-selected');
+  ok('a stroke beside another shadow is found among the layers', insetStrokeVars('0 1px 2px var(--shadow), inset 0 0 0 var(--stroke-1) rgb(0, 0, 0)').width[0] === '--stroke-1' && !insetStrokeVars('0 1px 2px var(--shadow), inset 0 0 0 var(--stroke-1) rgb(0, 0, 0)').colour.length);
+  ok('a shadow that is no inset stroke names none', insetStrokeVars('0 1px 2px var(--shadow)') === null && insetStrokeVars('inset 0 1px 0 var(--stroke-1) red') === null && insetStrokeVars(null) === null);
 }
 
 console.log(`\n${n} passed`);
