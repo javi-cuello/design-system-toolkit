@@ -60,8 +60,8 @@ nobody maintains a second status.
 - **Propose a change:** each component with a contract links to it in the
   project's contract editor (`tools/contract-editor`), at the project block's
   `editorPort` (9250 where it states none), where its API is edited and
-  proposed. Shown only where the site is served from this machine, since the
-  editor runs there; a published copy never offers it. The editor links back
+  proposed. Shown only where the site is served from this machine and the
+  editor answers there; a published copy never offers it. The editor links back
   to the component's page, read from this site's `api/index.json`, which
   gives each set's `path`.
 - **For agents:** `/llms.txt` lists every component page with its first line
