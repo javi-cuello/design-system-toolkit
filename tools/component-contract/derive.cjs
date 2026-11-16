@@ -644,11 +644,11 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   // default is the set's, so every variant that draws the layer holds the same words)
   // (only where the property drives the layer: a set that binds it in some variants only, snapshot 0.61.0 on, leaves the
   // rest their own words, as anatomies does)
-  // (the link found by the layer it names, as anatomies finds it)
-  const drives = (segs, t) => { const l = Object.values(L).find((x) => x.kind === 'characters' && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))); return !l || !l.variants || l.variants.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v)); };
+  // (the link found by the layer it names, as anatomies finds it, and by the prop that layer is read as)
+  const drives = (prop, segs, t) => { const l = (Object.entries(L).find(([k, x]) => x.kind === 'characters' && camel(k) === prop && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))) || [])[1]; return !l || !l.variants || l.variants.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v)); };
   for (const t of trees) for (const { node, segs } of t.list) {
     const prop = characters.get(keyOf(segs)) || characters.get(plain(segs));
-    if (prop && node.type === 'TEXT' && typeof node.text === 'string' && !words.has(prop) && drives(segs, t)) words.set(prop, node.text);
+    if (prop && node.type === 'TEXT' && typeof node.text === 'string' && !words.has(prop) && drives(prop, segs, t)) words.set(prop, node.text);
   }
 
   // props: an enum's default is the default variant's value, a boolean's the

@@ -134,6 +134,12 @@ ok('a text default skips a variant where its property does not drive the layer',
 const unboundAtDefault = { ...boundIn, variants: [T('Size=M', [text('Go'), text('Pick one', 'Caption')]), T('Size=S', [text('Go'), text('Small', 'Caption')]), T('Size=L', [text('Go'), text('Hint', 'Caption')])] };
 ok('a text default is not the default variant\'s own words where the property does not drive that layer', derive(unboundAtDefault).props.caption.default === 'Hint');
 
+// two text properties on one layer, each in its own variants: each default from where that property drives it
+const shared = { name: 'Search', props: { Placeholder: 'TEXT', Value: 'TEXT', Filled: ['False', 'True'] },
+  links: { Placeholder: { kind: 'characters', layers: [['Text']], variants: ['Filled=False'] }, Value: { kind: 'characters', layers: [['Text']], variants: ['Filled=True'] } },
+  variants: [T('Filled=False', [text('Search', 'Text')]), T('Filled=True', [text('Typed', 'Text')])] };
+ok('two text properties on one layer each take the words of the variants they drive', (() => { const d = derive(shared); return d.props.value.default === 'Typed'; })());
+
 const twoLabels = { name: 'Card', props: { Title: 'TEXT', Subtitle: 'TEXT', Size: ['M'] },
   links: { Title: { kind: 'characters', layers: [['Header', 'Label']] }, Subtitle: { kind: 'characters', layers: [['Header', 'Label[2]']] } },
   variants: [T('Size=M', [{ name: 'Header', type: 'FRAME', children: [text('T'), text('S')] }])] };
