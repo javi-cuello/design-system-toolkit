@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fieldOf, counts, worse, measure, causes, hashOf } from './eval.mjs';
+import { fieldOf, counts, worse, measure, causes, hashOf, closureHashes, scopedTo } from './eval.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -16,6 +16,15 @@ const accepted = { browser: { a: 2, b: 0, c: 3 }, figma: { a: 2 } };
 const bad = worse({ browser: { a: 3, b: 0 }, figma: { a: 1 } }, accepted);
 ok('a count that rose is said, one that fell is not, and a reading that went is said', bad.length === 2 && bad.includes('browser a: 2 → 3') && bad.some((x) => /browser c: accepted at 3, now not measured/.test(x)));
 ok('a component measured since the accept is held until accepted; one that came back the same is not', worse({ browser: { z: 9 } }, { browser: {} }).length === 1 && worse({ browser: { z: 0 } }, { browser: {} }).length === 0);
+
+// the self leg's fingerprint: a change to one component moves it and what places it (through a variant too), nothing else
+{
+  const lib = { A: { folder: 'a', anatomy: { root: {}, x: { kind: 'instance', component: 'B' } } }, B: { folder: 'b', anatomy: { root: {} }, variants: [{ add: { y: { kind: 'instance', component: 'C' } } }] }, C: { folder: 'c', anatomy: { root: {} } }, D: { folder: 'd', anatomy: { root: {}, z: { kind: 'instance', component: 'Icon/x' } } } };
+  const before = closureHashes(lib, { a: '1', b: '1', c: '1', d: '1' }, 's'), after = closureHashes(lib, { a: '1', b: '1', c: '2', d: '1' }, 's');
+  ok('a change to a placed component moves it and every component that places it, through a variant too, and nothing else', ['a', 'b', 'c'].every((f) => before[f] !== after[f]) && before.d === after.d);
+  ok('a sheet whose every rule names its element is scoped; one rule past it is not', scopedTo('@layer c { ds-tag { color: red } :where(ds-tag[size="s"]) > [data-part="x"], ds-tag:hover { gap: 0 } }', 'ds-tag') && !scopedTo('ds-tag { a: 0 } button { b: 0 }', 'ds-tag') && !scopedTo('ds-tag-item { a: 0 }', 'ds-tag') && scopedTo('ds-tag:where(:disabled, :has(> :disabled)) > b { a: 0 }', 'ds-tag') && !scopedTo('ds-tag { animation: spin 1s } @keyframes spin { from { a: 0 } }', 'ds-tag'));
+  ok('and a change all share moves every one', Object.keys(before).every((f) => closureHashes(lib, { a: '1', b: '1', c: '1', d: '1' }, 't')[f] !== before[f]));
+}
 
 // measure: a reading from code compared with the official contract by value; no reading, not measured and said
 {

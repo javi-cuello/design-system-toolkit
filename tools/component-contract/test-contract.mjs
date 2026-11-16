@@ -313,6 +313,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('a boolean-named part matches its layer: equal insides go, an override on it stays alone',
     placed('C/icon', 'C/text').length === 0 && JSON.stringify(placed('C/red', 'C/text')) === JSON.stringify(['b/content', 'b/content/icon']));
   ok('a layer renamed in the instance matches its part by place', placed('C/icon', 'C/text', 'glyph').length === 0 && JSON.stringify(placed('C/red', 'C/text', 'glyph')) === JSON.stringify(['b/content', 'b/content/glyph']));
+  // a placed menu filled with its own items: the menu's sample items are not drawn, and that hides nothing
+  const menu = { contract: 1, component: 'Menu', props: {}, anatomy: { root: { kind: 'container' }, head: { kind: 'text', parent: 'root', color: 'C/text', order: 0 }, list: { kind: 'slot', parent: 'root', content: '{list}', order: 1 }, 'list/sample': { kind: 'text', parent: 'list', color: 'C/text', order: 0 } }, variants: [] };
+  const filled = { root: { kind: 'container' }, m: { kind: 'instance', parent: 'root', component: 'Menu' }, 'm/head': { kind: 'text', parent: 'm', color: 'C/text', order: 0 }, 'm/list': { kind: 'slot', parent: 'm', content: '{list}', order: 1 }, 'm/list/mine': { kind: 'text', parent: 'm/list', color: 'C/red', order: 0 } };
+  ownInsides(filled, (n) => (n === 'Menu' ? menu : null));
+  ok('a placed component whose slot is filled hides none of the slot\'s samples: what equals its component goes, what fills the slot stays', JSON.stringify(Object.keys(filled).filter((k) => k.startsWith('m/'))) === JSON.stringify(['m/list', 'm/list/mine']));
+  const unfilled = { root: { kind: 'container' }, m: { kind: 'instance', parent: 'root', component: 'Menu' }, 'm/head': { kind: 'text', parent: 'm', color: 'C/text', order: 0 }, 'm/list': { kind: 'slot', parent: 'm', content: '{list}', order: 1 } };
+  ownInsides(unfilled, (n) => (n === 'Menu' ? menu : null));
+  ok('and one whose slot shows none of its samples, filled with nothing, hides them: the instance is kept whole', !!unfilled['m/head']);
   const { asPlaced } = require('./derive.cjs');
   const P = asPlaced({ root: { kind: 'container' }, 'content/icon': { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'root', name: 'Icon' }, 'content/showIconIcon/glyph': { kind: 'graphic', parent: 'content/showIconIcon' } }).M;
   const Q = asPlaced({ root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'content', name: 'Icon' }, 'content/showIconIcon/v': { kind: 'graphic', parent: 'content/showIconIcon' } });

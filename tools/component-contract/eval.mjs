@@ -32,7 +32,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
@@ -48,9 +49,9 @@ export { hashOf };
 /* When each reading was taken, of which contract: <home>/round-trip/taken.json, { self|figma: { <component>: { hash, kept? } } }. */
 const takenFile = (home) => path.join(home, 'round-trip', 'taken.json');
 const readTaken = (home) => { try { return JSON.parse(fs.readFileSync(takenFile(home), 'utf8')); } catch { return {}; } };
-function noteTaken(home, leg, folder, contract, kept = false) {
+function noteTaken(home, leg, folder, contract, kept = false, inputs = null) {
   const t = readTaken(home);
-  t[leg] = { ...(t[leg] || {}), [folder]: kept && t[leg] && t[leg][folder] ? { ...t[leg][folder], kept: true } : { hash: hashOf(contract), ...(kept && { kept: true }) } };
+  t[leg] = { ...(t[leg] || {}), [folder]: kept && t[leg] && t[leg][folder] ? { ...t[leg][folder], kept: true } : { hash: hashOf(contract), ...(kept && { kept: true }), ...(inputs && { inputs }) } };
   // written whole and renamed into place, so a reader never meets half a file (two runs at once can still lose one entry,
   // which then reads stale: the safe side)
   fs.mkdirSync(path.dirname(takenFile(home)), { recursive: true });
@@ -190,39 +191,133 @@ function draw(where, label, into, only, retry = true) {
   if (retry && unanswered.length) draw(where, label, into, unanswered, false);
 }
 
-/* contract → to-markup and to-code → Chrome → from-code's walk → contract, per component (from-code --self), stopping
-   after three failures in a row. */
-function readSelf(where, label, only, second = false) {
-  let fails = 0;
+/* The reader's own code: every tool file a reading runs through, but to-markup's and to-code's, whose output selfInputs
+   hashes instead (each component's markup, sheet, mapping and props, and what every page shares: the base sheet, the DOM
+   helper, the pointer states) (a change to either moves only the components whose markup or sheet it changes). */
+function readerCode() {
+  const tools = path.join(HERE, '..'), h = createHash('sha1');
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (e.isDirectory()) { if (!/^(node_modules|sample|fixtures|\..*)$/.test(e.name)) walk(path.join(d, e.name)); continue; }
+    if (!/\.(mjs|cjs|js)$/.test(e.name) || /^test-/.test(e.name) || (d === HERE && /^(to-markup|to-code)\.mjs$/.test(e.name))) continue;
+    h.update(path.relative(tools, path.join(d, e.name))).update('\0').update(fs.readFileSync(path.join(d, e.name))).update('\0');
+  } };
+  for (const d of ['component-contract', 'parity', 'shared', 'tokens', 'snapshot', 'contract-editor']) if (fs.existsSync(path.join(tools, d))) walk(path.join(tools, d));
+  return h.digest('hex');
+}
+
+/* What each component's self reading is read from, as one hash per component: it and every component it places,
+   transitively (each one's contract, spec, markup, sheet, parity mapping and props as stories give them), the base sheet,
+   the tokens and their values, the project's parity settings, and the reader's own code. Two readings from the same
+   inputs are the same reading (--twice holds the leg to that), so --changed reads only the components whose hash moved. */
+export async function selfInputs(label, where) {
+  const { loadParity } = await import('../parity/project.mjs');
+  const project = await loadParity(label);
+  const { toElement, toParity, propsOf, DOM } = await import('./to-markup.mjs');
+  const { toCss, BASE, pseudoClasses } = await import('./to-code.mjs');
+  const { ELEMENT } = await import('./site.mjs');
+  const store = req('../snapshot/store.cjs');
+  const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
+  const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
+  const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
+  const hash = (xs) => createHash('sha1').update(xs.join('\0')).digest('hex');
+  const own = {}, unscoped = [];
+  for (const c of Object.values(library)) {
+    let spec = ''; try { spec = JSON.stringify(store.readSpec(project.paths.components, c.folder, { compact: true })); } catch { /* none: its hash says so */ }
+    const sheet = toCss(c, c.folder, { naming: ELEMENT });
+    // every sheet is on the one page: one whose rules reach past its own element reaches every reading
+    if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
+    own[c.folder] = hash([JSON.stringify(c), spec, toElement(c, c.folder, { naming: ELEMENT, library }), sheet, JSON.stringify(toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components' })), JSON.stringify(propsOf(c, library))]);
+  }
+  // what every reading shares: the reader's code and the house settings it reads (standards/audit-settings.json: the
+  // pointer states, the pseudo-classes), the base sheet, an unscoped sheet, the tokens and the project's settings, every
+  // contract (a token named by a raw value breaks its ties by the whole library's use, from-code usageIn), and the
+  // browser and system the page is measured in (its fallback font)
+  let chrome = ''; try { const { findChrome } = await import('../shared/cdp.mjs'); chrome = execFileSync(findChrome(), ['--version'], { encoding: 'utf8' }); } catch { /* none: no reading either */ }
+  // (and the fonts installed here: a family the tokens name, once installed, is measured in place of the fallback)
+  const fonts = ['/Library/Fonts', '/System/Library/Fonts', path.join(process.env.HOME || '', 'Library', 'Fonts'), '/usr/share/fonts', '/usr/local/share/fonts', path.join(process.env.HOME || '', '.fonts'), path.join(process.env.HOME || '', '.local', 'share', 'fonts')]
+    .flatMap((d) => { try { return fs.readdirSync(d, { recursive: true }).map((f) => `${d}/${f}`); } catch { return []; } }).sort().join('\n');
+  const shared = hash([readerCode(), read(path.join(HERE, '..', '..', 'standards', 'audit-settings.json')), BASE, DOM, JSON.stringify(pseudoClasses()), fonts, ...unscoped, where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '', JSON.stringify(project.parity), JSON.stringify(project.snapshot || null), JSON.stringify(project.lib || null), JSON.stringify(Object.values(library)), chrome, `${process.platform} ${(await import('node:os')).release()}`]);
+  return closureHashes(library, own, shared);
+}
+
+/* Whether every rule of a sheet names its element (`ds-x`), so it styles nothing outside it: its selectors, at-rules aside. */
+export function scopedTo(css, root) {
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const m of bare.matchAll(/([^{};]+)\{/g)) {
+    const sel = m[1].trim();
+    // a name every sheet shares (an animation's, a registered property's, a font's) is no element's: unscoped
+    if (/^@(keyframes|property|font-face|counter-style)\b/.test(sel)) return false;
+    if (!sel || sel.startsWith('@') || /^(from|to|\d+%)(\s*,\s*(from|to|\d+%))*$/.test(sel)) continue;
+    // (each selector of the list: commas inside :is(), :where() and :has() are theirs)
+    const list = []; let depth = 0, at = 0;
+    for (let i = 0; i < sel.length; i++) { const ch = sel[i]; if (ch === '(') depth++; else if (ch === ')') depth--; else if (ch === ',' && !depth) { list.push(sel.slice(at, i)); at = i + 1; } }
+    list.push(sel.slice(at));
+    if (list.some((x) => !new RegExp(`(^|[^\\w-])${root}(?![\\w-])`).test(x))) return false;
+  }
+  return true;
+}
+
+/* Each component's hash with every component it places, transitively (a component a contract names anywhere, placed or
+   swapped to, that the library holds; `library` by component name, each with its folder), over each one's own hash and
+   what all share: so a change to one moves it and what places it, nothing else. */
+export function closureHashes(library, own, shared) {
+  const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
+  const placed = (c) => { const out = new Set(); JSON.stringify(c, (k, v) => { if (k === 'component' && typeof v === 'string' && library[v]) out.add(library[v].folder); return v; }); return out; };
+  const closure = (f, seen = new Set()) => { if (seen.has(f)) return seen; seen.add(f); for (const g of placed(byFolder[f])) closure(g, seen); return seen; };
+  const hash = (xs) => createHash('sha1').update(xs.join('\0')).digest('hex');
+  return Object.fromEntries(Object.keys(byFolder).map((f) => [f, hash([shared, ...[...closure(f)].sort().map((g) => `${g}:${own[g]}`)])]));
+}
+
+/* contract → to-markup and to-code → Chrome → from-code's walk → contract, per component (from-code --self), `jobs` at a
+   time (each its own browser), stopping after three failures in a row. Each reading is noted with the hash of what it
+   was read from (selfInputs); `changed` reads only the components whose hash moved since their last reading (the second
+   trip: since the first reading it goes round from, too). */
+async function readSelf(where, label, only, second = false, { changed = false, jobs = 1 } = {}) {
+  const inputs = await selfInputs(label, where);
+  const firstOf = (folder) => read1(path.join(where.projectDir, 'round-trip', 'self', 'from-code', `${folder}.json`));
+  const read1 = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return null; } };
+  const keyOf = (folder) => (second ? createHash('sha1').update(`${inputs[folder]}\0${firstOf(folder) || ''}`).digest('hex') : inputs[folder]);
+  const taken = readTaken(where.projectDir)[second ? 'second' : 'self'] || {};
+  const todo = [];
   for (const { folder, contract } of contracts(where)) {
     if (only.length && !only.includes(folder)) continue;
-    let out, ok = true;
-    try { out = execFileSync('node', [path.join(HERE, 'from-code.mjs'), '--project', label, folder, second ? '--second' : '--self'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = `${e.stdout || ''}${e.stderr || ''}`; ok = false; }
-    // its own summary line, else the last line that is not a stack frame (what went wrong)
-    const lines = out.trim().split('\n').reverse(), last = lines.find((l) => l.startsWith(`${folder}:`)) || lines.find((l) => !/^\s+at /.test(l) && /\w{3}/.test(l)) || '';
-    console.log(`${folder}: ${ok ? last.split(' — ')[0] : `not read — ${last}`}`);
-    if (ok) {
-      fails = 0;
-      if (!second) noteTaken(where.projectDir, 'self', folder, contract);
-      // the second trip is fingerprinted with the first reading it went round from
-      else { try { noteTaken(where.projectDir, 'second', folder, JSON.parse(fs.readFileSync(path.join(where.projectDir, 'round-trip', 'self', 'from-code', `${folder}.json`), 'utf8')).asFigma); } catch { /* no first reading: from-code refused it */ } }
-      continue;
-    }
-    process.exitCode = 1;
-    if (++fails >= 3) { console.log('three failures in a row: stopped'); return; }
+    const file = path.join(where.projectDir, 'round-trip', second ? 'self2' : 'self', 'from-code', `${folder}.json`);
+    if (changed && taken[folder] && taken[folder].inputs === keyOf(folder) && fs.existsSync(file)) { console.log(`${folder}: unchanged since its last reading`); continue; }
+    todo.push({ folder, contract });
   }
+  let fails = 0, stopped = false;
+  const one = ({ folder, contract }) => new Promise((done) => {
+    execFile('node', [path.join(HERE, 'from-code.mjs'), '--project', label, folder, second ? '--second' : '--self'], { encoding: 'utf8', maxBuffer: 64 << 20 }, (e, stdout, stderr) => {
+      const ok = !e, out = ok ? stdout : `${stdout || ''}${stderr || ''}`;
+      // its own summary line, else the last line that is not a stack frame (what went wrong)
+      const lines = out.trim().split('\n').reverse(), last = lines.find((l) => l.startsWith(`${folder}:`)) || lines.find((l) => !/^\s+at /.test(l) && /\w{3}/.test(l)) || '';
+      console.log(`${folder}: ${ok ? last.split(' — ')[0] : `not read — ${last}`}`);
+      if (ok) {
+        fails = 0;
+        if (!second) noteTaken(where.projectDir, 'self', folder, contract, false, keyOf(folder));
+        // the second trip is fingerprinted with the first reading it went round from
+        else { const f = firstOf(folder); if (f) noteTaken(where.projectDir, 'second', folder, JSON.parse(f).asFigma, false, keyOf(folder)); }
+      } else {
+        process.exitCode = 1;
+        if (++fails >= 3 && !stopped) { stopped = true; console.log('three failures in a row: stopped'); }
+      }
+      done();
+    });
+  });
+  const queue = [...todo];
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(jobs, queue.length)) }, async () => { while (queue.length && !stopped) await one(queue.shift()); }));
 }
 
 /* The self leg read twice: a reading that is not the same both times is a measure that cannot be trusted. Returns the
    exit code: 1 where any differs or was not read. */
-function readTwice(where, label, only) {
+async function readTwice(where, label, only, opts) {
   const dir = path.join(where.projectDir, 'round-trip', 'self', 'from-code');
   // a reading less what every run changes (its date, its seconds; shared/output.mjs writeReport's volatile fields)
   const snap = () => Object.fromEntries(contracts(where).filter(({ folder }) => !only.length || only.includes(folder)).map(({ folder }) => { try { const { at, seconds, ...r } = JSON.parse(fs.readFileSync(path.join(dir, `${folder}.json`), 'utf8')); return [folder, JSON.stringify(r)]; } catch { return [folder, null]; } }));
   // each pass starts with no readings, so one that fails is missing, never the last pass's file compared with itself
   const clear = () => { for (const f of Object.keys(snap())) fs.rmSync(path.join(dir, `${f}.json`), { force: true }); };
-  clear(); readSelf(where, label, only); const first = snap();
-  clear(); readSelf(where, label, only); const second = snap();
+  clear(); await readSelf(where, label, only, false, opts); const first = snap();
+  clear(); await readSelf(where, label, only, false, opts); const second = snap();
   const differ = Object.keys(first).filter((f) => first[f] === null || second[f] === null || first[f] !== second[f]);
   for (const f of differ) console.log(`  ${f}: ${first[f] === null || second[f] === null ? 'not read' : 'read differently the second time'}`);
   console.log(`${label} self, read twice: ${Object.keys(first).length - differ.length} of ${Object.keys(first).length} the same both times`);
@@ -235,14 +330,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
-  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [components…]\n       eval.mjs --project <label> --second [components…]'); process.exit(2); }
+  const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
+  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (into) { draw(where, label, into, argv); process.exit(); }
   if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
-  if (self && twice) { process.exit(readTwice(where, label, argv)); }
-  if (self) { readSelf(where, label, argv); process.exit(); }
-  if (second) { readSelf(where, label, argv, true); process.exit(); }
+  if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
+  if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }
+  if (second) { await readSelf(where, label, argv, true, opts); process.exit(); }
   const m = measure(where);
   report(label, m, fields, byCause);
   const file = path.join(m.home, 'round-trip', 'accepted.json');

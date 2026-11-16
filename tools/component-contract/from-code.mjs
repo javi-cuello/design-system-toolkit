@@ -185,6 +185,18 @@ export function usageIn(contracts) {
 
 /* A value the code draws as the design does, written raw or left unset (a 0 padding, no radius), takes the design's
    token for it: the drawing binds what the design binds. `value` is a token's value by its name. */
+/* Whether a placed component's markup carries one arg of its mapping: the arg's own attribute (size, data-size, aria-)
+   first; else a data attribute holding the value (data-hierarchy for variant). A flag is on where its attribute is there
+   and not "false" (markup that writes every flag as a string: selected="false"), off where it is absent or "false".
+   Never class, style or the walk's own marks. */
+export function carries(attrs, k, v) {
+  const own = attrs[k] ?? attrs[`data-${k}`] ?? attrs[`aria-${k}`];
+  if (v === true) return own != null && own !== 'false';
+  if (v === false) return own == null || own === 'false';
+  if (own != null) return own === String(v);
+  return Object.entries(attrs).some(([n, x]) => n.startsWith('data-') && !/^data-(contract-id|figma-)/.test(n) && x === String(v));
+}
+
 export function zeroTokens(e, fe, value) {
   const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
   const unbound = (v) => v == null || typeof v === 'number';
@@ -1194,9 +1206,7 @@ async function main() {
           const w = {};
           // the arg's own attribute (size, data-size) first; else a data attribute holding the value (data-hierarchy for
           // variant); a flag by its presence. Never class, style or the walk's own marks
-          const own = (k) => x.attrs[k] ?? x.attrs[`data-${k}`] ?? x.attrs[`aria-${k}`];
-          const data = Object.entries(x.attrs).filter(([n]) => n.startsWith('data-') && !/^data-(contract-id|figma-)/.test(n)).map(([, v]) => v);
-          const has = (k, v) => (v === true ? k in x.attrs || own(k) === 'true' || own(k) === '' : v === false ? !(k in x.attrs) && own(k) !== 'true' : own(k) != null ? own(k) === String(v) : data.includes(String(v)));
+          const has = (k, v) => carries(x.attrs, k, v);
           if (axes) for (const [ax, vals] of Object.entries(axes)) {
             const hit = Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => has(k, v)));
             const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);

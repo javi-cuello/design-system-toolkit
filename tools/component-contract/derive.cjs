@@ -502,8 +502,12 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set() } = {})
     const drawnAs = new Set(Object.values(match));
     const opened = (up) => Object.values(match).some((mk) => mk.startsWith(`${up}/`));
     const delegated = (mk) => mk.split('/').slice(0, -1).some((_, i, a) => { const up = a.slice(0, i + 1).join('/'); return M[up] && M[up].kind === 'instance' && drawnAs.has(up) && !opened(up); });
+    // a slot's sample children are what the component shows until a caller fills it: an instance that fills it otherwise
+    // hides none of them; one left unfilled shows its samples, so a sample not drawn there is hidden after all
+    const filled = (p) => { const k = Object.keys(match).find((r) => match[r] === p); return !!k && inner.some((x) => anatomy[x].parent === `${id}/${k}` && !match[x.slice(id.length + 1)]); };
+    const sampled = (mk) => { for (let p = M[mk] && M[mk].parent; p && p !== 'root'; p = M[p] && M[p].parent) if (M[p] && M[p].kind === 'slot') return filled(p); return false; };
     // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
-    if (whole.has(id) || (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk)))) continue;
+    if (whole.has(id) || (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk)))) continue;
     const own = (k) => {
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x) return false;
