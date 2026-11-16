@@ -52,7 +52,7 @@ A drawer slides in from an edge of the viewport and spans its height, holding a 
 - *Script* could: open a drawer and assert a close button exists, Escape closes it, focus returns; for a non-modal drawer assert Tab can reach the page and the focused element is never fully covered.
 - *Judgement*: does the person need the page while the drawer is open, and is the task short?
 
-**Sources.** Primer treats side sheets as modal dialogs; Carbon and NN/g describe non-modal panels and sheets. The toolkit lets the task decide and requires the choice to be stated per drawer in the design.
+**Sources.** Primer treats side sheets as modal dialogs; Carbon and NN/g describe non-modal panels and sheets.
 
 ## In Figma
 
@@ -80,7 +80,7 @@ A drawer slides in from an edge of the viewport and spans its height, holding a 
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis, property and slot for the parity report.
 - *Judgement*: does each drawn drawer say whether it is modal, and is its task short enough for one?
 
-**Sources.** Fluent, MUI and Primer for positions, sizes and the modal choice; the slot and naming rules of figma-standard. Fluent alone names its sides logically; the toolkit follows it, as its own naming rule does.
+**Sources.** Fluent, MUI and Primer for positions, sizes and the modal choice; the slot and naming rules of figma-standard. Fluent alone names its sides logically, as figma-standard rule 21 asks, and figma-standard rule 50 where the project mirrors.
 
 ## Alignment with code
 

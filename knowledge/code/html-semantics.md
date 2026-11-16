@@ -90,7 +90,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - *Script:* `tools/parity/pages.mjs` structure reports "<n> <h1> elements", "the <h1> sits outside <main>" and "heading jump h2 → h4" (outside an `article`) on every page it renders.
 - *Judgement:* Read only the headings, in order: is that a table of contents for the page?
 
-**Sources:** WHATWG as linked. Older advice to restart at `h1` in every `section` came from the withdrawn outline algorithm; the toolkit follows the standard's explicit levels and code-standard rule 1's single `h1`.
+**Sources:** WHATWG as linked. Older advice to restart at `h1` in every `section` came from the withdrawn outline algorithm; this page follows the standard's explicit levels and code-standard rule 1's single `h1`.
 
 ## Landmarks
 
@@ -139,7 +139,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - *Script:* `tools/parity/pages.mjs` structure reports "<n> <main> elements" and "unnamed <nav>", "unnamed <aside>", "unnamed <section>". Could add: more than one `header` or `footer` whose nearest sectioning ancestor is `body`, and text nodes outside any landmark.
 - *Judgement:* Open a screen reader's landmark list: does every entry say what it is, and is anything you would want to jump to missing?
 
-**Sources:** WHATWG, HTML-AAM, APG and MDN as linked. The toolkit names every `nav`, `aside` and `section` even where only one exists, because the structure check asks it and a landmark list reads better with names; APG asks for names only where a role repeats.
+**Sources:** WHATWG, HTML-AAM, APG and MDN as linked. Every `nav`, `aside` and `section` is named even where only one exists, because code-standard rule 1 asks for landmarks labelled; APG asks for names only where a role repeats.
 
 ## Links and buttons
 
@@ -277,7 +277,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - *Script:* `tools/parity/pages.mjs` overflow reports a box that leaves the box meant to hold it, which is how a wide table shows up. Could check every `table` has a `caption` or `aria-labelledby` and at least one `th`, and that a scrolling ancestor of a table is focusable and named.
 - *Judgement:* Is it data with two axes? If not, it is not a table; if so, can a screen-reader user tell what each cell means?
 
-**Sources:** WHATWG, [W3C tables tutorial](https://www.w3.org/WAI/tutorials/tables/), Roselli and Deque as linked. Chrome made scrollers with no focusable children keyboard-focusable by default from Chrome 130 (moved to 132) ([Chrome](https://developer.chrome.com/blog/keyboard-focusable-scrollers)); the toolkit keeps the explicit `tabindex="0"` and name, since other engines and the region's name are not covered by that.
+**Sources:** WHATWG, [W3C tables tutorial](https://www.w3.org/WAI/tutorials/tables/), Roselli and Deque as linked. Chrome made scrollers with no focusable children keyboard-focusable by default from Chrome 130 (moved to 132) ([Chrome](https://developer.chrome.com/blog/keyboard-focusable-scrollers)); the explicit `tabindex="0"` and name stay, since other engines are below code-standard rule 68's floor for that behaviour and the region's name is not covered by it.
 
 ## Table behaviour
 
@@ -314,7 +314,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - *Script:* none yet. Could assert at most one `th[aria-sort]` per table and that it is not `none`, a `button` inside every sortable header, a name containing the row identifier on each row checkbox, and computed `text-align: end` with `tabular-nums` on cells of a numeric column.
 - *Judgement:* With the keyboard alone, sort a column and select three rows: is focus where it was, and was each change announced once?
 
-**Sources:** APG, MDN and Roselli as linked. APG's example states no announcement; the toolkit adds Roselli's status message, since a change of `aria-sort` alone is not reliably announced.
+**Sources:** APG, MDN and Roselli as linked. APG's example states no announcement; Roselli adds a status message, since a change of `aria-sort` alone is not reliably announced.
 
 ## Disclosure, dialogs and popovers
 
@@ -355,7 +355,7 @@ How a page's markup carries its meaning: metadata, share previews (Open Graph), 
 - *Script:* `tools/parity/pages.mjs` structure checks every `details` whose content floats closes on Escape and on a click outside ("stays open on Escape (code-standard 19)"). Could flag a `dialog` with `tabindex`, a `[role="dialog"]` on anything but `dialog`, and a modal trigger with no `popovertarget` or `href` (no no-script path).
 - *Judgement:* With scripts off, does every overlay still open and every collapsed block still read?
 
-**Sources:** WHATWG and MDN as linked. The APG's modal dialog pattern predates `dialog` and builds the same behaviour on a `div`; the toolkit uses the element and keeps APG for the keyboard contract.
+**Sources:** WHATWG and MDN as linked. The APG's modal dialog pattern predates `dialog` and builds the same behaviour on a `div`; this page uses the element (code-standard rule 8) and keeps APG for the keyboard contract.
 
 ## Forms markup
 

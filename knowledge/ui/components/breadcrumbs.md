@@ -9,7 +9,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - [required] One component, the trail: each level places the [link](link.md) component in its standalone look, and the trail adds the list, the separators and the current page (figma-standard rule 53).
 
 **Anatomy**
-- [strong] A labelled `nav` holding an ordered list; each item a link to a level, separated from the next, and the last the current page. The APG, Carbon (`isCurrentPage`, a `nav` labelled "Breadcrumb") and Primer (`selected`, labelled "Breadcrumbs") build it so ([APG breadcrumb](https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/), [Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx)). The toolkit renders the current page as text ([breadcrumbs](#breadcrumbs)).
+- [strong] A labelled `nav` holding an ordered list; each item a link to a level, separated from the next, and the last the current page. The APG, Carbon (`isCurrentPage`, a `nav` labelled "Breadcrumb") and Primer (`selected`, labelled "Breadcrumbs") build it so ([APG breadcrumb](https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/), [Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx)).
 - [required] The separator is decorative and directional: hidden from assistive technology (code-standard rule 18) and, where the project mirrors, mirrored in a right-to-left trail (figma-standard rule 50).
 - [required] Each crumb is a target of at least 24 by 24 CSS pixels, with a focus ring (WCAG 2.5.8 and 2.4.7; figma-standard rules 26 and 39).
 
@@ -49,7 +49,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - *Script:* could check the last item is not an `a[href]`, carries `aria-current`, that the trail sits in a labelled `nav` before `main`, and that it occupies one line at 320px.
 - *Judgement:* does every level in the trail exist as a page the reader would want to visit?
 
-**Sources:** NN/g and GOV.UK disagree on the current page: NN/g includes it as the unlinked last item; GOV.UK ends at the parent (it removed its advice to include the current page in June 2020). The toolkit includes it, unlinked: it confirms where the reader is and costs one word, and code-standard rule 64 already marks it.
+**Sources:** NN/g and GOV.UK disagree on the current page: NN/g includes it as the unlinked last item; GOV.UK ends at the parent (it removed its advice to include the current page in June 2020). Where a trail includes it, code-standard rule 64 marks it with `aria-current`.
 
 ## Breadcrumbs on small screens
 
@@ -84,7 +84,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - *Script:* could check at 320px that the trail is one line, that no `li` computes `display: none`, that the parent's link is inside the visible part of the row after load, and that the page itself does not scroll sideways.
 - *Judgement:* is the hidden part of the row really one swipe away? Would the reader guess that it scrolls?
 
-**Sources:** sources disagree. GOV.UK's breadcrumbs can "only show the first and last items on mobile devices" ([GOV.UK breadcrumbs](https://design-system.service.gov.uk/components/breadcrumbs/)). NN/g allows "a single breadcrumb pointing up a level" on mobile only. Friedman warns against cutting the trail and asks for the parent always in view. The toolkit follows Friedman and scrolls. GOV.UK's trail ends at the parent, so its first-and-last option keeps the parent; the toolkit's trail ends at the current page, so the same option would drop the parent, the one link a phone reader most needs. NN/g's single parent link keeps the parent but removes every higher level, while the scrolling row keeps them all with no extra control.
+**Sources:** sources disagree. GOV.UK's breadcrumbs can "only show the first and last items on mobile devices" ([GOV.UK breadcrumbs](https://design-system.service.gov.uk/components/breadcrumbs/)). NN/g allows "a single breadcrumb pointing up a level" on mobile only. Friedman warns against cutting the trail and asks for the parent always in view. GOV.UK's trail ends at the parent, so its first-and-last option keeps the parent; a trail that ends at the current page would drop the parent with the same option, the one link a phone reader most needs. NN/g's single parent link keeps the parent but removes every higher level, while the scrolling row keeps them all with no extra control.
 
 ## Sideways breadcrumbs
 
@@ -119,7 +119,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - *Script:* could check that each crumb with a chevron is still an `a[href]`, that the chevron is a separate `button` with a name and `aria-expanded`, that there is no `[role=menu]` in the trail, and that Escape closes the list and returns focus to the button.
 - *Judgement:* do readers really move sideways at this level, or would the side navigation serve them?
 
-**Sources:** NN/g and Friedman disagree. NN/g prefers a separate local navigation to a dropdown in the trail; Friedman calls sideways breadcrumbs "a quite surprising and useful discovery for your users." The toolkit uses a separate side navigation where one exists, and sideways breadcrumbs only where none does. There, the separate chevron keeps NN/g's reading of the trail as links to places intact.
+**Sources:** NN/g and Friedman disagree. NN/g prefers a separate local navigation to a dropdown in the trail; Friedman calls sideways breadcrumbs "a quite surprising and useful discovery for your users." Where a project uses sideways breadcrumbs, the separate chevron keeps NN/g's reading of the trail as links to places intact.
 
 ## In Figma
 
@@ -136,7 +136,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 **Variants and states**
 - [required] On the item, `Current` is a True/False variant, a bare word, before `State` (figma-standard rules 1 and 21).
 - [required] `State` runs `Rest → Focus → Hover → Press` on a linked item, each drawn differently, Focus with a ring; the current item is text, so `Current=True` pairs only with Rest (figma-standard rules 2, 4, 31 and 39).
-- [contested] No collapsed or overflow-menu variant: the toolkit's trail scrolls on one line ([breadcrumbs on small screens](#breadcrumbs-on-small-screens)), where Primer's `overflow="menu"` and MUI's `maxItems` collapse it ([Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)).
+- [contested] No collapsed or overflow-menu variant where the project takes the side that the trail scrolls on one line ([breadcrumbs on small screens](#breadcrumbs-on-small-screens)); Primer's `overflow="menu"` and MUI's `maxItems` collapse it ([Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)).
 - [required] Sizes, where the trail has them, are `Size` with t-shirt values, largest first; Carbon's Breadcrumb takes `sm` and `md` (figma-standard rule 6; [Carbon Breadcrumb source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/Breadcrumb.tsx)).
 
 **Tokens**
@@ -148,7 +148,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - *Script*: figma-components-audit runs the rules cited above on both sets.
 - *Judgement*: at phone width, does the frame show the trail as one scrolling row ending on the parent and the current page?
 
-**Sources.** The toolkit's naming research for the part's name; Primer, MUI and Carbon for the overflow and size props they ship. The separator's place in the item is the toolkit's reasoning from the stylesheet.
+**Sources.** The toolkit's naming research for the part's name; Primer, MUI and Carbon for the overflow and size props they ship. The separator's place in the item is figma-standard rule 51's: the set draws it where the stylesheet puts it.
 
 ## Alignment with code
 
@@ -176,19 +176,19 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - [required] Hover, Press and Focus on a linked item are set by the browser, as `:hover`, `:active` and `:focus-visible`; no prop sets them (code-standard rule 9).
 - [strong] Current is set by code: Carbon's `isCurrentPage` and Primer's `selected` on the item, each writing `aria-current="page"`, while React Aria derives it, marking the last item current ([Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [React Aria Breadcrumbs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Breadcrumbs.tsx)).
 - [moderate] Code cannot reach Current with Hover, Press or Focus: React Aria disables the current item, and Carbon renders it as text when it has no `href` (sources as above), so no frame pairs them (figma-standard rule 2).
-- [weak] An item is a link, so the browser can set `:visited` on it, and the item has no Visited axis: the stylesheet keeps a visited item at Rest's colour, or code reaches a state no frame shows ([MDN `:visited`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:visited); the toolkit's reasoning).
+- [required] An item is a link, so the browser can set `:visited` on it, and the set draws a Visited state only where the stylesheet styles `:visited` apart from Rest; otherwise code reaches a state no frame shows ([MDN `:visited`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:visited); figma-standard rule 51).
 - [moderate] Carbon's code reaches a separator after the current item unless the trail sets `noTrailingSlash`, which its Code Connect sets whenever an item is Current ([Carbon Breadcrumb.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/Breadcrumb.figma.ts)); a set draws that separator only where its code renders it (figma-standard rule 51).
 
 **Differences**
 - [moderate] `Current` is a True/False variant on the item here, as in Carbon's kit (`Current`, or `State=Current`) and Primer's (`selected`) (Code Connect files as above), where React Aria takes it from the item's position; the mapping row writes it on the item either way.
-- [contested] No overflow item: Carbon's kit draws `Type=Overflow`, which maps to a `BreadcrumbItem` holding an `OverflowMenu` ([Carbon BreadcrumbItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/BreadcrumbItem.figma.ts)); this page draws none, as its trail scrolls ([In Figma](#in-figma)).
+- [contested] No overflow item: Carbon's kit draws `Type=Overflow`, which maps to a `BreadcrumbItem` holding an `OverflowMenu` ([Carbon BreadcrumbItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/BreadcrumbItem.figma.ts)); a set draws none where the project takes the side that its trail scrolls ([In Figma](#in-figma)).
 - [weak] No skeleton: Carbon's kit draws `State=Skeleton` on the item, which maps to a separate `BreadcrumbSkeleton` component (same source); a project that loads its trail late names its own here.
 
 **Check**
 - *Script*: the component contract lists every Figma axis and property of the trail and the item beside the props of each; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
 - *Judgement*: could a developer build the trail from the page tree, the current page and the browser's states alone, with the separator in the stylesheet?
 
-**Sources.** Carbon, Primer, MUI and React Aria source, styles and Code Connect files as linked, read for the parts, the current item and where the separator lives; MDN for `:visited`. The separator leading each item is the toolkit's reasoning from its stylesheet.
+**Sources.** Carbon, Primer, MUI and React Aria source, styles and Code Connect files as linked, read for the parts, the current item and where the separator lives; MDN for `:visited`. The separator leading each item is figma-standard rule 51's, drawn where the stylesheet puts it.
 
 ## In code
 
@@ -198,10 +198,10 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 **Props**
 - [strong] The trail takes its items, the `nav`'s label, a size and a separator: Carbon (`aria-label` defaulting to "Breadcrumb", `size`, `noTrailingSlash`), Primer (`variant`, `overflow`) and MUI (`separator`, `maxItems`) ([Carbon Breadcrumb source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/Breadcrumb.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)).
 - [moderate] An item takes its `href` and a current flag: Carbon's `isCurrentPage`, Primer's `selected`, each setting `aria-current="page"`.
-- [contested] No collapse props (`overflow="menu"`, `maxItems`, `itemsBeforeCollapse`): the trail scrolls ([breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
+- [contested] No collapse props (`overflow="menu"`, `maxItems`, `itemsBeforeCollapse`) where the project takes the side that the trail scrolls ([breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
 
 **Check**
 - *Script*: the parity loop compares each item's variants with their frames (design-code-parity); the checks in each section above cover the trail.
 - *Judgement*: does the trail's code take its labels from the pages, never from the design's sample text?
 
-**Sources.** Carbon, Primer and MUI for the props; the APG for the current item; the toolkit's sections above for what it leaves out.
+**Sources.** Carbon, Primer and MUI for the props; the APG for the current item; this page's sections above for what a scrolling trail leaves out.

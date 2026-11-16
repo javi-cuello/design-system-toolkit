@@ -53,7 +53,7 @@ A popover shows a little information or a few related controls next to the one e
 - *Script*: code-standard rule 19's check in `tools/parity/pages.mjs` already asserts Escape and click-outside close a floating `details`. Could: for each `[popover]` or `aria-expanded` trigger, assert Escape closes, a click outside closes, focus returns, and only one is open at a time.
 - *Judgement*: would losing this popover by accident cost the person anything?
 
-**Sources.** Carbon, Apple and MDN agree on light dismiss, one at a time and no nesting. Carbon caps popovers at four columns and disclosures at six; the toolkit uses four for a popover and moves anything larger into a dialog or drawer.
+**Sources.** Carbon, Apple and MDN agree on light dismiss, one at a time and no nesting. Carbon caps popovers at four columns and disclosures at six.
 
 ## In Figma
 
@@ -78,7 +78,7 @@ A popover shows a little information or a few related controls next to the one e
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis, property and slot for the parity report.
 - *Judgement*: would anything in this popover be missed if it were dismissed by accident?
 
-**Sources.** Radix and Primer for parts and placement; the HTML standard for the attribute; figma-standard for names. Radix and Primer name sides physically; the toolkit's naming rule takes logical ones.
+**Sources.** Radix and Primer for parts and placement; the HTML standard for the attribute; figma-standard for names. Radix and Primer name sides physically; figma-standard rule 21 takes logical ones.
 
 ## Alignment with code
 

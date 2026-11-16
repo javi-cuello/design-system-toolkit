@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.34.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.35.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -206,6 +206,22 @@
     *Why:* open-in-new-tab is the user's, not the page's.
 
     *Evidence:* one project's row-click script handled this in four lines and a review later cut the script entirely in favour of a stretched link, which needs no handling at all — the simplest path won. **Mechanical.** *Checked:* `tools/css-lint/check.mjs` "gate('modified clicks go to the browser', 21", per click handler.
+
+67. **A list's state lives in its address, and a saved view is a name for an address.** Facets, search, sort, page and columns are in the URL; a saved view or a shared link is that address, stored on the server; "Edited" is the current address differing from the saved one.
+
+    *Why:* state kept only in memory is lost on reload, cannot be shared, and makes a saved view a second copy of the same facts that drifts from the first.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 7 items stating it with no source outside the toolkit moved here (filtering, dashboards).
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
+
+68. **The support floor is Baseline widely available; anything newer ships behind a feature test, the old path intact.** A feature outside Baseline widely available is used only where `@supports` or a script test finds it, and the page works without it.
+
+    *Why:* a feature the floor does not cover breaks for the readers on it, and a test with the old path intact costs one branch.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 2 items stating it with no source outside the toolkit moved here (browser-support, javascript).
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
 
 ## Tokens and literals
 

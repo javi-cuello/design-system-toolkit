@@ -63,7 +63,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 - *Script:* `tools/css-lint/lint.mjs` gates *layers* (every top-level statement of the compiled sheet is a layer, keyframes or a face) and *`!important`* (none outside a reduced-motion block).
 - *Judgement:* Is every `!important` one whose inverted order you wanted?
 
-**Sources:** [CSS Cascade 5](https://www.w3.org/TR/css-cascade-5/#layering), [MDN `@layer`](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer). The sources agree; the toolkit adds that nothing is unlayered.
+**Sources:** [CSS Cascade 5](https://www.w3.org/TR/css-cascade-5/#layering), [MDN `@layer`](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer). The sources agree; nothing unlayered is code-standard rule 4.
 
 ## Selectors that stay cheap and local
 
@@ -91,7 +91,7 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 - *Script:* `tools/css-lint/lint.mjs` gates *own parts* (code-standard rule 5) and *a hook name reaches only its own* (code-standard rule 39) on the compiled sheet. Could flag a rule inside `@scope` that names `:root` or `html`.
 - *Judgement:* If this block moved to another parent, which of its rules would stop matching?
 
-**Sources:** MDN as linked. `@scope` is new; the toolkit uses it only where a donut boundary is the point, and keeps child combinators as the default because they need no support check.
+**Sources:** MDN as linked. `@scope` is new; child combinators stay the default (code-standard rule 5), and `@scope` is used only where a donut boundary is the point, under the support floor of code-standard rule 68.
 
 ## Custom properties
 
@@ -103,7 +103,6 @@ How a stylesheet is organised so it stays cheap to change: the cascade and speci
 **How**
 - [required] **Scope is the selector, and they inherit.** "The selector given to the ruleset… defines the scope in which the custom property can be used," and an unregistered property "always inherits the value of its parent" ([MDN, Using custom properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties)). Inheritance ignores layers, which is what lets a page change a component it cannot out-rank.
 - [required] **A knob** is a property read with a default (code-standard rule 38):
-- [weak] While debugging, a loud fallback such as `var(--x, magenta)` shows at a glance which custom property resolves to nothing; take it out before the commit (the toolkit's practice; fallback behaviour per [MDN `var()`](https://developer.mozilla.org/en-US/docs/Web/CSS/var)).
 
 ```css
 ds-modal > [data-body] { padding: var(--modal-body-pad, var(--space-5)); }
@@ -166,7 +165,7 @@ ds-button > button:active { --state: var(--state-pressed-opacity); }
 - *Script:* could force `:hover`, `:active` and `:focus-visible` in a headless browser and fail an element whose computed background does not change or does not resolve to the state token, and flag a `:hover` rule outside `@media (hover: hover)` and a `class` toggled in a click handler that mirrors an ARIA state.
 - *Judgement:* Is each state visible on every surface the component sits on, and is selected seen without hovering?
 
-**Sources:** MDN as linked; the overlay mechanism is Material's state layer ([Material tokens](https://github.com/material-components/material-web/blob/main/tokens/versions/latest/sass/_md-sys-state.scss)). Systems differ on the opacities; the toolkit takes the mechanism and the project's tokens supply the figures.
+**Sources:** MDN as linked; the overlay mechanism is Material's state layer ([Material tokens](https://github.com/material-components/material-web/blob/main/tokens/versions/latest/sass/_md-sys-state.scss)). Systems differ on the opacities, so the mechanism is Material's and the project's tokens supply the figures.
 
 ## Nesting
 
@@ -198,10 +197,10 @@ ds-card {
 - [required] No criterion bears directly; a nested rule that silently drops can remove focus or `[hidden]` styling (code-standard rules 17 and 40).
 
 **Check**
-- *Script:* `tools/css-lint/lint.mjs` *own parts* on the compiled sheet; could flag nesting deeper than two levels in source.
+- *Script:* `tools/css-lint/lint.mjs` *own parts* on the compiled sheet.
 - *Judgement:* Does every nested rule describe a state, a condition or one child?
 
-**Sources:** [MDN, Using CSS nesting](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_nesting/Using_CSS_nesting). The two-level limit is the toolkit's commentary; no spec sets a depth.
+**Sources:** [MDN, Using CSS nesting](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_nesting/Using_CSS_nesting). No spec sets a nesting depth.
 
 ## Naming
 
@@ -215,7 +214,6 @@ ds-card {
 - [required] **Rename collisions.** A Figma axis called `Role` becomes `variant`, because `role` is ARIA's (code-standard rule 9); `align` or `width` on a custom element triggers the browser's presentational hints (code-standard rule 10).
 - [required] **A class convention is a stated choice.** A project that names by class (`.ds-block`, `.ds-block__part`) records it in its context document as a ruling. The rules still hold under it: one block per file naming only its own parts (code-standard rule 5), state as a pseudo-class (code-standard rule 9), hooks as attributes (code-standard rule 6). The *own parts* gate reads either shape (`styles` in `snapshot.config.json` says which).
 - [required] **Utility classes:** the two code-standard rule 6 allows, and no others ([Utilities](#utilities)).
-- [weak] A name is the word a newcomer would search for: a class, attribute or token whose obvious word finds nothing in a grep of the source is renamed now, while one change still fixes it (the toolkit's practice; the concatenation case is [nesting](#nesting)).
 
 **Cases**
 - A design hands over `Size=Large, State=Hover, Disabled=True` → `<ds-x size="large">` with `:hover` and the inner control's `disabled` (code-standard rules 9 and 62); a `state="hover"` attribute would let a template claim a state the control is not in.
@@ -229,7 +227,7 @@ ds-card {
 - *Script:* `tools/css-lint/lint.mjs` gates *a state is a pseudo-class, disabled the control's own* (code-standard rule 9) and *no presentational attribute as a variant* (code-standard rule 10).
 - *Judgement:* Could a template put this element in a state it is not in?
 
-**Sources:** WHATWG [custom elements](https://html.spec.whatwg.org/multipage/custom-elements.html) and [presentational hints](https://html.spec.whatwg.org/multipage/rendering.html#presentational-hints). BEM and similar class methods are widespread; the toolkit prefers elements and attributes, and accepts a class convention only as a project's stated ruling.
+**Sources:** WHATWG [custom elements](https://html.spec.whatwg.org/multipage/custom-elements.html) and [presentational hints](https://html.spec.whatwg.org/multipage/rendering.html#presentational-hints). BEM and similar class methods are widespread; code-standard rule 6 prefers elements and attributes, and a class convention is a project's stated ruling.
 
 ## Modern colour
 
@@ -241,7 +239,7 @@ ds-card {
 - [required] **`oklch()`** expresses a colour in Oklab with polar chroma and hue; `L` "is the perceived lightness" ([MDN `oklch()`](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch), Baseline widely available since May 2023). Generating ramps is the `oklch-color-scale-system` skill's job.
 - [required] **`color-mix()`** mixes two colours in a stated space, Oklab by default ([MDN `color-mix()`](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/color-mix), widely available since May 2023): `color-mix(in oklab, var(--brand) 80%, black)`.
 - [required] **Relative colour** takes channels from an origin colour, custom properties included ([MDN, relative colours](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_colors/Relative_colors)): `oklch(from var(--brand) l c h / 50%)`. Guard it with `@supports (color: oklch(from red l c h))`; MDN warns Safari's first implementation used an older draft.
-- [weak] Prefer a token the design names over a derivation the design never drew; derive only where the design's own state model is a formula (a focus ring tint, a hover overlay).
+- [required] Prefer a token the design names over a derivation the design never drew; derive only where the design's own state model is a formula (a focus ring tint, a hover overlay) (code-standard rule 24).
 
 **Cases**
 - A focus ring is the accent at 40% → `color-mix(in oklab, var(--accent) 40%, transparent)` or a relative colour with alpha; one source, so the ring follows a theme change.
@@ -255,7 +253,7 @@ ds-card {
 - *Script:* `tools/css-lint/lint.mjs` *literal is a token* and *literal reason* (code-standard rule 22) catch a typed colour; could flag `darken()`/`lighten()` in Sass.
 - *Judgement:* Does the design name this colour, or is the code inventing a step?
 
-**Sources:** MDN as linked. The sources agree; the toolkit derives only where the design states a formula.
+**Sources:** MDN as linked. The sources agree; deriving only where the design states a formula is code-standard rule 24.
 
 ## Font smoothing and rendering
 
@@ -288,7 +286,7 @@ ds-card {
 - *Script:* `tools/css-lint/lint.mjs` could flag `-webkit-font-smoothing` or `-moz-osx-font-smoothing` on `html`, `body` or `:root`, one prefix without the other, and any `text-rendering: optimizeLegibility`.
 - *Judgement:* Is this text light on dark, and does it look wrong on macOS without the override?
 
-**Sources:** [MDN `font-smooth`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-smooth), [MDN `text-rendering`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-rendering), [MDN `font-kerning`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-kerning), [MDN `font-variant-ligatures`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-ligatures), [WebKit r239306](https://trac.webkit.org/r239306), [Zach Leatherman, font-smooth](https://www.zachleat.com/web/font-smooth/), [Dmitry Fadeyev, stop fixing font smoothing](http://usabilitypost.com/2012/11/05/stop-fixing-font-smoothing/), [modern-normalize #19](https://github.com/sindresorhus/modern-normalize/issues/19), [Bocoup, text-rendering](https://bocoup.com/blog/text-rendering), [marco.org, optimizeLegibility](https://marco.org/2012/11/15/text-rendering-optimize-legibility), [Carbon type reset](https://github.com/carbon-design-system/carbon/blob/main/packages/type/scss/_reset.scss), [GOV.UK Frontend typography helper](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/helpers/_typography.scss), [Primer React Tooltip](https://github.com/primer/react/blob/main/packages/react/src/TooltipV2/Tooltip.module.css), [Material Web icon](https://github.com/material-components/material-web/blob/main/icon/internal/_icon.scss), [Tailwind utilities](https://github.com/tailwindlabs/tailwindcss/blob/main/packages/tailwindcss/src/utilities.ts). Sources disagree on a global `antialiased`: Carbon (which also sets `optimizeLegibility` on `body`) and GOV.UK ship it on all text, Primer and the authors above keep the platform default. The toolkit keeps the default and scopes an override to light-on-dark surfaces where a macOS review asks for it.
+**Sources:** [MDN `font-smooth`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-smooth), [MDN `text-rendering`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-rendering), [MDN `font-kerning`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-kerning), [MDN `font-variant-ligatures`](https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-ligatures), [WebKit r239306](https://trac.webkit.org/r239306), [Zach Leatherman, font-smooth](https://www.zachleat.com/web/font-smooth/), [Dmitry Fadeyev, stop fixing font smoothing](http://usabilitypost.com/2012/11/05/stop-fixing-font-smoothing/), [modern-normalize #19](https://github.com/sindresorhus/modern-normalize/issues/19), [Bocoup, text-rendering](https://bocoup.com/blog/text-rendering), [marco.org, optimizeLegibility](https://marco.org/2012/11/15/text-rendering-optimize-legibility), [Carbon type reset](https://github.com/carbon-design-system/carbon/blob/main/packages/type/scss/_reset.scss), [GOV.UK Frontend typography helper](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/helpers/_typography.scss), [Primer React Tooltip](https://github.com/primer/react/blob/main/packages/react/src/TooltipV2/Tooltip.module.css), [Material Web icon](https://github.com/material-components/material-web/blob/main/icon/internal/_icon.scss), [Tailwind utilities](https://github.com/tailwindlabs/tailwindcss/blob/main/packages/tailwindcss/src/utilities.ts). Sources disagree on a global `antialiased`: Carbon (which also sets `optimizeLegibility` on `body`) and GOV.UK ship it on all text, Primer and the authors above keep the platform default. This page follows Leatherman and Fadeyev: the default, and an override scoped to light-on-dark surfaces.
 
 ## Sass modules
 
@@ -394,7 +392,7 @@ components/<x>/   one folder per component, its sheet named after it
 
 **How**
 - [required] The two classes code-standard rule 6 allows sit in the last layer, so they win; the visually hidden ruleset is [accessibility: hidden content](accessibility.md#hidden-content).
-- [required] CUBE CSS defines a utility as "a CSS class that does one job and does that one job well," generated from tokens to move repetition into the HTML ([CUBE CSS, utility](https://cube.fyi/utility.html)). That is a coherent method, and it conflicts with code-standard rule 6: the toolkit styles by element and attribute, so a spacing or colour class has no place.
+- [required] CUBE CSS defines a utility as "a CSS class that does one job and does that one job well," generated from tokens to move repetition into the HTML ([CUBE CSS, utility](https://cube.fyi/utility.html)). That is a coherent method, and it conflicts with code-standard rule 6, which styles by element and attribute, so a spacing or colour class has no place.
 - [required] A layout need that repeats (a stack, a cluster) is a layout component (code-standard rule 11), not a class.
 
 **Cases**
@@ -409,4 +407,4 @@ components/<x>/   one folder per component, its sheet named after it
 - *Script:* `tools/css-lint/lint.mjs` *a state is a pseudo-class* refuses a state spelled as a class; could flag any class in the utilities layer beyond the two.
 - *Judgement:* Would removing this class change what the page does, or only how it looks?
 
-**Sources:** [CUBE CSS](https://cube.fyi/utility.html). Sources disagree: utility-first methods put visual classes in markup; the toolkit goes with code-standard rule 6 and keeps utilities to behaviour.
+**Sources:** [CUBE CSS](https://cube.fyi/utility.html). Sources disagree: utility-first methods put visual classes in markup; code-standard rule 6 keeps utilities to behaviour.

@@ -33,7 +33,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 - *Script* could: flag `role="grid"` on an element where arrow keys do not move focus between cells, and a grid whose cells hold no editable or interactive content.
 - *Judgement*: which interaction on this screen needs cell-level focus?
 
-**Sources.** Primer, Roselli, Fluent and APG agree: a table unless cells are interactive. NN/g and Atlassian prefer editing outside the table; the toolkit follows them for occasional edits.
+**Sources.** Primer, Roselli, Fluent and APG agree: a table unless cells are interactive. NN/g and Atlassian prefer editing outside the table, which this section follows for occasional edits.
 
 ## Anatomy
 
@@ -213,7 +213,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 - *Script* could: tab into the grid and assert one stop; press each APG key and assert the focused cell moved as specified; assert focus is visible and unobscured after each move.
 - *Judgement*: does the grid add any key APG does not define, and is it needed?
 
-**Sources.** APG is the source; MUI X and Fluent implement it. The toolkit uses APG's set unchanged.
+**Sources.** APG is the source; MUI X and Fluent implement it. This section uses APG's set unchanged.
 
 ## Roles
 

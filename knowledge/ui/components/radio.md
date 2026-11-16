@@ -52,7 +52,7 @@ A radio button picks exactly one option from a small set shown in full, saved wi
 - *Script:* tools/ui-check/check.mjs does not limit radios: design-standard rule 4 counts only button groups (`aria-pressed` buttons or `button[role="radio"]`), and treats native radio inputs as a form question. A script could check that radios in a question start unchecked, that every group has a `legend`, and that a `change` causes no navigation.
 - *Judgement:* Is this a value saved with a form, or a view that should apply at once?
 
-**Sources:** GOV.UK says never preselect; [NN/g's 2004 guideline 9](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/) says "Always offer a default selection". The toolkit follows GOV.UK for questions, because its reasons are tested failures (missed questions, wrong answers), and keeps the checked current value for settings, where NN/g's concern (a group that never shows a state) applies.
+**Sources:** GOV.UK says never preselect; [NN/g's 2004 guideline 9](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/) says "Always offer a default selection". GOV.UK's reasons are tested failures (missed questions, wrong answers); NN/g's concern is a group that never shows a state.
 
 ## In Figma
 

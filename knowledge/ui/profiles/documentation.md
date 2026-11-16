@@ -37,7 +37,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check that every page carries the same global links in the same order, that exactly one local link is current, and that a skip link exists. code-standard rule 64 already names the marking.
 - *Judgement:* can a reader dropped on any page say which section they are in and what else it holds, without scrolling?
 
-**Sources:** [NN/g tabs](https://www.nngroup.com/articles/tabs-used-right/); [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) for "Pages in this section"; [Atlassian, 2020](https://community.developer.atlassian.com/t/our-new-home-for-atlassian-design-system/40698) and [Primer React PR #4822](https://github.com/primer/react/pull/4822) for the merges. Carbon keeps tabs (Usage, Style, Code, Accessibility) while GOV.UK, Codex and Spectrum's design site use one long page. A 2026-11 recount found tabs also on eBay, Atlassian, Primer, Spectrum Web Components and every zeroheight and Supernova site measured, so tabs are the more common choice; the toolkit still prefers one page, because tabs hide content readers rarely switch to (NN/g) and no source measured the opposite.
+**Sources:** [NN/g tabs](https://www.nngroup.com/articles/tabs-used-right/); [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) for "Pages in this section"; [Atlassian, 2020](https://community.developer.atlassian.com/t/our-new-home-for-atlassian-design-system/40698) and [Primer React PR #4822](https://github.com/primer/react/pull/4822) for the merges. Carbon keeps tabs (Usage, Style, Code, Accessibility) while GOV.UK, Codex and Spectrum's design site use one long page. A 2026-11 recount found tabs also on eBay, Atlassian, Primer, Spectrum Web Components and every zeroheight and Supernova site measured, so tabs are the more common choice; NN/g's warning that tabs hide content readers rarely switch to favours one page, and no source measured the opposite.
 
 ---
 
@@ -97,7 +97,7 @@ What a page on a design-system documentation site must specify: the site's struc
 | Atlassian | Tabs: Examples, Code, Usage, Changelog; Usage runs Parts, Accessibility, Best practices, Content guidelines, Related |
 | eBay Playbook | Anatomy, Properties, Behavior, Platforms, Best practices, Specs; varies by component |
 
-- [weak] A section with nothing to say is marked "Not applicable" in the source, so a script can tell a deliberate gap from a forgotten one. Spectrum drops Content standards where a component carries no text; the toolkit keeps the heading with "Not applicable" instead, because a silent gap cannot be checked. An empty guidance section says "No guidance yet" rather than vanishing, since GOV.UK's [documentation research](https://designnotes.blog.gov.uk/2018/11/05/how-we-document-components-and-patterns-in-the-gov-uk-design-system/) asks for honest docs.
+- [required] A section with nothing to say stays, marked "Not applicable" in the source, so a script can tell a deliberate gap from a forgotten one (design-standard rule 20). Spectrum drops Content standards where a component carries no text; design-standard rule 20 departs from it. An empty guidance section says "No guidance yet" rather than vanishing; GOV.UK's [documentation research](https://designnotes.blog.gov.uk/2018/11/05/how-we-document-components-and-patterns-in-the-gov-uk-design-system/) asks for honest docs.
 - [weak] Internationalisation (text expansion, right-to-left) gets a sentence under behaviour or content when the component carries text, as Spectrum does.
 - [moderate] Hold every generated table to one test: does it help someone choose, build or check this component? A variant-by-state grid of 216 cells, or every token across every variant, goes behind a disclosure (`../patterns/disclosure.md`) or into an export. Primer's own [PR #710](https://github.com/primer/design/pull/710) called its mixed props tables a "matrix of sadness".
 - [weak] Headline figures are health (3 open accessibility failures), never inventory (715 variants).
@@ -114,7 +114,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - A component has no text (a divider) → content guidance reads "Not applicable: this component carries no text." The section stays, so the skeleton check passes and the reader learns it was considered.
 - Usage guidance sits on a second tab behind Examples → move it to the default tab, or collapse to one page.
 - The accessibility section repeats generic WCAG paragraphs on every page → keep the component's role, keyboard pattern, a link to the matching APG pattern, and its known gaps; cut the boilerplate.
-- A component exists in Figma only → the example is an image of the design, labelled as design; once code exists, the live example replaces it.
+- A component exists in Figma only → the example is an image of the design; once code exists, the live example replaces it.
 
 **Accessibility**
 - [required] 1.3.1 Info and Relationships and 2.4.6 Headings and Labels: the skeleton is a heading outline, levels never skipped, labels that say what follows. 2.4.10 Section Headings (AAA) is why each section has one.
@@ -132,7 +132,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check each declared section is present or marked "Not applicable", "When not to use" exists, the change log is present with dated entries, and headings do not skip.
 - *Judgement:* does "when not to use" name the right alternative? Does every generated table help someone choose, build or check?
 
-**Sources:** [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) (When to use, When not to use, How it works, Research, Recent changes as a Date/Changed/Description table); [Spectrum button](https://spectrum.adobe.com/web/rsp/components/button), [Primer button](https://primer.style/product/components/button/), [Atlassian button usage](https://atlassian.design/components/button/usage), [eBay checkbox](https://playbook.ebay.com/design-system/components/checkbox), [GOV.UK documentation research (2018)](https://designnotes.blog.gov.uk/2018/11/05/how-we-document-components-and-patterns-in-the-gov-uk-design-system/). GOV.UK puts the example first and anatomy inside "How it works"; Spectrum leads with anatomy. The toolkit puts purpose and example first, then the use decision, then anatomy, because GOV.UK's 2018 research is the only published evidence on docs structure and it puts the decision early.
+**Sources:** [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) (When to use, When not to use, How it works, Research, Recent changes as a Date/Changed/Description table); [Spectrum button](https://spectrum.adobe.com/web/rsp/components/button), [Primer button](https://primer.style/product/components/button/), [Atlassian button usage](https://atlassian.design/components/button/usage), [eBay checkbox](https://playbook.ebay.com/design-system/components/checkbox), [GOV.UK documentation research (2018)](https://designnotes.blog.gov.uk/2018/11/05/how-we-document-components-and-patterns-in-the-gov-uk-design-system/). GOV.UK puts the example first and anatomy inside "How it works"; Spectrum leads with anatomy. The skeleton puts purpose and example first, then the use decision, then anatomy, because GOV.UK's 2018 research is the only published evidence on docs structure and it puts the decision early.
 
 ---
 
@@ -175,7 +175,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check every swatch has a text name, every mode in the payload has a column, and the page caption names its payload and date. `tools/ui-check/check.mjs` does not yet.
 - *Judgement:* does the page lead with what most readers use, or with everything the payload holds?
 
-**Sources:** as linked above; Paste's pairing popover is in its [tokens list source](https://github.com/twilio-labs/paste/tree/main/packages/paste-website/src/components/tokens-list). Primer shows only the active theme; the toolkit shows every mode as a column, following the majority.
+**Sources:** as linked above; Paste's pairing popover is in its [tokens list source](https://github.com/twilio-labs/paste/tree/main/packages/paste-website/src/components/tokens-list). Primer shows only the active theme; the majority show every mode as a column.
 
 ---
 
@@ -186,7 +186,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - [weak] The question the reader brings is "how do I solve this task?", not "how does this component work?".
 
 **How**
-- [weak] Open with the user need the pattern solves, in one sentence, then **when to use** and **when not to use** (naming the alternative pattern), then **how it works** as steps or a worked screen, then the **components it uses** (linked), then **accessibility**, **research** if any, and **change log**.
+- [required] Open with the user need the pattern solves, in one sentence, then **when to use** and **when not to use** (naming the alternative pattern), then **how it works** as steps or a worked screen, then the **components it uses** (linked), then **accessibility**, **research** if any, and **change log**: the component page's order (design-standard rule 20).
 - [moderate] A pattern page is mostly how-to (Diátaxis), with reference only for the components it links. GOV.UK's patterns (question pages, check answers, validation) follow the same order as its components.
 - [required] Show the pattern in a realistic screen, not a lone component. A filtering pattern shows the tabs, the bar and the list together (design-standard rule 3).
 - [weak] State the house decisions as decisions: where the sources disagree (search left or right, validate on blur or submit), say which way the system goes and why, as the knowledge pages do (for example [interaction: validation timing](../design/interaction.md#error-prevention-and-validation-timing)).
@@ -208,7 +208,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check that a pattern page links at least one component page and carries "when not to use".
 - *Judgement:* does the page solve a task, or catalogue components?
 
-**Sources:** [GOV.UK patterns](https://design-system.service.gov.uk/patterns/question-pages/); [Diátaxis](https://diataxis.fr/compass/). No source specifies a pattern-page skeleton; this one mirrors the component page so readers learn one shape.
+**Sources:** [GOV.UK patterns](https://design-system.service.gov.uk/patterns/question-pages/); [Diátaxis](https://diataxis.fr/compass/). No source specifies a pattern-page skeleton; this one mirrors the component page, as design-standard rule 20 sets.
 
 ---
 
@@ -279,7 +279,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could flag an FAQ answer with no link to another page, an answer whose text repeats another page's, and a collapsed panel hidden in a way find in page cannot reach.
 - *Judgement:* did a real reader ask each question, and does the page it is about now answer it?
 
-**Sources:** as linked above. GOV.UK forbids FAQs; NN/g defends them for real, frequent questions. The toolkit takes GOV.UK's default, because a docs site has an owning page for nearly every question, and NN/g's shape for the few that survive. NN/g recommends accordions for FAQs and GOV.UK warns against hiding content; the toolkit collapses only a long FAQ, and only with reveal on find.
+**Sources:** as linked above. GOV.UK forbids FAQs; NN/g defends them for real, frequent questions. GDS's reason, that FAQs duplicate content, holds on a docs site, where nearly every question has an owning page; NN/g gives the shape for the few that survive. NN/g recommends accordions for FAQs and GOV.UK warns against hiding content; MDN's `hidden="until-found"` keeps a collapsed answer findable.
 
 ---
 
@@ -293,14 +293,12 @@ What a page on a design-system documentation site must specify: the site's struc
 - [weak] Three forms, cheapest first:
   - **In the text**: a clause, a parenthesis or a descriptive link. The default for anything that changes what the reader does.
   - **Notes**: a numbered marker linking to a note at the end of the section, each note linking back. For citations and asides a minority want.
-  - **Side notes**: the same note shown in the margin beside its reference on wide screens, after its paragraph on narrow ones. For long explanation pages with margin to spare (the toolkit's judgement; no source specifies it).
-- [weak] On a docs page, sources go in the section's Sources line, as these knowledge pages do, not in numbered notes; a note is for an aside.
+  - **Side notes**: the same note shown in the margin beside its reference on wide screens, after its paragraph on narrow ones. For long explanation pages with margin to spare; the narrow form stacks in reading order (design-standard rule 19).
 - [required] The W3C [DPUB-ARIA](https://www.w3.org/TR/dpub-aria-1.1/) roles describe the parts: `doc-noteref` is "A reference to a footnote or endnote, typically appearing as a superscripted number or symbol in the main body of text"; `doc-backlink` is "A link that allows the user to return to a related location in the content".
 - [weak] Notes sit at the end of their section, numbered in order of first reference, so a note stays near its reference on a long page.
 - [moderate] Shown in place where it helps: NN/g's [study of nonfiction e-books](https://www.nngroup.com/articles/nonfiction-ebooks/) preferred notes "in popovers on top of the corresponding words" to sending readers away. A marker may open the note in a popover by click; the notes list stays as the no-script path.
 
 **Cases**
-- A component page with three numbered notes citing the source of a rule → move them to the Sources line; numbers interrupt a scanning reader.
 - A note reading "except in dark mode" → into the sentence; it changes what the reader does.
 - Markers "*" and "†" → numbers; a link named "*" says nothing.
 - One notes list at the foot of a twenty-section page → a list per section.
@@ -321,7 +319,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check every `doc-noteref` resolves to a note, every note has a back link to an existing reference, numbers ascend in document order, and no marker is named by a symbol alone.
 - *Judgement:* would the page lose anything if this note went into the sentence or was cut?
 
-**Sources:** as linked above. GOV.UK advises against footnotes on the web; DPUB-ARIA gives them roles because publications keep them. The toolkit puts what matters in the text, uses notes only for skippable asides, and puts sources in a Sources line, because a docs reader scans rather than reads through.
+**Sources:** as linked above. GOV.UK advises against footnotes on the web; DPUB-ARIA gives them roles because publications keep them. What matters goes in the text and the rest is cut, as GOV.UK's content clinic says.
 
 ---
 
@@ -333,7 +331,7 @@ What a page on a design-system documentation site must specify: the site's struc
 **How**
 - [moderate] **Do and don't come in pairs.** Every "don't" names the "do" it should be replaced with; where the point is visual, the two are shown side by side, same size, same content where possible, with a caption saying why. A list of prohibitions leaves the reader without the thing to reach for ([Write the Docs](https://www.writethedocs.org/guide/writing/docs-principles/) *Exemplary*; [TDesign](https://tdesign.tencent.com/react/components/button) lists similar components).
 - [required] Label do and don't with a word ("Do", "Don't") and an icon, never colour alone (WCAG 1.4.1).
-- [weak] **Live examples** once code exists, served from the project's own Storybook on the docs site's origin and matched to the component by file location; before code exists, images exported from the design, labelled as design. Never both on one page without saying which is which. This labelling is the toolkit's judgement.
+- [weak] **Live examples** once code exists, served from the project's own Storybook on the docs site's origin and matched to the component by file location; before code exists, images exported from the design.
 - [weak] Each example has an "Open in a new tab" link naming the example, as GOV.UK does ("Open this example in a new tab: text input"), so it can be tested alone at any width.
 - [weak] **Code snippets** under the example they produce, in the tabs the system supports (GOV.UK: HTML and Nunjucks), with a copy button that says it copied. Short and complete: a snippet that cannot be pasted and run is a fragment.
 - [weak] Examples use realistic content (real labels, long names, translated strings), not "Lorem" or "Button".
@@ -364,14 +362,14 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check each "don't" block has a sibling "do", each example has a labelled source, and each copy button has an accessible name.
 - *Judgement:* is the "do" the right alternative, and is the example representative of real use?
 
-**Sources:** [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) (HTML/Nunjucks tabs, open-in-new-tab link); [Primer button](https://primer.style/product/components/button/) and [Atlassian button examples](https://atlassian.design/components/button/examples) for live, editable examples. Shipping systems mostly write do and don't as text (eBay's sentences with one image each, Codex's "Use… / Avoid…", Primer's Button none at all); the toolkit's guidance keeps the pair in the words, every "don't" naming its "do", and draws it only where the point is visual.
+**Sources:** [GOV.UK text input](https://design-system.service.gov.uk/components/text-input/) (HTML/Nunjucks tabs, open-in-new-tab link); [Primer button](https://primer.style/product/components/button/) and [Atlassian button examples](https://atlassian.design/components/button/examples) for live, editable examples. Shipping systems mostly write do and don't as text (eBay's sentences with one image each, Codex's "Use… / Avoid…", Primer's Button none at all); Write the Docs' *Exemplary* is the source for naming the "do" beside every "don't".
 
 ---
 
 ## On-this-page navigation
 
 **Use when**
-- [weak] A page is longer than about two screens or has more than three `h2` sections. (This threshold is the toolkit's judgement; NN/g gives none.)
+No source sets the length at which a page needs one; NN/g gives none.
 
 **How**
 - [weak] The list itself (rail or body, label, entries generated from headings, scroll margin) is [navigation: in-page navigation](../patterns/navigation.md#in-page-navigation-on-this-page). A docs site adds:
@@ -396,7 +394,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check entries match `h2` text exactly and in order, and every heading has an id.
 - *Judgement:* does the list help on this page, or decorate it?
 
-**Sources:** [NN/g table of contents](https://www.nngroup.com/articles/table-of-contents/), as in navigation; the threshold and the tab rule are the toolkit's.
+**Sources:** [NN/g table of contents](https://www.nngroup.com/articles/table-of-contents/), as in navigation.
 
 ---
 
@@ -502,7 +500,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check the search is a labelled form with a no-script action and a `search` landmark, and that a known token name returns its own page first.
 - *Judgement:* does a hit land the reader on the answer or on a page they must search again?
 
-**Sources:** [Paste docs search](https://github.com/twilio-labs/paste/blob/main/internal-docs/engineering/doc-site/docsearch.md). Paste ranks by vector similarity; the toolkit asks for exact-name matches first on token and prop names, because a reader who types a token's name wants that token.
+**Sources:** [Paste docs search](https://github.com/twilio-labs/paste/blob/main/internal-docs/engineering/doc-site/docsearch.md). Paste ranks by vector similarity; Atlassian's token page searches by exact name.
 
 ---
 

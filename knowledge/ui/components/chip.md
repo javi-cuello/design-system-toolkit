@@ -6,7 +6,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 
 **Use when / don't use**
 - [weak] A filter chip for a small facet of values that may hold together, an input chip for values the person entered; a single choice is a segmented control. The cases are [*Filter chips*](#filter-chips), [*Choice chips*](#choice-chips) and [*Input chips and tag entry*](#input-chips-and-tag-entry).
-- [contested] One component or several. MUI ships one `Chip` that turns removable when `onDelete` is set ([Chip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.d.ts)); Material Web ships four elements, `md-assist-chip`, `md-filter-chip`, `md-input-chip` and `md-suggestion-chip` ([Material chips](https://github.com/material-components/material-web/blob/main/docs/components/chip.md)); Carbon four tags, `Tag`, `DismissibleTag`, `SelectableTag` and `OperationalTag` ([Carbon tag source](https://github.com/carbon-design-system/carbon/tree/main/packages/react/src/components/Tag)). The toolkit splits where the element changes, a toggle against a value with a remove button, and keeps one component where only the look does ([when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#component-or-value)).
+- [contested] One component or several. MUI ships one `Chip` that turns removable when `onDelete` is set ([Chip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Chip/Chip.d.ts)); Material Web ships four elements, `md-assist-chip`, `md-filter-chip`, `md-input-chip` and `md-suggestion-chip` ([Material chips](https://github.com/material-components/material-web/blob/main/docs/components/chip.md)); Carbon four tags, `Tag`, `DismissibleTag`, `SelectableTag` and `OperationalTag` ([Carbon tag source](https://github.com/carbon-design-system/carbon/tree/main/packages/react/src/components/Tag)). The toolkit's research finds the element changing between a toggle and a value with a remove button, and only the look changing among the rest ([when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#component-or-value)).
 
 **Anatomy**
 - [strong] A container with a label and, optionally, a leading icon or avatar, a check when selected, or a trailing remove button: MUI (`label`, `icon`, `avatar`, `deleteIcon`), Material Web (icons, and an `avatar` on input chips), Carbon (`renderIcon`, a close button on `DismissibleTag`) and Figma's Simple Design System (`Label` and `Removable` on `Tag`, `Label` and an `Icon` swap on `TagToggle`; [SDS tag files](https://github.com/figma/sds/tree/main/src/figma/primitives/tag)).
@@ -53,8 +53,8 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 ## Choice chips
 
 **Use when / don't use**
-- [weak] A set where exactly one holds ("Daily", "Weekly", "Monthly"). In the toolkit this is a segmented control and is built as one ([selection: segmented control](segmented-control.md#segmented-control)); calling it chips does not change what it is.
-- [weak] Carbon lets selectable tags stand in for form controls in a form made only of tags ([Carbon tag](https://carbondesignsystem.com/components/tag/usage/)); the toolkit keeps radios or a segmented control, so a choice looks like a choice.
+- [weak] A set where exactly one holds ("Daily", "Weekly", "Monthly"). That is a [segmented control](segmented-control.md#segmented-control); calling it chips does not change what it is.
+- [weak] Carbon lets selectable tags stand in for form controls in a form made only of tags ([Carbon tag](https://carbondesignsystem.com/components/tag/usage/)).
 - [required] Don't use choice chips for more than four options (design-standard rule 4) or where "none" is a valid answer without a "None" option.
 
 **How**
@@ -81,7 +81,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - *Script:* could flag a group of chips with `aria-pressed` where only one can ever be pressed (should be radios), and a choice set of more than four.
 - *Judgement:* Must exactly one hold? Then it is a radio group, whatever it looks like.
 
-**Sources:** Carbon as linked; the toolkit departs from Carbon's tags-as-form-controls to keep one control per kind of choice.
+**Sources:** Carbon as linked.
 
 ## Input chips and tag entry
 
@@ -93,12 +93,11 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 **How**
 - [weak] Chips sit inside or directly above the field, in the order entered; the text cursor follows the last chip.
 - [weak] A value commits on Enter or on choosing a suggestion; comma or Tab committing is a choice to state in the design and keep everywhere.
-- [moderate] Each chip has its own remove button with a name ("Remove Ada Lovelace"); Backspace in the empty field selects, then removes, the last chip, as a shortcut beside the button, never instead of it. Primer's token also removes on Backspace or Delete when focused ([Primer Token](https://primer.style/product/components/token/)).
+- [moderate] Each chip has its own remove button with a name ("Remove Ada Lovelace"); a Backspace shortcut sits beside the button, never instead of it. Primer's token also removes on Backspace or Delete when focused ([Primer Token](https://primer.style/product/components/token/)).
 - [moderate] A duplicate or invalid value is refused with a message on the field, not silently dropped ([forms: error messages and the error summary](../patterns/forms.md#error-messages-and-the-error-summary)).
 - [weak] Values that differ in kind (a person, a team) may carry an avatar or icon, and keep the text.
 
 **Cases**
-- Pressing Backspace once in the empty field deletes a chip outright → select it first, remove on the second press, or rely on the remove button; one stray key should not lose a value.
 - Typing an address that is already a chip adds a second copy → refuse it and say it is already added.
 - The field accepts comma to commit, but a company name contains a comma → commit on Enter and suggestion only.
 - A reviewer field shows 14 chips and the input is pushed to a fourth line → collapse to "+10 more" (next section).
@@ -118,7 +117,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - *Script:* could add and remove values by keyboard alone and assert every remove button has a name, focus lands on a neighbour after removal, a duplicate is refused with a described error, and the form submits every chip's value.
 - *Judgement:* Is the value set open (tag entry) or closed (a multi-select would do)?
 
-**Sources:** Material, Primer and APG as linked; they agree on removable values with named remove controls, and the toolkit adds the two-step Backspace to protect against a stray key.
+**Sources:** Material, Primer and APG as linked; they agree on removable values with named remove controls.
 
 ## Removing chips, overflow and wrapping
 
@@ -155,7 +154,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - *Script:* could remove each chip by keyboard and assert where focus lands, measure remove targets at 24px or more and gaps between interactive chips, and assert a table row's height does not grow with its tag count.
 - *Judgement:* Where can this set grow, and what moves when it does?
 
-**Sources:** Carbon, Atlassian and Friedman as linked. Friedman's 48px touch target is a mobile figure; the toolkit holds 24px as the floor (2.5.8) and asks for larger on touch screens.
+**Sources:** Carbon, Atlassian and Friedman as linked. Friedman's 48px touch target is a mobile figure; WCAG 2.5.8 sets 24px as the floor.
 
 ## In Figma
 
@@ -185,7 +184,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - *Script*: figma-components-audit runs the rules cited above; the parity report compares the chip's boxes selected and unselected, which must match in width.
 - *Judgement*: can a designer build every set on the page from the slot without detaching a chip?
 
-**Sources.** MUI, Material Web, Carbon and SDS for the parts and the split; Primer for a focusable input chip. Where the systems split, the toolkit follows the element.
+**Sources.** MUI, Material Web, Carbon and SDS for the parts and the split; Primer for a focusable input chip.
 
 ## Alignment with code
 
@@ -230,7 +229,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 
 **Element**
 - [required] A filter chip is a checkbox in a `fieldset` or a `button` with `aria-pressed`; an input chip is a list item holding the value and a named remove `button`. The markup is in [*Filter chips*](#filter-chips) and [*Input chips and tag entry*](#input-chips-and-tag-entry), Build (code-standard rules 9 and 20).
-- [contested] What the set is. Material Web makes every chip set a toolbar, one Tab stop with arrows inside; Carbon's `SelectableTag` is a plain `button` with `aria-pressed`, each its own Tab stop ([SelectableTag.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Tag/SelectableTag.tsx)). The toolkit makes each chip a Tab stop and allows a toolbar from three chips ([*Filter chips*](#filter-chips), Build).
+- [contested] What the set is. Material Web makes every chip set a toolbar, one Tab stop with arrows inside; Carbon's `SelectableTag` is a plain `button` with `aria-pressed`, each its own Tab stop ([SelectableTag.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Tag/SelectableTag.tsx)). [*Filter chips*](#filter-chips)' Build sets out both.
 
 **Props**
 - [strong] A label, an icon, a selected state, `disabled`, `size`, and a remove handler for a removable chip: MUI (`label`, `icon`, `avatar`, `onDelete`, `disabled`, `size`), Carbon (`text`, `renderIcon`, `selected`, `onChange`, `disabled`, `size`) and SDS (`Tag`'s `onRemove`, `scheme`, `variant`; `TagToggle`'s `iconStart`).

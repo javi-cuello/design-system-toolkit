@@ -45,7 +45,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 - *Script* could: measure the arc's contrast against its computed background; flag a spinner larger than its container's line or box.
 - *Judgement*: does the size follow the place, not the length of the wait?
 
-**Sources.** Primer, Spectrum and Carbon ship two or three named sizes; MUI takes a number. The toolkit follows the named sizes, so Figma and code share one `Size` axis.
+**Sources.** Primer, Spectrum and Carbon ship two or three named sizes; MUI takes a number.
 
 ## Accessible name and announcements
 
@@ -57,8 +57,8 @@ A spinner is a small turning ring that says work is under way here, now, with no
   - *Hidden graphic, text beside it.* Primer's SVG is `aria-hidden` with a visually hidden `srText` (default "Loading"), set to `null` "if the loading state is displayed in a text node somewhere else on the page" ([Primer Spinner](https://primer.style/product/components/spinner/), [Primer Spinner source](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.tsx)); its accessibility page still says the component has "no built-in announcement" and must be part of a solution with `aria-live` ([Primer Spinner accessibility](https://primer.style/product/components/spinner/accessibility/)).
   - *An image in a live region.* Carbon's SVG is `role="img"` with `aria-label` and a `title`, inside a wrapper with `aria-live="assertive"` while active ([Carbon Loading source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Loading/Loading.tsx)).
   - *A progress bar with no value.* MUI's `CircularProgress` and Spectrum's `ProgressCircle` are `role="progressbar"` with no `aria-valuenow`, named by an `aria-label` ([MUI progress](https://mui.com/material-ui/react-progress/), [Spectrum ProgressCircle source](https://github.com/adobe/react-spectrum/blob/main/packages/@react-spectrum/s2/src/ProgressCircle.tsx)).
-  The toolkit takes the first: the spinner is `aria-hidden`, and a `role="status"` element present from load carries a specific message ("Loading invoices"). A `progressbar` with no value adds a role nothing can act on, and an image in an assertive region interrupts.
-- [moderate] Polite, not assertive: a loading message should not cut off what the person is hearing. `role="status"` is polite by definition ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)); Carbon's loaders use `assertive` (above), which the toolkit does not follow.
+  Where the project takes the first, the spinner is `aria-hidden`, and a `role="status"` element present from load carries a specific message ("Loading invoices").
+- [moderate] Polite, not assertive: a loading message should not cut off what the person is hearing. `role="status"` is polite by definition ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)); Carbon's loaders use `assertive` (above).
 - [weak] Say what is loading, not "Loading" alone (Primer's example in [feedback: *Loading*](../patterns/feedback.md#loading)); when visible text beside the spinner already says it, that text is the status and the spinner adds nothing to the tree.
 - [moderate] Delay before showing and hold once shown, as one timer ([feedback: *Loading*](../patterns/feedback.md#loading)). Primer builds the delay into the component: `delay` of `true` or `'long'` waits 1000ms, `'short'` 300ms ([Primer Spinner source](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.tsx)). No library read publishes a minimum show time; Carbon's inline loader holds its finished state 1500ms (`successDelay`) before calling `onSuccess` ([Carbon InlineLoading source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/InlineLoading/InlineLoading.tsx)).
 
@@ -84,7 +84,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 - *Script* could: flag a spinner that is neither `aria-hidden` nor named; assert a `role="status"` element exists before the spinner shows and changes text when it does; flag `aria-live="assertive"` on a loader.
 - *Judgement*: does the message say what is loading?
 
-**Sources.** Primer, Carbon, MUI and Spectrum each expose the spinner differently; the toolkit follows Primer's hidden graphic with text, and the polite status of [feedback: *Loading*](../patterns/feedback.md#loading), over Carbon's assertive region.
+**Sources.** Primer, Carbon, MUI and Spectrum each expose the spinner differently; the polite status is [feedback: *Loading*](../patterns/feedback.md#loading)'s.
 
 ## Motion and reduced motion
 
@@ -92,7 +92,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 - [required] 2.2.2 Pause, Stop, Hide: a spinner turning for more than five seconds beside other content needs a way to stop or hide it, unless it is the only content; WCAG's own "loading" example is exempt because the animation "is the only content on the page" ([Understanding 2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html)); WCAG 2.2's Note 4 also counts a preload animation as essential "if interaction cannot occur during that phase for all users" ([WCAG 2.2, 2.2.2](https://www.w3.org/TR/WCAG22/#pause-stop-hide)). A wait that long usually wants progress instead ([steppers](../patterns/steppers.md#progress-for-long-running-tasks)).
 
 **How**
-- [contested] Under `prefers-reduced-motion: reduce`, systems split. Primer's spinner has no reduced-motion rule and keeps turning ([Primer Spinner styles](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.module.css)), as its loading pattern asks ([feedback: *Loading*](../patterns/feedback.md#loading)); MUI sets `animation: none` on the ring and the arc when the theme opts into reduced motion ([MUI CircularProgress source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/CircularProgress/CircularProgress.js), [MUI reducedMotion](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/styles/reducedMotion.ts)); the toolkit's base block stops every animation, spinners included ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)). The toolkit keeps a slow rotation, as [feedback: *Loading*](../patterns/feedback.md#loading) records, which needs the base block's selector narrowed to leave the spinner out, a project ruling; a project that stops it instead relies on the status text.
+- [contested] Under `prefers-reduced-motion: reduce`, systems split. Primer's spinner has no reduced-motion rule and keeps turning ([Primer Spinner styles](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.module.css)), as its loading pattern asks ([feedback: *Loading*](../patterns/feedback.md#loading)); MUI sets `animation: none` on the ring and the arc when the theme opts into reduced motion ([MUI CircularProgress source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/CircularProgress/CircularProgress.js), [MUI reducedMotion](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/styles/reducedMotion.ts)); the base reduced-motion block stops every animation, spinners included ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)). A project that keeps a slow rotation, as [feedback: *Loading*](../patterns/feedback.md#loading) describes, narrows the base block's selector to leave the spinner out, a project ruling; a project that stops it relies on the status text.
 - [moderate] Rotate a fixed arc; don't animate its length. MUI documents that "under heavy load, you might lose the stroke dash animation" and offers `disableShrink`, which keeps only the rotation ([MUI progress](https://mui.com/material-ui/react-progress/)); Primer's spinner is a rotation only ([Primer Spinner styles](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.module.css)).
 - [weak] Linear easing and one constant speed, about one turn a second: Primer turns on `--base-duration-1000` with `--base-easing-linear` (Primer Spinner styles); Carbon reserves back-and-forth motion for skeletons ([Carbon progress bar](https://carbondesignsystem.com/components/progress-bar/usage/)).
 
@@ -118,7 +118,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 - *Script* could: with reduced motion emulated, read the spinner's computed `animation-duration` and assert it matches the project's ruling (slowed or stopped), never the default speed.
 - *Judgement*: with reduced motion on, does the page still say something is loading?
 
-**Sources.** Primer keeps the spinner moving; MUI stops it on opt-in; WCAG 2.2.2 and 2.3.3 as linked. The toolkit keeps a slow turn, as feedback.md decided, and leaves stopping to a project ruling.
+**Sources.** Primer keeps the spinner moving; MUI stops it on opt-in; WCAG 2.2.2 and 2.3.3 as linked. Slowing or stopping it is a project ruling.
 
 ## Spinner or skeleton
 
@@ -191,7 +191,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 - [required] Reduced motion is a state the code reaches from the system preference and no frame shows (figma-standard rule 52); the project's ruling (*Motion and reduced motion*) names what it looks like.
 
 **Differences**
-- [moderate] Carbon draws `Loading` and `InlineLoading` as one Figma component whose `Size` axis has an `Inline` value; Code Connect turns `Size=Inline` into `InlineLoading` with `State` mapped to `status`, and the other sizes into `Loading` ([Carbon Loading Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Loading/Loading.figma.ts)). One Figma set for two code components is a departure the mapping has to carry; the toolkit splits them where the code does.
+- [moderate] Carbon draws `Loading` and `InlineLoading` as one Figma component whose `Size` axis has an `Inline` value; Code Connect turns `Size=Inline` into `InlineLoading` with `State` mapped to `status`, and the other sizes into `Loading` ([Carbon Loading Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Loading/Loading.figma.ts)). One Figma set for two code components is a departure the mapping has to carry; a kit that draws what its code renders splits them where the code does (figma-standard rule 51).
 - [weak] MUI's numeric `size` has no Figma counterpart beyond sample frames; where a project uses it, the sizes it uses are named here.
 
 **Check**

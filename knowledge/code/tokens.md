@@ -6,7 +6,7 @@ How design tokens reach a stylesheet and how themes and modes switch them: the t
 
 **What good looks like**
 - [moderate] **Components consume semantic tokens only.** A primitive in a component stylesheet is the defect: it is how a system ends up with fourteen greys and no way to theme any of them.
-- [weak] A component tier exists only where a component exposes a knob.
+- [required] A component tier exists only where a component exposes a knob a caller or a variant re-points (code-standard rule 38).
 - [required] Every token is named by its design-file path (code-standard rule 52), so a designer and an engineer search for the same word.
 
 **How**
@@ -14,11 +14,11 @@ How design tokens reach a stylesheet and how themes and modes switch them: the t
 ```
 primitive   --blue-500: oklch(…);                       a value; names nothing about use
 semantic    --colour-text-link: var(--blue-500);        a decision; names the use
-component   --button-bg: var(--colour-action-primary);  a knob; optional
+component   --button-bg: var(--colour-action-primary);  a knob
 ```
 
 - [moderate] Primer's model is the same: base tokens "map directly to a raw value", functional tokens "represent global UI patterns", and component tokens "should only be used in component CSS" ([Primer, token names](https://primer.style/product/primitives/token-names/)).
-- [required] The component tier is an indirection point: `--button-bg` lets a variant re-point one property without a new selector (code-standard rule 38). Most projects are better off without it at the start; add it when a component needs a knob, not because the tier exists.
+- [required] The component tier is an indirection point: `--button-bg` lets a variant re-point one property without a new selector (code-standard rule 38); it is added when a component needs a knob, not because the tier exists.
 - [moderate] **Fixed colours are named apart from the themed ones.** Spectrum's palette keeps `white`, `black`, `transparent-black-*`, `transparent-white-*` and a few `static-*` hue steps with one value, in the same file as hue steps that carry a value per theme ([spectrum-tokens 13.0.0 `color-palette.json`](https://cdn.jsdelivr.net/npm/@adobe/spectrum-tokens@13.0.0/src/color-palette.json)); Radix ships `black-a` and `white-a`, identical in light and dark, as files of their own beside its themed scales ([Radix Colors](https://cdn.jsdelivr.net/npm/@radix-ui/colors@3.0.0/black-alpha.css)). Primer has no fixed tier: every primitive collection in its Figma export has one mode, one collection per theme (`base/color/light`, `base/color/dark`), and only the semantic `mode` collection switches ([Primer `dist/figma/figma.json`](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/figma/figma.json)). Spectrum mixes fixed and themed values in one set; Radix separates them; Primer has none.
 - [moderate] **White and black do not flip.** Spectrum's `white` and `black` are fixed; Primer's `base/color/black` is a dark ink in both themes (`#1f2328` in [light](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/figma/scales/light.json), `#010409` in [dark](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/figma/scales/dark.json)) and its `fgColor-onEmphasis` is `#ffffff` in both ([`light.css`](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/light.css), [`dark.css`](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/dark.css)). A colour that inverts with the mode is a semantic role (an `inverse`).
 - [weak] Where the design file hides primitives from publishing, a component physically cannot bind one there; the code holds the same line by convention and by review.
@@ -37,7 +37,7 @@ component   --button-bg: var(--colour-action-primary);  a knob; optional
 - *Script:* `tools/css-lint/lint.mjs` *literal is a token* (code-standard rules 22 and 46) catches a literal equal to a token; could flag a primitive-tier `var()` in a component sheet.
 - *Judgement:* Does each `var()` in a component name a use or a value?
 
-**Sources:** [Primer, token names](https://primer.style/product/primitives/token-names/); [DTCG Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/). The sources agree on three tiers; the toolkit makes the component tier optional.
+**Sources:** [Primer, token names](https://primer.style/product/primitives/token-names/); [DTCG Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/). The sources agree on three tiers; the component tier as a knob is code-standard rule 38.
 
 ## Component token names, worked through
 
@@ -227,32 +227,27 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 - *Script:* `tools/css-lint/lint.mjs` *native controls follow the theme* (a dark tier comes with `color-scheme`, generated tokens included); `tools/tokens/check.mjs` proves the theme files are the build's. Parity runs each scheme a project ships (code-standard rule 35).
 - *Judgement:* Does any component sheet mention a theme?
 
-**Sources:** MDN and web.dev as linked. Sources differ on `light-dark()` as the primary mechanism; the toolkit keeps token re-pointing because one mechanism covers colours, shadows and lengths alike.
+**Sources:** MDN and web.dev as linked. Sources differ on `light-dark()` as the primary mechanism; code-standard rule 53 keeps token re-pointing, one mechanism for colours, shadows and lengths alike.
 
 ## What not to tokenise
 
 **What good looks like**
-- [weak] A token exists because a value is reused, themed or shared with the design file.
-- [weak] A value used once, in one place, stays a literal with its reason (beyond code-standard rule 22).
+- [weak] No source sets when a value earns a token of its own; what holds is the design's binding, below.
 
 **How**
-- [weak] Do not tokenise: a value used once, the width of one illustration, `0`, `100%`, `1fr`, `auto`, or a keyword.
-- [weak] The cost of a token is that a reader must jump to find its value; reuse and theming repay that, nothing else does.
 - [required] Where the design binds a value, use its token even if it appears once: the binding is the shared vocabulary (code-standard rule 22 *literal is a token*).
 
 **Cases**
-- `--hero-illustration-width: 37rem` used by one rule → a literal with its reason.
-- `--zero: 0` → delete; `0` has no unit to vary and no theme.
 - A max height the design never draws → a literal with a comment saying the design has no value for it (code-standard rule 22).
 
 **Accessibility**
 - [weak] No criterion bears directly.
 
 **Check**
-- *Script:* could flag a custom property read exactly once in the codebase that the design file does not define.
+- *Script:* `tools/css-lint/lint.mjs` *literal is a token* (code-standard rule 22).
 - *Judgement:* Would anyone ever change this value without changing the rule that uses it?
 
-**Sources:** commentary from the toolkit's practice; no primary source sets a threshold.
+**Sources:** code-standard rule 22; no primary source sets a threshold.
 
 ## Literals with reasons
 
@@ -340,7 +335,7 @@ ds-card[disabled] > * { --dim: 1; }
 **What good looks like**
 - [strong] The primitive scale is named by number, never by t-shirt size. Carbon v11 removed `$spacing-4xs`…`$spacing-3xl` and kept `$spacing-01`…`13` ([v11 migration](https://raw.githubusercontent.com/carbon-design-system/carbon/main/docs/migration/v11.md)); Orbit v16 moved `spaceSmall`, `spaceMedium` to `space300`, `space400` to open in-between steps ([v16 guide](https://github.com/kiwicom/orbit/blob/master/docs/src/documentation/05-development/04-migration-guides/12-v16.mdx)); TDesign deprecated `@spacer` for `--td-size-1`…`16` ([`_size.less`](https://raw.githubusercontent.com/Tencent/tdesign-common/develop/style/web/theme/_size.less)). The base and the proximity rules are [visual: spacing scale and proximity](../ui/design/visual.md#spacing-scale-and-proximity).
 - [moderate] A role layer on top names what a space does: `inset` (padding inside a container), `stack` (vertical gap), `inline` (horizontal gap), `layout` (page margins, region gaps), each aliasing a primitive. Primer's `stack.padding.*` and `stack.gap.*` (8/16/24) ([functional size](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5)), Fluent's `spacingHorizontal*` and `spacingVertical*` ([spacings.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/tokens/src/global/spacings.ts)), Ant's `padding*` and `margin*` aliases ([customize theme](https://ant.design/docs/react/customize-theme)); Atlassian added experimental `space.gap.*` and `space.inset.*` in `@atlaskit/tokens` 20.12 ([tokens raw](https://unpkg.com/@atlaskit/tokens/dist/es2019/artifacts/tokens-raw/atlassian-spacing.js)). The words come from [Curtis, Space in Design Systems](https://nathanacurtis.substack.com/p/space-in-design-systems-188bcbae0d62) (commentary).
-- [strong] The systems that ship role tokens re-point them per mode while the primitives hold: SLDS compact remaps `VAR_SPACING_MEDIUM` 16→8px and splits its horizontal and vertical roles ([SLDS 1 tokens](https://v1.lightningdesignsystem.com/design-tokens/)); Ant's compact lowers `sizeStep` 4→2, so `sizeLG` 24→16 and every `padding*` alias follows ([genSizeMapToken](https://raw.githubusercontent.com/ant-design/ant-design/master/components/theme/themes/shared/genSizeMapToken.ts)); Primer's `controlStack.medium.gap.auto` is 8px in its fine-pointer file and 12px in its coarse one ([functional size](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5)); Polaris `light-mobile` sets `space-card-gap` 16→8px ([`space.ts`](https://raw.githubusercontent.com/Shopify/polaris/main/polaris-tokens/src/themes/base/space.ts)). Carbon removed `$layout-01`…`07`, which only repeated spacing values and changed with no mode ([issue #5602](https://github.com/carbon-design-system/carbon/issues/5602)). How the toolkit switches density is [density](#density).
+- [strong] The systems that ship role tokens re-point them per mode while the primitives hold: SLDS compact remaps `VAR_SPACING_MEDIUM` 16→8px and splits its horizontal and vertical roles ([SLDS 1 tokens](https://v1.lightningdesignsystem.com/design-tokens/)); Ant's compact lowers `sizeStep` 4→2, so `sizeLG` 24→16 and every `padding*` alias follows ([genSizeMapToken](https://raw.githubusercontent.com/ant-design/ant-design/master/components/theme/themes/shared/genSizeMapToken.ts)); Primer's `controlStack.medium.gap.auto` is 8px in its fine-pointer file and 12px in its coarse one ([functional size](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5)); Polaris `light-mobile` sets `space-card-gap` 16→8px ([`space.ts`](https://raw.githubusercontent.com/Shopify/polaris/main/polaris-tokens/src/themes/base/space.ts)). Carbon removed `$layout-01`…`07`, which only repeated spacing values and changed with no mode ([issue #5602](https://github.com/carbon-design-system/carbon/issues/5602)). How density switches is [density](#density).
 - [moderate] Control height is a token apart from the spacing scale: Primer `control.medium.size` 32px, Spectrum `component-height-100` 32px desktop and 40px mobile ([`layout.json`](https://raw.githubusercontent.com/adobe/spectrum-design-data/main/packages/tokens/src/layout.json)), Carbon `layout.size.height` ([button mixins](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/styles/scss/components/button/_mixins.scss)).
 - [weak] Components own no outer margin; the parent sets the gap, as [visual: spacing scale and proximity](../ui/design/visual.md#spacing-scale-and-proximity) already asks. Every Layout's Stack argues it ([every-layout.dev](https://every-layout.dev/layouts/stack/), commentary); Primer's `Stack` takes the gap as a prop ([Stack](https://primer.style/product/components/stack/)).
 
@@ -388,7 +383,8 @@ ds-card[disabled] > * { --dim: 1; }
 [data-density="compact"] { --control-height: 2rem; --row-gap: var(--space-2); }
 ```
 
-- [weak] Systems differ on the default: React Spectrum picks its medium or large scale "according to the device type (e.g. touch vs mouse input)" ([React Spectrum Provider](https://react-spectrum.adobe.com/react-spectrum/Provider.html)), which CSS can read as `@media (pointer: coarse)` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/pointer)). The toolkit sets density by attribute only, so there is one mechanism; a project that wants a touch default records it as a ruling.
+- [weak] Systems differ on the default: React Spectrum picks its medium or large scale "according to the device type (e.g. touch vs mouse input)" ([React Spectrum Provider](https://react-spectrum.adobe.com/react-spectrum/Provider.html)), which CSS can read as `@media (pointer: coarse)` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/pointer)).
+- [required] Density is a mode, so it switches by attribute, one mechanism (code-standard rule 53); a project that wants a touch default records it as a ruling.
 - [weak] Where density applies, and where it never should, is [visual: density modes](../ui/design/visual.md#density-modes).
 
 **Cases**
@@ -403,4 +399,4 @@ ds-card[disabled] > * { --dim: 1; }
 - *Script:* tools/parity/pages.mjs could measure target sizes in each density mode; could flag a component rule keyed on a density attribute.
 - *Judgement:* Does compact remove space, or remove something a reader needs?
 
-**Sources:** React Spectrum and MDN as linked; WCAG 2.2. Sources differ on whether density follows the pointer; the toolkit keeps it an explicit mode.
+**Sources:** React Spectrum and MDN as linked; WCAG 2.2. Sources differ on whether density follows the pointer; code-standard rule 53 keeps it an explicit mode.

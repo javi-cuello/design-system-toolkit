@@ -23,7 +23,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 - [strong] **Modal** when the person must decide or supply something before continuing, or must not miss an urgent consequence of their own action. NN/g's [modal and nonmodal dialogs](https://www.nngroup.com/articles/modal-nonmodal-dialog/): use modals "for important warnings", to request information "critical to continuing the current process", and avoid them for "nonessential information" and "complex decision making that requires additional sources of information unavailable in the modal".
 - [moderate] **Non-modal** when the person needs the page while the surface is open (find and replace, a comparison). Carbon: "Use when a user needs to compare or refer to information in the main page."
 - [strong] **Page** when the task has steps, needs navigation inside it, or should have its own address. Primer's [dialog](https://primer.style/product/components/dialog/guidelines/) on deep linking: "it is often more advisable to avoid using a Dialog altogether" and create a dedicated page. Apple's [modality](https://developer.apple.com/design/human-interface-guidelines/modality): avoid "a modal experience that feels like an app within your app".
-- [required] **An item's detail or an explanation** (a row's checks, "what the levels mean") opens in a dialog or a side panel, not in place: design-standard rule 13 is the toolkit's choice between the inline and overlay rows above.
+- [required] **An item's detail or an explanation** (a row's checks, "what the levels mean") opens in a dialog or a side panel, not in place (design-standard rule 13 picks this between the inline and overlay rows above).
 - [moderate] **Never for news.** System messages go to toasts or banners ([feedback: choosing the feedback](feedback.md#choosing-the-feedback)); Carbon reserves modals for critical information "immediately related to their task".
 
 **Cases**
@@ -49,7 +49,7 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 - *Script* could: on load, assert no `dialog[open]`, open popover or overlay exists before any interaction; list overlays that opened after a scroll or timer.
 - *Judgement*: is this the least interrupting surface that does the job, and would the task be better as a page?
 
-**Sources.** Carbon, NN/g, Apple and Primer agree on modals for short, critical, user-initiated tasks and pages for anything larger. They differ on how much a dialog may hold: Primer treats dialogs as a way to "add responsive support, and avoid deeper navigations" for single-context features, while Carbon warns against data tables, tabs and accordions inside one. The toolkit follows Carbon's stricter line: a dialog holds one task.
+**Sources.** Carbon, NN/g, Apple and Primer agree on modals for short, critical, user-initiated tasks and pages for anything larger. They differ on how much a dialog may hold: Primer treats dialogs as a way to "add responsive support, and avoid deeper navigations" for single-context features, while Carbon warns against data tables, tabs and accordions inside one. Carbon's stricter line is the one taken: a dialog holds one task.
 
 ## A modal or a page of its own
 
@@ -98,4 +98,4 @@ Surfaces that appear over or beside a page: when to use a modal dialog, an inlin
 - *Script* could: flag a `dialog` holding a `tablist`, a `nav`, more than one `form` step or a body that scrolls well past its own height; flag a dialog opened from URL parameters that Back does not close.
 - *Judgement*: would anyone link to, bookmark or press Back into this task? If so, it is a page.
 
-**Sources.** NN/g, Carbon, Primer and Atlassian agree: short single-step tasks in a modal, multi-step, long or reference-heavy tasks on a page. GOV.UK goes furthest and treats pages as the default. Primer allows opening a dialog from URL parameters; the toolkit makes any task that needs an address a page, following Primer's own advice for links from outside and GOV.UK's practice, because Back and the title then work without imitation.
+**Sources.** NN/g, Carbon, Primer and Atlassian agree: short single-step tasks in a modal, multi-step, long or reference-heavy tasks on a page. GOV.UK goes furthest and treats pages as the default. Primer allows opening a dialog from URL parameters; a task that needs an address is a page, by Primer's own advice for links from outside and GOV.UK's practice, because Back and the title then work without imitation.

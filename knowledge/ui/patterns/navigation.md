@@ -82,7 +82,7 @@ One test sorts most decisions here: **does activating it change the address?** I
 - *Script:* could check that the row has 26 items, that every `a[href^="#letter-"]` resolves to a heading, that every letter with no heading has no `href`, that no `a[href][aria-disabled]` exists, and that every "see" entry links to an entry on the page.
 - *Judgement:* do readers know the names this index is sorted by? Which synonyms do they search for that the index lacks?
 
-**Sources:** NN/g as linked; MDN for `aria-disabled`. GOV.UK, Carbon and Atlassian publish no A–Z index pattern. NN/g's own articles pull two ways: alphabetical order "must (mostly) die" for menus and categories, yet it works for an index of known names. The toolkit uses an A–Z index only for known-item lookup, with synonyms to cover the names readers bring.
+**Sources:** NN/g as linked; MDN for `aria-disabled`. GOV.UK, Carbon and Atlassian publish no A–Z index pattern. NN/g's own articles pull two ways: alphabetical order "must (mostly) die" for menus and categories, yet it works for an index of known names. Read together, they put an A–Z index at known-item lookup only, with synonyms for the names readers bring (NN/g's finding that visitors did not know the official names).
 
 ## Skip links
 

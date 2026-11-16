@@ -5,7 +5,8 @@ How a long list is split and walked: whether to page it, load more on request or
 ## Choosing pagination, load more or infinite scroll
 
 **Use when / don't use**
-- [moderate] **Pagination** when readers look for something specific, compare items, return to a place or share it: every page has an address, Back returns to it and the footer is reachable. NN/g suits it to "goal-driven" listings, where each page is a manageable set the reader can refind ([NN/g infinite scrolling, Neusesser 2022](https://www.nngroup.com/articles/infinite-scrolling-tips/)). This is the toolkit's default for tools, dashboards and documentation.
+- [moderate] **Pagination** when readers look for something specific, compare items, return to a place or share it: every page has an address, Back returns to it and the footer is reachable. NN/g suits it to "goal-driven" listings, where each page is a manageable set the reader can refind ([NN/g infinite scrolling, Neusesser 2022](https://www.nngroup.com/articles/infinite-scrolling-tips/)).
+- [moderate] **No one default.** NN/g says no option is "overall superior" ([NN/g](https://www.nngroup.com/articles/infinite-scrolling-tips/)), so the task decides per list, and the product records which it takes for each kind.
 - [moderate] **Load more** when most readers need only the first batch and the rest is browsed: it keeps the footer reachable and leaves the reader in charge, at the cost of a click per batch ([NN/g](https://www.nngroup.com/articles/infinite-scrolling-tips/)).
 - [strong] **Infinite scroll** only for a feed of similar items browsed with no particular goal; NN/g advises against it when readers need to "Find something specific" or "Compare items in a long list" ([NN/g](https://www.nngroup.com/articles/infinite-scrolling-tips/)). GOV.UK says to avoid it because it "causes problems for keyboard users" ([GOV.UK pagination](https://design-system.service.gov.uk/components/pagination/)). Friedman's own advice ends at the same place: when in doubt, page ([Smashing, Friedman 2022](https://www.smashingmagazine.com/2022/03/designing-better-infinite-scroll/), commentary).
 - [moderate] **No paging at all** when the whole list loads fast and stays usable: GOV.UK splits content only when it improves performance or usability, and NN/g says linear content such as an article should "almost never be broken up" ([NN/g, View All, Nielsen](https://www.nngroup.com/articles/item-list-view-all/)).
@@ -37,7 +38,7 @@ How a long list is split and walked: whether to page it, load more on request or
 - *Script:* could flag a list that loads on scroll with no paged or load-more fallback, and a list whose footer cannot be reached by tabbing.
 - *Judgement:* What is the reader's task with this list: find, browse or pass time? Is it written down?
 
-**Sources:** NN/g, GOV.UK, Carbon and Friedman as linked. NN/g says no option is "overall superior"; the toolkit defaults to pagination for tools and docs because their lists are worked, linked and returned to, and allows load more for galleries.
+**Sources:** NN/g, GOV.UK, Carbon and Friedman as linked. NN/g says no option is "overall superior".
 
 ## Pagination anatomy
 
@@ -76,7 +77,7 @@ How a long list is split and walked: whether to page it, load more on request or
 - *Script:* could assert one `aria-current` per pager, no Previous on page 1 and no Next on the last, every page control an `a[href]`, no pager when there is one page, the pager's bounding box the same on page 1 and page 9, and its height one row at 320px.
 - *Judgement:* Does the reader need to reach arbitrary pages (numbers) or only the next one (Previous and Next)?
 
-**Sources:** GOV.UK, Atlassian, Primer, Carbon and MDN as linked. They differ on how many numbers to show (Atlassian up to 14, Primer five around and two at the ends, GOV.UK at least one either side); the toolkit takes GOV.UK's minimum and adds numbers only while the pager stays one row.
+**Sources:** GOV.UK, Atlassian, Primer, Carbon and MDN as linked. They differ on how many numbers to show (Atlassian up to 14, Primer five around and two at the ends, GOV.UK at least one either side); GOV.UK's minimum is the floor, and the others show more.
 
 ## Page size and items per page
 
@@ -113,7 +114,7 @@ How a long list is split and walked: whether to page it, load more on request or
 - *Script:* could assert the page size is a query parameter, survives a reload, and that changing it keeps the first visible item on screen.
 - *Judgement:* Does anyone need a different size, or is the default right for nearly everyone?
 
-**Sources:** NN/g and Carbon as linked; NN/g prefers one default plus View all to a selector, and the toolkit follows it for lists and keeps Carbon's selector for data tables only.
+**Sources:** NN/g and Carbon as linked; NN/g prefers one default plus View all to a selector, so lists follow NN/g and data tables keep Carbon's selector.
 
 ## Range, total and jump to page
 
@@ -148,7 +149,7 @@ How a long list is split and walked: whether to page it, load more on request or
 - *Script:* could assert the title contains the page number, the range equals the rows shown, the total equals the unpaged count, and a jump beyond the last page is refused with a message.
 - *Judgement:* Would a filter serve better than jumping by number?
 
-**Sources:** Carbon and GOV.UK as linked; they agree on showing position, and the toolkit adds the total wherever it can be counted, per design-standard rule 11.
+**Sources:** Carbon and GOV.UK as linked; they agree on showing position, and the total wherever it can be counted is design-standard rule 11.
 
 ## Load more
 
@@ -184,13 +185,13 @@ How a long list is split and walked: whether to page it, load more on request or
 - *Script:* could press Load more and assert focus is on the first new item, the address reflects the count, a reload restores the depth, and the button is gone when the list is complete.
 - *Judgement:* Do readers browse this list, or look for something in it?
 
-**Sources:** Friedman and NN/g ([infinite scrolling](https://www.nngroup.com/articles/infinite-scrolling-tips/)) as linked; both treat load more as the middle ground, which the toolkit accepts for browsed lists.
+**Sources:** Friedman and NN/g ([infinite scrolling](https://www.nngroup.com/articles/infinite-scrolling-tips/)) as linked; both treat load more as the middle ground, which holds for browsed lists.
 
 ## Infinite scroll
 
 **Use when / don't use**
 - [moderate] Only for a feed of similar items browsed without a goal ([NN/g](https://www.nngroup.com/articles/infinite-scrolling-tips/)); never in a tool, docs site or searched list.
-- [weak] If a product owner insists elsewhere, the toolkit's answer is load more, and this section says what infinite scroll must carry if it ships anyway.
+- [weak] If a product owner insists elsewhere, the sources' middle ground is load more, and this section says what infinite scroll must carry if it ships anyway.
 
 **How**
 - [moderate] **Keep the footer reachable:** after a few automatic batches, switch to a Load more button, and give a way to reach the footer without racing the loader ([Smashing, Friedman 2022](https://www.smashingmagazine.com/2022/03/designing-better-infinite-scroll/), commentary; NN/g).
@@ -220,7 +221,7 @@ How a long list is split and walked: whether to page it, load more on request or
 - *Script:* could scroll the feed and assert the footer becomes reachable by keyboard, the history length does not grow per batch, `aria-busy` returns to false, and Back restores the item in view.
 - *Judgement:* Is this truly a goal-free feed? If anyone looks for something in it, page it.
 
-**Sources:** NN/g, Friedman, GOV.UK and APG as linked. GOV.UK says avoid; NN/g and Friedman give conditions; the toolkit avoids it in everything it builds and keeps the conditions for a feed.
+**Sources:** NN/g, Friedman, GOV.UK and APG as linked. GOV.UK says avoid; NN/g and Friedman give conditions; this page takes GOV.UK's avoidance and NN/g's conditions for a feed.
 
 ## Paging with filters, sort and the address
 

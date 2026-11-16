@@ -41,7 +41,7 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 - *Script:* could check that the sign-in page has both fields in one form, with `autocomplete` tokens `username` and `current-password`; that no `paste` listener calls `preventDefault`; that the toggle has a name and a state; that the error text names neither field alone.
 - *Judgement:* Does the product need accounts, and is single sign-on routed without costing everyone else a page?
 
-**Sources:** Friedman, GOV.UK, NN/g, MDN and W3C as linked. NN/g's 2009 article argues for showing passwords by default; the toolkit masks by default with a visible toggle, which is what WCAG's understanding document and GOV.UK practice assume.
+**Sources:** Friedman, GOV.UK, NN/g, MDN and W3C as linked. NN/g's 2009 article argues for showing passwords by default; WCAG's understanding document and GOV.UK practice assume a masked field with a visible toggle, which is the toggle item above.
 
 ## Passwords and creating an account
 
@@ -222,4 +222,4 @@ How a person proves who they are and keeps the session they opened: the sign-in 
 - *Script:* could sign in two test accounts and assert both are listed with distinct email text, the active one is checked, and each sign-out action ends only what its label says.
 - *Judgement:* Could someone act as the wrong account without noticing?
 
-**Sources:** GitHub, Google, AWS, Figma and Linear as linked. Products disagree on per-tab versus global accounts and on the default sign-out scope; the toolkit asks for the account to be visible and the scope to be labelled.
+**Sources:** GitHub, Google, AWS, Figma and Linear as linked. Products disagree on per-tab versus global accounts and on the default sign-out scope; Google and GitHub both label the scope, which is the item above.

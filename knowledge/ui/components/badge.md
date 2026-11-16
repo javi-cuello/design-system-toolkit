@@ -48,7 +48,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - *Script* could: collect every badge's text on a site and flag a text with two colours or a colour with two meanings; flag a badge with no text node and no accessible name.
 - *Judgement*: is the vocabulary one list, and does each status say something the reader acts on?
 
-**Sources.** Carbon asks for three cues where Atlassian asks for text and an optional icon; the toolkit requires text always and an icon at density.
+**Sources.** Carbon asks for three cues where Atlassian asks for text and an optional icon; both keep the text, which WCAG 1.4.1 needs where colour is the other cue.
 
 ## In Figma
 
@@ -76,7 +76,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - *Script*: figma-components-audit runs the rules cited above; a token-vocabulary check compares the tone values with the status token names (figma-standard rule 22).
 - *Judgement*: does `Feedback` hold the status tokens' tones, and no status of its own?
 
-**Sources.** Primer, Atlassian, MUI and SDS as linked. They agree on the parts; their tone lists differ in length, which is why the toolkit fixes the axis at the status tokens' tones, never one value per status.
+**Sources.** Primer, Atlassian, MUI and SDS as linked. They agree on the parts; their tone lists differ in length, so the axis holds the project's status tokens' tones, never one value per status (figma-standard rule 22; design-standard rule 15).
 
 ## Alignment with code
 
@@ -115,7 +115,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 ## In code
 
 **Element**
-- [moderate] Inline text, not a control: Primer's `Label` renders a `span`, SDS's `Tag` a `span`, and the toolkit a visual custom element with no script ([*Status badges and pills*](#status-badges-and-pills), Build; code-standard rule 8).
+- [moderate] Inline text, not a control: Primer's `Label` renders a `span`, SDS's `Tag` a `span`, and code-standard rule 8 makes it a visual custom element with no script ([*Status badges and pills*](#status-badges-and-pills), Build).
 - [weak] A count read aloud says what it counts: Primer's `CounterLabel` hides the visible number with `aria-hidden` and repeats it in a visually hidden "(n)".
 
 **Props**

@@ -1,5 +1,6 @@
 # History — design-standard
 
+- 1.7.0 (2026-11-16): rules 16–20 by decree, from the design, pattern and profile pages (toolkit-standard §D 21): one size step; an action names its scope; nothing changed silently; side by side then stacked; one documentation skeleton.
 - 1.6.0 (2026-11-16): rule 15 by decree, from the badge page (toolkit-standard §D 21): a status has one name, one colour role and one icon across the product.
 - 1.5.0 (2026-11-16): rule 14: a `weak` knowledge item is not used, and a `contested` one is decided and reported (toolkit-standard 2.41.0 §D 21).
 - 1.4.0 (2026-11-11): rule 14 follows each knowledge item as far as its weight carries (toolkit-standard §D 21); a weak or contested one is a starting point, kept or changed in the report.

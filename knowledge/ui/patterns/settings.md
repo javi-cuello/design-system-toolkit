@@ -1,12 +1,12 @@
 # Settings and preferences: settings pages, saving, language, time zone and theme
 
-How a product lets people set it up for themselves: how a settings area is structured, how a change is saved, and the three preferences nearly every product the toolkit builds offers (language, time zone, appearance). It serves the principles *people in control, mistakes forgiven* (a change is clearly saved or clearly not), *consistent, not uniform* (one save model per form) and *for everyone, in any context* (a language is offered in its own words, a time in the reader's own zone). No design-standard rule is admitted for settings yet. Whether a change saves itself or waits for a button is decided in [interaction: saving, explicit or automatic](../design/interaction.md#saving-explicit-or-automatic); fields and their errors are [forms](forms.md)'s; a switch, radio group and select are [selection](selection.md)'s; the left-hand list of sections is [sidebars: navigation sidebar](sidebars.md#navigation-sidebar); theming as a visual decision is [visual: theming and dark mode](../design/visual.md#theming-and-dark-mode); language and direction in code are [code: language and direction](../../code/i18n.md#language-and-direction).
+How a product lets people set it up for themselves: how a settings area is structured, how a change is saved, and three common preferences (language, time zone, appearance). It serves the principles *people in control, mistakes forgiven* (a change is clearly saved or clearly not), *consistent, not uniform* (one save model per form) and *for everyone, in any context* (a language is offered in its own words, a time in the reader's own zone). No design-standard rule is admitted for settings yet. Whether a change saves itself or waits for a button is decided in [interaction: saving, explicit or automatic](../design/interaction.md#saving-explicit-or-automatic); fields and their errors are [forms](forms.md)'s; a switch, radio group and select are [selection](selection.md)'s; the left-hand list of sections is [sidebars: navigation sidebar](sidebars.md#navigation-sidebar); theming as a visual decision is [visual: theming and dark mode](../design/visual.md#theming-and-dark-mode); language and direction in code are [code: language and direction](../../code/i18n.md#language-and-direction).
 
 ## Settings pages
 
 **Use when / don't use**
 - [weak] Use a settings area when a product has preferences that persist past one session: account, notifications, appearance, integrations.
-- [weak] Use one page of grouped sections while it fits; past about five groups, a side list of sections with a page each.
+- [weak] Use one page of grouped sections while it fits; once it does not, a side list of sections with a page each.
 - [weak] Don't scatter a setting across several places, and don't put a setting where only its first use can reach it; a preference a person changes later lives in settings even if it was first asked elsewhere.
 
 **How**
@@ -38,7 +38,7 @@ How a product lets people set it up for themselves: how a settings area is struc
 - *Script:* could check every settings group has a heading, every radio set a `fieldset` with a `legend`, the side list exactly one `aria-current`, and every destructive button opens a dialog.
 - *Judgement:* Would a person looking for this setting look in this group?
 
-**Sources:** Shopify (Polaris) and Primer as linked. Neither sets a count for when a side list replaces one page; the toolkit's five groups is a starting point.
+**Sources:** Shopify (Polaris) and Primer as linked. Neither sets a count for when a side list replaces one page, so this section gives none.
 
 ## Saving settings
 

@@ -43,7 +43,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - *Script:* could check that a form's fields share one left edge at each width (no columns), that every group of radios, checkboxes or multi-part fields sits in a `fieldset` with a `legend`, that no `type="reset"` button exists, and that a question page has one `h1` that is the field's label or legend.
 - *Judgement:* Does every field have a reason, and is the one-page or one-thing choice stated?
 
-**Sources:** GOV.UK and NN/g as linked; [Adam Silver](https://adamsilver.io/blog/form-design-from-zero-to-hero-all-in-one-blog-post/) (practitioner commentary) takes the same line. GOV.UK presents one thing per page as a starting point, and so does the toolkit.
+**Sources:** GOV.UK and NN/g as linked; [Adam Silver](https://adamsilver.io/blog/form-design-from-zero-to-hero-all-in-one-blog-post/) (practitioner commentary) takes the same line. GOV.UK presents one thing per page as a starting point, and this page takes it from GOV.UK.
 
 ## Labels
 
@@ -123,7 +123,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - *Script:* could check that every field marked with "*" carries `required` and the reverse, that a page using "*" explains it before the first field, that a page with one field uses no asterisk, and that every label ending "(optional)" is on a field without `required`.
 - *Judgement:* Has every optional field earned its place?
 
-**Sources:** GOV.UK and Silver mark optional only; Baymard and NN/g mark required, and Baymard both. The common advice to "mark whichever is the minority" is practitioner commentary that no tested source here supports. The toolkit goes by layout: GOV.UK's one-question pages make optionality obvious from the page, and Baymard's evidence comes from pages of many fields.
+**Sources:** GOV.UK and Silver mark optional only; Baymard and NN/g mark required, and Baymard both. The common advice to "mark whichever is the minority" is practitioner commentary that no tested source here supports. Deciding by layout applies each source where its evidence comes from: GOV.UK's one-question pages make optionality obvious from the page, and Baymard's evidence comes from pages of many fields.
 
 ## Help and hint text
 
@@ -133,7 +133,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - [weak] Long explanations go in the page, before the question.
 
 **How**
-- [contested] **Where.** Under the label, above the field, as GOV.UK does; it is read before the person types and stays while they do. SDS and Primer place it after the control instead ([label: *Where the hint sits*](../components/label.md#overview)); the toolkit keeps it above, so a sighted reader meets it before the field, as a screen reader does through `aria-describedby`. Never in a placeholder ([GOV.UK](https://design-system.service.gov.uk/components/text-input/): no placeholder "for hints or examples").
+- [contested] **Where.** Under the label, above the field, as GOV.UK does; it is read before the person types and stays while they do. SDS and Primer place it after the control instead ([label: *Where the hint sits*](../components/label.md#overview)), hence *contested*. Never in a placeholder ([GOV.UK](https://design-system.service.gov.uk/components/text-input/): no placeholder "for hints or examples").
 - [weak] **Length.** "Keep hint text to a single short sentence, without any full stops" ([GOV.UK](https://design-system.service.gov.uk/components/text-input/)). More than that is body text above the label ([GOV.UK question pages](https://design-system.service.gov.uk/patterns/question-pages/)).
 - [moderate] **When.** Add a hint for a format ("For example, QQ 12 34 56 C"), a constraint ("Must be 12 characters or more"), or a reason ("We'll only use this to send your receipt") ([Silver](https://adamsilver.io/blog/form-design-from-zero-to-hero-all-in-one-blog-post/): explain "why you're asking"). Leave it out when the label is enough.
 - [moderate] **Rules up front.** State every rule a value must meet before the person types, not first in an error ([NN/g](https://www.nngroup.com/articles/web-form-design/): "state the exact instructions").
@@ -150,7 +150,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 
 **Build**
 - [required] The hint is an element with an `id` listed in the control's `aria-describedby`; never inside the `label`, a `title` or a `placeholder` (code-standard rule 15).
-- [contested] In the DOM the hint follows the visual side: between the `label` and the control where it is drawn above, as the toolkit's default is (*Where*, above), and listed first in `aria-describedby`, the error's `id` after it.
+- [contested] In the DOM the hint follows the visual side: between the `label` and the control where it is drawn above, as GOV.UK draws it (*Where*, above), and listed first in `aria-describedby`, the error's `id` after it.
 - [weak] On a group, `aria-describedby` goes on the `fieldset`.
 - [weak] A toggletip is a `button` that shows its text on click, built as [accessibility: tooltips and toggletips](../../code/accessibility.md#tooltips-and-toggletips) says.
 - [weak] The hint's markup sits with the rest in [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup); the message after it in [*Form errors and validation*](../../code/html-semantics.md#form-errors-and-validation).
@@ -437,7 +437,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 
 **How**
 - [weak] **Task list.** Each task with a status; people move on only when every task reads "Completed" ([GOV.UK](https://design-system.service.gov.uk/components/task-list/)). Statuses carry text, not colour alone.
-- [weak] **Saving.** Save each page's answers on Continue; offer a "Save and come back later" link on every page of a long form, and say how to return (a sign-in, or a link sent by email).
+- [required] **Saving.** Save each page's answers on Continue; offer a "Save and come back later" link on every page of a long form, and say how to return (a sign-in, or a link sent by email) (design-standard rule 18: a long form keeps its progress).
 - [weak] **Progress.** On a fixed-order form, a step count ("Question 3 of 8") only when the count is stable; branching makes a count lie.
 - [required] **Timeouts.** Warn before a session ends and let the person extend it; never discard saved answers on expiry (WCAG 2.2.1).
 
@@ -460,7 +460,7 @@ How a form is structured, labelled, marked, validated, corrected and submitted, 
 - *Script:* could check that task statuses carry text, and that answers persist across a reload mid-form.
 - *Judgement:* Does this form need more than one sitting, and is its order fixed?
 
-**Sources:** GOV.UK as linked. GOV.UK has no published save-and-return pattern; the advice above is its task-list guidance plus the toolkit's commentary.
+**Sources:** GOV.UK as linked. GOV.UK has no published save-and-return pattern; the advice above is its task-list guidance plus design-standard rule 18.
 
 ## Autofill and redundant entry
 

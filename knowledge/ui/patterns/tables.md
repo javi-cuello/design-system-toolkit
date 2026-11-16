@@ -17,7 +17,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **How**
 - [weak] Ask "will someone read down a column?" If yes, it is a table. If every row would show different attributes, it is a list or cards.
 - [weak] Name the task the table serves in the design's notes; it decides the default sort, the identifier column and whether rows are selectable.
-- [weak] A table of two columns where the first is a label and the second a value is a description list (`dl`), not a table.
+- [required] A table of two columns where the first is a label and the second a value is a description list (`dl`), not a table: HTML's `dl` "represents an association list consisting of zero or more name-value groups" ([WHATWG, the `dl` element](https://html.spec.whatwg.org/multipage/grouping-content.html#the-dl-element)).
 - [weak] Then ask what a reader learns from each column at a glance. When the answer for most columns is "the same thing in every row", the table is reporting a state of the whole set, not differences between rows: say the state once (a sentence, a tile, a count), and show only the rows that differ, linking to the full table or the record pages. Polaris's index-table guidance calls such a list "a summary of these details pages" ([Polaris IndexTable source](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/tables/index-table.mdx)).
 - [moderate] Few rows and many columns: swap them. Primer: "Consider swapping columns and rows when it's unlikely that there will ever be more rows than columns"; Datawrapper: people skim "information that's vertically aligned" more easily than across ([Datawrapper, what to consider when creating tables](https://www.datawrapper.de/blog/guide-what-to-consider-when-creating-tables)).
 - [weak] A table is not a dashboard. A table of figures with one row per category and one figure each is a bar chart's job when the shape is the message ([data visualisation: choosing a chart by its job](data-visualisation.md#choosing-a-chart-by-its-job)).
@@ -45,7 +45,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag a `table` with no `th` (likely layout), and a grid of `div`s with column alignment and no table roles.
 - *Judgement*: will the reader compare down a column?
 
-**Sources.** NN/g, GOV.UK and Primer agree on when a table fits; Primer adds the list and data-grid exits, Polaris the summary of details pages. The description-list call and the summary-first reading of a uniform table are the toolkit's commentary.
+**Sources.** NN/g, GOV.UK and Primer agree on when a table fits; Primer adds the list and data-grid exits, Polaris the summary of details pages. The description-list call is the HTML standard's `dl` element. The summary-first reading of a uniform table rests on Polaris alone.
 
 ## Column choice and order
 
@@ -57,7 +57,6 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **How**
 - [weak] Start from the task: list the attributes the person decides with, in the order they decide. That is the column order.
 - [weak] Put the identifier first, status near it, numbers to compare beside each other, actions last.
-- [weak] Five to seven columns is a practical default for a desktop table (commentary; no source gives a number). Past that, ask which columns the task needs.
 - [weak] Column headers are short nouns in sentence case, with the unit in the header ("Size (KB)"), never repeated in every cell.
 - [required] Fixed columns per table. A column that appears for some filters and not others moves everything beside it (design-standard rule 2); keep it and leave its cells blank (*Cell content and empty cells*).
 
@@ -117,7 +116,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: for each column, count distinct values across the rows rendered and flag a column with one distinct value (or one value in over 90% of rows) for review; flag a cell holding two or more separated values from a recurring vocabulary.
 - *Judgement*: what does the reader lose if this column goes?
 
-**Sources.** Primer, Datawrapper, GOV.UK and NN/g agree on fewer columns; NN/g's "only show the differences" is written for comparison rows and applied here to columns, which is the toolkit's reading. Primer's "one piece of data per column" is an outside statement of design-standard rule 8.
+**Sources.** Primer, Datawrapper, GOV.UK and NN/g agree on fewer columns; NN/g's "only show the differences" is written for comparison rows and applied here to columns by analogy. Primer's "one piece of data per column" is an outside statement of design-standard rule 8.
 
 ## Grouping and header hierarchy
 
@@ -128,7 +127,6 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **How**
 - [weak] Adjacent first: related columns sit together in a fixed order (*Column choice and order*). Often adjacency and a shared header word are enough.
-- [weak] A group header row above the column headers, spanning its columns, for one level of grouping; two header rows is the limit (*Captions, header cells and scope*).
 - [weak] Separate groups with space or a single vertical rule between groups, not a rule between every column; the group boundary is the only vertical line.
 - [weak] Row groups: a full-width group header row ("Blocked (12)") or one table per group under a heading. One table per group when groups are compared separately or are long; group rows when the reader still sorts or scans across groups.
 - [weak] A group header carries a count when the group can be collapsed or is long.
@@ -157,7 +155,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag a `thead` with more than two rows, and a spanning `th` without `scope="colgroup"`.
 - *Judgement*: does the grouping match how the reader thinks about the columns?
 
-**Sources.** The W3C tutorial and Primer agree that deep hierarchy belongs outside one table; the single group rule is the toolkit's commentary.
+**Sources.** The W3C tutorial and Primer agree that deep hierarchy belongs outside one table; as linked.
 
 ## Alignment and figures
 
@@ -170,7 +168,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Right-align numbers that are compared: counts, amounts, sizes, percentages, durations. Left-align identifiers that happen to be numeric (a version, a postcode, an ID): they are labels.
 - [weak] Same precision down a column, so decimals line up ([data: numbers](data.md#numbers)).
 - [weak] Tabular figures: `font-variant-numeric: tabular-nums` on numeric cells ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant-numeric): figures "all of the same size, allowing them to be easily aligned like in tables"). A font without tabular figures is a finding for the type choice.
-- [weak] Status badges and icons left-aligned, with their header ([Polaris DataTable source](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/tables/data-table.mdx): "Align headers with their related data", "Don't center align"); centred only in a matrix of single marks (see *Many boolean columns*). Dates left-aligned in one fixed-width format, or right-aligned if compared as numbers; pick one per product.
+- [weak] Status badges and icons left-aligned, with their header ([Polaris DataTable source](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/tables/data-table.mdx): "Align headers with their related data", "Don't center align"). Dates left-aligned in one fixed-width format, or right-aligned if compared as numbers; pick one per product.
 - [weak] Units in the header; a currency symbol may stay in the cell when columns mix currencies.
 
 **Cases**
@@ -186,13 +184,12 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [required] Numeric columns take `text-align: end` and `font-variant-numeric: tabular-nums`, set from a column attribute such as `data-type="number"` on header and cells ([HTML semantics: *Table behaviour*](../../code/html-semantics.md#table-behaviour); code-standard rule 6).
 - [required] `end`, not `right`, so a right-to-left table mirrors ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
 - [weak] Figures are formatted by `Intl.NumberFormat` or the server's equivalent with fixed fraction digits per column, never by string padding ([i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)).
-- [weak] The header aligns with its column from the same attribute; no per-cell classes.
 
 **Check**
 - *Script* could: for each column whose cells parse as numbers, assert computed `text-align` is right or end and `font-variant-numeric` includes `tabular-nums`; assert the header matches.
 - *Judgement*: is a numeric-looking column a quantity or a label?
 
-**Sources.** GOV.UK, Primer, Polaris and Material ([data tables](https://m1.material.io/components/data-tables.html): "Right-aligned numeric columns", "Left-aligned text columns") agree on right-aligned numbers; NN/g's data-tables article does not cover alignment. Polaris forbids centring; the toolkit follows it except for a matrix of marks.
+**Sources.** GOV.UK, Primer, Polaris and Material ([data tables](https://m1.material.io/components/data-tables.html): "Right-aligned numeric columns", "Left-aligned text columns") agree on right-aligned numbers; NN/g's data-tables article does not cover alignment. Polaris forbids centring.
 
 ## Cell content and empty cells
 
@@ -204,7 +201,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **How**
 - [weak] By type: text left; quantities right in tabular figures ([data: numbers](data.md#numbers)); identifiers that look numeric left; dates in one format ([data: dates and times](data.md#dates-and-times)); status as a short label or badge, left ([status badges and pills](../components/badge.md#status-badges-and-pills)); a link only on the identifier; row actions last, one visible and the rest in a menu (Primer: "Do not pull out more than 1 action").
 - [moderate] Long text: Primer prefers wrapping to truncation; Polaris says "Wrap instead of truncate" because rows that start alike look the same when cut. Prose longer than a line or two belongs on the record page (*Truncation*).
-- [weak] Empty cells: Primer says "By default, leave empty cells blank … Just don't use a character like "x" or "-". It creates a weird experience for assistive technologies like screen readers." The toolkit follows it: blank for "no value", and a word where the reason matters to the reader ("None", "Not measured", "Not applicable"), so a screen reader announces a meaning rather than "dash".
+- [weak] Empty cells: Primer says "By default, leave empty cells blank … Just don't use a character like "x" or "-". It creates a weird experience for assistive technologies like screen readers." Blank for "no value", and a word where the reason matters to the reader ([data: numbers](data.md#numbers)) ("None", "Not measured", "Not applicable"), so a screen reader announces a meaning rather than "dash".
 - [weak] Zero, missing and not applicable are three values, owned by [data: numbers](data.md#numbers): a count column shows "0", never blank; missing data is "Not measured", never "0".
 - [weak] Repeated values: a value repeated down many rows (the same owner, the same date) can be shown once per group when the rows are sorted by it, if the table is never re-sorted; in a sortable table, repeat it.
 
@@ -227,7 +224,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag cells whose whole text is "-", "–", "—", "x" or "✕" with no accessible text; flag a numeric column with blank cells and no zeros; flag more than one content type in a column.
 - *Judgement*: does each blank mean one thing?
 
-**Sources.** Primer and Polaris. Primer's "leave it blank" disagrees with the common dash convention; the toolkit takes Primer's reason, the screen-reader experience, and adds words for reasons.
+**Sources.** Primer and Polaris. Primer's "leave it blank" disagrees with the common dash convention; Primer's reason is the screen-reader experience; the words for reasons are data.md's.
 
 ## Status and boolean cells
 
@@ -238,14 +235,12 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Never marks for three or more states, and never two different marks (✓ and ✕) where one mark and a blank would do.
 
 **How**
-- [weak] Mark the exception, not the norm. In a column where most rows are "missing", a red ✕ in every row is noise; mark the rows that have it (✓), leave the others blank, and say the norm in the header or caption ("Usage written: 3 of 40"). When most rows have it, mark the few that do not.
 - [weak] Status vocabulary: one short label per state, in a fixed list ([status badges and pills](../components/badge.md#status-badges-and-pills)). A long status label repeated on every row moves its repeated words into the header: "Code generation" as the header, "Ready" or "Blocked" in the cells, not "Not ready for code generation" forty times (Datawrapper: "bring repeating words in the column header").
 - [weak] A status the same in every row is the state of the set, not of a row: say it once above the table and drop the column (*What earns a column*), or group rows by status so each status is said once in a group header (*Grouping and header hierarchy*).
 - [weak] A status needing attention gets the colour and icon; neutral and good states stay quiet (*Colour in cells*).
 - [required] Pair a status with what to do about it on the record page or in a described-by text; a cell is a label, not a message (design-standard rule 10 for the message).
 
 **Cases**
-- Nine columns of red ✕ marks, true in nearly every row → blanks for missing, a quiet ✓ for present, a count column "Present: 1 of 9" sorted ascending, and a sentence above stating that nearly every component lacks nearly every section. The red goes; nothing in the table needs more attention than anything else.
 - A "Status" column repeating "Not ready: missing guidance" on 38 of 40 rows → header "Ready", cells "No" (or blank) and "Yes"; better, a sentence "2 of 40 are ready" and the two named.
 - A "Supported" column with ✓, ✕ and "~" → text: "Yes", "No", "Partial".
 
@@ -262,30 +257,24 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [required] The status vocabulary comes from one list in the model, so cells and filters share it (code-standard rule 29).
 
 **Check**
-- *Script* could: flag a column whose cells are all one of two glyphs and where one glyph covers over 80% of rows (marking the norm); flag a status cell over about 25 characters repeated in more than half the rows; flag a column of ✓/✕ glyphs with no text alternative.
+- *Script* could: flag a status cell over about 25 characters repeated in more than half the rows; flag a column of ✓/✕ glyphs with no text alternative.
 - *Judgement*: is the mark on the rows that need the reader's eye?
 
-**Sources.** NN/g warns that checkmarks "can't stand alone" and asks for short text ([comparison tables](https://www.nngroup.com/articles/comparison-tables/)); Datawrapper gives repeating words into the header. Marking the exception is the toolkit's commentary.
+**Sources.** NN/g warns that checkmarks "can't stand alone" and asks for short text ([comparison tables](https://www.nngroup.com/articles/comparison-tables/)); Datawrapper gives repeating words into the header.
 
 ## Many boolean columns: matrix, heatmap or summary
 
 **Use when / don't use**
-- [weak] When more than about five boolean columns sit side by side, decide what the reader asks of them (commentary; no source gives a number):
-  - "Which rows are complete, and how far off are the rest?" → a count column and a summary; the detail on the record page.
-  - "Where are the gaps across the set, and which attributes are missing everywhere?" → a matrix view, read as a heatmap.
-  - "What stops this row from moving on?" → a "Blocked by" summary column.
-- [weak] Don't keep nine mark columns in a table whose task is one of these; they answer all three badly.
+- [weak] Many mark columns side by side, where the reader looks for patterns and outliers across the set: a heatmap lets readers "quickly skim the table for outliers and patterns" ([Datawrapper, heatmaps for tables](https://www.datawrapper.de/blog/heatmaps-for-tables/)).
 
 **How**
 - [weak] Count and summary: one right-aligned count ("7 of 9 present" or "2 missing"), sortable, with the attributes' names on the record page or in an expandable row ([Carbon expandable rows](https://carbondesignsystem.com/components/data-table/usage/): to "present large amounts of data in a small space"). Totals per attribute in a footer row or a short list above.
 - [weak] Matrix: rows by attributes, cells filled or empty, one hue. Sort rows by completeness and columns by how often the attribute is present, so the pattern reads as a block and the outliers stand out. Datawrapper: a heatmap lets readers "quickly skim the table for outliers and patterns" ([Datawrapper, heatmaps for tables](https://www.datawrapper.de/blog/heatmaps-for-tables/)). Shape, not colour, carries the state: a filled square or ✓ for present, empty for absent, so it survives greyscale. The matrix is a second view of the same data, not the default table, unless the pattern is the message.
-- [weak] "Blocked by": one value per row, the first blocker in a fixed priority order of the attributes, plus a count of the rest ("Usage, +3"). One value keeps the column sortable and groupable; a comma list of every blocker is the list in a cell that design-standard rule 8 forbids. The full set stays as columns in the matrix or on the record page.
 - [weak] Whichever form, the per-attribute totals are said once ("Usage: 3 of 40"), so the reader can see which attribute is the common gap without reading forty rows.
 
 **Cases**
-- An audit table with nine red ✕ columns, mostly true in every row → default view: identifier, status, "Missing: 8 of 9", "Blocked by: Usage, +7", owner; above it, "Missing across 40 components: usage 37, code notes 40, …"; a "Matrix" view shows the 40 × 9 grid sorted so the two near-complete components sit at the top.
+- An audit table with nine red ✕ columns, mostly true in every row → default view: identifier, status, "Missing: 8 of 9", owner; above it, "Missing across 40 components: usage 37, code notes 40, …"; a "Matrix" view shows the 40 × 9 grid sorted so the two near-complete components sit at the top.
 - A platform-support table, three columns → keep the three mark columns: three is few, and each differs between rows.
-- A "Blocked by" cell listing "Usage, Code notes, Tokens, Do and don't" → "Usage, +3" with the full list on the record page.
 
 **Accessibility**
 - [required] A matrix is a real `table` with row and column headers; each cell has a text value ("Present" visually hidden) so the matrix reads cell by cell. A heatmap drawn as a canvas or SVG needs the table as its alternative ([data visualisation: long descriptions and data tables](data-visualisation.md#long-descriptions-and-data-tables)).
@@ -299,10 +288,10 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] A heatmap drawn as SVG or canvas keeps this table as its alternative ([data visualisation: long descriptions and data tables](data-visualisation.md#long-descriptions-and-data-tables)).
 
 **Check**
-- *Script* could: count adjacent boolean-mark columns and flag more than five; flag a "Blocked by"-style column whose cells hold separated lists.
-- *Judgement*: which of the three questions does the reader ask?
+- *Script* could: count adjacent boolean-mark columns.
+- *Judgement*: does the reader ask about one row, or about the pattern across the set?
 
-**Sources.** Datawrapper on heatmaps, Carbon on expandable rows, NN/g on showing only differences; the three-question split and the single-value "Blocked by" are the toolkit's commentary.
+**Sources.** Datawrapper on heatmaps, Carbon on expandable rows, NN/g on showing only differences.
 
 ## Feature comparison tables
 
@@ -315,9 +304,9 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Offerings as columns, attributes as rows: there are more attributes than offerings (*Table, list or cards* on transposing). The offering's name, price and main action sit in the header row.
 - [moderate] Freeze the header row so each column keeps its name while scrolling: NN/g, "keep column headers fixed as users scroll", because people "will easily forget which column is for which product"; Baymard's comparison testing found the same for sticky product headings ([Baymard, comparison tools](https://baymard.com/blog/user-friendly-comparison-tools)). Freeze the attribute column too when the offerings overflow sideways (*Sticky header and first column*).
 - [moderate] Group the attributes under category headings (pricing, limits, support) rather than one long list; Baymard found categorised specs easiest to scan. One level of grouping, as *Grouping and header hierarchy* says.
-- [moderate] Differences first: an "Only show differences" switch hides the rows that are the same for every offering. NN/g: "let users hide the rows for which all offerings are similar, and only show the differences". Baymard ranks hiding above shading the differing rows, and accepts shading only where hiding cannot be offered. The toolkit offers the switch, off by default, and says how many rows it hides ("12 identical rows hidden").
+- [moderate] Differences first: an "Only show differences" switch hides the rows that are the same for every offering. NN/g: "let users hide the rows for which all offerings are similar, and only show the differences". Baymard ranks hiding above shading the differing rows, and accepts shading only where hiding cannot be offered. The switch says how many rows it hides ("12 identical rows hidden"; design-standard rule 18).
 - [weak] A check or blank for yes or no; a short word or figure where the answer has a size ("10 GB", "Email only"). NN/g warns against "symbols like checkmarks that can't stand alone" and asks to keep text short. Never a cross for "no" beside a check for "yes" where a blank does the job (*Status and boolean cells*).
-- [weak] Row separators carry the eye across: light rules or stripes, one system (*Zebra stripes and hover*).
+- [weak] Row separators carry the eye across: light rules or stripes (*Zebra stripes and hover*).
 
 **Cases**
 - Four plans and forty features in one long ungrouped list → group under five category headings, sticky plan header, and an "Only show differences" switch.
@@ -327,7 +316,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **Accessibility**
 - [required] 1.3.1: offering names are `th scope="col"`, attribute names `th scope="row"`, category headings `th scope="rowgroup"`; a check has visually hidden text ("Included") so the cell reads "Priority support, Pro, included".
-- [required] 4.1.3: switching "Only show differences" announces the change ("12 identical rows hidden").
+- [required] 4.1.3: switching "Only show differences" announces the change ("12 identical rows hidden"; design-standard rule 18).
 - [required] 2.4.11: the sticky header does not cover the focused row.
 
 **Build**
@@ -339,7 +328,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag a comparison table with more than five offering columns, a mark with no text alternative, and rows marked `data-same` whose cell texts differ.
 - *Judgement*: does the default view lead with the attributes that tell the offerings apart?
 
-**Sources.** NN/g and Baymard agree on sticky headers and on hiding identical rows; Baymard treats highlighting as a fallback, which the toolkit follows. The default-off switch and the hidden-row count are the toolkit's commentary.
+**Sources.** NN/g and Baymard agree on sticky headers and on hiding identical rows; Baymard treats highlighting as a fallback. The hidden-row count is design-standard rule 18.
 
 ## Colour in cells
 
@@ -383,7 +372,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **How**
 - [weak] Sorting lives in the header: the header text is a button. No separate "Sort by" menu for a table that has headers (from Carbon).
 - [moderate] Three states: unsorted, ascending, descending ([Carbon](https://carbondesignsystem.com/components/data-table/usage/): "A sorted data table has three states"). A click cycles ascending, descending, back to the default order.
-- [moderate] One column sorted at a time. Only that column shows a direction icon; other sortable headers show one subdued neutral icon. Carbon shows the neutral icon on hover only; the toolkit shows it always, because touch has no hover and the principle is *discoverable*.
+- [moderate] One column sorted at a time. Only that column shows a direction icon; other sortable headers show one subdued neutral icon. Carbon shows the neutral icon on hover only; Roselli shows it always, which also serves touch, where there is no hover.
 - [weak] One sort icon per header: an up or down arrow for the sorted direction, a neutral two-way icon otherwise. The shape changes with the direction, not only the colour ([Roselli, sortable table columns](https://adrianroselli.com/2021/04/sortable-table-columns.html)).
 - [weak] A default sort that matches the task (most recent first for activity, most severe first for findings), stated in the design.
 - [required] Sorting re-renders the rows only. The header, toolbar and pagination stay put (design-standard rule 2), and focus stays on the header button.
@@ -411,7 +400,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: assert each sortable header contains a `button`; at most one `th` has `aria-sort`; after a click, the toolbar's position is unchanged (the shape of design-standard rule 2's check) and focus is on the same button.
 - *Judgement*: does the default sort serve the table's task?
 
-**Sources.** Carbon and Roselli agree on three states and one sorted column; they differ on icon visibility, and the toolkit follows touch over hover.
+**Sources.** Carbon and Roselli agree on three states and one sorted column; they differ on icon visibility, and this page follows Roselli.
 
 ## Column-header filters
 
@@ -447,13 +436,13 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag a table with both a filter bar and filter controls in its headers; flag header filter inputs without a label; assert the address changes when a header filter applies.
 - *Judgement*: do people filter while looking at a column, or before they look at the table?
 
-**Sources.** Smashing describes filter boxes in headers; Atlassian forbids extra controls in headings, and Carbon and Primer put filters above the table. The toolkit sides with the bar (design-standard rule 3) and allows a header filter row only in an expert data grid, where it replaces the bar.
+**Sources.** Smashing describes filter boxes in headers; Atlassian forbids extra controls in headings, and Carbon and Primer put filters above the table. One bar per list is design-standard rule 3, so a header filter row (Smashing's complex tables) replaces the bar, never joins it.
 
 ## Density and row height
 
 **What good looks like**
 - [weak] One row height per table, matched by the header row (Carbon: the header "should always match the row size of the table").
-- [weak] Two densities at most per product: a default and a compact.
+- [weak] Two densities at most per product: a default and a compact, as Cloudscape ships.
 - [required] Every interactive element in a row meets its target size (WCAG 2.5.8).
 
 **How**
@@ -463,7 +452,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] A density setting is a feature someone must ask for; offering five sizes is not.
 - [weak] Match row height to the number of rows: a short table reads better roomy, a long one compact. Datawrapper: "If you show only a few rows, a wide layout is more pleasant to the eye. If your table has a lot of rows, consider a compact layout".
 - [weak] Density is spacing, never type size ([visual: density modes](../design/visual.md#density-modes)). Shrinking the text to fit more columns is a sign the columns need cutting (*What earns a column*), not a denser table.
-- [contested] Systems name three densities: Primer's condensed, normal and spacious ([Primer DataTable](https://primer.style/product/components/data-table/)); MUI X's compact, standard and comfortable ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/)). The toolkit keeps two settings; a short table of rich rows gets a roomier default rather than a third setting.
+- [contested] Systems name three densities: Primer's condensed, normal and spacious ([Primer DataTable](https://primer.style/product/components/data-table/)); MUI X's compact, standard and comfortable ([MUI X accessibility](https://mui.com/x/react-data-grid/accessibility/)). Cloudscape ships two, comfortable and compact ([Cloudscape content density](https://cloudscape.design/foundation/visual-foundation/content-density/)).
 
 **Cases**
 - Rows that grow when one cell wraps → set a column width or truncation (see *Truncation*); the row height is fixed.
@@ -485,7 +474,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: assert all body rows in a table share one rendered height (within a pixel) and the header matches; measure targets inside rows.
 - *Judgement*: does the density fit how often and on what device the table is used?
 
-**Sources.** Carbon publishes five sizes, Primer and MUI X three densities, and Datawrapper ties row height to row count; the research behind the design standard found most products need two settings. The toolkit uses two.
+**Sources.** Carbon publishes five sizes, Primer and MUI X three densities, and Datawrapper ties row height to row count; Cloudscape ships two.
 
 ## Sticky header and first column
 
@@ -525,7 +514,6 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **What good looks like**
 - [weak] A row hover state on every data table, so the eye can follow a row (Carbon: "The data table's row hover state should always be enabled").
 - [moderate] Zebra stripes only where rows are wide and dense enough that the eye loses the line.
-- [weak] One row separator system: stripes, horizontal rules or whitespace alone, never two at once.
 - [weak] No vertical rules between columns; alignment makes the columns, and the only vertical line marks a group boundary (*Grouping and header hierarchy*).
 
 **How**
@@ -537,7 +525,6 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Hover is never the only way to reveal row actions: touch has no hover (Carbon keeps overflow menus visible on touch).
 
 **Cases**
-- Striped rows plus borders plus a hover tint → keep hover and either stripes or borders.
 - Row actions that appear only on hover → show them always, subdued, or in an overflow menu that is always visible.
 - A selected row that looks like a hovered row → a stronger fill and the checked box.
 
@@ -549,13 +536,12 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [required] Hover is `tbody tr:hover`; stripes are `tbody tr:nth-child(even)`, switched on by a table attribute (`data-striped`), both from colour tokens (code-standard rule 9, code-standard rule 22).
 - [weak] Selected is `tr:has(:checked)` (or `[aria-selected="true"]` in a grid), a stronger token than hover ([HTML semantics: *Table behaviour*](../../code/html-semantics.md#table-behaviour)).
 - [weak] Row actions are always rendered and visible; never `opacity: 0` or `visibility: hidden` until `:hover` ([code accessibility: *Hidden content*](../../code/accessibility.md#hidden-content)).
-- [weak] Separators are one system: `border-block-end` on cells, or stripes, not both; no `border-inline` between columns.
 
 **Check**
 - *Script* could: hover a row and assert a computed background change; flag row actions with `opacity: 0` or `visibility: hidden` until hover.
 - *Judgement*: does striping help this table or only decorate it?
 
-**Sources.** Carbon, Datawrapper, NN/g and Enders's study. Datawrapper and Carbon offer stripes for wide tables; Enders found no measured gain. The toolkit allows stripes only where columns are many, and the one-separator and no-vertical-rules rules are commentary.
+**Sources.** Carbon, Datawrapper, NN/g and Enders's study. Datawrapper and Carbon offer stripes for wide tables; Enders found no measured gain. Stripes only where columns are many follows Datawrapper and Carbon.
 
 ## Selection and bulk actions
 
@@ -703,14 +689,14 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Hidden columns are visible as hidden ([NN/g, data tables](https://www.nngroup.com/articles/data-tables/): "clear visual state indicators should signal to users that some columns are hidden").
 
 **How**
-- [moderate] In order, cheapest first: cut columns (*What earns a column*); shorten them (repeated words to the header, shorter numbers, abbreviations with the full form in the header's accessible name, per [Datawrapper](https://www.datawrapper.de/blog/guide-what-to-consider-when-creating-tables)); transpose when rows are few (Primer); split into several tables (GOV.UK: "organise it into multiple tables or multiple pages"); only then scroll horizontally with the identifier frozen (*Sticky header and first column*). Primer lists the same moves for narrow viewports: width options, "Remove less important columns", "Scroll horizontally".
+- [moderate] The moves: cut columns (*What earns a column*); shorten them (repeated words to the header, shorter numbers, abbreviations with the full form in the header's accessible name, per [Datawrapper](https://www.datawrapper.de/blog/guide-what-to-consider-when-creating-tables)); transpose when rows are few (Primer); split into several tables (GOV.UK: "organise it into multiple tables or multiple pages"); and, last, scroll horizontally with the identifier frozen (*Sticky header and first column*): Atlassian recommends "finding ways to simplify the table before opting for a horizontal scroll solution" ([Atlassian dynamic table](https://atlassian.design/components/dynamic-table/examples)). Primer lists the same moves for narrow viewports: width options, "Remove less important columns", "Scroll horizontally".
 - [weak] Freeze the identifier, not a block of columns: Polaris fixes the first column "because the product names are important to reference", and warns that fixing several must leave the rest visible on small screens ([Polaris DataTable source](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/tables/data-table.mdx)).
 - [weak] Column settings (show, hide, reorder) when people's tasks differ and the default cannot serve all of them; NN/g: "Hiding and reordering columns must be easy to accomplish". The setting belongs to the toolbar and persists per person; past that, it is a data grid's column management ([data-grid: column management](data-grid.md#column-management)).
 - [weak] Column widths from the content's role: Primer's "Grow" columns take spare room with the widest cell as the minimum; a fixed width only where content is predictable. Widths never come from today's longest value (code-standard rule 57).
 - [weak] The narrow-screen form is *Responsive tables*.
 
 **Cases**
-- An eleven-column audit table scrolled sideways on a laptop, the component name scrolled away → cut the uniform columns to reach six, then freeze the name if it still overflows.
+- An eleven-column audit table scrolled sideways on a laptop, the component name scrolled away → cut the uniform columns, then freeze the name if it still overflows.
 - Two columns headed "Accessibility: contrast" and "Accessibility: focus" → a group header "Accessibility" over "Contrast" and "Focus" (*Grouping and header hierarchy*).
 - A column setting with eight columns hidden and no trace in the table → "8 columns hidden" beside the settings button.
 
@@ -729,7 +715,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: at the design's main width, assert the table does not overflow its container, or that it has a frozen identifier and a visible overflow cue; assert a hidden-columns indicator exists when a column setting hides any.
 - *Judgement*: is the scroll the last resort, after cutting, shortening, transposing and splitting?
 
-**Sources.** Primer, Polaris, Datawrapper, GOV.UK and NN/g; the order of the moves is the toolkit's commentary.
+**Sources.** Primer, Polaris, Datawrapper, GOV.UK, NN/g and Atlassian as linked.
 
 ## A variant matrix in a tool layout
 
@@ -742,12 +728,12 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] **The matrix gets the width; the layout gives way first.** In a tool with panels, the tab that shows the matrix is a full-width tab ([sidebars: object header over a tool layout](sidebars.md#object-header-over-a-tool-layout)); then cut, shorten and split as [wide tables](#wide-tables-and-column-priority) says; scrolling comes last. Atlassian: "we recommend finding ways to simplify the table before opting for a horizontal scroll solution" ([Atlassian dynamic table](https://atlassian.design/components/dynamic-table/examples)).
 - [required] **Scroll inside the matrix, never the page.** The matrix scrolls in its own container under a fixed header bar; WCAG's reflow exception covers only "parts of the content which require two-dimensional layout", and "applies to that section" alone ([Understanding 1.4.10](https://www.w3.org/WAI/WCAG21/Understanding/reflow.html)). Atlassian warns horizontal scroll fails "if there isn't enough visual affordance", so show a shadow at the scrolled edge.
 - [moderate] **Both headers sticky.** NN/g: "Freeze header rows and header columns (if the table is larger than the screen)" ([NN/g data tables](https://www.nngroup.com/articles/data-tables/)), since readers "easily forget which column is for which product" ([NN/g comparison tables](https://www.nngroup.com/articles/comparison-tables/)). The pinned column carries a border and a shadow "that appears when there is scroll" ([MUI X column pinning](https://mui.com/x/react-data-grid/column-pinning/)); when it would leave no room, unpin it, as AG Grid does automatically "to make the centre viewport visible again" ([AG Grid column pinning](https://www.ag-grid.com/javascript-data-grid/column-pinning/)).
-- [weak] **Cells one size, from the tool's scale.** Unlike a data table, where Carbon lets "Column widths… vary by content" ([Carbon data table style](https://carbondesignsystem.com/components/data-table/style/)), a matrix compares like with like: every cell in a column takes one width, every row one height, sized to the largest specimen at its true size, padded by one spacing step, and labelled in the tool's text styles ([visual: one size scale per screen](../design/visual.md#one-size-scale-per-screen)). Never scale specimens down to fit; scroll instead, since the specimen's size is the information.
+- [required] **Cells one size, from the tool's scale** (design-standard rule 16). Unlike a data table, where Carbon lets "Column widths… vary by content" ([Carbon data table style](https://carbondesignsystem.com/components/data-table/style/)), a matrix compares like with like: every cell in a column takes one width, every row one height, sized to the largest specimen at its true size, padded by one spacing step, and labelled in the tool's text styles ([visual: one size scale per screen](../design/visual.md#one-size-scale-per-screen)). Never scale specimens down to fit; scroll instead, since the specimen's size is the information.
 - [weak] **Header labels are the property values,** the property name once in the corner cell or a group header ([grouping and header hierarchy](#grouping-and-header-hierarchy)).
 
 **Cases**
 - A variants tab shows 4 sizes by 6 states inside a column squeezed by the inspector → full-width tab; the size names frozen at the start, the state names sticky at the top.
-- Cells grow to each specimen, so a column of small buttons sits in a 40px column beside a 120px one → one cell size per column, or for the whole matrix when the specimens are comparable.
+- Cells grow to each specimen, so a column of small buttons sits in a 40px column beside a 120px one → one cell size per column, or for the whole matrix when the specimens are comparable (design-standard rule 16).
 - A 3-axis matrix flattens to 24 column headers "Primary / Hover / Small…" → group headers per axis, or one matrix per value of the outer axis.
 - Specimens shrunk to 60% so the matrix fits → true size, scroll inside the container.
 
@@ -763,7 +749,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: assert the page has no horizontal scroll while the matrix container does, the header row and first column stay in view when the container is scrolled to its far corner, every cell in a column has one width, and no specimen carries a scale transform.
 - *Judgement*: does the matrix need every axis at once, or would one matrix per value read better?
 
-**Sources.** Figma and storybook-addon-variants for the matrix itself; NN/g, MUI X, AG Grid, Atlassian, Carbon and WCAG for scroll, pinning and cell size. No variant-matrix source speaks to sticky headers or cell size; those come from data-table sources, and the one-size cell is the toolkit's commentary, since a matrix compares specimens rather than values.
+**Sources.** Figma and storybook-addon-variants for the matrix itself; NN/g, MUI X, AG Grid, Atlassian, Carbon and WCAG for scroll, pinning and cell size. No variant-matrix source speaks to sticky headers or cell size; those come from data-table sources, and the one-size cell is design-standard rule 16.
 
 ## Tables in dialogs and dashboard cards
 
@@ -774,9 +760,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **How**
 - [weak] Dialog: the default or large size; Carbon's modal guidance says "for complex components, like a data table, the default or large modal is more suitable", and lets the table run to the dialog's full width ([Carbon modal](https://carbondesignsystem.com/components/modal/usage/)). The dialog body scrolls with the table's header sticky inside it; never two scrolling regions nested, and never sideways (cut columns instead, *What earns a column*).
-- [weak] Card: a fixed row count (five is a practical default; commentary), the columns cut to the identifier, the deciding figure and status, no selection, no pagination, no column settings. The card's heading says what the rows are and how they are chosen ("Five oldest open findings").
 - [weak] "View all" at the card's foot, naming the whole: "View all 42 open findings". It opens the full table already filtered and sorted the way the preview was, so the first rows match ([dashboards: drill-down](../profiles/dashboards.md#drill-down)).
-- [weak] The preview sorts by the card's purpose and is not re-sortable; sorting a five-row slice of 42 would mislead.
 - [weak] Width: the table takes the card's width; columns that do not fit are cut, not scrolled. Truncate only text that does not tell rows apart (*Truncation*), and switch to a list when the card is narrow ([responsive: *Container queries*](../../code/responsive.md#container-queries)).
 - [weak] Fewer rows than the count: show what there is; none: the card's empty state ("No open findings"), not an empty grid of headers (*Empty and loading tables*).
 
@@ -800,7 +784,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag a table inside a card or dialog that scrolls horizontally, has pagination, or nests a scroll container inside another; flag a "View all" link without a count or a filter in its address.
 - *Judgement*: does the preview answer the card's question in its first rows?
 
-**Sources.** Carbon on placement and modal size; the row count, the non-sortable preview and the "View all" wording are the toolkit's commentary.
+**Sources.** Carbon on placement and modal size; the "View all" wording follows 2.4.4 (*Accessibility*, above).
 
 ## A fixed set of attributes as columns
 

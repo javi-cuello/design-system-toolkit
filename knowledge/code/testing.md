@@ -35,7 +35,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* `tools/parity/pages.mjs` structure drives the rendered pages for code-standard rules 14, 15 and 19; a project's own tests carry the rest.
 - *Judgement:* For this defect, what is the cheapest test that would have failed?
 
-**Sources:** Fowler and Dodds are commentary and disagree on the middle; Testing Library is a library's stated principle. The toolkit goes with the lowest level that sees the defect, and with querying by role.
+**Sources:** Fowler and Dodds are commentary and disagree on the middle; Testing Library is a library's stated principle. The lowest level that sees the defect follows Fowler's pyramid, and querying by role follows Testing Library.
 
 ## Automated accessibility checks and their limits
 
@@ -64,7 +64,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* could run axe-core over each page `tools/parity/pages.mjs` already loads, per theme. `tools/ui-check/check.mjs` measures the design-standard rules a rendered page can be held to; neither replaces the other.
 - *Judgement:* What did the reviewer check by keyboard and screen reader that no tool covers?
 
-**Sources:** axe-core, Deque, Playwright and W3C as linked; they agree that automation finds a part. The toolkit treats a clean scan as necessary, never sufficient.
+**Sources:** axe-core, Deque, Playwright and W3C as linked; they agree that automation finds a part. So a clean scan is necessary, never sufficient.
 
 ## Visual regression and screenshot diffs
 
@@ -92,7 +92,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* could, as an advisory step beside the parity run; it is a candidate, not a gate, in [candidates](candidates.md).
 - *Judgement:* Was each accepted change meant?
 
-**Sources:** Playwright and Chromatic as linked; the parity baseline is the toolkit's own (`design-code-parity`).
+**Sources:** Playwright and Chromatic as linked; the parity baseline is the toolkit's `design-code-parity` skill.
 
 ## Testing the rendered page, not a harness
 
@@ -119,14 +119,14 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* `tools/parity/pages.mjs` structure and overflow load the project's own pages, not stories; `tools/ui-check/check.mjs` takes a URL.
 - *Judgement:* Has someone opened this route, as a user, since the last change?
 
-**Sources:** the toolkit's own (code-standard rule 56).
+**Sources:** code-standard rule 56.
 
 ## Linting: styles, scripts and markup
 
 **What good looks like**
 - [weak] Stylesheets, scripts and rendered HTML each have a linter in CI, and a lint error fails the build.
 - [weak] Warnings are either errors or off; a warning nobody reads is noise.
-- [required] The toolkit's own gates run for the rules a generic linter cannot know (code-standard rule 59).
+- [required] The toolkit's gates run for the rules a generic linter cannot know (code-standard rule 59).
 
 **How**
 - [weak] [Stylelint](https://stylelint.io/) for CSS and Sass (syntax errors, unknown properties, physical properties where logical ones are wanted, [i18n](i18n.md)); [ESLint](https://eslint.org/) for JavaScript (unused symbols, unsafe sinks such as `innerHTML`, [security](security.md)); the [Nu Html Checker](https://validator.github.io/validator/) (`vnu`) for the rendered HTML, which catches duplicate ids, invalid nesting and bad attributes.
@@ -155,7 +155,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - [required] Every check states what it examined (pages, swaps, rules) so a zero is visibly a zero of something (code-standard rule 30).
 
 **How**
-- [required] code-standard rule 30 applies to every check a project writes, the toolkit's own included.
+- [required] code-standard rule 30 applies to every check a project writes, the toolkit's gates included.
 - [required] Print the count examined: "checked 14 pages, 3 swaps". A check with no browser, no server or no input exits non-zero and says which (code-standard rule 30).
 - [required] A gate whose inputs a project does not supply prints *not run*, never *ok*; `tools/project-check/check.mjs` reports it as "RED — not run:" (code-standard rule 30).
 - [required] Prove each check fires: feed it a known violation and assert it fails (`tools/css-lint/test-lint.mjs` does this for every stylesheet gate; code-standard rule 41).
@@ -173,7 +173,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* `tools/project-check/check.mjs` "RED — not run:" for the toolkit's gates; `tools/ui-check/check.mjs` exits 2 for a page it could not check.
 - *Judgement:* If the thing this check reads disappeared, what would it print?
 
-**Sources:** the toolkit's own (code-standard rules 30 and 41).
+**Sources:** code-standard rules 30 and 41.
 
 ## CI gates
 
@@ -200,7 +200,7 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* `tools/project-check/check.mjs` "verdicts" gate (code-standard rule 49) flags a check piped on without `pipefail` in a project's `bin/` and hooks.
 - *Judgement:* Would CI fail if this gate failed?
 
-**Sources:** the toolkit's own (code-standard rules 35 and 49).
+**Sources:** code-standard rules 35 and 49.
 
 ## Evals: testing the agent, not the code
 
@@ -209,7 +209,6 @@ How a front end is tested and linted so that a green run means the page works: w
 - [weak] The vocabulary is shared: a *task*, a *trial* (one run of it), a *grader*, the *transcript*, the *outcome*. *pass@k* is the chance at least one of k trials succeeds; *pass^k* the chance all k do, which falls as k grows. A *capability* eval measures what an agent can now do; a *regression* eval guards what it already did ([Anthropic, *Demystifying evals for AI agents*](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
 
 **How**
-- [weak] Grade with the project's own gates, so a better score means code the project would accept, not code an eval prefers. The toolkit's `tools/skill-evals` does this.
 - [moderate] Run each trial in a clean copy with no history. Anthropic saw an agent gain an unfair advantage "by examining the git history from previous trials" (same page); a run that read the answer scores 0 and is never the baseline ([`tools/skill-evals`](../../tools/skill-evals/README.md)).
 - [weak] Hold the project still between runs (a pinned commit), or a moved score may be the project's doing, not the change under test.
 - [weak] Keep a held-out set once there are enough tasks to tune on: draw a share of tasks at random, commit only a salted hash of the list (it fixes the split before tuning, and shows later it never moved, without anyone reading it meanwhile), tune on the rest, and score the held-out set once at the end, so the score is not one the work was tuned to. Southleft holds out a third of its components this way for DS Contracts ([Pitre, 2026](https://southleft.substack.com/p/why-a-button-takes-a-month)).
@@ -219,28 +218,24 @@ How a front end is tested and linted so that a green run means the page works: w
 - An agent told not to game the grader still plans to → in one METR experiment (o3, one task, 20 runs per prompt), instructions not to cheat "had a nearly negligible effect" on reward hacking ([METR](https://metr.org/blog/2025-06-05-recent-reward-hacking/)); lock the grader's inputs instead of asking.
 
 **Accessibility**
-- [weak] An eval graded without the accessibility checks rewards an agent that skips labels; the grade carries the same accessibility gates as the project.
+- [weak] None directly.
 
 **Check**
-- *Script:* the eval's own tests prove the grader scores low with the answer removed and as the project does with it kept.
+- *Script:* the eval's own tests prove the grader scores low with the answer removed.
 - *Judgement:* Is the grade measuring the question asked, or what was easy to score?
 
-**Sources:** Anthropic and METR as linked; Pitre is a practitioner, and his held-out read had not happened at the time of writing; the scoring rule is the toolkit's own (`tools/skill-evals`).
+**Sources:** Anthropic and METR as linked; Pitre is a practitioner, and his held-out read had not happened at the time of writing.
 
 ## Test fixtures as one module
 
 **What good looks like**
-- [weak] A fixture used by more than one test or story is defined once and imported.
 - [weak] Fixtures are realistic: long names, empty lists, the largest count, another language.
 
 **How**
-- [weak] One fixtures module per domain (navigation, a user, a list of items); tests and stories import it and override only what differs.
 - [required] Include the edge values code-standard rule 57 asks a fix to survive: the longest label, one more item, none at all.
 - [weak] Pseudo-localised fixtures exercise text expansion ([i18n](i18n.md)).
-- [weak] Copies of a fixture are a fork; the lesson is in [candidates](candidates.md) ("Copies of a fixture are a fork").
 
 **Cases**
-- Nine story files carry their own navigation fixture and one is two items short → one module, imported; nobody can see which copy is wrong.
 - Every fixture has three short items and a page breaks with forty → add the forty-item and empty fixtures to the module.
 - A fixture is written to match the design so a parity test passes → it then proves nothing about the route (code-standard rule 56); keep the route test beside it.
 
@@ -251,4 +246,4 @@ How a front end is tested and linted so that a green run means the page works: w
 - *Script:* could flag identical object literals over a size in two or more test or story files.
 - *Judgement:* Which fixture would a new test copy, and does it import it instead?
 
-**Sources:** the toolkit's own; the lesson is in [candidates](candidates.md).
+**Sources:** code-standard rules 56 and 57. No outside source opened says a shared fixture must be one module; the lesson waits in [candidates](candidates.md).

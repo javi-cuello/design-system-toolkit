@@ -68,7 +68,7 @@ How a tool lets people define and edit the properties of a thing: a component's 
 - [weak] Where the same panel edits in one mode and inspects in another, the two are separate renderings of one schema, never the editor with every control greyed.
 
 **How**
-- [moderate] **Two columns, label then value,** one property per row, in the editor's order and groups so a person moving between modes finds each value where they left it. Labels in the secondary text colour, values in the primary at full contrast (Carbon: read-only text "should still pass 4.5:1"); the label column a fixed width from the longest label, about a third of the panel; Cloudscape's minimum column is 150px and no source sets the label width.
+- [moderate] **Two columns, label then value,** one property per row, in the editor's order and groups so a person moving between modes finds each value where they left it. Labels in the secondary text colour, values in the primary at full contrast (Carbon: read-only text "should still pass 4.5:1"); the label column a fixed width from the longest label, so values sit in the same place in every mode (design-standard rule 2); Cloudscape's minimum column is 150px and no source sets the label width.
 - [weak] **Same density as the editor:** a row the height of the editor's control row, so switching modes moves nothing ([interaction: layout stability](../design/interaction.md#layout-stability)); groups keep their headings.
 - [weak] **Whole values, never ellipses.** Cloudscape: "Don't collapse or truncate data using ellipses (...)… always show the full string for both label and value." Long values wrap within the value column.
 - [weak] **A token shows its name first,** as a chip with its swatch or a mono name, the resolved value beside it or on demand; in Dev Mode a person can "click on the variable name in the Inspect panel to open the Variable details modal" ([Figma, variables in Dev Mode](https://help.figma.com/hc/en-us/articles/27882809912471)). A raw value with no token reads differently from a bound one, so an unbound value is visible as such.
@@ -95,7 +95,7 @@ How a tool lets people define and edit the properties of a thing: a component's 
 - *Script:* could assert the panel in read-only mode has no `input`, `select` or `[disabled]`, every `dt` has a `dd`, no value is truncated with `text-overflow: ellipsis`, every copy button has a name, and each row's top matches the editor's row top within `interface.shiftTolerance`.
 - *Judgement:* Is this person reading values to use elsewhere (inspect list) or changing them (editor)? Does each token read by its name?
 
-**Sources:** Figma Help Center, Chrome DevTools, Carbon, Cloudscape and GOV.UK as linked. They agree on label-value rows, read-only values as full-contrast text, and copy on the value. No source sets the label column's width or the row height; the toolkit takes the editor's, so modes do not shift.
+**Sources:** Figma Help Center, Chrome DevTools, Carbon, Cloudscape and GOV.UK as linked. They agree on label-value rows, read-only values as full-contrast text, and copy on the value. No source sets the label column's width or the row height; taking the editor's keeps the layout still between modes (design-standard rule 2).
 
 ## Selecting on a canvas
 
@@ -106,7 +106,7 @@ How a tool lets people define and edit the properties of a thing: a component's 
 **How**
 - [moderate] **Parent first, one level at a time.** A click chooses the outermost part under the pointer at the levels already open (the part chosen and every part it sits in); a second click, a double-click or Enter goes one level in; Shift+Enter goes back out. Figma: "when you click on an object that is part of a group or frame, we'll select the parent by default. Double-click on the object, or press the enter key, to select one level of nesting down". Sketch treats a group "as a single layer" until it is double-clicked.
 - [moderate] **A deep pick on a modifier.** ⌘-click (Ctrl on Windows) chooses the innermost part at once (Figma's deep select; Sketch's ⌘ while hovering).
-- [weak] **Hover shows what a click would choose**, outlined thinner than the selection, so the next click is never a surprise; the outline follows the same parent-first rule, and the modifier too.
+- [weak] **Hover shows what a click would choose**, so the next click is never a surprise; the outline follows the same parent-first rule, and the modifier too.
 - [weak] **The outermost frame is labelled** with its name above it; pointing at or clicking the label is pointing at or clicking the frame (Figma's frame names).
 - [weak] **Direct selection is the other model**: a click chooses the innermost part, Escape climbs out. Framer offers it as a preference (a third-party lesson summary says it is Framer's default; unconfirmed on Framer's own pages). Pick one model per tool; hover and click always share it.
 
@@ -125,4 +125,4 @@ How a tool lets people define and edit the properties of a thing: a component's 
 - *Script:* could point at a nested part with nothing chosen and assert the outline and the click both land on its outermost container; click again and assert one level in; ⌘-click and assert the innermost.
 - *Judgement:* does the outline always predict the click?
 
-**Sources:** [Figma, Select layers and objects](https://help.figma.com/hc/en-us/articles/360040449873) (parent by default, double-click or Enter one level down, deep select); [Sketch, Grouping layers](https://sketch.com/docs/designing/layer-basics/grouping-layers/) (a group as one layer, double-click in, ⌘ while hovering); Framer from a [lesson summary](https://youtubesummary.com/summary/AAhQd56msrQ) only, its own docs not found. No source documents the hover outline's width or colour; the toolkit draws it thinner than the selection's, in its colour.
+**Sources:** [Figma, Select layers and objects](https://help.figma.com/hc/en-us/articles/360040449873) (parent by default, double-click or Enter one level down, deep select); [Sketch, Grouping layers](https://sketch.com/docs/designing/layer-basics/grouping-layers/) (a group as one layer, double-click in, ⌘ while hovering); Framer from a [lesson summary](https://youtubesummary.com/summary/AAhQd56msrQ) only, its own docs not found. No source documents the hover outline's width or colour, so this section sets none.

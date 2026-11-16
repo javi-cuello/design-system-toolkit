@@ -160,7 +160,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - *Script* could: count series per stack (flag over four); flag adjacent segments under 3:1 with no direct labels; check the emphasised series is the first in the stack.
 - *Judgement*: does the reader compare the totals or one part? If neither, why stack?
 
-**Sources.** NN/g, the FT, the Analysis Function, Datawrapper and SWD agree: few series, the important one on the baseline, or another form. NN/g would rarely stack at all; the toolkit stacks only for a total with one part that matters.
+**Sources.** NN/g, the FT, the Analysis Function, Datawrapper and SWD agree: few series, the important one on the baseline, or another form. NN/g would rarely stack at all; the condition to stack (a total that matters, one part on the baseline) is Datawrapper's and SWD's.
 
 ## Line charts and small data
 
@@ -170,7 +170,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **How**
 - [weak] Stock or flow. A level at a moment (open findings) is a line; a count within each period (findings filed this week) is flow: ONS, "Consider using a column chart instead of a line chart when displaying flow data".
-- [moderate] Few points. With five to ten points, prefer bars for a count, or a line with a marker on every point: ONS says to avoid markers "unless" there is "a small number of data points" ([ONS, line chart](https://service-manual.ons.gov.uk/data-visualisation/chart-types/line-chart)); NN/g asks for markers to show when data was collected. Under five points, the numbers themselves, or the latest number and its change, usually say more than a chart (the five-point threshold is the toolkit's commentary).
+- [moderate] Few points: prefer bars for a count, or a line with a marker on every point: ONS says to avoid markers "unless" there is "a small number of data points" ([ONS, line chart](https://service-manual.ons.gov.uk/data-visualisation/chart-types/line-chart)); NN/g asks for markers to show when data was collected.
 - [weak] Irregular intervals: a line, spaced by real time, not evenly spaced bars (ONS).
 - [moderate] Number of lines: the Analysis Function finds more than four "often results in the chart becoming too cluttered"; ONS suggests a small multiple line chart for an overcrowded chart.
 - [weak] The Analysis Function adds that bars "can be useful for showing time series when there is one series of data"; more than one series is a line.
@@ -191,10 +191,10 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [required] Missing values are `null` in the series and the path is split at them (`d` with a new `M`), never coerced to `0` (code-standard rule 12).
 
 **Check**
-- *Script* could: flag a line chart with fewer than five points and no markers; flag a line drawn over a count per period; flag a path that drops to zero where the series is missing.
+- *Script* could: flag a line drawn over a count per period; flag a path that drops to zero where the series is missing.
 - *Judgement*: stock or flow? Would the numbers alone say it?
 
-**Sources.** ONS, NN/g and the Analysis Function agree; the five-point floor for a chart is the toolkit's commentary.
+**Sources.** ONS, NN/g and the Analysis Function agree.
 
 ## Calendar heatmaps
 
@@ -204,7 +204,6 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **How**
 - [weak] The anatomy, the sequential scale and the feed beside it are [dashboards: timelines and activity](../profiles/dashboards.md#timelines-and-activity); this section adds when the form works.
-- [weak] Dense enough to show a pattern: if most days have an event, the grid shows rhythm; if a few dozen days in a year do, a list of those days with their counts says more (the threshold is the toolkit's commentary).
 - [weak] Sparse data: show only the period with data (the last eight weeks, not the year), or a strip of dates, or a list.
 - [weak] A sequential single-hue scale of four or five steps, boundaries from the data's spread; an empty day distinct from a day with no data ([data: numbers](data.md#numbers)).
 
@@ -224,7 +223,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - *Script* could: compute the share of days with data and flag a heatmap under a density threshold; check each cell has a count in text.
 - *Judgement*: is the pattern of gaps the question, or would a list or a line answer it?
 
-**Sources.** The FT for when it works; Carbon and NN/g on its colour, as in the dashboards page. The density threshold is the toolkit's commentary.
+**Sources.** The FT for when it works; Carbon and NN/g on its colour, as in the dashboards page.
 
 ## Axes, gridlines, labels and number formats
 
@@ -298,7 +297,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - *Script* could: hover and focus each point and assert the tooltip's box lies inside the plot and does not intersect the title, legend or summary; assert focus produces the same content as hover; assert Escape dismisses; flag a guide element wider than a hairline.
 - *Judgement*: while hovering, can the reader still see the line they are reading?
 
-**Sources.** Carbon, Highcharts and Primer on content; NN/g and W3C on placement and dismissal; Chartability on keyboard parity. None of them names the band-over-the-chart failure; the guide-line rule is the toolkit's reading of NN/g's "does not block".
+**Sources.** Carbon, Highcharts and Primer on content; NN/g and W3C on placement and dismissal; Chartability on keyboard parity. None of them names the band-over-the-chart failure; the guide line rests on Highcharts' crosshair line and NN/g's "does not block".
 
 ## Responsive charts
 
@@ -349,7 +348,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
   - "No table": "A table must be provided that contains a human-readable version of the data the chart is based on" ([long descriptions and data tables](#long-descriptions-and-data-tables)).
   - "No title, summary, or caption" and "No explanation for purpose or for how to read" ([cognitive load](#cognitive-load)).
 - [weak] Others that bite in product charts: "Color is used alone to communicate meaning" ([colour-vision deficiency](#colour-vision-deficiency)); "Inappropriate tab stops"; "Zoom and reflow are not supported" ([zoom and reflow of charts](#zoom-and-reflow-of-charts)); "Changes are not easy to follow" ([reduced motion in charts](#reduced-motion-in-charts)).
-- [weak] Chartability goes past WCAG (its CAF principles ask, for example, whether a reader can explain the chart); the toolkit treats WCAG failures as defects and the rest as review questions.
+- [weak] Chartability goes past WCAG (its CAF principles ask, for example, whether a reader can explain the chart); WCAG failures are conformance failures, and the rest are a community framework's heuristics, read as review questions.
 
 **Cases**
 - A dashboard ships six charts with 10px tick labels → one change to the chart component's text size fixes all six.

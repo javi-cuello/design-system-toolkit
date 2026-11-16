@@ -53,7 +53,7 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - *Script* could: hover and focus each tooltip trigger; assert the tooltip appears in both cases, Escape hides it without moving focus, moving the pointer onto it keeps it, and it contains no focusable element; flag `role="tooltip"` on a non-focusable trigger.
 - *Judgement*: if this tooltip never appeared, could the person still finish the task?
 
-**Sources.** The W3C tooltip pattern is marked as work in progress without task-force consensus; WCAG 1.4.13 is normative and is what the toolkit checks against. Carbon, Primer and NN/g agree on supplementary-only content; Primer is the strictest (tooltips mainly to label icon buttons), and the toolkit follows Primer.
+**Sources.** The W3C tooltip pattern is marked as work in progress without task-force consensus; WCAG 1.4.13 is normative. Carbon, Primer and NN/g agree on supplementary-only content; Primer is the strictest (tooltips mainly to label icon buttons).
 
 ## In Figma
 
@@ -78,13 +78,13 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis and property for the parity report.
 - *Judgement*: is every tooltip drawn in the library a few words, and does each icon-only trigger that needs one have it?
 
-**Sources.** Figma's SDS, Primer, MUI and Radix for parts and names; figma-standard for names. SDS's tooltip, with a title and a body, is richer than the toolkit's, which keeps to [tooltips](#tooltips).
+**Sources.** Figma's SDS, Primer, MUI and Radix for parts and names; figma-standard for names. SDS's tooltip carries a title and a body, more than the supplementary label [tooltips](#tooltips) describes.
 
 ## Alignment with code
 
 **Structure**
 - [strong] Code keeps the tip apart from its trigger and wires the two together, so the Figma component is the tip alone and the frame that places it supplies the trigger, as [In Figma](#in-figma) says. Radix ships `TooltipProvider`, `Tooltip`, `TooltipTrigger`, `TooltipPortal`, `TooltipContent` and `TooltipArrow` ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); React Aria `TooltipTrigger`, `Tooltip` and `OverlayArrow` ([React Aria Tooltip.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Tooltip.tsx)); Primer and MUI one `Tooltip` that clones its single child to add the events and `aria-labelledby` or `aria-describedby` ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx), [MUI Tooltip.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.js)).
-- [moderate] Kits disagree on whether the trigger is inside the Figma component. Carbon's carries it as a `Trigger` instance swap, and its `Type=Definition` switches the code to another component, `DefinitionTooltip` ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)); Primer's connects a single `Label` text property to `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)), and SDS's a `Title`, a `Body` and `Placement`, with no trigger ([SDS Tooltip.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Tooltip.figma.ts)). The toolkit follows Primer and SDS, since the trigger is any component.
+- [moderate] Kits disagree on whether the trigger is inside the Figma component. Carbon's carries it as a `Trigger` instance swap, and its `Type=Definition` switches the code to another component, `DefinitionTooltip` ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)); Primer's connects a single `Label` text property to `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)), and SDS's a `Title`, a `Body` and `Placement`, with no trigger ([SDS Tooltip.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Tooltip.figma.ts)). figma-standard rule 53 keeps the trigger outside the component, as Primer and SDS do.
 - [weak] Radix's `TooltipProvider` holds the delay for every tip on the page ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); Figma draws nothing for it, as the delay is one product constant ([In code](#in-code)).
 
 **Mapping**
@@ -105,8 +105,8 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - [required] Timing states have no frame: Radix's `data-state` tells `delayed-open` from `instant-open`, the second for a tip that opens right after another closed ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); React Aria's `[data-entering]` and `[data-exiting]` are motion (figma-standard rule 52).
 
 **Differences**
-- [weak] `Placement` has four sides, where Primer's `direction` takes eight compass values and Carbon's Figma pairs `Position` with an `Alignment` of `Start`, `Center` or `End` to give `top-start` and the rest ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)). The toolkit draws sides only and leaves the alignment along a side to the code.
-- [weak] A kit's own property can stray from its code's name: Primer's Figma says `Label` for the prop `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)). The toolkit names the property as the code does (figma-standard rule 21), so the mapping row has nothing to translate.
+- [weak] `Placement` has four sides, where Primer's `direction` takes eight compass values and Carbon's Figma pairs `Position` with an `Alignment` of `Start`, `Center` or `End` to give `top-start` and the rest ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)).
+- [weak] A kit's own property can stray from its code's name: Primer's Figma says `Label` for the prop `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)). figma-standard rule 21 names the property as the code does, so the mapping row has nothing to translate.
 - [moderate] Name or description is a prop in code (Primer's `type`, MUI's `describeChild`; sources above) and an annotation in Figma (figma-standard rule 52); the mapping row carries it to `aria-labelledby` or `aria-describedby`.
 
 **Check**

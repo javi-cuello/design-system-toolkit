@@ -182,7 +182,7 @@ What a front end does so that the page cannot be turned against the person readi
 
 **What good looks like**
 - [strong] A server on `localhost` (a dev server, a dashboard, a tool bridge) assumes every page the developer visits can send it requests.
-- [strong] It checks `Origin` on every write route and on WebSocket upgrades, and refuses what is not its own.
+- [strong] It checks `Origin` on every write route and on WebSocket upgrades, and refuses what is not its own. Chrome's guidance to private-network servers: "the server should examine the `Origin` header", and "Typically, you should allow access to a single origin under your control" ([Chrome, *Private Network Access: introducing preflights*](https://developer.chrome.com/blog/private-network-access-preflight), last updated 2022).
 
 **How**
 - [required] A page on any site can POST to `http://localhost:port/` from the developer's browser: a `text/plain` body is a CORS simple request, so there is no preflight, and the attacker does not need to read the reply when the request itself does the harm ([MDN, *CORS*](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)). Binding to `127.0.0.1` does not help; the request comes from the developer's own browser.
@@ -201,7 +201,7 @@ What a front end does so that the page cannot be turned against the person readi
 - *Script:* could start the server and send a write request with `Origin: https://example.com` and `Content-Type: text/plain`, expecting a refusal; the same for a WebSocket upgrade.
 - *Judgement:* What could a page on another site make this server do?
 
-**Sources:** MDN as linked; the lesson is the toolkit's own, recorded in [candidates](candidates.md).
+**Sources:** MDN and Chrome as linked; the run that taught the lesson is recorded in [candidates](candidates.md).
 
 ## Secrets never in front-end code
 

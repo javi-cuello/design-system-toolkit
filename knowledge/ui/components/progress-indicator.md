@@ -7,7 +7,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 **Use when / don't use**
 - [weak] Which wait gets a bar, a spinner, a skeleton or nothing is [feedback: *Loading*](../patterns/feedback.md#loading); this page starts once a progress indicator is the answer.
 - [strong] Determinate when the work can be counted against a known end (bytes of a known file, items of a known list); indeterminate when it cannot; switch from indeterminate to determinate as soon as the total is known. Carbon: an indeterminate bar "may change to a determinate indicator if enough information is gathered to calculate the load completion" ([Carbon progress bar](https://carbondesignsystem.com/components/progress-bar/usage/)); HTML's `progress` is indeterminate exactly when it has no `value` ([MDN `progress`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/progress)); MUI and React Aria expose the same two modes ([MUI progress](https://mui.com/material-ui/react-progress/), [React Aria ProgressBar](https://react-aria.adobe.com/ProgressBar)).
-- [contested] A measurement that is not work in progress (storage used, a score, tasks a person has finished) is a meter, not a progress bar, in Carbon ("When the progress is determined by user actions such as tutorials completed, or storage space", don't use it) and in ARIA, whose `meter` role is "a scalar measurement within a known range" ([WAI-ARIA `meter`](https://w3c.github.io/aria/#meter)). Primer's ProgressBar instead is "a simple chart" that can "visualize parts that make up a whole", segments included ([Primer ProgressBar](https://primer.style/product/components/progress-bar/)). The toolkit uses a progress bar for system work only and `meter` for a static measure, since a screen reader announces a progressbar as something still under way.
+- [contested] A measurement that is not work in progress (storage used, a score, tasks a person has finished) is a meter, not a progress bar, in Carbon ("When the progress is determined by user actions such as tutorials completed, or storage space", don't use it) and in ARIA, whose `meter` role is "a scalar measurement within a known range" ([WAI-ARIA `meter`](https://w3c.github.io/aria/#meter)). Primer's ProgressBar instead is "a simple chart" that can "visualize parts that make up a whole", segments included ([Primer ProgressBar](https://primer.style/product/components/progress-bar/)).
 - [strong] Not for steps a person moves through; that is a step indicator ([steppers](../patterns/steppers.md#step-indicators); [Carbon progress bar](https://carbondesignsystem.com/components/progress-bar/usage/): "When manual user actions are required to progress, use a progress indicator instead").
 
 **Anatomy**
@@ -48,7 +48,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 - *Script* could: measure the fill's contrast against track and page; with `dir="rtl"`, assert the fill starts at the inline start.
 - *Judgement*: is a ring used where a bar would fit?
 
-**Sources.** Carbon and Primer ship linear only; MUI and Spectrum ship both shapes. The toolkit defaults to linear and allows a ring where space forces it, with the value in text.
+**Sources.** Carbon and Primer ship linear only; MUI and Spectrum ship both shapes.
 
 ## Determinate and indeterminate
 
@@ -80,7 +80,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 - *Script* could: assert an indeterminate bar has no `aria-valuenow` and a determinate one has all three values; with reduced motion emulated, assert no running animation.
 - *Judgement*: is the total real, or a guess dressed as a percentage?
 
-**Sources.** ARIA, MDN and WCAG as linked set the attributes. Carbon owns the richest status model; MUI and Primer leave status to the page. The toolkit follows Carbon's three statuses.
+**Sources.** ARIA, MDN and WCAG as linked set the attributes. Carbon owns the richest status model; MUI and Primer leave status to the page.
 
 ## Labels and values
 
@@ -121,7 +121,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 - *Script* could: flag a progress element with no accessible name, one named "Loading", text inside a `role="progressbar"`, and a value announced twice (a visible count and an identical `aria-valuetext`).
 - *Judgement*: does the label tell three bars apart, and does the value use the person's units?
 
-**Sources.** Carbon, Primer and React Aria agree on a named bar with a value in text; they differ on placement (Carbon: label above, Primer: value beside). The toolkit follows Carbon's placement and React Aria's `aria-valuetext`.
+**Sources.** Carbon, Primer and React Aria agree on a named bar with a value in text; they differ on placement (Carbon: label above, Primer: value beside).
 
 ## In Figma
 
@@ -149,7 +149,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 - *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists the axes, so a `Value` axis with no `value` prop shows in the parity report.
 - *Judgement*: can a designer draw every status in both modes, and does the description say how the fill is sized?
 
-**Sources.** Carbon's and Primer's Code Connect files for the Figma names; React Aria for the part names. Where Carbon samples the value as an axis, the toolkit keeps it as sample frames only and says so under *Differences*.
+**Sources.** Carbon's and Primer's Code Connect files for the Figma names; React Aria for the part names. Carbon samples the value as an axis, which *Differences* reads as samples.
 
 ## Alignment with code
 
@@ -189,7 +189,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 ## In code
 
 **Element**
-- [contested] Native `progress`, or `role="progressbar"` on a `div`. The first rule of ARIA and HTML favour the native element, which carries role and value with no ARIA ([accessibility: *ARIA: the first rule*](../../code/accessibility.md#aria-the-first-rule-and-when-it-is-needed); [MDN `progress`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/progress)). Every library read uses the role on a `span` or `div` instead (Primer, MUI, Carbon, React Aria; sources above), since a ring, segments and a status icon do not fit `progress`, and styling its fill needs non-standard pseudo-elements ([MDN `::-webkit-progress-value`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::-webkit-progress-value): "Non-standard"). The toolkit uses `progress` for a plain linear bar and the role where the design needs a ring or segments, with all three values set.
+- [contested] Native `progress`, or `role="progressbar"` on a `div`. The first rule of ARIA and HTML favour the native element, which carries role and value with no ARIA ([accessibility: *ARIA: the first rule*](../../code/accessibility.md#aria-the-first-rule-and-when-it-is-needed); [MDN `progress`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/progress)). Every library read uses the role on a `span` or `div` instead (Primer, MUI, Carbon, React Aria; sources above), since a ring, segments and a status icon do not fit `progress`, and styling its fill needs non-standard pseudo-elements ([MDN `::-webkit-progress-value`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::-webkit-progress-value): "Non-standard").
 - [required] Never focusable: no `tabindex` (Primer's component tests check it "does not receive keyboard focus", [Primer ProgressBar accessibility](https://primer.style/product/components/progress-bar/accessibility/)).
 - [moderate] GOV.UK's component list has neither a progress bar nor a spinner ([GOV.UK components](https://design-system.service.gov.uk/components/)), and Figma's Simple Design System ships no progress component, only a loader glyph ([SDS IconLoader](https://github.com/figma/sds/blob/main/src/ui/icons/IconLoader.tsx)); a project without long-running work may not need one.
 
@@ -202,4 +202,4 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 - *Script*: axe flags a `progressbar` with no name; the parity loop compares each frame's fill width and colours (design-code-parity). Could: assert a value above `max` renders as full, not past the track.
 - *Judgement*: is `progress` enough here, or does the design need the role?
 
-**Sources.** WAI-ARIA, MDN and the library source as linked. On the element the specs and the libraries split; the toolkit takes the native element where it can draw the design.
+**Sources.** WAI-ARIA, MDN and the library source as linked. On the element the specs and the libraries split.

@@ -8,7 +8,7 @@ How a person gives the interface a file: which control to offer, how the file in
 - [weak] Ask for a file only when the task cannot be done without it: GOV.UK says to ask for an upload only if it is "critical to the delivery of your service" ([GOV.UK file upload](https://design-system.service.gov.uk/components/file-upload/)). A typed answer, a choice or a lookup beats a document where one carries the same fact.
 - [weak] **A single file input** for one file in a form (an avatar, one CSV to import).
 - [weak] **A file input with `multiple`** when the task takes several files of one kind at once (screenshots for a report).
-- [moderate] **A drop zone** around the input where people often have the files open beside the browser (importing assets, attaching evidence in a tool); it enlarges the target and accepts a drag, and still contains the button ([Carbon file uploader](https://carbondesignsystem.com/components/file-uploader/usage/) offers both the button and the drag-and-drop variant).
+- [moderate] **A drop zone** around the input: it enlarges the target and accepts a drag, and still contains the button ([Carbon file uploader](https://carbondesignsystem.com/components/file-uploader/usage/) offers both the button and the drag-and-drop variant).
 - [weak] Don't put a multi-file uploader in a modal; Carbon advises against it, since the list grows past what a dialog holds.
 
 **How**
@@ -37,7 +37,7 @@ How a person gives the interface a file: which control to offer, how the file in
 - *Script:* could check that every `input[type=file]` has a label, sits in a form with `enctype="multipart/form-data"`, has a description naming its limits, and that a drop zone always contains a focusable file input or button.
 - *Judgement:* Is the file needed at all, and is single or multiple chosen by what people actually do?
 
-**Sources:** GOV.UK and Carbon as linked. Carbon treats the drag-and-drop variant as one of two equal choices; the toolkit uses the plain input by default and adds the drop zone only where people drag files from their desktop as a matter of course.
+**Sources:** GOV.UK and Carbon as linked. Carbon treats the drag-and-drop variant as one of two equal choices; no source opened sets when to choose it.
 
 ## The file input and its label
 
@@ -88,7 +88,7 @@ How a person gives the interface a file: which control to offer, how the file in
 - [weak] **Draw every state.** Friedman lists the states a drop area passes through, from empty to ready-to-receive to filled and disabled, and asks that each be designed, with a dashed border as the common signal of a drop area ([Friedman, Drag-and-Drop UX](https://smart-interface-design-patterns.com/articles/drag-and-drop-ux/)).
 - [weak] **Say what happens on drop.** The zone's text names the action and the limits ("Drop a CSV here, or choose a file. Up to 5 MB.").
 - [weak] **Many files at once.** When someone drops a batch, a summary of how many and which types reads better than a long list appearing at once (Friedman, as linked); the per-file list follows.
-- [weak] **Single-file zones.** After one file is added, Carbon removes the zone, and the person removes the file to add another ([Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)); the toolkit keeps the zone but labels it "Replace file", so the place the person aimed at stays put (design-standard rule 2 applies the same stillness to controls).
+- [required] **Single-file zones.** After one file is added, Carbon removes the zone, and the person removes the file to add another ([Carbon](https://carbondesignsystem.com/components/file-uploader/usage/)); the zone's space stays, holding the added file, since content that comes and goes keeps its space (design-standard rule 2).
 
 **Cases**
 - An import page accepts drops anywhere but shows nothing until a drag starts → draw a visible zone with its button; nobody discovers a target that appears only mid-drag.
@@ -111,7 +111,7 @@ How a person gives the interface a file: which control to offer, how the file in
 - *Script:* could check that each drop zone contains a focusable file input or a button that opens one, that its border meets 3:1, and that dropping files updates a live region.
 - *Judgement:* Do people here drag files often enough to earn the zone, and is every state drawn?
 
-**Sources:** GOV.UK, Carbon and Friedman as linked. Carbon removes a single-file zone once a file is added; the toolkit keeps it as "Replace file", for layout stability.
+**Sources:** GOV.UK, Carbon and Friedman as linked. Carbon removes a single-file zone once a file is added; the space it leaves is design-standard rule 2's.
 
 ## Progress, errors and retry
 

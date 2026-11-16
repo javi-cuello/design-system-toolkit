@@ -8,7 +8,7 @@ Which platform features a front end can use, and what it does where one is missi
 
 **What good looks like**
 - [moderate] A project states its support target once, as a Baseline level, and every feature choice is read against it.
-- [moderate] Baseline widely available features are used without a fallback; newly available ones get a fallback or are enhancements; limited ones are enhancements only.
+- [required] Baseline widely available features are used without a fallback; newly available ones get a fallback or are enhancements; limited ones are enhancements only (code-standard rule 68).
 - [moderate] The target is one setting the tools read, not a sentence in a README.
 - [weak] As read in August 2026: container size queries, cascade layers, nesting, `@scope` and `light-dark()` were Baseline, style queries newly so. A dated reading, re-checked on the feature's MDN page before it is leaned on.
 
@@ -38,7 +38,7 @@ Which platform features a front end can use, and what it does where one is missi
 - *Script:* could compare the CSS properties, selectors and JavaScript APIs a build uses against web-features data for the project's target, and report each feature above it with no `@supports` or feature test around it. Stylelint has plugins that do this against Browserslist.
 - *Judgement:* What does a reader on the oldest supported browser get from this page?
 
-**Sources:** web.dev, MDN, web-features and Browserslist as linked. The toolkit defaults to Baseline widely available, with newly available as enhancement; a project's context document can move it.
+**Sources:** web.dev, MDN, web-features and Browserslist as linked. The floor of Baseline widely available, with newer features as enhancement, is code-standard rule 68; a project's context document can move it.
 
 ## Progressive enhancement and feature queries
 
@@ -139,7 +139,6 @@ Which platform features a front end can use, and what it does where one is missi
 ## Reduced motion and reduced data
 
 **What good looks like**
-- [weak] Motion that is not essential is reduced when the reader asks, not deleted wholesale: a fade can stay where a slide goes.
 - [moderate] Heavy media and prefetching respect a data-saving preference where the browser reports one, without depending on it.
 
 **How**
@@ -157,7 +156,7 @@ Which platform features a front end can use, and what it does where one is missi
 - *Script:* could render each page with `prefers-reduced-motion: reduce` emulated and assert no running animation longer than a threshold.
 - *Judgement:* With reduced motion on, does every state change still show?
 
-**Sources:** MDN and W3C as linked. The toolkit reduces rather than removes motion, the stance in [candidates](candidates.md).
+**Sources:** MDN and W3C as linked.
 
 ## Print styles
 

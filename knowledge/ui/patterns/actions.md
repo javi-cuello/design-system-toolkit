@@ -76,7 +76,7 @@ How an interface offers things to do, across its controls: button or link, how d
 - *Script* could: flag a danger button with no visible text or with the primary role in a neutral form; after a scripted delete, assert an undo control or a dialog appeared.
 - *Judgement*: could this be undoable instead of confirmed?
 
-**Sources.** Apple does not style the button confirming an action the person deliberately chose (Empty Trash); Carbon's danger modal and GOV.UK's warning button do. On the web the toolkit follows Carbon and GOV.UK: the colour is the last cue before an irreversible step. Apple's point survives as "not the default".
+**Sources.** Apple does not style the button confirming an action the person deliberately chose (Empty Trash); Carbon's danger modal and GOV.UK's warning button do. On the web this section follows Carbon and GOV.UK: the colour is the last cue before an irreversible step. Apple's point survives as "not the default".
 
 ## Button groups and order
 
@@ -117,7 +117,7 @@ How an interface offers things to do, across its controls: button or link, how d
 - *Script* could: assert a dialog's primary is last in DOM order and visually trailing; flag groups of mixed height or of more than three buttons.
 - *Judgement*: does every dialog and form put the primary in the same place?
 
-**Sources.** NN/g's 2008 web advice was OK first (following Windows); Apple, Carbon and Primer put it last in dialogs; GOV.UK and Carbon put it first at the foot of a page. The toolkit follows Carbon, which states the split, and NN/g's point that consistency outweighs either.
+**Sources.** NN/g's 2008 web advice was OK first (following Windows); Apple, Carbon and Primer put it last in dialogs; GOV.UK and Carbon put it first at the foot of a page. This section follows Carbon, which states the split, and NN/g's point that consistency outweighs either.
 
 ## Cancel, close and back
 
@@ -153,7 +153,7 @@ How an interface offers things to do, across its controls: button or link, how d
 - *Script* could: type in each dialog, press X, Cancel and Escape, and assert each asks or keeps nothing submitted; flag a Back link without `href`, one after `main`, or a page with both a back link and breadcrumbs.
 - *Judgement*: if the person presses X now, will they get what they expect?
 
-**Sources.** NN/g advises that an ambiguous X should "err on the side of caution and save any intermediate work"; Carbon makes the X discard. The toolkit follows Carbon inside a modal dialog, where a primary button exists to save, and asks before discarding typed work, which meets NN/g's worry; on a surface that applies changes live, close keeps them, as NN/g says.
+**Sources.** NN/g advises that an ambiguous X should "err on the side of caution and save any intermediate work"; Carbon makes the X discard. The contested item follows Carbon inside a modal dialog, where a primary button exists to save, and asking before discarding typed work meets NN/g's worry; on a surface that applies changes live, close keeps them, as NN/g says.
 
 ## Toolbars and bulk actions
 

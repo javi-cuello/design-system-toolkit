@@ -12,7 +12,7 @@ How a person keeps their bearings in a task that spans several screens or takes 
 **How**
 - [moderate] **Labels** of one or two words naming the step by its purpose ("Your details", "Choose files"), so the label survives changes to the step's contents (Atlassian); Carbon suggests verb plus noun ("Define endpoints") and numbering the steps. Never vague labels ("Processing").
 - [weak] **Three states drawn differently:** done, current, not yet; plus error where a step has a problem (Carbon). Done shows a mark as well as a colour.
-- [moderate] **Going back by the indicator.** Atlassian lets people select visited steps to return to them; Carbon's default indicator is display-only, with an interactive variant. The toolkit makes visited steps links and future steps plain text: going back is safe, jumping ahead past unanswered steps is not ([NN/g wizards](https://www.nngroup.com/articles/wizards/): enforce the order).
+- [moderate] **Going back by the indicator.** Atlassian lets people select visited steps to return to them; Carbon's default indicator is display-only, with an interactive variant. Visited steps are links, as Atlassian lets them be, and future steps plain text, since NN/g asks to enforce the order ([NN/g wizards](https://www.nngroup.com/articles/wizards/)).
 - [moderate] **Orientation.** Vertical where there is room beside the form, since Carbon finds it easier to read; horizontal above the form otherwise. On small screens, collapse to "Step 2 of 5: Choose files", GOV.UK's simple form.
 - [weak] **Total only if reliable.** GOV.UK: include the total only if you can do so reliably.
 - [weak] The indicator never replaces the page heading; each step has its own `h1`.
@@ -38,7 +38,7 @@ How a person keeps their bearings in a task that spans several screens or takes 
 - *Script:* could check one `aria-current="step"` per indicator, that future steps are not links, that the step list is an `ol`, that the page title carries the step name, and that the indicator stays on one line or collapses at 320px.
 - *Judgement:* Did the flow need an indicator at all, or would better questions have been enough (GOV.UK's test)?
 
-**Sources:** Carbon, Atlassian, GOV.UK and NN/g as linked. GOV.UK is the most sceptical and advises against indicators that show all questions, allow navigation back and show the current one; Carbon and Atlassian both ship that shape. The toolkit uses the full indicator for short linear tool flows of three to six fixed steps, where people revisit steps, and GOV.UK's "Step 2 of 5" text for public forms and small screens.
+**Sources:** Carbon, Atlassian, GOV.UK and NN/g as linked. GOV.UK is the most sceptical and advises against indicators that show all questions, allow navigation back and show the current one; Carbon and Atlassian both ship that shape. Carbon's and Atlassian's full indicator is for linear flows of three to six fixed steps; GOV.UK's "Step 2 of 5" text is the small-screen form (*Orientation*).
 
 ## Task lists
 
@@ -88,7 +88,7 @@ How a person keeps their bearings in a task that spans several screens or takes 
 - [weak] **The browser's Back does the same thing as the page's.** Friedman finds people distrust the browser button because flows send them to the start or lose their answers; each step is its own address, so Back returns to the previous step with its answers in place ([back behaviour](navigation.md#back-behaviour)). Minor changes on one page (a disclosure, a filter) do not add history entries.
 - [weak] **Continue** names what comes next where that helps; NN/g notes generic "Next" carries weak scent ([NN/g wizards](https://www.nngroup.com/articles/wizards/)). Continue saves the step.
 - [weak] **Leave and return.** Long flows save as they go and let people exit midway (NN/g); how is [forms: long forms, saving and resuming](forms.md#long-forms-saving-and-resuming).
-- [weak] **Before losing data,** ask. Where going back or leaving would discard answers that were not saved, Friedman suggests confirming first; the toolkit prefers saving so the question never arises.
+- [weak] **Before losing data,** ask. Where going back or leaving would discard answers that were not saved, Friedman suggests confirming first; a flow that saves as it goes (*Leave and return*, NN/g) never has to ask.
 - [weak] **Check answers at the end** before the final submit: [forms: check answers before submitting](forms.md#check-answers-before-submitting). Its Change links return to the step and then back to the check page.
 
 **Cases**

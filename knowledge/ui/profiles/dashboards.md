@@ -42,7 +42,7 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - *Script:* could check that the screen's specification declares a kind. Nothing measures the layout against it.
 - *Judgement:* is what sits at the top what this kind of user needs first?
 
-**Sources:** [NN/g dashboards](https://www.nngroup.com/articles/dashboards-preattentive/); [Carbon dashboards](https://carbondesignsystem.com/data-visualization/dashboards/), opened here. The table is the toolkit's synthesis of the two.
+**Sources:** [NN/g dashboards](https://www.nngroup.com/articles/dashboards-preattentive/); [Carbon dashboards](https://carbondesignsystem.com/data-visualization/dashboards/), opened here. The table combines the two.
 
 ---
 
@@ -77,7 +77,7 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - *Script:* could count tiles above the first chart or table, check each tile has a label and a value, and check a trend carries text.
 - *Judgement:* is the most important figure the most prominent? Is each tile a health figure someone acts on?
 
-**Sources:** [Carbon dashboards](https://carbondesignsystem.com/data-visualization/dashboards/) (quoted above, opened here); [ONS chart text](https://service-manual.ons.gov.uk/data-visualisation/guidance/chart-text). The health versus inventory distinction is practitioner commentary on generated docs sites; the toolkit adopts it because a figure nobody acts on wastes the top of the page.
+**Sources:** [Carbon dashboards](https://carbondesignsystem.com/data-visualization/dashboards/) (quoted above, opened here); [ONS chart text](https://service-manual.ons.gov.uk/data-visualisation/guidance/chart-text). The health versus inventory distinction is [data: KPI tiles](../patterns/data.md#kpi-tiles)'s.
 
 ---
 
@@ -216,7 +216,7 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - *Script:* could flag a table with headers and no rows, the strings "undefined", "NaN" or "null" in rendered text, and a figure of 0 whose source record is absent.
 - *Judgement:* does every empty state say why and offer the way forward?
 
-**Sources:** as linked from feedback, ux and data. None covers stale data; marking staleness in the caption is the toolkit's judgement, following design-standard rule 1.
+**Sources:** as linked from feedback, ux and data; design-standard rule 1 for the caption's dates. None covers stale data.
 
 ---
 
@@ -330,9 +330,9 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - [moderate] **Pick the form by the question.** *Is the trend rising?* A line: "If you want to show a data trend over time, a line chart will work better than a bar chart" ([NN/g, choosing chart types](https://www.nngroup.com/articles/choosing-chart-types/)); bars for a few discrete periods, which Carbon also allows for "trends over time" ([Carbon simple charts](https://carbondesignsystem.com/data-visualization/simple-charts/)). *When is work done, and where are the gaps?* A calendar heatmap. *What changed, and who did it?* A feed. A dashboard often wants a chart or heatmap on top and the feed below, filtered by the same period.
 - [required] **Calendar heatmap** (contribution-graph style): one cell per day, weeks as columns, weekday rows labelled, month labels above. A sequential single-hue scale in four or five steps, light to dark: "Sequential scales use a blended progression, typically of a single color" ([Carbon spatial charts](https://carbondesignsystem.com/data-visualization/spatial-charts/)). Step boundaries come from the data's spread, not from numbers that suit today (code-standard rule 57).
 - [weak] A legend states what each step counts ("None, 1–3, 4–9, 10+ changes") and sits in one place ([colour and legends across charts](#colour-and-legends-across-charts)). An empty day is a visible empty cell, distinct from a day with no data ("not recorded"): missing is not zero ([data: numbers](../patterns/data.md#numbers)).
-- [contested] Colour carries magnitude here, which NN/g warns against: "color should not be used to communicate information about quantitative values or magnitude" ([NN/g dashboards](https://www.nngroup.com/articles/dashboards-preattentive/)). The toolkit keeps the heatmap for the pattern of gaps and bursts and puts the exact count in each cell's text and in the table, so no figure depends on reading a shade. Carbon notes the 3:1 contrast floor "does not apply to heat maps"; the toolkit still wants the empty cell's outline at 3:1, so the grid's shape survives.
-- [required] **Activity feed**: newest first, grouped under day headings ("Today", "Yesterday", "9 Oct 2026"). Each entry says what changed and its effect, then who, then when (design-standard rule 10), and links to the change itself (the commit, the run, the record). An icon for the type carries a text label: Primer's timeline asks that icons used as badges "include a text alternative when they convey essential information" ([Primer timeline accessibility](https://primer.style/product/components/timeline/accessibility/)).
-- [contested] Timestamps: relative for recent entries, absolute past a week, and the exact time always reachable ([data: dates and times](../patterns/data.md#dates-and-times)). Atlassian switches to a date stamp after seven days and says to "always provide a way for people to see the actual timestamp" ([Atlassian date and time](https://atlassian.design/foundations/content/date-time)); Primer's relative time defaults to a 30-day threshold ([Primer relative time](https://primer.style/product/components/relative-time/)). The toolkit takes the week: under day headings, "3 weeks ago" says less than the date.
+- [contested] Colour carries magnitude here, which NN/g warns against: "color should not be used to communicate information about quantitative values or magnitude" ([NN/g dashboards](https://www.nngroup.com/articles/dashboards-preattentive/)). Where a heatmap is kept, the exact count goes in each cell's text and in the table, so no figure depends on reading a shade (1.4.1). Carbon notes the 3:1 contrast floor "does not apply to heat maps".
+- [required] **Activity feed**: newest first. Each entry says what changed and its effect, then who, then when (design-standard rule 10), and links to the change itself (the commit, the run, the record). An icon for the type carries a text label: Primer's timeline asks that icons used as badges "include a text alternative when they convey essential information" ([Primer timeline accessibility](https://primer.style/product/components/timeline/accessibility/)).
+- [contested] Timestamps: relative for recent entries, absolute past a threshold, and the exact time always reachable ([data: dates and times](../patterns/data.md#dates-and-times)). Atlassian switches to a date stamp after seven days and says to "always provide a way for people to see the actual timestamp" ([Atlassian date and time](https://atlassian.design/foundations/content/date-time)); Primer's relative time defaults to a 30-day threshold ([Primer relative time](https://primer.style/product/components/relative-time/)).
 - [weak] Filter a feed by type (runs, releases, findings) and by who, as facets in the address ([filtering: filters in the address](../patterns/filtering.md#filters-in-the-address)); a long feed pages or loads more, never infinitely under a footer.
 
 **Cases**
@@ -342,20 +342,20 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - Someone asks whether activity is slowing → a weekly line, not the heatmap.
 
 **Accessibility**
-- [required] 1.1.1 and 1.3.1: the heatmap has a short name stating its message and a table of its days as the long description; the W3C asks for "a two-part text alternative" for complex images ([W3C complex images](https://www.w3.org/WAI/tutorials/images/complex/)). 1.4.1: each step has a count in text. 2.1.1: drill-down from a day is reachable without the grid. 1.3.1: feed day headings are headings, the feed a list.
+- [required] 1.1.1 and 1.3.1: the heatmap has a short name stating its message and a table of its days as the long description; the W3C asks for "a two-part text alternative" for complex images ([W3C complex images](https://www.w3.org/WAI/tutorials/images/complex/)). 1.4.1: each step has a count in text. 2.1.1: drill-down from a day is reachable without the grid. 1.3.1: the feed is a list.
 - [required] Implementation: code-standard rule 1 (lists as lists), code-standard rule 18 (type icons named), code-standard rule 20 (filters and paging work without script).
 
 **Build**
 - [strong] The heatmap is a chart `figure`: an `svg role="img"` named by its summary sentence, its legend, and a `table` of week by weekday with counts ([html-semantics: *Charts in markup*](../../code/html-semantics.md#charts-in-markup); [data visualisation: long descriptions and data tables](../patterns/data-visualisation.md#long-descriptions-and-data-tables)). The cells are not 365 tab stops; links to a day sit in the table, or the cells become one `grid` with a roving tabindex and arrow keys, as the [W3C grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) describes ([accessibility: *Composite widgets and roving tabindex*](../../code/accessibility.md#composite-widgets-and-roving-tabindex)).
 - [weak] Each cell's step is a class or `data-level` set from the model's thresholds; the colours are a sequential token set per theme ([tokens: *Themes and modes*](../../code/tokens.md#themes-and-modes)).
-- [required] The feed is an `ol` per day under an `h3` holding a `<time datetime>`; each entry is an `li` with a link to the change and its own `time`. MDN: `datetime` translates dates "into machine-readable format" ([MDN time](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/time)). Grouping by day happens in the model, in the reader's time zone (code-standard rule 29; [i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)).
+- [required] The feed is an `ol`; each entry is an `li` with a link to the change and its own `time`. MDN: `datetime` translates dates "into machine-readable format" ([MDN time](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/time)). Dates render in the reader's time zone ([i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)).
 - [required] The heatmap, the table and the feed render from one event list, so their counts agree (code-standard rule 29).
 
 **Check**
-- *Script:* could check that a heatmap `svg` has a name and a table with one row per weekday, that every feed entry has a `time` with `datetime` and a link, and that a day heading's count equals its entries.
+- *Script:* could check that a heatmap `svg` has a name and a table with one row per weekday, that every feed entry has a `time` with `datetime` and a link.
 - *Judgement:* does each feed entry say what changed in the reader's words? Would a chart answer the question better?
 
-**Sources:** [Carbon spatial charts](https://carbondesignsystem.com/data-visualization/spatial-charts/), [Carbon simple charts](https://carbondesignsystem.com/data-visualization/simple-charts/), [NN/g choosing chart types](https://www.nngroup.com/articles/choosing-chart-types/), [NN/g dashboards](https://www.nngroup.com/articles/dashboards-preattentive/), [Primer timeline accessibility](https://primer.style/product/components/timeline/accessibility/), [Primer relative time](https://primer.style/product/components/relative-time/), [Atlassian date and time](https://atlassian.design/foundations/content/date-time), [W3C complex images](https://www.w3.org/WAI/tutorials/images/complex/), [W3C grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/), [MDN time](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/time), all opened here. Carbon and NN/g disagree on colour for magnitude, and Primer and Atlassian on the relative-time threshold; the toolkit's choices are stated above. No source opened covers grouping a feed by day; it is the toolkit's judgement.
+**Sources:** [Carbon spatial charts](https://carbondesignsystem.com/data-visualization/spatial-charts/), [Carbon simple charts](https://carbondesignsystem.com/data-visualization/simple-charts/), [NN/g choosing chart types](https://www.nngroup.com/articles/choosing-chart-types/), [NN/g dashboards](https://www.nngroup.com/articles/dashboards-preattentive/), [Primer timeline accessibility](https://primer.style/product/components/timeline/accessibility/), [Primer relative time](https://primer.style/product/components/relative-time/), [Atlassian date and time](https://atlassian.design/foundations/content/date-time), [W3C complex images](https://www.w3.org/WAI/tutorials/images/complex/), [W3C grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/), [MDN time](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/time), all opened here. Carbon and NN/g disagree on colour for magnitude, and Primer and Atlassian on the relative-time threshold. No source opened covers grouping a feed by day, so none is given.
 
 ---
 
@@ -366,14 +366,11 @@ What a dashboard, report or data tool must specify: whether it is operational or
 
 **How**
 - [weak] Export sits in the table toolbar, which Carbon reserves for global actions "such as table settings, complex filters, exporting, or editing table data" ([Carbon data table](https://carbondesignsystem.com/components/data-table/usage/)).
-- [weak] Export what the reader is looking at: the current filters and sort, all pages, with the option of everything stated in the menu ("Export 42 filtered rows" / "Export all 508").
-- [weak] The file carries its provenance: source names and dates in a header row or the filename, following design-standard rule 1. (The toolkit's judgement; no source opened specifies it.)
-- [weak] Column names in the file match the screen; values are raw (numbers as numbers, dates in ISO form), not formatted for display.
+- [required] Export what the reader is looking at: the current filters and sort, all pages, with the option of everything stated in the menu ("Export 42 filtered rows" / "Export all 508") (design-standard rule 17).
 - [weak] A long export runs in the background with progress and a notice when ready ([interaction: response times](../design/interaction.md#response-times-and-perceived-performance)).
 
 **Cases**
-- Export downloads all 508 rows while the reader filtered to 42 → export the filtered set by default and label the choice.
-- A CSV's dates read "3 days ago" → write ISO dates; relative times are for the screen.
+- Export downloads all 508 rows while the reader filtered to 42 → export the filtered set by default and label the choice (design-standard rule 17).
 - A chart has no export and people screenshot it → offer the underlying table as CSV.
 
 **Accessibility**
@@ -381,16 +378,14 @@ What a dashboard, report or data tool must specify: whether it is operational or
 - [required] Implementation: code-standard rule 18 (an icon-only export button has a name).
 
 **Build**
-- [strong] A file that exists at an address is `<a href="…?status=open&format=csv" download>`, carrying the current filters and sort; a file generated on request is a `button` ([html-semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons)).
-- [required] The file is written from raw values: numbers unformatted, dates in ISO 8601, column names matching the screen's headers from one definition (code-standard rule 29).
-- [weak] Provenance goes in the filename and a header row, from the same source record the caption reads.
+- [strong] A file that exists at an address is `<a href="…?status=open&format=csv" download>`, carrying the current filters and sort from the address (code-standard rule 67); a file generated on request is a `button` ([html-semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons)).
 - [required] A background export reports progress and "Export ready" in a persistent `role="status"` line ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)); an icon-only export control is named (code-standard rule 18).
 
 **Check**
 - *Script:* could compare the exported row count with the filtered count on screen.
 - *Judgement:* is what the reader gets what they expected from what they saw?
 
-**Sources:** [Carbon data table](https://carbondesignsystem.com/components/data-table/usage/). Carbon's dashboards page does not cover exports; the rest is the toolkit's judgement.
+**Sources:** [Carbon data table](https://carbondesignsystem.com/components/data-table/usage/). Carbon's dashboards page does not cover exports; the scope applies design-standard rule 17. No source opened sets the file's provenance or value format, so none is given.
 
 ---
 

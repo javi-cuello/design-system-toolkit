@@ -43,7 +43,7 @@ Patterns that hide part of the content until the person asks for it: show more a
 - *Script* could: find elements with `text-overflow: ellipsis` or `-webkit-line-clamp` whose content overflows, and assert each has a keyboard-reachable reveal or sits in a link; flag truncation inside headings, labels, buttons and alerts; flag a Show more control on content that does not overflow; flag link text "Read more" or "More" without a fuller accessible name.
 - *Judgement*: would wrapping or more room avoid the truncation altogether?
 
-**Sources.** Carbon pairs end-line truncation with a browser `title` tooltip in its code; Primer and WCAG's Understanding say that alone fails keyboard users. The toolkit follows Primer and WCAG: an explicit, keyboard-reachable reveal.
+**Sources.** Carbon pairs end-line truncation with a browser `title` tooltip in its code; Primer and WCAG's Understanding say that alone fails keyboard users. This section follows Primer and WCAG: an explicit, keyboard-reachable reveal.
 
 ## Progressive disclosure depth
 
@@ -164,4 +164,4 @@ Patterns that hide part of the content until the person asks for it: show more a
 - *Script*: tools/ui-check/check.mjs: design-standard rule 3 (tabs keep one row and scroll). Could: at 320px, assert content tabs either fit without truncation or render as sections with headings; assert the same headings exist in both presentations.
 - *Judgement*: are these tabs views of one context (stay tabs) or sections of one page (stack them)?
 
-**Sources.** GOV.UK stacks content tabs on small screens and flags it as needing research; NN/g recommends accordions on mobile. The toolkit stacks by default, since nothing is hidden, and uses an accordion when sections are long and independent.
+**Sources.** GOV.UK stacks content tabs on small screens and flags it as needing research; NN/g recommends accordions on mobile. The items give each its case: GOV.UK's stacking as the default form, NN/g's accordion for long, independent sections.

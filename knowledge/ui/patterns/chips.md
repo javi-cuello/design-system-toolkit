@@ -17,7 +17,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - [weak] Name the components by job ("Status badge", "Filter chip", "Input chip"), as Friedman recommends, not by shape.
 - [weak] Word static labels as adjectives or nouns ("Completed", "Colour"), never verbs, so nobody expects them to act (GOV.UK).
 - [moderate] Keep labels short and in sentence case; Atlassian truncates lozenges and tags past 200px and Carbon asks for under 20 characters where it can control the text.
-- [weak] Carbon's tag types map onto the toolkit's: read-only tag = static tag; dismissible tag = input chip or applied-filter chip; selectable tag = filter chip; operational tag = the "+3 more" control ([chip: removing chips, overflow and wrapping](../components/chip.md#removing-chips-overflow-and-wrapping)).
+- [weak] Carbon's tag types map onto the jobs above: read-only tag = static tag; dismissible tag = input chip or applied-filter chip; selectable tag = filter chip; operational tag = the "+3 more" control ([chip: removing chips, overflow and wrapping](../components/chip.md#removing-chips-overflow-and-wrapping)).
 
 **Cases**
 - A table shows a grey "Colour" tag and, beside it, an identical grey "Colour" chip that filters on click → make the chip look like a control (border, hover) or make the tag a plain link; two looks for two jobs.
@@ -39,7 +39,7 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - *Script:* could flag an element styled as a tag that has a click handler but no button or link role, a static tag with `cursor: pointer` or a hover style, and a chip whose boundary contrast is under 3:1.
 - *Judgement:* For each rounded label: does it do anything? If it does, is it built and styled as that control; if not, is it plainly inert?
 
-**Sources:** Friedman, GOV.UK, Atlassian and Carbon as linked; Primer's [Label](https://primer.style/product/components/label/) (contextual metadata) and [Token](https://primer.style/product/components/token/) (a compact, optionally removable representation of an object) split the same way. Carbon and Atlassian allow some tags to be interactive where GOV.UK allows none; the toolkit lets a tag be interactive only when it looks like a control.
+**Sources:** Friedman, GOV.UK, Atlassian and Carbon as linked; Primer's [Label](https://primer.style/product/components/label/) (contextual metadata) and [Token](https://primer.style/product/components/token/) (a compact, optionally removable representation of an object) split the same way. Carbon and Atlassian allow some tags to be interactive where GOV.UK allows none; GOV.UK's reason, that interactive and non-interactive tags look the same, is why an interactive tag must look like a control.
 
 ## Tags as metadata and links
 
@@ -73,4 +73,4 @@ The small rounded labels an interface scatters across lists and fields, and whic
 - *Script:* could list every tag's text across a site and flag near-duplicates by case and stem, and flag a tag with a link role that has no link styling cue.
 - *Judgement:* Does the tag have a page worth visiting? If not, keep it static.
 
-**Sources:** Carbon, GOV.UK and Atlassian as linked. Carbon and GOV.UK refuse linking tags; the toolkit allows them for topic pages only when they are styled as links, which answers GOV.UK's reason (looking the same as inert tags).
+**Sources:** Carbon, GOV.UK and Atlassian as linked. Carbon and GOV.UK refuse linking tags, hence *contested*; where a project links them, GOV.UK's reason (looking the same as inert tags) is why they must look like links.

@@ -201,7 +201,7 @@ The fundamentals of the design standard's Interaction area: what happens between
 - [moderate] No error while a field is first being typed.
 - [moderate] An error clears the moment it is fixed; input is kept.
 
-**How:** the toolkit's settled position, which `../patterns/forms.md` applies:
+**How:** the position `../patterns/forms.md` applies:
 - [contested] Check a field on leaving it, only if changed; empty required fields on submit.
 - [moderate] Once in error, re-check on every keystroke so the error clears at once.
 - [weak] Live checks only for constraints (password rules, character limits), as guidance.

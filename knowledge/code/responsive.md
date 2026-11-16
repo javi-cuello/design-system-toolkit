@@ -124,7 +124,8 @@ How a page and its components respond to the space they are given: intrinsic lay
 - [required] An element cannot query itself: a component that sets `container-type` on its root and queries that root never matches. Put the container on the component's host and style its parts, or on the slot the caller provides (CSS).
 - [required] `container-type: inline-size` applies size containment in the inline axis: the element's width no longer comes from its contents. A container that relied on shrink-to-fit (a flex item sized by its content, an inline-block) collapses; give it a width from its parent ([MDN `container-type`](https://developer.mozilla.org/en-US/docs/Web/CSS/container-type)).
 - [strong] Container query units (`cqi`, `cqb`) size things relative to the container, for type or padding inside a card that must scale with the card.
-- [strong] Style queries: `@container style(--density: compact) { … }`. Any element can be a style container without `container-type`; only custom properties can be queried so far ([MDN, size and style queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_containment/Container_size_and_style_queries)). Support arrived in Firefox last ([caniuse](https://caniuse.com/css-container-queries-style)); below the project's floor, the same mode as an attribute on the component is the fallback ([browser-support.md](browser-support.md)).
+- [strong] Style queries: `@container style(--density: compact) { … }`. Any element can be a style container without `container-type`; only custom properties can be queried so far ([MDN, size and style queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_containment/Container_size_and_style_queries)). Support arrived in Firefox last ([caniuse](https://caniuse.com/css-container-queries-style)).
+- [required] Below the project's support floor, a style query ships behind a feature test, with the same mode as an attribute on the component as the path that stays (code-standard rule 68; [browser-support.md](browser-support.md)).
 
 **Cases**
 - The same card in the main column and in a sidebar → a size container on each region; one card stylesheet, no "sidebar card" variant.
@@ -140,7 +141,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 - *Script:* `tools/parity/pages.mjs overflow` sees a component overflowing its column at a width no frame drew. Could: flag an `@container` whose name is declared on the same element it styles.
 - *Judgement:* does this component change because the page changed, or because its own space did? The second is a container query.
 
-**Sources:** [CSS Conditional Rules Module Level 5](https://www.w3.org/TR/css-conditional-5/), MDN and caniuse as linked. Size queries are the default for a component's layout; the toolkit uses style queries only above the project's support floor.
+**Sources:** [CSS Conditional Rules Module Level 5](https://www.w3.org/TR/css-conditional-5/), MDN and caniuse as linked. Size queries are the default for a component's layout; style queries below the support floor follow code-standard rule 68.
 
 ## Breakpoints
 
@@ -172,7 +173,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 - *Script:* `tools/tokens/check.mjs` fails a breakpoint variable or mixin that names nothing (code-standard rule 54). Could: flag a `max-width` media query, a breakpoint literal in a component sheet, and a breakpoint in `px`.
 - *Judgement:* does each breakpoint mark a change in the page's layout, and is it from the tokens?
 
-**Sources:** [MDN, using media queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_media_queries/Using_media_queries), Media Queries 4. The design side's breakpoint rulers (Primer, Carbon, GOV.UK) are in [visual](../ui/design/visual.md#layout-and-grid); the toolkit takes the project's set from its tokens.
+**Sources:** [MDN, using media queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_media_queries/Using_media_queries), Media Queries 4. The design side's breakpoint rulers (Primer, Carbon, GOV.UK) are in [visual](../ui/design/visual.md#layout-and-grid); the build takes the project's set from its tokens (code-standard rules 24 and 51).
 
 ## Fluid type
 
@@ -187,7 +188,7 @@ How a page and its components respond to the space they are given: intrinsic lay
   --heading-lg-font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2.25rem);
   ```
 - [weak] A `vw`-only size does not grow with zoom: "Browsers do not scale viewport-based units when zooming the page", and a maximum no more than about 2.5 times the minimum always passes 1.4.4 ([Smashing, fluid type and accessibility](https://www.smashingmagazine.com/2023/11/addressing-accessibility-concerns-fluid-type/), commentary).
-- [weak] Where the design's text styles carry modes (Desktop and Mobile, say), the token build writes both and switches them at a breakpoint. A clamp between the two mode values is a project's ruling, written into its context document; without one, step at the breakpoint.
+- [required] Where the design's text styles carry modes (Desktop and Mobile, say), the token build writes both and switches them at a breakpoint; a clamp between the two sets sizes the design file does not hold, so it needs a project ruling, and without one the size steps at the breakpoint (code-standard rule 24).
 - [required] Line height stays unitless so it scales with the size; the text style's fields are applied whole with `@include text-style(name)` (code-standard rule 54).
 
 **Cases**
@@ -203,7 +204,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 - *Script:* could: flag a `font-size` with a viewport unit and no rem or em term, and a clamp whose maximum exceeds 2.5 times its minimum.
 - *Judgement:* at 200% browser zoom, does every text size at least double, or reach 200% of its default?
 
-**Sources:** [MDN `clamp()`](https://developer.mozilla.org/en-US/docs/Web/CSS/clamp), WCAG Understanding 1.4.4, Smashing as commentary. The toolkit follows the design file's modes first and uses fluid interpolation only by ruling.
+**Sources:** [MDN `clamp()`](https://developer.mozilla.org/en-US/docs/Web/CSS/clamp), WCAG Understanding 1.4.4, Smashing as commentary. The design file's modes come first by code-standard rule 24.
 
 ## Tables on small screens
 
@@ -290,7 +291,7 @@ How a page and its components respond to the space they are given: intrinsic lay
 - *Script:* could: on a built page, measure each interactive element's box and apply the 24px circle test to its neighbours.
 - *Judgement:* is a small target truly inline or essential, as the exceptions require?
 
-**Sources:** WCAG Understanding 2.5.8 and 2.5.5. The toolkit takes 24px as the floor and the platform default as the touch target.
+**Sources:** WCAG Understanding 2.5.8 and 2.5.5: 2.5.8 sets 24px as the AA floor, 2.5.5 (AAA) 44px, the figure used for touch-first controls.
 
 ## Zoom and reflow
 
@@ -305,7 +306,6 @@ How a page and its components respond to the space they are given: intrinsic lay
 - [required] Never `user-scalable=no` or a `maximum-scale` in the viewport meta: "Disabling zooming capabilities… prevents people experiencing low vision conditions from being able to read and understand page content" ([MDN, viewport meta](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element)).
 - [weak] Rows of controls wrap (`flex-wrap`) or move behind a menu button at the narrow breakpoint; a navigation bar is the usual failure.
 - [required] Test with browser zoom at 200% and 400%, with the window at 320px, and with the 1.4.12 spacing values applied (line height 1.5, paragraph spacing 2, letter spacing 0.12, word spacing 0.16 times the font size).
-- [weak] Drag the window continuously from 320px to the widest screen you support, not only to the breakpoints: a layout breaks between named widths, where no fixed-width test looks (the toolkit's practice).
 
 **Cases**
 - A navigation bar of six links scrolls the page sideways at 320px → wrap it, or step its padding down at the narrow breakpoint and collapse it behind a menu button below that; this failure is the nearest reflow candidate to a rule ([candidates.md](candidates.md)).

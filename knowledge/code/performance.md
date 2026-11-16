@@ -38,7 +38,7 @@ How a page loads fast, responds at once and holds still: the Core Web Vitals and
 - *Script:* none in the toolkit. Could run Lighthouse in CI per template and fail on LCP, TBT (INP's lab proxy) and CLS over budget; could collect field values with `web-vitals`.
 - *Judgement:* Which element is the LCP on each template, and is it discoverable in the HTML?
 
-**Sources:** web.dev as linked. Google sets the thresholds and the 75th percentile; the toolkit adopts them as they stand.
+**Sources:** web.dev as linked. Google sets the thresholds and the 75th percentile; they stand as published.
 
 ## Images
 
@@ -106,7 +106,7 @@ How a page loads fast, responds at once and holds still: the Core Web Vitals and
 - *Script:* could flag `@font-face` without `font-display`, non-WOFF2 sources, font preloads without `crossorigin`, and more than two font preloads; could measure CLS with fonts throttled.
 - *Judgement:* Does the fallback take the same room as the web font at body and heading sizes?
 
-**Sources:** web.dev, Chrome and MDN as linked. web.dev declines to pick one `font-display`; the toolkit defaults to `swap` with a matched fallback and an early load, and uses `optional` where the brand allows a fallback on slow loads.
+**Sources:** web.dev, Chrome and MDN as linked. web.dev declines to pick one `font-display`.
 
 ## CSS delivery
 
@@ -305,4 +305,4 @@ How a page loads fast, responds at once and holds still: the Core Web Vitals and
 - *Script:* none in the toolkit. Could fail a build when a route's compressed JavaScript, CSS or image bytes exceed the budget, and Lighthouse CI on timings.
 - *Judgement:* Who decided this budget, from what data, and when was it last reviewed?
 
-**Sources:** web.dev as linked. The numbers are each project's; no source sets a universal byte budget, and the toolkit does not either.
+**Sources:** web.dev as linked. The numbers are each project's; no source sets a universal byte budget, so none is given.

@@ -39,7 +39,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - *Script:* `tools/tokens/check.mjs` fails a `var()` or `text-style()` that names nothing; `tools/css-lint/check.mjs` gate "literal is a token" (code-standard rules 22 and 46) catches a length typed where the design binds a token; the parity run compares every mapped layer with the spec (code-standard rule 24).
 - *Judgement:* can every number in this stylesheet be traced to the snapshot, or to a comment saying why the design has none (code-standard rule 22)?
 
-**Sources:** [DTCG Format Module](https://www.designtokens.org/tr/drafts/format/); [Figma, modes for variables](https://help.figma.com/hc/en-us/articles/15343816063383-Modes-for-variables). Where a design tool's generated CSS and the snapshot disagree, the toolkit goes by the snapshot.
+**Sources:** [DTCG Format Module](https://www.designtokens.org/tr/drafts/format/); [Figma, modes for variables](https://help.figma.com/hc/en-us/articles/15343816063383-Modes-for-variables).
 
 ## What to trust in a design file, and what not
 
@@ -101,7 +101,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - *Script:* the parity run compares gap, padding, direction and alignment for every mapped layer (code-standard rules 24 and 34); `tools/css-lint/check.mjs` gate "no declaration made to agree with a check" (code-standard rule 42) fails a height computed as a text size times its line height.
 - *Judgement:* is every length in this component's sheet one the design binds, or a size that should have been intrinsic?
 
-**Sources:** [Figma, guide to auto layout](https://help.figma.com/hc/en-us/articles/360040451373-Guide-to-auto-layout) and the API pages linked. They agree; the toolkit maps each property one to one and questions only FIXED.
+**Sources:** [Figma, guide to auto layout](https://help.figma.com/hc/en-us/articles/360040451373-Guide-to-auto-layout) and the API pages linked. They agree, so each property maps one to one and only FIXED is questioned.
 
 ## Strokes: borders, outlines and shadows
 
@@ -166,7 +166,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - *Script:* the parity run asserts the ring's width, colour, `-ring-offset` and `-ring-radius` (its outer corners) on every focus variant; `tools/css-lint/check.mjs` gate "`outline: none`" (code-standard rule 40) fails the shorthand that leaves a width behind.
 - *Judgement:* on every surface the component sits on, does the ring reach 3:1, and is anything clipping or covering it?
 
-**Sources:** MDN and WCAG Understanding as linked. Where a design's glow and stroke disagree on contrast, the toolkit grades the stroke the design names as the indicator.
+**Sources:** MDN and WCAG Understanding as linked. Where a design's glow and stroke disagree on contrast, the stroke the design names is the indicator WCAG 1.4.11 grades.
 
 ## Text styles to type tokens
 
@@ -264,7 +264,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 
 **What good looks like**
 - [weak] Before any CSS, a list of the components the design implies, each with its element, kind, variants, states and content extremes.
-- [moderate] One component per kind of thing, however many frames draw it.
+- [weak] One component per kind of thing, however many frames draw it: an interface inventory exists to find one thing drawn three ways ([Brad Frost, interface inventory](https://bradfrost.com/blog/post/interface-inventory/), commentary).
 - [weak] Every component maps to a library component set or is named as page-local.
 
 **How**
@@ -285,7 +285,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - *Script:* the parity run compares the design-system instances each frame holds with what the page renders (code-standard rule 31). Could: list detached instances and unmapped component sets from the snapshot.
 - *Judgement:* is any component in the inventory two things, or any two components one?
 
-**Sources:** Brad Frost as commentary; code-standard rules 8 and 31 are the toolkit's own.
+**Sources:** Brad Frost as commentary; code-standard rules 8, 31 and 36.
 
 ## What a component contract covers
 
@@ -339,8 +339,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 ## Reporting deviations
 
 **What good looks like**
-- [required] The build matches the design on type, colour, spacing, radii, strokes and structure (code-standard rule 24).
-- [required] Where it departs, the departure is deliberate, has a reason, and is reported back to the design (code-standard rule 42).
+This is code-standard rules 24 and 42 applied: the build matches the design on type, colour, spacing, radii, strokes and structure, and where it departs, the departure is deliberate, has a reason and is reported back to the design.
 - [required] No declaration exists to make a check agree (code-standard rule 42), and no deviation is hidden by changing the drawing.
 
 **How**
@@ -362,4 +361,4 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - *Script:* the parity run fails any difference without a waiver, and a waiver whose reason is not from the closed list (code-standard rule 41).
 - *Judgement:* would the designer, reading the report, know what to change in the file or why not to?
 
-**Sources:** WCAG 2.2 ([W3C](https://www.w3.org/TR/WCAG22/)); code-standard rules 24, 41 and 42 are the toolkit's own. Where fidelity and accessibility disagree, the toolkit builds the accessible version and reports the difference.
+**Sources:** WCAG 2.2 ([W3C](https://www.w3.org/TR/WCAG22/)); code-standard rules 24, 41 and 42. Where fidelity and accessibility disagree, the accessible version is built and the difference recorded with its reason (code-standard rule 42).

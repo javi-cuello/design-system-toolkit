@@ -245,7 +245,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 - [required] Nothing moves on its own for over five seconds without pause, stop or hide (WCAG 2.2.2).
 - [moderate] Every non-essential animation has a designed reduced form.
 
-**How:** [2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html): no more than three flashes in a second, or below the thresholds. [2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html): automatic moving, blinking or scrolling content lasting over five seconds beside other content needs a way to pause, stop or hide it; auto-updating content needs control of its frequency. [2.3.3](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html) is AAA, but its Understanding text names the harm ("distraction or nausea", dizziness from scroll-triggered motion, parallax as the example); the toolkit treats it as required. Specify the reduced form beside each transition: a slide becomes a cross-fade, a zoom an instant change, parallax static, a loop its first frame. Reduce rather than remove where motion carries meaning. Apple's Reduce Motion cuts "automatic and repetitive animations, including zooming, scaling, and peripheral motion". The code's global reduced-motion block is a backstop, not the design.
+**How:** [2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html): no more than three flashes in a second, or below the thresholds. [2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html): automatic moving, blinking or scrolling content lasting over five seconds beside other content needs a way to pause, stop or hide it; auto-updating content needs control of its frequency. [2.3.3](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html) is AAA, but its Understanding text names the harm ("distraction or nausea", dizziness from scroll-triggered motion, parallax as the example), which is the evidence for the item above. Specify the reduced form beside each transition: a slide becomes a cross-fade, a zoom an instant change, parallax static, a loop its first frame. Reduce rather than remove where motion carries meaning. Apple's Reduce Motion cuts "automatic and repetitive animations, including zooming, scaling, and peripheral motion". The code's global reduced-motion block is a backstop, not the design.
 
 **Cases:**
 - An auto-advancing carousel → avoid it, and never in documentation or dashboards; if kept, a visible pause, stopping on hover and focus.
@@ -261,7 +261,7 @@ What the screen decides is where the ring lands: on a dark band, over an image, 
 
 **Check:** *Script* — could: on a Figma file, prototype transitions with movement, zoom or parallax and no reduced form noted, auto-advancing components with no pause variant; on a built page, animation under emulated reduced motion, and flash rate from a recording with a tool such as PEAT. *Judgement* — is this motion essential, and does the reduced form still say what changed?
 
-**Sources:** WCAG Understanding 2.2.2, 2.3.1, 2.3.3; Apple HIG. Conformance and safety part here: 2.3.3 is AAA, so skipping it still conforms. The toolkit follows safety.
+**Sources:** WCAG Understanding 2.2.2, 2.3.1, 2.3.3; Apple HIG. Conformance and safety part here: 2.3.3 is AAA, so skipping it still conforms; the reduced-form item rests on the harm its Understanding text names.
 
 ## Cognitive accessibility
 

@@ -59,7 +59,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - *Script* could: for each `aria-expanded` header, assert it is a button inside a heading, toggles its panel, and the heading levels fit the outline; assert every panel's content is present with scripts off (code-standard rule 20); flag an accordion nested in another.
 - *Judgement*: would most visitors open most sections? If so, it should be a page with headings.
 
-**Sources.** The W3C allows single-open accordions; Carbon, NN/g and GOV.UK default to several open. The toolkit allows several, because auto-closing breaks comparison and printing. NN/g's 2014 [desktop accordion article](https://www.nngroup.com/articles/accordions-complex-content/) argues long pages are often better on desktop; the toolkit agrees and treats the accordion as the exception there.
+**Sources.** The W3C allows single-open accordions; Carbon, NN/g and GOV.UK default to several open. NN/g's 2014 [desktop accordion article](https://www.nngroup.com/articles/accordions-complex-content/) argues long pages are often better on desktop.
 
 ## Details and summary
 
@@ -97,7 +97,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - *Script*: code-standard rule 19 is checked in `tools/parity/pages.mjs` for floating `details`. Could: flag `summary` with fewer than two words or generic text; flag more than one advanced-options disclosure in a view.
 - *Judgement*: would most people need what is inside?
 
-**Sources.** GOV.UK styles the summary as a link; Primer and Apple pair an icon with text. The toolkit pairs a triangle or chevron with descriptive text, which addresses GOV.UK's own research finding that link styling makes some people expect navigation.
+**Sources.** GOV.UK styles the summary as a link; Primer and Apple pair an icon with text. GOV.UK's own research found that link styling makes some people expect navigation.
 
 ## In Figma
 
@@ -114,7 +114,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - [strong] On the item, the axes run `Size → Chevron position → Open → Disabled → State`, each where the library draws it; `Open` is a True/False variant, a bare word, `False` first (figma-standard rules 1 and 21); code holds it as a prop beside the states ([*Alignment with code*](#alignment-with-code)).
 - [required] `State` runs `Rest → Focus → Hover → Press` on the header, each drawn differently, Focus with a ring (figma-standard rules 4, 31 and 39).
 - [contested] `Disabled`: MUI, Carbon and React Aria each offer it on an item; GOV.UK says "Do not disable sections" ([accordions](#accordions)). Where the library draws it, it pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rule 2).
-- [moderate] Each item owns its `Open`, so several can be open at once, as the toolkit's accordion allows ([accordions](#accordions)); the parent cannot set the variant of what fills its slot (figma-standard rule 38).
+- [moderate] Each item owns its `Open`, so several can be open at once, as Carbon, NN/g and GOV.UK allow by default ([accordions](#accordions)); the parent cannot set the variant of what fills its slot (figma-standard rule 38).
 - [required] Sizes, where the accordion has them, are `Size` with t-shirt values, largest first; Carbon's takes `sm`, `md`, `lg` (figma-standard rule 6).
 
 **Tokens**
@@ -176,11 +176,11 @@ An accordion stacks headed sections whose content the person opens and closes in
 
 **Props**
 - [strong] An item takes its title, its open state, controlled and uncontrolled, and `disabled`: MUI (`expanded`, `defaultExpanded`, `disabled`), Carbon (`open`, `title`, `disabled`), React Aria (`isExpanded`, `defaultExpanded`, `isDisabled`) and SDS (`title`) ([MUI Accordion types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Accordion/Accordion.d.ts), [Carbon AccordionItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Accordion/AccordionItem.tsx), [React Aria Disclosure](https://react-aria.adobe.com/Disclosure)).
-- [contested] Whether several may open: React Aria's group defaults `allowsMultipleExpanded` to false ([useDisclosureGroupState source](https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/disclosure/useDisclosureGroupState.ts)); the toolkit's accordion allows several by default ([accordions](#accordions)).
+- [contested] Whether several may open: React Aria's group defaults `allowsMultipleExpanded` to false ([useDisclosureGroupState source](https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/disclosure/useDisclosureGroupState.ts)); Carbon, NN/g and GOV.UK default to several open ([accordions](#accordions)).
 - [moderate] The heading level is settable, since it must fit the page's outline: MUI's `heading` slot renders an `h3` unless told otherwise; GOV.UK asks for the level to fit ([accordions](#accordions)).
 
 **Check**
 - *Script*: the parity loop compares each item's variants with their frames (design-code-parity); the checks in each section above cover the markup.
 - *Judgement*: with scripts off, does the page read as headed sections?
 
-**Sources.** MUI, Carbon, React Aria and SDS for the props; React Aria against the toolkit on several open; the toolkit's *Variants to attributes* for the mapping.
+**Sources.** MUI, Carbon, React Aria and SDS for the props; React Aria against Carbon, NN/g and GOV.UK on several open; the toolkit's *Variants to attributes* for the mapping.

@@ -7,7 +7,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 ## Filter bar, sidebar or filter dialog
 
 **Use when / don't use**
-- [required] **Filter bar** (one horizontal row above the list) when there are few facets: a tool or docs screen with up to about six. Baymard finds horizontal toolbars "can be troublesome if there are more than 6–8 filter types" ([Baymard, Horizontal Filtering Toolbars, 2025 update](https://baymard.com/blog/horizontal-filtering-sorting-design)). This is the house default for tool screens (design-standard rule 3).
+- [required] **Filter bar** (one horizontal row above the list) when there are few facets: a tool or docs screen with up to about six. Baymard finds horizontal toolbars "can be troublesome if there are more than 6–8 filter types" ([Baymard, Horizontal Filtering Toolbars, 2025 update](https://baymard.com/blog/horizontal-filtering-sorting-design)). A tool screen's bar is laid out as design-standard rule 3 sets.
 - [moderate] **Sidebar** (a vertical panel left of the list) when there are many facets, many values per facet, or readers need to scan values across facets at once; Baymard calls sidebar filtering "a proven and familiar implementation" and recommends it for most e-commerce sites. Carbon places multiple categories "vertically on the left side of the page or horizontally at the top of the data set" ([Carbon filtering](https://carbondesignsystem.com/patterns/filtering/)).
 - [moderate] **Filter dialog or tray** on small screens, or when facets outnumber what either fits: a "Filters" button opens a panel over the results ([NN/g mobile tray, Whitenton 2015](https://www.nngroup.com/articles/mobile-faceted-search/)).
 - [required] Don't use two of these for the same list on one screen; "nothing else filters the same list" (design-standard rule 3).
@@ -41,7 +41,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* tools/ui-check/check.mjs: design-standard rule 3 ("facets and toggles come first, search last"; tabs keep one row) and design-standard rule 2 (the tab list's position across tab switches; it does not yet measure the bar itself). Could check the bar's height is one row at every width above its collapse point, and that one list has one filter form.
 - *Judgement:* How many facets do readers actually use, and do they need to see values across facets at once?
 
-**Sources:** Baymard, Carbon, NN/g, Primer and Anvil as linked. Baymard leans to sidebars for shops with many filter types; the toolkit defaults to a bar for tool and docs screens, which have few facets, and moves to a sidebar past about six facets, inside Baymard's 6–8 limit.
+**Sources:** Baymard, Carbon, NN/g, Primer and Anvil as linked. Baymard leans to sidebars for shops with many filter types; design-standard rule 3 sets a bar for tool and docs screens, which have few facets; a sidebar past about six facets stays inside Baymard's 6–8 limit.
 
 ## Facet controls
 
@@ -82,12 +82,12 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* tools/ui-check/check.mjs: design-standard rule 4 ("a facet is a menu": more than four buttons in a group) and design-standard rule 12 ("its first option names what"). Could check that a multi-select menu's collapsed label reflects its selection.
 - *Judgement:* Is a menu of four or fewer actually a facet (a script cannot tell it from a form field), and is the facet single or multi-select by the reader's task?
 
-**Sources:** [Carbon filtering](https://carbondesignsystem.com/patterns/filtering/) says multiple categories "should never be put within a menu or dropdown"; the toolkit keeps one menu per facet past four values, as design-standard rule 4 records, and meets Carbon's closed-container rule by showing the choice in the collapsed label.
+**Sources:** [Carbon filtering](https://carbondesignsystem.com/patterns/filtering/) says multiple categories "should never be put within a menu or dropdown"; design-standard rule 4 keeps one menu per facet past four values, and meets Carbon's closed-container rule by showing the choice in the collapsed label.
 
 ## Long value lists: truncation and a filter box
 
 **Use when / don't use**
-- [moderate] **Truncate** a facet's values in a sidebar or tray once there are more than about ten: show the first ten and a "Show all" control. Baymard found truncated lists beat both showing every value and an inline scroll area, because a full list pushes the other facets out of sight and readers then pick whichever facet happens to be visible ([Baymard, truncation design](https://baymard.com/blog/truncation-design)).
+- [moderate] **Truncate** a facet's values in a sidebar or tray once there are more than about ten: show the first six to ten (Baymard: at least six, up to ten; Friedman: 7 to 10) and a "Show all" control. Baymard found truncated lists beat both showing every value and an inline scroll area, because a full list pushes the other facets out of sight and readers then pick whichever facet happens to be visible ([Baymard, truncation design](https://baymard.com/blog/truncation-design)).
 - [moderate] **Add a filter box** inside the facet once it has more than about 15 to 20 values; Baymard found 46% of benchmarked sites give no reliable way to search within a facet ([Baymard, search within long filter lists](https://baymard.com/blog/allow-search-for-long-filter-options-lists)). Friedman suggests the same for a brands filter of hundreds: "compliment the filter with a search autocomplete and an alphabetical view" ([Smashing](https://www.smashingmagazine.com/2021/07/frustrating-design-patterns-broken-frozen-filters/), commentary).
 - [moderate] Don't truncate below six values (Baymard: readers took a short truncated list to be complete) and never to hide a single value; the control takes the room the value would.
 - [weak] Don't use either inside a bar's menu: past about 15 values the menu becomes a dialog or sheet (*Filter bar, sidebar or filter dialog*), and a menu that needs a filter box is a [selection](selection.md) panel.
@@ -100,7 +100,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - [weak] No matches says so in the facet ("No components match 'buton'"), with the box still editable.
 
 **Cases**
-- A component facet lists 80 values and the area facet below it is off-screen → truncate at ten with "Show all 80" and add a filter box; the reader sees both facets at once.
+- A component facet lists 80 values and the area facet below it is off-screen → truncate at six to ten with "Show all 80" and add a filter box; the reader sees both facets at once.
 - "Show all" sits flush between two groups and readers think it belongs to the next → put it under its own group with the extra space above.
 - A reader checks "Tooltip", which sits past the cut, then collapses the list and "Tooltip" vanishes → keep checked values in view in the collapsed state.
 - A facet of eight values is truncated to five with "Show 3 more" → show all eight.
@@ -110,7 +110,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - [required] Implementation: code-standard rule 12 ("Show all" renders only when there is more), code-standard rule 20 (without script every value shows), code-standard rule 17 (hidden values use `hidden`), code-standard rule 15 (counts stay descriptions).
 
 **Build**
-- [required] The full list is in the markup; the script hides past the tenth with `hidden` and adds a `button aria-expanded` "Show all 34", so with no script nothing is lost (code-standard rule 20; [HTML semantics: *Disclosure, dialogs and popovers*](../../code/html-semantics.md#disclosure-dialogs-and-popovers)).
+- [required] The full list is in the markup; the script hides past the cut with `hidden` and adds a `button aria-expanded` "Show all 34", so with no script nothing is lost (code-standard rule 20; [HTML semantics: *Disclosure, dialogs and popovers*](../../code/html-semantics.md#disclosure-dialogs-and-popovers)).
 - [required] The filter box is an `input type="search"` with a `label`, outside the form's submitted fields (no `name`, or `form` pointing nowhere), so typing never writes the address; it toggles `hidden` on non-matching values, never removes them ([HTML semantics: *Search and filter forms*](../../code/html-semantics.md#search-and-filter-forms)).
 - [weak] Matching runs on each `input` event over values already in the page; for a facet loaded from the server, debounce and abort ([javascript: *Debouncing input*](../../code/javascript.md#debouncing-input)).
 - [required] The match count ("6 of 80 components") goes to the facet's status text, polite ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)).
@@ -118,9 +118,9 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 
 **Check**
 - *Script:* could assert a facet with more than 15 values has a labelled filter box, a truncated facet hides at least two values, every checked value is visible when collapsed, and with script off every value renders.
-- *Judgement:* Does the order put the values readers want inside the first ten?
+- *Judgement:* Does the order put the values readers want before the cut?
 
-**Sources:** Baymard, Smashing and Primer as linked. Friedman shows 7 to 10 values before an expander, Baymard at least six and up to ten; the toolkit cuts at ten, inside both. Baymard's evidence is from shops; tool screens have fewer values, so most facets never reach the cut.
+**Sources:** Baymard, Smashing and Primer as linked. Friedman shows 7 to 10 values before an expander, Baymard at least six and up to ten; a cut in that range sits inside both. Baymard's evidence is from shops; tool screens have fewer values, so most facets never reach the cut.
 
 ## Counts
 
@@ -168,7 +168,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 **How**
 - [moderate] AND across facets, OR within one ([Baymard](https://baymard.com/blog/allow-applying-of-multiple-filter-values)).
 - [required] Order left to right (or top to bottom in a sidebar) from the most specific facet to the least: a component before the areas of its findings, so the area menu offers only that component's areas as live choices, the rest disabled at "(0)" in place (design-standard rules 6 and 5; *Unavailable options*).
-- [weak] Changing an earlier facet recomputes the later ones; a later choice that no longer fits resets to "All" and says so in the chips row, never silently.
+- [required] Changing an earlier facet recomputes the later ones; a later choice that no longer fits resets to "All" and says so in the chips row, never silently (design-standard rules 6 and 18).
 - [moderate] Within that order, the most used facets come first where specificity does not decide ([Anvil](https://anvil.servicetitan.com/docs/web/patterns/filters); [NN/g](https://www.nngroup.com/articles/filter-categories-values/)).
 
 **Cases**
@@ -226,7 +226,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* could choose each scope and assert every facet shown has at least one matching row, shared facets keep their choice, and every filterable column has a facet.
 - *Judgement:* Do the rows really differ by kind enough to earn scoped facets, or would one shared set do?
 
-**Sources:** NN/g, Baymard and Smashing as linked; they agree. NN/g's own advice on scoped search warns that readers overlook a scope, which is why the toolkit makes the scope the first facet, always in sight with its current choice.
+**Sources:** NN/g, Baymard and Smashing as linked; they agree. NN/g's own advice on scoped search warns that readers overlook a scope, and design-standard rule 6 puts the most specific facet, the scope, first.
 
 ## Unavailable options
 
@@ -272,7 +272,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - [weak] On a bar of single-choice facets whose collapsed labels show their selection ("Area: Colour"), the bar itself is the overview; chips add nothing.
 
 **How**
-- [weak] **Chips** in one row under the bar (or above the list beside a sidebar), one per applied value: "Level: Error ×". Each removes its value.
+- [weak] **Chips** in one row beside the list, one per applied value: "Level: Error ×". Each removes its value.
 - [weak] **Clear all** after the chips when two or more filters are applied; it returns every facet to its default ([Carbon filtering](https://carbondesignsystem.com/patterns/filtering/)), keeps the search unless the search is shown as a chip.
 - [required] The chips row keeps its height when empty, or sits below the list's header so it pushes nothing the reader just used (design-standard rule 2).
 - [moderate] On small screens the chips scroll horizontally in one row ([Baymard](https://baymard.com/blog/how-to-design-applied-filters)).
@@ -300,13 +300,14 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* could apply two filters and assert a chip per value, each removing only its value, a clear-all that restores the default address, and a list position unchanged by removing a chip.
 - *Judgement:* Is the overview where the reader looks after choosing?
 
-**Sources:** Baymard, Carbon and Anvil as linked. Baymard found no placement winner on desktop; the toolkit puts chips under the bar so they sit where the eye goes after a choice.
+**Sources:** Baymard, Carbon and Anvil as linked. Baymard found no placement winner on desktop, so no placement is given.
 
 ## Instant or Apply
 
 **Use when / don't use**
-- [moderate] **Instant** (each choice updates the list) by default: for few facets, fast data and exploring readers ([NN/g](https://www.nngroup.com/articles/applying-filters/); Carbon's instant method suits single-category filtering; NN/g found immediate updates help readers notice an overly narrow choice, [NN/g mobile tray](https://www.nngroup.com/articles/mobile-faceted-search/)).
+- [moderate] **Instant** (each choice updates the list) for few facets, fast data and exploring readers ([NN/g](https://www.nngroup.com/articles/applying-filters/); Carbon's instant method suits single-category filtering; NN/g found immediate updates help readers notice an overly narrow choice, [NN/g mobile tray](https://www.nngroup.com/articles/mobile-faceted-search/)).
 - [weak] **Apply** (choices batch, one button runs them) when the data is slow, when readers set several criteria they already know, or in a filter dialog on a phone where each update would redraw behind the panel ([Carbon](https://carbondesignsystem.com/patterns/filtering/)).
+- [contested] **Which is the default where both fit.** NN/g and Carbon favour instant for few facets and fast data (above); Friedman favours an Apply button alongside live updates ([Smashing](https://www.smashingmagazine.com/2021/07/frustrating-design-patterns-broken-frozen-filters/)). The product decides and records it.
 - [weak] Don't mix the two in one bar; one facet applying instantly beside another waiting for Apply confuses which is in force.
 
 **How**
@@ -335,7 +336,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* could change a facet and assert focus stays on it, the scroll position holds, and the list updates without a full page load; with script off, assert the form submits and filters.
 - *Judgement:* Is the data fast enough for instant?
 
-**Sources:** NN/g, Carbon and Smashing as linked. Friedman's commentary favours an Apply button alongside live updates; the toolkit defaults to instant for tool screens, whose data is small, and uses Apply where the data is slow.
+**Sources:** NN/g, Carbon and Smashing as linked. Friedman's commentary favours an Apply button alongside live updates, against NN/g's and Carbon's instant default.
 
 ## Filters in the address
 
@@ -439,7 +440,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 ## Filter presets
 
 **Use when / don't use**
-- [moderate] Use quick presets when a few combinations cover most visits ("My open findings", "Errors this week"): one click sets several facets at once. Baymard finds that promoting popular filters above the list gives readers a shortcut, especially on phones where the filters sit behind a button, and that 61% of benchmarked sites do not ([Baymard, promoting product filters](https://baymard.com/research-articles/promoting-product-filters)).
+- [moderate] Use quick presets when a few combinations cover most visits ("My open findings", "Errors this week"). Baymard finds that promoting popular filters above the list gives readers a shortcut, especially on phones where the filters sit behind a button, and that 61% of benchmarked sites do not ([Baymard, promoting product filters](https://baymard.com/research-articles/promoting-product-filters)).
 - [weak] A preset is set by the team that designs the screen; a combination the reader names and keeps is a saved view (*Saved views*, next). Jira's saved filters are the second kind: "saving filters will allow you to save, reuse, and easily access them later" ([Atlassian, save your filters](https://support.atlassian.com/jira-software-cloud/docs/save-your-filters-in-business-projects/)).
 - [weak] A one-facet shortcut is not a preset; it is that facet's control, made visible (a segmented facet or [filter chips](../components/chip.md#filter-chips)).
 - [weak] Don't add presets the reader cannot see inside: a preset that hides which filters it set breaks *show state*.
@@ -471,24 +472,22 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* could follow each preset's link and assert the facets show its values, exactly one preset is current when the address matches, and none after a facet edit.
 - *Judgement:* Do the presets match combinations readers actually repeat, and are they few enough to stay in sight?
 
-**Sources:** Baymard, Atlassian and Carbon as linked. No Primer or NN/g page opened in this session covers presets or saved filters. Baymard promotes single popular filter values; the toolkit extends the idea to named multi-facet presets on tool screens, and keeps Baymard's condition that the filters themselves stay in place and in sight.
+**Sources:** Baymard, Atlassian and Carbon as linked. No Primer or NN/g page opened in this session covers presets or saved filters. Baymard promotes single popular filter values; no source opened sets presets that combine several facets. Baymard's condition holds that the filters themselves stay in place and in sight.
 
 ## Saved views
 
 **Use when / don't use**
 - [weak] Use when readers return daily to the same combination of filters, sort and columns (my open findings, this file's errors).
-- [weak] Don't build it before the address holds the full state; a bookmark of the address is the first saved view and costs nothing.
+- [required] Don't build it before the address holds the full state (code-standard rule 67); a bookmark of the address is the first saved view and costs nothing.
 
 **How**
-- [weak] A saved view is a name for an address: the facets, search, sort and columns it restores.
-- [weak] Saved views sit with the tabs or before the facets as a menu named "Views", opening on the default view's name; picking one sets the bar's controls, which stay editable.
-- [weak] A view edited after loading shows that it differs ("Edited") with Save and Reset; never save silently.
-- [weak] Shared views (for a team) are marked apart from personal ones.
+- [required] A saved view is a name for an address: the facets, search, sort and columns it restores (code-standard rule 67).
+- [required] A view edited after loading shows that it differs ("Edited") with Save and Reset; never save silently (design-standard rule 18; code-standard rule 67).
 
 **Cases**
-- Readers ask for "my filters" → first make sure the address carries them and say a bookmark works; add saved views only if that is not enough.
-- A view loads, the reader changes a facet, and the view's name still shows unchanged → mark it edited.
-- A saved view refers to a component since removed → load the rest and show the missing value as a removable chip with a note.
+- Readers ask for "my filters" → first make sure the address carries them and say a bookmark works; add saved views only if that is not enough (code-standard rule 67).
+- A view loads, the reader changes a facet, and the view's name still shows unchanged → mark it edited (design-standard rule 18).
+- A saved view refers to a component since removed → load the rest and show the missing value as a removable chip with a note (design-standard rule 18).
 
 **Accessibility**
 - [required] 4.1.2 (the views menu names its current view), 3.2.2 (choosing a view changes the list, not the page context), 4.1.3 (announce the loaded view's total).
@@ -497,11 +496,11 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 **Build**
 - [required] A saved view is a stored address: render each as a link to it, so it works without script (code-standard rule 20).
 - [required] A list of views is a `nav` of links with `aria-current="page"` on the loaded one when the address matches exactly (code-standard rule 64; [HTML semantics: *Navigation markup*](../../code/html-semantics.md#navigation-markup)); a menu of views is a native `select` that navigates only from a Go button or on submit, never on `change` (3.2.2, [accessibility: *Keyboard access and modified clicks*](../../code/accessibility.md#keyboard-access-and-modified-clicks)).
-- [weak] "Edited" is derived by comparing the current address with the view's, not tracked as a separate flag that can drift.
-- [weak] Saving is a POST to the server with the address; the view's name and owner live there, never in `localStorage` only ([security: *Forms and cross-site request forgery*](../../code/security.md#forms-and-cross-site-request-forgery)).
+- [required] "Edited" is derived by comparing the current address with the view's, not tracked as a separate flag that can drift (code-standard rule 67).
+- [required] Saving is a POST to the server with the address; the view's name and owner live there, never in `localStorage` only (code-standard rule 67; [security: *Forms and cross-site request forgery*](../../code/security.md#forms-and-cross-site-request-forgery)).
 
 **Check**
 - *Script:* could load each saved view's address and assert the controls match its stored state.
 - *Judgement:* Do readers repeat the same combination often enough to name it?
 
-**Sources:** no published source opened in this session sets rules for saved views; this section is house practice built on the address rules above.
+**Sources:** no published source opened in this session sets rules for saved views; the section applies code-standard rule 67 and design-standard rule 18.

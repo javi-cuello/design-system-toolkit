@@ -21,10 +21,10 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [weak] Don't use when the action and its effect share a screen; show the effect there instead.
 
 **How**
-- [weak] At most two lines of text. Carbon's ceiling is three ([notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/)); the toolkit sets two because a toast may leave before a slow reader finishes.
+- [weak] A short message: Carbon's ceiling is three lines ([notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/)).
 - [weak] No essential action. An Undo is the one action a toast may carry, and then it has no timer: Carbon says a toast with an action "should remain on screen until the user dismisses it".
 - [required] Auto-dismiss only when the same information can be found elsewhere (the notifications centre, the changed record, an activity log). W3C's [Understanding 2.2.1](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html) treats a disappearing message as a time limit unless the user can get the information another way.
-- [contested] One at a time. A second toast replaces the first or queues behind it; Carbon stacks them newest on top, and the toolkit does not, because a stack of vanishing messages is unreadable. Carbon and MUI set no duration by default and Radix 5,000 ms ([*In code*](#in-code)); set one in the project's context document and keep a close button on every toast.
+- [contested] One at a time, or stacked. A second toast replaces the first or queues behind it, or, in Carbon, stacks newest on top. Carbon and MUI set no duration by default and Radix 5,000 ms ([*In code*](#in-code)); set one in the project's context document and keep a close button on every toast.
 - [required] One region, in one corner, for the whole product. The toast never covers the control the person is using or the focused element (2.4.11).
 - [weak] Wording: what happened, in the past tense, with the object named: "Report exported to Downloads". No "Success!".
 - [weak] Small screens: full width at the bottom, above any bottom navigation.
@@ -51,17 +51,17 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [weak] Enters with `transform` and `opacity`, still under reduced motion ([accessibility: *Reduced motion and colour scheme in code*](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
 
 **Check**
-- *Script* could: find the toast region and confirm it is a live region present before any toast; flag a toast containing a button that auto-dismisses; flag toast text over two lines at the toast's width; flag an error that appears only in a toast.
+- *Script* could: find the toast region and confirm it is a live region present before any toast; flag a toast containing a button that auto-dismisses; flag toast text over the project's line limit at the toast's width; flag an error that appears only in a toast.
 - *Judgement*: is this message global enough to be a toast, and can it be found again?
 
-**Sources.** Carbon allows three lines and stacking; Primer steers away from toasts; Lightning ties them to user actions. The toolkit goes with Primer's caution and W3C's 2.2.1 reading: two lines, one at a time, timed only when findable elsewhere.
+**Sources.** Carbon allows three lines and stacking; Primer steers away from toasts; Lightning ties them to user actions. WCAG 2.2.1 bounds a timed toast whose content exists nowhere else.
 
 ## In Figma
 
 **Layers**
 - [required] Auto layout throughout, text hugging vertically, so a second line grows the toast downward (figma-standard rule 33).
 - [required] Layers named for their role: `Icon`, `Title`, `Message`; the action and the close are instances of the library's button and icon button and keep those names unless two must be told apart (figma-standard rule 10).
-- [weak] The toast has a fixed maximum width at which the message wraps to its two lines (the line limit is [*Toasts*](#toasts)); it is drawn at that width, never stretched to the frame.
+- [weak] The toast has a fixed maximum width at which the message wraps within the project's line limit (Carbon's ceiling is three lines, [*Toasts*](#toasts)); it is drawn at that width, never stretched to the frame.
 
 **Properties**
 - [required] `Title` and `Message` are text properties (figma-standard rule 37); `Show icon` reveals the tone's icon and `Show action` the action button (figma-standard rules 5 and 21).
@@ -80,15 +80,15 @@ A toast is a brief message that appears over the page, in one corner, about some
 
 **Check**
 - *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists the tone values, which the parity report compares with the code's.
-- *Judgement*: does the drawn toast hold its two lines at its width in the longest language the product ships?
+- *Judgement*: does the drawn toast hold its line limit at its width in the longest language the product ships?
 
-**Sources.** Carbon, MUI and Radix for the parts; SDS for a notification's Figma properties. The toolkit drops the close boolean because its toasts always close.
+**Sources.** Carbon, MUI and Radix for the parts; SDS for a notification's Figma properties. The close boolean is left out where every toast has a close button ([*Toasts*](#toasts), Build).
 
 ## Alignment with code
 
 **Structure**
 - [strong] Code splits the toast into a region and the toasts in it, so Figma draws one toast and the region exists only in code. Radix ships `ToastProvider`, `ToastViewport` (a `role="region"` labelled "Notifications ({hotkey})"), `Toast`, `ToastTitle`, `ToastDescription`, `ToastAction` and `ToastClose` ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)); React Aria a `ToastRegion` fed by a `ToastQueue`, each `Toast` holding a `ToastContent` with `Text slot="title"`, `Text slot="description"` and a `Button slot="close"`, all still exported as `UNSTABLE_` ([React Aria Toast.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Toast.tsx)); MUI's `Snackbar` places and times a `SnackbarContent` that holds `message` and `action` ([MUI Snackbar.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Snackbar/Snackbar.js), [SnackbarContent.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/SnackbarContent/SnackbarContent.js)).
-- [moderate] Carbon splits by whether the toast has an action: its Figma toast's `Actionable=True` connects to `ActionableNotification`, whose role defaults to `alertdialog`, and otherwise to `ToastNotification`, whose `Time text` becomes `caption` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts), [Carbon Notification.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Notification/Notification.tsx)). The toolkit's `Show action` keeps one component, as Radix's optional `ToastAction` and MUI's optional `action` do; the mapping row says what the action changes.
+- [moderate] Carbon splits by whether the toast has an action: its Figma toast's `Actionable=True` connects to `ActionableNotification`, whose role defaults to `alertdialog`, and otherwise to `ToastNotification`, whose `Time text` becomes `caption` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts), [Carbon Notification.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Notification/Notification.tsx)). A `Show action` boolean keeps one component, as Radix's optional `ToastAction` and MUI's optional `action` do; the mapping row says what the action changes.
 - [weak] Figma's SDS has no toast: one `Notification`, with a `Variant` of `Message` or `Alert`, serves in-page and floating messages alike ([SDS Notification.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Notification.figma.ts)).
 
 **Mapping**
@@ -110,9 +110,9 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [required] Swipe and motion states are drawn in no frame: Radix sets `data-swipe` to `start`, `move`, `cancel` or `end` and `data-swipe-direction` on the toast ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)) (figma-standard rule 52).
 
 **Differences**
-- [weak] Figma draws no region and no stack: the region's role, label and position are code (the structure above), and the toolkit shows one toast at a time ([*Toasts*](#toasts)).
-- [weak] No close boolean, where Carbon's Figma toast has a `Close` boolean that becomes `hideCloseButton` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts)): the toolkit's toasts always close ([In Figma](#in-figma)), so a coded `hideCloseButton` is the departure.
-- [weak] The role is code's alone and the libraries split on it (Carbon and Radix `status`, MUI's `SnackbarContent` `alert`, React Aria `alertdialog`; [SnackbarContent.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/SnackbarContent/SnackbarContent.js)); nothing drawn changes with it, and the toolkit's choice is in [In code](#in-code).
+- [weak] Figma draws no region and no stack: the region's role, label and position are code (the structure above); how many show at once is [*Toasts*](#toasts)' contested item.
+- [weak] No close boolean, where Carbon's Figma toast has a `Close` boolean that becomes `hideCloseButton` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts)): this page's Build gives every toast a close button ([In Figma](#in-figma)), so a coded `hideCloseButton` is the departure.
+- [weak] The role is code's alone and the libraries split on it (Carbon and Radix `status`, MUI's `SnackbarContent` `alert`, React Aria `alertdialog`; [SnackbarContent.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/SnackbarContent/SnackbarContent.js)); nothing drawn changes with it, and [In code](#in-code) sets out the split.
 
 **Check**
 - *Script*: the component contract lists `Feedback`, `State`, `Title`, `Message`, `Show icon` and `Show action` beside the props the code takes (design-code-parity). A test can fire a toast, assert the region existed before it, then focus the toast by keyboard and compare its ring with the `Focus` frame.
@@ -128,7 +128,7 @@ A toast is a brief message that appears over the page, in one corner, about some
 
 **Props**
 - [strong] A tone, a title or message, an optional action and a close handler: Carbon (`kind`, `title`, `subtitle`, `onClose`), MUI (`message`, `action`, `onClose`) and Radix (`ToastTitle`, `ToastDescription`, `ToastAction`, `onOpenChange`).
-- [contested] Whether a toast times out by default. Carbon's `timeout` defaults to 0 and MUI's `autoHideDuration` to `null`, so neither closes on its own; Radix closes after 5,000 ms. The toolkit times a toast only when its content is findable elsewhere, and never one with an action ([*Toasts*](#toasts)).
+- [contested] Whether a toast times out by default. Carbon's `timeout` defaults to 0 and MUI's `autoHideDuration` to `null`, so neither closes on its own; Radix closes after 5,000 ms. WCAG 2.2.1 bounds a timed toast whose content exists nowhere else, and this page's Build gives a toast with an action no timer ([*Toasts*](#toasts)).
 - [weak] Radix requires an `altText` on the action: "an alternate way to carry out the action", for screen-reader users "who will not be able to navigate to the button easily/quickly".
 
 **Check**

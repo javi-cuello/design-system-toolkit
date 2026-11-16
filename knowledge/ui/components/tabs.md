@@ -26,7 +26,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 - [weak] **First tab** is the one most readers want ([GOV.UK](https://design-system.service.gov.uk/components/tabs/)).
 - [required] **Stability.** Switching never moves the tabs or the bar under them (design-standard rule 2). In a tool where the columns change per tab, the tabs live in the object's header bar above every column ([sidebars: object header over a tool layout](../patterns/sidebars.md#object-header-over-a-tool-layout)).
 - [strong] **Keyboard** for a panel tab set ([W3C APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)): one tab stop, arrows move and wrap, automatic activation when panels are instant, manual (Enter or Space) when they load slowly. Link tabs are ordinary links in the tab order.
-- [contested] **One tab set per region, never tabs inside a tab panel.** A switch inside a tab's content, or inside an inspector, is a segmented control or a select: Apple: "Use a tab view in the main window area — instead of a segmented control — for view switching… Consider using a segmented control to help people switch views in a toolbar or inspector pane" ([Apple segmented controls](https://developer.apple.com/design/human-interface-guidelines/segmented-controls)); Apple also caps a tab view: "Avoid providing more than six tabs" ([Apple tab views](https://developer.apple.com/design/human-interface-guidelines/tab-views)). Material allows secondary tabs "within a content area to further separate related content" ([Material tabs, Android docs](https://github.com/material-components/material-components-android/blob/master/docs/components/Tabs.md)); the toolkit does not, because two underlined tab rows read as one set with two current items.
+- [contested] **Tabs inside a tab panel.** A switch inside a tab's content, or inside an inspector, is a segmented control or a select: Apple: "Use a tab view in the main window area — instead of a segmented control — for view switching… Consider using a segmented control to help people switch views in a toolbar or inspector pane" ([Apple segmented controls](https://developer.apple.com/design/human-interface-guidelines/segmented-controls)); Apple also caps a tab view: "Avoid providing more than six tabs" ([Apple tab views](https://developer.apple.com/design/human-interface-guidelines/tab-views)). Material allows secondary tabs "within a content area to further separate related content" ([Material tabs, Android docs](https://github.com/material-components/material-components-android/blob/master/docs/components/Tabs.md)).
 - [required] A count on a tab ("Open (12)") follows design-standard rule 11's counting.
 
 **Cases**
@@ -53,7 +53,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 - *Script:* tools/ui-check/check.mjs: design-standard rule 3 (tabs keep one row and scroll) and design-standard rule 2 (the tab list holds its position after each switch). Could check that a tab set does not mix `role="tab"` and `a[href]`, and that only one tab is current.
 - *Judgement:* is each tab independent content, or is it a filter or a step in disguise?
 
-**Sources:** Atlassian, Carbon, GOV.UK, Primer, W3C APG as linked; [eBay MIND fake tabs](https://ebay.gitbook.io/mindpatterns/navigation/fake-tabs) agrees that page-loading tabs are a list of links. GOV.UK's tabs update the URL fragment while staying a tab panel; the toolkit follows Primer and eBay: if the tab is in the address, it is navigation. GOV.UK warns its tabs component "has not yet been tried in research with users"; the toolkit uses tabs only where design-standard rule 3 allows them. Apple and Material disagree on secondary tabs; the toolkit takes Apple's segmented control for any switch inside a tab. This section owns tabs; other pages link here.
+**Sources:** Atlassian, Carbon, GOV.UK, Primer, W3C APG as linked; [eBay MIND fake tabs](https://ebay.gitbook.io/mindpatterns/navigation/fake-tabs) agrees that page-loading tabs are a list of links. GOV.UK's tabs update the URL fragment while staying a tab panel; Primer and eBay treat a tab in the address as navigation. GOV.UK warns its tabs component "has not yet been tried in research with users"; design-standard rule 3 says where tabs are allowed. Apple and Material disagree on secondary tabs. This section owns tabs; other pages link here.
 
 ## In Figma
 
@@ -121,7 +121,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 - *Script*: the component contract lists every Figma axis and property of `Tab` and `Tabs` beside the props of the tab and the list; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
 - *Judgement*: does each frame say which tab the row's value selects, and is there a focused selected tab to build the keyboard entry from?
 
-**Sources.** Radix, React Aria, Carbon, MUI, Primer and SDS source and Code Connect files as linked, read for the parts, where selection lives and the tab stop; the toolkit's figma-standard for why selection sits on the tab in Figma.
+**Sources.** Radix, React Aria, Carbon, MUI, Primer and SDS source and Code Connect files as linked, read for the parts, where selection lives and the tab stop; figma-standard rule 38 for why selection sits on the tab in Figma.
 
 ## In code
 
@@ -131,7 +131,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 **Props**
 - [strong] The row takes the selected value, the orientation and the activation mode: React Aria's `keyboardActivation`, Carbon's `activation: 'automatic' | 'manual'` and MUI's `selectionFollowsFocus` ([React Aria Tabs](https://react-aria.adobe.com/Tabs), [Carbon Tabs source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Tabs/Tabs.tsx), [MUI Tabs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tabs/Tabs.d.ts)). Automatic is the default where panels show without delay ([APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)).
 - [strong] A tab takes its label, an icon, a count and `disabled`: MUI (`label`, `icon`, `disabled`), Primer (`icon`, `counter`) and SDS (the label as children).
-- [contested] Link tabs and panel tabs as one component or two: Primer ships two; React Aria lets a `Tab` take an `href` inside one `Tabs` ([React Aria Tabs: Links](https://react-aria.adobe.com/Tabs)). The toolkit keeps them apart and never mixes them in one set ([tabs](#tabs)).
+- [contested] Link tabs and panel tabs as one component or two: Primer ships two; React Aria lets a `Tab` take an `href` inside one `Tabs` ([React Aria Tabs: Links](https://react-aria.adobe.com/Tabs)). Primer and eBay treat link tabs as navigation, a list of links ([tabs](#tabs)).
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity); tools/ui-check/check.mjs runs design-standard rules 2 and 3 on the row.

@@ -7,7 +7,7 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 **Use when / don't use**
 - [strong] A button when the action happens here; a link when it takes the person somewhere ([actions: buttons or links](../patterns/actions.md#buttons-or-links)).
 - [strong] One component for every rank; compactness is a size and a bare clickable icon is the icon button's lowest rank, never a component of their own. MUI, Atlassian, Polaris, Carbon and Material 3 all reach compact through a size value ([MUI Button](https://mui.com/material-ui/react-button/), [Carbon button](https://carbondesignsystem.com/components/button/usage/)).
-- [contested] Icon-only is its own component in MUI, Primer, Atlassian, Spectrum and Radix, and a form of Button in Fluent, Polaris and Ant Design ([Primer IconButton](https://primer.style/product/components/icon-button/), [Fluent migration](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/docs/MIGRATION.md)). The toolkit keeps it a separate component in Figma; when to merge instead is *In Figma*, [one component or two](#in-figma).
+- [contested] Icon-only is its own component in MUI, Primer, Atlassian, Spectrum and Radix, and a form of Button in Fluent, Polaris and Ant Design ([Primer IconButton](https://primer.style/product/components/icon-button/), [Fluent migration](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/docs/MIGRATION.md)). Which a project's Figma draws is *In Figma*, [one component or two](#in-figma).
 
 **Anatomy**
 - [strong] A container holding, in reading order, an optional leading icon, the label, and an optional trailing icon or count; a spinner replaces nothing and takes no width of its own while loading. Primer names these `leadingVisual`, `trailingVisual`, `trailingAction` and `count` ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts)); Figma's Simple Design System names them `Icon Start`, `Label`, `Icon End` ([SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)).
@@ -56,7 +56,7 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 - *Script* could: count primary-variant elements per page and per landmark region, flagging more than one outside an open dialog or panel; the same per top-level Figma frame.
 - *Judgement*: is the one primary the action most people came to take?
 
-**Sources.** All four agree on one primary (Apple allows two prominent). Carbon reserves secondary for the negative half of a pair; Primer makes it the default. The toolkit uses a neutral button for ordinary actions (Primer) and Carbon's pairing inside dialogs and forms; both keep the primary alone.
+**Sources.** All four agree on one primary (Apple allows two prominent). Carbon reserves secondary for the negative half of a pair; Primer makes it the default. Both keep the primary alone.
 
 ## Button labels
 
@@ -93,7 +93,7 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 - *Script* could: flag vague names (OK, Yes, No, Submit, Click here, Learn more alone), an `aria-label` missing the visible text, terminal punctuation.
 - *Judgement*: from the label alone, does a person know what happens and whether it saves?
 
-**Sources.** Carbon wraps an overflowing label; Primer says buttons "should never contain line breaks". The toolkit writes labels that fit and wraps when translation or zoom still overflows, because truncation loses words (1.4.12, see [`disclosure.md`](../patterns/disclosure.md)).
+**Sources.** Carbon wraps an overflowing label; Primer says buttons "should never contain line breaks". Truncation loses words when translation or zoom overflows a label (1.4.12, see [`disclosure.md`](../patterns/disclosure.md)).
 
 ## Icon-only buttons
 
@@ -131,7 +131,7 @@ A button does something here: submits, saves, opens a dialog, toggles, deletes. 
 - *Script* could: flag nameless buttons (axe covers it), icon buttons with no tooltip on hover or focus, boxes under 24 by 24.
 - *Judgement*: would a first-time visitor recognise the icon without hovering?
 
-**Sources.** Carbon and Primer require the tooltip; NN/g argues for visible labels. The toolkit defaults to labels (NN/g) and, when icon-only, requires name and tooltip (Carbon).
+**Sources.** Carbon and Primer require the tooltip; NN/g argues for visible labels.
 
 ## Loading buttons
 
@@ -212,7 +212,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - *Script* could: press submit, compare the button's and siblings' boxes before and during loading (tools/ui-check/check.mjs's design-standard rule 2 method), assert focus remains and a live region updated; with the response stubbed at half the threshold, assert no spinner renders; press twice and assert one request.
 - *Judgement*: which row of the table is this press, and is a failure safe to roll back?
 
-**Sources.** On focus the systems split: [Primer](https://primer.style/product/components/button/accessibility/) and [React Aria](https://react-aria.adobe.com/Button) keep the pending button focusable; [MUI](https://mui.com/material-ui/react-button/) (`disabled={disabled || loading}` in its source), Chakra (`disabled={loading || rest.disabled}`) and [Carbon](https://carbondesignsystem.com/components/inline-loading/usage/) ("disabled until the action is complete") set `disabled`; [Base Web](https://github.com/uber/baseweb/blob/main/src/button/button.tsx) stays enabled, ignores the click and sets `aria-busy="true"` on the button. The toolkit follows Primer, since `disabled` drops focus; code-standard rules 9 and 62 allow `aria-disabled` as the control's own attribute. Primer's [loading pattern](https://primer.style/product/ui-patterns/loading/) says "the button that initiates the a loading process may not be semantically disabled using `aria-disabled`", which contradicts its own Button page and component (`loading` "sets `aria-disabled` and preserves focus automatically", [Button](https://primer.style/product/components/button/)); the component and its accessibility page win. The delay: [React Spectrum](https://react-spectrum.adobe.com/v3/Button.html) 1 s; [Adobe Commerce](https://developer.adobe.com/commerce/admin-developer/pattern-library/feedback-to-user/progress-indicator) "Delay 500ms before showing the spinner"; no system read publishes a spinner minimum. Double press: [GOV.UK button](https://design-system.service.gov.uk/components/button/) and its [source](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/button/button.mjs) (`DEBOUNCE_TIMEOUT_IN_SECONDS = 1`). Optimistic: [React `useOptimistic`](https://react.dev/reference/react/useOptimistic), [Primer saving](https://primer.style/product/ui-patterns/saving/). Atlassian's [button](https://atlassian.design/components/button/examples) "disables the button and blocks user interaction". The navigating-form row is the toolkit's reasoning, not a published rule: no system read asks for a spinner on a full page load.
+**Sources.** On focus the systems split: [Primer](https://primer.style/product/components/button/accessibility/) and [React Aria](https://react-aria.adobe.com/Button) keep the pending button focusable; [MUI](https://mui.com/material-ui/react-button/) (`disabled={disabled || loading}` in its source), Chakra (`disabled={loading || rest.disabled}`) and [Carbon](https://carbondesignsystem.com/components/inline-loading/usage/) ("disabled until the action is complete") set `disabled`; [Base Web](https://github.com/uber/baseweb/blob/main/src/button/button.tsx) stays enabled, ignores the click and sets `aria-busy="true"` on the button. `disabled` drops focus; code-standard rules 9 and 62 allow `aria-disabled` as the control's own attribute. Primer's [loading pattern](https://primer.style/product/ui-patterns/loading/) says "the button that initiates the a loading process may not be semantically disabled using `aria-disabled`", which contradicts its own Button page and component (`loading` "sets `aria-disabled` and preserves focus automatically", [Button](https://primer.style/product/components/button/)); the component and its accessibility page win. The delay: [React Spectrum](https://react-spectrum.adobe.com/v3/Button.html) 1 s; [Adobe Commerce](https://developer.adobe.com/commerce/admin-developer/pattern-library/feedback-to-user/progress-indicator) "Delay 500ms before showing the spinner"; no system read publishes a spinner minimum. Double press: [GOV.UK button](https://design-system.service.gov.uk/components/button/) and its [source](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/button/button.mjs) (`DEBOUNCE_TIMEOUT_IN_SECONDS = 1`). Optimistic: [React `useOptimistic`](https://react.dev/reference/react/useOptimistic), [Primer saving](https://primer.style/product/ui-patterns/saving/). Atlassian's [button](https://atlassian.design/components/button/examples) "disables the button and blocks user interaction". For the navigating-form row: no system read asks for a spinner on a full page load, where the browser shows its own loading state.
 
 ## Disabled buttons
 
@@ -289,7 +289,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - *Script*: tools/ui-check/check.mjs: design-standard rule 5 (an empty menu is disabled; options disabled, not hidden). Could: flag triggers without `aria-expanded`, menus under three items; assert Escape closes and returns focus.
 - *Judgement*: is the most-used action outside the menu?
 
-**Sources.** Carbon, Apple and NN/g agree on the three-item floor. Carbon offers the combo button freely as a primary; NN/g reserves split buttons for repeat-use desktop tools. The toolkit keeps NN/g's restraint.
+**Sources.** Carbon, Apple and NN/g agree on the three-item floor. Carbon offers the combo button freely as a primary; NN/g reserves split buttons for repeat-use desktop tools.
 
 ## Floating action buttons
 
@@ -336,7 +336,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - [strong] Property names follow the code's props, so the mapping is one line per prop: SDS maps `Variant`, `Size`, `Label` and its two icons straight onto `variant`, `size` and children, though its own icon names (`Icon Start`, `Has Icon Start`) are ones figma-standard rule 21 does not use ([SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)); Polaris collapsed seven booleans into the enums `variant` and `tone` so each maps as one axis ([Polaris v12 migration](https://github.com/Shopify/polaris-react/blob/main/polaris.shopify.com/content/version-guides/migrating-from-v11-to-v12.mdx)).
 
 **Variants and states**
-- [contested] **Icon button: one component or two.** Keep `Icon button` a component set of its own beside `Button` by default, and merge it into Button only when every one of these holds; the split-or-fold test (split when the element, role or keyboard behaviour changes) does not decide it, because icon-only changes none of the three ([when to split or merge](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#separate-icon-buttons)).
+- [contested] **Icon button: one component or two.** A merge into Button holds up only when every one of these holds; the split-or-fold test (split when the element, role or keyboard behaviour changes) does not decide it, because icon-only changes none of the three ([when to split or merge](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#separate-icon-buttons)).
   - The code has one component for both: Fluent derives icon-only from `icon` with no children, Polaris and Ant Design the same ([Fluent migration](https://github.com/microsoft/fluentui/blob/master/packages/react-components/react-button/library/docs/MIGRATION.md)). Where the code has two (MUI, Primer, Atlassian, Spectrum, Radix), two sets keep Figma and code one to one.
   - The square sizes line up with Button's heights. Where they do not, one `Size` axis would mean two things: in one library's merge, both a 64 to 80px labelled button and a 40px square ([four buttons become two](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#four-buttons-become-two)).
   - Icon-only takes every role Button has. Carbon allows no icon-only danger button and Atlassian's `IconButtonAppearance` drops `danger` and `warning`, so a merged set would hold holes the picker refuses ([Carbon button](https://carbondesignsystem.com/components/button/usage/)).
@@ -361,7 +361,7 @@ The threshold is [interaction: response times](../design/interaction.md#response
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis and property, so an axis with no code counterpart shows in the parity report.
 - *Judgement*: can a designer reach every state the code can be in, and no state the code cannot?
 
-**Sources.** Figma's Simple Design System, Primer and Polaris for names; the toolkit's research articles [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md) and [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md) (November 2026) for Loading, Open and the icon button, with the libraries each read. Where kits split (Loading as a boolean, icon-only merged into Button), the toolkit takes the smaller set and the required accessible name.
+**Sources.** Figma's Simple Design System, Primer and Polaris for names; the toolkit's research articles [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md) and [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md) (November 2026) for Loading, Open and the icon button, with the libraries each read. Kits split on Loading as a boolean and on icon-only merged into Button; those items are contested, and the project decides.
 
 ## Alignment with code
 

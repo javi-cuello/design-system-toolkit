@@ -210,7 +210,8 @@ This file holds the UX area's fundamentals for building and auditing a design or
 - [moderate] The product is understandable by using it; onboarding, where needed, is short, optional and in context.
 - [weak] The first run gives a welcome and one clear next action.
 - [moderate] Anything skipped or dismissed does not return, and stays findable.
-- [weak] At most one teaching bubble at a time, and an announcement only when it is needed.
+- [contested] **How many steps a tour runs.** Atlassian allows tours of three to four steps ([Atlassian onboarding](https://atlassian.design/components/onboarding/usage)); Apple and Atlassian prefer single, contextual tips, and Primer shows one teaching bubble at a time ([Primer feature onboarding](https://primer.style/product/ui-patterns/feature-onboarding/)). The product decides and records it.
+- [weak] An announcement only when it is needed: Atlassian asks whether the message is needed at all ([Atlassian onboarding](https://atlassian.design/components/onboarding/usage)).
 
 **How.** Prefer the empty states of a first run to a tour: each empty page says what will appear and the one action that fills it (*Empty states*). Where teaching is needed, use context-specific tips over a single flow and teach through interaction ([Apple Onboarding](https://developer.apple.com/design/human-interface-guidelines/onboarding)); postpone nonessential setup. Give users "a clear next step at every point" ([Carbon Onboard](https://carbondesignsystem.com/building-experiences/onboard/)). For a feature introduced to existing users, show one teaching bubble at a time, no more than two alerts at once, and respect a dismissal ([Primer feature onboarding](https://primer.style/product/ui-patterns/feature-onboarding/)); offer dismiss at every step and ask whether the message is needed at all ([Atlassian onboarding](https://atlassian.design/components/onboarding/usage)). On a small screen a tip must not cover the control it explains.
 
@@ -229,7 +230,7 @@ This file holds the UX area's fundamentals for building and auditing a design or
 
 **Check.** *Script:* could check that every tip and banner has a dismiss control, that a dismissed one stays gone on reload, and that no more than one bubble and two alerts show at once. *Judgement:* is onboarding needed, and what is the first meaningful action?
 
-**Sources.** As linked. Atlassian allows tours of three to four steps; Apple and Atlassian both prefer single, contextual tips. The toolkit goes with one step: no source found shows that longer tours are remembered, and every team wants its own bubble. Atlassian's package is marked deprecated in favour of `@atlaskit/spotlight`; the guidance is still published.
+**Sources.** As linked. Atlassian allows tours of three to four steps; Apple and Atlassian both prefer single, contextual tips. No source found shows that longer tours are remembered. Atlassian's package is marked deprecated in favour of `@atlaskit/spotlight`; the guidance is still published.
 
 ---
 

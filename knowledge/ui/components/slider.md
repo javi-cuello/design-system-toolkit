@@ -80,7 +80,7 @@ A slider sets a number in a range by moving a thumb along a track: a volume, a z
 - *Script*: figma-components-audit runs the rules cited above; the thumb's box is measured against figma-standard rule 26.
 - *Judgement*: does every frame show the value, and could a designer draw a range without detaching?
 
-**Sources.** Carbon's slider guidance for the parts, states and tooltip; MUI's types and SDS's source and Code Connect file for the names. SDS maps four Figma properties to props (`State`, `Label`, `Has Description`, `Description`); the rest of the [mapping](#alignment-with-code) is the toolkit's.
+**Sources.** Carbon's slider guidance for the parts, states and tooltip; MUI's types and SDS's source and Code Connect file for the names. SDS maps four Figma properties to props (`State`, `Label`, `Has Description`, `Description`); the rest of the [mapping](#alignment-with-code) applies code-standard rules 9 and 10.
 
 ## Alignment with code
 

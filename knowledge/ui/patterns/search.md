@@ -95,7 +95,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 
 **Cases**
 - An audit screen puts its search left of the facets → move it after them (design-standard rule 3; the check flags it).
-- A large table whose main task is finding one row, built on Carbon → Carbon's data table puts its always-open search on the left under the title, stretching to the actions; the toolkit keeps the house order, since one order across every screen is learned once. Record the divergence if a project overrides it.
+- A large table whose main task is finding one row, built on Carbon → Carbon's data table puts its always-open search on the left under the title, stretching to the actions; design-standard rule 3 keeps search last in the bar. Record the divergence if a project overrides it.
 - A dashboard header has site search right and the filter bar's search also right, stacked → keep both; label each, so the reader can tell the global box from the list box.
 - At 375px the bar wraps facets, search and actions onto three rows → collapse facets into a menu, keep search on its own row, move actions to an overflow menu.
 
@@ -113,7 +113,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 - *Script:* tools/ui-check/check.mjs: design-standard rule 3 ("facets and toggles come first, search last"). Could check the site search's position is the same on every page.
 - *Judgement:* Is search the reader's main tool on this screen, and if so does it get the width it needs?
 
-**Sources:** [Carbon data table](https://carbondesignsystem.com/components/data-table/usage/) places the search left; NN/g accepts either side for site search. The toolkit puts list search last in the filter bar, by design-standard rule 3, and does not follow Carbon's table.
+**Sources:** [Carbon data table](https://carbondesignsystem.com/components/data-table/usage/) places the search left; NN/g accepts either side for site search. List search sits last in the filter bar by design-standard rule 3, not as in Carbon's table.
 
 ## Instant or submitted
 
@@ -194,13 +194,11 @@ First decide which search it is. **Site search** finds pages across a site or to
 ## Highlighting matches
 
 **Use when / don't use**
-- [weak] Use in results lists and excerpts so the reader sees why each result matched.
-- [weak] Don't highlight in a list search that shows whole names a few characters long; the match is the row.
+No source opened states when highlighting in results helps.
 
 **How**
 - [required] Mark the matched text with `mark`, drawn as a background or a weight change that reads in both themes, and never by colour alone (WCAG 1.4.1).
 - [moderate] In autocomplete, emphasise the predicted part, the reverse of results ([Baymard](https://baymard.com/blog/autocomplete-design)).
-- [weak] Highlight whole matched terms, case-insensitively; don't highlight inside the result's link text so heavily that it stops reading as a link.
 
 **Cases**
 - An excerpt marks matches in the same yellow in dark mode, failing contrast → use a highlight token per mode; the marked text keeps its contrast (figma-standard rule 32).
@@ -221,7 +219,7 @@ First decide which search it is. **Site search** finds pages across a site or to
 - *Script:* could check each `mark`'s text against its background for 4.5:1 in every theme.
 - *Judgement:* Does the highlight help the reader pick the right result?
 
-**Sources:** no published source opened in this session states a rule for highlighting in results; this section is house practice. The autocomplete rule is Baymard's.
+**Sources:** no published source opened in this session states a rule for highlighting in results. The autocomplete rule is Baymard's.
 
 ## The query in the address
 

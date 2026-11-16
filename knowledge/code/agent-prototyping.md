@@ -25,7 +25,7 @@ How a coding agent builds a prototype from the design system's real components i
 - *Script:* `tools/system-mcp/validate.mjs` with `--from <the system's import prefix>` fails on a library component imported by name from anywhere else (`import * as` is not read) or defined in the prototype, and on raw HTML where the library has a component. project-check's `validate` gate runs it on the code each push changes.
 - *Judgement:* Change one token in the library. Did the prototype change?
 
-**Sources:** Lovable, v0 and Figma are vendor docs. Vallaure is commentary. The toolkit counts only the first level, imports from the package.
+**Sources:** Lovable, v0 and Figma are vendor docs. Vallaure is commentary. Only the first level, imports from the package, passes the import test above.
 
 ## Giving the agent the system
 
@@ -105,7 +105,7 @@ How a coding agent builds a prototype from the design system's real components i
 - *Script:* the import check from the first section on the code. A library audit of the Figma frame that fails on detached instances and unbound values.
 - *Judgement:* Is anything in the chrome new? Does each region show its loading, empty and error states?
 
-**Sources:** Atlassian, shadcn, Shopify, Ant Design, Primer and Figma are vendor docs. Kolthoff et al. and Cha et al. are small studies, so read them as a direction. No benchmark grades screens for design system use, and no vendor tests a screen's round trip as lossless. The toolkit goes with templates and config over prose, because every source with evidence points that way.
+**Sources:** Atlassian, shadcn, Shopify, Ant Design, Primer and Figma are vendor docs. Kolthoff et al. and Cha et al. are small studies, so read them as a direction. No benchmark grades screens for design system use, and no vendor tests a screen's round trip as lossless. Templates and config over prose is where every source with evidence points.
 
 ## Feedback on a prototype
 
@@ -177,4 +177,4 @@ How a coding agent builds a prototype from the design system's real components i
 - *Script:* CI on the feature branch, plus the lint rules above.
 - *Judgement:* Was the pull request built on the feature branch, or merged from the prototype branch?
 
-**Sources:** Vallaure is commentary. Atlassian, Primer, react-scanner and Salesforce's skill are the tools' own docs. The toolkit follows the unmerged-branch rule because it keeps throwaway code out of the product's history.
+**Sources:** Vallaure is commentary. Atlassian, Primer, react-scanner and Salesforce's skill are the tools' own docs. The unmerged prototype branch and the rebuild follow Vallaure's four-step handoff: prototype on a design branch, rebuild on a feature branch, run CI, a person approves.

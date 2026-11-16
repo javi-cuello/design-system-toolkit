@@ -33,7 +33,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* a static scan of each `*Props` type for keys in the HTML and ARIA attribute set that are not passed straight to the native element; `tsc --strict` fails a value outside a union.
 - *Judgement:* Could a reader guess every prop's effect from its name at the call site?
 
-**Sources:** Primer, Fluent, Atlassian, Carbon, React Aria and the TypeScript handbook as linked. They disagree on the `is` prefix for booleans; the toolkit uses the native name where one exists and an unprefixed state word otherwise, so a prop and the attribute it becomes share a name.
+**Sources:** Primer, Fluent, Atlassian, Carbon, React Aria and the TypeScript handbook as linked. They disagree on the `is` prefix for booleans; this page uses the native name where one exists (code-standard rule 9) and, with Primer, Fluent and MUI, an unprefixed state word otherwise, so a prop and the attribute it becomes share a name.
 
 ## The native props, passed through
 
@@ -67,7 +67,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* render with `react-dom/server` `renderToString(<Button data-x="1" aria-describedby="h" className="c" style={{ margin: 1 }} />)` and assert all four on the `button` with the component's own class kept; with React Testing Library, pass a `createRef()` and assert `ref.current instanceof HTMLButtonElement`; a static scan for `forwardRef` in a React-19-only library.
 - *Judgement:* Is there any native attribute a caller would reasonably set that this component swallows?
 
-**Sources:** react.dev and @types/react as linked. Radix's composition guide still asks a child to "wrap the component in `React.forwardRef`" ([Radix composition](https://www.radix-ui.com/primitives/docs/guides/composition)) and MUI's composition guide the same ([MUI composition](https://mui.com/material-ui/guides/composition/)), because both still support React 18. The toolkit goes with React 19: `ref` as a prop, typed with `ComponentPropsWithRef`.
+**Sources:** react.dev and @types/react as linked. Radix's composition guide still asks a child to "wrap the component in `React.forwardRef`" ([Radix composition](https://www.radix-ui.com/primitives/docs/guides/composition)) and MUI's composition guide the same ([MUI composition](https://mui.com/material-ui/guides/composition/)), because both still support React 18. This page follows react.dev's React 19 form: `ref` as a prop, typed with `ComponentPropsWithRef`.
 
 ## Events, passed through
 
@@ -97,7 +97,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* `tsc --strict` on a fixture that passes `onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget}`; a Testing Library test that clicks by role and asserts the spy ran, and presses Enter on the focused button and asserts it again.
 - *Judgement:* Does every event this component invents carry something the native one does not?
 
-**Sources:** react.dev and Radix as linked. React Aria disagrees: its Button marks `onClick` "Not recommended – use `onPress` instead", because press events unify mouse, touch and keyboard ([React Aria Button](https://react-aria.adobe.com/Button)). That earns its cost in a library that renders non-native elements; for a component whose root is a native `button` the browser already unifies them. The toolkit passes the native events through.
+**Sources:** react.dev and Radix as linked. React Aria disagrees: its Button marks `onClick` "Not recommended – use `onPress` instead", because press events unify mouse, touch and keyboard ([React Aria Button](https://react-aria.adobe.com/Button)). That earns its cost in a library that renders non-native elements; for a component whose root is a native `button` the browser already unifies them, so the native events pass through, as react.dev types them.
 
 ## Children, label props and slots
 
@@ -124,7 +124,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* a static scan for `React.Children`, `cloneElement` and props named `render*` in component files; for each slot prop, render it with a `<strong>` and assert the element lands in the slot's part.
 - *Judgement:* Is each string prop really text, or a region a caller will one day need to put markup in?
 
-**Sources:** react.dev, Fluent and MUI as linked. React's alternatives include render props ("there is nothing special about it: it is a regular prop which happens to be a function", [Children, alternatives](https://react.dev/reference/react/Children#alternatives)), and React Aria takes functions for `className`, `style` and `children` to style by state ([React Aria styling](https://react-aria.adobe.com/styling)); Carbon takes `renderIcon` as a component type ([Carbon Button source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Button/Button.tsx)). The toolkit goes with slots (code-standard rule 13): a slot is markup at the call site, renders on the server, and crosses a client boundary, which a function does not (code-standard rule 43).
+**Sources:** react.dev, Fluent and MUI as linked. React's alternatives include render props ("there is nothing special about it: it is a regular prop which happens to be a function", [Children, alternatives](https://react.dev/reference/react/Children#alternatives)), and React Aria takes functions for `className`, `style` and `children` to style by state ([React Aria styling](https://react-aria.adobe.com/styling)); Carbon takes `renderIcon` as a component type ([Carbon Button source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Button/Button.tsx)). Slots are code-standard rule 13: a slot is markup at the call site, renders on the server, and crosses a client boundary, which a function does not (code-standard rule 43).
 
 ## Controlled and uncontrolled state
 
@@ -184,7 +184,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* `tsc --strict` fails `<IconButton icon={…} />` without `aria-label`; render each state in Chrome and run axe-core ([testing: automated checks](testing.md#automated-accessibility-checks-and-their-limits)); assert the loading button is still `document.activeElement` after `loading` turns on; a static scan for `role="button"` and `onClick` on a non-interactive element.
 - *Judgement:* For each ARIA attribute the component writes, which native element or attribute was ruled out first?
 
-**Sources:** MDN, APG, Primer, React Aria, Fluent, Base UI and Carbon as linked. On loading, Base Web puts `aria-busy` on the button ([loading buttons](../ui/components/button.md#loading-buttons)), MDN places it on the region being updated, and Primer and React Aria use a focusable button that refuses the action plus an announcement; the toolkit goes with Primer and React Aria. On disabled, Primer advises against it altogether; the toolkit offers both forms, native by default, focusable where the control must be discoverable.
+**Sources:** MDN, APG, Primer, React Aria, Fluent, Base UI and Carbon as linked. On loading, Base Web puts `aria-busy` on the button ([loading buttons](../ui/components/button.md#loading-buttons)), MDN places it on the region being updated, and Primer and React Aria use a focusable button that refuses the action plus an announcement; this page follows Primer and React Aria. On disabled, Primer advises against it altogether; MDN and the APG describe both forms, and the APG asks for one consistent convention.
 
 ## Polymorphism: `as`, `asChild`, and when to avoid them
 
@@ -211,7 +211,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* a static scan for `as`, `asChild`, `component` and `render` props on design-system components, each needing a waiver naming the elements allowed.
 - *Judgement:* Is this two components with one look?
 
-**Sources:** MUI, Chakra, Radix, Base UI, Carbon, Primer and react.dev as linked. Chakra and Radix favour `asChild` for flexibility; React's own docs call the cloning beneath it fragile. The toolkit goes with one element per component and a sibling component for the other element.
+**Sources:** MUI, Chakra, Radix, Base UI, Carbon, Primer and react.dev as linked. Chakra and Radix favour `asChild` for flexibility; React's own docs call the cloning beneath it fragile. This page follows react.dev's warning and Primer's `LinkButton`: one element per component and a sibling component for the other element.
 
 ## Styling hooks and the stylesheet
 
@@ -242,7 +242,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* a static scan for `style=` in component files whose value is not the caller's prop or a single custom property; render each variant with `react-dom/server` and assert the attribute the sheet selects on; `to-code --check` for the generated sheet.
 - *Judgement:* Could a caller restyle this variant through a custom property, without fighting specificity?
 
-**Sources:** Radix, React Aria, react.dev and webpack as linked. React Spectrum disagrees on caller classes: it names them `UNSAFE_className` and `UNSAFE_style`, "a last resort", because a future design update "may cause unintended breaking changes" ([React Spectrum styling](https://react-spectrum.adobe.com/react-spectrum/styling.html)), and Atlassian's Button drops `style` ([Atlassian Button](https://atlassian.design/components/button/code)). The toolkit passes `className` and `style` through, because a component is a native element first, and points callers at custom properties for anything the design governs.
+**Sources:** Radix, React Aria, react.dev and webpack as linked. React Spectrum disagrees on caller classes: it names them `UNSAFE_className` and `UNSAFE_style`, "a last resort", because a future design update "may cause unintended breaking changes" ([React Spectrum styling](https://react-spectrum.adobe.com/react-spectrum/styling.html)), and Atlassian's Button drops `style` ([Atlassian Button](https://atlassian.design/components/button/code)). This page follows Radix, React Aria and react.dev in passing `className` and `style` through, because a component is a native element first, and points callers at custom properties for anything the design governs.
 
 ## Server components and `"use client"`
 
@@ -270,7 +270,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* render every component without a directive with `react-dom/server` `renderToString` in a Node process with no DOM; it must not throw. A static scan: a file with `useState`, `useEffect`, `useContext`, `createContext`, `forwardRef` or `window`/`document` and no `"use client"` first line is an error, and the reverse is a cost to justify (`tools/css-lint/check.mjs` already gates code-standard rules 43 and 47).
 - *Judgement:* Does this component itself hold state, run an effect or touch a browser API?
 
-**Sources:** react.dev as linked. React allows Server Functions to cross the boundary; code-standard rule 43 allows no function at all, and the toolkit keeps it, so a shared component renders the same in an application and in a story.
+**Sources:** react.dev as linked. React allows Server Functions to cross the boundary; code-standard rule 43 allows no function at all, so a shared component renders the same in an application and in a story.
 
 ## TypeScript strictness and prop documentation
 
@@ -302,7 +302,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 ## Stories in CSF3
 
 **What good looks like**
-- [moderate] One `.stories.tsx` per component, with a typed default export and one named story per meaningful state: each variant, each size where it changes layout, disabled, loading, icon-only, long text, and any state the contract draws.
+- [required] One `.stories.tsx` per component, with a typed default export and one named story per meaningful state: each variant, each size where it changes layout, disabled, loading, icon-only, long text, and any state the contract draws (code-standard rule 33).
 - [moderate] Args come from the props, so the controls are the API; event props are spies.
 - [moderate] Accessibility checks run on every story and fail the build.
 
@@ -345,7 +345,7 @@ How a design-system component is written in React 19 and TypeScript so that it b
 - *Script:* `tsc --strict` over the stories; a static scan that the meta uses `satisfies Meta<typeof …>`, sets `a11y.test: 'error'`, and has a named export for each value of each union prop and each boolean the contract draws; the Storybook test runner or Vitest addon in CI.
 - *Judgement:* Is there a state a person meets that no story shows?
 
-**Sources:** Storybook as linked. Storybook's docs show one story per variant but do not say "a story per state"; the toolkit requires it, because parity proves the set (code-standard rule 33).
+**Sources:** Storybook as linked. Storybook's docs show one story per variant but do not say "a story per state"; code-standard rule 33 requires it, because parity proves the set.
 
 ## Tests: render, role queries, axe
 

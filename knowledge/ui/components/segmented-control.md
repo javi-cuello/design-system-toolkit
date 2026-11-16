@@ -39,7 +39,7 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 - [required] Implementation: code-standard rule 8, code-standard rule 9 (selected is a state of the native control), code-standard rule 15 (a count is a description). In Figma: figma-standard rule 31 (selected draws differently from rest by more than colour), figma-standard rules 26 and 32.
 
 **Build**
-- [required] A `role="group"` with a name, holding `<button type="button" aria-pressed>`s; selected is styled from `[aria-pressed="true"]` (code-standard rule 9). That is the view switch outside any form. A segmented facet inside a filter bar's GET form is radios in a `fieldset` styled as segments, so it submits without script ([filtering: facet controls](../patterns/filtering.md#facet-controls)).
+- [required] Built as buttons, it is a `role="group"` with a name, holding `<button type="button" aria-pressed>`s; selected is styled from `[aria-pressed="true"]` (code-standard rule 9). Radios in a `fieldset` styled as segments submit with a GET form without script, which pressed buttons do not ([filtering: facet controls](../patterns/filtering.md#facet-controls)); which a project builds is the contested item under *In code* (*Element*).
   ```html
   <div role="group" aria-label="View">
     <button type="button" aria-pressed="true">Table</button>
@@ -127,7 +127,7 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 ## In code
 
 **Element**
-- [contested] A `role="group"` of `button`s with `aria-pressed`, or a radio group. Primer renders a labelled `ul` of buttons with `aria-pressed`; React Aria sets `role="radiogroup"` and `role="radio"` when the selection is single ([useToggleButtonGroup](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/button/useToggleButtonGroup.ts)), and Radix does the same for `type="single"`. The toolkit picks by context: buttons for a view switch, radios inside a form ([*Segmented control*](#segmented-control), Build).
+- [contested] A `role="group"` of `button`s with `aria-pressed`, or a radio group. Primer renders a labelled `ul` of buttons with `aria-pressed`; React Aria sets `role="radiogroup"` and `role="radio"` when the selection is single ([useToggleButtonGroup](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/button/useToggleButtonGroup.ts)), and Radix does the same for `type="single"`. [*Segmented control*](#segmented-control)'s Build shows both.
 - [required] A disabled segment keeps its place with `disabled` or `aria-disabled="true"` on its own button, never on the group (code-standard rules 9 and 62); Primer sets `aria-disabled`.
 
 **Props**
@@ -140,4 +140,4 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 - *Script*: the parity loop compares each segment variant with its frame (design-code-parity); tools/ui-check/check.mjs counts segments (design-standard rule 4); a test could assert exactly one segment is pressed after any click.
 - *Judgement*: does the control apply its choice at once, and does it become a menu where it no longer fits?
 
-**Sources.** Primer, MUI, React Aria and Radix sources as linked; they split on the role (pressed buttons or radios), and the toolkit chooses by whether the control sits in a form.
+**Sources.** Primer, MUI, React Aria and Radix sources as linked; they split on the role (pressed buttons or radios).

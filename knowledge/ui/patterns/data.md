@@ -14,7 +14,6 @@ How an interface shows figures so they can be read, compared and trusted: number
 - [strong] Format with the platform's formatter, never by concatenation: `Intl.NumberFormat` gives "language-sensitive number formatting", with currency, unit and significant-digit options ([MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat)). Store raw numbers; format at render.
 - [contested] Dialect rules: GOV.UK uses numerals for everything including 2 to 9, "%" with a number, and no space between a numeral and an abbreviated unit ("3,500kg") ([GOV.UK A to Z style guide](https://guidance.publishing.service.gov.uk/writing-to-gov-uk-standards/style-guides/a-to-z-style-guide/)); Mailchimp spells a number out only at the start of a sentence ([Mailchimp grammar and mechanics](https://styleguide.mailchimp.com/grammar-and-mechanics/)). The project's dialect decides the spacing; the formatter applies it.
 - [weak] Thousands separators on four digits and up in running text and tables, in the locale's form.
-- [weak] Precision: as few decimals as the decision needs, the same down a column and across tiles of one measure (commentary; no source fixes a number). Percentages of small counts are shown with the count ("3 of 7, 43%"), since a percentage alone hides a small base.
 - [weak] Compact notation ("1.2k") only where space forces it and the exact value is one step away; never in a table people sort or compare.
 - [weak] Zero, missing and not applicable are three different values (this section owns the rule; other pages link here): "0", "Not measured" (a word, never a dash, which screen readers announce inconsistently: [tables: cell content and empty cells](tables.md#cell-content-and-empty-cells)), and blank for not applicable. A missing count beside a label (a tab, a filter option, a counter) is hidden, never shown as zero (Primer's [degraded experiences](https://primer.style/ui-patterns/degraded-experiences): "default to hiding the number").
 - [weak] Signs: a change carries "+" or "−" and a direction word or icon; a negative value uses the true minus sign or the locale's form.
@@ -86,7 +85,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 - *Script* could: flag ordinals in dates, numeric short dates, hyphenated ranges and the wrong dialect's order with regular expressions; flag a relative time with no `time` element or no `datetime`; flag a `time` whose exact value is only in `title`.
 - *Judgement*: does this time matter enough to be absolute?
 
-**Sources.** GOV.UK and Atlassian differ by dialect; on relative time with an exact timestamp available, Atlassian is the source and the toolkit adds the keyboard requirement.
+**Sources.** GOV.UK and Atlassian differ by dialect; on relative time with an exact timestamp available, Atlassian is the source, and the keyboard requirement applies WCAG 2.1.1 Keyboard.
 
 ## KPI tiles
 
@@ -107,7 +106,6 @@ How an interface shows figures so they can be read, compared and trusted: number
 - [weak] Rows that fill: every row of tiles is full, so no tile sits alone on a last row and no empty cell is left in the grid. Choose the tiles per row from the number of tiles: 2, 3 or 4 in one row; 5 as one row of five where it fits; 6 as 3 + 3 (or one row on a wide screen); 7 or more is too many (move the rest to a table). Avoid 4 + 1 and 3 + 1.
 - [required] Derive the column count from the tile count, never fix it for today's tiles (code-standard rule 57): the same strip with one tile removed must still fill its rows.
 - [weak] At each breakpoint, pick a count that divides the tiles evenly (six tiles: 3 then 2 then 1 per row; four: 4, then 2, then 1). A plain `repeat(auto-fill, minmax(…))` grid wraps by width alone and leaves orphans; `auto-fit` collapses empty tracks only when all tiles fit on one row ([MDN, repeat()](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/repeat): empty tracks "are collapsed"), so it does not fix a short last row. Setting the columns from the count, or letting a short last row's tiles span the width, does.
-- [weak] Never pad a row with an empty or placeholder tile to make it full; remove a tile or move it to the table.
 - [moderate] Tiles belong in a table instead when they are one figure per member of a set (per component, per file, per library): those are rows of one column, compared down it, and grow with the set. Tiles are for a fixed handful of headline figures about the whole; when the reader compares tiles with each other rather than checking each against its target, it is a table or a bar chart ([data visualisation: choosing a chart by its job](data-visualisation.md#choosing-a-chart-by-its-job)). NN/g's cards guidance points the same way: cards are "a poor choice when users need to compare" ([NN/g, cards](https://www.nngroup.com/articles/cards-component/)).
 
 **Cases**
@@ -141,7 +139,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 - *Script* could: assert each tile has a label, a value and a period; flag tone by colour with no icon or word; compare tile counts with the linked list's count; at each breakpoint, assert every row of tiles holds the same number of tiles (no short last row) and no tile is empty.
 - *Judgement*: is each tile a figure someone acts on, and is the most important the most prominent? Is this a handful of headline figures, or one figure per member of a set that belongs in a table?
 
-**Sources.** No system publishes a tile specification; this section combines ONS's subtitle rule, Carbon's ranking and status indicators, and is partly commentary. Carbon's dashboards guidance gives hierarchy but no tile grid; the full-row rule and tiles-to-table threshold are the toolkit's commentary, with MDN for the grid mechanics.
+**Sources.** No system publishes a tile specification; ONS's subtitle rule, Carbon's ranking and status indicators, MDN for the grid mechanics and NN/g for the cards-against-tables test, as linked. Carbon's dashboards guidance gives hierarchy but no tile grid.
 
 ## Charts
 
@@ -166,7 +164,7 @@ How an interface shows figures so they can be read, compared and trusted: number
 - [weak] A missing source is named as missing ("no audit has run"), never left out of the caption.
 - [weak] A hand-written page that summarises generated data still carries the caption, or links to the generated page that does.
 - [required] State provenance once per page or table, never at the start of every row or message; repeated provenance pushes the change out of the first words (design-standard rule 10).
-- [weak] Two sources: name both with their dates, so a reader can see when one is older than the other, and say so when they are out of order (an audit older than the snapshot it judged); the out-of-order flag is the toolkit's judgement.
+- [required] Two sources: name both with their dates, so a reader can see when one is older than the other, and say so when they are out of order (an audit older than the snapshot it judged) (design-standard rule 1).
 - [weak] Freshness: when a source is older than its expected cadence, a warning banner says so (see the feedback patterns); when a source is missing, the page shows what is missing and never mixes stale and fresh figures silently (Primer [degraded experiences](https://primer.style/ui-patterns/degraded-experiences)).
 - [required] The lede says what the page means; provenance stays out of it (design-standard rule 1).
 

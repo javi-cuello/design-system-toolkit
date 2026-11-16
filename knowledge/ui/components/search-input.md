@@ -20,7 +20,7 @@ A search input is the one-line field a person types a query into, to search a si
 
 **How**
 - [moderate] **`type="search"`** on the `input`: React Aria's `SearchField` defaults its `type` to `'search'` ([React Aria useSearchField](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/searchfield/useSearchField.ts)), SDS's `Search` renders `type="search"` (source above), and Carbon deprecated its `role` prop: "The `role` prop has been deprecated since <input type="search"> already provides correct semantics" ([Carbon Search source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Search/Search.tsx)). SDS is built on React Aria, so the two count as one source.
-- [contested] **Where the `search` landmark goes.** MDN and the APG put it on the region that holds the search, around the form: the `search` element "is a semantic container for the `<form>`" ([MDN `search`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/search)), and a search form takes the search landmark in place of the form one ([APG search landmark](https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/examples/search.html)). Carbon's `Search` puts `role="search"` on its own wrapper, so every instance is a landmark (source above). The toolkit keeps the landmark out of the component: the page wraps the form in `search` once, so a filter box in each of several lists does not add a landmark each. Where there are two, each has its own label (APG, above).
+- [contested] **Where the `search` landmark goes.** MDN and the APG put it on the region that holds the search, around the form: the `search` element "is a semantic container for the `<form>`" ([MDN `search`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/search)), and a search form takes the search landmark in place of the form one ([APG search landmark](https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/examples/search.html)). Carbon's `Search` puts `role="search"` on its own wrapper, so every instance is a landmark (source above). Where the landmark stays out of the component, the page wraps the form in `search` once, so a filter box in each of several lists does not add a landmark each. Where there are two, each has its own label (APG, above).
 - [weak] **Magnifier** leads, decorative, since the label names the field; it is not the submit button unless it is a real, named button.
 - [weak] **Placeholder** short and naming what can be found ("Search components"), the one field where a placeholder is fine ([text input: placeholder text](text-input.md#placeholder-text)).
 - [weak] **Sizes** match the bar's controls: Carbon's search has `sm`, `md` and `lg` (Code Connect above) ([search: the box](../patterns/search.md#the-box-visible-wide-and-labelled)).
@@ -42,7 +42,7 @@ A search input is the one-line field a person types a query into, to search a si
 - *Script:* could flag a search `input` without `type="search"`, a `role="search"` on anything but the region around the form, and more than one search landmark without distinct labels.
 - *Judgement:* is this a search, or a choice from a list that should be a combobox?
 
-**Sources:** MDN and the APG for the landmark; React Aria, SDS and Carbon for the type; Carbon departs on the landmark, settled above.
+**Sources:** MDN and the APG for the landmark; React Aria, SDS and Carbon for the type; Carbon departs on the landmark.
 
 ## Clear and submit
 
@@ -54,7 +54,7 @@ A search input is the one-line field a person types a query into, to search a si
 - [moderate] **The clear button is named** "Clear search": React Aria and SDS use those words (SDS is built on React Aria, so one source), Carbon "Clear search input" (sources above).
 - [moderate] **Clearing returns focus to the field** and, for an instant filter, restores the full list. React Aria focuses the input on press start, so a phone keeps its keyboard (useSearchField, above).
 - [moderate] **Escape clears** a field with text: React Aria clears on Escape and lets it through when the field is empty, so a dialog around it can still close (useSearchField, above); Carbon clears on Escape too (source above). With suggestions open, the first Escape closes them ([search: keyboard](../patterns/search.md#keyboard)).
-- [contested] **Whether the clear button takes a Tab stop.** React Aria takes it out of the tab order (`excludeFromTabOrder: true`), since Escape does the same from the field (useSearchField, above); Carbon renders it as a plain `button`, in the tab order (source above). The toolkit keeps it in the tab order, so a keyboard user who does not know Escape can still clear, and it costs one stop only while there is text.
+- [contested] **Whether the clear button takes a Tab stop.** React Aria takes it out of the tab order (`excludeFromTabOrder: true`), since Escape does the same from the field (useSearchField, above); Carbon renders it as a plain `button`, in the tab order (source above).
 - [weak] **Enter submits**: natively in a form; React Aria calls `onSubmit` on Enter instead of the browser's submit when one is given (useSearchField, above).
 
 **Cases**
@@ -76,7 +76,7 @@ A search input is the one-line field a person types a query into, to search a si
 - *Script:* could type, clear with the button and with Escape, and assert the field is empty, focus is in it, and an empty field's Escape reaches the dialog around it.
 - *Judgement:* does this search need a submit, or does it filter as the person types?
 
-**Sources:** React Aria, Carbon and SDS source as linked; they split on the clear button's tab stop, settled above.
+**Sources:** React Aria, Carbon and SDS source as linked; they split on the clear button's tab stop.
 
 ## When a search becomes a combobox
 
@@ -161,8 +161,8 @@ A search input is the one-line field a person types a query into, to search a si
 - [moderate] Code reaches focus with a value, the commonest frame of a search in use; the set draws it because `Has value` sits beside `State`.
 
 **Differences**
-- [weak] The landmark is not part of the component, where Carbon's `Search` renders `role="search"` on its own wrapper ([Search input](#search-input) for why).
-- [weak] The clear button keeps its tab stop, where React Aria removes it ([clear and submit](#clear-and-submit)).
+- [contested] Where the project takes MDN's and the APG's side, the landmark is not part of the component, where Carbon's `Search` renders `role="search"` on its own wrapper ([Search input](#search-input)).
+- [contested] Where the project takes Carbon's side, the clear button keeps its tab stop, where React Aria removes it ([clear and submit](#clear-and-submit)).
 - [required] Carbon's skeleton and `ExpandableSearch`, and React Aria's `isReadOnly` and `isInvalid` on a search field (sources above), are drawn only where the project's code renders them (figma-standard rule 51).
 
 **Check**

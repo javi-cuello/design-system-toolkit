@@ -49,7 +49,7 @@ How an interface tells people what happened, what state something is in, and wha
 - *Script* could: after a scripted action, assert something visible changed within a time bound and sits inside the viewport; list every message component on a page and flag a dialog that opened without a person's action.
 - *Judgement*: is this the least intrusive component that is enough, and is it next to its cause?
 
-**Sources.** Lightning, Primer, Carbon and NN/g agree on ordering by intrusiveness and placing near the cause. Primer is the most sceptical of toasts; the toolkit follows it and makes inline the default.
+**Sources.** Lightning, Primer, Carbon and NN/g agree on ordering by intrusiveness and placing near the cause. Primer is the most sceptical of toasts, and inline as the default is Primer's line.
 
 ## Inline messages
 
@@ -62,7 +62,7 @@ How an interface tells people what happened, what state something is in, and wha
 - [weak] Next to the cause: on a field, at the top of a region, in the row. Carbon: "Place inline notifications near their related items"; keep the message under two lines.
 - [weak] Persist until resolved or dismissed (Carbon). A validation message clears when the input is fixed; timing is [interaction: validation timing](../design/interaction.md#error-prevention-and-validation-timing).
 - [weak] Wording: what is wrong and how to fix it, as [content: error messages](../design/content.md#error-messages) sets out.
-- [required] A message never pushes the control the person is using (design-standard rule 2): a field's message, above it by the toolkit's default ([forms: *Error messages and the error summary*](forms.md#error-messages-and-the-error-summary)), appears on submit, or its line is reserved.
+- [required] A message never pushes the control the person is using (design-standard rule 2): a field's message ([forms: *Error messages and the error summary*](forms.md#error-messages-and-the-error-summary)) appears on submit, or its line is reserved.
 - [weak] A form with several errors also gets a summary ([forms: error messages and the error summary](forms.md#error-messages-and-the-error-summary)).
 
 **Cases**
@@ -135,13 +135,13 @@ How an interface tells people what happened, what state something is in, and wha
 - *Script* could: with a throttled network, measure time to first visual change and confirm no indicator shows under the threshold; compare skeleton and loaded bounding boxes within a tolerance; flag an empty-state message rendered while a request is pending.
 - *Judgement*: which waits deserve determinate progress, and is the layout predictable enough to skeleton?
 
-**Sources.** Primer, Carbon, NN/g and Lightning as linked agree on skeleton shape; the thresholds and their disagreement (Lightning's 300ms) are in [interaction: response times](../design/interaction.md#response-times-and-perceived-performance). Reduced motion: [Primer's loading pattern](https://primer.style/product/ui-patterns/loading/) keeps the spinner moving, where a blanket reduced-motion block stops it; the toolkit follows Primer for spinners and stops shimmer, which conveys nothing a still skeleton does not. Boundaries: [React `Suspense`](https://react.dev/reference/react/Suspense).
+**Sources.** Primer, Carbon, NN/g and Lightning as linked agree on skeleton shape; the thresholds and their disagreement (Lightning's 300ms) are in [interaction: response times](../design/interaction.md#response-times-and-perceived-performance). Reduced motion: [Primer's loading pattern](https://primer.style/product/ui-patterns/loading/) keeps the spinner moving, where a blanket reduced-motion block stops it, hence *contested*. Boundaries: [React `Suspense`](https://react.dev/reference/react/Suspense).
 
 ## Empty states
 
 **Use when / don't use**
 - [weak] Use for every list, table, chart or region that can have nothing in it.
-- [moderate] Design four kinds separately: first use, no results, cleared (the person finished or removed everything), and error. Each says something different. This section owns the kinds and their copy; other pages link here.
+- [moderate] Design Carbon's three kinds separately: first use, user action (no results after a search or filter, or cleared: the person finished or removed everything), and error. Each says something different. This section owns the kinds and their copy; other pages link here.
 - [moderate] Don't leave a blank area or an empty grid with headers; don't show a first-use message on a filtered list.
 
 **How**
@@ -149,8 +149,8 @@ How an interface tells people what happened, what state something is in, and wha
 | Kind | Say | Action |
 |---|---|---|
 | First use | what will appear here and why it matters | the one action that creates the first item |
-| No results | that nothing matches, and what was searched or filtered | clear filters, or widen the search |
-| Cleared | that the work is done, plainly | the next useful place, or none |
+| User action: no results | that nothing matches, and what was searched or filtered | clear filters, or widen the search |
+| User action: cleared | that the work is done, plainly | the next useful place, or none |
 | Error | what failed, in plain words, no codes | retry, or where to go instead |
 
 - [weak] Replace the element that would show: an empty table is replaced, headers and all ([Carbon empty states](https://carbondesignsystem.com/patterns/empty-states-pattern/)).
@@ -181,7 +181,7 @@ How an interface tells people what happened, what state something is in, and wha
 - *Script* could: render each data region with an empty data set and with a failed source, and assert a heading and an action exist and no empty `tbody` or axis frame remains; flag error text containing a status code.
 - *Judgement*: does each kind say why it is empty, and is the action the one that fills it?
 
-**Sources.** Carbon names three kinds, Primer three with different cuts; the toolkit splits "user action" into no results and cleared because their actions differ.
+**Sources.** Carbon names three kinds, Primer three with different cuts; the table gives Carbon's user-action kind two rows because their actions differ.
 
 ## Error pages
 
@@ -217,13 +217,13 @@ How an interface tells people what happened, what state something is in, and wha
 - *Script* could: request a nonsense path and assert the response status is 404 and the page has the shell, a title naming the problem, and at least one link; flag "404", "500" or "oops" in visible text.
 - *Judgement*: does the page say what the person can do now?
 
-**Sources.** GOV.UK's three patterns are the only detailed published guidance and the toolkit follows them; their "Sorry" in the 500 heading is kept, though GOV.UK lists please and sorry as an open question.
+**Sources.** GOV.UK's three patterns are the only detailed published guidance and this section follows them; their "Sorry" in the 500 heading is kept, though GOV.UK lists please and sorry as an open question.
 
 ## Success confirmation
 
 **Use when / don't use**
-- [weak] Confirm success only when the result is not evident from the screen: the action happened elsewhere, its effect is off-screen, or it took long enough that the person may have looked away.
-- [weak] Don't confirm what the person can already see: a renamed item showing its new name, a toggled switch, a row that vanished after delete (offer undo there instead).
+- [contested] **Whether to confirm what the screen already shows** (a renamed item showing its new name, a toggled switch, a row gone after delete). Lightning's timely principle skips feedback where it is not needed; NN/g's first heuristic: "systems should always keep users informed about what is going on" ([NN/g, visibility of system status](https://www.nngroup.com/articles/visibility-system-status/)). The product decides and records it.
+- [weak] Confirm success where the result is not evident from the screen: the action happened elsewhere, its effect is off-screen, or it took long enough that the person may have looked away.
 
 **How**
 - [weak] Prefer showing the changed state in place (the new value, a "Saved" state beside the button, the item at the top of the list) over a separate message. Lightning's timely principle: skip feedback where it is not needed.
@@ -251,7 +251,7 @@ How an interface tells people what happened, what state something is in, and wha
 - *Script* could: flag the words "successfully" or "Success!" in messages; after a scripted save, assert a status message or a visible changed state exists.
 - *Judgement*: would the person know it worked without the message?
 
-**Sources.** Atlassian and GOV.UK agree on wording; the "only when not evident" rule is the toolkit's reading of Lightning's timely principle and NN/g's [visibility of system status](https://www.nngroup.com/articles/visibility-system-status/), and is commentary.
+**Sources.** Atlassian and GOV.UK agree on wording; Lightning's timely principle and NN/g's [visibility of system status](https://www.nngroup.com/articles/visibility-system-status/) pull apart on confirming what is already evident.
 
 ## Notifications centre
 
@@ -287,4 +287,4 @@ How an interface tells people what happened, what state something is in, and wha
 - *Script* could: assert the trigger's accessible name changes with the count; assert entries are in descending time order and each carries a `time` element.
 - *Judgement*: does each notification type have an urgency level, and is anything urgent only here?
 
-**Sources.** Carbon and Apple agree on user control of notifications; Apple's four interruption levels are the written scale the toolkit points to.
+**Sources.** Carbon and Apple agree on user control of notifications; Apple's four interruption levels are the written scale this section points to.

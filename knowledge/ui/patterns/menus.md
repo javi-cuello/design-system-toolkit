@@ -15,7 +15,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 
 **How**
 - [weak] **Anatomy, left to right:** the product name linked to home, the section links, then the utility group. The section links read in order of importance, the most used first ([NN/g menu-design checklist](https://www.nngroup.com/articles/menu-design/)).
-- [weak] **Count.** As many as fit one row at the narrowest width where the bar shows as a bar; no system sets a number. GOV.UK sets none; Friedman suggests about five for a bar that stays fixed in view ([Smashing, sticky menus, Friedman 2023](https://www.smashingmagazine.com/2023/05/sticky-menus-ux-guidelines/)). Past what fits, *Overflow* below.
+- [weak] **Count.** No system sets a number. GOV.UK sets none; Friedman suggests about five for a bar that stays fixed in view ([Smashing, sticky menus, Friedman 2023](https://www.smashingmagazine.com/2023/05/sticky-menus-ux-guidelines/)). Past what fits, *Overflow* below.
 - [weak] **Labels.** The reader's words for what the section holds, specific and quick to scan: "Menus are not the place to get cute with made-up words, internal jargon, or abstract high-level categorization" ([NN/g](https://www.nngroup.com/articles/menu-design/); wording is [content: terminology](../design/content.md#terminology)).
 - [strong] **Current section.** Marked by more than colour (weight, an underline bar), and kept marked on every page inside the section; NN/g calls a missing current marker "probably the single most common mistake" on menus. GOV.UK pairs the styling with a bold fallback ([GOV.UK service navigation](https://design-system.service.gov.uk/components/service-navigation/)).
 - [weak] **States.** Rest, hover, focus and current each look different; current never looks like hover ([visual: visual states of controls](../design/visual.md#visual-states-of-controls)).
@@ -44,7 +44,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could check exactly one `aria-current` link per `nav`, the same link order on every page, the bar's height equal across pages at one width (no wrap), no `role="menubar"` on a list of links, and no `button` that runs an action inside the section list.
 - *Judgement:* Could a reader landing on an inner page say which section they are in and name three others?
 
-**Sources:** NN/g, GOV.UK, Carbon, Friedman and the APG as linked. GOV.UK and NN/g set no item count; the toolkit takes "fits one row at the width it shows" as the limit, and treats Friedman's five as the budget for a bar that is also sticky.
+**Sources:** NN/g, GOV.UK, Carbon, Friedman and the APG as linked. GOV.UK and NN/g set no item count; Friedman's five, for a bar that is also sticky, is the one figure found.
 
 ## Navigation dropdowns
 
@@ -84,7 +84,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could check each trigger is a `button` with `aria-expanded` and `aria-controls`, the panel is hidden when closed, Escape closes and returns focus, a click outside closes, only one panel is open, no `mouseenter` handler opens a panel without a click path, and no element is both a link and a trigger.
 - *Judgement:* Would the section's index page, or a side navigation, serve the reader as well with no dropdown at all?
 
-**Sources:** NN/g, Friedman, Carbon and the APG as linked. All four agree on click to open and on a trigger that does one thing; the toolkit follows them and does not build hover menus.
+**Sources:** NN/g, Friedman, Carbon and the APG as linked. All four agree on click to open and on a trigger that does one thing, so this section builds no hover menus.
 
 ## Mega menus
 
@@ -95,7 +95,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 
 **How**
 - [moderate] **Groups.** Options chunked into related sets under short headings, ideally from card sorting; medium granularity; the most important group top left; each choice shown once ([NN/g](https://www.nngroup.com/articles/mega-menus-work-well/)).
-- [contested] **Open on click,** with a chevron on a trigger that only opens ([Smashing, Friedman 2021](https://www.smashingmagazine.com/2021/05/frustrating-design-patterns-mega-dropdown-hover-menus/)). If a team keeps hover, NN/g's timings are the floor: the pointer rests about 0.5 s before the panel shows, and the panel hides only after the pointer has been outside both trigger and panel for about 0.5 s; the pointer's diagonal path to the panel must not close it. Friedman shows how these guesses still fail (the "trajectory triangle" and exit areas break when triggers sit close together) and that the delays add lag to every visit, which is why the toolkit does not keep hover.
+- [contested] **Open on click,** with a chevron on a trigger that only opens ([Smashing, Friedman 2021](https://www.smashingmagazine.com/2021/05/frustrating-design-patterns-mega-dropdown-hover-menus/)). If a team keeps hover, NN/g's timings are the floor: the pointer rests about 0.5 s before the panel shows, and the panel hides only after the pointer has been outside both trigger and panel for about 0.5 s; the pointer's diagonal path to the panel must not close it. Friedman shows how these guesses still fail (the "trajectory triangle" and exit areas break when triggers sit close together) and that the delays add lag to every visit, his case against keeping hover.
 - [weak] **Transitions** short: Friedman keeps fades at 300 ms or less and warns against stacking delayed submenus.
 - [weak] **A visible edge** (border or shadow) so the panel reads as one surface over the page ([NN/g](https://www.nngroup.com/articles/mega-menus-work-well/)).
 - [weak] **"All of this section"** as a link inside each panel, and each section heading inside the panel a link only if it is styled as one.
@@ -122,7 +122,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could check the trigger is a `button` with `aria-expanded`, the panel closes on Escape and returns focus, no link appears twice in one panel, no input sits inside a panel, and each section's index page links every page its panel lists.
 - *Judgement:* Would a side navigation inside the section serve the same readers with less machinery?
 
-**Sources:** NN/g and Friedman as linked. NN/g allows hover with its timings; Friedman argues click menus avoid the whole problem. The toolkit opens on click and cites NN/g's timings only for a team that overrides that.
+**Sources:** NN/g and Friedman as linked. NN/g allows hover with its timings; Friedman argues click menus avoid the whole problem, hence *contested*; NN/g's timings stand for a team that keeps hover.
 
 ## Hamburger and mobile menus
 
@@ -165,7 +165,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could check at 320px that no horizontal scroll appears and the toggle is a `button` with `aria-expanded` and a name; that Escape closes and returns focus; that with script disabled every link is reachable; that no menu button shows at desktop widths; and that the links exist once in the DOM.
 - *Judgement:* Are there few enough destinations to show them all, and does the open menu put the reader's most likely next step first?
 
-**Sources:** NN/g, Friedman, GOV.UK and Carbon as linked. NN/g measured hidden navigation and allows a menu button past four items; Friedman's argument is against the icon, not the button. The toolkit follows both: visible links up to four, past that a button with the word "Menu".
+**Sources:** NN/g, Friedman, GOV.UK and Carbon as linked. NN/g measured hidden navigation and allows a menu button past four items; Friedman's argument is against the icon, not the button. This section follows both: visible links up to four, past that a button with the word "Menu".
 
 ## Sticky menus
 
@@ -203,7 +203,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could tab through the page asserting no focused element's box lies wholly under a sticky element; jump to each in-page anchor asserting the target's top is below the bar; check the bar's height at each width against a budget; and at 400% zoom assert the bar is not sticky or takes under a set share of the viewport.
 - *Judgement:* How often do readers use the bar while deep in this page?
 
-**Sources:** Friedman, NN/g and MDN as linked. They agree on size, opacity and the reveal timing; NN/g prefers no animation at all, Friedman allows the slide. The toolkit allows the 300–400 ms slide for a partially persistent bar and nothing else.
+**Sources:** Friedman, NN/g and MDN as linked. They agree on size, opacity and the reveal timing; NN/g prefers no animation at all, Friedman allows the slide; both give the 300–400 ms range the partially persistent item uses.
 
 ## Overflow: "More" in the top menu
 
@@ -214,9 +214,9 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [weak] Don't use it below the mobile collapse width; there the whole bar becomes the Menu button.
 
 **How**
-- [weak] **Order:** the bar keeps its order; items leave from the end (the least used) and enter "More" in the same order, so a section never jumps ahead of another (beyond design-standard rule 2).
+- [required] **Order:** the bar keeps its order; items leave from the end and enter "More" in the same order, so a section never jumps ahead of another (design-standard rule 2).
 - [weak] **Label:** "More", with a chevron; it opens like any navigation dropdown.
-- [required] **Current item inside "More":** "More" itself is marked as current, and some systems lift the current item into the visible bar; the toolkit marks "More" and keeps the order, so items never swap places as the reader moves (design-standard rule 2).
+- [required] **Current item inside "More":** "More" itself is marked as current, and some systems lift the current item into the visible bar; marking "More" and keeping the order means items never swap places as the reader moves (design-standard rule 2).
 - [required] **Measured from the content:** how many fit is measured at run time or decided at fixed widths from the longest labels, never from a device list (code-standard rule 57).
 
 **Cases**
@@ -239,7 +239,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could resize through a range of widths asserting the bar is one row at each, each link appears exactly once in the accessibility tree, the order of links (bar then "More") never changes, and "More" carries the current marker when it holds the current page.
 - *Judgement:* Which sections would readers miss if they sat in "More", and are those the ones that stay in sight?
 
-**Sources:** Friedman and Carbon as linked. Neither specifies the order rule; it follows from design-standard rule 2, so the toolkit moves items from the end and never reorders.
+**Sources:** Friedman and Carbon as linked. Neither specifies the order rule; it is design-standard rule 2 applied.
 
 ## Account menu
 
@@ -273,4 +273,4 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could open the account menu on each page type and assert it is in the same place, names the account, and ends with "Sign out".
 - *Judgement:* Is everything in this menu about the person, not the product?
 
-**Sources:** Carbon, shadcn, GOV.UK One Login and HMRC as linked. Products differ on top-right versus sidebar footer; the toolkit asks for one place.
+**Sources:** Carbon, shadcn, GOV.UK One Login and HMRC as linked. Products differ on top-right versus sidebar footer; one place on every page is WCAG 3.2.3's ask.

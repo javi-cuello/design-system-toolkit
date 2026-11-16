@@ -1,6 +1,6 @@
 # Design standard — how an interface the toolkit builds or audits looks, behaves and reads, in a design file and in a built page
 
-**Version 1.6.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
+**Version 1.7.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
 
 **Scope.** The design of any interface a project or the toolkit itself puts in front of people: a documentation site, a dashboard, a tool, a screen drawn in Figma. Five areas, each owning one kind of decision: **UX** (what and why, across screens), **Interaction** (how it responds, in the moment), **Visual** (how it looks), **Content** (what it says) and **Accessibility** (who it works for). Above them sit the principles every area answers to; below them, **application profiles** say what a kind of product (documentation, dashboards, editorial reading, forms) must specify. A rule applies to a design file and to a built page alike; each says which it can be checked on. Project-agnostic by construction, like `code-standard.md`.
 
@@ -68,6 +68,26 @@ Good UX starts from the task someone came to do, asks for nothing twice, chooses
    *Applies to:* design file and built page.
 
    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit, against the context document's status list.
+
+17. **An action on a set acts on what the reader is looking at, and names that scope.** Select all, export and every bulk action take the set the reader has filtered to, and the label says so ("Select all 6 matching", "Export 42 filtered rows"); acting on everything is a choice the reader makes, never the default.
+
+    *Why:* an action that reaches past what is on screen changes rows the reader never saw, and the reader finds out afterwards.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 3 items stating it with no source outside the toolkit moved here (selection, dashboards).
+
+    *Applies to:* design file and built page.
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
+
+18. **Nothing the reader chose or typed is changed, dropped or hidden silently.** Typed input is read as generously as it can be; a choice that no longer fits resets where the reader sees it; a view the reader has changed says "Edited"; hidden rows are counted; a saved value that no longer exists comes back as a chip the reader can remove; a long form keeps its progress.
+
+    *Why:* work the screen throws away without saying so is work the reader does again, and trust in every other screen goes with it.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 13 items stating it with no source outside the toolkit moved here (filtering, selection, tables, forms).
+
+    *Applies to:* design file and built page.
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
 
 ---
 
@@ -173,6 +193,26 @@ Good visual design makes the most important thing the most visible, groups by pr
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the review of a control's styles.
 
 
+16. **A screen uses one size step in every region.** A tool picks one step (control height, text style, icon, row) and every region of the screen uses it; tiles, swatches, thumbnails and matrix cells are sized from that step, not from their content. It extends the matched control heights Carbon and Apple ship ([visual: *One size scale per screen*](../knowledge/ui/design/visual.md#one-size-scale-per-screen)) to every region and kind, tiles and cells included.
+
+    *Why:* regions sized one by one drift a step apart, and the screen reads as several products put together.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 5 items stating it with no source outside the toolkit moved here (visual, tables).
+
+    *Applies to:* design file and built page.
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
+
+19. **Side by side when wide, one column in reading order when narrow.** Content set beside other content (a preview by its list, a side note by its paragraph, options by their result) stacks in reading order when the width runs out, never overlapping and never scrolling sideways.
+
+    *Why:* a layout that keeps its columns on a narrow screen pushes one of them off it, and the order the stack takes is the order a screen reader already reads.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 3 items stating it with no source outside the toolkit moved here (selection, documentation).
+
+    *Applies to:* design file and built page.
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
+
 ---
 
 ## Content — what it says
@@ -211,6 +251,16 @@ Good content uses the reader's words, one name per thing, says what happened and
 
     *Checked:* `tools/ui-check/check.mjs` "its first option names what"; `tools/ui-check/test-check.mjs` "rule 12".
 
+
+20. **Documentation pages share one skeleton, and an empty section stays, marked.** Pattern pages take the component page's section order; a section with nothing to say reads "Not applicable" or "No guidance yet", so a reader and a script can tell a deliberate gap from a forgotten one.
+
+    *Why:* a section that vanishes when empty looks the same as one nobody wrote, and pages in different orders make a reader hunt.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and 3 items stating it with no source outside the toolkit moved here (documentation).
+
+    *Applies to:* documentation pages.
+
+    *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit; no script reads it.
 
 ---
 

@@ -1,5 +1,6 @@
 # History — code-standard
 
+- 1.35.0 (2026-11-16): rules 67 and 68 by decree, from the knowledge pages (toolkit-standard §D 21): a list's state lives in its address; the support floor is Baseline widely available.
 - 1.34.0 (2026-11-16): fixed on the facts (toolkit-standard §D 21): rule 18, a logo or linked image takes alt; rule 3, not every band is a landmark; rule 9, `aria-disabled` keeps the control focusable.
 - 1.33.0 (2026-11-12): rule 57 covers a fix keyed to one named thing (a company, host, board or id in a list or branch): fix the mechanism that produced the case; a list stays only for a ruling no mechanism can make.
 - 1.32.1 (2026-11-05): rule 65 says corner to corner is the gradient's whole transform, `[[0.5, 0.5, 0], [-0.5, 0.5, 0.5]]`, not its two end handles: dragged corner handles still drew 131° on a wide box because the width handle tilts the bands. No rule's requirement changed.

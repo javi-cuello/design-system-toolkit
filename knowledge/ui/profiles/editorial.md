@@ -12,7 +12,6 @@ What a site of articles, essays and series must specify, past what a docs site d
 **How**
 - [weak] **One lead story**, larger than the rest, then the others at one size. Emphasis is a budget ([visual: emphasis and the attention budget](../design/visual.md#emphasis-and-the-attention-budget)); two leads are none.
 - [weak] **Series and issues are groups with a name**: a series lists its parts in order; an issue, if the site has them, is a dated set. Each shows its title, its part count and its newest part.
-- [weak] **List or card.** A list (title, standfirst, date) scans fastest and suits text-led archives; a card adds an image and suits pieces whose picture carries the story. Choose per section, not per item (the toolkit's judgement; no source opened measures it).
 - [weak] **Images earn their size.** NN/g: "Large images are visually appealing, but they can harm the overall user experience if they aren't appropriately prioritized", and "Most sites will do best with a balanced approach" ([Whitenton 2014](https://www.nngroup.com/articles/image-focused-design/)). Imagery in general is [visual: imagery and illustration](../design/visual.md#imagery-and-illustration).
 - [weak] **Art direction within templates.** Dan Mall: "Art direction is about evoking the right emotion", design "the technical execution of that connection"; "We've all but perfected the art of designing templates" but "we're still relearning how to design pages and create moments" ([A List Apart, 2010](https://alistapart.com/article/art-direction-and-design/)). Let a piece choose from a few named variants of the template (a hero treatment, an accent, a display face) rather than carry its own stylesheet.
 - [weak] **Go with the web's grain.** Chimero: "I believe every material has a grain, including the web"; the web "adapts to the width of the viewport to fill it up" ([The Web's Grain, 2015](https://frankchimero.com/blog/2015/the-webs-grain/)). A front page drawn as a fixed print spread breaks at the first width nobody drew.
@@ -35,7 +34,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Script:* could check each item has one link, named by its title, and a `time` with `datetime`.
 - *Judgement:* does the eye land on one piece first?
 
-**Sources:** NN/g, A List Apart and Chimero as linked. Mall argues for per-piece direction; the toolkit keeps it to named variants, because a piece styled from scratch is a template nobody maintains.
+**Sources:** NN/g, A List Apart and Chimero as linked. Mall argues for per-piece direction; a piece's own stylesheet is a caller's rule of its own, which code-standard rule 38 forbids, so direction comes from named variants.
 
 ---
 
@@ -45,17 +44,17 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [weak] Giving an article site its look: the home hero, the article header, the index and the space between them; hierarchy (one lead) is [Front page as a magazine](#front-page-as-a-magazine).
 
 **How**
-- [strong] **Large titles are light and tight.** Stripe, Vercel and Linear set their page titles at 48 to 56px, weight 300 to 590, with negative tracking (Vercel −2.88px on 48px, about −0.06em); none sets a large sans title at 700. Bold belongs to serif or condensed display faces (Increment's Tiempos at 700, Figma's condensed sans). Tracking stays within [visual: typography](../design/visual.md#typography)'s limit, about −0.025em at display sizes: Vercel's −0.06em is one face's choice, not the toolkit's default.
+- [strong] **Large titles are light and tight.** Stripe, Vercel and Linear set their page titles at 48 to 56px, weight 300 to 590, with negative tracking (Vercel −2.88px on 48px, about −0.06em); none sets a large sans title at 700. Bold belongs to serif or condensed display faces (Increment's Tiempos at 700, Figma's condensed sans). Tracking stays within [visual: typography](../design/visual.md#typography)'s limit, about −0.025em at display sizes: Vercel's −0.06em is one face's choice.
 - [strong] **A headline is a few words.** Sketch's is three ("Designers, welcome home."), Increment's measured article title three, Stripe's eight. A sentence that explains goes in the standfirst under it, at about 1.2 times body size (A List Apart 24px over 18px body; Sketch 24px).
 - [strong] **The background is flat, with one gesture.** Stripe has one ribbon on white, Sketch one soft gradient, rauno.me one yellow disc, The Pudding one colour field per story; Linear, Vercel and Increment are flat. None layers texture, gradient and image together.
 - [strong] **One accent hue**, spent on links, kickers and the main action: Stripe purple, Increment blue, Craig Mod blue; Linear and Vercel use none and let imagery carry colour. A kicker is a link to its section, so this keeps [visual: emphasis](../design/visual.md#emphasis-and-the-attention-budget)'s accent-where-action-is.
 - [moderate] **The article header repeats the index's title face and scale.** Vercel and Linear set the article title at the same 48px as the index heading and add a kicker above and author and date below; Figma keeps its 90px title and changes the page colour; Stripe keeps its kicker colour and grid lines.
 - [strong] **The nav is quiet**: 14 to 16px at weight 400, grey links, at most one filled button (Linear, Vercel, Stripe).
 - [strong] **Index entries are regular**: a meta line (date or topic), the title, one or two grey lines of summary, a hairline between rows (Increment, Vercel, Linear). Only the newest or lead piece is featured (Stripe).
-- [moderate] **Sections get room.** Section gaps measured 100 to 128px, about 6 to 8rem (Figma, Sketch), and 224px, 14rem (Linear). Spending white space on purpose reads as care (the toolkit's judgement; no source measures the effect).
+- [moderate] **Sections get room.** Section gaps measured 100 to 128px, about 6 to 8rem (Figma, Sketch), and 224px, 14rem (Linear).
 
 **Cases**
-- A hero headline of two sentences at 72px bold → the first clause as the title at weight 400 to 500 (the toolkit's reading of three sites), the rest as the standfirst.
+- A hero headline of two sentences at 72px bold → the first clause as the title at weight 400 to 500 (within the weights the three sites set, above), the rest as the standfirst.
 - A soft gradient, a texture and a coloured band on one page → one gesture, repeated in the article header so the two pages belong together.
 - Home titles at 800, article titles at 700, topic titles at 600 → one large-title weight and scale for the home hero and the article header; smaller headings step down from it.
 - Topic links set as bordered pills in bold beside a bold name → plain links at 400 in grey; the name at 600 at most.
@@ -69,7 +68,6 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [required] Title weight and tracking come from the text styles, one style for the large title used by both headers (code-standard rule 54).
 
 **Check**
-- *Script:* could flag (thresholds are the toolkit's judgement) a large title over 40px at weight 700 or more in a sans face that is not condensed, a hero `h1` over about eight words, more than one accent hue in links and kickers, and muted text whose sampled background fails 4.5:1.
 - *Judgement:* does the article header look like it came from the same site as the home page?
 
 **Sources:** [Stripe](https://stripe.com/blog), [Vercel](https://vercel.com/blog), [Linear](https://linear.app/now), [Sketch](https://www.sketch.com), [Figma's Shortcut](https://www.figma.com/blog/), [Increment](https://increment.com), [A List Apart](https://alistapart.com), [Craig Mod](https://craigmod.com), [The Pudding](https://pudding.cool) and [rauno.me](https://rauno.me), measured from their rendered pages (computed styles and screenshots) on 11 November 2026; where tracking disagrees with visual.md, visual's limit holds, since one face's tight setting does not carry to another; Medium and The Verge refused or walled the automated visit and are not counted. Galleries (Awwwards, Land-book) were not crawled.
@@ -82,15 +80,12 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [weak] Building the top of an article: everything above the first paragraph of the body.
 
 **How**
-- [weak] In order: **kicker** (the section or series, a link), **title** (the one `h1`), **standfirst** (one or two sentences saying what the piece is and why read it), **byline**, **date**, **reading time**, then the **hero** if there is one.
-- [weak] **Dates**: the published date, and an updated date when the piece changed in substance, each labelled ("Updated 3 November 2026"). An unlabelled second date reads as a mistake (the toolkit's judgement; no source checked states it).
 - [weak] **Reading time** is an estimate from the word count; round it to whole minutes. No source on the method could be opened (Medium's help page refused), so no words-per-minute figure is given here.
 - [weak] **The hero** supports the title, not the reverse (NN/g, as in [Front page](#front-page-as-a-magazine)). With no picture worth showing, no hero: the title and standfirst are the opening.
 - [weak] Metadata for sharing (title, description, image) is [HTML semantics: share previews](../../code/html-semantics.md#share-previews).
 
 **Cases**
 - The title sits under a full-height hero and the first screen shows no words → a hero at most part of the first screen, or the title over or above it.
-- The page shows "Nov 3" and "11/5" → one format, written out, labelled published and updated.
 - A standfirst repeats the title → rewrite it to say what the reader gets.
 
 **Accessibility**
@@ -98,15 +93,15 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [required] Implementation: code-standard rule 1 (one `h1`), code-standard rule 18.
 
 **Build**
-- [required] `article` holds a `header`: the kicker a link in a `p`, the `h1`, the standfirst a `p`, then byline and dates in a `p` or `dl`; each date `<time datetime="2026-11-03">` with the written date as text ([i18n: numbers, dates, plurals and lists](../../code/i18n.md#numbers-dates-plurals-and-lists)).
+- [required] `article` holds a `header` with the `h1`; a kicker is a link in a `p`, a standfirst a `p`, byline and dates a `p` or `dl`; each date `<time datetime="2026-11-03">` with the written date as text ([i18n: numbers, dates, plurals and lists](../../code/i18n.md#numbers-dates-plurals-and-lists)).
 - [moderate] The hero is a `figure` with `img` (`width`, `height`, `fetchpriority="high"` if it is the largest paint) and a `figcaption` for credit ([HTML semantics: images and alt](../../code/html-semantics.md#images-and-alt); [performance: images](../../code/performance.md#images)).
 - [required] Reading time is computed at build time from the body text and written into the HTML: the source determines it, so it is generated (toolkit-standard §D 23).
 
 **Check**
-- *Script:* could check one `h1` per article, every date a `time` with a valid `datetime`, an updated date labelled, and the `h1` inside the first viewport at 390px.
+- *Script:* could check one `h1` per article, every date a `time` with a valid `datetime`, and the `h1` inside the first viewport at 390px.
 - *Judgement:* could a reader decide from the frame alone whether to read on?
 
-**Sources:** NN/g as linked. The order is the common one on reading sites by the toolkit's own reading, not a measured survey.
+**Sources:** NN/g as linked.
 
 ---
 
@@ -117,7 +112,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 
 **How**
 - [moderate] **A text face and a display face may be two families.** [Visual: typography](../design/visual.md#typography) advises one family; that is for tools, where type serves controls. A reading site pairs a text face for the body with a display face for titles and the front page: Santa Maria, "One typeface can be enough to say what you need to say, and two is usually plenty" ([A List Apart, 2009](https://alistapart.com/article/on-web-typography/)); Tufte CSS sets its body in a serif and "shifts gracefully to other serif fonts like Palatino and Georgia" ([Tufte CSS](https://edwardtufte.github.io/tufte-css/)). Two families, no third; the chrome around the article (menus, buttons) keeps the system's sans.
-- [contested] **Measure.** Bringhurst: "Anything from 45 to 75 characters is widely regarded as a satisfactory length of line", and "The 66-character line (counting both letters and spaces) is widely regarded as ideal" ([webtypography.net 2.1.2](http://webtypography.net/2.1.2)); Butterick 45 to 90 ([line length](https://practicaltypography.com/line-length.html)); Craig Mod "approximately 12-15 words per line" on tablets ([A Simpler Page](https://craigmod.com/essays/a_simpler_page/)). The toolkit's target stays visual's 65 to 75, capped at 80.
+- [contested] **Measure.** Bringhurst: "Anything from 45 to 75 characters is widely regarded as a satisfactory length of line", and "The 66-character line (counting both letters and spaces) is widely regarded as ideal" ([webtypography.net 2.1.2](http://webtypography.net/2.1.2)); Butterick 45 to 90 ([line length](https://practicaltypography.com/line-length.html)); Craig Mod "approximately 12-15 words per line" on tablets ([A Simpler Page](https://craigmod.com/essays/a_simpler_page/)). Visual's 65 to 75 (Baymard, GOV.UK) sits inside Bringhurst's range, capped at WCAG's 80.
 - [weak] **Small caps are the face's own.** Rutter: "Genuine small caps are not simply shrunken versions of the full caps"; synthesised ones "only produce a parody" ([webtypography.net 3.2.2](http://webtypography.net/3.2.2)). Use `font-variant-caps` only with a face that has them; track them as [visual: typography](../design/visual.md#typography) says.
 - [required] **Balanced titles, pretty paragraphs.** `text-wrap: balance` evens a heading's lines and works on "six or less for Chromium and ten or less for Firefox" lines; `pretty` uses "a slower algorithm that favors better layout over speed", is "intended for body copy", and "has a negative effect on performance" ([MDN `text-wrap`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-wrap); [MDN `text-wrap-style`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-wrap-style): Baseline 2024, newly available since October 2024, and "Some parts of this feature may have varying levels of support", so both are enhancements).
 - [required] **Hyphenation** helps narrow columns. Browsers "will only hyphenate if this attribute [`lang`] is present and the appropriate hyphenation dictionary is available" ([MDN `hyphens`](https://developer.mozilla.org/en-US/docs/Web/CSS/hyphens)). Never justify: 1.4.8 asks that "Text is not justified" ([Understanding 1.4.8](https://www.w3.org/WAI/WCAG22/Understanding/visual-presentation.html)).
@@ -129,7 +124,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - `hyphens: auto` does nothing → the page has no `lang`, or the wrong one.
 
 **Accessibility**
-- [moderate] 1.4.8 (AAA, the toolkit's target): at most 80 characters, not justified. 1.4.4 and 1.4.12 as in visual. 3.1.1 Language of Page is also what hyphenation needs.
+- [moderate] 1.4.8 (AAA): at most 80 characters, not justified. 1.4.4 and 1.4.12 as in visual. 3.1.1 Language of Page is also what hyphenation needs.
 - [required] Implementation: code-standard rule 7 (prose scale), code-standard rule 54 (type from the text styles).
 
 **Build**
@@ -141,7 +136,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Script:* could count rendered characters per body line, and flag `text-align: justify`, `hyphens: auto` without `lang`, more than two families in the prose, and `font-variant-caps` on a face without the `smcp` feature.
 - *Judgement:* does the body read as a book page, and the chrome as a tool?
 
-**Sources:** as linked. Line length disagrees (Bringhurst 45 to 75, Butterick 45 to 90, WCAG 80); the toolkit keeps visual's 65 to 75 capped at 80. Visual advises one family and the editorial sources allow two; the toolkit allows two here because a reading face and a display face do different jobs, and keeps one in tools.
+**Sources:** as linked. Line length disagrees (Bringhurst 45 to 75, Butterick 45 to 90, WCAG 80); visual's 65 to 75 sits inside Bringhurst's and Baymard's ranges, capped at WCAG's 80. Visual's one-family source writes for tools; Santa Maria allows two for reading, "two is usually plenty".
 
 ---
 
@@ -152,13 +147,13 @@ What a site of articles, essays and series must specify, past what a docs site d
 
 **How**
 - [weak] **The lede** (first paragraph) is set flush left: Butterick calls an indent on the first paragraph optional, because its start is already obvious ([first-line indents](https://practicaltypography.com/first-line-indents.html)).
-- [weak] **Indent or space, never both.** Butterick: "If you use a first-line indent on a paragraph, don't use space between. And vice versa", with an indent between one and four times the point size. On screen, space between paragraphs is the common choice (the toolkit's judgement).
+- [weak] **Indent or space, never both.** Butterick: "If you use a first-line indent on a paragraph, don't use space between. And vice versa", with an indent between one and four times the point size.
 - [required] **Drop caps.** `initial-letter` sets "the size and sink for dropped, raised, and sunken initial letters" and is "not Baseline because it does not work in some of the most widely-used browsers" ([MDN `initial-letter`](https://developer.mozilla.org/en-US/docs/Web/CSS/initial-letter)); caniuse shows partial support in Chromium from 110 and Safari from 9, and none in Firefox ([caniuse](https://caniuse.com/css-initial-letter), read 2026-11-11). Use it behind `@supports`, with a floated `::first-letter` or a plain first letter as the fallback ([CSS-Tricks](https://css-tricks.com/snippets/css/drop-caps/)).
 - [weak] **New-thought small caps.** Tufte "starts each section with a bit of vertical space, a non-indented paragraph, and the first few words of the sentence set in small caps" ([Tufte CSS](https://edwardtufte.github.io/tufte-css/)): a break that needs no heading.
 - [required] **Ornaments.** A scene change with no heading is an `hr`, which "represents a paragraph-level thematic break" ([HTML `hr`](https://html.spec.whatwg.org/multipage/grouping-content.html)); draw the ornament in CSS.
 
 **Cases**
-- Paragraphs are indented and spaced → drop one; on screen, keep the space.
+- Paragraphs are indented and spaced → drop one.
 - A drop cap is a `span` around the first letter → `::first-letter`; the word stays whole in the markup.
 - Section breaks are three asterisks typed as a paragraph → an `hr`, styled.
 
@@ -208,7 +203,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Script:* could check no element in the article has a negative inline margin, `scrollWidth ≤ innerWidth` at 320px, and every `figure` holding an image has a `figcaption` or a reason.
 - *Judgement:* does each breakout earn its width?
 
-**Sources:** Mulligan and Tufte as linked. Responsive.md puts a breakout outside the container, in its own band; the toolkit uses that for page sections, and for an article, where figures alternate with prose too often for separate bands, the container's article variant, which keeps code-standard rules 3, 11 and 46.
+**Sources:** Mulligan and Tufte as linked. Responsive.md puts a breakout outside the container, in its own band; that holds for page sections; an article, where figures alternate with prose too often for separate bands, takes the container's article variant, which keeps code-standard rules 3, 11 and 46.
 
 ---
 
@@ -252,7 +247,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 
 **How**
 - [moderate] **Side notes on wide screens.** Gwern: sidenotes put "the notes in the page margin to let the reader instantly read them", and on the web footnotes "wind up degrading to simply endnotes" ([Sidenotes in web design](https://gwern.net/sidenote)). Tufte CSS uses "the margin for sidenotes, margin notes, and small figures" ([Tufte CSS](https://edwardtufte.github.io/tufte-css/)).
-- [contested] **On narrow screens the sources differ.** Tufte hides them "until the user toggles them into view"; Nystrom's books shift "the aside into the text, inline"; Butterick uses "pop-ins defaulted to expanded"; Gwern uses floating footnotes (the last three as Gwern reports them). The toolkit places the note after its paragraph, shown, as documentation already does: no control, no script, and nothing hidden on the device where a reader can least afford to hunt.
+- [required] **On narrow screens the sources differ; design-standard rule 19 decides.** Tufte hides them "until the user toggles them into view"; Nystrom's books shift "the aside into the text, inline"; Butterick uses "pop-ins defaulted to expanded"; Gwern uses floating footnotes (the last three as Gwern reports them). The note stacks after its paragraph, shown, in reading order (design-standard rule 19).
 - [weak] **Long notes collide.** Tufte's sidenotes "will not handle gracefully many complex or lengthy sidenotes (which will overlap)" (Gwern). Keep side notes short; a long aside becomes an endnote.
 - [weak] Side notes need a margin: the article grid's `popout` track on one side ([Figures](#figures-captions-and-breakouts)).
 
@@ -270,7 +265,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Script:* could check side notes do not overlap at the widest breakpoint and sit after their paragraph at 390px.
 - *Judgement:* is the note short enough for the margin?
 
-**Sources:** Gwern and Tufte as linked; the toolkit takes the inline fallback.
+**Sources:** Gwern and Tufte as linked; the inline fallback is design-standard rule 19.
 
 ---
 
@@ -282,7 +277,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 **How**
 - [weak] **A contents list.** NN/g: "A table of contents increases the discoverability of the content that is low on the page"; sticky is easy in a rail, but they recommend a "nonsticky implementation of a table of contents when placed within the main body" ([NN/g, Wang and Brown 2023](https://www.nngroup.com/articles/table-of-contents/)). The list itself is [navigation: in-page navigation](../patterns/navigation.md#in-page-navigation-on-this-page) and documentation's [on-this-page navigation](documentation.md#on-this-page-navigation).
 - [weak] **The current section, marked.** NN/g suggests "highlighting the current section in the table of contents", so "Users get feedback on scrolling progress and learn where they are on the page".
-- [weak] **Progress bars.** A bar across the top restates the scrollbar. Viget's eye-tracking study of custom scroll indicators is often cited as showing readers rarely notice them; its page refused to load here, so that claim is unchecked. The toolkit's position rests on NN/g: mark the current section in the contents, and add no bar.
+- [weak] **Progress bars.** A bar across the top restates the scrollbar. Viget's eye-tracking study of custom scroll indicators is often cited as showing readers rarely notice them; its page refused to load here, so that claim is unchecked. The position rests on NN/g: mark the current section in the contents, and add no bar.
 - [weak] **Back to top.** NN/g suggests one "especially when you have a long page with a nonsticky table of contents".
 
 **Cases**
@@ -355,7 +350,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [required] 1.4.3 and 1.4.11 in each theme; 1.4.8's first bullet (colours the reader can select) is what a theme toggle partly answers.
 
 **Build**
-- [moderate] As [tokens: themes and modes](../../code/tokens.md#themes-and-modes): `<meta name="color-scheme" content="light dark">`, then an inline script in `<head>` that sets the root attribute from storage. Comeau injects his at the start of `body`; the toolkit puts it in `head`, before the stylesheets, as tokens.md's web.dev source does.
+- [moderate] As [tokens: themes and modes](../../code/tokens.md#themes-and-modes): `<meta name="color-scheme" content="light dark">`, then an inline script in `<head>` that sets the root attribute from storage. Comeau injects his at the start of `body`; tokens.md's web.dev source puts it in `head`, before the stylesheets.
 - [required] Diagram images use `picture` with a `prefers-color-scheme` source ([accessibility: reduced motion and colour scheme in code](../../code/accessibility.md#reduced-motion-and-colour-scheme-in-code)).
 
 **Check**

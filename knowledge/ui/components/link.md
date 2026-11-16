@@ -25,7 +25,7 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 - [strong] **Text names the destination.** Link the noun phrase, front-loaded; never "click here" (GOV.UK's [writing for user interfaces](https://www.gov.uk/service-manual/design/writing-for-user-interfaces): "‘click here’ is not accessible link text"). Carbon: "Avoid using the same link text for different destinations on the same page".
 - [moderate] **Same tab by default.** NN/g's [new tabs and windows](https://www.nngroup.com/articles/new-browser-windows-and-tabs/): "For the most part, always open links in the same browser tab or window." GOV.UK's [links](https://design-system.service.gov.uk/styles/links/): "Avoid opening links in a new tab or window."
 - [moderate] **A new tab when leaving would lose work.** GOV.UK's case: "to stop the user losing information they’ve entered into a form", such as a help link inside a form; Atlassian's [link](https://atlassian.design/components/link/usage) puts it the same way: "a risk of someone losing their current place or task". Then warn: GOV.UK includes "the words ‘opens in new tab’ as part of the link".
-- [contested] **External is not a warning.** GOV.UK: "Do not use an external link icon"; a link to another site in the same tab behaves like any link. Carbon and Atlassian draw a launch icon; the toolkit keeps the icon for links that open a new tab, beside the words (Atlassian: "If the icon is not desired, reconsider if the link should open in a new window").
+- [contested] **External is not a warning.** GOV.UK: "Do not use an external link icon"; a link to another site in the same tab behaves like any link. Carbon and Atlassian draw a launch icon, and Atlassian ties it to a new tab: "If the icon is not desired, reconsider if the link should open in a new window".
 - [moderate] **Downloads say type and size.** NN/g's [PDF article](https://www.nngroup.com/articles/avoid-pdf-for-on-screen-reading/): "include the page count and the file size in close proximity to the link". Write "Annual report (PDF, 2MB, 40 pages)"; sizes follow the [GOV.UK style guide](https://guidance.publishing.service.gov.uk/writing-to-gov-uk-standards/style-guides/a-to-z-style-guide/) ("Use MB for anything over 1MB") and [content: numbers](../design/content.md#numbers-dates-times-units).
 
 **Cases**
@@ -51,7 +51,7 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 - *Script* could: flag link text in the content page's banned list, `target="_blank"` without "new tab" in the accessible name, `download` or file-extension `href`s without a type in the text, and one text pointing at two URLs.
 - *Judgement*: would leaving this page in the same tab lose anything the person did?
 
-**Sources.** On external links GOV.UK says no icon, Carbon and Atlassian draw one. The toolkit follows GOV.UK for same-tab external links (going to another site needs no warning) and Atlassian for new tabs (the icon marks the behaviour that does), with the words always, as MDN, GOV.UK and G201 ask.
+**Sources.** On external links GOV.UK says no icon, Carbon and Atlassian draw one. MDN, GOV.UK and G201 ask for the words always.
 
 ## In Figma
 
@@ -81,7 +81,7 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 - *Script*: figma-components-audit runs the rules cited above on the set.
 - *Judgement*: does an inline link in the text style still read as a link with the colour taken away?
 
-**Sources.** Figma's Simple Design System for the property name; Primer and Carbon for the inline form; Carbon for visited and size; WCAG's F73 and G183 for links in text; MDN for what `:visited` can change. The inline-as-text-style split is the toolkit's reasoning from what Figma can place in text.
+**Sources.** Figma's Simple Design System for the property name; Primer and Carbon for the inline form; Carbon for visited and size; WCAG's F73 and G183 for links in text; MDN for what `:visited` can change. The inline link as a text style is figma-standard rule 53, from what Figma can place in text.
 
 ## Alignment with code
 
@@ -120,7 +120,7 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 - *Script*: the component contract lists every Figma axis and property beside the link's props; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity). The inline text style is outside the contract, so its row is read by hand.
 - *Judgement*: could a developer build every frame from `href`, `inline`, `size`, the icon and the browser's states alone, and does every prop have a frame?
 
-**Sources.** Carbon, Primer, MUI, React Aria and SDS source and Code Connect files as linked, read for the split, the icon and the disabled link; MDN for `:visited` and `:any-link`. The inline link as a text style is the toolkit's reasoning from what Figma can place in text.
+**Sources.** Carbon, Primer, MUI, React Aria and SDS source and Code Connect files as linked, read for the split, the icon and the disabled link; MDN for `:visited` and `:any-link`. The inline link as a text style is figma-standard rule 53, from what Figma can place in text.
 
 ## In code
 

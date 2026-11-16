@@ -170,7 +170,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - *Script:* `tools/ui-check/check.mjs` reads tab lists for design-standard rules 2 and 3 (one row, a layout that holds still). Could, in a headless browser, focus the first `[role=tab]`, press ArrowRight and assert focus moved and only one tab has `tabindex="0"`; and flag a `tablist` whose tabs have no `aria-controls` target.
 - *Judgement:* Operate each widget with the keyboard alone, following the APG table for its role: does every listed key do what it says?
 
-**Sources:** APG as linked. The APG ships a menubar example for site navigation as well as the disclosure one; the toolkit uses disclosure for navigation, because it needs no arrow-key model and degrades to a list of links.
+**Sources:** APG as linked. The APG ships a menubar example for site navigation as well as the disclosure one; this page takes the disclosure example for navigation, because it needs no arrow-key model and degrades to a list of links.
 
 ## Menus, menu buttons and toolbars
 
@@ -210,7 +210,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - *Script:* `tools/ui-check/check.mjs` reads design-standard rule 5 for menus; `tools/parity/pages.mjs` asserts a floating `details` closes on Escape and outside click (code-standard rule 19). Could open each `aria-haspopup` trigger by keyboard and assert focus lands on the first item, `aria-expanded` turned true, and Escape returns focus to the trigger; and assert a `role="toolbar"` takes one Tab.
 - *Judgement:* Is each menu a list of actions (a menu) or of places (a disclosure)?
 
-**Sources:** APG as linked. The APG builds a menu's open state in script; the toolkit opens it with `popover` first, so it works before the script loads, and keeps the APG's keyboard contract.
+**Sources:** APG as linked. The APG builds a menu's open state in script; `popover` first, so it works before the script loads, is code-standard rule 20, and the APG's keyboard contract stays.
 
 ## Tooltips and toggletips
 
@@ -327,7 +327,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - *Script:* could flag `role="switch"` on anything but a checkbox input, a `role="combobox"` without `aria-expanded` and `aria-controls`, a `role="slider"` without its three value attributes, and, in a headless browser, press Down then Escape in each combobox and assert focus stayed in the input and the popup closed.
 - *Judgement:* With scripts off, does each control still submit a value?
 
-**Sources:** APG, WAI-ARIA and MDN as linked; they agree. Soueidan is commentary on hiding the native input. The `aria-haspopup="dialog"` reading for a picker whose popup holds a search box is the toolkit's, from the APG's description of dialog popups. The toolkit keeps the native control under every enhancement, per code-standard rule 8.
+**Sources:** APG, WAI-ARIA and MDN as linked; they agree. Soueidan is commentary on hiding the native input. The `aria-haspopup="dialog"` reading for a picker whose popup holds a search box follows the APG's description of dialog popups. The native control stays under every enhancement, per code-standard rule 8.
 
 ## Live regions and status messages
 
@@ -422,7 +422,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
   }
   ```
   [`prefers-reduced-motion`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion) reflects the operating system's setting; WCAG technique [C39](https://www.w3.org/WAI/WCAG22/Techniques/css/C39) uses it to meet 2.3.3. Motion tokens and replacing travel with a fade are [tokens: motion tokens](tokens.md#motion-tokens).
-- [contested] **A spinner left out of the block, or stopped.** Systems split: Primer's spinner keeps turning under `reduce` and MUI's stops ([spinner: *Motion and reduced motion*](../ui/components/spinner.md#motion-and-reduced-motion)). The toolkit's default, kept by a project ruling, leaves it out, since frozen on one frame it reads as a broken icon, and slows it instead ([feedback: *Loading*](../ui/patterns/feedback.md#loading)). The exclusion covers the spinner's descendants, since the block also matches its `svg`: `*:not(ds-spinner, ds-spinner *), *:not(ds-spinner, ds-spinner *)::before, *:not(ds-spinner, ds-spinner *)::after { … }`. A project that stops it instead relies on the status text.
+- [contested] **A spinner left out of the block, or stopped.** Systems split: Primer's spinner keeps turning under `reduce` and MUI's stops ([spinner: *Motion and reduced motion*](../ui/components/spinner.md#motion-and-reduced-motion)). Where it is left out, Primer's way, the exclusion covers the spinner's descendants, since the block also matches its `svg`: `*:not(ds-spinner, ds-spinner *), *:not(ds-spinner, ds-spinner *)::before, *:not(ds-spinner, ds-spinner *)::after { … }`. A project that stops it instead relies on the status text.
 - [strong] **Script motion** reads the same preference: `matchMedia('(prefers-reduced-motion: reduce)').matches` before `scrollIntoView({ behavior: 'smooth' })` or an animation library call.
 - [required] **Colour scheme.** `color-scheme: light dark` on `:root` wherever the tokens have a dark tier (code-standard rule 16), and MDN advises the `<meta name="color-scheme">` tag "before any CSS style information" to prevent "unwanted screen flashes during the page load" ([MDN `color-scheme`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/color-scheme)). How the tiers switch, with [`prefers-color-scheme`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-color-scheme) and `[data-theme]`, is [tokens: themes and modes](tokens.md#themes-and-modes).
 
@@ -440,7 +440,7 @@ What code adds to an accessible design: ARIA where HTML has nothing, accessible 
 - *Script:* `tools/css-lint/lint.mjs` *native controls follow the theme* (a dark tier comes with `color-scheme`) and *`!important`* (none outside a reduced-motion block). Could flag a script calling smooth scrolling or an animation API with no `prefers-reduced-motion` read.
 - *Judgement:* With reduced motion on, does every state change still show, and does nothing slide or zoom?
 
-**Sources:** MDN and WCAG as linked. Reducing non-essential motion rather than deleting it is a [candidate](candidates.md). The toolkit ships the blunt block as the floor; it makes fades instant too, and a component cannot override it from a later layer (an `!important` in an earlier layer wins, [css-architecture: cascade layers](css-architecture.md#cascade-layers)), so a project that keeps a fade under reduced motion narrows the block's selector, as a ruling in its context document.
+**Sources:** MDN and WCAG as linked. Reducing non-essential motion rather than deleting it is a [candidate](candidates.md). The base block (C39) is the floor; it makes fades instant too, and a component cannot override it from a later layer (an `!important` in an earlier layer wins, [css-architecture: cascade layers](css-architecture.md#cascade-layers)), so a project that keeps a fade under reduced motion narrows the block's selector, as a ruling in its context document.
 
 ## Keyboard access and modified clicks
 

@@ -17,12 +17,12 @@ Two questions decide almost every case: **how many values can hold at once**, an
 | one of 2–5 | with a form | radio buttons | all choices in sight, nothing applies until submit ([NN/g, Kaley 2020](https://www.nngroup.com/articles/listbox-dropdown/): radios for "5 or fewer") |
 | one of about 6–15 | either | select (a menu) | a list too long to scan as radios; [NN/g](https://www.nngroup.com/articles/listbox-dropdown/) accepts either control from 5 to 15 |
 | one of very many, or a value the person already knows | either | combobox with autocomplete, or a plain text field | scrolling a long list is slower than typing ([NN/g dropdowns, Li 2017](https://www.nngroup.com/articles/drop-down-menus/); [Baymard](https://baymard.com/blog/drop-down-usability)) |
-| any of a few (up to about ten) | with a form | checkboxes | every option and its state visible |
+| any of a few | with a form | checkboxes | every option and its state visible |
 | any of many | either | multi-select: a combobox that adds input chips, or a filtered checkbox list | a select cannot show several picks ([NN/g](https://www.nngroup.com/articles/listbox-dropdown/): "Dropdown lists do not support multiselect") |
 | on or off, taking effect now | at once | switch | a switch promises immediacy ([NN/g, Kendrick 2018](https://www.nngroup.com/articles/toggle-switch-guidelines/)) |
 | on or off, saved with a form | with a form | a single checkbox | a checkbox promises a submit ([NN/g, Nielsen 2004](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/), guideline 12) |
 
-- [weak] A kind that needs a title and a line of description to be chosen well is [option tiles](#option-tiles-and-picking-a-kind-in-a-dialog), up to six.
+- [weak] A kind that needs a title and a line of description to be chosen well is [option tiles](#option-tiles-and-picking-a-kind-in-a-dialog).
 - [moderate] Two more rules sit over the table. Before choosing any long-list control, ask whether a question earlier in the flow could cut the list ([GOV.UK select](https://design-system.service.gov.uk/components/select/): "try asking users questions which will allow you to present them with fewer options"). And a set with one remaining option is not a choice: show it as text, or preselect it ([Baymard](https://baymard.com/blog/drop-down-usability)).
 
 **Cases**
@@ -43,7 +43,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could flag a `select` with fewer than three options or more than fifteen with no type-ahead, radios past five, and a switch inside a form with a submit button.
 - *Judgement:* does the choice act now or wait for a submit, and how many values can hold at once?
 
-**Sources:** NN/g, Baymard and GOV.UK as linked. The counts disagree at the edges. NN/g puts the radio-to-list boundary at five; [Baymard](https://baymard.com/blog/drop-down-usability) calls a drop-down "a poor choice for offering fewer than 5 or more than 10 options"; GOV.UK sets no count and treats a select as "a last resort". The toolkit takes five as the radio ceiling, fifteen as the select ceiling, and prefers radios over a select whenever there is room, as [NN/g's 2004 guideline 8](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/) does ("If possible, use radio buttons rather than drop-down menus"). This section owns the counts for value controls; the segment limit is design-standard rule 4.
+**Sources:** NN/g, Baymard and GOV.UK as linked. The counts disagree at the edges. NN/g puts the radio-to-list boundary at five; [Baymard](https://baymard.com/blog/drop-down-usability) calls a drop-down "a poor choice for offering fewer than 5 or more than 10 options"; GOV.UK sets no count and treats a select as "a last resort". Five as the radio ceiling and fifteen as the select ceiling are NN/g's, and radios win over a select whenever there is room, as [NN/g's 2004 guideline 8](https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/) does ("If possible, use radio buttons rather than drop-down menus"). This section owns the counts for value controls; the segment limit is design-standard rule 4.
 
 ## Visible listbox
 
@@ -65,7 +65,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 **Cases**
 - An editor where people switch between eight templates many times a session → a visible listbox of eight rows; one click per switch instead of open-then-pick.
 - A one-off "Country" choice shown as an open list of 200 → a combobox; the open list helps only when the options can be seen at once.
-- A listbox in a form's side column that pushes the form far down on a phone → a select at that width; the space argument reverses on a small screen (toolkit commentary).
+- A listbox in a form's side column that pushes the form far down on a phone → a select at that width; the space argument reverses on a small screen, where the side column stacks in reading order (design-standard rule 19).
 - Options named "Report: weekly", "Report: monthly", "Report: yearly" → "Weekly", "Monthly", "Yearly" under a label that says "Report"; a shared prefix is read before every option.
 
 **Accessibility**
@@ -82,14 +82,14 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could check that every `select[size]` and `role="listbox"` has a label, and flag a `size` smaller than the option count when the count is ten or fewer.
 - *Judgement:* Is this choice made often enough to earn the space an open list takes?
 
-**Sources:** NN/g, APG and MDN as linked; they agree. NN/g notes listboxes are "relatively seldom used"; the toolkit keeps them for frequent choices, where their low interaction cost pays for the space.
+**Sources:** NN/g, APG and MDN as linked; they agree. NN/g notes listboxes are "relatively seldom used"; NN/g's own "Low interaction cost" is why they suit frequent choices.
 
 ## Option tiles and picking a kind in a dialog
 
 **Use when / don't use**
-- [moderate] Use option tiles (radio cards) when the person picks one of two to six kinds and each needs more than a word to tell apart: a title and one line of description, or an icon that shows the kind. Carbon: "Selectable tiles are used to present different options for users to select from"; "Use single-select tiles when the user can only select one tile" ([Carbon tile](https://carbondesignsystem.com/components/tile/usage/)). Radix ships them as RadioCards, "interactive cards where only one can be selected at a time" ([Radix radio cards](https://www.radix-ui.com/themes/docs/components/radio-cards)); shadcn's choice card wraps a radio item, a title and a description in one label ([shadcn radio group](https://ui.shadcn.com/docs/components/radio-group)).
+- [moderate] Use option tiles (radio cards) when the person picks one of a few kinds and each needs more than a word to tell apart: a title and one line of description, or an icon that shows the kind. Carbon: "Selectable tiles are used to present different options for users to select from"; "Use single-select tiles when the user can only select one tile" ([Carbon tile](https://carbondesignsystem.com/components/tile/usage/)). Radix ships them as RadioCards, "interactive cards where only one can be selected at a time" ([Radix radio cards](https://www.radix-ui.com/themes/docs/components/radio-cards)); shadcn's choice card wraps a radio item, a title and a description in one label ([shadcn radio group](https://ui.shadcn.com/docs/components/radio-group)).
 - [weak] Don't use tiles for short values that need no explanation: those are radios (in a form) or a segmented control (applying at once, [segmented control](../components/segmented-control.md#segmented-control)). Apple's segmented control in an inspector chooses "attributes" of an object ([Apple segmented controls](https://developer.apple.com/design/human-interface-guidelines/segmented-controls)).
-- [weak] Don't use tiles past about six kinds; a select (Apple's pop-up button, "a flat list of mutually exclusive options", "when space is limited", [Apple pop-up buttons](https://developer.apple.com/design/human-interface-guidelines/pop-up-buttons)) with the description in the option or as the field's hint.
+- [weak] Don't use tiles when the kinds outgrow the space; a select (Apple's pop-up button, "a flat list of mutually exclusive options", "when space is limited", [Apple pop-up buttons](https://developer.apple.com/design/human-interface-guidelines/pop-up-buttons)) with the description in the option or as the field's hint.
 - [weak] Choice chips are for picking among values in place, not for a form's kind ([choice chips](../components/chip.md#choice-chips)); Material's segmented button covers "two and five items. For more complex choices, or more than five items, use chips" ([Android segmented button](https://developer.android.com/develop/ui/compose/components/segmented-button)), and is deprecated in Material 3 Expressive for the connected button group.
 
 **How**
@@ -119,12 +119,12 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could assert every tile in a group has the same rendered width and height, every control in a dialog the same height and the same inline start and end, a default checked, and each tile's radio reachable by Tab with arrows moving between them.
 - *Judgement:* does each kind need its description to be chosen well, or would a word in a segmented control do?
 
-**Sources:** Carbon, Radix, shadcn, Apple, Material, NN/g, Figma and SwiftUI as linked. Radix and shadcn ship radio cards with no guidance on when; Carbon's selectable tiles are the one usage source. Primer and Apple allow up to five to seven segments where design-standard rule 4 allows four ([interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice)). The toolkit takes six as the tile ceiling, from Apple's tab and segment counts, with no source setting it for tiles. Well-regarded design-tool panels on Dribbble ([Dimply property panels](https://dribbble.com/shots/19866493-Dimply-UI-Builder-Property-Panels), [Stratis modal components](https://dribbble.com/shots/20649877-Stratis-UI-Modal-components)) were found but not viewed, since Dribbble refuses automated reads; they support nothing here.
+**Sources:** Carbon, Radix, shadcn, Apple, Material, NN/g, Figma and SwiftUI as linked. Radix and shadcn ship radio cards with no guidance on when; Carbon's selectable tiles are the one usage source. Primer and Apple allow up to five to seven segments where design-standard rule 4 allows four ([interaction: choosing a control for a choice](../design/interaction.md#choosing-a-control-for-a-choice)). No source sets a tile ceiling, so none is given. Well-regarded design-tool panels on Dribbble ([Dimply property panels](https://dribbble.com/shots/19866493-Dimply-UI-Builder-Property-Panels), [Stratis modal components](https://dribbble.com/shots/20649877-Stratis-UI-Modal-components)) were found but not viewed, since Dribbble refuses automated reads; they support nothing here.
 
 ## Multi-select
 
 **Use when / don't use**
-- [weak] Use when several values may hold and the list is too long for checkboxes: more than about ten, or a list that grows.
+- [weak] Use when several values may hold and the list is too long for checkboxes, or grows ([NN/g](https://www.nngroup.com/articles/listbox-dropdown/): "a multiselect listbox with checkboxes").
 - [moderate] Use checkboxes instead when the options are few; every state stays visible.
 - [moderate] Don't use `select multiple`: it needs a modifier key nobody discovers ([GOV.UK select](https://design-system.service.gov.uk/components/select/): use checkboxes instead).
 - [moderate] Don't use a closed drop-down that hides what is picked ([NN/g](https://www.nngroup.com/articles/listbox-dropdown/): "Do not use a dropdown list" for multiselect).
@@ -154,7 +154,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could flag `select[multiple]`, check that a collapsed multi-select shows its count, and that every chip has a named remove button.
 - *Judgement:* Do people browse this list or type into it?
 
-**Sources:** NN/g, GOV.UK and Carbon agree; none sets the exact count at which checkboxes give way, so "about ten" is the toolkit's commentary, taken from Baymard's ten-option ceiling for drop-downs.
+**Sources:** NN/g, GOV.UK and Carbon agree; none sets the count at which checkboxes give way, so none is given.
 
 ## Dual listbox (transfer list)
 
@@ -166,7 +166,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - [moderate] Don't put links, buttons or checkboxes inside the options; a listbox "does not provide an accessible way to present a list of interactive elements" ([APG listbox](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/)).
 
 **How**
-- [weak] **Layout.** "The listbox on the left holds available options and the listbox on the right represents selected items" ([NN/g](https://www.nngroup.com/articles/listbox-dropdown/)); Add and Remove sit between them, Up and Down beside the chosen list. Below the width where both fit, the chosen list stacks under the available one.
+- [weak] **Layout.** "The listbox on the left holds available options and the listbox on the right represents selected items" ([NN/g](https://www.nngroup.com/articles/listbox-dropdown/)); Add and Remove sit between them, Up and Down beside the chosen list. Below the width where both fit, the chosen list stacks under the available one (design-standard rule 19).
 - [required] **Buttons** say what they do in text ("Add", "Remove", "Move up"), not arrows alone; each is disabled while it has nothing to act on (design-standard rule 5).
 - [weak] **Labels** name each list and its count: "Available columns (14)", "Shown columns (4)".
 - [weak] **Focus after a move** stays where the person is working. In the [APG rearrangeable example](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/examples/listbox-rearrangeable/), "pressing Enter in the available options list leaves focus in the available options list", on the next option still present; moving an option up keeps focus on that option, so it can be moved again.
@@ -194,7 +194,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could check both listboxes are named, every move button has a name, and, in a headless browser, that pressing Enter in the pool moves the option and leaves focus in the pool.
 - *Judgement:* Does the order matter, or would one checkbox list do?
 
-**Sources:** NN/g and APG as linked; they agree. None of the Carbon selection pages opened for this file documents a dual list, so the narrow-screen stacking is the toolkit's commentary.
+**Sources:** NN/g and APG as linked; they agree. None of the Carbon selection pages opened for this file documents a dual list, so the narrow-screen stacking applies design-standard rule 19.
 
 ## Select all and clear all
 
@@ -206,7 +206,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 **How**
 - [weak] **Select all** is a parent checkbox first in the list, set off from the options by a divider, and named for the set: "All permissions (12)". Its three states and click behaviour are the [checkbox](../components/checkbox.md#checkbox)'s indeterminate parent; this section does not repeat them.
 - [weak] **Clear all** sits with the count of picks, in the field or the list's heading: Carbon's multiselect shows a tag "containing the total number of selected options" that "also provides a functionality to clear all the selected options" ([Carbon](https://carbondesignsystem.com/components/dropdown/usage/)).
-- [weak] **With a filter typed into the list,** select all acts on the options that match, and its label says so: "Select all 6 matching". Clearing the filter keeps the picks and shows the ones it hid. A filter is the person saying what "all" means; selecting options they cannot see is a surprise (toolkit commentary).
+- [required] **With a filter typed into the list,** select all acts on the options that match, and its label says so: "Select all 6 matching" (design-standard rule 17). Clearing the filter keeps the picks and shows the ones it hid (design-standard rule 18).
 - [required] **Disabled options** are skipped by select all and stay in place (design-standard rule 5).
 - [weak] **Long lists** keep select all in view while the options scroll.
 
@@ -229,7 +229,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could filter a list, click select all, and assert only the visible, enabled options are checked; then assert the parent is mixed after one child is unchecked.
 - *Judgement:* Does all differ from none here, and does anyone ever want all?
 
-**Sources:** Carbon as linked. No NN/g, Baymard or Carbon page opened for this file says what select all should do while a filter is active; the matching-only rule is the toolkit's commentary.
+**Sources:** Carbon as linked. No NN/g, Baymard or Carbon page opened for this file says what select all should do while a filter is active; the matching-only rule is design-standard rule 17.
 
 ## Date and time entry
 
@@ -287,7 +287,7 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - [weak] **Writing a time** in labels, hints and messages follows the [GOV.UK style guide](https://guidance.publishing.service.gov.uk/writing-to-gov-uk-standards/style-guides/a-to-z-style-guide/): "5:30pm (not 1730hrs)", "midday (not 12 noon, noon or 12pm)", "midnight (not 00:00)", and "10am to 11am (not 10-11am)".
 - [weak] **Midnight** is ambiguous at a deadline: GOV.UK, "Midnight is the first minute of the day, not the last", and suggests "11:59pm" instead.
 - [moderate] **Time zone.** Carbon: "Specific times should specify a timezone", with an optional time zone select beside the field. GOV.UK adds "UK time" when the service serves people outside the UK.
-- [weak] **Typed input** is read generously: "9", "9am", "09:00" and "21:00" all mean something; reject only what cannot be a time, and say what to enter (toolkit commentary).
+- [required] **Typed input** is read generously: "9", "9am", "09:00" and "21:00" all mean something; reject only what cannot be a time, and say what to enter (design-standard rule 18).
 - [weak] **Seconds** only where they matter.
 - [weak] **A range that crosses midnight** (a night shift, 22:00 to 06:00) is accepted and shown as ending the next day, not rejected as end before start.
 
@@ -312,4 +312,4 @@ Two questions decide almost every case: **how many values can hold at once**, an
 - *Script:* could check every time field has a label and a hint, flag a `type="time"` whose `step` adds seconds, and flag "12pm", "12am", "00:00" and "noon" in interface text.
 - *Judgement:* Can any time be chosen, or only some?
 
-**Sources:** Carbon, GOV.UK, MDN and NN/g as linked; NN/g's advice is about dates and is applied to times by analogy. Carbon writes "AM" and "PM" ("Use uppercase letters and no periods"); GOV.UK writes "5:30pm". The toolkit follows the project's dialect: GOV.UK for British English, where its style guide is the house reference, Carbon's form where a product follows US convention.
+**Sources:** Carbon, GOV.UK, MDN and NN/g as linked; NN/g's advice is about dates and is applied to times by analogy. Carbon writes "AM" and "PM" ("Use uppercase letters and no periods"); GOV.UK writes "5:30pm". The project's dialect decides: GOV.UK's form for British English, Carbon's for US convention.

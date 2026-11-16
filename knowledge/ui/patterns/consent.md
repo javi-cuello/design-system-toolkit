@@ -38,7 +38,7 @@ How a product asks for consent and keeps it revocable: the cookie banner and coo
 - *Script:* could load the page with no stored choice and assert no non-essential cookie or third-party request before acceptance; that Accept and Reject compute the same size and style; that the banner is not `position: fixed` or `sticky`; that rejecting sets no non-essential cookie.
 - *Judgement:* Would a person who wants to reject find it as quickly as one who wants to accept?
 
-**Sources:** GOV.UK, Friedman and NN/g as linked. GOV.UK shows both buttons alike without stating equal weight as a rule; Friedman and NN/g state it, and the toolkit follows them.
+**Sources:** GOV.UK, Friedman and NN/g as linked. GOV.UK shows both buttons alike without stating equal weight as a rule; Friedman and NN/g state it, and the item follows them.
 
 ## Cookies page
 

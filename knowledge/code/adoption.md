@@ -55,7 +55,7 @@ How much of a product, in Figma and in code, is built from the system, and how t
 **What good looks like**
 - [moderate] A detach is read per component, as a backlog: the most-detached components are missing a property, a slot or a fix.
 - [moderate] Components meant to be detached, screen templates above all, are left out of the count.
-- [contested] Whether a detach is a defect: Salesforce holds that detached copies miss fixes, accessibility ones included, and adds properties and slots so nobody needs to ([Salesforce](https://www.salesforce.com/blog/figma-component-health/)); athenahealth reads each as a bug, a missing enhancement or an unexpected combination ([Figma, Design systems 104](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). The toolkit goes with reading it as a signal about the component.
+- [contested] Whether a detach is a defect: Salesforce holds that detached copies miss fixes, accessibility ones included, and adds properties and slots so nobody needs to ([Salesforce](https://www.salesforce.com/blog/figma-component-health/)); athenahealth reads each as a bug, a missing enhancement or an unexpected combination ([Figma, Design systems 104](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). Both read it as a signal about the component.
 
 **How**
 - [strong] A file scan finds surviving detaches through `detachedInfo` on a frame ([Figma plugin API](https://developers.figma.com/docs/plugins/api/DetachedInfo/)); Library Analytics counts the command, so a detach later deleted still counts there.
@@ -70,12 +70,12 @@ How much of a product, in Figma and in code, is built from the system, and how t
 ## Token coverage
 
 **What good looks like**
-- [strong] Token coverage is reported beside component adoption, per category (colour, spacing and radius, type), as values bound over values that could have been bound.
+- [required] Token coverage is reported as a percentage beside component adoption (figma-standard rule 17), per category (colour, spacing and radius, type), as values bound over values that could have been bound.
 - [moderate] A zero value, an image or a gradient is not judged: it could never have been a token.
 
 **How**
 - [strong] In Figma, a value is bound when the node's `boundVariables` holds it or a style id is set ([Figma plugin API](https://developers.figma.com/docs/plugins/api/node-properties/)); Pinterest's figma-calculations reports style adoption per file ([pinterest/figma-calculations](https://github.com/pinterest/figma-calculations)).
-- [strong] In code, a lint rule finds the raw values: Atlassian's `ensure-design-token-usage` by domain ([Atlassian](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage/usage)), `stylelint-declaration-strict-value` by property ([stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value)). None publishes a coverage formula; values passing over values checked is the toolkit's.
+- [strong] In code, a lint rule finds the raw values: Atlassian's `ensure-design-token-usage` by domain ([Atlassian](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage/usage)), `stylelint-declaration-strict-value` by property ([stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value)). None publishes a coverage formula; the percentage is figma-standard rule 17's.
 - [moderate] Shopify set its own library 90% token coverage for colour, motion, type and spacing ([Polaris issue 4528](https://github.com/Shopify/polaris/issues/4528)).
 
 **Check**
