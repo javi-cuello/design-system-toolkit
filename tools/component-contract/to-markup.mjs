@@ -386,7 +386,11 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         const prev = glyph.code ? `(${glyph.code})` : lang.str(glyph.lit);
         glyph = { code: t === 'true' ? lang.str(g) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${lang.str(g)} : ${prev}` };
       }
-      out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ['aria-hidden', { lit: 'true' }]], children: [] };
+      // the glyph's own size, where it is drawn at another (a 16 check drawn at 12): which of its set's sizes it is
+      // (at any combination: a variant that draws it smaller says the same glyph's size)
+      const widths = [e.width, ...(c.variants || []).map((v) => (v.set || {})[`${id}.width`]).filter((w) => w !== undefined)];
+      const size = !icon && e.with && e.with.Size !== undefined && widths.some((w) => String(w) !== String(e.with.Size)) && !(c.variants || []).some((v) => `${id}.with` in (v.set || {})) ? String(e.with.Size) : null;
+      out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ...(size ? [['data-icon-size', { lit: size }]] : []), ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       out = { tag, attrs: [...hook(id), ...(slot.slot === id ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };

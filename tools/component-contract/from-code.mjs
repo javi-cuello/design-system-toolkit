@@ -1104,7 +1104,7 @@ async function main() {
             if (!inside && n.hasAttribute('data-figma-id')) { let i = 0; for (const c of n.children) { const cs = getComputedStyle(c); if (cs.display === 'none' || cs.visibility === 'hidden') continue; walk(c, id, i++, id); } }
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
-          if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; }
+          if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
           else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             if (/flex/.test(s.display)) {
@@ -1833,6 +1833,8 @@ async function main() {
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
         if (!swapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
         e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
+        // the glyph's own size the mark says (to-markup's data-icon-size): its set's variant, as Figma's Size
+        if (e.iconSize) { e.with = { ...(e.with || {}), Size: e.iconSize }; delete e.iconSize; }
         // a colour it only takes from around it is no override of the placed icon: the design leaves it the icon's own
         // (where the design sets the icon's colour, on it or inside it, the code's is read as drawn and compared)
         const under = (k) => k === id || k.startsWith(`${id}/`);
@@ -1991,6 +1993,10 @@ async function main() {
         if (!hit && !fromCode.variants.some((v) => JSON.stringify(v.when) === JSON.stringify(r.when))) fromCode.variants.push({ when: { ...r.when }, set: { [f]: r.figmaValue } });
       }
     }
+    // (a size a mark said that did not become an instance's is no field of a graphic's, with a design or without one;
+    // a variant's change of it, none)
+    for (const e of [...Object.values(fromCode.anatomy), ...fromCode.variants.flatMap((v) => Object.values(v.add || {}))]) if (e) delete e.iconSize;
+    for (const v of fromCode.variants) for (const k of Object.keys(v.set || {})) if (k.endsWith('.iconSize')) delete v.set[k];
     // in the house's Figma conventions; its props against Figma's as the code audit judges them (one comparison, compareProps)
     const shaped = asFigma(fromCode, { axisOrder: (L.lib.tokens && L.lib.tokens.axisOrder) || [] });
     // a prop the design has under no key or name is the code's alone (the contract editor's "Exists in: Code only"):
