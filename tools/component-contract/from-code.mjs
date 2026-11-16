@@ -90,6 +90,20 @@ export function wordsOf(fc, texts, own = {}) {
   return Object.fromEntries(said.map((q, i) => [q.figma, ownProp(texts[i])]));
 }
 
+/* The element a mapped layer names. A placed component's own layer is mapped to that component's root, inside its host
+   (ds-button > button): the host is the instance, so it takes the layer's id and the walk names it by its layer, not by
+   the component it places. Only an instance moves: another layer mapped to that root (an override there) stays on it,
+   and a text there is the instance's words, as it was when the root held the instance's id. Returns the element and
+   whether it is words. Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function layerAt(q, id, kind, rootRe, others) {
+  const h = q && q.parentElement;
+  const isHost = h && rootRe && h.firstElementChild === q && [...h.classList, h.tagName.toLowerCase()].some((c) => { const x = (c.match(new RegExp(rootRe)) || [])[1]; return x && others[x]; });
+  if (!isHost) return [q, false];
+  const its = h.getAttribute('data-figma-id');
+  if (kind === 'instance' && !its) return [h, false];
+  return [q, kind === 'text' && !!its && id.startsWith(`${its}/`)];
+}
+
 export function cornerOf(css, w, h) {
   const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
   const pct = /%$/.test(css) ? parseFloat(css) : null;
@@ -849,7 +863,8 @@ async function main() {
     for (const at of Object.values(L.pseudoOf)) if (!at.on) at.on = rootSel;
     // a governed mapping states which element is which Figma layer: those take Figma's ids; a compared
     // library's are paired by rule, a guess, so its parts keep the names their markup gives them
-    const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
+    // (each with its kind in the design, for where a placed component's layer lands: layerAt)
+    const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id, figmaContract ? kindIn(figmaContract, id) || null : null]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
     let remPx = null;
     // the room the component is given: Figma's own, so a root that fills its room fills the width Figma draws it at
     // (a canvas fact, as derive records a root fill's), and a fixed or hugging root is read in the same room. Its
@@ -883,7 +898,7 @@ async function main() {
         // (as a block of that width, whatever the story's wrapper lays out)
         Object.assign(up.style, { display: 'block', width: `${w}px`, minWidth: '0', maxWidth: 'none', padding: '0' });
       }, [rootSel, L.container, !L.root, room]);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, layerAtSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -894,7 +909,8 @@ async function main() {
         // up to the story's top unless the mapping names the root: that is the root, not a wrapper a story puts around it
         if (climb) while (root.parentElement && root.parentElement !== holder && root.parentElement !== document.body) root = root.parentElement;
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
-        for (const [s, id] of named) { const n = document.querySelector(s); if (!n) continue; if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
+        const layerAt = new Function(`return ${layerAtSrc}`)();
+        for (const [s, id, kind] of named) { const [n, words] = layerAt(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
         const typeOf = (s) => ({ size: px(s.fontSize), lineHeight: px(s.lineHeight), weight: WEIGHT[s.fontWeight] });
@@ -1056,7 +1072,7 @@ async function main() {
         // (one inside a placed component keeps its place among that component's own, most of which are not read here)
         for (const xs of Object.values(byParent)) xs.forEach((e, i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), layerAt.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // each element's matched styles fetched once for all the properties this render reads of it
       const styles = new Map();
