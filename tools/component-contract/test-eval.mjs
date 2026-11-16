@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fieldOf, counts, worse, measure, causes, hashOf, closureHashes, scopedTo } from './eval.mjs';
+import { fieldOf, counts, worse, measure, causes, hashOf, closureHashes, scopedTo, leftToCode } from './eval.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -83,4 +83,17 @@ ok('a component measured since the accept is held until accepted; one that came 
   const some = causes([{ at: 'cap', library: { kind: 'text' }, drawn: null, in: 2 }, { at: 'cap.kind', library: 'text', drawn: 'slot', in: 2 }], 4);
   ok('a part missing in only some combinations folds nothing: its field rows from the others are causes of their own', some['cap.kind'] === 1 && some.cap === 1 && causes([{ at: 'cap', library: { kind: 'text' }, drawn: null, in: 4 }, { at: 'cap/x', library: 1, drawn: null, in: 4 }], 4)['cap (missing)'] === 2);
 }
+// what the markup leaves to its caller is counted apart: a menu drawn only at focus, a slot's sample content; a focus
+// ring (an outline in code) and a part every variant draws stay differences
+{ const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'], figma: 'State' } },
+    anatomy: { root: { kind: 'container' }, field: { kind: 'container', parent: 'root' }, slot: { kind: 'slot', parent: 'root' }, 'slot/sample': { kind: 'text', parent: 'slot', content: 'x' } },
+    variants: [{ when: { state: 'focus' }, add: { menu: { kind: 'container', parent: 'root' }, 'menu/item': { kind: 'text', parent: 'menu', content: 'A' } } }] };
+  const left = leftToCode(c);
+  ok('rows of a part drawn only at a pointer state, or inside a slot, are left to code; the rest are differences',
+    left('menu') && left('menu/item.content') && left('slot/sample.content') && !left('field.layout') && !left('slot.width') && !left('menuish'));
+  const placed = { ...c, anatomy: { ...c.anatomy, picker: { kind: 'instance', parent: 'root', component: 'Menu' }, 'picker/items': { kind: 'slot', parent: 'picker' }, 'picker/items/one': { kind: 'text', parent: 'picker/items', content: 'One' } } };
+  ok('what this component puts in a placed component\'s slot is drawn, so stays a difference', !leftToCode(placed)('picker/items/one.content'));
+  ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
+    && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }
+
 console.log(`${n} passed`);

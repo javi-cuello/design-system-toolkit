@@ -38,6 +38,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { contracts, hashOf } from './official.mjs';
 import { roundTrip } from './to-figma.mjs';
+import { partsOf } from './to-markup.mjs';
 
 const req = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -79,6 +80,18 @@ export function causes(rows, combinations) {
   return out;
 }
 
+/* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state (a menu
+   open at focus: frontend-build's, said as a gap in the markup), but a focus ring, which to-code draws as an outline;
+   and what a slot holds in the design (its sample content: the slot's filler is the caller's). The self legs count the
+   rows of these apart (`left`), never among the differences, and never dropped. */
+export function leftToCode(contract) {
+  // (a slot of a placed component is filled by the markup, its parts drawn: only the component's own slot is a sample)
+  const parts = partsOf(contract);
+  const ids = [...parts.values()].filter((p) => (p.pointerOnly && !p.ring) || (p.slotted && !(parts.get(p.slotted) || {}).inside)).map((p) => p.id);
+  return (at) => { const el = at.split('.')[0]; return ids.some((id) => el === id || el.startsWith(`${id}/`)); };
+}
+const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at)), left: rows.filter((r) => isLeft(r.at)) });
+
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
 export function measure(where) {
   const home = where.projectDir;
@@ -99,7 +112,7 @@ export function measure(where) {
     else { const r = roundTrip(contract, code.asFigma, { mains }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : null; legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains }), st = stale('self', folder, contract); legs.self[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -108,7 +121,7 @@ export function measure(where) {
       // only the combinations the library draws (a reading carries no invalid list of its own)
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains }), t = (taken.second || {})[folder];
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : null;
-      legs.second[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     const st = back && stale('figma', folder, contract);
@@ -118,7 +131,14 @@ export function measure(where) {
 }
 
 /* The counts a measure stands at, and what rose or went against the accepted ones. */
-export const counts = (legs) => Object.fromEntries(Object.entries(legs).map(([leg, cs]) => [leg, Object.fromEntries(Object.entries(cs).filter(([, x]) => x.rows).map(([c, x]) => [c, x.rows.length]))]));
+// (what is left to code is held too, as its own leg: a part that comes to be drawn only at a pointer state moves its rows
+// there, and that rise is said, not hidden)
+export const counts = (legs) => Object.fromEntries(Object.entries(legs).flatMap(([leg, cs]) => {
+  const out = [[leg, Object.fromEntries(Object.entries(cs).filter(([, x]) => x.rows).map(([c, x]) => [c, x.rows.length]))]];
+  // (every component the leg splits, 0 included: one whose left rows fall to none is measured, not gone)
+  const left = Object.entries(cs).filter(([, x]) => x.rows && x.left);
+  return left.length ? [...out, [`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, x.left.length]))]] : out;
+}));
 export function worse(now, accepted) {
   const out = [];
   for (const [leg, cs] of Object.entries(accepted || {})) for (const [c, n] of Object.entries(cs)) {
@@ -136,7 +156,7 @@ function report(label, { legs }, fields, byCause) {
     const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
     const rows = m.flatMap(([, x]) => x.rows);
     const all = Object.keys(cs).length, old = m.filter(([, x]) => x.stale), nc = m.reduce((a, [, x]) => a + Object.keys(causes(x.rows, x.combinations)).length, 0);
-    console.log(`${label} ${leg}: ${m.filter(([, x]) => !x.rows.length).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
+    console.log(`${label} ${leg}: ${m.filter(([, x]) => !x.rows.length).length} of ${all} the same; measured ${m.length} of ${all}; ${nc} causes, ${rows.length} differing rows${m.some(([, x]) => x.left && x.left.length) ? `; ${m.reduce((a, [, x]) => a + (x.left || []).length, 0)} rows left to code (drawn only at a pointer state, or slot samples)` : ''}${old.length ? `; ${old.length} stale (${[...new Set(old.map(([, x]) => x.stale))].join('; ')})` : ''}${skipped.length ? `; ${skipped.length} not measured (${[...new Set(skipped.map(([, x]) => x.skipped))].join('; ')})` : ''}`);
     for (const [c, x] of m) if (x.cut) console.log(`  ${c}: ${x.cut} combination(s) past the first ${x.combinations} not compared`);
     if (byCause) for (const [c, k, n] of m.flatMap(([c, x]) => Object.entries(causes(x.rows, x.combinations)).map(([k, n]) => [c, k, n])).sort((a, b) => b[2] - a[2])) console.log(`  ${String(n).padStart(4)}  ${c}: ${k}`);
     if (!fields) continue;

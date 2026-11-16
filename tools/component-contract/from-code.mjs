@@ -359,7 +359,9 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
 /* A pointer state forced where the mapping says that state is taken (`on`, a selector in the page), then
    held until its transitions have run: what both kinds of source do after a render. */
 async function forceAt(tab, at) {
-  if (!at || !at.on) return;
+  // a render at rest releases what the last one forced: fetching the document again drops every forced state
+  // (shared/cdp.mjs forceState), which matchedLevels no longer does on each read
+  if (!at || !at.on) { await tab.send('DOM.getDocument', { depth: 0 }); return; }
   const { forceState, waitFor } = await import('../shared/cdp.mjs');
   await forceState(tab, [{ selector: at.on, pseudo: at.pseudo }]);
   await waitFor(tab, 'document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)', { timeout: 3000 }).catch(() => {});

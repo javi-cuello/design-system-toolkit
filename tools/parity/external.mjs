@@ -884,8 +884,15 @@ export async function authoredWidth(tab, selector, property, { raw = false, cach
 async function matchedLevels(tab, selector, cache) {
   let levels = cache && cache.get(selector);
   if (levels) return levels;
-  const { root } = await tab.send('DOM.getDocument', { depth: 0 });
-  const { nodeId } = await tab.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+  // the node found without fetching the document again: that resets the node ids a forced :hover or :active is held
+  // against (shared/cdp.mjs forceState), and the rules matched would be the resting ones
+  // (a page no one has asked the document of since it loaded gives node 0: asked once then, which drops nothing, as a
+  // forced state asks it first)
+  const { result } = await tab.send('Runtime.evaluate', { expression: `document.querySelector(${JSON.stringify(selector)})` });
+  if (!result || !result.objectId) return null;
+  let { nodeId } = await tab.send('DOM.requestNode', { objectId: result.objectId });
+  if (!nodeId) { await tab.send('DOM.getDocument', { depth: 0 }); ({ nodeId } = await tab.send('DOM.requestNode', { objectId: result.objectId })); }
+  await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
   if (!nodeId) return null;
   const r = await tab.send('CSS.getMatchedStylesForNode', { nodeId });
   const own = [...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])];
