@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.7.0)
+# Eval cases — design-system-research (v3.7.1)
+
+**Walked: 2026-11-16 for 3.7.1** — wording only, from review: A31's fixture names deep mode and its Assert says the included topics count toward Step 1's two to five axes; A1 to A30 unchanged, none asserts on the axis count's source.
 
 **Walked: 2026-11-16 for 3.7.0** — A31 added, observed on the spacing-token run and traced to Step 1; A1 to A30 read against the added paragraph, which adds a scoping step and changes none of their assertions (A29's code-alignment axis and A30's weak-items queue sit beside it).
 
@@ -288,8 +290,8 @@ Negative: a run that cites a `weak` item as settled guidance in its answer.
 Traced: 2026-11-16 for 3.6.0 — to SKILL.md Step 1.
 
 ## A31 · Scope looks past the prompt before searching
-Fixture: "do a ds-research on spacing systems, tokens and semantic setup", with nothing said about components or layouts.
-Assert: before the first search, Step 1 lists the neighbouring topics the decision depends on (spacing inside components, layout primitives and grid gutters, size against space, density, touch targets, right-to-left, how values reach each platform, audit and migration), each with why it bears on the answer; those that change the recommendation become axes, and those left out are named.
+Fixture: deep mode, "do a ds-research on spacing systems, tokens and semantic setup", with nothing said about components or layouts.
+Assert: before the first search, Step 1 lists the neighbouring topics the decision depends on (spacing inside components, layout primitives and grid gutters, size against space, density, touch targets, right-to-left, how values reach each platform, audit and migration), each with why it bears on the answer; those that change the recommendation become axes within Step 1's two to five, and those left out are named. In light mode the same list is a line or two in the answer.
 Negative: a run whose axes are only the words of the prompt, with an adjacent topic added only after the person asks.
 Observed: 2026-11-16 — the spacing-token run launched four threads from the ticket's words; the maintainer asked mid-run for components and layouts and for a check of further topics, which became a fifth thread.
 Traced: 2026-11-16 for 3.7.0 — to SKILL.md Step 1, "Then look past the prompt before searching".
