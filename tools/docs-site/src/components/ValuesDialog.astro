@@ -40,7 +40,7 @@ const swatch = (v) => { const head = alpha(String(v).split(' (')[0]); return isC
 <button type="button" class="link-button" popovertarget={id}>Details<span class="visually-hidden">: {title}</span></button>
 <Modal id={id} title={title}>
   <div class="table-wrap" data-scrolls>
-  <table class="table">
+  <table class="table values-dialog">
     <caption class="visually-hidden">{title}</caption>
     <thead><tr><th scope="col">{heads[0]}</th>{withMode && <th scope="col">Mode</th>}<th scope="col">{heads[1]}</th><th scope="col">{heads[2]}</th></tr></thead>
     <tbody>

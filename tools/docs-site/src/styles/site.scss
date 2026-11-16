@@ -813,7 +813,7 @@ $xxl: 90rem;
       thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
       tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-4) var(--space-12); padding-block: var(--space-12); border-block-end: var(--stroke-1) solid var(--line); }
       :is(th, td) { padding: 0; border: 0; }
-      :is(.changes__date, .changes__what) { flex-basis: 100%; }
+      :is(.changes__date, .changes__subject-col, .changes__what) { flex-basis: 100%; }
       td[data-label]::before { content: attr(data-label) " "; font-size: var(--text-xs); color: var(--fg-soft); }
     }
     @include from($sm) {
@@ -827,7 +827,7 @@ $xxl: 90rem;
       }
     }
     .changes__what > span { display: block; }
-    .changes__subject { font-weight: var(--weight-medium); }
+    :is(.changes__subject, .changes__subject-col) { font-weight: var(--weight-medium); text-align: start; }
     .changes__consequence { font-size: var(--text-xs); color: var(--fg-muted); }
 
     // Code a builder copies: a quiet chip that wraps rather than being cut.
@@ -1666,6 +1666,12 @@ $xxl: 90rem;
 
   // The one dialog's rules (Modal.astro) are system.css's `.modal`, shared with the toolkit's other pages.
   // A swatch in running text: one em, set on the text's baseline.
+  // What a change moved, inside a value: the moved part in the text's own
+  // colour, set off by weight and an accent underline; the browser's yellow
+  // <mark> fought both themes.
+  .values-dialog mark { background: none; color: inherit; font-weight: var(--weight-semibold); text-decoration: underline var(--accent) var(--stroke-2); text-underline-offset: 0.2em; }
+  // A section with nothing to show says so in one muted line, the same on every page.
+  .empty-state { margin-block: var(--space-16) 0; color: var(--fg-muted); max-inline-size: 66ch; }
   .values-swatch { display: inline-block; inline-size: 1em; block-size: 1em; vertical-align: -0.15em; margin-inline-end: 0.4em; border-radius: var(--radius-4); box-shadow: inset 0 0 0 var(--stroke-1) rgb(0 0 0 / 0.2); }
 
   // Windows high contrast and other forced palettes drop backgrounds and

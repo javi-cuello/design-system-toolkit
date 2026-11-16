@@ -17,7 +17,9 @@ import Time from './Time.astro';
 import { day } from '../lib/format.js';
 import { cap } from '../lib/changes.js';
 import { displayName } from '../../../shared/names.js';
-import { toolkitRequire } from '../lib/project.js';
+import { toolkitRequire, project } from '../lib/project.js';
+// A project in design has no code to break: its grades are for the Figma files alone.
+const withCode = project.phase !== 'design';
 const store = toolkitRequire('tools/snapshot/store.cjs');
 
 const { GRADE_RULES } = store;
@@ -80,6 +82,7 @@ const days = [...byDay.values()];
 // A value as a reader needs it: nothing is "none", a colour carries its swatch.
 const blank = (v) => !v || v === 'none' || v === 'present';
 ---
+{days.length === 0 && <p class="empty-state" id={id}>No change recorded yet: the log starts with the next snapshot that changes this component.</p>}
 {days.length > 0 && (
   <div class="section" id={id}>
     {days.map((d, di) => (
@@ -88,7 +91,7 @@ const blank = (v) => !v || v === 'none' || v === 'present';
           <div class:list={['table-wrap', d.rows.length > 20 && 'table-wrap--long']} data-scrolls>
             <table class="table changes">
               <caption class="visually-hidden">Changes on {day(d.at)}</caption>
-              <thead><tr><th scope="col" class="changes__what">Change</th><th scope="col">Type</th><th scope="col">Figma files</th><th scope="col">Code</th><th scope="col">Details</th></tr></thead>
+              <thead><tr><th scope="col" class="changes__what">Change</th><th scope="col">Type</th><th scope="col">Figma files</th>{withCode && <th scope="col">Code</th>}<th scope="col">Details</th></tr></thead>
               <tbody>
                 {d.rows.map((r, ri) => {
                   const pid = `${id}-${di}-${ri}`;
@@ -96,7 +99,7 @@ const blank = (v) => !v || v === 'none' || v === 'present';
                     <tr>
                       <th scope="row" class="changes__what">{r.what}</th>
                       <td>{r.type ? <span class="pill">{r.type}</span> : <span class="muted">Not graded</span>}</td>
-                      {[[r.figma, 'Figma files'], [r.code, 'Code']].map(([l, label]) => <ChangeLevel level={l} label={label} />)}
+                      {[[r.figma, 'Figma files'], ...(withCode ? [[r.code, 'Code']] : [])].map(([l, label]) => <ChangeLevel level={l} label={label} />)}
                       <td>{!(blank(r.before) && blank(r.after)) && <ValuesDialog id={pid} title={`${r.what}, ${day(d.at)}`} rows={r.items || [{ what: r.what, before: r.before, after: r.after }]} />}</td>
                     </tr>
                   );

@@ -63,6 +63,10 @@ const hasA11y = g.accessibility.length > 0 || Boolean(apg);
 // What code builds differently from the drawing, as the component-validator
 // engine reads it: Figma, code, why.
 const hasImplementation = lead.implementation.length > 0;
+// A project in design, with nothing for development, has no Development tab: one
+// sentence repeated on every component said nothing (maintainer, 16 November 2026).
+const devEmpty = !hasImplementation && !(parity && lead.parity && lead.parity.status !== 'match');
+const showDev = !(devEmpty && project.phase === 'design');
 
 const done = page.status && (project.done || []).includes(page.status.marker);
 // The audit's view of this page: its score and what is still open.
@@ -122,7 +126,7 @@ const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.
   {/* Hidden until the script below wires it: with no script there are no
       tabs, and the four panels read one after another. */}
   <div class="tabs tabs--sections" role="tablist" aria-label={`${title} documentation`} data-tabs hidden>
-    {[['overview', 'Overview'], ['specs', 'Specs'], ['development', 'Development'], ['change-log', 'Change log']].map(([idp, label], i) => (
+    {[['overview', 'Overview'], ['specs', 'Specs'], ...(showDev ? [['development', 'Development']] : []), ['change-log', 'Change log']].map(([idp, label], i) => (
       <button type="button" class="tab" role="tab" id={`tab-${idp}`} aria-controls={idp} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{label}</button>
     ))}
   </div>
@@ -144,7 +148,8 @@ const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.
           {lead.editor && <a href={lead.editor} data-editor hidden>Propose a change <span aria-hidden="true">↗</span></a>}
         </dd></div>
       )}
-      {lead.editor && <script is:inline>if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) for (const a of document.querySelectorAll('[data-editor]')) a.hidden = false;</script>}
+      {/* Shown only when the editor answers: a link to a service that is not running went nowhere. */}
+      {lead.editor && <script is:inline>if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) { const as = document.querySelectorAll('[data-editor]'); if (as.length) fetch(new URL(as[0].href).origin + '/', { mode: 'no-cors' }).then(() => { for (const a of as) a.hidden = false; }, () => {}); }</script>}
     </dl>
     {preview(lead) && (
       <section class="section" id="preview" aria-labelledby="preview-h">
@@ -216,13 +221,13 @@ const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.
       {lead.noContract && (
         <section class="section" id="properties" aria-labelledby="properties-h">
           <h2 id="properties-h">Properties</h2>
-          <p class="muted">No contract is stored for this component, so its properties cannot be listed. Take a snapshot.</p>
+          <p class="empty-state">No contract is stored for this component, so its properties cannot be listed. Take a snapshot.</p>
         </section>
       )}
       <States props={lead.props} states={lead.states} id="states" />
   </div>
 
-  <div class="tabpanel" id="development" role="tabpanel" aria-labelledby="tab-development">
+  {showDev && <div class="tabpanel" id="development" role="tabpanel" aria-labelledby="tab-development">
     {hasImplementation && (
       <section class="section prose" id="implementation" aria-labelledby="implementation-h">
         <h2 id="implementation-h">Implementation</h2>
@@ -243,8 +248,8 @@ const docTitle = `${part ? `${title} · ${page.title}` : title} component${page.
         <Parity result={lead.parity} />
       </section>
     )}
-    {!hasImplementation && !(parity && lead.parity && lead.parity.status !== 'match') && <><h2 class="visually-hidden">Development</h2><p class="muted">Nothing for development yet: no implementation notes from the validator, and no difference from the code measured.</p></>}
-  </div>
+    {devEmpty && <><h2 class="visually-hidden">Development</h2><p class="empty-state">Nothing for development yet: no implementation notes from the validator, and no difference from the code measured.</p></>}
+  </div>}
 
   <div class="tabpanel" id="change-log" role="tabpanel" aria-labelledby="tab-change-log">
     <ChangeLog folders={[lead.folder]} id="changelog" />

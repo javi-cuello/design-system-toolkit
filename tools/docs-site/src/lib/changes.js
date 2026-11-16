@@ -27,7 +27,12 @@ const parts = (c) => {
   const [what, ...why] = head.split(': ');
   return { what: cap(what), detail: rest.join(' — '), consequence: why.length ? cap(why.join(': ')) : '' };
 };
-const label = (c) => { const p = parts(c); return p.detail ? `${p.what}: ${p.detail}` : p.what; };
+// A token change lists its names ("Semantic: 8 — a → b, c → d +5"); the
+// Details dialog holds them, so the row says only how many and where.
+const label = (c) => {
+  const p = parts(c), m = c.values ? /^(.+?): (\d+)(?: \u2014 |$)/.exec(p.detail) : null;
+  return m ? `${p.what}: ${m[2]} in ${m[1]}` : p.detail ? `${p.what}: ${p.detail}` : p.what;
+};
 // The subject of an UNGRADED entry's fact, a word or two, as before grades.
 const subject = (n) => (typeof n === 'string' ? n : n.what).replace(/^Layer .*$/, 'Layers').replace(/ \(\d+ (bindings|layers?)\)$/, '').replace(/^.*: /, '').replace(/^\w/, (c) => c.toUpperCase());
 const subjectsOf = (c, f) => {

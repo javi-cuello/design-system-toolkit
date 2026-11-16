@@ -46,7 +46,7 @@ for (const d of days) {
   <UpdatedBy from={['snapshot']} />
   <p class="lede">What each snapshot changed against the one before it, newest first, one row per change. {withCode ? <>Each change is graded twice, as a version number is: for the <strong>Figma files</strong> that use the library, and for the <strong>code</strong> built from it. Breaking means instances lose work, or a name the code uses changes.</> : <>Each change is graded as a version number is, for the <strong>Figma files</strong> that use the library. Breaking means instances lose work.</>}</p>
   {files.length > 1 && <Filter label="Show changes in" groups={[['all', 'All files', total], ...files.map((f) => [f.name, f.name, f.n])]} />}
-  {days.length === 0 ? <p class="muted">Nothing recorded yet: the log starts with the next snapshot.</p> : days.map((d) => (
+  {days.length === 0 ? <p class="empty-state">Nothing recorded yet: the log starts with the next snapshot.</p> : days.map((d) => (
     <section class="section" id={`day-${d.key}`} aria-labelledby={`day-${d.key}-h`} data-filter-part>
       <h2 id={`day-${d.key}-h`}><Time at={d.at} short /></h2>
       {d.files.map((g) => (
@@ -55,14 +55,14 @@ for (const d of days) {
           <div class:list={['table-wrap', g.items.length > 20 && 'table-wrap--long']} data-scrolls>
             <table class="table changes">
               <caption class="visually-hidden">Changes to {g.file} on {day(d.at)}</caption>
-              <thead><tr><th scope="col" class="changes__what">Change</th><th scope="col">Type</th><th scope="col">Figma files</th>{withCode && <th scope="col">Code</th>}</tr></thead>
+              <thead><tr><th scope="col" class="changes__subject-col">Component</th><th scope="col" class="changes__what">Change</th><th scope="col">Type</th><th scope="col">Figma files</th>{withCode && <th scope="col">Code</th>}</tr></thead>
               <tbody>
                 {g.items.map((it) => (
                   <tr data-kind={g.file} data-name={it.key}>
+                    {/* Which component, then what changed and what it does to the
+                        people who use it (design-standard rule 10). */}
+                    <th scope="row" class="changes__subject-col">{it.folder ? (link(it.folder) ? <a href={link(it.folder)}>{title(it.folder)}</a> : title(it.folder)) : 'Tokens'}</th>
                     <td class="changes__what">
-                      {/* What changed and on which component, then what it does to
-                          the people who use it (design-standard rule 10). */}
-                      <span class="changes__subject">{it.folder ? (link(it.folder) ? <a href={link(it.folder)}>{title(it.folder)}</a> : title(it.folder)) : 'Tokens'}</span>
                       {it.label && <span class="changes__label">{it.label}</span>}
                       {it.consequence && <span class="changes__consequence">{it.consequence}</span>}
                       {/* Only a token change has values to show; the rest are on the component's own page. */}
