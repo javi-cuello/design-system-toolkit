@@ -32,7 +32,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 
 **Build**
 - [required] Every form of it is one GET `form`, named for its list (`aria-label="Filter findings"`), whose fields are the address's parameters; one list, one form ([HTML semantics: *Search and filter forms*](../../code/html-semantics.md#search-and-filter-forms)).
-- [required] Bar, sidebar and tray are presentations of the same markup chosen by container or media query, never three copies (code-standard rule 36; [responsive: *Container queries*](../../code/responsive.md#container-queries)).
+- [weak] Bar, sidebar and tray are presentations of the same markup chosen by container or media query, never three copies ([responsive: *Container queries*](../../code/responsive.md#container-queries)).
 - [required] The tray is a `dialog` opened from `<button type="button" popovertarget="filters">Filters <span data-count>2</span></button>` and enhanced to `showModal()`; focus in and back are the platform's ([HTML semantics: *Disclosure, dialogs and popovers*](../../code/html-semantics.md#disclosure-dialogs-and-popovers)).
 - [weak] Its "Show 42 results" is the form's submit button; Escape and the close button discard pending changes.
 - [required] A collapsed sidebar group uses `hidden`, which beats the stylesheet (code-standard rule 17); DOM order is the bar's visual order (code-standard rule 2).
@@ -147,7 +147,8 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - [required] Implementation: code-standard rule 15 (counts as descriptions, `aria-describedby`, not inside the name). Figma: figma-standard rule 32.
 
 **Build**
-- [required] Counts come from the same query function as the list, per facet with that facet's own choice removed, so a count and the rows it leads to cannot disagree (code-standard rule 36).
+- [required] Each count is counted the way the list below it counts (design-standard rule 11).
+- [weak] So counts come from the same query function as the list, per facet with that facet's own choice removed, and a count and the rows it leads to cannot disagree.
 - [required] In markup the count is a separate element: `<label><input type="checkbox" name="level" value="error"> Error</label> <span id="c-error">(14)</span>`, tied by `aria-describedby="c-error"` (code-standard rule 15; [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)). In a native `select` the count stays in the option text, the only place it can go.
 - [required] Numbers are formatted with `Intl.NumberFormat` in the page's language ([i18n: *Numbers, dates, plurals and lists*](../../code/i18n.md#numbers-dates-plurals-and-lists)).
 - [required] The total ("42 of 508 findings") is written to a status region present from page load ([accessibility: *Live regions and status messages*](../../code/accessibility.md#live-regions-and-status-messages)).

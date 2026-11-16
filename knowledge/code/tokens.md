@@ -6,7 +6,7 @@ How design tokens reach a stylesheet and how themes and modes switch them: the t
 
 **What good looks like**
 - [moderate] **Components consume semantic tokens only.** A primitive in a component stylesheet is the defect: it is how a system ends up with fourteen greys and no way to theme any of them.
-- [required] A component tier exists only where a component exposes a knob a caller or a variant re-points (code-standard rule 38).
+- [weak] A component tier exists only where a component exposes a knob a caller or a variant re-points; the override itself is a custom property (code-standard rule 38).
 - [required] Every token is named by its design-file path (code-standard rule 52), so a designer and an engineer search for the same word.
 
 **How**

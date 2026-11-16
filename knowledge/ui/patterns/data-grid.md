@@ -27,7 +27,7 @@ When a table becomes a data grid and how to build one: the threshold between the
 - [required] A table is a native `table` with no widget role ([HTML semantics: *Tables for data*](../../code/html-semantics.md#tables-for-data)); its links, checkboxes and row menus are ordinary tab stops.
 - [required] A grid is the same `table` with `role="grid"` added and the full APG grid keyboard behind it ([code accessibility: *Data grids*](../../code/accessibility.md#data-grids)); never the role without the keyboard.
 - [moderate] Occasional edits open the record in a `dialog` or a page ([HTML semantics: *Disclosure, dialogs and popovers*](../../code/html-semantics.md#disclosure-dialogs-and-popovers)), which keeps the table a table.
-- [required] The choice is one component kind per screen: a grid is a behaviour-heavy component, built once and reused (code-standard rule 8, code-standard rule 36).
+- [weak] The choice is one component kind per screen; a grid is a behaviour-heavy component in code-standard rule 8's terms.
 
 **Check**
 - *Script* could: flag `role="grid"` on an element where arrow keys do not move focus between cells, and a grid whose cells hold no editable or interactive content.

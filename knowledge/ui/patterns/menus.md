@@ -7,7 +7,8 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 ## Top menu bar
 
 **Use when / don't use**
-- [required] Use on any site or tool with more than one top-level section, on every page, in the same place with the same items in the same order (WCAG 3.2.3).
+- [required] Navigation repeated across pages keeps its items in the same relative order (WCAG 3.2.3).
+- [weak] Use it on any site or tool with more than one top-level section, on every page, in the same place: the systems' practice (*Sources*), not a WCAG ask.
 - [weak] Use it for destinations. Product-wide utilities (search, help, notifications, account) sit at its right end as a separate group, as Carbon's header does ([Carbon UI shell header](https://carbondesignsystem.com/components/UI-shell-header/usage/)); page actions never sit in it.
 - [weak] Don't use it as a site map: GOV.UK shows "only the most important top-level sections" and says navigation "is not a site map" ([GOV.UK, help users to navigate a service](https://design-system.service.gov.uk/patterns/navigate-a-service/)).
 - [weak] Don't use it where a service is one linear journey; GOV.UK points that case at a task list instead.
@@ -214,7 +215,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - [weak] Don't use it below the mobile collapse width; there the whole bar becomes the Menu button.
 
 **How**
-- [required] **Order:** the bar keeps its order; items leave from the end and enter "More" in the same order, so a section never jumps ahead of another (design-standard rule 2).
+- [weak] **Order:** the bar keeps its order; items leave from the end and enter "More" in the same order, so a section never jumps ahead of another.
 - [weak] **Label:** "More", with a chevron; it opens like any navigation dropdown.
 - [required] **Current item inside "More":** "More" itself is marked as current, and some systems lift the current item into the visible bar; marking "More" and keeping the order means items never swap places as the reader moves (design-standard rule 2).
 - [required] **Measured from the content:** how many fit is measured at run time or decided at fixed widths from the longest labels, never from a device list (code-standard rule 57).
@@ -260,7 +261,7 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - A content site with no menu at all, only "Sign out" → acceptable while the account has one destination; a menu once it has three.
 
 **Accessibility**
-- [required] 1.1.1 (the avatar has a text alternative), 4.1.2, 2.4.7, 3.2.3 (the menu sits in the same place on every page).
+- [required] 1.1.1 (the avatar has a text alternative), 4.1.2, 2.4.7, 3.2.3 (its items keep the same relative order on every page).
 
 **Build**
 - [required] *Elements:* a `button` holding the avatar `img` with `alt` naming the person, or the name as visible text; a `ul` of items (WCAG 1.1.1, 4.1.2).
@@ -273,4 +274,4 @@ One distinction runs through the page: a **navigation menu** is a list of links 
 - *Script:* could open the account menu on each page type and assert it is in the same place, names the account, and ends with "Sign out".
 - *Judgement:* Is everything in this menu about the person, not the product?
 
-**Sources:** Carbon, shadcn, GOV.UK One Login and HMRC as linked. Products differ on top-right versus sidebar footer; one place on every page is WCAG 3.2.3's ask.
+**Sources:** Carbon, shadcn, GOV.UK One Login and HMRC as linked. Products differ on top-right versus sidebar footer; WCAG 3.2.3 asks only that repeated navigation keep the same relative order, so one place on every page is the systems' practice, not the criterion's.

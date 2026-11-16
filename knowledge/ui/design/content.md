@@ -407,7 +407,7 @@ The fundamentals of interface text, for building a page or a design and for audi
 - [strong] No idioms, no directional words, no strings built from fragments.
 - [strong] Dates, numbers and currencies formatted in code.
 
-**How:** write "Access is denied", not "Access denied", where a verb clarifies. Avoid "above", "below", "left", "right" in instructions: they break on reflow, mirror in right-to-left and mean nothing to a screen reader ([Fluent](https://fluent2.microsoft.design/content-design)); name the thing instead. Never concatenate a sentence ("You have " + n + " items"); use whole messages with placeholders and plural rules. Leave room for labels to grow; test with a pseudo-localised build. Currency as a three-letter code where amounts cross borders ([Mailchimp](https://styleguide.mailchimp.com/writing-for-translation/)).
+**How:** write "Access is denied", not "Access denied", where a verb clarifies. Avoid "above", "below", "left", "right" in instructions: they break on reflow, mirror in right-to-left and mean nothing to a screen reader ([Fluent](https://fluent2.microsoft.design/content-design)); name the thing instead. Never concatenate a sentence ("You have " + n + " items"); use whole messages with placeholders and plural rules. Leave room for labels to grow; test with labels lengthened by W3C's short-string factors ([i18n: text expansion](../../code/i18n.md#text-expansion-and-no-fixed-widths-on-text)). Currency as a three-letter code where amounts cross borders ([Mailchimp](https://styleguide.mailchimp.com/writing-for-translation/)).
 
 **Cases:**
 - Help text says "use the button on the right" → "use Export"; on a phone the button is below.
@@ -422,7 +422,7 @@ The fundamentals of interface text, for building a page or a design and for audi
 
 **Check:** *Script* could flag directional words in instructions, an idiom list, "e.g."/"i.e.", currency symbols, `lang` absent or not matching the project's `language`, and sentence concatenation in templates. *Judgement:* is a phrase an idiom the list misses?
 
-**Sources:** Microsoft, Mailchimp and Fluent agree. No opened source gives a text-expansion percentage, so the toolkit gives none; test with pseudo-localisation instead.
+**Sources:** Microsoft, Mailchimp and Fluent agree. Expansion figures come from W3C, quoting IBM's averages ([i18n: text expansion](../../code/i18n.md#text-expansion-and-no-fixed-widths-on-text)).
 
 ---
 

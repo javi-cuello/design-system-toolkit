@@ -233,7 +233,7 @@ How a front end is tested and linted so that a green run means the page works: w
 
 **How**
 - [required] Include the edge values code-standard rule 57 asks a fix to survive: the longest label, one more item, none at all.
-- [weak] Pseudo-localised fixtures exercise text expansion ([i18n](i18n.md)).
+- [moderate] Fixtures lengthen short labels by W3C's short-string expansion factors ([i18n: text expansion](i18n.md#text-expansion-and-no-fixed-widths-on-text)).
 
 **Cases**
 - Every fixture has three short items and a page breaks with forty → add the forty-item and empty fixtures to the module.

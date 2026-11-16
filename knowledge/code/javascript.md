@@ -72,7 +72,7 @@ This is code-standard rule 36 applied: filter, tabs, view toggle, modal opening 
 
 **How**
 - [required] One module per behaviour, initialised from data attributes: `for (const el of document.querySelectorAll('[data-tabs]')) tabs(el);`. The template carries the markup and the hook; the script carries the behaviour (code-standard rule 36).
-- [required] Configuration lives on the element (`data-endpoint`, `data-poll="30"`) rather than in a per-page script block (code-standard rule 36).
+- [weak] Configuration lives on the element (`data-endpoint`, `data-poll="30"`) rather than in a per-page script block (beyond code-standard rule 36).
 - [weak] Before writing a handler, search for one: the roving-focus code a tab set has is the code a toolbar or menu needs.
 
 **Cases**

@@ -528,7 +528,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **Build**
 - [required] Hit areas are transparent shapes or one overlay that maps the pointer to the nearest point, sized from a token, not the mark size (code-standard rule 22, code-standard rule 57).
-- [required] Pointer events, not separate mouse and touch handlers, so one code path serves both (code-standard rule 36).
+- [strong] Pointer events, not separate mouse and touch handlers, so one code path serves mouse, pen and touch ([MDN Pointer events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events)).
 
 **Check**
 - *Script* could: measure each interactive mark's hit area and flag under 24px with intersecting neighbours.

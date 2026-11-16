@@ -70,7 +70,8 @@ How much of a product, in Figma and in code, is built from the system, and how t
 ## Token coverage
 
 **What good looks like**
-- [required] Token coverage is reported as a percentage beside component adoption (figma-standard rule 17), per category (colour, spacing and radius, type), as values bound over values that could have been bound.
+- [required] Token coverage is reported as a percentage (figma-standard rule 17).
+- [strong] It is reported beside component adoption, per category (colour, spacing and radius, type): Figma exposes what is bound per property, Atlassian's lint rule counts by domain and Polaris set its target per category (sources under *How*).
 - [moderate] A zero value, an image or a gradient is not judged: it could never have been a token.
 
 **How**

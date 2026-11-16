@@ -32,7 +32,8 @@ First decide which search it is. **Site search** finds pages across a site or to
 - [required] **Site search**: a `search` element wrapping a GET `form` with an `action` (the results page) and an `input type="search" name="q"`; the snippet is [HTML semantics: *Search and filter forms*](../../code/html-semantics.md#search-and-filter-forms).
 - [moderate] **List search**: the same input inside the list's filter form, so `q` joins the facets in one address; no `search` landmark of its own unless the page has no site search ([HTML semantics: *Landmarks*](../../code/html-semantics.md#landmarks)).
 - [required] Each input's `label` says what it searches; two search landmarks on one page each get a name (code-standard rule 1).
-- [required] The list search's AND with the facets and its recount come from one query function over the form's values, not two filters (code-standard rule 36).
+- [required] The facet counts are recounted within the list search's query, the way the list is (design-standard rule 11).
+- [weak] The list search's AND with the facets and that recount come from one query function over the form's values, not two filters.
 - [required] code-standard rule 15 and code-standard rule 20 apply as the section's Accessibility part says.
 
 **Check**

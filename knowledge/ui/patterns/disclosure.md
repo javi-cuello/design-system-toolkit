@@ -139,7 +139,7 @@ Patterns that hide part of the content until the person asks for it: show more a
 - [weak] **Or an accordion**, when sections are long, independent and most people need one. NN/g's [tabs, used right](https://www.nngroup.com/articles/tabs-used-right/): accordions "are particularly useful on mobile devices, where they work better than tabs due to the limited screen space", and on desktop tabs may be preferable because closed accordions "can make the page seem too empty".
 - [required] **Decide the switch by the content**: tabs that overflow by a label or two keep one row that scrolls, never wrapped or truncated (design-standard rule 3; [tabs](../components/tabs.md#tabs)); when most labels would sit out of view, switch to sections or an accordion. NN/g: hidden tabs in a scrolling tab bar "become less discoverable".
 - [weak] **Each section keeps a heading** that repeats its tab label (GOV.UK: "Include a heading at the beginning of each tab"), so the stacked or accordion form has the same outline.
-- [required] **One source, two presentations**: the same markup renders as tabs at wide widths and sections or accordion at narrow ones; no duplicated content (code-standard rule 36 on one implementation).
+- [weak] **One source, two presentations**: the same markup renders as tabs at wide widths and sections or accordion at narrow ones; no duplicated content (GOV.UK's tabs show the same content stacked without JavaScript and on small screens).
 - [weak] **The selected tab** maps to the open accordion section or the scrolled-to section, so a shared address opens the same content ([ux: state persistence and restore](../design/ux.md#state-persistence-and-restore)).
 
 **Cases**
@@ -158,7 +158,8 @@ Patterns that hide part of the content until the person asks for it: show more a
 - [weak] One markup: headed sections in order. Wide, the script adds the [APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/) roles and keys; narrow, it adds accordion buttons or nothing (stacked) ([accessibility: *Composite widgets and roving tabindex*](../../code/accessibility.md#composite-widgets-and-roving-tabindex)).
 - [weak] Switch on a container query or a `matchMedia` listener tied to the same breakpoint token, tearing down one set of roles before adding the other, so the two semantics never mix ([responsive: *Breakpoints*](../../code/responsive.md#breakpoints)).
 - [weak] The selected tab and the open section are the same fragment (`#reviews`), so one address opens the same content in both forms ([javascript: *State in the address and history*](../../code/javascript.md#state-in-the-address-and-history)).
-- [required] One module owns both presentations (code-standard rule 36); the stacked form is the no-script form (code-standard rule 20).
+- [weak] One module owns both presentations.
+- [required] The stacked form is the no-script form (code-standard rule 20).
 
 **Check**
 - *Script*: tools/ui-check/check.mjs: design-standard rule 3 (tabs keep one row and scroll). Could: at 320px, assert content tabs either fit without truncation or render as sections with headings; assert the same headings exist in both presentations.
