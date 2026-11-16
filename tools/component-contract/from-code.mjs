@@ -258,7 +258,9 @@ export function boundText(content, id, props, args, design, joined = {}) {
   // (effectiveProps' shapes: a drivable prop's code name; a text's { code, fixed }; one no code prop joins, { missing })
   const codeOf = (k) => { const j = joined[k]; return typeof j === 'string' ? j : j && typeof j === 'object' && (j.code || j.arg) ? j.code || j.arg : j && j.missing ? null : k; };
   const sets = (q) => Object.entries((design || {}).props || {}).some(([k, d]) => codeOf(k) === q.code && (d.sets || []).includes(id));
-  return (hits.find(([, q]) => sets(q)) || hits[0] || [])[0];
+  // (one the design sets on other layers only is not this text's: a placed message's own "Label", beside a card's label)
+  const elsewhere = (q) => Object.entries((design || {}).props || {}).some(([k, d]) => codeOf(k) === q.code && (d.sets || []).length && !(d.sets || []).includes(id));
+  return (hits.find(([, q]) => sets(q)) || hits.find(([, q]) => !elsewhere(q)) || [])[0];
 }
 
 export function asShape(x, fa, hasChildren) {

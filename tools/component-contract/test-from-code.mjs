@@ -211,8 +211,10 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
 { const props = { selectedDate: { type: 'string', code: 'selectedDate', sample: 'Label' }, unit: { type: 'string', code: 'unit', sample: 'Label' } };
   const design = { props: { value: { figma: 'Value', sets: ['field/value'] }, suffix: { sets: ['field/suffix'] } } };
   const joined = { value: { code: 'selectedDate', fixed: undefined }, suffix: { code: 'unit', fixed: undefined } };
-  ok('a text two props share words with binds to the one the design sets that layer with, through the mapping\'s joins where code names differ',
+  ok('a text two props share words with binds to the one the design sets that layer with, through the mapping\'s joins where code names differ; one the design sets elsewhere only binds none',
     boundText('Label', 'field/suffix', props, {}, design, joined) === 'unit' && boundText('Label', 'field/value', props, {}, design, joined) === 'selectedDate'
     && boundText('Label', 'field/suffix', { suffix: { type: 'string', code: 'suffix', sample: 'Label' }, value: { type: 'string', code: 'value', sample: 'Label' } }, {}, design) === 'suffix'
-    && boundText('Other', 'field/suffix', props, {}, design, joined) === undefined); }
+    && boundText('Other', 'field/suffix', props, {}, design, joined) === undefined
+    && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, { props: { label: { sets: ['texts/label'] } } }) === undefined
+    && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, null) === 'label'); }
 console.log(`${n}/${n} passed`);
