@@ -118,7 +118,11 @@ function atDefault(x, mains) {
       // a swap at the icon its component draws there (Icon (16): house where the part is Icon/house) is its default too
       if (q && q.type === 'instance' && q.default === undefined) {
         // the icon the main draws there at the instance's own props; a part those props hide, the one any variant draws
-        const part = (q.swaps || [])[0], at = part && (req('./derive.cjs').atProps(main, e.with)[part] || {}).component;
+        const part = (q.swaps || [])[0], M = part && req('./derive.cjs').atProps(main, e.with), at = part && (M[part] || {}).component;
+        // a swap another prop drives the layer for at these props (Icon (20) on a button drawn at xs, whose icon Icon (16)
+        // swaps) draws nothing: Figma keeps its override, which no code can say
+        const key = Object.keys(main.props).find((kk) => main.props[kk] === q);
+        if (part && M[part] && M[part].swappedBy && M[part].swappedBy !== key) return false;
         const drawn = at || (part && ([main.anatomy || {}, ...(main.variants || []).map((v) => v.add || {})].map((a) => a[part]).find((y) => y && y.component) || {}).component);
         return !drawn || (low(drawn) !== low(v) && !low(drawn).endsWith(`/${low(v)}`));
       }

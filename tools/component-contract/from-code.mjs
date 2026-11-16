@@ -57,7 +57,7 @@ import { compareNames, writeReport } from '../shared/output.mjs';
 import { realpathSync } from 'node:fs';
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
-const { expand, variantDefaults } = req('./derive.cjs');
+const { expand, variantDefaults, atProps } = req('./derive.cjs');
 
 /* ---- pure parts ---- */
 
@@ -974,7 +974,10 @@ async function main() {
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
+              // (and a control inside it that is its own, not another instance's, saying it is disabled: an icon button
+              // whose host wraps the <button> that carries it)
               slug: other, attrs: Object.fromEntries([...n.attributes].map((a) => [a.name, a.value])),
+              innerDisabled: !n.hasAttribute('disabled') && [...n.querySelectorAll('button[disabled], input[disabled], select[disabled], textarea[disabled], fieldset[disabled]')].some((m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up)) return false; return true; }),
               // its words, in the order it shows them: each element's own text, where it is drawn
               // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
               // (not one of another instance nested in it, and drawn: seen, not merely present)
@@ -1228,7 +1231,10 @@ async function main() {
           // variant); a flag by its presence. Never class, style or the walk's own marks
           const has = (k, v) => carries(x.attrs, k, v);
           if (axes) for (const [ax, vals] of Object.entries(axes)) {
-            const hit = Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => has(k, v)));
+            const fits = (h) => Object.entries(vals).find(([, a]) => a && Object.keys(a).length && !('pseudo' in a) && Object.entries(a).every(([k, v]) => h(k, v)));
+            // (the host's own attributes first; only where they say none, an inner control's disabled: a loading button
+            // whose <button> is disabled because it is busy stays loading)
+            const hit = fits(has) || (x.innerDisabled ? fits((k, v) => carries({ ...x.attrs, disabled: '' }, k, v)) : undefined);
             const rest = Object.entries(vals).find(([, a]) => a && !Object.keys(a).length);
             if (hit || rest) w[ax] = (hit || rest)[0];
           }
@@ -1242,12 +1248,20 @@ async function main() {
           if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props));
           for (const [p, v] of Object.entries(x.shown || {})) w[p] = v;
           const glyphOf = [];
-          if (fc && x.glyphs && x.glyphs.length) for (const p of Object.values(fc.props)) if (p.type === 'instance' || p.type === 'swap') { w[p.figma] = x.glyphs[0]; glyphOf.push(p.figma); }
+          // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
+          // size, never both; a prop no drawn layer of which it drives is left its default
+          if (fc && x.glyphs && x.glyphs.length) {
+            const M = atProps(fc, w);
+            for (const [k, p] of Object.entries(fc.props)) if (p.type === 'instance' || p.type === 'swap') {
+              const drives = (p.swaps || []).some((l) => M[l] && (M[l].swappedBy ? M[l].swappedBy === k : !Object.entries(fc.props).some(([k2, q]) => k2 !== k && (q.swaps || []).includes(l))));
+              if (drives || !(p.swaps || []).length) { w[p.figma] = x.glyphs[0]; glyphOf.push(p.figma); }
+            }
+          }
           if (Object.keys(w).length) x.with = w;
           // which of them name the glyph it draws: content, which the swap test below sets aside
           if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
         }
-        delete x.slug; delete x.attrs; delete x.glyphs; delete x.texts; delete x.shown;
+        delete x.slug; delete x.attrs; delete x.innerDisabled; delete x.glyphs; delete x.texts; delete x.shown;
         if (x.kind === 'container' && x.full && fa && fa.kind === 'graphic' && fa.shape === 'ellipse' && !raw.some((r) => r.parent === id)) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; }
         // and an empty box where the design draws a rectangle (a divider, a swatch): to-markup writes a shape as an empty
         // element, which draws as a box; it is the shape, its corners its own
@@ -1287,10 +1301,17 @@ async function main() {
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {
+          const raw0 = x.border.width;
           // a width per side where the sides differ: each side's token, 0 where it draws none. The token is the one the code
           // wrote, in a border or in the inset shadow to-code draws a stroke inside the box with (Figma's inside stroke)
           const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width', 'box-shadow:width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width', 'box-shadow:width']);
           x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'box-shadow:colour']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }) };
+          // a line (a shape no wide or no tall): css.mjs draws its stroke as the one edge it has, the leading one, so that
+          // edge is the shape's whole stroke
+          // (no wide: 0, or the edge's own width where a border-box reset counts it in)
+          const raw = Array.isArray(raw0) ? raw0 : [], thin = (n, i) => n === 0 || (typeof n === 'number' && n === raw[i]);
+          const lead = thin(x.width, 3) ? 3 : thin(x.height, 0) ? 0 : -1;
+          if (x.kind === 'graphic' && lead >= 0 && Array.isArray(width) && width.every((v, i) => (i === lead) === !!v)) x.border = { color: x.border.color, width: width[lead] };
         }
         // an outline is the design's focus ring: a stroke-only box stretched past this one by how far the outline's outer
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way

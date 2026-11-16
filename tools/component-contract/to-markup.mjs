@@ -159,17 +159,24 @@ export function partsOf(c) {
   const props = c.props || {};
   const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
   const parts = new Map();
-  for (const [id, e] of Object.entries(c.anatomy || {})) parts.set(id, { id, e, base: true, adds: [], removes: [], pointerOnly: false, rings: [] });
+  for (const [id, e] of Object.entries(c.anatomy || {})) parts.set(id, { id, e, base: true, adds: [], removes: [], pointerOnly: false, rings: [], words: [] });
   for (const v of c.variants || []) {
     const when = v.when || {};
     const byPointer = Object.entries(when).some(([k, x]) => pointer(k, x));
     for (const [id, e] of Object.entries(v.add || {})) {
-      if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [] });
+      if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [], words: [] });
       if (byPointer) { parts.get(id).rings.push(!!ringOf(c, when, id, e, { ...c.anatomy, ...v.add })); continue; }
       parts.get(id).pointerOnly = false;
       parts.get(id).adds.push(when);
+      const at = parts.get(id);
+      if (at.base && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) && (e.content !== at.e.content || at.words.length)) at.words.push([when, e.content]);
     }
     for (const id of v.remove || []) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
+    // words a variant sets on a base text (a label's * that reads Optional where it is not required)
+    if (!byPointer) for (const [k, w] of Object.entries(v.set || {})) {
+      const m = /^(.+)\.content$/.exec(k), at = m && parts.get(m[1]);
+      if (at && at.base && typeof w === 'string' && !/^\{.*\}$/.test(w) && (w !== at.e.content || at.words.length)) at.words.push([when, w]);
+    }
   }
   for (const part of parts.values()) {
     // a ring where to-code makes it the ringed element's outline at every focus that draws it (to-code's ringOf, the one rule)
@@ -270,7 +277,25 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const nameAttr = (id) => { const nm = ((parts.get(id) || {}).e || {}).name; return nm ? [['data-figma-name', { lit: nm }]] : []; };
   const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id)];
   const named = (key) => props.find((x) => x.key === key);
-  const textOf = (id, e) => { const x = props.find((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id)); return x ? { code: ref(x.name) } : { lit: e.content || '' }; };
+  // the code that holds at a variant's props (null: never in markup; 'true': always)
+  const testOf = (when) => {
+    const out = [];
+    for (const [k, v] of Object.entries(when)) {
+      const x = props.find((y) => y.key === k);
+      if (!x) { if (v !== ((c.props || {})[k] || {}).default) return null; continue; }
+      out.push(typeof v === 'boolean' ? (v ? ref(x.name) : `!${ref(x.name)}`) : `${ref(x.name)} === ${lang.str(v)}`);
+    }
+    return out.length ? out.join(' && ') : 'true';
+  };
+  // a text's words: its property's, else its own, else, where a variant puts it back with other words (a label's * that
+  // reads Optional when not required), those there, the later variant first
+  const textOf = (id, e, words = []) => {
+    const x = props.find((y) => y.type === 'string' && !y.input && (y.p.sets || []).includes(id));
+    if (x) return { code: ref(x.name) };
+    let code = lang.str(e.content || ''), any = false;
+    for (const [when, w] of words) { const t = testOf(when); if (!t) continue; code = t === 'true' ? lang.str(w) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${lang.str(w)} : ${any ? `(${code})` : code}`; any = true; }
+    return any ? { code } : { lit: e.content || '' };
+  };
   const busy = props.find((x) => x.busy && x.busy.length);
   const busyCode = busy && busy.busy.map((v) => `${ref(busy.name)} === ${lang.str(v)}`).join(' || ');
   const node = (part, holds, fill = false) => {
@@ -323,16 +348,6 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (a combination is drawn alone, the first that holds: one that holds and states nothing here still shadows the next,
       // so the layers below it give the value there)
       const combos = vs.filter((v) => v.combination).map(stated), varied = vs.filter((v) => !v.combination).reverse().map(stated).filter(({ sets }) => sets.size);
-      const testOf = (when) => {
-        const out = [];
-        for (const [k, v] of Object.entries(when)) {
-          const x = props.find((y) => y.key === k);
-          if (!x) { if (v !== ((c.props || {})[k] || {}).default) return null; continue; }
-          out.push(typeof v === 'boolean' ? (v ? ref(x.name) : `!${ref(x.name)}`) : `${ref(x.name)} === ${lang.str(v)}`);
-        }
-        // null: never holds in markup; 'true': always does
-        return out.length ? out.join(' && ') : 'true';
-      };
       const litCode = (l) => (l === undefined ? (lang.php ? 'null' : 'undefined') : typeof l === 'boolean' || typeof l === 'number' ? String(l) : lang.str(String(l)));
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const figs = [...new Set([...Object.keys(e.with || {}), ...[...combos, ...varied].flatMap(({ sets }) => [...sets])])];
@@ -389,7 +404,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     } else if (e.kind === 'graphic') {
       out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (e.kind === 'text') {
-      out = { tag, attrs: hook(id), children: [textOf(id, e)] };
+      out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
     } else {
       out = { tag, attrs: hook(id), children: (kids.get(id) || []).map((k) => node(k, known, fill)).filter(Boolean) };
     }

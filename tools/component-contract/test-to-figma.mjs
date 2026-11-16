@@ -245,6 +245,11 @@ delete globalThis.figma;
   ok('a swap at the icon its component draws there is unstated; another icon is stated', roundTrip(holder({ Icon: 'house' }), holder(null), { mains: (n) => (n === 'Button' ? iconed : null) }).rows.length === 0 && roundTrip(holder({ Icon: 'x' }), holder(null), { mains: (n) => (n === 'Button' ? iconed : null) }).rows.length === 1);
   const sized = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/house' } }, variants: [{ when: { size: 'xs' }, set: { 'i.component': 'Icon/star' } }] };
   ok('a swap is held to the icon drawn at the instance\'s own props: house at xs, where xs draws star, is stated', roundTrip(holder({ Size: 'xs', Icon: 'house' }), holder({ Size: 'xs' }), { mains: (n) => (n === 'Button' ? sized : null) }).rows.length === 1);
+  const twoSwaps = { component: 'Button', props: { size: { type: 'enum', values: ['lg', 'xs'], figmaValues: ['lg', 'xs'], default: 'lg', figma: 'Size' }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['i'] }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['i'] } },
+    anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/plus', swappedBy: 'icon20' } }, variants: [{ when: { size: 'xs' }, set: { 'i.swappedBy': 'icon16' } }] };
+  ok('a swap another prop drives the layer for at the instance\'s props draws nothing and is not compared; the one that drives it is', (() => { const m = { mains: (n) => (n === 'Button' ? twoSwaps : null) };
+    return roundTrip(holder({ Size: 'xs', 'Icon (20)': 'x', 'Icon (16)': 'x' }), holder({ Size: 'xs', 'Icon (16)': 'x' }), m).rows.length === 0
+      && roundTrip(holder({ Size: 'xs', 'Icon (16)': 'x' }), holder({ Size: 'xs', 'Icon (16)': 'house' }), m).rows.length === 1; })());
   ok('a text at its default is unstated only as written: NEW is not the default New', roundTrip(holder({ Label: 'NEW' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 1 && roundTrip(holder({ Label: 'New' }), holder(null), { mains: (n) => (n === 'Button' ? tagged : null) }).rows.length === 0);
 }
 

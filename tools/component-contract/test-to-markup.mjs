@@ -463,6 +463,19 @@ else {
   // a narrower removal stacked on the put-back still takes it away
   const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
   ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));
+  // a part a variant puts back with other words says those there, the later variant over the earlier
+  { const lab = { contract: 1, component: 'Lab', props: { required: { type: 'boolean', default: true, figma: 'Required' }, compact: { type: 'boolean', default: false, figma: 'Compact' } },
+      anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },
+      variants: [{ when: { required: false }, add: { mark: { kind: 'text', parent: 'root', content: 'Optional' } } }, { when: { required: false, compact: true }, add: { mark: { kind: 'text', parent: 'root', content: 'Opt.' } } }] };
+    const r = toReact(lab, 'lab', { naming: CLASS, library: { Lab: { ...lab, folder: 'lab' } } }), php = toSnippet(lab, 'lab', { naming: CLASS, library: { Lab: { ...lab, folder: 'lab' } } });
+    ok('a part a variant puts back with other words says them there, the later variant first', /\(!required && compact\) \? "Opt\." : \(!required \? "Optional" : "\*"\)/.test(r) && /: \(!\$required \? 'Optional' : '\*'\)/.test(php)); }
+  { const lab2 = { contract: 1, component: 'Lab', props: { required: { type: 'boolean', default: true, figma: 'Required' }, small: { type: 'boolean', default: false, figma: 'Small' } },
+      anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },
+      variants: [{ when: { required: false }, add: { mark: { kind: 'text', parent: 'root', content: 'Optional' } } }, { when: { required: false, small: true }, add: { mark: { kind: 'text', parent: 'root', content: '*' } } }] };
+    ok('a later variant that gives a part its own words back says them over an earlier one\'s', /\(!required && small\) \? "\*" : \(!required \? "Optional" : "\*"\)/.test(toReact(lab2, 'lab', { naming: CLASS, library: { Lab: { ...lab2, folder: 'lab' } } }))); }
+  { const lab3 = { contract: 1, component: 'Lab', props: { required: { type: 'boolean', default: true, figma: 'Required' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },
+      variants: [{ when: { required: false }, set: { 'mark.content': 'Optional' } }] };
+    ok('words a variant sets on a base text are said there', /!required \? "Optional" : "\*"/.test(toReact(lab3, 'lab', { naming: CLASS, library: { Lab: { ...lab3, folder: 'lab' } } }))); }
   // a snippet's nested choice is bracketed (PHP 8 refuses it bare), and no value is the language's null
   const php = toSnippet(lib.Row, 'row', { naming: KIRBY, library: lib });
   const phpFile = path.join(os.tmpdir(), `row-${process.pid}.php`); fs.writeFileSync(phpFile, php);
