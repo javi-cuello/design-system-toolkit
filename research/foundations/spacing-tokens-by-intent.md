@@ -105,10 +105,10 @@ The counter-story is Carbon. Before v11 it had a second scale, `$layout-01` to `
 
 > **Aside.** Every Layout and Braid argue for fewer role tokens from the code side: components carry no outer space, and layout components (`Stack`, `Inline`, `Box`) own every gap. Braid ships exactly one role name, `gutter` (24px). Both approaches separate inset from gap; one does it with token names, the other with component boundaries. They combine well, as [space in layouts](#space-in-layouts) shows.
 
-Here is the worked case, with the scene's phone layout. Your cards are padded 24px and should drop to 16px on phones, as the [responsive spacing](#responsive-spacing) table has it; nothing else should move.
+Here is the worked case, on a roomier version of the scene where every container is padded 24px (`space-600`) instead of 16. Your cards are padded 24px and should drop to 16px on phones, as the [responsive spacing](#responsive-spacing) table has it; nothing else should move.
 
 ```css
-/* Primitives: the change has to find every space-400 that pads a card */
+/* Primitives: the change has to find every space-600 that pads a card */
 .card     { padding: var(--space-600); }
 .row      { padding: var(--space-600); }
 .field    { margin-block-end: var(--space-600); }
