@@ -119,6 +119,21 @@ ok('inside a layer a boolean adds, its children keep their own names, and the bo
   (() => { const n = derive(nested); return n.props.leftIcon.shows.join() === 'leftIconIconContainer' && 'leftIconIconContainer/icon' in n.variants[0].add && selfCheck(nested, n).length === 0; })());
 ok('a boolean on by default shows the layers its flip hides', oc.props.rightIcon.default === true && oc.props.rightIcon.shows.join() === 'content/icon');
 
+// a text property whose layer a boolean hides in the default variant takes its words from a variant that shows it
+const hiddenWords = { name: 'Item', props: { Caption: 'TEXT', 'Show caption': 'BOOLEAN', Size: ['M'] },
+  links: { Caption: { kind: 'characters', layers: [['Caption']] } },
+  variants: [T('Size=M', [text('Go')]), T('Size=M, Show caption=True', [text('Go'), text('Hint', 'Caption')])] };
+ok('a text property hidden in the default variant takes its default from the variant that shows it', derive(hiddenWords).props.caption.default === 'Hint');
+
+// …and only from a variant where the property drives that layer: elsewhere the layer keeps its own words
+const boundIn = { ...hiddenWords, props: { ...hiddenWords.props, Size: ['M', 'S', 'L'] }, links: { Caption: { kind: 'characters', layers: [['Caption']], variants: ['Size=L'] } },
+  variants: [T('Size=M', [text('Go')]), T('Size=S', [text('Go'), text('Small', 'Caption')]), T('Size=L', [text('Go'), text('Hint', 'Caption')])] };
+ok('a text default skips a variant where its property does not drive the layer', derive(boundIn).props.caption.default === 'Hint');
+
+// …the default variant included: where the property does not drive its layer there, the layer's own words are no default
+const unboundAtDefault = { ...boundIn, variants: [T('Size=M', [text('Go'), text('Pick one', 'Caption')]), T('Size=S', [text('Go'), text('Small', 'Caption')]), T('Size=L', [text('Go'), text('Hint', 'Caption')])] };
+ok('a text default is not the default variant\'s own words where the property does not drive that layer', derive(unboundAtDefault).props.caption.default === 'Hint');
+
 const twoLabels = { name: 'Card', props: { Title: 'TEXT', Subtitle: 'TEXT', Size: ['M'] },
   links: { Title: { kind: 'characters', layers: [['Header', 'Label']] }, Subtitle: { kind: 'characters', layers: [['Header', 'Label[2]']] } },
   variants: [T('Size=M', [{ name: 'Header', type: 'FRAME', children: [text('T'), text('S')] }])] };

@@ -238,8 +238,15 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
   const gone = any(no);
   const wrap = (x) => (/^!?[\w$]+$/.test(x) ? x : `(${x})`);
   const not = (x) => (/^![\w$]+$/.test(x) ? x.slice(1) : `!${wrap(x)}`);
-  const cond = gone === 'false' ? add : gone === 'true' ? 'false' : add === 'true' ? not(gone) : add === 'false' ? 'false' : `${wrap(add)} && ${not(gone)}`;
-  return { when: cond === 'true' ? null : cond, unknown, known: { yes: new Set([...known.yes, add]), no: new Set([...known.no, ...no]) } };
+  let cond = gone === 'false' ? add : gone === 'true' ? 'false' : add === 'true' ? not(gone) : add === 'false' ? 'false' : `${wrap(add)} && ${not(gone)}`;
+  // a base part one variant takes away and a later one puts back (a bar's menu gone at sm, back at sm with end): drawn
+  // there too, but for a narrower removal stacked on it (gone again at sm, end and loading)
+  const narrower = (w) => part.removes.filter((r) => Object.keys(r).length > Object.keys(w).length && Object.entries(w).every(([k, v]) => r[k] === v));
+  const backs = !part.base ? [] : part.adds.flatMap((w) => { const [t] = terms([w]); if (!t) return []; const rs = terms(narrower(w)); return [rs.length ? `${wrap(t)} && ${not(any(rs))}` : t]; });
+  const back = any(backs);
+  if (back !== 'false' && cond !== 'true') cond = cond === 'false' || back === 'true' ? back : `${wrap(cond)} || ${wrap(back)}`;
+  // (a removal it is put back over rules nothing out for its children: they keep their own)
+  return { when: cond === 'true' ? null : cond, unknown, known: { yes: new Set([...known.yes, add]), no: new Set([...known.no, ...(back === 'false' ? no : [])]) } };
 }
 
 /* The tree, built once for both frameworks: each element as a tag, its attributes (a literal, or code) and its

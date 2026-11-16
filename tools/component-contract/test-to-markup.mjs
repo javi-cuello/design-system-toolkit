@@ -453,6 +453,16 @@ else {
   // a layer at a prop code has no name for, at its default, always holds in the markup: it ends the choice
   const always = { ...lib.Row, variants: [{ when: { on: true }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { state: 'rest' }, set: { 'check.with': { Selected: 'True', Tone: 'Plain' } } }] };
   ok('a layer that always holds in the markup outranks what came before it', /selected=\{true\}/.test(toReact(always, 'row', { naming: CLASS, library: { ...lib, Row: always } })) && !/tone=\{on/.test(toReact(always, 'row', { naming: CLASS, library: { ...lib, Row: always } })));
+  // a base part one variant takes away and a later one puts back is drawn there too
+  const bar = { contract: 1, component: 'Bar', props: { sm: { type: 'boolean', default: false, figma: 'Sm' }, end: { type: 'boolean', default: false, figma: 'End' } }, anatomy: { root: { kind: 'container' }, menu: { kind: 'container', parent: 'root' } },
+    variants: [{ when: { sm: true }, remove: ['menu'] }, { when: { sm: true, end: true }, add: { menu: { kind: 'container', parent: 'root' } } }] };
+  ok('a base part a later variant puts back is drawn where it does', /\(?!sm\)? \|\| \(sm && end\)/.test(toReact(bar, 'bar', { naming: CLASS, library: { Bar: { ...bar, folder: 'bar' } } })));
+  // its child the later variant does not put back keeps its own removal
+  const bar2 = { ...bar, anatomy: { ...bar.anatomy, 'menu/badge': { kind: 'container', parent: 'menu' } }, variants: [{ when: { sm: true }, remove: ['menu', 'menu/badge'] }, bar.variants[1]] };
+  ok('a child of a part put back, that is not put back itself, stays taken away', /\{!sm && \(\s*<div className="ds-bar__badge"/.test(toReact(bar2, 'bar', { naming: CLASS, library: { Bar: { ...bar2, folder: 'bar' } } })));
+  // a narrower removal stacked on the put-back still takes it away
+  const bar3 = { ...bar, props: { ...bar.props, busy: { type: 'boolean', default: false, figma: 'Busy' } }, variants: [...bar.variants, { when: { sm: true, end: true, busy: true }, remove: ['menu'] }] };
+  ok('a removal narrower than a put-back still takes the part away', /\(sm && end\) && !\(sm && end && busy\)/.test(toReact(bar3, 'bar', { naming: CLASS, library: { Bar: { ...bar3, folder: 'bar' } } })));
   // a snippet's nested choice is bracketed (PHP 8 refuses it bare), and no value is the language's null
   const php = toSnippet(lib.Row, 'row', { naming: KIRBY, library: lib });
   const phpFile = path.join(os.tmpdir(), `row-${process.pid}.php`); fs.writeFileSync(phpFile, php);
