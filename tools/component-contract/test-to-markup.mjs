@@ -427,4 +427,37 @@ else {
   } finally { await browser.close(); await site.close(); }
 }
 
+// a value a variant sets on a placed component goes with this component's props: a flag that follows one is that prop,
+// any other a choice by them; a variant at a prop code has no name for leaves the base's
+{
+  const check = { contract: 1, component: 'Check', props: { selected: { type: 'boolean', default: false, figma: 'Selected' }, tone: { type: 'enum', values: ['plain', 'loud'], figmaValues: ['Plain', 'Loud'], default: 'plain', figma: 'Tone' } }, anatomy: { root: { kind: 'container' } }, variants: [{ when: { tone: 'loud' }, set: { 'root.background': 'C/loud' } }] };
+  const row = { contract: 1, component: 'Row', props: { on: { type: 'boolean', default: false, figma: 'On' }, size: { type: 'enum', values: ['s', 'l'], figmaValues: ['S', 'L'], default: 's', figma: 'Size' }, state: { type: 'enum', role: 'interaction', values: ['rest', 'hover'], figmaValues: ['Rest', 'Hover'], default: 'rest', figma: 'State', pointer: ['hover'] } },
+    anatomy: { root: { kind: 'container' }, check: { kind: 'instance', parent: 'root', component: 'Check', with: { Selected: 'False', Tone: 'Plain' } } },
+    variants: [{ when: { size: 'l' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { state: 'hover' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { on: true }, set: { 'check.with': { Selected: 'True', Tone: 'Plain' } } }] };
+  const lib = { Check: { ...check, folder: 'check' }, Row: { ...row, folder: 'row' } };
+  const r = toReact(lib.Row, 'row', { naming: CLASS, library: lib }), w = toElement(lib.Row, 'row', { naming: ELEMENT, library: lib });
+  ok('a flag a variant sets on a placed component follows the prop that sets it', /<Check [^>]*selected=\{on\}/.test(r) && /renderCheck\(\{ selected: on,/.test(w));
+  ok('any other value a variant sets is a choice by the props, a later layer first, the base\'s elsewhere, and a pointer state\'s is not the markup\'s', /tone=\{on \? "plain" : \(\(size === "l"\) \? "loud" : "plain"\)\}/.test(r) && !/state ===/.test(r));
+  // overlapping variants resolve as the props do: a later one over an earlier, so a pair outranks the one it narrows, and
+  // one that gives back the base's value still outranks what it follows
+  const pair = { ...lib.Row, variants: [{ when: { size: 'l' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { size: 'l', on: true }, set: { 'check.with': { Selected: 'False', Tone: 'Plain' } } }] };
+  const rp = toReact(pair, 'row', { naming: CLASS, library: { ...lib, Row: pair } });
+  ok('a later variant outranks an earlier one it overlaps, even one that gives back the base\'s value', /tone=\{\(size === "l" && on\) \? "plain" : \(\(?size === "l"\)? \? "loud" : "plain"\)\}/.test(rp));
+  // a combination is drawn alone, the first that holds: one stating nothing here still shadows a later one that does
+  const combo = { ...lib.Row, variants: [{ when: { on: true }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { size: 'l' }, combination: true, set: { 'root.opacity': 0.5 } }, { when: { size: 'l', on: true }, combination: true, set: { 'check.with': { Selected: 'True', Tone: 'Loud' } } }] };
+  const rc = toReact(combo, 'row', { naming: CLASS, library: { ...lib, Row: combo } });
+  ok('a combination that holds and states nothing on a placed component shadows a later one that does', /selected=\{\(?size === "l"\)? \? false : \(\(?size === "l" && on\)? \? true : false\)\}/.test(rc));
+  // a layer's with replaces the one before it whole: what it leaves out is the placed component's default there
+  const cleared = { ...lib.Row, variants: [{ when: { size: 'l' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { on: true }, set: { 'check.with': { Selected: 'True' } } }] };
+  ok('a later layer\'s with that leaves a prop out gives that prop back to the placed component\'s default', /tone=\{on \? undefined : \(\(size === "l"\) \? "loud" : "plain"\)\}/.test(toReact(cleared, 'row', { naming: CLASS, library: { ...lib, Row: cleared } })));
+  // a layer at a prop code has no name for, at its default, always holds in the markup: it ends the choice
+  const always = { ...lib.Row, variants: [{ when: { on: true }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { state: 'rest' }, set: { 'check.with': { Selected: 'True', Tone: 'Plain' } } }] };
+  ok('a layer that always holds in the markup outranks what came before it', /selected=\{true\}/.test(toReact(always, 'row', { naming: CLASS, library: { ...lib, Row: always } })) && !/tone=\{on/.test(toReact(always, 'row', { naming: CLASS, library: { ...lib, Row: always } })));
+  // a snippet's nested choice is bracketed (PHP 8 refuses it bare), and no value is the language's null
+  const php = toSnippet(lib.Row, 'row', { naming: KIRBY, library: lib });
+  const phpFile = path.join(os.tmpdir(), `row-${process.pid}.php`); fs.writeFileSync(phpFile, php);
+  let lint = ''; try { lint = execFileSync('php', ['-l', phpFile], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { lint = `${e.stdout || ''}${e.stderr || ''}` || 'no php'; }
+  ok('a snippet that passes a placed component a value its variants choose is PHP that parses', /No syntax errors/.test(lint) || /no php/.test(lint) && !/undefined/.test(php));
+}
+
 console.log(`${n} passed`);

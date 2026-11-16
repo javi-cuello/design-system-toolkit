@@ -288,15 +288,66 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       out = { tag, attrs: [...hook(id), ...(slot.slot === id ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
     } else if (e.kind === 'instance') {
       const placed = library[e.component], theirs = propsOf(placed, library, lang, settings);
-      const given = Object.entries(e.with || {}).map(([fig, v]) => {
+      const valueOf = (fig, v, w = e.with || {}) => {
         const x = theirs.find((y) => (y.figmas || [y.p.figma]).includes(fig));
         if (!x) return null;
+        if (v === undefined) return [x.name, { lit: undefined }];
         // Figma's word for it ("False", "Secondary") as the placed component's own value in code; a pointer state the browser's
         if (x.type === 'boolean') return [x.name, { lit: v === true || /^true$/i.test(String(v)) }];
         // a placed field's Value is its input's first text, and only where the instance is drawn holding one
-        if (x.type === 'value') { const f = entryOf(placed), on = f && (e.with || {})[(placed.props[f.flag] || {}).figma]; return f && String(on).toLowerCase() === String(f.on) ? [jsx ? 'defaultValue' : 'value', { lit: v }] : null; }
+        if (x.type === 'value') { const f = entryOf(placed), on = f && w[(placed.props[f.flag] || {}).figma]; return f && String(on).toLowerCase() === String(f.on) ? [jsx ? 'defaultValue' : 'value', { lit: v }] : null; }
         const i = (x.p.figmaValues || []).indexOf(v), lit = i >= 0 ? x.p.values[i] : v;
         return x.type === 'enum' && !x.values.includes(lit) ? null : [x.name, { lit }];
+      };
+      // a value a variant sets on the placed component (a selected list item selects its checkbox): the value at each of
+      // those props, the base's elsewhere, said by this component's props; a variant at a prop code has no name for (a
+      // pointer state) is the stylesheet's, not the markup's
+      // each variant that states the instance's props (a whole `with`, one of them, or the `with` it adds the instance
+      // with), in the order the props resolve them (expand: later layers over earlier, a combination's last): the first of
+      // this list that holds wins
+      // (a layer's `with` replaces the one before it whole, as expand applies it: a prop it leaves out is the placed
+      // component's default there)
+      const stated = (v) => {
+        const whole = (v.set || {})[`${id}.with`] ?? ((v.add || {})[id] || {}).with;
+        if (!whole || typeof whole !== 'object') return { when: v.when || {}, w: {}, sets: new Set() };
+        return { when: v.when || {}, w: whole, sets: new Set([...Object.keys(e.with || {}), ...Object.keys(whole)]) };
+      };
+      const vs = c.variants || [];
+      // (a combination is drawn alone, the first that holds: one that holds and states nothing here still shadows the next,
+      // so the layers below it give the value there)
+      const combos = vs.filter((v) => v.combination).map(stated), varied = vs.filter((v) => !v.combination).reverse().map(stated).filter(({ sets }) => sets.size);
+      const testOf = (when) => {
+        const out = [];
+        for (const [k, v] of Object.entries(when)) {
+          const x = props.find((y) => y.key === k);
+          if (!x) { if (v !== ((c.props || {})[k] || {}).default) return null; continue; }
+          out.push(typeof v === 'boolean' ? (v ? ref(x.name) : `!${ref(x.name)}`) : `${ref(x.name)} === ${lang.str(v)}`);
+        }
+        // null: never holds in markup; 'true': always does
+        return out.length ? out.join(' && ') : 'true';
+      };
+      const litCode = (l) => (l === undefined ? (lang.php ? 'null' : 'undefined') : typeof l === 'boolean' || typeof l === 'number' ? String(l) : lang.str(String(l)));
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const figs = [...new Set([...Object.keys(e.with || {}), ...[...combos, ...varied].flatMap(({ sets }) => [...sets])])];
+      // (a choice that always holds ends the chain: what follows it is never reached)
+      const chain = (all, end) => { const k0 = all.findIndex(([t]) => t === 'true'), alts = k0 < 0 ? all : all.slice(0, k0), last = k0 < 0 ? end : (typeof all[k0][1] === 'string' ? all[k0][1] : litCode(all[k0][1][1].lit)); return alts.reduceRight((acc, [t, g], k) => `${/^[\w$!.]+$/.test(t) ? t : `(${t})`} ? ${typeof g === 'string' ? (/\?/.test(g) ? `(${g})` : g) : litCode(g[1].lit)} : ${k === alts.length - 1 && !/\?/.test(acc) ? acc : `(${acc})`}`, last); };
+      const given = figs.map((fig) => {
+        const base = fig in (e.with || {}) ? valueOf(fig, e.with[fig]) : null, at0 = base ? base[1].lit : undefined;
+        // (each as its value in code, so Figma's "False" and false are one value)
+        let alts = varied.filter(({ sets }) => sets.has(fig)).map(({ when, w }) => [testOf(when), valueOf(fig, w[fig], w)]).filter(([t, g]) => t && g);
+        // one that gives the base's value matters only where one after it, which it outranks, gives another
+        alts = alts.filter(([, g], k) => !same(g[1].lit, at0) || alts.slice(k + 1).some(([, h]) => !same(h[1].lit, at0)));
+        // the combinations first, up to the last that states this one: each that holds gives its value, or the layers' below
+        const lastCombo = combos.map(({ sets }) => sets.has(fig)).lastIndexOf(true);
+        const gate = combos.slice(0, lastCombo + 1).map(({ when, w, sets }) => [testOf(when), sets.has(fig) ? valueOf(fig, w[fig], w) : null]).filter(([t, g]) => t && (g || g === null));
+        if (!alts.length && !gate.some(([, g]) => g)) return base;
+        const name = (base || (alts[0] || [])[1] || gate.find(([, g]) => g)[1])[0];
+        // a flag that follows this component's own: the test itself
+        if (!gate.length && alts.length === 1 && alts[0][1][1].lit === true && (at0 === false || at0 === undefined)) return [name, { code: alts[0][0] }];
+        // nested choices bracketed, as PHP 8 requires
+        const below = chain(alts, litCode(at0));
+        const code = gate.length ? chain(gate.map(([t, g]) => [t, g || below]), below) : below;
+        return [name, { code }];
       }).filter(Boolean);
       // one icon for a swap Figma keeps per size: the one the instance draws (its glyph's own name, where its insides are
       // stated), else the swap its component draws that part by at the instance's props (Size xs: Icon (16)), else the first
