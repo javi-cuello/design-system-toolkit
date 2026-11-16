@@ -115,7 +115,7 @@ A label names a form field: the words above a text field or select, or beside a 
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
-- [required] The `Label` component has `Necessity` then `Disabled` (`False` first); it has no `State` axis, since it takes no focus of its own (figma-standard rules 1 and 35).
+- [required] The `Label` component has `Necessity` and no state axis: no `State`, since it takes no focus of its own, and no `Disabled`, since a nested label is exposed on the field and its axis would show there as a toggle a designer could set apart from the field's (figma-standard rules 7 and 35).
 - [required] A field owns its label's state: its own `Disabled=True` dims the label and the description, and a designer never sets them apart (figma-standard rule 7).
 - [moderate] No error variant on the label; error lives on the field's `Validation` axis and its message ([Label: *How*](#label)).
 
