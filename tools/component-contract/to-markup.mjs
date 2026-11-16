@@ -300,7 +300,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const swapped = (w) => xs.find((y) => `{${y.key}}` === w);
       const first = xs.find((y) => `{${y.key}}` === e.content) || xs.find((y) => !words.some(([, w]) => swapped(w) === y)) || xs[0];
       let code = ref(first.name);
-      for (const [when, w] of words) { const y = swapped(w), t = y && testOf(when); if (!t) continue; code = t === 'true' ? ref(y.name) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${ref(y.name)} : ${code}`; }
+      let nested = false;
+      for (const [when, w] of words) { const y = swapped(w), t = y && testOf(when); if (!t) continue; code = t === 'true' ? ref(y.name) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${ref(y.name)} : ${nested ? `(${code})` : code}`; nested = true; }
       return { code };
     }
     let code = lang.str(e.content || ''), any = false;
@@ -325,7 +326,16 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     let out;
     if (icon || (e.kind === 'instance' && !library[e.component])) {
       gaps.push(`${partName(id)}: draw the icon ${icon ? `its ${icon.name} names` : e.component}, as the project draws icons`);
-      out = { tag: 'span', attrs: [...hook(id), ['data-icon', icon ? { code: ref(icon.name) } : { lit: e.component }], ['aria-hidden', { lit: 'true' }]], children: [] };
+      // the glyph a variant changes (an alert's error icon): the one its condition draws, else the part's own
+      let glyph = icon ? { code: ref(icon.name) } : { lit: e.component };
+      if (!icon) for (const v of c.variants || []) {
+        const g = (v.set || {})[`${id}.component`], t = typeof g === 'string' && !library[g] && testOf(v.when);
+        if (!t) continue;
+        // (a nested choice bracketed: PHP 8 refuses an unbracketed one)
+        const prev = glyph.code ? `(${glyph.code})` : lang.str(glyph.lit);
+        glyph = { code: t === 'true' ? lang.str(g) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${lang.str(g)} : ${prev}` };
+      }
+      out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       out = { tag, attrs: [...hook(id), ...(slot.slot === id ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };

@@ -952,8 +952,23 @@ async function main() {
         if (Object.keys(sub).length < n) wholeIn.add(id);
       }
     }
+    // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.
+    // Joined by name, as the code's props are the design's on the toolkit's own render; a project's own names that
+    // differ fall back to the base room, as before
+    const roomOf = (args) => {
+      if (!figmaContract) return room;
+      const combo = {};
+      for (const [k, q] of Object.entries(props)) {
+        const d = figmaContract.props[k];
+        if (!d || !q.code || args[q.code] === undefined) continue;
+        combo[k] = d.type === 'enum' ? (d.values || []).find((w) => String(w).toLowerCase() === String(args[q.code]).toLowerCase()) ?? args[q.code] : args[q.code];
+      }
+      const r = expand(figmaContract, { ...variantDefaults(figmaContract), ...combo }).root || {};
+      return typeof r.width === 'number' ? r.width : r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? r.canvas.width : room;
+    };
     const read = async (args) => {
       await show(args);
+      const room = roomOf(args);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
         let root = document.querySelector(sel); if (!root) return;
         const holder = document.querySelector(container);
@@ -1054,7 +1069,10 @@ async function main() {
               // each boolean that shows a layer: whether that layer is drawn in it, found where its own mapping places it
               // (not one of another instance nested in it, and drawn: seen, not merely present)
               shown: Object.fromEntries(Object.entries(shownSel[other] || {}).map(([p, q]) => {
-                const own = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up)) return false; return true; };
+                // (a layer that is itself a placed component is reached through its host, `[data-part=button] > button`:
+                // that host is the layer's own, not another instance's)
+                const host = q.replace(/\s*>\s*[a-z][a-z0-9-]*\s*$/i, '');
+                const own = (m) => { for (let up = m.parentElement; up && up !== n; up = up.parentElement) if (isRoot(up) && !(up === m.parentElement && host !== q && up.matches(host))) return false; return true; };
                 const seen = (m) => { const cs = getComputedStyle(m); return m.getClientRects().length && cs.visibility !== 'hidden' && +cs.opacity > 0; };
                 return [p, [...n.querySelectorAll(q)].some((m) => own(m) && seen(m))];
               })),
@@ -1534,12 +1552,16 @@ async function main() {
     }
     // read once more after: a combination still not rebuilt is a defect of the contract, reported
     const stillUnread = unread.filter(([when, got]) => Object.keys(delta(expand(fromCode, { ...allDefaults, ...when }), got, base)).length).map(([w]) => JSON.stringify(w));
-    // and the check reads what built nothing at all: every four-prop combination, which the layers, pairs
-    // and three-prop combinations must predict; one they do not is a defect of the contract, reported
+    // and every four-prop combination, which the layers, pairs and three-prop combinations must predict: what four
+    // do beyond them is a layer of its own, as three's is (a loading button's icon colour at a size, a hierarchy and
+    // a feedback), so the reading rebuilds it
+    // (counted and said with the self-check: layers kept from one read each, not a check passed)
+    let fourLayers = 0;
     for (const four of combos(4)) {
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
-      if (Object.keys(delta(expand(fromCode, { ...allDefaults, ...when }), got, base)).length) stillUnread.push(JSON.stringify(when));
+      const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
+      if (Object.keys(d).length) { variants.push({ when, ...d }); fourLayers++; }
     }
 
     // self-check, as derive.cjs's: every render rebuilt by expand(), and every unread one predicted
@@ -1957,7 +1979,7 @@ async function main() {
     const propsCompare = figmaContract ? compareProps(figmaContract, side.map, side.code, side.framework, side.fw || {}) : [];
     // a check that read nothing the layers were not built from cannot fail: said, not passed
     const heldOut = combos(4).length;
-    const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} four-prop combination(s) among them that built nothing` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
+    const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} four-prop combination(s) among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
       ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed, contract: fromCode, asFigma: shaped.contract };
     const out = path.join(L.out, 'from-code', `${name}.json`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
