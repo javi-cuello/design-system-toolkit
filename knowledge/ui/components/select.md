@@ -57,7 +57,7 @@ A select is a closed field that opens a list for one choice from more options th
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the chevron `Icon` (the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container's width and the value truncates only by design (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the chevron `Icon` (placing the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container's width and the value truncates only by design (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant: `Label`, `Field`, `Value`, `Icon`, `Description`, `Error message` (figma-standard rule 10); the value layer keeps one name whether it shows a value or the placeholder.
 - [required] The chevron trails in auto-layout order, never pinned to the right edge, so a right-to-left page puts it at the inline end, where the project mirrors (figma-standard rule 50; design-standard rule 9 for its inset).
 

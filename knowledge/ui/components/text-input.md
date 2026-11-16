@@ -139,7 +139,7 @@ A text input takes one line of free text: a name, an email address, a reference,
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` row holding `Leading icon`, `Prefix`, `Value`, `Suffix`, `Trailing icon` and `Trailing action` in that order (the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); `Value` fills the row and the field fills its container (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` row holding `Leading icon`, `Prefix`, `Value`, `Suffix`, `Trailing icon` and `Trailing action` in that order (placing the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); `Value` fills the row and the field fills its container (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant; `Value` keeps one name whether it shows the value or the placeholder (figma-standard rule 10).
 - [required] Leading parts lead and trailing parts trail in auto-layout order, never pinned by position, so a right-to-left page mirrors them where the project mirrors (figma-standard rule 50); an icon is first or last in the row, never between an affix and the value (component-validator rules W2 and MU5).
 

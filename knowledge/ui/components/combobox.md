@@ -57,7 +57,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the trailing `Icon` button (the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, then the `Field` holding `Value` and the trailing `Icon` button (placing the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the popup is a part named for its family and last word, `Combobox list`, with its rows `Combobox option`, and inside the field's frames it keeps the last word, `List` (figma-standard rule 9).
 - [required] The button sits last in auto-layout order, never pinned to the right edge, so a right-to-left page puts it at the inline end, where the project mirrors (figma-standard rules 33 and 50).
 

@@ -80,7 +80,7 @@ A text area takes free text longer than one line: a description, a message, a re
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: `Label`, `Description`, `Error message`, the `Field` holding `Value` and the `Resize handle`, then `Count` under the field (the hint and the message above it is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container's width and `Value` wraps inside it (figma-standard rule 33).
+- [required] Auto layout throughout: `Label`, `Description`, `Error message`, the `Field` holding `Value` and the `Resize handle`, then `Count` under the field (placing the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container's width and `Value` wraps inside it (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the text input's names where the part is the same ([text input: *In Figma*](text-input.md#in-figma)).
 - [weak] The field's height is drawn at the rows the component defaults to, with the value wrapping and clipping inside it; `Value` is not hugged, so the frame does not grow with the text as a fixed-rows field does not (toolkit reasoning).
 
