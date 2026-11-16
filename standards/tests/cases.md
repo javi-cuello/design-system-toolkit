@@ -300,6 +300,12 @@ Assert: each mismatch is refused with its file, history records are skipped, and
 Walked 2026-11-11 for toolkit-standard 2.28.0: test-restated 7 passed; test-gates 37 passed; on the repo, restated.mjs clean and the gate listed ten guides citing §D 12, 13, 21 and 22.
 Runs: node tools/toolkit-check/test-restated.mjs — "a registered value that differs from its owner is refused"; node --test tools/claude-hooks/test-gates.mjs — "names the guides that cite a rule the work changed"
 
+## S24 · A skip-if-unchanged cache hashes every input and is shown selective — WALKED 2026-11-16
+Fixture: the self leg's fingerprint (component-contract eval.mjs `selfInputs`, `closureHashes`, `scopedTo`): a library where A places B, B places C through a variant, D alone; sheets scoped and unscoped.
+Assert: a change to C moves A, B and C and not D; a change to what all share moves every one; a sheet whose rule reaches past its element counts as unscoped (toolkit-standard §D 0 question 4). On the projects, the hashes are the same twice, and a probe changing one contract (spinner) moved it and its 17 placers only, the file restored byte for byte.
+Walked 2026-11-16 for toolkit-standard 2.37.0: test-eval 21 passed; the closure mutant (placed components not followed) fails it; three reviews each found an input the hash missed (whole-library token ties, house settings, fonts and the shared DOM helper), all now hashed; --twice --jobs 4 read 63 of 63 and 40 of 40 the same.
+Runs: node tools/component-contract/test-eval.mjs — "a change to a placed component moves it and every component that places it, through a variant too, and nothing else", "and a change all share moves every one", "a sheet whose every rule names its element is scoped; one rule past it is not"
+
 ## R1 · Every rule says how it is enforced, and a named check exists — WALKED 2026-10-08
 Fixture: throwaway trees in which a rule has no marker; a `*Checked:*` pair names a file that no longer holds its string, or a path that does not exist; a path names a project's own file; a standard has no handle pattern; a rule is marked *No check yet.*
 Assert: each is refused, naming the standard and handle, except the project's path, which is an example and not verified, and *No check yet.*, which passes and is counted as debt. A standard the check cannot read is refused, never skipped.

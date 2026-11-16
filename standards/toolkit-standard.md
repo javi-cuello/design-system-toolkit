@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.36.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.37.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -135,7 +135,11 @@ correctness**, because a check only sees what it measures:
 3. **Did run time or cost grow** — compared before and after on the same
    input, the way output is compared?
 4. **Does anything the toolkit claims lack a trigger** — a *reviewed* with no
-   moment, a rule with no check, a cache with no stale test?
+   moment, a rule with no check, a cache with no stale test? A cache that skips
+   work whose inputs hash the same hashes every input its reader touches,
+   shared ones included (settings, the whole library, the browser, the fonts),
+   and is shown selective by a probe: one input changed, only what depends on
+   it moves.
 5. **Is any deterministic work described in prose instead of shipped as an
    engine** — an algorithm, a mapping applied mechanically, a computation an
    agent or a project re-derives by hand each run (skill-standard §A clause G)?
