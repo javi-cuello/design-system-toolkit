@@ -91,6 +91,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **How**
 - [strong] Primer: "Minimize the number of columns. It's easier to scan many rows than it is to scan many columns." Datawrapper: "the fewer columns your table has, the more readable it becomes"; ask "What's the essential information?" GOV.UK: "aim to have less data in your tables", and split a large set "into multiple tables or multiple pages".
+- [moderate] Five or six columns as the default ceiling. Genesys Spark: "By default we recommend limiting tables to a maximum of six columns", and "Avoid displaying more than six columns at once" ([Spark composed table](https://spark.genesys.com/latest/components/data-display/data-tables/composed-table/usage-3oangEHS)); Drupal's interface standards: "Limit the number of columns to 5" ([Drupal, table](https://www.drupal.org/node/1146122)); Red Hat says "There is no maximum number of columns or rows" but to "set a `max-width` or `max-height` after five or six of each" ([Red Hat table guidelines](https://ux.redhat.com/elements/table/guidelines)).
 - [weak] NN/g on comparison tables: "Don't just throw every piece of metadata you have into the table", and "let users hide the rows for which all offerings are similar, and only show the differences" ([NN/g, comparison tables](https://www.nngroup.com/articles/comparison-tables/)). The same holds for columns: a column uniform across the rows in view is a candidate to drop from the default view.
 - [weak] Test each column: if every row had the same value, what would the reader lose? A column that loses nothing goes; its fact becomes one sentence in the caption or a summary above ("No component has usage notes yet").
 - [weak] Where design-standard rule 8 meets crowding: the rule says a closed set of attributes is shown as columns, not a list in one cell. It governs how an attribute is shown once it has earned a place; it does not ask for every attribute to be shown. When nine attributes are each true for nearly every row, the columns obey it and still say almost nothing; reduce them as *Many boolean columns* describes, and keep the full set as columns on the record page or in a matrix view, where the rule still holds.
@@ -116,7 +117,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: for each column, count distinct values across the rows rendered and flag a column with one distinct value (or one value in over 90% of rows) for review; flag a cell holding two or more separated values from a recurring vocabulary.
 - *Judgement*: what does the reader lose if this column goes?
 
-**Sources.** Primer, Datawrapper, GOV.UK and NN/g agree on fewer columns; NN/g's "only show the differences" is written for comparison rows and applied here to columns by analogy. Primer's "one piece of data per column" is an outside statement of design-standard rule 8.
+**Sources.** Primer, Datawrapper, GOV.UK and NN/g agree on fewer columns; Spark (six), Drupal (five) and Red Hat (no maximum, constrain after five or six) give the numbers; NN/g's "only show the differences" is written for comparison rows and applied here to columns by analogy. Primer's "one piece of data per column" is an outside statement of design-standard rule 8.
 
 ## Grouping and header hierarchy
 
@@ -130,6 +131,8 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Separate groups with space or a single vertical rule between groups, not a rule between every column; the group boundary is the only vertical line.
 - [weak] Row groups: a full-width group header row ("Blocked (12)") or one table per group under a heading. One table per group when groups are compared separately or are long; group rows when the reader still sorts or scans across groups.
 - [weak] A group header carries a count when the group can be collapsed or is long.
+
+No source settles a maximum number of header rows: the W3C multi-level tutorial, Primer, GOV.UK and the Analysis Function set none. The W3C applies multi-level markup to "Tables with three or more header cells associated with each data cell" and suggests "splitting the information in smaller, more manageable tables" ([W3C, multi-level headers](https://www.w3.org/WAI/tutorials/tables/multi-level/)).
 
 **Cases**
 - Columns "Web", "iOS", "Android" scattered among others → adjacent, under a group header "Platforms".
@@ -152,7 +155,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Markup basics are [HTML semantics: *Tables for data*](../../code/html-semantics.md#tables-for-data).
 
 **Check**
-- *Script* could: flag a `thead` with more than two rows, and a spanning `th` without `scope="colgroup"`.
+- *Script* could: flag a multi-row `thead` for review, and a spanning `th` without `scope="colgroup"`.
 - *Judgement*: does the grouping match how the reader thinks about the columns?
 
 **Sources.** The W3C tutorial and Primer agree that deep hierarchy belongs outside one table; as linked.
@@ -271,6 +274,8 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - [weak] Count and summary: one right-aligned count ("7 of 9 present" or "2 missing"), sortable, with the attributes' names on the record page or in an expandable row ([Carbon expandable rows](https://carbondesignsystem.com/components/data-table/usage/): to "present large amounts of data in a small space"). Totals per attribute in a footer row or a short list above.
 - [weak] Matrix: rows by attributes, cells filled or empty, one hue. Sort rows by completeness and columns by how often the attribute is present, so the pattern reads as a block and the outliers stand out. Datawrapper: a heatmap lets readers "quickly skim the table for outliers and patterns" ([Datawrapper, heatmaps for tables](https://www.datawrapper.de/blog/heatmaps-for-tables/)). Shape, not colour, carries the state: a filled square or ✓ for present, empty for absent, so it survives greyscale. The matrix is a second view of the same data, not the default table, unless the pattern is the message.
 - [weak] Whichever form, the per-attribute totals are said once ("Usage: 3 of 40"), so the reader can see which attribute is the common gap without reading forty rows.
+
+No source settles how many boolean columns side by side call for a count, matrix or summary instead: NN/g, Primer, Carbon, Datawrapper and searches across shipping systems' table guidance give no number.
 
 **Cases**
 - An audit table with nine red ✕ columns, mostly true in every row → default view: identifier, status, "Missing: 8 of 9", owner; above it, "Missing across 40 components: usage 37, code notes 40, …"; a "Matrix" view shows the 40 × 9 grid sorted so the two near-complete components sit at the top.
@@ -760,12 +765,15 @@ When to use a table and how to build one people can scan, sort, act on and read 
 
 **How**
 - [weak] Dialog: the default or large size; Carbon's modal guidance says "for complex components, like a data table, the default or large modal is more suitable", and lets the table run to the dialog's full width ([Carbon modal](https://carbondesignsystem.com/components/modal/usage/)). The dialog body scrolls with the table's header sticky inside it; never two scrolling regions nested, and never sideways (cut columns instead, *What earns a column*).
-- [weak] "View all" at the card's foot, naming the whole: "View all 42 open findings". It opens the full table already filtered and sorted the way the preview was, so the first rows match ([dashboards: drill-down](../profiles/dashboards.md#drill-down)).
+- [moderate] A "View all" link to the complete list on its own page: Cloudscape's dashboard items offer a "View all link that takes the user to a new page with the complete resource list" ([Cloudscape dashboard items](https://cloudscape.design/patterns/general/service-dashboard/dashboard-items/)); Siemens iX's card list has a header button that shows all items, "Typically, these items are displayed on a new page" ([iX card list](https://ix.siemens.io/docs/components/card-list/guide)).
+- [weak] The link names the whole ("View all 42 open findings") and opens the full table already filtered and sorted the way the preview was, so the first rows match ([dashboards: drill-down](../profiles/dashboards.md#drill-down)).
 - [weak] Width: the table takes the card's width; columns that do not fit are cut, not scrolled. Truncate only text that does not tell rows apart (*Truncation*), and switch to a list when the card is narrow ([responsive: *Container queries*](../../code/responsive.md#container-queries)).
 - [weak] Fewer rows than the count: show what there is; none: the card's empty state ("No open findings"), not an empty grid of headers (*Empty and loading tables*).
 
+No source settles how many rows a preview shows: PatternFly's dashboard example says "Show only top 5" and sizes an events card to about four items ([PatternFly dashboard guidelines](https://www.patternfly.org/patterns/dashboard/design-guidelines)), Siemens iX shows "a maximum of 12 items" in a card list, and Cloudscape and Carbon give no number.
+
 **Cases**
-- A dashboard card holding a 40-row, eight-column table with its own scroll → five rows, three columns, "View all 40 open findings".
+- A dashboard card holding a 40-row, eight-column table with its own scroll → the few rows that need attention, three columns, "View all 40 open findings".
 - A dialog with a paginated, sortable table and bulk actions → a page.
 - "View all" that opens the unfiltered list → carry the card's filter and sort in the link.
 - A card table scrolling sideways at tablet width → drop to the two deciding columns, or a list, by container query.
@@ -784,7 +792,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: flag a table inside a card or dialog that scrolls horizontally, has pagination, or nests a scroll container inside another; flag a "View all" link without a count or a filter in its address.
 - *Judgement*: does the preview answer the card's question in its first rows?
 
-**Sources.** Carbon on placement and modal size; the "View all" wording follows 2.4.4 (*Accessibility*, above).
+**Sources.** Carbon on placement and modal size; Cloudscape and Siemens iX on "View all" to a full page; PatternFly and iX on preview size, which they do not agree on; the "View all" wording follows 2.4.4 (*Accessibility*, above).
 
 ## A fixed set of attributes as columns
 
@@ -829,7 +837,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 **How**
 - [weak] The caption may be visually the table's heading; if the page has a visible heading for it, the caption can repeat it or carry the table's provenance and sort hint (Roselli puts the sort instruction in the caption).
 - [moderate] A row header (`th scope="row"`) for the identifier column, so each cell is announced with its row's name.
-- [weak] Avoid merged header cells; two header rows are the limit, and a third means splitting the table.
+- [moderate] Merged header cells only in HTML with header mark-up: the Analysis Function says the mark-up "allows HTML tables to have merged cells", but "merged cells in tables published in spreadsheets and text documents are not accessible" ([Analysis Function, tables](https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-tables)); the W3C suggests splitting complex tables into "smaller, more manageable tables" ([W3C, multi-level headers](https://www.w3.org/WAI/tutorials/tables/multi-level/)).
 - [required] Provenance for a table of recorded figures: source and date in the caption or directly under it (design-standard rule 1).
 
 **Cases**
@@ -852,7 +860,7 @@ When to use a table and how to build one people can scan, sort, act on and read 
 - *Script* could: assert every `table` has a non-empty `caption` or an `aria-labelledby`, at least one `th`, and `scope` on header cells in tables with both row and column headers.
 - *Judgement*: does the caption say what the table is for?
 
-**Sources.** GOV.UK and the W3C tutorial agree.
+**Sources.** GOV.UK and the W3C tutorial agree; the Analysis Function on merged cells.
 
 ## Truncation
 

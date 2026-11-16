@@ -195,11 +195,14 @@ First decide which search it is. **Site search** finds pages across a site or to
 ## Highlighting matches
 
 **Use when / don't use**
-No source opened states when highlighting in results helps.
+- [moderate] Highlight the matched terms in results, to show why each result matched. The Home Office: "You may wish to highlight to users why the search results match the search criteria" ([Home Office, search for something](https://design.homeoffice.gov.uk/design-system/patterns/help-users-to/search-for-something)); Salesforce Lightning: "use background color highlighting for the matched terms", and "Highlight anywhere there's a match", the poster's name and comments included ([SLDS, search in context](http://spring-20.lightningdesignsystem.com/guidelines/search/in-context/)).
+- [weak] Don't overuse it: "think about which parts of the search results should be highlighted, do not overuse the highlight". In the Home Office's test with 3 participants with access needs, "highlight colours conflicted with other coloured tags in the results causing disorientation" and "participants took time to understand what the highlight was for"; it concludes "More research is needed" (Home Office).
+- [weak] Salesforce Lightning says to "Avoid using snippets, which truncate long bodies of text to only show your matched character and its surrounding words", for feed posts where people "need the full context" (SLDS).
 
 **How**
-- [required] Mark the matched text with `mark`, drawn as a background or a weight change that reads in both themes, and never by colour alone (WCAG 1.4.1).
-- [moderate] In autocomplete, emphasise the predicted part, the reverse of results ([Baymard](https://baymard.com/blog/autocomplete-design)).
+- [required] Mark the matched text with `mark`, drawn as a background or a weight change that reads in both themes, and never by colour alone (WCAG 1.4.1). The Home Office: "use bold as well as colour to highlight the differences" and check the highlight does not "conflict" with other colours on the page.
+- [moderate] In autocomplete that completes the typed text, emphasise the predicted part, the reverse of results ([Baymard](https://baymard.com/blog/autocomplete-design)); NN/g agrees: "you should highlight the suggested characters" ([NN/g, site search suggestions](https://www.nngroup.com/articles/site-search-suggestions/)).
+- [weak] In suggestions that contain the typed text anywhere, emphasise the typed text instead, "to help the user scan the suggestions" and "identify where the query text fits within each suggestion"; "bolding, italics, color, or indenting" can mark the parts (NN/g).
 
 **Cases**
 - An excerpt marks matches in the same yellow in dark mode, failing contrast → use a highlight token per mode; the marked text keeps its contrast (figma-standard rule 32).
@@ -220,7 +223,7 @@ No source opened states when highlighting in results helps.
 - *Script:* could check each `mark`'s text against its background for 4.5:1 in every theme.
 - *Judgement:* Does the highlight help the reader pick the right result?
 
-**Sources:** no published source opened in this session states a rule for highlighting in results. The autocomplete rule is Baymard's.
+**Sources:** Home Office, Salesforce Lightning, Baymard and NN/g as linked. Searched also: Carbon's search usage (no highlighting guidance), MDN's `mark` page (says `mark` may "indicate the words that matched a search operation", nothing on screen readers in the text loaded), WCAG 1.4.1's Understanding page (no mention of search) and a GitLab Pajamas proposal for `mark` in results (not a decided rule). No source opened says whether a screen reader should announce the highlight.
 
 ## The query in the address
 

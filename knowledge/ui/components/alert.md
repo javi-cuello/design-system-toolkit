@@ -23,7 +23,9 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - [moderate] One banner per page. Combine messages or show only the most important (GOV.UK; Carbon: "Only show one banner at a time").
 - [moderate] Page banner: immediately before the page `h1`, as wide as the content (GOV.UK). Product banner: directly below the main header, scrolling with the page, not sticky ([Carbon](https://carbondesignsystem.com/patterns/notification-pattern/)).
 - [required] Severity drives colour role, icon and a heading word, so meaning never rests on colour (GOV.UK asks for a heading such as "Success" for this reason; WCAG 1.4.1).
-- [weak] Whether a banner can be dismissed is open: GOV.UK lists dismissal as an open question, and the project decides.
+- [contested] **Whether a banner can be dismissed.** Atlassian: banners "are not dismissible, and only disappear when no longer required" ([Atlassian banner](https://atlassian.design/components/banner/usage)). Polaris: "Allow merchants to dismiss banners unless immediate action's required" and "Avoid persistent banners that can't be closed" ([Polaris banner](https://shopify.dev/docs/api/app-home/polaris-web-components/feedback-and-status-indicators/banner)); Carbon's banners "persist until they are dismissed by the user" ([Carbon notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/)). GOV.UK still lists dismissal as needing research ([GOV.UK notification banner](https://design-system.service.gov.uk/components/notification-banner/)). The project decides.
+- [strong] Where a banner can be dismissed, one the person must act on, or could miss to their cost, has no close button. Primer: "If accidental closure of the Banner would leave the user confused or missing something critical, it should not have a close button", and a banner warning of a destructive action is not dismissible ([Primer banner guidelines](https://primer.style/product/components/banner/guidelines/)); Carbon: the close button "should not be included if it is critical for a user to read or interact with the notification"; Polaris: dismissible "unless immediate action's required".
+- [moderate] A dismissal is stored by the product, not the component: Polaris's "dismissed state doesn't persist across page loads or sessions", so the product keeps it "using local storage, cookies, or server-side state"; Primer: "When it makes sense, the choice to dismiss the Banner should be stored and the Banner should not be shown again." Carbon notes banners "may also persist across multiple sessions".
 - [weak] Body: the problem and its cause, then what the person can do, in one to two sentences. Atlassian's [error messages](https://atlassian.design/foundations/content/designing-messages/error-messages) asks for one to two sentences and not to invent a cause.
 - [required] Reserve its space or place it above the controls so its arrival or dismissal does not move them (design-standard rule 2).
 
@@ -47,7 +49,7 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - *Script* could: count banners per page (more than one is a finding); confirm each has a heading and an accessible region name; flag a banner placed after the `h1` or inside the main content flow on a page that has one.
 - *Judgement*: is the condition still true while the banner shows, and could the message live in the content instead?
 
-**Sources.** GOV.UK and Carbon agree on one at a time and on placement; neither settles dismissal.
+**Sources.** GOV.UK and Carbon agree on one at a time and on placement. On dismissal Atlassian forbids it and Polaris and Carbon allow it; Primer, Carbon and Polaris agree a banner needing action keeps no close button, and Polaris and Primer leave storing a dismissal to the product.
 
 ## In Figma
 

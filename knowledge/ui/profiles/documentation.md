@@ -294,6 +294,8 @@ What a page on a design-system documentation site must specify: the site's struc
   - **In the text**: a clause, a parenthesis or a descriptive link. The default for anything that changes what the reader does.
   - **Notes**: a numbered marker linking to a note at the end of the section, each note linking back. For citations and asides a minority want.
   - **Side notes**: the same note shown in the margin beside its reference on wide screens, after its paragraph on narrow ones. For long explanation pages with margin to spare; the narrow form stacks in reading order (design-standard rule 19).
+- [moderate] **Margin notes ship in docs tooling.** [Tufte CSS](https://edwardtufte.github.io/tufte-css/): "On sufficiently large viewports, Tufte CSS uses the margin for sidenotes, margin notes, and small figures." [Quarto](https://quarto.org/docs/authoring/article-layout.html): with `reference-location: margin`, footnotes are "placed in the margin of the document rather than the bottom of the page".
+- [weak] **On narrow screens** Tufte CSS hides them: "On smaller viewports, elements that would go in the margin are hidden until the user toggles them into view"; Quarto's layout page does not say. The other forms (inline, pop-ins, floating notes) are in [editorial: side notes and notes](editorial.md#side-notes-and-notes).
 - [required] The W3C [DPUB-ARIA](https://www.w3.org/TR/dpub-aria-1.1/) roles describe the parts: `doc-noteref` is "A reference to a footnote or endnote, typically appearing as a superscripted number or symbol in the main body of text"; `doc-backlink` is "A link that allows the user to return to a related location in the content".
 - [weak] Notes sit at the end of their section, numbered in order of first reference, so a note stays near its reference on a long page.
 - [moderate] Shown in place where it helps: NN/g's [study of nonfiction e-books](https://www.nngroup.com/articles/nonfiction-ebooks/) preferred notes "in popovers on top of the corresponding words" to sending readers away. A marker may open the note in a popover by click; the notes list stays as the no-script path.
@@ -319,7 +321,7 @@ What a page on a design-system documentation site must specify: the site's struc
 - *Script:* could check every `doc-noteref` resolves to a note, every note has a back link to an existing reference, numbers ascend in document order, and no marker is named by a symbol alone.
 - *Judgement:* would the page lose anything if this note went into the sentence or was cut?
 
-**Sources:** as linked above. GOV.UK advises against footnotes on the web; DPUB-ARIA gives them roles because publications keep them. What matters goes in the text and the rest is cut, as GOV.UK's content clinic says.
+**Sources:** as linked above; Tufte CSS and Quarto for margin notes. GOV.UK advises against footnotes on the web; DPUB-ARIA gives them roles because publications keep them. What matters goes in the text and the rest is cut, as GOV.UK's content clinic says.
 
 ---
 
@@ -369,11 +371,13 @@ What a page on a design-system documentation site must specify: the site's struc
 ## On-this-page navigation
 
 **Use when**
-No source sets the length at which a page needs one; NN/g gives none.
+No source settles the length or the number of `h2`s at which a page needs one: NN/g, GOV.UK's contents list and component guide, Docusaurus and Starlight were searched and give none.
+- [moderate] **Docs themes show it on every page and let a page opt out.** [Docusaurus](https://docusaurus.io/docs/markdown-features/toc): "Each Markdown document displays a table of contents on the top-right corner", with front matter `hide_table_of_contents` (default `false`) to hide it ([docs plugin](https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-docs)). [Starlight](https://starlight.astro.build/reference/configuration/) configures "the table of contents shown on the right of each page", and front matter `tableOfContents: false` hides it on one page ([frontmatter](https://starlight.astro.build/reference/frontmatter/)).
+- [weak] GOV.UK's [contents list](https://design-guide.publishing.service.gov.uk/components/content-list) is for "when content is long and needs to be broken up to help users navigate it".
 
 **How**
 - [weak] The list itself (rail or body, label, entries generated from headings, scroll margin) is [navigation: in-page navigation](../patterns/navigation.md#in-page-navigation-on-this-page). A docs site adds:
-- [weak] `h2` only, or `h2` and `h3` for long reference pages; deeper levels make it a second page.
+- [moderate] **`h2` and `h3` by default.** Docusaurus: "By default, this table only shows h2 and h3 headings" (`toc_min_heading_level` 2, `toc_max_heading_level` 3); Starlight's default is `{ minHeadingLevel: 2, maxHeadingLevel: 3 }`. Both let a page change the range. GOV.UK's [contents list](https://components.publishing.service.gov.uk/component-guide/contents_list) "Supports nesting contents one level deep".
 - [weak] Each section has an anchor, so a heading can be linked (Write the Docs *Addressable*).
 - [weak] Small screens: the rail collapses to a disclosure at the top of the content, closed by default.
 
@@ -394,7 +398,7 @@ No source sets the length at which a page needs one; NN/g gives none.
 - *Script:* could check entries match `h2` text exactly and in order, and every heading has an id.
 - *Judgement:* does the list help on this page, or decorate it?
 
-**Sources:** [NN/g table of contents](https://www.nngroup.com/articles/table-of-contents/), as in navigation.
+**Sources:** [NN/g table of contents](https://www.nngroup.com/articles/table-of-contents/), as in navigation; Docusaurus, Starlight and GOV.UK's contents list as linked (opened 2026-11-17).
 
 ---
 

@@ -171,7 +171,8 @@ ds-button > button:active { --state: var(--state-pressed-opacity); }
 
 **What good looks like**
 - [weak] Nesting expresses a state, a condition or one child step; never the DOM's structure.
-- [weak] Two levels at most.
+- [strong] **Shipping systems cap nesting depth with a lint**, and no spec does: CSS Nesting allows nesting "in as many levels as you desire", noting only that more levels multiply the desugared selectors ("three levels of nesting, each with three selectors in their lists, produced 27 desugared selectors") ([CSS Nesting Module](https://www.w3.org/TR/css-nesting-1/)). stylelint's [`max-nesting-depth`](https://stylelint.io/user-guide/rules/max-nesting-depth/) has no default value and is not in `stylelint-config-standard`; its example is "limit nesting to `2` levels, so that nested rules stay readable".
+- [contested] **Two levels or three.** GOV.UK's [`stylelint-config-gds`](https://github.com/alphagov/stylelint-config-gds/blob/main/css-rules.js) sets `max-nesting-depth: 2`, ignoring blockless at-rules and pseudo-classes ("Disallow deep nesting, ideally only exceptions (such as .js-enabled) should have nesting"). Primer's [`stylelint-config`](https://github.com/primer/stylelint-config/blob/main/index.js) sets 3; [Airbnb's CSS guide](https://github.com/airbnb/css): "Do not nest selectors more than three levels deep!"; [Sass Guidelines](https://sass-guidelin.es/#selector-nesting) recalls the Inception rule ("against nesting more than 3 levels deep") and goes further: "avoid selector nesting as much as possible", except pseudo-classes, pseudo-elements, state classes and contextual selectors.
 - [required] The compiled selector is what you meant (code-standard rule 5 lints the compiled output).
 
 **How**
@@ -200,7 +201,7 @@ ds-card {
 - *Script:* `tools/css-lint/lint.mjs` *own parts* on the compiled sheet.
 - *Judgement:* Does every nested rule describe a state, a condition or one child?
 
-**Sources:** [MDN, Using CSS nesting](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_nesting/Using_CSS_nesting). No spec sets a nesting depth.
+**Sources:** [MDN, Using CSS nesting](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_nesting/Using_CSS_nesting); the CSS Nesting Module, stylelint, GOV.UK and Primer lint configs, Airbnb and Sass Guidelines as linked (read 2026-11-17). No spec sets a nesting depth; the lint configs split between 2 and 3.
 
 ## Naming
 

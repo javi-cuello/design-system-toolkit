@@ -170,7 +170,8 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **How**
 - [weak] Stock or flow. A level at a moment (open findings) is a line; a count within each period (findings filed this week) is flow: ONS, "Consider using a column chart instead of a line chart when displaying flow data".
-- [moderate] Few points: prefer bars for a count, or a line with a marker on every point: ONS says to avoid markers "unless" there is "a small number of data points" ([ONS, line chart](https://service-manual.ons.gov.uk/data-visualisation/chart-types/line-chart)); NN/g asks for markers to show when data was collected.
+- [moderate] Few points: prefer columns, or a line with a marker on every point. Datawrapper: "If you only have a few values of one category at the same time intervals, consider a column chart instead" ([Datawrapper, line charts](https://www.datawrapper.de/academy/what-to-consider-when-creating-line-charts)); ONS says to avoid markers "unless" there is "a small number of data points" ([ONS, line chart](https://service-manual.ons.gov.uk/data-visualisation/chart-types/line-chart)); NN/g asks for markers to show when data was collected.
+- [weak] The count: ONS, "If you have five or fewer data points, consider using a column chart", with markers on each point if a line is kept; for two periods it suggests a clustered bar, range plot or rate-of-change bar instead (ONS, line chart). Datawrapper and the Analysis Function set no number.
 - [weak] Irregular intervals: a line, spaced by real time, not evenly spaced bars (ONS).
 - [moderate] Number of lines: the Analysis Function finds more than four "often results in the chart becoming too cluttered"; ONS suggests a small multiple line chart for an overcrowded chart.
 - [weak] The Analysis Function adds that bars "can be useful for showing time series when there is one series of data"; more than one series is a line.
@@ -191,10 +192,10 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - [required] Missing values are `null` in the series and the path is split at them (`d` with a new `M`), never coerced to `0` (code-standard rule 12).
 
 **Check**
-- *Script* could: flag a line drawn over a count per period; flag a path that drops to zero where the series is missing.
+- *Script* could: flag a line chart of five or fewer points without markers (ONS's count); flag a line drawn over a count per period; flag a path that drops to zero where the series is missing.
 - *Judgement*: stock or flow? Would the numbers alone say it?
 
-**Sources.** ONS, NN/g and the Analysis Function agree.
+**Sources.** ONS, NN/g, Datawrapper and the Analysis Function agree on columns or markers for few points; only ONS gives a count (five or fewer).
 
 ## Calendar heatmaps
 
@@ -204,6 +205,8 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 
 **How**
 - [weak] The anatomy, the sequential scale and the feed beside it are [dashboards: timelines and activity](../profiles/dashboards.md#timelines-and-activity); this section adds when the form works.
+- [weak] Too dense: Visa's heatmap guidance says not to use one "When comparing too many categories, which can make the heatmap cluttered. Consider grouping or filtering categories" ([Visa heatmap](https://design.visa.com/data-visualization/charts/heatmap)); Carbon notes "When cells get extremely small, a white border can hinder the intended effect" ([Carbon spatial charts](https://carbondesignsystem.com/data-visualization/spatial-charts/)). No source opened sets a cell count or a minimum cell size.
+- [weak] Values in the cells: Atlassian's heatmap guide says "Where possible, it is a good idea to add cell value annotations to the heatmap as a double encoding of value" ([Atlassian, heatmap guide](https://www.atlassian.com/data/charts/heatmap-complete-guide)); Visa: "Include a legend unless data labels are included in every cell" (Visa heatmap). Neither says at what cell size labels stop fitting.
 - [weak] Sparse data: show only the period with data (the last eight weeks, not the year), or a strip of dates, or a list.
 - [weak] A sequential single-hue scale of four or five steps, boundaries from the data's spread; an empty day distinct from a day with no data ([data: numbers](data.md#numbers)).
 
@@ -223,7 +226,7 @@ How an interface turns figures into a chart that says one thing clearly, to ever
 - *Script* could: compute the share of days with data and flag a heatmap under a density threshold; check each cell has a count in text.
 - *Judgement*: is the pattern of gaps the question, or would a list or a line answer it?
 
-**Sources.** The FT for when it works; Carbon and NN/g on its colour, as in the dashboards page.
+**Sources.** The FT for when it works; Carbon and NN/g on its colour, as in the dashboards page; Visa and Carbon on density, Atlassian's data guide and Visa on values in cells, all opened here. No source sets a numeric density limit.
 
 ## Axes, gridlines, labels and number formats
 

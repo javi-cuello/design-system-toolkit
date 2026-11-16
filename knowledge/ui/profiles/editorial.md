@@ -16,6 +16,8 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [weak] **Art direction within templates.** Dan Mall: "Art direction is about evoking the right emotion", design "the technical execution of that connection"; "We've all but perfected the art of designing templates" but "we're still relearning how to design pages and create moments" ([A List Apart, 2010](https://alistapart.com/article/art-direction-and-design/)). Let a piece choose from a few named variants of the template (a hero treatment, an accent, a display face) rather than carry its own stylesheet.
 - [weak] **Go with the web's grain.** Chimero: "I believe every material has a grain, including the web"; the web "adapts to the width of the viewport to fill it up" ([The Web's Grain, 2015](https://frankchimero.com/blog/2015/the-webs-grain/)). A front page drawn as a fixed print spread breaks at the first width nobody drew.
 
+- [contested] **List or cards for a section index.** NN/g: "Card layouts are less scannable than lists", and for "very homogenous items (such as a list of similar blog posts, products, or news stories)" consider "a standard vertical list of items" "to support scannability and also comparisons among items"; cards suit browsing and "collections of heterogeneous items" ([Cards: UI-Component Definition](https://www.nngroup.com/articles/cards-component/)). The Singapore Government Design System uses cards "When users need to scan and compare multiple entries", and "When items have a clear hierarchy — use a list instead" ([SGDS cards](https://www.designsystem.tech.gov.sg/templates/block-templates/cards)). NN/g adds that cards "typically deemphasize the ranking of content". They split on which form scans and compares better.
+
 **Cases**
 - Every item on the home page is a card with a stock photo → a list for text pieces; cards only where the image is the story.
 - A feature needs its own colour and type → a named variant on the article, from the template's set; a one-off stylesheet becomes the next template's debt.
@@ -34,7 +36,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Script:* could check each item has one link, named by its title, and a `time` with `datetime`.
 - *Judgement:* does the eye land on one piece first?
 
-**Sources:** NN/g, A List Apart and Chimero as linked. Mall argues for per-piece direction; a piece's own stylesheet is a caller's rule of its own, which code-standard rule 38 forbids, so direction comes from named variants.
+**Sources:** NN/g, A List Apart, Chimero and SGDS as linked. Mall argues for per-piece direction; a piece's own stylesheet is a caller's rule of its own, which code-standard rule 38 forbids, so direction comes from named variants.
 
 ---
 
@@ -80,6 +82,8 @@ What a site of articles, essays and series must specify, past what a docs site d
 - [weak] Building the top of an article: everything above the first paragraph of the body.
 
 **How**
+- [moderate] **Kicker, title, standfirst, then byline and dates.** Reuters Graphics' [`Headline`](https://github.com/reuters-graphics/graphics-components/blob/main/src/components/Headline/Headline.svelte) renders the section label, the `h1` headline, the dek, then its `Byline` with authors, publish and update times. The Guardian's [article arrangement](https://github.com/guardian/dotcom-rendering/blob/main/dotcom-rendering/src/layouts/lib/articleArrangements.ts) orders the areas title (its section or series link), headline, standfirst, meta (byline and dateline).
+- [weak] **Where the hero goes** has one source: the Guardian's standard layout puts main media after the standfirst and before the meta from tablet up, and first in the DOM order its mobile layout follows ("media → title → headline → standfirst → meta → body"). Reuters' `Headline` holds no media.
 - [weak] **Reading time** is an estimate from the word count; round it to whole minutes. No source on the method could be opened (Medium's help page refused), so no words-per-minute figure is given here.
 - [weak] **The hero** supports the title, not the reverse (NN/g, as in [Front page](#front-page-as-a-magazine)). With no picture worth showing, no hero: the title and standfirst are the opening.
 - [weak] Metadata for sharing (title, description, image) is [HTML semantics: share previews](../../code/html-semantics.md#share-previews).
@@ -101,7 +105,7 @@ What a site of articles, essays and series must specify, past what a docs site d
 - *Script:* could check one `h1` per article, every date a `time` with a valid `datetime`, and the `h1` inside the first viewport at 390px.
 - *Judgement:* could a reader decide from the frame alone whether to read on?
 
-**Sources:** NN/g as linked.
+**Sources:** NN/g as linked; header order from shipped source, Reuters Graphics' [`Headline.svelte`](https://github.com/reuters-graphics/graphics-components/blob/main/src/components/Headline/Headline.svelte) and the Guardian's [`articleArrangements.ts`](https://github.com/guardian/dotcom-rendering/blob/main/dotcom-rendering/src/layouts/lib/articleArrangements.ts) (both read 2026-11-17).
 
 ---
 

@@ -21,7 +21,8 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [weak] Don't use when the action and its effect share a screen; show the effect there instead.
 
 **How**
-- [weak] A short message: Carbon's ceiling is three lines ([notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/)).
+- [strong] A short message with a fixed line ceiling, longer content linked elsewhere. Carbon's toast has a fixed width and its message "should not exceed three lines" ([notification pattern](https://carbondesignsystem.com/patterns/notification-pattern/)); Material's Android snackbar caps its text at two lines, one on screens 600dp wide and up, ellipsized past that ([config.xml](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/snackbar/res/values/config.xml), [sw600dp config.xml](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/snackbar/res/values-sw600dp/config.xml), [layout](https://raw.githubusercontent.com/material-components/material-components-android/master/lib/java/com/google/android/material/snackbar/res/layout/design_layout_snackbar_include.xml)); Atlassian's flag description scrolls past five lines, and "If a long message is needed, consider linking to an additional page" ([Atlassian flag](https://atlassian.design/components/flag/usage)).
+- [contested] **The number.** Material two lines (one on wide screens), Carbon three, Atlassian five before scrolling; Polaris's toast API states none ([Polaris toast API](https://shopify.dev/docs/api/app-home/apis/user-interface-and-interactions/toast-api)). The project sets its limit.
 - [weak] No essential action. An Undo is the one action a toast may carry, and then it has no timer: Carbon says a toast with an action "should remain on screen until the user dismisses it".
 - [required] Auto-dismiss only when the same information can be found elsewhere (the notifications centre, the changed record, an activity log). W3C's [Understanding 2.2.1](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html) treats a disappearing message as a time limit unless the user can get the information another way.
 - [contested] One at a time, or stacked. A second toast replaces the first or queues behind it, or, in Carbon, stacks newest on top. Carbon and MUI set no duration by default and Radix 5,000 ms ([*In code*](#in-code)); set one in the project's context document and keep a close button on every toast.
@@ -54,14 +55,14 @@ A toast is a brief message that appears over the page, in one corner, about some
 - *Script* could: find the toast region and confirm it is a live region present before any toast; flag a toast containing a button that auto-dismisses; flag toast text over the project's line limit at the toast's width; flag an error that appears only in a toast.
 - *Judgement*: is this message global enough to be a toast, and can it be found again?
 
-**Sources.** Carbon allows three lines and stacking; Primer steers away from toasts; Lightning ties them to user actions. WCAG 2.2.1 bounds a timed toast whose content exists nowhere else.
+**Sources.** Carbon allows three lines and stacking, Material's snackbar two, Atlassian's flag five before scrolling; Primer steers away from toasts; Lightning ties them to user actions. WCAG 2.2.1 bounds a timed toast whose content exists nowhere else.
 
 ## In Figma
 
 **Layers**
 - [required] Auto layout throughout, text hugging vertically, so a second line grows the toast downward (figma-standard rule 33).
 - [required] Layers named for their role: `Icon`, `Title`, `Message`; the action and the close are instances of the library's button and icon button and keep those names unless two must be told apart (figma-standard rule 10).
-- [weak] The toast has a fixed maximum width at which the message wraps within the project's line limit (Carbon's ceiling is three lines, [*Toasts*](#toasts)); it is drawn at that width, never stretched to the frame.
+- [weak] The toast has a fixed maximum width at which the message wraps within the project's line limit (Carbon: "fixed width", three lines; Material: two, [*Toasts*](#toasts)); it is drawn at that width, never stretched to the frame.
 
 **Properties**
 - [required] `Title` and `Message` are text properties (figma-standard rule 37); `Show icon` reveals the tone's icon and `Show action` the action button (figma-standard rules 5 and 21).

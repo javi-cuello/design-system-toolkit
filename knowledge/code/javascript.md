@@ -463,7 +463,8 @@ This is code-standard rule 36 applied: filter, tabs, view toggle, modal opening 
 
 **How**
 - [strong] **Debounce** waits for invocations to stop, then runs once; **throttle** limits a continuous stream ([MDN debounce](https://developer.mozilla.org/en-US/docs/Glossary/Debounce)). Debounce the fetch and the history write, not the field's own echo.
-- [weak] One constant for the delay, shared by every field: `const settle = debounce(run, DELAY);`. A few hundred milliseconds is common practice (commentary); no source fixes it.
+- [weak] One constant for the delay, shared by every field: `const settle = debounce(run, DELAY);`.
+- [moderate] **Shipped search tools wait 150 to 300 ms.** Algolia: "200 ms is the preferred debounce delay" and "Delays of over 300 ms will start degrading the user experience"; too short and "users still see flashes of content" ([Autocomplete: debouncing sources](https://www.algolia.com/doc/ui-libraries/autocomplete/guides/debouncing-sources); [InstantSearch: improve performance](https://www.algolia.com/doc/guides/building-search-ui/going-further/improve-performance/js)). Pagefind's `pagefind-searchbox` defaults `debounce` to `150` ("Milliseconds to wait after typing", [searchbox](https://pagefind.app/docs/components/searchbox/)), its `debouncedSearch` API to `300` ([API](https://pagefind.app/docs/api/)). No source opened sets one number for every case.
 - [strong] **Abort the previous request** when a new one starts (`AbortController`), so responses cannot land out of order.
 - [moderate] **Keep handlers short** and yield long work so the next paint is not delayed ([web.dev optimize INP](https://web.dev/articles/optimize-inp); INP is [performance.md](performance.md#core-web-vitals)).
 - [moderate] `replaceState` per keystroke, push on settle (state section above).
@@ -481,4 +482,4 @@ This is code-standard rule 36 applied: filter, tabs, view toggle, modal opening 
 - *Script:* could type five characters quickly and assert one request and at most one history entry.
 - *Judgement:* Is the work being debounced expensive enough to need it?
 
-**Sources:** MDN and web.dev as linked.
+**Sources:** MDN, web.dev, Algolia and Pagefind as linked (read 2026-11-17).

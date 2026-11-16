@@ -94,6 +94,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - [weak] Chips sit inside or directly above the field, in the order entered; the text cursor follows the last chip.
 - [weak] A value commits on Enter or on choosing a suggestion; comma or Tab committing is a choice to state in the design and keep everywhere.
 - [moderate] Each chip has its own remove button with a name ("Remove Ada Lovelace"); a Backspace shortcut sits beside the button, never instead of it. Primer's token also removes on Backspace or Delete when focused ([Primer Token](https://primer.style/product/components/token/)).
+- [contested] **Backspace in the empty text field: delete the last chip, or focus it first.** MUI's Autocomplete removes the last value when the input is empty ([useAutocomplete.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/useAutocomplete/useAutocomplete.js)); react-select pops the last value (`backspaceRemovesValue`, true by default, [Select.tsx](https://raw.githubusercontent.com/JedWatson/react-select/master/packages/react-select/src/Select.tsx)), which Atlassian's select is based on ([Atlassian select](https://atlassian.design/components/select/code)); Downshift's multiple selection "Removes the last selected item" ([useMultipleSelection](https://raw.githubusercontent.com/downshift-js/downshift/master/src/hooks/useMultipleSelection/README.md)). Angular Material instead moves focus to the last chip and deletes nothing, ignoring a held key "so that we don't accidentally remove too many chips" ([chip-input.ts](https://raw.githubusercontent.com/angular/components/main/src/material/chips/chip-input.ts)); Primer removes the last token and puts its text back in the field, selected, to edit ([TextInputWithTokens.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TextInputWithTokens/TextInputWithTokens.tsx)). Left Arrow from the field moves focus to the last chip (Downshift).
 - [moderate] A duplicate or invalid value is refused with a message on the field, not silently dropped ([forms: error messages and the error summary](../patterns/forms.md#error-messages-and-the-error-summary)).
 - [weak] Values that differ in kind (a person, a team) may carry an avatar or icon, and keep the text.
 
@@ -117,7 +118,7 @@ A chip is a compact, rounded control for one value: a value to filter by, a valu
 - *Script:* could add and remove values by keyboard alone and assert every remove button has a name, focus lands on a neighbour after removal, a duplicate is refused with a described error, and the form submits every chip's value.
 - *Judgement:* Is the value set open (tag entry) or closed (a multi-select would do)?
 
-**Sources:** Material, Primer and APG as linked; they agree on removable values with named remove controls.
+**Sources:** Material, Primer, APG, MUI, react-select (Atlassian) and Downshift as linked; they agree on removable values with named remove controls, and split on Backspace in the empty field: MUI, react-select and Downshift delete the last chip, Angular Material focuses it, Primer returns its text to the field.
 
 ## Removing chips, overflow and wrapping
 

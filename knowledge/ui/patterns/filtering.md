@@ -170,7 +170,8 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - [moderate] AND across facets, OR within one ([Baymard](https://baymard.com/blog/allow-applying-of-multiple-filter-values)).
 - [required] Order left to right (or top to bottom in a sidebar) from the most specific facet to the least: a component before the areas of its findings, so the area menu offers only that component's areas as live choices, the rest disabled at "(0)" in place (design-standard rules 6 and 5; *Unavailable options*).
 - [required] Changing an earlier facet recomputes the later ones; a later choice that no longer fits resets to "All" and says so in the chips row, never silently (design-standard rules 6 and 18).
-- [moderate] Within that order, the most used facets come first where specificity does not decide ([Anvil](https://anvil.servicetitan.com/docs/web/patterns/filters); [NN/g](https://www.nngroup.com/articles/filter-categories-values/)).
+- [strong] Within that order, the facets readers use most come first where specificity does not decide. Anvil: "Most usable filters should always be placed first" ([Anvil](https://anvil.servicetitan.com/docs/web/patterns/filters)); Polaris: "promoting the filtering categories that are most commonly used" ([Polaris index filters](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/selection-and-input/index-filters.mdx)); NN/g: facets "need to be ordered according to importance" and "Relevance to users is the ultimate prioritization criterion" ([NN/g filter categories](https://www.nngroup.com/articles/filter-categories-values/)).
+- [weak] NN/g's rule of thumb puts "the most general, high-level filter categories at the top" (brand, rating, price) and "the more specific ones towards the bottom" (Lens Mount), broken when a specific one matters more to readers ([NN/g filter categories](https://www.nngroup.com/articles/filter-categories-values/)). Its "specific" is a niche attribute; design-standard rule 6's "most specific first" is the facet that narrows the others, a different axis no source opened addresses.
 
 **Cases**
 - Area sits before component, and after choosing an area the component menu still lists every component → put component first; then area offers only its areas, the others disabled at "(0)" (design-standard rules 6 and 5).
@@ -190,7 +191,7 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* could choose a value in the first facet and assert every enabled value in the second has at least one matching row.
 - *Judgement:* design-standard rule 6 is read at review: is the most specific facet first?
 
-**Sources:** Baymard as linked; no source states the ordering itself, which rests on design-standard rule 6.
+**Sources:** Baymard, Anvil, Polaris and NN/g as linked. Anvil, Polaris and NN/g order facets by use or importance; no source opened orders them by which narrows the others, which rests on design-standard rule 6. Searched: NN/g, Polaris, Anvil and Baymard (no Baymard article on facet order found).
 
 ## Scoped filters
 
@@ -480,10 +481,17 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 **Use when / don't use**
 - [weak] Use when readers return daily to the same combination of filters, sort and columns (my open findings, this file's errors).
 - [required] Don't build it before the address holds the full state (code-standard rule 67); a bookmark of the address is the first saved view and costs nothing.
+- [weak] Don't keep views in the browser only: Shopify says an app without saved-view support should omit the feature "instead of creating browser-only views that disappear on another device", and to "Persist the view name and normalized query parameters through the app's backend" ([Shopify, migrate index filters](https://shopify.dev/docs/apps/build/app-home/migrate-from-polaris-react/index-filters)); Cloudscape's default view applies "unless specific filter parameters are present in the URL" ([Cloudscape saved filter sets](https://cloudscape.design/patterns/general/filter-patterns/saved-filter-sets/)).
 
 **How**
 - [required] A saved view is a name for an address: the facets, search, sort and columns it restores (code-standard rule 67).
-- [required] A view edited after loading shows that it differs ("Edited") with Save and Reset; never save silently (design-standard rule 18; code-standard rule 67).
+- [moderate] The views control sits with the filters, above the list it shapes: Polaris's tabs sit at the head of the index filters ([Polaris index filters](https://github.com/Shopify/polaris/blob/main/polaris.shopify.com/content/components/selection-and-input/index-filters.mdx)), Cloudscape hosts filter sets in a select inside the property filter ([Cloudscape saved filter sets](https://cloudscape.design/patterns/general/filter-patterns/saved-filter-sets/)), Jira lists saved filters "at the top of the Filters dropdown" ([Atlassian, save your filters](https://support.atlassian.com/jira-software-cloud/docs/save-your-filters-in-business-projects/)).
+- [contested] Tabs or a menu. Tabs: Polaris ("Tabs: A list of saved views") and GitHub Projects ("Each view is displayed on a separate tab", [GitHub, managing your views](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/managing-your-views)). A menu: Cloudscape's select, Jira's Filters dropdown, and Shopify's current guidance, "A saved-view `s-select`, or explicit navigation controls when a small set must stay visible" ([Shopify](https://shopify.dev/docs/apps/build/app-home/migrate-from-polaris-react/index-filters)).
+- [strong] A view edited after loading shows that it differs, and nothing saves until the reader says so (design-standard rule 18; code-standard rule 67). Cloudscape: "an “unsaved” label should be displayed next to the saved filter name"; GitHub Projects: "a dot is displayed next to the view name to indicate that there are unsaved changes"; Polaris marks each changed filter pill with a dot, named "Unsaved changes - {label}" to assistive technology ([Polaris FilterPill source](https://github.com/Shopify/polaris/blob/main/polaris-react/src/components/Filters/components/FilterPill/FilterPill.tsx); [locale strings](https://github.com/Shopify/polaris/blob/main/polaris-react/locales/en.json)). Shopify's later guidance allows the other course: "either mark the view as modified or leave the saved view and treat the query as custom".
+- [moderate] An edited view offers save over it, save as new, and cancel. Polaris: "The primary action will always be either "Save" or "Save as" depending on whether the view is mutable, and the secondary action will always be "Cancel""; Cloudscape offers save, update ("overwrite the previous filter set configuration") and delete in an actions dropdown.
+- [moderate] Some views come with the screen and some are the reader's own: Cloudscape's "Filter sets can be user generated, or provided by your service"; Polaris controls "which actions can be performed on a particular view", and a view that is not mutable saves only as new.
+- [weak] Sharing is the owner's explicit choice. Jira: a filter can be private, "viewed or edited by the owner and Jira admins", or shared with groups, spaces or the whole organization, as viewers or editors ([Atlassian, manage filters](https://support.atlassian.com/jira-software-cloud/docs/manage-filters/)); GitHub Projects keeps unsaved edits personal: "No one else will see your changes".
+- [weak] One view may be the default: Cloudscape offers "Set as default" and shows a "Default" label beside its name.
 
 **Cases**
 - Readers ask for "my filters" → first make sure the address carries them and say a bookmark works; add saved views only if that is not enough (code-standard rule 67).
@@ -504,4 +512,4 @@ Vocabulary: a **facet** is one aspect of the rows (level, area, component); its 
 - *Script:* could load each saved view's address and assert the controls match its stored state.
 - *Judgement:* Do readers repeat the same combination often enough to name it?
 
-**Sources:** no published source opened in this session sets rules for saved views; the section applies code-standard rule 67 and design-standard rule 18.
+**Sources:** Polaris (docs and source), Shopify, Cloudscape, GitHub and Atlassian as linked; the address rules are code-standard rule 67 and design-standard rule 18. Cloudscape and Shopify do not say whether views are personal or shared; only Jira sets sharing rules, so that item stays weak. Polaris's own docs site now redirects to shopify.dev, so its guidance is cited from its repository.
