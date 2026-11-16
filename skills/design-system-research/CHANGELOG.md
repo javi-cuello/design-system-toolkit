@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.7.0 (2026-11-16): Step 1 looks past the prompt before searching: it lists the neighbouring topics the decision depends on, includes those that change the answer and names those left out. Case A31.
 - 3.6.0 (2026-11-16): Step 1 takes the topic's `weak` knowledge items first, as the research queue (toolkit-standard 2.41.0 §D 21). Case A30.
 - 3.5.0 (2026-11-16): a component's alignment with code (structure, mapping, states, departures) is a default axis of every component question, read from library source and Code Connect files, and lands in the component page's Alignment with code section. Case A29.
 - 3.4.0 (2026-11-14): each section's advice, and the short version, carry their weight on toolkit-standard §D 21's scale instead of consensus against judgement; a source over three years old on a fast-moving subject drops a level (Step 6). Case A28.
