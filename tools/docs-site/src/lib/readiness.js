@@ -6,7 +6,9 @@
 // Documentation page. What each component lacks is the audit's. The method
 // and why these three: Research/ai-and-docs/machine-readable-design-systems.md, sections 7 and 8.
 import { snapshot, meta, componentPages, collectionPages, isPrivateName } from './snapshot.js';
-import { deprecation } from './project.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { deprecation, project } from './project.js';
 
 // How current the reference is. Every other figure describes the library as
 // it was when the snapshot was taken; Figma's own last edit, where the plugin
@@ -51,3 +53,25 @@ const replacement = (c) => {
 };
 export const deprecated = componentPages.flatMap((p) => p.components.filter((c) => isDeprecated(p, c)).map((c) => ({ page: p, name: c.name, unknown: Boolean(c.guidance.unknown), replacement: replacement(c) })));
 export const deprecatedClear = deprecated.filter((d) => d.replacement).length;
+
+// Agent runs: the one behavioural measure a design-only library has, an agent
+// composing a screen from the library on a task that names no component
+// (tools/skill-evals, Figma tasks). Every static figure above is an input to
+// it, never a stand-in (research/ai-and-docs/measuring-agent-readiness.md).
+// The last line per task, from the project's results file; none, and the page
+// says it is not measured rather than showing a zero.
+const tasksFile = project.doc ? join(dirname(project.doc), 'tests', 'evals', 'figma-tasks.json') : null;
+const readJson = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
+const tasks = tasksFile && existsSync(tasksFile) ? readJson(tasksFile) : null;
+const resultsFile = tasks ? resolve(dirname(tasksFile), tasks.results || 'results.jsonl') : null;
+const lines = resultsFile && existsSync(resultsFile)
+  ? readFileSync(resultsFile, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((l) => l && l.task && l.at)
+  : [];
+const lastOf = new Map();
+for (const l of lines) if (!lastOf.has(l.task) || lastOf.get(l.task).at < l.at) lastOf.set(l.task, l);
+export const agentRuns = {
+  tasks: tasks && Array.isArray(tasks.tasks) ? tasks.tasks.length : 0,
+  runs: lines.length,
+  latest: [...lastOf.values()].sort((a, b) => (a.at < b.at ? 1 : -1)),
+};
+

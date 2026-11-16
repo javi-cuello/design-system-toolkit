@@ -11,7 +11,8 @@ import UpdatedBy from '../../components/UpdatedBy.astro';
 import Base from '../../layouts/Base.astro';
 import { rows, audit } from '../../lib/tracker.js';
 import { health } from '../../lib/measures.js';
-import { tokenCollections, tokensPublished, tokensDescribed, deprecated, deprecatedClear } from '../../lib/readiness.js';
+import { tokenCollections, tokensPublished, tokensDescribed, deprecated, deprecatedClear, agentRuns } from '../../lib/readiness.js';
+import { day } from '../../lib/format.js';
 import { base } from '../../lib/format.js';
 
 const keyOf = (f) => String(f.key || '');
@@ -116,5 +117,29 @@ const status = (key, field) => { const t = tile(key); return t ? `${t.label}: ${
         </table>
       </div>
     </>}
+  </section>
+  <section class="report-section" aria-labelledby="runs">
+    <h2 id="runs">Agent runs</h2>
+    <p>Everything above is an input. Whether an agent builds from the library is measured only by running one: a task in product words, naming no component, composed in Figma and graded on whether every screen uses the library's components, cites a reference screen and leaves nothing loose (the toolkit's skill evals, Figma tasks).</p>
+    {agentRuns.latest.length === 0 ? (
+      <p class="muted">Not measured yet: {agentRuns.tasks ? `${agentRuns.tasks} ${agentRuns.tasks === 1 ? 'task is' : 'tasks are'} written, with no run recorded.` : 'no task is written for this project.'}</p>
+    ) : (
+      <div class="table-wrap" data-scrolls>
+        <table class="table">
+          <caption class="visually-hidden">The last run of each agent task</caption>
+          <thead><tr><th scope="col">Task</th><th scope="col">Last run</th><th scope="col" class="num">Score</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            {agentRuns.latest.map((l) => (
+              <tr>
+                <th scope="row">{l.task}</th>
+                <td>{day(l.at)}</td>
+                <td class="num">{typeof l.score === 'number' ? l.score.toFixed(2) : '–'}</td>
+                <td>{l.green ? 'Clean' : (l.why || 'Not clean')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
   </section>
 </Base>
