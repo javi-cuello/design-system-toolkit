@@ -82,17 +82,14 @@ A drawer slides in from an edge of the viewport and spans its height, holding a 
 
 **Sources.** Fluent, MUI and Primer for positions, sizes and the modal choice; the slot and naming rules of figma-standard. Fluent alone names its sides logically; the toolkit follows it, as its own naming rule does.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] The element for each kind, and what closed means, are in [drawers and side sheets: *Build*](#drawers-and-side-sheets).
-- [required] It opens without script from `popovertarget` before the script upgrades it (code-standard rule 20).
+**Structure**
+- [strong] Code builds the modal drawer on its dialog and the inline one on a plain element, so the one Figma set's `Modal` axis stands for two code paths. Fluent's `OverlayDrawer` renders inside a Fluent dialog, while its `InlineDrawer` is a `div` with an optional `separator` ([Fluent renderOverlayDrawer.tsx](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/components/OverlayDrawer/renderOverlayDrawer.tsx), [useInlineDrawer.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/components/InlineDrawer/useInlineDrawer.ts)); MUI's `Drawer` renders on `Modal` when `variant="temporary"` and in a docked `div` otherwise, its surface a `Paper` slot ([MUI Drawer.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.js)); Primer has no drawer and reaches the modal kind through Dialog's `position="left|right"` ([Primer Dialog source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Dialog/Dialog.tsx)).
+- [moderate] The parts are components in Fluent and the dialog's own parts in Primer, which is what the Figma parts mirror: `Drawer header` for Fluent's `DrawerHeader` with `DrawerHeaderTitle`, the back button for `DrawerHeaderNavigation`, the body and actions for `DrawerBody` and `DrawerFooter` ([Fluent react-drawer components](https://github.com/microsoft/fluentui/tree/master/packages/react-components/react-drawer/library/src/components)); Primer's side sheet uses `Dialog.Header`, `Dialog.Body` and `Dialog.Footer` ([Primer Dialog source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Dialog/Dialog.tsx)). MUI ships no parts: the consumer composes the paper's content ([MUI Drawer.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.js)).
+- [weak] Neither Figma's SDS nor Carbon's Code Connect has a drawer ([SDS figma primitives](https://github.com/figma/sds/tree/main/src/figma/primitives), [Carbon code-connect](https://github.com/carbon-design-system/carbon/tree/main/packages/react/code-connect)), so no kit's own Figma-to-code mapping was read for this page.
 
-**Props**
-- [strong] Open state and a close callback, a position, a size and the modal choice, with the body and actions as children: Fluent (`open`, `position`, `size`, `type`, and `modalType` on its overlay drawer), MUI (`open`, `onClose`, `anchor`, `variant`) and Primer (`onClose`, `position`, `width`) ([Fluent Drawer types](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/shared/DrawerBase.types.ts), [MUI Drawer types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.d.ts), [Primer Dialog source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Dialog/Dialog.tsx)).
-- [required] The body and footer are slots, never a string or render prop (code-standard rule 13).
-
-**From Figma**
+**Mapping**
 - [required] Each Figma property maps to one attribute, prop or child, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -107,6 +104,32 @@ A drawer slides in from an edge of the viewport and spans its height, holding a 
   | `Show actions slot` | whether a footer is passed |
   | `Show back button`, close button | named `button` elements (code-standard rule 18) |
 - [required] `position` names the logical side, so the same markup mirrors in a right-to-left page ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
+
+**States**
+- [required] The browser sets what each `Modal` value shows: opened with `showModal()`, the drawer carries `[open]` and matches `:open` and `:modal`; opened with `show()`, it matches `:open` only; as a popover it matches `:popover-open` ([HTML `:modal`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-modal), [`:open`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-open), [`:popover-open`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-popover-open)). The frame shows the open drawer; closed needs no frame.
+- [moderate] The slide in and out is reached in code and drawn in no frame: MUI wraps the paper in `Slide` ([MUI Drawer.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.js)) and Fluent's drawers take a `surfaceMotion` ([Fluent useInlineDrawer.ts](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/components/InlineDrawer/useInlineDrawer.ts)). The motion is a token; the frame shows the drawer at rest.
+- [weak] The surface takes no pointer or focus state of its own (no `State` axis, [In Figma](#in-figma)); a frame of the open drawer shows the focus ring where focus lands, as on the [modal dialog](modal-dialog.md#alignment-with-code).
+
+**Differences**
+- [weak] `Modal` is one True/False axis where code picks a component or a variant (Fluent's `type="overlay|inline"`, MUI's `variant`): the two share every part and differ in look, so Figma keeps one set, and the mapping row says which element each value becomes.
+- [weak] `Position` names logical sides where MUI's `anchor` names physical ones, but MUI flips `left` and `right` itself when the theme's direction is `rtl` (`getAnchor`, [MUI Drawer.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.js)). On MUI, `Trailing` maps to `anchor="right"` and the theme mirrors it; a library that names physical sides without flipping them is mapped by direction in the project's code.
+- [weak] `Show back button` is a boolean in Figma where Fluent's `DrawerHeaderNavigation` is a part the consumer fills ([Fluent react-drawer components](https://github.com/microsoft/fluentui/tree/master/packages/react-components/react-drawer/library/src/components)): the drawer has one back step at most ([drawers and side sheets](#drawers-and-side-sheets)), so a boolean says all a slot would.
+
+**Check**
+- *Script*: the component contract lists `Position`, `Size`, `Modal`, `Title`, the slots and the booleans beside the props the code takes (design-code-parity). A test can open each `Modal` value and assert `:modal` matches for `True` and not for `False`.
+- *Judgement*: does the coded drawer's element and opening call follow from the `Modal` value its frame shows, and does `Leading` land on the start side in a right-to-left page?
+
+**Sources.** Fluent, MUI and Primer source as linked; the HTML standard for `:open`, `:modal` and `:popover-open`. Fluent and MUI agree that the modal and inline drawers are different elements; only Fluent ships the parts as components; SDS and Carbon's Code Connect ship no drawer.
+
+## In code
+
+**Element**
+- [required] The element for each kind, and what closed means, are in [drawers and side sheets: *Build*](#drawers-and-side-sheets).
+- [required] It opens without script from `popovertarget` before the script upgrades it (code-standard rule 20).
+
+**Props**
+- [strong] Open state and a close callback, a position, a size and the modal choice, with the body and actions as children: Fluent (`open`, `position`, `size`, `type`, and `modalType` on its overlay drawer), MUI (`open`, `onClose`, `anchor`, `variant`) and Primer (`onClose`, `position`, `width`) ([Fluent Drawer types](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/react-components/react-drawer/library/src/shared/DrawerBase.types.ts), [MUI Drawer types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Drawer/Drawer.d.ts), [Primer Dialog source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Dialog/Dialog.tsx)).
+- [required] The body and footer are slots, never a string or render prop (code-standard rule 13).
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity); the component contract flags a Figma property with no prop.

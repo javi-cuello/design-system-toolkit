@@ -366,19 +366,13 @@ The threshold is [interaction: response times](../design/interaction.md#response
 
 **Sources.** Figma's Simple Design System, Primer and Polaris for names; the toolkit's research articles [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md) and [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md) (November 2026) for Loading, Open and the icon button, with the libraries each read. Where kits split (Loading as a boolean, icon-only merged into Button), the toolkit takes the smaller set and the required accessible name.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] A native `button` with `type="button"` unless it submits; an `a` only when it navigates, styled by the same component (code-standard rule 8; [html-semantics](../../code/html-semantics.md)).
-- [required] Disabled is `disabled` on the native control, or `aria-disabled="true"` where it must keep focus (a loading button); never `disabled` on a wrapper ([disabled buttons](#disabled-buttons); code-standard rule 9).
+**Structure**
+- [strong] Figma mirrors the code's components one to one: a `Button` set and an `Icon button` set where the code has `Button` and `IconButton` (MUI, Primer, Atlassian, Spectrum, Radix), one set where it has one (Fluent, Polaris, Ant Design); a menu trigger or a split button is a separate set only where the code ships `MenuButton` or `SplitButton`, as Fluent and Carbon do ([when to split or merge](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#separate-icon-buttons)).
+- [strong] The label, the leading and trailing icons and the spinner are parts of one component in code, never components of their own: Primer's `leadingVisual`, `trailingVisual` and `loading`, MUI's `startIcon`, `endIcon` and `loading` ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts), [MUI Button](https://mui.com/material-ui/react-button/)). So the Figma set nests an icon instance for each and no `Button content` sub-component.
 
-**Props**
-- [strong] `variant` for the rank, `size`, `loading`, `disabled`, and the leading and trailing icons as slots or props; the label is the children. Primer (`variant`, `size`, `loading`, `leadingVisual`, `trailingVisual`), MUI (`variant`, `size`, `loading`, `startIcon`, `endIcon`) and SDS (`variant`, `size`, `isDisabled`) share this shape ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts), [MUI Button](https://mui.com/material-ui/react-button/), [SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)).
-- [strong] Loading is a boolean prop (`loading`, `isLoading` or `isPending`), never `state="loading"` and never a component of its own: MUI, Primer, React Aria, Atlassian, Polaris and Chakra all do this ([loading buttons](#loading-buttons)); Carbon alone hands it to `InlineLoading` ([Carbon inline loading](https://carbondesignsystem.com/components/inline-loading/usage/)).
-- [required] An icon-only button has an accessible name (WCAG 4.1.2; [icon-only buttons](#icon-only-buttons)).
-- [moderate] A separate icon button makes the name a required prop (`aria-label` in Primer, `label` in Atlassian and Carbon); a merged Button can only recommend it, as Polaris's `accessibilityLabel` does, so its docs say so ([Primer IconButton](https://primer.style/product/components/icon-button/)).
-
-**From Figma**
+**Mapping**
 - [required] Each Figma axis maps to one attribute or prop, recorded once (code-standard rule 9; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -395,8 +389,36 @@ The threshold is [interaction: response times](../design/interaction.md#response
   | `Show leading icon`, `Show trailing icon` | whether that icon is passed; no prop of their own |
 - [strong] Write `:focus-visible` before `:hover` in the stylesheet, as Focus precedes Hover in the set: two rules of equal specificity resolve by order, and a later hover would hide the ring under the pointer ([CSS Cascade 4](https://www.w3.org/TR/css-cascade-4/#cascade-order); figma-standard rule 4).
 
+**States**
+- [required] Rest, Hover, Press and Focus are set by the browser, as `:hover`, `:active` and `:focus-visible`; no prop sets them, so the developer builds each from its frame, and the frame must exist (code-standard rule 9; [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md#state-values-in-code)).
+- [required] Disabled, Loading and Open are set by the code (`disabled`, `loading`, `aria-expanded`), and each excludes the pointer states in appearance, which is why they are values or a pairing that the set keeps sparse (figma-standard rules 2 and 4).
+- [strong] Code reaches combinations no frame shows unless one is drawn: a focused button that is also hovered resolves by stylesheet order, so Focus is drawn before Hover in the set and written before it in the stylesheet ([what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md#states-on-the-axis)). A disabled button never hovers, since a native `disabled` button receives no pointer events in MUI's `ButtonBase`, so no Disabled-and-Hover frame is drawn.
+
+**Differences**
+- [strong] Loading: a `State` value in Figma, a boolean prop in code. One value adds 18 variants where a boolean would add 90, 72 of them impossible; the mapping row says which prop it becomes ([loading as a State](../../../research/components-and-naming/what-the-state-axis-models.md#loading-as-a-state)).
+- [moderate] Axis and value names follow figma-standard rules 18 and 21 (sentence case, `Leading icon`), and code keeps its own case (`leadingVisual`, `startIcon`); the mapping row is where the two meet. Carbon's `Style` axis maps to `kind` and has stayed that way since a rename was declined ([Carbon issue #14836](https://github.com/carbon-design-system/carbon/issues/14836)).
+- [weak] Any other departure (a Figma-only `Device` axis, a code-only `block` prop) is named here with its reason, or the parity report raises it.
+
+**Check**
+- *Script*: the component contract lists every Figma axis and property and the props the code exposes; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
+- *Judgement*: could a developer build every frame from the code's props and the browser's states alone, and does every prop have a frame?
+
+**Sources.** The toolkit's research articles [what the State axis models](../../../research/components-and-naming/what-the-state-axis-models.md) and [when to split or merge a component](../../../research/components-and-naming/when-to-split-or-merge-a-component.md), with the libraries each read; Primer and MUI source as linked; Carbon issue #14836 for a mismatch kept on purpose.
+
+## In code
+
+**Element**
+- [required] A native `button` with `type="button"` unless it submits; an `a` only when it navigates, styled by the same component (code-standard rule 8; [html-semantics](../../code/html-semantics.md)).
+- [required] Disabled is `disabled` on the native control, or `aria-disabled="true"` where it must keep focus (a loading button); never `disabled` on a wrapper ([disabled buttons](#disabled-buttons); code-standard rule 9).
+
+**Props**
+- [strong] `variant` for the rank, `size`, `loading`, `disabled`, and the leading and trailing icons as slots or props; the label is the children. Primer (`variant`, `size`, `loading`, `leadingVisual`, `trailingVisual`), MUI (`variant`, `size`, `loading`, `startIcon`, `endIcon`) and SDS (`variant`, `size`, `isDisabled`) share this shape ([Primer Button types](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Button/types.ts), [MUI Button](https://mui.com/material-ui/react-button/), [SDS Button.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/button/Button.figma.ts)).
+- [strong] Loading is a boolean prop (`loading`, `isLoading` or `isPending`), never `state="loading"` and never a component of its own: MUI, Primer, React Aria, Atlassian, Polaris and Chakra all do this ([loading buttons](#loading-buttons)); Carbon alone hands it to `InlineLoading` ([Carbon inline loading](https://carbondesignsystem.com/components/inline-loading/usage/)).
+- [required] An icon-only button has an accessible name (WCAG 4.1.2; [icon-only buttons](#icon-only-buttons)).
+- [moderate] A separate icon button makes the name a required prop (`aria-label` in Primer, `label` in Atlassian and Carbon); a merged Button can only recommend it, as Polaris's `accessibilityLabel` does, so its docs say so ([Primer IconButton](https://primer.style/product/components/icon-button/)).
+
 **Check**
 - *Script*: the parity loop compares each variant's geometry, fills and focus ring with its frame (design-code-parity); the component contract flags a Figma axis with no prop.
 - *Judgement*: does the loading button keep focus, keep its width, and announce the outcome?
 
-**Sources.** Primer, MUI, Figma's SDS, Carbon and the libraries named in the *Loading buttons* section; the toolkit's state-axis research for the mapping table.
+**Sources.** Primer, MUI, Figma's SDS, Carbon and the libraries named in the *Loading buttons* section; the toolkit's state-axis research for the mapping table in *Alignment with code*.

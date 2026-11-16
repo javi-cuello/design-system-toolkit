@@ -80,17 +80,14 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 
 **Sources.** Primer, Atlassian, MUI and SDS as linked. They agree on the parts; their tone lists differ in length, which is why the toolkit fixes the axis at the status tokens' tones, never one value per status.
 
-## In code
+## Alignment with code
 
-**Element**
-- [moderate] Inline text, not a control: Primer's `Label` renders a `span`, SDS's `Tag` a `span`, and the toolkit a visual custom element with no script ([*Status badges and pills*](#status-badges-and-pills), Build; code-standard rule 8).
-- [weak] A count read aloud says what it counts: Primer's `CounterLabel` hides the visible number with `aria-hidden` and repeats it in a visually hidden "(n)".
+**Structure**
+- [strong] Code splits a status label from a count: Primer ships `Label`, `StateLabel` and `CounterLabel` ([CounterLabel.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/CounterLabel/CounterLabel.tsx)), Atlassian a `Lozenge` and a `Badge` that "is used to display numeric status data" ([Atlassian badge](https://atlassian.design/components/badge/code)), MUI a `Badge` that pins a count or dot to its children ([Badge types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Badge/Badge.d.ts)). This page's set is the status label; a count is a set of its own where the code has one, and the word clash is the *Overview*'s.
+- [weak] Primer's kit mirrors its code one to one: three Figma components, each Code Connected to its own ([Label.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Label/Label.figma.tsx), [StateLabel.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/StateLabel/StateLabel.figma.tsx), [CounterLabel.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/CounterLabel/CounterLabel.figma.tsx)). Its `StateLabel` set maps Figma's words to the code's (`open` becomes `issueOpened` or `pullOpened`), one Figma set feeding two code variants.
+- [moderate] Where code merges a passive tag with a removable one, kits merge too: SDS's `Tag` is a `span` that grows a remove button when `onRemove` is set ([Tag.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Tag/Tag.tsx)), and its Figma `Removable` drives that handler ([Tag.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/Tag.figma.ts)); Carbon's Figma `Tag` turns a `Dismissible` boolean into a different code component, `DismissibleTag` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)). This page keeps the badge passive and the removable value a [chip](chip.md), so the badge set has no remove property.
 
-**Props**
-- [strong] A tone, a size and an optional icon, the label as children; the tone's name differs: Primer `variant`, Atlassian `appearance`, SDS `scheme`.
-- [weak] Atlassian's `maxWidth` sets where the label truncates.
-
-**From Figma**
+**Mapping**
 - [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)). SDS maps `Scheme` to `scheme` and `Label` to children:
 
   | Figma | Code |
@@ -100,6 +97,32 @@ A badge is a short label for the state of an object, in a list, a table or a hea
   | `Size` | `size` |
   | `Label` | the text, children |
   | `Show icon`, `Icon` | a leading icon, `aria-hidden` (code-standard rule 18) |
+
+**States**
+- [required] The browser sets none: a badge is a `span` that takes no focus and answers no pointer, so it has no `:hover`, `:active` or `:focus-visible` frame and no `State` axis ([*In Figma*](#in-figma), Variants and states).
+- [strong] What code sets is the tone and the text, not a state: Primer's `variant`, Atlassian's `appearance` and SDS's `scheme` each take one tone value ([Label.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Label/Label.figma.tsx), [Atlassian badge](https://atlassian.design/components/badge/code), [Tag.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/Tag.figma.ts)).
+- [moderate] A count's frames show what its props produce: MUI's `max` and Atlassian's `max` (99 by default) cap the number with a plus, and MUI's `showZero` and `invisible` decide whether zero shows ([Badge types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Badge/Badge.d.ts), [Atlassian badge](https://atlassian.design/components/badge/code)). A count set draws the capped value; the status badge has none of these.
+
+**Differences**
+- [weak] The tone axis is `Feedback` in Figma and `tone` in code, the values the same words (Mapping); kits keep their code's names instead, Primer `variant` and Carbon `Color` for `type` ([Label.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Label/Label.figma.tsx), [Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)), which figma-standard rule 1's slot name does not.
+- [weak] No `Disabled` and no loading value: Carbon's kit draws `State=Disabled` and `State=Skeleton` on its tag, mapping them to `disabled` and to a separate `TagSkeleton` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)). A passive badge has nothing to disable, and a loading placeholder is not a state of the badge.
+- [weak] `Emphasis` names the attribute the code adds where it ships both looks; SDS calls the axis `Variant` and maps only `Secondary` to `variant="secondary"`, primary being the default ([Tag.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/Tag.figma.ts)).
+
+**Check**
+- *Script*: the component contract lists `Size`, `Emphasis` and `Feedback` beside the badge's attributes; a tone value in one with no partner in the other, or a `State` axis on the set, is a finding unless *Differences* names it (design-code-parity).
+- *Judgement*: is every tone in Figma a tone attribute in code, word for word, and is any count drawn as its own set?
+
+**Sources.** Primer's Label, StateLabel and CounterLabel Code Connect files and source, Atlassian's badge code page, MUI's Badge types, and SDS's and Carbon's Tag source and Code Connect files, all as linked. They agree that a count and a status label are different components, and differ on whether a removable tag shares the passive one's component.
+
+## In code
+
+**Element**
+- [moderate] Inline text, not a control: Primer's `Label` renders a `span`, SDS's `Tag` a `span`, and the toolkit a visual custom element with no script ([*Status badges and pills*](#status-badges-and-pills), Build; code-standard rule 8).
+- [weak] A count read aloud says what it counts: Primer's `CounterLabel` hides the visible number with `aria-hidden` and repeats it in a visually hidden "(n)".
+
+**Props**
+- [strong] A tone, a size and an optional icon, the label as children; the tone's name differs: Primer `variant`, Atlassian `appearance`, SDS `scheme`.
+- [weak] Atlassian's `maxWidth` sets where the label truncates.
 
 **Check**
 - *Script*: the parity loop compares each tone with its frame (design-code-parity); a test could flag a badge rendered as a `button` or link.

@@ -77,6 +77,40 @@ An alert is a message with a severity, shown in the page: a banner about the who
 
 **Sources.** Primer, MUI, Carbon and SDS for the parts and tone names; the toolkit's split-or-merge research for severity and colour.
 
+## Alignment with code
+
+**Structure**
+- [strong] Code builds the alert as one component whose title, body and actions are props or children, so Figma draws one set with `Title`, `Body` and an `Actions slot`, as [In Figma](#in-figma) does. Primer's `Banner` takes `title`, `description`, `primaryAction`, `secondaryAction` and `onDismiss`, and also exports `Banner.Title`, `Banner.Description`, `Banner.PrimaryAction` and `Banner.SecondaryAction` ([Primer Banner index.ts](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/index.ts), [Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx)); MUI's `Alert` takes `severity`, `action` and `onClose`, its title a separate `AlertTitle` child ([MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js), [AlertTitle.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/AlertTitle/AlertTitle.js)); SDS's `Notification` takes `variant`, `icon` and `isDismissible`, with the title and body as `TextStrong` and `Text` children ([SDS Notification.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Notification/Notification.tsx)).
+- [strong] The close button is built inside the component, never passed in: Primer renders an `IconButton` named "Dismiss banner" when `onDismiss` is set, MUI one named by `closeText` ("Close" by default) when `onClose` is set, and SDS one named "Dismiss notification" ([Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx), [MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js), [SDS Notification.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Notification/Notification.tsx)). So Figma nests an icon button instance behind `Show close button`, never a slot.
+- [weak] Carbon splits by behaviour and its Figma follows: one Figma inline notification connects to `InlineNotification`, or to `ActionableNotification` when `Actionable=True`, and a separate Figma `Callout` to `Callout` ([Carbon InlineNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/InlineNotification.figma.ts), [Callout.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/Callout.figma.ts)). An axis that changes which code component renders is what the toolkit avoids here: actions are a slot.
+
+**Mapping**
+- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
+
+  | Figma | Code |
+  |---|---|
+  | `Feedback` | `tone`, the same word lowercased (Primer `variant`, MUI `severity`, Carbon `kind`) |
+  | `Title`, `Body` | the heading and body text |
+  | the tone's icon | an `aria-hidden` icon chosen by tone (code-standard rule 18) |
+  | `Show actions slot`, `Actions slot` | the actions, buttons or links |
+  | `Show close button` | a dismiss handler and a named close `button` |
+
+**States**
+- [moderate] The browser sets no state on the alert itself; its buttons carry their own. Primer gives the `section` `tabIndex={-1}` so a script can move focus to it ([Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx)), which the toolkit does only after a redirect ([*Banners and alerts*](#banners-and-alerts)); MUI's `Alert` is a `div` with `role="alert"` and no focus of its own ([MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js)).
+- [moderate] Dismissed is no state but an unmount: `onDismiss` and `onClose` are handlers, and the consumer removes the alert ([Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx), [MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js)). No frame shows a dismissed alert.
+- [weak] A combination some code cannot reach: MUI renders the close button only when no `action` is passed ([MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js)), while Primer renders both ([Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx)). On MUI, a frame with `Show actions slot` and `Show close button` both on has no code; the project draws it only where its code reaches it.
+- [weak] A combination code reaches that a frame may need: Primer's `hideTitle` keeps the title for assistive technology and hides it on screen, and its Figma `Title?` boolean maps onto it ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)). A project that uses it draws the compact alert with its `Title` text still filled and hidden, never emptied, so the region keeps its name.
+
+**Differences**
+- [strong] `Show close button` is a boolean where code has a handler: Primer's Figma `Dismissible?` becomes `onDismiss`, SDS's `Dismissible` becomes `isDismissible`, and Carbon's `Close` becomes `hideCloseButton`, inverted ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx), [SDS Notification.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Notification.figma.ts), [Carbon InlineNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/InlineNotification.figma.ts)). The Figma name says what it reveals (figma-standard rule 21) and the mapping row turns it into the handler.
+- [weak] The icon is fixed per tone, though Primer's code takes a `leadingVisual` for `info` and `upsell` and its Figma exposes an `Icon` instance ([Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx), [Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)): the toolkit keeps the icon a signal of severity ([In Figma](#in-figma)), so a custom icon is a project's ruling.
+
+**Check**
+- *Script*: the component contract lists the `Feedback` values, `Title`, `Body`, `Show close button` and the actions slot beside the props the code takes (design-code-parity). A test can assert that an alert with a close has a named button and that pressing it removes the alert.
+- *Judgement*: does every frame with the close shown stand for a condition that can end, and could the code reach every combination of actions and close the frames show?
+
+**Sources.** Primer, MUI, Carbon and Figma's SDS source and Code Connect files as linked. They agree on one component with the close built in and on dismissal as a handler; Carbon alone splits by behaviour into components.
+
 ## In code
 
 **Element**
@@ -87,17 +121,6 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - [strong] A tone, a title, a body, actions and a dismiss handler: Primer (`variant`, `title`, `description`, `primaryAction`, `secondaryAction`, `onDismiss`), MUI (`severity`, `action`, `onClose`), Carbon (`kind`, `title`, `subtitle`, `onClose`), SDS (`variant`, `icon`, `isDismissible`).
 - [moderate] Dismissible is a handler, not only a flag: Primer shows a dismiss button when `onDismiss` is set, and MUI a close button when `onClose` is set and no `action` is.
 - [weak] Primer's `hideTitle` keeps the title for assistive technology while hiding it on screen, so a compact alert still names its region.
-
-**From Figma**
-- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
-
-  | Figma | Code |
-  |---|---|
-  | `Feedback` | `tone`, the same word lowercased (Primer `variant`, MUI `severity`, Carbon `kind`) |
-  | `Title`, `Body` | the heading and body text |
-  | the tone's icon | an `aria-hidden` icon chosen by tone (code-standard rule 18) |
-  | `Show actions slot`, `Actions slot` | the actions, buttons or links |
-  | `Show close button` | a dismiss handler and a named close `button` |
 
 **Check**
 - *Script*: the parity loop compares each tone with its frame (design-code-parity); a test could assert each alert is a named region or sits inside one.

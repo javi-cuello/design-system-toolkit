@@ -263,16 +263,19 @@ ok("…and an anchor the page has no heading for", /links b\.md#nope, a heading/
 ok("…and a path on someone's machine", /links a path outside the repo \(\/Users\/me\/notes\.md\)/.test(kOut));
 // 2026-11-16: a component page has one shape: Overview, topic sections with Build, In Figma, In code (toolkit-standard §D 21).
 const FIG = "## In Figma\n\n**Layers**\n**Properties**\n**Variants and states**\n**Tokens**\n**Check**\n**Sources.** s\n\n";
-const COD = "## In code\n\n**Element**\n**Props**\n**From Figma**\n**Check**\n**Sources.** s\n";
-d = tree({ files: { "knowledge/ui/components/good.md": "# G\n\n## Overview\n\n**Use when / don't use**\n**Anatomy**\n\n## Topic\n\n**Build**\n\n" + FIG + COD,
+const ALI = "## Alignment with code\n\n**Structure**\n**Mapping**\n**States**\n**Differences**\n**Check**\n**Sources.** s\n\n";
+const COD = "## In code\n\n**Element**\n**Props**\n**Check**\n**Sources.** s\n";
+d = tree({ files: { "knowledge/ui/components/good.md": "# G\n\n## Overview\n\n**Use when / don't use**\n**Anatomy**\n\n## Topic\n\n**Build**\n\n" + FIG + ALI + COD,
   "knowledge/ui/components/README.md": "# Components\n",
+  "knowledge/ui/components/ali.md": "# A\n\n## Overview\n\n**Use when / don't use**\n**Anatomy**\n\n## Topic\n\n**Build**\n\n" + FIG + "## Alignment with code\n\n**Structure**\n**Mapping**\n**Check**\n**Sources.** s\n\n" + COD,
   "knowledge/ui/components/bad.md": "# B\n\n## Topic\n\n**How**\n\n## In Figma\n\n**Properties**\n**Layers**\n- unweighed layer\n\n" + COD } });
 const cOut = run(d).stdout;
 ok("a component page in the template passes", !/components\/good\.md/.test(cOut));
-ok("…one without Overview first is refused", /bad\.md: a component page runs Overview, its topic sections, In Figma, In code/.test(cOut));
+ok("…one without Overview first is refused", /bad\.md: a component page runs Overview, its topic sections, In Figma, Alignment with code, In code/.test(cOut));
 ok("…and a topic section with no Build part", /bad\.md: component section "Topic" has no Build part/.test(cOut));
 ok("…and In Figma's parts missing or out of order", /bad\.md: component section "In Figma" holds Layers, Properties/.test(cOut));
 ok("…and an item under a Figma part with no weight", /bad\.md:\d+: an item carries no weight/.test(cOut));
+ok("…and Alignment with code missing a part", /ali\.md: component section "Alignment with code" holds Structure, Mapping, States, Differences, Check, Sources/.test(cOut));
 ok("…and the folder's README is not a component page", !/components\/README\.md/.test(cOut));
 // 2026-11-11: every knowledge item carries a weight; a Case is not an item (toolkit-standard §D 21).
 d = tree({ files: { "knowledge/ui/w.md": "# W\n\n## S\n\n**How**\n- [strong] **Weighed.** x\n- **Bare.** y\n- [maybe] z\n\n**Cases**\n- a case → a fix\n\n```\n- **In a fence.** q\n```\n" } });

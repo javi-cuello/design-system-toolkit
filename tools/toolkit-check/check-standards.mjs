@@ -259,15 +259,16 @@ for (const f of knowledgePages) {
   // A design pattern ships with its code counterpart: every section of a pattern page carries a Build part.
   if (/^knowledge\/ui\/patterns\//.test(f)) for (const sec of read(f).split(/^## /m).slice(1))
     if (!/\*\*Build[.:]?\*\*|\*\*Build:?\*\*/.test(sec)) problems.push(`${f}: pattern "${sec.split("\n")[0].trim()}" has no Build part (its code counterpart, toolkit-standard §D 21)`);
-  // A component page has one shape: Overview first, its topic sections (each with a Build part), then In Figma and
-  // In code last, each with its parts in order, so every component reads the same way (maintainer, 2026-11-16).
+  // A component page has one shape: Overview first, its topic sections (each with a Build part), then In Figma,
+  // Alignment with code and In code last, each with its parts in order, so every component reads the same way and
+  // every Figma build is held to the code (maintainer, 2026-11-16).
   if (/^knowledge\/ui\/components\/(?!README\.md$)/.test(f)) {
     const secs = read(f).split(/^## /m).slice(1).map((s) => ({ name: s.split("\n")[0].trim(), body: s }));
     const names = secs.map((s) => s.name);
     const parts = (body) => [...body.matchAll(/^\*\*([^*]+?)[.:]?\*\*/gm)].map((m) => m[1].trim());
-    const shape = { "Overview": ["Use when / don't use", "Anatomy"], "In Figma": ["Layers", "Properties", "Variants and states", "Tokens", "Check", "Sources"], "In code": ["Element", "Props", "From Figma", "Check", "Sources"] };
-    if (names[0] !== "Overview" || names.at(-2) !== "In Figma" || names.at(-1) !== "In code" || names.length < 4)
-      problems.push(`${f}: a component page runs Overview, its topic sections, In Figma, In code (it has ${names.join(", ") || "no sections"}) (toolkit-standard §D 21)`);
+    const shape = { "Overview": ["Use when / don't use", "Anatomy"], "In Figma": ["Layers", "Properties", "Variants and states", "Tokens", "Check", "Sources"], "Alignment with code": ["Structure", "Mapping", "States", "Differences", "Check", "Sources"], "In code": ["Element", "Props", "Check", "Sources"] };
+    if (names[0] !== "Overview" || names.at(-3) !== "In Figma" || names.at(-2) !== "Alignment with code" || names.at(-1) !== "In code" || names.length < 5)
+      problems.push(`${f}: a component page runs Overview, its topic sections, In Figma, Alignment with code, In code (it has ${names.join(", ") || "no sections"}) (toolkit-standard §D 21)`);
     for (const s of secs) {
       if (shape[s.name]) {
         const have = parts(s.body).filter((p) => shape[s.name].includes(p));
@@ -286,7 +287,7 @@ for (const f of knowledgePages) {
       const lab = l.match(/^\*\*([^*]{1,40}?)[.:]?\*\*[.:]?(\s|$)/);
       if (lab) label = lab[1].trim();
       if (!/^- /.test(l) || /^(cases|check|sources)$/i.test(label)) return;
-      if (!/^(use when.*|what good looks like|how|accessibility|build|anatomy|layers|properties|variants and states|tokens|element|props|from figma)$/i.test(label) && !/^- (\[[^\]]*\] )?\*\*/.test(l)) return;
+      if (!/^(use when.*|what good looks like|how|accessibility|build|anatomy|layers|properties|variants and states|tokens|structure|mapping|states|differences|element|props)$/i.test(label) && !/^- (\[[^\]]*\] )?\*\*/.test(l)) return;
       if (!/^- \[(required|strong|moderate|weak|contested)\] /.test(l)) problems.push(`${f}:${i + 1}: an item carries no weight; start it with [required], [strong], [moderate], [weak] or [contested] (toolkit-standard §D 21)`);
     });
   }

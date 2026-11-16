@@ -54,19 +54,20 @@ A switch turns one setting on or off, and the change takes effect the moment it 
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: the label column, the track, the state text and the save status line, in the order the project's layout puts them; the label wraps and the component grows with it (figma-standard rule 33).
-- [required] Each layer is named for its role, the same in every variant: `Track`, `Thumb`, `Label`, `Description`, `State text` (holding the on and off labels) and `Save status` (figma-standard rule 10); the two text names stay apart, so neither means both.
+- [required] Auto layout throughout. `Switch` is the control alone, the `Track` holding its `Thumb`. `Switch field` holds the label column, a `Switch` instance, the state text and the save status line, in the order the project's layout puts them; the label wraps and the field grows with it (figma-standard rule 33). No group set: a list of switches is a layout, under a `fieldset` and `legend` where it shares a heading ([forms: *Form structure*](../patterns/forms.md#form-structure)). The split follows the code's ([Alignment with code](#alignment-with-code)).
+- [required] Each layer is named for its role, the same in every variant: in `Switch`, `Track` and `Thumb`; in `Switch field`, `Label`, `Description`, the nested `Switch`, `State text` (holding the on and off labels) and `Save status` (figma-standard rule 10); the two text names stay apart, so neither means both.
 - [required] The thumb's position comes from the track's auto-layout alignment (start for off, end for on), never a fixed x, so a right-to-left page mirrors which end means on, where the project mirrors (figma-standard rule 50).
 
 **Properties**
-- [required] `Label` is a text property; `Show description` is a boolean directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds.
-- [required] The state text, where the library draws it, is revealed by a `Show state text` boolean directly above two text properties, `On label` and `Off label`, in sentence case for the code's props (Primer's `buttonLabelOn` and `buttonLabelOff`, Carbon's `labelB` and `labelA`), so a project can say "Show" and "Hide" (figma-standard rules 5, 18, 21 and 37).
+- [required] `Switch field` has `Label` as a text property and `Show description` directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds.
+- [required] The state text, where the library draws it, sits on `Switch field`, revealed by a `Show state text` boolean directly above two text properties, `On label` and `Off label`, in sentence case for the code's props (Primer's `buttonLabelOn` and `buttonLabelOff`, Carbon's `labelB` and `labelA`), so a project can say "Show" and "Hide" (figma-standard rules 5, 18, 21 and 37).
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
 - [required] On is a True/False axis named after the code's `checked`, `False` first (figma-standard rules 1 and 21). SDS draws it as `Value Type` with a `Checked` value mapped to `defaultSelected` ([SDS SwitchField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/SwitchField.figma.ts)).
-- [required] Axes in the order `Size → Checked → Disabled → State`; `Disabled` pairs only with Rest and sits right after it; `State` runs `Rest → Focus → Hover → Press → Loading` (figma-standard rules 1 to 4).
-- [moderate] Loading is the last `State` value where the project saves switches live, never a boolean beside the states (figma-standard rule 4); Primer's switch carries a `loading` prop and a `loadingLabel` announced after `loadingLabelDelay` ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)), and the moved section asks for a pending state ([switch (toggle): *How*](#switch-toggle)). Whether the library needs it is figma-standard rule 36's judgement.
+- [required] Both sets have the axes `Size → Checked → Disabled → State`; `Disabled` pairs only with Rest and sits right after it; `State` runs `Rest → Focus → Hover → Press → Loading` (figma-standard rules 1 to 4).
+- [moderate] Loading is the last `State` value where the project saves switches live, never a boolean beside the states (figma-standard rule 4); Primer's switch carries a `loading` prop and a `loadingLabel` announced after `loadingLabelDelay` ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)), and [switch (toggle): *How*](#switch-toggle) asks for a pending state. Whether the library needs it is figma-standard rule 36's judgement.
+- [required] The field owns its switch's state: it sets the nested `Switch`'s variant from its own axes, `Loading` included, and does not expose the instance (figma-standard rule 7), as [checkbox: *In Figma*](checkbox.md#in-figma) sets out.
 - [required] On and off differ by the thumb's position as well as colour (WCAG 1.4.1; figma-standard rule 31).
 - [weak] `Size` only where the code has sizes: Primer ships `small` and `medium`, MUI `small` and `medium` ([MUI Switch source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Switch/Switch.js)); t-shirt values, largest first (figma-standard rule 6).
 - [weak] No `Validation` axis: a switch applies at once outside a submitted form, so nothing validates it; a failed save is the `Save status` line and the switch's return to its old state ([switch (toggle): *How*](#switch-toggle)). `Checked` sits beside `State`, not on it, for the reason [checkbox: *In Figma*](checkbox.md#in-figma) gives.
@@ -81,19 +82,16 @@ A switch turns one setting on or off, and the change takes effect the moment it 
 - *Script*: figma-components-audit runs the rules cited above on the set; the contract lists `Checked`, `Size` and `Loading`, so an axis or value with no code counterpart shows in the parity report.
 - *Judgement*: with colour removed, can a designer still tell on from off?
 
-**Sources.** Figma's Simple Design System, Primer and Carbon for the parts and property names; MUI for sizes; figma-standard rules 4 and 48 for Loading and the thumb's token.
+**Sources.** Figma's Simple Design System, Primer and Carbon for the parts and property names; SDS, React Aria and MUI for the control and field split; MUI for sizes; figma-standard rules 4 and 48 for Loading and the thumb's token.
 
-## In code
+## Alignment with code
 
-**Element**
-- [contested] The native `input type="checkbox" role="switch"` the [switch (toggle): *Build*](#switch-toggle) part sets out. Systems split three ways: MUI and React Aria put `role="switch"` on a native checkbox input ([MUI Switch source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Switch/Switch.js), [React Aria useSwitch](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/switch/useSwitch.ts)); Carbon and Radix render a `button role="switch"` with `aria-checked` ([Carbon Toggle source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Toggle/Toggle.tsx), [Radix switch source](https://github.com/radix-ui/primitives/blob/main/packages/react/switch/src/switch.tsx)); Primer renders a `button` with `aria-pressed`, a toggle button rather than a switch ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)). The toolkit takes the native input, which keeps its form value and no-script path (code-standard rules 8 and 20).
-- [strong] Whichever element, the APG's contract holds: role `switch`, `aria-checked` (or `checked`) for on, Space toggles, and the name comes from the visible label ([APG switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/)).
+**Structure**
+- [strong] Code splits the switch into a bare control and a field, and the `Switch` and `Switch field` sets mirror it: SDS ships `Switch` and `SwitchField` ([SDS Switch.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Switch/Switch.tsx)); React Aria `SwitchButton` and `SwitchField`, its single `Switch` deprecated for the pair ([React Aria Switch.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Switch.tsx)); MUI `Switch` inside `FormControlLabel`, which takes the `control`, its `label` and `labelPlacement` ([MUI FormControlLabel types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/FormControlLabel/FormControlLabel.d.ts)); Radix `Switch.Root` and `Switch.Thumb`, with no label ([Radix switch source](https://github.com/radix-ui/primitives/blob/main/packages/react/switch/src/switch.tsx)).
+- [moderate] Primer and Carbon each ship one component, at opposite ends. Primer's `ToggleSwitch` is the bare control with its status text and spinner, named from outside by a required `aria-labelledby` ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx), [Primer ToggleSwitch.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.figma.tsx)); Carbon's `Toggle` is the field, with `labelText`, `labelA`, `labelB` and `hideLabel` ([Carbon Toggle.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Toggle/Toggle.figma.ts)). They map to `Switch` and to `Switch field`.
+- [strong] No library ships a switch group with a legend: SDS's `SwitchGroup` is a plain `div` ([SDS Switch.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Switch/Switch.tsx)), and React Aria, Primer, Carbon and Radix export none, which is why [In Figma](#in-figma) draws no group set.
 
-**Props**
-- [strong] `checked` (or `defaultChecked`), `disabled`, `onChange`, `size`, and the label; Primer adds `loading`, `loadingLabel`, `buttonLabelOn` and `buttonLabelOff`; Carbon names on `toggled` with `labelA`, `labelB` and `hideLabel`; React Aria `isSelected`; MUI `checked` and `size`. All four carry the same boolean under different names.
-- [weak] A pending save is a `loading` prop that keeps the switch focusable and announces what is saving, as Primer does with `aria-disabled` and its `loadingLabel`; not `disabled`, which drops focus ([button: *Loading buttons*](button.md#loading-buttons) holds the same reasoning).
-
-**From Figma**
+**Mapping**
 - [required] Each Figma axis maps to one attribute, property or pseudo-class, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -106,6 +104,35 @@ A switch turns one setting on or off, and the change takes effect the moment it 
   | `State=Loading` | `aria-busy="true"` on the host as the styling hook, `aria-disabled` while it saves, and the saving text in a status region; not `aria-busy` alone |
   | `Label`, `Description` | the `label`; the description tied with `aria-describedby` (code-standard rule 15) |
   | `Show state text`, `On label`, `Off label` | visible text marked `aria-hidden`, since the checked state is announced |
+
+**States**
+- [required] On the native `input type="checkbox" role="switch"` the toolkit builds, the browser sets `:checked` and the pointer and focus states in the mapping. On the `button role="switch"` Carbon and Radix render, `:checked` never matches, since it applies to checkbox and radio inputs and options only ([HTML: `:checked`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-checked)): on and off are styled from `aria-checked` in Carbon and `data-state="checked"` in Radix ([Carbon Toggle source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Toggle/Toggle.tsx), [Radix switch source](https://github.com/radix-ui/primitives/blob/main/packages/react/switch/src/switch.tsx)).
+- [required] A prop sets `checked`, `disabled`, `size` and the pending save. Primer's `loading` refuses clicks while it saves (`acceptsInteraction = !disabled && !loading`, [Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)), so a press during Loading does nothing and no Loading-and-Press frame is drawn.
+- [moderate] Code reaches Loading on either `Checked` value (a save towards on, a save towards off) and focus on each; the set draws them, since `Checked` sits beside `State` ([In Figma](#in-figma)).
+- [moderate] React Aria sets the states as data attributes (`data-selected`, `data-hovered`, `data-pressed`, `data-focus-visible`; [React Aria Switch.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Switch.tsx)), as [checkbox: *Alignment with code*](checkbox.md#alignment-with-code) describes.
+
+**Differences**
+- [moderate] Loading is a `State` value where code has a `loading` prop, as on the button ([research: *Loading as a State*](../../../research/components-and-naming/what-the-state-axis-models.md#loading-as-a-state)); Primer's own kit draws it the same way, its `state=loading` read as `loading` ([Primer ToggleSwitch.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.figma.tsx)).
+- [weak] No `Validation` axis, though React Aria's `SwitchField` takes `isInvalid` and SDS's renders a `FieldError` ([React Aria Switch.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Switch.tsx), [SDS Switch.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Switch/Switch.tsx)): a switch that applies at once has nothing to validate, the reason [In Figma](#in-figma) gives.
+- [weak] The state text sits on `Switch field`, where Primer renders it inside `ToggleSwitch` and maps a `label position` of start or end to `statusLabelPosition` ([Primer ToggleSwitch.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.figma.tsx)): the field owns the nested switch and exposes none of its properties (figma-standard rule 7), so text a designer sets lives on the field (toolkit reasoning).
+- [required] `Disabled` is an axis of its own where the SDS and Carbon kits fold it into `State` (`State=Disabled`, and Carbon's `Read-only`), for the reason [checkbox: *Alignment with code*](checkbox.md#alignment-with-code) gives (figma-standard rule 1).
+- [moderate] `Checked` is the code's most common name; Carbon's kit says `Toggled` for `defaultToggled`, SDS's `Value Type`, and React Aria's prop is `isSelected` ([In code: *Props*](#in-code)); the mapping row joins them (figma-standard rule 21).
+
+**Check**
+- *Script*: the component contract lists both sets beside the code's components and props; a `Loading` value with no `loading` prop, or a field on a library with none, shows in the parity report (design-code-parity).
+- *Judgement*: on the project's element, does the stylesheet read on and off from what the element sets (`:checked`, `aria-checked` or `data-state`)?
+
+**Sources.** SDS, React Aria, MUI, Radix, Primer and Carbon source and Code Connect files as linked; the HTML standard for `:checked`; the toolkit's state-axis research for Loading.
+
+## In code
+
+**Element**
+- [contested] The native `input type="checkbox" role="switch"` the [switch (toggle): *Build*](#switch-toggle) part sets out. Systems split three ways: MUI and React Aria put `role="switch"` on a native checkbox input ([MUI Switch source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Switch/Switch.js), [React Aria useSwitch](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/switch/useSwitch.ts)); Carbon and Radix render a `button role="switch"` with `aria-checked` ([Carbon Toggle source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Toggle/Toggle.tsx), [Radix switch source](https://github.com/radix-ui/primitives/blob/main/packages/react/switch/src/switch.tsx)); Primer renders a `button` with `aria-pressed`, a toggle button rather than a switch ([Primer ToggleSwitch source](https://github.com/primer/react/blob/main/packages/react/src/ToggleSwitch/ToggleSwitch.tsx)). The toolkit takes the native input, which keeps its form value and no-script path (code-standard rules 8 and 20).
+- [strong] Whichever element, the APG's contract holds: role `switch`, `aria-checked` (or `checked`) for on, Space toggles, and the name comes from the visible label ([APG switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/)).
+
+**Props**
+- [strong] `checked` (or `defaultChecked`), `disabled`, `onChange`, `size`, and the label; Primer adds `loading`, `loadingLabel`, `buttonLabelOn` and `buttonLabelOff`; Carbon names on `toggled` with `labelA`, `labelB` and `hideLabel`; React Aria `isSelected`; MUI `checked` and `size`. All four carry the same boolean under different names.
+- [weak] A pending save is a `loading` prop that keeps the switch focusable and announces what is saving, as Primer does with `aria-disabled` and its `loadingLabel`; not `disabled`, which drops focus ([button: *Loading buttons*](button.md#loading-buttons) holds the same reasoning).
 
 **Check**
 - *Script*: the parity loop compares each variant's track, thumb and ring with its frame, the thumb's end mirrored under `dir="rtl"` (design-code-parity); the component contract flags a Figma axis with no prop.

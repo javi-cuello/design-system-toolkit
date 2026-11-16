@@ -70,8 +70,8 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
 
 **Variants and states**
-- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the alert's and the badge's. It is the toast's only axis, so its order is `Feedback` alone.
-- [weak] No `State` axis on the toast: it is not itself a control, and its action and close buttons are instances that carry their own states.
+- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the alert's and the badge's. With `State` (below) its order is `Feedback → State` (figma-standard rule 1).
+- [moderate] A `State` axis of `Rest` and `Focus` only: the toast is no control, but Radix and React Aria make it focusable, so code reaches a focus ring a frame must show ([Alignment with code](#alignment-with-code)); hover and press change nothing, and its action and close buttons are instances that carry their own states.
 - [weak] No timing in Figma: a duration is a product token in code, and a toast with an action has none.
 
 **Tokens**
@@ -85,6 +85,42 @@ A toast is a brief message that appears over the page, in one corner, about some
 
 **Sources.** Carbon, MUI and Radix for the parts; SDS for a notification's Figma properties. The toolkit drops the close boolean because its toasts always close.
 
+## Alignment with code
+
+**Structure**
+- [strong] Code splits the toast into a region and the toasts in it, so Figma draws one toast and the region exists only in code. Radix ships `ToastProvider`, `ToastViewport` (a `role="region"` labelled "Notifications ({hotkey})"), `Toast`, `ToastTitle`, `ToastDescription`, `ToastAction` and `ToastClose` ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)); React Aria a `ToastRegion` fed by a `ToastQueue`, each `Toast` holding a `ToastContent` with `Text slot="title"`, `Text slot="description"` and a `Button slot="close"`, all still exported as `UNSTABLE_` ([React Aria Toast.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Toast.tsx)); MUI's `Snackbar` places and times a `SnackbarContent` that holds `message` and `action` ([MUI Snackbar.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Snackbar/Snackbar.js), [SnackbarContent.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/SnackbarContent/SnackbarContent.js)).
+- [moderate] Carbon splits by whether the toast has an action: its Figma toast's `Actionable=True` connects to `ActionableNotification`, whose role defaults to `alertdialog`, and otherwise to `ToastNotification`, whose `Time text` becomes `caption` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts), [Carbon Notification.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Notification/Notification.tsx)). The toolkit's `Show action` keeps one component, as Radix's optional `ToastAction` and MUI's optional `action` do; the mapping row says what the action changes.
+- [weak] Figma's SDS has no toast: one `Notification`, with a `Variant` of `Message` or `Alert`, serves in-page and floating messages alike ([SDS Notification.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Notification.figma.ts)).
+
+**Mapping**
+- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
+
+  | Figma | Code |
+  |---|---|
+  | `Feedback` | `tone`, the same word lowercased (Carbon `kind`) |
+  | `State=Focus` | `:focus-visible` on the focusable toast, set by the browser |
+  | `Title`, `Message` | the title and message text |
+  | `Show icon` | the tone's icon, chosen by tone, `aria-hidden` (code-standard rule 18) |
+  | `Show action` | an action button; the toast loses its timer |
+  | close button | a named `button`; SDS names its own "Dismiss notification" ([Notification.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Notification/Notification.tsx)) |
+  | none | the duration: one product token |
+
+**States**
+- [moderate] The toast takes keyboard focus, so code reaches a focus ring a frame must show: Radix renders each toast as an `li` with `tabIndex={0}` in a viewport that F8 focuses ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)), and React Aria makes each toast an `alertdialog` with `tabIndex: 0`, styled by `[data-focus-visible]` ([React Aria useToast.ts](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria/src/toast/useToast.ts), [Toast.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Toast.tsx)). The browser sets it as `:focus-visible`; [In Figma](#in-figma) draws it as `State=Focus`.
+- [moderate] Paused is a state code reaches with nothing to draw: Radix stops every toast's timer while the pointer moves over the viewport or focus is inside it, and while the window is blurred ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)); React Aria marks the region `[data-hovered]` and `[data-focused]` ([React Aria Toast.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Toast.tsx)). The toast looks the same paused or running.
+- [weak] Swipe and motion states are drawn in no frame: Radix sets `data-swipe` to `start`, `move`, `cancel` or `end` and `data-swipe-direction` on the toast ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)); they are motion, given by tokens.
+
+**Differences**
+- [weak] Figma draws no region and no stack: the region's role, label and position are code (the structure above), and the toolkit shows one toast at a time ([*Toasts*](#toasts)).
+- [weak] No close boolean, where Carbon's Figma toast has a `Close` boolean that becomes `hideCloseButton` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts)): the toolkit's toasts always close ([In Figma](#in-figma)), so a coded `hideCloseButton` is the departure.
+- [weak] The role is code's alone and the libraries split on it (Carbon and Radix `status`, MUI's `SnackbarContent` `alert`, React Aria `alertdialog`; [SnackbarContent.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/SnackbarContent/SnackbarContent.js)); nothing drawn changes with it, and the toolkit's choice is in [In code](#in-code).
+
+**Check**
+- *Script*: the component contract lists `Feedback`, `State`, `Title`, `Message`, `Show icon` and `Show action` beside the props the code takes (design-code-parity). A test can fire a toast, assert the region existed before it, then focus the toast by keyboard and compare its ring with the `Focus` frame.
+- *Judgement*: could a developer tell from the frames alone that the region, the timer and its pause are theirs to build?
+
+**Sources.** Radix, React Aria, MUI and Carbon source and Code Connect files as linked, with SDS's. They agree on a region apart from the toasts; Radix and React Aria make the toast focusable, and the libraries split on its role.
+
 ## In code
 
 **Element**
@@ -96,20 +132,8 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [contested] Whether a toast times out by default. Carbon's `timeout` defaults to 0 and MUI's `autoHideDuration` to `null`, so neither closes on its own; Radix closes after 5,000 ms. The toolkit times a toast only when its content is findable elsewhere, and never one with an action ([*Toasts*](#toasts)).
 - [weak] Radix requires an `altText` on the action: "an alternate way to carry out the action", for screen-reader users "who will not be able to navigate to the button easily/quickly".
 
-**From Figma**
-- [required] Each Figma property maps to one prop or attribute, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
-
-  | Figma | Code |
-  |---|---|
-  | `Feedback` | `tone`, the same word lowercased (Carbon `kind`) |
-  | `Title`, `Message` | the title and message text |
-  | `Show icon` | the tone's icon, chosen by tone, `aria-hidden` (code-standard rule 18) |
-  | `Show action` | an action button; the toast loses its timer |
-  | close button | a named `button`; SDS names its own "Dismiss notification" ([Notification.tsx](https://raw.githubusercontent.com/figma/sds/main/src/ui/primitives/Notification/Notification.tsx)) |
-  | none | the duration: one product token |
-
 **Check**
 - *Script*: the parity loop compares each tone with its frame (design-code-parity); a test could fire a toast and assert the live region existed before it and holds its text.
 - *Judgement*: if the person looked away, can they find the message again?
 
-**Sources.** Carbon, MUI and Radix sources as linked; they agree on the parts and on a polite role, and split on the timer.
+**Sources.** Carbon, MUI and Radix sources as linked; they agree on the parts, split on the timer, and mostly choose a polite role, though MUI's `SnackbarContent` defaults to `alert`.

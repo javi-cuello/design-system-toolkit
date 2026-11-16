@@ -56,20 +56,22 @@ A radio button picks exactly one option from a small set shown in full, saved wi
 ## In Figma
 
 **Layers**
-- [required] Auto layout throughout: the circle, then the text column holding `Label` and `Description`; the label wraps and the component grows with it (figma-standard rule 33).
-- [required] Each layer is named for its role, the same in every variant: `Circle`, its `Dot`, `Label`, `Description` (figma-standard rule 10).
+- [required] Auto layout throughout. `Radio` is the circle alone. `Radio field` holds a `Radio` instance, then the text column with `Label` and `Description`; the label wraps and the field grows with it (figma-standard rule 33). `Radio group` holds the legend, its hint and message, then the options, as the checkbox group does ([checkbox: *In Figma*](checkbox.md#in-figma)). The split follows the code's ([Alignment with code](#alignment-with-code)).
+- [required] Each layer is named for its role, the same in every variant: in `Radio`, `Circle` and its `Dot`; in `Radio field`, the nested `Radio`, `Label` and `Description` (figma-standard rule 10).
 - [required] The circle leads and the text trails in auto-layout order, so a right-to-left page mirrors it, where the project mirrors (figma-standard rule 50).
 
 **Properties**
-- [required] `Label` is a text property; `Show description` is a boolean directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS RadioField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/radio/RadioField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds.
+- [required] `Radio field` has `Label` as a text property and `Show description` directly above a `Description` text property (figma-standard rules 5, 21 and 37). SDS names the boolean `Has Description` ([SDS RadioField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/radio/RadioField.figma.ts)); figma-standard rule 21 keeps `Has` for content the component holds.
 - [required] Every property drives a layer in every variant where that layer exists (figma-standard rule 30).
-- [required] The group holds a `Legend` text property and its radios in a slot named for what it hosts (`Options slot`), so each radio keeps its own label across a variant switch (figma-standard rules 21 and 38).
+- [strong] `Radio field` has no error message: a radio's error is its group's. Primer's `FormControl` renders no validation message for a radio, React Aria's `RadioField` takes a description and no error, and Carbon's kit maps `invalid` on `RadioButtonGroup` and never on `RadioButton` ([Primer FormControl source](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControl.tsx), [React Aria RadioGroup.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/RadioGroup.tsx), [Carbon RadioButton.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/RadioButton/RadioButton.figma.ts)).
+- [required] `Radio group` holds `Legend`, `Show hint` above `Hint`, `Show error message` above `Error message`, and its radio fields in a slot named for what it hosts (`Options slot`), so each radio keeps its own label across a variant switch (figma-standard rules 5, 21 and 38). The message sits where [checkbox: *In Figma*](checkbox.md#in-figma) puts the group's.
 - [weak] The group's direction is a property only where the library draws inline pairs (Yes and No); Carbon's `orientation` and MUI's `row`, which its radio group takes from `FormGroup`, are the code's names for it ([Carbon RadioButtonGroup source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/RadioButtonGroup/RadioButtonGroup.tsx), [MUI FormGroup types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/FormGroup/FormGroup.d.ts)). Name the Figma property after the project's prop (figma-standard rule 21).
 
 **Variants and states**
-- [required] Selection is a True/False variant on the radio, `Selected`, `False` first (figma-standard rules 1 and 21); it maps to the group's `value`, not to a prop of the radio (*From Figma*, below). SDS's radio field maps no selection to code at all ([SDS RadioField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/radio/RadioField.figma.ts)), which leaves the selected frame with no prop to name.
+- [required] Selection is a True/False variant on `Radio` and `Radio field`, `Selected`, `False` first (figma-standard rules 1 and 21); it maps to the group's `value`, not to a prop of the radio ([Alignment with code](#alignment-with-code)). SDS's radio field maps no selection to code at all ([SDS RadioField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/radio/RadioField.figma.ts)), which leaves the selected frame with no prop to name.
 - [weak] Selection stays on each radio, not on the group: the group's items live in a slot, and a component cannot set the variant of what fills its slot (figma-standard rule 38), so Figma cannot stop two radios in one group being checked. The group's description says one only; the toolkit's research accepts the same trade for Primer's segmented control ([research: *Nested child state*](../../../research/components-and-naming/what-the-state-axis-models.md#nested-child-state)). In code the group owns the value.
-- [required] Axes in the order `Selected → Validation → Disabled → State`; `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest and sits right after it; `State` runs `Rest → Focus → Hover → Press` (figma-standard rules 1 to 4).
+- [required] Both sets have the axes `Selected → Validation → Disabled → State`; `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest and sits right after it; `State` runs `Rest → Focus → Hover → Press` (figma-standard rules 1 to 4). Disabled never combines with Error, for the reason [checkbox: *In Figma*](checkbox.md#in-figma) gives, so the bare radio is 18 variants: 2 `Selected` values × (4 states without error, 4 with error, 1 disabled).
+- [required] The field owns its radio's state: it sets the nested `Radio`'s variant from its own axes and does not expose the instance, and hovering or pressing the label acts on the circle (figma-standard rule 7).
 - [moderate] `Selected` and `Validation` sit beside `State`, not on it, for the reason [checkbox: *In Figma*](checkbox.md#in-figma) gives.
 - [weak] There is no indeterminate radio: a group with nothing checked is every radio at `Selected=False`, the state a question starts in ([radio buttons: *How*](#radio-buttons)).
 
@@ -83,19 +85,16 @@ A radio button picks exactly one option from a small set shown in full, saved wi
 - *Script*: figma-components-audit runs the rules cited above on the set; the contract lists `Selected`, so a library whose group holds no `value` shows it in the parity report.
 - *Judgement*: does every example group on the page show at most one checked radio, and a question group none?
 
-**Sources.** Figma's Simple Design System for the property names and its missing selection mapping; Carbon and MUI for the group's direction; the toolkit's state-axis research for selection held per child.
+**Sources.** Figma's Simple Design System for the property names and its missing selection mapping; Carbon and MUI for the group's direction; Primer, React Aria and Carbon for the field without a message; the toolkit's state-axis research for selection held per child.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] Native `input type="radio"`s sharing one `name` in a `fieldset` with a `legend`, as [radio buttons: *Build*](#radio-buttons) sets out; the browser gives one tab stop and arrow keys (code-standard rule 8; [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
-- [required] The group is the component that names the question and carries the `name`; a radio component alone cannot keep a group to one choice.
+**Structure**
+- [strong] Code splits the radio as it splits the checkbox, into a bare circle, a field and a group, and the three sets mirror it: SDS ships `Radio`, `RadioField` and `RadioGroup` ([SDS Radio.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Radio/Radio.tsx)); React Aria `RadioButton`, `RadioField` and `RadioGroup`, its single `Radio` deprecated for the pair ([React Aria RadioGroup.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/RadioGroup.tsx)); Primer a bare `Radio` placed in `FormControl`, and `RadioGroup` ([Primer Radio.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Radio/Radio.figma.tsx), [Primer RadioGroup.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/RadioGroup/RadioGroup.figma.tsx)); MUI `Radio` inside `FormControlLabel`, inside `RadioGroup` ([MUI FormControlLabel types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/FormControlLabel/FormControlLabel.d.ts), [MUI RadioGroup types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/RadioGroup/RadioGroup.d.ts)).
+- [moderate] Carbon's `RadioButton` is always the field (`labelText`, a bare circle only through `hideLabel`) inside `RadioButtonGroup` ([Carbon RadioButton.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/RadioButton/RadioButton.figma.ts)); Radix ships `RadioGroup.Root`, `RadioGroup.Item` and `RadioGroup.Indicator` with no label or message ([Radix radio-group exports](https://github.com/radix-ui/primitives/blob/main/packages/react/radio-group/src/index.ts)). They map to `Radio field` and to `Radio` in a group.
+- [strong] Unlike the checkbox, no library gives a lone radio a message, a validity or a requirement of its own: the value, the error and `required` are the group's. Primer's `FormControl` warns "An individual radio cannot be a required field" ([Primer FormControl source](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControl.tsx)); Carbon's `RadioButtonGroup` takes `invalid` and `invalidText` ([Carbon RadioButtonGroup.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/RadioButton/RadioButtonGroup.figma.ts)); React Aria's `RadioGroup` takes `isInvalid`. So the field has no message in [In Figma](#in-figma).
 
-**Props**
-- [strong] On the group: `name`, `value` (or `defaultValue`), a legend, `disabled`, `required` and a validation prop; on the radio: `value`, the label, `disabled`. Carbon (`name`, `valueSelected`, `legendText`, `orientation`, `invalid`; radio `value`, `labelText`), React Aria (`value`, `orientation`, `isInvalid`; [React Aria RadioGroup](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/RadioGroup.tsx)), MUI (`name`, `value`, `row`; [MUI RadioGroup types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/RadioGroup/RadioGroup.d.ts)) and Primer (radio `value`, `name`, `checked`, `disabled`, `required`; [Primer Radio source](https://github.com/primer/react/blob/main/packages/react/src/Radio/Radio.tsx)) share this shape.
-- [strong] The selected value is the group's prop, never a `checked` passed to each radio by hand: Carbon, React Aria and MUI all hold it on the group.
-
-**From Figma**
+**Mapping**
 - [required] Each Figma axis maps to one attribute, property or pseudo-class, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -107,6 +106,34 @@ A radio button picks exactly one option from a small set shown in full, saved wi
   | `State=Hover`, `Press`, `Focus` | `:hover`, `:active`, `:focus-visible`, set by the browser |
   | `Label`, `Description` | the `label`; the description tied with `aria-describedby` (code-standard rule 15) |
   | group `Legend` | the `legend` |
+
+**States**
+- [required] The browser sets `:checked` on the chosen radio and clears it on the others sharing its `name`, and the pointer and focus states in the mapping. A `required` group left empty makes every radio in it invalid ("both input elements will be suffering from being missing", [HTML: the radio state](https://html.spec.whatwg.org/multipage/input.html#radio-button-state-(type=radio))), so `:user-invalid` marks each radio after interaction or submit, the `Validation=Error` the fields take in a failed group.
+- [required] `:indeterminate` matches every radio in a group with none checked ([HTML: `:indeterminate`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-indeterminate)), so a stylesheet that styles it for checkboxes scopes it to `[type=checkbox]`, or an unanswered question draws as mixed.
+- [required] A prop sets the rest: the group's `value`, `disabled` on an input or on the `fieldset`, which disables every radio in it ([HTML: disabled form controls](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#concept-fe-disabled)), and `aria-invalid` for an error `required` cannot express. A chosen radio satisfies `required`, so `Selected=True` with `Validation=Error` (a server rejecting the choice) is reached only through `aria-invalid`.
+- [required] Code cannot reach Disabled with Error: a disabled control is barred from constraint validation ([HTML: the disabled attribute](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#attr-fe-disabled)), and Carbon's group shows `invalid` only when `!readOnly && !disabled` ([Carbon RadioButtonGroup source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/RadioButtonGroup/RadioButtonGroup.tsx)).
+- [moderate] React Aria marks each radio `data-invalid` from its group's state, and sets the pointer and focus states as data attributes ([React Aria RadioGroup.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/RadioGroup.tsx)), as [checkbox: *Alignment with code*](checkbox.md#alignment-with-code) describes for the checkbox.
+
+**Differences**
+- [moderate] Selection is drawn on each radio and held by the group in code, the trade [In Figma](#in-figma) explains. The kits draw it per radio too: Carbon's maps `Selected` to `defaultChecked` and Primer's `checked?` to `checked` on each radio ([Carbon RadioButton.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/RadioButton/RadioButton.figma.ts), [Primer Radio.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Radio/Radio.figma.tsx)), and SDS's maps none.
+- [required] `Disabled` is an axis of its own where the SDS, Carbon and Primer kits fold it into `State`, and Read-only and Warning are not drawn, for the reasons [checkbox: *Alignment with code*](checkbox.md#alignment-with-code) gives (figma-standard rule 1).
+- [moderate] The text names take SDS's props; Primer's `Caption` and Carbon's `labelText`, `legendText` and `helperText` meet them in the mapping (figma-standard rule 21).
+
+**Check**
+- *Script*: the component contract lists the three sets beside the code's components and props; a radio field with an error message, or a group with no `value`, shows in the parity report (design-code-parity).
+- *Judgement*: does every failed group show one message, on the group, with every radio in it marked?
+
+**Sources.** SDS, React Aria, Primer, MUI, Carbon and Radix source and Code Connect files as linked; the HTML standard for the radio group's validity, `:indeterminate` and disabled controls.
+
+## In code
+
+**Element**
+- [required] Native `input type="radio"`s sharing one `name` in a `fieldset` with a `legend`, as [radio buttons: *Build*](#radio-buttons) sets out; the browser gives one tab stop and arrow keys (code-standard rule 8; [HTML semantics: *Forms markup*](../../code/html-semantics.md#forms-markup)).
+- [required] The group is the component that names the question and carries the `name`; a radio component alone cannot keep a group to one choice.
+
+**Props**
+- [strong] On the group: `name`, `value` (or `defaultValue`), a legend, `disabled`, `required` and a validation prop; on the radio: `value`, the label, `disabled`. Carbon (`name`, `valueSelected`, `legendText`, `orientation`, `invalid`; radio `value`, `labelText`), React Aria (`value`, `orientation`, `isInvalid`; [React Aria RadioGroup](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/RadioGroup.tsx)), MUI (`name`, `value`, `row`; [MUI RadioGroup types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/RadioGroup/RadioGroup.d.ts)) and Primer (radio `value`, `name`, `checked`, `disabled`, `required`; [Primer Radio source](https://github.com/primer/react/blob/main/packages/react/src/Radio/Radio.tsx)) share this shape.
+- [strong] The selected value is the group's prop, never a `checked` passed to each radio by hand: Carbon, React Aria and MUI all hold it on the group.
 
 **Check**
 - *Script*: the parity loop compares each variant's circle, dot and ring with its frame (design-code-parity); the component contract flags a Figma axis with no prop.

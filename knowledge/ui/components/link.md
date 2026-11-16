@@ -84,17 +84,13 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 
 **Sources.** Figma's Simple Design System for the property name; Primer and Carbon for the inline form; Carbon for visited and size; WCAG's F73 and G183 for links in text; MDN for what `:visited` can change. The inline-as-text-style split is the toolkit's reasoning from what Figma can place in text.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] An `a` with an `href`; nothing else navigates (code-standard rule 8; [HTML semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons)).
-- [required] A link with no destination drops its `href` and carries `aria-disabled="true"`, never `disabled` (code-standard rule 62).
+**Structure**
+- [strong] One component in code, the inline form a prop of it, never a component of its own: Carbon's `inline`, Primer's `inline`, MUI's `underline` ([Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx), [Primer Link source](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.tsx), [MUI Link types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Link/Link.d.ts)); SDS's `Link` is a bare `a` ([SDS Link.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Link/Link.tsx)). Carbon's and Primer's kits draw the inline form inside the one set, as `Type=Inline` and an `inline` boolean ([Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts), [Primer Link.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.figma.tsx)); this page departs (*Differences*).
+- [moderate] The icon is a part of the link, never a component: Carbon takes one trailing `renderIcon`, while Primer's kit has `leadingVisual` and `trailingVisual` that its Code Connect writes as children of `Link`, which has no icon prop (sources as above). So the set nests one icon instance, trailing, as [In Figma](#in-figma) draws it.
 
-**Props**
-- [moderate] `href`, the text as children, `inline` for a link inside running text, and an optional icon. Primer (`inline`, `muted`) and Carbon (`inline`, `size`, `visited`, `renderIcon`, `disabled`) share this shape ([Primer Link source](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.tsx), [Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx)); MUI reaches the inline question through `underline="always|hover|none"` ([MUI Link](https://mui.com/material-ui/react-link/)).
-- [required] `target`, `rel` and `download` pass through to the `a` unchanged, and `target="_blank"` brings the new-tab words with it ([links: text, new tabs and downloads](#links-text-new-tabs-and-downloads)).
-
-**From Figma**
+**Mapping**
 - [required] Each Figma axis maps to one attribute or prop, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -108,6 +104,34 @@ A link takes the person somewhere: another page, a place on this page, a file. T
   | `State=Hover`, `Press` | `:hover`, `:active`, set by the browser |
   | `State=Focus` | `:focus-visible` |
 - [required] Write `:visited` before `:hover` and `:active`, so a visited link still shows them: MDN's LVHA order ([MDN `:visited`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:visited)).
+
+**States**
+- [required] Rest, Hover, Press, Focus and Visited are set by the browser, as `:hover`, `:active`, `:focus-visible` and `:visited`; no prop sets them, and Carbon's `visited` prop only opts into styles for the browser's `:visited` ([Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx); code-standard rule 9).
+- [required] Disabled is set by code, by dropping the `href` (code-standard rule 62): Carbon then writes `aria-disabled` and `role="link"`, React Aria renders a `span` ([React Aria Link source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Link.tsx)); Primer's and MUI's links have no disabled state at all.
+- [required] Code cannot reach Visited with Disabled: `:visited` is a subset of `:any-link`, which matches only an `a` with an `href` ([MDN `:any-link`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:any-link)), so no frame pairs them (figma-standard rule 2).
+- [required] Code reaches Visited with Hover, Press and Focus, since `:visited` is written before them (the *Mapping*), so each `State` value is drawn under `Visited=True` too ([MDN `:visited`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:visited); figma-standard rule 31).
+- [weak] Carbon renders no icon on an inline link (`!inline && Icon`), a combination its code cannot reach ([Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx)); this page never draws it, as its inline form is a text style.
+
+**Differences**
+- [weak] The inline link is a text style here, where code has one component with `inline` and Carbon's and Primer's kits a variant of the one set: Figma cannot place an instance inside a run of text ([In Figma](#in-figma)). The mapping's first row is where the two meet.
+- [required] `Disabled` is a True/False variant before `State` (figma-standard rule 1), where Carbon's kit draws it as `State=Disabled` ([Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts)); both map to one boolean prop.
+- [required] The text is `Label` (figma-standard rule 21), where SDS names it `Text` and Carbon `Link text`; each maps to the link's children, which have no prop name of their own ([SDS TextLink.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/text/TextLink.figma.ts), [Carbon Link.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Link/Link.figma.ts)).
+
+**Check**
+- *Script*: the component contract lists every Figma axis and property beside the link's props; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity). The inline text style is outside the contract, so its row is read by hand.
+- *Judgement*: could a developer build every frame from `href`, `inline`, `size`, the icon and the browser's states alone, and does every prop have a frame?
+
+**Sources.** Carbon, Primer, MUI, React Aria and SDS source and Code Connect files as linked, read for the split, the icon and the disabled link; MDN for `:visited` and `:any-link`. The inline link as a text style is the toolkit's reasoning from what Figma can place in text.
+
+## In code
+
+**Element**
+- [required] An `a` with an `href`; nothing else navigates (code-standard rule 8; [HTML semantics: *Links and buttons*](../../code/html-semantics.md#links-and-buttons)).
+- [required] A link with no destination drops its `href` and carries `aria-disabled="true"`, never `disabled` (code-standard rule 62).
+
+**Props**
+- [moderate] `href`, the text as children, `inline` for a link inside running text, and an optional icon. Primer (`inline`, `muted`) and Carbon (`inline`, `size`, `visited`, `renderIcon`, `disabled`) share this shape ([Primer Link source](https://github.com/primer/react/blob/main/packages/react/src/Link/Link.tsx), [Carbon Link source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Link/Link.tsx)); MUI reaches the inline question through `underline="always|hover|none"` ([MUI Link](https://mui.com/material-ui/react-link/)).
+- [required] `target`, `rel` and `download` pass through to the `a` unchanged, and `target="_blank"` brings the new-tab words with it ([links: text, new tabs and downloads](#links-text-new-tabs-and-downloads)).
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity), but `getComputedStyle` reports a visited link's unvisited colour, so the Visited frame is named as unmeasured (MDN; code-standard rule 37).

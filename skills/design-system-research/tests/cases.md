@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.3.0)
+# Eval cases — design-system-research (v3.5.0)
+
+**Walked: 2026-11-16 for 3.5.0** — A29 added and observed on the checkbox run; the other cases read against the new Step 1 paragraph, which adds an axis and changes none of their assertions.
 
 **Walked: 2026-11-13 for 3.3.0** — A27 added, traced to SKILL.md and toolkit-standard §D 6; walked against the 59 research articles as committed in the anonymisation: no project, scope, file id, home path or private quote, and `bin/check`'s name step green. A17 read: unchanged (scripts still kept out, the experiment harness removed). Others unchanged: none asserts on who a guide may name.
 
@@ -267,3 +269,10 @@ Negative: advice with no weight; a weight scale defined in the skill or the voic
 Observed: 2026-11-14 — a workshop draft leaned on a 2019 design-system study; the maintainer ruled that old research weighs less and that the knowledge base and research articles share one scale.
 Traced: 2026-11-14 for 3.4.0 — to SKILL.md Step 5 "Resolve to a recommendation twice" and Step 6 "Date every source", and references/deep-mode-voice.md §4 *The advice*.
 Walked live: 2026-11-14 on research/auditing/auditing-a-design-system.md: nine sections re-weighed to `*Weight: …*` and the short version restated by weight; two independent reviews checked each tag against §D 21 and corrected three (one author is `weak`; one detach-watching system is `weak`; the 2019 vendor study drops two levels). No "consensus"/"judgement" marking left; SKILL.md cites §D 21 without the age figure.
+
+## A29 · A component question researches its alignment with code by default
+Fixture: "what is the best way to build the checkbox in Figma: a bare control and a labelled field?", asked with no mention of code.
+Assert: the run reads at least two libraries' source or Code Connect files for how the checkbox is split in code (SDS's `CheckboxField` rendering a bare `Checkbox`, Primer's label-less `Checkbox`), which props become which Figma properties, which states the browser sets, and which combinations code cannot reach (Carbon drops `invalid` when `disabled`); the findings land in `knowledge/ui/components/checkbox.md` under *Alignment with code*.
+Negative: a Figma schema recommended from kits' drawings alone; alignment with code left out because the question did not name it.
+Observed: 2026-11-16 — the checkbox run found the control-and-field split and the disabled-error exclusion only by reading SDS's and Carbon's source; the maintainer then asked that alignment with code be part of the default research.
+Traced: 2026-11-16 for 3.5.0 — to SKILL.md Step 1, "A component's alignment with code is always one of the axes".

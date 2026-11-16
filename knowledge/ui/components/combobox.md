@@ -70,7 +70,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 **Variants and states**
 - [required] The field's axes run `Size → Has value → Validation → Disabled → State`; `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest; `State` runs `Rest → Focus → Hover → Press → Open`, `Open` drawn with the focus ring, since the input keeps focus while the list shows (figma-standard rules 1 to 4).
 - [moderate] Open is one value on the field's `State`, not a boolean beside it ([research: *Open menu triggers*](../../../research/components-and-naming/what-the-state-axis-models.md#open-menu-triggers)); the field owns whether the list shows (figma-standard rule 7).
-- [weak] The list's contents (options, no match, loading, "Create 'design-ops'") are one axis on `Combobox list`, not on the field, so the field's set does not multiply by every list state and no frame shows two at once (figma-standard rule 2's reasoning). The states the moved section lists are [combobox and autocomplete: *How*](#combobox-and-autocomplete).
+- [weak] The list's contents (options, no match, loading, "Create 'design-ops'") are one axis on `Combobox list`, not on the field, so the field's set does not multiply by every list state and no frame shows two at once (figma-standard rule 2's reasoning). The states themselves are in [combobox and autocomplete: *How*](#combobox-and-autocomplete).
 - [strong] An option's active and selected looks are an axis on `Combobox option`, active drawn distinctly from selected: the APG tells them apart as `aria-activedescendant` and `aria-selected`, and GOV.UK's research found people confusing focused with selected items in selects ([select (dropdown): *How*](select.md#select-dropdown)).
 
 **Tokens**
@@ -84,17 +84,13 @@ A combobox is a text field with a list of suggestions: the person types to narro
 
 **Sources.** Carbon, React Aria and MUI for the custom-value prop and the popup's messages; figma-standard rules 7, 9 and 38 for the parts; the toolkit's state-axis research for `Open`. Figma's Simple Design System ships no combobox among its primitives ([SDS primitives](https://github.com/figma/sds/tree/main/src/ui/primitives)), so no Code Connect file was read for this page.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] An `input` with `role="combobox"`, `aria-expanded`, `aria-controls` and `aria-activedescendant`, controlling a `listbox` of `option`s, enhanced from a native `select` or an `input` with a `datalist`, as [combobox and autocomplete: *Build*](#combobox-and-autocomplete) sets out ([APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/); code-standard rules 8 and 20).
-- [moderate] `aria-autocomplete="list"` for the default behaviour, suggestions shown and the person picking; React Aria sets exactly that on its input (React Aria useComboBox) and the APG documents it as list autocomplete.
+**Structure**
+- [strong] Code builds the combobox as one field component composing a text input, a toggle button and a popup list, and the page's three sets mirror its parts: `Combobox` the field, `Combobox list` the listbox, `Combobox option` its item. React Aria's `ComboBox` composes `Label`, `Input`, `Button`, a description, `FieldError` and a `Popover` with a `ListBox` ([React Aria ComboBox.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)); Carbon's `ComboBox` is one field with `titleText`, `helperText`, `invalidText` and its `items` ([Carbon ComboBox.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/ComboBox/ComboBox.figma.ts)); MUI's `Autocomplete` must render "a `TextField` component or a compatible custom component" for its input, which brings the label, helper text and error ([MUI Autocomplete types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Autocomplete/Autocomplete.d.ts)).
+- [moderate] Primer keeps the field outside: `Autocomplete` holds `Autocomplete.Input`, `Autocomplete.Overlay` and `Autocomplete.Menu`, placed in `FormControl` for the label and validation, and its kit draws the input as a nested `TextInput` with `label?` and `caption?` ([Primer Autocomplete.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Autocomplete/Autocomplete.figma.tsx)). Radix ships no combobox ([Radix packages](https://github.com/radix-ui/primitives/tree/main/packages/react)), nor does SDS ([In Figma](#in-figma)), so there is no bare control to mirror: the field set is the component, as in Carbon and React Aria.
 
-**Props**
-- [strong] `value` (or `defaultValue`), `inputValue`, the options, `onChange`, a custom-value flag, `disabled`, a validation prop, `placeholder`, `size`, and the no-results and loading text. MUI (`freeSolo`, `loading`, `loadingText`, `noOptionsText`, `size`), Carbon (`allowCustomValue`, `typeahead`, `invalid`, `warn`, `placeholder`, `readOnly`, `size`) and React Aria (`allowsCustomValue`, `isInvalid`, `defaultFilter`; [React Aria ComboBox](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)) share this shape.
-- [weak] The filter is a prop with a locale-aware default, as React Aria's `defaultFilter` is, so a project can add synonyms ("UK" finds "United Kingdom") without forking the component.
-
-**From Figma**
+**Mapping**
 - [required] Each Figma axis maps to one attribute, property or pseudo-class, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -112,6 +108,34 @@ A combobox is a text field with a list of suggestions: the person types to narro
   | `Show description` | whether a hint is passed |
   | `Value`, `Placeholder` | the input's `value` and `placeholder` |
   | `Options slot` | the listbox's options |
+
+**States**
+- [required] The browser sets the pointer and focus states on the input, and `:user-invalid` only where the input is `required` and left empty ([HTML: `:user-invalid`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-user-invalid)). A typed value that matches no option breaks no constraint the browser knows, so that error is `aria-invalid` from code.
+- [required] Script sets the rest: `aria-expanded` for `Open`, `aria-activedescendant` for the active option and `aria-selected` for the chosen one ([APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)); React Aria also marks its root `data-open`, `data-focused` and `data-invalid` ([React Aria ComboBox.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)).
+- [required] Code cannot reach Disabled with Error, nor Disabled with Open: a disabled input is barred from constraint validation and takes neither focus nor clicks ([HTML: the disabled attribute](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#attr-fe-disabled)), and Carbon's `ComboBox` runs `invalid` through the `useNormalizedInputProps` that drops it under `disabled` ([Carbon ComboBox source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/ComboBox/ComboBox.tsx)).
+- [moderate] Code reaches focus with error whenever a person returns to fix the field, and Carbon gives it a class of its own, `combo-box--invalid--focused` ([Carbon ComboBox source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/ComboBox/ComboBox.tsx)); the field set draws it, since `Validation` sits beside `State`, and draws `Open` with the focus ring ([In Figma](#in-figma)).
+
+**Differences**
+- [weak] `Open` is a `State` value drawn with the focus ring; React Aria also renders the toggle button pressed while the list shows (`isPressed: state.isOpen`, [React Aria ComboBox.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)), so a project on it draws the `Open` frame's button in its pressed look.
+- [required] `Disabled` and `Validation` are axes of their own where Carbon's kit puts `Disabled`, `Error`, `Warning` and `Read-only` in one `State` ([Carbon ComboBox.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/ComboBox/ComboBox.figma.ts)); code sets each as a prop (figma-standard rule 1).
+- [weak] Carbon's `Warning` and `Read-only`, and a multiple-value combobox with chips (MUI's `multiple`), are not drawn; a project whose code ships one adds it and records it (toolkit reasoning).
+- [moderate] `Label` and `Placeholder` take the common prop names; Carbon's are `titleText` and `placeholder`, the latter drawn in its kit as `Filter text`, and the mapping row is where they meet (figma-standard rule 21).
+
+**Check**
+- *Script*: the component contract lists the field's, the list's and the option's axes beside the code's props and parts; a list state or option state with no code counterpart shows in the parity report (design-code-parity).
+- *Judgement*: does the project's library put the label inside its combobox or around it, and does the Code Connect file follow?
+
+**Sources.** React Aria, Carbon, MUI, Primer and Radix source and Code Connect files as linked; the APG combobox pattern; the HTML standard for `:user-invalid` and disabled controls.
+
+## In code
+
+**Element**
+- [required] An `input` with `role="combobox"`, `aria-expanded`, `aria-controls` and `aria-activedescendant`, controlling a `listbox` of `option`s, enhanced from a native `select` or an `input` with a `datalist`, as [combobox and autocomplete: *Build*](#combobox-and-autocomplete) sets out ([APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/); code-standard rules 8 and 20).
+- [moderate] `aria-autocomplete="list"` for the default behaviour, suggestions shown and the person picking; React Aria sets exactly that on its input (React Aria useComboBox) and the APG documents it as list autocomplete.
+
+**Props**
+- [strong] `value` (or `defaultValue`), `inputValue`, the options, `onChange`, a custom-value flag, `disabled`, a validation prop, `placeholder`, `size`, and the no-results and loading text. MUI (`freeSolo`, `loading`, `loadingText`, `noOptionsText`, `size`), Carbon (`allowCustomValue`, `typeahead`, `invalid`, `warn`, `placeholder`, `readOnly`, `size`) and React Aria (`allowsCustomValue`, `isInvalid`, `defaultFilter`; [React Aria ComboBox](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)) share this shape.
+- [weak] The filter is a prop with a locale-aware default, as React Aria's `defaultFilter` is, so a project can add synonyms ("UK" finds "United Kingdom") without forking the component.
 
 **Check**
 - *Script*: the parity loop compares each field variant and the list's states with their frames (design-code-parity); the component contract flags a Figma axis with no prop.

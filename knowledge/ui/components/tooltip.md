@@ -81,6 +81,41 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 
 **Sources.** Figma's SDS, Primer, MUI and Radix for parts and names; figma-standard for names. SDS's tooltip, with a title and a body, is richer than the toolkit's, which keeps to [tooltips](#tooltips).
 
+## Alignment with code
+
+**Structure**
+- [strong] Code keeps the tip apart from its trigger and wires the two together, so the Figma component is the tip alone and the frame that places it supplies the trigger, as [In Figma](#in-figma) says. Radix ships `TooltipProvider`, `Tooltip`, `TooltipTrigger`, `TooltipPortal`, `TooltipContent` and `TooltipArrow` ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); React Aria `TooltipTrigger`, `Tooltip` and `OverlayArrow` ([React Aria Tooltip.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Tooltip.tsx)); Primer and MUI one `Tooltip` that clones its single child to add the events and `aria-labelledby` or `aria-describedby` ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx), [MUI Tooltip.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.js)).
+- [moderate] Kits disagree on whether the trigger is inside the Figma component. Carbon's carries it as a `Trigger` instance swap, and its `Type=Definition` switches the code to another component, `DefinitionTooltip` ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)); Primer's connects a single `Label` text property to `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)), and SDS's a `Title`, a `Body` and `Placement`, with no trigger ([SDS Tooltip.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Tooltip.figma.ts)). The toolkit follows Primer and SDS, since the trigger is any component.
+- [weak] Radix's `TooltipProvider` holds the delay for every tip on the page ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); Figma draws nothing for it, as the delay is one product constant ([In code](#in-code)).
+
+**Mapping**
+- [required] Each Figma property maps to one attribute, prop or child, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
+
+  | Figma | Code |
+  |---|---|
+  | `Text` or `Title` | the tip's text, and the trigger's name when it labels it |
+  | `Placement` | the preferred side; the side it lands on may flip to stay in view |
+  | `Show caret` | the caret element, on the edge facing the trigger |
+  | Name or description annotation | `aria-labelledby` or `aria-describedby` on the trigger |
+- [required] `Leading` and `Trailing` resolve to the logical side, so a right-to-left page mirrors the placement ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
+
+**States**
+- [required] Shown is set by the browser's events on the trigger, never by a prop the frame chooses; where the tip is a popover it matches `:popover-open` while shown ([HTML `:popover-open`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-popover-open)), which Primer calls `showPopover()` for and tests ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx)). Figma draws the shown tip only.
+- [strong] Focus opens the tip only when it is keyboard focus: MUI opens on focus only when the target is focus-visible, Radix ignores a focus that follows a pointer press and closes on click, and Carbon ignores focus by mouse ([MUI Tooltip.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.js), [Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx), [Carbon Tooltip.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Tooltip/Tooltip.tsx)). So the tip is drawn beside the trigger's `Hover` and `Focus` frames, its `:hover` and `:focus-visible`, and never beside `Press`.
+- [strong] The side the tip lands on is decided at run time, so every `Placement` value needs its frame whatever the preferred side: React Aria exposes it as `[data-placement]`, MUI's popper as `data-popper-placement`, and Primer moves to another direction when the asked one has no room ([React Aria Tooltip.tsx](https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/react-aria-components/src/Tooltip.tsx), [MUI Tooltip.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.js), [Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx)).
+- [weak] Timing states have no frame: Radix's `data-state` tells `delayed-open` from `instant-open`, the second for a tip that opens right after another closed ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); React Aria's `[data-entering]` and `[data-exiting]` are motion.
+
+**Differences**
+- [weak] `Placement` has four sides, where Primer's `direction` takes eight compass values and Carbon's Figma pairs `Position` with an `Alignment` of `Start`, `Center` or `End` to give `top-start` and the rest ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)). The toolkit draws sides only and leaves the alignment along a side to the code.
+- [weak] A kit's own property can stray from its code's name: Primer's Figma says `Label` for the prop `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)). The toolkit names the property as the code does (figma-standard rule 21), so the mapping row has nothing to translate.
+- [weak] Name or description is an annotation in Figma and a prop in code (Primer's `type`, MUI's `describeChild`); the reason is in [In Figma](#in-figma), and the mapping row carries it to `aria-labelledby` or `aria-describedby`.
+
+**Check**
+- *Script*: the component contract lists `Text`, `Placement` and `Show caret` beside the props the code takes (design-code-parity). A test can focus the trigger by keyboard, assert the tip shows, and compare its text with the trigger's accessible name or description.
+- *Judgement*: does each placement frame match where the code puts the tip when it flips, and is the trigger in every frame a real instance of its own component?
+
+**Sources.** Radix, React Aria, MUI, Primer and Carbon source and Code Connect files as linked, with SDS's; the HTML standard for `:popover-open`. The libraries agree that the trigger is separate and opens the tip on hover and keyboard focus; their Figma kits split on whether the trigger is drawn inside.
+
 ## In code
 
 **Element**
@@ -91,17 +126,6 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - [strong] The text, the side, and whether it names or describes the trigger: Primer (`text`, `direction`, `type`, `delay`), MUI (`title`, `placement`, `arrow`, `describeChild`, `enterDelay`) and Radix (content, `side`, `delayDuration`) share this shape ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx), [MUI Tooltip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.d.ts), [Radix Tooltip source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)).
 - [contested] The delay before showing has no agreed figure: MUI's `enterDelay` defaults to 100 ms ([MUI Tooltip source](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.js)), Radix's `delayDuration` to 700 ms ([Radix Tooltip source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)), and Primer offers `short`, `medium` and `long`. It is one product constant, never a figure per instance.
 - [required] The tip stays while the pointer moves onto it (WCAG 1.4.13): an option that turns that off, MUI's `disableInteractive` or Radix's `disableHoverableContent`, stays off.
-
-**From Figma**
-- [required] Each Figma property maps to one attribute, prop or child, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
-
-  | Figma | Code |
-  |---|---|
-  | `Text` or `Title` | the tip's text, and the trigger's name when it labels it |
-  | `Placement` | the preferred side; the side it lands on may flip to stay in view |
-  | `Show caret` | the caret element, on the edge facing the trigger |
-  | Name or description annotation | `aria-labelledby` or `aria-describedby` on the trigger |
-- [required] `Leading` and `Trailing` resolve to the logical side, so a right-to-left page mirrors the placement ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
 
 **Check**
 - *Script*: the parity loop compares each placement with its frame (design-code-parity); the component contract flags a Figma property with no prop.

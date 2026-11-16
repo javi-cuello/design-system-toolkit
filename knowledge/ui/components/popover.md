@@ -81,17 +81,13 @@ A popover shows a little information or a few related controls next to the one e
 
 **Sources.** Radix and Primer for parts and placement; the HTML standard for the attribute; figma-standard for names. Radix and Primer name sides physically; the toolkit's naming rule takes logical ones.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] The element and how it opens are [popovers: *Build*](#popovers).
-- [required] HTML defines three states: `auto` closes other auto popovers and has light dismiss; `manual` does neither; `hint` closes only other hints ([HTML popover](https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute)). A popover the person opens takes `auto`.
+**Structure**
+- [contested] Whether the trigger is part of the component: Radix has a `Trigger` part ([Radix Popover source](https://github.com/radix-ui/primitives/blob/main/packages/react/popover/src/popover.tsx)) and Carbon takes the trigger as the first child of `Popover`, the surface in `PopoverContent` ([Carbon Popover source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Popover/index.tsx)); Primer's `Popover` and MUI's take none, MUI positioning against an `anchorEl` ([Primer Popover.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Popover/Popover.figma.tsx), [MUI Popover types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Popover/Popover.d.ts)). No kit draws the trigger: Carbon's Code Connect writes a placeholder `button` ([Carbon Popover.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Popover/Popover.figma.ts)), and this page leaves it out ([In Figma](#in-figma)).
+- [moderate] The surface's parts: Radix splits `Content`, `Title`, `Description`, `Close` and `Arrow`, wiring `aria-labelledby` and `aria-describedby` from the title and description it finds ([Radix Popover source](https://github.com/radix-ui/primitives/blob/main/packages/react/popover/src/popover.tsx)); Primer's kit maps `heading` and `body` strings into `Popover.Content` ([Primer Popover.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Popover/Popover.figma.tsx)); React Aria's caret is a separate `OverlayArrow` that the popover passes its placement ([React Aria Popover source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Popover.tsx)). Radix's parts are this page's `Title`, `Description`, `Close` and `Caret` layers.
 
-**Props**
-- [moderate] Open state and its change callback, the side and alignment, and the content as children: Radix (`open`, `onOpenChange`, `modal`, and `side`, `align`, `sideOffset` on its content) and Primer (`open`, `caret`, and `width` and `height` on its content) ([Radix Popover source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popover/src/popover.tsx), [Radix Popper source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx), [Primer Popover source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Popover/Popover.tsx)).
-- [required] The content is a slot, never a string or render prop (code-standard rule 13).
-
-**From Figma**
+**Mapping**
 - [required] Each Figma property maps to one attribute, prop or child, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -103,6 +99,33 @@ A popover shows a little information or a few related controls next to the one e
   | `Slot` | the popover's children |
   | `Show close button` | a named `button` with `popovertarget` and `popovertargetaction="hide"` |
 - [required] `Leading` and `Trailing` resolve to the logical side, so a right-to-left page mirrors the placement ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
+
+**States**
+- [required] The surface has no pointer states; Open is its one state, set by a prop (`open` in Radix, MUI, Carbon and Primer, sources as above) or, on a `popover` element, by the browser, and matched by `:popover-open` ([MDN `:popover-open`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:popover-open)).
+- [strong] The side it lands on is set at run time, not by the design: Radix writes `data-side` and `data-align` after flipping to stay in view ([Radix Popper source](https://github.com/radix-ui/primitives/blob/main/packages/react/popper/src/popper.tsx)), React Aria `data-placement` ([React Aria Popover source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Popover.tsx)), and Carbon's `autoAlign` moves it when it would not be visible ([Carbon Popover source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Popover/index.tsx)). So code reaches every `Placement` value whatever the preferred side, and the caret follows the side it landed on.
+- [moderate] Entering and exiting are states code sets for animation, React Aria's `data-entering` and `data-exiting` and Radix's `data-state` (sources as above); Figma draws none of them.
+- [weak] Code reaches alignments the kits leave undrawn: Carbon's `align` takes twelve values, `left-start` and `right-end` among them, but its kit's `Left` and `Right` positions have no `Alignment` ([Carbon Popover source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Popover/index.tsx), [Carbon Popover.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Popover/Popover.figma.ts)); this page draws alignment only where a screen needs it ([In Figma](#in-figma)).
+
+**Differences**
+- [moderate] `Placement` names a logical side here and a physical one in code: Radix's `side`, Carbon's `align`, Primer's `caret` (sources as above; figma-standard rule 21). The mapping's second item resolves `Leading` and `Trailing` against the page's direction.
+- [weak] Carbon's kit has a `Visible` boolean that maps to `open` ([Carbon Popover.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Popover/Popover.figma.ts)); this page has no open property, since a closed popover draws nothing and the trigger shows Open ([In Figma](#in-figma)).
+- [weak] Carbon's kit toggles `Caret tip` and `Shadow`, mapping to `caret` and `dropShadow` (same source); this page has `Show caret` and binds the shadow to a token, with no toggle ([In Figma](#in-figma)).
+
+**Check**
+- *Script*: the component contract lists every Figma axis, property and slot beside the popover's props and parts; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
+- *Judgement*: does each `Placement` frame show the caret where the code would draw it after a flip, and does nothing in the frame depend on the trigger being inside the component?
+
+**Sources.** Radix, Carbon, Primer, MUI and React Aria source and Code Connect files as linked, read for the parts, the trigger and the placement code sets at run time; MDN for `:popover-open`.
+
+## In code
+
+**Element**
+- [required] The element and how it opens are [popovers: *Build*](#popovers).
+- [required] HTML defines three states: `auto` closes other auto popovers and has light dismiss; `manual` does neither; `hint` closes only other hints ([HTML popover](https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute)). A popover the person opens takes `auto`.
+
+**Props**
+- [moderate] Open state and its change callback, the side and alignment, and the content as children: Radix (`open`, `onOpenChange`, `modal`, and `side`, `align`, `sideOffset` on its content) and Primer (`open`, `caret`, and `width` and `height` on its content) ([Radix Popover source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popover/src/popover.tsx), [Radix Popper source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx), [Primer Popover source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Popover/Popover.tsx)).
+- [required] The content is a slot, never a string or render prop (code-standard rule 13).
 
 **Check**
 - *Script*: the parity loop compares each variant with its frame (design-code-parity); the component contract flags a Figma property with no prop.

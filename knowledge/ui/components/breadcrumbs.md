@@ -151,17 +151,15 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 
 **Sources.** The toolkit's naming research for the part's name; Primer, MUI and Carbon for the overflow and size props they ship. The separator's place in the item is the toolkit's reasoning from the stylesheet.
 
-## In code
+## Alignment with code
 
-**Element**
-- [required] A `nav` labelled "Breadcrumb" holding an `ol` of links, the current page as text with `aria-current="page"`; the component itself needs no script, code-standard rule 8's visual kind, and the one line that starts the row at its end is a page enhancement the trail works without (code-standard rules 8 and 20; [breadcrumbs](#breadcrumbs), [breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
+**Structure**
+- [strong] A trail and its items: Carbon's `Breadcrumb` and `BreadcrumbItem`, Primer's `Breadcrumbs` and `Breadcrumbs.Item`, React Aria's `Breadcrumbs` and `Breadcrumb` ([Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [React Aria Breadcrumbs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Breadcrumbs.tsx)). MUI ships the trail alone, taking any links as children and wrapping each in an `li` ([MUI Breadcrumbs source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.js)).
+- [moderate] The kits mirror the two: Carbon's connects `Breadcrumb` and `BreadcrumbItem` ([Carbon Breadcrumb.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/Breadcrumb.figma.ts), [Carbon BreadcrumbItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/BreadcrumbItem.figma.ts)), Primer's `Breadcrumbs` and `Breadcrumbs.Item`, though its trail holds ten fixed layers, `1st parent` to `Current page`, where this page has an `Items slot` ([Primer Breadcrumbs.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.figma.tsx); [In Figma](#in-figma)).
+- [weak] Carbon's item renders Carbon's own `Link` when it has an `href` ([Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx)), so the item's link states are the link's; see [link](link.md#alignment-with-code).
+- [contested] Where the separator lives: Carbon and Primer draw it as each item's `::after`, hidden on the last ([Carbon breadcrumb styles](https://github.com/carbon-design-system/carbon/blob/main/packages/styles/scss/components/breadcrumb/_breadcrumb.scss), [Primer Breadcrumbs CSS](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.module.css)); MUI inserts it as its own `li` with `aria-hidden` ([MUI Breadcrumbs source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.js)); this page leads each item with it, as `li + li::before` ([In Figma](#in-figma)).
 
-**Props**
-- [strong] The trail takes its items, the `nav`'s label, a size and a separator: Carbon (`aria-label` defaulting to "Breadcrumb", `size`, `noTrailingSlash`), Primer (`variant`, `overflow`) and MUI (`separator`, `maxItems`) ([Carbon Breadcrumb source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/Breadcrumb.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)).
-- [moderate] An item takes its `href` and a current flag: Carbon's `isCurrentPage`, Primer's `selected`, each setting `aria-current="page"`.
-- [contested] No collapse props (`overflow="menu"`, `maxItems`, `itemsBeforeCollapse`): the trail scrolls ([breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
-
-**From Figma**
+**Mapping**
 - [required] Each Figma axis maps to one attribute or prop, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
@@ -174,6 +172,34 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
   | `State=Hover`, `Press` | `:hover`, `:active`, set by the browser |
   | `State=Focus` | `:focus-visible` |
   | the sideways chevron | a `button` with `aria-expanded` ([sideways breadcrumbs](#sideways-breadcrumbs)) |
+
+**States**
+- [required] Hover, Press and Focus on a linked item are set by the browser, as `:hover`, `:active` and `:focus-visible`; no prop sets them (code-standard rule 9).
+- [strong] Current is set by code: Carbon's `isCurrentPage` and Primer's `selected` on the item, each writing `aria-current="page"`, while React Aria derives it, marking the last item current ([Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [React Aria Breadcrumbs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Breadcrumbs.tsx)).
+- [moderate] Code cannot reach Current with Hover, Press or Focus: React Aria disables the current item, and Carbon renders it as text when it has no `href` (sources as above), so no frame pairs them (figma-standard rule 2).
+- [weak] An item is a link, so the browser can set `:visited` on it, and the item has no Visited axis: the stylesheet keeps a visited item at Rest's colour, or code reaches a state no frame shows ([MDN `:visited`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:visited); the toolkit's reasoning).
+- [weak] Carbon's code reaches a separator after the current item unless the trail sets `noTrailingSlash`, which its Code Connect sets whenever an item is Current ([Carbon Breadcrumb.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/Breadcrumb.figma.ts)); this page's trail never ends on one, as its separator leads.
+
+**Differences**
+- [moderate] `Current` is a True/False variant on the item here, as in Carbon's kit (`Current`, or `State=Current`) and Primer's (`selected`) (Code Connect files as above), where React Aria takes it from the item's position; the mapping row writes it on the item either way.
+- [contested] No overflow item: Carbon's kit draws `Type=Overflow`, which maps to a `BreadcrumbItem` holding an `OverflowMenu` ([Carbon BreadcrumbItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/BreadcrumbItem.figma.ts)); this page draws none, as its trail scrolls ([In Figma](#in-figma)).
+- [weak] No skeleton: Carbon's kit draws `State=Skeleton` on the item, which maps to a separate `BreadcrumbSkeleton` component (same source); a project that loads its trail late names its own here.
+
+**Check**
+- *Script*: the component contract lists every Figma axis and property of the trail and the item beside the props of each; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).
+- *Judgement*: could a developer build the trail from the page tree, the current page and the browser's states alone, with the separator in the stylesheet?
+
+**Sources.** Carbon, Primer, MUI and React Aria source, styles and Code Connect files as linked, read for the parts, the current item and where the separator lives; MDN for `:visited`. The separator leading each item is the toolkit's reasoning from its stylesheet.
+
+## In code
+
+**Element**
+- [required] A `nav` labelled "Breadcrumb" holding an `ol` of links, the current page as text with `aria-current="page"`; the component itself needs no script, code-standard rule 8's visual kind, and the one line that starts the row at its end is a page enhancement the trail works without (code-standard rules 8 and 20; [breadcrumbs](#breadcrumbs), [breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
+
+**Props**
+- [strong] The trail takes its items, the `nav`'s label, a size and a separator: Carbon (`aria-label` defaulting to "Breadcrumb", `size`, `noTrailingSlash`), Primer (`variant`, `overflow`) and MUI (`separator`, `maxItems`) ([Carbon Breadcrumb source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/Breadcrumb.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)).
+- [moderate] An item takes its `href` and a current flag: Carbon's `isCurrentPage`, Primer's `selected`, each setting `aria-current="page"`.
+- [contested] No collapse props (`overflow="menu"`, `maxItems`, `itemsBeforeCollapse`): the trail scrolls ([breadcrumbs on small screens](#breadcrumbs-on-small-screens)).
 
 **Check**
 - *Script*: the parity loop compares each item's variants with their frames (design-code-parity); the checks in each section above cover the trail.
