@@ -1196,7 +1196,8 @@ async function main() {
         for (const p of LINES_CSS) cut[p] = await authoredWidth(L.tab, sel, p, { raw: true, cache: styles });
         cut['white-space'] = await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).whiteSpace : null; }, sel);
         const lines = linesFromCss(cut);
-        if (lines) Object.assign(e, lines);
+        // (the overflow a cut needs is the cut's, as css.mjs writes it for one: no clip of the text's own beside it)
+        if (lines) { Object.assign(e, lines); if (e.kind === 'text' && e.overflow === 'hidden') delete e.overflow; }
       };
       const lengthOf = (v) => { const m = /^\s*(-?[\d.]+)(px|rem)\s*$/.exec(v || ''); return m ? +(+m[1] * (m[2] === 'rem' ? remPx : 1)).toFixed(2) : null; };
       // a minimum or maximum the code writes (a set size is the size's own, read with the sizing below)
@@ -1225,7 +1226,10 @@ async function main() {
           const place = placeFromCss(pos);
           // (fixed is placed against the viewport, not the parent Figma measures from: left to the walk)
           if (place && !/fixed/.test(String(pos.position || ''))) {
-            e.position = 'absolute';
+            // (in a box of this component's with no auto layout every part is placed so, and the design writes no
+            // position there; a placed component's insides keep it, as its entry here carries no layout of its own)
+            const up = raw.find((r) => r.id === e.parent);
+            if (!up || up.kind === 'instance' || (up.layout && up.layout.direction)) e.position = 'absolute';
             // where the declarations say an edge (or both) but the box sits centred and sized on its own (a transform
             // the table does not read, auto margins between two insets), the centre the walk measured is the truth
             const measured = (e.constraints || {});
@@ -1968,7 +1972,20 @@ async function main() {
         if (r.codeValue != null || typeof r.figmaValue !== 'string' || !['background', 'color'].includes(r.field)) continue;
         if (r.verdict !== 'same on screen' && !(r.verdict === 'differs' && seeThrough(r.figmaValue))) continue;
         const f = `${r.figma}.${r.field}`, inWhen = (v) => Object.entries(r.when).every(([k, x]) => String(v.when[k]) === String(x));
-        if (!Object.keys(r.when).length) { const e = fromCode.anatomy[r.figma]; if (e && e[r.field] == null) e[r.field] = r.figmaValue; continue; }
+        if (!Object.keys(r.when).length) {
+          const e = fromCode.anatomy[r.figma];
+          if (!e || e[r.field] != null) continue;
+          e[r.field] = r.figmaValue;
+          // and where the design draws no fill there (a drop area's while dragging), none: the code draws nothing at both
+          // (never over a fill the code draws there: a layer of the reading that can meet this combination, none of its
+          // keys at another value, and sets it, wider or narrower, keeps the null out)
+          const meets = (v, dv) => Object.entries(v.when || {}).every(([k, x]) => !(k in dv.when) || String(dv.when[k]) === String(x));
+          for (const dv of figmaContract.variants || []) if (dv.set && f in dv.set && dv.set[f] === null && !fromCode.variants.some((v) => meets(v, dv) && v.set && v.set[f] != null)) {
+            const same = fromCode.variants.find((v) => JSON.stringify(v.when) === JSON.stringify(dv.when));
+            if (same) same.set = { ...(same.set || {}), [f]: null }; else fromCode.variants.push({ when: { ...dv.when }, set: { [f]: null } });
+          }
+          continue;
+        }
         let hit = false;
         for (const v of fromCode.variants) if (inWhen(v) && v.set && f in v.set && v.set[f] === null) { v.set[f] = r.figmaValue; hit = true; }
         if (!hit && !fromCode.variants.some((v) => JSON.stringify(v.when) === JSON.stringify(r.when))) fromCode.variants.push({ when: { ...r.when }, set: { [f]: r.figmaValue } });

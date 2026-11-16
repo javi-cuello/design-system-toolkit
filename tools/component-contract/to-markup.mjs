@@ -127,12 +127,25 @@ export const pointerWords = (c, when) => Object.entries(when || {}).some(([k, v]
 /* A part inside a placed component that no prop of that component carries (an avatar's icon shown in a switcher
    that has no prop for it): an override the markup cannot pass, so the generated code leaves it to the developer,
    named as a gap. `mainOf` is a component's contract by its name. Tested by test-to-markup.mjs. */
+/* The placed component a part is held to: outside any slot, the outermost it sits in; in a slot this component fills
+   (a menu's items), the one placed in that fill (an item, its avatar the override); a slot's own sample, none. */
+export function overrideHost(c, id) {
+  const parts = partsOf(c), part = parts.get(id);
+  if (!part || !part.inside) return null;
+  if (!part.slotted) return part.inside;
+  if (!(parts.get(part.slotted) || {}).inside) return null;
+  let host = null;
+  for (let up = part.e.parent; up && up !== part.slotted; up = ((parts.get(up) || {}).e || {}).parent) if ((((parts.get(up) || {}).e) || {}).kind === 'instance') host = up;
+  return host;
+}
+
 export function unexposed(c, id, mainOf) {
   const parts = partsOf(c), part = parts.get(id);
-  if (!part || !part.inside || part.slotted) return false;
-  const main = mainOf(((parts.get(part.inside) || {}).e || {}).component);
+  const host = overrideHost(c, id);
+  if (!host) return false;
+  const main = mainOf(((parts.get(host) || {}).e || {}).component);
   if (!main) return false;
-  const rel = id.slice(part.inside.length + 1);
+  const rel = id.slice(host.length + 1);
   const own = (main.anatomy || {})[rel], props = Object.values(main.props || {});
   // a part the component draws in one of its variants is passed by that variant's prop, and a field a variant sets, by
   // that field's; never a pointer state's (hover is no value markup passes)
@@ -493,7 +506,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const children = (kids.get('root') || []).map((k) => node(k)).filter(Boolean);
   // an override a placed component has no prop for: the markup cannot pass it (only the outermost such part is named)
   const ancestors = (id) => { const out = []; for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) out.push(up); return out; };
-  for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name) => library[name]) && !ancestors(part.id).some((up) => unexposed(c, up, (name) => library[name]) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(part.inside)}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
+  for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name) => library[name]) && !ancestors(part.id).some((up) => unexposed(c, up, (name) => library[name]) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
   if (!control && !entry) gaps.push(`its element and role: a ${n.element ? 'custom element' : inline ? 'span' : 'div'} until frontend-build says what it is (code-standard rule 8)`);
   if (!entry && props.some((x) => /^placeholder$/i.test(x.key))) gaps.push('a field drawn with a Placeholder and no Value text: its <input>, and its text the input\'s ::placeholder (to-code reads a text entry from the two texts)');
   for (const x of props) if (x.type === 'event') gaps.push(`${x.name}: when it fires, frontend-build's to wire (taken here, so it reaches no element)`);

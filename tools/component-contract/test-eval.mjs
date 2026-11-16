@@ -106,6 +106,17 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
     over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
   const typed = { ...c, anatomy: { ...c.anatomy, 'field/text': { kind: 'text', parent: 'field', content: '{p}' } }, variants: [...c.variants, { when: { state: 'focus' }, set: { 'field/text.content': 'Search', 'field.width': 10 } }] };
+  const item = { component: 'Item', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
+  const menu = { component: 'Menu', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root' } }, variants: [] };
+  const bar = { ...c, anatomy: { root: { kind: 'container' }, menu: { kind: 'instance', parent: 'root', component: 'Menu' }, 'menu/items': { kind: 'slot', parent: 'menu' }, 'menu/items/item': { kind: 'instance', parent: 'menu/items', component: 'Item' }, 'menu/items/item/label': { kind: 'text', parent: 'menu/items/item', content: 'B' }, 'menu/items/item/avatar': { kind: 'instance', parent: 'menu/items/item', component: 'Avatar' } } };
+  const inFill = leftToCode(bar, (n) => ({ Item: item, Menu: menu })[n] || null);
+  ok('in a slot this component fills, an override the placed item has no prop for is left to code; its words a prop passes, and the item itself, stay differences',
+    inFill('menu/items/item/avatar') && !inFill('menu/items/item/label.content') && !inFill('menu/items/item'));
+  const deep = { ...bar, anatomy: { ...bar.anatomy, 'menu/items/item/box': { kind: 'container', parent: 'menu/items/item' }, 'menu/items/item/box/avatar': { kind: 'instance', parent: 'menu/items/item/box', component: 'Avatar' } } };
+  const itemBox = { ...item, anatomy: { ...item.anatomy, box: { kind: 'container', parent: 'root' } } };
+  const inDeep = leftToCode(deep, (n) => ({ Item: itemBox, Menu: menu })[n] || null);
+  ok('a part of the item\'s own the design keeps only as the way down to an override goes with it, whole; its fields stay differences',
+    inDeep('menu/items/item/box') && !inDeep('menu/items/item/box.layout') && inDeep('menu/items/item/box/avatar'));
   ok('words only a pointer state changes are left to code where the design holds them; a wrong rest text and another field stay differences',
     leftToCode(typed)('field/text.content', { library: 'Search' }) && !leftToCode(typed)('field/text.content', { library: '{p}' }) && !leftToCode(typed)('field.width') && !leftToCode(c)('field/text.content', { library: 'Search' }));
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))

@@ -104,7 +104,12 @@ export function leftToCode(contract, mainOf = null) {
   // styles the sheet reaches, and a name the reading gives it is the reader's)
   const passed = new Set(['', 'kind', 'component', 'content', 'with']);
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
+  // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
+  // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
+  const P = partsOf(contract);
+  const placedIn = (el) => { const q = P.get(el); if (!q || !q.inside) return false; for (let up = q.e.parent; up && up !== q.slotted; up = ((P.get(up) || {}).e || {}).parent) if ((((P.get(up) || {}).e) || {}).kind === 'instance') return true; return !q.slotted; };
+  const carries = (el) => mainOf && !over.has(el) && [...over.keys()].some((id) => id.startsWith(`${el}/`)) && placedIn(el);
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
