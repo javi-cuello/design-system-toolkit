@@ -93,6 +93,18 @@ ok('a component measured since the accept is held until accepted; one that came 
     left('menu') && left('menu/item.content') && left('slot/sample.content') && !left('field.layout') && !left('slot.width') && !left('menuish'));
   const placed = { ...c, anatomy: { ...c.anatomy, picker: { kind: 'instance', parent: 'root', component: 'Menu' }, 'picker/items': { kind: 'slot', parent: 'picker' }, 'picker/items/one': { kind: 'text', parent: 'picker/items', content: 'One' } } };
   ok('what this component puts in a placed component\'s slot is drawn, so stays a difference', !leftToCode(placed)('picker/items/one.content'));
+  const sw = { component: 'Switcher', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Org' }, dot: { kind: 'graphic', parent: 'root', background: 'Icon/strong' } }, variants: [] };
+  const holder = { ...c, anatomy: { root: { kind: 'container' }, org: { kind: 'instance', parent: 'root', component: 'Switcher' }, 'org/icon': { kind: 'instance', parent: 'org', component: 'Icon/case' }, 'org/label': { kind: 'text', parent: 'org', content: 'Acme' }, 'org/dot': { kind: 'graphic', parent: 'org', background: 'Icon/inverse' } } };
+  const over = leftToCode(holder, (n) => (n === 'Switcher' ? sw : null));
+  const swV = { ...sw, props: { ...sw.props, status: { type: 'enum', values: ['off', 'on'], default: 'off', figma: 'Status' } }, variants: [{ when: { status: 'on' }, add: { icon: { kind: 'instance', parent: 'root', component: 'Icon/case' } } }] };
+  ok('a part the placed component draws in a variant is passed by that variant\'s prop, so stays a difference', !leftToCode(holder, (n) => (n === 'Switcher' ? swV : null))('org/icon'));
+  const swW = { ...sw, anatomy: { ...sw.anatomy, icon: { kind: 'instance', parent: 'root', component: 'Icon/dot' }, 'icon/glyph': { kind: 'graphic', parent: 'icon' }, box: { kind: 'container', parent: 'root' }, 'box/t': { kind: 'text', parent: 'box', content: 'a' }, 'box/t/x': { kind: 'graphic', parent: 'box/t' } }, props: { ...sw.props, deep: { type: 'string', figma: 'Deep', sets: ['icon/glyph'] } } };
+  const holderW = { ...holder, anatomy: { ...holder.anatomy, 'org/icon/glyph': { kind: 'graphic', parent: 'org/icon', background: 'x' }, 'org/box': { kind: 'container', parent: 'org' }, 'org/box/t': { kind: 'text', parent: 'org/box', content: 'b' }, 'org/box/t/x': { kind: 'graphic', parent: 'org/box/t', background: 'y' } } };
+  const overW = leftToCode(holderW, (n) => (n === 'Switcher' ? swW : null));
+  ok('a swap no prop passes is left, its insides with it, even where a deeper prop sets them; words no prop passes are left, the insides\' styles stay differences',
+    overW('org/icon.component') && overW('org/icon/glyph.background') && overW('org/box/t.content') && !overW('org/box/t/x.background') && !overW('org/box/t.width'));
+  ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
+    over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
     && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }
 

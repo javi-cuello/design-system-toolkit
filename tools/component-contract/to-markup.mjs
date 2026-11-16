@@ -121,6 +121,35 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
   for (const x of out) if (TAKEN.has(x.name) || lang.taken.has(x.name)) { x.renamed = x.name; x.name = x.name === 'role' && !names.has('variant') ? 'variant' : x.name === 'role' && !names.has('appearance') ? 'appearance' : free(`${x.name}Option`); names.add(x.name); }
   return out;
 }
+/* A part inside a placed component that no prop of that component carries (an avatar's icon shown in a switcher
+   that has no prop for it): an override the markup cannot pass, so the generated code leaves it to the developer,
+   named as a gap. `mainOf` is a component's contract by its name. Tested by test-to-markup.mjs. */
+export function unexposed(c, id, mainOf) {
+  const parts = partsOf(c), part = parts.get(id);
+  if (!part || !part.inside || part.slotted) return false;
+  const main = mainOf(((parts.get(part.inside) || {}).e || {}).component);
+  if (!main) return false;
+  const rel = id.slice(part.inside.length + 1);
+  const own = (main.anatomy || {})[rel], props = Object.values(main.props || {});
+  // a part the component draws in one of its variants is passed by that variant's prop, and a field a variant sets, by
+  // that field's; never a pointer state's (hover is no value markup passes)
+  const pointer = (v) => Object.entries(v.when || {}).some(([k, x]) => ((main.props || {})[k] || {}).pointer && main.props[k].pointer.includes(x));
+  const passing = (main.variants || []).filter((v) => !pointer(v));
+  if (passing.some((v) => (v.add || {})[rel])) return false;
+  const varied = (f) => passing.some((v) => `${rel}.${f}` in (v.set || {}));
+  // a part the component does not draw at all: nothing in the markup can pass it ('part', its insides with it)
+  if (!own) return 'part';
+  // else each field markup would have to pass, held to the prop that passes that field
+  const by = (key) => props.some((q) => (q[key] || []).includes(rel));
+  const differs = (k) => JSON.stringify(own[k] ?? null) !== JSON.stringify(part.e[k] ?? null);
+  if (differs('kind')) return 'part';
+  if (differs('component') && !by('swaps') && !varied('component')) return 'part';
+  if (differs('content') && !by('sets') && !varied('content')) return 'field';
+  // a nested instance's own props reach it through a prop the component passes down to it
+  if (differs('with') && !varied('with') && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return 'field';
+  return false;
+}
+
 /* A swap: among icons (a component the library does not hold), the icon's name; of a part inside a placed component,
    that component's own prop, passed to it; among the library's components, what is placed. */
 function swapOf(c, p, library, lang) {
@@ -453,6 +482,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (lang.php) gaps.push(`${busy.name}: the page's script refuses the click while aria-disabled is "true", as a busy control stays enabled`);
   }
   const children = (kids.get('root') || []).map((k) => node(k)).filter(Boolean);
+  // an override a placed component has no prop for: the markup cannot pass it (only the outermost such part is named)
+  const ancestors = (id) => { const out = []; for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) out.push(up); return out; };
+  for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name) => library[name]) && !ancestors(part.id).some((up) => unexposed(c, up, (name) => library[name]) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(part.inside)}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
   if (!control && !entry) gaps.push(`its element and role: a ${n.element ? 'custom element' : inline ? 'span' : 'div'} until frontend-build says what it is (code-standard rule 8)`);
   if (!entry && props.some((x) => /^placeholder$/i.test(x.key))) gaps.push('a field drawn with a Placeholder and no Value text: its <input>, and its text the input\'s ::placeholder (to-code reads a text entry from the two texts)');
   for (const x of props) if (x.type === 'event') gaps.push(`${x.name}: when it fires, frontend-build's to wire (taken here, so it reaches no element)`);
