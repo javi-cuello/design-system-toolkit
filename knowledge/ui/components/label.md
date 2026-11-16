@@ -54,7 +54,6 @@ A label names a form field: the words above a text field or select, or beside a 
 **How**
 - [strong] **Inside the label, after the words.** Primer renders the label's text and then the mark in one flex row with a 4px gap ([Primer InputLabel source](https://github.com/primer/react/blob/main/packages/react/src/internal/components/InputLabel.tsx)), MUI appends a thin space and `*` ([MUI FormLabel source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/FormLabel/FormLabel.js)), and Spectrum appends an asterisk icon or the words "(required)" or "(optional)" through one `necessityIndicator` prop ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)).
 - [required] The mark is never colour alone and meets contrast where it is coloured (WCAG 1.4.1, 1.4.3); an asterisk is explained at the start of the form ([forms: *Required and optional fields*](../patterns/forms.md#required-and-optional-fields)).
-- [weak] **"(optional)" in the label's own colour and weight,** or one step quieter, never smaller than the label; the words are read, not glanced at (toolkit reasoning).
 - [weak] **The words are translatable text.** Spectrum formats "(required)" and "(optional)" from its localised strings ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)); a mark baked into each label string drifts between fields.
 
 **Cases**

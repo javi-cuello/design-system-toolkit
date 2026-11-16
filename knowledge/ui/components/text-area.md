@@ -10,7 +10,7 @@ A text area takes free text longer than one line: a description, a message, a re
 
 **Anatomy**
 - [strong] The text input's anatomy without icons or affixes: label, hint, the multi-line field, an optional character count under it, and the error message. SDS names `Label`, `Value`, `Description` and `Error` ([SDS TextareaField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/TextareaField.figma.ts)); Carbon adds `Show count` to `Label text`, `Helper text` and `Error text` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
-- [weak] A resize handle at the bottom inline-end corner where the field resizes; it is the browser's, drawn so the frame shows what code shows.
+- [required] A resize handle at the bottom inline-end corner where the field resizes; the browser renders it, so the frame draws it (figma-standard rule 51).
 - [required] A focus ring on the field (WCAG 2.4.7; figma-standard rule 39) and a border at 3:1 against its surface (WCAG 1.4.11).
 
 ## Height and resizing
@@ -82,15 +82,15 @@ A text area takes free text longer than one line: a description, a message, a re
 **Layers**
 - [required] Auto layout throughout: `Label`, `Description`, `Error message`, the `Field` holding `Value` and the `Resize handle`, then `Count` under the field (placing the hint and the message above the field is the toolkit's side of a `contested` choice, which the project decides; see [forms: *Help and hint text*](../patterns/forms.md#help-and-hint-text) and [*Error messages*](../patterns/forms.md#error-messages-and-the-error-summary)); the field fills its container's width and `Value` wraps inside it (figma-standard rule 33).
 - [required] Each layer is named for its role, the same in every variant (figma-standard rule 10); the text input's names where the part is the same ([text input: *In Figma*](text-input.md#in-figma)).
-- [weak] The field's height is drawn at the rows the component defaults to, with the value wrapping and clipping inside it; `Value` is not hugged, so the frame does not grow with the text as a fixed-rows field does not (toolkit reasoning).
+- [required] The field's height is drawn at the rows the code defaults to, with the value wrapping and clipping inside it; `Value` is not hugged, since a fixed-rows field does not grow with its text (figma-standard rule 51).
 
 **Properties**
 - [required] `Label`, `Value`, `Placeholder`, `Description`, `Count` and `Error message` are text properties; `Show description` and `Show count` sit directly above what they reveal (figma-standard rules 5, 21 and 37).
 - [strong] `Has value` and `Show label` as on the text input: SDS's `Value Type` and `Has Label` ([SDS TextareaField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/TextareaField.figma.ts)), Primer's `text type` and `label?` ([Primer Textarea.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.figma.tsx)), Carbon's `Text filled` and `Show label` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
-- [weak] `Show resize handle` where the project lets some text areas resize and others not; otherwise the handle is always drawn or never.
+- [required] `Show resize handle` only where the project's code lets some text areas resize and not others; otherwise the handle is drawn always or never, as the code renders it (figma-standard rule 51).
 
 **Variants and states**
-- [required] The text input's axes and order, `Has value → Validation → Read-only → Disabled → State` (`Read-only` only where the code has it), without `Size` unless the code has one; `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 3; [text input: *In Figma*](text-input.md#in-figma)).
+- [required] The text input's axes and order, `Has value → Validation → Disabled → State` (`Read-only` a `State` value where the code has it), without `Size` unless the code has one; `Disabled` pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 3; [text input: *In Figma*](text-input.md#in-figma)).
 - [weak] Over the limit is `Validation=Error` with the count in the error style, not a value of its own: Primer turns over-limit into its error status (source above).
 - [weak] No `Size` axis by default: none of SDS, Primer, Carbon or React Aria gives its text area a size prop (sources above); rows set its height in code.
 
@@ -99,7 +99,7 @@ A text area takes free text longer than one line: a description, a message, a re
 - [required] Placeholder and count text meet the contrast floor (figma-standard rule 32); a state variant binds its own state's tokens (figma-standard rule 48); component tokens are `Component/Text area/<Element>/<property>[-<variant>][-<state>]` (figma-standard rule 49).
 
 **Check**
-- *Script*: figma-components-audit runs the rules cited above; the contract lists `Has value`, `Validation`, `Read-only`, `Disabled` and `Show count` for the parity report.
+- *Script*: figma-components-audit runs the rules cited above; the contract lists `Has value`, `Validation`, `Disabled`, `Show count` and any `State=Read-only` for the parity report.
 - *Judgement*: does the drawn height match the rows the code sets?
 
 **Sources.** SDS, Primer and Carbon Code Connect files for the kit's properties; the text input page for the shared axes.
@@ -126,8 +126,8 @@ A text area takes free text longer than one line: a description, a message, a re
 - [moderate] An auto-grow field's height is a state the browser sets from the content; the set draws its minimum, and the parity loop compares at that height.
 
 **Differences**
-- [weak] No `Size` axis where some kits might add one; Carbon's `Warning` and skeleton, Primer's `contrast`, and MUI's variants are not drawn; a project whose code ships one adds it and records it here (toolkit reasoning).
-- [required] `Disabled`, `Read-only` and `Validation` are axes of their own where the kits put them in `State` (Code Connect files above; figma-standard rule 1).
+- [required] Carbon's `Warning` and skeleton, Primer's `contrast`, and MUI's variants (sources above) are drawn only where the project's code renders them (figma-standard rule 51).
+- [required] `Disabled` and `Validation` are axes of their own where the kits put them in `State` (Code Connect files above; figma-standard rule 1); `Read-only` stays a `State` value, as there ([text input: *In Figma*](text-input.md#in-figma)).
 
 **Check**
 - *Script*: the component contract lists the set's axes beside the code's props; a `Show count` with no counter prop, or a drawn height that matches no `rows`, shows in the parity report (design-code-parity).

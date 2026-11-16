@@ -126,7 +126,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - *Script*: figma-components-audit runs the rules cited above on both sets.
 - *Judgement*: does a closed accordion still show the page's structure at a glance?
 
-**Sources.** Figma's Simple Design System for the parts and names; MUI, Carbon and React Aria for Disabled (their open props are in *Alignment with code*); GOV.UK against Disabled. The panel as a slot is the toolkit's reasoning.
+**Sources.** Figma's Simple Design System for the parts and names; MUI, Carbon and React Aria for Disabled (their open props are in *Alignment with code*); GOV.UK against Disabled. The panel is a slot by figma-standard rule 38.
 
 ## Alignment with code
 

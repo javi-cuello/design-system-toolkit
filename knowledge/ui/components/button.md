@@ -197,7 +197,6 @@ The threshold is [interaction: response times](../design/interaction.md#response
   });
   ```
   A framework's pending flag (React's `useFormStatus`, a store's `isPending`) feeds the same two attributes; the timing stays in one place.
-- [weak] A form that navigates has no submit script beyond the guard: a flag set on `submit` and checked on the next, cleared on `pageshow` so a back navigation does not leave it stuck.
 - [required] An optimistic toggle writes the new state (`aria-pressed`, `aria-checked`) on press, keeps the previous value, and restores it with a message if the request fails (code-standard rule 61).
 - [required] The spinner sits inside the same box; the box is sized from its widest label state (a grid stacking both labels in one cell), so nothing moves ([performance: *Layout stability in code*](../../code/performance.md#layout-stability-in-code)).
   ```css
@@ -297,7 +296,6 @@ The threshold is [interaction: response times](../design/interaction.md#response
 **Use when / don't use**
 - [weak] A FAB is fixed over content for a screen's single most important action; Material Web's [FAB documentation](https://github.com/material-components/material-web/blob/main/docs/components/fab.md) says it "represents the most important action on a screen".
 - [moderate] Rarely on the web. Carbon's, Primer's and GOV.UK's catalogues ship none, and none of the Apple pages read here describes one; a primary button in the header does the job.
-- [weak] Consider it only for a touch-first view whose dominant action is creating something, at narrow widths (the toolkit's judgement).
 
 **How**
 - [weak] One per screen, positive, never destructive or navigation.
@@ -396,7 +394,6 @@ The threshold is [interaction: response times](../design/interaction.md#response
 **Differences**
 - [strong] Loading: a `State` value in Figma, a boolean prop in code. One value adds 18 variants where a boolean would add 90, 72 of them impossible; the mapping row says which prop it becomes ([loading as a State](../../../research/components-and-naming/what-the-state-axis-models.md#loading-as-a-state)).
 - [moderate] Axis and value names follow figma-standard rules 18 and 21 (sentence case, `Leading icon`), and code keeps its own case (`leadingVisual`, `startIcon`); the mapping row is where the two meet. Carbon's `Style` axis maps to `kind` and has stayed that way since a rename was declined ([Carbon issue #14836](https://github.com/carbon-design-system/carbon/issues/14836)).
-- [weak] Any other departure (a Figma-only `Device` axis, a code-only `block` prop) is named here with its reason, or the parity report raises it.
 
 **Check**
 - *Script*: the component contract lists every Figma axis and property and the props the code exposes; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).

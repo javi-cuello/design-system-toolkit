@@ -1,6 +1,6 @@
-# Eval cases — figma-components-audit (v2.48.0)
+# Eval cases — figma-components-audit (v2.48.1)
 
-**Walked: 2026-11-16 for 2.48.0** — A137 walked live on a project's web-components library by a fresh read-only agent following step 4b (result under the case); A138 traced; `node tools/shared/test-knowledge.mjs` 14 of 14 for the name-to-page lookup. The other cases do not read step 4b.
+**Walked: 2026-11-16 for 2.48.1** — 2.48.1 changes one example word; A137 and A138 re-read against it, unchanged. Earlier: — A137 walked live on a project's web-components library by a fresh read-only agent following step 4b (result under the case); A138 traced; `node tools/shared/test-knowledge.mjs` 14 of 14 for the name-to-page lookup. The other cases do not read step 4b.
 
 **Walked: 2026-11-15 for 2.47.2** — `node tests/test-audit.mjs` 121 of 121: a frame at opacity 0 bound to a variable that is 0 in every mode hides its text from the contrast check; it fails with the fix reverted, and the same frame bound to a variable that shows in some mode stays judged. Review: an alias now counts as zero only when every mode of its target is 0. Met real input: the Button set's loading label, bound to `State/Loading/opacity`, no longer raised on a live re-scan.
 

@@ -118,7 +118,7 @@ A combobox is a text field with a list of suggestions: the person types to narro
 **Differences**
 - [weak] `Open` is a `State` value drawn with the focus ring; React Aria also renders the toggle button pressed while the list shows (`isPressed: state.isOpen`, [React Aria ComboBox.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)), so a project on it draws the `Open` frame's button in its pressed look.
 - [required] `Disabled` and `Validation` are axes of their own where Carbon's kit puts `Disabled`, `Error`, `Warning` and `Read-only` in one `State` ([Carbon ComboBox.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/ComboBox/ComboBox.figma.ts)); code sets each as a prop (figma-standard rule 1).
-- [weak] Carbon's `Warning` and `Read-only`, and a multiple-value combobox with chips (MUI's `multiple`), are not drawn; a project whose code ships one adds it and records it (toolkit reasoning).
+- [required] Carbon's `Warning` and `Read-only` (its kit, above) and MUI's `multiple`, a combobox of several values shown as chips, are drawn only where the project's code renders them (figma-standard rule 51).
 - [moderate] `Label` and `Placeholder` take the common prop names; Carbon's are `titleText` and `placeholder`, the latter drawn in its kit as `Filter text`, and the mapping row is where they meet (figma-standard rule 21).
 
 **Check**

@@ -5,7 +5,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 ## Overview
 
 **Use when / don't use**
-- [weak] The state of an object, from a fixed vocabulary; never interactive and never decoration. The cases are [*Status badges and pills*](#status-badges-and-pills).
+- [weak] The state of an object, from the product's one list of statuses (design-standard rule 15); never interactive and never decoration. The cases are [*Status badges and pills*](#status-badges-and-pills).
 - [moderate] A status badge and a count are two components: Primer ships `Label` for text and `CounterLabel` for a number ([CounterLabel.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/CounterLabel/CounterLabel.tsx)); MUI's `Badge` is only the count or dot pinned to another element (`badgeContent`, `max`, `variant="dot"`; [Badge types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Badge/Badge.d.ts)). The word differs by system, so the project's context document names which is which.
 
 **Anatomy**
@@ -22,7 +22,6 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 
 **How**
 - [required] Colour plus text, and an icon where the status must be scanned at density. Carbon's [status indicator pattern](https://carbondesignsystem.com/patterns/status-indicator-pattern/): rely on at least two of colour, shape and symbol, and add text; "Relying solely on color to convey status is insufficient" (WCAG 1.4.1).
-- [weak] A fixed vocabulary: list every status the product uses, each with one label, one colour role and one icon, in the project's context document. The same state never has two names on two screens, and two states never share a colour.
 - [weak] Short labels in sentence case (Atlassian: "Don't use long labels"; it truncates past 200px by default). One or two words.
 - [weak] Three attention levels at most: high (act now: error), medium (no action needed: in progress), low (something changed or is ready) ([Carbon](https://carbondesignsystem.com/patterns/status-indicator-pattern/)).
 - [weak] A dot-only status is allowed only in a dense column whose header names the status, and with the text available to assistive technology.

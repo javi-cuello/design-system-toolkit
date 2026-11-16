@@ -58,7 +58,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 **How**
 - [moderate] Three statuses on either mode: active, success and error, each drawn with a colour and an icon, and the error with text saying what failed. Carbon's `status` is `active | finished | error` and its error state "must convey the problem in the error helper text" ([Carbon progress bar](https://carbondesignsystem.com/components/progress-bar/usage/), [Carbon ProgressBar source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/ProgressBar/ProgressBar.tsx)); MUI and Primer have no status and leave it to the page.
 - [weak] An indeterminate bar moves in one direction at a steady speed; Carbon "reserves back and forth motions for skeletons" ([Carbon progress bar](https://carbondesignsystem.com/components/progress-bar/usage/)).
-- [weak] A buffer (MUI's `variant="buffer"` with `valueBuffer`) belongs to media that plays while it loads; elsewhere it is a second value nobody reads (the toolkit's reading) ([MUI progress](https://mui.com/material-ui/react-progress/)).
+- [weak] A buffer (MUI's `variant="buffer"` with `valueBuffer`) shows a second value, how much is loaded, alongside the progress ([MUI progress](https://mui.com/material-ui/react-progress/)).
 - [moderate] Under reduced motion an indeterminate bar may go still, with its status text saying the work goes on: MUI freezes it as a still segment (`left: 30%`, `width: 40%`) when the theme opts into reduced motion ([MUI LinearProgress source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/LinearProgress/LinearProgress.js), [MUI reducedMotion](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/styles/reducedMotion.ts)); Primer runs its bar's shimmer only under `prefers-reduced-motion: no-preference` ([Primer ProgressBar styles](https://github.com/primer/react/blob/main/packages/react/src/ProgressBar/ProgressBar.module.css)).
 
 **Cases**
@@ -128,7 +128,7 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 **Layers**
 - [required] Auto layout throughout: the label row (`Label`, `Value`) above the `Track`, `Helper text` below; the `Fill` nests in the `Track` (figma-standard rule 33). Layers are named for their role in the code's words, the same in every variant (figma-standard rule 10; React Aria's Label, Track, Fill and Value label, [React Aria ProgressBar](https://react-aria.adobe.com/ProgressBar)).
 - [required] The fill's width is a fixed fraction of the track, a raw value that serves the mechanism; figma-standard rule 29 names "a progress fill driven by padding" as a question to answer, not a defect, so record how the fill is sized in the description.
-- [weak] An indeterminate frame is drawn at one still moment (a segment part-way along the track); Figma's component holds no motion (*Variants and states*).
+- [required] An indeterminate frame is drawn at one still moment, a segment part-way along the track (figma-standard rule 52).
 
 **Properties**
 - [required] `Label`, `Value` and `Helper text` are text properties; `Show value` and `Show helper text` reveal them, each directly above the property it reveals (figma-standard rules 5, 21 and 37). Carbon's Figma set exposes `Label text`, `Helper text`, `Error text` and `Success text` ([Carbon ProgressBar Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/ProgressBar/ProgressBar.figma.ts)).
@@ -174,7 +174,6 @@ A progress indicator shows how far a piece of work the system is doing has got: 
 **States**
 - [required] The browser sets nothing: no hover, press or focus, since the element is not interactive (WAI-ARIA `progressbar`). Every state is a prop: the value, indeterminate, the status.
 - [strong] Indeterminate is derived, not declared: it is the absence of a value (`progress` without `value`; `aria-valuenow` omitted), so the code reaches it by leaving the value out and Figma's `Indeterminate` maps to no prop of its own in plain HTML ([MDN `progress`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/progress); React Aria's `:not([aria-valuenow])`).
-- [weak] Motion is a state code reaches and no frame shows; the frame shows one still moment and the motion is the token pair (*Tokens*).
 
 **Differences**
 - [moderate] Carbon's Figma `Progress` axis offers `0%`, `25%`, `50%` and `75%`; code takes any number. The axis is a set of samples, so the mapping row says so rather than reading the axis as the prop's range ([Carbon ProgressBar Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/ProgressBar/ProgressBar.figma.ts)).

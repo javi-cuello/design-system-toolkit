@@ -23,7 +23,7 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - [moderate] One banner per page. Combine messages or show only the most important (GOV.UK; Carbon: "Only show one banner at a time").
 - [moderate] Page banner: immediately before the page `h1`, as wide as the content (GOV.UK). Product banner: directly below the main header, scrolling with the page, not sticky ([Carbon](https://carbondesignsystem.com/patterns/notification-pattern/)).
 - [required] Severity drives colour role, icon and a heading word, so meaning never rests on colour (GOV.UK asks for a heading such as "Success" for this reason; WCAG 1.4.1).
-- [weak] Dismissible or not: a banner about a condition that still holds (outage, stale data, read-only mode) is not dismissible; it leaves when the condition ends. A banner of information the person has read is dismissible, and stays dismissed for that person. GOV.UK lists dismissal as an open question; this split is the toolkit's commentary.
+- [weak] Whether a banner can be dismissed is open: GOV.UK lists dismissal as an open question, and the project decides.
 - [weak] Body: the problem and its cause, then what the person can do, in one to two sentences. Atlassian's [error messages](https://atlassian.design/foundations/content/designing-messages/error-messages) asks for one to two sentences and not to invent a cause.
 - [required] Reserve its space or place it above the controls so its arrival or dismissal does not move them (design-standard rule 2).
 
@@ -47,7 +47,7 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - *Script* could: count banners per page (more than one is a finding); confirm each has a heading and an accessible region name; flag a banner placed after the `h1` or inside the main content flow on a page that has one.
 - *Judgement*: is the condition still true while the banner shows, and could the message live in the content instead?
 
-**Sources.** GOV.UK and Carbon agree on one at a time and on placement; neither settles dismissal, so the toolkit splits it by whether the condition persists.
+**Sources.** GOV.UK and Carbon agree on one at a time and on placement; neither settles dismissal.
 
 ## In Figma
 
@@ -62,7 +62,7 @@ An alert is a message with a severity, shown in the page: a banner about the who
 
 **Variants and states**
 - [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the toast's and the badge's. Unless colour is split off (below), it is the alert's only axis, so its order is `Feedback` alone. The systems' words differ: Primer `critical`, `info`, `success`, `upsell`, `warning`; MUI `success`, `info`, `warning`, `error`; Carbon adds `info-square` and `warning-alt`.
-- [weak] Tone and colour are one axis unless the brand must recolour a severity: MUI keeps `severity` and `color` apart, which the toolkit's research judges right, since meaning and colour are separable ([when to split or merge a component: booleans as one axis](../../../research/components-and-naming/when-to-split-or-merge-a-component.md#booleans-as-one-axis)).
+- [contested] **Tone and colour as one axis or two.** MUI keeps `severity` and `color` as separate props ([MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js)); Primer's `variant` and Carbon's `kind` set tone and colour together (sources below). A project splits them only where its brand must recolour a severity.
 - [weak] No `State` axis on the alert; its buttons are instances carrying their own states.
 
 **Tokens**
@@ -74,7 +74,7 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - *Script*: figma-components-audit runs the rules cited above; the parity report compares the tone values with the code's.
 - *Judgement*: read in greyscale, does each tone still say its severity by icon and title?
 
-**Sources.** Primer, MUI, Carbon and SDS for the parts and tone names; the toolkit's split-or-merge research for severity and colour.
+**Sources.** Primer, MUI, Carbon and SDS for the parts and tone names, and MUI against them for colour apart from severity.
 
 ## Alignment with code
 

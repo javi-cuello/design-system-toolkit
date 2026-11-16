@@ -111,9 +111,9 @@ A select is a closed field that opens a list for one choice from more options th
 - [moderate] Code reaches focus with error, and `Has value=False` with error, the commonest failed select: a required question left on its placeholder. The set draws both, since `Has value` and `Validation` sit beside `State` ([In Figma](#in-figma)).
 
 **Differences**
-- [weak] One set where Primer, MUI and SDS code has two. The label, description and message sit outside the control's box, take no pointer state of their own and go together with `Show label`, so a second set would only repeat the field's axes on a wrapper; the Code Connect file switches component on the boolean, as SDS's does. The checkbox splits because its bare box sits alone in table rows with a layout of its own ([checkbox: *In Figma*](checkbox.md#in-figma)) (toolkit reasoning).
+- [required] One set where Primer, MUI and SDS code has two; the Code Connect file switches component on `Show label`, as SDS's does (sources above) (figma-standard rule 54).
 - [required] `Disabled` and `Validation` are axes of their own where SDS's kit puts `Disabled` and `Error` in `State` and Carbon's adds `Warning` and `Read-only` there ([Carbon Select.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Select/Select.figma.ts)); code sets each as a prop (figma-standard rule 1).
-- [weak] Carbon's `Inline` style (`inline`), its `Warning` and `Read-only`, and Primer's full width (`fullWidth?` read as `block`) are not drawn; a project whose code ships one adds it and records it (toolkit reasoning).
+- [required] Carbon's `Inline` style (`inline`), its `Warning` and `Read-only`, and Primer's full width (`fullWidth?` read as `block`) (sources above) are drawn only where the project's code renders them (figma-standard rule 51).
 
 **Check**
 - *Script*: the component contract lists the set's axes and properties beside the code's props; a `Show label` that maps to no component switch, or an `Open` frame on a native select with no `:open` rule, shows in the parity report (design-code-parity).

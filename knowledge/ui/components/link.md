@@ -56,7 +56,7 @@ A link takes the person somewhere: another page, a place on this page, a file. T
 ## In Figma
 
 **Layers**
-- [weak] The inline link is a text style, applied to a range inside the paragraph's own text layer, not a component: Figma cannot place an instance inside a run of text. The component serves the standalone link (the toolkit's reasoning).
+- [required] The inline link is a text style applied to a range inside the paragraph's own text layer, not a component; the component serves the standalone link (figma-standard rule 53).
 - [required] The standalone link is an auto-layout frame, never a group, holding `Label` and an optional `Icon` after it; the text hugs, so a longer label grows the link (figma-standard rules 10 and 33).
 - [required] The icon's position is `Trailing`, never `Right` (figma-standard rule 21); where the project mirrors, a new-tab or external glyph records in its description whether it mirrors (figma-standard rule 50).
 

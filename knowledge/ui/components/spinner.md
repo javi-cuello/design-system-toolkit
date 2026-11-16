@@ -148,7 +148,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 
 **Layers**
 - [required] One frame, auto layout, holding a `Track` ring and an `Arc`; the same names in every size (figma-standard rules 10 and 33). Primer's SVG has the same two parts ([Primer Spinner source](https://github.com/primer/react/blob/main/packages/react/src/Spinner/Spinner.tsx)).
-- [weak] The arc is drawn at one fixed angle; the component holds no motion. Figma's prototype can loop rotation between frames with Smart animate, which "takes the layer's rotation and orientation into account" and lists "Loading sequences" among its uses ([Figma Smart animate](https://help.figma.com/hc/en-us/articles/360039818874-Smart-animate-layers-between-frames)), fired by an "After delay" trigger ([Figma prototype triggers](https://help.figma.com/hc/en-us/articles/360040035834-Prototype-triggers)). That loop is for a prototype only; the motion's specification is the token pair (*Tokens*), never frames a developer has to time.
+- [required] The arc is drawn at one fixed angle; the motion is the token pair (*Tokens*) (figma-standard rule 52). Figma's prototype can loop rotation between frames with Smart animate, which "takes the layer's rotation and orientation into account" and lists "Loading sequences" among its uses ([Figma Smart animate](https://help.figma.com/hc/en-us/articles/360039818874-Smart-animate-layers-between-frames)), fired by an "After delay" trigger ([Figma prototype triggers](https://help.figma.com/hc/en-us/articles/360040035834-Prototype-triggers)); that loop serves a prototype only.
 
 **Properties**
 - [moderate] No properties beyond `Size` for a bare spinner. A spinner with text beside it (Carbon's inline loader) exposes the text as a property (`Label`) revealed by `Show label` (figma-standard rules 5, 21 and 37); Carbon's set reads a `Loading message` layer ([Carbon Loading Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Loading/Loading.figma.ts)).
@@ -188,7 +188,7 @@ A spinner is a small turning ring that says work is under way here, now, with no
 
 **States**
 - [required] The browser sets nothing: no hover, focus or press. The code sets whether it renders (after the delay) and Carbon's `active`; neither is a Figma variant, since a spinner that is not running is not drawn.
-- [weak] Reduced motion is a state the code reaches from the system preference and no frame shows; the project's ruling (*Motion and reduced motion*) names what it looks like.
+- [required] Reduced motion is a state the code reaches from the system preference and no frame shows (figma-standard rule 52); the project's ruling (*Motion and reduced motion*) names what it looks like.
 
 **Differences**
 - [moderate] Carbon draws `Loading` and `InlineLoading` as one Figma component whose `Size` axis has an `Inline` value; Code Connect turns `Size=Inline` into `InlineLoading` with `State` mapped to `status`, and the other sizes into `Loading` ([Carbon Loading Code Connect](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Loading/Loading.figma.ts)). One Figma set for two code components is a departure the mapping has to carry; the toolkit splits them where the code does.

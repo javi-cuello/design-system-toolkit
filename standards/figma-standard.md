@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.24.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.25.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -213,6 +213,38 @@ Cite a rule as `figma-standard rule N`.
     *Evidence:* maintainer-decreed 2026-10-11. One project's 262 icon sets, read from the stored icons that day: 5 named outside Lucide, all suffixed `-custom`.
 
    *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "icons: a set missing a size most sets have, an unbound paint and a name the icon set lacks are raised".
+
+51. **A kit draws what its code renders, and only that; a departure is recorded.** Each set draws the variants, parts and defaults the project's code ships, its parts in the code's order (variants in rules 3 and 4's): the rows a text area opens at, the resize handle the browser draws, a separator where the stylesheet puts it. A value another system ships and this code does not (a `Warning` state, `Read-only`, a skeleton, an inline form, multiple selection) is not drawn. Adding one before the code has it, or drawing what the code lacks, is a ruling in the context document; the parity report raises anything unrecorded.
+
+    *Why:* a frame the code cannot reach is a promise nobody keeps, and a state the code reaches with no frame is a screen nobody designed; both surface only when a developer builds from the drawing or a designer from the code.
+
+    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and twelve component-page items stating this convention, with no source outside the toolkit, moved here.
+
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+
+52. **What Figma cannot show is not a variant: its values are tokens, and behaviour goes in an annotation.** A frame draws one still moment. Motion, timing, swipe and entering or exiting states, which code reaches at run time, get no frame and no axis; their durations and easings are motion tokens (rule 42). Behaviour with nothing to draw (a dialog's role, which text names it and which describes it, where focus returns when its trigger is gone) is a Dev Mode annotation on the frame that places the component.
+
+    *Why:* an axis whose only difference is motion or timing offers a choice the canvas cannot show (rule 35), and behaviour left out of the file is guessed in code.
+
+    *Evidence:* maintainer-decreed 2026-11-16, ten component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
+
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+
+53. **A component is what its code renders; what it attaches to stays outside it.** A trigger, an anchor or the paragraph a component sits in is not part of it: a frame showing it open places the trigger beside it as its own instance. A part that runs inside text, an inline link, is a text style on a range, since Figma cannot place an instance inside text. A composite such as a breadcrumb trail places the existing component for each item rather than redrawing it.
+
+    *Why:* a trigger drawn inside a popover's set is a second button nobody maintains, and a redrawn item drifts from the component it copies.
+
+    *Evidence:* maintainer-decreed 2026-11-16, four component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
+
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+
+54. **A field and its control are one set, unless the bare control is placed alone.** The label, hint and message take no pointer state, so a wrapper set around the control repeats every axis for nothing. The bare control is a set of its own only where it has a layout of its own, such as a checkbox in a table row; Code Connect then switches component on `Show label`.
+
+    *Why:* two sets that differ only by a label double the variants and drift apart at the first change made to one.
+
+    *Evidence:* maintainer-decreed 2026-11-16, two component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
+
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
 
 ## Naming
 

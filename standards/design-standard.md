@@ -1,6 +1,6 @@
 # Design standard — how an interface the toolkit builds or audits looks, behaves and reads, in a design file and in a built page
 
-**Version 1.5.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
+**Version 1.6.0** — history in [`changelog/design-standard.md`](changelog/design-standard.md).
 
 **Scope.** The design of any interface a project or the toolkit itself puts in front of people: a documentation site, a dashboard, a tool, a screen drawn in Figma. Five areas, each owning one kind of decision: **UX** (what and why, across screens), **Interaction** (how it responds, in the moment), **Visual** (how it looks), **Content** (what it says) and **Accessibility** (who it works for). Above them sit the principles every area answers to; below them, **application profiles** say what a kind of product (documentation, dashboards, editorial reading, forms) must specify. A rule applies to a design file and to a built page alike; each says which it can be checked on. Project-agnostic by construction, like `code-standard.md`.
 
@@ -58,6 +58,16 @@ Good UX starts from the task someone came to do, asks for nothing twice, chooses
    *Applies to:* built page, and a design file drawn with no design to follow.
 
    *Reviewed:* `skills/frontend-build/SKILL.md` "**No design file**" — before any page, site or artifact is built with no design to follow; `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit.
+
+15. **A status has one name, one colour role and one icon across the product, listed in the context document.** Where a product shows statuses (a badge, a tag, a row's state), each status is named once, in the product's words, with the colour role and icon it always takes; a screen does not coin a status of its own.
+
+   *Why:* the same state shown as "Pending" on one screen and "In review" on another, or amber here and blue there, reads as two states, and a person learns neither.
+
+   *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and the badge page's item stating it moved here; figma-standard rule 22 keeps the words matched in the library.
+
+   *Applies to:* design file and built page.
+
+   *Reviewed:* `skills/frontend-build/SKILL.md` "Hold it to the whole of the knowledge" — at its audit, against the context document's status list.
 
 ---
 

@@ -36,7 +36,6 @@ A search input is the one-line field a person types a query into, to search a si
 
 **Build**
 - [required] `<search><form method="get">`, a `label` (visually hidden if the design shows none), `<input type="search" name="q">`, and a submit `button`, as [HTML semantics: *Search and filter forms*](../../code/html-semantics.md#search-and-filter-forms) sets out (code-standard rule 20).
-- [weak] The landmark is the page's `search` element, outside the component; the component renders no `role="search"` of its own: the toolkit's pick from the contested *Where the `search` landmark goes* (MDN, APG, above).
 - [moderate] `enterkeyhint="search"` gives phones the right key ([search: instant or submitted](../patterns/search.md#instant-or-submitted)); React Aria types `enterKeyHint` with `'search'` among its values (useSearchField, above).
 
 **Check**
@@ -164,7 +163,7 @@ A search input is the one-line field a person types a query into, to search a si
 **Differences**
 - [weak] The landmark is not part of the component, where Carbon's `Search` renders `role="search"` on its own wrapper ([Search input](#search-input) for why).
 - [weak] The clear button keeps its tab stop, where React Aria removes it ([clear and submit](#clear-and-submit)).
-- [weak] Carbon's skeleton and `ExpandableSearch`, and React Aria's `isReadOnly` and `isInvalid` on a search field, are not drawn; a project that ships one adds it and records it here (toolkit reasoning).
+- [required] Carbon's skeleton and `ExpandableSearch`, and React Aria's `isReadOnly` and `isInvalid` on a search field (sources above), are drawn only where the project's code renders them (figma-standard rule 51).
 
 **Check**
 - *Script*: the component contract lists the set's axes beside the code's props; a clear button drawn on an empty field, or a set mapped to a combobox component with no line here, shows in the parity report (design-code-parity).

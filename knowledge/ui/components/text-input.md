@@ -128,7 +128,7 @@ A text input takes one line of free text: a name, an email address, a reference,
 
 **Build**
 - [required] The name comes from the `label`, never from `placeholder` alone ([accessibility: accessible names and descriptions](../../code/accessibility.md#accessible-names-and-descriptions)); Carbon also writes `title` from its `placeholder` ([Carbon TextInput source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/TextInput/TextInput.tsx)), which is no substitute for a label either.
-- [weak] An empty field is styled from `:placeholder-shown` only where a placeholder exists; otherwise from the value, so the filled style does not depend on one.
+- [moderate] An empty field is styled from `:placeholder-shown` only where a placeholder exists; otherwise from the value, so the filled style does not depend on one: the pseudo-class matches an `input` or `textarea` "currently displaying placeholder text" ([MDN `:placeholder-shown`](https://developer.mozilla.org/en-US/docs/Web/CSS/:placeholder-shown)).
 
 **Check**
 - *Script:* could flag an `input` or `textarea` whose only name comes from `placeholder`, and a placeholder under the contrast floor.
@@ -150,9 +150,9 @@ A text input takes one line of free text: a name, an email address, a reference,
 - [weak] `Show count` adds the character count under the field where code ships one (Carbon `enableCounter`, Primer `characterLimit`); its behaviour is [text area: character count](text-area.md#character-count).
 
 **Variants and states**
-- [required] Axes in the order `Size → Has value → Validation → Read-only → Disabled → State`, `Read-only` only where the code has it (its own item below) (figma-standard rule 1); `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest and sits right after it, and pairs with Focus too where the code keeps it focusable (figma-standard rules 2 and 3).
-- [weak] `State` runs `Rest → Focus → Hover`, with no `Press`: pressing a field focuses it, so a press frame would repeat Focus (figma-standard rule 4 orders the rest; dropping Press is toolkit reasoning, and figma-standard rule 36 reads the archetype from the library's own fields).
-- [weak] `Read-only` is a True/False axis of its own, paired with Rest and Focus only, since a read-only field is focusable but takes no hover style and no error. Carbon and Primer put read-only as a value of `State` instead (sources above); the toolkit keeps it beside `State` because code sets it as a prop and the field can still be focused (toolkit reasoning, as figma-standard rule 1 treats `Disabled`).
+- [required] Axes in the order `Size → Has value → Validation → Disabled → State` (figma-standard rule 1); `Validation` lists `None` then `Error`; `Disabled` pairs only with Rest and sits right after it, and pairs with Focus too where the code keeps it focusable (figma-standard rules 2 and 3).
+- [moderate] `State` runs `Rest → Focus → Hover` (then `Read-only` where the code has it), with no `Press`: pressing a field focuses it, so a press frame would repeat Focus, and neither Material Web's outlined text field nor Primer's TextInput Code Connect has one ([Material Web _outlined-text-field.scss](https://github.com/material-components/material-web/blob/main/textfield/internal/_outlined-text-field.scss), [Primer TextInput.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/TextInput/TextInput.figma.tsx)). figma-standard rule 4 orders the rest; figma-standard rule 36 reads the archetype from the library's own fields.
+- [moderate] Read-only, where the code has it, is a `State` value: Carbon's and Primer's kits each draw it there, mapping `Read-only` and `read-only` to `readOnly` ([Carbon TextInput.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextInput/TextInput.figma.ts), [Primer TextInput.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/TextInput/TextInput.figma.tsx)).
 - [moderate] `Has value` and `Validation` sit beside `State`, not on it, because a focused field in error and an empty field in error are both frames code reaches ([research: *States on the axis*](../../../research/components-and-naming/what-the-state-axis-models.md#states-on-the-axis)); SDS puts `Disabled` and `Error` in one `State`, which cannot draw them ([SDS InputField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/InputField.figma.ts)).
 - [required] Sizes are `Size` with t-shirt values, largest first, matching the code's steps (figma-standard rule 6).
 
@@ -162,7 +162,7 @@ A text input takes one line of free text: a name, an email address, a reference,
 - [required] A state variant binds its own state's tokens (figma-standard rule 48); component tokens, where the project has them, are `Component/Text input/<Element>/<property>[-<variant>][-<state>]` (figma-standard rule 49).
 
 **Check**
-- *Script*: figma-components-audit runs the rules cited above; component-validator raises an icon in the field row (W2) and one in the middle of it (MU5) as decisions for code; the contract lists `Has value`, `Validation`, `Read-only`, `Disabled` and `Size` for the parity report.
+- *Script*: figma-components-audit runs the rules cited above; component-validator raises an icon in the field row (W2) and one in the middle of it (MU5) as decisions for code; the contract lists `Has value`, `Validation`, `Disabled`, `Size` and any `State=Read-only` for the parity report.
 - *Judgement*: can a designer draw every state the code reaches, including focus with error and an empty field in error?
 
 **Sources.** Figma's Simple Design System, Carbon and Primer Code Connect files for property names and the one-set kit; the toolkit's state-axis research for what sits beside `State`; component-validator for where code places icons.
@@ -183,7 +183,7 @@ A text input takes one line of free text: a name, an email address, a reference,
   | `Has value=False` | empty `value`; `Placeholder` is `placeholder`, styled from `:placeholder-shown` |
   | `Has value=True` | `value` |
   | `Validation=Error` | `aria-invalid="true"`, `Error message` tied with `aria-describedby`; styled from `:user-invalid` or the attribute |
-  | `Read-only=True` | `readonly`, styled from `:read-only` |
+  | `State=Read-only` | `readonly`, styled from `:read-only` |
   | `Disabled=True` | `disabled` on the `input` |
   | `State=Hover`, `Focus` | `:hover`, `:focus-visible`, set by the browser |
   | `Label`, `Description` | the `label`; the hint tied with `aria-describedby` (code-standard rule 15) |
@@ -197,15 +197,15 @@ A text input takes one line of free text: a name, an email address, a reference,
 - [required] The browser sets hover and focus, `:placeholder-shown` while the field is empty, `:read-only` from `readonly`, and `:user-invalid` once the person has interacted or submitted ([HTML: `:user-invalid`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-user-invalid)). A text field shows its focus however it was focused: MDN gives "a text box needing user input" as the case where focus is indicated after a click ([MDN `:focus-visible`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:focus-visible)).
 - [required] A prop sets `value`, `disabled`, `readonly`, `size` and the error: Primer writes `aria-invalid` from `validationStatus`, Carbon from `invalid`, MUI from `error` (sources above). React Aria sets `data-focused`, `data-focus-visible`, `data-hovered`, `data-disabled` and `data-invalid` on its `Input` from script ([React Aria Input.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Input.tsx)), so a stylesheet on it matches those attributes, as SDS's does ([SDS input.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Input/input.css)).
 - [required] Code cannot reach Disabled with Error, nor Read-only with Error, through validation: disabled and read-only controls are barred from constraint validation (MDN `readonly`, above), and Carbon drops `invalid` under either (`invalid: !readOnly && !disabled && invalid`, [Carbon useNormalizedInputProps](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/internal/useNormalizedInputProps.tsx)). So the set draws neither.
-- [moderate] Code reaches focus with error, empty with error and read-only with focus; the set draws them because `Has value`, `Validation` and `Read-only` sit beside `State`.
+- [moderate] Code reaches focus with error and empty with error; the set draws them because `Has value` and `Validation` sit beside `State`. A read-only field also takes focus; `State=Read-only` draws it at rest only, its ring the same as Focus's, and a project that wants it drawn records it (figma-standard rule 51).
 
 **Differences**
-- [weak] One set where SDS, Primer, MUI and React Aria code has two. The label, hint and message take no pointer state of their own and go together with `Show label`, so a second set would repeat every axis on a wrapper; the Code Connect file switches component on the boolean, as SDS's does. The checkbox splits because its bare box sits alone in table rows with a layout of its own ([checkbox: *In Figma*](checkbox.md#in-figma)) (toolkit reasoning).
-- [required] `Disabled`, `Read-only` and `Validation` are axes of their own where the SDS, Carbon and Primer kits fold them into `State` (Code Connect files above); code sets each as a prop (figma-standard rule 1).
-- [weak] Carbon's `Warning` validation, its `Inline` style and its skeleton, Primer's `loading`, `contrast` and `monospace`, and MUI's `filled` and `standard` variants are not drawn; a project whose code ships one adds it and records it here (toolkit reasoning).
+- [required] One set where SDS, Primer, MUI and React Aria code has two; the Code Connect file switches component on `Show label`, as SDS's does (sources above) (figma-standard rule 54).
+- [required] `Disabled` and `Validation` are axes of their own where the SDS, Carbon and Primer kits fold them into `State` (Code Connect files above); code sets each as a prop (figma-standard rule 1). `Read-only` stays in `State`, as Carbon's and Primer's kits draw it.
+- [required] Carbon's `Warning` validation, its `Inline` style and its skeleton, Primer's `loading`, `contrast` and `monospace`, and MUI's `filled` and `standard` variants (sources above) are drawn only where the project's code renders them (figma-standard rule 51).
 
 **Check**
-- *Script*: the component contract lists the set's axes and properties beside the code's props; an icon property with no slot prop, or a `Read-only` axis over code with no `readOnly`, shows in the parity report (design-code-parity).
+- *Script*: the component contract lists the set's axes and properties beside the code's props; an icon property with no slot prop, or a `State=Read-only` over code with no `readOnly`, shows in the parity report (design-code-parity).
 - *Judgement*: does the Code Connect file give the bare input where `Show label` is off?
 
 **Sources.** SDS, React Aria, Primer, MUI, Carbon and GOV.UK source and Code Connect files as linked; the HTML standard and MDN for `:user-invalid`, `readonly` and `:focus-visible`.

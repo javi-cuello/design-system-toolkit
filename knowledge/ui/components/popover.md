@@ -60,7 +60,6 @@ A popover shows a little information or a few related controls next to the one e
 **Layers**
 - [required] Auto layout throughout: the surface hugs its content up to a maximum width, the text wraps and hugs vertically (figma-standard rule 33).
 - [required] Layers are named for their role (`Caret`, `Title`, `Description`, `Body`, `Close`), the same in every variant (figma-standard rules 9 and 10).
-- [weak] The trigger is not part of the component: a frame that shows the popover open places the trigger beside it as its own instance, so the popover can serve any trigger.
 
 **Properties**
 - [required] `Title` and `Description` are text properties, each revealed by a boolean directly above it (`Show title`, `Show description`); the content is a slot named `Slot` (figma-standard rules 5, 21, 37 and 38).

@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.25.0 (2026-11-16): rules 51–54 by decree, the knowledge base's house conventions moved here (toolkit-standard §D 21): a kit draws what its code renders; what Figma cannot show is not a variant; a trigger stays outside; a field and its control are one set.
 - 2.24.0 (2026-11-16): rule 1's emphasis slot is `Variant`, not `Role` (HTML's attribute); rule 2 lets Disabled pair with Focus where the code keeps the control focusable (`aria-disabled`).
 - 2.23.0 (2026-11-12): rule 43, letter spacing set in percent may stay unbound, since Figma binds a number variable to it only as px; figma-foundations-audit's style-binding check no longer raises it.
 - 2.22.1 (2026-11-11): rule 50's *Evidence* and *Checked:* cover 2.22.0's broadening (the Direction variant for anything that mirrors; the rtlVerdicts test).

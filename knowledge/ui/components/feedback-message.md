@@ -67,7 +67,7 @@ A feedback message is the short line on one form field that says what is wrong w
 
 **Build**
 - [required] `aria-describedby="email-hint email-error"` and `aria-invalid="true"` on the control while it fails; both removed when it passes, and the message with them ([forms: *Error messages and the error summary*](../patterns/forms.md#error-messages-and-the-error-summary)).
-- [weak] Where a project adds `aria-errormessage`, it points at the same `id` and keeps `aria-describedby` too; test it with the readers the product supports for a double reading (toolkit reasoning).
+- [weak] Where a project adds `aria-errormessage`, it points at the same `id` and keeps `aria-describedby` too; test it with the readers the product supports for a double reading ([Adrian Roselli: Exposing field errors](https://adrianroselli.com/2023/04/exposing-field-errors.html)).
 
 **Check**
 - *Script:* could flag `aria-errormessage` with no `aria-invalid="true"`, a message element with `aria-live` or `role="alert"` inside a field, and a message `id` missing from `aria-describedby`.
@@ -84,7 +84,7 @@ A feedback message is the short line on one form field that says what is wrong w
 - [contested] **Its own component, or a layer in each field.** Primer's kit draws `FormControl.Validation` and `InlineMessage` as components of their own ([Primer FormControl.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControl.figma.tsx), [Primer InlineMessage.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/InlineMessage/InlineMessage.figma.tsx)); SDS's and Carbon's kits draw the error text as a layer of each field, read through its `Error` or `Error text` property when `State=Error` ([SDS InputField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/InputField.figma.ts), [Carbon TextInput.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextInput/TextInput.figma.ts)). The toolkit publishes `Feedback message` for compositions no field covers, and draws it inside each field as a layer bound to the field's `Error message`, in the same style and tokens, because a nested instance whose type the field switches drops its typed text (figma-standard rule 38). A project that nests it proves the text survives switching the field's `Validation`, and records the choice.
 
 **Properties**
-- [weak] `Text` is a text property (figma-standard rule 37); the icon is fixed by the type, not an instance swap a designer could set to the wrong glyph (toolkit reasoning beyond figma-standard rule 21).
+- [required] `Text` is a text property (figma-standard rule 37).
 - [required] On a field: `Show error message` directly above `Error message` (figma-standard rules 5 and 21), with the field's `Validation` axis choosing the look.
 
 **Variants and states**

@@ -6,7 +6,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 
 **Use when / don't use**
 - [moderate] A site three or more levels deep, where readers arrive deep from search or a link; never for history or the steps of a journey ([breadcrumbs](#breadcrumbs)).
-- [weak] One component, the trail; each level is a link with the [link](link.md) component's standalone look, and the trail adds the list, the separators and the current page (the toolkit's reasoning).
+- [required] One component, the trail: each level places the [link](link.md) component in its standalone look, and the trail adds the list, the separators and the current page (figma-standard rule 53).
 
 **Anatomy**
 - [strong] A labelled `nav` holding an ordered list; each item a link to a level, separated from the next, and the last the current page. The APG, Carbon (`isCurrentPage`, a `nav` labelled "Breadcrumb") and Primer (`selected`, labelled "Breadcrumbs") build it so ([APG breadcrumb](https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/), [Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx)). The toolkit renders the current page as text ([breadcrumbs](#breadcrumbs)).
@@ -126,7 +126,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 **Layers**
 - [required] `Breadcrumbs` holds `Breadcrumbs item` parts, the family's name and the part's last word, in an `Items slot`: an item has a Current variant, and per-item text in a nested instance is dropped when it switches (figma-standard rules 9, 21 and 38). The toolkit's naming research found the same shape in Qualcomm's `_Breadcrumb item` (*Naming inside Figma components*, research folder).
 - [required] Auto layout throughout; the item's layers are named for their role, `Separator` then `Label` (figma-standard rules 10 and 33).
-- [weak] The separator leads each item and is hidden on the first, which is what `li + li::before` draws in code ([breadcrumbs](#breadcrumbs)); the toolkit's reasoning, so the drawing and the stylesheet place it alike.
+- [required] The separator leads each item and is hidden on the first, as `li + li::before` places it in code ([breadcrumbs](#breadcrumbs)) (figma-standard rule 51).
 - [required] Where the project mirrors, the separator glyph records in its description whether it mirrors (figma-standard rule 50).
 
 **Properties**
@@ -177,7 +177,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - [strong] Current is set by code: Carbon's `isCurrentPage` and Primer's `selected` on the item, each writing `aria-current="page"`, while React Aria derives it, marking the last item current ([Carbon BreadcrumbItem source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/Breadcrumb/BreadcrumbItem.tsx), [Primer Breadcrumbs source](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.tsx), [React Aria Breadcrumbs source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Breadcrumbs.tsx)).
 - [moderate] Code cannot reach Current with Hover, Press or Focus: React Aria disables the current item, and Carbon renders it as text when it has no `href` (sources as above), so no frame pairs them (figma-standard rule 2).
 - [weak] An item is a link, so the browser can set `:visited` on it, and the item has no Visited axis: the stylesheet keeps a visited item at Rest's colour, or code reaches a state no frame shows ([MDN `:visited`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:visited); the toolkit's reasoning).
-- [weak] Carbon's code reaches a separator after the current item unless the trail sets `noTrailingSlash`, which its Code Connect sets whenever an item is Current ([Carbon Breadcrumb.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/Breadcrumb.figma.ts)); this page's trail never ends on one, as its separator leads.
+- [moderate] Carbon's code reaches a separator after the current item unless the trail sets `noTrailingSlash`, which its Code Connect sets whenever an item is Current ([Carbon Breadcrumb.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/Breadcrumb.figma.ts)); a set draws that separator only where its code renders it (figma-standard rule 51).
 
 **Differences**
 - [moderate] `Current` is a True/False variant on the item here, as in Carbon's kit (`Current`, or `State=Current`) and Primer's (`selected`) (Code Connect files as above), where React Aria takes it from the item's position; the mapping row writes it on the item either way.
