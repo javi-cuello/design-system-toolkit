@@ -167,18 +167,18 @@ ok('a flag written "false" is off, and one written "true", bare or empty is on',
 ok('an arg by its own attribute, else by a data attribute holding its value, never the walk\'s own marks', carries({ size: 'sm' }, 'size', 'sm') && !carries({ size: 'md' }, 'size', 'sm') && carries({ 'data-hierarchy': 'primary' }, 'variant', 'primary') && !carries({ 'data-figma-id': 'primary' }, 'variant', 'primary'));
 // a placed component's layer mapped to its root inside its host: the host takes the id; a layer inside it stays
 {
-  const { layerAt } = await import('./from-code.mjs');
+  const { elementOfLayer } = await import('./from-code.mjs');
   const el = (tag, cls = [], attrs = {}) => ({ tagName: tag.toUpperCase(), classList: cls, attrs, parentElement: null, firstElementChild: null, getAttribute(k) { return this.attrs[k] ?? null; } });
   const host = el('ds-button'), inner = el('button'); inner.parentElement = host; host.firstElementChild = inner;
   const box = el('div'), first = el('span'); first.parentElement = box; box.firstElementChild = first;
   const others = { button: true };
   const R = '^ds-(.+)$';
-  ok('a placed component\'s layer mapped to its root names the host that places it', layerAt(inner, 'footer/buttons/button_2', 'instance', R, others)[0] === host);
-  ok('an element that is no other component\'s root names itself', layerAt(first, 'footer/x', 'instance', R, others)[0] === first);
-  ok('a layer inside a placed component the mapping names alone (not the instance) stays on that root', layerAt(inner, 'footer/chip/label', 'text', R, others)[0] === inner && !layerAt(inner, 'footer/chip/label', 'text', R, others)[1]);
+  ok('a placed component\'s layer mapped to its root names the host that places it', elementOfLayer(inner, 'footer/buttons/button_2', 'instance', R, others)[0] === host);
+  ok('an element that is no other component\'s root names itself', elementOfLayer(first, 'footer/x', 'instance', R, others)[0] === first);
+  ok('a layer inside a placed component the mapping names alone (not the instance) stays on that root', elementOfLayer(inner, 'footer/chip/label', 'text', R, others)[0] === inner && !elementOfLayer(inner, 'footer/chip/label', 'text', R, others)[1]);
   host.attrs['data-figma-id'] = 'footer/button';
-  ok('a layer inside a placed component, mapped to its root, stays on that root', layerAt(inner, 'footer/button/container', 'container', R, others)[0] === inner);
-  ok('a text inside a placed component, mapped to its root, is that root\'s words', layerAt(inner, 'footer/button/label', 'text', R, others)[1] === true);
+  ok('a layer inside a placed component, mapped to its root, stays on that root', elementOfLayer(inner, 'footer/button/container', 'container', R, others)[0] === inner);
+  ok('a text inside a placed component, mapped to its root, is that root\'s words', elementOfLayer(inner, 'footer/button/label', 'text', R, others)[1] === true);
 }
 
 console.log(`${n}/${n} passed`);
