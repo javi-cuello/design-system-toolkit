@@ -60,7 +60,7 @@ const LIBRARY = {
   },
   'text-style': { value: {
     body: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 400, fontSize: '{type.body.size}', lineHeight: 1.5, letterSpacing: { value: 0, unit: 'px' } } },
-    display: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 500, fontSize: '{type.body.size}', lineHeight: 1, letterSpacing: { value: -1.44, unit: 'px' } }, $extensions: { 'com.figma.variables': { letterSpacingEm: -0.02 } } },
+    display: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 500, fontSize: '{type.body.size}', lineHeight: 1, letterSpacing: { value: -1.44, unit: 'px' } }, $extensions: { 'com.figma.variables': { letterSpacingEm: -0.02, paragraphSpacing: { value: 16, unit: 'px' }, listSpacing: { value: 0, unit: 'px' } } } },
   } },
 };
 
@@ -104,6 +104,8 @@ test('a text style is its fields, a bound field stays a reference, and the mixin
   assert.match(out['_text-styles.scss'], /2 styles: body, display/);
   // tracking that is a share of a size bound by mode follows that size
   assert.match(css, /--display-letter-spacing: -0\.02em;/);
+  // paragraph and list spacing come from the export's $extensions, as lengths, after the five
+  assert.match(css, /--display-letter-spacing: -0\.02em;\s*--display-paragraph-spacing: 1rem;\s*--display-list-spacing: 0rem;/);
 });
 
 test('two paths that become one property fail the build', { skip }, async () => {

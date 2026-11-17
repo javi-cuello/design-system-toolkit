@@ -38,6 +38,9 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
+
+const DTCG = createRequire(import.meta.url)('./dtcg.js');
 
 const ROOT_PX = 16;
 const FALLBACK = 'system-ui, sans-serif';
@@ -168,10 +171,18 @@ function register(SD) {
             const [name, type] = FIELD[field] || [field, undefined];
             group[name] = { $value: val, ...(type && { $type: type }) };
           }
+          // paragraph and list spacing are no DTCG typography members, so the
+          // export keeps them in its $extensions (from-snapshot.mjs); after the
+          // five, in this order, as the stylesheet has always listed them
+          const ext = (v.$extensions || {})[DTCG.VENDOR] || {};
+          for (const field of ['paragraphSpacing', 'listSpacing']) {
+            if (ext[field] === undefined) continue;
+            const [name, type] = FIELD[field];
+            group[name] = { $value: ext[field], $type: type };
+          }
           // tracking that is a share of a size bound by mode is written in
           // em, so it follows the size the breakpoint picks (dtcg.js)
-          const em = Object.values(v.$extensions || {}).find((e) => e && e.letterSpacingEm !== undefined);
-          if (em) group['letter-spacing'] = { $value: `${em.letterSpacingEm}em` };
+          if (ext.letterSpacingEm !== undefined) group['letter-spacing'] = { $value: `${ext.letterSpacingEm}em` };
           n[k] = group;
         }
         return n;

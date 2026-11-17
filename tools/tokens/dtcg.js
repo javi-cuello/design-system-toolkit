@@ -8,6 +8,12 @@
 (function () {
   'use strict';
 
+  // The one $extensions key this export writes under (Format 2025.10 §5.2.3:
+  // one vendor key per tool). The data is the toolkit's reading of Figma, and
+  // the key predates the resolver; kept so stored exports and their readers
+  // do not churn over a name.
+  var VENDOR = 'com.figma.variables';
+
   /* ---------- names ---------- */
 
   // Token path segments are kebab-case. A '.' in a segment would break the
@@ -196,7 +202,7 @@
    * Returns { tokens, skipped:[{name, reason}] }. */
   function buildCollection(collection, mode, opts) {
     var o = opts || {};
-    var vendor = o.vendor || 'com.figma.variables';
+    var vendor = o.vendor || VENDOR;
     var colorFormat = o.colorFormat || 'object';
     var unit = o.unit || 'px';
     var rootSize = o.rootSize || 16;
@@ -299,11 +305,12 @@
       value.lineHeight = perFontSize(lh, style.fontSize);
     }
 
+    // DTCG's typography requires all five members (Format 2025.10 §9.8): a
+    // style with no tracking has none, which is zero. A line height the
+    // snapshot could not measure stays omitted and warned, never invented.
     var ls = style.letterSpacing;
-    if (ls) {
-      var px = ls.unit === 'PERCENT' ? (ls.value / 100) * style.fontSize : ls.value;
-      value.letterSpacing = dimension(px, unit, rootSize);
-    }
+    var px = !ls ? 0 : ls.unit === 'PERCENT' ? (ls.value / 100) * style.fontSize : ls.value;
+    value.letterSpacing = dimension(px, unit, rootSize);
 
     var token = { $type: 'typography', $value: value };
     if (style.description) token.$description = style.description;
@@ -313,7 +320,7 @@
     // (CSS em). A 36px phone Display got -1.44px, the -2% of 72 (2026-11-04)
     if (ls && ls.unit === 'PERCENT' && bound.fontSize && !o.noExtensions) {
       token.$extensions = {};
-      token.$extensions[o.vendor || 'com.figma.variables'] = { letterSpacingEm: +(ls.value / 100).toFixed(4) };
+      token.$extensions[o.vendor || VENDOR] = { letterSpacingEm: +(ls.value / 100).toFixed(4) };
     }
     return { token: token, warnings: warnings };
   }
@@ -400,7 +407,7 @@
   function paintToken(style, opts) {
     var o = opts || {};
     var colorFormat = o.colorFormat || 'object';
-    var vendor = o.vendor || 'com.figma.variables';
+    var vendor = o.vendor || VENDOR;
     var ref = function (bound) { return bound ? refFor(pathFor(bound.collection, bound.name)) : null; };
     var paints = (style.paints || []).filter(function (p) { return p.visible !== false; });
     if (!paints.length) return { token: null, reason: 'no visible paint' };
@@ -436,7 +443,7 @@
     return { tokens: tokens, warnings: warnings, skipped: skipped };
   }
 
-  /* ---------- files + manifest ---------- */
+  /* ---------- files + resolver ---------- */
 
   /* One folder per collection, one file per mode. The mode is the file and never
    * part of a token path: every mode file declares the same paths with different
@@ -448,12 +455,15 @@
   }
 
   /* One file per (collection, mode). Single-mode collections drop the suffix.
-   * Returns { files:[{name, tokens}], manifest, report }.
+   * Returns { files:[{name, tokens}], resolver, resolutions, report }.
    *
-   * The manifest is the load-bearing half: per-mode files repeat the same token
-   * paths, so feeding all of them to one Style Dictionary build collides. The
-   * manifest lists the source sets that are actually valid — one per theme
-   * permutation — so nobody has to work that out again by hand. */
+   * The resolver is the load-bearing half: per-mode files repeat the same token
+   * paths, so feeding all of them to one build collides. It is a DTCG Resolver
+   * Module 2025.10 document saying which files make which theme, in the
+   * standard's own terms, so any conforming tool reads it without knowing this
+   * export; `resolutions` is the same thing spelled out, one source list per
+   * combination, for the reference check and for builds that cannot read a
+   * resolver yet. */
   function buildFiles(snapshot, opts) {
     var o = opts || {};
     var files = [];
@@ -520,7 +530,7 @@
       });
     }
 
-    return { files: files, manifest: buildManifest(axes), report: report };
+    return { files: files, resolver: buildResolver(axes), resolutions: resolutions(axes), report: report };
   }
 
   /* Cartesian product over the *distinct* mode axes; single-mode files are in
@@ -537,7 +547,11 @@
     return axis.variants.map(function (v) { return slug(v.mode); }).sort().join('|');
   }
 
-  function buildManifest(axes) {
+  /* The single-mode files, and one axis per distinct mode-name set: its
+   * collections, and one step per mode (in the first collection's order, whose
+   * first mode is Figma's default) carrying every file the group contributes
+   * for that mode. */
+  function groupAxes(axes) {
     var fixed = [], order = [], grouped = {};
     for (var i = 0; i < axes.length; i++) {
       if (axes[i].single) { fixed.push(axes[i].variants[0].file); continue; }
@@ -561,35 +575,76 @@
         }
         steps.push({ mode: mode, files: files });
       }
-      axisList.push(steps);
+      axisList.push({ collections: group.map(function (x) { return x.collection; }), steps: steps });
     }
+    return { fixed: fixed, axes: axisList };
+  }
 
+  /* Every combination of one mode per axis, as the files one build reads:
+   * the single-mode files first, then each axis's files for its mode. Named by
+   * the modes, joined ("dark-desktop"), or "default" with no axis. */
+  function resolutions(axes) {
+    var g = groupAxes(axes);
     var combos = [[]];
-    for (var a = 0; a < axisList.length; a++) {
+    for (var a = 0; a < g.axes.length; a++) {
       var next = [];
       for (var c = 0; c < combos.length; c++)
-        for (var s = 0; s < axisList[a].length; s++)
-          next.push(combos[c].concat([axisList[a][s]]));
+        for (var s = 0; s < g.axes[a].steps.length; s++)
+          next.push(combos[c].concat([g.axes[a].steps[s]]));
       combos = next;
     }
-
     var builds = [];
     for (var b = 0; b < combos.length; b++) {
-      var picks = combos[b], names = [], sources = fixed.slice();
+      var picks = combos[b], names = [], sources = g.fixed.slice();
       for (var p = 0; p < picks.length; p++) { names.push(slug(picks[p].mode)); sources = sources.concat(picks[p].files); }
       builds.push({ name: names.join('-') || 'default', sources: sources });
     }
-    return { builds: builds };
+    return builds;
+  }
+
+  /* The same axes as a DTCG Resolver Module 2025.10 document
+   * (designtokens.org/tr/2025.10/resolver; its schema pins version "2025.10").
+   * The single-mode files are one set; each axis is one modifier, its contexts
+   * the modes (slugged, as the file names are) and its default Figma's default
+   * mode. Figma has no name for an axis, so a modifier is named by the
+   * collections that move on it, joined with "+": stable when a mode is added,
+   * honest when two tiers share one switch, and the description says it.
+   * File references are relative to the resolver, which sits at the export's
+   * root; nothing absolute, so an export compares equal wherever it is written. */
+  function buildResolver(axes) {
+    var g = groupAxes(axes);
+    var ref = function (file) { return { $ref: file }; };
+    var doc = { version: '2025.10' };
+    var order = [];
+    if (g.fixed.length) {
+      doc.sets = { base: { description: 'The collections and styles with one mode, in every resolution.', sources: g.fixed.map(ref) } };
+      order.push({ $ref: '#/sets/base' });
+    }
+    for (var a = 0; a < g.axes.length; a++) {
+      var ax = g.axes[a];
+      var name = ax.collections.map(slug).join('+');
+      var contexts = {};
+      for (var s = 0; s < ax.steps.length; s++) contexts[slug(ax.steps[s].mode)] = ax.steps[s].files.map(ref);
+      if (!doc.modifiers) doc.modifiers = {};
+      doc.modifiers[name] = {
+        description: 'The Figma modes of ' + ax.collections.join(', ') + '.',
+        contexts: contexts,
+        'default': slug(ax.steps[0].mode)
+      };
+      order.push({ $ref: '#/modifiers/' + name });
+    }
+    doc.resolutionOrder = order;
+    return doc;
   }
 
   /* ---------- verification ---------- */
 
-  /* Every reference must resolve inside each manifest build that uses it,
-   * not merely somewhere in the export: a build is the set of files one Style
-   * Dictionary run reads, and a reference that resolves only in another
-   * build's sources is silent in Figma and fatal there. `files` maps a file
-   * name to its parsed tokens; a source the map does not hold is skipped.
-   * Returns { builds, dangling: [{ build, reference }], ok }. */
+  /* Every reference must resolve inside each resolution that uses it, not
+   * merely somewhere in the export: a resolution is the set of files one build
+   * reads, and a reference that resolves only in another resolution's sources
+   * is silent in Figma and fatal there. `files` maps a file name to its parsed
+   * tokens; `builds` is resolutions()' list; a source the map does not hold is
+   * skipped. Returns { builds, dangling: [{ build, reference }], ok }. */
   function tokenPaths(node, prefix, into) {
     for (var k in node) {
       if (k.charAt(0) === '$') continue;
@@ -614,10 +669,10 @@
     }
     return into;
   }
-  function verifyReferences(files, manifest) {
+  function verifyReferences(files, builds) {
     var bad = [], seen = {};
-    for (var b = 0; b < manifest.builds.length; b++) {
-      var build = manifest.builds[b];
+    for (var b = 0; b < builds.length; b++) {
+      var build = builds[b];
       var defined = {}, used = [];
       for (var s = 0; s < build.sources.length; s++) {
         var f = files[build.sources[s]];
@@ -629,7 +684,7 @@
         // one line per build and reference, however many tokens use it
         if (!defined[used[u]] && !seen[build.name + '\u0000' + used[u]]) { seen[build.name + '\u0000' + used[u]] = true; bad.push({ build: build.name, reference: used[u] }); }
     }
-    return { builds: manifest.builds.length, dangling: bad, ok: bad.length === 0 };
+    return { builds: builds.length, dangling: bad, ok: bad.length === 0 };
   }
 
   var DTCG = {
@@ -641,7 +696,7 @@
     paintToken: paintToken, buildPaintStyles: buildPaintStyles, isOpacity: isOpacity,
     isLossy: isLossy, renamedSegments: renamedSegments,
     buildTextStyles: buildTextStyles, fileName: fileName,
-    buildFiles: buildFiles, buildManifest: buildManifest,
+    buildFiles: buildFiles, resolutions: resolutions, buildResolver: buildResolver, VENDOR: VENDOR,
     verifyReferences: verifyReferences
   };
 

@@ -20,11 +20,18 @@ node ~/Projects/toolkit/tools/tokens/check.mjs --repo .            # the token g
 
 ## How it fits
 
-Both conversion steps live here, because every project's build runs them: snapshot → DTCG is `from-snapshot.mjs` over `dtcg.js` (a tokens folder's shape, one folder per collection and one file per mode, is read by `discover.mjs`), with `generate-ts.mjs` and `verify-ts.mjs` mirroring the result as TypeScript. `from-snapshot.mjs` writes nothing unless every reference resolves inside each manifest build: `dtcg.js`'s `verifyReferences(files, manifest)`. `verify-ts.mjs` loads every module at once, so it cannot see a reference that resolves only in another build's sources; DTCG → CSS and Sass is `build-tokens.mjs` ([frontend-build](../../skills/frontend-build/SKILL.md) explains it). Until 2026-10-31 they were those skills' scripts; the old `build-tokens.mjs` path forwards here for one release, and the old `from-snapshot.mjs` path went with the figma-token-export skill (2026-11-05). The snapshot router runs a project's `bin/tokens` after every snapshot ([tools/snapshot](../snapshot/README.md)).
+Both conversion steps live here, because every project's build runs them: snapshot → DTCG is `from-snapshot.mjs` over `dtcg.js` (a tokens folder's shape, one folder per collection and one file per mode, is read by `discover.mjs`), with `generate-ts.mjs` and `verify-ts.mjs` mirroring the result as TypeScript. `from-snapshot.mjs` writes nothing unless every reference resolves inside each resolution: `dtcg.js`'s `verifyReferences(files, resolutions)`. `verify-ts.mjs` loads every module at once, so it cannot see a reference that resolves only in another resolution's sources; DTCG → CSS and Sass is `build-tokens.mjs` ([frontend-build](../../skills/frontend-build/SKILL.md) explains it). Until 2026-10-31 they were those skills' scripts; the old `build-tokens.mjs` path forwards here for one release, and the old `from-snapshot.mjs` path went with the figma-token-export skill (2026-11-05). The snapshot router runs a project's `bin/tokens` after every snapshot ([tools/snapshot](../snapshot/README.md)).
 
 ## What the conversion does
 
 Moved here from the retired figma-token-export skill (2026-11-05), whose converter this folder runs. The command writes object colours, `px` and a root of 16; `dtcg.js`'s other options (`colorFormat: 'hex'`, `noExtensions`, an opacity scale, `rem` with a root size) are reachable from code only. Why each mapping is what it is: `git show 196b9581:skills/figma-token-export/references/mapping.md`.
+
+### Plain DTCG, so any tool can take it
+
+The export is the standard and nothing of ours: [DTCG Format 2025.10](https://www.designtokens.org/tr/2025.10/format/) token files, and beside them `tokens.resolver.json`, a [Resolver Module 2025.10](https://www.designtokens.org/tr/2025.10/resolver/) document saying which files make which theme. A team that wants none of the house CSS points any conforming tool at the resolver; [Terrazzo](https://terrazzo.app/docs/guides/resolvers/) 2.10 checked and built a project's export from it unchanged (2026-11-17). Until then the export wrote a house `manifest.json`, which an export still recognises as its own and removes.
+
+- **The resolver.** The single-mode collections and styles are one set (`base`). Each distinct set of mode names is one modifier, its contexts the modes, slugged as the file names are, and its default Figma's default (the first collection's first mode). Figma has no name for a mode axis, so a modifier is named by the collections that move on it, joined with `+` (`primitives-colour+semantic`), and its description lists them. References are relative to the resolver. Style Dictionary does not read resolvers yet ([issue 1590](https://github.com/style-dictionary/style-dictionary/issues/1590)), so the house build composes the same files itself.
+- **Typography** carries exactly the spec's five members (§9.8 requires all five): a style with no tracking gets zero; a line height the snapshot could not measure stays out and is warned of, never invented. Paragraph and list spacing have no member, so they ride in the token's `$extensions` under `com.figma.variables`, beside the tracking fraction a mode-bound size needs; a conforming tool ignores them, and the house build writes them as `--<style>-paragraph-spacing` and `--<style>-list-spacing`.
 
 ### Naming parity is the thing to protect
 
@@ -38,9 +45,9 @@ Three shapes to expect, all worth fixing at the source rather than in the pipeli
 - **Punctuation standing in for a decimal** — `Stroke/1_5` becomes `1-5`. A literal `1.5` would be worse, because a dot is the DTCG path separator.
 - **Two names that collapse onto one path**, which is not a rename but a loss, and appears in `skipped` instead.
 
-### One bundle per manifest entry is usually too many
+### One bundle per resolution is usually too many
 
-The manifest says which source sets are *valid*, not how many files to ship. Before building one bundle per entry, diff two of them. Where a mode axis moves a single token — a brand switch that only repoints one alias is the common case — the bundles come out near-identical, and the right shape is one file per *theme* plus a small file of per-mode overrides scoped to an attribute.
+The resolver says which source sets are *valid*, not how many files to ship. Before building one bundle per resolution, diff two of them. Where a mode axis moves a single token — a brand switch that only repoints one alias is the common case — the bundles come out near-identical, and the right shape is one file per *theme* plus a small file of per-mode overrides scoped to an attribute.
 
 Measured on a real library: two brand bundles of the same theme differed by **one declaration out of 593**, and each carried seven brand ramps nobody in that bundle used. Sixteen files became three, 15MB became 744KB, and every one of the sixteen combinations was still reproducible. The tell is cheap to check and easy to skip: `diff` two built bundles before deciding the shape.
 

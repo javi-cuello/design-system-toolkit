@@ -72,8 +72,8 @@ test('a conforming repo passes, and its tokens are stored as DTCG beside the sna
   writeFileSync(join(root, 'design/dtcg/dist/tokens.json'), '{}');
   const r = check(root);
   assert.equal(r.status, 0, r.stderr);
-  const manifest = JSON.parse(readFileSync(join(root, 'design/dtcg/manifest.json'), 'utf8'));
-  assert.ok(manifest.collections || manifest.files || Object.keys(manifest).length, 'a DTCG manifest');
+  const resolver = JSON.parse(readFileSync(join(root, 'design/dtcg/tokens.resolver.json'), 'utf8'));
+  assert.equal(resolver.version, '2025.10', 'a DTCG resolver beside the token files');
   assert.ok(existsSync(join(root, 'design/dtcg/semantic/light.json')), 'one file per collection mode');
 });
 

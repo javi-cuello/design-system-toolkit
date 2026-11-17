@@ -159,41 +159,71 @@ var body = byName['text-style/value.json']['text-style'].body.md;
 ok('AUTO line height is omitted, not faked', body.$value.lineHeight === undefined, body.$value);
 ok('and omitting it was reported',
   built.report.warnings.some(function (w) { return /AUTO/.test(w.reason); }), built.report.warnings);
+// DTCG 2025.10 §9.8: the five members, all required, nothing else
+var noTracking = DTCG.typographyToken({ name: 'Plain', fontFamily: 'Inter', fontWeight: 'Regular', fontSize: 16,
+  lineHeight: { unit: 'PERCENT', value: 150 } }, {}).token;
+eq('a style with no tracking still carries letterSpacing, as zero', noTracking.$value.letterSpacing, { value: 0, unit: 'px' });
+eq('and its value holds exactly the spec\'s five members', Object.keys(noTracking.$value).sort(),
+  ['fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 'lineHeight']);
 
-/* ---- A11 manifest ---- */
-eq('one build per mode permutation', built.manifest.builds.map(function (b) { return b.name; }), ['light', 'dark']);
-ok('every build carries the single-mode files',
-  built.manifest.builds.every(function (b) {
+/* ---- A11 resolutions ---- */
+eq('one resolution per mode permutation', built.resolutions.map(function (b) { return b.name; }), ['light', 'dark']);
+ok('every resolution carries the single-mode files',
+  built.resolutions.every(function (b) {
     return b.sources.indexOf('primitive-scale/value.json') !== -1 && b.sources.indexOf('text-style/value.json') !== -1;
-  }), built.manifest.builds);
+  }), built.resolutions);
 ok('and never two files of the same collection',
-  built.manifest.builds.every(function (b) {
+  built.resolutions.every(function (b) {
     return !(b.sources.indexOf('semantic/light.json') !== -1 && b.sources.indexOf('semantic/dark.json') !== -1);
-  }), built.manifest.builds);
+  }), built.resolutions);
 
 /* two genuinely different mode axes multiply */
-var twoAxes = DTCG.buildManifest([
+var twoAxesIn = [
   { collection: 'A', single: false, variants: [{ mode: 'Light', file: 'a/light.json' }, { mode: 'Dark', file: 'a/dark.json' }] },
   { collection: 'B', single: false, variants: [{ mode: 'One', file: 'b/one.json' }, { mode: 'Two', file: 'b/two.json' }] }
-]);
+];
 eq('two distinct mode axes produce their cartesian product',
-  twoAxes.builds.map(function (b) { return b.name; }), ['light-one', 'light-two', 'dark-one', 'dark-two']);
+  DTCG.resolutions(twoAxesIn).map(function (b) { return b.name; }), ['light-one', 'light-two', 'dark-one', 'dark-two']);
 
 /* ---- A11b two collections sharing a mode set are ONE axis (regression) ---- */
-var shared = DTCG.buildManifest([
+var sharedIn = [
   { collection: 'Primitive', single: false, variants: [{ mode: 'Light', file: 'p/light.json' }, { mode: 'Dark', file: 'p/dark.json' }] },
   { collection: 'Semantic', single: false, variants: [{ mode: 'Light', file: 's/light.json' }, { mode: 'Dark', file: 's/dark.json' }] },
   { collection: 'Brand', single: false, variants: [{ mode: 'One', file: 'b/one.json' }, { mode: 'Two', file: 'b/two.json' }] }
-]);
+];
+var shared = DTCG.resolutions(sharedIn);
 eq('collections sharing a mode set share an axis — 2x2, not 2x2x2',
-  shared.builds.map(function (b) { return b.name; }), ['light-one', 'light-two', 'dark-one', 'dark-two']);
+  shared.map(function (b) { return b.name; }), ['light-one', 'light-two', 'dark-one', 'dark-two']);
 eq('and the shared step carries both collections’ files for that mode',
-  shared.builds[0].sources, ['p/light.json', 's/light.json', 'b/one.json']);
-ok('no build ever mixes Light from one tier with Dark from another',
-  shared.builds.every(function (b) {
+  shared[0].sources, ['p/light.json', 's/light.json', 'b/one.json']);
+ok('no resolution ever mixes Light from one tier with Dark from another',
+  shared.every(function (b) {
     return !(b.sources.indexOf('p/light.json') !== -1 && b.sources.indexOf('s/dark.json') !== -1) &&
            !(b.sources.indexOf('p/dark.json') !== -1 && b.sources.indexOf('s/light.json') !== -1);
-  }), shared.builds);
+  }), shared);
+
+/* ---- A11c the resolver: DTCG Resolver Module 2025.10 ---- */
+var res = DTCG.buildResolver([{ collection: 'Scale', single: true, variants: [{ mode: null, file: 'scale/value.json' }] }].concat(sharedIn));
+eq('the resolver names the module version its schema pins', res.version, '2025.10');
+eq('the single-mode files are one set, referenced relative to the resolver',
+  res.sets.base.sources, [{ $ref: 'scale/value.json' }]);
+eq('one modifier per axis, named by the collections that move on it',
+  Object.keys(res.modifiers), ['primitive+semantic', 'brand']);
+eq('a shared axis lists every collection\'s file for each mode, contexts keyed by the slugged mode',
+  res.modifiers['primitive+semantic'].contexts, { light: [{ $ref: 'p/light.json' }, { $ref: 's/light.json' }], dark: [{ $ref: 'p/dark.json' }, { $ref: 's/dark.json' }] });
+eq('the default is the first collection\'s first mode, and is one of the contexts',
+  [res.modifiers['primitive+semantic']['default'], res.modifiers.brand['default']], ['light', 'one']);
+eq('the resolution order is the set, then each modifier',
+  res.resolutionOrder, [{ $ref: '#/sets/base' }, { $ref: '#/modifiers/primitive+semantic' }, { $ref: '#/modifiers/brand' }]);
+ok('no reference is absolute', JSON.stringify(res).indexOf('"$ref":"/') === -1, res);
+var stylesOnly = DTCG.buildResolver([{ collection: 'text-style', single: true, variants: [{ mode: null, file: 'text-style/value.json' }] }]);
+ok('styles only: one set, no modifiers', !stylesOnly.modifiers && stylesOnly.resolutionOrder.length === 1, stylesOnly);
+var modesOnly = DTCG.buildResolver(twoAxesIn);
+ok('nothing single-mode: no empty set', !modesOnly.sets && modesOnly.resolutionOrder.length === 2, modesOnly);
+// a second collection ordering the shared modes differently does not move the default
+var reordered = DTCG.buildResolver([sharedIn[0], { collection: 'Semantic', single: false, variants: [{ mode: 'Dark', file: 's/dark.json' }, { mode: 'Light', file: 's/light.json' }] }]);
+eq('the default follows the first collection, whatever order the next one keeps',
+  reordered.modifiers['primitive+semantic']['default'], 'light');
 
 /* ---- A12 effects are declared missing, not silently dropped ---- */
 ok('the effect styles this version does not export are reported',
@@ -337,14 +367,14 @@ var vfiles = {
   'prim/dark.json': { prim: { a: { $type: 'color', $value: '#ffffff' } } },
   'sem/value.json': { sem: { x: { $type: 'color', $value: '{prim.a}' }, y: { $type: 'shadow', $value: [{ color: '{prim.b}' }] } } }
 };
-var vman = { builds: [{ name: 'light', sources: ['prim/light.json', 'sem/value.json'] }, { name: 'dark', sources: ['prim/dark.json', 'sem/value.json'] }] };
+var vman = [{ name: 'light', sources: ['prim/light.json', 'sem/value.json'] }, { name: 'dark', sources: ['prim/dark.json', 'sem/value.json'] }];
 var vr = DTCG.verifyReferences(vfiles, vman);
 eq('a reference resolving only in another build is dangling in this one, nested values included', vr,
   { builds: 2, dangling: [{ build: 'dark', reference: 'prim.b' }], ok: false });
 vfiles['prim/dark.json'].prim.b = { $type: 'color', $value: '#eeeeee' };
 eq('resolved in every build is ok', DTCG.verifyReferences(vfiles, vman), { builds: 2, dangling: [], ok: true });
 var twice = { 'p/value.json': { p: { a: { $type: 'color', $value: '#000000' } } }, 's/value.json': { s: { x: { $type: 'color', $value: '{p.z}' }, y: { $type: 'color', $value: '{p.z}' } } } };
-eq('a reference used by many tokens is one line per build', DTCG.verifyReferences(twice, { builds: [{ name: 'one', sources: ['p/value.json', 's/value.json'] }, { name: 'two', sources: ['p/value.json', 's/value.json'] }] }).dangling,
+eq('a reference used by many tokens is one line per build', DTCG.verifyReferences(twice, [{ name: 'one', sources: ['p/value.json', 's/value.json'] }, { name: 'two', sources: ['p/value.json', 's/value.json'] }]).dangling,
   [{ build: 'one', reference: 'p.z' }, { build: 'two', reference: 'p.z' }]);
 
 ok('the sandbox copy of the weight table is the parity engine\'s one table, name for name', JSON.stringify(DTCG.WEIGHTS) === JSON.stringify(require('../parity/values.mjs').WEIGHTS));

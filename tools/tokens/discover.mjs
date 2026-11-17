@@ -4,7 +4,7 @@
  *
  *   <tokens>/<collection>/<mode>.json      multi-mode collection
  *   <tokens>/<collection>/value.json       single-mode collection
- *   <tokens>/manifest.json                 build metadata, not a collection
+ *   <tokens>/tokens.resolver.json          which files make which theme (DTCG resolver), not a collection
  *
  * The mode is the FILE and never part of a token path. Every mode file of a
  * collection declares the same paths with different values, which is what lets a

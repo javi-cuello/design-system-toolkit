@@ -4,8 +4,9 @@
  *
  *   node tools/tokens/from-snapshot.mjs <tokens.json | downloaded snapshot.json> <out-dir>
  *
- * Checks that every reference resolves inside each manifest build (refusing
- * to write otherwise), writes the collection folders and manifest, then the
+ * Checks that every reference resolves inside each resolution (refusing to
+ * write otherwise), writes the collection folders and `tokens.resolver.json`
+ * (DTCG Resolver Module 2025.10, which replaced the house manifest.json), then the
  * TypeScript modules (generate-ts, into <out-dir>/dist/ts) and checks them
  * (verify-ts). This is
  * the export's one refresh: a live refresh server was retired in 2.5.0 because
@@ -15,7 +16,7 @@
  * The snapshot plugin already read the file; reading it again through the
  * bridge to export tokens was a second reader of the same variables. This
  * converts what the snapshot holds into the shape dtcg.js takes and writes the
- * DTCG files, manifest included. dtcg.js stays the one converter, and its tests stay the gate.
+ * DTCG files, resolver included. dtcg.js stays the one converter, and its tests stay the gate.
  *
  * What the snapshot records differently, and how each is recovered:
  *  - values arrive resolved, with each alias's first hop by name only; the
@@ -158,42 +159,51 @@ export function writeDtcg(tokens, dir, opts = {}) {
   const snap = toDtcgSnapshot(tokens);
   const built = DTCG.buildFiles(snap, { colorFormat: 'object', unit: 'px', rootSize: 16, ...opts });
   /* Paragraph and list spacing belong to a text style and DTCG's typography
-     type has no member for them. They ride on the typography value as two
-     extra members, the same trade the shadow export makes for `inset`: a
-     strict validator flags them, and dropping them loses the design silently.
-     Always written, zero included, for the same reason as letter-spacing. */
+     type has no member for them (Format 2025.10 §9.8 lists exactly five). They
+     go in the token's $extensions, merged beside any tracking fraction already
+     there: a conforming reader ignores them, the house build reads them, and
+     dropping them would lose the design silently. Always written, zero
+     included, for the same reason as letter-spacing. */
+  const vendor = opts.vendor || DTCG.VENDOR;
   const bySlug = new Map((tokens.textStyles || []).map((s) => [s.name.split('/').map(DTCG.slug).join('/'), s]));
-  for (const f of built.files) {
+  if (!opts.noExtensions) for (const f of built.files) {
     const walk = (node, path) => {
       for (const [k, v] of Object.entries(node)) {
         if (k.startsWith('$') || !v || typeof v !== 'object') continue;
         if (v.$type === 'typography') {
           const s = bySlug.get([...path, k].slice(1).join('/'));
-          if (s) Object.assign(v.$value, { paragraphSpacing: { value: s.paragraphSpacing || 0, unit: 'px' }, listSpacing: { value: s.listSpacing || 0, unit: 'px' } });
+          if (s) {
+            v.$extensions ||= {};
+            v.$extensions[vendor] = { ...v.$extensions[vendor], paragraphSpacing: { value: s.paragraphSpacing || 0, unit: 'px' }, listSpacing: { value: s.listSpacing || 0, unit: 'px' } };
+          }
         } else if (v.$value === undefined) walk(v, [...path, k]);
       }
     };
     walk(f.tokens, []);
   }
-  // Every reference must resolve inside each manifest build, checked before a
+  // Every reference must resolve inside each resolution, checked before a
   // file is written: verify-ts resolves across every module at once, so a
-  // reference that resolves only in another build's sources passed it and
-  // failed in Style Dictionary. A refused export leaves the last one in place.
-  const refs = DTCG.verifyReferences(Object.fromEntries(built.files.map((f) => [f.name, f.tokens])), built.manifest);
+  // reference that resolves only in another resolution's sources passed it
+  // and failed in Style Dictionary. A refused export leaves the last one in place.
+  const refs = DTCG.verifyReferences(Object.fromEntries(built.files.map((f) => [f.name, f.tokens])), built.resolutions);
   if (!refs.ok) {
     const list = refs.dangling.slice(0, 10).map((d) => `${d.build}: {${d.reference}}`).join('; ');
-    throw Object.assign(new Error(`${refs.dangling.length} reference(s) do not resolve inside their manifest build, nothing written: ${list}${refs.dangling.length > 10 ? '; …' : ''}`), { refused: true });
+    throw Object.assign(new Error(`${refs.dangling.length} reference(s) do not resolve inside their resolution, nothing written: ${list}${refs.dangling.length > 10 ? '; …' : ''}`), { refused: true });
   }
   // Refuse a folder this export did not write: a wrong --out would otherwise
-  // delete whatever it names. In one it did write, only what an export owns is
-  // replaced (the manifest and the collection folders, which hold nothing but
-  // mode files); a README, a .gitignore and dist/ beside them stay.
-  if (existsSync(dir) && readdirSync(dir).length && !existsSync(join(dir, 'manifest.json')))
-    throw Object.assign(new Error(`${dir} is not empty and holds no manifest.json: not a token export, not deleting it`), { refused: true });
+  // delete whatever it names. An export is known by its resolver, or by the
+  // manifest.json exports wrote before it (until 2026-11-17), which stays
+  // owned so the first export after the change removes it. In one it did
+  // write, only what an export owns is replaced (those two files and the
+  // collection folders, which hold nothing but mode files); a README, a
+  // .gitignore and dist/ beside them stay.
+  const marks = [RESOLVER, 'manifest.json'];
+  if (existsSync(dir) && readdirSync(dir).length && !marks.some((m) => existsSync(join(dir, m))))
+    throw Object.assign(new Error(`${dir} is not empty and holds no ${RESOLVER}: not a token export, not deleting it`), { refused: true });
   if (existsSync(dir)) {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const at = join(dir, e.name);
-      const owned = e.name === 'manifest.json' || (e.isDirectory() && e.name !== 'dist' && readdirSync(at).every((f) => f.endsWith('.json')));
+      const owned = marks.includes(e.name) || (e.isDirectory() && e.name !== 'dist' && readdirSync(at).every((f) => f.endsWith('.json')));
       if (owned) rmSync(at, { recursive: true, force: true });
     }
   }
@@ -202,9 +212,12 @@ export function writeDtcg(tokens, dir, opts = {}) {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, JSON.stringify(f.tokens, null, 2) + '\n');
   }
-  writeFileSync(join(dir, 'manifest.json'), JSON.stringify(built.manifest, null, 2) + '\n');
+  writeFileSync(join(dir, RESOLVER), JSON.stringify(built.resolver, null, 2) + '\n');
   return built;
 }
+
+/** The resolver's file name, at the export's root: the Resolver Module asks for a `.resolver.json` extension. */
+export const RESOLVER = 'tokens.resolver.json';
 
 /** The tokens from either input: a stored `tokens.json`, or the whole file the
  *  snapshot plugin saves when no receiver is listening, which holds them under

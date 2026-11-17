@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { figmaRgba, toDtcgSnapshot, writeDtcg, tokensOf } from './from-snapshot.mjs';
+import { createRequire } from 'node:module';
+import { figmaRgba, toDtcgSnapshot, writeDtcg, tokensOf, RESOLVER } from './from-snapshot.mjs';
+
+const DTCG = createRequire(import.meta.url)('./dtcg.js');
 
 const snapshot = () => ({
   _meta: { file: 'UI library', fileId: 'x' },
@@ -68,6 +71,37 @@ test('effects keep inset layers, gradients keep bound stops and the angle', () =
   assert.equal(Object.values(g.$extensions)[0].angle, 180);
 });
 
+test('typography holds the spec\'s five members; paragraph and list spacing ride in $extensions beside the tracking fraction', () => {
+  const s = snapshot();
+  s.textStyles[0].letterSpacing = -0.02; // the snapshot stores tracking as a share of the size
+  s.textStyles[0].paragraphSpacing = 12;
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(s, dir);
+  const t = JSON.parse(readFileSync(join(dir, 'text-style/value.json'), 'utf8'))['text-style'].heading.lg;
+  assert.deepEqual(Object.keys(t.$value).sort(), ['fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 'lineHeight']);
+  assert.deepEqual(t.$extensions[DTCG.VENDOR], { letterSpacingEm: -0.02, paragraphSpacing: { value: 12, unit: 'px' }, listSpacing: { value: 0, unit: 'px' } });
+});
+
+test('the export writes a DTCG 2025.10 resolver: one set, one modifier per mode axis, relative references', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(snapshot(), dir);
+  const r = JSON.parse(readFileSync(join(dir, RESOLVER), 'utf8'));
+  assert.equal(r.version, '2025.10');
+  assert.deepEqual(Object.keys(r.modifiers), ['primitives-colour+semantic', 'responsive-type']);
+  assert.deepEqual(r.modifiers['responsive-type'], { description: 'The Figma modes of Responsive type.', contexts: { desktop: [{ $ref: 'responsive-type/desktop.json' }], mobile: [{ $ref: 'responsive-type/mobile.json' }] }, default: 'desktop' });
+  for (const { $ref } of [...r.sets.base.sources, ...Object.values(r.modifiers).flatMap((m) => Object.values(m.contexts).flat())])
+    assert.ok(readdirSync(join(dir, $ref.split('/')[0])).includes($ref.split('/')[1]), `${$ref} is a file the export wrote`);
+});
+
+test('a folder an older export wrote, marked by manifest.json, is taken over and the manifest removed', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeFileSync(join(dir, 'manifest.json'), '{"builds":[]}');
+  writeFileSync(join(dir, 'README.md'), 'kept');
+  writeDtcg(snapshot(), dir);
+  const names = readdirSync(dir);
+  assert.ok(names.includes(RESOLVER) && !names.includes('manifest.json') && names.includes('README.md'), names.join(', '));
+});
+
 test('an alias to a same-named variable points at the other collection, never itself', () => {
   const s = snapshot();
   // Semantic listed first, so a first-definer lookup would have sent the alias home to itself.
@@ -86,7 +120,7 @@ test('an export refuses to clear a non-empty folder it did not write', () => {
   assert.equal(readFileSync(join(dir, 'notes.txt'), 'utf8'), 'mine');
   const ours = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeDtcg(snapshot(), ours);
-  writeDtcg(snapshot(), ours); // its own manifest: replaced, no throw
+  writeDtcg(snapshot(), ours); // its own resolver: replaced, no throw
 });
 
 test('a text style takes the bindings the snapshot records, over the naming convention, and drops a foreign one', () => {
@@ -154,7 +188,7 @@ test('a file the plugin downloaded reads as its tokens, a stored tokens.json as 
   assert.equal(tokensOf(tokens), tokens);
 });
 
-test('a reference that resolves only in another manifest build is refused, nothing written', () => {
+test('a reference that resolves only in another resolution is refused, nothing written', () => {
   const s = snapshot();
   // The primitive exists in Light only; a single-mode collection aliasing it
   // sits in every build, so the dark builds cannot resolve it. Across all files
@@ -162,6 +196,6 @@ test('a reference that resolves only in another manifest build is refused, nothi
   s.collections['Primitives - Colour'].values.Light['Palette/Accent/9'] = '#0055ff';
   s.collections.Brand = { modes: ['Value'], values: { Value: { 'Accent/base': '#0055ff' } }, alias: { Value: { 'Accent/base': 'Palette/Accent/9' } } };
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
-  assert.throws(() => writeDtcg(s, dir), /2 reference\(s\) do not resolve inside their manifest build, nothing written: dark-desktop: \{primitives-colour\.palette\.accent\.9\}; dark-mobile: /);
+  assert.throws(() => writeDtcg(s, dir), /2 reference\(s\) do not resolve inside their resolution, nothing written: dark-desktop: \{primitives-colour\.palette\.accent\.9\}; dark-mobile: /);
   assert.deepEqual(readdirSync(dir), [], 'a refused export writes nothing');
 });
