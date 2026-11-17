@@ -25,6 +25,7 @@ Type, colour, surfaces and the scales everything else is built on.
 
 - [Line height and letter spacing, from Figma to the browser](foundations/line-height-letter-spacing-figma-to-css.md)
 - [Naming text styles](foundations/naming-text-styles.md)
+- [Naming text styles: tags, defaults and a second platform](foundations/naming-text-styles-part-2.md) (Part 2)
 - [One type scale for an interface and its articles](foundations/one-type-scale-for-ui-and-content.md)
 - [Space between prose elements](foundations/space-between-prose-elements.md)
 - [Type on a phone](foundations/type-on-a-phone.md)
@@ -40,6 +41,7 @@ Type, colour, surfaces and the scales everything else is built on.
 ### Spacing and shape
 
 - [Spacing tokens by intent](foundations/spacing-tokens-by-intent.md)
+- [Spacing tokens by intent: platforms, Figma and migration](foundations/spacing-tokens-by-intent-part-2.md) (Part 2)
 - [Corner radius by intent](foundations/corner-radius-by-intent.md)
 
 ## Components and naming
@@ -65,6 +67,7 @@ Where the design file and the browser agree, and where they cannot.
 - [How closely should a Figma library match its code?](figma-and-code/how-closely-figma-should-match-code.md)
 - [Where responsive behaviour belongs in a Figma library](figma-and-code/responsive-components-in-figma.md)
 - [Where Figma and CSS render differently](figma-and-code/where-figma-and-css-render-differently.md)
+- [Where Figma and CSS render differently: paint, text and layout](figma-and-code/where-figma-and-css-render-differently-part-2.md) (Part 2)
 
 ### Running the library
 
@@ -78,6 +81,7 @@ Focus, direction and the decisions a design file has to carry.
 
 - [Focus indicators in a design system](accessibility/focus-indicators.md)
 - [Right-to-left in a Figma design system](accessibility/rtl-design-systems.md)
+- [Arabic text in a right-to-left design system](accessibility/rtl-design-systems-part-2.md) (Part 2)
 
 ## Principles
 

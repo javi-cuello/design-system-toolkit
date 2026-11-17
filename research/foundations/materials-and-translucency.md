@@ -22,9 +22,8 @@ A designer gives the app's header a frosted look in Figma: white at 70%, a backg
 - [Materials in dark mode](#materials-in-dark-mode): what changes when the tint goes dark
 - [The cost of backdrop-filter](#the-cost-of-backdrop-filter): what the blur costs the browser
 - [When to skip it](#when-to-skip-it): when a small team should leave materials out
-- [How strong the evidence is](#how-strong-the-evidence-is): which claims rest on what
 
-For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole guide in four paragraphs. How surfaces stack into levels is in [how surfaces stack](how-surfaces-stack.md), shadows in [elevation and shadows](elevation-and-shadows.md), and dark surfaces in general in [surfaces in dark mode](surfaces-in-dark-mode.md).
+For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole guide in five paragraphs. Surface levels are in [how surfaces stack](how-surfaces-stack.md), shadows in [elevation and shadows](elevation-and-shadows.md), and dark surfaces in [surfaces in dark mode](surfaces-in-dark-mode.md).
 
 ---
 
@@ -32,13 +31,9 @@ For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-shor
 
 A surface should be translucent only when it floats over content that moves underneath it and the reader gains something from glimpsing that content; everything else stays opaque, and that is what most design systems ship.
 
-Back at the frosted header, the question is what the translucency is for. A header that sits over a scrolling feed does carry information through it: the reader can see there is more content above, and roughly what colour it is. A settings card sitting on a plain grey page carries nothing through it except the grey.
+A header over a scrolling feed shows there is more content above; a settings card on a plain grey page shows only the grey. That is the trade a **material** makes, meaning here a surface fill that lets some of what is behind it through, usually blurred. It buys context and depth, and pays with a fill whose final colour is unknown at design time.
 
-That is the trade a material makes. A **material** here means a surface fill that lets some of what is behind it through, usually blurred, as opposed to a solid colour. It buys context and a sense of depth. It pays with a fill whose final colour is unknown at design time, because it depends on whatever happens to be behind it.
-
-The two platform owners that lean hardest on materials agree on the boundary. Apple's guidance puts Liquid Glass on "a distinct functional layer for controls and navigation", the bars and sidebars that float over content, and tells designers not to use it in the content layer. Microsoft recommends Acrylic for transient surfaces such as menus and flyouts and an opaque background for panes that section off content. Both draw the line at the same place: glass on what floats, solid on what is read.
-
-Here is that line drawn on a phone.
+The two platform owners that lean hardest on materials draw the boundary in the same place. Apple puts Liquid Glass on "a distinct functional layer for controls and navigation" and tells designers to keep it out of the content layer. Microsoft recommends Acrylic for transient surfaces such as menus and flyouts and an opaque background for panes that section off content. Glass on what floats, solid on what is read.
 
 <svg role="img" viewBox="0 0 720 384" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two phone screens showing a list of five coloured album cards. Left, marked as the right use: a frosted navigation bar titled Library across the top and a floating frosted tab bar with Home, Search and Library at the bottom, both over the scrolling cards, so the cards' colour shows softly through the bars. Right, marked as the wrong use: a frosted Now playing card placed in the middle of the list itself, where its blurred colours compete with the opaque album cards around it. A note between them names the functional layer, navigation bar, tab bar, sidebars and popovers, and the content layer, lists, cards and media, which stays opaque or uses standard materials. Colours are illustrative.</title>
@@ -82,7 +77,7 @@ Here is that line drawn on a phone.
 
 The bars on the left earn their glass, because the list scrolls under them. The card on the right is part of the list, so its blur only muddies the cards beside it.
 
-Make every surface opaque unless it floats above content that scrolls or moves beneath it. **Translucency belongs to bars, sheets, popovers and menus that cover live content, never to cards and panels in the content itself.** That's consensus between Apple and Microsoft, reached on separate platforms; the web systems in [Web systems stay opaque](#web-systems-stay-opaque) go further and mostly don't ship it at all.
+**Translucency belongs to bars, sheets, popovers and menus that cover live content, never to cards and panels in the content itself.** *Weight: strong.* Apple and Microsoft reach it on separate platforms; the web systems in [Web systems stay opaque](#web-systems-stay-opaque) go further and mostly don't ship it at all.
 
 ---
 
@@ -90,7 +85,7 @@ Make every surface opaque unless it floats above content that scrolls or moves b
 
 A fill can hide the backdrop, show it at reduced strength, or show its colour without its detail, and only the third is what platforms call a material.
 
-Take the header's card and draw it three ways over the same busy backdrop of coloured shapes, stripes and letters.
+Here is the header's card three ways over the same busy backdrop of coloured shapes, stripes and letters.
 
 <svg role="img" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>The same card drawn three ways over the same busy backdrop of coloured circles, bars, stripes and letters. Left, an opaque white card hides the backdrop completely and its text reads cleanly. Middle, a white card at 70 percent opacity lets the sharp edges of the shapes and letters behind show through, so the stripes run straight through its text. Right, the same 70 percent white over a blurred copy of the backdrop keeps the colour of what is behind but removes the edges, so the text sits on soft patches of colour. Colours are illustrative.</title>
@@ -129,13 +124,11 @@ Take the header's card and draw it three ways over the same busy backdrop of col
 <text x="579" y="284" font-size="12" fill="#5a5850" text-anchor="middle">colour shows, edges don't</text>
 </svg>
 
-The opaque card on the left is predictable: its text sits on white whatever is behind. The 70% card in the middle is the one that looks right in a quick mock-up and fails first in use, because the stripes and letters behind it run straight through its text at full sharpness. The card on the right has the same 70% white, but over a blurred copy of the backdrop.
+The 70% card in the middle looks right in a quick mock-up and fails first: the stripes and letters behind it run through its text at full sharpness. The card on the right has the same 70% white over a blurred backdrop.
 
-The mechanism is worth stating exactly. **Alpha** (opacity) mixes the fill with the backdrop pixel by pixel, so every edge behind survives, only fainter. **Blur** averages each pixel with its neighbours before the fill goes on, which removes the edges, the fine detail that competes with letterforms, while keeping the average colour and brightness. Blur is what makes translucency compatible with text; alpha is what decides how much of the backdrop's brightness still gets through.
+**Alpha** mixes the fill with the backdrop pixel by pixel, so every edge behind survives, only fainter. **Blur** averages each pixel with its neighbours first, which removes the fine detail that competes with letterforms while keeping the average colour and brightness. Blur is what makes translucency compatible with text; alpha decides how much of the backdrop's brightness gets through. That is why Microsoft's Acrylic recipe stacks blur, tint, a luminosity blend and noise, and why Apple describes its materials as blur plus vibrancy plus blending.
 
-That's why Microsoft's Acrylic recipe stacks blur, a tint, a luminosity blend and noise rather than using opacity alone, and why Apple describes its standard materials as blur plus vibrancy plus blending. A translucent fill without blur is an alpha colour, a perfectly good tool for small tints (see [Alpha ramps](#alpha-ramps)), and a poor one for a surface that holds text.
-
-Never put a large surface that holds text on alpha alone. **If a surface is translucent, it is blurred; if it can't be blurred, it is opaque.** That is consensus: no system surveyed ships an unblurred translucent panel for text.
+**If a surface is translucent, it is blurred; if it can't be blurred, it is opaque.** *Weight: strong.* No system surveyed ships an unblurred translucent panel for text; an alpha colour is a tool for small tints ([Alpha ramps](#alpha-ramps)).
 
 ---
 
@@ -143,7 +136,7 @@ Never put a large surface that holds text on alpha alone. **If a surface is tran
 
 Apple ships its standard materials as a named ladder from thin to thick, and asks designers to choose by purpose and to put vibrant system colours on top rather than their own greys.
 
-On iOS and iPadOS the standard materials are `ultraThin`, `thin`, `regular` (the default) and `thick`. SwiftUI's `Material` type adds `ultraThick` and `bar`. The names describe one thing: how opaque the material is, and so how much of the backdrop shows through.
+On iOS and iPadOS the standard materials are `ultraThin`, `thin`, `regular` (the default) and `thick`; SwiftUI's `Material` adds `ultraThick` and `bar`. The names describe how opaque each is.
 
 <svg role="img" viewBox="0 0 720 264" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>A ladder of five frosted panels named after the SwiftUI materials ultraThin, thin, regular, thick and ultraThick, laid over the same backdrop of vertical stripes in navy, ochre, blue, cream, orange and green. From left to right each panel is more opaque, about 35, 50, 65, 80 and 92 percent white over a blurred backdrop. On the thinnest the stripes still show clearly and the grey secondary line is hard to read; on the thickest the stripes are a faint tint and both lines of text are crisp. Apple publishes no opacity values, so these percentages are illustrative.</title>
@@ -198,13 +191,11 @@ On iOS and iPadOS the standard materials are `ultraThin`, `thin`, `regular` (the
 <path d="M24 252 H696" stroke="#5a5850" stroke-width="1.5" marker-end="url(#f2-arrow)"/>
 </svg>
 
-Apple's own summary of the ladder is a trade. Thicker materials give better contrast for text and fine detail; thinner ones help people keep their context, because more of the background shows. The figure shows both ends: the stripes are obvious through `ultraThin` and the grey line under "Library" is hard to read there, while `ultraThick` reads cleanly and almost hides the stripes.
+Thicker materials give better contrast for text; thinner ones keep more context, and the grey line under "Library" is hard to read through `ultraThin`. Apple publishes no opacity numbers and says not to pick a material for the colour it seems to give, since system settings change how each looks: the material is a role the system renders, not a recipe.
 
-Apple doesn't publish opacity numbers for these, and its guidance says not to pick a material for the colour it seems to give, since system settings change how each one looks. That is deliberate. The material is a role the system renders, not a recipe the designer copies.
+The second half is **vibrancy**: label, fill and separator colours designed for materials, which pull colour forward from the backdrop instead of painting a fixed grey over it. Labels come in levels from primary to quaternary, and Apple warns against quaternary labels on the thinnest materials.
 
-The second half of Apple's system is **vibrancy**: label, fill and separator colours designed to sit on materials. They pull colour forward from the backdrop instead of painting a fixed grey over it. Labels and fills come in several levels named by contrast (primary down to quaternary), and Apple warns against quaternary labels on the thinnest materials because the contrast is too low. Its HIG pairs a "poor contrast" example using `systemGray3` with a vibrant label that reads.
-
-For a design system on Apple platforms, map each surface to a material by role and leave the rendering to the system: `regular` for most floating panels, `thick` where the panel carries paragraphs or small text. **Use vibrant label colours on materials, never fixed greys from the solid palette.** That is Apple's documented rule, not an opinion; on the web there is no vibrancy, which is part of why [Text over translucency](#text-over-translucency) needs its own section.
+On Apple platforms, map each surface to a material by role (`regular` for most floating panels, `thick` where the panel carries paragraphs or small text) and leave the rendering to the system. **Use vibrant label colours on materials, never fixed greys from the solid palette.** *Weight: required* on Apple platforms, where it is the documented rule. The web has no vibrancy, which is why [Text over translucency](#text-over-translucency) needs its own section.
 
 ---
 
@@ -212,19 +203,11 @@ For a design system on Apple platforms, map each surface to a material by role a
 
 Liquid Glass is Apple's material for the controls and navigation that float above content, in a regular variant for most uses and a clear one only over rich media, and its first months showed what happens when glass gets too thin.
 
-Apple's HIG frames Liquid Glass as a separate functional layer: tab bars, sidebars, toolbars and the controls that float over scrolling content. It says not to use it in the content layer, and to use it sparingly in custom controls, since too much of it distracts from the content it is meant to reveal. The one exception is a transient control in content, a slider or a toggle, which takes on the glass look only while someone is touching it.
+Apple's HIG puts it on tab bars, sidebars, toolbars and floating controls, and asks for it sparingly in custom ones. The **regular** variant blurs and adjusts the brightness behind it to keep text legible, and most system components use it. The **clear** variant is far more transparent and meant only for components over photos and video; over bright media, Apple suggests a dark dimming layer at 35% opacity behind the component.
 
-There are two variants. The **regular** variant blurs and adjusts the brightness of what is behind it to keep text legible, and Apple says most system components use it, including alerts, sidebars and popovers, anything with a lot of text. The **clear** variant is far more transparent and is meant only for components floating over photos and video.
+In October 2025 Nielsen Norman Group argued, from screenshots rather than a study, that iOS 26's glass hurt legibility: Mail's search bar over previews, controls lost in Maps photos. Within weeks iOS 26.1 added a choice between Clear and a more opaque Tinted look. The lesson is not that glass fails: the thin end of the ladder fails first, and a system has to work at whatever thickness the user picks.
 
-For clear glass over bright content, Apple suggests adding a dark **dimming layer** at 35% opacity behind the component; over content that is already dark, none is needed.
-
-The rollout is the story worth retelling. In October 2025, Nielsen Norman Group published a critique of iOS 26 arguing that the glass hurt legibility in everyday screens: Mail's search bar sitting over email previews, controls blending into photos in Maps.
-
-It is an expert review of screenshots, not a usability study, but it named concrete failures. Within weeks, Apple's iOS 26.1 added a Liquid Glass setting with a choice between Clear and a more opaque Tinted look, and its HIG now notes that a person's preferred look, Reduce Transparency and Increase Contrast all change how the material renders.
-
-That is a platform owner shipping a thickness control to its users after shipping a thin default. The lesson for a design system is not that glass fails; it is that the thin end of the ladder fails first, and that the system has to work at whatever thickness the user picks.
-
-If your system targets Apple platforms, take the system bars and controls as they come and keep custom glass to one or two floating controls. **Choose the regular variant whenever text sits on the glass; clear is for controls over media, with a 35% dimming layer when the media is bright.** That is Apple's own guidance; the advice to keep custom glass rare is judgement, backed by the iOS 26.1 change.
+**Choose the regular variant whenever text sits on the glass; clear is for controls over media, with a 35% dimming layer when the media is bright.** *Weight: strong*, Apple's own guidance. Keeping custom glass to one or two floating controls is judgement (*moderate*), backed by the iOS 26.1 change.
 
 ---
 
@@ -262,19 +245,13 @@ Here is a file manager window built the way Microsoft's guidance lays it out.
 <text x="556" y="325" font-size="11" fill="#5a5850">blurs past the window edge</text>
 </svg>
 
-**Mica** is the window's backdrop, behind the title bar and the navigation pane. Microsoft calls it opaque: it samples the desktop wallpaper once and uses it to tint the base very slightly, then falls back to a neutral colour when the window loses focus.
+**Mica** is the window's opaque backdrop: it samples the wallpaper once to tint the base slightly, so nothing is blurred live. **Mica Alt** tints more strongly, for apps with tabs in the title bar.
 
-Sampling once is the performance choice, since nothing behind the window is blurred live. The content area sits on a layer above it, filled with `LayerFillColorDefaultBrush`, a low-opacity solid that lets the Mica tint through. **Mica Alt** tints more strongly and is meant for apps with tabs in the title bar.
+**Acrylic** is the real translucency, and Microsoft restricts it to transient surfaces (context menus, flyouts, drop-downs) and, in-app, to supporting panes that open over content. The don'ts are blunt: no desktop acrylic on large backgrounds, no two acrylic panes side by side (the blurred edges meet in a seam), and no accent-coloured text on acrylic, because it is likely to miss contrast.
 
-**Acrylic** is the real translucency, and Microsoft restricts it. Background acrylic, which shows the desktop and other windows, is for transient light-dismiss surfaces: context menus, flyouts, the drop-downs of combo boxes and auto-suggest fields. In-app acrylic, which shows the app's own content, is for supporting surfaces that overlap content, like a navigation pane that opens over the page.
+Both turn solid with *Transparency effects* off, in Battery Saver and on low-end hardware (Mica to `SolidBackgroundFillColorBase`). Fluent's web tokens carry Smoke, the black behind a modal, as `colorBackgroundOverlay`, but no Acrylic or Mica: on the web, Fluent stays opaque.
 
-The do's and don'ts are blunt: no desktop acrylic on large backgrounds, no two acrylic panes side by side (the blurred edges meet in a visible seam), and no accent-coloured text on acrylic, because it is likely to miss contrast at the default 14px.
-
-The fallbacks are where Windows is most specific. Both acrylic types turn solid when the user switches off *Transparency effects* in Settings, when Battery Saver is on, and on low-end hardware; background acrylic also goes solid in an inactive window. Mica falls back to `SolidBackgroundFillColorBase` (and Mica Alt to `SolidBackgroundFillColorBaseAlt`) in the same cases. High Contrast replaces both with the user's own colour.
-
-Fluent 2's material page names a fourth material besides solid, Mica and Acrylic: **Smoke**, the translucent black behind a modal dialog. On the web, Fluent's React tokens (`@fluentui/tokens`) carry that as `colorBackgroundOverlay` (black at 40% or 50%) and ship alpha neutrals such as `colorNeutralBackgroundAlpha`, but no Acrylic or Mica token. On Windows the materials are system brushes; on the web, Fluent stays opaque.
-
-For a Windows app, use Mica as the base and Acrylic only for menus and flyouts. **Use Acrylic only on surfaces that appear briefly over other content, never on a pane that stays open beside the content.** That's Microsoft's documented rule, and it matches Apple's line between functional and content layers.
+**Use Acrylic only on surfaces that appear briefly over other content, never on a pane that stays open beside the content.** *Weight: strong*, Microsoft's documented rule, matching Apple's line between functional and content layers.
 
 ---
 
@@ -282,7 +259,7 @@ For a Windows app, use Mica as the base and Acrylic only for menus and flyouts. 
 
 The large web design systems ship opaque surfaces, alpha colours and a translucent scrim, and almost no blur; Radix Themes is the one that makes translucency a default, and even it limits the blur to two components.
 
-Reading the shipped code settles this better than reading the docs. Here is what each system's current package contains, searched for `backdrop-filter` and for how surfaces and scrims are filled.
+Here is what each package ships, searched for `backdrop-filter`.
 
 | System, package | Surfaces | Scrim behind a modal | Blur shipped |
 |---|---|---|---|
@@ -294,13 +271,13 @@ Reading the shipped code settles this better than reading the docs. Here is what
 | Ant Design 6.7.0 | opaque | `colorBgMask` black at 0.45 | opt-in `blur(4px)` on the mask |
 | Radix Themes 3.3.0 | Card and Table translucent by default | `--color-overlay` `black-a6` light, `black-a8` dark | `blur(64px)` on Card and Table |
 
-The table's left column is close to unanimous. Material 3 moved away from translucent tint overlays toward opaque surface-container roles, Atlassian and Primer use alpha only for small fills and the scrim, and GOV.UK has nothing to blur. Carbon's single blur is a small decorative bar in its AI label, a part of the system that is visually distinct on purpose.
+The surfaces column is close to unanimous. Material 3 even moved away from its one translucent mechanism, a tint laid over surfaces by elevation, to opaque container roles ([surfaces in dark mode](surfaces-in-dark-mode.md#tint-overlays-to-containers) tells that change). Carbon's single blur is a small decorative bar in its AI label, distinct on purpose.
 
-Ant Design is the interesting variant. Version 6 lets a Modal or Drawer take `mask={{ blur: true }}`, which adds a 4px `backdrop-filter` to the dark scrim rather than to the dialog. The blur goes behind the dialog, where it only has to reduce distraction, and the dialog itself stays opaque, where the text is. It is off by default.
+Ant Design 6 lets a Modal or Drawer take `mask={{ blur: true }}`, which adds a 4px `backdrop-filter` to the dark scrim rather than the dialog: the blur goes where it only has to reduce distraction, and the dialog, where the text is, stays opaque. It is off by default.
 
-Radix Themes is the counter-example, and its code tells a more careful story than its docs. `<Theme panelBackground="translucent">` is the default, and the docs list cards, tables, popovers and dropdown menus as panels. In the 3.3.0 stylesheet, though, the translucent fill (`--color-panel-translucent`, white at 70% in light, `--gray-a2` in dark) and `--backdrop-filter-panel: blur(64px)` reach only `Card` and `Table`. Menus, popovers, selects, hover cards and dialogs all take `--color-panel-solid`. The floating surfaces, the ones Apple and Microsoft would make glass, are the ones Radix keeps solid.
+Radix Themes is the counter-example: `<Theme panelBackground="translucent">` is the default, and its docs list popovers and menus as panels. In the 3.3.0 stylesheet, though, the translucent fill (`--color-panel-translucent`, white at 70% in light) and `--backdrop-filter-panel: blur(64px)` reach only `Card` and `Table`. Menus, popovers, selects, hover cards and dialogs take `--color-panel-solid`: the floating surfaces Apple and Microsoft would make glass are the ones Radix keeps solid.
 
-On the web, start opaque and stay there for anything holding text. **If you want one translucent effect, blur the scrim behind a modal, as Ant Design does, rather than the panel in front.** The opacity consensus is strong in what ships, but some of it is history: `backdrop-filter` only became unprefixed in Safari 18, so a system designed earlier had good reason to avoid it.
+**If you want one translucent effect on the web, blur the scrim behind a modal, as Ant Design does, rather than the panel in front.** *Weight: strong* for opaque panels, in what ships. Some of it is history: `backdrop-filter` only became unprefixed in Safari 18, so a system designed earlier had reason to avoid it.
 
 ---
 
@@ -308,7 +285,7 @@ On the web, start opaque and stay there for anything holding text. **If you want
 
 An alpha colour ramp gives translucent fills that match the solid ramp on the page background and take on the colour of anything else they sit over; it is a tool for tints, hovers and borders, not for surfaces that need a material.
 
-Radix publishes every colour scale twice: the solid steps and an alpha twin designed to look the same over the page background. Its slate grey runs from `slate1` `#fcfcfd` to `slate12` `#1c2024`, and `slateA` runs from `#00005503` (about 1% of a near-black) to `#000509e3` (about 89%). The difference shows only when the background changes.
+Radix publishes every colour scale twice: the solid steps and an alpha twin designed to look the same over the page background. Its slate grey runs from `slate1` `#fcfcfd` to `slate12` `#1c2024`, and `slateA` from `#00005503` (about 1% of a near-black) to `#000509e3` (about 89%).
 
 <svg role="img" viewBox="0 0 720 290" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Radix's slate grey ramp, steps 1 to 12, drawn twice: once as solid colours and once as its alpha twin, slateA, each step a near-black at a set opacity, from about 1 percent at step 1 to 89 percent at step 12. On the left, over white, the two rows look the same, because the alpha ramp is tuned to match the solid one on the page background. On the right, over a light blue panel, the solid steps stay neutral grey and read as grey patches stuck on the blue, while the alpha steps let the blue through and read as darker blues. Values are Radix Colors' published slate and slateA.</title>
@@ -391,15 +368,11 @@ Radix publishes every colour scale twice: the solid steps and an alpha twin desi
 <text x="574" y="262" font-size="11" fill="#1a1a1a" text-anchor="middle">solid steps stay grey; alpha steps take the blue</text>
 </svg>
 
-Over white the two rows are indistinguishable. Over a blue panel, the solid steps are grey patches stuck onto the blue, and the alpha steps take the blue in and read as darker blues. That is the whole reason to use them: a hover fill, a divider or a subtle tag background in an alpha step works on any surface it lands on without a second token.
+Over white the two rows match. Over a blue panel the solid steps are grey patches, and the alpha steps read as darker blues: a hover, divider or tag in an alpha step works on any surface without a second token.
 
-Atlassian and Primer use the same idea in their semantic tokens. Atlassian's `background.neutral` is `#0515240F` and its newer `surface.container` is `#17171708`, both translucent darks that tint whatever surface they sit on. Primer's `bgColor-neutral-muted` is `#818b981f`. The [Atlassian surfaces themselves are opaque](#web-systems-stay-opaque); the alpha is in the small fills on top.
+Atlassian's `color.background.neutral` is `#0515240F` in light and `#CECED912` in dark, and its newer `surface.container` is `#17171708`; Primer's `bgColor-neutral-muted` is `#818b981f`. That is what keeps a component's light-grey parts visible on a tinted card ([how surfaces stack](how-surfaces-stack.md#components-on-a-tint) measures it). An alpha step goes on small things over a known surface; a material goes on a large surface over unknown content, and needs blur. Radix's docs add that alpha colours need wide-gamut definitions to stay saturated on P3 displays.
 
-The distinction from a material is scale and blur. An alpha step is applied to small things on a known surface: a chip on a card, a hover on a row. A material is applied to a large surface over unknown content, and needs blur because alpha alone lets every edge through (the middle card in [Solid, alpha and blur](#solid-alpha-and-blur)).
-
-Radix's own docs add a technical catch: alpha colours need wide-gamut definitions to stay saturated on P3 displays, because alpha blending works differently in P3 than in sRGB.
-
-Ship alpha twins for your neutral ramp, and use them for hovers, tints and dividers. **Use alpha steps for small fills over known surfaces, and a material, or nothing, for large surfaces over unknown content.** The alpha ramp is consensus across Radix, Atlassian, Primer and Fluent; it is cheap, has no performance cost, and has no accessibility setting to honour.
+**Use alpha steps for small fills over known surfaces, and a material, or nothing, for large surfaces over unknown content.** *Weight: strong.* The alpha ramp is shared by Radix, Atlassian, Primer and Fluent; it is cheap, has no performance cost and no accessibility setting to honour.
 
 ---
 
@@ -407,7 +380,7 @@ Ship alpha twins for your neutral ramp, and use them for hovers, tints and divid
 
 Text on a material has to pass contrast against the worst backdrop that can scroll under it, not the one in the mock-up, and secondary text is what fails first.
 
-Take Radix's light translucent panel as shipped: white at 70% over a 64px blur. Put the card's grey secondary line, `slate11` `#60646c`, on it, and scroll the darkest part of a night photo underneath. Before reading on, work out which of the two lines of text fails.
+Take Radix's light translucent panel as shipped, white at 70% over a 64px blur, with the card's grey secondary line, `slate11` `#60646c`, and scroll the darkest part of a night photo underneath. Before reading on, work out which of the two lines of text fails.
 
 <svg role="img" viewBox="0 0 720 310" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Four frosted cards over a near-black night photo with a few small coloured lights. Each card has a bold title, Recent files, and a grey secondary line, Edited 2 hours ago. First, as shipped: white at 70 percent, the grey line measures 2.8 to 1 against the composited fill and fails. Second, the material made thicker, white at 88 percent: the grey line reaches 4.5 to 1 and passes. Third, the fill left at 70 percent but the secondary line set in the primary text colour: 7.8 to 1, passes. Fourth, the opaque fallback, plain white: the grey line measures 5.9 to 1 and passes. Ratios are WCAG 2 contrast against the fill composited over black; text colours are Radix slate 11 and slate 12.</title>
@@ -460,15 +433,13 @@ Take Radix's light translucent panel as shipped: white at 70% over a 64px blur. 
 <text x="16" y="30" font-size="14" fill="#1a1a1a" font-weight="600">Secondary text on a 70% panel, over the darkest part of a photo</text>
 </svg>
 
-Blur doesn't help here. A large dark area blurred is still a dark area, so the backdrop under the card is effectively black, and the card's fill composites to `#b2b2b2`. On that, the primary `slate12` text measures 7.8:1 and passes. The secondary `slate11` line measures 2.8:1 and fails WCAG's 4.5:1 for body text. On the opaque card the same grey measures 5.9:1.
+Blur doesn't help: a large dark area blurred is still dark, so the card's fill composites to `#b2b2b2`. On that, primary `slate12` text measures 7.8:1 and passes; the secondary `slate11` line measures 2.8:1 and fails WCAG's 4.5:1. On the opaque card the same grey measures 5.9:1.
 
-There are three fixes, all in the figure. Thicken the material: at 88% white the secondary line reaches 4.5:1 (and the primary 12.5:1). Use the primary text colour on the material: 7.8:1 at the original 70%. Or drop the material for that card: 5.9:1. Accent colours fare worse than grey. A link in `#1f5fbf` on the same 70% card over black measures 2.9:1, which is the arithmetic behind Microsoft's rule against accent-coloured text on Acrylic.
+There are three fixes. Thicken the material: at 88% white the secondary line reaches 4.5:1. Use the primary text colour on the material: 7.8:1 at 70%. Or drop the material for that card: 5.9:1. Accent colours fare worse: a link in `#1f5fbf` on the same card over black measures 2.9:1, the arithmetic behind Microsoft's rule against accent text on Acrylic.
 
-The worst case has to be chosen deliberately. For a light material, it is the darkest content that can sit behind it, often near black in a photo. For a dark material it is the brightest, often a white page scrolled underneath. A contrast checker given the mock-up's backdrop will report a pass that the product never sees. The general rule, that composited colour is measured where it lands, is in the toolkit's accessibility knowledge; materials are the case where "where it lands" moves.
+The worst case is the darkest content behind a light material and the brightest behind a dark one; a checker given the mock-up's backdrop reports a pass the product never sees. On the web, with no vibrancy, this check falls to the design system.
 
-Apple's answers are vibrancy and thickness; Microsoft's is a recipe tuned so that its own text colours pass on Acrylic, plus a list of colours not to use. The web has neither, so the check falls to the design system.
-
-Measure every text colour on the material against its composite over black (light material) or white (dark material). **For a light material at 70%, only the primary text colour survives the worst case; secondary text needs about 88% white, or the material has to go.** The numbers are WCAG 2 arithmetic, not opinion; the choice between thickening and recolouring is judgement, and thickening is usually better, since it keeps the text hierarchy intact.
+**For a light material at 70%, only the primary text colour survives the worst case; secondary text needs about 88% white, or the material has to go.** *Weight: required* for the arithmetic, which is WCAG 2's; *moderate* for thickening over recolouring, which keeps the text hierarchy intact.
 
 ---
 
@@ -476,9 +447,7 @@ Measure every text colour on the material against its composite over black (ligh
 
 Every material needs an opaque twin, close to its average colour and with a real border, that replaces it when the user turns transparency off, and on the web that preference reaches only some browsers.
 
-All three platforms have the setting. On macOS and iOS it is *Reduce Transparency* under Accessibility; SwiftUI reads it as `accessibilityReduceTransparency`. On Windows it is *Transparency effects* under Personalization, Colors, and Windows also drops transparency for Battery Saver and low-end hardware without being asked. People turn it on because moving blurred colour behind text is hard to read for some people, distracting for others, and slow on some machines.
-
-The fallback is a design decision, not a deletion. Here is the mail toolbar both ways.
+macOS and iOS have *Reduce Transparency* (SwiftUI's `accessibilityReduceTransparency`); Windows has *Transparency effects*, and drops transparency itself for Battery Saver and low-end hardware.
 
 <svg role="img" viewBox="0 0 720 284" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two copies of a mail toolbar with the title Inbox, a grey 128 unread count and a blue Compose button, over the same busy backdrop. Left, with transparency allowed: a frosted bar of white at 70 percent over a blurred backdrop, edged by a faint white hairline. Right, with Reduce Transparency or Windows transparency effects turned off: the same bar filled with an opaque light grey, number f2f3f5, close to the frosted bar's average colour, and edged with a real grey border, d9d9e0, because the hairline no longer has anything to separate. The layout, text and button are identical in both. Colours are illustrative.</title>
@@ -509,11 +478,9 @@ The fallback is a design decision, not a deletion. Here is the mail toolbar both
 <text x="24" y="30" font-size="14" fill="#1a1a1a" font-weight="600">The same toolbar, with the setting off and on</text>
 </svg>
 
-Two things change. The fill becomes an opaque colour near the material's average over typical content, here `#f2f3f5`, so the screen doesn't jump in brightness when the setting flips. And the white hairline, which only read as an edge against blurred colour, becomes a real border, because an opaque bar on an opaque page needs one to stay separate. Microsoft names its fallbacks (`SolidBackgroundFillColorBase` for Mica); Apple renders its own; on the web the system has to supply it.
+The fill becomes an opaque colour near the material's average, here `#f2f3f5`, so brightness doesn't jump, and the white hairline becomes a real border. On the web the system supplies this twin.
 
-The web's hook is `prefers-reduced-transparency`, from the Media Queries Level 5 draft. MDN marks it experimental. Browser support, from MDN's compatibility data in November 2026, is Chrome and Edge from version 118, Firefox only behind a preference since 113, and Safari not at all, which means no detection on any iPhone or Mac browser that uses WebKit. MDN lists the operating-system settings browsers map it to: Windows' transparency effects, and Reduce Transparency on macOS and iOS.
-
-That gap decides which way round to write the CSS. Here is the version that looks reasonable, translucent by default with an override:
+The web's hook is `prefers-reduced-transparency`, from the Media Queries Level 5 draft, marked experimental by MDN. Support in November 2026: Chrome and Edge from 118, Firefox only behind a preference since 113, Safari not at all. That gap decides which way round to write the CSS. Here is the version that looks reasonable:
 
 ```css
 .toolbar {
@@ -525,7 +492,7 @@ That gap decides which way round to write the CSS. Here is the version that look
 }
 ```
 
-In Safari the media query never matches, so a Mac user who turned on Reduce Transparency still gets the glass. The safer order makes the opaque fallback the default and adds the material only where the browser can say the user hasn't asked for less:
+In Safari the media query never matches, so a Mac user with Reduce Transparency on still gets the glass. The safer order makes the opaque fallback the default and adds the material only where the browser can say the user hasn't asked for less:
 
 ```css
 .toolbar {
@@ -543,17 +510,15 @@ In Safari the media query never matches, so a Mac user who turned on Reduce Tran
 }
 ```
 
-The cost is that Safari and Firefox users get the opaque toolbar. Since a material that passes [the contrast check](#text-over-translucency) is only decoration, that loses nothing a user needs. In Windows' forced colours mode the fill is replaced anyway, which is one more reason the opaque version carries a real border.
+Safari and Firefox users get the opaque toolbar, which loses nothing a user needs.
 
-Write the opaque fallback first, as a token beside the material. **Gate the material behind `prefers-reduced-transparency: no-preference`, so a browser that can't report the setting gets the opaque version.** The fallback as a designed twin is consensus across Apple and Microsoft; gating the web version on `no-preference` is judgement, driven by Safari's missing support, and worth revisiting when WebKit ships the query.
+**Gate the material behind `prefers-reduced-transparency: no-preference`, so a browser that can't report the setting gets the opaque version.** *Weight: strong* for the designed fallback, shared by Apple and Microsoft; *moderate* for the gating, driven by Safari's missing support and worth revisiting when WebKit ships the query.
 
 ---
 
 ## Tokens for a material
 
 A material is a small group of tokens, a fill colour with alpha, a blur radius, an optional saturation boost, an edge and an opaque fallback, named for the role the surface plays.
-
-Here is one material taken apart.
 
 <svg role="img" viewBox="0 0 720 310" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Anatomy of one material. On the left, a frosted card over a busy backdrop, its title Recent files and a grey secondary line. On the right, the five tokens that describe it, with arrows to the card: material.chrome.fill, white with alpha 0.72, a colour; material.chrome.blur, 24 pixels, a dimension; material.chrome.saturate, 1.8, a number; material.chrome.edge, white at 60 percent, the hairline border; and material.chrome.fallback, an opaque light grey f2f3f5 used when transparency is reduced. The names and values are illustrative.</title>
@@ -584,7 +549,7 @@ Here is one material taken apart.
 <text x="372" y="72" font-size="12" fill="#5a5850" font-weight="600">Tokens (illustrative values)</text>
 </svg>
 
-Each value has a type the token format already knows, except the blur. The Design Tokens Community Group's format (version 2025.10) defines colour, with an `alpha` component; dimension; number; and composites such as shadow, border, gradient and typography. A blur appears only inside the shadow type, as a shadow's blur radius. There is no filter or backdrop type, so a backdrop blur has to be stored as a plain dimension and a saturation boost as a plain number, grouped by name:
+The DTCG format (2025.10) has colour with `alpha`, dimension and number, but a blur only inside the shadow type, so a backdrop blur is stored as a plain dimension and a saturation boost as a number, grouped by name:
 
 ```json
 {
@@ -600,13 +565,9 @@ Each value has a type the token format already knows, except the blur. The Desig
 }
 ```
 
-The transform then assembles `backdrop-filter: blur(24px) saturate(1.8)` from the group. Radix takes the shortcut of storing the whole filter string as one CSS variable, `--backdrop-filter-panel: blur(64px)`, switched to `none` for the solid setting. That is simpler and loses the ability to read the radius on its own, for a Figma variable or a native platform.
+The transform assembles `backdrop-filter: blur(24px) saturate(1.8)`; Radix's single filter-string variable is simpler but loses the radius for Figma or a native platform. In Figma a background blur's radius can be bound to a number variable (`boundVariables.radius` in the plugin API) and the fill takes a colour variable with alpha; Figma has no saturation control, so write `saturate` into the token's description.
 
-Figma can hold most of it. A background blur's radius can be bound to a number variable (the plugin API exposes `boundVariables.radius` on blur effects), and the fill takes a colour variable with alpha. Figma's background blur has no saturation control, so `saturate` lives only in code; write it in the token's description so nobody goes looking for it in the design file.
-
-Naming follows the surface levels. Apple names materials by thickness and asks designers to choose by role; a design system with only one or two materials is better served by role names (`material.chrome`, `material.overlay`) whose values carry the thickness. A role name survives a change of thickness; `material.thin` set to 88% would be a lie.
-
-Store each material as a group under its role: fill, blur, saturate, edge, fallback. **Never ship a material token without its fallback in the same group.** The grouping is judgement, since DTCG has no material type; keeping the fallback beside the fill follows directly from [Reduce Transparency fallbacks](#reduce-transparency-fallbacks).
+Name by role (`material.chrome`): a role survives a change of thickness, and `material.thin` set to 88% would be a lie. **Never ship a material token without its fallback in the same group.** *Weight: moderate.* DTCG has no material type, so the grouping is judgement; the fallback beside the fill follows from [Reduce Transparency fallbacks](#reduce-transparency-fallbacks).
 
 ---
 
@@ -614,11 +575,9 @@ Store each material as a group under its role: fill, blur, saturate, edge, fallb
 
 A Figma background blur and CSS `backdrop-filter` look alike and differ in three ways: the radius is about half in CSS, Figma has no saturation, and CSS blurs only up to the nearest backdrop root.
 
-The radius is the familiar one. Figma's background blur value is about twice the CSS `blur()` value that matches it, so 30 in Figma is about 15 in CSS; the measurements and the rule for the token transform are in [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently.md#blur-values).
+Figma's background blur value is about twice the matching CSS `blur()` value, so 30 in Figma is about 15 in CSS; the measurements are in [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently.md#blur-values). Figma also shows a background blur only when the layer's fill is below 100% opacity; CSS runs `backdrop-filter` whatever the fill, so an opaque fill over a blur wastes its cost.
 
-Figma also requires the layer's fill to be partly transparent before a background blur shows at all; its help page says any fill opacity below 100% works, and at 100% the blur is invisible. CSS has no such link: `backdrop-filter` runs whatever the background colour, so an opaque CSS fill over a blur wastes the blur's cost and shows nothing.
-
-The trap that breaks components is the backdrop root. In Figma, a background blur sees every layer drawn behind it on the canvas. In CSS, `backdrop-filter` sees only back to the nearest ancestor that has a filter, an opacity below 1, a mask, a clip path, a blend mode or its own backdrop filter.
+The trap that breaks components is the backdrop root. In Figma, a background blur sees every layer drawn behind it. In CSS, `backdrop-filter` sees only back to the nearest ancestor with a filter, an opacity below 1, a mask, a clip path, a blend mode or its own backdrop filter.
 
 <svg role="img" viewBox="0 0 720 286" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>The same Now playing panel shown twice over the same busy backdrop. Left, as drawn in Figma with a background blur: the shapes behind the panel are softly blurred and the text reads cleanly. Right, as built in CSS with backdrop-filter, but inside a wrapper whose opacity is 0.9, outlined with a red dashed line: the wrapper becomes the backdrop root, the filter has nothing of the page to blur, and the shapes behind show sharp through a plain 70 percent white fill. Colours are illustrative.</title>
@@ -647,17 +606,15 @@ The trap that breaks components is the backdrop root. In Figma, a background blu
 <text x="16" y="30" font-size="14" fill="#1a1a1a" font-weight="600">Same component, two backdrops</text>
 </svg>
 
-The right-hand panel is the same component placed inside a wrapper with `opacity: 0.9`, perhaps for a fade-in. The wrapper is now the backdrop root, the filter blurs only the wrapper's own transparent contents, and the photo shows sharp through a plain 70% fill. That is the middle card of [Solid, alpha and blur](#solid-alpha-and-blur) again, arriving by accident. Figma's newer glass effect, with refraction and dispersion, has no CSS equivalent at all; [the glass section of the same article](../figma-and-code/where-figma-and-css-render-differently.md#glass-and-progressive-blur) covers it.
+On the right, the same component sits in a wrapper with `opacity: 0.9`, which becomes the backdrop root, so the photo shows sharp through a plain 70% fill: the middle card of [Solid, alpha and blur](#solid-alpha-and-blur), by accident. Figma's newer glass effect has no CSS equivalent ([the same article](../figma-and-code/where-figma-and-css-render-differently.md#glass-and-progressive-blur)).
 
-When you hand off a material, halve the blur in the token transform and add `saturate` in code. **Note on any component with a material that it must not sit inside an ancestor with opacity, a filter or a mask.** The radius rule comes from Figma's own Dev Mode behaviour; the backdrop root is in the CSS spec; the note on the component is the cheap way to stop the trap reaching production.
+Halve the blur in the token transform and add `saturate` in code. **Note on any component with a material that it must not sit inside an ancestor with opacity, a filter or a mask.** *Weight: strong.* The backdrop root is in the CSS spec; the note is the cheap way to stop the trap reaching production.
 
 ---
 
 ## Materials in dark mode
 
 A dark material swaps the white tint for a near-black one and adds a faint light edge, and its worst case flips from a dark backdrop to a bright one.
-
-Here is the same card in both modes.
 
 <svg role="img" viewBox="0 0 720 296" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>The same frosted card in light and dark mode. Left, over a light busy backdrop, the light material: white at 72 percent over a blur, dark title and grey secondary text, a bright white hairline edge. Right, over a dark busy backdrop with pale stripes and letters, the dark material: a near-black tint, 16 18 1d, at 72 percent over a blur, light title and light grey secondary text, and a faint white hairline at 14 percent that catches the edge the way a highlight would. The blur is the same in both; only the tint and the edge change. Colours are illustrative.</title>
@@ -688,13 +645,11 @@ Here is the same card in both modes.
 <text x="16" y="30" font-size="14" fill="#1a1a1a" font-weight="600">One material, two tints</text>
 </svg>
 
-The blur stays the same. The tint changes to a near-black, here `#16181d` at 72%, and the edge changes from a bright white hairline at 60% to a white hairline at 14%, which reads as a highlight catching the edge rather than a line. Apple's materials and Mica do this switch themselves; on the web the material group needs a value per mode.
+The blur stays; the tint becomes a near-black, `#16181d` at 72%, and the edge a 14% white highlight. On the web the material group needs a value per mode.
 
-The contrast arithmetic flips with it. Over a white page scrolled underneath, the 72% dark fill composites to a mid grey, and light text has to beat that. Primary text in `#edeef0` measures 6.1:1 and passes; secondary text in `#b0b4ba` measures 3.4:1 and fails, and needs the tint at about 80% to reach 4.5:1. The pattern is the same as in light mode: the secondary colour is what decides the thickness.
+The contrast arithmetic flips with it. Over a white page scrolled underneath, the 72% dark fill composites to a mid grey. Primary text in `#edeef0` measures 6.1:1 and passes; secondary text in `#b0b4ba` measures 3.4:1 and fails, and needs the tint at about 80% to reach 4.5:1. Radix's dark panel, about 3.5% white over the blur, works only on cards over the dark page.
 
-Radix's dark translucent panel shows the other approach. Its dark `--color-panel-translucent` is `--gray-a2`, which for the plain gray scale is `#ffffff09`, about 3.5% white, over the 64px blur. It works because Radix applies it to cards on the page, whose backdrop is the dark page itself; it would fail as a toolbar over a white document. The general rules for dark surfaces, how much lighter each level gets and why, are in [surfaces in dark mode](surfaces-in-dark-mode.md).
-
-Give each material a dark value for fill and edge, and measure the dark one against white. **In dark mode, set the material's thickness by the secondary text colour composited over white, which usually means 80% or more.** The edge highlight is common practice in Apple's and Microsoft's materials rather than a written rule; the arithmetic is WCAG's.
+**In dark mode, set the material's thickness by the secondary text colour composited over white, which usually means 80% or more.** *Weight: required* for the arithmetic, WCAG's; the edge highlight is common practice in Apple's and Microsoft's materials rather than a written rule.
 
 ---
 
@@ -702,17 +657,9 @@ Give each material a dark value for fill and edge, and measure the dark one agai
 
 A backdrop blur makes the browser re-read and re-blur whatever is behind the surface whenever that changes, so a large blurred surface over scrolling content costs work on every frame of the scroll.
 
-Support is no longer the obstacle. `backdrop-filter` works unprefixed in Chrome from version 76, Firefox from 103 and Safari from 18 (Safari had it with a `-webkit-` prefix since version 9). MDN's compatibility data notes that Firefox before 123 didn't support it on systems with an unknown GPU vendor.
+Support is no longer the obstacle: `backdrop-filter` works unprefixed in Chrome from 76, Firefox from 103 and Safari from 18 (prefixed since 9). The cost is in the work. An opaque header is drawn once and moved; a blurred header over a scrolling feed samples, blurs and composites the pixels under it each time the feed moves, on the GPU, growing with area and radius. Microsoft says rendering Acrylic is GPU-intensive, can raise power use and shorten battery life, and switches it off in Battery Saver. On the web there are bug reports, not benchmarks: a 2025 Firefox bug (unconfirmed) describes very slow scrolling with `backdrop-filter: blur` and no GPU acceleration, as over remote desktop, the opening scene's stutter.
 
-The cost is in what the blur has to do. An opaque header is drawn once and moved. A blurred header over a scrolling feed has to sample the pixels under it, blur them and composite the result each time the feed moves. The cost grows with the blurred area and with the radius, and it lands on the GPU.
-
-Microsoft says this plainly about its own materials: rendering Acrylic is GPU-intensive, can raise power use and shorten battery life, and is switched off automatically in Battery Saver. Mica exists partly because it doesn't do this; it samples the wallpaper once.
-
-On the web, the reports are bug reports rather than benchmarks. A Firefox bug from 2025 describes very slow scrolling on a page using `backdrop-filter: blur` when no GPU acceleration was available, as in a remote desktop session, with the page fine once the filter was removed in the inspector; the bug is unconfirmed and may come from one distribution's packaging.
-
-So the support engineer's stutter from the opening scene is plausible and hard to predict.
-
-Keep blurred surfaces small (a bar, a menu) rather than full panels, never animate the blur radius, avoid nesting one blurred surface inside another, and try the page on a low-end laptop and over remote desktop. **Blur bars and menus, not page-sized panels, and test the scroll on the weakest machine your users have.** The direction is consensus; how much it costs on a given device is not measured in any source found, and has to be measured on yours.
+Keep blurred surfaces small, never animate the blur radius, avoid nesting one blurred surface in another, and try the page on a low-end laptop and over remote desktop. **Blur bars and menus, not page-sized panels, and test the scroll on the weakest machine your users have.** *Weight: moderate.* The direction is consensus; the cost on a given device is measured in no source found, and has to be measured on yours.
 
 ---
 
@@ -720,31 +667,11 @@ Keep blurred surfaces small (a bar, a menu) rather than full panels, never anima
 
 A small team without a native app to match, or without a surface that floats over moving content, should ship no material at all and spend the effort on opaque surface levels and alpha ramps.
 
-Count what one material asks of a design system. A fill, blur, saturate, edge and fallback per mode, so ten values. A contrast check per text colour against two worst cases. A fallback path gated on a media query that Safari doesn't support. A note on every component about backdrop roots. A performance check on weak hardware. And a Figma style whose blur doesn't match the code by a factor of two.
+One material asks for ten values, two worst-case contrast checks per text colour, a gated fallback, a backdrop-root note per component and a performance check. What it gives is context through a bar or a menu, which matters where content scrolls under fixed chrome: a media app, a map, a photo library. A form-heavy admin product or a dashboard on a plain page gets very little.
 
-Against that, what it gives is context through a bar or a menu, which matters most where content scrolls under fixed chrome: a media app, a map, a photo library, an editor with a floating toolbar. A form-heavy admin product, a documentation site or a dashboard on a plain page gets very little through a frosted panel.
+Two cases justify it for a small team: a web view inside a native shell whose bars are system materials, and a single surface the product is built around, such as a map with floating controls.
 
-There are two cases where a small team should still do it. One is matching a native shell: a web view inside an iOS or Windows app whose bars are system materials will look wrong with opaque bars of its own. The other is a single surface the product is built around, such as a map with floating controls, where one well-tested material is cheaper than the arguments about not having one.
-
-If neither applies, ship opaque surfaces at the levels in [how surfaces stack](how-surfaces-stack.md), alpha twins for your neutral ramp, and a translucent scrim behind modals. **Without a native shell to match or content that scrolls under fixed chrome, ship no material; add one later, as a group with its fallback, when a surface needs it.** That is judgement, for teams of a few people; the large web systems reached the same answer with far more people to spare.
-
----
-
-## How strong the evidence is
-
-The rules about where translucency goes rest on two platform owners' documentation; the web's opacity rests on shipped code; and no controlled study of reading text on blurred backgrounds turned up.
-
-From strongest to weakest:
-
-- **What ships.** The package contents in [Web systems stay opaque](#web-systems-stay-opaque) were read from the published npm tarballs and stylesheets: Radix's panel rules, Ant Design's mask blur, Carbon's single blur, the absence of `backdrop-filter` in Material Web, Atlassian, Primer and GOV.UK. This is the firmest evidence in the guide, and it shows what survives, not what reads best.
-- **Platform documentation.** Apple's materials HIG and Microsoft's Mica and Acrylic pages are first-hand and specific (the 35% dimming layer, the fallback triggers, the accent-text rule). They are also the guidance of companies selling the look, so their limits on it are more telling than their praise.
-- **Standards and browser data.** The DTCG format's types, MDN's compatibility data and the Media Queries Level 5 draft settle what can be stored and detected.
-- **Commentary.** Nielsen Norman Group's iOS 26 critique is an expert review of screenshots that draws on the group's earlier research on text over images; it names failures, but it isn't a study with participants.
-- **User outcomes.** None found. No published usability study measuring reading speed or errors on blurred translucent surfaces against opaque ones came up in the search. The contrast arithmetic in [Text over translucency](#text-over-translucency) is the strongest outcome-shaped evidence here, and it is WCAG's model, not a measurement of people.
-
-On independence: Apple and Microsoft draw the same line (glass on floating chrome, solid on content) on separate platforms with separate compositors, which counts as independent convergence.
-
-The web systems' opacity counts for less. They share a constraint, `backdrop-filter` arriving late in Firefox and unprefixed in Safari, and their influences on each other weren't traced here, so their agreement may partly be one circumstance repeated. Ant Design, from outside the Western cluster, reaching a different compromise (blur the scrim, not the panel) is a useful check that the consensus is not just habit.
+**Without a native shell to match or content that scrolls under fixed chrome, ship no material; add one later, as a group with its fallback, when a surface needs it.** *Weight: moderate.* It is judgement for teams of a few people; the large web systems reached the same answer with far more people to spare.
 
 ---
 
@@ -753,22 +680,11 @@ The web systems' opacity counts for less. They share a constraint, `backdrop-fil
 | Surface | Fill | Why |
 |---|---|---|
 | Card, panel, table in content | opaque | it is read, and nothing moves under it |
-| Sticky header or toolbar over a scrolling feed | material, or opaque | glass shows what is scrolling; only if text passes on the worst case |
+| Sticky header or toolbar over a scrolling feed | material, or opaque | only if text passes on the worst case |
 | Menu, popover, flyout | material on native; opaque on the web | Microsoft's Acrylic rule; Radix keeps these solid |
-| Dialog | opaque | holds text; the scrim does the separating |
-| Scrim behind a modal | translucent black; optional 4px blur | Ant Design's opt-in blur goes here, not on the dialog |
-| Hover, selected row, tag background, divider | alpha ramp step | adapts to any surface, no blur, no setting to honour |
-
-| Write this | Not this |
-|---|---|
-| blur plus 72% fill | 70% fill with no blur |
-| `material.chrome.fill`, `.blur`, `.saturate`, `.edge`, `.fallback` | `bg-glass: rgba(255,255,255,.7)` with no fallback |
-| primary text colour on a material | secondary grey or accent colour on a material |
-| opaque default, material under `prefers-reduced-transparency: no-preference` | material default with a `reduce` override |
-| Figma blur 30, CSS `blur(15px)` | the same number in both |
-| a real border on the opaque fallback | the material's white hairline on an opaque fill |
-
-Worst-case checks, from [Text over translucency](#text-over-translucency) and [Materials in dark mode](#materials-in-dark-mode):
+| Dialog | opaque | holds text; the scrim separates |
+| Scrim behind a modal | translucent black; optional 4px blur | Ant Design's opt-in blur goes here |
+| Hover, selected row, tag, divider | alpha ramp step | adapts to any surface, no blur |
 
 | Material | Worst backdrop | Primary text | Secondary text | Thickness for secondary at 4.5:1 |
 |---|---|---|---|---|
@@ -779,17 +695,13 @@ Worst-case checks, from [Text over translucency](#text-over-translucency) and [M
 
 ## The short version
 
-Most surfaces should be opaque. Translucency earns its place only on surfaces that float over content moving beneath them: a toolbar over a scrolling feed, a menu over a page, a sheet over a photo. Apple puts Liquid Glass on that floating layer and says to keep it out of content; Microsoft keeps Acrylic to brief menus and flyouts and makes the window base, Mica, opaque. The big web systems (Material, Atlassian, Primer, Carbon, GOV.UK) ship essentially no blur at all, Ant Design offers an opt-in blur on the scrim behind a modal, and Radix Themes, the one system with translucency on by default, applies it to cards and tables and keeps its menus and dialogs solid.
+Most surfaces should be opaque. Translucency earns its place only on surfaces that float over moving content, which is where Apple keeps Liquid Glass and Microsoft keeps Acrylic. The big web systems ship essentially no blur; Radix, translucent by default, still keeps menus and dialogs solid.
 
-A translucent surface that holds text must be blurred, because alpha alone lets every edge behind run through the letters.
+A translucent surface that holds text must be blurred, and must pass contrast on the worst backdrop: black for a light material, white for a dark one. At 70% white only the primary text colour survives; secondary text needs about 88%, and 80% or more in dark.
 
-Then it must pass contrast on the worst backdrop that can reach it: black for a light material, white for a dark one. At Radix's 70% white, only the primary text colour survives; grey secondary text needs about 88%, and accent-coloured links fail outright. In dark mode, plan on 80% or more. You choose between thickening the material and recolouring the text; thickening keeps the hierarchy.
+Every material needs an opaque twin with a real border for Reduce Transparency, Windows' transparency effects and battery saver. On the web, `prefers-reduced-transparency` works in Chrome and Edge only, so make the opaque version the default and add the material under `no-preference`.
 
-Every material needs an opaque twin close to its average colour, with a real border, for Reduce Transparency, Windows' transparency effects and battery saver. On the web, `prefers-reduced-transparency` works in Chrome and Edge only, so make the opaque version the default and add the material under `no-preference`.
-
-Store the material as a token group under a role name: fill with alpha, blur as a dimension, saturate as a number, edge, fallback. DTCG has no blur type, Figma has no saturation, and Figma's blur is about twice the CSS value. Note on each component that it must not sit inside an ancestor with opacity, a filter or a mask.
-
-For a small team with no native shell to match and nothing scrolling under fixed chrome, skip materials entirely: ship opaque surface levels, alpha twins of the neutral ramp, and a translucent scrim. That is the same answer the large web systems reached. Write down for the people downstream which surfaces are opaque by rule, so the first frosted card in a mock-up gets a question rather than a ticket.
+Store a material as a token group under a role name (fill, blur, saturate, edge, fallback); halve Figma's blur for CSS, and keep the component out of ancestors with opacity, a filter or a mask. A small team with no native shell to match should skip materials. The placement rule and the arithmetic are strong; skipping materials is judgement. Write down which surfaces are opaque by rule, so the first frosted card in a mock-up gets a question rather than a ticket.
 
 ---
 
@@ -797,16 +709,13 @@ For a small team with no native shell to match and nothing scrolling under fixed
 
 Researched 12 November 2026.
 
-- **`prefers-reduced-transparency` support** is from MDN's browser-compat-data on GitHub as of 12 November 2026: Chrome 118, Firefox behind `layout.css.prefers-reduced-transparency.enabled` since 113, Safari none (WebKit bug 175497). When WebKit ships it, the advice to gate on `no-preference` can relax.
-- **Package versions read**: `@radix-ui/themes` 3.3.0 (3.2.1 checked too, same rules), `@material/web` 2.5.0, `@atlaskit/tokens` 20.11.0, `@primer/primitives` 11.10.0, `@carbon/styles` 1.119.0, `govuk-frontend` 6.6.0, `antd` 6.7.0, `@fluentui/tokens` 1.0.0-alpha.24 (via `@fluentui/react-theme` 9.2.2), `@figma/plugin-typings` 1.142.0. Carbon and GOV.UK scrims were not checked.
-- **Radix docs against code**: the theme docs list popovers and dropdown menus as panels; the 3.3.0 CSS gives them the solid panel colour. Re-check before citing either as Radix's intent.
-- **Material 3's move from tint overlays to surface-container roles** is stated from the Material blog's title and the shipped tokens; the blog post itself renders only with JavaScript and its text was not read.
-- **Liquid Glass**: the HIG materials page was read through Apple's JSON endpoint, change log last entry 9 September 2025. The iOS 26.1 Clear and Tinted setting is from press coverage (MacRumors, October 2025), not an Apple page. Apple's guidance has changed twice in four months and may change again.
-- **Apple material opacities** in the thickness figure are illustrative. Apple publishes none.
-- **Microsoft's fallback colour values** (`SolidBackgroundFillColorBase` and the rest) are named from the Mica page; their hex values were not looked up, and `#f2f3f5` in the figures is illustrative.
-- **Performance**: no benchmark was found. The Firefox bug cited (1988728) is unconfirmed. Re-check before stating any number.
-- **Figma's blur radius**: the halving rule and its sources are in the linked Figma and CSS article and were not re-checked here.
-- **Contrast figures** are WCAG 2 relative-luminance ratios computed for this guide against black and white backdrops; APCA would give different numbers.
+- **`prefers-reduced-transparency` support** is from MDN's browser-compat-data as of 12 November 2026: Chrome 118, Firefox behind `layout.css.prefers-reduced-transparency.enabled` since 113, Safari none (WebKit bug 175497). When WebKit ships it, the gating advice can relax.
+- **Package versions** are those named in the table and sources. Carbon and GOV.UK scrims were not checked.
+- **Radix docs against code**: the docs list popovers and menus as panels; the 3.3.0 CSS makes them solid. Re-check before citing either as Radix's intent.
+- **Liquid Glass**: the HIG materials page was read through Apple's JSON endpoint (change log last entry 9 September 2025). The iOS 26.1 setting is from press coverage, not an Apple page.
+- **Illustrative values**: Apple's material opacities (Apple publishes none) and `#f2f3f5` as a fallback colour. No performance benchmark was found.
+- **Contrast figures** are WCAG 2 ratios computed for this guide; APCA would give different numbers.
+- **Evidence quality.** Shipped code shows what survives, not what reads best. Apple's and Microsoft's shared line is an independent convergence; the web systems' opacity may partly be one circumstance, late `backdrop-filter` support, repeated. No usability study of reading on blurred surfaces turned up.
 
 ---
 
@@ -814,42 +723,35 @@ Researched 12 November 2026.
 
 **Primary: platforms and shipped code**
 
-- [Apple HIG: Materials](https://developer.apple.com/design/human-interface-guidelines/materials) (read via [its JSON](https://developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json): Liquid Glass layer, regular and clear, 35% dimming layer, standard materials, vibrancy levels, change log)
-- [SwiftUI `Material`](https://developer.apple.com/documentation/swiftui/material) (`ultraThin` to `ultraThick`, `bar`)
-- [SwiftUI `accessibilityReduceTransparency`](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducetransparency)
-- [Microsoft Learn: Mica material](https://learn.microsoft.com/en-us/windows/apps/design/style/mica) (opaque, sampled once, Mica Alt, fallbacks, layering brushes)
-- [Microsoft Learn: Acrylic material](https://learn.microsoft.com/en-us/windows/apps/design/style/acrylic) (background and in-app, transient surfaces, fallbacks, GPU and battery, accent text, recipe)
+- [Apple HIG: Materials](https://developer.apple.com/design/human-interface-guidelines/materials) (read via [its JSON](https://developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json): Liquid Glass, 35% dimming layer, standard materials, vibrancy)
+- [SwiftUI `Material`](https://developer.apple.com/documentation/swiftui/material) and [`accessibilityReduceTransparency`](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducetransparency)
+- [Microsoft Learn: Mica material](https://learn.microsoft.com/en-us/windows/apps/design/style/mica) (opaque, sampled once, Mica Alt, fallbacks)
+- [Microsoft Learn: Acrylic material](https://learn.microsoft.com/en-us/windows/apps/design/style/acrylic) (transient surfaces, fallbacks, GPU and battery, accent text, recipe)
 - [Fluent 2: Material](https://fluent2.microsoft.design/material) (solid, Mica, Acrylic, Smoke)
 - [`@fluentui/tokens` 1.0.0-alpha.24](https://www.npmjs.com/package/@fluentui/tokens) (`colorBackgroundOverlay`, `colorNeutralBackgroundAlpha`)
-- [Radix Themes: Color, panel background and alpha colors](https://github.com/radix-ui/website/blob/main/data/themes/docs/theme/color.mdx) and [Theme component API](https://www.radix-ui.com/themes/docs/components/theme) (`panelBackground`, default `translucent`)
-- [`@radix-ui/themes` 3.3.0 styles.css](https://unpkg.com/@radix-ui/themes@3.3.0/styles.css) (`--color-panel-translucent`, `--backdrop-filter-panel: blur(64px)`, which components use it)
+- [Radix Themes: colour, panel background and alpha colours](https://github.com/radix-ui/website/blob/main/data/themes/docs/theme/color.mdx) and [Theme component API](https://www.radix-ui.com/themes/docs/components/theme)
+- [`@radix-ui/themes` 3.3.0 styles.css](https://unpkg.com/@radix-ui/themes@3.3.0/styles.css) (`--color-panel-translucent`, `--backdrop-filter-panel`)
 - [Radix Colors `light.ts`](https://github.com/radix-ui/colors/blob/main/src/light.ts) (`slate`, `slateA`) and [custom palettes](https://github.com/radix-ui/website/blob/main/data/colors/docs/overview/custom-palettes.mdx) (alpha blending in P3)
-- [`@material/web` 2.5.0](https://www.npmjs.com/package/@material/web) (dialog scrim 0.32 in `dialog/internal/animations.js`; no `backdrop-filter`)
-- [`@atlaskit/tokens` 20.11.0](https://www.npmjs.com/package/@atlaskit/tokens) (`atlassian-light` theme: `surface`, `surface-container`, `background-neutral`, `blanket`) and [Atlassian elevation](https://atlassian.design/foundations/elevation)
+- [`@material/web` 2.5.0](https://www.npmjs.com/package/@material/web) (dialog scrim 0.32; no `backdrop-filter`)
+- [`@atlaskit/tokens` 20.11.0](https://www.npmjs.com/package/@atlaskit/tokens) (`surface`, `surface-container`, `background-neutral`, `blanket`) and [Atlassian elevation](https://atlassian.design/foundations/elevation)
 - [`@primer/primitives` 11.10.0](https://www.npmjs.com/package/@primer/primitives) (`overlay-backdrop-bgColor`, `bgColor-neutral-muted`)
 - [`@carbon/styles` 1.119.0, `_slug.scss`](https://github.com/carbon-design-system/carbon/blob/main/packages/styles/scss/components/slug/_slug.scss) (AI label actions `blur(85px)`)
 - [`govuk-frontend` 6.6.0](https://www.npmjs.com/package/govuk-frontend) (no `backdrop-filter`)
-- [`antd` 6.7.0](https://www.npmjs.com/package/antd) (`useMergedMask` `blur: false` default; Modal and Drawer `-mask-blur` `blur(4px)`; `colorBgMask` black at 0.45)
-- [Figma help: Apply effects to layers](https://help.figma.com/hc/en-us/articles/360041488473-Apply-effects-to-layers) (background blur needs fill below 100%; glass effect limits)
+- [`antd` 6.7.0](https://www.npmjs.com/package/antd) (mask `blur: false` default; Modal and Drawer mask blur `blur(4px)`; `colorBgMask`)
+- [Figma help: Apply effects to layers](https://help.figma.com/hc/en-us/articles/360041488473-Apply-effects-to-layers) (background blur needs fill below 100%)
 - [`@figma/plugin-typings` 1.142.0](https://www.npmjs.com/package/@figma/plugin-typings) (`BlurEffectBase.boundVariables.radius`)
 
 **Standards and browser data**
 
-- [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/) (types; blur only inside shadow; colour with `alpha`)
-- [Media Queries Level 5: prefers-reduced-transparency](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-transparency) (Working Draft)
-- [MDN: prefers-reduced-transparency](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-transparency) (experimental; OS settings mapped)
+- [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/) (types; blur only inside shadow)
+- [Media Queries Level 5: prefers-reduced-transparency](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-transparency) and [MDN: prefers-reduced-transparency](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-transparency)
 - [MDN browser-compat-data: media.json](https://github.com/mdn/browser-compat-data/blob/main/css/at-rules/media.json) and [backdrop-filter.json](https://github.com/mdn/browser-compat-data/blob/main/css/properties/backdrop-filter.json)
-- [WebKit bug 175497](https://webkit.org/b/175497) (prefers-reduced-transparency not implemented)
-- [Mozilla bug 1988728](https://bugzilla.mozilla.org/show_bug.cgi?id=1988728) (backdrop-filter blur laggy without GPU acceleration; unconfirmed)
+- [WebKit bug 175497](https://webkit.org/b/175497) and [Mozilla bug 1988728](https://bugzilla.mozilla.org/show_bug.cgi?id=1988728)
 
 **Commentary**
 
 - [Raluca Budiu, Nielsen Norman Group: Liquid Glass Is Cracked, and Usability Suffers in iOS 26](https://www.nngroup.com/articles/liquid-glass/) (10 October 2025; expert critique, no participants)
-- [MacRumors: iOS 26.1 lets users control Liquid Glass transparency](https://www.macrumors.com/2025/10/20/ios-26-1-liquid-glass-toggle/) (Clear and Tinted setting; press, not Apple)
-
-**Cited but not resolved to a URL**
-
-- Material Design blog, "Learn about tone-based surfaces in Material 3" (m3.material.io/blog/tone-based-surface-color-m3): the page renders only with JavaScript and its text was not read; only its title supports the claim about Material's move to surface-container roles.
+- [MacRumors: iOS 26.1 lets users control Liquid Glass transparency](https://www.macrumors.com/2025/10/20/ios-26-1-liquid-glass-toggle/) (press, not Apple)
 
 ---
 

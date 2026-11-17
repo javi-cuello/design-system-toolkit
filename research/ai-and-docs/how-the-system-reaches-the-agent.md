@@ -88,7 +88,7 @@ Four traps follow from the studies:
 
 Skills ration the same budget in steps. In [Anthropic's guidance](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices), the name and description load at startup (about 100 tokens a skill), the body once the skill is triggered (under 500 lines), and bundled files only when referenced.
 
-Even a well-written rule is advisory. The model may judge that it doesn't apply, so the step that must happen every time needs a hook; [Part 6](agent-workflow-enforcement.md) covers why a written step feels optional.
+Even a well-written rule is advisory. The model may judge that it doesn't apply, so the step that must happen every time needs a hook; [Part 6](agent-workflow-enforcement.md#why-written-steps-slip) covers why a written step feels optional.
 
 Write your rules by hand as imperative constraints, delete the repository overview, and turn anything deterministic into a lint rule or a check: zero tokens, and no question of compliance. **The lines that earn their tokens are the instructions the code cannot state about itself.** Both studies support that reading, though neither measured design-system work specifically.
 
@@ -154,7 +154,7 @@ Two other measurements point the same way. Storybook reported, for the Reshaped 
 
 The remaining choice, a server or a CLI, is about a team's tooling rather than settled evidence. Atlassian's later CLI post reports an 8 percent cut against its own MCP server, in both session time (352 to 325 seconds) and tokens (218k to 201k), and CLI usage overtaking MCP usage. That is one team's data.
 
-A preloaded file is like handing a new colleague the whole manual every morning; a server is the colleague down the hall who answers the question asked. Where the analogy stops: the colleague down the hall is only consulted if the agent thinks to ask, and that depends on its instructions, as [Part 5](what-keeps-an-agent-on-track.md) shows.
+A preloaded file is like handing a new colleague the whole manual every morning; a server is the colleague down the hall who answers the question asked. Where the analogy stops: the colleague down the hall is only consulted if the agent thinks to ask, and that depends on its instructions, as [Part 5](what-keeps-an-agent-on-track.md#progressive-disclosure) shows.
 
 Serve your generated reference on demand from whatever your team already runs (a docs site's JSON, a server over it, or a CLI), and keep your rules file short. **An all-at-once file cost more than no context at all in the only head-to-head, so the reference is fetched, never preloaded.** The direction is consensus among the vendors who measured; the size of the effect rests on one team's test with no published run counts.
 
@@ -181,7 +181,7 @@ Figma's own MCP server reads the design side. `get_design_context` returns code 
 
 **A worked case: one toolkit's server.** The design-system toolkit took the on-demand route without a separate pipeline. Its docs site writes a JSON API beside its pages at build time, and `tools/system-mcp` is a read-only MCP server over that API, for one project at a time ([server README](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/README.md)).
 
-Its tools are `overview`, `search`, `get_contract`, `get_component`, `get_tokens`, `get_changes`, `get_audit`, `get_screen_recipe`, `list_pages`, `read_page` and `validate`. The reference is whatever the site renders, so the server can't say something the docs don't. It had no `llms.txt` and no Markdown page variants. Whether an agent actually calls a loaded server depends on its instructions, a finding told in [Part 5](what-keeps-an-agent-on-track.md).
+Its tools are `overview`, `search`, `get_contract`, `get_component`, `get_tokens`, `get_changes`, `get_audit`, `get_screen_recipe`, `list_pages`, `read_page` and `validate`. The reference is whatever the site renders, so the server can't say something the docs don't. It had no `llms.txt` and no Markdown page variants. Whether an agent actually calls a loaded server depends on its instructions, a finding told in [Part 5](what-keeps-an-agent-on-track.md#progressive-disclosure).
 
 The `llms.txt` it lacks is a short file. Per [the proposal](https://llmstxt.org/), it has an H1, a blockquote summary, H2 sections of links and an `Optional` section, like this illustrative one:
 

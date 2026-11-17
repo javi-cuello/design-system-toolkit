@@ -19,9 +19,8 @@ A team ships dark mode by giving every surface token a dark value. The page work
 - [Images in dark](#images-in-dark): photos, logos and illustrations on dark surfaces
 - [Contrast settings](#contrast-settings): what Increase Contrast and forced colours do to the ladder
 - [Testing dark surfaces](#testing-dark-surfaces): what to check, and where
-- [Evidence and lineage](#evidence-and-lineage): how strong the evidence is, and how independent
 
-For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole piece in a few paragraphs. The basics are not repeated here: the toolkit's knowledge base already holds the dark step size (about 0.03 to 0.04 OKLCH lightness), deriving levels from the neutral ramp, the case against a pure black page, keeping shadows in dark but darker, a border on every overlay, and a scrim that darkens (`knowledge/ui/design/visual.md`, section *Surfaces and elevation levels*). Which surface sits on which is in [how surfaces stack](how-surfaces-stack.md), shadows in [elevation and shadows](elevation-and-shadows.md), and blur and translucency in [materials and translucency](materials-and-translucency.md).
+For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole piece in a few paragraphs. The basics (a dark step of about 0.03 to 0.04 OKLCH lightness, no pure black page, a border on every overlay) are in the toolkit's knowledge base, `knowledge/ui/design/visual.md`. Which surface sits on which is in [how surfaces stack](how-surfaces-stack.md), shadows in [elevation and shadows](elevation-and-shadows.md).
 
 ---
 
@@ -29,9 +28,7 @@ For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-shor
 
 In dark mode every system read makes a surface further forward lighter; in light mode they disagree, so a dark ladder can't be produced by inverting a light one.
 
-Take a card on a page with a text field inside it. In dark mode the answer is settled: page darkest, card lighter, a menu over the card lighter still. In light mode there is no agreement on what "higher" looks like, and a team that writes its dark tokens by flipping the light ones inherits whichever light convention it started from.
-
-Here are two systems' ladders in both modes, base at the bottom.
+In dark mode the order is settled: page darkest, card lighter, a menu over the card lighter still. In light there is no agreement, and a team that writes dark tokens by flipping the light ones inherits whichever light convention it started from. Here are two systems' ladders in both modes, base at the bottom.
 
 <svg role="img" viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Four surface ladders, base at the bottom. Material 3 light containers, from lowest #FFFFFF up through #F7F2FA, #F3EDF7, #ECE6F0 to highest #E6E0E9, get darker as they rise. Material 3 dark containers, from lowest #0F0D13 up through #1D1B20, #211F26, #2B2930 to highest #36343B, get lighter as they rise. Carbon's White theme alternates: background #FFFFFF, layer-01 #F4F4F4, layer-02 #FFFFFF, layer-03 #F4F4F4. Carbon's Gray 100 theme climbs in large steps: background #161616, layer-01 #262626, layer-02 #393939, layer-03 #525252. Values from Material Web's baseline tokens and Carbon's themes package.</title>
@@ -82,15 +79,13 @@ Here are two systems' ladders in both modes, base at the bottom.
 <text x="552" y="312" font-size="12" fill="#5a5850">lighter going up, big steps</text>
 </svg>
 
-Both dark columns climb. The light columns go two different ways: Material's light containers darken as they rise, and Carbon's White theme swaps between white and grey at each layer.
+Both dark columns climb. The light columns go two ways: Material's light containers darken as they rise, and Carbon's White theme swaps between white and grey at each layer ([how surfaces stack](how-surfaces-stack.md#a-surface-on-a-surface) explains the alternation).
 
-The mechanism differs because the two systems mean different things by a level. Material's container roles measure distance from the page's extreme: in light, further from white; in dark, further from black. "High" means more separated, not nearer the viewer. Carbon's layers are nesting contexts. Each layer only has to differ from the one directly beneath it, and in light mode the only room left is between white and one grey, so it alternates.
-
-Carbon's dark steps are also much larger than the toolkit's 0.03. Gray 100 climbs from OKLCH L 0.20 to 0.27, 0.35 and 0.44, about 0.08 per layer, because each layer has to hold fields and borders of its own. Carbon pairs them by number: a field on `layer-01` takes `field-02`, so the field is always one layer up from its container. In White that gives `#FFFFFF` on `#F4F4F4`; in Gray 100, `#393939` on `#262626`. The relationship holds in both directions because it is written as a position, not as "lighter".
+The two systems mean different things by a level. Material's container roles measure distance from the page's extreme: in light, further from white; in dark, further from black. Carbon's layers are nesting contexts, each only having to differ from the one beneath it. Carbon's dark steps are also much larger than the toolkit's 0.03: Gray 100 climbs from OKLCH L 0.20 to 0.27, 0.35 and 0.44, about 0.08 per layer, because each layer has to hold fields and borders of its own. Carbon pairs them by position (a field on `layer-01` takes `field-02`), so the relationship holds in both modes.
 
 Take an illustrative inversion to see the cost. A team's light tokens follow Carbon's White theme, and someone writes dark values by mapping each light grey to the matching dark grey of the ramp. `background` and `layer-02` share `#FFFFFF` in light, so they get the same dark value too, and a card at `layer-02` on a `background` page disappears in dark mode.
 
-**Write the order of levels per mode as a position (one up from its container), and design the dark ladder on its own, ascending.** Every system read agrees on ascending in dark, so that part is consensus. Whether light mode darkens, alternates or stays white (Atlassian, shadcn) is a free choice; the only error is deriving one mode from the other.
+**Write the order of levels per mode as a position (one up from its container), and design the dark ladder on its own, ascending.** *Weight: strong* for ascending in dark, which every system read does. Whether light mode darkens, alternates or stays white (Atlassian, shadcn) is a free choice; the only error is deriving one mode from the other.
 
 ---
 
@@ -98,9 +93,7 @@ Take an illustrative inversion to see the cost. A team's light tokens follow Car
 
 Material stopped computing a surface's colour from its elevation and replaced it with a fixed set of named container roles, because a computed tint couldn't be themed, inspected or kept in order.
 
-In Material 2's dark theme, and in Material 3 until 2023, the surface colour was arithmetic. A component declared an elevation in dp, and the renderer laid a translucent colour over the base surface: white in Material 2, the primary tint in Material 3. Compose still ships the formula as `surfaceColorAtElevation`: the overlay's alpha is (4.5 × ln(dp + 1) + 2) / 100 of `surfaceTint` over `surface`.
-
-Run that formula on Material 3's baseline dark scheme (`surfaceTint` `#D0BCFF` over `surface` `#141218`) and set the results beside the containers that replaced them.
+In Material 2's dark theme, and in Material 3 until 2023, the surface colour was arithmetic. A component declared an elevation in dp, and the renderer laid a translucent colour over the base surface: white in Material 2, the primary tint in Material 3. Compose still ships the formula as `surfaceColorAtElevation`: the overlay's alpha is (4.5 × ln(dp + 1) + 2) / 100 of `surfaceTint` over `surface`. Run it on Material 3's baseline dark scheme (`surfaceTint` `#D0BCFF` over `surface` `#141218`) and set the results beside the containers that replaced them.
 
 <svg role="img" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two rows on Material 3's dark surface #141218. Top row, the tint overlay model: surfaceTint #D0BCFF laid over the surface at elevations 1, 3, 6, 8 and 12 dp gives alphas of 5.1, 8.2, 10.8, 11.9 and 13.5 percent and the colours #1E1B24, #23202B, #282431, #2A2633 and #2D2937, purple-tinged and close together at the top. Bottom row, the tonal container roles: lowest #0F0D13, low #1D1B20, container #211F26, high #2B2930, highest #36343B, neutral tones 4, 10, 12, 17 and 22. Tint values computed with Compose's surfaceColorAtElevation formula; container values from Material Web's baseline tokens.</title>
@@ -130,17 +123,15 @@ Run that formula on Material 3's baseline dark scheme (`surfaceTint` `#D0BCFF` o
 <text x="574" y="258" font-size="12" fill="#cac4d0">highest, 22</text>
 </svg>
 
-The tinted row bunches up: the logarithm flattens it, so 8 dp and 12 dp differ by under two percent. The container row is neutral, evenly stepped, and includes a level below the page (`surfaceContainerLowest`), which an overlay can never produce, since laying something on top only lightens.
+The tinted row bunches up: 8 dp and 12 dp differ by under two percent. The container row is neutral, evenly stepped, and includes a level below the page (`surfaceContainerLowest`), which an overlay, which only lightens, can never produce.
 
-The migration is documented on both of Google's toolkits. Compose Material 3 added the `SurfaceContainer` roles in 1.2.0-alpha03, with a `LocalTonalElevationEnabled` switch to turn the overlay off. The release notes then move component after component: `Menu` to `SurfaceContainer` with `MenuDefaults.TonalElevation` at 0.dp, `AlertDialog` to `SurfaceContainerHigh`, `TextField` to `SurfaceContainerHighest`. Flutter 3.22 made the same move in one release: seven new roles (`surfaceBright`, `surfaceDim` and five containers), `background`, `onBackground` and `surfaceVariant` deprecated, and `surfaceTintColor` defaulting to null on every widget.
+The migration is documented on both of Google's toolkits. Compose Material 3 added the `SurfaceContainer` roles in 1.2.0-alpha03 (21 June 2023), with a `LocalTonalElevationEnabled` switch to turn the overlay off, and later releases moved component after component: `Menu` to `SurfaceContainer` with `MenuDefaults.TonalElevation` at 0.dp, `AlertDialog` to `SurfaceContainerHigh`, `TextField` to `SurfaceContainerHighest`. Flutter 3.22 (2024) made the same move in one release: seven new roles (`surfaceBright`, `surfaceDim` and five containers), `background`, `onBackground` and `surfaceVariant` deprecated, and `surfaceTintColor` defaulting to null on every widget. Material Web's generated tokens now mark `surface-tint` deprecated, its function "replaced by the tonal surface colors".
 
-There is a catch in the new model. A container role is assigned per component, not per position in the stack, so it doesn't know what it is drawn over. Before reading on, work out what a menu opened from a field inside a dialog looks like in Material 3's dark scheme.
+There is a catch. A container role is assigned per component, not per position in the stack, so it doesn't know what it is drawn over. Before reading on, work out what a menu opened from a field inside a dialog looks like in Material 3's dark scheme.
 
-The menu is `surfaceContainer`, `#211F26` (L 0.245). The dialog is `surfaceContainerHigh`, `#2B2930` (L 0.286). The menu is darker than the dialog it opens over, by a contrast of 1.13:1, and only its shadow separates it. Under the old overlay model the order at least followed the declared elevation numbers; under containers, the order follows whatever the component table says.
+The menu is `surfaceContainer`, `#211F26` (L 0.245). The dialog is `surfaceContainerHigh`, `#2B2930` (L 0.286). The menu is darker than the dialog it opens over, by 1.13:1, and only its shadow separates it. Under the overlay model the order at least followed the declared elevations; under containers it follows the component table.
 
-> **Aside.** Compose's documentation page on Material 3 still describes elevation as "mainly" tonal overlays from the primary colour, while its release notes describe the move away. The release notes and the components' current defaults are the reliable record.
-
-**If you adopt container roles, check every pair of a floating component and the surface it can open over, and give the floating one a border where the container order runs the wrong way.** Named containers are better than computed tint: they can be themed, read in a design file, and placed below the page. That part is consensus across Material's own toolkits. The stacking check is the cost of the change, and it is judgement that it belongs in your test plan rather than in the role table.
+**If you adopt container roles, check every pair of a floating component and the surface it can open over, and give the floating one a border where the container order runs the wrong way.** *Weight: strong* that named containers beat computed tint (they can be themed, read in a design file and placed below the page), which is Material's own migration across its toolkits. *Weight: moderate* for the stacking check, judgement about where the change's cost belongs.
 
 ---
 
@@ -148,9 +139,7 @@ The menu is `surfaceContainer`, `#211F26` (L 0.245). The dialog is `surfaceConta
 
 Apple keeps one set of background tokens and makes elevation a property of the context: the same `systemBackground` resolves to black at the base level and to `#1C1C1E` when the view is presented forward.
 
-Picture a grouped settings list in iOS dark mode. The screen behind is black, and the cells are `#1C1C1E`. Then a sheet slides up with another grouped list in it. If the sheet used the same values, its black background would merge with the black page behind, and the only edge would be the sheet's rounded top.
-
-Apple's answer is in the trait system. `UITraitCollection` carries a `userInterfaceLevel` of `.base` or `.elevated`, and the system assigns `.elevated` to alerts, popovers and sheets. Every dynamic background colour has a value for each level. The Human Interface Guidelines describe the base set as dimmer so background interfaces recede, and the elevated set as brighter.
+A grouped list in iOS dark mode is black with `#1C1C1E` cells; a sheet with the same values would merge with the black page behind. Apple's answer is in the trait system. `UITraitCollection` carries a `userInterfaceLevel` of `.base` or `.elevated`, and the system assigns `.elevated` to alerts, popovers and sheets. Every dynamic background colour has a value for each level; the HIG describes the base set as dimmer so background interfaces recede, and the elevated set as brighter.
 
 <svg role="img" viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two iPhone-shaped frames in dark mode. Left, base level: a black #000000 background with grouped cells in #1C1C1E. Right, the same screen with a sheet presented: the screen behind is dimmed, and the sheet takes the elevated set, so its background is #1C1C1E and its cells #2C2C2E. Every value moved one step lighter while the relationship between background and cell stayed the same. Values from Apple's system colour tables.</title>
@@ -175,15 +164,13 @@ Apple's answer is in the trait system. `UITraitCollection` carries a `userInterf
 <text x="400" y="306" font-size="12" fill="#5a5850">Same tokens, elevated values, one step up</text>
 </svg>
 
-The sheet's code didn't change a single colour name. The presentation flipped the level, and every background and cell token inside moved one step up together.
+The sheet's code changed no colour name; the presentation flipped the level, and every token inside moved one step up.
 
-In light mode the base and elevated sets are identical, so a designer who works only in light never sees the trait. It matters only when one dark interface is layered over another, which also covers multitasking: the HIG notes the elevated set separates apps side by side and windows on an external display.
+In light mode the two sets are identical. iOS is also the exception to the rule against a pure black page: base `systemBackground` in dark is `#000000`, which works because anything that comes forward switches to the elevated set.
 
-The web has no built-in level, but the same shape is a few lines of CSS: a scope attribute that redefines the surface custom properties one step up, so nested content follows without knowing where it is. Atlassian ships the read side of the idea as a token: `utility.elevation.surface.current` is described as the surface colour "set by a parent element", defaulting to `elevation.surface`, so a child such as a sticky header or a fade-out gradient matches whatever it sits on.
+The web has no built-in level, but the same shape is a few lines of CSS: a scope attribute that redefines the surface custom properties one step up, so nested content follows without knowing where it is. Atlassian's `utility.elevation.surface.current` is the read side of the same idea ([how surfaces stack](how-surfaces-stack.md#a-surface-on-a-surface)).
 
-> **Aside.** iOS is also the exception to the toolkit's rule against a pure black page: base `systemBackground` in dark is `#000000`. That works there because no level ever needs to sink below the page; anything that comes forward switches to the elevated set.
-
-**Model "elevated" as a scope that remaps the same surface tokens, rather than as a second set of tokens a component has to choose.** In CSS: `[data-level="elevated"] { --surface-page: var(--surface-raised-value); ... }` on the dialog root. That is judgement, borrowed from Apple; the evidence that it works is Apple's own platform, under the constraint that every component reads semantic tokens and none hard-codes a value.
+**Model "elevated" as a scope that remaps the same surface tokens, rather than as a second set of tokens a component has to choose.** In CSS: `[data-level="elevated"] { --surface-page: var(--surface-raised-value); ... }` on the dialog root. *Weight: moderate.* It is borrowed from Apple's platform, under the constraint that every component reads semantic tokens and none hard-codes a value.
 
 ---
 
@@ -191,9 +178,7 @@ The web has no built-in level, but the same shape is a few lines of CSS: a scope
 
 Most systems ship one dark theme plus contrast variants; GitHub's Primer ships a dimmed dark as well, and Carbon offers two darks that differ only in where the ladder starts.
 
-A team gets a request: the dark theme is too harsh, can there be a softer one? It looks like a palette job. It is a second ladder, a second set of overlays and a second column in every contrast check.
-
-Primer's package lists fourteen functional themes, eight of them dark: `dark`, `dark-dimmed`, `dark-high-contrast`, `dark-colorblind`, `dark-tritanopia`, and high-contrast versions of the dimmed, colourblind and tritanopia themes. GitHub stores the choice as a pair: `data-color-mode` (`light`, `dark` or `auto`) plus a `data-light-theme` and a `data-dark-theme`. A person picks one theme for each mode, and `auto` follows the operating system between them.
+A request for a softer dark theme looks like a palette job. It is a second ladder, a second set of overlays and a second column in every contrast check. Primer ships eight dark themes among fourteen, `dark-dimmed` among them, and GitHub stores a person's choice as one theme per mode (`data-light-theme`, `data-dark-theme`).
 
 <svg role="img" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Three Primer dark themes side by side, each showing a page, an inset well and a floating menu with a one-pixel ring. Dark: page #0D1117, inset #010409, menu #010409 with ring #3D444D. Dark dimmed: page #212830, inset #151B23, menu #2A313C with ring #3D444D, the menu lighter than the page. Dark high contrast: page #010409, inset #010409, menu #010409 with a bright ring #B7BDC8. Values from @primer/primitives 11.10.</title>
@@ -227,15 +212,11 @@ Primer's package lists fourteen functional themes, eight of them dark: `dark`, `
 <text x="504" y="284" font-size="12" fill="#5a5850">menu same as page, edge only</text>
 </svg>
 
-Three dark themes from one system, and the menu sits in three different places on the ladder: below the page, above it, and level with it. Only the ring is constant.
+The menu sits below the page, above it, and level with it. Only the ring is constant.
 
-That is the hidden cost of a second dark theme. Dimmed starts higher (page L 0.27 against dark's 0.18), which leaves room above for a lighter menu but less room below for wells. Each theme ends up with its own answer to where overlays go, and each answer needs its own checks.
+That is the hidden cost. Dimmed starts higher (page L 0.27 against dark's 0.18), which leaves room above for a lighter menu but less below for wells, so each theme needs its own answer to where overlays go, and its own checks. Carbon makes the smaller version of the choice: Gray 90 and Gray 100 share one ladder shifted by a step, and Carbon asks a product for one light theme and one dark.
 
-Carbon makes the smaller version of the same choice. Gray 90 and Gray 100 share one ladder shifted by a step: Gray 100 runs `#161616`, `#262626`, `#393939`, `#525252`, and Gray 90 starts at `#262626` and ends at `#6F6F6F`. Carbon's colour guidance asks a product for one light theme and one dark, so the second dark is a product decision, not a user setting.
-
-Outside the Western cluster, Ant Design's dark algorithm takes the opposite position on how dark to start. Its `colorBgBase` defaults to `#000`, the layout background is that base unchanged, containers are the base lightened by 8 (`#141414`) and elevated surfaces by 12 (`#1F1F1F`). The page is pure black, like iOS, and elevation is all upward.
-
-**Ship one dark theme, built as a mode of the same token collection, unless your users have asked for a second; if you add a dimmed one, give it its own overlay decision and its own contrast run.** One dark theme is the consensus. A dimmed variant is evidence from one system, GitHub, with a very large and vocal audience; the constraint it depends on is the budget to test every theme.
+**Ship one dark theme, built as a mode of the same token collection, unless your users have asked for a second; if you add a dimmed one, give it its own overlay decision and its own contrast run.** *Weight: strong* for one dark theme, the consensus. A dimmed variant is evidence from one system with a very large audience; it depends on the budget to test every theme.
 
 ---
 
@@ -243,11 +224,9 @@ Outside the Western cluster, Ant Design's dark algorithm takes the opposite posi
 
 A menu or popover in dark mode can be lighter or darker than what it opens over; what decides is whether anything has to be layered inside it, and either way its edge, a ring or border, does the separating.
 
-Back to the dropdown inside the dialog. The toolkit's rule says an overlay is two steps above the page. That rule assumes the overlay is a flat list. A menu with a selected row, a hovered row and a search field inside it is itself a small page, and those need room on the ladder too.
+The toolkit's rule puts an overlay two steps above the page, which assumes a flat list. A menu with a selected row and a search field is a small page that needs room on the ladder too.
 
-Primer hit exactly this and reversed itself. Until mid 2025 its dark `overlay-bgColor` was `#151b23`, the muted background, lighter than the page. In June 2025 a pull request changed it to `#010409`, darker than the page, in every dark theme except dimmed. The author wrote that the team relied on the lighter shade for dimension "where shadows aren't very useful", but was "lacking the ability to layer inside overlays" with muted as the background. A selected row in a menu uses muted, and muted on muted is invisible.
-
-Here are the three answers shipping systems give, each on its own system's page.
+Primer hit exactly this and reversed itself. In June 2025 a pull request moved its dark `overlay-bgColor` from `#151b23`, the muted background, lighter than the page, to `#010409`, darker than the page, in every dark theme except dimmed. The reason given: the team could not layer inside overlays, because a selected row uses muted, and muted on muted is invisible.
 
 <svg role="img" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Three dark panels, each with a menu over a card. First, illustrative, a menu with the same fill as the card and no border: the menu's edge is lost. Second, Atlassian: page #1F1F21, card #242528, menu #2B2C2F lighter than the card, with a faint light ring and a dark shadow. Third, Primer dark: page #0D1117, card #151B23, menu #010409 darker than both, with a #3D444D ring, and a selected row in #151B23 that stays visible inside it. Atlassian values from @atlaskit/tokens 20.11, Primer from @primer/primitives 11.10; the Atlassian selected row is illustrative.</title>
@@ -281,13 +260,11 @@ Here are the three answers shipping systems give, each on its own system's page.
 <text x="504" y="284" font-size="12" fill="#5a5850">sink by fill, ring; rows can layer</text>
 </svg>
 
-The first menu is gone. The second and third are both readable, and the difference is what fits inside: in Primer's version the selected row uses the same muted value the card uses, and still shows.
+The first menu is gone. In Primer's, the selected row uses the card's muted value and still shows.
 
-The mechanism is that a dark ladder is short. Atlassian's whole climb from sunken to overlay is about 0.08 OKLCH L (`#18191A` to `#2B2C2F`). An overlay at the top of it has one step left for hover and selection before it starts to glow. An overlay at the bottom has the entire ladder above it for whatever it contains, and leans on its ring for separation.
+A dark ladder is short. Atlassian's whole climb from sunken to overlay is about 0.08 OKLCH L (`#18191A` to `#2B2C2F`). An overlay at the top of it has one step left for hover and selection; an overlay at the bottom has the whole ladder above it, and leans on its ring. Neither direction works without the edge: Primer's dark floating shadows open with a one-pixel `#3d444d` ring, Atlassian's dark `elevation.shadow.overlay` with a one-pixel light ring at 12% opacity. The ring is decoration, not a control boundary, so WCAG's 3:1 doesn't bind it: Primer's measures 2.09:1 against its overlay.
 
-Neither direction works without the edge. Primer's dark floating shadows open with a one-pixel `#3d444d` ring; Atlassian's dark `elevation.shadow.overlay` opens with a one-pixel light ring at 12% opacity. The ring is decoration, not a control boundary, so WCAG's 3:1 doesn't bind it: Primer's ring measures 2.09:1 against its overlay.
-
-**Decide per system whether overlays hold layered content (selected rows, nested fields, tabs); if they do, sink the overlay and let a ring carry the edge, and if they don't, lift it one step and still give it the ring.** Lighter-is-higher is the consensus and the toolkit's default. Primer's reversal is one system's evidence, but it is a documented reversal by a team that had shipped the consensus for years, which is the strongest kind of evidence a single system can give. The constraint is the content: a plain action menu doesn't need the room.
+**Decide per system whether overlays hold layered content (selected rows, nested fields, tabs); if they do, sink the overlay and let a ring carry the edge, and if they don't, lift it one step and still give it the ring.** *Weight: moderate.* Lighter-is-higher is the consensus and the toolkit's default; Primer's reversal is one system's evidence, but a documented reversal by a team that had shipped the consensus for years.
 
 ---
 
@@ -295,9 +272,7 @@ Neither direction works without the edge. Primer's dark floating shadows open wi
 
 A region that must stay dark in both modes (a video player, a code block, a dark hero) should be a theme scope set to dark, not a block of hard-coded colours, and in dark mode it needs an edge because the page has come down to meet it.
 
-The hero from the opening scene was built as `background: #111; color: #fff`. In light mode, a text link inside it takes the light theme's link colour, Primer's `#0969da`, which measures 3.64:1 on `#111111` and fails WCAG's 4.5:1 for text. The focus ring is the same dark blue. The block was dark; the components inside it still believed they were on a light page.
-
-Apple names the legitimate cases. Its guidelines allow a permanently dark appearance for immersive media, with the Stocks app as its example, and watchOS and visionOS have no dark mode setting at all. Media viewers, video players, photo lightboxes, slide presenters and code editors all have a reason to keep one scheme regardless of the person's choice.
+The hero from the opening scene was built as `background: #111; color: #fff`. In light mode a link inside it takes the light theme's link colour, Primer's `#0969da`, which measures 3.64:1 on `#111111` and fails WCAG's 4.5:1. The focus ring is the same dark blue. The block was dark; the components inside still believed they were on a light page.
 
 <svg role="img" viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two pages side by side. Left, a light page #FFFFFF holding an always-dark video player #000000 and a dark code block #0D1117; both stand out on their own. Right, the same layout on a dark page #0D1117: the video player at #000000 measures only 1.11 to 1 against the page and needs a border, and an always-light document preview #FFFFFF sits in the middle of the dark page as the reverse case. Colours illustrative, page values from Primer.</title>
@@ -323,13 +298,11 @@ Apple names the legitimate cases. Its guidelines allow a permanently dark appear
 <text x="412" y="262" font-size="11" fill="#5a5850">Document preview, always light</text>
 </svg>
 
-On the light page, both dark blocks separate themselves. On the dark page, the player has lost its edge and needs a border, while the document preview is now the region that stands out, and glows.
+On the dark page the player has lost its edge, and the document preview glows.
 
-The reverse case is as common as the first. A document editor shows the page being edited as white paper in both modes; an email client often renders a message's own HTML on white; a PDF viewer shows the PDF as printed. These are always-light regions inside a dark interface, and they bring the same two problems back: the components inside them (a comment marker, a selection colour, a link) need the light theme's values, and the white block needs softening or framing so it doesn't dominate. Apple's guidelines suggest slightly darkening a content image with a white background for exactly this reason.
+The reverse case, an always-light document preview or email body in a dark interface, needs the light theme's values inside and framing so it doesn't dominate. Carbon calls this inline theming: a `Theme` component wraps a region in another theme, such as a Gray 100 side panel on a White page, kept to "major shifts in color". The scope carries every token, so a button, link and focus ring inside are correct without a single override.
 
-Carbon's documentation describes this as inline theming: a `Theme` component wraps a region in another theme, such as a Gray 100 side panel on a White page, and Carbon limits it to "major shifts in color, like high contrast moments". The scope carries every token, so a button, a link and a focus ring inside the region are all correct without a single override.
-
-**Wrap the always-dark region in a theme scope (`data-theme="dark"` with `color-scheme: dark` on the element, a Figma frame with the Dark mode applied, Carbon's `<Theme theme="g100">`), and give it a border that only appears when the page is dark too.** That keeps the hero's link at Primer's dark `#4493f8`, which measures 6.09:1 on `#111111`. Scoping is consensus wherever systems document it; the conditional border is judgement, needed because a near-black region on a near-black page measures about 1.1:1.
+**Wrap the always-dark region in a theme scope (`data-theme="dark"` with `color-scheme: dark` on the element, a Figma frame with the Dark mode applied, Carbon's `<Theme theme="g100">`), and give it a border that only appears when the page is dark too.** That keeps the hero's link at Primer's dark `#4493f8`, 6.09:1 on `#111111`. *Weight: strong* for scoping, consensus wherever systems document it; *moderate* for the conditional border, needed because a near-black region on a near-black page measures about 1.1:1.
 
 ---
 
@@ -337,9 +310,7 @@ Carbon's documentation describes this as inline theming: a `Theme` component wra
 
 A colour that must stay the same in both modes should be its own role family with its own on-colour, as Material's fixed roles are, never a raw hex pasted into one component.
 
-The brand banner from the opening scene is `primaryContainer`. In Material 3's baseline that is a pale lilac (`#EADDFF`, tone 90) in light mode and a deep purple (`#4F378B`, tone 30) in dark, with the text flipping from `#21005D` to `#EADDFF`. That is correct adaptive behaviour, and it is also not what a product team wants when the banner is a brand moment or a card that pictures a physical product.
-
-Material 3 added a role family for exactly this. `primaryFixed`, `primaryFixedDim`, `onPrimaryFixed` and `onPrimaryFixedVariant` take tones 90, 80, 10 and 30 in both modes; in Material's colour utilities the tone function for each ignores whether the scheme is dark. The same family exists for secondary and tertiary.
+The brand banner from the opening scene is `primaryContainer`. In Material 3's baseline that is a pale lilac (`#EADDFF`, tone 90) in light and a deep purple (`#4F378B`, tone 30) in dark, with the text flipping from `#21005D` to `#EADDFF`. That is correct adaptive behaviour, and not what a product team wants when the banner is a brand moment. Material 3 added a family for it: `primaryFixed`, `primaryFixedDim`, `onPrimaryFixed` and `onPrimaryFixedVariant` take tones 90, 80, 10 and 30 in both modes, and the same family exists for secondary and tertiary.
 
 <svg role="img" viewBox="0 0 720 270" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Material 3 baseline, light page #FEF7FF on the left and dark page #141218 on the right. In each, two banners. The primaryContainer banner flips: #EADDFF with #21005D text in light, #4F378B with #EADDFF text in dark. The primaryFixed banner stays #EADDFF with #21005D text in both modes, and on the dark page it is far brighter than anything around it. Values from Material Web's baseline tokens and Material colour utilities.</title>
@@ -364,13 +335,11 @@ Material 3 added a role family for exactly this. `primaryFixed`, `primaryFixedDi
 <text x="376" y="260" font-size="12" fill="#5a5850">Only the adaptive one adapts.</text>
 </svg>
 
-In light mode the two banners are indistinguishable. In dark mode the fixed one keeps its identity, and also becomes the brightest thing on the screen: `#EADDFF` on `#141218` is 14.42:1.
+In dark the fixed banner keeps its identity, and becomes the brightest thing on the screen: `#EADDFF` on `#141218` is 14.42:1.
 
-So a system ends up with three kinds of colour role, and naming the kind is what keeps a request like "make it stay the same" from turning into a hex in a component. Adaptive roles (most of them) change per mode. Fixed roles keep one value. Inverse roles do the opposite of the theme: Carbon's `background-inverse` is `#393939` in White and `#F4F4F4` in Gray 100, and Material's snackbar takes `inverseSurface`.
+So a system has three kinds of colour role. Adaptive roles change per mode. Fixed roles keep one value. Inverse roles do the opposite of the theme (Carbon's `background-inverse`, Material's `inverseSurface`; see [how surfaces stack](how-surfaces-stack.md#inverse-surfaces)). Skip the role and, in an illustrative case, a promo card set to the brand hex `#6750A4` and marked "same in dark" is never checked in dark, so its 60% white secondary text and its outline button, which takes the theme's dark `outline`, are never measured against it.
 
-Take an illustrative request to see the cost of skipping the role. A designer sets a promo card to the brand hex `#6750A4` with white text (6.44:1, fine) in the light file and marks it "same in dark". Nobody makes a dark-mode check for a colour that "doesn't change", so the card's secondary text, a 60% white, and its outline button, which takes the theme's dark `outline`, are never measured against it.
-
-**Add fixed roles as a family (`brand-fixed`, `on-brand-fixed`, `on-brand-fixed-variant`) with both modes set to the same value, and measure every pair inside them in both modes anyway.** Fixed roles are documented only by Material, so this is one system's evidence; the reason it transfers is mechanical: a role with an on-colour gets checked, and a raw hex doesn't. Keep fixed surfaces small in dark mode, where a light fixed surface outshines everything else.
+**Add fixed roles as a family (`brand-fixed`, `on-brand-fixed`, `on-brand-fixed-variant`) with both modes set to the same value, and measure every pair inside them in both modes anyway.** *Weight: moderate.* Only Material documents fixed roles; the reason it transfers is mechanical: a role with an on-colour gets checked, and a raw hex doesn't. Keep fixed surfaces small in dark mode, where a light one outshines everything else.
 
 ---
 
@@ -378,14 +347,14 @@ Take an illustrative request to see the cost of skipping the role. A designer se
 
 Every platform lets a frame, a subtree or a view take a different theme, and each one has a boundary where the override silently stops; a system stays intact when overrides are whole themes applied to a scope, never individual colours.
 
-The always-dark hero, the always-light document and Apple's elevated sheet are all the same mechanism: a part of the tree resolves the same tokens to different values. Here is how each platform spells it.
+The always-dark hero, the always-light document and Apple's elevated sheet are the same mechanism: part of the tree resolves the same tokens to different values. Each platform spells it differently.
 
-- **Figma.** Select a frame, section, group or page and use Apply variable mode in the Appearance section. A child left on Auto takes its parent's mode, walking up until it finds a container with one set, and falls back to the collection's default when none has.
-- **CSS.** `color-scheme: dark` on an element sets the used colour scheme for that subtree, so `light-dark()` values and native controls inside it resolve to dark. A theme attribute does the same for custom properties: Primer's selectors are plain attribute selectors (`[data-color-mode="dark"][data-dark-theme="dark"]`), so they work on any element, not only `html`.
-- **UIKit.** `overrideUserInterfaceStyle` on a view applies to it and its subviews owned by the same view controller.
-- **SwiftUI.** `.environment(\.colorScheme, .dark)` changes a view and its children only. `.preferredColorScheme(.dark)` propagates up to the enclosing presentation (a sheet, a popover, a window) and then down through all of it.
+- **Figma.** Apply variable mode on a frame; a child on Auto takes its nearest moded ancestor's mode, else the collection default.
+- **CSS.** `color-scheme: dark` on an element makes `light-dark()` values and native controls in that subtree resolve dark; a theme attribute does the same for custom properties, and Primer's attribute selectors work on any element.
+- **UIKit.** `overrideUserInterfaceStyle` on a view applies to it and the subviews its view controller owns.
+- **SwiftUI.** `.environment(\.colorScheme, .dark)` changes a view and its children. `.preferredColorScheme(.dark)` propagates up to the enclosing presentation and then down through all of it.
 
-Each of these has a place where the override stops, and that place is where customisation breaks the system. Here is one subtree, with the place it breaks on the web.
+Here is one subtree, with the place it breaks on the web.
 
 <svg role="img" viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>A tree diagram of a light page. html, light, contains main, light, which contains a hero section with data-theme dark and color-scheme dark. Inside the hero, a card inherits dark and a button inside the card inherits dark: both correct. The button opens a menu, but the menu is rendered through a portal as a child of body, outside the hero, so it resolves to the light theme: a white menu appears over the dark hero. The fix shown: the portal copies the trigger's theme attribute onto the menu root. Illustrative.</title>
@@ -418,22 +387,17 @@ Each of these has a place where the override stops, and that place is where cust
 <text x="432" y="297" font-size="12" fill="#1f5fbf">data-theme onto the menu root</text>
 </svg>
 
-Inheritance follows the tree, and a portal moves the menu out of the tree. The card and the button are right; the menu, which is the one surface that floats, is wrong.
-
-Each platform has its own version of the portal. Here is the run, each with what it looks like and what it breaks.
+Inheritance follows the tree, and a portal moves the menu out of it.
 
 | Trap | What happens | What breaks |
 |---|---|---|
 | Portal escape (web) | A menu, tooltip or dialog is appended to `body`, outside the themed subtree | It renders in the page's theme over a region of the other one |
-| Embedded child view controller (UIKit) | Apple's documentation says a child view controller's views don't inherit the override | A reused component inside a dark-only screen turns light |
+| Embedded child view controller (UIKit) | Apple's documentation says its views don't inherit the override | A reused component inside a dark-only screen turns light |
 | `preferredColorScheme` reaching up (SwiftUI) | Set on one view, it flows up to the enclosing sheet or window | One dark card turns a whole sheet dark |
-| Auto falling through (Figma) | A component on Auto with no moded ancestor takes the collection default | A component pasted outside its frame changes mode in the file |
-| Media queries ignore scope (web) | `<picture>` sources and `@media (prefers-color-scheme)` read the person's setting, not the subtree | A dark-only region shows the light logo when the person is in light mode |
-| Raw values inside a scope | A colour typed as hex doesn't follow the scope | That one element is the only thing wrong in the region |
+| Auto falling through (Figma) | A component with no moded ancestor takes the collection default | A component pasted outside its frame changes mode |
+| Media queries ignore scope (web) | `<picture>` sources and `@media (prefers-color-scheme)` read the person's setting, not the subtree | A dark-only region shows the light logo |
 
-Two of these come from systems' own documentation (the UIKit and SwiftUI rows); the rest follow from how CSS inheritance and Figma's Auto mode are specified. Carbon caps the related `Layer` component at three nested levels, which is another way of saying a scope is not free.
-
-**Allow overrides only as a whole theme or mode applied to a scope, never as colours: in code a `data-theme` attribute (and `color-scheme`) on the region root, in Figma a mode applied to the frame, and in a component library a rule that portalled surfaces copy their trigger's theme attribute.** That rule is how a design system keeps a product's customisation inside the system: a team can ask for a dark hero or a light document, and gets a correct one because it gets a whole theme. Scoping by theme is consensus wherever systems document overrides; the portal rule is judgement, drawn from how inheritance works rather than from any system's docs.
+**Allow overrides only as a whole theme or mode applied to a scope, never as colours: a `data-theme` attribute (and `color-scheme`) on the region root in code, a mode on the frame in Figma, and a rule that portalled surfaces copy their trigger's theme attribute.** A team can then ask for a dark hero or a light document and get a correct one, because it gets a whole theme. *Weight: strong* for scoping by theme, consensus wherever systems document overrides; *moderate* for the portal rule, drawn from how inheritance works rather than any system's docs.
 
 ---
 
@@ -441,7 +405,7 @@ Two of these come from systems' own documentation (the UIKit and SwiftUI rows); 
 
 An image doesn't follow the theme, so each one is either designed to work on both grounds or given a second asset swapped by the same switch that changes the theme.
 
-A logo exported as a PNG with near-black text (`#1A1A1A`) on a transparent background measures 1.09:1 on Primer's dark page `#0D1117`. A product photo shot on white becomes a lit rectangle in the middle of a dark screen. An illustration drawn with dark outlines loses its details.
+A PNG logo with `#1A1A1A` text measures 1.09:1 on Primer's dark page `#0D1117`; a product photo shot on white becomes a lit rectangle.
 
 <svg role="img" viewBox="0 0 720 270" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Four tiles on a dark page #0D1117. First, a logo with #1A1A1A text on a transparent background, nearly invisible at 1.09 to 1. Second, the dark-mode asset of the same logo with light text #F0F6FC. Third, a product photo on a pure white background, glowing. Fourth, the same photo with its white background softened to a light grey. Colours illustrative, page colour from Primer.</title>
@@ -467,13 +431,11 @@ A logo exported as a PNG with near-black text (`#1A1A1A`) on a transparent backg
 <text x="534" y="204" font-size="12" fill="#9198a1">slightly darkened</text>
 </svg>
 
-The logo needs a second asset; the photo needs only to be toned down. Those are the two remedies Apple's guidelines give: separate light and dark assets where an image works in only one mode, and slightly darkening a content image with a white background so it doesn't glow.
+The logo needs a second asset; the photo needs only to be toned down. Those are Apple's two remedies: separate light and dark assets where an image works in one mode only, and slightly darkening a content image with a white background.
 
-Apple's asset catalogs carry the swap natively: one named image with an appearance for Any, Dark and, optionally, high contrast. Apple's own example is an icon of a drop of oil that gets a thin outline only in dark mode, so its edge shows on a dark ground.
+On the web the obvious tool is `<picture>` with a `prefers-color-scheme` source, which GitHub supports even in Markdown. Its limit is the scope trap above: the media query reads the system setting. A site with its own theme toggle, or a region forced dark, needs the swap driven by the theme attribute, for example `[data-theme="dark"] .logo-light { display: none }`. An SVG drawn with `currentColor` follows its text colour and needs no second asset.
 
-On the web the obvious tool is `<picture>` with a `prefers-color-scheme` source, which GitHub supports even inside Markdown. Its limit is the scope trap from the last section: the media query reads the person's system setting. A site with its own theme toggle, or a region forced dark, needs the swap driven by the theme attribute instead, for example two `img` elements with one hidden by `[data-theme="dark"] .logo-light { display: none }`. An SVG drawn with `currentColor` follows its text colour and needs no second asset at all.
-
-**Make icons and logos SVGs that use `currentColor` where you can; give every raster that fails on dark a dark asset swapped by your theme attribute, not by a media query; and soften white-background photos with a light filter in dark mode only.** The asset swap is consensus (Apple, GitHub and the toolkit's own rule). Driving it from the theme attribute rather than the media query is judgement, and it matters only for products with a toggle or scoped regions.
+**Make icons and logos SVGs that use `currentColor` where you can; give every raster that fails on dark a dark asset swapped by your theme attribute, not by a media query; and soften white-background photos in dark mode only.** *Weight: strong* for the asset swap (Apple, GitHub and the toolkit's own rule); *moderate* for driving it from the theme attribute, which matters only for products with a toggle or scoped regions.
 
 ---
 
@@ -481,9 +443,7 @@ On the web the obvious tool is `<picture>` with a `prefers-color-scheme` source,
 
 When a person turns up contrast, the dark ladder should spread its steps and lean harder on borders; when forced colours are on, every level collapses into one colour and only borders survive.
 
-The toolkit's knowledge base already covers the basics of forced colours and `prefers-contrast`. What it doesn't say is what each setting does to the surface ladder specifically.
-
-Material's colour utilities make the answer concrete. Each dark container's tone is a contrast curve with four points, for reduced, standard, medium and high contrast. At standard contrast the dark containers sit at tones 4, 10, 12, 17 and 22. At high contrast they sit at 0, 12, 20, 25 and 30, while `surface` stays at 6.
+Material's colour utilities make this concrete. Each dark container's tone is a contrast curve with points for reduced, standard, medium and high contrast. At standard contrast the dark containers sit at tones 4, 10, 12, 17 and 22; at high contrast at 0, 12, 20, 25 and 30, while `surface` stays at 6.
 
 <svg role="img" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Material 3's five dark surface containers at two contrast levels, drawn as neutral greys at each tone with the hue dropped. Standard contrast: tones 4, 10, 12, 17 and 22, greys #0E0E0E, #1B1B1B, #1F1F1F, #2A2A2A and #353535, with a gap of only 2 between low and container. High contrast: tones 0, 12, 20, 25 and 30, greys #000000, #1F1F1F, #303030, #3B3B3B and #474747, wider gaps and a lowest level of pure black. Tones from Material colour utilities; greys illustrative.</title>
@@ -512,15 +472,11 @@ Material's colour utilities make the answer concrete. Each dark container's tone
 <text x="580" y="188" font-size="12" fill="#e3e3e3">highest 30</text>
 </svg>
 
-The weak link at standard contrast is the two-tone gap between low and container; at high contrast it becomes eight. The whole ladder also widens, from a span of 18 tones to 30.
+The weak link at standard contrast is the two-tone gap between low and container; at high contrast it becomes eight, and the whole ladder widens from a span of 18 tones to 30.
 
-Primer's dark high contrast theme takes the other route. Its page, inset and overlay are all `#010409`, and the separation moves entirely to borders: `borderColor-default` is `#b7bdc8`, 10.88:1 against the page, and the floating shadow's ring takes the same value. Where Material spreads the fills, Primer flattens them and draws lines.
+Primer's dark high contrast theme takes the other route: page, inset and overlay are all `#010409`, and separation moves to borders, `borderColor-default` at `#b7bdc8`, 10.88:1 against the page. Forced colours go furthest: MDN lists `background-color` and `border-color` among the properties replaced with system colours and `box-shadow` forced to `none`, so every level becomes `Canvas` and a menu's border is the only thing left that outlines it. Apple asks for dark mode to be tested with Increase Contrast and Reduce Transparency, separately and together.
 
-Forced colours go furthest. MDN lists `background-color` and `border-color` among the properties replaced with system colours, and `box-shadow` forced to `none`. Every surface level becomes `Canvas`, and a menu's border, now a system colour, is the only thing left that outlines it.
-
-Apple adds a warning specific to dark mode: with Increase Contrast on, dark text on a dark background can end up with less visual contrast, and its guidelines ask for testing with Increase Contrast and Reduce Transparency both separately and together.
-
-**Give each surface level a high-contrast value that widens the dark steps, make sure every floating surface has a real border (not only a shadow ring) so forced colours can outline it, and check Increase Contrast and Reduce Transparency in dark mode together.** Spreading or bordering under high contrast is consensus between Material, Primer and Apple, by different routes; which route suits a product depends on whether its surfaces carry content that needs fills (Material's case) or are mostly lists and code (Primer's).
+**Give each surface level a high-contrast value that widens the dark steps, give every floating surface a real border (not only a shadow ring) so forced colours can outline it, and check Increase Contrast and Reduce Transparency in dark mode together.** *Weight: strong.* Material, Primer and Apple reach it by different routes; which route suits a product depends on whether its surfaces carry content that needs fills or are mostly lists and code.
 
 ---
 
@@ -528,33 +484,16 @@ Apple adds a warning specific to dark mode: with Increase Contrast on, dark text
 
 Dark surfaces fail at the joins (an overlay over the level it opens on, a scoped region against the page, an image against its ground), so the tests have to list the joins, not only the tokens.
 
-A token-by-token contrast run, each text colour against the surface it was designed for, passes every theme in this piece. The Material menu in a dialog, Primer's dimmed overlay against its page (1.14:1), the always-dark player on a dark page (1.11:1) and the portalled menu in the dark hero all pass it too, because the failure is in which token meets which.
+A token-by-token contrast run passes the Material menu in a dialog, Primer's dimmed overlay on its page (1.14:1), the dark player on a dark page (1.11:1) and the portalled menu, because the failure is in which token meets which. So the test plan is a list of pairs:
 
-So the test plan is a list of pairs. Here is a working version, in the order the failures appeared above.
-
-- **Every floating surface against every surface it can open over.** For a menu that can open from a page, a card or a dialog, that is three pairs per theme. The check is that the overlay differs in fill or carries a border, and for a selected row, that the row differs from the overlay.
-- **Every theme and contrast level.** Light, dark, any dimmed variant, and each one with high contrast. Forced colours once, by hand.
-- **Every scoped region against the page, in both modes.** A dark region on a dark page needs its edge; a light region on a dark page needs softening.
-- **Every portalled surface opened from inside a scoped region.**
+- **Every floating surface against every surface it can open over**, per theme: the overlay differs in fill or carries a border, and a selected row differs from the overlay.
+- **Every theme and contrast level**, light, dark, any dimmed variant, each with high contrast; forced colours once, by hand.
+- **Every scoped region against the page, in both modes**, and every portalled surface opened from inside one.
 - **Every raster image on the darkest and lightest surface it can land on.**
 
-The tools exist for each. Chrome DevTools' Rendering panel emulates `prefers-color-scheme`, `forced-colors` and `prefers-contrast`. Playwright's `page.emulateMedia({ colorScheme: 'dark', forcedColors: 'active' })` puts the same states into an automated run. In Figma, duplicating a frame and applying the Dark mode to the copy shows both at once. On Apple platforms, the HIG's own list is Dark Mode with Increase Contrast and Reduce Transparency, separately and together.
+Chrome DevTools' Rendering panel emulates these settings, and Playwright's `page.emulateMedia({ colorScheme: 'dark', forcedColors: 'active' })` puts them into an automated run.
 
-**Write the surface pairs down as data (overlay, opens-over, theme) and run a contrast and border check over that list on every token change, then look at forced colours by hand once per release.** No system read publishes a check of this shape, so this is judgement; the reason for it is that every failure in this piece passed a per-token check.
-
----
-
-## Evidence and lineage
-
-The evidence here is strong on what systems ship and weak on what works for people: no published user research on depth perception between dark surfaces turned up.
-
-Ranked by strength, the sources are: token source code and generated packages (Material colour utilities, Material Web tokens, `@primer/primitives` 11.10, `@carbon/themes` 11.85, `@atlaskit/tokens` 20.11, Ant Design's dark algorithm); release notes and pull requests with their reasoning (Compose Material 3, Flutter 3.22, Primer's PR #1220); platform documentation (Apple's HIG and UIKit and SwiftUI reference, MDN, Figma's help centre, Carbon's colour guidance). A search for user studies of perceived elevation in dark interfaces found practitioner guides and one 2016 study on shading in flat interfaces, nothing on dark surface steps.
-
-The lineage check matters for the central claim, lighter-is-higher in dark. Material 2 published it as a white overlay with its dark theme guidance (2019, unchecked), and much of the web followed Material. Apple's base and elevated sets (iOS 13, 2019, unchecked) reach the same direction by a different mechanism, a trait rather than an overlay, which counts as close to independent. Carbon's ascending layers and Ant Design's lightened containers come from systems with their own colour tooling. So the direction has at least two independent origins; the step sizes do not agree (about 0.08 per layer in Carbon against about 0.027 in Atlassian), which suggests the size is local judgement.
-
-The two reversals in this piece are the most informative evidence because they ran against the consensus: Primer moving dark overlays below the page in 2025, and Material moving from computed tint to named containers in 2023 to 2024. Both are documented by the teams that made them.
-
-**Treat the direction (lighter is higher in dark) as settled, the step size and the overlay's place as local decisions to test, and say so when you write them into your system's documentation.**
+**Write the surface pairs down as data (overlay, opens-over, theme) and run a contrast and border check over that list on every token change, then look at forced colours by hand once per release.** *Weight: moderate.* No system publishes a check of this shape; every failure in this piece passed a per-token check.
 
 ---
 
@@ -562,35 +501,29 @@ The two reversals in this piece are the most informative evidence because they r
 
 | Situation | Do | Don't |
 |---|---|---|
-| Writing dark surface values | Design an ascending ladder of its own | Invert or map the light values |
-| Naming levels | Position: one up from its container | "Lighter" or "darker" |
+| Writing dark surface values | Design an ascending ladder of its own, levels named by position | Invert or map the light values |
 | Material 3 container roles | Check each floating role against what it opens over | Assume `surfaceContainer` sits above `surfaceContainerHigh` |
 | Elevated content (sheet, dialog) | A scope that remaps surface tokens one step up | A second token set components must pick |
 | Second dark theme | Only on request; own overlay decision, own contrast run | A palette tweak with no new tests |
 | Overlay holds selected rows or fields | Sink it below the page, with a ring | Lift it to the top of a short ladder |
-| Plain action menu | Lift it one step, with a ring | Same fill as the card, no edge |
 | Always-dark or always-light region | Theme scope on the root; border when page matches | Hard-coded `#111` and `#fff` |
 | Colour that must not change | Fixed role family with on-colours | A raw hex in one component |
 | Portalled menu or tooltip | Copy the trigger's theme attribute | Let it inherit from `body` |
 | Logo or illustration | `currentColor` SVG, or dark asset swapped by theme attribute | `<picture>` alone when there's a toggle |
-| White-background photo | Soften slightly in dark | Leave it glowing |
-| High contrast | Widen dark steps, or flatten and border | Keep standard steps |
-| Forced colours | A real border on every floating surface | Shadow or ring alone |
+| High contrast and forced colours | Widen dark steps or flatten and border; a real border on every floating surface | Standard steps; shadow or ring alone |
 | Tests | A list of surface pairs per theme | Per-token contrast only |
 
 ---
 
 ## The short version
 
-In dark mode, a surface further forward is lighter in every system read, but light modes disagree (Material darkens, Carbon alternates, Atlassian stays white), so design the dark ladder on its own and name levels by position, one up from their container, never by lightness.
+In dark mode a surface further forward is lighter in every system read, but light modes disagree, so design the dark ladder on its own and name levels by position, one up from their container.
 
-Material's move from a computed tint overlay to named container roles made surfaces themeable and allowed a level below the page, but a role is assigned per component, so a Material 3 menu (`surfaceContainer`) is darker than the dialog it opens over (`surfaceContainerHigh`). Apple's alternative is worth borrowing: one token set, and a base or elevated context that shifts every surface one step when something is presented. On the web that's a scope attribute that remaps your surface properties.
+Material's named container roles beat its old computed tint, but a role is assigned per component, so a Material 3 menu is darker than the dialog it opens over. Apple's alternative is worth borrowing: one token set, shifted a step by an elevated context; on the web, a scope attribute.
 
-Ship one dark theme unless users ask for more. Primer ships a dimmed one, and its overlays then sit in a different place on the ladder than in its main dark theme, which is the real cost. For floating surfaces, decide whether they hold layered content: Primer moved its dark overlays below the page in 2025 because a selected row had nowhere to go, while Atlassian lifts them. Either way the edge, a ring or border, does the separating.
+Ship one dark theme unless users ask for more. Sink floating surfaces that hold layered content, as Primer did in 2025, or lift plain ones, as Atlassian does; either way a ring does the separating.
 
-Regions that keep one scheme (video, code, document previews) and colours that must not change (Material's fixed roles) are both handled by naming them: a theme scope on the region, a fixed role family with on-colours. Overrides should only ever be whole themes applied to a scope, in Figma as a mode on a frame and in code as `data-theme` with `color-scheme`; the place they break is a portal, a child view controller or a media query that reads the system setting instead of the scope.
-
-Write down for your engineers: the ladder per mode, where overlays sit and why, the fixed and inverse roles, the portal rule, and a list of surface pairs to test in every theme and contrast level. The direction of the dark ladder is consensus; the step size and the overlay's place are your decisions, and should say so.
+Always-dark regions take a theme scope and colours that must not change a fixed role family; overrides are whole themes on a scope, and break at a portal or a media query. Write down for your engineers the ladder per mode, where overlays sit, the fixed and inverse roles, the portal rule and the surface pairs to test. The ladder's direction is strong; the step size and the overlay's place are your decisions, and should say so.
 
 ---
 
@@ -598,17 +531,12 @@ Write down for your engineers: the ladder per mode, where overlays sit and why, 
 
 Researched 12 November 2026.
 
-- **Primer.** Values read from `@primer/primitives` 11.10.0. The dark overlay change is PR #1220 (merged 5 June 2025); the author called it a solution they were unsure of, so it may move again. Dimmed's overlay stays lighter than its page.
-- **Atlassian's dark surfaces have changed.** `@atlaskit/tokens` 20.11.0 gives `elevation.surface` `#1F1F21`, sunken `#18191A`, raised `#242528`, overlay `#2B2C2F`, neutral greys. The toolkit's `visual.md` (surfaces and elevation levels) still quotes the older blue-tinted set (`#161A1D` to `#282E33`) and should be updated there.
-- **Material.** Tone values read from material-color-utilities `color_spec_2021.ts`, and baseline hex from Material Web's v0_192 tokens. Material's 2025 Expressive spec may adjust tones; the 2021 spec is what the baseline still uses. The m3.material.io pages render client-side and were not read; the release notes and code stand in for them. Compose's Material 3 overview page still describes tonal overlays.
-- **Compose versions.** Roles added in 1.2.0-alpha03; component moves listed under 1.2 and 1.3 release notes (Menu in 1.3.0-alpha02).
-- **Apple's colour hex values** (`#1C1C1E`, `#2C2C2E`, `#3A3A3C`) come from the toolkit's knowledge base and Apple's colour tables; the grouped-list pairing in the figure follows the same tables and was not re-read for this piece (unchecked).
-- **Carbon.** `@carbon/themes` 11.85.0. Carbon's colour usage page does not compare layering with elevation.
-- **Ant Design.** Read from the `master` branch's dark algorithm; `colorBgBase` defaults to `#000`.
-- **Playwright's `contrast` option** for `emulateMedia` was not checked and is left out; `colorScheme` and `forcedColors` are long-standing (unchecked against the current docs).
-- **Spectrum** was not read; whether Spectrum 2 still ships a "darkest" theme is unchecked.
-- **The portal trap and the media-query trap** follow from how CSS inheritance and media queries are specified, not from a system's documentation.
-- **Evidence quality.** Everything is what systems ship and say. No user research on dark surface steps was found.
+- **Primer.** `@primer/primitives` 11.10.0. The dark overlay change is PR #1220 (merged 5 June 2025); the author called it a solution they were unsure of, so it may move again. Dimmed's overlay stays lighter than its page.
+- **Atlassian's dark surfaces have changed.** `@atlaskit/tokens` 20.11.0 gives `elevation.surface` `#1F1F21`, sunken `#18191A`, raised `#242528`, overlay `#2B2C2F`. The toolkit's `visual.md` still quotes the older blue-tinted set (`#161A1D` to `#282E33`) and should be updated there.
+- **Material.** Tones from material-color-utilities `color_spec_2021.ts`, baseline hex from Material Web's v0_192 tokens; the 2025 Expressive spec may adjust tones. The m3.material.io pages render client-side and were not read, and Compose's Material 3 overview page still describes tonal overlays; the 2023 date is Compose's 1.2.0-alpha03 release.
+- **Apple's hex values** (`#1C1C1E`, `#2C2C2E`) come from the knowledge base and Apple's colour tables; the figure's grouped-list pairing is unchecked.
+- **Unchecked**: Playwright's `contrast` option (left out); whether Spectrum 2 still ships a "darkest" theme. The portal and media-query traps follow from how CSS is specified, not from a system's docs.
+- **Evidence quality.** Strong on what ships, weak on what works for people: no user research on dark surface steps turned up. Lighter-is-higher has two independent origins (Material 2 and Apple, both 2019, unchecked); step sizes disagree (0.08 per layer in Carbon, 0.027 in Atlassian), so the size is local judgement.
 
 ---
 
@@ -617,35 +545,35 @@ Researched 12 November 2026.
 **Primary: system source, tokens and release notes**
 
 - [Material color utilities, `color_spec_2021.ts`](https://github.com/material-foundation/material-color-utilities/blob/main/typescript/dynamiccolor/color_spec_2021.ts). Surface, container and fixed tones, contrast curves.
-- [Material Web, `_md-sys-color.scss`](https://github.com/material-components/material-web/blob/main/tokens/versions/v0_192/_md-sys-color.scss) and [`_md-ref-palette.scss`](https://github.com/material-components/material-web/blob/main/tokens/versions/v0_192/_md-ref-palette.scss). Baseline role mapping and hex values.
+- [Material Web, `_md-sys-color.scss`](https://github.com/material-components/material-web/blob/main/tokens/versions/v0_192/_md-sys-color.scss), [`_md-ref-palette.scss`](https://github.com/material-components/material-web/blob/main/tokens/versions/v0_192/_md-ref-palette.scss) and [latest `_md-sys-color.scss`](https://github.com/material-components/material-web/blob/main/tokens/versions/latest/sass/_md-sys-color.scss) (`surface-tint` deprecated).
 - [Compose Material 3, `ColorScheme.kt`](https://github.com/androidx/androidx/blob/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ColorScheme.kt). `surfaceColorAtElevation` formula.
 - [Compose Material 3 release notes](https://developer.android.com/jetpack/androidx/releases/compose-material3). SurfaceContainer roles, `LocalTonalElevationEnabled`, component moves.
 - [Flutter, new ColorScheme roles](https://docs.flutter.dev/release/breaking-changes/new-color-scheme-roles). Flutter 3.22 roles, deprecations, `surfaceTintColor` default.
 - [`@primer/primitives` dark theme CSS](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/dark.css), [dark dimmed](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/dark-dimmed.css) and [dark high contrast](https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/themes/dark-high-contrast.css).
 - [Primer primitives PR #1220, overlay background in dark themes](https://github.com/primer/primitives/pull/1220) and [CHANGELOG](https://github.com/primer/primitives/blob/main/CHANGELOG.md).
-- [`@carbon/themes` on npm](https://www.npmjs.com/package/@carbon/themes) (11.85.0, `scss/generated/_themes.scss`).
-- [`@atlaskit/tokens` dark raw tokens](https://cdn.jsdelivr.net/npm/@atlaskit/tokens/dist/cjs/artifacts/tokens-raw/atlassian-dark.js) (20.11.0). Surfaces, overlay shadow, `utility.elevation.surface.current`.
+- [`@carbon/themes` on npm](https://www.npmjs.com/package/@carbon/themes) (11.85.0).
+- [`@atlaskit/tokens` dark raw tokens](https://cdn.jsdelivr.net/npm/@atlaskit/tokens/dist/cjs/artifacts/tokens-raw/atlassian-dark.js) (20.11.0).
 - [Ant Design dark theme colours](https://github.com/ant-design/ant-design/blob/master/components/theme/themes/dark/colors.ts) and [colour algorithm](https://github.com/ant-design/ant-design/blob/master/components/theme/themes/dark/colorAlgorithm.ts).
 
 **Primary: platform and system documentation**
 
-- [Apple Human Interface Guidelines, Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode). Base and elevated, dark-only apps, softening white images, separate assets, testing with Increase Contrast and Reduce Transparency.
+- [Apple Human Interface Guidelines, Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode). Base and elevated, dark-only apps, softening white images, separate assets, testing.
 - [UIKit, `overrideUserInterfaceStyle`](https://developer.apple.com/documentation/uikit/uiview/overrideuserinterfacestyle), [`userInterfaceLevel`](https://developer.apple.com/documentation/uikit/uitraitcollection/userinterfacelevel) and [`accessibilityContrast`](https://developer.apple.com/documentation/uikit/uitraitcollection/accessibilitycontrast).
 - [SwiftUI, `colorScheme`](https://developer.apple.com/documentation/swiftui/environmentvalues/colorscheme) and [`preferredColorScheme(_:)`](https://developer.apple.com/documentation/swiftui/view/preferredcolorscheme(_:)).
-- [Carbon, colour usage](https://carbondesignsystem.com/elements/color/usage/). Layering sets, contextual tokens, `Layer` nesting, inline theming.
+- [Carbon, colour usage](https://carbondesignsystem.com/elements/color/usage/). Layering sets, inline theming.
 - [Android Developers, Material Design 3 in Compose](https://developer.android.com/develop/ui/compose/designsystems/material3). Tonal and shadow elevation on `Surface`.
 
 **Standards and tools**
 
-- [MDN, `light-dark()`](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/light-dark). Used colour scheme, scoping by `color-scheme`, Baseline 2024.
+- [MDN, `light-dark()`](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/light-dark). Scoping by `color-scheme`.
 - [MDN, `forced-colors`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors). Overridden properties, `box-shadow: none`.
 - [Figma help, modes for variables](https://help.figma.com/hc/en-us/articles/15343816063383-Modes-for-variables). Apply variable mode, Auto inheritance.
 
 **Commentary and research**
 
-- [Creager and colleagues, HFES 2016](https://flatisbad.com/publications/Creager-HFES16.pdf). Shading salience in flat interfaces; the nearest research found, not about dark surfaces.
+- [Creager and colleagues, HFES 2016](https://flatisbad.com/publications/Creager-HFES16.pdf). Shading salience in flat interfaces; the nearest research found.
 
 **Cited but not resolved to a URL**
 
-- GitHub's documentation on specifying the theme an image is shown to in Markdown (`<picture>` with `prefers-color-scheme`): known, not opened for this piece.
-- Material 3's "tone-based surfaces" page on m3.material.io: opened, but the page renders client-side and returned no text.
+- GitHub's documentation on `<picture>` with `prefers-color-scheme` in Markdown: known, not opened for this piece.
+- Material 3's "tone-based surfaces" page on m3.material.io: opened, but it renders client-side and returned no text.

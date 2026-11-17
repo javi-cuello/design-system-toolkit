@@ -227,7 +227,7 @@ The toolkit's rule that component vocabulary matches token vocabulary (`standard
 
 | Item | Why it is acceptable |
 |---|---|
-| `Danger` in Figma, `error` in the theme | both defensible: `error` is MUI's key and can't be renamed without wrapping every component, while Joy UI itself uses `danger` |
+| `Danger` in Figma, `error` in the theme | `error` is MUI's key and can't be renamed without wrapping every component, and Joy UI itself uses `danger`; it is a translation of the kind [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md#property-names-and-values) asks to be recorded in one place, never left implicit |
 | No press token in MUI | it needs a custom key; the ripple is a different model |
 | The `State` axis | documentation of what code produces, never a prop (see [What the State axis models](what-the-state-axis-models.md)) |
 

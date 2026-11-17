@@ -206,7 +206,7 @@ Taking each move in turn:
 
 The swaps carry three traps, all about overrides.
 
-**Layer and property names must match first.** A swap from one set to another keeps an instance's edits only where layer names match. So the retired components' `Label`, `Icon` and value layers are renamed to the survivor's names before swapping. Their properties are renamed to the survivor's too (`Label text` to `Label`, `Value text` to `Value`, the revealing boolean to `Show value`), so the swap renames once, not twice.
+**Layer and property names must match first.** A swap from one set to another keeps an instance's edits only where layer names match ([Figma's help on applying changes to instances](https://help.figma.com/hc/en-us/articles/360039150733-Apply-changes-to-instances)), and a swap dragged from the Assets panel keeps text edits only, so swap from the Instance menu. So the retired components' `Label`, `Icon` and value layers are renamed to the survivor's names before swapping. Their properties are renamed to the survivor's too (`Label text` to `Label`, `Value text` to `Value`, the revealing boolean to `Show value`), so the swap renames once, not twice.
 
 **The colours didn't quite match.** The trigger's label was `Neutral/secondary` where Button Tertiary's was `Neutral/primary`. Swapped triggers would read a step darker unless the team decided first which was right.
 
@@ -305,6 +305,7 @@ Researched August to October 2026 from the migration guides, source and issue tr
 - [Ant Design Button](https://raw.githubusercontent.com/ant-design/ant-design/master/components/button/index.en-US.md), [Radix Themes IconButton](https://www.radix-ui.com/themes/docs/components/icon-button), [Chakra IconButton source](https://raw.githubusercontent.com/chakra-ui/chakra-ui/main/packages/react/src/components/button/icon-button.tsx), [Twilio Paste Button types](https://raw.githubusercontent.com/twilio-labs/paste/main/packages/paste-core/components/button/src/types.ts)
 - [Material Components Android: Icon buttons](https://raw.githubusercontent.com/material-components/material-components-android/master/docs/components/IconButton.md), [Compose icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button)
 - [W3C, Understanding SC 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+- [Figma, Apply changes to instances](https://help.figma.com/hc/en-us/articles/360039150733-Apply-changes-to-instances) and [Swap components and instances](https://help.figma.com/hc/en-us/articles/360039150413-Swap-components-and-instances)
 
 **Commentary**
 

@@ -34,11 +34,11 @@ That's the general shape. A name inside a component isn't a label for people; it
 | What reads the name | What it uses it for | What a careless name does |
 |---|---|---|
 | Text auto-rename | keeps an unrenamed text layer's name equal to its content | the name moves on every copy edit |
-| Override preservation | matches layers to carry a consumer's edits through a variant switch or swap | a layer named differently across variants loses the edit, silently |
+| Override preservation | matches layers by name to carry a consumer's edits through a variant switch or an instance swap ([Figma's help on applying changes to instances](https://help.figma.com/hc/en-us/articles/360039150733-Apply-changes-to-instances)) | a layer named differently across variants loses the edit, silently |
 | Code Connect | `figma.children('Name')`, `figma.boolean('Name')` and friends take literal strings | the mapping stops matching, at publish or, for enums, not at all |
 | Dev Mode and code generation | the name is often the only semantic label on a layer | worse generated code |
 
-The fourth row has grown. [Figma's guidance on helping its AI understand a design system](https://help.figma.com/hc/en-us/articles/38978644498199-Best-practices-to-help-Figma-AI-understand-your-design-system) says "Group 7 or Rectangle 3 give the agent nothing to work with". The toolkit measured the effect in a small test: when Claude wrote code from Figma without the component API in context, names aligned with the code cut wrong props by more than half (`standards/figma-standard.md`, rule 21's *Why*).
+The fourth row has grown. [Figma's guidance on helping its AI understand a design system](https://help.figma.com/hc/en-us/articles/38978644498199-Best-practices-to-help-Figma-AI-understand-your-design-system) says "Group 7 or Rectangle 3 give the agent nothing to work with". A small toolkit experiment measured the effect: without the component API in context, names aligned with the code cut wrong props by more than half ([Alignment and AI](../figma-and-code/how-closely-figma-should-match-code.md#alignment-and-ai) has the numbers).
 
 The audience grew too. Since simplified instances were deprecated on 23 March 2026, every layer inside an instance shows in every consumer's layers panel. Names written for the author's convenience are now part of the library's public surface.
 
@@ -115,7 +115,7 @@ The toolkit has ruled on the ties (`standards/figma-standard.md` rule 21):
 
 - `Show` for a boolean that reveals text, an instance or a slot;
 - a bare word for a boolean that only switches a style, such as `AI`, ruled on 12 October 2026 because the code has `variant="ai"` and no `show` prop;
-- a True/False *variant* is a state and stays bare (`Disabled`, `Open`), never `Is`;
+- a True/False *variant* is a state and stays bare (`Disabled`, `Selected`), never `Is`; an open menu trigger is not a toggle but one `Open` value on the `State` axis, as [What the State axis models](what-the-state-axis-models.md#open-menu-triggers) argues;
 - `Has` kept for a variant that reflects content (`Has value`);
 - no two properties sharing a name.
 
@@ -127,21 +127,19 @@ Name the pair `Label` and `Show label`, or `Icon` and `Show icon`, and keep `Dis
 
 ## Swaps, variants and sizes
 
-Name a swap for the thing it holds (`Icon`), position it with `Leading` and `Trailing`, case variant values like their axis, and pick one size vocabulary knowing MUI costs a one-word mapping either way.
+Name a swap for the thing it holds (`Icon`), position it with `Leading` and `Trailing`, case variant values like their axis, and write sizes as `lg`, `md`, `sm`.
 
 A button has an icon property. One kit calls it `Icon swap`, another `Left icon`. Then the product ships in Arabic, the button mirrors, and the property named `Left icon` now controls the icon on the right.
 
-That's why position words matter more than they look. Across the kits they split four ways: prefix and suffix (11 names), left and right (7), leading and trailing (7), start and end (2). `Leading` and `Trailing` win the tie because they stay true when a right-to-left layout mirrors the component, which `Left` doesn't.
+Across the kits, position words split four ways: prefix and suffix (11 names), left and right (7), leading and trailing (7), start and end (2). `Leading` and `Trailing` win because they stay true when the layout mirrors; why, and where code's `start` and `end` take over, is in [No sides in names](../accessibility/rtl-design-systems.md#no-sides-in-names).
 
 The mechanism word is noise. Plain `Icon` is the most common swap name, and only Carbon, IBM Products and Coveo put "swap" in a name.
 
 Variant values follow the axis's casing (`Size: Small`). A True/False variant is spelt `True`/`False`, Figma's default: 51 axes use the capitalised form and 76 lowercase, the lowercase ones being kits that case everything like code. Values stay abstract; as GitLab Pajamas puts it, `Color: muted, enhanced`, never `light gray, blue`.
 
-Size values are the one open split. The blind re-run found them written as words (`Small`, `Medium`, `Large`) in 27 kits and as codes in 20, and MUI's code says `small`, `medium`, `large`.
+Sizes are where kits split most evenly. The blind re-run found words (`Small`, `Medium`, `Large`) in 27 kits and codes in 20. The toolkit settled it (rule 6, 7 October 2026): lowercase t-shirt names, largest first, as one unbroken run (`lg`, `md`, `sm`), because `size="sm"` is how most frameworks write it and `2xl` extends the scale without renaming anything.
 
-The toolkit ruled the other way (rule 6, 7 October 2026): lowercase t-shirt names, largest first, as one unbroken run (`lg`, `md`, `sm`). The reasons are that `size="sm"` is how most frameworks write it, and `2xl` extends the scale without renaming anything.
-
-Use `Icon`, `Leading icon` and `Trailing icon`, never `Left icon` or `Icon swap`. **Both size vocabularies are defensible: a library targeting MUI pays a one-word mapping either way, so pick one and write the mapping down.**
+Use `Icon`, `Leading icon` and `Trailing icon`, never `Left icon` or `Icon swap`. **Write sizes as `lg`, `md`, `sm`; where the code says `small`, as MUI does, record that one-word translation in the mapping.** *Weight: moderate.* The kit evidence is split, so the tie is ruled for the reasons above, not measured.
 
 ---
 
@@ -254,19 +252,7 @@ A consumer has placed a button and typed `Save changes` into it. In the library,
 
 Nothing warns the consumer; their copy is just gone. The differing name looked like harmless tidying, because inside the library it was.
 
-Override preservation matches layers by name across variants, so a rename hurts only where it isn't consistent. Each kind of rename fails in its own way:
-
-| What is renamed | What breaks | How it is discovered |
-|---|---|---|
-| A code prop | every consumer | a build error; codemods are the remedy |
-| A Figma property | Code Connect mappings holding the literal name | a failed publish |
-| A Figma variant value | an enum mapping, whose keys must be the exact literal values and are not normalised (Code Connect docs) | not at all, until the snippet is wrong |
-| A Figma layer, consistently | `figma.children` mappings | a failed publish; overrides survive, since they follow layer identity |
-| A Figma layer, in some variants only | overrides on variant switch | when a consumer switches variant and their content is gone |
-
-The layer rows were tested on 1 October 2026 with local components. Renaming and wrapping a layer kept every override on update; overrides were lost only on switching to a variant whose layer names differed.
-
-> **Aside.** That test ran inside one file, not through publish and accept. And whether `figma.children` reaches past direct children is still undocumented: [Code Connect's React docs](https://developers.figma.com/docs/code-connect/react/) describe its argument only as the instance layer's name within the parent component, and the request to combine properties from nested instances ([code-connect #11](https://github.com/figma/code-connect/issues/11)) remains open.
+That is one row of a longer table. A consistent layer rename keeps overrides, since they follow layer identity; a renamed property fails the Code Connect publish; a renamed variant value publishes cleanly and leaves an enum mapping silently wrong. [What counts as a breaking change in a Figma library](../figma-and-code/breaking-changes-in-a-figma-library.md#renaming-things) owns that grading, with the tests behind it, and its [Code Connect checks](../figma-and-code/breaking-changes-in-a-figma-library.md#code-connect-checks) shows the enum case.
 
 Treat property, value and layer names as versioned interfaces. Search your Code Connect files before renaming, and rename in every variant at once. **Ship a rename in a published library as a release with a deprecation path.**
 
@@ -307,9 +293,9 @@ Names have barely formed. Only three of the 23 kits mapped a native slot: lifina
 | Positioned icons | `Leading icon`, `Trailing icon` | n/a | same names | Swap |
 | Freeform area | `Slot` | n/a | `Slot`, `Leading slot`, `Items slot` | Slot |
 | Style switch | n/a | n/a | `AI`, `Divider` | Boolean |
-| State | n/a | n/a | `Disabled`, `Open` (`True`/`False`) | Variant |
+| State | n/a | n/a | `Disabled`, `Selected` (`True`/`False`); `Open` is a `State` value | Variant |
 | Content-reflecting variant | n/a | n/a | `Has value` | Variant |
-| Size | n/a | n/a | `Size`: `lg`, `md`, `sm` (toolkit); `Small`… is the kit majority | Variant |
+| Size | n/a | n/a | `Size`: `lg`, `md`, `sm` | Variant |
 | Part | n/a | n/a | `Card header`, `_Menu item` | component |
 | Siblings of one part | n/a | n/a | `Cell / Fill`, `Cell / Hug` | component |
 | Flavour built separately | n/a | n/a | `Button - CTA` | component |

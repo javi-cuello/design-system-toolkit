@@ -149,21 +149,30 @@ There is no composite and no tier, and a check that hasn't run says "Checked at 
 
 The behavioural half exists separately. The toolkit's `tools/skill-evals` has screen tasks, graded by `validate`, that compare an agent with and without the system's MCP server (Part 5, [what keeps an eval honest](what-keeps-an-agent-on-track.md#honest-evals)). The readiness page doesn't show those results yet.
 
+Two habits from Brad Frost's [`ds-ai-rails` skill](https://github.com/bradfrost/skills/blob/main/skills/design-systems/ds-ai-rails/SKILL.md) keep the display honest. Each piece of evidence is labelled verified, reported or unknown, so "the agent said it used the Dialog" is never mistaken for a reading of the imports; each control is labelled advisory, detecting or blocking, so a rule in a context file isn't counted as enforcement.
+
+A team that has got there, in [Part 1's sense](what-makes-a-design-system-agent-ready.md#signs-of-readiness), can show:
+
+- a fixed set of tasks in product language, none naming a component, kept in the repository;
+- a recent run of each, repeated, with and without the system's context, dated and tied to the system's version;
+- the four failures (invented component, invented prop, hard-coded value, rebuild) counted per run, with zero as the target;
+- tokens and time per task, against a ceiling the team set;
+- a check in CI that would catch each of the four if the next run regressed;
+- a separate, human judgement of whether the result was the right design.
+
 Show readiness as a small set of ratios, with the failing items one click from each. Label static measures as static. Give any behavioural result its own row, with its run date and repetition count, and leave tiers out until there is evidence to calibrate them. **A ratio names what to fix; a single score only says something is wrong.**
 
 ---
 
 ## One defensible number
 
-When a review insists on a single figure, the defensible one is coverage: the share of a product built with the system's components and tokens, because it can be measured and it ties to a cost someone outside the team feels.
+When a review insists on a single figure, the defensible one is coverage: the share of a product built with the system's components and tokens, because it can be measured and it answers the question people outside the team already ask.
 
-Shopify's admin shows why. Laura Griffee, writing about Polaris, reported its components in 70 percent of the admin, but its tokens in only 44 percent of admin components. She said that gap made large design changes very costly to ship. That's a cost felt outside the design-system team, which no readiness score can claim to measure.
-
-The gap was worst in type. Polaris tracked an issue with a 90 percent coverage target across colour, motion, type and spacing. Typography token coverage in custom components stood at about 8 percent. At the time, type was spread across six components (`DisplayText`, `Heading`, `Subheading`, `Caption`, `TextStyle`, `VisuallyHidden`), which later collapsed into one `Text`.
+How to count it as a share rather than a count, and where adoption numbers mislead, is [Measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md#counts-and-shares)'s subject. What matters here is that a coverage target can be kept as an engineering goal. Polaris tracked one in public: an issue titled ["polaris-react 90% token coverage for color, motion, type, spacing"](https://github.com/Shopify/polaris-react-archive/issues/4528), with a 90 percent target per area and 100 percent of components built with tokens as the intended outcome.
 
 Coverage stays honest only if its exceptions are visible. An exception log is the list of places that knowingly don't use the system. Stylelint's allow-list is one: each accepted deviation is an explicit entry, rather than an ignore comment buried in the code.
 
-When the review insists on one number, give coverage, and compute it from your exception log so every point it is short of 100 is a named entry. **Keep the exception log primary and the coverage figure a rollup of it.** Coverage as the one defensible figure is a judgement; Polaris's own tracking is the evidence it can be kept.
+When the review insists on one number, give coverage, and compute it from your exception log so every point it is short of 100 is a named entry. **Keep the exception log primary and the coverage figure a rollup of it.** Coverage as the one defensible figure is a judgement; Polaris's tracking issue shows a team can hold itself to one.
 
 ---
 
@@ -207,7 +216,7 @@ Measure it on your own system, because nobody else will. Keep a fixed set of scr
 
 A file audit tells you whether the inputs an agent needs are there; only a run of real agents tells you whether they change what the agent writes. Compute the static measures that can only move when your system improves (interface completeness, mapping coverage, vocabulary distance, token binding, descriptions, deprecations, freshness), call them static, and keep the word "ready" for a behavioural run on tasks that never name a component.
 
-Show the result as ratios, with numerators, denominators and failing items one click away, "not measured" in words, and no composite or tier until a behavioural run has calibrated one. If someone needs a single figure, give them coverage, rolled up from your exception log: it's the one number that ties to a cost people outside the team feel.
+Show the result as ratios, with numerators, denominators and failing items one click away, "not measured" in words, and no composite or tier until a behavioural run has calibrated one. If someone needs a single figure, give them coverage, rolled up from your exception log.
 
 At screen level almost nothing is measured. The public benchmarks grade pixels and features, and the industry figures are self-reported. So measure it on your own system, with a fixed task set, before and after each change. Keeping static and behavioural apart is the bench's own practice; the ratio display, coverage as the single figure and the screen-task method are judgements built on it.
 
@@ -221,7 +230,7 @@ Researched November 2026, when this part was assembled from guides first researc
 - **The bench's tiers.** Uncalibrated as of release 1.4 (29 October 2026), the release that withheld unsatisfiable rubrics, checked judge claims against the diff and allowed three judge samples. Re-check before vendoring the tiers.
 - **The toolkit's readiness page** covers the design-only half; the code-side ratios were not built as of November 2026. A behavioural run through `validate` is built as `tools/skill-evals` screen tasks; the page does not show its results.
 - **A screen-level benchmark.** None grading design system use at screen level existed in November 2026. One appearing would replace most of [screen-building evidence](#screen-building-evidence).
-- **Griffee's figures** come from her own post and Polaris's issue tracker; the version 10 typography page is read from a community mirror.
+- **Shopify's admin coverage.** The admin coverage figures this part once gave were removed on 17 November 2026: the post they came from returned 403, and one appears only on a community mirror of Polaris's docs. [Measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md#what-to-re-check-later) records the same gap. The tracking issue's per-area targets were read at Shopify's own repository that day.
 - **The evidence base is Western and vendor-heavy.** Every measured result comes from a US or Australian design-system team, a vendor selling the surface it measured, or an academic benchmark that grades something other than design system use.
 
 ---
@@ -242,12 +251,12 @@ Researched November 2026, when this part was assembled from guides first researc
 
 - [zeroheight, *State of AI in design systems*](https://zeroheight.com/resources/state-of-ai-in-design-systems/).
 - [Southleft, `figma-console-mcp`](https://github.com/southleft/figma-console-mcp). The six-category health score.
-- [Laura Griffee, *Putting the system back in our design system*](https://lauragriffee.medium.com/putting-the-system-back-in-our-design-system-b2c55a392dea).
-- [Shopify, Polaris issue #4528](https://github.com/Shopify/polaris-react-archive/issues/4528) and [*Version 10 Typography*, community mirror](https://ss-polaris.vercel.app/whats-new/version-10-typography).
+- [Shopify, Polaris issue #4528](https://github.com/Shopify/polaris-react-archive/issues/4528), closed 20 April 2022; read 17 November 2026.
 - [Storybook, *Storybook MCP for React* (23 Mar 2026)](https://storybook.js.org/blog/storybook-mcp-for-react/).
 
 **Commentary**
 
+- [Brad Frost, `ds-ai-rails` skill](https://github.com/bradfrost/skills/blob/main/skills/design-systems/ds-ai-rails/SKILL.md).
 - [Southleft, *Machine-Readable, Not Machine-Governed*](https://southleft.substack.com/p/machine-readable-not-machine-governed).
 - [Vercel, v0 composite model family (1 Jun 2025)](https://vercel.com/blog/v0-composite-model-family): error-free rates only; not about design system use.
 

@@ -19,7 +19,7 @@ A team adds a hover state to its cards and reaches for the shadow tokens. There 
 - [Shadows as boundaries](#shadows-as-boundaries): whether a shadow can meet non-text contrast
 - [Shadows in dark mode](#shadows-in-dark-mode): what changes, briefly
 
-For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole guide in four paragraphs. Which fill each surface takes, and how the levels stack, is in [how surfaces stack](how-surfaces-stack.md); dark surfaces in full are in [surfaces in dark mode](surfaces-in-dark-mode.md); blur and translucency are in [materials and translucency](materials-and-translucency.md).
+For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole guide in four paragraphs. How surfaces stack, dark surfaces and blur have their own guides: [how surfaces stack](how-surfaces-stack.md), [surfaces in dark mode](surfaces-in-dark-mode.md), [materials and translucency](materials-and-translucency.md).
 
 ---
 
@@ -27,9 +27,7 @@ For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-shor
 
 Systems ship between one and seven shadow steps, but every one of them gives ordinary components only two: one for things resting on the page and one for things floating over it.
 
-Back at the card's hover state, the problem is not that seven tokens is too many. It is that nothing in the list says which two of them a component should reach for, so each designer picks by eye and the steps drift apart.
-
-Here is what two systems at opposite ends ship, rendered from their token values.
+Back at the card's hover state, the problem is not that seven tokens is too many; it is that nothing says which two a component should reach for. Here is what two systems at opposite ends ship, rendered from their token values.
 
 <svg role="img" viewBox="0 0 720 352" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two elevation ladders rendered from their token values. Above, Material 3 levels 0 to 5 at 0, 1, 3, 6, 8 and 12dp, each a card with a deeper and wider shadow, labelled with a component that uses it by default: filled button at level 0, elevated card at 1, menu and navigation bar at 2, dialog and floating action button at 3, a dragged card at 4, level 5 at the top. Below, Atlassian ships only default with no shadow, raised for movable cards and overlay for menus and modals.</title>
@@ -153,14 +151,12 @@ The middle of the range follows the same pattern under different names:
 - **Primer** names its steps by job: `shadow-resting-xsmall`, `-small` and `-medium` for things on the page, `shadow-floating-small` up to `-xlarge` for things over it.
 - **Polaris** ships `shadow-0` to `shadow-600`, then a bevel, two insets and twelve button shadows that are really the buttons' strokes.
 - **Fluent 2** ships `shadow2`, `4`, `8`, `16`, `28` and `64`, split by its docs into a low ramp for cards and command bars and a high ramp for sheets and dialogs.
-- **Carbon** ships one: a `box-shadow` mixin, `0 2px 6px $shadow`, used by menus and popovers. Its tiles and cards are flat.
-- **Ant Design** ships `boxShadow`, `boxShadowSecondary` and `boxShadowTertiary`, with the first two identical in source.
+- **Carbon** ships one `box-shadow` mixin, `0 2px 6px $shadow`, used by its menus; popovers take a lighter `filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.2))`. Its tiles and cards are flat.
+- **Ant Design** ships `boxShadow`, `boxShadowSecondary` and `boxShadowTertiary`, with the first two identical in source, so in practice it has two steps.
 
-That last detail is telling. Ant Design's two named floating shadows carry the same three layers, so in practice it has two steps, the same as Atlassian.
+The steps a system has and the steps a component uses are different numbers, and the second one decides whether the scale stays coherent. How the surfaces under those shadows stack is in [how surfaces stack](how-surfaces-stack.md).
 
-The steps a system has and the steps a component uses are different numbers, and the second one is what decides whether the scale stays coherent. The toolkit's knowledge base already sets three or four surface levels, each paired with its shadow; how those surfaces stack is in [how surfaces stack](how-surfaces-stack.md).
-
-Give your components two shadow roles, resting and floating, and map every component to one of them in its documentation. Keep further steps only where a state needs them (hover, drag) or a surface floats over another floating surface, like a dialog over a menu. **A shadow scale is as long as the list of reasons to use it, and most systems have two.** The two-role pattern is consensus across Atlassian, Primer and Carbon, and Material's component tokens behave the same way despite the longer scale.
+Give your components two shadow roles, resting and floating, and map every component to one of them in its documentation. Keep further steps only where a state needs them (hover, drag) or a surface floats over another floating surface, like a dialog over a menu. **A shadow scale is as long as the list of reasons to use it, and most systems have two.** *Weight: strong.* The two-role pattern is shared by Atlassian, Primer and Carbon, and Material's component tokens behave the same way despite the longer scale.
 
 ---
 
@@ -226,24 +222,13 @@ A designer opening Material's level 3 in Figma finds two drop-shadow effects sta
 
 The key layer, `0 1px 3px 0` at 30% black, is nearly invisible as depth but crisp at the edge, especially along the bottom. The ambient layer, `0 4px 8px 3px` at 15% black, has no edge at all; it only darkens the page around the card. Together they read as one object at one distance.
 
-Each number in a layer does one job:
+Offset moves the shadow (every system here uses x = 0 and a positive y, a light from above), blur softens its edge, and spread grows or shrinks the shape before it is blurred; a negative spread pulls the shadow under the element so only its lower part shows.
 
-- **Offset x and y** move the shadow away from the element. Every system here uses x = 0 and a positive y, a light from straight above.
-- **Blur** softens the edge. In CSS the blur radius is about twice the Gaussian standard deviation, so `8px` spreads the fade over about 8px each way.
-- **Spread** grows or shrinks the shadow's shape before it is blurred. A negative spread pulls the shadow back under the element so only its lower part shows past the edge.
+Material Web computes all five levels from one formula in `_elevation.scss`. The key layer grows from 1px to 4px of offset; the ambient layer grows faster, offset 1px to 8px, blur 3px to 12px, spread 1px to 6px. The opacities never change, 30% and 15%, so distance is carried by size, not darkness.
 
-Material Web computes all five levels from one formula in `_elevation.scss`. The key layer's offset grows from 1px to 4px and its blur from 2px to 4px. The ambient layer grows faster: offset 1px to 8px, blur 3px to 12px, spread 1px to 6px. The two opacities never change, 30% and 15%, so distance is carried by size, not darkness.
+Fluent 2 keeps the two layers with the roles swapped in size: an ambient `0 0 2px` at 12% and a key `0 2px 4px` at 14% for `shadow4`, the key growing to `0 32px 64px` at `shadow64`. Its documentation notes the exception in the last panel: on Windows a stroke outlines the object instead of a key shadow.
 
-Fluent 2 keeps the same two-layer idea with the roles swapped in size. Its web tokens put an ambient `0 0 2px` around the element at 12% and a key `0 2px 4px` (for `shadow4`) at 14%, the key growing to `0 32px 64px` at `shadow64`. Its documentation also notes the exception in the last panel: on Windows a stroke outlines the object instead of a key shadow, leaving only the soft ambient layer.
-
-Other systems split the work differently, and the differences are the useful part:
-
-- **Primer's floating shadows** open with a ring, `0 0 0 1px`, then stack two to four drops with negative spreads. `shadow-floating-medium` has four drops at 8% each, offset 8, 4, 24 and 48px.
-- **Atlassian's** pair a drop with a `0 0 1px` edge at 31%. The edge is the key layer in miniature.
-- **Polaris** uses one layer per step: `shadow-400` is `0 8px 16px -4px` at 22%, with the negative spread doing what an ambient layer would.
-- **Radix Themes** stacks up to four, a gray-alpha ring first.
-
-Here are eight systems side by side, the smallest resting shadow and one floating step each, rendered from their published values.
+Others split the work differently. Primer's floating shadows open with a `0 0 0 1px` ring, then stack two to four drops with negative spreads. Atlassian's pair a drop with a `0 0 1px` edge at 31%, the key layer in miniature. Polaris uses one layer per step: `shadow-400` is `0 8px 16px -4px` at 22%, the negative spread doing an ambient layer's job. Here are eight systems side by side, the smallest resting shadow and one floating step each, rendered from their published values.
 
 <svg role="img" viewBox="0 0 720 658" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Eight systems' shadow tokens rendered on white from their published values, one row each, with the smallest resting shadow on the left and a floating step on the right. Material 3 level1 and level2 stack a 30 percent key and a 15 percent ambient layer. Fluent 2 shadow4 and shadow16 pair a 12 percent ambient with a 14 percent key. Polaris shadow-100 is a single 1px line and shadow-400 a single soft drop. Atlassian raised and overlay add a faint 1px edge to a drop. Primer resting-small is nearly invisible and floating-small adds a ring to two drops. Carbon has no resting shadow and one shadow overall. Ant Design stacks three faint layers. Radix Themes draws a ring and several faint drops.</title>
@@ -485,7 +470,7 @@ Here are eight systems side by side, the smallest resting shadow and one floatin
 
 The floating steps look alike; the resting ones do not. Polaris and Primer rest on a line or almost nothing, Material and Radix on a visible edge, and Carbon on no shadow at all, so a "card shadow" carried from one system to another changes how much a card stands out.
 
-A two-layer shadow is a deliberate split of jobs, and the split matters more than the exact values. Here is the same card with one layer and with two, to make it concrete.
+The split of jobs matters more than the exact values. Here is the same card with one layer and with two.
 
 ```
 /* one layer, looks reasonable */
@@ -498,7 +483,7 @@ box-shadow: 0 1px 3px 0 rgba(0 0 0 / 0.3),
 
 The single layer has to choose. A 4px offset and a 12px blur leave the top edge of a white card on a white page with almost no shadow, so the card's top edge vanishes. Darkening it to fix that makes the bottom heavy and muddy. The key layer fixes the edge without making the distance look larger.
 
-Build each shadow token from a key layer and an ambient layer, or from a ring and a drop, and change size, not opacity, as the levels rise. **The key layer draws the edge and the ambient layer draws the distance; a single layer can only do one well.** That is consensus among Material, Fluent, Atlassian and Primer; Polaris's single layers with negative spread are the working counter-example, viable because Polaris also draws a bevel on its cards.
+Build each shadow token from a key layer and an ambient layer, or from a ring and a drop, and change size, not opacity, as the levels rise. **The key layer draws the edge and the ambient layer draws the distance; a single layer can only do one well.** *Weight: strong.* It is shared by Material, Fluent, Atlassian and Primer; Polaris's single layers with negative spread are the working counter-example, viable because Polaris also draws a bevel on its cards.
 
 ---
 
@@ -593,25 +578,11 @@ A team puts a product on a warm cream background. Its shadows are `rgba(0, 0, 0,
 <text x="16" y="248" font-size="11" fill="#5a5850">shadow.overlay in its legacy and current themes, 0 8px 12px at 15% plus a 0 0 1px edge at 31%.</text>
 </svg>
 
-The left two pairs use the same alpha with different colours. Black over cream mixes towards a neutral grey, which the eye reads as a different material lying on the page. A dark brown at the same strength mixes towards a darker cream, which reads as the page in shade. On a cool blue-grey page the difference is smaller, because black is already close to a dark navy.
+The left two pairs use the same alpha with different colours. Black over cream mixes towards a neutral grey, which reads as a different material lying on the page; a dark brown at the same strength mixes towards a darker cream, which reads as the page in shade. That is the mechanism behind tinting: real shade on a coloured surface is a darker version of that surface, not grey.
 
-That is the mechanism behind tinting: a shadow is a mix of the shadow colour and the page, and real shade on a coloured surface is a darker version of that surface, not grey.
+Most systems still use something close to black. Material's `md-sys-color-shadow` is black in both themes; Fluent's two shadow colours are black at 12% and 14% in light, doubled in dark; Carbon's `$shadow` is black at 30% in White and 80% in Gray 100; Polaris uses its darkest grey, `rgb(26, 26, 26)`; Primer its own slightly blue greys, `#25292e` and `#1f2328`.
 
-How do the systems colour theirs? Mostly with something close to black:
-
-- **Material** uses `md-sys-color-shadow`, which is `neutral0`, tone 0, black in both themes.
-- **Fluent** uses `colorNeutralShadowAmbient` and `colorNeutralShadowKey`, `rgba(0,0,0,0.12)` and `0.14` in light, doubled to `0.24` and `0.28` in dark.
-- **Carbon** uses one token, `$shadow`: `rgba(0, 0, 0, 0.3)` in White, `0.8` in Gray 100.
-- **Polaris** uses `rgb(26, 26, 26)`, its darkest grey, rather than black.
-- **Primer** uses its own greys, `#25292e` and `#1f2328`, which lean very slightly blue.
-
-The tinted systems tint quietly. Radix Themes draws its ring layers with `--gray-a3` and its drops with `--black-a*`. Since the gray scale follows the theme's chosen grey, a Slate theme's ring is `#0000330f`, a navy at 6%, while a Sand theme's is `#20100010`, a brown. The drops stay neutral.
-
-Atlassian is the migration story. Its legacy shadows used `#091E42`, its navy, at 25% and 31%: tinted towards its brand. The current theme uses `#1E1F21`, almost neutral, at the same alphas and offsets. On white, as the third pair shows, the change is close to invisible; it matters once a surface or page carries colour.
-
-Carbon is the counter-example inside one system. Its ordinary `$shadow` is black, but its AI tokens are tinted blue in light, `aiDropShadow` at `rgba(15, 98, 254, 0.1)`, and go back to black, `rgba(0, 0, 0, 0.28)`, in Gray 100. A tint used as a signal, not a material, and dropped where it would not show.
-
-Fluent states a rule for shadows on colour. On a coloured surface, it derives each layer's opacity from the colour's luminance (key `42 - 0.116 × L`, ambient `34 - 0.09 × L`) and points to its brand shadow tokens instead of the neutral ramp.
+The tinted systems tint quietly. Radix Themes draws its ring layers with `--gray-a3`, which follows the theme's grey, so a Slate theme's ring is a navy at 6% and a Sand theme's a brown, while the drops stay neutral. Atlassian moved the other way: its legacy shadows used its navy `#091E42`, the current theme a near-neutral `#1E1F21` at the same alphas. On white, as the third pair shows, the change is close to invisible. Carbon tints only its AI shadows, blue in light and black in Gray 100, a tint used as a signal rather than a material.
 
 Make the shadow colour its own token, separate from the composite shadow, with a value per theme. Use a near-black from your neutral ramp; tint it towards the page's hue only when the page itself is noticeably coloured, and keep the tint dark enough that it still reads as shade. **The colour belongs in a token, so the theme can change it without rewriting every shadow.** Near-black is consensus; tinting is a judgement that pays off on warm or saturated grounds and does nothing on white.
 
@@ -621,7 +592,7 @@ Make the shadow colour its own token, separate from the composite shadow, with a
 
 The same shadow reads much more strongly on a grey page than on a white one, because on grey the card's lighter fill does half the work.
 
-Atlassian's raised shadow is 1px of offset, 1px of blur and a faint edge. On a white page under a white card, that is the only thing marking the card, and the top edge, which gets almost none of the offset, all but disappears.
+Atlassian's raised shadow is 1px of offset, 1px of blur and a faint edge. On a white page under a white card, the top edge all but disappears.
 
 <svg role="img" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>The same white card three ways, drawn at twice size. On a white page with only Atlassian's raised shadow, the card's top and sides almost disappear and only the bottom edge shows. On a light grey page with the same shadow, the whole outline reads, because the fill step and the shadow work together. On a white page with a 1 pixel grey border and no shadow, the outline reads evenly on all four sides.</title>
@@ -652,21 +623,17 @@ Atlassian's raised shadow is 1px of offset, 1px of blur and a faint edge. On a w
 <text x="24" y="214" font-size="11" fill="#5a5850">Atlassian shadow.raised, 0 1px 1px 25% + 0 0 1px 31%, drawn at 2×. Grey page #f1f2f4 (illustrative).</text>
 </svg>
 
-On the light grey page, the card's whole outline reads with the same token. The fill step gives every edge a little contrast, and the shadow adds weight along the bottom. On white, a 1px border gives an even outline without any shadow at all.
+On the light grey page the whole outline reads with the same token: the fill step gives every edge a little contrast, and the shadow adds weight along the bottom. That is why a raised card on Atlassian's grey `surface-sunken` column gets both cues, and one straight on the white page only the shadow; which surface sits on which is [how surfaces stack](how-surfaces-stack.md)'s subject.
 
-That is why Atlassian's light theme keeps `surface`, `surface-raised` and `surface-overlay` all white and pairs raised with a shadow, while its `surface-sunken` is grey. A raised card on a grey sunken column, the Jira board, gets both cues; a raised card straight on the white page gets only the shadow. Which surface sits on which is [how surfaces stack](how-surfaces-stack.md)'s subject.
-
-Check every shadow on the page colours it will actually sit on, white and grey. If a resting card must sit directly on white, give it a border or a darker key layer, since its resting shadow alone leaves the top edge undrawn. **A resting shadow is tuned for one ground; on the other it either vanishes or shouts.** This is mechanism, not taste: the fill step and the shadow add up.
+Check every shadow on the page colours it will actually sit on, white and grey. If a resting card must sit directly on white, give it a border or a darker key layer, since its resting shadow alone leaves the top edge undrawn. **A resting shadow is tuned for one ground; on the other it either vanishes or shouts.**
 
 ---
 
 ## Inset ring or border
 
-An inset ring, `box-shadow: inset 0 0 0 1px`, draws a stroke without taking any room, which matches how Figma draws an inside stroke by default; a border takes room, survives forced colours and paints above children.
+An inset ring, `box-shadow: inset 0 0 0 1px`, draws a stroke without taking any room; a border takes room, but survives forced colours and paints above children.
 
-A button is drawn in Figma at 40px tall with 12px of vertical padding and a 1px inside stroke. In code it ships with `border: 1px solid` and the same padding, and the label sits 1px lower inside a 42px button, or a 38px content area, depending on `box-sizing`. Where did the pixel go?
-
-The knowledge base already maps each Figma stroke to the CSS channel that takes the same room (code-standard rule 63). What it does not show is what each channel does at the pixel level, and where the ring breaks. Here are the three channels drawn on a grid of device pixels at 2×.
+Which Figma stroke maps to which CSS channel, and the two-pixel drift a border adds, are set out in [stroke alignment](../figma-and-code/where-figma-and-css-render-differently.md#stroke-alignment). Here are the three channels on a grid of device pixels at 2×.
 
 <svg role="img" viewBox="0 0 720 276" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Three ways to draw a 1 pixel stroke on a box set to 24 by 12 CSS pixels, shown on a grid of device pixels at 2x. An inset box-shadow ring keeps the box at 24 by 12 and leaves all of it for content, the ring painted over the edge, which is how Figma draws an inside stroke excluded from layout. A border under box-sizing border-box keeps the outside at 24 by 12 but leaves only 22 by 10 for content, like an inside stroke included in layout. A border under content-box grows the box to 26 by 14, like an outside stroke.</title>
@@ -700,11 +667,9 @@ The knowledge base already maps each Figma stroke to the CSS channel that takes 
 <text x="16" y="262" font-size="11" fill="#5a5850">pale blue is the area padding and children are measured from (dashed). Geometry per CSS box model, drawn here.</text>
 </svg>
 
-The inset ring keeps the box at its set size and leaves the whole of it for padding and children; the ring is painted over the edge. That is Figma's inside stroke with strokes excluded from layout, the default, which is why a ring matches the design pixel for pixel. A `border-box` border keeps the outside the same but steals 1px per side from the content, like Figma's "include strokes in layout". A `content-box` border grows the box.
+The inset ring keeps the box at its set size and paints over the edge, like a Figma inside stroke excluded from layout (the legacy default; frames created from July 2026 include inside strokes in layout by default, which is the `border-box` border). That is why Polaris draws its button strokes as inset shadows and Radix's recessed `--shadow-1` opens with `inset 0 0 0 1px`: a ring can change on hover or press without nudging the label.
 
-That is why Polaris draws its button strokes as inset shadows (`shadow-button` is three inset layers, among them `0 0 0 1px` at 10% black) and why Radix's `--shadow-1`, the recessed style, opens with `inset 0 0 0 1px var(--gray-a5)`. A ring can change on hover or press without nudging the label by a pixel.
-
-The ring has three costs a border does not. The first is paint order.
+The ring has two costs a border does not. The first is paint order.
 
 <svg role="img" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Two cards with a full-bleed image at the top and a grey 1 pixel ring. On the left the ring is an inset box-shadow; the image, a child element, paints over it, so the ring vanishes along the top and down the upper sides and only shows around the text below. On the right the ring is a border; the image sits inside it and the ring runs unbroken around the whole card.</title>
@@ -734,7 +699,7 @@ CSS paints an inset shadow above the element's background and below its content.
 
 The second cost is forced colours. The CSS Color Adjustment spec computes `box-shadow` to `none` in forced colours mode, inset rings included, while a border's colour is replaced with a system colour and stays visible. A control whose only outline is a ring has no outline at all for a Windows High Contrast user.
 
-The third cost is the half pixel.
+A half-pixel ring may also render soft where a border snaps to a device pixel; [hairlines](../figma-and-code/where-figma-and-css-render-differently.md#dashed-gradient-hairline-strokes) covers the snapping.
 
 <svg role="img" viewBox="0 0 720 222" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>A half-pixel hairline at two pixel densities, each square one device pixel inward from the edge. On a 1x screen a 0.5px border snaps up to one solid device pixel, while a 0.5px inset box-shadow ring is drawn as a half-strength grey pixel, marked unchecked. On a 2x screen a 0.5px border is one crisp device pixel and a 1px border is two.</title>
@@ -771,41 +736,21 @@ The third cost is the half pixel.
 <text x="20" y="208" font-size="11" fill="#5a5850">box-shadow spread is not listed for snapping, so its 1× rendering is drawn as a browser might, not as specified.</text>
 </svg>
 
-CSS Values 4 snaps `border-width` to whole device pixels: a 0.5px border becomes one solid device pixel on a 1× screen and stays one crisp device pixel at 2×. `box-shadow` spread is not listed for that snapping, so a 0.5px ring on a 1× screen may render as a half-strength, anti-aliased pixel. A team designing hairlines at 2× and shipping to mixed screens sees the ring go soft where the border would not.
+The figure's 0.5px ring on 1× is a likely result, unchecked in browsers: `box-shadow` spread is not listed for the snapping `border-width` gets.
 
-Dark mode exposes the same trade. Primer and Atlassian both put a solid ring, `#3d444d` and an alpha white, in front of their dark overlay shadows. As a ring it adds no layout; as a border it would also survive forced colours, which is why the knowledge base asks floating surfaces for a real border as well.
-
-Here are the traps in one place:
-
-| Trap | What it looks like | Why |
-|---|---|---|
-| Ring under a full-bleed child | Ring missing along an image or header | Inset shadows paint below children |
-| Ring as the only outline | Control has no edge in forced colours | `box-shadow` computes to `none` |
-| 0.5px ring on 1× | Soft grey hairline | Spread is not snapped like `border-width` |
-| Border where Figma had an excluded stroke | Label 1px off, or box 2px larger | Border takes room the stroke did not |
-| Ring plus outer shadow in one token | Ring disappears when the shadow is swapped for a hover value | One composite, two jobs |
-
-Use an inset ring for strokes that change with state on controls (a button's edge, a pressed bevel), where keeping the label still matters and no child paints to the edge. Use a border for containers that hold images or coloured children, for any outline that must survive forced colours, and for hairlines on mixed-density screens. **A ring takes no room and a border survives; choose by which of the two the element can't do without.** Polaris and Radix show the ring works at scale for controls; the forced-colours and paint-order costs are mechanism, not opinion.
+Use an inset ring for strokes that change with state on controls (a button's edge, a pressed bevel), where keeping the label still matters and no child paints to the edge. Use a border for containers that hold images or coloured children, for any outline that must survive forced colours, and for hairlines on mixed-density screens. **A ring takes no room and a border survives; choose by which of the two the element can't do without.** *Weight: strong.* Polaris and Radix show the ring works for controls; the forced-colours and paint-order costs are mechanism.
 
 ---
 
 ## Naming shadow tokens
 
-Systems name shadow tokens either by the surface's role (`elevation.shadow.raised`) or by the shadow's size (`shadow-400`), and the role names survive change better; the value is a composite that the DTCG format can now describe.
+Name shadow tokens by the surface's role (`elevation.shadow.raised`) rather than the shadow's size (`shadow-400`), because role names survive change; the value is a composite the DTCG format can describe.
 
 A designer looks for "the menu shadow". In Atlassian it is `elevation.shadow.overlay`. In Polaris it is a number, `shadow-300` or `shadow-400`, and the answer depends on someone remembering which.
 
-The naming styles split cleanly:
+Atlassian names by role, `elevation.shadow.raised` beside `elevation.surface.raised`, so the pairing is in the name. Primer names by job and size, `shadow-floating-large`. Polaris, Fluent, Radix and Material name by scale step. Fluent's step is the key layer's blur (`shadow16` has a 16px blur), so a retuned shadow either breaks its name or keeps a lie. Material sits on both sides: the system token `md-sys-elevation-level3` is a step, but each component token names its role, `md-comp-dialog-container-elevation`, and points at the step, which keeps its six steps from drifting.
 
-- **By role:** Atlassian `elevation.shadow.raised` and `elevation.shadow.overlay`, under the same `elevation.*` root as `elevation.surface.raised`, so the pairing is in the name.
-- **By job and size:** Primer `shadow-resting-small`, `shadow-floating-large`: a role word, then a size.
-- **By scale step:** Polaris `shadow-100` to `-600`, Fluent `shadow2` to `shadow64`, Radix `--shadow-1` to `-6`, Material `level0` to `level5`.
-
-Fluent's numbers carry a meaning: the step is the blur of the key layer. `shadow16` has a 16px blur. That makes the name a value name, which is honest but means a retuned shadow either breaks its name or keeps a lie.
-
-Material sits on both sides. The system token `md-sys-elevation-level3` is a scale step, but each component token names its role, `md-comp-dialog-container-elevation`, and points at the step. That two-tier pattern is what keeps its six steps from drifting.
-
-Underneath the names, a shadow is a composite: several layers, each with a colour, offsets, blur and spread. The DTCG Format Module 2025.10, a W3C Community Group report rather than a W3C standard, defines a `shadow` type with exactly those properties (`color`, `offsetX`, `offsetY`, `blur`, `spread`) and an optional `inset` boolean. Its value can be one shadow object or an array of them, so a two-layer shadow is one token.
+Underneath, a shadow is a composite. The DTCG Format Module 2025.10, a W3C Community Group report rather than a W3C standard, defines a `shadow` type with `color`, `offsetX`, `offsetY`, `blur`, `spread` and an optional `inset`, and its value can be an array, so a two-layer shadow is one token.
 
 ```json
 {
@@ -830,11 +775,9 @@ Underneath the names, a shadow is a composite: several layers, each with a colou
 }
 ```
 
-That sketch is Atlassian's `shadow.raised` written in the 2025.10 form, with dimensions as value-and-unit objects and colours carrying a colour space, as in the spec's own example. Two details matter more than its shape. Each layer's colour is a reference, which is what lets a theme change it. And because each layer has its own alpha, the colour tokens come one per alpha, two here.
+That sketch is Atlassian's `shadow.raised` in the 2025.10 form. Each layer's colour is a reference, which lets a theme change it, and because each layer has its own alpha, the colour tokens come one per alpha. In Figma, each drop shadow's colour, offsets, blur and spread in an effect style can be bound to variables, so one style follows the theme the same way.
 
-On the Figma side, an effect style holds the layers, and each drop shadow's colour, offsets, blur and spread can be bound to variables. Bound to a colour variable with light and dark modes, one shadow style follows the theme the way the DTCG reference does.
-
-Name shadow tokens by role at the level components use (`shadow.raised`, `shadow.overlay`, or `elevation.shadow.*` beside `elevation.surface.*`), and keep any numbered scale one tier below. Store each as a DTCG `shadow` array, with the colour referenced from a theme-aware token. **Components ask for a role; only the role token knows the step.** Role names over step names is judgement backed by Material's two tiers and Atlassian's pairing; the DTCG type is the published format.
+Name shadow tokens by role at the level components use (`shadow.raised`, `shadow.overlay`, or `elevation.shadow.*` beside `elevation.surface.*`), and keep any numbered scale one tier below. Store each as a DTCG `shadow` array, with the colour referenced from a theme-aware token. **Components ask for a role; only the role token knows the step.** *Weight: moderate.* Role names are a judgement backed by Material's two tiers and Atlassian's pairing.
 
 ---
 
@@ -900,11 +843,7 @@ Here is how Material's own card tokens step through its states.
 
 The hover step is small: `level1` to `level2`, the ambient layer growing from 3px to 6px of blur. The drag is large: `level1` to `level4`, a different kind of state. Material's filled button follows the same rule from lower down, `level0` at rest and `level1` on hover, and its FAB goes `level3` to `level4`.
 
-Atlassian gives a choice, not a combination. Hover and press can change the fill (`elevation.surface.hovered`, `elevation.surface.pressed`) or, for default and raised surfaces only, the elevation (overlay on hover, raised on press), never both. A dragged raised card goes to overlay and comes back on drop.
-
-The pressed state usually goes down, not up. Material's elevated card returns to `level1` on press, and Polaris's buttons swap to `shadow-button-inset` and `shadow-button-primary-inset`, inset shadows that make the button look pushed in.
-
-Hover lift has an accessibility limit worth knowing. WCAG's Understanding page for 1.4.11 treats author-supplied hover effects as supplemental, so a hover shadow need not meet 3:1. It also means the hover shadow can't be the only signal that something is interactive, since touch users never see it.
+Atlassian gives a choice, not a combination: hover and press change either the fill (`elevation.surface.hovered`) or the elevation, never both, and a dragged raised card goes to overlay. The pressed state usually goes down: Material's elevated card returns to `level1` on press, and Polaris's buttons swap to inset shadows that look pushed in. WCAG's Understanding page for 1.4.11 treats hover effects as supplemental, so a hover shadow need not meet 3:1, but it can't be the only sign that something is interactive, since touch users never see it.
 
 Define hover as one step up from rest, press as rest or an inset, and drag as the floating role. Keep the floating role higher than any hover, so a menu opened from a hovered card still sits above it. **Hover nudges; drag lifts; and nothing on the page hovers as high as what floats over it.** The one-step hover and drag-to-overlay are consensus between Material and Atlassian; pressing down instead of up is shared by Material and Polaris.
 
@@ -979,18 +918,18 @@ A team rebuilds an issue list as a stack of cards, each with a soft shadow and a
 <text x="24" y="386" font-size="11" fill="#5a5850">Illustrative: 36px rows; 38px cards with 10px gaps and a light two-layer shadow.</text>
 </svg>
 
-The hairline list fits eight 36px rows in 288px with one edge per row. The card stack fits six, because each card needs a gap for its shadow to show, and each row now has four edges and a blur. Nothing in the content asked for depth; the rows are not movable or floating.
+The hairline list fits eight 36px rows in 288px; the card stack fits six, because each card needs a gap for its shadow, and each row now has four edges and a blur.
 
 The systems agree here more than anywhere else:
 
-- **Atlassian** says not to use elevation to group content where a border or white space would do, and makes borders the default for scrolled content such as sticky headers. It keeps its overflow shadow for small UI and tables where a border might be missed.
-- **Carbon** draws its tiles flat, separated by layer fills, and spends its one shadow mixin on the overflow menu, with a lighter `drop-shadow` on popovers.
-- **Primer**'s resting shadows are deliberately close to invisible: `shadow-resting-small` is two layers at 4% and 3%, too faint to separate anything without a line beside it.
-- **Polaris** goes furthest. Its `p-theme-light-mobile` theme sets `--p-shadow-100` and `--p-shadow-bevel-100` to `none` and redraws its buttons as an inset `0 0 0 var(--p-border-width-025)` border. On small screens, where density matters most, the shadows go and the lines stay.
+- **Atlassian** says not to use elevation to group content where a border or white space would do, and makes borders the default for scrolled content.
+- **Carbon** draws its tiles flat, separated by layer fills, and spends its one shadow mixin on menus, with a lighter `drop-shadow` on popovers.
+- **Primer**'s `shadow-resting-small` is two layers at 4% and 3%, too faint to separate anything without a line beside it.
+- **Polaris** goes furthest: its `p-theme-light-mobile` theme sets `--p-shadow-100` and `--p-shadow-bevel-100` to `none` and redraws buttons with an inset border. On small screens the shadows go and the lines stay.
 
-The counter-example is Material, whose elevated card does rest at `level1`. It also ships filled and outlined cards with no shadow, and its lists are flat.
+Material's elevated card does rest at `level1`, but its lists are flat.
 
-Use 1px dividers for rows and a bordered container for the table or list; give shadows only to what floats over it (a menu, a sticky header once it overlaps scrolled content, a dragged row). **Depth is a signal; on every row, it stops signalling anything.** This is the strongest consensus in the guide, and Polaris's mobile theme is a system acting on it.
+Use 1px dividers for rows and a bordered container for the table or list; give shadows only to what floats over it (a menu, a sticky header once it overlaps scrolled content, a dragged row). **Depth is a signal; on every row, it stops signalling anything.** *Weight: strong.* It is the strongest consensus in the guide.
 
 ---
 
@@ -1000,9 +939,7 @@ A shadow cannot be relied on to meet non-text contrast: WCAG treats it as part o
 
 A text input is drawn as a white field on a white page with a soft shadow and no border, and looks clean. The question in an accessibility review is whether that field's boundary meets 1.4.11.
 
-WCAG's Understanding page for 1.4.11 answers it directly. A boundary is required only when nothing else identifies the control, and a text input with no other cue is the standard case where it is. For drop shadows, the page treats the shadow as subsumed into whichever adjacent colour is closest in brightness. The shadow does not become a separate boundary colour to measure.
-
-Even measured generously, it would not pass.
+WCAG's Understanding page for 1.4.11 answers it directly. A boundary is required when nothing else identifies the control, the standard case being a text input, and a drop shadow is subsumed into whichever adjacent colour is closest in brightness rather than measured as a boundary. Even measured generously, it would not pass.
 
 <svg role="img" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Three text inputs on a white page, each labelled Email address. The first has only Atlassian's raised shadow; even its darkest layer at full strength would measure 1.95 to 1 against white, and the blur makes it fainter. The second has a light grey border, 1.43 to 1, which fails non-text contrast when the border is what identifies the field. The third has a mid-grey border, 3.04 to 1, which passes.</title>
@@ -1038,8 +975,6 @@ Even measured generously, it would not pass.
 </svg>
 
 Atlassian's raised shadow uses `#1E1F21` at up to 31%. Over white, that unblurred colour measures 1.95:1, and the 1px blur thins it further at every real pixel. Primer's default border, `#d1d9e0`, measures 1.43:1, decorative by WCAG's terms. A border at `#8c959f` reaches 3.04:1.
-
-This is also where the knowledge base's forced-colours point bites twice. A field outlined by a shadow or an inset ring loses its outline entirely in forced colours, because `box-shadow` computes to `none`.
 
 Give every control whose edge identifies it (text inputs, selects, checkboxes, unlabelled toggles) a border at 3:1 against the surface it sits on, and treat its shadow as decoration. Cards and menus don't need one for 1.4.11, though they need a border for forced colours. **A shadow is never the boundary of record; a border is.** This follows from WCAG's own text, not from system practice.
 
@@ -1107,7 +1042,7 @@ In dark mode a shadow needs far more opacity and a ring in front of it, and ligh
 
 Primer's light resting shadow is about 12% at its strongest; reused on GitHub's dark page, it vanishes, and only the small step from `#0d1117` to `#151b23` marks the card. Primer's dark tokens go to 40% to 80% near-black and open floating shadows with a `#3d444d` ring. Fluent doubles its alphas; Carbon goes from 30% to 80%; Material keeps black and relies on its tonal surfaces.
 
-Give every shadow token a dark value of its own, never the light one, and put a ring or border in front of floating ones. **In dark, the surface step and the ring do the work, and the shadow only adds weight.** The surfaces themselves are in [surfaces in dark mode](surfaces-in-dark-mode.md).
+Give every shadow token a dark value of its own, never the light one, and put a ring or border in front of floating ones. **In dark, the surface step and the ring do the work, and the shadow only adds weight.**
 
 ---
 
@@ -1117,15 +1052,11 @@ Give every shadow token a dark value of its own, never the light one, and put a 
 |---|---|---|
 | How many shadow roles | `shadow.raised`, `shadow.overlay` (plus hover and drag states) | A seven-step scale components pick from by eye |
 | Layers per token | Key + ambient, or ring + drop | One layer doing edge and distance |
-| As levels rise | Larger offset, blur, spread | Darker alpha |
 | Shadow colour | A `shadow.color` token, near-black, per theme | `rgba(0,0,0,.2)` written into every shadow |
-| On a coloured page | Tint the colour token towards the page hue | Black over cream |
 | Stroke that changes with state | `inset 0 0 0 1px` | A border that moves the label |
 | Container with images or coloured children | `border` | An inset ring the children cover |
 | Hairline on 1× and 2× screens | `border` (snaps) | A 0.5px ring |
 | Hover | One step up | The floating step |
-| Pressed | Rest, or an inset | Higher than hover |
-| Drag | The floating role | A custom shadow |
 | Rows in a table or list | 1px divider | A shadow per row |
 | Control edge (input, select) | Border at 3:1 | Shadow only |
 | Dark mode | Its own value, 40 to 80% plus a ring | The light value |
@@ -1135,26 +1066,19 @@ Give every shadow token a dark value of its own, never the light one, and put a 
 
 ## The short version
 
-A shadow scale is as long as its list of reasons. Systems ship between one and seven steps, but components use two: resting and floating. Name those roles, map every component to one, and keep further steps only for hover and drag. Material's six levels and Atlassian's two behave the same way once you look at the component tokens, and Carbon gets by with one.
+Systems ship between one and seven shadow steps, but components use two: resting and floating. Name those roles, map every component to one, and keep further steps only for hover and drag.
 
-Build each token from a tight key layer for the edge and a wide ambient layer for distance, and let size, not darkness, grow with the level. Make the colour its own token with a value per theme: near-black almost everywhere, tinted towards the page only where the page is visibly coloured. Store the result as a DTCG `shadow` array named by role.
+Build each token from a tight key layer for the edge and a wide ambient layer for distance, and let size, not darkness, grow with the level. Make the colour its own token per theme, near-black unless the page is visibly coloured, and store each as a DTCG `shadow` array named by role.
 
-Use an inset ring where a stroke must change with state without moving anything, which is how Figma's default inside stroke behaves. Use a border on containers with full-bleed children, on hairlines, on anything that must survive forced colours, and on every control edge that has to meet 3:1, because a shadow never counts as a boundary. In dense lists and tables, lines separate and only floating things get a shadow.
+Use an inset ring where a stroke must change with state without moving anything. Use a border on containers with full-bleed children, on hairlines, on anything that must survive forced colours, and on every control edge that has to meet 3:1, because a shadow never counts as a boundary. In dense lists and tables, lines separate and only floating things get a shadow.
 
-Hover is one step, drag is the floating role, press goes down. In dark mode every shadow needs its own value and floating ones a ring, with surfaces doing most of the work. Two roles, layered tokens and borders on the edges that matter are consensus; tinting and the ring-versus-border split are judgements, and the reasons for each are above, ready to write into your token documentation.
+Hover is one step, drag is the floating role, press goes down. In dark mode every shadow needs its own value and floating ones a ring. Two roles, layered tokens and borders on the edges that matter are consensus; tinting and the ring-versus-border split are judgements.
 
 ---
 
 ## How strong the evidence is
 
-Ranked by source type, strongest first:
-
-1. **Shipped token values and component tokens.** Material Web, Fluent, Primer, Polaris, Atlassian, Carbon, Ant Design and Radix values were read from their published packages and source. These prove what ships, not what works.
-2. **Standards.** WCAG 2.2's Understanding 1.4.11 (shadows subsumed into the nearest colour, hover supplemental), CSS Color Adjustment (box-shadow to none in forced colours), CSS Values 4 (line-width snapping) and the DTCG Format Module 2025.10.
-3. **System documentation.** Atlassian's and Fluent's elevation pages for roles, hover, drag and the Windows stroke.
-4. **User research.** One study, NN/g's 2017 eye-tracking test of strong and weak signifiers, in which shadows were bundled with other cues. No study was found that tests shadow steps, layer structure or tinting in interfaces.
-
-The independence check is mixed. Key-plus-ambient layering appears in Material first (2014) and Fluent later, and Fluent uses the same key and ambient vocabulary, so their agreement is closer to one decision than two. Primer's ring-plus-drops, Atlassian's drop-plus-edge and Polaris's single layer with negative spread arrive at the same split of edge and distance by different routes, which is stronger. The preference for borders in dense UI is independent across Atlassian, Carbon, Primer and Polaris, four teams with different lineages; it is the best-supported claim here. Shadow tinting has no convergence at all: Atlassian moved away from a tinted shadow, Radix tints only its rings, and Carbon tints one family.
+Shipped token values are the strongest evidence here, and they prove what ships, not what works. Key-plus-ambient layering began in Material (2014) and Fluent shares its vocabulary, so their agreement is closer to one decision than two; Primer, Atlassian and Polaris reach the same split of edge and distance by different routes. The preference for borders in dense UI is independent across four teams and is the best-supported claim. Tinting has no convergence. The only user research found, NN/g's 2017 signifier study, bundles shadows with other cues.
 
 ---
 
@@ -1162,17 +1086,15 @@ The independence check is mixed. Key-plus-ambient layering appears in Material f
 
 Researched November 2026.
 
-- **Package versions read.** `@primer/primitives` 11.10.0, `@shopify/polaris-tokens` 9.4.2, `@atlaskit/tokens` 20.11.0 (and 4.5.0 for the older dark ring), `@fluentui/tokens` 1.0.0-alpha.24, `@carbon/themes` 11.85.0 and `@carbon/styles` 1.119.0, `@radix-ui/themes` 3.3.0, Ant Design `master` (6.7.0), Material Web `main` with tokens `v0_192`.
-- **Fluent's documented values differ from its tokens.** The elevation page lists 24% and 20% for the high ramp; the web tokens use the same 14% and 12% for every step, with brand variants at 25% and 30%. The tokens were followed here.
-- **Ant Design's `colorShadow` base value** was not resolved; the alphas shown are multipliers of it.
-- **Polaris's component mapping** for `shadow-300` and `shadow-400` (which popover uses which) was not confirmed; its docs moved to shopify.dev during research.
-- **Fluent's Windows stroke** is stated on the elevation page without values; the figure's stroke is illustrative.
-- **Half-pixel ring rendering on 1×** is drawn as a likely result, unchecked in browsers; only `border-width` snapping is specified.
-- **Figma effect variables.** Binding a shadow's colour, offsets, blur and spread is in the plugin API's `setBoundVariableForEffect`; a 2023 forum report of binding `color` resetting `spread` to 0 was not confirmed fixed. Re-test before relying on one style across themes.
-- **Apple** publishes no shadow tokens or values in the HIG; its depth comes from system materials and window shadows, covered in [materials and translucency](materials-and-translucency.md).
-- **The DTCG module** is a Community Group report, not a W3C standard, and a newer draft was dated 8 September 2026; re-read section 9.6 before writing a converter.
-- **Figures** render real token values with SVG filters (`feMorphology`, `feGaussianBlur`, `feOffset`), which approximate `box-shadow` closely but not exactly; spread on rounded corners is squarer than in a browser.
-- **The NCSU thesis on shading and perceived clickability** (Creager) turned up in search and was not read; it may add user evidence.
+- **Package versions read.** `@primer/primitives` 11.10.0, `@shopify/polaris-tokens` 9.4.2, `@atlaskit/tokens` 20.11.0, `@fluentui/tokens` 1.0.0-alpha.24, `@carbon/themes` 11.85.0 and `@carbon/styles` 1.119.0, `@radix-ui/themes` 3.3.0, Ant Design 6.7.0, Material Web tokens `v0_192`.
+- **Carbon's popover shadow.** An earlier version said popovers used the `box-shadow` mixin; `_popover.scss` (1.119.0) uses `drop-shadow(0 2px 2px rgb(0 0 0 / 0.2))`.
+- **Figma's inside stroke.** An earlier version called "excluded from layout" Figma's default; since July 2026 new frames include inside strokes in layout ([Figma help](https://help.figma.com/hc/en-us/articles/42031586813719-Use-auto-layout-with-CSS-Flexbox-in-mind)).
+- **Fluent's documented values differ from its tokens** (24% and 20% on the elevation page, 14% and 12% in the tokens); the tokens were followed.
+- **Unresolved:** Ant Design's `colorShadow` base value; which Polaris popover uses `shadow-300` or `-400`; Fluent's Windows stroke values (the figure is illustrative); half-pixel ring rendering on 1× (unchecked in browsers).
+- **Figma effect variables.** A 2023 report of binding `color` resetting `spread` to 0 was not confirmed fixed.
+- **The DTCG module** had a newer draft dated 8 September 2026; re-read section 9.6 before writing a converter.
+- **Figures** approximate `box-shadow` with SVG filters; spread on rounded corners is squarer than in a browser.
+- **Apple** publishes no shadow values; see [materials and translucency](materials-and-translucency.md).
 
 ---
 
@@ -1182,7 +1104,7 @@ Researched November 2026.
 
 - [Material Web, `elevation/internal/_elevation.scss`](https://github.com/material-components/material-web/blob/main/elevation/internal/_elevation.scss). The key and ambient formulas and opacities.
 - [Material Web tokens v0_192](https://github.com/material-components/material-web/tree/main/tokens/versions/v0_192): `_md-sys-elevation.scss` (levels in dp), `_md-sys-color.scss` (`shadow` as `neutral0`), `_md-comp-elevated-card.scss`, `_md-comp-fab-primary.scss`, `_md-comp-menu.scss`, `_md-comp-dialog.scss`, `_md-comp-filled-button.scss`, `_md-comp-navigation-bar.scss`.
-- [Fluent 2, elevation](https://fluent2.microsoft.design/elevation). Ramps, key and ambient, Windows strokes, shadows on colour.
+- [Fluent 2, elevation](https://fluent2.microsoft.design/elevation). Ramps, key and ambient, Windows strokes.
 - [`@fluentui/tokens`, `shadows.js`](https://cdn.jsdelivr.net/npm/@fluentui/tokens/lib/utils/shadows.js), [`lightColor.js`](https://cdn.jsdelivr.net/npm/@fluentui/tokens/lib/alias/lightColor.js) and [`darkColor.js`](https://cdn.jsdelivr.net/npm/@fluentui/tokens/lib/alias/darkColor.js).
 - [Primer primitives, light theme CSS](https://cdn.jsdelivr.net/npm/@primer/primitives/dist/css/functional/themes/light.css) and [dark theme CSS](https://cdn.jsdelivr.net/npm/@primer/primitives/dist/css/functional/themes/dark.css).
 - [Shopify Polaris tokens CSS](https://cdn.jsdelivr.net/npm/@shopify/polaris-tokens/dist/css/styles.css), [`shadow.ts`](https://github.com/Shopify/polaris/blob/main/polaris-tokens/src/themes/base/shadow.ts) and [`Card.tsx`](https://github.com/Shopify/polaris/blob/main/polaris-react/src/components/Card/Card.tsx).
@@ -1199,7 +1121,7 @@ Researched November 2026.
 - [CSS Color Adjustment 1, properties affected by forced colors](https://drafts.csswg.org/css-color-adjust-1/#forced-colors-properties).
 - [CSS Values 4, snapping a length as a line width](https://drafts.csswg.org/css-values-4/#snap-a-length-as-a-border-width).
 - [Design Tokens Format Module 2025.10, shadow](https://www.designtokens.org/TR/2025.10/format/#shadow).
-- [Figma Plugin API, `strokeAlign`](https://developers.figma.com/docs/plugins/api/properties/nodes-strokealign/) and [`figma.variables`](https://developers.figma.com/docs/plugins/api/figma-variables) (effect binding).
+- [Figma help, auto layout with CSS flexbox in mind](https://help.figma.com/hc/en-us/articles/42031586813719-Use-auto-layout-with-CSS-Flexbox-in-mind) (inside strokes in layout by default from July 2026); [Plugin API `figma.variables`](https://developers.figma.com/docs/plugins/api/figma-variables) (effect binding).
 - [Figma forum, `setBoundVariableForEffect` spread report](https://forum.figma.com/t/setboundvariableforeffect-bug/59788).
 
 **Research**
@@ -1210,7 +1132,3 @@ Researched November 2026.
 
 - `knowledge/ui/design/visual.md#elevation-borders-radius-and-shape`, `#surfaces-and-elevation-levels` and `#theming-and-dark-mode`; `knowledge/code/figma-handoff.md#strokes-borders-outlines-and-shadows`.
 - [How surfaces stack](how-surfaces-stack.md), [surfaces in dark mode](surfaces-in-dark-mode.md), [materials and translucency](materials-and-translucency.md).
-
-**Cited but not resolved to a URL**
-
-- Creager, NCSU master's thesis on shading gradients and perceived clickability: found in search, not opened; repository URL not verified.

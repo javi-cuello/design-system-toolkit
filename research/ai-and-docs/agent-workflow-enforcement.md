@@ -27,17 +27,15 @@ For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-shor
 
 A written step is optional by design: Claude Code treats `CLAUDE.md` as guidance the model weighs, and only the harness (hooks, permission rules, tool restrictions) applies a rule whatever the model decides.
 
-Go back to the agent that answered "partly". Its instructions said to finish with an independent review. Everything else in front of it said the work was finished: the tests passed, the diff looked right, and the person was waiting.
+Go back to the agent that answered "partly". Its instructions said to finish with an independent review; everything else in front of it said the work was finished.
 
 Anthropic's [best-practices page](https://code.claude.com/docs/en/best-practices) divides instructions into two kinds. A prompt, a `CLAUDE.md` line or a skill is non-deterministic: the model reads it and decides. A hook, a permission rule or a managed setting is deterministic: "Claude Code applies this every time, no matter what the model decided to do."
 
 On the first kind the page is blunt: "CLAUDE.md is for guidelines, and Claude is allowed to decide a guideline doesn't apply." It also names the symptom a maintainer sees. A line that keeps getting more emphasis and keeps being missed belongs in a hook.
 
-Louder wording doesn't help. The same page says adding IMPORTANT probably won't fix it, and that emphasis mostly makes the model over-apply the rule. Claude Code's [memory page](https://code.claude.com/docs/en/memory) says the same of `CLAUDE.md` and of the auto memory the agent writes for itself: both are context, not enforced configuration, and anything that must be blocked belongs in a hook.
+Louder wording doesn't help: the same page says adding IMPORTANT probably won't fix it, and emphasis mostly makes the model over-apply the rule. Claude Code's [memory page](https://code.claude.com/docs/en/memory) says `CLAUDE.md` and auto memory are context, not enforced configuration.
 
-The mechanism is ordinary. A model holds instructions, the code it has read, tool output and its own reasoning in one context, and weighs them together. A rule saying "finish with an independent review" competes with a strong local signal that the work is done.
-
-When the rule loses, the model doesn't experience breaking a rule. It judges that the rule didn't apply this time, which is exactly the latitude the documentation grants.
+The mechanism is ordinary. A model weighs instructions, code, tool output and its own reasoning together, and a rule saying "finish with an independent review" competes with a strong local signal that the work is done. When the rule loses, the model judges that it didn't apply this time, exactly the latitude the documentation grants.
 
 Long sessions with many rules make this worse, and three research findings say why:
 
@@ -57,7 +55,7 @@ Every serious workflow has the same phases (plan, implement, verify, review), an
 
 [GitHub Spec Kit](https://github.com/github/spec-kit) shows the gap in one line. Its [plan template](https://raw.githubusercontent.com/github/spec-kit/main/templates/plan-template.md) carries a heading, "GATE: Must pass before Phase 0". The model fills it in, and nothing checks what it wrote.
 
-Spec Kit runs constitution, specify, plan, tasks, implement. One of its gates is real, because it is a script: the [implement command](https://raw.githubusercontent.com/github/spec-kit/main/templates/commands/implement.md) fails without a tasks file. The rest are text the model reads.
+One of Spec Kit's gates is real, because it is a script: the [implement command](https://raw.githubusercontent.com/github/spec-kit/main/templates/commands/implement.md) fails without a tasks file.
 
 Anthropic's own guidance is explore, plan, code, commit. [Plan mode](https://code.claude.com/docs/en/permission-modes) is the harness version of "plan first": edits are blocked until the person approves the plan. It has one documented hole. In an interactive terminal where bypass permissions are available, the model is only instructed not to edit.
 
@@ -72,9 +70,7 @@ The same page asks for evidence over claims: "'All tests pass' on its own tells 
 
 [AWS Kiro](https://kiro.dev/docs/specs/) builds requirements, design and tasks into its editor, with a review screen for each. Its "Quick Spec" mode runs without approval gates. Its [hooks](https://kiro.dev/docs/hooks/index) can gate a tool call, as Claude Code's can.
 
-[obra/superpowers](https://github.com/obra/superpowers) is the most complete process framework for Claude Code, and the most instructive about limits. It runs a brainstorm, an isolated worktree, a written plan in two-to-five-minute tasks, a fresh subagent per task with a two-stage review, test-first, a requested code review where critical issues block progress, and verification before completion.
-
-Every one of those gates is prose. A SessionStart hook injects it, written at maximum volume ("YOU DO NOT HAVE A CHOICE"), with a table rebutting the excuses a model gives. Nothing blocks an edit or a stop, and its docs note that a long session that compacts can lose the bootstrap without re-injection. It is the loud end of prose enforcement.
+[obra/superpowers](https://github.com/obra/superpowers) is the most complete process framework for Claude Code: a brainstorm, an isolated worktree, a plan in two-to-five-minute tasks, a fresh subagent per task with a two-stage review, test-first, and verification before completion. Every one of those gates is prose, injected by a SessionStart hook at maximum volume ("YOU DO NOT HAVE A CHOICE"). Nothing blocks an edit or a stop. It is the loud end of prose enforcement.
 
 OpenAI's [codex-plugin-cc](https://github.com/openai/codex-plugin-cc) puts Codex inside Claude Code as a reviewer. Its optional review gate is a Stop hook: if Codex finds problems, "the stop is blocked so Claude can address them first". Its README warns that this can start a long Claude and Codex loop and drain usage limits quickly.
 
@@ -93,20 +89,18 @@ Take your phases from Spec Kit and superpowers, which agree with each other and 
 
 The same failures everywhere (early victory, tampered tests, wandering past the task), and the fixes that lasted moved out of the prompt into something the agent couldn't argue with.
 
-The canonical list of failures is Kent Beck's. Working through a plan of tests with an agent, he met loops, features nobody asked for, and an agent that "cheated" by disabling or deleting tests. Those three come back in every account below.
+Kent Beck's list is the canonical one: loops, features nobody asked for, and an agent that "cheated" by disabling or deleting tests. Here are first-hand accounts from 2025 and 2026, each with what failed and what fixed it:
 
-Here are eight first-hand accounts from 2025 and 2026, each with what failed and what fixed it:
-
-- **[Kent Beck](https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes)** keeps a `plan.md` of tests and has the agent take the next one: red, green, refactor. His fix was closer steering by hand, which works for one expert watching one agent.
-- **[Harper Reed](https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/)** has a model interview him into a `spec.md`, then writes a prompt plan of small test-first steps and a `todo.md`. The plan files are the only enforcement, and he reports merge conflicts once a team is involved.
+- **[Kent Beck](https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes)** keeps a `plan.md` of tests and steers closely by hand, which works for one expert watching one agent.
+- **[Harper Reed](https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/)** works from a `spec.md`, a prompt plan of small test-first steps and a `todo.md`. The plan files are the only enforcement, and he reports merge conflicts once a team is involved.
 - **[Armin Ronacher](https://lucumr.pocoo.org/2025/6/12/agentic-coding/)** lets the agent verify itself through Makefile targets, logs and a browser driver. When it started a dev server that was already running, he didn't add a prompt line. He made the target refuse with an error, so the guardrail went into the tool.
 - **[Mitchell Hashimoto](https://mitchellh.com/writing/my-ai-adoption-journey)** calls his practice harness engineering: every agent mistake becomes a line in `AGENTS.md`, or a script with a line pointing to it. He names giving the agent a way to verify its work as the most reliable way to get it right first time.
 - **[Jesse Vincent](https://blog.fsck.com/2025/10/09/superpowers/)**, building superpowers, found that quizzing subagents on skills proved little. Pressure scenarios tested a rule (an outage where delay costs money, a solution already built and tempting to keep), and each failure strengthened the skill that should have stopped it.
-- **[Anthropic Engineering](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)**, on long-running agents, met four failures. Building everything at once ran out of context (fix: one feature per session). Early victory (fix: a feature list where every item starts failing). "Done" after unit tests alone (fix: end-to-end tests in a browser). Edited tests (fix: among others, a JSON checklist, overwritten less often than Markdown).
+- **[Anthropic Engineering](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)**, on long-running agents, met running out of context (fix: one feature per session), early victory (a feature list where every item starts failing), "done" after unit tests alone (end-to-end tests in a browser) and edited tests (a JSON checklist, overwritten less often than Markdown).
 - **[Spotify](https://engineering.atspotify.com/2025/12/feedback-loops-background-coding-agents-part-3)** runs deterministic verifiers (format, build, test) in a Claude Code Stop hook before a pull request can open, then a model judge that compares the diff with the request. The judge vetoes about a quarter of sessions, and the agent recovers about half the time. The worst failure it names is a pull request that passes CI and is functionally wrong.
 - **[Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2)** run inside code-defined blueprints that alternate agent steps with deterministic ones. A hard cap of two CI rounds hands over to a person, rules are scoped per directory, and human review is mandatory. More than 1,300 such pull requests merge a week.
 
-Every fix in Anthropic's list is a structure, not a sentence, and the same holds across the others. Three patterns run through them:
+Every fix is a structure, not a sentence. Three patterns run through them:
 
 - **Test tampering is the most reported failure**, and nobody fixed it with wording.
 - **The lesson goes back into the system**: Hashimoto's into `AGENTS.md` and scripts, Vincent's into skills, Ronacher's into the tool.
@@ -198,13 +192,11 @@ Require a fresh-context review, not a second vendor. **What makes a review indep
 
 Measure the change, not the request: a script that reads what the session wrote can tell a one-line fix from a cross-repository change without asking the agent, and the gates fire only above a line.
 
-Every framework above scales by asking someone to choose a mode. Kiro has "Quick Spec". Superpowers has its "1% chance" rule. Anthropic advises skipping the plan when "you could describe the diff in one sentence".
+Every framework above scales by asking someone to choose a mode: Kiro's "Quick Spec", superpowers' "1% chance" rule, Anthropic's advice to skip the plan when "you could describe the diff in one sentence". Choosing is the problem. The agent that treats review as optional will also judge its own change to be small.
 
-Choosing is the problem. The agent that treats review as optional will also judge its own change to be small, so the decision has to be made by something that measures.
+Where a change lands matters as much as its size: a two-line edit to a shared standard changes a rule every consumer reads. So small and local takes the fast path; large, or touching a shared rule or tool, takes the full path.
 
-Where a change lands matters as much as its size. A two-line edit to a shared standard changes a rule every consumer reads; a two-line edit to one button doesn't. So the line is drawn on both. Small and local takes the fast path. Large, or touching a shared rule or tool, takes the full path.
-
-**One toolkit's history, worked through.** The line was tested against 293 commits from 1 September to 28 October 2026. It was set at three files and 100 changed lines, bookkeeping files aside, with no file under `standards/` or `tools/shared/`. That line put exactly half the commits (147) on the fast path. Fourteen commits changed more than 400 lines.
+**One toolkit's history, worked through.** The line was tested against 293 commits from 1 September to 28 October 2026. It was first set at three files and 100 changed lines, bookkeeping files aside, with no file under `standards/` or `tools/shared/`; today's, below, allows ten lines there. That line put exactly half the commits (147) on the fast path. Fourteen commits changed more than 400 lines.
 
 Use two tiers, chosen by a script, never by the agent. The fast path keeps what already exists, a check at push; the full path adds the plan, review and feedback gates. **Start your thresholds where your own history puts them, and tune them from the gate's log.** The two-tier design is a judgement; the even split is what one repository's history showed.
 
@@ -212,20 +204,11 @@ Use two tiers, chosen by a script, never by the agent. The fast path keeps what 
 
 ## One toolkit's gates
 
-Four gates that refuse, built as `tools/claude-hooks/gates.mjs` and in use for every Claude Code session on its maintainer's machine since 28 October 2026; everything else still only informs.
+Four gates that refuse, built as `tools/claude-hooks/gates.mjs` and in use for every Claude Code session on its maintainer's machine since 28 October 2026, riding on two of the four hooks that otherwise only inform.
 
-The record before the gates is the opening scene in numbers. In October the toolkit had moved its loop out of prose into four hooks that informed and refused nothing:
+The record before the gates is the opening scene in numbers. In October the toolkit's loop ran through four hooks that informed and refused nothing: SessionStart handed over open items, PreToolUse an area's rules beside the first edit there, Stop collected what a turn left open, and UserPromptSubmit handed that over with the next message. The steps gated at push (the check and the commit trailers) held; the steps only written down were the ones a person kept asking for. Of 293 commits since 1 September, 23 mentioned an independent review.
 
-- SessionStart hands over open items;
-- PreToolUse hands over an area's rules beside the first edit there;
-- Stop collects what a turn left open;
-- UserPromptSubmit hands that over with the next message.
-
-They refused nothing by choice: an earlier blocking Stop hook had printed on screen "on nearly every turn". The cost showed in the record. The two steps gated at push (the check and the commit trailers) held. The one gated at Stop (reply length) held. The steps only written down were the ones a person kept having to ask for.
-
-Of 293 commits since 1 September, 23 mentioned an independent review. On 28 October, an agent asked whether it had reviewed its work answered "partly", three weeks after the rule was written down to make the question unnecessary.
-
-The rule now reads, in toolkit-standard §D 13: "The loop runs for every piece of work, and no step of it is optional". The gates are its trigger column. Each checks evidence in the session's own transcript, so the agent is never asked whether it did a step.
+The rule now reads, in toolkit-standard §D 13: "The loop runs for every piece of work, and no step of it is optional". The gates, on the PreToolUse and Stop hooks, are its trigger column. Each checks evidence in the session's own transcript, so the agent is never asked whether it did a step.
 
 | When | Gate | What clears it |
 |---|---|---|
@@ -234,16 +217,11 @@ The rule now reads, in toolkit-standard §D 13: "The loop runs for every piece o
 | A push of a repository with unreviewed full-size work, or while a review runs | Refused (PreToolUse) | The review, reported |
 | The end of reviewed work | Blocked (Stop) | A `Toolkit:` line (what goes back to the toolkit), an `Open:` line (what stays unfinished and why), and a `Docs:` line when a README describing the changed files was left alone |
 
-Full-size is measured, never asked: three files or 100 lines written since the work began, or more than ten lines in a standard or shared tool (`FILES = 3`, `LINES = 100`, `WIDE_LINES = 10` in `gates.mjs`). The count includes what subagents write and what a script's own code writes (found on disk, beyond what the file held before).
+Full-size is measured, never asked: more than three files or 100 lines written since the work began, or more than ten lines in a standard or shared tool (`FILES = 3`, `LINES = 100`, `WIDE_LINES = 10` in `gates.mjs`). The count includes what subagents write and what a script's own code writes (found on disk, beyond what the file held before).
 
-It also carries unreviewed, uncommitted work another session left in the same repository, for up to a week. Small work committed as it goes, about half of all commits, never meets a gate. The gates refuse in the session and nowhere else on screen, which keeps the decision of 15 October that the hooks speak to the session.
+It also carries unreviewed, uncommitted work another session left in the same repository, for up to a week. Small work committed as it goes, about half of all commits, never meets a gate.
 
-**The first week.** The plan gate refused the work that built it until that work had a plan, and the feedback gate caught its own bug on its first run; the hooks' README records both as the gates' proof. Most commits since have taught the gates to see writes they had missed:
-
-- an in-place `sed` whose file sits after a script, inside a subshell or in backticks;
-- a background agent's edits in its own worktree, now counted when its branch merges.
-
-That is the refusal rung's hole from [the enforcement ladder](#the-enforcement-ladder), tools the matcher doesn't see, found in practice one shape at a time.
+**The first week.** The plan gate refused the work that built it until that work had a plan, and the feedback gate caught its own bug on its first run. Most commits since have taught the gates to see writes they had missed (an in-place `sed` inside a subshell, a background agent's edits in its own worktree): the refusal rung's hole from [the enforcement ladder](#the-enforcement-ladder), found one shape at a time.
 
 **The holes that remain**, as the [README](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/README.md) lists them:
 
@@ -261,7 +239,7 @@ Build the review gate first: it is the step skipped most, with the clearest evid
 
 About half of all changes pay nothing; the rest pay a plan file and one review round, and the real risks are a threshold drawn in the wrong place and a gate noisy enough to be resented.
 
-Take a full-path change from start to finish. It adds one plan, about a minute of agent time, most of it the impact script. It adds one review round of two or three fresh agents, a few minutes. When findings land, it adds a fix and a re-review. That is the review most teams already say they want and mostly don't get.
+A full-path change adds one plan, about a minute of agent time, and one review round of two or three fresh agents, a few minutes, plus a fix and a re-review when findings land. That is the review most teams say they want and mostly don't get.
 
 Thresholds drawn from history will misjudge some changes, and each misjudgement becomes a test case and a tuned number. A change split across two sessions is two smaller changes, which is why the carry file and the push gate exist.
 
@@ -294,27 +272,24 @@ A step written in `CLAUDE.md` is a guideline the model is allowed to judge inapp
 
 Other tools agree on the phases (plan, implement, verify, review) and mostly enforce them with prose, which is why their gates leak; the exceptions use the harness.
 
-Nothing shows a reviewer needs a different model; what the evidence supports is a reviewer that never saw the implementer's reasoning. Practitioners at scale say the same: Spotify gates pull requests with a Stop hook, Stripe wraps agents in code-defined steps with a capped retry, and the people who improve over time write every mistake back into their rules or tools.
+Nothing shows a reviewer needs a different model, only one that never saw the implementer's reasoning. At scale, Spotify gates pull requests with a Stop hook, Stripe wraps agents in code-defined steps with a capped retry, and the people who improve write every mistake back into their rules or tools.
 
 Keep your small changes fast by letting a script, not the agent, decide what is small. Above the line, use three gates: no edit until a plan exists with an impact list the code produced, no end of turn while an edit postdates the last independent review, and no end of reviewed work without saying what goes back and what stays open.
 
-One toolkit has run exactly this since 28 October 2026; the gates held on their first run, and the work since has been teaching them to see writes they missed. The hook looks, so the agent is never asked.
+One toolkit has run exactly this since 28 October 2026. The hook looks, so the agent is never asked.
 
 ---
 
 ## What to re-check later
 
-Researched October 2026 (27 to 28 October) and updated on 2 November 2026; the memory-page point in [why written steps slip](#why-written-steps-slip) was added on 9 November 2026, when the series was assembled. Vendor mechanics were read from primary sources: Anthropic's Claude Code documentation (best practices, hooks, permission modes, local code review), GitHub Spec Kit's repository and templates, AWS Kiro's specs and hooks docs, the obra/superpowers repository, OpenAI's codex-plugin-cc and Codex docs, Cursor's rules and hooks docs, and Aider's and Cline's docs. Research papers were read at arXiv.
+Researched 27 to 28 October 2026 and updated on 2 November 2026, from primary sources: Claude Code's documentation, Spec Kit's repository and templates, Kiro's, Codex's, Cursor's, Aider's and Cline's docs, the superpowers repository and codex-plugin-cc; papers at arXiv. The toolkit was read from its repository on 2 November 2026. Shortened on 17 November 2026 to the series' 20-minute limit, when the account of the hooks was aligned with [Part 5](what-keeps-an-agent-on-track.md#hooks-and-gates): four informing hooks, with the gates riding on PreToolUse and Stop.
 
-Re-checked in November 2026: the Claude Code hooks reference (the eight-continuation Stop cap, its reset on a tool call and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` are as stated) and the Gloaguen et al. abstract (now version 3, 29 September 2026). The toolkit was read from its repository on 2 November 2026: `tools/claude-hooks/` (in use since 28 October), toolkit-standard §D 13 and `CLAUDE.md`.
-
-- **The Stop-hook cap.** The eight-continuation cap, its reset on a tool call and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` were re-checked on 2 November 2026; hook events change with most Claude Code releases.
-- **A hook's deny in bypass modes.** Anthropic documents permission deny rules as holding in every mode; the same claim for a hook's deny was not found verbatim.
-- **Self-preference.** Panickssery and colleagues (2024) were read through secondary sources only; the June 2026 preprint is one study of 85 cases.
-- **No controlled study compares prose rules against hooks directly.** The case rests on vendor documentation and the mechanism.
-- **The practitioner accounts** are paraphrased, with figures as each reported them; where an account was read through a summarising fetch it is paraphrased, not quoted. Two were left out: posts attributed to Boris Cherny (only secondary write-ups found) and Anthropic's "How Anthropic teams use Claude Code" (no failures reported).
-- **The best-practices quotes** were checked verbatim on 28 October 2026. Some of the page's wording is paraphrased in the body to keep quotations short.
-- **The toolkit's gates** run on one maintainer's machine, in use since 28 October 2026; the holes listed in [one toolkit's gates](#one-toolkits-gates) were open as of 2 November 2026.
+- **The Stop-hook cap**, its reset and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` were re-checked on 2 November 2026; hook events change with most releases.
+- **A hook's deny in bypass modes** was not found documented as it is for permission deny rules.
+- **Self-preference.** Panickssery and colleagues (2024) were read through secondary sources; the June 2026 preprint is one study of 85 cases.
+- **No controlled study compares prose rules against hooks directly.**
+- **The practitioner accounts** are paraphrased, with figures as each reported them. Posts attributed to Boris Cherny (secondary write-ups only) were left out.
+- **The toolkit's gates** are described as of 2 November 2026. Its hooks README (read 17 November 2026) since lists a fifth gate, refusing once the first write to a component's file whose knowledge page the session hasn't opened, and asks the feedback gate for a measure line too.
 
 ---
 
@@ -322,12 +297,12 @@ Re-checked in November 2026: the Claude Code hooks reference (the eight-continua
 
 **Primary: Anthropic**
 
-- [Claude Code best practices](https://code.claude.com/docs/en/best-practices). Deterministic and non-deterministic instructions, emphasis, verification rungs, fresh-subagent review; quotes checked verbatim 28 October 2026.
-- [Claude Code hooks reference](https://code.claude.com/docs/en/hooks). Stop decisions, the eight-continuation cap, its reset and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`; re-checked 2 November 2026.
+- [Claude Code best practices](https://code.claude.com/docs/en/best-practices); quotes checked verbatim 28 October 2026.
+- [Claude Code hooks reference](https://code.claude.com/docs/en/hooks); re-checked 2 November 2026.
 - [Claude Code hooks guide](https://code.claude.com/docs/en/hooks-guide). Failing open, `stop_hook_active`.
 - [Permission modes](https://code.claude.com/docs/en/permission-modes). Plan mode and where it is not enforced.
 - [Local code review](https://code.claude.com/docs/en/code-review-local).
-- [Claude Code memory](https://code.claude.com/docs/en/memory). `CLAUDE.md` and auto memory as context, not enforced configuration.
+- [Claude Code memory](https://code.claude.com/docs/en/memory).
 - [Anthropic Engineering, *Effective harnesses for long-running agents*](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents), November 2025.
 
 **Primary: other tools**

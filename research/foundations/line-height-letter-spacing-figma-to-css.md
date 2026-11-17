@@ -37,7 +37,7 @@ Two mismatches fall out of the table. The first is that CSS's preferred line hei
 
 The second is newer. Both tools now offer `%` for letter spacing, and the two mean different things. Figma's is a share of the font size; CSS's, since early 2026, is a share of the width of the space character.
 
-That collision is more dangerous than the old situation, when CSS simply rejected the unit and the missing tracking was easy to spot. [How letter spacing should cross over](#letter-spacing-in-css) works through what a literal copy now renders.
+[Letter spacing in CSS](#letter-spacing-in-css) works through what a literal copy now renders.
 
 **Whatever Figma shows, line height reaches CSS as a bare number and letter spacing as `em`.** That one sentence, written into a handoff note, prevents most of what follows.
 
@@ -57,7 +57,7 @@ Percentage is a multiplier on font size. 150% of 16px is a 24px line box, and th
 
 Pixels are absolute, and Figma treats them more literally than CSS does. In a browser, a fixed `line-height` behaves as a floor: an inline image, a taller inline element or an emoji can push the line box past it. Figma doesn't allow that. Ask for 20px and the box is 20px.
 
-Most days the difference is invisible. It turns into a bug in a component that mixes text with inline icons, where the mock and the page disagree on the final line height while both declare the same pixel number.
+It turns into a bug in a component that mixes text with inline icons, where mock and page disagree while both declare the same pixel number.
 
 Letter spacing in Figma is a percentage of font size, so 2% is exactly `0.02em`. Print tools count tracking in thousandths of an em, so a tracking value of -20 equals -0.02em, which equals -2% in Figma. Figma's pixel option for letter spacing is absolute and doesn't scale.
 
@@ -147,9 +147,7 @@ The rule for a Figma-to-code spec has no exceptions. **Figma's `150%` becomes CS
 
 Percentage for most product UI, and pixels only where line height has to be a bound variable, because the cost of pixels is a conformance failure and the cost of percentage is a missing Figma feature.
 
-Picture a scale of twelve type sizes. Set in percentage, it might need three or four ratios. Set in pixels, it needs twelve separate values, and each is one more number to keep right through every change.
-
-Percentage has five things in its favour:
+Picture a scale of twelve type sizes. In percentage it needs three or four ratios; in pixels, twelve values, each one more number to keep right. Percentage has five things in its favour:
 
 - One value covers many sizes.
 - It survives responsive modes: when font sizes shrink on a small viewport, line height follows, where a fixed pairing has to be updated by hand and degrades quietly when someone forgets.
@@ -159,11 +157,9 @@ Percentage has five things in its favour:
 
 The large cost is that percentage line heights can't be bound to Figma variables. [Typography variables](https://forum.figma.com/t/launched-typography-variables/48430), launched in April 2024, take only numbers, and a number applied to line height is read as pixels.
 
-The [request to allow percentages](https://forum.figma.com/suggest-a-feature-11/allow-percentages-for-line-height-21970) has been open since April 2024, with a staff note that it is "on the team's radar" and no date. A [second request](https://forum.figma.com/suggest-a-feature-11/feature-request-support-percentage-values-for-line-height-in-figma-variables-58640), filed in October 2026, asks for the same thing. [Config 2026](https://www.figma.com/blog/config-2026-recap/) covered Code Layers, Motion, shader fills, generative plugins and an updated agent, and said nothing about typography variable units.
+The [request to allow percentages](https://forum.figma.com/suggest-a-feature-11/allow-percentages-for-line-height-21970) has been open since April 2024, with a staff note that it is "on the team's radar" and no date, and [Config 2026](https://www.figma.com/blog/config-2026-recap/) said nothing about typography variable units. A third-party plugin, Line Height Tokens, converts unitless number variables to proportional line height, a workaround rather than a binding. A system that requires line height to be a token with modes has no percentage route today.
 
-A third-party plugin, Line Height Tokens, stores unitless values in number variables and converts them to proportional line height. That's a workaround, not a binding. A system that requires line height to be a token with modes has no percentage route today.
-
-Two smaller costs come with percentage. 150% of 15px is 22.5px, and a sub-pixel line box makes component-height arithmetic awkward. And checking whether a two-line label fits a 48px row is easier when the line height is a round number.
+A smaller cost: 150% of 15px is 22.5px, and a sub-pixel line box makes component-height arithmetic awkward.
 
 Fixed pixels have three advantages:
 
@@ -177,7 +173,7 @@ The cost that reaches a reader is accessibility. [WCAG's Success Criterion 1.4.1
 
 Here is how pixel line heights fail it. Say you set body text to `font-size: 1rem; line-height: 24px`, so that font size respects the reader's browser setting. At the default 16px root the ratio is 1.5. A reader who raises the default to 24px gets 24px text in the same 24px line box, a ratio of 1.0. The text grew; the line box didn't. (These values are illustrative.)
 
-Auto suits exploratory work and long prose in a single typeface, and is poor for a design system. Its value can't go into a token, it depends on the font, and it isn't guaranteed to match what a browser computes for `line-height: normal`. Both derive their defaults from the font's metrics, but they are separate implementations with no promise they agree.
+Auto suits exploratory work and is poor for a design system: its value can't go into a token, and it isn't guaranteed to match the browser's `line-height: normal`.
 
 Use percentage in your Figma text styles for ordinary product UI, and fixed pixels only where line height genuinely has to be a bound variable. The two costs aren't the same kind of thing: the percentage route loses tokenisation, a maintenance problem, while the pixel route fails a reader who enlarged their text, a defect. **Choose the cost that lands on the maintainers, not on the reader.** Never use Auto in a published library.
 
@@ -189,11 +185,9 @@ The constraint this depends on: if your organisation requires every typographic 
 
 The scale mostly settles it: choose the sizes so that percentage and pixels land on the same numbers, and the choice stops mattering.
 
-At a 150% ratio, any font size that is a multiple of 8 lands on a 4px grid: 16 gives 24, 32 gives 48. Sizes that are multiples of 4 but not 8 miss it: 12 gives 18, 20 gives 30. A scale built from the first kind lets both units say the same thing.
+Sizes in multiples of 8 land on a 4px grid at 150% (16 gives 24, 32 gives 48), so a scale built from them lets percentage and pixels say the same thing. The worked table, and the role values that decide the number in the first place, are in [choosing line height](../foundations/one-type-scale-for-ui-and-content.md#choosing-line-height).
 
-Line height should also fall as size rises, and a pixel-first exercise produces that almost as a side effect. The table of sizes with the ratio each implies, and the four role values (text 1.5, labels 1.3, headings 1.2, display 1.1), are in [one type scale for an interface and its articles](one-type-scale-for-ui-and-content.md).
-
-One caveat on any single ratio. Ant Design sets 14/22, about 1.57, above common Latin defaults. In a system that ships across scripts, that's a reason to treat the ratio as a mode rather than a constant; what Ant Design does and doesn't claim about its reasons is in [naming text styles](naming-text-styles.md).
+One caveat: Ant Design sets 14/22, about 1.57, above common Latin defaults, so a system that ships across scripts may need the ratio as a mode rather than a constant ([a second platform](../foundations/naming-text-styles-part-2.md#a-second-platform)).
 
 Choose your sizes so most land on the grid at their role's ratio. **Once both units produce the same numbers, percentage against pixels is only a question of tokenisation.**
 
@@ -221,7 +215,7 @@ For print-style tracking values, [Figma's help page on text properties](https://
 
 For years, `letter-spacing: 2%` was invalid CSS: the parser dropped it and the tracking was simply missing. That changed. Percentage values for `letter-spacing` and `word-spacing` are defined in CSS Text Module Level 4. Firefox and Safari supported them for some years, and [Chrome 145](https://developer.chrome.com/release-notes/145), released on 10 February 2026, shipped them on desktop, Android, WebView and iOS. The value is now valid and applied in every major engine.
 
-The catch is what the percentage measures against. [CSS Text Level 4 resolves it against the advance width of the space character](https://developer.mozilla.org/en-US/docs/Web/CSS/letter-spacing) (U+0020), while Figma's resolves against the font size. The space is far narrower than the em. [Microsoft's character design standards](https://learn.microsoft.com/en-us/typography/develop/character-design-standards/whitespace) put an average font's space at about a quarter of the em; Times New Roman's is 512 units of a 2048-unit em, exactly 0.25em.
+The catch is what the percentage measures against. [CSS Text Level 4 resolves it against the advance width of the space character](https://developer.mozilla.org/en-US/docs/Web/CSS/letter-spacing) (U+0020), while Figma's resolves against the font size. The space is far narrower than the em. [Microsoft's character design standards](https://learn.microsoft.com/en-us/typography/develop/character-design-standards/whitespace) put an average font's space at about a quarter of the em.
 
 Here is the label's 2% both ways, worked with that figure.
 
@@ -234,11 +228,11 @@ Here is the label's 2% both ways, worked with that figure.
 
 A literal copy applies roughly a quarter of the intended tracking, in the right direction, at every size. That's worse than the old failure. Missing tracking was visible in a side-by-side screenshot; slightly-too-tight tracking reads as an ordinary Figma-against-browser rendering difference, so it survives review. The correct output hasn't changed: `0.02em`.
 
-The two percentages are like a tip worked out on the bill and a tip worked out on the tax: same sign, same number, a much smaller amount. Where the picture stops: the space character's width varies by font, so the shortfall isn't a fixed quarter everywhere, only roughly one.
+The two percentages are like a tip worked out on the bill and a tip worked out on the tax: same sign, same number, a much smaller amount. The space's width varies by font, so the shortfall is only roughly a quarter.
 
 Two more traps sit between Figma and the code. The first is Dev Mode, which offers letter spacing in px or rem, never em. A style set to 2% on 18px type surfaces as `letter-spacing: 0.0225rem`, a fixed value that no longer scales with the element's own font size.
 
-A [request for em output](https://forum.figma.com/suggest-a-feature-11/percentage-based-letter-spacing-should-convert-to-em-value-in-dev-mode-41443) was filed in June 2025 and acknowledged by staff the same day, with no change shipped since. Until it is, turning Dev Mode's number back into em is a manual step, and the inspect panel works against getting it right.
+A [request for em output](https://forum.figma.com/suggest-a-feature-11/percentage-based-letter-spacing-should-convert-to-em-value-in-dev-mode-41443) was acknowledged in June 2025, with no change shipped since.
 
 The second trap follows from the first: `rem` looks proportional and isn't. It is relative, so beside `px` it feels like the responsible choice. But it is relative to the root element's font size, not the element carrying the tracking, so a `rem` letter spacing is as fixed across a type scale as a `px` one. Of the units on offer, only `em` and the CSS percentage scale with their own text, and only `em` uses Figma's denominator.
 
@@ -247,8 +241,6 @@ Fixed pixels are the right call in three cases:
 - The value has to be a Figma variable, since a number variable on letter spacing is read as pixels and there's no other route to tokenisation.
 - A single-size optical correction, such as a logotype or a numeric readout that only appears at one size, where proportion buys nothing.
 - A variable font with an optical-size axis, which already adjusts its spacing by size; manual tracking at either end of the scale should be lighter there, not a second correction stacked on the font's own.
-
-> **Aside.** A participant in the [Chromium shipping thread](https://groups.google.com/a/chromium.org/g/blink-dev/c/K7wT6GjVZsQ) reported Firefox failing a batch of letter-spacing tests despite showing as shipped. Those failures concern line-ending and word-boundary handling, not the percentage resolution this section relies on.
 
 Use percentage in Figma and `em` in CSS, and write the divide-by-100 rule into your handoff document rather than trusting anyone to remember it under a deadline. Add one line beside it: **never write `%` in a CSS `letter-spacing` declaration.** If your tokens are linted, make that an error rather than a warning, since the failure it prevents is invisible at review.
 
@@ -342,7 +334,7 @@ For letter spacing, use percentage in Figma and `em` in CSS. `letter-spacing: 2%
 
 Turn on vertical trim. Firefox shipped it in August 2026, so every engine supports it; decide the untrimmed fallback for older browsers first.
 
-Then write the rules down. The most useful thing to come out of this isn't a token architecture but a short handoff note saying that Figma's `%` is not CSS's `%`, and exactly what to type instead. Better still, make it mechanical: a lint rule that rejects `%` in `letter-spacing` and a length unit in `line-height` catches both headline bugs at build time, and neither has an exception worth keeping. Most of what goes wrong here is transcription, not design, and that is the consensus position; the percentage-over-pixels default is a judgement, resting on the difference between a maintenance cost and a defect.
+Then write the rules down, and make them mechanical: a lint rule that rejects `%` in `letter-spacing` and a length unit in `line-height` catches both headline bugs at build time. Most of what goes wrong here is transcription, not design, which is consensus; the percentage-over-pixels default is a judgement, resting on the difference between a maintenance cost and a defect.
 
 ---
 
@@ -351,10 +343,10 @@ Then write the rules down. The most useful thing to come out of this isn't a tok
 Researched August 2026, revised November 2026. Figma's behaviour was checked against its blog, developer docs, help centre and forum threads with staff responses; CSS's against MDN, the CSS Text Level 4 spec, and the Chromium and Mozilla shipping announcements. The August pass checked letter-spacing percentages most closely.
 
 - **`text-box-trim`** landed in Firefox 154 and is Baseline 2026 on MDN, checked November 2026. What remains is the spread of real users' browser versions; re-check before dropping the untrimmed fallback.
-- **CSS percentage letter spacing in Firefox.** Shipped and stable. The one Chromium-thread report of Firefox test failures traced to line-ending and word-boundary handling; worth a second look only if a project depends on an edge case near a line break.
-- **Figma percentage line-height variables.** Still unsupported in November 2026. The request thread stood at 198 replies and about 25,900 views, and forum posts from September and October 2026 still describe the feature as missing. This is the claim most likely to flip in a system's favour, and the one to re-check before committing to a pixel-only token architecture. Forum posts aren't release notes; check Figma's changelog too.
+- **CSS percentage letter spacing in Firefox.** Shipped and stable. A [Chromium-thread](https://groups.google.com/a/chromium.org/g/blink-dev/c/K7wT6GjVZsQ) report of Firefox test failures concerns line-ending handling, not percentage resolution.
+- **Figma percentage line-height variables.** Still unsupported in November 2026 (198 replies on the request thread; a second request filed in October 2026). The claim most likely to flip; re-check Figma's changelog before committing to a pixel-only token architecture.
 - **Dev Mode em output for letter spacing.** Requested June 2025, acknowledged the same day, no later update on the thread as of November 2026.
-- **Config 2026** covered Code Layers, Motion, shader fills and effects, generative plugins and an updated agent, and nothing touching typography variable units. The absence suggests the current architecture is the settled state, not a stopgap awaiting a keynote.
+- **Config 2026** touched nothing on typography variable units.
 - **A corrected figure.** The Dev Mode example (2% on 18px type) previously gave `0.1125rem`; 2% of 18px is 0.36px, which is `0.0225rem` at a 16px root, and the guide now says so.
 - **The toolkit's build rules** for the same conversions are in `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and code-standard rule 54; re-check them if this guide's conversion table changes.
 - **The evidence, honestly.** The WCAG 1.4.12 understanding document grounds its 1.5x line-height and 0.12x/0.16x spacing thresholds in readability research, so that floor is evidence-based. Nothing in the public record shows that any particular ratio above it outperforms another in product UI; the role ratios are craft consensus.
@@ -365,32 +357,32 @@ Researched August 2026, revised November 2026. Figma's behaviour was checked aga
 
 **Primary: platform documentation, engineering write-ups, and staff-acknowledged threads**
 
-- [Figma, *Getting to the bottom of line height in Figma*](https://www.figma.com/blog/line-height-changes/). Figma's own account of how percentage and Auto line height are read, and the deliberate divergence from CSS's minimum-line-height behaviour.
+- [Figma, *Getting to the bottom of line height in Figma*](https://www.figma.com/blog/line-height-changes/). How percentage and Auto are read; the divergence from CSS's minimum line height.
 - [Figma Help Center, *Explore text properties*](https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties). The tracking-divided-by-1000 conversion, and the px/percent line-height toggle.
-- [Figma Plugin API, `LineHeight`](https://developers.figma.com/docs/plugins/api/LineHeight). The current `PIXELS | PERCENT | AUTO` union type quoted under *What does each Figma option do?*.
-- [Figma Forum, *Allow percentages for line height*](https://forum.figma.com/suggest-a-feature-11/allow-percentages-for-line-height-21970). Open since April 2024, past 195 replies and 24,000 views at research time, staff acknowledgement on record.
+- [Figma Plugin API, `LineHeight`](https://developers.figma.com/docs/plugins/api/LineHeight). The `PIXELS | PERCENT | AUTO` union type.
+- [Figma Forum, *Allow percentages for line height*](https://forum.figma.com/suggest-a-feature-11/allow-percentages-for-line-height-21970). Open since April 2024, staff acknowledgement on record.
 - [Figma Forum, *Percentage-based letter-spacing should convert to em value in Dev Mode*](https://forum.figma.com/suggest-a-feature-11/percentage-based-letter-spacing-should-convert-to-em-value-in-dev-mode-41443). Filed and acknowledged June 2025, unchanged since.
-- [Figma Forum, *Letter-spacing should not be percentage based*](https://forum.figma.com/suggest-a-feature-11/letter-spacing-should-not-be-percentage-based-33344). The designer-versus-developer tension over Figma's percentage default, and staff's July 2024 non-committal response.
+- [Figma Forum, *Letter-spacing should not be percentage based*](https://forum.figma.com/suggest-a-feature-11/letter-spacing-should-not-be-percentage-based-33344). The tension over Figma's percentage default.
 - [Figma Blog, *Config 2026 recap*](https://www.figma.com/blog/config-2026-recap/). Source for the negative finding that Config 2026 did not touch typography variable units.
 - [Figma Forum, *Launched: Typography Variables*](https://forum.figma.com/t/launched-typography-variables/48430). The April 2024 launch.
-- [MDN, `line-height`](https://developer.mozilla.org/en-US/docs/Web/CSS/line-height). The unitless-is-preferred guidance and the inheritance example behind *Why does a percentage break nested text?*.
+- [MDN, `line-height`](https://developer.mozilla.org/en-US/docs/Web/CSS/line-height). The unitless-is-preferred guidance and the inheritance example.
 - [MDN, `letter-spacing`](https://developer.mozilla.org/en-US/docs/Web/CSS/letter-spacing). The current percentage value definition, resolved against the space character's advance width.
 - [MDN, `text-box-trim`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/text-box-trim). Property definition and current Baseline status.
-- [MDN, *Firefox 154 release notes for developers*](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/154). `text-box-trim`, `text-box-edge` and the `text-box` shorthand enabled by default on all platforms.
+- [MDN, *Firefox 154 release notes for developers*](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/154). `text-box` enabled by default.
 - [Chrome for Developers, *Chrome 145 release notes*](https://developer.chrome.com/release-notes/145). The percentage letter-spacing and word-spacing ship date, 10 February 2026.
-- [Chromium blink-dev, *Web-Facing Change PSA: CSS letter-spacing and word-spacing: percentage values*](https://groups.google.com/a/chromium.org/g/blink-dev/c/K7wT6GjVZsQ). The space-advance resolution mechanic, and the thread noting Firefox's unrelated test failures.
+- [Chromium blink-dev, *Web-Facing Change PSA: CSS letter-spacing and word-spacing: percentage values*](https://groups.google.com/a/chromium.org/g/blink-dev/c/K7wT6GjVZsQ). The space-advance resolution.
 - [caniuse, `text-box-trim`](https://caniuse.com/mdn-css_properties_text-box-trim). Chrome and Edge 133, Safari 18.2, Firefox 154.
-- [W3C, *Understanding Success Criterion 1.4.12: Text Spacing*](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html). The 1.5x line-height and 0.12x/0.16x letter- and word-spacing thresholds.
-- [Microsoft Typography, *Character design standards: whitespace*](https://learn.microsoft.com/en-us/typography/develop/character-design-standards/whitespace). The roughly-one-quarter-em average space advance, with the Times New Roman 512/2048-unit example.
-- [Tokens Studio, *Letter Spacing* token type](https://docs.tokens.studio/manage-tokens/token-types/typography/letter-spacing). How a token pipeline bridges Figma's percentage and CSS's em in practice.
-- [Ant Design, font specification](https://ant.design/docs/spec/font). The 14/22 base pairing.
+- [W3C, *Understanding Success Criterion 1.4.12: Text Spacing*](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html). The 1.5x and 0.12x/0.16x thresholds.
+- [Microsoft Typography, *Character design standards: whitespace*](https://learn.microsoft.com/en-us/typography/develop/character-design-standards/whitespace). The quarter-em average space advance.
+- [Tokens Studio, *Letter Spacing* token type](https://docs.tokens.studio/manage-tokens/token-types/typography/letter-spacing). A pipeline bridging Figma's percentage and CSS's em.
+- [Ant Design, font specification](https://ant.design/docs/spec/font). 14/22.
 - [Figma Forum, Feature request: support percentage values for line height in Figma variables](https://forum.figma.com/suggest-a-feature-11/feature-request-support-percentage-values-for-line-height-in-figma-variables-58640). October 2026, the same request again.
 
 **Commentary, convenient rather than canonical**
 
-- [GitHub, mdn/browser-compat-data issue #28979](https://github.com/mdn/browser-compat-data/issues/28979). Community confirmation that Firefox and Safari supported letter-spacing percentages before Chrome 145 closed the gap.
+- [GitHub, mdn/browser-compat-data issue #28979](https://github.com/mdn/browser-compat-data/issues/28979). Firefox and Safari supported percentages before Chrome 145.
 
 **Toolkit knowledge base and sister pieces**
 
 - `knowledge/code/figma-handoff.md#text-styles-to-type-tokens` and `standards/code-standard.md` rule 54. The build-side rules and their evidence.
-- [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [space between prose elements](space-between-prose-elements.md), [naming text styles](naming-text-styles.md).
+- [One type scale for an interface and its articles](one-type-scale-for-ui-and-content.md), [space between prose elements](space-between-prose-elements.md), [naming text styles](naming-text-styles.md) and [its part 2](naming-text-styles-part-2.md).

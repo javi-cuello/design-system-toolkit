@@ -27,8 +27,8 @@ An agent choosing a component is doing retrieval, not reasoning. It matches the 
 
 Whatever the library leaves unstated, the agent fills from its training, which is mostly public web code. Each of the five properties replaces a guess with a lookup.
 
-- **Components, not drawings.** [Figma's guidance for its MCP server](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file) lists six recommendations in order, and the first is that anything repeated should be a component. A detached frame that looks like a button reaches the agent as rectangles and text. There's nothing to import, so it writes markup.
-- **A mapping from design to code.** Figma's second recommendation is Code Connect, "the number one way to get consistent component reuse", without which the model is left guessing. When a mapping exists, the server's [`get_design_context` tool](https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/) returns its real import and usage in place of generated React and Tailwind. It's a paid feature, tied to the seat and the plan.
+- **Components, not drawings.** [Figma's guidance for its MCP server](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file) lists seven recommendations in order (components, Code Connect, variables, clear names, auto layout, annotations, dev resources), and the first is that anything repeated should be a component. A detached frame that looks like a button reaches the agent as rectangles and text. There's nothing to import, so it writes markup.
+- **A mapping from design to code.** Figma's second recommendation is Code Connect, which its page calls "the most effective way" to get an agent to reuse real components. When a mapping exists, the server's [`get_design_context` tool](https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/) returns its real import and usage in place of generated React and Tailwind. It's a paid feature, tied to the seat and the plan.
 - **A typed, described interface.** A typed prop is a closed set the agent can't invent outside. A described prop is the only place intent ("use `tertiary` inside a dense table") can live. [Storybook's AI docs](https://storybook.js.org/docs/ai/best-practices) ask for JSDoc on components and props, and its [manifest](https://storybook.js.org/docs/ai/manifests) passes the agent each `@summary`. The bench's catalogue-quality check, in the author's weights, gives props tables 25, typed props 35, described props 25 and defaults 15.
 - **Bound, semantic tokens.** A model given `color-primary-500` pulls the value the team assigned to that role; given a hex value, it can only copy it. Primer's `find_tokens` tool tells agents to search by intent (blue becomes accent, red becomes danger) and to check the result with its `lint_css` tool.
 - **Conventional names.** These get their own section, [the weight of names](#the-weight-of-names).
@@ -100,7 +100,7 @@ The one team that measured the format is Indeed. Diana Wolosin, in [her own writ
 
 Markdown ran about 30,000 tokens per query at 82 percent coverage, with hallucinations. Structured JSON used about 80 percent fewer tokens, at a fifth of the annual cost. Read the direction, not the decimals. Her own nuance is the part people drop: JSON for the metadata an agent retrieves, Markdown for the rules a human writes.
 
-More isn't always better, though. Atlassian found that a *fuller* portable specification made agents re-create components instead of importing them, because a complete description of how a component looks is also a recipe for rebuilding it (the test is in [Part 4](how-the-system-reaches-the-agent.md)). Richness helps green-field generation and hurts brownfield maintenance.
+More isn't always better, though: a complete description of how a component looks is also a recipe for rebuilding it, as Atlassian's test found ([Part 4](how-the-system-reaches-the-agent.md#reference-on-demand)). Richness helps green-field generation and hurts brownfield maintenance.
 
 Hand-written fields have a second cost: they rot silently. Nothing detects when a component's real use drifts from what was written a year ago.
 
@@ -127,11 +127,7 @@ How far do agents reach for public names? The bench author mined a lexicon from 
 
 The bench turns this into a convention-distance score. A concept whose expected name exists is aligned. One where only a known alias exists (`Toggle` where agents expect `Switch`) is distance. The score is 100 times one minus the occurrence-weighted share of distance.
 
-A small controlled test on Project A's own components with Claude measured the effect from the other side. It is reported in [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md), under what alignment changes for AI.
-
-With the component API in context, naming made no difference: every condition was fully correct. Without it, aligning Figma's property names to the code's raised fully correct output from 33 to 52 percent, and cut wrong props from 45 to 21.
-
-The failures that remained sat where Project A's code departs from Material UI: Claude wrote `variant` on every Button, whatever the Figma property was called.
+A small controlled test on Project A's own components measured the effect from the other side: with the component API in context, naming made no difference, and without it, aligning Figma's names to the code's helped but left the failures where the code departs from Material UI (Claude wrote `variant` on every Button). The numbers are in [How closely should a Figma library match its code?](../figma-and-code/how-closely-figma-should-match-code.md), which owns the test.
 
 How big is that gap in one library? Project A's parity comparison sizes it. Of 390 Figma properties across 52 components, 67 have no code counterpart. Of the other 323, 53 carry a different name in code (`Label text` is `children`, `Left icon` is `startIcon`), and 8 option values are renamed.
 
@@ -184,7 +180,7 @@ Put `$deprecated` in your exported tokens and `@deprecated` in code, and carry a
 
 What makes agents succeed is mostly your library's own content. Anything repeated is a component, so there's something to import. Each design component is mapped to its code component, so the agent stops translating `Role` into a guessed prop. Props are typed and described, so the agent can't invent outside the set and can read the intent. Tokens are semantic and bound everywhere, so the agent copies a role rather than a hex value.
 
-Generate the mechanical metadata and hand-write a small fixed set of intent fields: when to use, when not to (naming the alternative), and notes for code generation. A fuller description isn't always better: Atlassian found a complete visual specification made agents rebuild components instead of importing them.
+Generate the mechanical metadata and hand-write a small fixed set of intent fields: when to use, when not to (naming the alternative), and notes for code generation. A fuller description isn't always better: a complete visual specification is also a recipe for rebuilding.
 
 Names still matter, because agents fall back on public conventions whenever the API isn't in context. Measure the distance from Figma to code and from code to convention, close the first where your code is conventional, and record each deliberate departure. Finally, flag retired items on the token or component itself, name the replacement, and hide what isn't for direct use.
 
@@ -200,6 +196,7 @@ Researched November 2026, when this part was assembled from guides first researc
 - **The bench's lexicon** (version 1, mined 25 August 2026) is one author's mining, and the catalogue-quality weights are the author's own. Re-check before vendoring either.
 - **Code Connect plans and seats**, checked 9 November 2026: it needs a Full or Dev seat on a Professional, Education, Organization, Government or Enterprise plan, and a Professional plan has one active library and one active framework.
 - **Project A's audit figure** (31,772 bound properties, none unbound) is from October 2026.
+- **Figma's file guidance** was re-read on 17 November 2026: seven recommendations, Code Connect second, now worded "the most effective way" to get agents to reuse real components. This part had counted six and quoted older wording.
 - **The toolkit's token export** did not emit `$deprecated` as of November 2026.
 
 ---
@@ -208,7 +205,7 @@ Researched November 2026, when this part was assembled from guides first researc
 
 **Primary: specifications, vendor documentation and benchmarks**
 
-- [Figma, *Structure your Figma file*](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file). The six recommendations and the Code Connect line.
+- [Figma, *Structure your Figma file*](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file). The seven recommendations and the Code Connect line; re-read 17 November 2026.
 - [Figma, MCP *Tools and prompts*](https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/).
 - [Figma, *Code Connect* help](https://help.figma.com/hc/en-us/articles/23920389749655-Code-Connect). Plans and seats.
 - [Figma Resource Library, *LLM context design*](https://www.figma.com/resource-library/llm-context-design/).
@@ -217,7 +214,6 @@ Researched November 2026, when this part was assembled from guides first researc
 - [Design Tokens Community Group, Format 2025.10](https://www.designtokens.org/TR/2025.10/format/). `$description`, `$deprecated`, aliases.
 - [zeroheight, *MCP*](https://zeroheight.com/mcp/). Hidden content kept from agents.
 - [christophhdesign, open-design-system-bench](https://github.com/christophhdesign/open-design-system-bench), with [`vocabulary.ts`](https://github.com/christophhdesign/open-design-system-bench/blob/main/src/audit/checks/vocabulary.ts), [`convention-lexicon.json`](https://github.com/christophhdesign/open-design-system-bench/blob/main/src/audit/convention-lexicon.json) and [`catalog-quality.ts`](https://github.com/christophhdesign/open-design-system-bench/blob/main/src/audit/checks/catalog-quality.ts); release 1.4.
-- [Atlassian, *What we learned testing portable design context in practice*](https://www.atlassian.com/blog/how-we-build/atlassians-design-md-is-here-what-we-learned-testing-portable-design-context-in-practice). The rebuild-instead-of-import finding.
 
 **Commentary**
 

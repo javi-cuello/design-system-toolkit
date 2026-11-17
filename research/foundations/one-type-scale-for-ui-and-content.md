@@ -29,7 +29,7 @@ Atlassian states the split most plainly. Its scale has three body sizes, and its
 
 Apple makes the same split with a trait rather than a size. A text style can take a loose-leading trait, which the guidelines recommend for wide columns and long passages, or a tight one for rows constrained in height. Spectrum names the split as two line heights over one set of sizes: `line-height-100: 1.3` for component text and `line-height-200: 1.5` for body copy.
 
-Carbon is the counter-example, and its history is the strongest evidence for the consensus. Carbon v10 shipped a productive type set for product screens and an expressive set for editorial pages, told apart by suffixes in the token names. Version 11 merged them into one collection and renamed the difference by behaviour: Fixed styles hold their size at every breakpoint, and Fluid styles interpolate between breakpoints. [Naming text styles](naming-text-styles.md) tells that migration.
+Carbon is the counter-example, and its history is the strongest evidence for the consensus. Carbon v10 shipped a productive type set for product screens and an expressive set for editorial pages, told apart by suffixes in the token names. Version 11 merged them into one collection and renamed the difference by behaviour: Fixed styles hold their size at every breakpoint, and Fluid styles interpolate between breakpoints. [Words for size](../foundations/naming-text-styles.md#words-for-size) tells that migration.
 
 Even before the merge, the two sets overlapped. `body-01` at 14px and `body-02` at 16px came from the same scale function in `scale.ts`, which generates 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48 and so on for both.
 
@@ -158,7 +158,7 @@ On the left the gap between the heading's own lines is wider than a line of body
 
 **Role-based systems** ship a handful of ratios. Primer's base tokens are `--base-text-lineHeight-tight: 1.25`, `snug: 1.375`, `normal: 1.5` and `relaxed: 1.625`, and every functional style picks one: body large and medium take `normal`, display takes `snug`. Spectrum has two, 1.3 and 1.5. USWDS has six system values from 1 to 1.75, with headings at 1.2 and body at 1.62.
 
-GOV.UK looks grid-like in source but behaves by role. Its Sass map writes line heights in pixels, then converts each to a ratio before output, and the ratios fall by role: 1.32 for the 19px body, about 1.1 for the 36px and 48px headings.
+GOV.UK looks grid-like in source but behaves by role. Its Sass map writes line heights in pixels, then converts each to a ratio before output, and the ratios fall by role: 1.32 for the 19px body, 1.1 or tighter for the 36px and 48px headings (the 48px at 1.09 on mobile and 1.04 on desktop, as [type on a phone](type-on-a-phone.md) works through).
 
 **Grid-stepped systems** write each size's line height as a length. Material's tokens are rem lengths: `body-large` 1rem on 1.5rem, `title-large` 1.375rem on 1.75rem, `display-large` 3.5625rem on 4rem, every one a multiple of 4px. Radix Themes does the same in pixels (12/16, 14/20, 16/24, 18/26, 24/30). Fluent's web tokens pair `fontSizeBase300: 14px` with `lineHeightBase300: 20px`.
 
@@ -177,15 +177,13 @@ The two can often be reconciled by choosing the sizes. With a 150% ratio, any si
 | heading-lg | 32 | 40px | 125% |
 | display | 48 | 56px | 117% |
 
-Both approaches agree on the shape: line height falls as size rises. The gap between lines grows with the font, which is what the figure above shows. The specialist ranges are about 1.5 for reading text, 1.2 to 1.3 for one-line UI text and 1.1 to 1.2 for headings ([Better Web Type](https://betterwebtype.com/8-tips-for-remarkably-better-typography/), [Pimp my Type](https://pimpmytype.com/line-length-line-height/)).
+Both approaches agree on the shape: line height falls as size rises. The gap between lines grows with the font, which is what the figure above shows. The specialist ranges are about 1.5 for reading text, 1.2 to 1.3 for one-line UI text and 1.1 to 1.2 for headings ([Better Web Type](https://betterwebtype.com/8-tips-for-remarkably-better-typography/), [Pimp my Type](https://pimpmytype.com/line-length-line-height/)). Shipped systems loosen the smallest headings a little past that, to 1.25 (Carbon's 32/40), so the heading band in practice runs 1.1 to 1.25.
 
 The research behind any particular ratio is thin. [Rello and colleagues (CHI 2016)](https://dl.acm.org/doi/10.1145/2858036.2858204) report little effect of line spacing within the usual range. So the ratios are craft consensus, and the tested part is the WCAG floor.
 
-That floor is [WCAG 1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html), and it's why the unit matters beyond tidiness. A reader may override line height to 1.5 times the font size, paragraph spacing to twice the font size and letter spacing to 0.12em, and the page must survive it. A unitless line height inherits as a ratio, so an override on the body flows into every descendant.
+That floor is [WCAG 1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html): a reader may override line height to 1.5 times the font size, and the page must survive it. What it does to a pixel line height is in [percentage or pixels](../foundations/line-height-letter-spacing-figma-to-css.md#percentage-or-pixels). What it does to layout is break any box of fixed height around text. Take a 20px card title on two lines at 1.2, in a box fixed at 48px. Under the reader's 1.5 those two lines need 60px, and the bottom of the second is clipped. A code block with a set height fails the same way.
 
-What breaks is a box of fixed height around text. Take a 20px card title on two lines at 1.2, in a box fixed at 48px. Under the reader's 1.5 those two lines need 60px, and the bottom of the second is clipped. A code block with a set height fails the same way.
-
-Set line height by role, four values at most: reading text 1.5, labels and other one-line UI text 1.3, headings 1.2, display 1.1. **Ship them unitless, and never put text in a box of fixed height.**
+Set line height by role, four values at most: reading text 1.5, labels and other one-line UI text 1.3, headings 1.2, display 1.1. A team may go to the tight end of a band (labels at 1.2, a small heading at 1.25) as a named choice; the role values are the default. **Ship them unitless, and never put text in a box of fixed height.**
 
 Grid-stepping is defensible in a dense tool whose rows must land on a 4px grid, and that's the constraint to name if you choose it; sizes in multiples of 8 make the two approaches give the same numbers for most of the scale. Both approaches are established. Roles win on upkeep, because four numbers are easier to keep than a table.
 
@@ -201,7 +199,7 @@ Primer's functional tokens are the clearest statement of one weight per role. `-
 
 Display goes lighter for an optical reason. At 60px and above a semibold stroke is heavy enough to dominate a page, and the size already carries the emphasis. Carbon goes furthest, setting `fluidDisplay01` and its siblings at its light weight.
 
-Small text pulls the other way. Apple warns against Ultralight, Thin and Light at small sizes, and Pimp my Type puts the threshold at 14 to 20px, below which a light face "soon looks too delicate". A dense tool needs two weights, 400 and 600 (or 500), and no third. Why weight shouldn't appear in style names is in [naming text styles](naming-text-styles.md).
+Small text pulls the other way. Apple warns against Ultralight, Thin and Light at small sizes, and Pimp my Type puts the threshold at 14 to 20px, below which a light face "soon looks too delicate". A dense tool needs two weights, 400 and 600 (or 500), and no third. Why weight shouldn't appear in style names is in [weight in the name](../foundations/naming-text-styles.md#weight-in-the-name).
 
 Give headings one weight, body and UI text another, and display one lighter than the headings. **Primer's 400, 600 and 500 is a well-evidenced default, with no light weight at text sizes.**
 
@@ -223,17 +221,13 @@ The reversal is the display cut. SF switches to its display design around 20pt, 
 
 So the text cut's negative tracking curve doesn't carry over to a display cut. The toolkit's measurement of Inter Display found its lowercase sidebearings about a quarter narrower than Inter's: tracking already applied in the drawing.
 
-Figma is why the static route still matters. In the toolkit's testing, Figma draws a variable font at the instance its axes are set to and doesn't move `opsz` with size. A 28px heading in the variable file is therefore the text drawing in Figma and a blend in the browser.
-
-Shipping Inter and Inter Display as separate families, and naming the size at which a style switches family, makes both sides draw the same glyphs. The cost is a discrete jump where the variable font would blend, and two families to load.
+Figma and the browser can draw a variable font's optical sizes differently, which is in [text rendering](../figma-and-code/where-figma-and-css-render-differently-part-2.md#text-rendering). Shipping Inter and Inter Display as separate families, and naming the size at which a style switches family, makes both sides draw the same glyphs. The cost is a discrete jump where the variable font would blend, and two families to load.
 
 The last question is how precisely to state tracking. Inter 3's "dynamic metrics" formula gave tracking to four decimal places per pixel size; it was fitted to Inter 3 and has been withdrawn, and no reader can see a difference of 0.1%. Tracking stated per text style, rounded to half a percent, gives a value a designer can type and a reviewer can check: 12px 0, 16px −1%, 22px −2%.
 
 Two more tracking rules from the toolkit apply to every face. Large headings tighten by 1 to 2% at most, and all caps and small caps are always spaced out, starting at 0.05 to 0.1em. In CSS, tracking is written in em; the conversion is in [line height and letter spacing](line-height-letter-spacing-figma-to-css.md).
 
 If Figma parity doesn't matter to you, use the variable font with `font-optical-sizing: auto`. If it does, ship static text and display families and switch at a named size inside the axis range. **Track the text cut by size in half-percent steps, and give the display cut little or none until its largest sizes.**
-
-Apple and the font itself document the mechanism; the static files are the safer choice for a team that measures Figma against the browser, because they are the one setup where both draw the same glyphs.
 
 ---
 
@@ -243,7 +237,7 @@ Name styles by role and size, never by HTML tag, because the two strides only wo
 
 Content's h3 takes Heading sm while a component's h3 may take Heading xs. On a phone, content's h2 may render at the size Heading sm has on a desktop. A style named `h2` can't express any of that.
 
-The prose container is where tags meet styles: it maps each tag to a style, and that mapping is documented as the content role's own. [Naming text styles](naming-text-styles.md) makes the full argument, with Material, Polaris, CMS.gov and GOV.UK as cases.
+The prose container is where tags meet styles: it maps each tag to a style, and that mapping is documented as the content role's own. [Heading-level names](../foundations/naming-text-styles-part-2.md#heading-level-names) makes the full argument, with Material, Polaris, CMS.gov and GOV.UK as cases.
 
 Name your styles by role and size, map tags to styles in the prose container, and write the mapping down. **A tag is a level and a style is a size; keep them apart so content and components can map the same tag differently.**
 
@@ -284,7 +278,7 @@ Researched November 2026.
 
 - **How the values were read.** Sizes, line heights and weights come from source wherever source exists: GOV.UK Frontend 6.6 (`_typography-responsive.scss`), USWDS `uswds-core` settings and tokens, Carbon's `@carbon/type` (`styles.ts`, `scale.ts`), Material Web's generated `md-sys-typescale` tokens, Apple's Human Interface Guidelines data file (the SF and New York tracking tables), `@adobe/spectrum-tokens` 15.6, `@primer/primitives` 11.10, `@shopify/polaris` 13.9, `@fluentui/tokens`, `@radix-ui/themes`, `github-markdown-css` and `tailwindcss-typography`. Atlassian's and Fluent's values come from their documentation pages.
 - **The toolkit's own measurements.** Two were made from the Inter 4.1 font files with fontTools: the `opsz` axis range (14 to 32) and Inter Display's narrower sidebearings.
-- **Figma's optical sizing behaviour** is the toolkit's documented finding, not a Figma statement. If Figma starts driving `opsz` from font size, the case for static display files weakens.
+- **Figma's optical sizing behaviour** is owned by [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently-part-2.md#text-rendering); if it changes, the case for static display files changes with it.
 - **GOV.UK's scale** has not changed since Frontend 6.0; 6.6.0 (15 October 2026) was the latest release when re-checked in November 2026. Re-read `_typography-responsive.scss` before quoting it.
 - **Inter 3's dynamic-metrics page** still returned a 404 on the live site in November 2026; only the archived copy exists.
 - **Atlassian's weight tokens** were re-checked against `@atlaskit/tokens` 20.8.2 in November 2026.
@@ -325,7 +319,7 @@ Researched November 2026.
 **Toolkit knowledge base and sister pieces**
 
 - `knowledge/ui/design/visual.md#typography`, `#type-for-ui-and-long-form-content` and `#one-size-scale-per-screen`. The Inter measurements, tracking rules, the line-height roles.
-- [Space between prose elements](space-between-prose-elements.md), [type on a phone](type-on-a-phone.md), [line height and letter spacing](line-height-letter-spacing-figma-to-css.md), [naming text styles](naming-text-styles.md).
+- [Space between prose elements](space-between-prose-elements.md), [type on a phone](type-on-a-phone.md), [line height and letter spacing](line-height-letter-spacing-figma-to-css.md), [naming text styles](naming-text-styles.md) and [its part 2](naming-text-styles-part-2.md).
 
 **Cited but not resolved to a URL**
 

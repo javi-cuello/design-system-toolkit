@@ -66,7 +66,7 @@ The trap in the component denominator is the one that matters most. A team build
 
 Figma's Library Analytics counts events on library assets, and it can't see anything that was never a library asset.
 
-On Organization and Enterprise plans, a library's Analytics tab shows, per component, its instances, inserts and detaches, and per style or variable how many files and teams use it ([Figma, library analytics](https://help.figma.com/hc/en-us/articles/360039238353)). Data updates daily and goes back a year; styles and variables have only been tracked since 10 October 2024. An insert is a drag from Assets, a paste, a duplicate, a swap, or content added to a slot. A detach is the Detach instance command.
+On Organization, Enterprise, Government and K-12 Education plans, a library's Analytics tab shows, per component, its instances, inserts and detaches, and per style or variable how many files and teams use it ([Figma, library analytics](https://help.figma.com/hc/en-us/articles/360039238353)). Data updates daily and can be read over 30, 60 or 90 days or the last year; styles and variables have only been tracked since 10 October 2024. An insert is a drag from Assets, a paste, a duplicate, a swap, or content added to a slot. A detach is the Detach instance command.
 
 The same data is available through the REST API's library analytics endpoints: weekly `insertions` and `detachments` per component, style or variable, grouped by asset or by team, and a usage snapshot of `usages`, `teams_using` and `files_using` ([Figma REST API](https://developers.figma.com/docs/rest-api/library-analytics-endpoints/)). The help page says the API is Enterprise-only.
 
@@ -89,14 +89,16 @@ A detach is a signal about a component, not a mark against the person who did it
 
 The designer from the opening detached a card because it couldn't hold a second button. The dashboard counted one detach. What happened is that the card is missing a slot, and every designer who needs two buttons will hit the same wall.
 
-Teams disagree about how bad that is, and both sides have a point. Salesforce says detaching "isn't ideal", because a detached copy no longer receives fixes, including accessibility fixes; their button icon had almost a million instances and more than 3,000 detaches in a year, and their answer was to add properties and slots so nobody needs to detach ([Salesforce, component health](https://www.salesforce.com/blog/figma-component-health/)). athenahealth's Veronica Agne reads each detach as a bug, a missing enhancement or a combination nobody expected ([Figma, Design systems 104](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). Figma's own guidance adds that a high detach rate isn't necessarily bad for components built to be detached, such as screen templates ([Figma, scaling design](https://www.figma.com/scaling-design/make-the-most-of-design-system-analytics/)).
+Teams disagree about how bad that is, and both sides have a point. Salesforce says detaching "isn't ideal", because a detached copy no longer receives fixes, including accessibility fixes; their button icon had almost a million instances and more than 3,000 detaches in a year, and their answer was to add properties and slots so nobody needs to detach ([Salesforce, component health](https://www.salesforce.com/blog/figma-component-health/)). athenahealth's Veronica Agne reads each detach as a bug, a missing enhancement or a combination nobody expected; her Forge team traced one spike in detaches to an auto layout bug in a container component ([Figma, Design systems 104](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). Figma's own guidance adds that a high detach rate isn't necessarily bad for components built to be detached, such as screen templates ([Figma, scaling design](https://www.figma.com/scaling-design/make-the-most-of-design-system-analytics/)).
 
 Two more traps sit in how detaches are counted.
 
 - **Library Analytics counts the command, not the state.** A designer who detaches and then deletes the copy still counted one detach; a detached copy pasted ten times counted one.
 - **A file scan sees only what survived.** The plugin API marks a frame that was once an instance with `detachedInfo`, holding the source component's key or id ([Figma, DetachedInfo](https://developers.figma.com/docs/plugins/api/DetachedInfo/)). That flag is a property of a frame that still exists, so it counts the detaches that are still in the design. Some scanners also treat a frame named exactly like a component as a "ghost detach"; DesignOps.Tools' Coverage Report does ([Coverage Report](https://designops-tools.pages.dev/coverage-report/)). The name rule catches copies made before the flag existed, and also flags a designer's own frame called "Header".
 
-**Count surviving detaches per component, read the top ten as a backlog, and leave templates meant to be detached out of the number.** That is judgement, drawn from Salesforce's and athenahealth's practice: the per-person detach rate tells you nothing a conversation wouldn't.
+A raw count also needs its denominator before it can rank anything. The Salesforce button icon's 3,000 detaches sound like a crisis; against almost a million instances they are about 0.3%. A component with 40 detaches out of 200 instances, 20%, is the one to look at first. The count says how big a component's backlog is; the rate says which component is failing its users.
+
+**Rank components by detach rate (detaches over instances), read the top ten as a backlog, and leave templates meant to be detached out of the number.** That is judgement, drawn from Salesforce's and athenahealth's practice; the per-person detach rate tells you nothing a conversation wouldn't.
 
 ---
 
@@ -108,13 +110,15 @@ A frame can be built entirely from library instances and still be off the system
 
 In Figma, a plugin finds these by reading each node's `boundVariables` and its style ids, such as `fillStyleId` ([Figma, node properties](https://developers.figma.com/docs/plugins/api/node-properties/)). The share is bound values over all values judged. Pinterest's own tool, figma-calculations, reports the "percent of Style Library Adoption in a file", with partial and full matches ([pinterest/figma-calculations](https://github.com/pinterest/figma-calculations)).
 
-Figma now does part of this itself. Check designs, in early access since October 2025 on Organization and Enterprise plans, flags hard-coded colour, type, radius and spacing, assets from the wrong library and components detached from their source, and suggests the variable to use ([Figma, Check designs](https://help.figma.com/hc/en-us/articles/39592284074263-Check-designs-in-Figma)). It lists suggestions in four tabs and gives a count. It gives no score.
+Figma now does part of this itself. Check designs, announced with early access at Schema in October 2025 ([Figma, Schema 2025 recap](https://www.figma.com/blog/schema-2025-design-systems-recap/)) and launched on 4 June 2026 ([Figma forum, launch post](https://forum.figma.com/product-updates-3/check-designs-catch-what-s-off-ship-what-s-right-54551)), runs on Organization, Enterprise, Government and K-12 Education plans. It flags hard-coded colour, type, radius and spacing, assets from the wrong library and components detached from their source, and suggests the variable to use ([Figma, Check designs](https://help.figma.com/hc/en-us/articles/39592284074263-Check-designs-in-Figma)). It lists suggestions in four tabs and gives a count. It gives no score.
 
 In code, the same check is a lint rule. Atlassian's `ensure-design-token-usage` flags hard-coded values in the domains a team names, `color`, `spacing` or `shape` ([Atlassian ESLint plugin](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage/usage)); `stylelint-declaration-strict-value` requires a variable for the CSS properties listed in its config ([stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value)). Shopify's `stylelint-polaris` grouped its rules under a `polaris/coverage` rule, by category ([stylelint-polaris](https://github.com/Shopify/polaris/blob/main/stylelint-polaris/index.js)). None of them publishes how violations become a percentage, so a team builds that ratio itself: values passing the rule over values the rule looked at.
 
 There's one trap in that ratio. A value of zero, an image fill or a gradient is not a token decision, and counting it as "judged" inflates the denominator with values that could never be wrong. Count only what could have been bound.
 
-**Report token coverage beside component adoption, per category, as values bound over values that could have been.** Shopify set its own library a target of 90% token coverage for colour, motion, type and spacing ([Polaris issue 4528](https://github.com/Shopify/polaris/issues/4528)), which shows a category split is how one large team chose to see it.
+**Report token coverage beside component adoption, per category, as values bound over values that could have been.** Shopify set its own library a target of 90% token coverage for colour, motion, type and spacing ([Polaris issue 4528](https://github.com/Shopify/polaris-react-archive/issues/4528)), which shows a category split is how one large team chose to see it.
+
+> **Aside.** Shopify's coverage figures travel widely, and only some are sourced. Sourced: the 90% target above (a goal for the polaris-react library itself, opened in October 2021), and about 8% coverage of typography in custom components in `shopify/web`, measured after the token release and given as the reason for Polaris v10's new `Text` component ([Polaris v10 typography notes, community mirror](https://ss-polaris.vercel.app/whats-new/version-10-typography); the official page now redirects). Not checked: Polaris components in about 70% of the admin and tokens in 44% of admin components, attributed to Laura Griffee's post of 31 March 2022, which refuses automated readers; and an 86.6% coverage figure from Shopify UX posts on Medium. Neither is in the Polaris issue tracker.
 
 ---
 
@@ -176,7 +180,7 @@ One number with a band is what people remember; a target on that number is what 
 
 Teams that publish their method mostly avoid a single target. Preply tracks per-team averages, gives teams numbers they can put in their OKRs, and decided never to set a target score. Pinterest saw adoption range from 50% on some teams to 2% on others and wrote that it's hard to say there's an ideal number. Sparkbox's maturity model puts adoption at the centre only in its second stage, "Growing Adoption"; after that, it says adoption is no longer the top concern, and consistency, accessibility regressions and uptake of new releases take over ([Sparkbox, maturity model](https://sparkbox.com/foundry/design_system_maturity_model)).
 
-Bands do exist, but none comes from research. DesignOps.Tools' Coverage Report bands its score at 0–40% low, 40–70% partial and 70–100% strong, with its formula published: library and local instances over instances plus ghost detaches ([Coverage Report](https://designops-tools.pages.dev/coverage-report/)). No published 80% industry target turned up anywhere.
+Bands do exist, but none comes from research. DesignOps.Tools' Coverage Report bands its score at 0 to 40% low, 40 to 70% partial and 70 to 100% strong, with its formula published: library and local instances over instances plus ghost detaches ([Coverage Report](https://designops-tools.pages.dev/coverage-report/)). No published 80% industry target turned up anywhere.
 
 How the checks combine is a choice too. Take a file that scores 99% on library components, 50% on colour and 100% on text styles. A plain average says 83, which reads as fine. Weighted by how many items each check judged (1,700 components, 400 paints, 300 texts), it says 91, which hides the colour problem further. Either way, one weak check vanishes into the total.
 
@@ -194,7 +198,7 @@ Pinterest's PageHeader had high adoption in Figma and low adoption in code. Desi
 
 That's the case for measuring both with the same denominator logic. A component high in design and low in code has a code problem. One high in code and low in design usually means designers are drawing their own version of something engineers have, which is a library or documentation problem.
 
-The evidence that adoption improves outcomes is thinner than the dashboards suggest. Figma's own study found designers finished a task 34% faster with a design system, and called that likely the upper bound ([Figma, measuring the value](https://www.figma.com/blog/measuring-the-value-of-design-systems/)). Sparkbox's study of eight developers on Carbon measured 47% faster work, consistency better for five of eight, and accessibility mixed: two builds from scratch beat their Carbon versions ([Sparkbox, Carbon study](https://sparkbox.com/foundry/design_system_roi_impact_of_design_systems_business_value_carbon_design_system)). No peer-reviewed study links adoption to user outcomes.
+The evidence that adoption improves outcomes is thinner than the dashboards suggest. Figma's own 2019 study found designers finished a task 34% faster with an up-to-date library than with old files, each designer acting as their own control, and called that likely the upper bound ([Figma, measuring the value](https://www.figma.com/blog/measuring-the-value-of-design-systems/)). Sparkbox's study of eight developers on Carbon measured 47% faster work, consistency better for five of eight, and accessibility mixed: two builds from scratch beat their Carbon versions ([Sparkbox, Carbon study](https://sparkbox.com/foundry/design_system_roi_impact_of_design_systems_business_value_carbon_design_system)). No peer-reviewed study links adoption to user outcomes.
 
 **Measure design and code per component, and read the components where they disagree first.** That is where the system is failing someone, and it's the cheapest finding either number gives.
 
@@ -205,7 +209,7 @@ The evidence that adoption improves outcomes is thinner than the dashboards sugg
 | Question | Measure | Not |
 |---|---|---|
 | How much of the product is the system? | System layers or elements ÷ all layers or elements, per screen or page | Insertions, instances, npm downloads |
-| Which components need work? | Surviving detaches per component, top ten | Detach rate per person |
+| Which components need work? | Detach rate per component (detaches ÷ instances), top ten | Raw detach count; detach rate per person |
 | Are tokens used? | Bound values ÷ values that could be bound, per category | Counting zero values and images as judged |
 | Which teams use it? | Products or services on the system, with version | One file-wide score |
 | What do users see? | Rendered coverage from a data attribute | A static scan alone |
@@ -218,7 +222,7 @@ The evidence that adoption improves outcomes is thinner than the dashboards sugg
 
 Insertions, instance counts and npm downloads measure activity, not adoption. Adoption is a share, and its honesty is in the denominator: divide what came from the system by everything a person drew or wrote, layers in Figma and elements in code, not only by the components they picked. A scanner that ignores raw HTML or hand-drawn shapes overstates adoption in exactly the places it's lowest. Figma's Library Analytics is good for component health and reach, but it counts events on library assets, so it can't see the hand-built button or the raw hex colour that make up the gap.
 
-Read detaches as a backlog per component rather than a mark against people, and leave templates meant to be detached out. Count token coverage beside component adoption, per category, over only the values that could have been bound. Decide the scope before the formula: which pages and files, how recent, and write it down beside the number so next month's is comparable. In code, put a stable data attribute on every rendered system component now; it makes a production measure possible later.
+Read detaches as a backlog per component rather than a mark against people: rank by detaches over instances, and leave templates meant to be detached out. Count token coverage beside component adoption, per category, over only the values that could have been bound. Decide the scope before the formula: which pages and files, how recent, and write it down beside the number so next month's is comparable. In code, put a stable data attribute on every rendered system component now; it makes a production measure possible later.
 
 Report a total, a band and each check's own share together. Bands are a reading aid; no published research supports any threshold, and most teams that publish their methods avoid a target on the headline number (Shopify's 90% applied to its own library's tokens), since commentary argues a target invites changing what's scanned. The most useful finding is often the gap: a component used in design and not in code, or the other way round, is where the system is failing someone.
 
@@ -228,14 +232,14 @@ Report a total, a band and each check's own share together. Bands are a reading 
 
 Researched on 12 November 2026.
 
-- **Library Analytics**: the plan tiers, the one-year window and the 10 October 2024 start for styles and variables come from Figma's help centre; the developer docs name no plan for the API. Re-check both.
-- **Check designs** was in early access on Organization and Enterprise plans as of the October 2025 announcement. Whether it reached general availability or other plans in 2026 was not confirmed from a primary source. A June 2026 forum report of a raw radius passing the check was seen only as a search snippet.
+- **Library Analytics**: the plan tiers (re-checked 17 November 2026), the duration filter and the 10 October 2024 start for styles and variables come from Figma's help centre; the developer docs name no plan for the API. Re-check both.
+- **Check designs**: early access from the October 2025 Schema announcement, launched 4 June 2026 for Organization and Enterprise (forum launch post); the help page now also lists Government and K-12 Education (re-checked 17 November 2026). A June 2026 forum report of a raw radius passing the check was seen only as a search snippet.
 - **Omlet** wound down as a business on 28 April 2026 and is open source; its charts and formula may change under the community.
 - **stylelint-polaris** was archived on 11 September 2026.
 - **Primer ADR-023** was accepted with implementation pending.
 - **Coverage Report's** formula and bands come from the vendor's own page; its Figma Community listing was not opened.
 - **Pinterest's post** carries no date. Its numbers (1,853 files, 50% to 2%) are from that post alone.
-- **Shopify's admin coverage**: figures of about 70% of the admin on Polaris and 86.6% coverage appear in Shopify UX posts on Medium that could not be opened; they are left out. An "8% token coverage" figure sometimes attributed to Shopify was not found in any source.
+- **Shopify's figures** (re-checked 17 November 2026): the 90% target and the ~8% typography figure are sourced; the 70% and 44% admin figures and 86.6% are not, because the Medium posts refuse automated readers. See the aside under [raw values](#raw-values).
 - **Evidence quality**: the outcome studies are small (Sparkbox, eight developers) or self-described upper bounds (Figma). No peer-reviewed work links adoption to user or business outcomes, and no primary source documents adoption metrics driving bad behaviour, though the risk is argued in commentary.
 - **Outside large US tech**: GOV.UK, the Scottish Government and Brevo (France) are covered in the body; Kiwi.com's Orbit (Czech Republic) tracking package is in the sources only. No Asian system's published method was found.
 
@@ -276,7 +280,9 @@ Researched on 12 November 2026.
 - [Atlassian, ensure-design-token-usage](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage/usage)
 - [stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value)
 - [Shopify, stylelint-polaris](https://github.com/Shopify/polaris/blob/main/stylelint-polaris/index.js)
-- [Shopify, Polaris issue 4528: token coverage](https://github.com/Shopify/polaris/issues/4528)
+- [Shopify, Polaris issue 4528: token coverage](https://github.com/Shopify/polaris-react-archive/issues/4528)
+- [Shopify, Polaris v10 typography notes (community mirror)](https://ss-polaris.vercel.app/whats-new/version-10-typography)
+- [Figma forum, Check designs launch post (4 June 2026)](https://forum.figma.com/product-updates-3/check-designs-catch-what-s-off-ship-what-s-right-54551)
 - [Sourcegraph, Migrating to CSS modules with codemods and code insights](https://sourcegraph.com/blog/migrating-to-css-modules-with-codemods-and-code-insights)
 - [Sparkbox, Carbon design system ROI study](https://sparkbox.com/foundry/design_system_roi_impact_of_design_systems_business_value_carbon_design_system)
 
@@ -291,4 +297,4 @@ Researched on 12 November 2026.
 
 - Nathan Curtis and EightShapes on adoption scorecards and OKRs: Medium refused access, so nothing from them is used.
 - Deliveroo Design on design system health: Medium refused access.
-- Shopify UX posts on Polaris coverage: Medium refused access.
+- Shopify UX posts on Polaris coverage, including Laura Griffee, *Putting the system back in our design system* (31 March 2022): Medium refused access.

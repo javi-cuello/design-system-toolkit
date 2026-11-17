@@ -286,7 +286,7 @@ The working construction has two levels of stack. Each heading and its content s
 
 Since slots reached general availability on 10 June 2026, a single Prose component can wrap that parent with a slot for its sections. Designers then have a container to drop content into without detaching anything.
 
-A responsive layout adds a mode to the spacing collection, so a mobile frame resolves the smaller heading gaps ([type on a phone](type-on-a-phone.md) covers how much they shrink) without a second component. A parity check then measures two gaps, not a margin per element.
+A responsive layout adds a mode to the spacing collection, so a mobile frame resolves the smaller heading gaps ([prose gaps on a phone](../foundations/type-on-a-phone.md#prose-gaps-on-a-phone) covers how much they shrink) without a second component. A parity check then measures two gaps, not a margin per element.
 
 Draw your prose as nested stacks bound to spacing variables, optionally inside one slot-based Prose component, and never as padded per-element components. **Put the gap on the stack, never on the element.** This is the toolkit's documented method. The slot-based component is optional, because a plain frame works as well.
 

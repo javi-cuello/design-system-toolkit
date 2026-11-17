@@ -204,15 +204,13 @@ Map every component your screens use, nested ones included, before expecting rea
 
 ## Code to Figma instances
 
-Capture alone produces flat layers; real instances come only from an agent rebuilding the screen in Figma from the library, with the capture kept as a picture to copy.
+Capture alone produces flat layers with no component instances; real instances come only from an agent rebuilding the screen in Figma from the library, with the capture kept as a picture to copy.
 
-Now run the settings page the other way. It exists in code, and the designers want it in the Figma file to iterate on. Figma launched [code to canvas](https://www.figma.com/blog/introducing-claude-code-to-figma/) in February 2026: its `generate_figma_design` tool captures a running page into Figma. The [developer docs](https://developers.figma.com/docs/figma-mcp-server/code-to-canvas/) describe the result as flat layers with no connection to the file's libraries.
-
-Variables are the one exception. When the target file has a library with variables, matching colours, numbers and strings are bound. Components are not: a [feature request](https://forum.figma.com/suggest-a-feature-11/figma-mcp-generate-figma-design-should-resolve-html-elements-to-existing-library-components-instead-of-raw-frames-51286) from the same month describes the output as having no component instances, no variable bindings and no variant properties, and the one reply suggests rebuilding with the agent instead.
+Now run the settings page the other way. It exists in code, and the designers want it in the Figma file to iterate on. Figma launched [code to canvas](https://www.figma.com/blog/introducing-claude-code-to-figma/) in February 2026: its `generate_figma_design` tool captures a running page into Figma. The [developer docs](https://developers.figma.com/docs/figma-mcp-server/code-to-canvas/) describe the result as "flat layers, without a connection to your libraries", with one exception: if the target file has a library with variables, Figma binds matching colour, number and string variables to the captured layers, so add the library before capturing. Components are never resolved: a [feature request](https://forum.figma.com/suggest-a-feature-11/figma-mcp-generate-figma-design-should-resolve-html-elements-to-existing-library-components-instead-of-raw-frames-51286) from the same month asks for library instances and variant properties instead of raw frames, and the one reply suggests rebuilding with the agent instead.
 
 The plugins in this space behave the same way. [html.to.design](https://html.to.design/docs/import-options/) creates new local styles and never links to a library. [story.to.design](https://story.to.design/docs/subcomponents) creates new Figma components from stories and links nesting only to components it created itself.
 
-The route that produces instances arrived in March 2026, when Figma [opened the canvas to agents](https://www.figma.com/blog/the-figma-canvas-is-now-open-to-agents/) with `use_figma`, which runs Plugin API code. Figma's [`figma-generate-design` skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-generate-design/SKILL.md) uses it in a fixed order:
+The route that produces instances arrived in March 2026, when Figma [opened the canvas to agents](https://www.figma.com/blog/the-figma-canvas-is-now-open-to-agents/) with [`use_figma`](https://developers.figma.com/docs/figma-mcp-server/write-to-canvas), which runs Plugin API code. It is in beta, free during it and due to become usage-based; it needs a Professional, Education, Organization or Enterprise plan and edit access. It can't add images itself (`upload_assets` and `generate_image` can), fonts must be uploaded to the Figma account, and each call returns at most 20 KB (as of November 2026). Figma's [`figma-generate-design` skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-generate-design/SKILL.md) uses it in a fixed order:
 
 1. find Code Connect mappings;
 2. list the file's libraries;
@@ -290,7 +288,7 @@ There is almost no measured evidence for any of it, so measure it on your own sy
 Researched November 2026. Vendor developer docs, MCP server sources, skill files and forum reports were checked against each other, and the benchmarks and papers were read for what they actually measured. The section on what has been measured moved to Part 9, [Measuring and showing agent readiness](measuring-agent-readiness.md), on 9 November 2026.
 
 - **Figma's MCP tools change monthly.** The large-frame advice, the Code Connect snippet behaviour and the forum-reported drops were checked in November 2026. The consumer-file drop was fixed on 28 October 2026.
-- **`generate_figma_design`** binds variables but not components as of November 2026. A version that resolves elements to library components would change [code to Figma instances](#code-to-figma-instances).
+- **`generate_figma_design`** binds the target library's variables but resolves no components (developer docs, re-checked 17 November 2026). **`use_figma`** is in beta, and its plan list and image and font limits changed between October and November 2026. A version that resolves elements to library components would change [code to Figma instances](#code-to-figma-instances).
 - **Primer's** `list_patterns` and `get_pattern` were read in the server source of 14 October 2026; the public docs page did not load. Primer's `SplitPageLayout` is still alpha.
 - **v0** labels its registry route legacy as of November 2026.
 - **Atlassian's 70 percent** is self-reported with no stated method, and the logo result has no before-and-after counts.
@@ -348,6 +346,7 @@ Researched November 2026. Vendor developer docs, MCP server sources, skill files
 ### Primary: code-to-Figma and round trip
 
 - [Figma, Code to canvas](https://developers.figma.com/docs/figma-mcp-server/code-to-canvas/)
+- [Figma, Write to canvas](https://developers.figma.com/docs/figma-mcp-server/write-to-canvas)
 - [Figma, *Introducing Claude Code to Figma* (17 Feb 2026)](https://www.figma.com/blog/introducing-claude-code-to-figma/)
 - [Figma, *The Figma canvas is now open to agents* (24 Mar 2026)](https://www.figma.com/blog/the-figma-canvas-is-now-open-to-agents/)
 - [Figma, figma-generate-design skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-generate-design/SKILL.md)

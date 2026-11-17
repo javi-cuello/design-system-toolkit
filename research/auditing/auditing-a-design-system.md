@@ -4,7 +4,7 @@ What an audit of a Figma library is for, which ways of running one fit which tea
 
 A developer points an agent at a settings screen in Figma and asks for the code. The result renders and looks close. Then someone reads it: the toggle is a hand-built `div` with a hex grey, the spacing is `padding: 14px`, and a wrapper is called `Frame1337`. Nobody told the agent to do any of that. It read the file, and the file said exactly that: the toggle had been detached months ago, its fill unbound, its frame never renamed.
 
-The agent didn't invent the mess. It copied it, faster than a person would have, and into code. That is the case for auditing the library first.
+The agent didn't invent the mess. It copied it, faster than a person would have, and into code.
 
 ---
 
@@ -12,15 +12,15 @@ The agent didn't invent the mess. It copied it, faster than a person would have,
 
 **Why audit**
 
-- [What an audit buys](#what-an-audit-buys): who gains from an audit, and what
+- [What an audit buys](#what-an-audit-buys): who gains, and what
 - [Messy library, messy output](#messy-library-messy-output): why library defects reappear in generated UI
 - [What an audit covers](#what-an-audit-covers): which parts of a library to check
 
 **Ways of auditing**
 
 - [Auditing by hand](#auditing-by-hand): what a person sees that no tool does
-- [Figma's Check designs](#figmas-check-designs): what the built-in check finds, and on which plans
-- [Library analytics](#library-analytics): what usage and detach data can and can't tell
+- [Figma's Check designs](#figmas-check-designs): what the built-in check finds
+- [Library analytics](#library-analytics): what usage data tells an audit
 - [Lint plugins](#lint-plugins): where community plugins fit
 - [Agent audits](#agent-audits): what an LLM adds, and what it costs
 - [Choosing a method](#choosing-a-method): which mix fits which team
@@ -31,7 +31,7 @@ The agent didn't invent the mess. It copied it, faster than a person would have,
 - [Ranking the findings](#ranking-the-findings): how to sort a long list into work
 - [Audit cadence](#audit-cadence): one-off, recurring or continuous
 
-For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole guide in four paragraphs. This piece sits beside the nine-part series *The agent-ready design system* (in `../ai-and-docs/`) and links to it where the series already covers a topic.
+For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-short-version) is the whole guide in four paragraphs. This piece sits beside the series *The agent-ready design system* and links to it where the series covers a topic.
 
 ---
 
@@ -41,19 +41,11 @@ For a lookup, use the [cheat sheet](#cheat-sheet); [the short version](#the-shor
 
 An audit turns drift nobody can see into a list of named items someone can fix, and the same list pays three readers: the designers who use the library, the agents that read it, and the product built from both.
 
-Drift is quiet by nature. A designer detaches a button to change its padding on a deadline. Another picks `#6B7280` from a screenshot because the token was hard to find. Each choice is reasonable, each file still looks right, and nothing announces that the library and the screens built from it have stopped agreeing.
+Drift is quiet by nature. A designer detaches a button to change its padding on a deadline. Another picks `#6B7280` from a screenshot because the token was hard to find. Each choice is reasonable, each file still looks right, and nothing announces that the library and its screens have stopped agreeing. Salesforce found thousands of such detaches across its SLDS 2 components, each one a copy that no longer receives accessibility, behaviour or branding fixes; the numbers, and how to read them, are in [detaches](../figma-and-code/measuring-design-system-adoption.md#detaches).
 
-Salesforce's Lightning team found this at scale. A Figma audit turned up thousands of detached instances of SLDS 2 components; their button icon alone had more than 3,000 detaches in a year, across almost a million instances. The team's write-up names the cost plainly: a detached instance stops receiving fixes to accessibility, behaviour and branding, and the drawing drifts away from the code ([Salesforce, Figma component health](https://www.salesforce.com/blog/figma-component-health/)).
+People gain time and a library they trust: Figma's 2019 task study, the one measured figure, is weighed in [design and code together](../figma-and-code/measuring-design-system-adoption.md#design-and-code-together). Agents gain lookups where they would otherwise guess, since a bound colour becomes a token in their output and an unbound one a hex value. The product gains changes that land everywhere: a rebrand or a new focus ring reaches every screen whose instances are attached and whose values are bound, and misses the rest.
 
-**For people,** the gain is time and trust. In a 2019 experiment by Figma's data science team, designers with an up-to-date library finished a task 34 percent faster than with old files, each designer acting as their own control. The author calls that the best case, because the library fitted the task exactly ([Figma, measuring the value of design systems](https://www.figma.com/blog/measuring-the-value-of-design-systems/)). The study is from 2019, before variables and agents, and Figma is measuring its own product, so it now counts two levels weaker than its design would suggest. An audit is what keeps a library close to that best case rather than drifting from it.
-
-**For agents,** the gain is fewer guesses. An agent fills every gap in a file from its training data, which is mostly public web code. A bound colour becomes a token in the output; an unbound one becomes a hex value. The next section works through how.
-
-**For the product,** the gain is that a change made once lands everywhere. A rebrand, a contrast fix or a new focus ring reaches every screen whose instances are attached and whose values are bound, and misses every screen where they aren't.
-
-> **Aside.** Return-on-investment figures for design systems circulate widely, and most trace back to one model. Speicher and Baena Wehrmann's Smashing article computes 135 percent ROI ($646,000 cost against $1,517,400 in gains) for a hypothetical company with 5 designers and 10 developers, built on productivity figures averaged from other studies; the authors call it an approximation resting on many assumptions ([Smashing, the ROI of a design system](https://www.smashingmagazine.com/2022/09/formula-roi-design-system)). It is a planning model, not a measurement, and vendor posts that quote it as an outcome have dropped that label.
-
-Pitch the audit by what it protects, not by a borrowed ROI figure. **Tell stakeholders which changes the library can no longer deliver everywhere, and how many places that is.** The SLDS and Figma figures are measured; any ROI number you quote is a model, and say so.
+Pitch the audit by what it protects. **Tell stakeholders which changes the library can no longer deliver everywhere, and how many places that is.** Most circulating ROI figures trace back to one model, Speicher and Baena Wehrmann's 135 percent for a hypothetical company, which its authors call an approximation ([Smashing, the ROI of a design system](https://www.smashingmagazine.com/2022/09/formula-roi-design-system)); if you quote it, say it is a model.
 
 ---
 
@@ -61,9 +53,7 @@ Pitch the audit by what it protects, not by a borrowed ROI figure. **Tell stakeh
 
 Generated UI inherits the library's defects one for one: an agent reading a Figma file turns each unbound value into a raw value, each detached component into hand-written markup, and each vague name into a guess.
 
-Back to the settings screen. The agent reached the file through Figma's MCP server, a connection that hands an agent the selected frame as structured data: layers, properties, bound variables, and where a team has set it up, the mapped code component. Whatever that data leaves out, the agent fills in.
-
-So the mechanism is retrieval, not reasoning. The series' [Part 2](../ai-and-docs/what-the-library-carries-for-an-agent.md) covers it in depth; the short form is that each property of the file either gives the agent a lookup or leaves it a guess. monday.com's engineering team saw exactly this when developers pasted Figma links into Cursor: the output looked roughly right, hard-coded its colours and overrode type defaults. Their diagnosis: "Without that context, it guessed" ([monday.com engineering](https://engineering.monday.com/how-we-use-ai-to-turn-figma-designs-into-production-code/)).
+Back to the settings screen. The agent reached the file through Figma's MCP server, which hands an agent the selected frame as structured data: layers, properties, bound variables, and where a team has set it up, the mapped code component. Whatever that data leaves out, the agent fills in. The mechanism is retrieval, not reasoning, and the series' [Part 2](../ai-and-docs/what-the-library-carries-for-an-agent.md) covers it in depth. monday.com's engineers saw it when developers pasted Figma links into Cursor: the output hard-coded its colours and overrode type defaults, and their diagnosis was "Without that context, it guessed" ([monday.com engineering](https://engineering.monday.com/how-we-use-ai-to-turn-figma-designs-into-production-code/)).
 
 Here is what the agent did with each defect in the settings screen.
 
@@ -107,15 +97,13 @@ Here is what the agent did with each defect in the settings screen.
 <text x="20" y="276" font-size="12" fill="#5a5850">Illustrative. Left: the defects an audit flags. Right: what the agent reuses once they are fixed.</text>
 </svg>
 
-Every red box on the left is something an audit catches; every green box on the right is something the agent could only write because the library now says it. Figma's own example in [*Why you should care about design context*](https://www.figma.com/blog/why-you-should-care-about-design-context) makes the same point with a card: a layer called "card" carries meaning that "Frame 1337" doesn't, and the cleanest file produced code that reused the codebase's real components.
+Every red box on the left is something an audit catches; every green box on the right is something the agent could only write because the library now says it.
 
-Figma's guidance on [structuring a file for its MCP server](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file) reads, item by item, like an audit checklist. In order: use components, connect them to code with Code Connect, use variables, name layers clearly, use auto layout, add annotations, add dev resources. Code Connect is the mapping from a Figma component to its code component; without it, the agent has to guess which code component a drawing stands for.
+Figma's guidance on [structuring a file for its MCP server](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file) reads like an audit checklist. Its seven recommendations, in order: use components, connect them to code with Code Connect, use variables, name layers clearly, use auto layout, add annotations, add dev resources. Code Connect is the mapping from a Figma component to its code component; without it, the agent guesses which code component a drawing stands for.
 
-The same holds for prototyping tools. An agent composing a screen in Figma, Figma Make building from a team's package, or a design-to-code pass all start from the library as it is. A library audited for people (are things findable, consistent, documented?) is most of the way to one audited for agents. What agents add is literalness: a person reads past "Frame 1337" and a hex value that happens to match the token; an agent can't.
+A library audited for people is most of the way to one audited for agents. What agents add is literalness: a person reads past "Frame 1337" and a hex value that happens to match the token; an agent can't.
 
-> **Aside.** The trust gap is real but often misquoted. Figma's 2025 AI report, a survey of 2,500 users, found 68 percent of developers use prompts to generate code, and only 32 percent of designers and developers together say they can rely on AI output ([Figma, 2025 AI report](https://www.figma.com/blog/figma-2025-ai-report-perspectives/)). Figma's [MCP post](https://www.figma.com/blog/design-systems-ai-mcp/) shortens the first to "use AI to write code".
-
-Audit the library before you connect an agent to it, not after the first bad output. **Treat every unbound value, detached instance and default layer name as a line of code the agent will write wrong.** *Weight: moderate.* That a messy file yields messy generated code is the view of Figma's own guidance and every team report found, a vendor among them; how much cleaning improves the output has been measured only by vendors (the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md) covers what exists).
+Audit the library before you connect an agent to it, not after the first bad output. **Treat every unbound value, detached instance and default layer name as a line of code the agent will write wrong.** *Weight: moderate.* Figma's own guidance and every team report found say so; how much cleaning improves the output has been measured only by vendors (the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md) covers what exists).
 
 ---
 
@@ -123,26 +111,24 @@ Audit the library before you connect an agent to it, not after the first bad out
 
 A useful audit checks a library at two levels, each component and the file as a whole, across a short list of areas where drift hides; the list is the same for people and agents, but agents raise the stakes on names, descriptions and properties.
 
-Picture the Switch from the settings screen after it has been reattached. It still has to pass more than one test. Its track colour has to be bound, and bound to the right kind of token: a semantic one like `surface/selected`, not a raw palette step. Its `On` and `Off` states have to exist as variants, with a disabled state that differs in more than opacity. Its label property has to be named the way code names it. And it has to sit on the right page, under a name that doesn't collide with a lower-case `switch` elsewhere in the file.
+Even the reattached Switch has more tests to pass: a track colour bound to a semantic token like `surface/selected`, a disabled state that differs in more than opacity, a label property named as code names it. One working audit groups such tests into these areas:
 
-Those tests group into areas. One working audit uses these, and each catches something different:
-
-- **Token use.** Every fill, stroke, radius, gap and padding bound to a variable, and text set with a text style. An unbound value is a decision nobody can change centrally.
-- **The tokens themselves.** Names that follow one grammar, semantic tokens over primitives in components, descriptions that say when to use each.
-- **Token links.** Bindings that resolve to the library the file is meant to use, not a retired copy or another team's file with the same collection names.
-- **Properties.** Variant axes, booleans and text properties named consistently and close to their code names; no property that does nothing.
-- **States.** Hover, focus, pressed, disabled and error drawn where the component has them, each using its own state's tokens.
-- **Structure and hygiene.** Auto layout over absolute positioning, no default layer names, no groups where frames belong, no hidden layers left from experiments.
-- **Descriptions.** What the component is for, when not to use it, and what it is called in code.
+- **Token use.** Every fill, stroke, radius, gap and padding bound to a variable; text set with a text style.
+- **The tokens themselves.** One naming grammar, semantic tokens over primitives in components, descriptions that say when to use each.
+- **Token links.** Bindings that resolve to the library the file is meant to use, not a retired copy.
+- **Properties.** Axes, booleans and text properties named consistently and close to their code names; none that does nothing.
+- **States.** Hover, focus, pressed, disabled and error drawn where the component has them, each with its own tokens.
+- **Structure and hygiene.** Auto layout, no default layer names, no stray groups or hidden layers.
+- **Descriptions.** What the component is for, when not to use it, and its name in code.
 - **Accessibility.** Contrast in every mode, focus indicators, target sizes, text that can grow without clipping.
-- **Right to left.** Padding and icons that mirror, where a product ships to Arabic or Hebrew readers.
+- **Right to left.** Padding and icons that mirror, where the product ships to Arabic or Hebrew readers.
 - **File structure.** Page order, naming across the library, parts that carry their parent's name.
 - **Icons.** One size system, bound colours, names that say what the icon shows.
-- **Platform fit.** Whether the target platform can build the component as drawn: a centre-aligned stroke, for instance, has no direct CSS equivalent.
+- **Platform fit.** Whether the target platform can build it as drawn: a centre-aligned stroke has no direct CSS equivalent.
 
-The first four matter most to an agent, because they are what it reads to choose and fill in a component. The last few matter most to people, because an agent rarely sees page order or icon naming. The series' [Part 1](../ai-and-docs/what-makes-a-design-system-agent-ready.md#layers-of-readiness) sets out which layers of a system carry readiness; this list is the Figma half of it.
+The first four matter most to an agent, which reads them to choose and fill in a component. The series' [Part 1](../ai-and-docs/what-makes-a-design-system-agent-ready.md#layers-of-readiness) sets out which layers of a system carry readiness; this list is the Figma half of it.
 
-Start a first audit with token use and properties on your five most-used components, because that's where both people and agents feel drift first. **Audit the file as a whole as well as component by component, since page order and name collisions never show up in a component-by-component walk.** *Weight: weak.* The area list is one working audit's, not a published standard, and the order of priority is reasoning.
+Start with token use and properties on your five most-used components. **Audit the file as a whole as well as component by component, since page order and name collisions never show up in a component-by-component walk.** *Weight: weak.* The area list is one working audit's, not a published standard.
 
 ---
 
@@ -152,68 +138,37 @@ Start a first audit with token use and properties on your five most-used compone
 
 A person walking the library is the only audit that sees intent, and it is slow, inconsistent between auditors and impossible to repeat every week.
 
-A designer opens the settings screen and the Switch side by side and notices that the screen's toggle is a few pixels taller than the library's. No tool flags that: the toggle is attached, every value is bound, and the height comes from a padding override that is itself a token. The designer knows the product and knows it looks wrong.
+A designer opens the settings screen and the Switch side by side and notices that the screen's toggle is a few pixels taller than the library's. No tool flags that: the toggle is attached, every value is bound, and the height comes from a padding override that is itself a token. The designer knows it looks wrong.
 
-The classic method is Brad Frost's interface inventory: screenshot every instance of each kind of thing in a product (every button, every input, every heading), group them, and look at the spread ([Frost, interface inventory](https://bradfrost.com/blog/post/interface-inventory/); [*Atomic Design*, chapter 4](https://atomicdesign.bradfrost.com/chapter-4/)). It was built for the start of a system, to show a team how many buttons it has. Pointed at a library, the same walk shows how many near-duplicate cards or three-generation-old icon sets survive.
+The classic method is Brad Frost's interface inventory: screenshot every instance of each kind of thing in a product, group them, and look at the spread ([Frost, interface inventory](https://bradfrost.com/blog/post/interface-inventory/); [*Atomic Design*, chapter 4](https://atomicdesign.bradfrost.com/chapter-4/)). Pointed at a library, it shows how many near-duplicate cards survive. It gives judgement of intent, a sense of what's missing, and a conversation with the people who'll fix it; it costs hours per component, depends on who audits, and never re-runs to say whether a fix held.
 
-What a hand audit gives that nothing else does:
-
-- judgement of intent ("this works, but it reads as a different product");
-- a sense of what's missing, which no check can count;
-- the conversation it starts, since the people walking the library are often the people who'll fix it.
-
-What it costs:
-
-- hours per component on a large library;
-- findings that depend on who audits, and drift between two auditors' calls;
-- no repeat run, so nothing tells the team whether a fix held.
-
-Use a hand audit for what only judgement can see, and hand everything countable to a tool. **A person should spend their audit time on intent and gaps, not on counting unbound fills.** *Weight: weak.* One author argues that split; the tools below exist because hand counting doesn't scale.
+**A person should spend their audit time on intent and gaps, not on counting unbound fills.** *Weight: weak.* One author argues that split; the tools below exist because hand counting doesn't scale.
 
 ---
 
 ## Figma's Check designs
 
-Check designs is Figma's built-in, deterministic check: it finds hard-coded values, detached components, components from libraries the file doesn't use and contrast failures in a selection, and suggests library replacements; it runs on Organization, Enterprise, Government and K-12 Education plans.
+Check designs is Figma's built-in, deterministic check: it finds hard-coded values, detached components, components from libraries the file doesn't use and contrast failures in a selection, and suggests library replacements, on Organization, Enterprise, Government and K-12 Education plans.
 
-A designer selects the settings screen and opens Check designs. It lists the `#6B7280` fill and suggests `text/subtle` from the connected library, the `14` padding and the nearest spacing variable, and the detached toggle. One click applies a suggestion; another applies all of them.
+A designer selects the settings screen and opens Check designs. It lists the `#6B7280` fill and suggests `text/subtle`, the `14` padding and the nearest spacing variable, and the detached toggle. One click applies a suggestion; another applies all of them. Figma's help page says it uses no LLM: suggestions are ranked by how close a variable's value is, by naming and hierarchy, and by how often the variable is used ([Figma, Check designs](https://help.figma.com/hc/en-us/articles/39592284074263)), so two runs say the same thing. Its history and what it reports for adoption are in [raw values](../figma-and-code/measuring-design-system-adoption.md#raw-values).
 
-How it works matters for trusting it. Figma's help page says it uses no LLM: suggestions are ranked by how close a variable's value is to the hard-coded one, by naming and hierarchy, and by how often the variable is used ([Figma, Check designs](https://help.figma.com/hc/en-us/articles/39592284074263)). That makes it repeatable. Run it twice and it says the same thing.
+Its limits come from the same design. It replaces values but not components, so a detached instance is swapped back by hand. It can't swap colour styles. It runs on one page at a time, capped at 25,000 layers. And it checks against the connected libraries, not the system's own rules. That last limit is where it misfires: within days of its launch on 4 June 2026, designers asked on Figma's forum for a way to ignore suggestions, because deliberate exceptions such as disabled states, which WCAG doesn't require to pass contrast, were being flagged ([forum request](https://forum.figma.com/suggest-a-feature-11/check-designs-ignore-or-exclude-suggestions-54643)).
 
-Its limits come from the same design:
+**A worked case.** Say Check designs reports 47 items on your settings screen, and 6 are disabled-state contrast failures. Apply all 47, and six disabled toggles get darker text and stop looking disabled. Apply in groups instead: values first, contrast by hand.
 
-- It replaces values but not components. A detached instance is flagged, and swapping it back is manual.
-- It binds a hard-coded colour to a variable but can't swap colour styles.
-- It runs on one page at a time, capped at 25,000 layers.
-- It checks against the libraries connected to the file. It doesn't know the system's own rules, such as which collection components should draw from, or which exceptions are deliberate.
-
-That last limit is where it misfires. Within days of launch in June 2026, designers asked on Figma's forum for a way to ignore or exclude suggestions, because deliberate exceptions were being flagged. One example was disabled states, which fail contrast but which WCAG doesn't require to pass ([forum request](https://forum.figma.com/suggest-a-feature-11/check-designs-ignore-or-exclude-suggestions-54643)). There's no way to mark an exception, so the count includes items nobody should fix.
-
-**A worked case.** Say Check designs reports 47 items on your settings screen, and 6 are disabled-state contrast failures. If you apply all 47, six disabled toggles get darker text and stop looking disabled. Apply in groups instead: values first, contrast by hand.
-
-Use Check designs as the everyday check on screens if your plan has it, since it's included with the plan and repeatable. **Apply its value suggestions in bulk and its contrast suggestions one at a time.** It's the right default for screen files; for auditing the library itself, its blindness to your conventions means it needs a second check beside it.
+Use Check designs as the everyday check on screens if your plan has it. **Apply its value suggestions in bulk and its contrast suggestions one at a time.** For the library itself, its blindness to your conventions means it needs a second check beside it.
 
 ---
 
 ## Library analytics
 
-Library analytics shows where a library is used and where it is abandoned (inserts, instances and detaches per component, style and variable), which makes it the best evidence of what to audit first, though it can't say why anyone detached anything.
+Library analytics shows where a library is used and where it is abandoned, which makes it the best evidence of what to audit first, though it can't say why anyone detached anything.
 
-Back to the toggle that was detached months ago. Was it one designer's shortcut, or does everyone detach that component? Analytics answers that. Figma's library analytics lists, per asset, its instances, inserts and detaches, with drill-down to the files and teams using it, over 30, 60 or 90 days or a rolling year ([Figma, track library and component usage](https://help.figma.com/hc/en-us/articles/360039238353-Track-library-and-component-usage)). It's on the same plans as Check designs; its REST API is Enterprise only.
+Was the toggle one designer's shortcut, or does everyone detach it? Figma's library analytics answers that, listing per asset its instances, inserts and detaches. What it counts, what it can't see and its plans are set out in [what Figma counts](../figma-and-code/measuring-design-system-adoption.md#what-figma-counts); how to read detaches, with the Salesforce and athenahealth stories, in [detaches](../figma-and-code/measuring-design-system-adoption.md#detaches).
 
-The caveats change how the numbers read:
+For an audit, one rule from there matters most: divide. A detach count says how big a component's backlog is; its detach rate, detaches over instances, says whether it is failing the people using it.
 
-- Usage in other people's drafts isn't tracked.
-- A nested component doesn't count as an insertion; only the outer one does. A variable used inside an inserted component isn't counted either.
-- Style and variable tracking began on 10 October 2024.
-
-**A detach count needs its denominator.** The SLDS button icon's "more than 3,000 detaches" sounds like a crisis. Against almost a million instances it is about 0.3 percent. A component with 40 detaches out of 200 instances, 20 percent, is the one to audit first. Always divide.
-
-Big systems turn this into routine. athenahealth's Forge team, handling around 100,000 insertions a month, watched detaches and traced a spike to an auto layout bug in a container component; one of its designers put it as wanting to know why anyone detaches ([Figma, making metrics matter](https://www.figma.com/blog/design-systems-104-making-metrics-matter/)). Pinterest went further: a nightly job over the REST API scored each handoff frame by the share of its layers coming from the Gestalt library, then rolled that up by team: about 50 percent on some teams, 2 on others ([Figma, how Pinterest measures adoption](https://www.figma.com/blog/how-pinterests-design-systems-team-measures-adoption/)). Shopify's version of the same idea, coverage of components and tokens across its admin, is told in the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md#one-defensible-number).
-
-What to count, which denominator keeps it honest and how to report it is the subject of [measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md).
-
-Read analytics before you audit, and sort components by detach rate, not detach count. **A high detach rate is a question for the people detaching, not a finding against them.** *Weight: weak.* Only athenahealth's story is about watching detaches, told on Figma's own blog; the analytics only shows where to look, and the reason has to come from asking.
+Read analytics before you audit, and pick targets by detach rate. **A high detach rate is a question for the people detaching, not a finding against them.** *Weight: weak.* The analytics shows where to look; the reason has to come from asking.
 
 ---
 
@@ -221,47 +176,25 @@ Read analytics before you audit, and sort components by detach rate, not detach 
 
 Community lint plugins run on any plan and check a library against generic rules, which makes them the cheapest start and the weakest at knowing what the system intends.
 
-A team on Figma's Professional plan has neither Check designs nor library analytics. It installs a lint plugin, runs it over the Switch, and gets a list: unbound fills, a missing text style, a layer named "Frame 12".
+A team on Figma's Professional plan has neither Check designs nor library analytics. It runs a lint plugin over the Switch and gets a list: unbound fills, a missing text style, a layer named "Frame 12". FigmaLint, from the consultancy Southleft, adds component-level checks (property naming, missing states, accessibility) and a score per component ([Southleft, introducing FigmaLint](https://www.southleft.com/insights/design-systems/designing-for-developers-introducing-figmalint)).
 
-That is what these plugins do well: walk the selected layers and report anything that isn't attached to a style, a variable or a component. FigmaLint, from the consultancy Southleft, adds component-level checks (property naming, missing states, accessibility) and a score per component ([Southleft, introducing FigmaLint](https://www.southleft.com/insights/design-systems/designing-for-developers-introducing-figmalint)). Smashing's 2026 piece on [making a design system AI-ready](https://smashingmagazine.com/2026/06/how-make-design-system-ai-ready/) recommends it as the audit step.
+They are cheap, fast, repeatable, and give two teams the same yardstick. The catch is whose rules they apply: the plugin author's. One that wants every radius bound flags a deliberate `0`, and one that lags Figma's API (slots, new variable types) reports what it can't read as missing.
 
-The trade-off is in where their rules come from:
-
-- **For:** free or cheap, on any plan, fast, and repeatable.
-- **For:** a fixed rule set gives two teams the same yardstick.
-- **Against:** the rules are the plugin author's, not the system's. A plugin that wants every radius bound will flag a deliberate `0`; one that checks names against a pattern doesn't know the team's pattern.
-- **Against:** third-party maintenance. A plugin that lags Figma's API (slots, new variable types) reports what it can't read as missing.
-
-Use a lint plugin when your plan has no built-in check, or as a fast first pass. **Before trusting its count, check three of its findings against your own conventions.** That a generic linter misreads deliberate choices follows from how it works; how often it does is unmeasured for any named plugin.
+Use a lint plugin when your plan has no built-in check, or as a fast first pass. **Before trusting its count, check three of its findings against your own conventions.** How often a generic linter misreads deliberate choices is unmeasured for any named plugin.
 
 ---
 
 ## Agent audits
 
-An agent audit points an LLM at the library through an MCP connection or Figma's built-in agent, and adds what deterministic checks can't (judging descriptions, names and intent) at the price of answers that vary between runs and confident findings that can be wrong.
+An agent audit points an LLM at the library and adds what deterministic checks can't (judging descriptions, names and intent) at the price of answers that vary between runs and confident findings that can be wrong.
 
-A team asks an agent to audit the Switch. It reads the component through the MCP server and comes back with judgements no counting tool makes: the description says what the Switch is but not when to use a Checkbox instead; the property `Toggle` is named for the gesture, while code calls it `checked`; the disabled state differs from the resting one only by opacity.
+Asked to audit the Switch, an agent comes back with judgements no counting tool makes: the description says what the Switch is but not when to use a Checkbox instead, and the property `Toggle` is named for the gesture, while code calls it `checked`. There are two main routes. **Figma's own agent,** in Figma Design since May 2026 (beta), can be connected to a library and asked to audit against it; Figma's [audit solution page](https://www.figma.com/solutions/ai-design-system-audit/) describes it scanning for detached components, hard-coded values and token drift. **An agent in a coding tool** (Claude Code, Cursor) reads the file through Figma's MCP server or a bridge such as Southleft's `figma-console-mcp`, running a team's own audit skill or script.
 
-There are two main routes:
+The costs are specific. The same audit, run twice, can return different lists, and a finding that comes and goes can't be closed. A wrong finding arrives in the same tone as a right one, with unknown conventions filled from training. And agent use is metered or credit-based; Figma's agent is free only during its beta.
 
-- **Figma's own agent,** in Figma Design since May 2026 (beta), can be connected to a library and asked to audit against it; Figma's [audit solution page](https://www.figma.com/solutions/ai-design-system-audit/) describes it scanning for detached components, hard-coded values and token drift, and saving an audit as a reusable skill.
-- **An agent in a coding tool** (Claude Code, Cursor) reading the file through Figma's MCP server or a bridge such as Southleft's `figma-console-mcp`, running a team's own audit skill or script.
+The strongest setups split the work. A script does the counting: every unbound value, every detached instance. The agent judges only what a script can't, and filters the script's candidates against the team's recorded decisions rather than raising its own.
 
-What an agent adds:
-
-- judgement on text: whether a description helps, whether a name reads as its job;
-- comparison across components ("Switch and Checkbox describe the same use");
-- a fix in the same session, where a deterministic tool only reports.
-
-What it costs:
-
-- **Variance.** The same audit, run twice, can return different lists. A finding that comes and goes can't be closed.
-- **Confident errors.** An agent states a wrong finding in the same tone as a right one, and it fills unknown conventions from its training, the same failure as in generated code.
-- **Price and plan.** Agent use is metered or credit-based once out of beta; Figma's agent is free only during its beta.
-
-The strongest setups split the work. A script does the counting, deterministically: every unbound value, every detached instance. The agent then judges only what a script can't, and filters the script's candidates against the team's recorded decisions rather than raising its own. That keeps the countable findings stable between runs and puts the LLM's judgement where it earns its cost.
-
-Use an agent for descriptions, names and intent, and a script for anything countable. **Never let an agent's audit be the only record of what's wrong, because a list that changes between runs can't be worked through.** *Weight: weak.* The split is drawn from one working audit and consistent with the series' advice on [checks versus evals](../ai-and-docs/what-keeps-an-agent-on-track.md#evals-versus-tests); no published comparison of agent and scripted audits was found.
+**Never let an agent's audit be the only record of what's wrong, because a list that changes between runs can't be worked through.** *Weight: weak.* The split is drawn from one working audit and fits the series' advice on [checks versus evals](../ai-and-docs/what-keeps-an-agent-on-track.md#evals-versus-tests); no published comparison of agent and scripted audits was found.
 
 ---
 
@@ -269,9 +202,7 @@ Use an agent for descriptions, names and intent, and a script for anything count
 
 No single method covers an audit: the working mix is a deterministic check for anything countable, usage data to choose where to look, and a person or an agent for intent, chosen by plan and library size.
 
-The settings-screen team has now met all five. Each answered a different question about the same toggle: analytics said how often it's detached, Check designs found its unbound fill, a hand look saw that it's too tall, and an agent noticed its property is named for a gesture. None of them saw all four.
-
-This table compares the methods on the axes the sections above introduced.
+Each method saw something different about the same toggle: how often it's detached, its unbound fill, its height, its gesture-named property.
 
 | Method | Finds best | Misses | Repeatable | Plan (as of Nov 2026) |
 |---|---|---|---|---|
@@ -281,13 +212,9 @@ This table compares the methods on the axes the sections above introduced.
 | Lint plugins | Unbound values, default names | The team's conventions | Yes | Any |
 | Agent audit | Descriptions, names, intent | Stability; anything it wasn't told | No | Figma's agent: paid plans in beta; MCP: varies by seat |
 
-By team, that resolves to:
+A small team on Professional runs a lint plugin and a hand walk of the most-used components, then an agent for descriptions. An Organization or Enterprise team adds analytics to choose targets, Check designs on screen files and a scripted audit of the library against its conventions. A team about to connect agents does all of that on the components agents will reach first, plus a check that each has a Code Connect mapping.
 
-- **A small team on Professional:** a lint plugin plus a hand walk of the most-used components, then an agent for descriptions.
-- **An Organization or Enterprise team:** analytics to choose targets, Check designs on screen files, a scripted audit of the library itself against the team's conventions, and an agent for the text.
-- **A team about to connect agents to the library:** all of the above on the components agents will reach first, plus a check that each has a Code Connect mapping.
-
-Pick by plan, then fill the gaps. **Use a deterministic check as the record, and people or agents to judge what it can't count.** *Weight: weak.* The mix is reasoning; each part is backed for its own job in the sections above.
+**Use a deterministic check as the record, and people or agents to judge what it can't count.** *Weight: weak.* The mix is reasoning; each part is backed for its own job above.
 
 ---
 
@@ -297,7 +224,7 @@ Pick by plan, then fill the gaps. **Use a deterministic check as the record, and
 
 An audit that doesn't know a system's own conventions reports that system's deliberate choices as defects, confidently and at scale; recording the conventions, and having a check skip rather than guess where none is recorded, fixes most of it.
 
-Every check carries an assumption. "Fills should come from the semantic collection" assumes the audit knows which collection that is. "Text tokens should be text roles" assumes it knows how text tokens are named. A check that doesn't know falls back on what it does know, and that is usually some other library's answer.
+Every check carries an assumption. "Fills should come from the semantic collection" assumes the audit knows which collection that is. A check that doesn't know falls back on what it does know, and that is usually some other library's answer.
 
 **A worked case.** One audit scanner, shared across several libraries, carried constants left over from the first library it was written for: a semantic collection called `Semantic`, and a pattern for text tokens that expected `/Text/` after another segment. It was then run on a second library, whose collection is called `2. Semantic` and whose text tokens start with `Text/`.
 
@@ -328,25 +255,19 @@ Before reading on, work out what a correctly bound fill in the second library lo
 <text x="372" y="214" font-size="13" fill="#1f5a1f">the 157 never generated</text>
 </svg>
 
-The scan raised 227 candidates. 157 of them said `fill from 2. Semantic/Surface/Muted (expected Semantic)`, against bindings that were all correct. The text-token pattern failed the same way, marking every text fill in the library as not a text role. Nothing errored. Each finding was plausible and neatly worded. Given each library's own collection name, spacing scale and text pattern, the same scan raised 70 candidates, and the 157 simply stopped being generated, because they had never been about that library.
+The scan raised 227 candidates. 157 of them said `fill from 2. Semantic/Surface/Muted (expected Semantic)`, against bindings that were all correct, and the text-token pattern failed the same way. Nothing errored; each finding was plausible and neatly worded. Given the library's own collection name, spacing scale and text pattern, the same scan raised 70 candidates, and the 157 stopped being generated, because they had never been about that library.
 
-That is the failure to fear. A wrong finding that looks wrong gets fixed. 157 that look right teach a maintainer that the tool is noise, and the 70 real ones go down with them.
+That is the failure to fear. A wrong finding that looks wrong gets fixed. 157 that look right teach a maintainer that the tool is noise, and the 70 real ones go down with them. The same shape shows up elsewhere: Check designs flags disabled states that may fail contrast, a check that inferred a "retired" library from a collection publishing no variables was wrong on three findings of four, and an agent with no conventions in front of it applies those of the public libraries it was trained on.
 
-The same shape shows up elsewhere:
-
-- **Built-in checks.** Check designs doesn't know that disabled states are allowed to fail contrast, so it flags them (see [Figma's Check designs](#figmas-check-designs)).
-- **Inferred rules.** The same team wrote a check for mode pins left by a retired library, inferring "retired" from a collection that publishes no variables. A live primitives collection hidden from publishing looks identical, and the check was wrong on three findings of four. It was dropped.
-- **Agents.** An agent asked to audit with no conventions in front of it applies the conventions of the public libraries it was trained on, and states them as rules.
-
-Context fixes most of it, and context means three kinds of record:
+Context means three kinds of record:
 
 - **Conventions:** the facts a check needs (which collection is semantic, the spacing scale, the name separator, which pages hold components).
-- **Decisions:** rulings on questions that could go either way, such as "disabled states are exempt from contrast" or "this radius of 0 is deliberate".
-- **Exceptions:** named, individual items that knowingly break a rule, each with a reason.
+- **Decisions:** rulings that could go either way, such as "disabled states are exempt from contrast".
+- **Exceptions:** named items that knowingly break a rule, each with a reason.
 
-The rule that made the difference in the worked case is stronger than "set the defaults right": a check whose convention isn't recorded is skipped and reported as not checked, never run on a borrowed default. A borrowed default is always some other library's answer, and it fails silently. Precision beats coverage here, for the reason the Ditto team gave for its copy linter: false positives cost trust in aggregate, while a missed suggestion costs almost nothing ([Quinn Keast, AI style guides for product copy](https://quinnkeast.com/writing/what-we-learned-building-ai-style-guides-for-product-copy)).
+The rule that made the difference is stronger than "set the defaults right": a check whose convention isn't recorded is skipped and reported as not checked, never run on a borrowed default. Precision beats coverage, for the reason the Ditto team gave for its copy linter: false positives cost trust in aggregate, while a missed suggestion costs almost nothing ([Quinn Keast, AI style guides for product copy](https://quinnkeast.com/writing/what-we-learned-building-ai-style-guides-for-product-copy)).
 
-Write your library's conventions, decisions and exceptions down where the audit (and any agent) can read them, before the first scan. **If the audit can't find a convention, have it skip the check and say so, rather than guess.** *Weight: strong.* Recording conventions is common advice, and skip-don't-guess was measured on one run of 157 avoidable findings.
+Write your conventions, decisions and exceptions down where the audit (and any agent) can read them, before the first scan. **If the audit can't find a convention, have it skip the check and say so, rather than guess.** *Weight: strong.* Recording conventions is common advice, and skip-don't-guess was measured on one run of 157 avoidable findings.
 
 ---
 
@@ -354,19 +275,15 @@ Write your library's conventions, decisions and exceptions down where the audit 
 
 Sort audit findings by the action they need (a safe mechanical fix, a decision, or a question for someone) and within each by what the defect costs, because a single severity scale mixes items one person can fix in a minute with ones that need a meeting.
 
-The settings-screen audit, run across the library, returns 300 findings. Sorted by severity alone, the top of the list is a mix: 120 unbound paddings that a script could bind in seconds, sitting beside a Switch whose `Toggle` property needs renaming in Figma and code together, and a question about whether the disabled state should exist at all.
+The settings-screen audit, run across the library, returns 300 findings. Sorted by severity alone, the top mixes 120 unbound paddings a script could bind in seconds, a `Toggle` property that needs renaming in Figma and code together, and a question about whether the disabled state should exist at all. Grouping by action makes the list workable:
 
-Those three need different people. Grouping by action makes the list workable:
+1. **Safe fixes.** Mechanical, reversible, no one's decision: bind a raw value that matches a token exactly, rename a default layer. A script or Check designs applies these in bulk.
+2. **Decisions.** Changes consumers will see or that touch code: renaming a property, merging near-duplicates, retiring a token. These go to the system's owner, with the cost of each option.
+3. **Questions.** Things the audit can't judge: a deliberate-looking exception, an off-scale 80 that may be a progress bar's fill, a detach spike. These go to the people closest to the work.
 
-1. **Safe fixes.** Mechanical, reversible, no one's decision: bind a raw value that matches a token exactly, rename a default layer. A script or Check designs can apply these in bulk.
-2. **Decisions.** Changes consumers will see or that touch code: renaming a property, merging two near-duplicate components, retiring a token. These go to whoever owns the system, with the cost of each option.
-3. **Questions.** Things the audit can't judge: a deliberate-looking exception, an off-scale value of 80 that may be a progress bar's fill, a detach spike. These go to the people closest to the work.
+Within each group, rank by how many instances or screens the defect reaches (from analytics) and whether an agent will read it (the first four areas in [what an audit covers](#what-an-audit-covers)). And a finding count isn't a health score: 300 findings where 250 are one-click bindings is a healthier library than 40 where 30 are naming decisions, so show the count by group; the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md#showing-readiness) argues the same for readiness.
 
-Within each group, rank by cost. Commentary on design debt commonly scores items by severity, reach and effort, and plots them on an impact against effort grid; no design system's own published model was found. Two inputs make cost concrete: how many instances or screens the defect reaches (from analytics), and whether an agent will read it (the first four areas in [what an audit covers](#what-an-audit-covers)).
-
-One trap sits in the counting. A finding count isn't a health score. 300 findings where 250 are one-click bindings is a healthier library than 40 where 30 are naming decisions. Show the count by group, not as one number; the series' [Part 9](../ai-and-docs/measuring-agent-readiness.md#showing-readiness) argues the same for readiness.
-
-Hand the safe fixes to a tool the same day, and put the decisions on the system team's agenda with a recommendation each. **Order the queue by who has to act, then by how far the defect reaches.** *Weight: weak.* The three groups come from one working audit's fix queue; ranking by reach and cost is common practice without a primary source behind any one formula.
+**Order the queue by who has to act, then by how far the defect reaches.** *Weight: weak.* The three groups come from one working audit's fix queue; design-debt commentary scores severity, reach and effort, and no design system's own model was found.
 
 ---
 
@@ -374,17 +291,15 @@ Hand the safe fixes to a tool the same day, and put the decisions on the system 
 
 Run one full audit to set a baseline, then keep it current with checks that run on every change and a lighter recurring pass, because a one-off audit starts going stale the day it's delivered.
 
-Six weeks after the settings-screen audit, someone detaches the Switch again. The audit report still says it's fixed. Nothing re-ran.
-
-Teams that keep a system healthy run three rhythms at once:
+Six weeks after the settings-screen audit, someone detaches the Switch again. The report still says it's fixed. Nothing re-ran. Teams that keep a system healthy run three rhythms at once:
 
 - **A baseline audit,** once and again after a major change (a rebrand, a library split, a migration). Full, slow and partly by hand.
-- **A recurring pass,** weekly to quarterly. Figma's audit page suggests monthly or quarterly for its agent; Pinterest's adoption job ran nightly over every recently edited handoff file.
-- **A gate on every change,** where a script can check the rule. In code this is a lint rule: Atlassian publishes an ESLint rule, [`ensure-design-token-usage`](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage), that flags values which should be tokens. Hardik Pandya's setup for AI-built prototypes adds a token audit script that exits with an error on any hard-coded colour or spacing, so it can block a commit; his project went from 418 hard-coded values across 28 files to none ([Pandya, expose your design system to LLMs](https://hvpandya.com/llm-design-systems)).
+- **A recurring pass,** weekly to quarterly. Figma's audit page suggests monthly or quarterly for its agent; Pinterest's adoption scan ran nightly over recently edited handoff files ([what Figma counts](../figma-and-code/measuring-design-system-adoption.md#what-figma-counts)).
+- **A gate on every change,** where a script can check the rule. In code that is a lint rule, such as Atlassian's [`ensure-design-token-usage`](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage). Hardik Pandya's token audit script blocks a commit on any hard-coded colour or spacing; his project went from 418 hard-coded values across 28 files to none ([Pandya, expose your design system to LLMs](https://hvpandya.com/llm-design-systems)).
 
-Figma has no equivalent gate on publishing a library, so the Figma side relies on the recurring pass. That makes the recurring pass's stability matter: it has to give the same list each run, so a finding closes when it's fixed and only then. That's another reason to keep the counting in a deterministic check and the judgement in a person or agent.
+Figma has no gate on publishing a library, so the Figma side relies on the recurring pass, and that pass must give the same list each run, so a finding closes when it's fixed and only then.
 
-Do the baseline once, put a deterministic recurring pass on a calendar, and gate whatever reaches code. **An audit that doesn't re-run can only tell you how the library was, not how it is.** *Weight: moderate.* The systems found all check continuously; the exact cadence is reasoning and should follow how often the library changes.
+**An audit that doesn't re-run can only tell you how the library was, not how it is.** *Weight: moderate.* The systems found all check continuously; the cadence should follow how often the library changes.
 
 ---
 
@@ -394,7 +309,7 @@ Do the baseline once, put a deterministic recurring pass on a calendar, and gate
 |---|---|---|
 | Pitching the audit | Name the changes the library can't deliver everywhere | Quote a modelled ROI as a measured one |
 | About to connect an agent | Audit token use, properties, names and Code Connect first | Wait for the first bad output |
-| Choosing what to audit first | Sort components by detach rate | Sort by detach count |
+| Choosing what to audit first | Rank components by detach rate (detaches ÷ instances) | Rank by raw detach count |
 | On Professional | Lint plugin plus a hand walk | Assume Check designs is there |
 | On Organization or Enterprise | Analytics, then Check designs on screens, then a scripted library audit | Rely on Check designs for the library's own conventions |
 | Using Check designs | Apply values in bulk, contrast one by one | "Apply all" over disabled states |
@@ -407,33 +322,25 @@ Do the baseline once, put a deterministic recurring pass on a calendar, and gate
 
 ## The short version
 
-An audit turns quiet drift (detached instances, raw values, default names) into a list someone can fix. People gain time and a library they trust; the product gains changes that land everywhere at once; and agents gain lookups where they'd otherwise guess. That last one is the new stake: an agent reads a Figma file literally, so every unbound fill becomes a hex value in code and every detached toggle becomes a hand-built `div`. Audit the library before you connect an agent to it, starting with token use, properties, names and Code Connect mappings on the components agents will reach first.
+An audit turns quiet drift (detached instances, raw values, default names) into a list someone can fix. People gain time, the product gains changes that land everywhere, and agents gain lookups where they'd otherwise guess, since an agent reads a Figma file literally. Audit the library before you connect an agent, starting with token use, properties, names and Code Connect mappings.
 
-No one method covers it. Library analytics tells you where to look (divide detaches by instances). Check designs, on Organization and Enterprise plans, finds hard-coded values and detaches on screens and suggests fixes, but can't tell deliberate exceptions from mistakes. Lint plugins do similar work on any plan with the author's rules rather than yours. A person sees intent and gaps; an agent judges descriptions and names, but its answers vary between runs. Use a deterministic check as the record and people or agents for judgement.
+No one method covers it. Analytics tells you where to look (rank by detach rate). Check designs finds hard-coded values and detaches on screens but can't tell deliberate exceptions from mistakes; lint plugins do similar work on any plan with the author's rules. A person sees intent; an agent judges descriptions and names but varies between runs. Use a deterministic check as the record.
 
-Write your conventions, decisions and exceptions down before the first scan. An audit that doesn't know them reports your choices as defects: one shared scanner raised 157 confident, wrong findings on a single library because it assumed another library's collection name, and given the right name, they never appeared. If a convention isn't recorded, the check should skip and say so, not guess.
+Write your conventions, decisions and exceptions down before the first scan: one scanner raised 157 confident, wrong findings because it assumed another library's collection name. If a convention isn't recorded, the check should skip and say so.
 
-Sort the findings by who has to act (safe fixes, decisions, questions), then by reach. Do one baseline audit, then a recurring deterministic pass, and a lint gate wherever the system reaches code. The case for auditing and continuous checking weigh moderate; skip-don't-guess weighs strong, measured on one run; the mix of methods, the three-way sort and the exact cadence weigh weak, drawn from one working audit.
+Sort findings by who has to act, then by reach. Do one baseline audit, then a recurring deterministic pass, and a lint gate wherever the system reaches code. Auditing before agents and continuous checking weigh moderate; skip-don't-guess weighs strong; the mix of methods, the sort and the cadence weigh weak.
 
 ---
 
 ## What to re-check later
 
-Researched 14 November 2026, against Figma's help centre, developer docs and blog, the team write-ups linked below, and one toolkit's audit skills and test cases.
+Researched 14 November 2026, against Figma's help centre, developer docs and blog, the team write-ups linked below, and one toolkit's audit skills and test cases. Re-checked 17 November 2026: Check designs' dates and plans, and the MCP file guidance (seven recommendations).
 
-- **Plans move fast.** Check designs launched on 4 June 2026 for Organization and Enterprise; the help page now also lists Government and K-12 Education. A June 2026 news item claimed "team plans"; Figma's help page does not list Professional, so that claim is treated as wrong.
-- **Code Connect plan.** The developer docs and help centre now list Professional, Organization and Enterprise (Dev or Full seat); earlier docs and 2026 forum reports said Organization and Enterprise only. Re-check before telling a Professional team it can map components.
-- **Figma's agent.** Announced 20 May 2026 for Full seats on Professional, Organization and Enterprise, in beta, with no credit cost during the beta. Plan lists have changed since; re-check the help page. Credits apply at general availability.
-- **MCP server.** The remote server is listed for all plans; the desktop server needs a Dev or Full seat on a paid plan. Rate limits by plan were not confirmed from Figma's own pricing page.
-- **Check designs and exceptions.** No ignore or exclude option as of November 2026; the forum request had no staff reply. If one ships, the advice on applying contrast suggestions changes.
-- **FigmaLint** was in beta at its July 2025 launch; its price and whether it calls an LLM were not confirmed. Other plugins found in search (Offspec, ComponentQA, Pixel Audit) were not checked and are left out.
-- **The 157-finding case** comes from one toolkit's audit test case and is anonymised here, with stand-in names. It was a scripted scanner, not an LLM; the claim that agents fail the same way is inference from the mechanism, not a measured run.
-- **The mode-pin check** (three false findings of four) is from the same toolkit's foundations audit notes.
-- **Figma 2019 study:** sample size not stated; 34 percent is the author's best case.
-- **Smashing ROI model:** a model with a hypothetical company; the $646,000 and $1,517,400 figures are inputs and outputs of that model.
-- **Atlassian's ESLint rule:** the docs page renders client-side and was not read in full; the package `@atlaskit/eslint-plugin-design-system` exists on npm. An interview figure of a 95 percent adoption goal at Atlassian could not be opened and is left out.
-- **Severity models:** no design system's own published triage model was found; the impact and effort framing is commentary.
-- **The evidence base is Western and vendor-heavy.** Every team story is from a US company or Figma itself. No user-outcome research on audits was found; the outcome evidence is Figma's 2019 task study.
+- **Check designs**: early access from October 2025, launched 4 June 2026 for Organization and Enterprise; the help page now also lists Government and K-12 Education, not Professional. No ignore option as of November 2026; if one ships, the contrast advice changes.
+- **Code Connect plan.** The docs now list Professional, Organization and Enterprise (Dev or Full seat); earlier docs said Organization and Enterprise only.
+- **Figma's agent** (20 May 2026) is in beta with no credit cost; credits apply at general availability.
+- **The 157-finding case and the mode-pin check** come from one toolkit's audit test cases and notes, anonymised. The scanner was scripted; that agents fail the same way is inference.
+- **The evidence base is Western and vendor-heavy**, and no user-outcome research on audits was found.
 
 ---
 
@@ -445,44 +352,30 @@ Researched 14 November 2026, against Figma's help centre, developer docs and blo
 - [Figma forum, Check designs launch post (4 June 2026)](https://forum.figma.com/product-updates-3/check-designs-catch-what-s-off-ship-what-s-right-54551)
 - [Figma forum, request to ignore or exclude suggestions (June 2026)](https://forum.figma.com/suggest-a-feature-11/check-designs-ignore-or-exclude-suggestions-54643)
 - [Figma help, track library and component usage](https://help.figma.com/hc/en-us/articles/360039238353-Track-library-and-component-usage)
-- [Figma help, guide to the Figma MCP server](https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Dev-Mode-MCP-Server)
 - [Figma developer docs, structure your Figma file for the MCP server](https://developers.figma.com/docs/figma-mcp-server/structure-figma-file)
 - [Figma developer docs, Code Connect](https://developers.figma.com/docs/code-connect)
-- [Figma help, Code Connect](https://help.figma.com/hc/en-us/articles/23920389749655)
 - [Figma help, work with the Figma agent in design files](https://help.figma.com/hc/en-us/articles/37998629035799-Work-with-the-Figma-agent-in-design-files)
 - [Figma blog, *The Figma Design Agent is here* (20 May 2026)](https://www.figma.com/blog/the-figma-agent-is-here/)
 - [Figma, AI design system audit](https://www.figma.com/solutions/ai-design-system-audit/)
-- [Figma, design system audits](https://www.figma.com/solutions/design-system-audits/)
-- [Figma help, use your design system package in Make kits](https://help.figma.com/hc/en-us/articles/35946832653975-Use-your-design-system-package-in-Make-kits)
-- [Figma blog, Thomas Lowry, *Why you should care about design context* (24 September 2025)](https://www.figma.com/blog/why-you-should-care-about-design-context)
-- [Figma blog, Ana Boyer, *Design systems and AI: why MCP servers are the unlock* (6 August 2025)](https://www.figma.com/blog/design-systems-ai-mcp/)
-- [Figma blog, *Figma's 2025 AI report: perspectives* (24 April 2025)](https://www.figma.com/blog/figma-2025-ai-report-perspectives/)
-- [Figma blog, Clancy Slack, *Measuring the value of design systems* (19 December 2019)](https://www.figma.com/blog/measuring-the-value-of-design-systems/)
 
 **Primary: design system teams**
 
-- [Salesforce, Amanda Page, Figma component health (25 March 2025)](https://www.salesforce.com/blog/figma-component-health/)
-- [Figma blog, Carly Ayres, *Design systems 104: making metrics matter* (11 February 2025)](https://www.figma.com/blog/design-systems-104-making-metrics-matter/): the athenahealth Forge account.
-- [Figma blog, Ravi Lingineni, *How Pinterest's design systems team measures adoption* (3 February 2023)](https://www.figma.com/blog/how-pinterests-design-systems-team-measures-adoption/)
-- [monday.com engineering, Rivka Ungar, AI from Figma designs to production code (2 February 2026)](https://engineering.monday.com/how-we-use-ai-to-turn-figma-designs-into-production-code/)
+- [monday.com engineering, AI from Figma designs to production code (2 February 2026)](https://engineering.monday.com/how-we-use-ai-to-turn-figma-designs-into-production-code/)
 - [Atlassian, ESLint rule `ensure-design-token-usage`](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage)
-- [Southleft, TJ Pitre, *Designing for developers: introducing FigmaLint* (2 July 2025)](https://www.southleft.com/insights/design-systems/designing-for-developers-introducing-figmalint)
-- One toolkit's audit skills (a components audit's test cases and check catalogue, and a foundations audit). Cited anonymously; not resolved to a public URL.
+- [Southleft, *Designing for developers: introducing FigmaLint* (2 July 2025)](https://www.southleft.com/insights/design-systems/designing-for-developers-introducing-figmalint)
+- One toolkit's audit skills (a components audit's test cases and a foundations audit). Cited anonymously; not resolved to a public URL.
 
 **Commentary**
 
 - [Brad Frost, *Interface inventory*](https://bradfrost.com/blog/post/interface-inventory/) and [*Atomic Design*, chapter 4](https://atomicdesign.bradfrost.com/chapter-4/)
-- [Smashing Magazine, Maximilian Speicher and Guido Baena Wehrmann, *One formula to rule them all: the ROI of a design system* (9 September 2022)](https://www.smashingmagazine.com/2022/09/formula-roi-design-system)
-- [Smashing Magazine, Vitaly Friedman, *How to make your design system AI-ready* (3 June 2026)](https://smashingmagazine.com/2026/06/how-make-design-system-ai-ready/)
+- [Smashing Magazine, Speicher and Baena Wehrmann, *One formula to rule them all: the ROI of a design system* (9 September 2022)](https://www.smashingmagazine.com/2022/09/formula-roi-design-system)
 - [Hardik Pandya, *Expose your design system to LLMs*](https://hvpandya.com/llm-design-systems)
 - [Quinn Keast, *What we learned building AI style guides for product copy* (August 2025)](https://quinnkeast.com/writing/what-we-learned-building-ai-style-guides-for-product-copy)
 
-**In the series**
+**Elsewhere in the magazine**
 
-- [Part 1, What makes a design system agent-ready?](../ai-and-docs/what-makes-a-design-system-agent-ready.md)
-- [Part 2, What a design system's library should carry for an agent](../ai-and-docs/what-the-library-carries-for-an-agent.md)
-- [Part 5, Hooks, gates, evals and the rest](../ai-and-docs/what-keeps-an-agent-on-track.md)
-- [Part 9, Measuring and showing agent readiness](../ai-and-docs/measuring-agent-readiness.md)
+- [Measuring design system adoption](../figma-and-code/measuring-design-system-adoption.md): library analytics, detaches (Salesforce, athenahealth), Figma's 2019 study, Pinterest's and Shopify's figures.
+- The series: [Part 1](../ai-and-docs/what-makes-a-design-system-agent-ready.md), [Part 2](../ai-and-docs/what-the-library-carries-for-an-agent.md), [Part 5](../ai-and-docs/what-keeps-an-agent-on-track.md), [Part 9](../ai-and-docs/measuring-agent-readiness.md).
 
 ---
 
