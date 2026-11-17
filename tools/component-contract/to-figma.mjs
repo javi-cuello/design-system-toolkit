@@ -121,6 +121,26 @@ function line(x) {
   return out;
 }
 
+/* A paint said two ways: a raw colour in either notation (rgb(255 255 255 / 0.9), rgba(255, 255, 255, 0.9)) is one
+   colour, written one way; a linear gradient that states its angle is that angle, its transform (Figma's matrix,
+   scaled by the box it was drawn in) said by it. */
+function paint(x) {
+  if (!x) return x;
+  const one = (v) => {
+    if (typeof v === 'string') { if (!/^rgba?\(/i.test(v)) return v; const c = parseColour(v); return c ? `rgb(${c[0]} ${c[1]} ${c[2]} / ${+(+c[3]).toFixed(3)})` : v; }
+    if (Array.isArray(v)) return v.map(one);
+    if (v && typeof v === 'object') {
+      const o = Object.fromEntries(Object.entries(v).map(([k, w]) => [k, one(w)]));
+      if (o.type === 'GRADIENT_LINEAR' && o.angle != null) delete o.transform;
+      return o;
+    }
+    return v;
+  };
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) if (e && e.background != null) out[id] = { ...e, background: one(e.background) };
+  return out;
+}
+
 /* A text's words with a space at either end: HTML collapses it (css-text-3 §4.1.1, white-space: normal), so code shows
    the words alone. Compared trimmed, on both sides; a space inside the words still counts. */
 function words(x) {
@@ -210,7 +230,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(words(room(x))))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(words(paint(room(x)))))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }

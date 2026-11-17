@@ -1336,7 +1336,7 @@ async function main() {
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
         for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const vars = part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
-        if (!r && !guess) return v;
+        if (!r && !guess) return ['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(v) : v;
         // a bare 0 is no token by value (Spacing/0 and a raw 0 look alike): zeroTokens gives it the design's where it binds one
         if (!r && (kind === 'space' || kind === 'radius') && parseFloat(v) === 0) return 0;
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);
@@ -1400,7 +1400,11 @@ async function main() {
           const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c, { size: x.paint.size, repeat: x.paint.repeat });
           const named = [];
           for (const f of fills) named.push(typeof f === 'string' && /^IMAGE:/.test(f) ? f : typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background-image'])
-            : { ...f, stops: await Promise.all(f.stops.map(async (st) => ({ ...st, color: await tok('background', st.color, `${id}.background`, ['background-image', 'background']) }))) });
+            : await (async () => {
+              // (a token by value only where the gradient names one: written raw, its stops are raw)
+              let named = false; for (const p of ['background-image', 'background']) if (/var\(/.test(String(await authoredValue(L.tab, `[data-contract-id="${id}"]`, p, styles) || ''))) named = true;
+              return { ...f, stops: await Promise.all(f.stops.map(async (st) => ({ ...st, color: await tok('background', st.color, `${id}.background`, ['background-image', 'background'], null, named) }))) };
+            })());
           // (once, however many renders read it)
           for (const why of lost) if (!notes.includes(`${id}: ${why}`)) notes.push(`${id}: ${why}`);
           // a layer over the colour that is not read: what shows is not the colour alone
