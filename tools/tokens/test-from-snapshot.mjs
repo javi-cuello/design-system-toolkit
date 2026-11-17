@@ -143,7 +143,12 @@ test('two collections whose names slug alike are refused, nothing written', () =
   const s = snapshot();
   s.collections.semantic = { modes: ['Light', 'Dark'], values: { Light: { 'A/b': '#000000' }, Dark: { 'A/b': '#ffffff' } }, alias: {} };
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
-  assert.throws(() => writeDtcg(s, dir), /two sources both become semantic\/light\.json/);
+  assert.throws(() => writeDtcg(s, dir), /"Semantic" and "semantic" both become semantic\//);
+  assert.deepEqual(readdirSync(dir), []);
+  // modes that differ still share the folder and the token paths
+  const t = snapshot();
+  t.collections['Text style'] = { modes: ['Light', 'Dark'], values: { Light: { 'Heading/lg': '#000000' }, Dark: { 'Heading/lg': '#ffffff' } }, alias: {} };
+  assert.throws(() => writeDtcg(t, dir), /"Text style" and "text-style" both become text-style\//);
   assert.deepEqual(readdirSync(dir), []);
 });
 

@@ -545,12 +545,16 @@
       });
     }
 
-    // two collections or style roots that slug alike would write one file
-    // over the other, and the resolver would list it twice
-    var written = {};
-    for (var w = 0; w < files.length; w++) {
-      if (written[files[w].name]) throw Object.assign(new Error('two sources both become ' + files[w].name + '; rename one in Figma'), { refused: true });
-      written[files[w].name] = true;
+    // two collections or style roots that slug alike share a folder and the
+    // first segment of every token path: one file overwrites the other, or two
+    // define the same tokens in one resolution and the later silently wins.
+    // Mode files of one collection share their folder by design; their own
+    // collisions were refused above.
+    var folders = {};
+    for (var w = 0; w < axes.length; w++) {
+      var folder = axes[w].variants[0].file.split('/')[0];
+      if (folders[folder] !== undefined) throw Object.assign(new Error('"' + folders[folder] + '" and "' + axes[w].collection + '" both become ' + folder + '/; rename one in Figma'), { refused: true });
+      folders[folder] = axes[w].collection;
     }
 
     return { files: files, resolver: buildResolver(axes), resolutions: resolutions(axes), report: report };
