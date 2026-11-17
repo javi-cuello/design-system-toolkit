@@ -601,7 +601,7 @@ export function toCss(c, folder, { naming, layer = 'components', settings = HOUS
     return `${k}: ${n.attr(k)}${p.type === 'boolean' ? '' : `="${(p.values || []).join('|')}" (default ${p.default}, or none)`}`;
   });
   if (hooks.length) lines.push(`/* Chosen by: ${said(hooks.join('; '))}. */`);
-  const parts = [...new Set(rules.flatMap((r) => Object.keys(r.parts)))].filter((id) => id !== 'root');
+  const parts = [...new Set(rules.flatMap((r) => Object.keys(r.parts)))].filter((id) => id.split('::')[0] !== 'root');
   const nested = (id) => chain(c, n, id, '', mains).split(' > ').pop();
   const named = (id) => (hostIn(c, id, mains) ? `${nested(id)} (the placed component's own part)` : id.endsWith('/*') ? `${n.part(partSeg(c, id.slice(0, -2)))} > * (any child)` : entryOf(c) && id.startsWith(entryOf(c).input) ? `${n.part('input')} (an <input>; ${entryOf(c).placeholder} is its ::placeholder)` : n.part(partSeg(c, id)));
   if (parts.length) lines.push(`/* Parts: ${said([...new Set(parts.map((id) => id.split('::')[0]))].map((id) => `${id} ${named(id)}`).join(', '))}. */`);
