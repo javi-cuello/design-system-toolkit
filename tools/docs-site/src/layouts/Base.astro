@@ -118,12 +118,16 @@ import themeScript from '../scripts/theme.js?raw';
           <nav class="masthead__systems segmented" aria-label="Design system" data-systems>
             {systems.map((s) => (s.current || s.port
               ? <a class="seg" href={s.current ? base + '/' : `http://127.0.0.1:${s.port}/`} data-system={s.label} aria-current={s.current ? 'true' : undefined}>{s.system}</a>
-              : <span class="seg">{s.system}</span>))}
+              : <span class="seg" data-system={s.label}>{s.system}</span>))}
           </nav>
         ) : <a class="masthead__brand" href={base + '/'}>{project.name}</a>}
         {systems.length > 0 && <script is:inline define:vars={{ me: project.id }}>{`
           const host = location.hostname, mine = me + '-docs.';
-          if (host.startsWith(mine)) for (const a of document.querySelectorAll('[data-systems] [data-system]')) if (!a.hasAttribute('aria-current')) a.href = location.protocol + '//' + a.dataset.system + '-docs.' + host.slice(mine.length) + '/';
+          if (host.startsWith(mine)) for (const el of document.querySelectorAll('[data-systems] [data-system]:not([aria-current])')) {
+            const a = el.tagName === 'A' ? el : document.createElement('a');
+            if (a !== el) { a.className = el.className; a.dataset.system = el.dataset.system; a.textContent = el.textContent; el.replaceWith(a); }
+            a.href = location.protocol + '//' + el.dataset.system + '-docs.' + host.slice(mine.length) + '/';
+          }
         `}</script>}
         {/* The section the page is in, not the page itself: "true", so a
             sidebar link can be the one "page" (menus.md *States*). Below 40rem
