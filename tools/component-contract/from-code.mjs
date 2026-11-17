@@ -738,7 +738,44 @@ async function selfSource(project, name, { second = false } = {}) {
     // (a string with no default draws its layer's words in the design: the reading binds the layer to it, so the words
     // are the design's, kept as its default)
     const props = Object.fromEntries(Object.entries(c.props || {}).map(([k, p]) => { const t = p.type === 'string' && p.default == null && (c.anatomy[(p.sets || [])[0]] || {}).content; return [k, typeof t === 'string' && !/^\{.+\}$/.test(t) ? { ...p, default: t } : p]; }));
-    c = library[c.component] = { ...c, props, anatomy: first.anatomy, variants: first.variants || [] };
+    // (an icon's colour, said on the instance as the reading compares it, goes back on the one glyph inside, as the
+    // design says it and as the sheet writes it; to-figma's glyph, undone)
+    const mainOf = req('./derive.cjs').byComponentName(Object.values(library));
+    // (keyed as the main names its one glyph; an icon, which the library holds no contract for, as the snapshot names
+    // an icon's vector, `icon`: the sheet writes the colour whatever the key. A main that is anything but its root and
+    // that one glyph is left as read: a colour on its instance cannot be told from a fill of its own)
+    const glyphOf = (id, e, scope) => {
+      // (a part inside it, here or added by a variant: it is open, and its glyph is read as it is)
+      if (!e || e.kind !== 'instance' || [...Object.keys(scope), ...opened].some((k) => k.startsWith(`${id}/`))) return null;
+      const m = mainOf(e.component);
+      if (!m) return [`${id}/icon`, {}];
+      const rest = Object.entries(m.anatomy).filter(([k]) => k !== 'root');
+      if (rest.length !== 1 || rest[0][1].kind !== 'graphic' || rest[0][1].parent !== 'root') return null;
+      // (the main's glyph whole, its colour too where the instance says none, so the sheet finds nothing of it
+      // overridden but the colour)
+      const { parent: _, ...g } = rest[0][1];
+      return [`${id}/${g.name ? camel(g.name) : rest[0][0]}`, g];
+    };
+    const anatomy = { ...first.anatomy }, variants = JSON.parse(JSON.stringify(first.variants || []));
+    const opened = variants.flatMap((v) => Object.keys(v.add || {}));
+    // a glyph for every instance a colour lands on (its own, or a variant's set), so a set has a part to land on
+    const coloured = (id) => variants.some((v) => v.set && `${id}.background` in v.set);
+    const down = (scope) => {
+      const keys = {};
+      for (const [id, e] of Object.entries(scope)) {
+        const g = glyphOf(id, e, scope);
+        if (!g || (e.background == null && !coloured(id))) continue;
+        const [key, own] = g;
+        keys[id] = key;
+        const { background, ...rest } = e;
+        scope[id] = rest; scope[key] = { kind: 'graphic', order: 0, ...own, parent: id, ...(background != null && { background }) };
+      }
+      return keys;
+    };
+    const keys = down(anatomy);
+    for (const v of variants) if (v.add) Object.assign(keys, down(v.add));
+    for (const v of variants) if (v.set) for (const [id, key] of Object.entries(keys)) if (`${id}.background` in v.set) { v.set[`${key}.background`] = v.set[`${id}.background`]; delete v.set[`${id}.background`]; }
+    c = library[c.component] = { ...c, props, anatomy, variants };
   }
   // the toolkit's page names its parts and instances its own way (data-part, ds-<folder>): none of the project's code
   // settings (its framework's components, part and icon classes, code profile) apply to it
