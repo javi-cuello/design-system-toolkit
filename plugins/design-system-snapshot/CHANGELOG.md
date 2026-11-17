@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.75.0] - 2026-11-18
+### Added
+- **A layer's variable modes are recorded** (`modes`: collection name → mode name, only where the layer sets one). A component's small variant set to its Mobile type read as if at the collection's default, so no contract, drawing or stylesheet carried the sizes it shows.
+
 ## [0.74.0] - 2026-11-17
 ### Added
 - **A variable's code syntax is recorded** (`codeSyntax`, per collection: variable name → `{ WEB, ANDROID, iOS }`, only where one is set). It is the string Dev Mode prints, typed by hand, so the token check can hold it to the name the build writes (code-standard rule 52).

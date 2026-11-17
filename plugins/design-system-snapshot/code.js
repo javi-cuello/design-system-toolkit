@@ -1,4 +1,4 @@
-// Design system snapshot — v0.74.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.75.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -130,6 +130,24 @@ const clean = (v) => (typeof v === 'symbol' ? 'mixed' : v);
 /** @param {unknown} v */
 const round = (v) => (typeof v === 'number' ? +v.toFixed(2) : v);
 
+/** @type {Record<string, VariableCollection | null>} */
+const colCache = {};
+/** A layer set to another mode of a collection than it inherits (a small variant's Mobile type), by the names a
+ *  build and the tokens file know them by; recorded since 0.75.0. One that does not resolve is left out.
+ *  @param {SceneNode} n */
+async function modesOf(n) {
+  const set = /** @type {any} */ (n).explicitVariableModes;
+  if (!set || !Object.keys(set).length) return null;
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const [cid, mid] of Object.entries(set)) {
+    if (!(cid in colCache)) { try { colCache[cid] = await figma.variables.getVariableCollectionByIdAsync(cid); } catch { colCache[cid] = null; } }
+    const c = colCache[cid];
+    const m = c && c.modes.find((x) => x.modeId === mid);
+    if (c && m) out[c.name] = m.name;
+  }
+  return Object.keys(out).length ? out : null;
+}
 /** @type {Record<string, Variable | null>} */
 const varCache = {};
 /** @param {string} id */
@@ -675,7 +693,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.74.0';
+const VERSION = '0.75.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -846,6 +864,9 @@ async function walk(n, depth) {
   // only the binding says whether the design decided it or someone typed it.
   const bound = await numberBindings(n);
   if (bound) o.bindings = bound;
+  // which mode of a collection the layer is set to, where it is set (a component's small variant at Mobile type)
+  const modes = await modesOf(n);
+  if (modes) o.modes = modes;
   if ('clipsContent' in n && n.clipsContent) o.clips = true;
   // a blend mode and a dashed stroke both change what is drawn, and neither
   // was recorded
