@@ -1166,6 +1166,9 @@ async function main() {
             { const sh = ['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((c) => s.getPropertyValue(`corner-${c}-shape`)).find((v) => v && v !== 'round'); if (sh) e.cornerShape = sh; }
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
             if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e.outline = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
+            // or as the outline of a box of its own over this one (::after, to-code's ring where this box keeps its corners):
+            // read the same way, its corners that box's, its offset from this box's edge (that box stands `d` inside it)
+            else { const f = getComputedStyle(n, '::after'); if (f.content && f.content !== 'none' && f.position === 'absolute' && !['none', 'auto'].includes(f.outlineStyle) && px(f.outlineWidth) > 0) { const r = n.getBoundingClientRect(), d = px(s.borderTopWidth) + px(f.top), c = corner(f.borderTopLeftRadius, r.width - 2 * d, r.height - 2 * d); e.outline = { color: f.outlineColor, width: px(f.outlineWidth), offset: px(f.outlineOffset) - d, radius: c.radius, full: !!c.full }; } }
             // a css border takes room, as a Figma stroke in the layout does: each side's width, one where all are alike
             const EDGES = ['Top', 'Right', 'Bottom', 'Left'];
             const bw = EDGES.map((k) => (s[`border${k}Style`] !== 'none' ? px(s[`border${k}Width`]) || 0 : 0));

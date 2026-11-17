@@ -245,6 +245,40 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
   return { parent: e.parent, clear, decls: [['outline', `${w} solid ${tokenNames.token(b.color)}`, undefined, 'ring'], ['outline-offset', offset, clear ? 'no token in the design' : undefined]] };
 }
 
+// where a box out of the flow stands to cover another's border box: an absolute box is placed in its parent's padding
+// box, so out past the border css.mjs draws as one (an inside stroke in the layout; any other is a shadow or an
+// outline, which takes no room), side by side
+const OVER = ['top', 'end', 'bottom', 'start'];
+function overBorder(P) {
+  const b = P.border;
+  // (css.mjs's own reading: no paint draws nothing, an unsaid width is 1, a side its weight where no width says it)
+  if (!b || b.color === undefined || (b.align || 'inside') !== 'inside' || !b.inLayout) return '0';
+  const W = Array.isArray(b.width) ? b.width : OVER.map(() => b.width ?? 1);
+  const at = W.map((x, i) => {
+    if ((b.sides ? !b.sides[OVER[i]] : x === 0) || x === 0) return '0';
+    const v = x ?? (b.sides && typeof b.sides[OVER[i]] === 'number' ? b.sides[OVER[i]] : null);
+    return v == null ? '0' : typeof v === 'number' ? `-${v}px` : `calc(-1 * ${tokenNames.token(v)})`;
+  });
+  return at.every((x) => x === '0') ? '0' : at.join(' ');
+}
+
+// whether a box paints (a fill, a stroke, a shadow, a clip, a shape, a mask) in the base or any variant
+const PAINTS = ['background', 'border', 'shadow', 'shape', 'mask', 'overflow'];
+// whether a box can be ringed by a box of its own in some combination: it paints somewhere, and a ring over it has
+// corners somewhere that its own differ from
+function ownable(c, id) {
+  const vs = c.variants || [], adds = vs.flatMap((v) => Object.entries(v.add || {}));
+  // (any part a variant adds under it, or moves there: a set can make one a ring after the add, as ringOf reads it
+  // expanded; too many only writes a box that draws nothing)
+  const rings = new Set([...adds.filter(([, e]) => e && e.parent === id).map(([k]) => k), ...vs.flatMap((v) => Object.entries(v.set || {}).filter(([k, x]) => k.endsWith('.parent') && x === id).map(([k]) => k.slice(0, -'.parent'.length)))]);
+  const sets = (k) => vs.filter((v) => v.set && `${k}.radius` in v.set).map((v) => v.set[`${k}.radius`]);
+  const R = [...rings].flatMap((k) => [...adds.filter(([j]) => j === k).map(([, e]) => e.radius), ...sets(k)]).filter((r) => r != null);
+  // (the box's own corners in any combination, none among them where its base or an add says none)
+  const Q = [(c.anatomy[id] || {}).radius, ...adds.filter(([j]) => j === id).map(([, e]) => e.radius), ...sets(id)];
+  return paintsAny(c, id) && R.some((r) => Q.some((q) => q !== r));
+}
+const paintsAny = (c, id) => PAINTS.some((k) => [c.anatomy[id], ...(c.variants || []).map((v) => (v.add || {})[id])].some((e) => e && !!e[k]) || (c.variants || []).some((v) => v.set && !!v.set[`${id}.${k}`]));
+
 // the boxes whose gap is below 0 in the base or any variant (rules.mjs: CSS says it as pull-backs)
 const PULLS = new WeakMap();
 function everPulls(c) {
@@ -377,8 +411,20 @@ export function drawn(c, when, mains = () => null) {
       // ring's corners less the ring's clearance while focused, which shows only as the ring; one that paints keeps its own
       // (nor clips what it holds, nor is drawn as a shape or a mask: rounding those would show); a ring rounder by no more
       // than its clearance, or of mixed corners, keeps the note
-      const P = a[ring.parent], bare = !P.background && !P.border && !P.shadow && P.overflow !== 'hidden' && !P.shape && !P.mask;
+      const P = a[ring.parent], bare = !P.background && !P.border && !P.shadow && P.overflow !== 'hidden' && !P.shape && !P.mask, clips = P.overflow === 'hidden';
       const corners = e.radius !== undefined && e.radius !== P.radius && bare && (typeof e.radius === 'number' ? (e.radius > ring.clear ? `${e.radius - ring.clear}px` : null) : typeof e.radius === 'string' && e.radius !== 'mixed' ? (ring.clear ? `calc(${tokenNames.token(e.radius)} - ${ring.clear}px)` : tokenNames.token(e.radius)) : null);
+      // one that paints or clips keeps its corners, and the ring is drawn by a box of its own over it (::after, the
+      // parent's box, its corners the ring's less its clearance, taking no pointer), outlined as the parent would be
+      const own = !corners && !bare && !(clips && ring.clear > 0) && e.radius !== undefined && e.radius !== P.radius && (typeof e.radius === 'number' ? (e.radius > ring.clear ? `${e.radius - ring.clear}px` : null) : typeof e.radius === 'string' && e.radius !== 'mixed' ? (ring.clear ? `calc(${tokenNames.token(e.radius)} - ${ring.clear}px)` : tokenNames.token(e.radius)) : null);
+      if (own) {
+        if (P.position !== 'absolute' && !P.absolute) extra.push([ring.parent, [['position', 'relative']]]);
+        out[`${ring.parent}::after`] = { decls: new Map([['content', { v: '""' }], ['position', { v: 'absolute' }], ['inset', { v: overBorder(P) }], ['border-radius', { v: own }], ['pointer-events', { v: 'none' }], ...ring.decls.map(([p, v, note, knob]) => [p, { v, note, knob }])]), unread: [] };
+        continue;
+      }
+      // (where another combination could ring this box by a box of its own, that box draws nothing here: the cascade
+      // unsets only what a combination draws, so its rule would otherwise reach this one beside the outline; so one box
+      // is never ringed twice, whichever way each combination rings it)
+      if (ownable(c, ring.parent)) out[`${ring.parent}::after`] = { decls: new Map([['content', { v: 'none' }]]), unread: [] };
       extra.push([ring.parent, corners ? [...ring.decls, ['border-radius', corners]] : ring.decls]);
       if (e.radius !== undefined && e.radius !== P.radius && !corners) (ringNotes[ring.parent] ||= []).push(`the focus ring's corners (${e.radius}): an outline follows its box's own`);
       continue;
@@ -476,7 +522,7 @@ export function rulesOf(c, mains) {
   // (as derive's per-combination entries do)
   for (const [key, miss] of groupBy(selfCheck(c, rules, mains), (o) => JSON.stringify(o.when))) {
     const when = JSON.parse(key), parts = {};
-    for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset' });
+    for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset', ...(o.knob && { knob: o.knob }) });
     rules.push({ when, weight: Object.keys(when).length, parts });
   }
   return { rules, unread };
@@ -500,7 +546,7 @@ export function selfCheck(c, rules, mains) {
     const full = { ...dflt, ...m };
     for (const [id, { decls }] of Object.entries(drawn(c, full, mains))) {
       const got = cascade(rules, full, id);
-      for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v });
+      for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v, ...(d.knob && { knob: d.knob }) });
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
   }
