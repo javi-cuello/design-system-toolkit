@@ -1939,14 +1939,16 @@ async function main() {
       }
       // stacking first on top, as the design does, where the children cannot overlap (no negative gap, none placed
       // absolutely): then the order they paint in shows nowhere, and the code renders the same either way
-      for (const [id, e] of Object.entries(fromCode.anatomy)) {
-        const fe = figmaContract.anatomy[id];
+      // (a part a variant adds too, against the part the design adds at that same variant, none other: a placed
+      // component's box shown by a prop)
+      for (const [id, e, fe] of [...Object.entries(fromCode.anatomy).map(([id, e]) => [id, e, figmaContract.anatomy[id]]),
+        ...(fromCode.variants || []).flatMap((v) => { const dv = (figmaContract.variants || []).find((x) => sameWhen(x.when, v.when)); return Object.entries(v.add || {}).map(([id, e]) => [id, e, dv && (dv.add || {})[id]]); })]) {
         if (!fe || !fe.layout || !fe.layout.firstOnTop || !e.layout || e.layout.firstOnTop) continue;
         const gap = e.layout.gap == null ? 0 : Number(val(e.layout.gap));
         // in any variant: a gap it sets below 0, or a child it adds or places absolutely where the design does not
         // (a layer the design places too, a focus ring over the box, paints as the design stacks it)
         const placedToo = (cid) => [figmaContract.anatomy, ...(figmaContract.variants || []).map((v) => v.add || {})].some((a) => (a[cid] || {}).position === 'absolute');
-        const loose = Object.entries(fromCode.anatomy).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid))
+        const loose = [fromCode.anatomy, ...(fromCode.variants || []).map((v) => v.add || {})].some((a) => Object.entries(a).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)))
           || fromCode.variants.some((v) => [(v.set || {})[`${id}.layout.gap`], ((v.set || {})[`${id}.layout`] || {}).gap].some((g) => g != null && !(Number(val(g)) >= 0)) ||Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && (fromCode.anatomy[f.slice(0, -9)] || {}).parent === id && !placedToo(f.slice(0, -9))) || Object.entries(v.add || {}).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)));
         if (gap >= 0 && !loose) {
           e.layout.firstOnTop = true;
