@@ -1930,8 +1930,9 @@ async function main() {
       for (const v of fromCode.variants || []) {
         for (const [id, e] of Object.entries(v.add || {})) { const fe = designOf(id, v.when); if (fe && fe.kind === e.kind) zeroFill(e, fe); }
         for (const [k, val] of Object.entries(v.set || {})) {
-          // a corner a variant takes away (null), where the design binds a zero corner: that token
-          if (k.endsWith('.radius') && (val == null || val === 0)) { const fe = designOf(k.slice(0, -'.radius'.length), v.when), holder = {}; if (fe) { zeroFill(holder, fe); if (holder.radius !== undefined) v.set[k] = holder.radius; } continue; }
+          // a corner a variant takes away (null), where the design binds a zero corner: that token (the one the design's
+          // same variant sets there first, a 0 the base does not have)
+          if (k.endsWith('.radius') && (val == null || val === 0)) { const dv = (figmaContract.variants || []).find((x) => sameWhen(x.when, v.when)), own = dv && (dv.set || {})[k], fe = own !== undefined ? { ...designOf(k.slice(0, -'.radius'.length), v.when), radius: own } : designOf(k.slice(0, -'.radius'.length), v.when), holder = {}; if (fe) { zeroFill(holder, fe); if (holder.radius !== undefined) v.set[k] = holder.radius; } continue; }
           if (!k.endsWith('.layout') || !val || typeof val !== 'object') continue;
           const id = k.slice(0, -'.layout'.length), fe = designOf(id, v.when), holder = { layout: val };
           if (fe) { zeroFill(holder, fe); v.set[k] = holder.layout; }
