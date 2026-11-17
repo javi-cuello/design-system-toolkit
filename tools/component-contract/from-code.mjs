@@ -1249,7 +1249,16 @@ async function main() {
             // where the declarations say an edge (or both) but the box sits centred and sized on its own (a transform
             // the table does not read, auto margins between two insets), the centre the walk measured is the truth
             const measured = (e.constraints || {});
-            for (const k of ['horizontal', 'vertical']) if (measured[k] === 'center' && place.constraints[k] === 'min') place.constraints[k] = 'center';
+            // (only where the declarations leave room for it: both edges set, or a transform; a box held by its near edge
+            // alone that happens to sit centred, a graphic larger than its frame, stays pinned there)
+            const moved = ['translate', 'transform'].some((p) => pos[p] && !/^\s*none\s*$/.test(String(pos[p])));
+            // (the far edge as declared: placeFromCss leaves it out where a size of its own over-constrains the box)
+            // (a value, not auto or a CSS-wide keyword; the inset shorthand's own right and bottom, as placeFromCss reads it)
+            const set = (v) => v != null && !/^\s*(auto|unset|initial|inherit|revert|revert-layer)\s*$/.test(String(v));
+            const iv = String(pos.inset || '').trim() ? String(pos.inset).trim().split(/\s+(?![^(]*\))/) : [];
+            const shR = iv.length ? iv[iv.length === 1 ? 0 : 1] : null, shB = iv.length ? iv[iv.length < 3 ? 0 : 2] : null;
+            const far = { horizontal: set(pos['inset-inline-end']) || set(pos.right) || set(shR), vertical: set(pos['inset-block-end']) || set(pos.bottom) || set(shB) };
+            for (const k of ['horizontal', 'vertical']) if (measured[k] === 'center' && place.constraints[k] === 'min' && (moved || far[k] || place.offsets[k === 'horizontal' ? 'x' : 'y'] == null)) place.constraints[k] = 'center';
             // said as the snapshot says it: pinned top left is Figma's default, left out
             if (place.constraints.horizontal === 'min' && place.constraints.vertical === 'min') delete e.constraints; else e.constraints = place.constraints;
             const o = place.offsets, at = { x: insets[e.id].x, y: insets[e.id].y, ...(e.absolute || {}) };
