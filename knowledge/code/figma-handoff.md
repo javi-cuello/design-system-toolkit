@@ -85,7 +85,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - [strong] Wrap: `layoutWrap: 'WRAP'` is `flex-wrap: wrap`, with the counter-axis spacing as `row-gap` ([Figma API `layoutWrap`](https://developers.figma.com/docs/plugins/api/properties/nodes-layoutwrap/)).
 - [strong] Sizing ([Figma API `layoutSizingHorizontal`](https://developers.figma.com/docs/plugins/api/properties/nodes-layoutsizinghorizontal/)): `HUG` is the default (`auto`, `fit-content`, or nothing); `FILL` is `flex: 1 1 0` on the primary axis or `align-self: stretch` on the counter axis; `FIXED` is the one to question (see above). Min and max widths become `min-inline-size` and `max-inline-size`.
 - [moderate] A control's declared height is a minimum: `min-block-size` from the sizing token, with padding as the inset when content grows. A fixed `height` around text fails at 200%.
-- [required] Strokes in layout: `strokesIncludedInLayout` makes the frame "behave like css box-sizing: border-box" ([Figma API](https://developers.figma.com/docs/plugins/api/properties/nodes-strokesincludedinlayout/)); which CSS draws the stroke is the next section (code-standard rule 63).
+- [required] Strokes in layout: `strokesIncludedInLayout` makes the frame "behave like css box-sizing: border-box" ([Figma API](https://developers.figma.com/docs/plugins/api/properties/nodes-strokesincludedinlayout/)), and only for an inside stroke: an outside or center stroke behaves like an outline and stays out of the layout even with the setting on ([Figma Help, "Use auto layout with CSS Flexbox in mind"](https://help.figma.com/hc/en-us/articles/42031586813719-Use-auto-layout-with-CSS-Flexbox-in-mind)), so the flag on one says nothing to build. Which CSS draws the stroke is the next section (code-standard rule 63).
 
 **Cases**
 - A button frame is horizontal, 8 gap, 12/16 padding, hug → `display: inline-flex; gap: var(--space-2); padding: var(--space-3) var(--space-4)`; no width, no height.
@@ -101,7 +101,7 @@ How to read a Figma file into a build: what to extract and how, what the file sa
 - *Script:* the parity run compares gap, padding, direction and alignment for every mapped layer (code-standard rules 24 and 34); `tools/css-lint/check.mjs` gate "no declaration made to agree with a check" (code-standard rule 42) fails a height computed as a text size times its line height.
 - *Judgement:* is every length in this component's sheet one the design binds, or a size that should have been intrinsic?
 
-**Sources:** [Figma, guide to auto layout](https://help.figma.com/hc/en-us/articles/360040451373-Guide-to-auto-layout) and the API pages linked. They agree, so each property maps one to one and only FIXED is questioned.
+**Sources:** [Figma, guide to auto layout](https://help.figma.com/hc/en-us/articles/360040451373-Guide-to-auto-layout), [Figma, use auto layout with CSS Flexbox in mind](https://help.figma.com/hc/en-us/articles/42031586813719-Use-auto-layout-with-CSS-Flexbox-in-mind) and the API pages linked. They agree, so each property maps one to one and only FIXED is questioned; the Flexbox article narrows the API's `strokesIncludedInLayout` page to inside strokes, as code-standard rule 63's evidence found (outside and centre strokes took no layout room whatever the flag).
 
 ## Strokes: borders, outlines and shadows
 
