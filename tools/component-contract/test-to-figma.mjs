@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey } from './to-figma.mjs';
+import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -310,4 +310,9 @@ delete globalThis.figma;
   namedByKey(walk, byKey);
   ok('a remote main the walk names bare is named back by its key, as the library names it with its folder; another key, or another name, stays',
     JSON.stringify(walk.children.map((x) => x.instanceOf)) === JSON.stringify(['Graphic/gold cup', 'Button / Size=md', 'gold cup', 'Close', 'Icons/Icon/arrow'])); }
+{ const os = await import('node:os'); const fsm = await import('node:fs'); const pth = await import('node:path');
+  const dir = fsm.mkdtempSync(pth.join(os.tmpdir(), 'keyed-')); fsm.mkdirSync(pth.join(dir, 'button'));
+  fsm.writeFileSync(pth.join(dir, 'button', 'figma.json'), JSON.stringify({ name: 'Button', key: 'kb', default: { children: [{ type: 'INSTANCE', instanceOf: 'Icon/x / Size=16', instanceOfKey: 'ki' }] } }));
+  const k = keyedNames(dir); fsm.rmSync(dir, { recursive: true });
+  ok('the library\'s components by key, and each main its specs place (an icon), named as the library names it', k.kb === 'Button' && k.ki === 'Icon/x'); }
 console.log(`${n}/${n} passed`);

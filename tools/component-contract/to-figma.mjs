@@ -1214,7 +1214,12 @@ export function keyedNames(dir) {
   const out = {};
   let folders = [];
   try { folders = fs.readdirSync(dir); } catch { return out; }
-  for (const f of folders) { try { const s = JSON.parse(fs.readFileSync(path.join(dir, f, 'figma.json'), 'utf8')); if (s.key && s.name) out[s.key] = s.name; } catch { /* no spec */ } }
+  // each component's own key, and each main its specs place (an icon, which has no spec of its own: Icon/x), named as
+  // the library's walk names it there, where the main is the library's own and so has its page
+  const placed = {};
+  const walk = (o) => { if (!o || typeof o !== 'object') return; if (typeof o.instanceOfKey === 'string' && typeof o.instanceOf === 'string') placed[o.instanceOfKey] ||= o.instanceOf.split(' / ')[0]; for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v); };
+  for (const f of folders) { try { const s = JSON.parse(fs.readFileSync(path.join(dir, f, 'figma.json'), 'utf8')); if (s.key && s.name) out[s.key] = s.name; walk(s); } catch { /* no spec */ } }
+  for (const [k, n] of Object.entries(placed)) if (!out[k]) out[k] = n;
   return out;
 }
 /* A drawing places the library's components as remote mains, which have no page: the snapshot's walk names one by
