@@ -26,6 +26,7 @@ Type, colour, surfaces and the scales everything else is built on.
 - [One type scale for an interface and its articles](foundations/one-type-scale-for-ui-and-content.md)
 - [Space between prose elements](foundations/space-between-prose-elements.md)
 - [Spacing tokens by intent](foundations/spacing-tokens-by-intent.md)
+- [Corner radius by intent](foundations/corner-radius-by-intent.md)
 - [Surfaces in dark mode](foundations/surfaces-in-dark-mode.md)
 - [Type on a phone](foundations/type-on-a-phone.md)
 - [Yellow in colour scale generators](foundations/yellow-in-color-scale-generators.md)
