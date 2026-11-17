@@ -42,7 +42,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
-import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars } from '../parity/values.mjs';
+import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
 import { camel, sentence, partName } from './layers.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -1332,10 +1332,11 @@ async function main() {
       const tok = async (kind, v, at, css = [], from = null, guess = true) => {
         let r = null;
         const el = from || at.slice(0, at.lastIndexOf('.'));
-        // (`box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
+        // (`background:base`: the colour layer at the bottom of a layered background, the last of its layers, written
+        // var() there; `box-shadow:width`, `box-shadow:colour`: that part of the inset stroke a border is drawn with, as written). Only a
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
-        for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const vars = part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
+        for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
         if (!r && !guess) return ['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(v) : v;
         // a bare 0 is no token by value (Spacing/0 and a raw 0 look alike): zeroTokens gives it the design's where it binds one
         if (!r && (kind === 'space' || kind === 'radius') && parseFloat(v) === 0) return 0;
@@ -1399,7 +1400,13 @@ async function main() {
         if (x.paint) {
           const { fills, unread: lost } = fillsFromCss(x.background, x.paint.image, { w: x.paint.w, h: x.paint.h }, (c) => !c, { size: x.paint.size, repeat: x.paint.repeat });
           const named = [];
-          for (const f of fills) named.push(typeof f === 'string' && /^IMAGE:/.test(f) ? f : typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background-image'])
+          // (a colour layer over the base, a gradient of one colour, takes a token by value only where a gradient layer
+          // names one: written raw, it stays raw)
+          // (the shorthand or the longhand; the base is fills' first only where a colour was read under the layers)
+          const layers = [];
+          for (const prop of ['background', 'background-image']) layers.push(...splitTop(String(await authoredValue(L.tab, `[data-contract-id="${id}"]`, prop, styles) || '')));
+          const overNamed = layers.some((l) => /gradient\(/.test(l) && /var\(/.test(l)), base = !!x.background;
+          for (const [i, f] of fills.entries()) named.push(typeof f === 'string' && /^IMAGE:/.test(f) ? f : typeof f === 'string' ? await tok('background', f, `${id}.background`, ['background-color', 'background', 'background:base', 'background-image'], null, (i === 0 && base) || overNamed)
             : await (async () => {
               // (a token by value only where the gradient names one: written raw, its stops are raw)
               let named = false; for (const p of ['background-image', 'background']) if (/var\(/.test(String(await authoredValue(L.tab, `[data-contract-id="${id}"]`, p, styles) || ''))) named = true;
