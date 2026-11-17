@@ -135,6 +135,21 @@ function outer(x) {
   return out;
 }
 
+/* An arc said two ways: Figma keeps its angles as drawn (a ring's track 0 to 360, an arc from -90 or past 360), code
+   keeps where it starts on the turn and how far it sweeps: compared as that, its end its start and sweep, a whole
+   turn 360. */
+const turnOf = (a) => +((((a % 360) + 360) % 360).toFixed(2));
+export function arcs(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || !e.arc) continue;
+    const start = turnOf(e.arc.start), sweep = turnOf(e.arc.end - e.arc.start) || 360;
+    out[id] = { ...e, arc: { ...e.arc, start, end: +(start + sweep).toFixed(2) } };
+  }
+  return out;
+}
+
 /* A paint said two ways: a raw colour in either notation (rgb(255 255 255 / 0.9), rgba(255, 255, 255, 0.9)) is one
    colour, written one way; a linear gradient that states its angle is that angle, its transform (Figma's matrix,
    scaled by the box it was drawn in) said by it. */
@@ -244,7 +259,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(outer(words(paint(room(x))))))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(arcs(outer(words(paint(room(x)))))))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }

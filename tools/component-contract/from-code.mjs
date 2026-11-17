@@ -1164,6 +1164,12 @@ async function main() {
             // a corner's shape where it is not the plain circle, on whichever corner says one (rules.mjs reads it back as
             // smoothing; to-code writes it on all four, a square corner included)
             { const sh = ['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((c) => s.getPropertyValue(`corner-${c}-shape`)).find((v) => v && v !== 'round'); if (sh) e.cornerShape = sh; }
+            // an arc drawn as a mask (css.mjs): a conic sweep from the top, back to Figma's angle from the x axis, and a
+            // radial cut's ratio as its inner radius
+            { const m = String(s.maskImage || s.webkitMaskImage || '').replace(/rgba?\([^)]*\)/g, 'C');
+              const c = m.match(/conic-gradient\((?:from (-?[\d.]+)deg,\s*)?C (-?[\d.]+)deg/);
+              if (c) { const turn = (a) => +((((a % 360) + 360) % 360).toFixed(2)), from = +(c[1] || 0), r = m.match(/radial-gradient\([^,]*,\s*C ([\d.]+)%/);
+                e.arc = { start: turn(from - 90), end: +(turn(from - 90) + +c[2]).toFixed(2), inner: r ? +(+r[1] / 100).toFixed(4) : 0 }; } }
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
             if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e.outline = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
             // or as the outline of a box of its own over this one (::after, to-code's ring where this box keeps its corners):

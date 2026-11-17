@@ -312,4 +312,10 @@ else console.log('skip: no stored contracts on this machine');
 ok('a root with no auto layout is a box: a custom element is inline and 0 wide', decl({ kind: 'container', width: 40, height: 40 }, { root: true }).display === 'block');
 ok('a placed component that hugs keeps its own size against its main\'s sheet', decl({ kind: 'instance', width: 'hug' }, { row: true })['inline-size'] === 'fit-content' && decl({ kind: 'instance', width: 'hug' }, { row: true }).flex === 'none');
 ok('a placed component stretched by its insets takes no size from its main', decl({ kind: 'instance', width: 200, absolute: { x: 0, y: 0, end: 0 }, constraints: { horizontal: 'stretch', vertical: 'min' } }, {})['inline-size'] === 'auto');
+// an arc (Figma's ArcData: 0 at the x axis, clockwise) as a mask: a conic sweep 90° on from CSS's top, a hollow one cut by a radial
+{ const ring = declarations({ kind: 'graphic', shape: 'ellipse', arc: { start: 270, end: 0, inner: 0.75 } }, {}, names), pie = decl({ kind: 'graphic', shape: 'ellipse', arc: { start: 270, end: 90, inner: 0 } });
+  const R = Object.fromEntries(ring.decls.map(([p, v]) => [p, v]));
+  ok('an arc is a conic mask from Figma\'s start, a ring cut at its inner ratio, and nothing left unread',
+    R.mask === 'conic-gradient(from 0deg, #000 90deg, #0000 0), radial-gradient(closest-side, #0000 75%, #000 75%)' && R['mask-composite'] === 'intersect'
+    && !ring.unread.some((f) => /arc/.test(f)) && pie.mask === 'conic-gradient(from 0deg, #000 180deg, #0000 0)' && !('mask-composite' in pie)); }
 console.log(`${n} passed`);

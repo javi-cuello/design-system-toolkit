@@ -17,7 +17,7 @@
  * The mapping is figma-handoff's (knowledge/code/figma-handoff.md, auto layout to flex and grid; strokes) and
  * code-standard's: a length in rem and a radius, stroke or shadow offset in px (code-standard rule 54), a stroke in the CSS
  * that takes the room Figma's takes (code-standard rule 63), a literal carrying its reason (code-standard rule 22). What the contract says
- * that CSS cannot (a corner's smoothing, an image fill, an arc) is returned in `unread`, never dropped quietly.
+ * that CSS cannot (a corner's smoothing, an image fill) is returned in `unread`, never dropped quietly.
  */
 
 const SIDES = ['top', 'end', 'bottom', 'start'];
@@ -94,7 +94,16 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   else if (radius !== undefined) put('border-radius', len(radius, true), literal(radius));
   const shape = take('shape');
   if (shape === 'ellipse') put('border-radius', '50%');
-  if (take('arc')) unread.push('arc (part of a ring: no CSS shape draws it)');
+  // an arc (part of an ellipse, a ring where it is hollow) as a mask: a conic sweep from Figma's start (0 at the x axis,
+  // clockwise, as CSS's conic turns from the top, so 90 more) and, hollow, a radial cut at the inner ratio, intersected
+  // (Figma's ArcData, developers.figma.com/docs/plugins/api/ArcData; read back by from-code)
+  const arc = take('arc');
+  if (arc) {
+    const turn = (a) => +((((a % 360) + 360) % 360).toFixed(2));
+    const sweep = turn(arc.end - arc.start) || 360, inner = +(100 * (arc.inner || 0)).toFixed(2);
+    put('mask', [`conic-gradient(from ${turn(arc.start + 90)}deg, #000 ${sweep}deg, #0000 0)`, ...(inner > 0 ? [`radial-gradient(closest-side, #0000 ${inner}%, #000 ${inner}%)`] : [])].join(', '));
+    if (inner > 0) put('mask-composite', 'intersect');
+  }
 
   // a stroke in the channel that takes the room Figma's takes (code-standard rule 63)
   // a stroke with no paint draws nothing, whatever its weight

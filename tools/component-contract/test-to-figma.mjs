@@ -298,4 +298,8 @@ delete globalThis.figma;
     roundTrip(t('Check your inbox. '), t('Check your inbox.')).rows.length === 0 && roundTrip(t('Check  your'), t('Check your')).rows.length === 1);
 }
 
+{ const { arcs } = await import('./to-figma.mjs');
+  const a = (start, end) => arcs({ p: { arc: { start, end, inner: 0.75 } } }).p.arc;
+  ok('an arc is compared by where it starts on the turn and how far it sweeps',
+    JSON.stringify(a(270, 0)) === JSON.stringify(a(270, 360)) && JSON.stringify(a(-90, 0)) === JSON.stringify(a(270, 360)) && a(0, 360).end === 360 && a(0, 0).end === 360 && a(270, 90).end === 450); }
 console.log(`${n}/${n} passed`);
