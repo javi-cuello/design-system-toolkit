@@ -1567,6 +1567,32 @@ test('a project is found at <root>/<label>/figma-design-system, its label the re
   }
 });
 
+test('a repo of several design systems: one home per figma-design-system/<system>/, labelled <repo>-<system>', () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'homes-'));
+  const doc = '# x\n\n```json project\n{ "name": "X", "phase": "design" }\n```\n';
+  const sys = (s) => path.join(rootDir, 'brand', contract.HOME, s);
+  for (const s of ['alpha', 'beta']) { fs.mkdirSync(sys(s), { recursive: true }); fs.writeFileSync(path.join(sys(s), 'design-system-context.md'), doc); }
+  fs.mkdirSync(path.join(sys('notes')), { recursive: true });
+  const before = process.env.TOOLKIT_PROJECTS_ROOT;
+  process.env.TOOLKIT_PROJECTS_ROOT = rootDir;
+  try {
+    assert.deepEqual(contract.homes().map((h) => h.name), ['brand-alpha', 'brand-beta'], 'a subfolder with no context document is not a system');
+    assert.equal(contract.homeOf('brand-beta'), sys('beta'));
+    assert.equal(contract.labelOf(sys('alpha')), 'brand-alpha');
+    assert.equal(contract.repoDirOf(sys('alpha')), path.join(rootDir, 'brand'));
+    fs.mkdirSync(path.join(rootDir, 'brand-alpha', contract.HOME), { recursive: true });
+    fs.writeFileSync(path.join(rootDir, 'brand-alpha', contract.HOME, 'design-system-context.md'), doc);
+    assert.equal(contract.homes().filter((h) => h.name === 'brand-alpha').length, 1, 'a repo named like a system is one label, not two');
+    fs.rmSync(path.join(rootDir, 'brand-alpha'), { recursive: true });
+    assert.deepEqual(contract.siblings('brand-alpha').map((h) => h.name), ['brand-alpha', 'brand-beta']);
+    assert.equal(contract.layout(null, 'brand-alpha').site, path.join(sys('alpha'), 'site'));
+    assert.ok(/holds design systems/.test(contract.create('brand', { library: 'ABCDEFGHIJKL' }).error || ''), 'no document at the top of a repo of systems');
+  } finally {
+    if (before === undefined) delete process.env.TOOLKIT_PROJECTS_ROOT; else process.env.TOOLKIT_PROJECTS_ROOT = before;
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test('validatorStates: one library\'s state axis and options by file key; none where it records none or libraries disagree', () => {
   const ctx = { libraries: { A: { tokens: { stateAxis: 'State' }, optionOrder: { State: ['Rest', 'Hover'] } }, B: { tokens: {}, optionOrder: {} } } };
   assert.deepEqual(contract.validatorStates(ctx, 'A'), { axis: 'State', options: ['Rest', 'Hover'] });

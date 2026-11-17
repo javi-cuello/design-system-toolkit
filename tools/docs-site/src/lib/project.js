@@ -71,6 +71,14 @@ const dir = (x) => (x && existsSync(x) ? x : null);
 
 // the project's layout, for the toolkit's readers that take it (component-contract's official contracts)
 export const layout = where;
+// The other design systems in this project's repo (figma-design-system/<system>/), itself
+// included, each with the port its dashboard serves on: the masthead's switch. Empty for a
+// repo with one system, so no switch shows.
+export const systems = contract.siblings(label).map((h) => {
+  const facts = contract.project(join(h.home, 'design-system-context.md'));
+  return { label: h.name, system: h.system[0].toUpperCase() + h.system.slice(1), port: facts.port || null, current: h.name === label };
+});
+
 export const project = {
   id: label,
   name: where.name,

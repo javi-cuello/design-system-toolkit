@@ -37,7 +37,7 @@ Everything on one machine: the skills in Claude Code, the services, and a first 
 
 ## A project's home
 
-A project is a repo beside the toolkit (here `~/Projects/<label>/`) with a `figma-design-system/` folder at its root; the label is the repo's folder name. The tools find it there and nowhere else, so adding a project is adding that folder. A project with no code repo, or whose code repo is someone else's, gets a small private repo of its own holding just the folder.
+A project is a repo beside the toolkit (here `~/Projects/<label>/`) with a `figma-design-system/` folder at its root; the label is the repo's folder name. The tools find it there and nowhere else, so adding a project is adding that folder. A project with no code repo, or whose code repo is someone else's, gets a small private repo of its own holding just the folder. A repo holding several design systems puts one folder per system inside it, `figma-design-system/<system>/`, with no context document at the top: each is a project of its own, labelled `<label>-<system>`, and their docs sites carry a switch between them.
 
 ```
 ~/Projects/<label>/figma-design-system/

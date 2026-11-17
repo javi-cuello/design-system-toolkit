@@ -29,7 +29,8 @@ const path = require('node:path');
 function parts(where) {
   if (!where || !where.paths) throw new Error('atRev takes a project layout (contract.layout), not a label');
   // a design-only project's own repo: the one its figma-design-system/ sits in
-  const root = where.repo ? require('./projects.cjs').expand(where.repo) : path.dirname(where.projectDir);
+  const contract = require('./projects.cjs');
+  const root = where.repo ? contract.expand(where.repo) : contract.repoDirOf(where.projectDir) || path.dirname(where.projectDir);
   const rel = (p) => path.relative(root, p).split(path.sep).join('/');
   return { root, tokens: rel(where.paths.tokens), components: rel(where.paths.components), index: rel(where.paths.index) };
 }

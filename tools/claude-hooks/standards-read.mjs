@@ -39,7 +39,7 @@ export function area(file, toolkit, projectRepos) {
   toolkit = unworktree(toolkit);
   projectRepos = projectRepos.map(unworktree);
   // a context document records a project's design and naming conventions, wherever its home is
-  if (/(^|\/)figma-design-system\/design-system-context\.md$/.test(f)) return { standard: 'figma-standard.md', part: '*' };
+  if (/(^|\/)figma-design-system\/([^/]+\/)?design-system-context\.md$/.test(f)) return { standard: 'figma-standard.md', part: '*' };
   if (f === toolkit || f.startsWith(toolkit + path.sep)) {
     const rel = path.relative(toolkit, f);
     if (/^(\.claude|node_modules)(\/|$)/.test(rel)) return null;

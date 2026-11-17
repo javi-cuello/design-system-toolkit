@@ -154,6 +154,11 @@ $xxl: 90rem;
     // Relative, not static, so the open Menu list still hangs from it.
     @media (max-height: 30rem) { .masthead { position: relative; } }
     .masthead__brand { grid-area: brand; }
+    // a repo of several design systems: the switch between their sites stands where the name would
+    .masthead__systems { grid-area: brand; justify-self: start; margin-block: var(--space-8); }
+    .masthead__systems .seg { text-decoration: none; }
+    // the group scrolls (overflow-x), which would clip a ring drawn outside the link
+    .masthead__systems .seg:focus-visible { outline-offset: -2px; }
     .topnav { grid-area: nav; min-inline-size: 0; }
     .theme { grid-area: theme; }
 

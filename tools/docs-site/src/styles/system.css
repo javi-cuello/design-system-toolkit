@@ -453,9 +453,9 @@
   .seg + .seg { border-inline-start: var(--stroke-1) solid var(--line-strong); }
   /* Pressed is more than a tint (1.11:1 against the rest of the group): an
      accent edge at 3:1 or more on its ground, and the heavier weight. */
-  .seg[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-semibold); box-shadow: inset 0 0 0 2px var(--accent); }
-  @media (hover: hover) { .seg:hover:not([aria-pressed="true"], :active) { color: var(--fg); } }
-  .seg:active:not([aria-pressed="true"]) { color: var(--fg); background: var(--hover); }
+  .seg:is([aria-pressed="true"], [aria-current="true"]) { background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-semibold); box-shadow: inset 0 0 0 2px var(--accent); }
+  @media (hover: hover) { .seg:hover:not([aria-pressed="true"], [aria-current="true"], :active) { color: var(--fg); } }
+  .seg:active:not([aria-pressed="true"], [aria-current="true"]) { color: var(--fg); background: var(--hover); }
 }
 
 /* Last, so what it says beats every component's own `display` by layer

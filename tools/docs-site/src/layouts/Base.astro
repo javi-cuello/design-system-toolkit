@@ -2,7 +2,7 @@
 import * as sass from 'sass';
 import '../styles/system.css';
 import '../styles/site.scss';
-import { project, shows, language, codeAudit } from '../lib/project.js';
+import { project, shows, language, codeAudit, systems } from '../lib/project.js';
 
 import { meta, icons, iconLibrary, assetGroups, snapshot, componentGroups, collectionPages, slug } from '../lib/snapshot.js';
 import { base, date } from '../lib/format.js';
@@ -111,7 +111,20 @@ import themeScript from '../scripts/theme.js?raw';
     <a class="skip-link" href="#main">Skip to main content</a>
     <div class:list={['shell', sidebar && 'shell--sidebar']}>
       <header class="masthead" data-masthead>
-        <a class="masthead__brand" href={base + '/'}>{project.name}</a>
+        {systems.length ? (
+          /* A repo of several design systems: one docs site each, and this switch between
+             them in place of the name. A sibling's address is its local dashboard (127.0.0.1: the Figma Desktop Bridge holds the same ports on ::1, where `localhost` may land);
+             on a published site the script swaps it for the sibling's Worker. */
+          <nav class="masthead__systems segmented" aria-label="Design system" data-systems>
+            {systems.map((s) => (s.current || s.port
+              ? <a class="seg" href={s.current ? base + '/' : `http://127.0.0.1:${s.port}/`} data-system={s.label} aria-current={s.current ? 'true' : undefined}>{s.system}</a>
+              : <span class="seg">{s.system}</span>))}
+          </nav>
+        ) : <a class="masthead__brand" href={base + '/'}>{project.name}</a>}
+        {systems.length > 0 && <script is:inline define:vars={{ me: project.id }}>{`
+          const host = location.hostname, mine = me + '-docs.';
+          if (host.startsWith(mine)) for (const a of document.querySelectorAll('[data-systems] [data-system]')) if (!a.hasAttribute('aria-current')) a.href = location.protocol + '//' + a.dataset.system + '-docs.' + host.slice(mine.length) + '/';
+        `}</script>}
         {/* The section the page is in, not the page itself: "true", so a
             sidebar link can be the one "page" (menus.md *States*). Below 40rem
             the list sits behind a Menu button (menus.md *Hamburger and mobile

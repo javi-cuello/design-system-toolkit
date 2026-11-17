@@ -44,28 +44,60 @@ const HOME = 'figma-design-system';
 const MAIN = TOOLKIT.replace(/[\\/]\.claude[\\/]worktrees[\\/][^\\/]+$/, '');
 const root = () => expand(process.env.TOOLKIT_PROJECTS_ROOT) || path.dirname(MAIN);
 const CONTEXT = 'design-system-context.md';
-/** The folder holding a project's design-system files. */
+/** The folder holding a project's design-system files: `<label>/figma-design-system`, or a system's folder inside one (`<repo>-<system>`). */
 function homeOf(label) {
-  return path.join(root(), label, HOME);
+  const direct = path.join(root(), label, HOME);
+  if (fs.existsSync(path.join(direct, CONTEXT))) return direct;
+  const nested = homes().find((h) => h.name === label);
+  return nested ? nested.home : direct;
 }
-/** The label a home folder belongs to: its repo's name. A folder of `<label>/` homes (a test's) names its own. */
-const labelOf = (home) => (path.basename(home) === HOME ? path.basename(path.dirname(home)) : path.basename(home));
+/**
+ * The label a home folder belongs to: its repo's name, or `<repo>-<system>` for
+ * one of several design systems a repo holds (`figma-design-system/<system>/`).
+ * A folder of `<label>/` homes (a test's) names its own.
+ */
+const labelOf = (home) => (path.basename(home) === HOME ? path.basename(path.dirname(home))
+  : path.basename(path.dirname(home)) === HOME ? `${path.basename(path.dirname(path.dirname(home)))}-${path.basename(home)}`
+  : path.basename(home));
+/** The repo folder a home sits in, or null for a test's loose `<label>/` home. */
+const repoDirOf = (home) => (path.basename(home) === HOME ? path.dirname(home)
+  : path.basename(path.dirname(home)) === HOME ? path.dirname(path.dirname(home)) : null);
 /** What a missing project needs, said the same way by every command that looks one up. */
 const notFound = (label) => `no project ${label}: no ${label}/${HOME}/ with a context document under ${root()} (TOOLKIT_PROJECTS_ROOT moves it). \`node tools/snapshot/projects.cjs homes\` lists the projects; the figma-context-capture skill writes a context document.`;
 
-/** Every project home: each `<root>/<label>/figma-design-system`. */
+/**
+ * Every project home: each `<root>/<label>/figma-design-system` with a context
+ * document. A repo holding several design systems has none there, and one home
+ * per system instead, `figma-design-system/<system>/`, labelled `<label>-<system>`;
+ * `system` names it and `repo` is the folder they share.
+ */
 function homes() {
   let entries = [];
   try { entries = fs.readdirSync(root(), { withFileTypes: true }); } catch { return []; }
-  return entries.filter((e) => e.isDirectory())
-    .map((e) => ({ name: e.name, home: path.join(root(), e.name, HOME) }))
-    .filter((h) => fs.existsSync(path.join(h.home, CONTEXT)));
+  const out = [];
+  for (const e of entries.filter((x) => x.isDirectory())) {
+    const home = path.join(root(), e.name, HOME);
+    if (fs.existsSync(path.join(home, CONTEXT))) { out.push({ name: e.name, home }); continue; }
+    let systems = [];
+    try { systems = fs.readdirSync(home, { withFileTypes: true }); } catch { continue; }
+    for (const sys of systems.filter((x) => x.isDirectory() && fs.existsSync(path.join(home, x.name, CONTEXT)))) {
+      out.push({ name: `${e.name}-${sys.name}`, home: path.join(home, sys.name), system: sys.name, repo: e.name });
+    }
+  }
+  // a repo named like another repo's system (`a-b` beside `a/…/b/`) is one label for two homes: the first found keeps it
+  return out.filter((h, i) => out.findIndex((o) => o.name === h.name) === i);
+}
+/** Every design system in the same repo as a project, itself included, in folder order: none for a repo with one. */
+function siblings(label) {
+  const all = homes();
+  const me = all.find((h) => h.name === label);
+  return me && me.repo ? all.filter((h) => h.repo === me.repo) : [];
 }
 /** Every git repo a project's work lands in: its code repo, else the repo its home sits in. */
 function repos() {
   const out = [];
   for (const p of projects().list) {
-    const dir = p.repo ? expand(p.repo) : path.basename(p.home) === HOME ? path.dirname(p.home) : null;
+    const dir = p.repo ? expand(p.repo) : repoDirOf(p.home);
     if (dir) out.push({ name: p.name, dir: path.resolve(dir) });
   }
   return out;
@@ -453,6 +485,8 @@ function create(label, { library, id } = {}) {
   id = id || library;
   if (!/^[\w:-]{1,80}$/.test(id)) return { error: "That is not a file id: snapshot the library once, and the refusal prints it beside the key." };
   const home = homeOf(label), doc = path.join(home, CONTEXT);
+  // a repo already holding design systems in subfolders: a document at its top would hide them from discovery
+  if (homes().some((h) => h.repo === label)) return { error: `${label} holds design systems in figma-design-system/<system>/: create each as ${label}-<system> in its own folder.` };
   const all = projects();
   if (all.errors.length) return { error: `A project's routing cannot be read, so whether it claims this file is unknown:\n${all.errors.join('\n')}` };
   const claim = all.list.find((p) => KINDS.some((k) => namesOf(p.files[k]).some((n) => n === library || n === id)));
@@ -1030,7 +1064,7 @@ function auditRecords(where) {
   return list.map((l, i) => ({ ...l, path: single && i === 0 ? legacy : path.join(where.audit, `${l.key}.json`) }));
 }
 
-module.exports = { storeLibraries, mainsIn, appendRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
+module.exports = { siblings, repoDirOf, storeLibraries, mainsIn, appendRuling, SECTIONS, esc, cells, EDITOR_PORT, HOME, notFound, homeOf, interfaceLimits, librarySettingsFor, create, homes, labelOf, repos, flatSettings, codeProfile, auditRecords, libraryRoles, ROLES, EXIT, KINDS, MARKERS, PHASES, auditContext, deriveOptions, deriveOptionsFor, validatorStates, fenced, setLibrary, setRepoConfig, keepUnclaimed, unclaimed, dropUnclaimed: drop, LARGEST, fileIdent, fileLabel, rulings, rulingKey, rulingsOf, walkRulings, status, entries, expand, figmaKey, identify, kindOf, layout, locate, names, namesOf, project, projects, route, routing, say, under };
 
 // Every project and its home, one per line, for the shell scripts:
 //   node tools/snapshot/projects.cjs homes    → <label><TAB><home>
@@ -1055,9 +1089,11 @@ if (require.main === module && process.argv[2] === 'names') {
   const out = new Set();
   for (const h of homes()) {
     out.add(h.name);
+    // a repo of several systems: its own name is a name too; a system's word alone (`cosmos`) is too common to ban
+    if (h.repo) out.add(h.repo);
     const route = routing(path.join(h.home, CONTEXT));
     for (const f of Object.values(route.files || {})) for (const e of entries(f)) for (const k of [e.key, e.id]) if (k && k.length >= 10) out.add(k);
-    for (const dir of [path.dirname(h.home), h.home]) {
+    for (const dir of [repoDirOf(h.home) || path.dirname(h.home), h.home]) {
       const p = parts(originOf(dir));
       if (!p) continue;
       out.add(p.repo);
