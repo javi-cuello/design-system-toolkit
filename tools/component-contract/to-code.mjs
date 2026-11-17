@@ -62,7 +62,7 @@ export const disabledKey = (c, t = HOUSE) => {
   return (want && Object.keys((c && c.props) || {}).find((k) => k.toLowerCase() === want && c.props[k].type === 'boolean')) || null;
 };
 // what a component placing another says of it: its place and size, nothing of its look
-const PLACED = /^(flex|align-self|order|(min-|max-)?(inline|block)-size|position|inset.*|translate|rotate|opacity|z-index|margin.*)$/;
+const PLACED = /^(flex|align-self|order|(min-|max-)?(inline|block)-size|position|inset.*|translate|rotate|scale|opacity|z-index|margin.*)$/;
 
 /* How the stylesheet names things: the component, its parts and its props, from the project's naming. */
 // a custom element's prefix: lower case, ending in the hyphen its name needs (ds-, my-ds-)

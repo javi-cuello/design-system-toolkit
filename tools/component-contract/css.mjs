@@ -157,6 +157,9 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   if (blend) put('mix-blend-mode', String(blend).replace(/_/g, '-'));
   const rotation = take('rotation');
   if (rotation) put('rotate', `${rotation}deg`);
+  // a mirror: its own property, as rotate is, so neither undoes the other
+  const flip = take('flip');
+  if (flip === 'x' || flip === 'y') put('scale', flip === 'x' ? '-1 1' : '1 -1');
   if (take('mask')) unread.push('mask');
   // corner smoothing as corner-shape (rules.mjs: an approximation of Figma's curve; a browser without corner-shape draws
   // the plain circle), written whatever the radius: on a square corner it draws nothing, as in Figma, and keeps the value

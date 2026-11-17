@@ -1070,6 +1070,14 @@ async function main() {
           return { absolute: { x: px(r.left - pr.left), y: px(r.top - pr.top) }, ...((h || v) && { constraints: { horizontal: h ? 'center' : 'min', vertical: v ? 'center' : 'min' } }) };
         };
         // a CSS order counts where the browser lays it out: the part's own parent box, a flex or grid one
+        // a mirror, said as `scale: -1 1` or a transform's matrix (scaleX(-1)): x horizontal, y vertical
+        const mirrored = (s) => {
+          const sc = String(s.scale || 'none').trim().split(/\s+/).map(Number);
+          if (sc.length && !isNaN(sc[0])) { const [x, y = x] = sc; if (x < 0 && y > 0) return 'x'; if (y < 0 && x > 0) return 'y'; }
+          const m = /^matrix\(([^)]+)\)$/.exec(s.transform || ''); if (!m) return null;
+          const [a, b, c, d] = m[1].split(',').map(Number);
+          return a * d - b * c < 0 && Math.abs(b) < 1e-6 && Math.abs(c) < 1e-6 ? (a < 0 ? 'x' : 'y') : null;
+        };
         const placedBy = (n, s, parent) => !!+s.order && parent != null && n.parentElement && n.parentElement.getAttribute('data-contract-id') === parent && /flex|grid/.test(getComputedStyle(n.parentElement).display);
         const walk = (n, parent, order, inside = false) => {
           const s = getComputedStyle(n);
@@ -1101,7 +1109,7 @@ async function main() {
           const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && (entryEl || !n.hasAttribute('data-figma-text')) ? 'text' : 'container';
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
           const figmaName = n.getAttribute('data-figma-name');
-          const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
           { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }

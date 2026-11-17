@@ -87,4 +87,7 @@ ok('corner smoothing goes to corner-shape and back the same, 0.1 to 1; none, 0 a
   [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].every((v) => smoothingFromCss(smoothingToCss(v)) === v)
   && smoothingToCss(0) === null && smoothingToCss(undefined) === null && smoothingFromCss('round') === null && smoothingFromCss('superellipse(1)') === null && smoothingFromCss('squircle') === smoothingFromCss('superellipse(2)') && smoothingFromCss('superellipse(2e0)') === smoothingFromCss('superellipse(2)'));
 
+{ // a mirror (the snapshot's flip) is its own property, scale, as rotate is
+  const d = (flip) => JSON.stringify(declarations({ kind: 'container', flip }, { holds: false, row: true }).decls);
+  ok('a horizontal mirror writes scale: -1 1, a vertical one 1 -1, none nothing', d('x') === '[["scale","-1 1"]]' && d('y') === '[["scale","1 -1"]]' && d(undefined) === '[]'); }
 console.log(`${n}/${n} passed`);

@@ -432,4 +432,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && whole['b/content/icon'].background === undefined && design['b/content/icon'].background === 'C/strong');
 }
 
+{ // a mirrored layer stands where its box does (the snapshot's visual), not at its matrix's origin: CSS's left and code's box
+  const box = { name: 'Box', id: '9:1', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 64, h: 64, children: [
+    { name: 'Art', type: 'FRAME', w: 176, h: 176, x: 64, y: -56, visual: { x: -112, y: -56, w: 176, h: 176 }, flip: 'x', absolute: true, constraints: 'MAX/MIN' }] }] };
+  const a = derive(box).anatomy.art;
+  ok('a mirrored layer is flip x at its box\'s near edge, its far offset from there', a && a.flip === 'x' && a.absolute.x === -112 && a.absolute.end === 0);
+  const up = JSON.parse(JSON.stringify(box)); Object.assign(up.variants[0].children[0], { flip: 'y', x: 0, y: 120, visual: undefined, constraints: 'MIN/MIN' });
+  const b = derive(up).anatomy.art;
+  ok('a vertical mirror, which the snapshot gives no visual box, stands at its far edge less its height', b && b.flip === 'y' && b.absolute.y === -56); }
 console.log(`${n}/${n} passed`);

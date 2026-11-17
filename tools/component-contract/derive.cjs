@@ -33,6 +33,15 @@ const { variantValues: valuesOf } = require('../shared/names.js');
 const KIND = { TEXT: 'text', INSTANCE: 'instance', SLOT: 'slot', FRAME: 'container', GROUP: 'container', COMPONENT: 'container', COMPONENT_SET: 'container', SECTION: 'container' };
 // alignment and sizing words, from the one table every direction reads
 const { alignFromFigma, sizeFromFigma } = require('./rules.mjs');
+/* Where a layer's box stands in its parent: its x and y, except a mirrored one's, whose x (or y) Figma gives as its
+   matrix's origin, the far edge; its box's near edge is what CSS's left and code's box say (the snapshot's `visual`). */
+// (a vertical mirror carries no visual box: the snapshot writes one only with a turn, and a mirror unturned is its far
+// edge less its size)
+const boxAt = (n) => {
+  if (!n.flip) return { x: n.x, y: n.y };
+  const near = (axis, size) => (n.visual && n.visual[axis] != null ? n.visual[axis] : n[axis] - (n[size] || 0));
+  return { x: n.flip === 'x' ? near('x', 'w') : n.x, y: n.flip === 'y' ? near('y', 'h') : n.y };
+};
 const TEXT_ALIGN = { LEFT: 'start', CENTER: 'center', RIGHT: 'end', JUSTIFIED: 'justify' };
 
 /* One layer, said without Figma's words. A bound value is its token's name;
@@ -66,7 +75,7 @@ function element(n, parent, known) {
   }
   for (const k of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (n[k] != null) e[k] = b[k] ?? n[k];
   // placed out of the flow, at its point in its parent
-  if (n.absolute) { e.position = 'absolute'; if (n.x != null) e.absolute = { x: n.x, y: n.y }; }
+  if (n.absolute) { e.position = 'absolute'; if (n.x != null) e.absolute = boxAt(n); }
   // how it follows its parent's size where no auto layout places it (snapshot 0.61.0 on): a ring stretched round its box
   if (n.constraints) { const [h, v] = n.constraints.toLowerCase().split('/'); e.constraints = { horizontal: h, vertical: v }; }
   // a corner bound to a token is said by it even at 0; per corner, a bound corner's token beside the others' numbers
@@ -98,6 +107,8 @@ function element(n, parent, known) {
   if (n.arc) e.arc = { ...n.arc };
   if (n.type === 'RECTANGLE') e.shape = 'rectangle';
   if (n.rotation) e.rotation = n.rotation;
+  // a mirror, as the snapshot takes it out of the matrix (x: horizontal, y: vertical)
+  if (n.flip) e.flip = n.flip;
   if (n.type === 'TEXT') {
     if (n.textStyle) e.typography = n.textStyle;
     if (n.textAlign) e.textAlign = TEXT_ALIGN[n.textAlign] || n.textAlign;
@@ -277,7 +288,7 @@ function flatten(list, characters = new Map(), known = []) {
     // in a box no auto layout places (nor an instance, whose own layers it are), a part is at its point in it
     const up = parent == null ? null : nodeAt.get(keyOf(parent));
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
-    if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = { x: node.x, y: node.y };
+    if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
     // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
     // parent's end and bottom, as CSS's right and bottom say it; stretched, its size is its parent's less both
     // offsets, never a number measured at one label's width

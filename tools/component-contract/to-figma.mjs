@@ -482,7 +482,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     ...typos.map(async (t) => { const key = K.styles && K.styles[t]; if (key) styles[key] = await tried(t, () => figma.importStyleByKeyAsync(key)); }),
     ...assets.map(async (a) => { if (K.icons && K.icons[a]) icons[a] = await tried(`icon ${a}`, () => figma.importComponentByKeyAsync(K.icons[a])); }),
     tried('Inter', () => figma.loadFontAsync({ family: 'Inter', style: 'Regular' })),
-    ...Object.entries(K.sets || {}).map(async ([name, key]) => { sets[name] = await tried(name, () => figma.importComponentSetByKeyAsync(key)); }),
+    // a component Figma never publishes (`_`, `.`) has no key that imports: placed from this file's own page instead
+    ...Object.entries(K.sets || {}).filter(([name]) => !/^[_.]/.test(name)).map(async ([name, key]) => { sets[name] = await tried(name, () => figma.importComponentSetByKeyAsync(key)); }),
     ...Object.entries(K.effects || {}).map(async ([name, key]) => { effects[name] = await tried(name, () => figma.importStyleByKeyAsync(key)); }),
   ]);
   await Promise.all(Object.values(styles).filter(Boolean).map(async (st) => { fonts[JSON.stringify(st.fontName)] = await tried(`font of ${st.name}`, () => figma.loadFontAsync(st.fontName)) !== null; }));
@@ -555,7 +556,24 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a paint the contract names on a layer inside an instance is set even where the main already has it: the library
   // read it as an override (set there by hand), and one left unset reads back as no override, so as the part gone
   const paintIf = async (n, field, token, force = false) => { if (typeof token !== 'string' || !(field in n)) return; const v = await V(token); if (v && boundTo(n[field]) === v.id) { if (!force) return; n[field] = [{ type: 'SOLID', color: { r: 1, g: 0, b: 1 } }]; } n[field] = [await solid(token)]; };
+  // an instance's own layout where the design overrides it there (a pill's content centred in one block): its
+  // alignment, gap and padding, on the auto layout its component gives it
+  const layoutOver = async (n, e) => {
+    if (n.type !== 'INSTANCE' || !e.layout || !n.layoutMode || n.layoutMode === 'NONE') return;
+    // only what differs from what the instance already has: a value written again would stand as an override where the
+    // design made none, and a raw number over a bound token would lose the token
+    const dir = e.layout.direction === 'column' ? 'VERTICAL' : 'HORIZONTAL';
+    if (n.layoutMode !== dir) n.layoutMode = dir;
+    const pa = ALIGN[e.layout.align] || 'MIN', ca = ALIGN[e.layout.crossAlign] || 'MIN';
+    if (n.primaryAxisAlignItems !== pa) n.primaryAxisAlignItems = pa;
+    if (n.counterAxisAlignItems !== ca) n.counterAxisAlignItems = ca;
+    const differs = async (f, t) => { const v = await V(t); if (v) return !(n.boundVariables && n.boundVariables[f] && n.boundVariables[f].id === v.id); const raw = typeof t === 'number' ? t : K.values && K.values[t]; return raw == null || n[f] !== raw; };
+    if (e.layout.gap != null && await differs('itemSpacing', e.layout.gap)) await num(n, 'itemSpacing', e.layout.gap);
+    const pad = e.layout.padding || {};
+    for (const [side, f] of [['top', 'paddingTop'], ['end', 'paddingRight'], ['bottom', 'paddingBottom'], ['start', 'paddingLeft']]) if (pad[side] != null && await differs(f, pad[side])) await num(n, f, pad[side]);
+  };
   const override = async (n, e) => {
+    await layoutOver(n, e);
     if (e.kind === 'instance' && e.component && n.type === 'INSTANCE') { await swapTo(n, e); await withProps(n, e); }
     if (e.kind === 'text' && n.type === 'TEXT') {
       await paintIf(n, 'fills', e.color);
@@ -705,6 +723,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (e.rotation) n.rotation = e.rotation;
       // a placed instance's own bounds (a dialog's modal at most 556 wide): a frame drawn here takes them with its layout
       if (n.type === 'INSTANCE') for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null) await num(n, f, e[f]);
+      await layoutOver(n, e);
       if (['FRAME', 'COMPONENT', 'SLOT', 'VECTOR', 'ELLIPSE', 'RECTANGLE'].includes(n.type)) {
         if (e.layout) {
           n.layoutMode = e.layout.direction === 'column' ? 'VERTICAL' : 'HORIZONTAL';
@@ -766,6 +785,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (id !== 'root' && e.absolute && nodes[e.parent].layoutMode && nodes[e.parent].layoutMode !== 'NONE') { n.layoutPositioning = 'ABSOLUTE'; n.x = e.absolute.x; n.y = e.absolute.y; }
       // in a box no layout places, at its point
       else if (id !== 'root' && e.absolute) { n.x = e.absolute.x; n.y = e.absolute.y; }
+      // a mirror about the layer's own point, as Figma's matrix keeps it (its x stays where the snapshot read it)
+      // (the contract's x and y are the box's near edge, as CSS's; Figma's matrix takes the far one as its origin)
+      if (e.flip && !e.rotation && 'relativeTransform' in n) { try { n.relativeTransform = e.flip === 'x' ? [[-1, 0, n.x + n.width], [0, 1, n.y]] : [[1, 0, n.x], [0, -1, n.y + n.height]]; } catch { missing.add(`${e.name || id} (its mirror)`); } }
       if (id !== 'root' && (e.absolute || e.constraints)) toPlace.push([n, e]);
       nodes[id] = n;
     }
@@ -782,6 +804,17 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     comps.push({ node: nodes.root, anatomy: variant.anatomy, nodes, inner, cell: variant.cell });
   }
   await Promise.all([...toStyle.map(([n, st, t]) => tried(t, () => n.setTextStyleIdAsync(st.id))), ...toEffect.map(([n, st, t]) => tried(t, () => n.setEffectStyleIdAsync(st.id)))]);
+  // where it stands in its parent: pinned to the end or bottom, from there; centred, as code read it (centred within
+  // 0.75 px), at the centre; a Figma contract's layer where it sat. Set again once the set is built: a parent that
+  // hugs its words still changes size after (its properties made), and a centre constraint moves the layer with it
+  // (a spinner left of its button)
+  const at_ = (n, e) => {
+    const c = e.constraints || {}, up = n.parent, at = e.absolute;
+    const x = c.horizontal === 'center' && P.fromCode ? Math.round((up.width - n.width) / 2) : c.horizontal === 'max' && at.end != null ? up.width - at.end - n.width : at.x;
+    const y = c.vertical === 'center' && P.fromCode ? Math.round((up.height - n.height) / 2) : c.vertical === 'max' && at.bottom != null ? up.height - at.bottom - n.height : at.y;
+    // a mirrored layer's x (or y) is its matrix's origin, its box's far edge
+    n.x = e.flip === 'x' && !e.rotation ? x + n.width : x; n.y = e.flip === 'y' && !e.rotation ? y + n.height : y;
+  };
   for (const [n, e] of toPlace) {
     if (e.absolute) {
       // its size: stretched, its parent's less both offsets; else its own
@@ -791,8 +824,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if ('resize' in n && n.type !== 'VECTOR' && (Math.abs(w - n.width) > 0.01 || Math.abs(h - n.height) > 0.01)) n.resize(px(w), px(h));
       // pinned to its parent's end or bottom: from there; centred, as code read it (centred within 0.75 px): at the centre;
       // a Figma contract's centred layer where it sat, as its centre constraint keeps it
-      n.x = c.horizontal === 'center' && P.fromCode ? Math.round((up.width - n.width) / 2) : c.horizontal === 'max' && at.end != null ? up.width - at.end - n.width : at.x;
-      n.y = c.vertical === 'center' && P.fromCode ? Math.round((up.height - n.height) / 2) : c.vertical === 'max' && at.bottom != null ? up.height - at.bottom - n.height : at.y;
+      at_(n, e);
     }
     if (e.constraints && 'constraints' in n) n.constraints = { horizontal: (e.constraints.horizontal || 'min').toUpperCase(), vertical: (e.constraints.vertical || 'min').toUpperCase() };
   }
@@ -894,6 +926,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // the set at the page's origin, where it is looked for
   set.x = 0; set.y = 0;
   page.selection = [set];
+  for (const [n, e] of toPlace) if (e.absolute && !n.removed) at_(n, e);
   return { set: set.id, parts: comps.map((c) => c.node.id), variants: comps.length, layout, props: Object.keys(set.componentPropertyDefinitions), missing: [...missing] };
 };
 
