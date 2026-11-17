@@ -116,12 +116,18 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     const w = (i) => len(widths[i], true) ?? (b.sides && typeof b.sides[SIDES[i]] === 'number' ? len(b.sides[SIDES[i]], true) : undefined);
     const c = names.token(b.color);
     const align = b.align || 'inside';
-    if (b.dash) unread.push('border.dash');
+    // a dashed stroke all round, one width: an outline dashed, pulled in as far as the stroke's alignment puts it (an inset
+    // shadow cannot dash); CSS sets no dash's length, so the pattern is the browser's (the user's ruling, 2026-11-17)
+    const dash = !!b.dash && (!Array.isArray(b.dash) || b.dash.length > 0);
+    // (a stroke that takes room in the layout is a border, which dashes as it is)
+    const dashed = dash && !(align === 'inside' && b.inLayout) && on.every(Boolean) && widths.every((x) => x === widths[0]) && !(e.kind === 'graphic' && (e.width === 0 || e.height === 0));
+    if (dash && !dashed && !(align === 'inside' && b.inLayout)) unread.push('border.dash (on some sides: CSS dashes a whole outline only)');
     // a line (a layer no wide or no tall, a divider): its stroke is the one edge it draws, its leading one, as parity reads it
     const line = e.kind === 'graphic' && (e.width === 0 || e.height === 0);
-    if (line) put(e.width === 0 ? 'border-left' : 'border-top', `${w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean))} solid ${c}`);
+    if (dashed) { put('outline', `${w(0)} dashed ${c}`); put('outline-offset', align === 'inside' ? `calc(-1 * ${w(0)})` : align === 'center' ? `calc(${w(0)} / -2)` : '0'); }
+    else if (line) put(e.width === 0 ? 'border-left' : 'border-top', `${w(on.findIndex(Boolean) < 0 ? 0 : on.findIndex(Boolean))} solid ${c}`);
     else if (align === 'inside' && b.inLayout) {
-      SIDES.forEach((s, i) => { if (on[i]) put(`border-${{ top: 'top', end: 'right', bottom: 'bottom', start: 'left' }[s]}`, `${w(i)} solid ${c}`); });
+      SIDES.forEach((s, i) => { if (on[i]) put(`border-${{ top: 'top', end: 'right', bottom: 'bottom', start: 'left' }[s]}`, `${w(i)} ${dash ? 'dashed' : 'solid'} ${c}`); });
     } else if (on.every(Boolean) && widths.every((x) => x === widths[0])) {
       // all round, one width: one ring, inward, outward or across the edge
       if (align === 'inside') rings.push(`inset 0 0 0 ${w(0)} ${c}`);

@@ -255,7 +255,10 @@ function strokeOutline(P) {
   if (!b || b.color === undefined) return false;
   const W = Array.isArray(b.width) ? b.width : OVER.map(() => b.width ?? 1);
   const on = W.map((x, i) => (b.sides ? !!b.sides[OVER[i]] : x !== 0) && x !== 0), align = b.align || 'inside';
-  if (align === 'inside' || !on.every(Boolean) || !W.every((x) => x === W[0])) return false;
+  if (!on.every(Boolean) || !W.every((x) => x === W[0])) return false;
+  // (a dashed one is an outline whatever its alignment)
+  if (b.dash && (!Array.isArray(b.dash) || b.dash.length) && !(align === 'inside' && b.inLayout)) return true;
+  if (align === 'inside') return false;
   return !(align === 'outside' && typeof P.shadow === 'string' && P.shadow !== 'literal');
 }
 function overBorder(P) {
@@ -284,7 +287,9 @@ function ownable(c, id) {
   const R = [...rings].flatMap((k) => [...adds.filter(([j]) => j === k).map(([, e]) => e.radius), ...sets(k)]).filter((r) => r != null);
   // (the box's own corners in any combination, none among them where its base or an add says none)
   const Q = [(c.anatomy[id] || {}).radius, ...adds.filter(([j]) => j === id).map(([, e]) => e.radius), ...sets(id)];
-  return paintsAny(c, id) && R.some((r) => Q.some((q) => q !== r));
+  // (or where its own stroke can be drawn as its outline, whose ring then takes a box of its own)
+  const strokes = [(c.anatomy[id] || {}).border, ...adds.filter(([j]) => j === id).map(([, e]) => e.border), ...vs.map((v) => (v.set || {})[`${id}.border`])].filter(Boolean);
+  return paintsAny(c, id) && (R.some((r) => Q.some((q) => q !== r)) || strokes.some((b) => strokeOutline({ border: b })));
 }
 const paintsAny = (c, id) => PAINTS.some((k) => [c.anatomy[id], ...(c.variants || []).map((v) => (v.add || {})[id])].some((e) => e && !!e[k]) || (c.variants || []).some((v) => v.set && !!v.set[`${id}.${k}`]));
 
@@ -425,11 +430,14 @@ export function drawn(c, when, mains = () => null) {
       // one that paints or clips keeps its corners, and the ring is drawn by a box of its own over it (::after, the
       // parent's box, its corners the ring's less its clearance, taking no pointer), outlined as the parent would be
       const own = !corners && !bare && !(clips && ring.clear > 0) && e.radius !== undefined && e.radius !== P.radius && (typeof e.radius === 'number' ? (e.radius > ring.clear ? `${e.radius - ring.clear}px` : null) : typeof e.radius === 'string' && e.radius !== 'mixed' ? (ring.clear ? `calc(${tokenNames.token(e.radius)} - ${ring.clear}px)` : tokenNames.token(e.radius)) : null);
-      if (own) {
+      // (a box whose own stroke is drawn as its outline, a dashed one among them, keeps it: the ring takes a box of its own
+      // there too, its corners the box's own where no others are said)
+      const box = own || (strokeOutline(P) ? corners || 'inherit' : null);
+      if (box) {
         // (the box's own outline off, or the browser's focus outline would show beside the ring; unless its own stroke
         // is drawn as its outline, which stays and stands in the browser's stead)
         extra.push([ring.parent, [...(P.position !== 'absolute' && !P.absolute ? [['position', 'relative']] : []), ...(strokeOutline(P) ? [] : [['outline', 'none']])]]);
-        out[`${ring.parent}::after`] = { decls: new Map([['content', { v: '""' }], ['position', { v: 'absolute' }], ['inset', { v: overBorder(P) }], ['border-radius', { v: own }], ['pointer-events', { v: 'none' }], ...ring.decls.map(([p, v, note, knob]) => [p, { v, note, knob }])]), unread: [] };
+        out[`${ring.parent}::after`] = { decls: new Map([['content', { v: '""' }], ['position', { v: 'absolute' }], ['inset', { v: overBorder(P) }], ['border-radius', { v: box }], ['pointer-events', { v: 'none' }], ...ring.decls.map(([p, v, note, knob]) => [p, { v, note, knob }])]), unread: [] };
         continue;
       }
       // (where another combination could ring this box by a box of its own, that box draws nothing here: the cascade

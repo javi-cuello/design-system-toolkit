@@ -135,6 +135,15 @@ function outer(x) {
   return out;
 }
 
+/* A dash said two ways: the design's pattern ([2, 2]), and code's dashed outline, whose length CSS does not state (the
+   user's ruling, 2026-11-17): compared as dashed or not. */
+export function dashes(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) if (e && e.border && e.border.dash) out[id] = { ...e, border: { ...e.border, dash: 'dashed' } };
+  return out;
+}
+
 /* An arc said two ways: Figma keeps its angles as drawn (a ring's track 0 to 360, an arc from -90 or past 360), code
    keeps where it starts on the turn and how far it sweeps: compared as that, its end its start and sweep, a whole
    turn 360. */
@@ -259,7 +268,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(arcs(outer(words(paint(room(x)))))))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
@@ -701,7 +710,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           // where the contract says (a divider's on its centre), else inside; taking room in the layout only where it says
           n.strokeAlign = (e.border.align || 'inside').toUpperCase();
           if ('layoutMode' in n && n.layoutMode !== 'NONE') n.strokesIncludedInLayout = !!e.border.inLayout;
-          if (e.border.dash) n.dashPattern = e.border.dash;
+          // (a dash code reads only as dashed, CSS stating no length: drawn at a pattern of its own, compared as dashed)
+          if (e.border.dash) n.dashPattern = Array.isArray(e.border.dash) ? e.border.dash : [4, 4];
           if (e.border.cap && 'strokeCap' in n) n.strokeCap = e.border.cap.toUpperCase();
           const side = (i) => (Array.isArray(e.border.width) ? e.border.width[i] : e.border.width ?? (e.border.sides || {})[['top', 'end', 'bottom', 'start'][i]] ?? 1);
           // a vector has one weight, a box one a side

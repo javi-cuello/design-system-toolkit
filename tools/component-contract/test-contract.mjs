@@ -138,7 +138,13 @@ ok('a text default is not the default variant\'s own words where the property do
 const shared = { name: 'Search', props: { Placeholder: 'TEXT', Value: 'TEXT', Filled: ['False', 'True'] },
   links: { Placeholder: { kind: 'characters', layers: [['Text']], variants: ['Filled=False'] }, Value: { kind: 'characters', layers: [['Text']], variants: ['Filled=True'] } },
   variants: [T('Filled=False', [text('Search', 'Text')]), T('Filled=True', [text('Typed', 'Text')])] };
-ok('two text properties on one layer each take the words of the variants they drive', (() => { const d = derive(shared); return d.props.value.default === 'Typed'; })());
+ok('two text properties on one layer each take the words of the variants they drive, and each names the layer where it drives it',
+  (() => { const d = derive(shared); const set = (d.variants.find((v) => v.when.filled === true) || {}).set || {};
+    return d.props.value.default === 'Typed' && d.props.placeholder.default === 'Search' && d.anatomy.text.content === '{placeholder}' && set['text.content'] === '{value}'; })());
+
+// …an older snapshot, whose links say no variants: one property takes the layer, the other none of its words
+{ const old = { ...shared, links: { Placeholder: { kind: 'characters', layers: [['Text']] }, Value: { kind: 'characters', layers: [['Text']] } } };
+  const d = derive(old); ok('two properties on one layer with no variants said: neither takes the other\'s words', !(d.props.placeholder.default === d.props.value.default && d.props.placeholder.default !== undefined)); }
 
 const twoLabels = { name: 'Card', props: { Title: 'TEXT', Subtitle: 'TEXT', Size: ['M'] },
   links: { Title: { kind: 'characters', layers: [['Header', 'Label']] }, Subtitle: { kind: 'characters', layers: [['Header', 'Label[2]']] } },

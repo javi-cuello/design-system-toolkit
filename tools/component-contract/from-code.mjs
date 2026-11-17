@@ -1171,10 +1171,11 @@ async function main() {
               if (c) { const turn = (a) => +((((a % 360) + 360) % 360).toFixed(2)), from = +(c[1] || 0), r = m.match(/radial-gradient\([^,]*,\s*C ([\d.]+)%/);
                 e.arc = { start: turn(from - 90), end: +(turn(from - 90) + +c[2]).toFixed(2), inner: r ? +(+r[1] / 100).toFixed(4) : 0 }; } }
             // a focus ring drawn as the box's outline (taking no room; the browser's own, style auto, is not the design's): read, and drawn below as the layer the design has
-            if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e.outline = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
+            if (!['none', 'auto'].includes(s.outlineStyle) && px(s.outlineWidth) > 0) e[s.outlineStyle === 'dashed' ? 'ownOutline' : 'outline'] = { color: s.outlineColor, width: px(s.outlineWidth), offset: px(s.outlineOffset), ...(s.outlineStyle === 'dashed' && { dashed: true }), ...(() => { const r = n.getBoundingClientRect(), c = corner(s.borderTopLeftRadius, r.width, r.height); return { radius: c.radius, full: !!c.full }; })() };
             // or as the outline of a box of its own over this one (::after, to-code's ring where this box keeps its corners):
             // read the same way, its corners that box's, its offset from this box's edge (that box stands `d` inside it)
-            else { const f = getComputedStyle(n, '::after'); if (f.content && f.content !== 'none' && f.position === 'absolute' && !['none', 'auto'].includes(f.outlineStyle) && px(f.outlineWidth) > 0) { const r = n.getBoundingClientRect(), d = px(s.borderTopWidth) + px(f.top), c = corner(f.borderTopLeftRadius, r.width - 2 * d, r.height - 2 * d); e.outline = { color: f.outlineColor, width: px(f.outlineWidth), offset: px(f.outlineOffset) - d, radius: c.radius, full: !!c.full }; } }
+            // (beside its own outline too: then that outline is the box's own stroke, as css.mjs draws one outside, centred or dashed)
+            { const f = getComputedStyle(n, '::after'); if (f.content && f.content !== 'none' && f.position === 'absolute' && !['none', 'auto'].includes(f.outlineStyle) && px(f.outlineWidth) > 0) { const r = n.getBoundingClientRect(), d = px(s.borderTopWidth) + px(f.top), c = corner(f.borderTopLeftRadius, r.width - 2 * d, r.height - 2 * d); if (e.outline) e.ownOutline = e.outline; e.outline = { color: f.outlineColor, width: px(f.outlineWidth), offset: px(f.outlineOffset) - d, radius: c.radius, full: !!c.full }; } }
             // a css border takes room, as a Figma stroke in the layout does: each side's width, one where all are alike
             const EDGES = ['Top', 'Right', 'Bottom', 'Left'];
             const bw = EDGES.map((k) => (s[`border${k}Style`] !== 'none' ? px(s[`border${k}Width`]) || 0 : 0));
@@ -1184,6 +1185,8 @@ async function main() {
             if (bw.some(Boolean)) {
               const color = s[`border${EDGES[bw.findIndex(Boolean)]}Color`];
               e.border = bw.every((v) => v === bw[0]) ? { color, width: bw[0], inLayout: true } : { color, width: bw, sides: { top: bw[0], end: bw[1], bottom: bw[2], start: bw[3] }, inLayout: true };
+              // (dashed, as css.mjs writes a dashed stroke that takes room)
+              if (EDGES.some((k, i) => bw[i] && s[`border${k}Style`] === 'dashed')) e.border.dash = 'dashed';
             }
             // a stroke drawn as an inset shadow with no offset and no blur is a border (values.mjs insetStroke, as the code audit reads it)
             else if (ss) e.border = { color: ss.colour, width: ['top', 'end', 'bottom', 'start'].map((k) => px(ss.sides[k])), sides: ss.sides, ...(ss.align === 'outside' && { align: 'outside' }) };
@@ -1496,7 +1499,7 @@ async function main() {
           // a width per side where the sides differ: each side's token, 0 where it draws none. The token is the one the code
           // wrote, in a border or in the inset shadow to-code draws a stroke inside the box with (Figma's inside stroke)
           const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width', 'box-shadow:width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width', 'box-shadow:width']);
-          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'box-shadow:colour']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }) };
+          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'box-shadow:colour']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }), ...(x.border.dash && { dash: x.border.dash }) };
           // a line (a shape no wide or no tall): css.mjs draws its stroke as the one edge it has, the leading one, so that
           // edge is the shape's whole stroke
           // (no wide: 0, or the edge's own width where a border-box reset counts it in)
@@ -1506,6 +1509,14 @@ async function main() {
         }
         // an outline is the design's focus ring: a stroke-only box stretched past this one by how far the outline's outer
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way
+        // the box's own outline beside a ring of a box of its own, or a dashed one: its own stroke (css.mjs), its alignment
+        // where the outline stands, no focus ring
+        if (x.ownOutline) {
+          const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
+          x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
+          // (a stroke an outline draws, never an effect style's ring: kept below where the shadow is a style)
+          delete x.ownOutline; x.ownStroke = true;
+        }
         if (x.outline) {
           const o = x.outline, clear = +(o.offset + o.width).toFixed(2);
           ring.push([id, { kind: 'graphic', shape: 'rectangle', parent: id, position: 'absolute', absolute: { x: -clear, y: -clear, end: -clear, bottom: -clear }, constraints: { horizontal: 'stretch', vertical: 'stretch' },
@@ -1526,7 +1537,7 @@ async function main() {
           // style's, not a border; a ring the style does not draw (a divider beside an elevation) stays the border
           const theirs = (l) => (named.layers || []).some((nl) => /SHADOW/.test(nl.type) && keyOf({ layers: [nl] }) === shadowKey(cssShadows(l)));
           const whole = x.shadowAll && effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadowAll)));
-          if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; delete x.border; }
+          if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; if (!x.ownStroke) delete x.border; }
           else if (x.shadow) {
             const hit = named || effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadow)));
             x.shadow = hit ? hit.name : x.shadow;
@@ -1534,10 +1545,10 @@ async function main() {
             // style's, not a border, where the code writes no ring of its own beside it: no inset layer of its own, and no
             // other custom property that could hold one
             const ownRing = () => import('../parity/values.mjs').then(({ splitTop: st }) => authoredValue(L.tab, at, 'box-shadow', styles).then((v) => st(v || '').some((p) => (/\binset\b/.test(p) && !/^\s*var\(/.test(p)) || (/var\(/.test(p) && !writtenAs((/var\(\s*(--[\w-]+)/.exec(p) || [])[1] || '', named.name)))));
-            if (named && x.border && !x.border.sides && !x.border.inLayout && (named.layers || []).some((l) => l.type === 'INNER_SHADOW' && !l.x && !l.y && !l.blur && l.spread > 0) && !(await ownRing())) delete x.border;
+            if (named && x.border && !x.ownStroke && !x.border.sides && !x.border.inLayout && (named.layers || []).some((l) => l.type === 'INNER_SHADOW' && !l.x && !l.y && !l.blur && l.spread > 0) && !(await ownRing())) delete x.border;
           }
         }
-        delete x.shadowAll; delete x.ringsUsed;
+        delete x.shadowAll; delete x.ringsUsed; delete x.ownStroke;
         // a text style named by the declarations that say it (rules.mjs), else by its values
         const said = x.type && x.kind === 'text' ? styleFromCss(Object.fromEntries(await Promise.all(['font-family', 'font-weight', 'font-size', 'line-height', 'letter-spacing'].map(async (p) => [p, await authoredWidth(L.tab, `[data-contract-id="${id in shown ? id : x.parent}"]`, p, { raw: true, cache: styles })]))), (L.tokens.textStyles || []).map((t) => t.name), (n) => textStyleFields(cssName('', n).slice(2))) : null;
         if (said) { x.typography = said; delete x.type; }

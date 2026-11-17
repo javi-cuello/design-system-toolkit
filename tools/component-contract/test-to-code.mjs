@@ -318,4 +318,19 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('an arc is a conic mask from Figma\'s start, a ring cut at its inner ratio, and nothing left unread',
     R.mask === 'conic-gradient(from 0deg, #000 90deg, #0000 0), radial-gradient(closest-side, #0000 75%, #000 75%)' && R['mask-composite'] === 'intersect'
     && !ring.unread.some((f) => /arc/.test(f)) && pie.mask === 'conic-gradient(from 0deg, #000 180deg, #0000 0)' && !('mask-composite' in pie)); }
+// a dashed stroke all round: an outline dashed, pulled in by an inside stroke's width; on some sides, named, not dropped
+{ const d = declarations({ kind: 'container', border: { color: 'C/s', width: 1, dash: [2, 2] } }, {}, names), D = Object.fromEntries(d.decls.map(([p, v]) => [p, v]));
+  const side = declarations({ kind: 'container', border: { color: 'C/s', width: [1, 0, 0, 0], dash: [2, 2] } }, {}, names);
+  ok('a dashed stroke all round is a dashed outline where the stroke stands; on some sides it is named as unread',
+    /dashed/.test(D.outline) && /^calc\(-1 \* /.test(D['outline-offset']) && !('box-shadow' in D) && side.unread.some((f) => /dash/.test(f))
+    && /dashed/.test(Object.fromEntries(declarations({ kind: 'container', border: { color: 'C/s', width: 1, dash: 'dashed' } }, {}, names).decls).outline)
+    // (one that takes room in the layout is a dashed border: it keeps its room, and nothing is unread)
+    && (() => { const L = declarations({ kind: 'container', border: { color: 'C/s', width: 1, dash: [2, 2], inLayout: true } }, {}, names); const M = Object.fromEntries(L.decls);
+      return /1px dashed/.test(M['border-top']) && !('outline' in M) && !L.unread.some((f) => /dash/.test(f)); })()); }
+// a focus ring on a box whose own stroke is a dashed outline: drawn by a box of its own, so the dash stays at focus
+{ const dc = { contract: 1, component: 'Drop', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } },
+    anatomy: { root: { kind: 'container', radius: 8, border: { color: 'C/s', width: 1, dash: [2, 2] } } },
+    variants: [{ when: { state: 'focus' }, add: { focusRing: { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/f', width: 2, align: 'inside' }, radius: 8 } } }] };
+  const css = toCss(dc, 'drop', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+  ok('a ring on a box with a dashed stroke is drawn by a box of its own; the box keeps its dash and its own outline', /::after \{[^}]*border-radius: inherit;[^}]*outline: /.test(css) && !/:focus-visible[^{]*\{[^}]*outline: none/.test(css) && /outline: 1px dashed/.test(css)); }
 console.log(`${n} passed`);

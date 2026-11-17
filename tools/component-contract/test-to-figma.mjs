@@ -302,4 +302,7 @@ delete globalThis.figma;
   const a = (start, end) => arcs({ p: { arc: { start, end, inner: 0.75 } } }).p.arc;
   ok('an arc is compared by where it starts on the turn and how far it sweeps',
     JSON.stringify(a(270, 0)) === JSON.stringify(a(270, 360)) && JSON.stringify(a(-90, 0)) === JSON.stringify(a(270, 360)) && a(0, 360).end === 360 && a(0, 0).end === 360 && a(270, 90).end === 450); }
+{ const { dashes } = await import('./to-figma.mjs');
+  ok('a dash is compared as dashed or not: the design\'s pattern and code\'s dashed outline are one',
+    JSON.stringify(dashes({ a: { border: { dash: [2, 2] } } })) === JSON.stringify(dashes({ a: { border: { dash: 'dashed' } } })) && !dashes({ a: { border: { color: 'x' } } }).a.border.dash); }
 console.log(`${n}/${n} passed`);

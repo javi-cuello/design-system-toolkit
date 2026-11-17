@@ -385,6 +385,9 @@ function anatomies(trees, characters, known, L, mains = null) {
         if (!a) continue;
         if (l.kind === 'mainComponent' && holds && a.kind === 'instance') a.swappedBy = camel(p);
         if (l.kind === 'characters' && !holds && a.content === `{${camel(p)}}` && typeof e.node.text === 'string') a.content = e.node.text;
+        // (and where it holds, its layer is its own: one layer two properties drive in turn, a field's placeholder while
+        // empty and its value once filled, names in each variant the one that drives it there)
+        if (l.kind === 'characters' && holds && e.node.type === 'TEXT' && a.kind === 'text') a.content = `{${camel(p)}}`;
       }
     });
   }
@@ -661,8 +664,12 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   // (the link found by the layer it names, as anatomies finds it, and by the prop that layer is read as)
   const drives = (prop, segs, t) => { const l = (Object.entries(L).find(([k, x]) => x.kind === 'characters' && camel(k) === prop && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))) || [])[1]; return !l || !l.variants || l.variants.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v)); };
   for (const t of trees) for (const { node, segs } of t.list) {
-    const prop = characters.get(keyOf(segs)) || characters.get(plain(segs));
-    if (prop && node.type === 'TEXT' && typeof node.text === 'string' && !words.has(prop) && drives(prop, segs, t)) words.set(prop, node.text);
+    // (every property that drives the layer, where one layer takes two in turn)
+    const props = Object.entries(L).filter(([, x]) => x.kind === 'characters' && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))).map(([k]) => camel(k));
+    // (only where each link says the variants it drives in, snapshot 0.61.0 on: before, one property takes the layer, as anatomies has it)
+    const each = props.length > 1 && props.every((pr) => { const l = Object.entries(L).find(([k, x]) => x.kind === 'characters' && camel(k) === pr); return l && l[1].variants; });
+    for (const prop of each ? props : [characters.get(keyOf(segs)) || characters.get(plain(segs))].filter(Boolean))
+      if (node.type === 'TEXT' && typeof node.text === 'string' && !words.has(prop) && drives(prop, segs, t)) words.set(prop, node.text);
   }
 
   // props: an enum's default is the default variant's value, a boolean's the
