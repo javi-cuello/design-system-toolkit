@@ -24,6 +24,8 @@ const PAGE = `<!doctype html><html data-theme="dark"><head><style>
   #ring { outline: 2px solid rgb(255, 0, 0); outline-offset: 3px; }
   #rround { width: 100px; height: 40px; border-radius: 12px; outline: 2px solid rgb(0, 0, 0); outline-offset: 2px; }
   #rpill { width: 100px; height: 40px; border-radius: 9999px; outline: 2px solid rgb(0, 0, 0); outline-offset: 2px; }
+  #rafter { position: relative; width: 40px; height: 40px; border: 1px solid rgb(9, 9, 9); background: rgb(250, 250, 250); }
+  #rafter::after { content: ""; position: absolute; inset: -1px; border-radius: 8px; outline: 2px solid rgb(0, 0, 255); outline-offset: -2px; pointer-events: none; }
   #rsquare { width: 100px; height: 40px; outline: 2px solid rgb(0, 0, 0); outline-offset: 2px; }
   #shadow { box-shadow: rgba(0, 0, 0, 0.2) 0px 4px 8px 0px, rgb(0, 0, 255) 0px 0px 0px 3px; }
   #plain { outline-style: none; outline-width: 7px; }
@@ -47,7 +49,7 @@ const PAGE = `<!doctype html><html data-theme="dark"><head><style>
 </style></head><body>
   <div style="height: 900px"></div>
   <section id="one"><div id="box">x</div><span id="inline">words</span><div id="flex"><i></i><i></i></div><div id="grid"></div>
-    <div id="row"><b></b><b></b></div><div id="cut">Xg</div><div id="ring"></div><div id="rround"></div><div id="rpill"></div><div id="rsquare"></div><div id="shadow"></div><div id="plain"></div><div id="rings" style="outline: 1px solid red"><i style="outline: 2px solid blue"></i><i style="outline: 2px solid transparent"></i><i style="outline: 2px none red"></i></div><div id="pseudo"></div><div id="turned"></div>
+    <div id="row"><b></b><b></b></div><div id="cut">Xg</div><div id="ring"></div><div id="rround"></div><div id="rpill"></div><div id="rafter"></div><div id="rsquare"></div><div id="shadow"></div><div id="plain"></div><div id="rings" style="outline: 1px solid red"><i style="outline: 2px solid blue"></i><i style="outline: 2px solid transparent"></i><i style="outline: 2px none red"></i></div><div id="pseudo"></div><div id="turned"></div>
     <x-card><x-label>Go</x-label></x-card>
     <div id="edge">e</div><div id="inset">i</div><div id="ghost">g</div><p id="clamp">two  lines</p><p id="nowrap">one</p><div id="tracks"><i></i><i></i><i></i></div><div id="centred"><i></i></div><div id="wrapped"><i></i><i></i></div><div id="slot"><span></span></div><textarea id="ta" style="border: 0; background: none"></textarea><div id="inring"></div><div id="focused"></div><i id="hidden"></i><i id="faded"></i><div id="empty"></div><input type="checkbox" id="tick"><div id="acut">Xg</div><div id="spin"></div><p id="vfill" style="margin: 0; height: 40px; line-height: 40px">Xg</p><p id="vtop" style="margin: 0; height: 40px; line-height: 20px">Xg</p><p id="vmid" style="margin: 0; height: 40px; line-height: 20px; display: flex; align-items: center">Xg</p><div id="snug" style="display: flex; align-items: center; height: 20px"><i style="display: block; width: 4px; height: 19.2px"></i></div><p id="snugtext" style="margin: 0; height: 16px; font-size: 12px; line-height: 14.4px; display: flex; align-items: center">Xg</p><div id="mixed" style="display: flex; align-items: flex-start; height: 20px"><i style="display: block; width: 4px; height: 19.2px"></i><i style="display: block; width: 4px; height: 10px"></i></div></section>
   <section id="two"><div id="box" style="width: 10px">y</div></section>
@@ -121,6 +123,11 @@ try {
   ok('a ring\'s outer radius is the box\'s grown by how far the ring reaches; a pill is capped; a square box draws square',
     (await one('#rround', ['-ring-radius']))['-ring-radius'] === '16px' && (await one('#rpill', ['-ring-radius']))['-ring-radius'] === '24px'
     && (await one('#rsquare', ['-ring-radius']))['-ring-radius'] === '0px');
+  // a ring drawn by a box of its own over the element (::after, over its border box): read as the element's, its offset
+  // from the element's edge, its corners that box's grown by its reach, and counted among the rings
+  { const a = await one('#rafter', ['-ring-width', '-ring-offset', '-ring-color', '-ring-radius', '-rings']);
+    ok('a ring on ::after is the element\'s ring: width, offset from its edge, colour, corners, counted',
+      a['-ring-width'] === '2px' && a['-ring-offset'] === '-2px' && a['-ring-color'] === 'rgb(0, 0, 255)' && a['-ring-radius'] === '8px' && JSON.stringify(a['-rings']) === '["rgb(0, 0, 255)"]'); }
   // round 4 (F6): how each ring is drawn, so the comparator snaps an outline's width and not a shadow's
   const drawn = await one('#focused', ['-ring-drawn', '-inner-ring-drawn']), shadowRing = await one('#shadow', ['-ring-drawn']), plain = await one('#plain', ['-ring-drawn', '-inner-ring-drawn']);
   ok('a ring says how it is drawn: an outline, a shadow, or none', drawn['-ring-drawn'] === 'an outline' && drawn['-inner-ring-drawn'] === 'a shadow'

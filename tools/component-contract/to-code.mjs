@@ -249,6 +249,15 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
 // box, so out past the border css.mjs draws as one (an inside stroke in the layout; any other is a shadow or an
 // outline, which takes no room), side by side
 const OVER = ['top', 'end', 'bottom', 'start'];
+// whether css.mjs draws a box's stroke as its outline: all round, one width, outside (beside no effect style) or centred
+function strokeOutline(P) {
+  const b = P.border;
+  if (!b || b.color === undefined) return false;
+  const W = Array.isArray(b.width) ? b.width : OVER.map(() => b.width ?? 1);
+  const on = W.map((x, i) => (b.sides ? !!b.sides[OVER[i]] : x !== 0) && x !== 0), align = b.align || 'inside';
+  if (align === 'inside' || !on.every(Boolean) || !W.every((x) => x === W[0])) return false;
+  return !(align === 'outside' && typeof P.shadow === 'string' && P.shadow !== 'literal');
+}
 function overBorder(P) {
   const b = P.border;
   // (css.mjs's own reading: no paint draws nothing, an unsaid width is 1, a side its weight where no width says it)
@@ -417,7 +426,9 @@ export function drawn(c, when, mains = () => null) {
       // parent's box, its corners the ring's less its clearance, taking no pointer), outlined as the parent would be
       const own = !corners && !bare && !(clips && ring.clear > 0) && e.radius !== undefined && e.radius !== P.radius && (typeof e.radius === 'number' ? (e.radius > ring.clear ? `${e.radius - ring.clear}px` : null) : typeof e.radius === 'string' && e.radius !== 'mixed' ? (ring.clear ? `calc(${tokenNames.token(e.radius)} - ${ring.clear}px)` : tokenNames.token(e.radius)) : null);
       if (own) {
-        if (P.position !== 'absolute' && !P.absolute) extra.push([ring.parent, [['position', 'relative']]]);
+        // (the box's own outline off, or the browser's focus outline would show beside the ring; unless its own stroke
+        // is drawn as its outline, which stays and stands in the browser's stead)
+        extra.push([ring.parent, [...(P.position !== 'absolute' && !P.absolute ? [['position', 'relative']] : []), ...(strokeOutline(P) ? [] : [['outline', 'none']])]]);
         out[`${ring.parent}::after`] = { decls: new Map([['content', { v: '""' }], ['position', { v: 'absolute' }], ['inset', { v: overBorder(P) }], ['border-radius', { v: own }], ['pointer-events', { v: 'none' }], ...ring.decls.map(([p, v, note, knob]) => [p, { v, note, knob }])]), unread: [] };
         continue;
       }

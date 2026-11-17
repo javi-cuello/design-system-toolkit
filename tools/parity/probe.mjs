@@ -221,8 +221,23 @@ export function probe(sections, opts) {
     }
     return { items, run };
   };
-  // The ring as drawn: an outline with a style, else a spread-only shadow.
-  const ring = (cs) => {
+  // A ring drawn by a box of its own over the element (::after, absolute,
+  // outlined: to-code's where the box keeps its corners): that box's style and
+  // how far inside the element's edge it stands (its border, less its inset).
+  const after = (el) => {
+    if (!el || !el.getBoundingClientRect) return null;
+    const f = getComputedStyle(el, '::after');
+    if (!f.content || f.content === 'none' || f.position !== 'absolute' || f.outlineStyle === 'none' || !(parseFloat(f.outlineWidth) > 0)) return null;
+    return { cs: f, d: (parseFloat(getComputedStyle(el).borderTopWidth) || 0) + (parseFloat(f.top) || 0) };
+  };
+  // The ring as drawn: an outline with a style, else a spread-only shadow,
+  // else the outline of a box of its own over it, its offset from this edge.
+  const ring = (cs, el) => {
+    const r = ownRing(cs);
+    const a = r.drawn === 'none' && after(el);
+    return a ? { width: a.cs.outlineWidth, offset: `${+(parseFloat(a.cs.outlineOffset) - a.d).toFixed(2)}px`, color: a.cs.outlineColor, drawn: 'an outline' } : r;
+  };
+  const ownRing = (cs) => {
     // `drawn` says which, because Chrome snaps an outline's width as it
     // does a border's and leaves a shadow's spread as written (schema.mjs)
     if (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) return { width: cs.outlineWidth, offset: cs.outlineOffset, color: cs.outlineColor, drawn: 'an outline' };
@@ -239,7 +254,14 @@ export function probe(sections, opts) {
   // (offset plus width), so the radius written on the box is not the ring's.
   // Tested in Chromium 2026-10-25: radius 12, a 2px outline at offset 2, draws
   // 16. Capped at half the ring's shorter side, as a pill's is.
-  const ringRadius = (el, cs) => {
+  const ringRadius = (el, cs, pseudo = false) => {
+    const a = ownRing(cs).drawn === 'none' && !pseudo && after(el);
+    if (a) {
+      // (that box's corners grown by how far its outline reaches past it, capped as a pill's at its own half)
+      const reach = parseFloat(a.cs.outlineOffset) + parseFloat(a.cs.outlineWidth), box = el.getBoundingClientRect();
+      const r0 = parseFloat(a.cs.borderTopLeftRadius) || 0, cap = Math.min(box.width, box.height) / 2 - a.d + reach;
+      return `${+Math.min(r0 > 0 ? r0 + reach : 0, cap).toFixed(2)}px`;
+    }
     const r = ring(cs);
     if (r.drawn === 'none') return '0px';
     const reach = r.drawn === 'an outline' ? parseFloat(r.offset) + parseFloat(r.width) : parseFloat(r.width);
@@ -297,11 +319,11 @@ export function probe(sections, opts) {
     if (p === '-clipped') return clipping(el, cs);
     if (p === '-stacking') return stacking(cs, pseudo ? null : el);
     if (p === '-place-h' || p === '-place-v') return pseudo ? null : placement(el, cs, p === '-place-h');
-    if (p === '-ring-radius') return ringRadius(el, cs);
-    if (p.startsWith('-ring-')) return ring(cs)[p.slice(6)];
+    if (p === '-ring-radius') return ringRadius(el, cs, pseudo);
+    if (p.startsWith('-ring-')) return ring(cs, pseudo ? null : el)[p.slice(6)];
     if (p.startsWith('-inner-ring-')) return innerRing(cs)[p.slice(12)];
     // the colour of each outline the box and what it holds draw: a part's ring beside its holder's is a second ring
-    if (p === '-rings') return pseudo ? null : [el, ...el.querySelectorAll('*')].map((x) => getComputedStyle(x)).filter((c) => c.outlineStyle !== 'none' && parseFloat(c.outlineWidth) > 0 && !clearColour(c.outlineColor)).map((c) => c.outlineColor);
+    if (p === '-rings') return pseudo ? null : [el, ...el.querySelectorAll('*')].flatMap((x) => [getComputedStyle(x), ...(after(x) ? [after(x).cs] : [])]).filter((c) => c.outlineStyle !== 'none' && parseFloat(c.outlineWidth) > 0 && !clearColour(c.outlineColor)).map((c) => c.outlineColor);
     if (p === '-stroke') {
       // an edge drawn in a transparent colour draws nothing
       const seen = (c) => !/^(transparent|rgba\([^)]*,\s*0\)|rgb\([^)]*\/\s*0\))$/.test(String(c).trim());
