@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED } from './to-figma.mjs';
+import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -305,4 +305,9 @@ delete globalThis.figma;
 { const { dashes } = await import('./to-figma.mjs');
   ok('a dash is compared as dashed or not: the design\'s pattern and code\'s dashed outline are one',
     JSON.stringify(dashes({ a: { border: { dash: [2, 2] } } })) === JSON.stringify(dashes({ a: { border: { dash: 'dashed' } } })) && !dashes({ a: { border: { color: 'x' } } }).a.border.dash); }
+{ const byKey = { k1: 'Graphic/gold cup', k2: 'Button', k3: 'Icons/Icon/arrow' };
+  const walk = { children: [{ instanceOf: 'gold cup', instanceOfKey: 'k1' }, { instanceOf: 'Button / Size=md', instanceOfKey: 'k2' }, { instanceOf: 'gold cup', instanceOfKey: 'other' }, { instanceOf: 'Close', instanceOfKey: 'k1' }, { instanceOf: 'Icon/arrow', instanceOfKey: 'k3' }] };
+  namedByKey(walk, byKey);
+  ok('a remote main the walk names bare is named back by its key, as the library names it with its folder; another key, or another name, stays',
+    JSON.stringify(walk.children.map((x) => x.instanceOf)) === JSON.stringify(['Graphic/gold cup', 'Button / Size=md', 'gold cup', 'Close', 'Icons/Icon/arrow'])); }
 console.log(`${n}/${n} passed`);

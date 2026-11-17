@@ -441,18 +441,38 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const colourOf = (c) => { const x = parseColour(c); return x ? { rgb: x.slice(0, 3).map((v) => v / 255), a: x[3] } : null; };
   // a fill or stroke as the contract says it: a token, a gradient whose stops are tokens, or a list of either
   // an image is not in the contract (its picture is the library's asset): said, not painted grey
-  const paints = async (x) => Promise.all([].concat(x).filter((p) => p != null && !(typeof p === 'string' && /^IMAGE/.test(p) && missing.add(`an image fill (${p})`))).map(async (p) => {
+  // the library's image paints by layer name (its root as 'root'), from its own component imported by key: an image is
+  // its asset, so a layer the library holds one on takes that one; another is said, not painted grey
+  let images = null;
+  const imageOf = async (layer) => {
+    if (!K.image) return null;
+    if (!images) {
+      images = {};
+      // (asked apart from the library's imports: a picture the library does not give is that image's row, never a
+      // drawing put back for an unanswered import, which would hide every other row of it)
+      const m = await Promise.race([either(K.image).catch(() => null), new Promise((res) => setTimeout(() => res(null), 15000))]);
+      // every variant, the default first: an image layer one variant alone draws takes its picture too
+      const mains = !m ? [] : m.type === 'COMPONENT_SET' ? [m.defaultVariant, ...m.children].filter(Boolean) : [m];
+      const take = (n, name) => { const f = 'fills' in n && Array.isArray(n.fills) && n.fills.find((x) => x.type === 'IMAGE'); if (f && !images[name]) images[name] = f; };
+      for (const main of mains) { take(main, 'root'); for (const n of main.findAll(() => true)) take(n, n.name); }
+    }
+    return images[layer] || null;
+  };
+  const paints = async (x, layer = null) => (await Promise.all([].concat(x).filter((p) => p != null).map(async (p) => {
+    if (typeof p === 'string' && /^IMAGE/.test(p)) { const img = await imageOf(layer); if (!img) missing.add(`an image fill (${p})`); return img ? { ...img, scaleMode: p.split(':')[1] || img.scaleMode } : null; }
     if (!p || typeof p !== 'object' || !/^GRADIENT_/.test(p.type || '')) return solid(p);
     const stops = await Promise.all((p.stops || []).map(async (st) => {
       const v = await V(st.color); const c = colourOf((K.values || {})[st.color] ?? st.color);
       return { position: st.position, color: c ? { r: c.rgb[0], g: c.rgb[1], b: c.rgb[2], a: c.a } : { r: 0.5, g: 0.5, b: 0.5, a: 1 }, ...(v ? { boundVariables: { color: figma.variables.createVariableAlias(v) } } : {}) };
     }));
     return { type: p.type, gradientTransform: p.transform || [[1, 0, 0], [0, 1, 0]], gradientStops: stops };
-  }));
+  }))).filter(Boolean);
   const solid = async (n) => { const v = await V(n); const c = colourOf((K.values || {})[n] ?? n); const p = { type: 'SOLID', color: c ? { r: c.rgb[0], g: c.rgb[1], b: c.rgb[2] } : { r: 0.5, g: 0.5, b: 0.5 }, opacity: c && !v ? c.a : 1 }; return v ? figma.variables.setBoundVariableForPaint(p, 'color', v) : p; };
   // a size in pixels: a contract also says one as fill, hug or a token, which are set once the part is placed
   const px = (x) => (typeof x === 'number' ? Math.max(x, 0.01) : null);
-  const num = async (node, field, n) => { const v = await V(n); const raw = typeof n === 'number' ? n : (K.values || {})[n]; if (v) node.setBoundVariable(field, v); else if (typeof raw === 'number') node[field] = raw; };
+  // (an opacity variable holds a percent, 50, where a layer's opacity is 0 to 1: a token's value drawn unbound is scaled;
+  // a raw number in the contract is already 0 to 1)
+  const num = async (node, field, n) => { const v = await V(n); const raw = typeof n === 'number' ? n : (K.values || {})[n]; if (v) node.setBoundVariable(field, v); else if (typeof raw === 'number') node[field] = field === 'opacity' && typeof n === 'string' ? raw / 100 : raw; };
   // alignment and sizing words, from the one table every direction reads (rules.mjs), handed in as data
   const ALIGN = P.align, SIZE = P.size;
   const styles = {}, fonts = {}, icons = {}, sets = {}, effects = {}, toEffect = [];
@@ -701,7 +721,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // a line's length is its path's, and it has no width to give
         // (a box that fills one way still takes its length the other: the fill is set with the parent's layout)
         } else if ((px(e.width) || px(e.height)) && n.type !== 'VECTOR') n.resize(px(e.width) || n.width, px(e.height) || px(e.width) || n.height);
-        n.fills = e.background ? await paints(e.background) : [];
+        n.fills = e.background ? await paints(e.background, id === 'root' ? 'root' : (e.name || id.slice(id.lastIndexOf('/') + 1))) : [];
         // one radius, or one per corner in Figma's order: top left, top right, bottom right, bottom left
         // an ellipse has no corners: a radius a variant kept from a rectangle is not drawn
         if (e.radius != null && n.type !== 'ELLIPSE') for (const [i, f] of ['topLeftRadius', 'topRightRadius', 'bottomRightRadius', 'bottomLeftRadius'].entries()) await num(n, f, Array.isArray(e.radius) ? e.radius[i] : e.radius);
@@ -1188,6 +1208,32 @@ export const PATCH_AFTER = `{ __res = await (${(async (res, target, token, patch
 /* In the scratch file: the drawing recorded for a component, read back as
    each variant's layers with what each is bound to (variable names, the text
    style, the component an instance is of), for verify(). */
+/* The library's components by published key, each under the name the snapshot gives it in the library (its page's
+   folder with it: Graphic/gold cup). */
+export function keyedNames(dir) {
+  const out = {};
+  let folders = [];
+  try { folders = fs.readdirSync(dir); } catch { return out; }
+  for (const f of folders) { try { const s = JSON.parse(fs.readFileSync(path.join(dir, f, 'figma.json'), 'utf8')); if (s.key && s.name) out[s.key] = s.name; } catch { /* no spec */ } }
+  return out;
+}
+/* A drawing places the library's components as remote mains, which have no page: the snapshot's walk names one by
+   its own name alone (gold cup), where the library names it with its page's folder (Graphic/gold cup), so no reader
+   finds its main. Each instance is named back by its key, where the library holds that key and the walk's name is the
+   library's less its folder. */
+export function namedByKey(node, byKey) {
+  if (!node || typeof node !== 'object') return node;
+  if (Array.isArray(node)) { for (const x of node) namedByKey(x, byKey); return node; }
+  const full = node.instanceOfKey && byKey[node.instanceOfKey];
+  if (full && typeof node.instanceOf === 'string' && node.instanceOf !== full) {
+    // (its own name may hold a slash: Icon/arrow on a page Icons is the library's Icons/Icon/arrow)
+    const base = node.instanceOf.split(' / ')[0];
+    if (full.endsWith(`/${base}`)) node.instanceOf = full + node.instanceOf.slice(base.length);
+  }
+  for (const v of Object.values(node)) if (v && typeof v === 'object') namedByKey(v, byKey);
+  return node;
+}
+
 const READBACK = async (name, id = null) => {
   await figma.loadAllPagesAsync();
   const page = figma.root.children.find((p) => p.name === name);
@@ -1341,6 +1387,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const walk = fs.readFileSync(path.join(TOOLKIT, 'plugins/design-system-snapshot/code.js'), 'utf8');
       const live = setId && await exec(`const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, into, 120000);
       const comp = live && (live.components || []).find((x) => x.id === setId);
+      if (comp) namedByKey(comp, keyedNames(where.paths.components));
       if (comp) {
         const { compact } = req('../snapshot/spec.cjs');
         const { derive } = req('./derive.cjs');
@@ -1362,6 +1409,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // a text style's key from the snapshot (plugin 0.51.0 on); the rest looked up where the library uses them
   const stored = JSON.parse(fs.readFileSync(where.paths.tokens, 'utf8')).textStyles || [];
   const keys = { styles: Object.fromEntries(stored.filter((x) => x.key && want.styles.includes(x.name)).map((x) => [x.name, x.key])), icons: {}, iconContainer: null };
+  // an image fill is the library's asset, not the contract's: the library's own component of this name, by its key, so
+  // the drawing paints each image layer with the picture the library's layer of the same name holds
+  if (JSON.stringify(c).includes('"IMAGE:')) { const byKey = keyedNames(where.paths.components); keys.image = Object.keys(byKey).find((k) => byKey[k] === c.component) || null; }
   const missing = { styles: want.styles.filter((n) => !keys.styles[n]), icons: want.icons, container: (map.draw && map.draw.iconContainer) || null, vars: want.vars, components: want.components };
   const tl = Date.now();
   // a variable's key from the snapshot (plugin 0.52.0 on); else looked up in the library file below
