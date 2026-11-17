@@ -194,7 +194,7 @@ export function writeDtcg(tokens, dir, opts = {}) {
   // Refuse a folder this export did not write: a wrong --out would otherwise
   // delete whatever it names. An export is known by what its marker says, not
   // its name, since `tokens.resolver.json` is the name the standard suggests to
-  // everyone: a resolver whose description is the export's own, or the house
+  // everyone: a resolver whose description opens as the export's does, or the house
   // manifest.json ({ builds: [...] }) exports wrote before it (until
   // 2026-11-17), which stays owned so the first export after the change
   // removes it. In one it did write, only what an export owns is replaced
@@ -202,7 +202,7 @@ export function writeDtcg(tokens, dir, opts = {}) {
   // files); a README, a .gitignore and dist/ beside them stay.
   const marks = [RESOLVER, 'manifest.json'];
   const read = (f) => { try { return JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { return null; } };
-  const ours = read(RESOLVER)?.description === DTCG.WRITTEN_BY || Array.isArray(read('manifest.json')?.builds);
+  const ours = String(read(RESOLVER)?.description).startsWith(DTCG.OURS) || Array.isArray(read('manifest.json')?.builds);
   if (existsSync(dir) && readdirSync(dir).length && !ours)
     throw Object.assign(new Error(`${dir} is not empty and holds no ${RESOLVER} this export wrote: not a token export, not deleting it`), { refused: true });
   if (existsSync(dir)) {

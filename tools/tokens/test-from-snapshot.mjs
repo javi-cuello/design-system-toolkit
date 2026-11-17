@@ -102,11 +102,11 @@ test('a resolver someone else wrote is not this export\'s: the folder is refused
   assert.ok(readdirSync(dir).includes('theirs'));
 });
 
-test('paragraph and list spacing survive noExtensions, under the vendor key given', () => {
+test('the design in $extensions (tracking fraction, paragraph and list spacing) survives noExtensions, under the vendor key given', () => {
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeDtcg(snapshot(), dir, { noExtensions: true, vendor: 'com.example' });
   const t = JSON.parse(readFileSync(join(dir, 'text-style/value.json'), 'utf8'))['text-style'].heading.lg;
-  assert.deepEqual(t.$extensions, { 'com.example': { paragraphSpacing: { value: 0, unit: 'px' }, listSpacing: { value: 0, unit: 'px' } } });
+  assert.deepEqual(t.$extensions, { 'com.example': { letterSpacingEm: 0, paragraphSpacing: { value: 0, unit: 'px' }, listSpacing: { value: 0, unit: 'px' } } });
 });
 
 test('a folder an older export wrote, marked by manifest.json, is taken over and the manifest removed', () => {
@@ -137,6 +137,14 @@ test('a collection holding only what DTCG cannot type adds no files and no modif
   assert.ok(!readdirSync(dir).includes('collection-1'), readdirSync(dir).join(', '));
   assert.ok(!Object.keys(JSON.parse(readFileSync(join(dir, RESOLVER), 'utf8')).modifiers).some((m) => m.includes('collection-1')));
   assert.equal(built.resolutions.length, 4, 'light/dark × desktop/mobile, not doubled');
+});
+
+test('two collections whose names slug alike are refused, nothing written', () => {
+  const s = snapshot();
+  s.collections.semantic = { modes: ['Light', 'Dark'], values: { Light: { 'A/b': '#000000' }, Dark: { 'A/b': '#ffffff' } }, alias: {} };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  assert.throws(() => writeDtcg(s, dir), /two sources both become semantic\/light\.json/);
+  assert.deepEqual(readdirSync(dir), []);
 });
 
 test('two modes whose names slug alike are refused, nothing written', () => {

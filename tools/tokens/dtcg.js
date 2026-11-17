@@ -13,10 +13,12 @@
   // the key predates the resolver; kept so stored exports and their readers
   // do not churn over a name.
   var VENDOR = 'com.figma.variables';
-  // The resolver's own description, and how an export knows a folder is one it
-  // wrote: a resolver anyone else wrote does not say this, so a wrong output
-  // folder holding one is refused, never cleared.
-  var WRITTEN_BY = 'Written by the toolkit token export from a Figma snapshot; regenerated, never edited.';
+  // The resolver's own description. Its opening, OURS, is how an export knows
+  // a folder is one it wrote: a resolver anyone else wrote does not open so,
+  // so a wrong output folder holding one is refused, never cleared. Reword the
+  // rest freely; changing OURS makes every stored export look foreign.
+  var OURS = 'Written by the toolkit token export';
+  var WRITTEN_BY = OURS + ' from a Figma snapshot; regenerated, never edited.';
 
   /* ---------- names ---------- */
 
@@ -323,7 +325,8 @@
     // is the percentage of the size in this snapshot's mode only: the
     // fraction rides along, so a consumer can write it relative to the size
     // (CSS em). A 36px phone Display got -1.44px, the -2% of 72 (2026-11-04)
-    if (ls && ls.unit === 'PERCENT' && bound.fontSize && !o.noExtensions) {
+    // written under noExtensions too: it is the design, not provenance
+    if (ls && ls.unit === 'PERCENT' && bound.fontSize) {
       token.$extensions = {};
       token.$extensions[o.vendor || VENDOR] = { letterSpacingEm: +(ls.value / 100).toFixed(4) };
     }
@@ -542,6 +545,14 @@
       });
     }
 
+    // two collections or style roots that slug alike would write one file
+    // over the other, and the resolver would list it twice
+    var written = {};
+    for (var w = 0; w < files.length; w++) {
+      if (written[files[w].name]) throw Object.assign(new Error('two sources both become ' + files[w].name + '; rename one in Figma'), { refused: true });
+      written[files[w].name] = true;
+    }
+
     return { files: files, resolver: buildResolver(axes), resolutions: resolutions(axes), report: report };
   }
 
@@ -712,7 +723,7 @@
     paintToken: paintToken, buildPaintStyles: buildPaintStyles, isOpacity: isOpacity,
     isLossy: isLossy, renamedSegments: renamedSegments,
     buildTextStyles: buildTextStyles, fileName: fileName,
-    buildFiles: buildFiles, resolutions: resolutions, buildResolver: buildResolver, VENDOR: VENDOR, WRITTEN_BY: WRITTEN_BY,
+    buildFiles: buildFiles, resolutions: resolutions, buildResolver: buildResolver, VENDOR: VENDOR, WRITTEN_BY: WRITTEN_BY, OURS: OURS,
     verifyReferences: verifyReferences
   };
 
