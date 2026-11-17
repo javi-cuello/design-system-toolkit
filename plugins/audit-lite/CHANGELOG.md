@@ -1,6 +1,12 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.9.0] - 2026-11-17
+### Changed
+- Settings: a loaded context document shows only Remove (no "Change…"), and the settings actions are small secondary buttons, not links (maintainer, workshop dry run).
+- The report offers its files as two .md files, never a zip: the plugin uploads the context document as it is.
+- The same finding on several variants of one component is one row, so repeated runs on one file give the same rows (a dry run split one finding into four rows, then merged it).
+
 ## [0.8.9] - 2026-11-15
 ### Fixed
 - The generated block carries figma-components-audit 2.47.2: text under an opacity bound to a variable that is 0 in every mode is not judged for contrast.

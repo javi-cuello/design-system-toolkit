@@ -300,13 +300,13 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 
 <div class="panel" id="panel-settings" role="tabpanel" aria-label="Settings" hidden>
   <div class="panel-body fields">
-    <fig-header borderless><h3>Context document</h3><fig-button variant="link" id="ctx-pick">Upload…</fig-button></fig-header>
+    <fig-header borderless><h3>Context document</h3><fig-button variant="secondary" id="ctx-pick">Upload…</fig-button></fig-header>
     <fig-field direction="horizontal"><label>Document</label>
-      <div class="value-row"><span class="value" id="ctx-name">No document</span><fig-button variant="link" id="ctx-clear" hidden>Remove</fig-button></div></fig-field>
+      <div class="value-row"><span class="value" id="ctx-name">No document</span><fig-button variant="secondary" id="ctx-clear" hidden>Remove</fig-button></div></fig-field>
     <fig-field direction="horizontal" id="draft-row"><label for="draft">Draft one</label><fig-switch id="draft"></fig-switch></fig-field>
-    <fig-header borderless><h3>Rulings</h3><fig-button variant="link" id="rul-upload">Upload…</fig-button></fig-header>
+    <fig-header borderless><h3>Rulings</h3><fig-button variant="secondary" id="rul-upload">Upload…</fig-button></fig-header>
     <fig-field direction="horizontal"><label>Saved</label>
-      <div class="value-row"><span class="value" id="rul-name">0</span><fig-button variant="link" id="rul-download" hidden>Download</fig-button><fig-button variant="link" id="rul-clear" hidden>Remove</fig-button></div></fig-field>
+      <div class="value-row"><span class="value" id="rul-name">0</span><fig-button variant="secondary" id="rul-download" hidden>Download</fig-button><fig-button variant="secondary" id="rul-clear" hidden>Remove</fig-button></div></fig-field>
   </div>
   <fig-footer><span class="footer-hint" id="settings-hint" role="status">Rulings are saved in this file.</span></fig-footer>
 </div>
@@ -349,7 +349,7 @@ $('save').addEventListener('click', function () { if (last) download(last); });
 // the project's context document: its settings and rulings, remembered for this file on this computer
 function context(name) {
   $('ctx-name').textContent = name || 'No document';
-  $('ctx-pick').textContent = name ? 'Change…' : 'Upload…';
+  $('ctx-pick').hidden = !!name;
   $('ctx-clear').hidden = !name;
   // a document in use needs no draft
   $('draft-row').hidden = !!name; if (name) $('draft').removeAttribute('checked');
