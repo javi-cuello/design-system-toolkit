@@ -108,6 +108,19 @@ function glyph(x) {
 }
 
 
+/* A line's stroke (a shape no wide or no tall, a divider): Figma draws it whatever its alignment, and code draws the one
+   edge (css.mjs), so the alignment shows nowhere and is said by neither: compared without it. */
+function line(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || e.kind !== 'graphic' || !(e.width === 0 || e.height === 0) || !e.border || e.border.align == null) continue;
+    const { align: _, ...border } = e.border;
+    out[id] = { ...e, border };
+  }
+  return out;
+}
+
 /* An icon's size, said two ways: Figma takes the variant of its set at that size (with Size "20"), code sets the width
    (20). Compared as the size: a `Size` that is the instance's own width and height goes, so the width says it. */
 function iconSize(x) {
@@ -188,7 +201,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(room(x))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(room(x)))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }

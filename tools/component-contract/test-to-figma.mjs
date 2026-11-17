@@ -275,4 +275,14 @@ delete globalThis.figma;
     && roundTrip(c({ width: 320, height: 'hug' }), c({ width: 'fill', height: 'hug', canvas: { width: 724 } })).rows.length === 1);
 }
 
+{
+  // a line's stroke alignment shows nowhere (Figma draws a line's stroke however aligned; code draws one edge): not
+  // compared; a box's is
+  const c = (part, align) => ({ component: 'L', props: {}, anatomy: { root: { kind: 'container' }, d: { kind: 'graphic', parent: 'root', ...part, border: { color: 'C/s', width: 'S/1', ...(align && { align }) } } }, variants: [] });
+  ok('a line\'s stroke alignment is not compared; a box\'s is',
+    roundTrip(c({ width: 0, height: 'fill' }, 'center'), c({ width: 0, height: 'fill' })).rows.length === 0
+    && roundTrip(c({ width: 'fill', height: 0 }), c({ width: 'fill', height: 0 }, 'center')).rows.length === 0
+    && roundTrip(c({ width: 10, height: 10 }, 'center'), c({ width: 10, height: 10 })).rows.length === 1);
+}
+
 console.log(`${n}/${n} passed`);
