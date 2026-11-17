@@ -1501,6 +1501,21 @@ async function main() {
         anatomy[id] = x;
       }
       for (const [id, e] of ring) anatomy[`${id === 'root' ? '' : `${id}/`}focusRing`] = { ...e, order: Object.values(anatomy).filter((y) => y.parent === id).length };
+      // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
+      // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
+      // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
+      // one equal to its component's own is folded below
+      for (const [hid, h] of Object.entries(anatomy)) {
+        const hm = h.kind === 'instance' && mainOf(h.component);
+        if (!hm || Object.keys(anatomy).some((k) => k.startsWith(`${hid}/`))) continue;
+        const M = atProps(hm, h.with || {}), gs = Object.entries(M).filter(([, g]) => g && g.kind === 'graphic');
+        if (gs.length !== 1 || gs[0][1].parent !== 'root' || typeof gs[0][1].background !== 'string' || Object.values(M).filter((g) => g && g.kind !== 'container' && g.kind !== 'graphic').length) continue;
+        const q = `[data-contract-id="${hid}"]`, written = await authoredWidth(L.tab, q, 'color', { raw: true, cache: styles });
+        if (!written || !/var\(/.test(written)) continue;
+        const shown = await call(L.tab, (sel) => { const n = document.querySelector(sel); return n ? getComputedStyle(n).color : null; }, q);
+        const t = shown && await tok('icon', shown, `${hid}.color`, ['color'], hid, false);
+        if (typeof t === 'string' && !/^rgba?\(/.test(t)) { const { parent: _, ...g } = gs[0][1]; anatomy[`${hid}/${g.name ? camel(g.name) : gs[0][0]}`] = { ...g, parent: hid, background: t }; }
+      }
       // each combination in the one spelling, and a placed instance's own styling left to its component, as derive does
       // each of its flats before folding them: so base and variants are cut alike
       // and a layer read inside it that equals its component's there (a contract keeps an override only where it differs)
