@@ -204,6 +204,10 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('a 0 the design leaves unbound stays 0; the zero padding the code leaves unset is said', e.layout.gap === 0 && e.layout.padding && e.layout.padding.start === 0);
   const w = zeroTokens({ layout: { direction: 'row', gap: 'Spacing/0' } }, { layout: { gap: 0 } }, value);
   ok('a zero token the code wrote stays that token, against a design that leaves it unbound', w.layout.gap === 'Spacing/0');
+  const see = (t) => ({ 'C/ghost': 'rgba(0, 0, 0, 0)', 'C/solid': 'rgb(0, 0, 0)', 'C/clear': 'rgb(0 0 0 / 0)', 'C/hex': '#00000000' })[t];
+  ok('a fill the browser reads as none, where the component binds a see-through token there, is that token inside a placed component (never on its own parts); never a solid one',
+    zeroTokens({}, { background: 'C/ghost' }, see, { fill: true }).background === 'C/ghost' && zeroTokens({}, { background: 'C/ghost' }, see).background === undefined && zeroTokens({}, { background: 'C/solid' }, see, { fill: true }).background === undefined && zeroTokens({ background: 'C/x' }, { background: 'C/ghost' }, see).background === 'C/x'
+    && zeroTokens({}, { background: 'C/clear' }, see, { fill: true }).background === 'C/clear' && zeroTokens({}, { background: 'C/hex' }, see, { fill: true }).background === 'C/hex');
   const f = zeroTokens({ layout: { direction: 'row', gap: 'Spacing/8' } }, { layout: { gap: 0 } }, value);
   ok('a gap the code sets above 0 stays what it is', f.layout.gap === 'Spacing/8');
 }

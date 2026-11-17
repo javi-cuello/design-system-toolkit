@@ -127,4 +127,10 @@ ok('a component measured since the accept is held until accepted; one that came 
   const left = leftToCode(t, () => null);
   ok('a placed icon left its own colour (its override taken away) is code\'s to say, where no main holds that colour',
     left('icon.background', { library: null, drawn: 'C/black' }) && !left('icon.background', { library: 'C/x', drawn: 'C/black' }) && !leftToCode({ ...t, anatomy: { ...t.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon', width: 12 } } }, () => null)('icon.background', { library: null, drawn: 'C/black' }) && !leftToCode(t, (n) => (n === 'Icon/plus' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null))('icon.background', { library: null, drawn: 'C/black' })); }
+{ const pill = { contract: 1, component: 'Pill', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column', align: 'start' } } }, variants: [] };
+  const c = { contract: 1, component: 'C', props: {}, anatomy: { root: { kind: 'container' }, p: { kind: 'instance', parent: 'root', component: 'Pill' } }, variants: [] };
+  const left = leftToCode(c, (n) => (n === 'Pill' ? pill : null));
+  ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
+    left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
+    && !leftToCode(c, () => null)('p.layout', { library: { align: 'center' } }) && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
 console.log(`${n} passed`);

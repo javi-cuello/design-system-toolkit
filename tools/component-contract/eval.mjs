@@ -114,7 +114,15 @@ export function leftToCode(contract, mainOf = null) {
   const all = { ...(contract.anatomy || {}), ...Object.assign({}, ...(contract.variants || []).map((v) => v.add || {})) };
   const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component)
     && (contract.variants || []).some((v) => (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null));
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
+  // a placed component's own look the design overrides on the instance (its layout, corners, stroke, effect, clipping,
+  // smoothing): code places a component and leaves its look to its own sheet (to-code's PLACED, code-standard rule 5),
+  // so what the markup cannot pass is code's to say. (Not its fill: on an instance that is an icon's colour, which code
+  // writes, ownColour above)
+  const LOOK = new Set(['layout', 'radius', 'border', 'shadow', 'overflow', 'smoothing']);
+  // (only where the design states one: a look the reading shows and the design leaves to the component is the
+  // component's own sheet drifting, a difference)
+  const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component);
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 

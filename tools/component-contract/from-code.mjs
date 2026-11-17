@@ -274,7 +274,10 @@ export function asShape(x, fa, hasChildren) {
   return x;
 }
 
-export function zeroTokens(e, fe, value) {
+// a token whose value paints nothing (rgba(…, 0), rgb(… / 0), #rrggbb00, transparent): the browser reads no fill there
+const seeThroughIn = (value, t) => { const v = String(value(t) ?? ''); return /rgba?\((?:[^,)]*,){3}\s*0(\.0+)?%?\s*\)$|\/\s*0(\.0+)?%?\s*\)$|^\s*transparent\s*$/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); };
+
+export function zeroTokens(e, fe, value, { fill = false } = {}) {
   const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
   const unbound = (v) => v == null || typeof v === 'number';
   const zeroish = (t) => { const v = val(t); return v === 0 || v === '0'; };
@@ -293,6 +296,10 @@ export function zeroTokens(e, fe, value) {
     if (path[1] === 'padding' && !e.layout.padding) e.layout.padding = { top: 0, end: 0, bottom: 0, start: 0 };
     if (have == null ? zeroish(want) : val(want) === have) put(e, path, want);
   }
+  // inside a placed component (`fill`), a fill its component binds to a see-through token (a ghost button's rest) the
+  // browser reads as none: that token. (Not on this component's own parts, whose design may draw no fill at some props,
+  // a drop area's while dragging: the compare rows say those)
+  if (fill && e.background == null && typeof fe.background === 'string' && fe.background.includes('/') && seeThroughIn(value, fe.background)) e.background = fe.background;
   return e;
 }
 
@@ -1583,7 +1590,7 @@ async function main() {
         const inner = Object.fromEntries(Object.keys(anatomy).filter((k) => k.startsWith(`${hid}/`)).map((k) => [k.slice(hid.length + 1), anatomy[k]]));
         if (!Object.keys(inner).length) continue;
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
-        for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) zeroTokens(e, M[match[rel]], L.value);
+        for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) zeroTokens(e, M[match[rel]], L.value, { fill: true });
       }
       normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
@@ -2086,8 +2093,7 @@ async function main() {
       // a fill or colour the code draws as nothing where the design binds a token that draws the same (a tertiary
       // button's ghost-rest, which is see-through): the design's token, at that combination and every one that holds it
       for (const r of compare) {
-        // see-through: the token's value has no alpha (rgba(…, 0), rgb(… / 0), #rrggbb00, transparent); the browser reads no fill there
-        const seeThrough = (t) => { const v = String(L.value(t) ?? ''); return /rgba?\(.*(,|\/)\s*0(\.0+)?%?\s*\)$|transparent/i.test(v) || /^#[0-9a-f]{6}00$/i.test(v) || /^#[0-9a-f]{3}0$/i.test(v); };
+        const seeThrough = (t) => seeThroughIn(L.value, t);
         if (r.codeValue != null || typeof r.figmaValue !== 'string' || !['background', 'color'].includes(r.field)) continue;
         if (r.verdict !== 'same on screen' && !(r.verdict === 'differs' && seeThrough(r.figmaValue))) continue;
         const f = `${r.figma}.${r.field}`, inWhen = (v) => Object.entries(r.when).every(([k, x]) => String(v.when[k]) === String(x));

@@ -348,6 +348,12 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const unfilled = { root: { kind: 'container' }, m: { kind: 'instance', parent: 'root', component: 'Menu' }, 'm/head': { kind: 'text', parent: 'm', color: 'C/text', order: 0 }, 'm/list': { kind: 'slot', parent: 'm', content: '{list}', order: 1 } };
   ownInsides(unfilled, (n) => (n === 'Menu' ? menu : null));
   ok('and one whose slot shows none of its samples, filled with nothing, hides them: the instance is kept whole', !!unfilled['m/head']);
+  // a footer pinned to the bottom of a dialog the instance makes taller stands lower: its near offset follows from that
+  // height, no override; a far offset that moves is one
+  const dialog = { contract: 1, component: 'Dialog', props: {}, anatomy: { root: { kind: 'container' }, foot: { kind: 'container', parent: 'root', position: 'absolute', absolute: { x: 0, y: 234, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'max' } } } };
+  const tall = (abs) => { const x = { root: { kind: 'container' }, d: { kind: 'instance', parent: 'root', component: 'Dialog', height: 'fill' }, 'd/foot': { kind: 'container', parent: 'd', position: 'absolute', absolute: abs, constraints: { horizontal: 'stretch', vertical: 'max' } } }; ownInsides(x, (n) => (n === 'Dialog' ? dialog : null)); return !!x['d/foot']; };
+  ok('a part pinned to the far edge is no override where only its near offset moves with the instance\'s size; its far offset is',
+    !tall({ x: 0, y: 794, end: 0, bottom: 0 }) && tall({ x: 0, y: 794, end: 0, bottom: 8 }));
   const { asPlaced } = require('./derive.cjs');
   const P = asPlaced({ root: { kind: 'container' }, 'content/icon': { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'root', name: 'Icon' }, 'content/showIconIcon/glyph': { kind: 'graphic', parent: 'content/showIconIcon' } }).M;
   const Q = asPlaced({ root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'content', name: 'Icon' }, 'content/showIconIcon/v': { kind: 'graphic', parent: 'content/showIconIcon' } });

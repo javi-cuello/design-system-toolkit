@@ -526,6 +526,12 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       if (!x) return false;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
       if (look(anatomy[k]) === look(x)) return true;
+      // a part pinned to its parent's far edge (bottom, end) stands where the parent's size puts it: its near offset
+      // follows from that size (a footer pinned to the bottom of a dialog the instance makes taller), so it is no
+      // override; compared without it
+      const pinned = (y) => { if (!y.absolute) return y; const c = y.constraints || {}, a = { ...y.absolute };
+        if (c.vertical === 'max' && a.bottom != null) delete a.y; if (c.horizontal === 'max' && a.end != null) delete a.x; return { ...y, absolute: a }; };
+      if (look(pinned(anatomy[k])) === look(pinned(x))) return true;
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
