@@ -1,6 +1,6 @@
 # Changelog — design-system-research
 
-- 3.10.1 (2026-11-17): Step 8 carries evidence, weighted, into the knowledge base: a disagreement is `contested` with both sides and the project decides, and the article's own recommendation stays in the article (toolkit-standard §D 21 as reworded in 2.42.0).
+- 3.10.1 (2026-11-17): Step 8 carries evidence into the knowledge base by the rules toolkit-standard §D 21 and knowledge/README.md set, read at the time and restated here no more (the old text restated a section shape and "which way the toolkit goes", which had drifted from §D 21); the article's own recommendation stays in the article.
 - 3.10.0 (2026-11-17): deep mode starts from the articles research/ already holds (reads the neighbours, updates the one that asks the question) and ends by correcting every neighbour the finding touches, with its `updated` day; an article reads in 20 minutes at most (about 4,700 words). Case A34.
 - 3.9.0 (2026-11-17): one idea per figure, drawn with real content instead of grey placeholder bars (voice §6, the checklist). Case A33.
 - 3.8.0 (2026-11-17): figures are checked by count (no stretch of over 1,000 words without one before the back matter, an awk in voice §6 and the checklist), and a setup in a tool is shown as a labelled sketch plus numbered steps. Case A32.
