@@ -1213,12 +1213,14 @@ async function main() {
       // a minimum or maximum the code writes (a set size is the size's own, read with the sizing below)
       // (one taken from a var's computed length: kept only where the tokens name it back, never as the length a window gave)
       const viaVar = new Set();
-      for (const e of raw) if (['container', 'slot', 'text'].includes(e.kind)) for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
-        const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true, cache: styles });
+      // (a placed instance's too, on the box in its parent's flow: a host that draws none, display: contents, through its control)
+      const boxOf = async (e) => { const q = `[data-contract-id="${e.id}"]`; return e.kind === 'instance' && await call(L.tab, (s) => { const n = document.querySelector(s); return !!n && getComputedStyle(n).display === 'contents' && !!n.firstElementChild; }, q) ? `${q} > :first-child` : q; };
+      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind)) { const q = await boxOf(e); for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
+        const w = await authoredWidth(L.tab, q, css, { raw: true, cache: styles });
         // (one written as a token, var(): the length it computes to, which the tokens below name back as that token)
-        const own = lengthOf(w), v = own ?? (/^\s*var\(/.test(w || '') ? lengthOf(await call(L.tab, ([q, prop]) => { const n = document.querySelector(q); return n ? getComputedStyle(n).getPropertyValue(prop) : null; }, [`[data-contract-id="${e.id}"]`, css])) : null);
+        const own = lengthOf(w), v = own ?? (/^\s*var\(/.test(w || '') ? lengthOf(await call(L.tab, ([q, prop]) => { const n = document.querySelector(q); return n ? getComputedStyle(n).getPropertyValue(prop) : null; }, [q, css])) : null);
         if (v && !(field in e)) { e[field] = v; if (own == null) viaVar.add(`${e.id}.${field}`); }
-      }
+      } }
       // layout and sizing as the code wrote them, read through the one table (rules.mjs) from the element's and its
       // parent's authored declarations: never a measured box, which keeps no hug or fill (CSSOM gives used pixels).
       // A fixed size keeps the length it renders at, which is the length written; a placed part is phase 5's.
