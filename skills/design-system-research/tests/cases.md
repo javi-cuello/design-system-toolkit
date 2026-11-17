@@ -1,4 +1,4 @@
-# Eval cases — design-system-research (v3.7.1)
+# Eval cases — design-system-research (v3.9.0)
 
 **Walked: 2026-11-16 for 3.7.1** — wording only, from review: A31's fixture names deep mode and its Assert says the included topics count toward Step 1's two to five axes; A1 to A30 unchanged, none asserts on the axis count's source.
 
@@ -303,3 +303,11 @@ Negative: a guide delivered with a stretch of over 1,000 words and no figure, or
 Observed: 2026-11-17 — the spacing guide shipped with one figure in about 8,000 words (the awk prints 1,358 and 5,382); the maintainer asked for more images and a visual Figma setup. With twelve more figures and eight setup steps it prints nothing.
 Traced: 2026-11-17 for 3.8.0 — to deep-mode-voice.md §6 and SKILL.md's quality checklist.
 Walked live: 2026-11-17 on research/foundations/spacing-tokens-by-intent.md: the awk prints nothing; the Figma variables panel and binding are labelled sketches dated November 2026, followed by eight numbered steps.
+
+## A33 · One idea per figure, real content
+Fixture: deep mode, a guide that explains several roles or parts of one object (inset, stack and inline on a card).
+Assert: each idea gets its own figure of the same object, with only that idea shaded and labelled with its token and value; the object carries real content (words in the heading, a price, labelled buttons).
+Negative: one figure marking three ideas in three colours, or text drawn as grey bars.
+Observed: 2026-11-17 — the spacing guide's first card marked all three roles over grey bars; the maintainer called it confusing and asked for separate images with real content.
+Traced: 2026-11-17 for 3.9.0 — to deep-mode-voice.md §6 and SKILL.md's quality checklist.
+Walked live: 2026-11-17 on research/foundations/spacing-tokens-by-intent.md: three figures of one invoice card ("Invoice #1042", "Pay now", "Download"), one role each.
