@@ -407,4 +407,16 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     JSON.stringify(a['i/v']) === '{"kind":"graphic","parent":"i","background":"C/icon"}' && fixed['i/v'].width === 16.67);
 }
 
+{
+  // an icon coloured on its instance (code's way) at the colour its component gives the glyph inside (Figma's way) is the
+  // component's, whole instance or not; a colour the component does not give is the instance's own
+  const main = { component: 'IB', props: {}, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/icon': { kind: 'instance', parent: 'content', component: 'Icon/x', width: 20, height: 20 }, 'content/icon/icon': { kind: 'graphic', parent: 'content/icon', background: 'C/strong' } }, variants: [] };
+  const read = (bg, kind = 'graphic') => ({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'IB' }, 'b/content': { kind: 'container', parent: 'b', background: 'C/own' }, 'b/content/icon': { kind, parent: 'b/content', width: 20, height: 20, ...(kind === 'instance' && { component: 'Icon/x' }), background: bg } });
+  const m = (x) => (x === 'IB' ? main : null);
+  const same = read('C/strong'), other = read('C/danger'), whole = read('C/strong', 'instance');
+  ownInsides(same, m, { partial: true }); ownInsides(other, m, { partial: true }); ownInsides(whole, m, { partial: true, whole: new Set(['b']) });
+  ok('an icon at its component\'s glyph colour is the component\'s; another colour is the instance\'s own',
+    same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && whole['b/content/icon'].background === undefined);
+}
+
 console.log(`${n}/${n} passed`);

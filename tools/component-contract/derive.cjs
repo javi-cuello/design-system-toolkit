@@ -506,13 +506,27 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set() } = {})
     // hides none of them; one left unfilled shows its samples, so a sample not drawn there is hidden after all
     const filled = (p) => { const k = Object.keys(match).find((r) => match[r] === p); return !!k && inner.some((x) => anatomy[x].parent === `${id}/${k}` && !match[x.slice(id.length + 1)]); };
     const sampled = (mk) => { for (let p = M[mk] && M[mk].parent; p && p !== 'root'; p = M[p] && M[p].parent) if (M[p] && M[p].kind === 'slot') return filled(p); return false; };
+    // an icon coloured as code colours it (on the instance, or the svg that stands for it until from-code's asIcon; no
+    // glyph read) at the colour its component gives the one
+    // glyph inside it (Figma's way) is its component's, which Figma does not say on the instance: to-figma's glyph
+    // equivalence, for a reading (from-code), whole or not
+    for (const k of inner) {
+      const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
+      if (!x || x.kind !== 'instance' || !['instance', 'graphic'].includes(e.kind) || e.background == null || x.background != null || inner.some((q) => q.startsWith(k + '/'))) continue;
+      const kids = Object.keys(M).filter((q) => M[q] && M[q].parent === mk), g = kids.length === 1 && M[kids[0]];
+      if (g && g.kind === 'graphic' && g.background === e.background) { const { background: _, ...rest } = e; anatomy[k] = rest; }
+    }
     // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
     if (whole.has(id) || (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk)))) continue;
     const own = (k) => {
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x) return false;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
-      return look(anatomy[k]) === look(x);
+      if (look(anatomy[k]) === look(x)) return true;
+      // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
+      // equivalence, for a reading (from-code)
+      const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
+      return look(sized(anatomy[k])) === look(sized(x));
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
