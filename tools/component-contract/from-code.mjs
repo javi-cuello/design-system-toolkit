@@ -1211,9 +1211,13 @@ async function main() {
       };
       const lengthOf = (v) => { const m = /^\s*(-?[\d.]+)(px|rem)\s*$/.exec(v || ''); return m ? +(+m[1] * (m[2] === 'rem' ? remPx : 1)).toFixed(2) : null; };
       // a minimum or maximum the code writes (a set size is the size's own, read with the sizing below)
+      // (one taken from a var's computed length: kept only where the tokens name it back, never as the length a window gave)
+      const viaVar = new Set();
       for (const e of raw) if (['container', 'slot', 'text'].includes(e.kind)) for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
-        const v = lengthOf(await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true, cache: styles }));
-        if (v && !(field in e)) e[field] = v;
+        const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, css, { raw: true, cache: styles });
+        // (one written as a token, var(): the length it computes to, which the tokens below name back as that token)
+        const own = lengthOf(w), v = own ?? (/^\s*var\(/.test(w || '') ? lengthOf(await call(L.tab, ([q, prop]) => { const n = document.querySelector(q); return n ? getComputedStyle(n).getPropertyValue(prop) : null; }, [`[data-contract-id="${e.id}"]`, css])) : null);
+        if (v && !(field in e)) { e[field] = v; if (own == null) viaVar.add(`${e.id}.${field}`); }
       }
       // layout and sizing as the code wrote them, read through the one table (rules.mjs) from the element's and its
       // parent's authored declarations: never a measured box, which keeps no hug or fill (CSSOM gives used pixels).
@@ -1414,6 +1418,8 @@ async function main() {
         // a corner rounder than the element's longest side asks for a full round: the library's fullest radius
         // a size the code wrote as a token (a column span, the screen's width): that token
         for (const [axis, css] of [['width', ['inline-size', 'width']], ['height', ['block-size', 'height']]]) if (typeof x[axis] === 'number') x[axis] = await tok('size', x[axis], `${id}.${axis}`, css, null, false);
+        // and a minimum or maximum written as a token (a container's max width, the screen's height)
+        for (const [f, css] of [['minWidth', ['min-inline-size', 'min-width']], ['minHeight', ['min-block-size', 'min-height']], ['maxWidth', ['max-inline-size', 'max-width']], ['maxHeight', ['max-block-size', 'max-height']]]) if (typeof x[f] === 'number') { x[f] = await tok('size', x[f], `${id}.${f}`, css, null, false); if (typeof x[f] !== 'string' && viaVar.has(`${id}.${f}`)) delete x[f]; }
         if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
