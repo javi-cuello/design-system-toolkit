@@ -121,6 +121,15 @@ function line(x) {
   return out;
 }
 
+/* A text's words with a space at either end: HTML collapses it (css-text-3 §4.1.1, white-space: normal), so code shows
+   the words alone. Compared trimmed, on both sides; a space inside the words still counts. */
+function words(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) if (e && e.kind === 'text' && typeof e.content === 'string' && e.content !== e.content.trim()) out[id] = { ...e, content: e.content.trim() };
+  return out;
+}
+
 /* An icon's size, said two ways: Figma takes the variant of its set at that size (with Size "20"), code sets the width
    (20). Compared as the size: a `Size` that is the instance's own width and height goes, so the width says it. */
 function iconSize(x) {
@@ -201,7 +210,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(room(x)))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(words(room(x))))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }

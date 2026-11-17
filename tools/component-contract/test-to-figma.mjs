@@ -285,4 +285,11 @@ delete globalThis.figma;
     && roundTrip(c({ width: 10, height: 10 }, 'center'), c({ width: 10, height: 10 })).rows.length === 1);
 }
 
+{
+  // a space at either end of a text shows in neither (HTML collapses it); one inside the words does
+  const t = (content) => ({ component: 'T', props: {}, anatomy: { root: { kind: 'container' }, l: { kind: 'text', parent: 'root', content } }, variants: [] });
+  ok('a text\'s end spaces are not compared; its inner words are',
+    roundTrip(t('Check your inbox. '), t('Check your inbox.')).rows.length === 0 && roundTrip(t('Check  your'), t('Check your')).rows.length === 1);
+}
+
 console.log(`${n}/${n} passed`);
