@@ -1059,7 +1059,8 @@ async function main() {
           const figmaName = n.getAttribute('data-figma-name');
           const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
-          { const r = n.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
+          // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
+          { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
           // a slot holding only words: its text styles kept aside, for where the design draws a text there
           if (filled && !n.children.length) e.asText = { color: s.color, type: typeOf(s), textAlign: s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign };
           n.setAttribute('data-contract-id', id);
@@ -1272,11 +1273,15 @@ async function main() {
         const loose = e.kind === 'text' && !(e.id in shown);
         // any other part gone from the page between the walk and now (a node a transition replaced) is not guessed at
         if (!loose && !(e.id in shown)) { if (!unsized.includes(e.id)) { unsized.push(e.id); notes.push(`${e.id}: left the page before its sizes were read (a node the page replaced); its size is not read`); } continue; }
+        // a host that draws no box of its own (display: contents, a placed button's custom element around its <button>,
+        // code-standard rule 8): its size is the control's, the box in its parent's flow, as to-code writes it there
+        const contents = !loose && shown[e.id][0] === 'contents';
+        const ownSel = contents ? `[data-contract-id="${e.id}"] > :first-child` : `[data-contract-id="${e.id}"]`;
         for (const p of SIZING_CSS) {
-          own[p] = loose ? null : await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, p, { raw: true, cache: styles });
+          own[p] = loose ? null : await authoredWidth(L.tab, ownSel, p, { raw: true, cache: styles });
           up[p] = await authoredWidth(L.tab, loose ? `[data-contract-id="${e.parent}"]` : `[data-contract-up~="${e.id}"]`, p, { raw: true, cache: styles });
         }
-        if (own.display == null && !loose) own.display = shown[e.id][0];
+        if (own.display == null && !loose) own.display = contents ? await call(L.tab, (q) => { const n = document.querySelector(q); return n ? getComputedStyle(n).display : null; }, ownSel) : shown[e.id][0];
         if (up.display == null) up.display = loose ? (shown[e.parent] || [])[0] : shown[e.id][1];
         // the second child in the flow, whose start margin says a gap below 0 (rules.mjs: CSS has none)
         const second = e.layout && raw.filter((x) => x.parent === e.id && x.id in shown && x.position !== 'absolute' && !x.absolute).sort((x, y) => x.order - y.order)[1];
