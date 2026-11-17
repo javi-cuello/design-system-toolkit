@@ -2,7 +2,7 @@
 // @ts-check
 // Runs the components audit's scanner on the open library with the house settings and saves one Markdown report that
 // carries the findings, the rules for judging them and a page to show them. Uploaded to Claude with "show me results",
-// it becomes the fix queue. Reads the file; writes to it only the rulings uploaded (plugin data, off the canvas).
+// it becomes the fix queue. Reads the file and writes nothing to it; the context document is kept on this machine.
 
 const VERSION = '0.11.0';
 
