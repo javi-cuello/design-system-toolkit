@@ -758,7 +758,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           if (e.border.cap && 'strokeCap' in n) n.strokeCap = e.border.cap.toUpperCase();
           const side = (i) => (Array.isArray(e.border.width) ? e.border.width[i] : e.border.width ?? (e.border.sides || {})[['top', 'end', 'bottom', 'start'][i]] ?? 1);
           // a vector has one weight, a box one a side
-          if ('strokeTopWeight' in n) { for (const [i, f] of ['strokeTopWeight', 'strokeRightWeight', 'strokeBottomWeight', 'strokeLeftWeight'].entries()) await num(n, f, side(i)); } else await num(n, 'strokeWeight', side(0));
+          // (its overall weight set first: a box whose overall weight is 0 draws an outside stroke on one side and leaves it
+          // out of what renders, a list item's bottom line gone)
+          if ('strokeTopWeight' in n) { n.strokeWeight = 1; for (const [i, f] of ['strokeTopWeight', 'strokeRightWeight', 'strokeBottomWeight', 'strokeLeftWeight'].entries()) await num(n, f, side(i)); } else await num(n, 'strokeWeight', side(0));
         }
         if (e.smoothing && 'cornerSmoothing' in n) n.cornerSmoothing = e.smoothing;
         // Figma's frames clip by default; the contract says which do

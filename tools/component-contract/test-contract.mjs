@@ -440,4 +440,16 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const up = JSON.parse(JSON.stringify(box)); Object.assign(up.variants[0].children[0], { flip: 'y', x: 0, y: 120, visual: undefined, constraints: 'MIN/MIN' });
   const b = derive(up).anatomy.art;
   ok('a vertical mirror, which the snapshot gives no visual box, stands at its far edge less its height', b && b.flip === 'y' && b.absolute.y === -56); }
+{ // an empty auto layout that hugs keeps its last size (a dialog's empty content): that is its least; one a boolean
+  // fills in another variant only holds a hidden layer, and keeps nothing
+  const frame = (kids, type = 'SLOT') => ({ name: 'Content', type, w: 400, h: 200, layout: 'VERTICAL', pad: [20, 20, 20, 20], gap: 0, align: 'MIN/MIN', sizing: 'FILL/HUG', children: kids });
+  const spec = (second) => ({ name: 'D', id: '9:2', props: { Show: 'BOOLEAN', Size: ['md'] }, links: { Show: { kind: 'visible', layers: [['Content', 'Body']] } },
+    variants: [{ name: 'Size=md', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([])] }, ...second] });
+  const empty = derive(spec([])).anatomy.content;
+  const shown = derive(spec([{ name: 'Size=md, Show=True', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([{ name: 'Body', type: 'TEXT', w: 360, h: 160 }])] }])).anatomy.content;
+  ok('an empty hugging frame keeps its size as its least; one a variant fills does not', empty.minHeight === 200 && !('emptyKept' in empty) && shown.minHeight === undefined && !('emptyKept' in shown));
+  const two = spec([]); two.props.Size = ['md', 'lg']; two.variants.push({ name: 'Size=lg', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([{ name: 'Body', type: 'TEXT', w: 360, h: 160 }])] });
+  ok('another variant filling a part of that name leaves this one\'s kept size', derive(two).anatomy.content.minHeight === 200);
+  const plain = spec([]); plain.variants[0].children = [frame([], 'FRAME')];
+  ok('a plain frame recorded empty keeps nothing (its layers may be hidden ones the walk skipped)', derive(plain).anatomy.content.minHeight === undefined); }
 console.log(`${n}/${n} passed`);

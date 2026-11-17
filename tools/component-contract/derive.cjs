@@ -48,7 +48,7 @@ const TEXT_ALIGN = { LEFT: 'start', CENTER: 'center', RIGHT: 'end', JUSTIFIED: '
    an unbound one is the number Figma drew. Position (x, y) and the size a
    hug or fill resolves to are drawing, not intent, and are left to the
    snapshot. */
-function element(n, parent, known) {
+function element(n, parent, known, up = null) {
   const b = n.bindings || {};
   const e = { kind: KIND[n.type] || 'graphic' };
   if (parent) e.parent = parent;
@@ -74,6 +74,19 @@ function element(n, parent, known) {
     if (!parent && (w === 'FILL' || h === 'FILL')) e.canvas = { ...(w === 'FILL' ? { width: n.w } : {}), ...(h === 'FILL' ? { height: n.h } : {}) };
   }
   for (const k of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (n[k] != null) e[k] = b[k] ?? n[k];
+  // an empty slot that hugs, or the empty sample frame a slot holds, keeps the size it last had (Figma's way: a
+  // dialog's empty content at 200): that size is its least, where it is more than its padding. Only there: any other
+  // frame the walk records empty may hold layers it skipped as hidden (a text field's label container), its size
+  // theirs
+  const slotty = n.type === 'SLOT' || (n.type === 'FRAME' && up && up.type === 'SLOT');
+  if (slotty && n.layout && n.sizing && !(n.children || []).length && Array.isArray(n.pad)) {
+    const [w, h] = String(n.sizing).split('/');
+    const kept = [];
+    if (w === 'HUG' && n.minWidth == null && n.w > n.pad[1] + n.pad[3] + 0.5) { e.minWidth = n.w; kept.push('minWidth'); }
+    if (h === 'HUG' && n.minHeight == null && n.h > n.pad[0] + n.pad[2] + 0.5) { e.minHeight = n.h; kept.push('minHeight'); }
+    // (checked against every variant in anatomies: one a boolean fills elsewhere only holds hidden layers here)
+    if (kept.length) e.emptyKept = kept;
+  }
   // placed out of the flow, at its point in its parent
   if (n.absolute) { e.position = 'absolute'; if (n.x != null) e.absolute = boxAt(n); }
   // how it follows its parent's size where no auto layout places it (snapshot 0.61.0 on): a ring stretched round its box
@@ -284,9 +297,9 @@ function flatten(list, characters = new Map(), known = []) {
   const out = {};
   const nodeAt = new Map(list.map((x) => [keyOf(x.segs), x.node]));
   for (const { node, segs, parent, order } of list) {
-    const e = element(node, parent == null ? null : idOf(parent), known);
     // in a box no auto layout places (nor an instance, whose own layers it are), a part is at its point in it
     const up = parent == null ? null : nodeAt.get(keyOf(parent));
+    const e = element(node, parent == null ? null : idOf(parent), known, up);
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
     if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
     // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
@@ -404,6 +417,14 @@ function anatomies(trees, characters, known, L, mains = null, found = null) {
   }
   // the one spelling first, so an instance and its component are compared alike
   for (const f of flat) normalForm(f.anatomy);
+  // an empty auto layout's kept size stands only where no variant (a boolean's flipped tree among them) draws anything
+  // in it: one that holds a layer elsewhere holds it hidden here, and its size is that layer's room, not its own
+  // (a variant and its booleans' trees, each flipped from it: another variant filling a part of the same name says
+  // nothing of this one's, a dialog's immersive content beside its default's empty one)
+  const base = (i) => (trees[i].from != null && trees[i].from >= 0 ? trees[i].from : i);
+  const filled = new Map();
+  flat.forEach((f, i) => { const s = filled.get(base(i)) || new Set(); for (const x of Object.values(f.anatomy)) if (x && x.parent) s.add(x.parent); filled.set(base(i), s); });
+  flat.forEach((f, i) => { for (const [k, x] of Object.entries(f.anatomy)) if (x && x.emptyKept) { if (filled.get(base(i)).has(k)) for (const m of x.emptyKept) delete x[m]; delete x.emptyKept; } });
   // (`found`: a Map, by each variant's `when`, of the instances its insides are kept whole in)
   if (mains) for (const f of flat) { const here = found ? new Set() : null; ownInsides(f.anatomy, mains, { found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
   return flat;

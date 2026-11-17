@@ -210,7 +210,11 @@ function draw(where, label, into, only, retry = true) {
   // and it is drawn once more after the rest
   const unanswered = [];
   const failed = (folder, what, out) => { console.log(`${folder}: ${what} — ${out.trim().split('\n').pop()}`); process.exitCode = 1; if (++fails < 3) return false; console.log('three failures in a row: stopped'); process.exitCode = 1; return true; };
-  for (const { folder, contract } of contracts(where)) {
+  // a component Figma never publishes (`_`, `.`) is placed from its own page in the scratch file, so it is drawn before
+  // the components that place it: a modal drawn first placed its dialog as it was before this run
+  const unpublished = (c) => /^[_.]/.test(c.component || '');
+  const order = contracts(where).sort((a, b) => unpublished(b.contract) - unpublished(a.contract));
+  for (const { folder, contract } of order) {
     if (only.length && !only.includes(folder)) continue;
     const file = path.join(dir, `${folder}.json`);
     fs.writeFileSync(file, JSON.stringify(contract, null, 2) + '\n');
