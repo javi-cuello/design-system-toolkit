@@ -333,4 +333,12 @@ ok('a placed component stretched by its insets takes no size from its main', dec
     variants: [{ when: { state: 'focus' }, add: { focusRing: { kind: 'graphic', shape: 'rectangle', parent: 'root', position: 'absolute', absolute: { x: -2, y: -2, end: -2, bottom: -2 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'C/f', width: 2, align: 'inside' }, radius: 8 } } }] };
   const css = toCss(dc, 'drop', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
   ok('a ring on a box with a dashed stroke is drawn by a box of its own; the box keeps its dash and its own outline', /::after \{[^}]*border-radius: inherit;[^}]*outline: /.test(css) && !/:focus-visible[^{]*\{[^}]*outline: none/.test(css) && /outline: 1px dashed/.test(css)); }
+{ const c = { contract: 1, component: 'Pick', props: { state: { type: 'enum', values: ['rest', 'focus'], default: 'rest', role: 'interaction', pointer: ['focus'] } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, down: { kind: 'container', parent: 'root', width: 20, height: 20, order: 0 }, 'down/dot': { kind: 'container', parent: 'down', width: 4, height: 4 } },
+    variants: [{ when: { state: 'focus' }, remove: ['down', 'down/dot'], add: { up: { kind: 'container', parent: 'root', width: 20, height: 20, order: 0 } } }] };
+  const css = toCss(c, 'pick');
+  const lg = { ...c, props: { ...c.props, size: { type: 'enum', values: ['md', 'lg'], default: 'md' } }, variants: [...c.variants, { when: { size: 'lg' }, set: { 'down.layout': { direction: 'row' } } }] };
+  ok('and stays hidden where a rule of the same weight gives the part a display of its own (a layout at a size)', selfCheck(lg, rulesOf(lg).rules).length === 0);
+  ok('a part a pointer state takes away is hidden by the sheet at that state, its insides with it, once',
+    /:focus-visible[^{]*> \.pick__down \{[^}]*display: none/.test(css) && !/pick__dot \{[^}]*display: none/.test(css) && (css.match(/display: none/g) || []).length === 1); }
 console.log(`${n} passed`);

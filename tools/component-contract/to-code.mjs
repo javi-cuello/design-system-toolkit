@@ -515,6 +515,15 @@ function cascade(rules, full, id) {
 }
 
 /* The contract's rules: the defaults, then each variant layer, each saying only what it changes. */
+// the parts a pointer state takes away at this combination (outermost only): drawn with the state at its default, gone
+// at this one
+function pointerGone(c, full, dflt, mains) {
+  const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
+  if (!pk || full[pk] === dflt[pk] || !(c.props[pk].pointer || []).includes(full[pk])) return [];
+  const at = { ...full, [pk]: dflt[pk] }, rest = drawn(c, at, mains), restA = expand(c, at), nowA = expand(c, full);
+  return Object.keys(rest).filter((id) => restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
+}
+
 export function rulesOf(c, mains) {
   const dflt = variantDefaults(c);
   const layers = [{ when: {} }, ...(c.variants || []).filter((v) => !v.combination), ...(c.variants || []).filter((v) => v.combination)]
@@ -534,6 +543,9 @@ export function rulesOf(c, mains) {
       for (const [p] of given) if (!decls.has(p) && given.get(p).v !== 'unset') own.set(p, { v: 'unset' });
       if (own.size) parts[id] = own;
     }
+    // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
+    // state, so the sheet hides it there (to-markup names it pointerGone); the outermost part gone, its insides with it
+    for (const id of pointerGone(c, full, dflt, mains)) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
     if (Object.keys(parts).length || !rules.length) rules.push({ when, weight: Object.keys(when).length, parts });
   }
   // CSS decides by specificity where the contract applies its layers in order, so a combination the two read
@@ -568,6 +580,8 @@ export function selfCheck(c, rules, mains) {
       for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v, ...(d.knob && { knob: d.knob }) });
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
+    // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
+    for (const id of pointerGone(c, full, dflt, mains)) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
   }
   return out;
 }
