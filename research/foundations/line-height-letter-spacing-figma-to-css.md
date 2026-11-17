@@ -155,7 +155,7 @@ Picture a scale of twelve type sizes. In percentage it needs three or four ratio
 - It maps directly onto CSS's unitless form.
 - It records intent. "Body text is one and a half times its size" is a decision; "body text has a 24px line box" is the arithmetic result of one, with the reasoning gone.
 
-The large cost is that percentage line heights can't be bound to Figma variables. [Typography variables](https://forum.figma.com/t/launched-typography-variables/48430), launched in April 2024, take only numbers, and a number applied to line height is read as pixels.
+The large cost is that percentage line heights can't be bound to Figma variables. [Typography variables](https://forum.figma.com/t/launched-typography-variables/48430), launched on 16 April 2024 for font family, weight and style, size, line height, letter spacing, and paragraph spacing and indent, store line height as a number or nothing (family and style take strings), and a number applied to line height is read as pixels.
 
 The [request to allow percentages](https://forum.figma.com/suggest-a-feature-11/allow-percentages-for-line-height-21970) has been open since April 2024, with a staff note that it is "on the team's radar" and no date, and [Config 2026](https://www.figma.com/blog/config-2026-recap/) said nothing about typography variable units. A third-party plugin, Line Height Tokens, converts unitless number variables to proportional line height, a workaround rather than a binding. A system that requires line height to be a token with modes has no percentage route today.
 
@@ -306,7 +306,7 @@ Turn vertical trim on in Figma and ship `text-box` in CSS, and check your projec
 |---|---|---|
 | Line height 150% on 16px type | `line-height: 1.5` | `150%`, `24px`, `1.5rem` |
 | Line height 24px on 16px type | `line-height: 1.5` | `24px` |
-| Line height Auto | `line-height: normal`, and pin a real number if the spacing matters | a guessed px value |
+| Line height Auto | nothing: stop the export and ask for a real number | `normal`, a guessed px value |
 | Letter spacing 2% | `letter-spacing: 0.02em` | `2%` (valid CSS, wrong denominator), `0.32px`, `0.02rem` |
 | Letter spacing -0.5px on 16px type | `letter-spacing: -0.031em` | `-0.5px` |
 | Tracking -20 (print convention) | `letter-spacing: -0.02em` | `-20`, `-20px` |

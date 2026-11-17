@@ -51,7 +51,7 @@ There are three ways to number a scale.
 
 The catch with multiplier names is that bases differ. Atlassian's `space.200` is 16px; Polaris's `space-200` is 8px. Spectrum uses the same shape of name as an index, so its `spacing-200` is 12px.
 
-How many steps? Closed scales in shipping systems run from 9 (Radix, Ant Design) to 19 (Primer), with Carbon at 13 and Polaris at 18. The base is 4px in most; Atlassian, Carbon and USWDS call 8px the base but add 2, 4 and 6px steps below it, which makes them 4px scales in practice. GOV.UK alone steps by 5px.
+How many steps? Closed scales in shipping systems run from 9 (Radix, Ant Design) to 19 (Primer), with Carbon at 13 and Polaris at 18 (`space-0` to `space-3200`). The base is 4px in most; Atlassian, Carbon and USWDS call 8px the base but add 2, 4 and 6px steps below it, which makes them 4px scales in practice. GOV.UK alone steps by 5px.
 
 Take an illustrative ten-step scale where a 20px step arrives late, written in all three schemes.
 
@@ -95,7 +95,7 @@ Shipping systems name these roles in different words, and the words matter less 
 
 Atlassian's recent move is the useful story. For years its spacing page gave usage bands in prose (0 to 8px inside components, 32 to 80px for page layout), and prose cannot be linted: nothing can tell whether `space.200` was used as a gap or as an inset. Now `@atlaskit/tokens` 20.12 adds experimental `space.gap.*` and `space.inset.*` tokens, each description warning against using one where the other belongs.
 
-The counter-story is Carbon. Before v11 it had a second scale, `$layout-01` to `$layout-07`, for space between larger regions. v11 folded it into the spacing scale (issue #5602): `$layout-01` became `$spacing-05`, both 16px. A context-named scale that only repeats the primitive values, never changing for any mode, adds a second name and no meaning. That is the test any role has to pass.
+The counter-story is Carbon. Before v11 it had a second scale, `$layout-01` to `$layout-07`, for space between larger regions. v11 folded it into the spacing scale (issue #5602): `$layout-01` became `$spacing-05` (16px) and `$layout-07` became `$spacing-13` (160px). A context-named scale that only repeats the primitive values, never changing for any mode, adds a second name and no meaning. That is the test any role has to pass.
 
 > **Aside.** Every Layout and Braid split inset from gap with component boundaries instead of token names: layout components own every gap, and Braid ships one role name, `gutter`. The two combine, as [space in layouts](#space-in-layouts) shows.
 
@@ -225,7 +225,7 @@ A few more traps live inside components:
 
 - **Optical nudges.** Fluent drops a button's padding when it holds only an icon, and Carbon widens the end padding to leave room for one. Without a named place for these, hard-coded nudges spread.
 - **Nested radius.** An inner corner takes the outer radius minus the padding; [corners inside corners](corner-radius-by-intent.md#corners-inside-corners) has the arithmetic and the systems that document it.
-- **The text box.** Figma measures padding from the text layer's box; CSS adds half-leading above and below the text. `text-box-trim` closes that gap and became Baseline in August 2026.
+- **The text box.** CSS adds half-leading above and below the text that Figma's padding doesn't see; [vertical trim](../foundations/line-height-letter-spacing-figma-to-css.md#vertical-trim) covers it and `text-box-trim`.
 - **Touch targets.** A compact control can look 20px and still needs a 24px target (WCAG 2.5.8). Primer keeps `control.minTarget.coarse` (44px) apart from the visual size.
 
 **Make control height a token of its own, separate from the spacing scale, and derive block padding from it with the border subtracted; name icon-to-label and label-to-field gaps as roles.** Do the subtraction once, in the component's styles, and write in the component's documentation that the drawn padding includes the border. *Weight: moderate.* Primer, Spectrum and Carbon fix the height; Fluent's padding-only button changes height with the font.
@@ -238,7 +238,7 @@ Between components, the parent owns the gap: a layout component or a layout role
 
 The scene: a card is given `margin-bottom: 24px` so cards stack nicely. Then the card goes into a grid with a 16px gap, and every row is now 40px apart. Put it last in a padded panel and the panel's bottom gets 24px more than its top.
 
-Every Layout states the mechanism: space belongs to the relationship between siblings, so the context should set it, not the element. Its Stack sets `margin-block-start` on every child after the first, so the first and last children carry nothing outward. CSS `gap` does the same without the selector.
+Every Layout states the mechanism: space belongs to the relationship between siblings, so the context sets it, and its Stack is the owl selector that [spacing ownership](../foundations/space-between-prose-elements.md#spacing-ownership) explains; CSS `gap` does the same without a selector.
 
 Most large systems now ship layout components that take spacing tokens as props:
 
@@ -288,7 +288,7 @@ Keep the scale fixed and let roles and layout change with the screen; usually on
 
 The scene: the mobile layout feels loose, and the first instinct is to make the whole spacing scale smaller on phones. Then a 4px icon gap becomes 3px, a 2px offset becomes 1.5px, and the gaps that keep targets apart shrink with them.
 
-GOV.UK shows the sound version. Its responsive spacing map leaves units 0 to 3 (0 to 15px) identical at every width and shrinks only the large ones on mobile: unit 6 is 20px on a phone and 30px from tablet up, unit 9 is 40px and 60px. Every other system read here keeps the scale itself fixed: Polaris varies values through component props, Carbon offers four separate fluid tokens, and Atlassian has no responsive spacing yet.
+GOV.UK shows the sound version. Its responsive spacing map leaves units 0 to 3 (0 to 15px) identical at every width and shrinks only the large ones on mobile: unit 4 is 15px on a phone and 20px from tablet up, unit 6 is 20px and 30px, unit 7 is 25px and 40px, unit 8 is 30px and 50px, unit 9 is 40px and 60px. Every other system read here keeps the scale itself fixed: Polaris varies values through component props, Carbon offers four separate fluid tokens, and Atlassian has no responsive spacing yet.
 
 Fluid spacing is the other route. Utopia generates `clamp()` pairs such as `--space-s: clamp(1.125rem, 1.0739rem + 0.2273vw, 1.25rem)` that grow smoothly between two screen widths. It suits editorial pages, but a Figma variable holds one number per mode, and a DTCG dimension allows only px and rem.
 
@@ -344,7 +344,7 @@ Use the roles where they belong. Inside a control, make height its own token and
 Researched 2026-11-16 from the systems' source files, documentation and migration guides, read that day.
 
 - **Atlassian's `space.gap.*` and `space.inset.*`** are marked experimental in `@atlaskit/tokens` 20.12; names may change before they are stable.
-- **`text-box-trim`** became Baseline in August 2026 per MDN; caniuse lists Chrome 133, Edge 132, Safari 18.2 and Firefox 154.
+- **`text-box-trim`** became Baseline in August 2026 per MDN; MDN's compatibility data lists Chrome and Edge 133, Safari 18.2 and Firefox 154.
 - **Polaris** is archived on GitHub, and its docs redirect to shopify.dev, so the Box documentation was not read.
 - **Not found:** Atlassian's reason for having no role tokens until now. Material 3's layout pages did not resolve, so its margins are unchecked.
 - **Counts** (Primer about 44 role tokens; Spectrum about 387 literals to 88 aliases) were counted from the files by structure and are approximate.

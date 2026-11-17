@@ -88,7 +88,7 @@ Translate it once, in the export transform, with a test that a two-colour fixtur
 
 ## Blur values
 
-For drop shadows, a Figma blur is close enough to copy, since a Figma shadow blur renders about 12% softer than the same number in `box-shadow`; for background and layer blur it isn't, because the CSS value is about half.
+For drop shadows, a Figma blur is close enough to copy, since a Figma shadow blur renders about 12% sharper than the same number in `box-shadow`; for background and layer blur it isn't, because the CSS value is about half.
 
 Say the Card's drop shadow has a blur of 16, and the modal behind it has a frosted backdrop with a background blur of 30. Copying both numbers straight into CSS leaves the shadow nearly right and the backdrop about twice as blurry as designed.
 
@@ -112,7 +112,7 @@ A designer adds Figma's glass effect to a floating toolbar, with a progressive b
 
 Figma's API exposes a progressive blur (`blurType: 'PROGRESSIVE'`) and a glass effect with refraction, depth and dispersion, besides noise and texture. CSS has a uniform `backdrop-filter: blur()`. A progressive blur is bespoke work, stacked `backdrop-filter` layers under `mask-image` gradients; refraction would need an SVG filter referenced from `backdrop-filter` (cross-browser support unchecked).
 
-The trap sits in plain background blur. `backdrop-filter` blurs only up to the nearest backdrop root, any ancestor with a filter, opacity below 1, a mask, a clip path or a blend mode. So a blurred panel inside a 90% opacity wrapper blurs only the wrapper's contents.
+The trap sits in plain background blur. `backdrop-filter` blurs only up to the nearest backdrop root, any ancestor with a filter, opacity below 1, a mask, a clip path, a blend mode or a backdrop filter of its own. So a blurred panel inside a 90% opacity wrapper blurs only the wrapper's contents.
 
 Keep these different. **Keep glass, progressive blur, noise and texture out of component libraries**; none of the systems surveyed ships a token for them. Background blur can stay, halved, with a note on any component that sits inside a translucent container.
 
@@ -160,7 +160,7 @@ This is a Figma fix with a code rule beside it. Update each library frame to the
 
 ## Focus rings
 
-A focus ring is an outside stroke that maps to `outline` with an `outline-offset`, and the element keeps its own radius, because an outline's corners grow by the offset; the whole treatment, from the ring layer in Figma to forced colours, is in [focus indicators](../accessibility/focus-indicators.md#the-rings-css-property).
+A focus ring is an outside stroke that maps to `outline` with an `outline-offset`, and the element keeps its own radius, because the browser grows an outline's corners itself; which edge grows by how much, and the whole treatment from the ring layer to forced colours, are in [focus indicators](../accessibility/focus-indicators.md#the-rings-css-property).
 
 For the handoff arithmetic: the offset is `clear − width`, where `clear` is the distance from the box to the ring's outer edge, so a 2px ring layer 8px wider than the button gives `clear` 4 and offset 2 (`knowledge/code/figma-handoff.md#focus-rings-reading-their-geometry`). **Keep the element's own radius; never copy the ring layer's radius onto it.**
 
@@ -208,7 +208,7 @@ Change Figma for radii: give each component radii that fit the smallest size it 
 | [Frame shadow source](#frame-shadows) | frame plus children unless clipped | `box-shadow` from the box | Change Figma: clip and fill |
 | [Inner shadow](#inner-shadows) | paints over children (tested) | under children | Translate: overlay pseudo-element |
 | [Several shadows](#shadow-stacking-order) | API array: last on top (tested) | first on top | Translate: reverse once |
-| [Shadow blur](#blur-values) | about 12% softer | radius = 2 × std dev | Keep: copy 1:1 |
+| [Shadow blur](#blur-values) | about 12% sharper | radius = 2 × std dev | Keep: copy 1:1 |
 | [Background, layer blur](#blur-values) | double the CSS value | `backdrop-filter`, `filter` | Translate: halve |
 | [Glass, progressive blur, noise](#glass-and-progressive-blur) | native | no primitive | Keep: out of libraries |
 | [Stroke alignment](#stroke-alignment) | inside counted (new version) | the room-taking channel | Change Figma; rule 63 mapping |

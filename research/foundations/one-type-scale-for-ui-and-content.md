@@ -112,7 +112,7 @@ The interface moves one step at a time, where small differences are enough. Cont
 
 The list then has to be rounded, and rounding is where a formula stops being a specification. Rounding 16 × 1.125ⁿ to whole even pixels produces 26, 32 and 42 as well as 28 and 36. A team that keeps only some of them has made a choice the formula doesn't record.
 
-So the systems publish the list. Carbon publishes its scale as code: a function in `scale.ts` that adds a growing increment rather than multiplying, which is why its list reads 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 54, 60. USWDS publishes a literal map from step 1 at 12px to step 20 at 140px. In both, the published artefact is the list, and the ratio is its rationale.
+So the systems publish the list. Carbon publishes its scale as code: a function in `scale.ts` that adds a growing increment rather than multiplying, which is why its list reads 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 54, 60. USWDS publishes a literal map from `micro` at 10px, then step 1 at 12px, to step 20 at 140px. In both, the published artefact is the list, and the ratio is its rationale.
 
 A size chosen off the formula is fine when it's named. A round 48 where the formula gives 46, or a 72 where it gives 74, buys a number people can remember. Say you keep 48 and don't write it down. The next person to extend the scale recomputes the formula, gets 46, and now your system has both.
 
@@ -195,7 +195,7 @@ One weight per role: regular for reading and UI text, semibold for every heading
 
 Size sets a heading's level; weight sets its role. Make the h2 bold and the h3 semibold, and a reader gets two signals that disagree about how different the levels are. The size says one step; the weight says another.
 
-Primer's functional tokens are the clearest statement of one weight per role. `--text-title-weight-large`, `medium` and `small` are all `semibold` (600), `--text-display-weight` is `medium` (500), and `--text-body-weight` is `normal` (400). Atlassian's headings use a custom bold of 653, a reminder that a weight token is a role, not a number from 100 to 900.
+Primer's functional tokens are the clearest statement of one weight per role. `--text-title-weight-large`, `medium` and `small` are all `semibold` (600), `--text-display-weight` is `medium` (500), and `--text-body-weight` is `normal` (400). Atlassian's headings use a custom bold of 653 ([weight in the name](../foundations/naming-text-styles.md#weight-in-the-name)), a reminder that a weight token is a role, not a number from 100 to 900.
 
 Display goes lighter for an optical reason. At 60px and above a semibold stroke is heavy enough to dominate a page, and the size already carries the emphasis. Carbon goes furthest, setting `fluidDisplay01` and its siblings at its light weight.
 
@@ -235,11 +235,7 @@ If Figma parity doesn't matter to you, use the variable font with `font-optical-
 
 Name styles by role and size, never by HTML tag, because the two strides only work if a level isn't a size.
 
-Content's h3 takes Heading sm while a component's h3 may take Heading xs. On a phone, content's h2 may render at the size Heading sm has on a desktop. A style named `h2` can't express any of that.
-
-The prose container is where tags meet styles: it maps each tag to a style, and that mapping is documented as the content role's own. [Heading-level names](../foundations/naming-text-styles-part-2.md#heading-level-names) makes the full argument, with Material, Polaris, CMS.gov and GOV.UK as cases.
-
-Name your styles by role and size, map tags to styles in the prose container, and write the mapping down. **A tag is a level and a style is a size; keep them apart so content and components can map the same tag differently.**
+Content's h3 takes Heading sm while a component's h3 may take Heading xs, which a style named `h2` can't express; [heading-level names](../foundations/naming-text-styles-part-2.md#heading-level-names) makes the full argument. **Map tags to styles in the prose container, and write the mapping down.**
 
 ---
 
@@ -262,7 +258,7 @@ Name your styles by role and size, map tags to styles in the prose container, an
 
 ## The short version
 
-A product with both an interface and articles needs one type scale, not two; Carbon is the system that tried two and merged them. Build yours from a small ratio such as 1.125, round it once, publish the rounded list, and name any size you picked off the formula. Interface text steps through adjacent sizes. Long-form content steps through every other one, which at 1.125 gives the roughly 1.27 ratio between heading levels that GOV.UK and GitHub use; check the result against reading-site ratios before you keep it.
+A product with both an interface and articles needs one type scale, not two; Carbon is the system that tried two and merged them. Build yours from a small ratio such as 1.125, round it once, publish the rounded list, and name any size you picked off the formula. Interface text steps through adjacent sizes. Long-form content steps through every other one, which at 1.125 gives about 1.27 between heading levels, inside the 1.2 to 1.5 range GOV.UK's and GitHub's heading runs climb by; check the result against reading-site ratios before you keep it.
 
 Set line height by role rather than by size: about 1.5 for reading text, 1.3 for labels and one-line UI text, 1.2 for headings and 1.1 for display, written unitless in code. A dense tool that needs every row on a 4px grid can step each size instead, and sizes in multiples of 8 make the two approaches agree.
 

@@ -109,7 +109,7 @@ On the left, each name matches what renders. On the right, none does, and two di
 
 Both failures are real. A developer holding a spec that says "36" and measuring 27px has every reason to log a bug. And points 24 and 27 produce one identical value at exactly the viewport carrying most public-sector traffic.
 
-The values move over time too: [v6 raised the small-screen sizes](https://design-system.service.gov.uk/get-started/new-type-scale/) and removed point 14. When the name is the value, changing the value means renaming the token across government or living with a name that has stopped telling the truth. GOV.UK chose the second; its source now marks point 27 "consider deprecating this size".
+The values move over time too, as GOV.UK's version 6 showed ([protecting small text](../foundations/type-on-a-phone.md#protecting-small-text) has the history and point 27's deprecation note). When the name is the value, changing the value means renaming the token across government or living with a name that has stopped telling the truth, and GOV.UK chose the second.
 
 Points 16 and 19 hold one value at every breakpoint, so the two sizes carrying most body copy have honest names. Value-literal naming is a bet that values won't move: GOV.UK has partly lost it (three of seven points) and partly won it (the two doing the most work).
 

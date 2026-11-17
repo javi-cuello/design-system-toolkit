@@ -180,9 +180,9 @@ The scene's team now has its new model and 600 uses of the old one. The temptati
 
 Four migrations show the parts.
 
-**Carbon v10 to v11** kept every value and changed names: `$layout-01` became `$spacing-05` (1rem), `$layout-07` became `$spacing-13` (10rem). Its stylelint plugin has a `carbon/layout-use` rule with auto-fix and an allow-list for accepted exceptions.
+**Carbon v10 to v11** kept every value and folded `$layout-*` into `$spacing-*`, as [roles on top](../foundations/spacing-tokens-by-intent.md#roles-on-top) tells. Its stylelint plugin has a `carbon/layout-use` rule with auto-fix and an allow-list for accepted exceptions.
 
-**Polaris v11 to v12** renamed with no value change, `--p-space-4` to `--p-space-400` across 16 steps, run as a codemod, then checked with a search for the old names until it found none. The one deliberate value change, a legacy card's padding from 20px to 16px, was documented apart from the rename. Earlier Polaris codemods converted raw `16px` on padding, margin and gap to a token, and left a comment on anything they could not convert.
+**Polaris v11 to v12** renamed with no value change, `--p-space-4` to `--p-space-400` across the 16 steps its migration table renames (the scale now has 18), run as a codemod, then checked with a search for the old names until it found none. The one deliberate value change, a legacy card's padding from 20px to 16px, was documented apart from the rename. Earlier Polaris codemods converted raw `16px` on padding, margin and gap to a token, and left a comment on anything they could not convert.
 
 **Primer** published a table from Sass to custom properties (`$spacer-3` to `--base-size-16`), and for values between steps advised the raw value or the closest step.
 

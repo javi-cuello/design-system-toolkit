@@ -573,11 +573,9 @@ Name by role (`material.chrome`): a role survives a change of thickness, and `ma
 
 ## From Figma to CSS
 
-A Figma background blur and CSS `backdrop-filter` look alike and differ in three ways: the radius is about half in CSS, Figma has no saturation, and CSS blurs only up to the nearest backdrop root.
+A Figma background blur and CSS `backdrop-filter` look alike, but the radius is about half in CSS, Figma has no saturation, and CSS blurs only up to the nearest backdrop root. The conversion is measured in [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently.md#blur-values), and the backdrop root explained in [its glass section](../figma-and-code/where-figma-and-css-render-differently.md#glass-and-progressive-blur). Figma also shows a background blur only when the layer's fill is below 100% opacity; CSS runs `backdrop-filter` whatever the fill, so an opaque fill over a blur wastes its cost.
 
-Figma's background blur value is about twice the matching CSS `blur()` value, so 30 in Figma is about 15 in CSS; the measurements are in [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently.md#blur-values). Figma also shows a background blur only when the layer's fill is below 100% opacity; CSS runs `backdrop-filter` whatever the fill, so an opaque fill over a blur wastes its cost.
-
-The trap that breaks components is the backdrop root. In Figma, a background blur sees every layer drawn behind it. In CSS, `backdrop-filter` sees only back to the nearest ancestor with a filter, an opacity below 1, a mask, a clip path, a blend mode or its own backdrop filter.
+For a material the backdrop root is the trap that breaks components. Here is the same panel drawn in Figma and built in CSS inside a translucent wrapper.
 
 <svg role="img" viewBox="0 0 720 286" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>The same Now playing panel shown twice over the same busy backdrop. Left, as drawn in Figma with a background blur: the shapes behind the panel are softly blurred and the text reads cleanly. Right, as built in CSS with backdrop-filter, but inside a wrapper whose opacity is 0.9, outlined with a red dashed line: the wrapper becomes the backdrop root, the filter has nothing of the page to blur, and the shapes behind show sharp through a plain 70 percent white fill. Colours are illustrative.</title>
@@ -606,7 +604,7 @@ The trap that breaks components is the backdrop root. In Figma, a background blu
 <text x="16" y="30" font-size="14" fill="#1a1a1a" font-weight="600">Same component, two backdrops</text>
 </svg>
 
-On the right, the same component sits in a wrapper with `opacity: 0.9`, which becomes the backdrop root, so the photo shows sharp through a plain 70% fill: the middle card of [Solid, alpha and blur](#solid-alpha-and-blur), by accident. Figma's newer glass effect has no CSS equivalent ([the same article](../figma-and-code/where-figma-and-css-render-differently.md#glass-and-progressive-blur)).
+On the right, the wrapper with `opacity: 0.9` becomes the backdrop root, so the photo shows sharp through a plain 70% fill: the middle card of [Solid, alpha and blur](#solid-alpha-and-blur), by accident.
 
 Halve the blur in the token transform and add `saturate` in code. **Note on any component with a material that it must not sit inside an ancestor with opacity, a filter or a mask.** *Weight: strong.* The backdrop root is in the CSS spec; the note is the cheap way to stop the trap reaching production.
 

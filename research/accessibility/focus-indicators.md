@@ -137,7 +137,7 @@ Here is what shipping systems use:
 | IBM Carbon | 2px | offset | `$focus`: Blue 60 `#0F62FE` in white, white in `g100` |
 | Adobe Spectrum | 2px | 2px | `focus-indicator-color`, plus static white and black variants |
 | Material Web | 3px (4px while pressed) | set by the component | `--md-sys-color-secondary` |
-| GitHub Primer (CSS) | 2px | −2px (inside) on buttons and links; 0 on bare links, radios and checkboxes; text fields use an inset box-shadow | `--focus-outlineColor` |
+| GitHub Primer (CSS) | 2px | −2px (inside) on buttons and links; 0 on bare links, radios and checkboxes; text fields an inset 1px box-shadow (Primer React's: a 2px outline at −1px) | `--focus-outlineColor` |
 | Red Hat | 3px | 3px | `--rh-color-border-interactive` |
 | Microsoft Fluent 2 | 2px | none; just outside the border | `colorStrokeFocus2` |
 
@@ -200,7 +200,7 @@ GOV.UK's yellow `#FFDD00` measures about 1.35:1 against white, which on its own 
 
 The style landed in 2019 ([#1309](https://github.com/alphagov/govuk-frontend/pull/1309), [#1316](https://github.com/alphagov/govuk-frontend/pull/1316)). It is the double ring's guarantee reached with different geometry, loud by design and designed per component. For a product system with a brand palette and dark mode, the double ring buys the same resilience with less work per component; for a public service with a fixed palette, the yellow has a decade of population-scale use behind it.
 
-**Take the compound-indicator principle, which is free, and the geometry that fits your palette.** Quote GOV.UK's hex values from its colour page.
+**Take the compound-indicator principle, free, and the geometry that fits your palette.** Quote GOV.UK's hex values from its colour page.
 
 ---
 
@@ -208,11 +208,15 @@ The style landed in 2019 ([#1309](https://github.com/alphagov/govuk-frontend/pul
 
 Carry the ring with an outline, or a mechanism with an explicit forced-colours override, because a ring drawn only as `box-shadow` disappears in Windows contrast themes for the people who most need it.
 
-Forced-colours mode, the setting behind Windows contrast themes, drops `box-shadow` and keeps `outline`, repainting it in a system colour. C40 warns against shadow-only rings for that reason, and Primer moved from box-shadow to outline partly for it ([primer/css #1744](https://github.com/primer/css/pull/1744)). Where a design needs a shadow, for a two-colour ring or a halo, pair it with `outline: 2px solid transparent`. The toolkit tested this in Chromium's forced-colours emulation on 25 October 2026: the shadow ring drew nothing, and the transparent outline drew the ring ([toolkit: visible focus](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/accessibility.md#visible-focus)). GOV.UK added such outlines for the same reason ([#2264](https://github.com/alphagov/govuk-frontend/pull/2264)).
+Forced-colours mode, behind Windows contrast themes, drops `box-shadow` and repaints outlines, borders and backgrounds in system colours. C40 warns against shadow-only rings, and Primer moved to outline partly for this ([primer/css #1744](https://github.com/primer/css/pull/1744)). Where a design needs a shadow, for a two-colour ring or a halo, pair it with `outline: 2px solid transparent`. In the toolkit's Chromium forced-colours test (25 October 2026) the shadow ring drew nothing and the transparent outline drew the ring ([toolkit: visible focus](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/code/accessibility.md#visible-focus)). GOV.UK added such outlines for the same reason ([#2264](https://github.com/alphagov/govuk-frontend/pull/2264)).
 
-At handoff, an outline's corners grow by its offset and width: in the same Chromium measurement, a `border-radius` of 12 with a 2px outline at offset 2 drew an outer radius of 16. So a card at 16 with a ring layer drawn at 20 keeps 16 on focus; writing 20 on the card draws 24. How corners grow isn't specified yet ([csswg-drafts #8786](https://github.com/w3c/csswg-drafts/issues/8786)), so Firefox and Safari can differ. The offset arithmetic from a Figma ring layer is in [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently.md#focus-rings).
+At handoff, an outline's corners grow: its inner edge sits at the element's radius plus the offset, its outer edge adds the width. Here is a 6px button with a ring at offset 2.
 
-**Put one sentence in every focus spec naming the CSS mechanism, and make sure it survives forced colours.** Give the element its own radius, never the ring layer's, and check the corners in Firefox and Safari.
+<svg role="img" viewBox="0 0 640 138" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0"><title>A Continue button with a 2px-offset focus ring twice: with the ring's inner edge at the button radius, 6, the gap pinches at the corners; at 8, the radius plus the offset, the gap is even all round</title><rect x="0" y="0" width="640" height="138" fill="#ffffff"/><text x="165.0" y="24.0" font-family="sans-serif" font-size="12" fill="#172b4d" text-anchor="middle" font-weight="bold">Ring reuses the button radius</text><rect x="96.5" y="47.5" width="137.0" height="49.0" rx="7.5" fill="none" stroke="#0c66e4" stroke-width="3"/><rect x="100.0" y="51.0" width="130.0" height="42.0" rx="6.0" fill="#0c66e4" stroke="#0c66e4" stroke-width="1.5"/><text x="165.0" y="77.0" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Continue</text><text x="165.0" y="124.0" font-family="monospace" font-size="11" fill="#c9372c" text-anchor="middle" font-weight="bold">button 6 · offset 2 · inner edge 6</text><text x="475.0" y="24.0" font-family="sans-serif" font-size="12" fill="#172b4d" text-anchor="middle" font-weight="bold">Inner edge = 6 + offset</text><rect x="406.5" y="47.5" width="137.0" height="49.0" rx="9.5" fill="none" stroke="#0c66e4" stroke-width="3"/><rect x="410.0" y="51.0" width="130.0" height="42.0" rx="6.0" fill="#0c66e4" stroke="#0c66e4" stroke-width="1.5"/><text x="475.0" y="77.0" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Continue</text><text x="475.0" y="124.0" font-family="monospace" font-size="11" fill="#1f845a" text-anchor="middle" font-weight="bold">button 6 · offset 2 · inner edge 8</text></svg>
+
+At 6 the gap pinches at each corner; at 8 it is even. In the same Chromium test, a radius of 12 with a 2px outline at offset 2 drew an outer radius of 16. So a Figma ring layer bounded by the outer edge carries radius, offset and width: a card at 16 with a ring layer at 20 keeps 16; writing 20 on the card draws 24. Corner growth is unspecified ([csswg-drafts #8786](https://github.com/w3c/csswg-drafts/issues/8786)), so Firefox and Safari can differ; the offset arithmetic is in [where Figma and CSS render differently](../figma-and-code/where-figma-and-css-render-differently.md#focus-rings).
+
+**Put one sentence in every focus spec naming the CSS mechanism, and make sure it survives forced colours.** Give the element its own radius, never the ring layer's; check corners in Firefox and Safari.
 
 ---
 
@@ -220,7 +224,7 @@ At handoff, an outline's corners grow by its offset and width: in the same Chrom
 
 On an input the border is the indicator: thicken it, or recolour it with a measured 3:1 change, rather than stacking border, ring and halo by default.
 
-A ring outside a bordered input gives three concentric lines. Two shipping patterns use the border alone. Here is a resting input, then the same input recoloured and thickened.
+A ring outside a bordered input gives three concentric lines; two shipping patterns use the border alone. Here is a resting input, then the same input recoloured and thickened.
 
 <svg role="img" viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;margin:2em 0" font-family="system-ui, sans-serif">
 <title>Three text inputs. Resting: a 1px mid-grey border. Recoloured: the same 1px border turned mid-blue, about 1.4:1 against the resting grey, so the colour change does no measurable work. Thickened: a 3px near-black border drawn inside, whose new pixels replaced white fill, so the change reads without colour.</title>
@@ -241,7 +245,7 @@ A ring outside a bordered input gives three concentric lines. Two shipping patte
 <text x="440" y="154" font-size="12" fill="#1b7f3b">New pixels replaced white fill</text>
 </svg>
 
-The recoloured field looks focused to someone who sees the blue, and measures as almost no change. The thickened one changes shape as well as colour.
+The recoloured field looks focused to someone who sees the blue, yet measures as almost no change; the thickened one changes shape too.
 
 **Thickening** is GOV.UK's pattern: the border gets thicker inside the yellow outline. Geometry carries the change, which helps people who can't tell the hues apart, and it clears the AAA area test because the new pixels used to be white fill. In Figma, an inside stroke whose weight changes between variants models it; on frames created from July 2026 an inside stroke counts in layout by default, so a heavier stroke grows a hugging frame unless it is excluded from layout ([stroke alignment](../figma-and-code/where-figma-and-css-render-differently.md#stroke-alignment)).
 
@@ -253,7 +257,7 @@ The recoloured field looks focused to someone who sees the blue, and measures as
 | Mid-grey `#7D7D7D` to mid-blue `#1064CD` | ~1.4:1 | Fails; only thickening carries it |
 | Red error border to black, GOV.UK before its fix | 2.75:1 | Failed and was fixed |
 
-The grey-to-blue row is the ordinary case: the colour change does nothing measurable, and the thickening does all the work. The last row is the story in [focused fields in error](#focused-fields-in-error).
+The grey-to-blue row is the ordinary case: the thickening does all the work. The last row is the story in [focused fields in error](#focused-fields-in-error).
 
 **Thicken when the state must read without colour vision; recolour only when you can prove the 3:1 change.** Keep an outer ring only when the border can do neither, or to match buttons exactly.
 
@@ -263,7 +267,7 @@ The grey-to-blue row is the ordinary case: the colour change does nothing measur
 
 A ring can have a glow as decoration, if the solid ring passes every test on its own and is audited with the glow hidden; the glow may touch the ring.
 
-A designer's mock shows a soft blue halo around a focused field. It looks finished, and it can't be certified: a translucent glow's colour is a blend with whatever is behind it, forced colours deletes it if it is a shadow, and a glow with no ring at all, as in Bootstrap's long-standing default, leaves nothing solid to measure.
+A designer's mock shows a soft blue halo around a focused field. It looks finished, and it can't be certified: a translucent glow's colour is a blend with whatever is behind it, forced colours deletes it as a shadow, and a glow with no ring at all, as in Bootstrap's long-standing default, leaves nothing solid to measure.
 
 If the glow touches the ring, the ring's 3:1 is measured against the glow; a same-hue glow lands around 4:1 in practice. Deque's Cauldron pairs a 2px purple outline with a glow on fields ([Deque](https://www.deque.com/blog/give-site-focus-tips-designing-usable-focus-indicators/)), and Ant Design's inputs recolour the border and add a tinted spread through `controlOutline` ([ant-design #21389](https://github.com/ant-design/ant-design/issues/21389)). In both a solid element does the state work, and the glow is texture.
 
@@ -340,7 +344,7 @@ Offset the ring. With a gap of page around the component, the ring is measured a
 
 When a mode mixes light and dark surfaces, or a ring lands on an image, use two 2px bands at least 9:1 apart, which is C40. Use `:focus-visible` everywhere, and test the custom widgets you sit inside with a mouse.
 
-Ship the ring as an outline, or keep a transparent outline beside any shadow, because forced colours deletes shadows. Keep the element's own radius, since outline corners grow by the offset.
+Ship the ring as an outline, or keep a transparent outline beside any shadow, because forced colours deletes shadows. Keep the element's own radius; the browser grows the outline's corners.
 
 On inputs the border is the indicator: thicken it, or recolour with a measured 3:1 change, and know which one carries it. On errors, keep focus unchanged and thin the error border, as GOV.UK did after measuring 2.75:1. A ring that vanishes on a button touches the button; one missing in a contrast theme was a plain shadow; one too round in code took the Figma ring's radius.
 
@@ -351,7 +355,7 @@ On inputs the border is the indicator: thicken it, or recolour with a measured 3
 Researched August 2026 and re-checked in November 2026.
 
 - **Re-read in November 2026.** The Selectors 4 `:focus-visible` heuristics; Red Hat's focus page (its tokens were renamed to the interactive border set); Atlassian's focus tokens in `llms-tokens.txt`; the WCAG 2.2 history and the 10 September 2026 WCAG 3 draft; `contrast-color()` Baseline in April 2026; Primer CSS's focus mixins.
-- **Corrections.** An earlier version advised plain `:focus` for retained components; the Selectors 4 heuristics overturned it. It also gave Primer's offset as 0 on form fields and 2px on buttons; `primer/css` uses −2px on buttons and links, 0 on bare links, radios and checkboxes, and an inset box-shadow on text fields.
+- **Corrections.** An earlier version advised plain `:focus` for retained components (the Selectors 4 heuristics overturned it) and gave Primer's offsets wrongly; the table now has them.
 - **EN 301 549 v4.1.1.** Date and status come from secondary reports; re-check whether the Commission has cited it in the Official Journal.
 - **GOV.UK's colours.** The focus page gives no hex values; take them from the colour page after the late-2025 renaming.
 - **`:focus-visible` heuristics** are non-normative; re-test custom retained widgets when browsers change them.
@@ -387,7 +391,7 @@ Researched August 2026 and re-checked in November 2026.
 - [Adobe `spectrum-design-data`, `layout.json`](https://github.com/adobe/spectrum-design-data/blob/main/packages/tokens/src/layout.json) and [`button.json`](https://github.com/adobe/spectrum-design-data/blob/main/packages/design-data/components/button.json).
 - [IBM Carbon themes, `white.ts`](https://github.com/carbon-design-system/carbon/blob/main/packages/themes/src/v10/white.ts) and [`g100.ts`](https://github.com/carbon-design-system/carbon/blob/main/packages/themes/src/v10/g100.ts).
 - [Material Web, focus ring](https://github.com/material-components/material-web/blob/main/docs/components/focus-ring.md).
-- [Primer CSS #1744](https://github.com/primer/css/pull/1744); [`base.scss`](https://github.com/primer/css/blob/main/src/base/base.scss) and [`mixins/misc.scss`](https://github.com/primer/css/blob/main/src/support/mixins/misc.scss) (focus offsets, read November 2026).
+- [Primer CSS #1744](https://github.com/primer/css/pull/1744); [`base.scss`](https://github.com/primer/css/blob/main/src/base/base.scss) and [`mixins/misc.scss`](https://github.com/primer/css/blob/main/src/support/mixins/misc.scss) (focus offsets, read November 2026); [`form-control.scss`](https://github.com/primer/css/blob/main/src/forms/form-control.scss) and Primer React's [`TextInputWrapper.module.css`](https://github.com/primer/react/blob/main/packages/react/src/internal/components/TextInputWrapper.module.css) (text-field focus, read 17 November 2026).
 - Microsoft `fluentui`: [`lightColor.ts`](https://github.com/microsoft/fluentui/blob/master/packages/tokens/src/alias/lightColor.ts), [`tab.styles.ts`](https://github.com/microsoft/fluentui/blob/master/packages/web-components/src/tab/tab.styles.ts), [Focus indicator doc](https://github.com/microsoft/fluentui/blob/master/apps/public-docsite-v9/src/Concepts/Accessibility/FocusIndicator.mdx).
 - [Ant Design #21389](https://github.com/ant-design/ant-design/issues/21389).
 - [Deque, *How To Design Useful and Usable Focus Indicators*](https://www.deque.com/blog/give-site-focus-tips-designing-usable-focus-indicators/).

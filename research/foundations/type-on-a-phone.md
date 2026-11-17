@@ -121,7 +121,7 @@ The rem part doubled; the vw part didn't.
 
 Stepped sizes do something similar: at 200% a 1280px window crosses GOV.UK's breakpoint and swaps the 48px heading for 32, rendered at 64 device pixels, 1.33 times the original.
 
-WCAG's understanding document allows this: 200% need only be reachable "in some way". Browsers zoom to 500%, so a size that never shrinks below 0.4 of its largest value can always reach twice that value. GOV.UK's shrinks (0.67) and Carbon's (0.53) clear it. The toolkit's fluid-type rule, after [Smashing's analysis](https://www.smashingmagazine.com/2023/11/addressing-accessibility-concerns-fluid-type/), says the same the other way round: the largest size within about 2.5 times the smallest.
+WCAG's understanding document allows this: 200% need only be reachable "in some way". Browsers zoom to 500%, so a size that never shrinks below 0.4 of its largest value can always reach twice that value. GOV.UK's deepest shrink (0.66, point 80 to 53) and Carbon's (0.53) clear it. The toolkit's fluid-type rule, after [Smashing's analysis](https://www.smashingmagazine.com/2023/11/addressing-accessibility-concerns-fluid-type/), says the same the other way round: the largest size within about 2.5 times the smallest.
 
 > **Aside.** The 0.4 bound is derived from WCAG's understanding text and browsers' 500% limit; it isn't a WCAG rule. A stricter reading of 1.4.4 that requires 200% at 200% zoom would fail any breakpoint shrink, GOV.UK's included.
 
@@ -145,7 +145,7 @@ Hold your body text on a phone. **A desktop reading size of 18 can hold too**, a
 
 The large ones do and the small ones hold: a gap tied to the body (paragraph, list item) holds when the body holds, and a gap tied to a heading shrinks with the heading.
 
-[GOV.UK's responsive spacing scale](https://design-system.service.gov.uk/styles/spacing/) is the one primary source that encodes the split. Units 1 to 3 (5, 10 and 15px) are identical at every width; unit 4 drops from 20 to 15, unit 6 from 30 to 20, unit 8 from 50 to 30. Applied to its prose, the space above a large heading falls from 40 to 30 and below it from 30 to 20, the same quarter to a third the headings shrink by. Tailwind's presets scale every gap in em with the body; USWDS's em-based gaps hold because its sizes hold.
+[GOV.UK's responsive spacing scale](../foundations/spacing-tokens-by-intent.md#responsive-spacing) is the one primary source that encodes the split: its small units hold at every width and its large ones shrink on mobile. Its large units shrink by a third or more on a phone (unit 6 from 30 to 20, unit 7 from 40 to 25), close to the third its large headings shrink by. Tailwind's presets scale every gap in em with the body; USWDS's em-based gaps hold because its sizes hold.
 
 What must not shrink is the ordering in [space between prose elements](../foundations/space-between-prose-elements.md#origins-of-prose-spacing): every heading's space above still has to clearly exceed the paragraph gap.
 
@@ -222,7 +222,7 @@ Most of this sits inside the evidence. **Check the desktop scale against the evi
 
 The evidence pushes back at the measure, which is too wide for the body; two first drafts were already corrected, and four smaller choices are judgement calls.
 
-At 18px, Inter sets about 87 characters on a 720px line, past WCAG 1.4.8's 80 and the toolkit's 65 to 75. The arithmetic and the fix (600 to 640px, or `max-inline-size: 36em`) are in [column width](../foundations/space-between-prose-elements.md#column-width).
+At 18px, Inter sets about 87 characters on the worked example's 720px line, too wide for the toolkit's 65 to 75; [column width](../foundations/space-between-prose-elements.md#column-width) has the arithmetic and the fix.
 
 The project had already corrected two first drafts. Code blocks started at 14, two steps below the body, and moved to 16, one step, which is where the content systems sit ([code inside prose](../foundations/space-between-prose-elements.md#code-inside-prose)). The content headings first walked every other step (h2 at 36, twice the body), above every reading site, so they moved to reading-site ratios.
 

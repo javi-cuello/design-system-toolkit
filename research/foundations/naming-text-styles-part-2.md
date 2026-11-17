@@ -113,7 +113,7 @@ Use separate libraries per platform with identical role names and primitives syn
 
 Variables hold the primitives and text styles hold the composites, a split that looks settled rather than temporary, with four rough edges worth knowing exactly before committing names to them.
 
-[Figma shipped typography variables](https://forum.figma.com/t/launched-typography-variables/48430) on 16 April 2024, covering font family, weight and style, size, line height, letter spacing, and paragraph spacing and indent. A variable still stores one value, while a text style bundles five or more, so primitive variables bind inside semantic text styles, and the style is what a designer applies.
+Typography variables arrived in April 2024 ([percentage or pixels](../foundations/line-height-letter-spacing-figma-to-css.md#percentage-or-pixels) has the launch and its limits). A variable still stores one value, while a text style bundles five or more, so primitive variables bind inside semantic text styles, and the style is what a designer applies.
 
 **Font weight takes strings in styles, and Dev Mode treats string and number variables differently.** A style's weight field accepts only a string ("Semibold"), which is why [Tokens Studio](https://docs.tokens.studio/manage-tokens/token-types/typography/) converts numeric weight tokens to names. A number-type weight variable surfaces in generated code as a real reference: `font-weight: var(--Thin-100, 100);`. A string-type one doesn't; [Figma's help page](https://help.figma.com/hc/en-us/articles/27882809912471-Variables-in-Dev-Mode) says string weight variables aren't passed through, and Dev Mode prints the literal number or, failing a match, a bare `font-weight: 400;` with no warning.
 

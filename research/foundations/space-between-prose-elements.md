@@ -97,7 +97,7 @@ CSS gained two units that make a one-line gap easy to write. The `lh` unit is th
 
 The catch is that `lh` on a heading is the heading's line, not the body's. Write a heading's margin in `lh` and it grows with the heading. Where the gap should follow the body, `rlh` or a token does that.
 
-A third addition changes what a gap measures. `text-box-trim` (Chrome 133, Safari 18.2, Firefox 154; Baseline since August 2026) removes the half-leading above the first line and below the last, so a gap runs from cap height to baseline rather than from line box to line box. It makes Figma and the browser agree more closely; [line height and letter spacing](line-height-letter-spacing-figma-to-css.md) covers what it costs.
+A third addition, `text-box-trim`, changes what a gap measures by removing the half-leading at the text's edges; [vertical trim](../foundations/line-height-letter-spacing-figma-to-css.md#vertical-trim) covers it.
 
 Space your prose from a small set of spacing tokens: a paragraph gap near one body line, a list-item gap a quarter to half of that, and per heading level a gap above that clearly exceeds the paragraph gap and a gap below that is clearly smaller than its own gap above.
 
@@ -146,7 +146,7 @@ Say an h2 has 48 above it, and someone places a rule before it with margins of i
 
 The systems avoid it in different ways. GitHub puts the rule under the heading rather than before it: `.markdown-body h2` carries `border-bottom: 1px solid` and `padding-bottom: .3em`, so every h1 and h2 is underlined, and the space above stays the plain 24.
 
-GOV.UK draws its rule as an element. `govuk-section-break--visible` is an `<hr>` with a 1px bottom border, spaced by equal top and bottom margins from the responsive scale: unit 6 for the large break, 30 on desktop and 20 on mobile.
+GOV.UK draws its rule as an element. `govuk-section-break--visible` is an `<hr>` with a 1px bottom border, spaced by equal top and bottom margins from its [responsive spacing scale](../foundations/spacing-tokens-by-intent.md#responsive-spacing): unit 6 for the large break, 30 on desktop and 20 on mobile.
 
 Tailwind's `prose` spaces a bare `<hr>` at 48 on each side, and resets the top margin of whatever follows it to zero. So a heading after a rule doesn't add its own gap on top.
 
@@ -205,11 +205,11 @@ The ranges disagree at the edges. [Butterick](https://practicaltypography.com/su
 
 The unit is where teams go wrong. A `ch` is the advance width of the digit zero, which in most sans faces is wider than an average letter, so `65ch` sets more than 65 characters. The toolkit measured Inter: `65ch` gave about 80 characters a line, and `55ch` about 71 to 79. Elastic's `max(64ch, 75%)` therefore runs longer than it reads.
 
-Pixel measures need the same check. Inter at 18px sets about 87 characters on a 720px line, measured from the font's advance widths on an English sample paragraph at 0.459em per character, before tracking. A measure of 600 to 640px, or `max-inline-size: 36em`, gives about 73 to 77.
+Pixel measures need the same check. Inter at 18px sets about 87 characters on a 720px line, measured from the font's advance widths on an English sample paragraph at 0.459em per character, before tracking. At that rate 600 to 640px gives about 73 to 77, and an em measure counts the same at any size: `36em` gives about 78, `34em` about 74.
 
 Tables, code and dashboards don't inherit the prose measure.
 
-Set your measure as a `max-inline-size` on the prose column, then count the characters it renders in the actual face and adjust. **In Inter, about `55ch` or `36em` lands in the 65 to 75 band.**
+Set your measure as a `max-inline-size` on the prose column, then count the characters it renders in the actual face and adjust. **In Inter, about `34em` lands in the 65 to 75 band; `55ch` (71 to 79) and `36em` (about 78) run past it.**
 
 ---
 

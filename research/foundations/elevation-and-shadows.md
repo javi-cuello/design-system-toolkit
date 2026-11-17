@@ -156,7 +156,7 @@ The middle of the range follows the same pattern under different names:
 
 The steps a system has and the steps a component uses are different numbers, and the second one decides whether the scale stays coherent. How the surfaces under those shadows stack is in [how surfaces stack](how-surfaces-stack.md).
 
-Give your components two shadow roles, resting and floating, and map every component to one of them in its documentation. Keep further steps only where a state needs them (hover, drag) or a surface floats over another floating surface, like a dialog over a menu. **A shadow scale is as long as the list of reasons to use it, and most systems have two.** *Weight: strong.* The two-role pattern is shared by Atlassian, Primer and Carbon, and Material's component tokens behave the same way despite the longer scale.
+Give your components two shadow roles, resting and floating, and map every component to one of them in its documentation. Keep further steps only where a state needs them (hover, drag) or a surface floats over another floating surface, like a dialog over a menu. **A shadow scale is as long as the list of reasons to use it, and most systems have two.** *Weight: strong.* The two-role pattern is shared by Atlassian and Primer, Carbon keeps only the floating one, and Material's component tokens behave the same way despite the longer scale.
 
 ---
 
@@ -697,7 +697,7 @@ The ring has two costs a border does not. The first is paint order.
 
 CSS paints an inset shadow above the element's background and below its content. A child with its own fill, an image, a coloured header strip, a selected row, covers the ring wherever it touches the edge. A border is painted around the padding box, outside anything a child draws, so it stays whole.
 
-The second cost is forced colours. The CSS Color Adjustment spec computes `box-shadow` to `none` in forced colours mode, inset rings included, while a border's colour is replaced with a system colour and stays visible. A control whose only outline is a ring has no outline at all for a Windows High Contrast user.
+The second cost is forced colours, which drop every `box-shadow`, inset rings included, and keep a border in a system colour ([the ring's CSS property](../accessibility/focus-indicators.md#the-rings-css-property)), so a control whose only outline is a ring has none for a Windows High Contrast user.
 
 A half-pixel ring may also render soft where a border snaps to a device pixel; [hairlines](../figma-and-code/where-figma-and-css-render-differently.md#dashed-gradient-hairline-strokes) covers the snapping.
 
@@ -785,7 +785,7 @@ Name shadow tokens by role at the level components use (`shadow.raised`, `shadow
 
 Hover raises a surface one step at most, and a drag lifts it to the floating level; anything more makes a resting card compete with the menus above it.
 
-Back to the card hover from the opening. The team's card rests at the raised shadow and hovers at the dialog's. Moving the pointer across a grid now makes each card jump to dialog height in turn, and the menu that opens from one of them no longer looks above it.
+Back to the opening: the team's card rests at the raised shadow and hovers at the dialog's. Across a grid each card jumps to dialog height in turn, and the menu that opens from one no longer looks above it.
 
 Here is how Material's own card tokens step through its states.
 
@@ -843,9 +843,9 @@ Here is how Material's own card tokens step through its states.
 
 The hover step is small: `level1` to `level2`, the ambient layer growing from 3px to 6px of blur. The drag is large: `level1` to `level4`, a different kind of state. Material's filled button follows the same rule from lower down, `level0` at rest and `level1` on hover, and its FAB goes `level3` to `level4`.
 
-Atlassian gives a choice, not a combination: hover and press change either the fill (`elevation.surface.hovered`) or the elevation, never both, and a dragged raised card goes to overlay. The pressed state usually goes down: Material's elevated card returns to `level1` on press, and Polaris's buttons swap to inset shadows that look pushed in. WCAG's Understanding page for 1.4.11 treats hover effects as supplemental, so a hover shadow need not meet 3:1, but it can't be the only sign that something is interactive, since touch users never see it.
+Atlassian gives a choice, not a combination: hover and press change the fill (`elevation.surface.hovered`) by default, or, sparingly and never on small UI, the elevation, but never both; a dragged raised card goes to overlay. The pressed state usually goes down: Material's elevated card returns to `level1` on press, and Polaris's buttons swap to inset shadows that look pushed in. WCAG's Understanding page for 1.4.11 treats hover effects as supplemental, so a hover shadow need not meet 3:1, but it can't be the only sign that something is interactive, since touch users never see it.
 
-Define hover as one step up from rest, press as rest or an inset, and drag as the floating role. Keep the floating role higher than any hover, so a menu opened from a hovered card still sits above it. **Hover nudges; drag lifts; and nothing on the page hovers as high as what floats over it.** The one-step hover and drag-to-overlay are consensus between Material and Atlassian; pressing down instead of up is shared by Material and Polaris.
+Hover small or flat elements by fill ([hover and pressed per level](how-surfaces-stack.md#hover-and-pressed-per-level)); a card on a shadow that lifts on hover goes one step up, fill unchanged. Press is rest or an inset, drag the floating role, and floating stays above any hover. **Hover nudges; drag lifts; and nothing on the page hovers as high as what floats over it.** The one-step hover and drag-to-overlay are consensus between Material and Atlassian; pressing down instead of up is shared by Material and Polaris.
 
 ---
 
@@ -1040,7 +1040,7 @@ In dark mode a shadow needs far more opacity and a ring in front of it, and ligh
 <text x="24" y="204" font-size="11" fill="#5a5850">Primer values, drawn at 2×.</text>
 </svg>
 
-Primer's light resting shadow is about 12% at its strongest; reused on GitHub's dark page, it vanishes, and only the small step from `#0d1117` to `#151b23` marks the card. Primer's dark tokens go to 40% to 80% near-black and open floating shadows with a `#3d444d` ring. Fluent doubles its alphas; Carbon goes from 30% to 80%; Material keeps black and relies on its tonal surfaces.
+Primer's light resting shadow is about 12% at its strongest; reused on GitHub's dark page, it vanishes, and only the small step from `#0d1117` to `#151b23` marks the card. Primer's dark tokens go to 40% to 80% near-black and open floating shadows with a one-pixel ring ([floating surfaces in dark](surfaces-in-dark-mode.md#floating-surfaces-in-dark)). Fluent doubles its alphas; Carbon goes from 30% to 80%; Material keeps black and relies on its tonal surfaces.
 
 Give every shadow token a dark value of its own, never the light one, and put a ring or border in front of floating ones. **In dark, the surface step and the ring do the work, and the shadow only adds weight.**
 
