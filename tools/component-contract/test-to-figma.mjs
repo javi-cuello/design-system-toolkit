@@ -28,6 +28,15 @@ ok('each variant drawn with every boolean on, the layers a boolean shows marked 
 const linked = plan({ contract: 1, component: 'tag', props: { showIcon: { type: 'boolean', default: false, figma: 'Show icon', shows: ['icon'] } },
   anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/check' } }, variants: [] }, {});
 ok('a part a boolean shows is bound to it, though no variant removes it', linked.variants[0].anatomy.icon.shownBy === 'Show icon' && !linked.variants[0].anatomy.root.shownBy);
+// a label's Optional: Indicator takes the layer away when required, and the contract adds it back when not
+const optional = plan({ contract: 1, component: 'label', props: { indicator: { type: 'boolean', default: true, figma: 'Indicator', shows: ['mark'] }, required: { type: 'boolean', default: true, axis: true, figma: 'Required' } },
+  anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },
+  variants: [{ when: { indicator: false }, remove: ['mark'] }, { when: { indicator: false, required: false }, add: { mark: { kind: 'text', parent: 'root', content: 'Optional' } } }] }, {});
+const req = (v) => optional.variants.find((x) => x.name === `Required=${v}`).anatomy.mark;
+ok('a boolean is bound only in the variants where turning it off takes its layer away', req('True').shownBy === 'Indicator' && !req('False').shownBy);
+const both = plan({ contract: 1, component: 'tag', props: { a: { type: 'boolean', default: true, figma: 'A', shows: ['x'] }, b: { type: 'boolean', default: true, figma: 'B' } },
+  anatomy: { root: { kind: 'container' }, x: { kind: 'text', parent: 'root', content: 'x' } }, variants: [{ when: { a: false, b: false }, remove: ['x'] }] }, {});
+ok('a remove that also asks another boolean off leaves the layer bound to the one that shows it', both.variants[0].anatomy.x.shownBy === 'A');
 const loading = plan({ contract: 1, component: 'button', props: { loading: { type: 'boolean', default: false, figma: 'Loading' } },
   anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Label' } },
   variants: [{ when: { loading: true }, add: { spinner: { kind: 'graphic', parent: 'root' } }, remove: ['label'] }] }, {});

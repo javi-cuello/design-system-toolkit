@@ -368,13 +368,18 @@ export function plan(contract, { axisOrder = [] } = {}) {
   const last = axes[axes.length - 1];
   const rowKeys = [...new Set(grid.map((w) => JSON.stringify(axes.slice(0, -1).map((a) => w[a.key]))))];
   const cellOf = (w) => (last ? [rowKeys.indexOf(JSON.stringify(axes.slice(0, -1).map((a) => w[a.key]))), last.values.indexOf(w[last.key])] : [0, 0]);
+  // a boolean that takes a layer away somewhere: where it leaves it, the layer is not its
+  // (a remove that also asks another boolean is off is one a Figma boolean cannot say: not counted)
+  const axisKeys = new Set(axes.map((a) => a.key));
+  const hides = (key, id) => (contract.variants || []).some((v) => v.when && v.when[key] === false && Object.keys(v.when).every((k) => k === key || axisKeys.has(k)) && (v.remove || []).includes(id));
   const variants = grid.map((w) => {
     const on = Object.fromEntries(booleans.map((b) => [b.key, true]));
     const anatomy = expand(contract, { ...w, ...on });
     // each element a boolean shows: there with it on, gone with it off
-    // a layer one boolean names is its; one gone only with its parent goes by that parent's (a button by its own
+    // not where the contract has it stay with the boolean off that elsewhere takes it away (a label's Optional, there
+    // whatever its Indicator says, when not required); a layer one boolean names is its; one gone only with its parent goes by that parent's (a button by its own
     // Show secondary button, not the Show buttons of the row it is in)
-    for (const b of booleans) { const off = expand(contract, { ...w, ...on, [b.key]: false }); for (const id of Object.keys(anatomy)) if (b.shows.includes(id) || (!off[id] && !anatomy[id].shownBy)) anatomy[id] = { ...anatomy[id], shownBy: b.figma }; }
+    for (const b of booleans) { const off = expand(contract, { ...w, ...on, [b.key]: false }); for (const id of Object.keys(anatomy)) if ((b.shows.includes(id) && !(off[id] && hides(b.key, id))) || (!off[id] && !anatomy[id].shownBy)) anatomy[id] = { ...anatomy[id], shownBy: b.figma }; }
     // a boolean shows the topmost of what it shows: the layers inside go with it
     for (const e of Object.values(anatomy)) if (e.shownBy && e.parent && anatomy[e.parent] && anatomy[e.parent].shownBy === e.shownBy) e.under = true;
     for (const e of Object.values(anatomy)) if (e.under) { delete e.shownBy; delete e.under; }
@@ -992,7 +997,7 @@ export function needs(p) {
    among this file's own. Passed to the service's /exec. */
 const LOOKUP = async (want) => {
   await figma.loadAllPagesAsync();
-  const styles = {}, icons = {}, vars = {}, sets = {};
+  const styles = {}, icons = {}, vars = {}, sets = {}, swaps = {};
   let container = null;
   // a variable's key from what the library's own layers are bound to (listing a library's variables hung)
   const ids = new Set();
@@ -1005,6 +1010,8 @@ const LOOKUP = async (want) => {
     }
     for (const v of await Promise.all([...ids].map((id) => figma.variables.getVariableByIdAsync(id)))) if (v && want.vars.includes(v.name) && !vars[v.name]) vars[v.name] = v.key;
   }
+  // a swap's value no instance in the snapshot carries the key of (a toggle's sun, set by its prop alone): its set
+  if (want.swaps && want.swaps.length) for (const n of figma.root.findAllWithCriteria({ types: ['COMPONENT_SET'] })) if (want.swaps.some((t) => n.name === t || n.name.endsWith('/' + t)) && !swaps[n.name]) swaps[n.name] = n.key;
   for (const n of figma.root.findAllWithCriteria({ types: ['TEXT', 'INSTANCE', 'COMPONENT_SET'] })) {
     if (n.type === 'COMPONENT_SET' && n.name === want.container && !container) container = n.key;
     if ((n.type === 'COMPONENT_SET') && (want.components || []).includes(n.name) && !sets[n.name]) sets[n.name] = n.key;
@@ -1012,7 +1019,7 @@ const LOOKUP = async (want) => {
     if (n.type === 'INSTANCE' && want.icons.length) { const mc = await n.getMainComponentAsync(); if (mc && want.icons.includes(mc.name) && !icons[mc.name]) icons[mc.name] = mc.key; }
     if (container && Object.keys(styles).length === want.styles.length && Object.keys(icons).length === want.icons.length) break;
   }
-  return { styles, icons, iconContainer: container, vars, sets };
+  return { styles, icons, iconContainer: container, vars, sets, swaps };
 };
 
 /* Where a drawing goes: a page of the component's own name in the scratch file,
@@ -1485,11 +1492,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   keys.values = Object.fromEntries(want.vars.map((n) => [n, valueOf(tokenFile, n, map.mode)]).filter(([, v]) => v != null));
   // each component's variants as the snapshot met them (an instance's `instanceOfKey`): no library file needs to be open
   keys.variants = variantKeys(where.paths.components, want.components, want.swaps);
+  missing.swaps = (want.swaps || []).filter((t) => !Object.keys(keys.variants).some((n) => n === t || n.endsWith('/' + t)));
   const notOpen = [];
   if (libKey) {
     // the rest where the library uses them, in the library file itself, which must be open with the Desktop Bridge
     const found = await exec(`return (${LOOKUP.toString()})(${JSON.stringify(missing)});`, libKey, 60000).catch((e) => { notOpen.push(`the library file (${libKey}) is not open with the Desktop Bridge, so only what the snapshot names was found: ${e.message.split('\n')[0]}`); return null; });
-    if (found) { Object.assign(keys.styles, found.styles); keys.icons = found.icons; keys.iconContainer = found.iconContainer; Object.assign(keys.vars, found.vars); keys.sets = found.sets; }
+    if (found) { Object.assign(keys.styles, found.styles); keys.icons = found.icons; keys.iconContainer = found.iconContainer; Object.assign(keys.vars, found.vars); keys.sets = found.sets; for (const [n, k] of Object.entries(found.swaps || {})) keys.variants[n] ||= { [n]: k }; }
   }
   // a variable the library hides from publishing cannot be imported here: its name, said with why it is not bound
   const hidden = new Set(Object.values(tokenFile.collections || {}).flatMap((col) => col.hidden || []));

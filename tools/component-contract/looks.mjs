@@ -58,17 +58,21 @@ export function compare(a, b, tolerance = 40, { within = false } = {}) {
   // (`within`: only over the first image's area, where it was cut by a frame around it and shows less than there is)
   const w = within ? a.w : Math.max(a.w, b.w), h = within ? a.h : Math.max(a.h, b.h), px = Buffer.alloc(w * h * 4);
   let off = 0;
-  const at = (img, x, y) => (x < img.w && y < img.h ? img.px.subarray((y * img.w + x) * 4, (y * img.w + x) * 4 + 4) : null);
+  // (past an image's edge is nothing: a shadow's faint tail one export keeps and the other trims is no difference, an
+  // area only one draws is)
+  const NONE = [0, 0, 0, 0];
+  const at = (img, x, y) => (x < img.w && y < img.h ? img.px.subarray((y * img.w + x) * 4, (y * img.w + x) * 4 + 4) : NONE);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const p = at(a, x, y), q = at(b, x, y), o = (y * w + x) * 4;
-    const differs = !p || !q || [0, 1, 2, 3].some((k) => Math.abs(p[k] - q[k]) > tolerance);
+    // (by colour as it shows, its alpha applied: two pixels nothing shows of are the same whatever their colour)
+    const differs = Math.abs(p[3] - q[3]) > tolerance || [0, 1, 2].some((k) => Math.abs((p[k] * p[3] - q[k] * q[3]) / 255) > tolerance);
     if (differs) { off++; px[o] = 230; px[o + 1] = 30; px[o + 2] = 60; px[o + 3] = 255; }
     else { const g = 255 - Math.round((255 - (p[0] + p[1] + p[2]) / 3) * (p[3] / 255) * 0.3); px[o] = px[o + 1] = px[o + 2] = g; px[o + 3] = 255; }
   }
   return { share: off / (w * h), sizes: [[a.w, a.h], [b.w, b.h]], diff: { w, h, px } };
 }
 
-/* Each variant exported at 1×: the drawn set's in the scratch file, and the library's by the same names, as an
+/* Each variant exported at 1×: the drawn set's in the scratch file, as an instance, and the library's by the same names, as an
    instance of its published component imported by key into the scratch file, else from the library file itself where
    the bridge has it open (a private component, or an import that does not answer). */
 const PNG = "{ format: 'PNG', constraint: { type: 'SCALE', value: 1 } }";
@@ -78,7 +82,9 @@ const page = figma.root.children.find((p) => p.name === ${JSON.stringify(name)})
 const drawn = page && page.children.find((n) => (n.type === 'COMPONENT_SET' || n.type === 'COMPONENT') && n.name === ${JSON.stringify(name)});
 if (!drawn) return { error: 'not drawn in this file' };
 const out = {};
-for (const d of drawn.type === 'COMPONENT_SET' ? drawn.children : [drawn]) out[d.name] = figma.base64Encode(await d.exportAsync(${PNG}));
+// (an instance of each, off the canvas, as the library's imported side is: a set that clips would cut what overflows a
+// variant, a dropdown's open menu)
+for (const d of drawn.type === 'COMPONENT_SET' ? drawn.children : [drawn]) { const i = d.createInstance(); i.x = -100000; try { out[d.name] = figma.base64Encode(await i.exportAsync(${PNG})); } finally { i.remove(); } }
 return { variants: out };`;
 const FROM_LIBRARY = (id) => `
 const set = await figma.getNodeByIdAsync(${JSON.stringify(id)});
@@ -123,7 +129,9 @@ async function main() {
     if (!lib || lib.error) { rows.push([folder, null, (lib && lib.error) || 'no answer']); continue; }
     const libBy = Object.fromEntries(Object.entries(lib.variants).map(([n, png]) => [norm(n), png]));
     const one = Object.keys(lib.variants).length === 1 && Object.keys(drawn.variants).length === 1 ? Object.values(lib.variants)[0] : null;
+    // a size that differs over nothing visible (a frame with no fill drawn larger) shows no pixel apart: said apart
     let worst = 0, at = '';
+    const sized = [];
     for (const [name, png] of Object.entries(drawn.variants)) {
       const v = { name, drawn: png, library: libBy[norm(name)] || one };
       if (!v.library) { worst = 1; at = `${name}: no library variant of that name`; continue; }
@@ -131,10 +139,11 @@ async function main() {
       const c = compare(decodePng(Buffer.from(v.library, 'base64')), decodePng(Buffer.from(v.drawn, 'base64')), 40, { within: !!lib.cut });
       const slug = `${folder}--${v.name.replace(/[^A-Za-z0-9=]+/g, '-')}`.slice(0, 120);
       if (c.share > 0.01) { fs.writeFileSync(path.join(out, `${slug}.library.png`), Buffer.from(v.library, 'base64')); fs.writeFileSync(path.join(out, `${slug}.drawn.png`), Buffer.from(v.drawn, 'base64')); fs.writeFileSync(path.join(out, `${slug}.diff.png`), encodePng(c.diff)); }
+      if (!lib.cut && c.sizes[0].some((x, i) => Math.abs(x - c.sizes[1][i]) > 2)) sized.push(`${v.name} (library ${c.sizes[0].join('×')}, drawn ${c.sizes[1].join('×')})`);
       if (c.share > worst) { worst = c.share; at = `${v.name}${c.sizes[0].join('x') !== c.sizes[1].join('x') ? ` (library ${c.sizes[0].join('×')}${lib.cut ? ', cut by its set' : ''}, drawn ${c.sizes[1].join('×')})` : ''}`; }
     }
     rows.push([folder, worst, at]);
-    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}`);
+    console.log(`${folder}: ${(worst * 100).toFixed(1)}%${at ? ` — worst ${at}` : ''}${sized.length ? `; sized apart: ${sized.length}, e.g. ${sized[0]}` : ''}`);
   }
   const bad = rows.filter(([, s]) => s == null || s > 0.01);
   console.log(`${label} looks: ${rows.length - bad.length} of ${rows.length} within 1%; images of the rest in ${path.relative(process.cwd(), out)}`);

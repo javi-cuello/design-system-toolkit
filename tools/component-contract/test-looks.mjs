@@ -16,6 +16,8 @@ ok('one pixel of twelve differs', Math.abs(compare(white, dot).share - 1 / 12) <
 ok('a pixel inside the tolerance (anti-aliasing) does not differ', compare(white, img(4, 3, () => [230, 230, 230, 255])).share === 0);
 const taller = img(4, 6, () => [255, 255, 255, 255]);
 ok('a drawing taller than the library differs where only it has pixels', Math.abs(compare(white, taller).share - 0.5) < 1e-9);
+ok('a faint edge only one image has (a shadow\'s tail an export trimmed) does not differ', compare(white, { w: 4, h: 6, px: Buffer.concat([white.px, img(4, 3, () => [0, 0, 0, 12]).px]) }).share === 0);
+ok('two pixels nothing shows of are the same, whatever their colour', compare(img(1, 1, () => [255, 255, 255, 0]), img(1, 1, () => [0, 0, 0, 0])).share === 0);
 ok('within the library\'s area (a set that clips cut it), only that area is compared', compare(white, taller, 40, { within: true }).share === 0);
 
 console.log(failed ? `${failed} of ${n} failed` : `${n}/${n} passed`);
