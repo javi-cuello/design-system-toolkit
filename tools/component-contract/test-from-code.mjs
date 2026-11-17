@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText } from './from-code.mjs';
+import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -217,4 +217,6 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     && boundText('Other', 'field/suffix', props, {}, design, joined) === undefined
     && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, { props: { label: { sets: ['texts/label'] } } }) === undefined
     && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, null) === 'label'); }
+ok('a name its id spells back is no name of its own; one it does not (a slash, other words) is kept',
+  !keepsName('Action footer', 'footer/menu/actionFooter') && !keepsName('Action footer', 'x/actionFooter_2') && keepsName('Context menu item / Default', 'a/contextMenuItemDefault') && keepsName('Footer', 'x/actionFooter') && keepsName('Item 2', 'list/item2') && keepsName('Icon 24', 'a/icon24'));
 console.log(`${n}/${n} passed`);

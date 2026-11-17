@@ -43,7 +43,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars } from '../parity/values.mjs';
-import { camel, sentence } from './layers.mjs';
+import { camel, sentence, partName } from './layers.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
@@ -262,6 +262,10 @@ export function boundText(content, id, props, args, design, joined = {}) {
   const elsewhere = (q) => Object.entries((design || {}).props || {}).some(([k, d]) => codeOf(k) === q.code && (d.sets || []).length && !(d.sets || []).includes(id));
   return (hits.find(([, q]) => sets(q)) || hits.find(([, q]) => !elsewhere(q)) || [])[0];
 }
+
+/* Whether a layer's name is its own: not the one its id spells back (layers.mjs partName: Action footer at actionFooter,
+   or at actionFooter_2), derive's own test for leaving it unsaid. Tested by test-from-code.mjs. */
+export const keepsName = (name, id) => partName(id) !== name;
 
 export function asShape(x, fa, hasChildren) {
   if (x.kind !== 'container' || !fa || fa.kind !== 'graphic' || hasChildren) return x;
@@ -1183,6 +1187,9 @@ async function main() {
         return out;
       }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
+      // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
+      // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
+      for (const e of raw) if (e.name && (e.parent == null || !keepsName(e.name, e.id))) delete e.name;
       // each element's matched styles fetched once for all the properties this render reads of it
       const styles = new Map();
       // a whole computed border may be a floored one (1.5px reads 1px): the cascade's, as the code audit reads it
