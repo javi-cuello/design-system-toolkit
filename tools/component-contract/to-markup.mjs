@@ -98,7 +98,7 @@ export function propsOf(c, library = {}, lang = JS, settings = HOUSE) {
     else if (p.type === 'string') { const t = (c.anatomy[(p.sets || [])[0]] || {}).content; out.push({ ...base, type: 'string', default: p.default ?? (typeof t === 'string' && !/^\{.+\}$/.test(t) ? t : '') }); }
     else if (p.type === 'number') out.push({ ...base, type: 'number', default: Number.isFinite(Number(p.default)) ? Number(p.default) : 0 });
     else if (p.type === 'instance') out.push({ ...base, ...swapOf(c, p, library, lang) });
-    else if (p.type === 'slot') out.push({ ...base, type: 'node', slot: slotPartOf(c, key) });
+    else if (p.type === 'slot') out.push({ ...base, type: 'node', slot: slotPartOf(c, key), slots: slotParts(c, key) });
     // an event: a DOM handler (onClick) is the element's own, typed by it and passed with the rest; another is a gap
     else if (p.type === 'event') { if (!HANDLERS.has(key)) out.push({ ...base, type: 'event' }); }
   }
@@ -182,7 +182,10 @@ function swapOf(c, p, library, lang) {
     const given = (holder.with || {})[q.figma];
     return { type: theirs ? theirs.type : 'node', default: given ?? (theirs && theirs.default) ?? '', pass: { part: up, to: theirs ? theirs.name : to } };
   }
-  if (e && e.kind === 'instance' && !library[e.component]) return { type: 'icon', default: e.component || '' };
+  // a swap of a drawing the code takes by name, as an icon is: one no main in the library draws, or one whose main is a
+  // drawing alone (no props, no words, nothing placed: an empty state's ghost), where a component is the caller's to place
+  const drawing = (m) => m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
+  if (e && e.kind === 'instance' && (!library[e.component] || drawing(library[e.component]))) return { type: 'icon', default: e.component || '' };
   return { type: 'node' };
 }
 // a slot prop's part: the slot whose content names it, else the slot part of its name, which a boolean that shows it
@@ -194,6 +197,18 @@ function slotPartOf(c, key) {
   const last = (id) => camel(id.split('/').pop());
   const hit = slots.find(([, e]) => e.content === `{${key}}`) || slots.find(([id]) => last(id) === key) || slots.find(([id]) => last(id).endsWith(cap(key)));
   return hit ? hit[0] : null;
+}
+// every part that shows a slot prop: its own, and another a variant draws in its place (a dialog's content moved to
+// the root when immersive: the variant takes the slot's own part away and adds one whose content names it), never a
+// placed component's own slot, nor a second one drawn beside the first (the content would show twice)
+function slotParts(c, key) {
+  const own = slotPartOf(c, key);
+  if (!own) return [];
+  const all = { ...(c.anatomy || {}), ...Object.assign({}, ...(c.variants || []).map((v) => v.add || {})) };
+  const placedIn = (id) => { for (let e = all[id]; e && e.parent; e = all[e.parent]) if ((all[e.parent] || {}).kind === 'instance') return true; return false; };
+  const moved = (c.variants || []).flatMap((v) => ((v.remove || []).includes(own) ? Object.entries(v.add || {}) : []))
+    .filter(([id, e]) => id !== own && e && e.kind === 'slot' && e.content === `{${key}}` && !placedIn(id)).map(([id]) => id);
+  return [...new Set([own, ...moved])];
 }
 
 /* Each part, base and added, with its parent and the conditions it is drawn under: the variants that add it and those
@@ -372,7 +387,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     if (unknown) gaps.push(`${partName(id)} is drawn by whether the field holds a value: the input's own :placeholder-shown, or frontend-build's to say`);
     if (when === 'false') return null;
     const icon = props.find((x) => x.type === 'icon' && (x.p.swaps || []).includes(id));
-    const slot = props.find((x) => x.type === 'node' && (x.slot === id || (x.p.swaps || []).includes(id)));
+    const slot = props.find((x) => x.type === 'node' && ((x.slots || [x.slot]).includes(id) || (x.p.swaps || []).includes(id)));
     const tag = e.kind === 'text' || control || inline ? 'span' : 'div';
     let out;
     if (icon || (e.kind === 'instance' && !library[e.component])) {
@@ -393,7 +408,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       out = { tag: 'span', attrs: [...hook(id), ['data-icon', glyph], ...(size ? [['data-icon-size', { lit: size }]] : []), ['aria-hidden', { lit: 'true' }]], children: [] };
     } else if (slot) {
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
-      out = { tag, attrs: [...hook(id), ...(slot.slot === id ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
+      out = { tag, attrs: [...hook(id), ...((slot.slots || [slot.slot]).includes(id) ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
     } else if (e.kind === 'instance') {
       const placed = library[e.component], theirs = propsOf(placed, library, lang, settings);
       const valueOf = (fig, v, w = e.with || {}) => {
@@ -464,8 +479,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // what this component puts in the placed one's slot (a menu's items): that slot's content, each drawn as its own
       // component; a snippet's slot takes no markup from its caller, so there it is frontend-build's
       for (const x of theirs.filter((y) => y.type === 'node' && y.slot)) {
-        const { back } = asPlaced(atProps(placed, e.with)), key = Object.keys(back).find((k) => back[k] === x.slot) || x.slot;
-        const under = kids.get(`${id}/${key}`) || [];
+        // (under any part that shows that slot: its own, or one a variant draws in its place)
+        const { back } = asPlaced(atProps(placed, e.with));
+        const under = [...new Set((x.slots || [x.slot]).flatMap((sp) => kids.get(`${id}/${Object.keys(back).find((k) => back[k] === sp) || sp}`) || []))];
         if (!under.length) continue;
         if (lang.php) { gaps.push(`${partName(id)}: what it puts in ${placed.component}'s ${x.name} (a snippet takes no markup there)`); continue; }
         // under the instance's own condition (known), so an item repeats none of it

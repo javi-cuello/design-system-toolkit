@@ -109,7 +109,12 @@ export function leftToCode(contract, mainOf = null) {
   const P = partsOf(contract);
   const placedIn = (el) => { const q = P.get(el); if (!q || !q.inside) return false; for (let up = q.e.parent; up && up !== q.slotted; up = ((P.get(up) || {}).e || {}).parent) if ((((P.get(up) || {}).e) || {}).kind === 'instance') return true; return !q.slotted; };
   const carries = (el) => mainOf && !over.has(el) && [...over.keys()].some((id) => id.startsWith(`${el}/`)) && placedIn(el);
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
+  // a placed icon's colour where the design leaves it its own (a combination that takes the glyph's override away): the
+  // icon set's own colour, which no main in the library holds, so what code draws there is its own to say
+  const all = { ...(contract.anatomy || {}), ...Object.assign({}, ...(contract.variants || []).map((v) => v.add || {})) };
+  const ownColour = (el, field, row) => field === 'background' && row && row.library == null && mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component)
+    && (contract.variants || []).some((v) => (v.remove || []).some((r) => r.startsWith(`${el}/`) && all[r] && all[r].background != null));
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 

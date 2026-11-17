@@ -122,4 +122,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('the rows left to code are counted, as a leg of their own, so a rise there is said', worse(counts({ self: { a: { rows: [], left: [{}, {}] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).some((w) => /self left a: 1 → 2/.test(w))
     && !worse(counts({ self: { a: { rows: [], left: [] } } }), { self: { a: 0 }, 'self left': { a: 1 } }).length); }
 
+{ const t = { contract: 1, component: 'T', props: { selected: { type: 'boolean', default: false, axis: true } }, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Icon/plus' }, 'icon/icon': { kind: 'graphic', parent: 'icon', background: 'C/medium' } },
+    variants: [{ when: { selected: true }, remove: ['icon/icon'] }] };
+  const left = leftToCode(t, () => null);
+  ok('a placed icon left its own colour (its override taken away) is code\'s to say, where no main holds that colour',
+    left('icon.background', { library: null, drawn: 'C/black' }) && !left('icon.background', { library: 'C/x', drawn: 'C/black' }) && !leftToCode({ ...t, anatomy: { ...t.anatomy, 'icon/icon': { kind: 'graphic', parent: 'icon', width: 12 } } }, () => null)('icon.background', { library: null, drawn: 'C/black' }) && !leftToCode(t, (n) => (n === 'Icon/plus' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null))('icon.background', { library: null, drawn: 'C/black' })); }
 console.log(`${n} passed`);

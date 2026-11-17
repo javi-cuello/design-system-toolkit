@@ -228,6 +228,22 @@ ok('and to-code styles that input and its placeholder by the same selectors: the
   ok('a box it puts there keeps what it holds', /h\("div", \{ "data-part": "group" \},\s*renderItem\(\{ label: "Three" \}/.test(g) && toParity(grouped, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Group > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="group"] > [data-part="menu-list-group-item"]');
   const titled = { contract: 1, component: 'Panel', props: { title: { type: 'slot', figma: 'Title' } }, anatomy: { root: { kind: 'container' }, head: { kind: 'slot', parent: 'root', content: '{title}' } }, variants: [] };
   ok('a slot is marked by its contract name, whatever its name in code', /"data-slot": "title"/.test(toElement(titled, 'panel', { naming: ELEMENT, library: {} })));
+  // a variant that draws the slot elsewhere (a dialog's content moved to the root when immersive): that part shows the slot too
+  { const moved = { ...titled, props: { ...titled.props, wide: { type: 'boolean', default: false, axis: true, figma: 'Wide' } }, anatomy: { ...titled.anatomy, box: { kind: 'container', parent: 'root' }, 'box/head': { kind: 'slot', parent: 'box', content: '{title}' } },
+      variants: [{ when: { wide: true }, add: { head: { kind: 'slot', parent: 'root', content: '{title}' } }, remove: ['box/head'] }] };
+    delete moved.anatomy.head;
+    const m = toElement(moved, 'panel', { naming: ELEMENT, library: {} });
+    ok('a slot a variant draws in another place is a slot there too, marked by the same name', (m.match(/"data-slot": "title"/g) || []).length === 2);
+    // drawn beside the first, not in its place, it is not the slot a second time
+    const beside = { ...moved, variants: [{ when: { wide: true }, add: { head: { kind: 'slot', parent: 'root', content: '{title}' } } }] };
+    // a swap of a drawing whose main takes no props: taken by name, as an icon, not as a slot that loses its default
+    { const es = { contract: 1, component: 'Empty', props: { graphic: { type: 'instance', figma: 'Graphic', swaps: ['art'] } }, anatomy: { root: { kind: 'container' }, art: { kind: 'instance', parent: 'root', component: 'Graphic/ghost', width: 120, height: 120 } }, variants: [] };
+      const lib = { 'Graphic/ghost': { contract: 1, component: 'Graphic/ghost', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } };
+      const out = toElement(es, 'empty', { naming: ELEMENT, library: lib });
+      ok('a swap of a drawing with no props of its own is taken by name, its default drawn', /graphic = "Graphic\/ghost"/.test(out) && /"data-icon": graphic/.test(out) && !/data-slot/.test(out));
+      const worded = { 'Graphic/ghost': { ...lib['Graphic/ghost'], anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root' } } } };
+      ok('a component with no props but words of its own is no drawing: placed by the caller', !/"data-icon": graphic/.test(toElement(es, 'empty', { naming: ELEMENT, library: worded }))); }
+    ok('a second part beside the slot\'s own is not the slot again', (toElement(beside, 'panel', { naming: ELEMENT, library: {} }).match(/"data-slot": "title"/g) || []).length === 1); }
   ok('the mapping reads them under that slot', toParity(bar, 'bar', { naming: ELEMENT, library: lib, framework: 'web-components' }).layers['Menu > List > Item'] === 'ds-bar > [data-part="menu"] > [data-part="list"] > [data-part="item"]');
 }
 
