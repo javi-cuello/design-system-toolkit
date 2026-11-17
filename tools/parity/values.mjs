@@ -63,19 +63,22 @@ export function insetStroke(layer) {
 }
 
 /** One `box-shadow` as written, var()s unresolved: the custom properties its inset stroke layer (`inset 0 0 0 <width>
- *  <colour>`, the order css.mjs writes) names its width and colour with → { width: [name], colour: [name] }, each
+ *  <colour>`, the order css.mjs writes, or one side's `inset 0 calc(-1 * <width>) 0 0 <colour>`) names its width and colour with → { width: [name], colour: [name] }, each
  *  empty where that part was written as a value, or null where no layer is such a stroke. What the code meant where
  *  two tokens hold one value (Stroke/2 and the focus ring's width are both 2px). */
 export function insetStrokeVars(raw) {
   if (!raw) return null;
   const top = (str, sep) => { const out = []; let d = 0, cur = ''; for (const ch of str) { if (ch === '(') d++; if (ch === ')') d--; if (d === 0 && sep.test(ch)) { if (cur.trim()) out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
   const name = (t) => { const m = t && /^var\(\s*(--[\w-]+)/.exec(t); return m ? [m[1]] : []; };
-  for (const layer of top(raw, /,/)) {
-    const words = top(layer, /\s/);
-    if (!words.includes('inset')) continue;
-    const rest = words.filter((w) => w !== 'inset');
-    if (rest.length !== 5 || !rest.slice(0, 3).every((w) => /^0(px)?$/.test(w))) continue;
-    return { width: name(rest[3]), colour: name(rest[4]) };
+  const zero = (w) => /^0(px)?$/.test(w);
+  const layers = top(raw, /,/).map((layer) => top(layer, /\s/)).filter((w) => w.includes('inset')).map((w) => w.filter((x) => x !== 'inset')).filter((r) => r.length === 5);
+  // a ring all round first, wherever it stands among the layers
+  for (const rest of layers) if (rest.slice(0, 3).every(zero)) return { width: name(rest[3]), colour: name(rest[4]) };
+  // else a stroke on one side (sideStrokes' shape): shifted by its width along one axis (var(--w), or calc(-1 * var(--w))
+  // for the far side), no blur or spread
+  for (const rest of layers) {
+    const off = rest.slice(0, 2).filter((w) => !zero(w));
+    if (off.length === 1 && zero(rest[2]) && zero(rest[3])) { const m = /^calc\(\s*-1\s*\*\s*(var\([^)]*\))\s*\)$/.exec(off[0]); return { width: name(m ? m[1] : off[0]), colour: name(rest[4]) }; }
   }
   return null;
 }

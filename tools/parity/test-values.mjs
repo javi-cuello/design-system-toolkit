@@ -40,6 +40,9 @@ ok('the table cannot be changed by a caller', Object.isFrozen(WEIGHTS));
 {
   const v = insetStrokeVars('inset 0 0 0 var(--stroke-2) var(--colour-stroke-neutral-selected)');
   ok('an inset stroke names the token its width and its colour were written with', v.width[0] === '--stroke-2' && v.colour[0] === '--colour-stroke-neutral-selected');
+  { const v = insetStrokeVars('inset 0 calc(-1 * var(--stroke-3)) 0 0 var(--colour-stroke-neutral-selected)'), w = insetStrokeVars('inset var(--stroke-1) 0 0 0 var(--c)');
+    ok('a one-side stroke names its width and colour too, on the near or far side', v && v.width[0] === '--stroke-3' && v.colour[0] === '--colour-stroke-neutral-selected' && w && w.width[0] === '--stroke-1' && w.colour[0] === '--c'
+      && insetStrokeVars('inset 0 -1px 0 0 var(--divider), inset 0 0 0 var(--stroke-1) var(--c)').colour[0] === '--c'); }
   ok('a stroke beside another shadow is found among the layers', insetStrokeVars('0 1px 2px var(--shadow), inset 0 0 0 var(--stroke-1) rgb(0, 0, 0)').width[0] === '--stroke-1' && !insetStrokeVars('0 1px 2px var(--shadow), inset 0 0 0 var(--stroke-1) rgb(0, 0, 0)').colour.length);
   ok('a shadow that is no inset stroke names none', insetStrokeVars('0 1px 2px var(--shadow)') === null && insetStrokeVars('inset 0 1px 0 var(--stroke-1) red') === null && insetStrokeVars(null) === null);
 }
