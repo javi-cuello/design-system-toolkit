@@ -13,6 +13,10 @@
   // the key predates the resolver; kept so stored exports and their readers
   // do not churn over a name.
   var VENDOR = 'com.figma.variables';
+  // The resolver's own description, and how an export knows a folder is one it
+  // wrote: a resolver anyone else wrote does not say this, so a wrong output
+  // folder holding one is refused, never cleared.
+  var WRITTEN_BY = 'Written by the toolkit token export from a Figma snapshot; regenerated, never edited.';
 
   /* ---------- names ---------- */
 
@@ -297,10 +301,11 @@
 
     // AUTO is the font's ascender + descender rounded to whole pixels; the
     // snapshot plugin measures it and from-snapshot.mjs passes it as PERCENT.
-    // An AUTO that reaches here unmeasured is omitted — never faked.
+    // An AUTO that reaches here unmeasured is omitted — never faked — and the
+    // warning says the token then falls short of DTCG, which requires it.
     var lh = style.lineHeight;
     if (!lh || lh.unit === 'AUTO') {
-      warnings.push({ name: style.name, reason: 'line height is AUTO and could not be measured — omitted' });
+      warnings.push({ name: style.name, reason: 'line height is AUTO and could not be measured — omitted, so this typography token lacks a member DTCG 2025.10 requires' });
     } else {
       value.lineHeight = perFontSize(lh, style.fontSize);
     }
@@ -473,12 +478,16 @@
     for (var i = 0; i < snapshot.collections.length; i++) {
       var c = snapshot.collections[i];
       var single = c.modes.length === 1;
-      var variants = [];
+      var variants = [], held = false, seenModes = {};
       for (var m = 0; m < c.modes.length; m++) {
         var built = buildCollection(c, c.modes[m], o);
         var name = fileName(c.name, c.modes[m], single);
+        // two modes that slug alike would write one file over the other
+        if (seenModes[name]) throw Object.assign(new Error('collection "' + c.name + '": modes "' + seenModes[name] + '" and "' + c.modes[m] + '" both become ' + name + '; rename one in Figma'), { refused: true });
+        seenModes[name] = c.modes[m];
         files.push({ name: name, tokens: built.tokens });
         variants.push({ mode: c.modes[m], file: name });
+        if (Object.keys(built.tokens).length) held = true;
         for (var s = 0; s < built.skipped.length; s++) {
           built.skipped[s].collection = c.name;
           built.skipped[s].mode = c.modes[m];
@@ -490,7 +499,10 @@
           report.renamed.push(built.renamed[r]);
         }
       }
-      axes.push({ collection: c.name, single: single, variants: variants });
+      // a collection holding nothing DTCG can type (only booleans, say) adds
+      // no axis: its modes would multiply the resolutions with nothing between them
+      if (held) axes.push({ collection: c.name, single: single, variants: variants });
+      else files.splice(files.length - variants.length, variants.length);
     }
 
     if (snapshot.textStyles && snapshot.textStyles.length) {
@@ -614,9 +626,11 @@
   function buildResolver(axes) {
     var g = groupAxes(axes);
     var ref = function (file) { return { $ref: file }; };
-    var doc = { version: '2025.10' };
+    var doc = { version: '2025.10', description: WRITTEN_BY };
     var order = [];
-    if (g.fixed.length) {
+    // the schema wants at least one entry in resolutionOrder: an export with
+    // nothing in it still names its one, empty, set
+    if (g.fixed.length || !g.axes.length) {
       doc.sets = { base: { description: 'The collections and styles with one mode, in every resolution.', sources: g.fixed.map(ref) } };
       order.push({ $ref: '#/sets/base' });
     }
@@ -670,6 +684,8 @@
     return into;
   }
   function verifyReferences(files, builds) {
+    // the old call passed { builds }: a list of nothing would pass every check
+    if (!Array.isArray(builds)) throw new TypeError('verifyReferences takes the resolutions list, not ' + typeof builds);
     var bad = [], seen = {};
     for (var b = 0; b < builds.length; b++) {
       var build = builds[b];
@@ -696,7 +712,7 @@
     paintToken: paintToken, buildPaintStyles: buildPaintStyles, isOpacity: isOpacity,
     isLossy: isLossy, renamedSegments: renamedSegments,
     buildTextStyles: buildTextStyles, fileName: fileName,
-    buildFiles: buildFiles, resolutions: resolutions, buildResolver: buildResolver, VENDOR: VENDOR,
+    buildFiles: buildFiles, resolutions: resolutions, buildResolver: buildResolver, VENDOR: VENDOR, WRITTEN_BY: WRITTEN_BY,
     verifyReferences: verifyReferences
   };
 

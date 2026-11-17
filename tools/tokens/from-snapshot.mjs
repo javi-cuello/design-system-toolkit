@@ -163,10 +163,11 @@ export function writeDtcg(tokens, dir, opts = {}) {
      go in the token's $extensions, merged beside any tracking fraction already
      there: a conforming reader ignores them, the house build reads them, and
      dropping them would lose the design silently. Always written, zero
-     included, for the same reason as letter-spacing. */
+     included, for the same reason as letter-spacing, and under noExtensions
+     too: they are the design, not provenance. */
   const vendor = opts.vendor || DTCG.VENDOR;
   const bySlug = new Map((tokens.textStyles || []).map((s) => [s.name.split('/').map(DTCG.slug).join('/'), s]));
-  if (!opts.noExtensions) for (const f of built.files) {
+  for (const f of built.files) {
     const walk = (node, path) => {
       for (const [k, v] of Object.entries(node)) {
         if (k.startsWith('$') || !v || typeof v !== 'object') continue;
@@ -191,15 +192,19 @@ export function writeDtcg(tokens, dir, opts = {}) {
     throw Object.assign(new Error(`${refs.dangling.length} reference(s) do not resolve inside their resolution, nothing written: ${list}${refs.dangling.length > 10 ? '; …' : ''}`), { refused: true });
   }
   // Refuse a folder this export did not write: a wrong --out would otherwise
-  // delete whatever it names. An export is known by its resolver, or by the
-  // manifest.json exports wrote before it (until 2026-11-17), which stays
-  // owned so the first export after the change removes it. In one it did
-  // write, only what an export owns is replaced (those two files and the
-  // collection folders, which hold nothing but mode files); a README, a
-  // .gitignore and dist/ beside them stay.
+  // delete whatever it names. An export is known by what its marker says, not
+  // its name, since `tokens.resolver.json` is the name the standard suggests to
+  // everyone: a resolver whose description is the export's own, or the house
+  // manifest.json ({ builds: [...] }) exports wrote before it (until
+  // 2026-11-17), which stays owned so the first export after the change
+  // removes it. In one it did write, only what an export owns is replaced
+  // (those two files and the collection folders, which hold nothing but mode
+  // files); a README, a .gitignore and dist/ beside them stay.
   const marks = [RESOLVER, 'manifest.json'];
-  if (existsSync(dir) && readdirSync(dir).length && !marks.some((m) => existsSync(join(dir, m))))
-    throw Object.assign(new Error(`${dir} is not empty and holds no ${RESOLVER}: not a token export, not deleting it`), { refused: true });
+  const read = (f) => { try { return JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { return null; } };
+  const ours = read(RESOLVER)?.description === DTCG.WRITTEN_BY || Array.isArray(read('manifest.json')?.builds);
+  if (existsSync(dir) && readdirSync(dir).length && !ours)
+    throw Object.assign(new Error(`${dir} is not empty and holds no ${RESOLVER} this export wrote: not a token export, not deleting it`), { refused: true });
   if (existsSync(dir)) {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const at = join(dir, e.name);

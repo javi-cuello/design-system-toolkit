@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.35.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.35.1** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -467,7 +467,7 @@
 
     *Why:* a whole-folder replace deletes what the writer never made, and nothing announces it: the new folder is well-formed and every check passes, so the loss is seen only by someone who remembers the file.
 
-    *Evidence:* two in one day. A token export replaced its output folder whole, which would have deleted a project's README and its generated TypeScript on the first refresh from the snapshot; it now removes only its manifest and collection folders, and a test puts a README and `dist/` beside the output and asserts both survive. A snapshot store pruned every icon the posting file did not send, so a second library's snapshot erased the first library's icons; it now records which file wrote which asset and prunes only the poster's, and its test posts two files and asserts neither erases the other. **Needs a read.**
+    *Evidence:* two in one day. A token export replaced its output folder whole, which would have deleted a project's README and its generated TypeScript on the first refresh from the snapshot; it now removes only its resolver (and the manifest older exports wrote) and its collection folders, and a test puts a README and `dist/` beside the output and asserts both survive. A snapshot store pruned every icon the posting file did not send, so a second library's snapshot erased the first library's icons; it now records which file wrote which asset and prunes only the poster's, and its test posts two files and asserts neither erases the other. **Needs a read.**
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the independent review of the change that touches it (the closing pass, `bin/closing`).
 

@@ -38,9 +38,6 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createRequire } from 'node:module';
-
-const DTCG = createRequire(import.meta.url)('./dtcg.js');
 
 const ROOT_PX = 16;
 const FALLBACK = 'system-ui, sans-serif';
@@ -173,8 +170,10 @@ function register(SD) {
           }
           // paragraph and list spacing are no DTCG typography members, so the
           // export keeps them in its $extensions (from-snapshot.mjs); after the
-          // five, in this order, as the stylesheet has always listed them
-          const ext = (v.$extensions || {})[DTCG.VENDOR] || {};
+          // five, in this order, as the stylesheet has always listed them. Read
+          // from whichever vendor key the export was given, as the gradient
+          // angle is, so an export under another key loses nothing here
+          const ext = Object.assign({}, ...Object.values(v.$extensions || {}).filter((e) => e && typeof e === 'object'));
           for (const field of ['paragraphSpacing', 'listSpacing']) {
             if (ext[field] === undefined) continue;
             const [name, type] = FIELD[field];

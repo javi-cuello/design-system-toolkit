@@ -373,6 +373,8 @@ eq('a reference resolving only in another build is dangling in this one, nested 
   { builds: 2, dangling: [{ build: 'dark', reference: 'prim.b' }], ok: false });
 vfiles['prim/dark.json'].prim.b = { $type: 'color', $value: '#eeeeee' };
 eq('resolved in every build is ok', DTCG.verifyReferences(vfiles, vman), { builds: 2, dangling: [], ok: true });
+var threw = false; try { DTCG.verifyReferences(vfiles, { builds: vman }); } catch (e) { threw = e instanceof TypeError; }
+ok('the old { builds } call is refused, never a silent pass', threw);
 var twice = { 'p/value.json': { p: { a: { $type: 'color', $value: '#000000' } } }, 's/value.json': { s: { x: { $type: 'color', $value: '{p.z}' }, y: { $type: 'color', $value: '{p.z}' } } } };
 eq('a reference used by many tokens is one line per build', DTCG.verifyReferences(twice, [{ name: 'one', sources: ['p/value.json', 's/value.json'] }, { name: 'two', sources: ['p/value.json', 's/value.json'] }]).dangling,
   [{ build: 'one', reference: 'p.z' }, { build: 'two', reference: 'p.z' }]);

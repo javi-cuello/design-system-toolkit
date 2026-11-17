@@ -2,7 +2,7 @@
 // plugin's. Run: node --test tools/tokens/test-from-snapshot.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -93,6 +93,22 @@ test('the export writes a DTCG 2025.10 resolver: one set, one modifier per mode 
     assert.ok(readdirSync(join(dir, $ref.split('/')[0])).includes($ref.split('/')[1]), `${$ref} is a file the export wrote`);
 });
 
+test('a resolver someone else wrote is not this export\'s: the folder is refused, nothing deleted', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeFileSync(join(dir, RESOLVER), JSON.stringify({ version: '2025.10', resolutionOrder: [] }));
+  mkdirSync(join(dir, 'theirs'));
+  writeFileSync(join(dir, 'theirs/value.json'), '{}');
+  assert.throws(() => writeDtcg(snapshot(), dir), /not a token export/);
+  assert.ok(readdirSync(dir).includes('theirs'));
+});
+
+test('paragraph and list spacing survive noExtensions, under the vendor key given', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(snapshot(), dir, { noExtensions: true, vendor: 'com.example' });
+  const t = JSON.parse(readFileSync(join(dir, 'text-style/value.json'), 'utf8'))['text-style'].heading.lg;
+  assert.deepEqual(t.$extensions, { 'com.example': { paragraphSpacing: { value: 0, unit: 'px' }, listSpacing: { value: 0, unit: 'px' } } });
+});
+
 test('a folder an older export wrote, marked by manifest.json, is taken over and the manifest removed', () => {
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeFileSync(join(dir, 'manifest.json'), '{"builds":[]}');
@@ -111,6 +127,24 @@ test('an alias to a same-named variable points at the other collection, never it
   };
   const v = toDtcgSnapshot(s).collections.find((c) => c.name === 'Brand').variables[0];
   assert.deepEqual(v.values.Light.alias, { collection: 'Primitives - Colour', name: 'Palette/Grey/12' });
+});
+
+test('a collection holding only what DTCG cannot type adds no files and no modifier', () => {
+  const s = snapshot();
+  s.collections['Collection 1'] = { modes: ['Expanded', 'Collapsed'], values: { Expanded: { 'Sidebar variant': true }, Collapsed: { 'Sidebar variant': false } }, alias: {} };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  const built = writeDtcg(s, dir);
+  assert.ok(!readdirSync(dir).includes('collection-1'), readdirSync(dir).join(', '));
+  assert.ok(!Object.keys(JSON.parse(readFileSync(join(dir, RESOLVER), 'utf8')).modifiers).some((m) => m.includes('collection-1')));
+  assert.equal(built.resolutions.length, 4, 'light/dark × desktop/mobile, not doubled');
+});
+
+test('two modes whose names slug alike are refused, nothing written', () => {
+  const s = snapshot();
+  s.collections.Brand = { modes: ['Light', 'light'], values: { Light: { 'A/b': '#000000' }, light: { 'A/b': '#ffffff' } }, alias: {} };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  assert.throws(() => writeDtcg(s, dir), /modes "Light" and "light" both become brand\/light\.json/);
+  assert.deepEqual(readdirSync(dir), []);
 });
 
 test('an export refuses to clear a non-empty folder it did not write', () => {
