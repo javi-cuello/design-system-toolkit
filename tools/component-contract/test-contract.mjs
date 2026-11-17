@@ -414,9 +414,10 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const read = (bg, kind = 'graphic') => ({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'IB' }, 'b/content': { kind: 'container', parent: 'b', background: 'C/own' }, 'b/content/icon': { kind, parent: 'b/content', width: 20, height: 20, ...(kind === 'instance' && { component: 'Icon/x' }), background: bg } });
   const m = (x) => (x === 'IB' ? main : null);
   const same = read('C/strong'), other = read('C/danger'), whole = read('C/strong', 'instance');
-  ownInsides(same, m, { partial: true }); ownInsides(other, m, { partial: true }); ownInsides(whole, m, { partial: true, whole: new Set(['b']) });
-  ok('an icon at its component\'s glyph colour is the component\'s; another colour is the instance\'s own',
-    same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && whole['b/content/icon'].background === undefined);
+  ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(whole, m, { partial: true, whole: new Set(['b']), reading: true });
+  const design = read('C/strong'); ownInsides(design, m, { partial: true });
+  ok('in a reading, an icon at its component\'s glyph colour is the component\'s; another colour, or a design\'s, is kept',
+    same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && whole['b/content/icon'].background === undefined && design['b/content/icon'].background === 'C/strong');
 }
 
 console.log(`${n}/${n} passed`);

@@ -1485,7 +1485,7 @@ async function main() {
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
         for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) zeroTokens(e, M[match[rel]], L.value);
       }
-      normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn });
+      normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };

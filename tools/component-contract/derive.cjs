@@ -482,7 +482,7 @@ let M = { ...atProps(m, e.with) };
 
 /* `partial`: a reading that holds only some of an instance's layers (from-code reads the ones a contract keeps): no layer
    it lacks says the instance hides one, so none is kept whole for it; each it holds goes where it equals its component's */
-function ownInsides(anatomy, mains, { partial = false, whole = new Set() } = {}) {
+function ownInsides(anatomy, mains, { partial = false, whole = new Set(), reading = false } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
@@ -510,7 +510,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set() } = {})
     // glyph read) at the colour its component gives the one
     // glyph inside it (Figma's way) is its component's, which Figma does not say on the instance: to-figma's glyph
     // equivalence, for a reading (from-code), whole or not
-    for (const k of inner) {
+    if (reading) for (const k of inner) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x || x.kind !== 'instance' || !['instance', 'graphic'].includes(e.kind) || e.background == null || x.background != null || inner.some((q) => q.startsWith(k + '/'))) continue;
       const kids = Object.keys(M).filter((q) => M[q] && M[q].parent === mk), g = kids.length === 1 && M[kids[0]];
@@ -526,7 +526,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set() } = {})
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
-      return look(sized(anatomy[k])) === look(sized(x));
+      return reading && look(sized(anatomy[k])) === look(sized(x));
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
