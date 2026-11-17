@@ -283,6 +283,12 @@ delete globalThis.figma;
     roundTrip(c({ width: 0, height: 'fill' }, 'center'), c({ width: 0, height: 'fill' })).rows.length === 0
     && roundTrip(c({ width: 'fill', height: 0 }), c({ width: 'fill', height: 0 }, 'center')).rows.length === 0
     && roundTrip(c({ width: 10, height: 10 }, 'center'), c({ width: 10, height: 10 })).rows.length === 1);
+  // an outside or centre stroke is out of the layout whatever the frame says (Figma lays it out as an outline): its
+  // inLayout is not compared; an inside stroke's is
+  const s = (align, inLayout) => ({ component: 'S', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' }, border: { color: 'C/s', width: 'S/1', align, ...(inLayout && { inLayout }) } } }, variants: [] });
+  ok('an outside or centre stroke\'s inLayout is not compared; an inside stroke\'s is',
+    roundTrip(s('outside', true), s('outside')).rows.length === 0 && roundTrip(s('center', true), s('center')).rows.length === 0
+    && roundTrip(s('inside', true), s('inside')).rows.length === 1);
 }
 
 {

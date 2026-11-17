@@ -121,6 +121,20 @@ function line(x) {
   return out;
 }
 
+/* A stroke outside or across its edge: Figma lays it out as an outline, out of the layout, whatever the frame's
+   "include stroke in layout" says (help.figma.com, "Use auto layout with CSS Flexbox in mind"; only an inside stroke
+   takes room), so its inLayout shows nowhere: compared without it. */
+function outer(x) {
+  if (!x) return x;
+  const out = { ...x };
+  for (const [id, e] of Object.entries(x)) {
+    if (!e || !e.border || !e.border.inLayout || !['outside', 'center'].includes(e.border.align)) continue;
+    const { inLayout: _, ...border } = e.border;
+    out[id] = { ...e, border };
+  }
+  return out;
+}
+
 /* A paint said two ways: a raw colour in either notation (rgb(255 255 255 / 0.9), rgba(255, 255, 255, 0.9)) is one
    colour, written one way; a linear gradient that states its angle is that angle, its transform (Figma's matrix,
    scaled by the box it was drawn in) said by it. */
@@ -230,7 +244,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
       theirs[dk] = dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v;
     }
     // the named equivalences, each the same on both sides
-    const same = (x) => spread(atDefault(iconSize(glyph(line(words(paint(room(x)))))), mains));
+    const same = (x) => spread(atDefault(iconSize(glyph(line(outer(words(paint(room(x))))))), mains));
     const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
