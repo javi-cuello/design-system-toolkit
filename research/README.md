@@ -6,10 +6,13 @@ A curated set of editorial articles on how design systems are built. Each piece 
 
 - One article per question. A broad survey of what the toolkit knowledge base ([`knowledge/`](../knowledge/README.md)) already holds is not an article; narrow it to the question the knowledge base cannot answer, or add the finding to the knowledge base instead.
 - Update the article that already asks a question rather than writing a second one.
+- Before writing, read the articles on the same or a neighbouring question; link to a section another article owns rather than retelling it. After writing, correct every article the finding changes (a fact, a number, a piece of advice), with its `updated` day: two articles never say a thing two ways.
 - File each article in the topic folder that fits it. A new folder only for a topic none covers.
 - research/ is public: no customer, private project or private person is named, and nothing from a private session is quoted; use neutral descriptions ("a product library", "Project A"). The rule is toolkit-standard §D 6; `bin/check` refuses a project's name, an email, a /Users/ path or the maintainer's name.
 - No scripts, raw results or experiment data. State their numbers in the prose and keep the files in the toolkit or a scratch folder.
 - An article added or edited goes into `index.html` in the same change, with `built` set to the day: nothing builds the page, and `bin/check` refuses an article missing from it or out of step with it.
+- Each entry carries `researched` (the day the research was done; a month, or a span `2026-08/2026-10`, only where no record holds the day) and `updated` (the day of its last change, set again on every edit), and `subtopic` in a topic that lists `subtopics`. The page computes the reading time from the text at 238 words a minute (Brysbaert 2019), so no one types it.
+- An article reads in 20 minutes or less, 4,760 words with figures and comments not counted; `bin/check` refuses an article updated after 2026-11-17 that runs longer, so a long one is brought under it the next time it is worked on. What does not fit is a second article on its own question, Part 1 and Part 2 of one question (each under 20 minutes, each linking to the other), or evidence the knowledge base holds and the article links to.
 - Retired pieces go to `_archive/<date>/`, never deleted.
 
 The `design-system-research` skill reads this file before writing a deep-mode guide. The knowledge base never links to these articles.
@@ -18,38 +21,56 @@ The `design-system-research` skill reads this file before writing a deep-mode gu
 
 Type, colour, surfaces and the scales everything else is built on.
 
-- [Elevation and shadows](foundations/elevation-and-shadows.md)
-- [How surfaces stack](foundations/how-surfaces-stack.md)
+### Type and prose
+
 - [Line height and letter spacing, from Figma to the browser](foundations/line-height-letter-spacing-figma-to-css.md)
-- [Materials and translucency](foundations/materials-and-translucency.md)
 - [Naming text styles](foundations/naming-text-styles.md)
 - [One type scale for an interface and its articles](foundations/one-type-scale-for-ui-and-content.md)
 - [Space between prose elements](foundations/space-between-prose-elements.md)
+- [Type on a phone](foundations/type-on-a-phone.md)
+
+### Colour and surfaces
+
+- [Elevation and shadows](foundations/elevation-and-shadows.md)
+- [How surfaces stack](foundations/how-surfaces-stack.md)
+- [Materials and translucency](foundations/materials-and-translucency.md)
+- [Surfaces in dark mode](foundations/surfaces-in-dark-mode.md)
+- [Yellow in colour scale generators](foundations/yellow-in-color-scale-generators.md)
+
+### Spacing and shape
+
 - [Spacing tokens by intent](foundations/spacing-tokens-by-intent.md)
 - [Corner radius by intent](foundations/corner-radius-by-intent.md)
-- [Surfaces in dark mode](foundations/surfaces-in-dark-mode.md)
-- [Type on a phone](foundations/type-on-a-phone.md)
-- [Yellow in colour scale generators](foundations/yellow-in-color-scale-generators.md)
 
 ## Components and naming
 
 How a component is cut, named and given its states.
 
-- [Mapping a Figma token system onto MUI's theme](components-and-naming/mapping-figma-tokens-onto-mui-theme.md)
+### Names and states
+
 - [Naming inside a Figma component](components-and-naming/naming-inside-figma-components.md)
 - [What the State axis models](components-and-naming/what-the-state-axis-models.md)
+
+### Cutting and mapping
+
+- [Mapping a Figma token system onto MUI's theme](components-and-naming/mapping-figma-tokens-onto-mui-theme.md)
 - [When to split or merge a component](components-and-naming/when-to-split-or-merge-a-component.md)
 
 ## Figma and code
 
 Where the design file and the browser agree, and where they cannot.
 
-- [What counts as a breaking change in a Figma library](figma-and-code/breaking-changes-in-a-figma-library.md)
+### Matching and rendering
+
 - [How closely should a Figma library match its code?](figma-and-code/how-closely-figma-should-match-code.md)
-- [Measuring design system adoption](figma-and-code/measuring-design-system-adoption.md)
 - [Where responsive behaviour belongs in a Figma library](figma-and-code/responsive-components-in-figma.md)
-- [When should a design system split into more than one component library?](figma-and-code/when-to-split-a-component-library.md)
 - [Where Figma and CSS render differently](figma-and-code/where-figma-and-css-render-differently.md)
+
+### Running the library
+
+- [What counts as a breaking change in a Figma library](figma-and-code/breaking-changes-in-a-figma-library.md)
+- [Measuring design system adoption](figma-and-code/measuring-design-system-adoption.md)
+- [When should a design system split into more than one component library?](figma-and-code/when-to-split-a-component-library.md)
 
 ## Accessibility
 
@@ -62,7 +83,6 @@ Focus, direction and the decisions a design file has to carry.
 
 What principles are for once everyone agrees on them.
 
-- [Marking AI-generated content](principles/marking-ai-generated-content.md)
 - [When design principles conflict](principles/when-design-principles-conflict.md)
 
 ## Auditing
@@ -85,4 +105,4 @@ Making a system readable to people and to agents. The nine articles form one ser
 8. [Prototyping with a design system's real components](ai-and-docs/prototyping-from-real-components.md)
 9. [Measuring and showing agent readiness](ai-and-docs/measuring-agent-readiness.md)
 
-*Making a design system usable by AI agents* was split into parts 2, 4 and 9 and retired to `_archive/2026-11-09/`.
+*Making a design system usable by AI agents* was split into parts 2, 4 and 9 and retired to `_archive/2026-11-09/`. *Marking AI-generated content* was retired to `_archive/2026-11-17/`: it is not about design systems.

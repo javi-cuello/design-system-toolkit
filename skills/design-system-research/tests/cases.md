@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.9.0)
+# Eval cases — design-system-research (v3.10.0)
+
+**Walked: 2026-11-17 for 3.10.0** — A34 added, walked on paper against the deep-mode paragraph and checklist (its live walk is the next deep-mode run); the rest unchanged, since the change only adds to deep mode's start and end.
 
 **Walked: 2026-11-16 for 3.7.1** — wording only, from review: A31's fixture names deep mode and its Assert says the included topics count toward Step 1's two to five axes; A1 to A30 unchanged, none asserts on the axis count's source.
 
@@ -311,3 +313,11 @@ Negative: one figure marking three ideas in three colours, or text drawn as grey
 Observed: 2026-11-17 — the spacing guide's first card marked all three roles over grey bars; the maintainer called it confusing and asked for separate images with real content.
 Traced: 2026-11-17 for 3.9.0 — to deep-mode-voice.md §6 and SKILL.md's quality checklist.
 Walked live: 2026-11-17 on research/foundations/spacing-tokens-by-intent.md: three figures of one invoice card ("Invoice #1042", "Pay now", "Download"), one role each.
+
+## A34 · A deep-mode run reads research/ first and corrects its neighbours
+Fixture: deep mode, a guide on a subject research/ already touches (corner radius, with spacing tokens and focus indicators already published).
+Assert: before searching, the reply or plan names the neighbouring articles read; the new piece links to a neighbour's section instead of retelling it; every neighbour whose fact, number or advice the finding changes is corrected in the same change with its `updated` day set in research/index.html, and the reply lists them; the guide is 4,760 words or fewer, figures and comments not counted.
+Negative: a guide that retells a neighbour's worked example, states a fact a neighbour states the other way, or runs past 20 minutes.
+Observed: 2026-11-17 — an audit of 35 articles found 19 contradictions and 10 overlapping sections (corner radius endorsed t-shirt names that spacing tokens said to drop; elevation stated Figma's stroke default the opposite way to the Figma-and-CSS piece), and 22 of 35 articles ran past 20 minutes at 238 words a minute, figures not counted (the longest 40).
+Traced: 2026-11-17 for 3.10.0 — to SKILL.md's deep-mode paragraph and the quality checklist.
+
