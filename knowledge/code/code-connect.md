@@ -1,8 +1,29 @@
-# Code Connect
+# Code Connect and the Inspect panel
 
-What Figma's Code Connect is, what it reads and checks, how to keep a library ready for it, and how an agent or a developer uses it. As of 2026-11-17; Figma's tooling changes monthly, so re-check anything dated before relying on it.
+What Dev Mode's Inspect panel shows with no Code Connect at all, then what Figma's Code Connect is, what it reads and checks, how to keep a library ready for it, and how an agent or a developer uses it. As of 2026-11-17; Figma's tooling changes monthly, so re-check anything dated before relying on it.
 
 **Implements:** the step after [reading a design file into code](figma-handoff.md): pairing each Figma component with the code component that ships it.
+
+## Inspect without Code Connect
+
+**What good looks like**
+- [strong] A developer in Dev Mode sees, for a selected layer, its measurements, its styles and, for each bound variable, a snippet in which the variable appears by name. Clicking it opens "Variable details": name, collection, mode, value with its alias chain, scopes and the snippet. Select nothing and "Open variables table" lists every variable, read-only, values copyable ([Figma, variables in Dev Mode](https://help.figma.com/hc/en-us/articles/27882809912471-Variables-in-Dev-Mode)).
+- [strong] What it prints for a variable is its **code syntax** for the platform: one hand-typed string each for Web, Android and iOS, set in the Edit variable modal and readable through the Plugin API and the REST API's `codeSyntax` ([setVariableCodeSyntax](https://developers.figma.com/docs/plugins/api/properties/Variable-setvariablecodesyntax); [REST variable types](https://developers.figma.com/docs/rest-api/variables-types)).
+- [strong] With no code syntax set, Dev Mode builds a CSS name itself and normalises it to a valid one (a name with an emoji becomes `--blue-0000FF`), and a string font-weight variable prints as a number, not a reference. So the printed name can differ from the layer's variable name, and from the build's.
+- [moderate] Layer names, component and variant property names, and a component's description are read as written; the description shows in Dev Mode (figma-standard rules 21 and 25). Annotations appear on the layer they were written on.
+
+**How**
+- [required] Set web code syntax to the name the build writes, `var(--…)`, or leave it unset and accept Dev Mode's own spelling (code-standard rule 52; `tools/tokens/check.mjs` holds it).
+- [moderate] Rename a variable and its code syntax keeps the old text, so Dev Mode keeps printing the old name until someone edits it (tested; `research/figma-and-code/breaking-changes-in-a-figma-library.md`).
+- [moderate] Use Inspect to check a number or find a token's name, never to produce a rule ([figma-handoff.md](figma-handoff.md)).
+
+**Cases**
+- A developer copies `var(--color-bg)` from Inspect and the stylesheet has `--colour-background` → the code syntax was typed by hand and drifted; the check names the variable and the expected string.
+- A variable has no code syntax → Inspect shows Dev Mode's normalised name; where it differs from the build's, set the syntax.
+
+**Check**
+- *Script:* `tools/tokens/check.mjs` compares each variable's web code syntax with the name the build writes; unset is not a finding.
+- *Judgement:* Does Inspect show what a developer would type? Open a bound layer in Dev Mode and read the snippet.
 
 ## What it is
 
@@ -56,4 +77,4 @@ What Figma's Code Connect is, what it reads and checks, how to keep a library re
 - *Script:* none today. A repo with mapping files could be checked against the snapshot's component property names and options; no registered repo has any yet.
 - *Judgement:* Does each mapped property name equal the code's prop, and does each nested instance have its own mapping?
 
-**Sources:** the Figma developer docs and Help Center pages linked above, the `figma/code-connect` releases and issues (fetched 2026-11-17).
+**Sources:** Figma's Help Center page on variables in Dev Mode (fetched 2026-11-17; undated), the Figma developer docs and Help Center pages linked above, the `figma/code-connect` releases and issues (fetched 2026-11-17).
