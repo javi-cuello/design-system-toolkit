@@ -160,8 +160,6 @@ $xxl: 90rem;
     // the group scrolls (overflow-x), which would clip a ring drawn outside the link
     // inside the current link's 2px inset accent, so the ring shows on it too
     .masthead__systems .seg:focus-visible { outline-offset: -5px; }
-    // a system with no address here is a label, not a link
-    .masthead__systems span.seg { cursor: default; color: var(--fg-soft); }
     .topnav { grid-area: nav; min-inline-size: 0; }
     .theme { grid-area: theme; }
 
