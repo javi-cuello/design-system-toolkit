@@ -72,7 +72,7 @@ How an interface looks: layout, space, type (for UI and for long-form content), 
 **Build**
 - [required] Every gap, padding and margin is a spacing token, or a literal with its reason (code-standard rule 22); `gap` on the flex or grid parent, not margins on children.
 - [required] The heading-to-content gap is a smaller step than the gap between sections, set by the parent, never per instance. Detail: [tokens: three tiers](../../code/tokens.md#three-tiers) and [figma handoff: auto layout to flex and grid](../../code/figma-handoff.md#auto-layout-to-flex-and-grid).
-- [strong] Spacing as tokens (primitive naming, inset, stack, inline and layout roles, control height, platforms, Figma scopes, audit and migration): [tokens: spacing tokens](../../code/tokens.md#spacing-tokens).
+- [strong] Spacing as tokens (primitive naming, padding, gap and page roles, control height, platforms, Figma scopes, audit and migration): [tokens: spacing tokens](../../code/tokens.md#spacing-tokens).
 
 **Check**
 - *Script:* could compare computed gaps with the scale, and for each heading assert space above > space below and heading-to-first-child < gap between sibling sections (a relational check proven so far on one docs site only). On Figma, auto-layout gaps and padding against the spacing variables.
