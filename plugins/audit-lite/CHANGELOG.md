@@ -1,6 +1,11 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.10.0] - 2026-11-17
+### Changed
+- A run with a context document carries the document's text in its report, and Claude, asked for the updated document, gives it back whole with the chat's decisions added to its rulings log (columns matched by header name); uploading it replaces the old one. Rulings decided in the chat no longer come as a separate `rulings.md`.
+- A fenced block in the report is one backtick longer than any run inside it, so an embedded document's own fences never close it.
+
 ## [0.9.0] - 2026-11-17
 ### Changed
 - Settings: a loaded context document shows only Remove (no "Change…"), and the settings actions are small secondary buttons, not links (maintainer, workshop dry run).

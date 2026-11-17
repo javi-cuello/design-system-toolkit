@@ -40,6 +40,9 @@ ok('a document with no entry for this file is refused by name', /no audit-settin
 ok('a document with no settings block is refused', /no audit-settings block/.test(refused(() => settingsFor('# Doc', 'KEY123'))));
 const withDoc = report(r, { fileName: 'Fixture library', fileKey: 'KEY123', date: '2026-11-10' }, Object.assign(run, { contextName: 'design-system-context.md' }));
 ok('the run says the settings came from the document', withDoc.includes("- Settings: the project's context document (design-system-context.md)"));
+const withText = report(r, { fileName: 'Fixture library', fileKey: 'KEY123', date: '2026-11-10' }, Object.assign({}, run, { contextName: 'design-system-context.md', contextText: MD }));
+ok('a run with a document carries its text, for Claude to give back with new rulings', withText.includes('## Context document') && withText.includes('# Fixture library — design system context'));
+ok('a run without the text has no Context document section', !withDoc.includes('## Context document\n'));
 ok('the judge gets the library\'s own conventions', ['This library\'s own:', 'Colour is bound from the semantic collection named Semantic.', 'Status options run Default · Hover · Pressed.', 'Descriptions: one sentence, then Use when.'].every((x) => withDoc.includes(x)), withDoc.split('This library')[1]?.slice(0, 400));
 ok('without a document the house conventions are not called the library\'s own', !report(r, { fileName: 'X', fileKey: 'K', date: 'd' }).includes('This library\'s own:'));
 const routedOnly = MD.replace(/"KEY123": \{[\s\S]*?\n    \}\n/, '');
