@@ -371,7 +371,8 @@ What a page on a design-system documentation site must specify: the site's struc
 ## On-this-page navigation
 
 **Use when**
-No source settles the length or the number of `h2`s at which a page needs one: NN/g, GOV.UK's contents list and component guide, Docusaurus and Starlight were searched and give none.
+- [contested] **Long pages only, or every page.** Government systems put it on long pages: USWDS: in-page navigation helps "pages that include three or more distinct content sections or content that exceeds three or more viewport heights", and "For pages that require little or no scrolling, in-page navigation is not necessary" ([USWDS, in-page navigation](https://designsystem.digital.gov/components/in-page-navigation/)). Singapore's design system: "If the page fits on one or two screens, a table of contents adds little value and competes with the body" ([SGDS, table of contents](https://designsystem.tech.gov.sg/components/table-of-contents)). Canada.ca names the trigger without a number: "excessive scrolling is required to view all of the content on the page" ([Canada.ca, in-page table of contents](https://design.canada.ca/common-design-patterns/in-page-toc.html)). Docs themes take the other side (next item); the project decides (design-standard rule 14).
+- [weak] USWDS's built-in floor is lower than its guidance: `data-minimum-heading-count` defaults to two headings, and "Teams should customize the value" (same page).
 - [moderate] **Docs themes show it on every page and let a page opt out.** [Docusaurus](https://docusaurus.io/docs/markdown-features/toc): "Each Markdown document displays a table of contents on the top-right corner", with front matter `hide_table_of_contents` (default `false`) to hide it ([docs plugin](https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-docs)). [Starlight](https://starlight.astro.build/reference/configuration/) configures "the table of contents shown on the right of each page", and front matter `tableOfContents: false` hides it on one page ([frontmatter](https://starlight.astro.build/reference/frontmatter/)).
 - [weak] GOV.UK's [contents list](https://design-guide.publishing.service.gov.uk/components/content-list) is for "when content is long and needs to be broken up to help users navigate it".
 
@@ -383,7 +384,7 @@ No source settles the length or the number of `h2`s at which a page needs one: N
 
 **Cases**
 - A tabbed page has one list covering every tab → the list covers the visible tab only.
-- A page with three short sections has a sticky rail → remove it; it takes width and gives nothing.
+- A short page that fits on one or two screens has a sticky rail → remove it where the project takes the long-pages side; it takes width and gives nothing.
 
 **Accessibility**
 - [required] 2.4.5 Multiple Ways, 2.4.1 Bypass Blocks (the list jumps within the page), 2.4.11 Focus Not Obscured (a sticky header must not cover the target heading after a jump; leave scroll margin).
