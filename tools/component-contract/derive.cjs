@@ -364,7 +364,7 @@ function read(stored) {
 }
 
 /* Each walked tree's flat anatomy, as derive() layers them and selfCheck() holds the contract to them. */
-function anatomies(trees, characters, known, L, mains = null) {
+function anatomies(trees, characters, known, L, mains = null, found = null) {
   const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known) }));
   // a boolean only shows and hides: a layer its flipped tree shares with the variant it was flipped from is that
   // variant's, but for its place (a flip is walked from a detached instance, whose sizes are its own: a root 420 wide)
@@ -393,7 +393,8 @@ function anatomies(trees, characters, known, L, mains = null) {
   }
   // the one spelling first, so an instance and its component are compared alike
   for (const f of flat) normalForm(f.anatomy);
-  if (mains) for (const f of flat) ownInsides(f.anatomy, mains);
+  // (`found`: a Map, by each variant's `when`, of the instances its insides are kept whole in)
+  if (mains) for (const f of flat) { const here = found ? new Set() : null; ownInsides(f.anatomy, mains, { found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
   return flat;
 }
 
@@ -485,7 +486,7 @@ let M = { ...atProps(m, e.with) };
 
 /* `partial`: a reading that holds only some of an instance's layers (from-code reads the ones a contract keeps): no layer
    it lacks says the instance hides one, so none is kept whole for it; each it holds goes where it equals its component's */
-function ownInsides(anatomy, mains, { partial = false, whole = new Set(), reading = false } = {}) {
+function ownInsides(anatomy, mains, { partial = false, whole = new Set(), reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
@@ -520,7 +521,10 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       if (g && g.kind === 'graphic' && g.background === e.background) { const { background: _, ...rest } = e; anatomy[k] = rest; }
     }
     // (`whole`: instances the design keeps whole, so a reading keeps what it reads there too)
-    if (whole.has(id) || (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk)))) continue;
+    // (`found`: where given, collects the instances kept whole for a layer they hide, so a drawing hides there what
+    // the contract does not list, and nowhere else)
+    if (whole.has(id)) continue;
+    if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); continue; }
     const own = (k) => {
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x) return false;
@@ -652,12 +656,12 @@ function mainsFrom(specs, known = [], optionsOf = () => ({})) {
 
 /* `known` is every stored component name, so an instance of `Table - Cell / Fill`
    resolves to that set and not to `Table - Cell` (graph.cjs nameOf). */
-function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null } = {}) {
+function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null, found = null } = {}) {
   const pointer = new Set(pointerStates.map(kebab));
   const { spec, trees, hides, characters } = read(stored);
   const figmaProps = spec.props || {};
   const L = spec.links || {};
-  const flat = anatomies(trees, characters, known, L, mains);
+  const flat = anatomies(trees, characters, known, L, mains, found);
   const addresses = new Map();
   for (const t of trees) for (const e of t.list) addresses.set(keyOf(e.segs), e.segs);
   const base = flat[0];

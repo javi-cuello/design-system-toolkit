@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames } from './to-figma.mjs';
+import { plan, figmaSide, pluginCode, verify, writeDrawn, variantKeys, needs, roundTrip, BEFORE, FAILED, PATCH_BEFORE, PATCH_AFTER, PATCH_FAILED, namedByKey, keyedNames, keptWhole } from './to-figma.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -315,4 +315,11 @@ delete globalThis.figma;
   fsm.writeFileSync(pth.join(dir, 'button', 'figma.json'), JSON.stringify({ name: 'Button', key: 'kb', default: { children: [{ type: 'INSTANCE', instanceOf: 'Icon/x / Size=16', instanceOfKey: 'ki' }] } }));
   const k = keyedNames(dir); fsm.rmSync(dir, { recursive: true });
   ok('the library\'s components by key, and each main its specs place (an icon), named as the library names it', k.kb === 'Button' && k.ki === 'Icon/x'); }
+{ // an input's label overridden, its field its own: trimmed, so the field is not hidden; the same with the field's
+  // own look listed too: kept whole, so a layer it does not list is hidden
+  const field = { component: 'Field', props: {}, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', color: 'A' }, input: { kind: 'container', parent: 'root', background: 'B' } }, variants: [] };
+  const mains = (n) => (n === 'Field' ? field : null);
+  const trimmed = { root: { kind: 'container' }, f: { kind: 'instance', parent: 'root', component: 'Field' }, 'f/label': { kind: 'text', parent: 'f', color: 'Z' } };
+  const whole = { ...trimmed, 'f/input': { kind: 'container', parent: 'f', background: 'B' } };
+  ok('an instance\'s insides are kept whole only where they list a layer that is its component\'s own', keptWhole(trimmed, mains).length === 0 && JSON.stringify(keptWhole(whole, mains)) === '["f"]'); }
 console.log(`${n}/${n} passed`);

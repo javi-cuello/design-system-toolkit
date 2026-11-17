@@ -552,14 +552,16 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // a value the contract gives a layer inside an instance, set only where the instance draws another: a value it
   // already draws is no override
   const boundTo = (paints) => (Array.isArray(paints) && paints[0] && paints[0].boundVariables && paints[0].boundVariables.color ? paints[0].boundVariables.color.id : null);
-  const paintIf = async (n, field, token) => { if (typeof token !== 'string' || !(field in n)) return; const v = await V(token); if (v && boundTo(n[field]) === v.id) return; n[field] = [await solid(token)]; };
+  // a paint the contract names on a layer inside an instance is set even where the main already has it: the library
+  // read it as an override (set there by hand), and one left unset reads back as no override, so as the part gone
+  const paintIf = async (n, field, token, force = false) => { if (typeof token !== 'string' || !(field in n)) return; const v = await V(token); if (v && boundTo(n[field]) === v.id) { if (!force) return; n[field] = [{ type: 'SOLID', color: { r: 1, g: 0, b: 1 } }]; } n[field] = [await solid(token)]; };
   const override = async (n, e) => {
     if (e.kind === 'instance' && e.component && n.type === 'INSTANCE') { await swapTo(n, e); await withProps(n, e); }
     if (e.kind === 'text' && n.type === 'TEXT') {
       await paintIf(n, 'fills', e.color);
       const words = typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) ? e.content : null;
       if (words !== null && n.characters !== words && n.fontName !== figma.mixed) { await tried(`font of ${n.name}`, () => figma.loadFontAsync(n.fontName)); n.characters = words; }
-    } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length ? 'strokes' : 'fills', e.background);
+    } else if (e.kind === 'graphic' && n.type === 'VECTOR') await paintIf(n, n.strokes.length ? 'strokes' : 'fills', e.background, true);
     else if (e.kind !== 'text') await paintIf(n, 'fills', e.background);
     if (e.border && e.border.color) await paintIf(n, 'strokes', e.border.color);
     // how it is sized where the contract says otherwise than the instance (a label hugging its words in a message)
@@ -701,6 +703,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // only one with no fill of its own: another component's box fill (an avatar's circle) is its background, not its paths'
       if (P.fromCode && e.kind === 'instance' && typeof e.background === 'string' && n.type === 'INSTANCE' && !(Array.isArray(n.fills) && n.fills.some((f) => f.visible !== false && (f.opacity ?? 1) > 0))) recolour(n, await solid(e.background));
       if (e.rotation) n.rotation = e.rotation;
+      // a placed instance's own bounds (a dialog's modal at most 556 wide): a frame drawn here takes them with its layout
+      if (n.type === 'INSTANCE') for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null) await num(n, f, e[f]);
       if (['FRAME', 'COMPONENT', 'SLOT', 'VECTOR', 'ELLIPSE', 'RECTANGLE'].includes(n.type)) {
         if (e.layout) {
           n.layoutMode = e.layout.direction === 'column' ? 'VERTICAL' : 'HORIZONTAL';
@@ -765,7 +769,10 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       if (id !== 'root' && (e.absolute || e.constraints)) toPlace.push([n, e]);
       nodes[id] = n;
     }
-    for (const [pid, kids] of levels) { const kept = new Set([...kids].map((k) => live(k).id)); for (const c of live(pid).children) if (!kept.has(c.id)) c.visible = false; }
+    // a layer the contract does not list is hidden only inside an instance it keeps whole (keptWhole): elsewhere it is
+    // the component's own, left as it shows (a text input's field beside its overridden label)
+    const wholeAt = (pid) => !variant.whole || variant.whole.some((w) => pid === w || pid.startsWith(w + '/'));
+    for (const [pid, kids] of levels) { if (!wholeAt(pid)) continue; const kept = new Set([...kids].map((k) => live(k).id)); for (const c of live(pid).children) if (!kept.has(c.id)) c.visible = false; }
     // placed out of the flow with no point given (a focus ring round its box): centred on its parent, above the rest
     for (const id of ids) {
       const e = variant.anatomy[id], n = nodes[id], up = nodes[e.parent];
@@ -911,12 +918,24 @@ export function variantKeys(dir, names, tails = []) {
   return out;
 }
 
+/* The instances whose insides a contract keeps whole: derive lists an instance's layers that equal its component's
+   own only where one of the component's layers is hidden there (a layer not listed is then hidden); elsewhere it keeps
+   only the overrides, and a layer not listed is the component's own, showing. Told apart by trimming again: the insides
+   lose a layer only where they were kept whole. */
+export function keptWhole(anatomy, mains) {
+  const { ownInsides } = req('./derive.cjs');
+  const copy = JSON.parse(JSON.stringify(anatomy));
+  ownInsides(copy, mains, { partial: true });
+  return Object.keys(anatomy).filter((id) => anatomy[id] && anatomy[id].kind === 'instance' && Object.keys(anatomy).some((k) => k.startsWith(id + '/') && !copy[k]));
+}
+
 /* The plan as the plugin gets it: each distinct element once, a variant's anatomy its indices. */
-export function pluginCode(contract, keys, { before = '', after = '', failed = '', axisOrder = [], sizeAxis = null } = {}) {
+export function pluginCode(contract, keys, { before = '', after = '', failed = '', axisOrder = [], sizeAxis = null, mains = null, whole = null } = {}) {
   const p = plan(contract, { axisOrder }), table = [], at = new Map();
+  const norm = (n) => String(n).split(',').map((x) => x.trim()).sort().join(', ');
   const ref = (e) => { const j = JSON.stringify(e); if (!at.has(j)) { at.set(j, table.length); table.push(e); } return at.get(j); };
   // the size axis by the library's settings' name (sizeAxis), carried to the drawing; none named, no variant is picked by size
-  const packed = { ...p, sizeAxis, elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
+  const packed = { ...p, sizeAxis, elements: table, variants: p.variants.map((v) => ({ name: v.name, cell: v.cell, ...(whole && whole[norm(v.name)] ? { whole: whole[norm(v.name)] } : mains && { whole: keptWhole(v.anatomy, mains) }), anatomy: Object.fromEntries(Object.entries(v.anatomy).map(([id, e]) => [id, ref(e)])) })) };
   // a layer hidden inside an instance is one to draw and match too: the snapshot's walk, run in the same plugin
   // before (the update's live read, the audit), leaves Figma skipping them
   return `figma.skipInvisibleInstanceChildren = false;\n${before}const P = ${JSON.stringify(packed)}; for (const v of P.variants) for (const id in v.anatomy) v.anatomy[id] = P.elements[v.anatomy[id]];\nconst parseColour = ${parseColour.toString()};
@@ -1484,7 +1503,22 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const awake = (async () => { while (drawing) { await exec('return 1', into, 5000).catch(() => {}); await new Promise((r) => setTimeout(r, 2000)); } })();
   // this run's token, chosen here so the runner can take back its own and no other
   const token = Date.now();
-  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis }) : pluginCode(c, keys, { before: BEFORE(p.name, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis });
+  const mainsOf = req('./derive.cjs').byComponentName((await import('./official.mjs')).contracts(where).map(({ contract }) => contract));
+  // the instances the library's own spec keeps whole (a layer hidden in them), as derive found them reading it: where
+  // the component has a spec, the drawing hides what the contract does not list there and nowhere else
+  const wholeFrom = (() => {
+    let index = {}; try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index */ }
+    const folder = libraryFolder || Object.keys(index).find((k) => index[k].name === p.name);
+    const read = (f) => { try { return folder && JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
+    const stored = read('figma.json'), own = read('contract.json');
+    // only for the library's own contract: another (a report from code) names its parts its own way
+    if (!stored || !own || JSON.stringify(own) !== JSON.stringify(c)) return null;
+    const found = new Map();
+    try { req('./derive.cjs').derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(folder).mains, found }); } catch { return null; }
+    // by the variant's name as the plan gives it (Breakpoint=md, State=Initial)
+    return Object.fromEntries([...found].map(([when, ids]) => [Object.entries(JSON.parse(when)).map(([k, v]) => `${k}=${v}`).sort().join(', '), ids]));
+  })();
+  const code = target ? pluginCode(c, keys, { before: PATCH_BEFORE(target), after: PATCH_AFTER, failed: PATCH_FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom }) : pluginCode(c, keys, { before: BEFORE(p.name, token), after: AFTER(p.name), failed: FAILED, axisOrder, sizeAxis, mains: mainsOf, whole: wholeFrom });
   // nine minutes for either: a drawing of 300 variants that import their graphics outran two in a background Figma, and a
   // run the runner gives up on goes on in Figma, holding the file; one that times out here may still be changing it
   const res = await exec(code, into, 540000).catch(async (e) => {
