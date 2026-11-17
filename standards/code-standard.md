@@ -1,6 +1,6 @@
 # Code standard — front-end defaults for any project that ships HTML, CSS and JavaScript
 
-**Version 1.35.1** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
+**Version 1.36.0** — history in [`changelog/code-standard.md`](changelog/code-standard.md).
 
 **Scope.** How the code of a site or app is structured: markup, styles, the scripts that enhance them, and how a design-system component is implemented. Project-agnostic by construction — it names no framework, no CMS, no file layout. It governs no directory of this repo; like `figma-standard.md` it holds cross-project defaults that a project applies.
 
@@ -243,11 +243,11 @@
 
     *Evidence:* two projects' generators had drifted into two dialects of the same job — one wrote dark on `:root` and px type, the other light on `:root`, rem type and `font` shorthands — and a third generator sat in a skill for projects with neither. Merged on 2026-09-19; both projects' tokens compared equal in a browser in every theme state and at two widths, save the changes rules 52–54 make on purpose. **Mechanical** (`tools/tokens/check.mjs`: `bin/tokens` must call the build). *Checked:* `tools/tokens/check.mjs` "say('code-standard rule 51'", run by each project's check.
 
-52. **A token is named by its Figma variable path, and two paths never share a name.** Kebab-case, no prefix, without the collection: `Colour/Text/Neutral/strong` is `--colour-text-neutral-strong`. A leading minus is spelled `minus-` (`Effect/Position/-1` is `--effect-position-minus-1`), so `-1` and `1` cannot land on one property. Two paths that would share a name fail the build rather than letting one win.
+52. **A token is named by its Figma variable path, and two paths never share a name.** Kebab-case, no prefix, without the collection: `Colour/Text/Neutral/strong` is `--colour-text-neutral-strong`. A leading minus is spelled `minus-` (`Effect/Position/-1` is `--effect-position-minus-1`), so `-1` and `1` cannot land on one property. Two paths that would share a name fail the build rather than letting one win. A variable's web code syntax, which Dev Mode prints, is the same name written as `var(--…)`, or it is left unset.
 
     *Why:* a name the designer can search for in the variable picker is the only name both sides can talk about; a prefix or a renaming layer is a second vocabulary someone has to keep true. A stripped sign is a silent collision waiting for its sibling.
 
-    *Evidence:* one project's generator named `Position/-1` as `--effect-position-1`, one `Position/1` away from overwriting it; the other project's already spelled the sign out after exactly that near miss. **Mechanical** (the build refuses a collision). *Checked:* `tools/tokens/build-tokens.mjs` "in one block: rename one in Figma" — the token build (`tools/tokens/build.mjs` calls it), which refuses a collision.
+    *Evidence:* one project's generator named `Position/-1` as `--effect-position-1`, one `Position/1` away from overwriting it; the other project's already spelled the sign out after exactly that near miss. **Mechanical** (the build refuses a collision). *Checked:* `tools/tokens/build-tokens.mjs` "in one block: rename one in Figma" — the token build (`tools/tokens/build.mjs` calls it), which refuses a collision. *Checked:* `tools/tokens/check.mjs` "code syntax": web code syntax that differs from the name the build writes is a finding (unset is not), read from the snapshot's `codeSyntax` (plugin 0.74.0 on).
 
 53. **Themes and modes follow one pattern, and tiers stay references.** A Light/Dark collection writes Light on `:root`, and Dark under `[data-theme="dark"]` and under `prefers-color-scheme: dark` when no theme is chosen. A Mobile/Tablet/Desktop collection writes Mobile on `:root` and the others from the `sm`/`md` breakpoint. Any other mode is `[data-<collection>="<mode>"]`. A semantic token that aliases a primitive is written as `var(--that-primitive)` (Style Dictionary's `outputReferences`), so a mode re-points one tier.
 

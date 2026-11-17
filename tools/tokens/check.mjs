@@ -16,6 +16,10 @@
  *      `--x`: the browser drops that whole declaration without a word, which is
  *      what a renamed token does to every stylesheet that missed the rename.
  *
+ *   5. a variable's web code syntax, which Dev Mode prints, is not the custom
+ *      property the build writes for it (code-standard rule 52). Unset is
+ *      fine; a snapshot from before the plugin recorded it is skipped.
+ *
  * Every repo's bin/check runs this; the toolkit's own test runs it over every
  * registered repo.
  */
@@ -92,6 +96,24 @@ for (const f of sources) {
   }
 }
 for (const [n, files] of missing) say('undefined', `var(${n}) is read with no fallback and nothing defines it: ${[...new Set(files)].slice(0, 3).join(', ')}${files.length > 3 ? ' …' : ''}`);
+
+// 5 · Dev Mode's code syntax is the name the build writes
+const { cssName } = await import('./names.mjs');
+const P = store.paths(repo, config.paths);
+if (existsSync(P.tokens)) {
+  const snap = JSON.parse(readFileSync(P.tokens, 'utf8'));
+  let wrong = 0; const shown = [];
+  for (const [cname, c] of Object.entries(snap.collections || {})) {
+    for (const [name, syn] of Object.entries(c.codeSyntax || {})) {
+      if (!syn.WEB || (c.hidden || []).includes(name)) continue;
+      const want = `var(${cssName(cname, name)})`;
+      if (syn.WEB.replace(/\s+/g, '') === want) continue;
+      wrong++;
+      if (shown.length < 3) shown.push(`${name}: "${syn.WEB}", build writes ${want}`);
+    }
+  }
+  if (wrong) say('code-standard rule 52', `${wrong} variable(s) have web code syntax that is not the name the build writes, so Dev Mode and the stylesheet disagree: ${shown.join('; ')}${wrong > 3 ? ' …' : ''}`);
+}
 
 if (findings.length) {
   console.error(`front-end standard: ${findings.length} finding(s) in ${repo}`);

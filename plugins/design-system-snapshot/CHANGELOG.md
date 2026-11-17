@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.74.0] - 2026-11-17
+### Added
+- **A variable's code syntax is recorded** (`codeSyntax`, per collection: variable name → `{ WEB, ANDROID, iOS }`, only where one is set). It is the string Dev Mode prints, typed by hand, so the token check can hold it to the name the build writes (code-standard rule 52).
+
 ## [0.73.1] - 2026-11-11
 ### Fixed
 - The icons switch sits in its row's control column with "Export icons" as the row's label, rather than its text floating a third across.

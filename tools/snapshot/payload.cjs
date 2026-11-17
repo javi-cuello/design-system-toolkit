@@ -50,6 +50,7 @@ function tokens(t, where = 'tokens') {
       need(isObj(c.values) && c.modes.every((m) => isObj(c.values[m])), `${at}.values`, 'must hold an object per mode');
       need(c.alias === undefined || isObj(c.alias), `${at}.alias`, 'must be an object when present');
       need(c.descriptions === undefined || (isObj(c.descriptions) && Object.values(c.descriptions).every(isStr)), `${at}.descriptions`, 'must map names to text when present');
+      need(c.codeSyntax === undefined || (isObj(c.codeSyntax) && Object.values(c.codeSyntax).every((o) => isObj(o) && Object.values(o).every(isStr))), `${at}.codeSyntax`, 'must map names to { platform: text } when present');
     }
   }
   if (need(Array.isArray(t.textStyles), `${where}.textStyles`, 'must be an array')) {

@@ -1,5 +1,6 @@
 # History — code-standard
 
+- 1.36.0 (2026-11-17): rule 52 holds a variable's web code syntax to the name the build writes (Dev Mode prints it); unset is allowed. Checked by `tools/tokens/check.mjs`, from the snapshot's `codeSyntax` (plugin 0.74.0).
 - 1.35.1 (2026-11-17): rule 58's evidence names what the token export now owns, its DTCG resolver and the older exports' manifest; no rule changed.
 - 1.35.0 (2026-11-16): rules 67 and 68 by decree, from the knowledge pages (toolkit-standard §D 21): a list's state lives in its address; the support floor is Baseline widely available.
 - 1.34.0 (2026-11-16): fixed on the facts (toolkit-standard §D 21): rule 18, a logo or linked image takes alt; rule 3, not every band is a landmark; rule 9, `aria-disabled` keeps the control focusable.

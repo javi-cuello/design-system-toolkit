@@ -1,4 +1,4 @@
-// Design system snapshot — v0.73.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.74.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -479,6 +479,8 @@ async function collectTokens() {
     /** @type {Record<string, string>} */ const keys = {};
     // the fields Figma's picker offers each variable in; mode-independent, as a key is
     /** @type {Record<string, string[]>} */ const scopes = {};
+    // the string Dev Mode prints for the variable, per platform (WEB, ANDROID, iOS); hand-typed, so it can drift from the exported name
+    /** @type {Record<string, Record<string, string>>} */ const codeSyntax = {};
     /** @type {Record<string, string>} */ const described = {};
     /** @type {string[]} */ const hidden = [];
     for (const id of collection.variableIds) {
@@ -500,6 +502,7 @@ async function collectTokens() {
       // its key: what another file imports it by (tools/component-contract/to-figma.mjs binds a drawing to it)
       keys[v.name] = v.key;
       scopes[v.name] = [...v.scopes];
+      if (v.codeSyntax && Object.keys(v.codeSyntax).length) codeSyntax[v.name] = { ...v.codeSyntax };
       /** @type {VariableValue | undefined} */
       let raw = own[mode.modeId];
       let ref = null;
@@ -520,13 +523,13 @@ async function collectTokens() {
       out[v.name] = raw && typeof raw === 'object' && 'r' in raw ? colour(raw) : raw;
       if (ref) alias[v.name] = ref;
     }
-    return { values: out, alias, described, hidden, keys, scopes };
+    return { values: out, alias, described, hidden, keys, scopes, codeSyntax };
   }
 
   say('reading variables');
   // Every collection, every mode, under Figma's own names. Read once here and
   // reused for the legacy keys below, so nothing is fetched twice.
-  /** @type {Record<string, { modes: string[], values: Record<string, unknown>, alias: Record<string, unknown>, descriptions: Record<string, string>, hidden?: string[], keys?: Record<string, string>, scopes?: Record<string, string[]>, extends?: string }>} */
+  /** @type {Record<string, { modes: string[], values: Record<string, unknown>, alias: Record<string, unknown>, descriptions: Record<string, string>, hidden?: string[], keys?: Record<string, string>, scopes?: Record<string, string[]>, codeSyntax?: Record<string, Record<string, string>>, extends?: string }>} */
   const byName = {};
   for (const c of collections) {
     const entry = { modes: c.modes.map((m) => m.name), values: {}, alias: {}, descriptions: {} };
@@ -544,6 +547,7 @@ async function collectTokens() {
       if (r.hidden.length) entry.hidden = r.hidden;
       entry.keys = r.keys;
       entry.scopes = r.scopes;
+      if (Object.keys(r.codeSyntax).length) entry.codeSyntax = r.codeSyntax;
     }
     byName[c.name] = entry;
   }
@@ -671,7 +675,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.73.1';
+const VERSION = '0.74.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

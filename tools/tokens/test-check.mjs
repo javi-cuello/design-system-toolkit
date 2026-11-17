@@ -77,6 +77,15 @@ test('a conforming repo passes, and its tokens are stored as DTCG beside the sna
   assert.ok(existsSync(join(root, 'design/dtcg/semantic/light.json')), 'one file per collection mode');
 });
 
+test('web code syntax equal to the built name passes, and an unset one is not a finding', () => {
+  const root = repo();
+  const f = join(root, 'design/figma.json'), t = JSON.parse(readFileSync(f, 'utf8'));
+  t.collections.Semantic.codeSyntax = { 'Colour/Text/strong': { WEB: 'var(--colour-text-strong)', ANDROID: 'x' }, 'Colour/Text/none': { ANDROID: 'y' } };
+  writeFileSync(f, JSON.stringify(t));
+  const r = check(root);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+});
+
 test('the parity engine\'s tolerances are a project fact the config may state', () => {
   const root = repo();
   const c = JSON.parse(readFileSync(join(root, 'snapshot.config.json'), 'utf8'));
@@ -97,6 +106,11 @@ test('each way of breaking the standard is named', () => {
       c.css = { baseMode: 'Dark' };
       writeFileSync(join(root, 'snapshot.config.json'), JSON.stringify(c));
     }, /\[code-standard rule 55\].*"css"/],
+    ['web code syntax that is not the name the build writes', (root) => {
+      const f = join(root, 'design/figma.json'), t = JSON.parse(readFileSync(f, 'utf8'));
+      t.collections.Semantic.codeSyntax = { 'Colour/Text/strong': { WEB: 'var(--color-text-strong)' } };
+      writeFileSync(f, JSON.stringify(t));
+    }, /\[code-standard rule 52\].*var\(--colour-text-strong\)/],
     ['a token read that nothing defines', (root) => appendFileSync(join(root, 'styles/app.scss'), 'a { color: var(--colour-text-renamed); }\n'), /\[undefined\].*--colour-text-renamed/],
     ['a text style the tokens do not have', (root) => appendFileSync(join(root, 'styles/app.scss'), 'h1 { @include ts.text-style(heading-xl); }\n'), /\[undefined\].*heading-xl/],
   ];
