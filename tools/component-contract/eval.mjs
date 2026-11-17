@@ -261,10 +261,10 @@ export async function selfInputs(label, where) {
   const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
   const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
   const hash = (xs) => createHash('sha1').update(xs.join('\0')).digest('hex');
-  const own = {}, unscoped = [];
+  const own = {}, unscoped = [], mains = req('./derive.cjs').byComponentName(Object.values(library));
   for (const c of Object.values(library)) {
     let spec = ''; try { spec = JSON.stringify(store.readSpec(project.paths.components, c.folder, { compact: true })); } catch { /* none: its hash says so */ }
-    const sheet = toCss(c, c.folder, { naming: ELEMENT });
+    const sheet = toCss(c, c.folder, { naming: ELEMENT, mains });
     // every sheet is on the one page: one whose rules reach past its own element reaches every reading
     if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
     own[c.folder] = hash([JSON.stringify(c), spec, toElement(c, c.folder, { naming: ELEMENT, library }), sheet, JSON.stringify(toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components' })), JSON.stringify(propsOf(c, library))]);
