@@ -150,4 +150,4 @@ async function main() {
   for (const [f, s, why] of rows) if (s == null) console.log(`  ${f}: not compared — ${why}`);
 }
 
-if (import.meta.url === `file://${fs.realpathSync(process.argv[1])}`) await main();
+if (process.argv[1] && import.meta.url === `file://${(() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()}`) await main();
