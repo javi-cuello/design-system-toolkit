@@ -119,7 +119,7 @@ let said = "";
 
 // A ruling as a row of the context document's rulings log (section 6): Date | Scope | Ruling | Why, the Why naming
 // the component and the finding ("on Button, about: …", as the dashboard writes it), which is how the full audit's judge
-// reads a ruling's subject, and how the plugin knows a re-recorded ruling replaces the earlier one. A backtick would open a code span in the
+// reads a ruling's subject, and how Claude finds the earlier row a re-recorded ruling supersedes. A backtick would open a code span in the
 // table and merge its cells (projects.cjs cells), so it becomes a quote.
 const cellText = (s) => String(s == null ? "" : s).replace(/`/g, "'").replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
@@ -200,7 +200,7 @@ function render(d) {
   }
   if (!rows.length) html += "<p>No fixes needed in " + esc(d.file) + " for what this run checked.</p>";
 
-  // Rulings travel back as one file: the plugin keeps them for this file and the next run judges by them.
+  // Rulings travel back as one file, to the chat: Claude adds them to the context document, which the plugin then takes.
   html += "<section class=\"bucket\" aria-labelledby=\"rulingsH\"><div class=\"bucket-head\"><h2 id=\"rulingsH\">Rulings</h2></div><div id=\"rulingsBody\"></div></section>";
   html += "<section class=\"bucket\" aria-labelledby=\"aboutH\"><h2 id=\"aboutH\">About this run</h2><div class=\"gaps\"><p>" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions, ruled on, or not defects.</p>"
     + "<p>Settings: " + (d.contextName ? "the context document " + esc(d.contextName) : "the toolkit's defaults; no context document") + ".</p>";
@@ -215,9 +215,9 @@ function rulings() {
   if (!host) return;
   const ruled = numbered.filter((x) => state.rules.includes(idOf(x.r)));
   let html = "<p class=\"bucket-note\">" + (ruled.length
-    ? ruled.length + " recorded. Download them, then in Audit lite's Settings press <b>Upload…</b> beside Rulings: the plugin saves them in the Figma file, and the next run judges by them. If nothing downloads, ask Claude in the chat for the rulings file."
-    : "When a row is intended, write why in its note and press <b>Record as ruling</b>. The rulings gather here, to download and upload into Audit lite once.") + "</p>";
-  if (ruled.length) html += "<textarea class=\"rulings\" id=\"rulingsText\" readonly aria-label=\"Rulings to upload into Audit lite\">" + esc(ruled.map((x) => rulingRow(x.r)).join("\n")) + "</textarea>"
+    ? ruled.length + " recorded. Download them, upload the file to the chat and ask Claude for the updated context document; upload that in Audit lite's Settings (<b>Upload…</b> beside Document), and the next run judges by them. If nothing downloads, copy the rows below into the chat."
+    : "When a row is intended, write why in its note and press <b>Record as ruling</b>. The rulings gather here, to take to the chat, where Claude adds them to the context document.") + "</p>";
+  if (ruled.length) html += "<textarea class=\"rulings\" id=\"rulingsText\" readonly aria-label=\"Rulings to take to the chat\">" + esc(ruled.map((x) => rulingRow(x.r)).join("\n")) + "</textarea>"
     + "<div class=\"row-actions\"><button type=\"button\" class=\"button\" id=\"downloadRulings\">Download rulings</button></div>";
   host.innerHTML = html;
 }

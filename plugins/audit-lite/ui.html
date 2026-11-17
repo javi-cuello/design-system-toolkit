@@ -304,21 +304,17 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
     <fig-field direction="horizontal"><label>Document</label>
       <div class="value-row"><span class="value" id="ctx-name">No document</span><fig-button variant="secondary" id="ctx-clear" hidden>Remove</fig-button></div></fig-field>
     <fig-field direction="horizontal" id="draft-row"><label for="draft">Draft one</label><fig-switch id="draft"></fig-switch></fig-field>
-    <fig-header borderless><h3>Rulings</h3><fig-button variant="secondary" id="rul-upload">Upload…</fig-button></fig-header>
-    <fig-field direction="horizontal"><label>Saved</label>
-      <div class="value-row"><span class="value" id="rul-name">0</span><fig-button variant="secondary" id="rul-download" hidden>Download</fig-button><fig-button variant="secondary" id="rul-clear" hidden>Remove</fig-button></div></fig-field>
   </div>
-  <fig-footer><span class="footer-hint" id="settings-hint" role="status">Rulings are saved in this file.</span></fig-footer>
+  <fig-footer><span class="footer-hint" id="settings-hint" role="status">Kept on this computer; nothing is saved in the Figma file.</span></fig-footer>
 </div>
 
 <input type="file" id="ctx-file" accept=".md,text/markdown" hidden>
-<input type="file" id="rul-file" accept=".md,text/markdown" hidden>
 
 <script>
 var $ = function (id) { return document.getElementById(id); };
 var last = null, busy = false;
 // while an audit runs the settings links ignore a click rather than show disabled: FigUI3 draws a disabled link as a grey filled button
-var HINT = 'Rulings are saved in this file.';
+var HINT = 'Kept on this computer; nothing is saved in the Figma file.';
 // the tabs show one panel; fig-tabs owns the keyboard (roving focus) and says which tab is chosen
 $('tabs').addEventListener('change', function (e) { var v = (e.detail && e.detail.value) || e.target.value || this.getAttribute('value'); $('panel-audit').hidden = v !== 'audit'; $('panel-settings').hidden = v !== 'settings'; });
 function download(msg) {
@@ -356,29 +352,14 @@ function context(name) {
 }
 $('ctx-pick').onclick = function () { if (busy) return; $('ctx-file').value = ''; $('ctx-file').click(); };
 $('ctx-clear').onclick = function () { if (busy) return; parent.postMessage({ pluginMessage: { type: 'context-clear' } }, '*'); };
-// rulings downloaded from the results page: uploaded once, saved in the file, judged by on every run
-function rulings(n) {
-  $('rul-name').textContent = String(n || 0);
-  $('rul-clear').hidden = $('rul-download').hidden = !n;
-}
-$('rul-upload').onclick = function () { if (busy) return; $('rul-file').value = ''; $('rul-file').click(); };
-$('rul-clear').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-clear' } }, '*'); };
-$('rul-download').onclick = function () { if (!busy) parent.postMessage({ pluginMessage: { type: 'rulings-download' } }, '*'); };
 $('ctx-file').onchange = function () {
   var f = this.files && this.files[0]; if (!f || busy) return;
   f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'context-set', name: f.name, text: text } }, '*'); });
 };
-$('rul-file').onchange = function () {
-  var f = this.files && this.files[0]; if (!f || busy) return;
-  f.text().then(function (text) { parent.postMessage({ pluginMessage: { type: 'rulings-add', text: text } }, '*'); });
-};
 onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
-  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); rulings(msg.rulings); return; }
-  if (msg.type === 'rulings') { rulings(msg.count); hint(msg.added == null ? '' : msg.added ? msg.added + (msg.added === 1 ? ' ruling' : ' rulings') + ' added. The next run judges by them.' : 'Rulings updated. The next run judges by them.'); return; }
-  if (msg.type === 'file') { download(msg); return; }
-  if (msg.type === 'rulings-failed') { hint('Rulings not changed: ' + msg.why + '.'); return; }
+  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); return; }
   if (msg.type === 'context') { context(msg.name); hint(''); return; }
   if (msg.type === 'context-failed') { hint('That document was not used: ' + msg.why + '.'); return; }
   busy = false; $('run').removeAttribute('disabled');

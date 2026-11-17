@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.11.0] - 2026-11-17
+### Removed
+- The Rulings section (Upload, Download, Remove, Saved) and every write to the Figma file. Rulings live in the context document only: the results page's Record as ruling and Download rulings now go to the chat, where Claude adds them to the document (a re-ruled finding strikes the earlier row's Ruling cell, the new row saying what it supersedes), and the plugin takes the updated document (maintainer, workshop dry run). Rulings 0.7–0.10 stored as plugin data stay in those files, unread.
+
 ## [0.10.0] - 2026-11-17
 ### Changed
 - A run with a context document carries the document's text in its report, and Claude, asked for the updated document, gives it back whole with the chat's decisions added to its rulings log (columns matched by header name); uploading it replaces the old one. Rulings decided in the chat no longer come as a separate `rulings.md`.

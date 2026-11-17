@@ -11,7 +11,7 @@ It is the components and foundations audits with nothing else to install: no bri
 3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
 4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
-As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Recorded rulings come back as one file: **Download rulings** on the page, then **Upload…** beside Rulings on the plugin's Settings tab saves them in the Figma file, and every later run on that file judges by them, whoever runs it. **Download** gives them as a rulings log for a context document's section 6. Marks and notes stay in that browser.
+As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Rulings live in the context document only: decide in the chat (or bring the page's **Download rulings** file to it), ask Claude for the updated context document, and upload it with **Upload…** beside Document; every later run judges by them. Marks and notes stay in that browser.
 
 On a 71-component library Claude's reply takes about a minute, most of it writing the tables.
 
@@ -32,6 +32,6 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 
 ## Data this plugin stores
 
-The context document picked for a file (its name and text), in the plugin's client storage on this machine, keyed by the file. The rulings uploaded for a file, in the file itself (plugin data on the document, invisible on the canvas), so saving one needs edit access; rulings 0.6 kept on the machine move into the file the first time rulings are added with edit access; opening the plugin, running an audit or downloading writes nothing. Each **Remove** deletes its own. The report is a download.
+The context document picked for a file (its name and text), in the plugin's client storage on this machine, keyed by the file. Nothing is written to the Figma file: rulings travel in the context document (0.7–0.10 kept uploaded rulings as plugin data on the document; 0.11 neither reads nor writes it). **Remove** deletes the document. The report is a download.
 
 The `teamlibrary` permission lets discovery read the variable collections the file's enabled libraries publish.

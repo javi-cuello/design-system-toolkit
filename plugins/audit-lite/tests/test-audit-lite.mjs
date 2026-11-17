@@ -9,7 +9,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
-const { report, settingsFor, pastedRulings, mergeRulings, rulingsLog, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
+const { report, settingsFor, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
 const projects = createRequire(import.meta.url)(path.join(ROOT, 'tools/snapshot/projects.cjs'));
 
 let failed = 0, passed = 0;
@@ -40,6 +40,7 @@ ok('a document with no entry for this file is refused by name', /no audit-settin
 ok('a document with no settings block is refused', /no audit-settings block/.test(refused(() => settingsFor('# Doc', 'KEY123'))));
 const withDoc = report(r, { fileName: 'Fixture library', fileKey: 'KEY123', date: '2026-11-10' }, Object.assign(run, { contextName: 'design-system-context.md' }));
 ok('the run says the settings came from the document', withDoc.includes("- Settings: the project's context document (design-system-context.md)"));
+ok('the run counts the document\'s rulings and says where they came from', /- Rulings: 2, from the context document's rulings log/.test(withDoc));
 const withText = report(r, { fileName: 'Fixture library', fileKey: 'KEY123', date: '2026-11-10' }, Object.assign({}, run, { contextName: 'design-system-context.md', contextText: MD }));
 ok('a run with a document carries its text, for Claude to give back with new rulings', withText.includes('## Context document') && withText.includes('# Fixture library — design system context'));
 ok('a run without the text has no Context document section', !withDoc.includes('## Context document\n'));
@@ -86,7 +87,7 @@ ok('a stopped file-level pass is said, the components kept', report(Object.assig
 const pageJs = (data) => LITE.template.split('<script>')[1].split('</script>')[0].replace('const DATA = null;', 'const DATA = ' + JSON.stringify(data) + ';');
 const mount = (data, stored, onSave) => {
   const app = { innerHTML: '' }, body = { innerHTML: '' };
-  const doc = { getElementById: (id) => (id === 'app' ? app : id === 'rulingsBody' ? body : id === 'rulingsText' ? { value: (body.innerHTML.split('readonly aria-label="Rulings to upload into Audit lite">')[1] || '').split('</textarea>')[0] } : null), querySelector: () => null };
+  const doc = { getElementById: (id) => (id === 'app' ? app : id === 'rulingsBody' ? body : id === 'rulingsText' ? { value: (body.innerHTML.split('readonly aria-label="Rulings to take to the chat">')[1] || '').split('</textarea>')[0] } : null), querySelector: () => null };
   new Function('document', 'localStorage', pageJs(data))(doc, { getItem: () => (stored ? JSON.stringify(stored) : null), setItem: (k, v) => onSave && onSave(JSON.parse(v)) });
   return { app, body, html: () => app.innerHTML + body.innerHTML, click: (dataset) => app.onclick({ target: { closest: () => ({ dataset, id: dataset.id || '' }) } }) };
 };
@@ -116,21 +117,13 @@ ok('the run\'s scope has its heading', html.includes('<h2 id="aboutH">About this
 // Recorded state: marks follow the finding; a ruling takes the row's note, and is read back by the full audit's reader.
 const kept = page(data, { done: ['Button|Label|c'], rules: ['Button|Label|c', 'Gone|x|a finding a later run dropped'], notes: { 'Button|Label|c': 'The label is decorative' } });
 ok('a mark follows its finding, and one for a finding no longer listed is ignored', kept.includes('<li class="row" data-done="true"><input class="tick" type="checkbox" data-done-id="3.1"') && (kept.match(/Recorded from Audit lite/g) || []).length === 1);
-const rows = (kept.split('readonly aria-label="Rulings to upload into Audit lite">')[1] || '').split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+const rows = (kept.split('readonly aria-label="Rulings to take to the chat">')[1] || '').split('</textarea>')[0].replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
 ok('a recorded row becomes a rulings-log row with its note, naming its component', /^\| \d{4}-\d\d-\d\d \| Button \| Button › Label: The label is decorative\. \| Recorded from Audit lite, on Button, about: c\. \|$/.test(rows), rows);
-const back = pastedRulings(rows);
-ok('the page\'s downloaded rulings file reads back the same', JSON.stringify(pastedRulings('## 6. Rulings log\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n')) === JSON.stringify(back));
-ok('the plugin reads the pasted rows as the full audit reads a rulings log', back.length === 1 && JSON.stringify(back) === JSON.stringify(projects.rulingsOf('## 6\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n')));
-ok('a paste with its own header reads the same', JSON.stringify(pastedRulings('| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows)) === JSON.stringify(back));
-ok('a paste of anything else finds no rulings', pastedRulings('hello').length === 0);
-ok('pasted and document rulings merge, each once', mergeRulings(back, back.concat({ key: 'other' })).length === 2);
-const edited = pastedRulings(rows.replace('The label is decorative.', 'Decorative: no ring.'));
-ok('a ruling re-recorded with a new note replaces the earlier one', (() => { const m = mergeRulings(back, edited); return m.length === 1 && m[0].text.includes('Decorative: no ring.'); })());
+const back = projects.rulingsOf('## 6. Rulings log\n\n| Date | Scope | Ruling | Why |\n|---|---|---|---|\n' + rows + '\n');
+ok('the page\'s rulings, added to a context document\'s log, read back as one ruling', back.length === 1 && back[0].text.includes('The label is decorative'));
 ok('the judge reads the ruling with its component and finding', report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { rulings: back })).includes('(recorded on Button about “c”;'));
-const withPasted = report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { rulings: back, pasted: 1 }));
-ok('the next run judges by a pasted ruling, and says where it came from', withPasted.includes('The label is decorative') && withPasted.includes('- Rulings: 1 (1 saved in the file'));
-const piped = back.concat(pastedRulings('| 2026-01-01 | Tag | Tag: a | b \\| c |'));
-ok('downloaded rulings read back as the same rulings', JSON.stringify(pastedRulings(rulingsLog(piped))) === JSON.stringify(piped) && JSON.stringify(projects.rulingsOf(rulingsLog(piped))) === JSON.stringify(piped));
+const withPasted = report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, settingsFor(null, null));
+ok('without a context document the report says there are no rulings', withPasted.includes('- Rulings: none, as there is no context document.'));
 ok('the draft switch reaches the report, and only without a document', report(r, { fileName: 'X', fileKey: 'K', date: 'd' }, Object.assign(settingsFor(null, null), { draft: true })).includes('- Draft a context document: yes') && !withPasted.includes('- Draft a context document: yes'));
 ok('the instructions say what a draft request and the closing files are', LITE.instructions.includes('Draft a context document: yes') && LITE.instructions.includes('8. **Offer the files**'));
 
@@ -145,34 +138,28 @@ ok('the instructions say what a draft request and the closing files are', LITE.i
   ok('the area filter shows only that area\'s rows, and says so', m.app.innerHTML.includes('Showing 1 of 4.') && !m.app.innerHTML.includes('rid-3-1"'));
 }
 
-// The window's handlers, against a fake figma: what opening, downloading and removing write, and where.
-const plugin = ({ fileKey, inFile = [], store = {}, viewOnly = false }) => {
-  let data = inFile.length ? JSON.stringify(inFile) : '';
+// The window's handlers, against a fake figma: nothing the plugin does writes to the file.
+const plugin = ({ fileKey, store = {} }) => {
+  let wrote = 0;
   const sent = [];
   const figma = {
-    fileKey, root: { name: 'Lib', getPluginData: () => data, setPluginData: (_, v) => { if (viewOnly) throw new Error('view-only'); data = v; } },
+    fileKey, root: { name: 'Lib', getPluginData: () => '', setPluginData: () => { wrote++; } },
     clientStorage: { getAsync: async (k) => store[k], setAsync: async (k, v) => { store[k] = v; }, deleteAsync: async (k) => { delete store[k]; } },
     ui: { postMessage: (m) => sent.push(m) }, showUI: () => {}, notify: () => {}, closePlugin: () => {},
   };
   new Function('module', 'figma', '__html__', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))({ exports: {} }, figma, '');
-  return { send: (m) => figma.ui.onmessage(m), sent, store, file: () => data };
+  return { send: (m) => figma.ui.onmessage(m), sent, store, wrote: () => wrote };
 };
-const ruling = { date: '2026-01-01', scope: 'Lib', text: 'x', why: 'about: Button', key: 'k1' };
 {
-  const p = plugin({ fileKey: 'F1', store: { 'rulings:F1': [ruling] } });
+  const p = plugin({ fileKey: 'KEY123' });
   await p.send({ type: 'hello' });
-  ok('opening counts the machine rulings and writes nothing to the file', p.sent[0].rulings === 1 && p.file() === '' && p.store['rulings:F1']);
-  await p.send({ type: 'rulings-download' });
-  ok('downloading writes nothing to the file either', p.file() === '' && p.store['rulings:F1']);
+  await p.send({ type: 'context-set', name: 'design-system-context.md', text: MD });
+  ok('a context document is kept on this machine, keyed by the file', p.store['context:KEY123'] && p.store['context:KEY123'].name === 'design-system-context.md');
+  await p.send({ type: 'context-clear' });
+  ok('removing it deletes it', !p.store['context:KEY123']);
+  ok('opening, setting and removing a document write nothing to the file', p.wrote() === 0);
 }
-{
-  const p = plugin({ fileKey: 'F2', store: { 'rulings:F2': [ruling] }, viewOnly: true });
-  await p.send({ type: 'rulings-clear' });
-  ok('a view-only file with no rulings of its own still lets the machine copy be removed', !p.store['rulings:F2']);
-  const q = plugin({ fileKey: 'F3', inFile: [ruling], store: { 'rulings:F3': [ruling] }, viewOnly: true });
-  await q.send({ type: 'rulings-clear' });
-  ok('a view-only file holding rulings keeps the machine copy when its own cannot be cleared', !!q.store['rulings:F3']);
-}
+ok('the plugin has no way to write to the file', !/setPluginData|setSharedPluginData/.test(fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8').split('/* audit-lite generated end */')[1]));
 
 console.log(failed ? `${failed} failed, ${passed} passed` : `${passed} passed`);
 process.exit(failed ? 1 : 0);
