@@ -86,9 +86,12 @@ A **hidden layer** is dropped by the snapshot plugin, without a warning. A layer
 node tools/tokens/test-check.mjs              # the token gates, on a throwaway repo (77: skipped)
 node tools/tokens/test-build-tokens.mjs         # the CSS and Sass build (run plainly: its skip exits 77)
 node tools/tokens/test-dtcg.js                  # snapshot names and values → DTCG
-node --test tools/tokens/test-from-snapshot.mjs # the converter, and the per-build reference check
+node --test tools/tokens/test-from-snapshot.mjs # the converter, and the per-resolution reference check
+node tools/tokens/test-schema.mjs               # an export against the DTCG 2025.10 schemas (run plainly: no ajv exits 77)
 node tools/tokens/test-ts.mjs                   # generate-ts and verify-ts, each defect verify-ts exists for
 node tools/tokens/test-names.mjs                # cssName and cssFamily
 ```
 
-The two Style Dictionary suites use this folder's pinned copy, else one a registered project installed (**Needs**, above).
+The two Style Dictionary suites use this folder's pinned copy, else one a registered project installed (**Needs**, above). `test-from-snapshot.mjs` and `test-schema.mjs` export the same invented library, `fixture-snapshot.mjs`.
+
+**Conformance is the standard's, not a tool's.** `test-schema.mjs` validates every file the fixture export writes, and its resolver, against the DTCG group's own JSON Schemas, copied into `schemas/dtcg-2025.10/`, with ajv (test-only, in this folder's `package.json`; no project installs it). A tool accepting a file proves only that the tool is lenient: one built the old export whose typography carried two members DTCG does not have, and the schema rejects that file. The schemas check shape, not meaning; a reference to a missing token stays `verifyReferences`'s to catch.
