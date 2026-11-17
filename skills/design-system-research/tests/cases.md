@@ -187,7 +187,7 @@ Traced: 2026-10-08 — to SKILL.md Step 6, "Where the documentation is silent on
 Fixture: a deep-mode run on "how should a form mark required fields", inside the toolkit repo.
 Assert: besides the guide, the run updates the section that owns the topic in `knowledge/ui/patterns/forms.md` in the shape and weights knowledge/README.md and §D 21 set at the time (read in the run, not taken from this skill), cites standards by handle, links nothing private, and leaves other pages a line and a link at most.
 Negative: a run that delivers only the guide, or copies the topic into a second page.
-Traced: 2026-10-11 for 2.6.0 — to SKILL.md Step 8; 2026-11-17 for 3.10.1 — the Assert follows §D 21's contested weight.
+Traced: 2026-10-11 for 2.6.0 — to SKILL.md Step 8; 2026-11-17 for 3.10.1 — the Assert defers to knowledge/README.md and §D 21 as read in the run.
 
 ## A16 · Research starts where the knowledge base left off
 Fixture: a run on "when should a button show a loading spinner", inside the toolkit repo, where `knowledge/ui/components/button.md` *Loading buttons* already cites Carbon and Primer.
