@@ -1469,6 +1469,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       process.exit(1);
     }
   }
+  // a scratch file draws one project's components: a private one (_Label) is placed from the file's own page of that
+  // name, so a file two projects draw into places one project's part in the other's drawing (2026-11-17). The file is
+  // claimed for the first project that draws into it, and refused to another
+  if (!target) {
+    const owner = await exec(`const p = figma.root.getPluginData('round-trip-project'); if (!p) figma.root.setPluginData('round-trip-project', ${JSON.stringify(label)}); return p || null;`, into, 30000);
+    if (owner && owner !== label) { console.error(`refused: ${into} is ${owner}'s scratch file; draw ${label} into a file of its own (a private component is placed from the file's own page by name, so two projects in one file mix their parts)`); process.exit(1); }
+  }
   const t0 = Date.now();
   // importing the library's variables and components is most of a drawing's time
   // the plugin runs a long execution only while a message is in flight: with none, it sat at one call
