@@ -97,12 +97,11 @@ export function toDtcgSnapshot(t) {
           if (at) values[mode] = { alias: { collection: at, name: alias } };
           else values[mode] = isColour(raw) ? figmaRgba(raw) : raw;
         }
-        // a string's font kind as Figma scopes it (FONT_FAMILY, FONT_WEIGHT): what it is, whatever its name says
+        // a string Figma scopes to font family (FONT_FAMILY) is a family where its name says no kind (dtcg.js classify:
+        // the name first, as it always was); a weight is not taken from a scope, which may be mis-set and which names a
+        // value the build may not map, and a reference to one it skips would refuse the build
         const scopes = (c.scopes || {})[name] || [];
-        // (a weight only where it holds its own value: an alias's target may be no weight the build can map, and a reference
-        // to one it skips would refuse the build)
-        const own = Object.values(values).every((x) => !(x && x.alias));
-        const font = type === 'STRING' ? (scopes.includes('FONT_FAMILY') ? 'fontFamily' : scopes.includes('FONT_WEIGHT') && own ? 'fontWeight' : undefined) : undefined;
+        const font = type === 'STRING' && scopes.includes('FONT_FAMILY') ? 'fontFamily' : undefined;
         return { name, type, hidden: (c.hidden || []).includes(name), description: (c.descriptions || {})[name] || '', values, ...(font && { font }) };
       }),
     };
@@ -120,7 +119,20 @@ export function toDtcgSnapshot(t) {
         if (to && to.type === 'STRING' && !to.font) { to.font = v.font; moved = true; }
       }
     }
+  }  // and a family only where every alias it holds lands on a family: a target its name makes something else (a
+  // `…/weight`) is skipped or typed apart, and the reference would dangle; that undoes the referrer, and so on up
+  const nameKind = (v) => { const seg = v.name.split('/'); return seg.some((x) => /^famil/i.test(x)) ? 'fontFamily' : seg.some((x) => /^weight/i.test(x)) ? 'fontWeight' : null; };
+  const isFamily = (v) => (nameKind(v) || v.font) === 'fontFamily';
+  for (let moved = true; moved;) {
+    moved = false;
+    for (const c of out) for (const v of c.variables) {
+      if (v.font !== 'fontFamily' || nameKind(v)) continue;
+      const off = Object.values(v.values).some((x) => { const to = x && x.alias && (byName.get(x.alias.collection) || new Map()).get(x.alias.name); return to && !isFamily(to); });
+      // (nor one whose name is also a group, Brand/Font beside Brand/Font/Family: typed, it would take the path first)
+      if (off || c.variables.some((x) => x.name.startsWith(`${v.name}/`))) { delete v.font; moved = true; }
+    }
   }
+
 
   // A text style's bindings, as the snapshot records them (plugin 0.24.0 on).
   // A snapshot from before that is refused, not guessed at: the naming

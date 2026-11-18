@@ -153,7 +153,7 @@ contributed, by name: a collection or style two files both name is shown once,
 the last writer's, and the write warns naming the other source; the other
 copies are kept under `shared[kind][name][source]`, and one of them takes the
 place of a name the last writer drops (with none kept — a store from before `shared`, a tie on `seq` — the name
-goes until the other file's next snapshot restores it; one the other wrote later stays). A file that moves to a new key (duplicated, its stamped id
+goes until the other file's next snapshot restores it; one the other wrote later stays). Another library's collection or text style a file sends marked `remote` (its components bind it) is no file's own: shown where no file owns that name, never over the owner's copy, never warned of, and dropped only once no file still sends it. A file that moves to a new key (duplicated, its stamped id
 carried along) leaves records under the old one: once every routed file has
 reported under its current identity, what only a key nobody routes owned —
 index entries, specs, icon lists, a token source and anything only it held —

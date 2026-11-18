@@ -27,7 +27,7 @@ test('an alias recorded by name stays a reference into the collection that defin
   assert.equal(light.semantic.state.disabled.opacity.$value, 0.5, 'opacity authored 0-100 becomes 0-1');
 });
 
-test('a string Figma scopes to font family is a fontFamily, and so is the one it aliases, whatever their names; a weight is not passed on', () => {
+test('a string Figma scopes to font family is a fontFamily where its name says no kind, and so is the one it aliases; a weight is never taken from a scope', () => {
   const t = {
     collections: {
       Theme: { modes: ['Base'], values: { Base: { 'Static/Font/Brand': 'Roboto' } }, scopes: { 'Static/Font/Brand': [] } },
@@ -36,7 +36,15 @@ test('a string Figma scopes to font family is a fontFamily, and so is the one it
     },
   };
   const vars = Object.fromEntries(toDtcgSnapshot(t).collections.flatMap((c) => c.variables).map((v) => [v.name, v.font]));
-  assert.deepEqual(vars, { 'Static/Font/Brand': 'fontFamily', 'Display/Font': 'fontFamily', 'Display/Label': undefined, Emphasis: undefined, Strong: undefined }, 'a weight is not passed down an alias, nor taken by one');
+  assert.deepEqual(vars, { 'Static/Font/Brand': 'fontFamily', 'Display/Font': 'fontFamily', 'Display/Label': undefined, Emphasis: undefined, Strong: undefined }, 'a weight is not taken from a scope');
+  // the name decides first, and a family never references what its name types otherwise: Display/Font, scoped a family,
+  // aliases Brand/weight, a weight by name the build skips ("Bold Italic"), so it is no family and the build writes
+  const named = { collections: { A: { modes: ['Base'], values: { Base: { 'Brand/weight': 'Bold Italic', 'Display/Font': 'Bold Italic' } }, alias: { Base: { 'Display/Font': 'Brand/weight' } }, scopes: { 'Brand/weight': ['FONT_FAMILY'], 'Display/Font': ['FONT_FAMILY'] } } } };
+  assert.equal(toDtcgSnapshot(named).collections[0].variables.find((v) => v.name === 'Display/Font').font, undefined);
+  const nd = mkdtempSync(join(tmpdir(), 'dtcg-')); writeDtcg(named, nd);
+  // nor one whose name is also a group: typed, Brand/Font would take the path Brand/Font/Family needs
+  const grouped = { collections: { T: { modes: ['Base'], values: { Base: { 'Brand/Font': 'Roboto', 'Brand/Font/Family': 'Inter', 'Body/Family': 'Inter' } }, alias: { Base: { 'Body/Family': 'Brand/Font/Family' } }, scopes: { 'Brand/Font': ['FONT_FAMILY'] } } } };
+  writeDtcg(grouped, mkdtempSync(join(tmpdir(), 'dtcg-')));
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeDtcg(t, dir); // and the build writes: no reference left to a string it skips
 });
