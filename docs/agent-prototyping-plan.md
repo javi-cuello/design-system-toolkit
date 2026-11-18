@@ -152,6 +152,15 @@ From Knapsack's Context product ([MCP docs](https://knapsack.docs.buildwithfern.
 
 Already covered, so not taken: their `check_usage` is `validate`, and their `render_ui` (a JSON screen spec rendered with real components) is what Outcome 5 does from stored screens. Knapsack has no screens, patterns or Figma flow, and its eval claims have no method.
 
+From Mercury's Builder Mode, an internal tool for prototyping in the product's own code: Lauren LoPrete's LinkedIn post (2026-11-17) and a [digest of it](https://www.antoinebuteau.com/daily-digest-2026-11-17/), read 2026-11-18. The source is one company's account, with no write-up found. Each idea needs a trial before it becomes a row.
+
+- **Versions and flags, a link each.** A panel in the browser switches a prototype between versions, user states and feature flags, and every view has its own link; one designer explored about 200 views in two days. User states are already Outcome 2's required states; versions and flags are new. Ours would be args and globals on Outcome 3's `Prototypes/` stories, beside the recipe's states, with a story's URL as the link. The project's flags stay the project's. It joins Outcome 3.
+- **Realistic mock data.** Agents get a realistic mock database. Outcome 3 names mocked data but no owner or shared source, so the first step is a fixtures file per project that templates and prototypes share. It joins Outcome 3.
+- **Feedback on a code prototype reaches the agent.** Comments left on the running prototype go to the agent. Only Figma comments have a route today (figma-prototype's `scripts/figma-feedback.mjs`); a code prototype has none. It joins Outcome 3, after publishing.
+- **Visual checks for undrawn screens.** Their evals caught bugs through visual checks that reading the code missed. Parity grades a drawn screen against its frame; an undrawn one has no frame, so the check would read the rendered story's screenshot for overlap, overflow and clipped text. It joins Outcome 6, as a grader for undrawn screens.
+
+Already covered, so not taken: agents playing designers on a fixed task set is Outcome 6, and helping agents choose components is Outcome 1 and the system MCP's instructions.
+
 ## Beyond scope
 
 Hosted app builders, wiring production data, and a canvas for designers who don't code. The research weighed each of these and set it aside.
