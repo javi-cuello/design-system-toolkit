@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { buildTokens, shadowCss } from './build-tokens.mjs';
+import { buildTokens, shadowCss, modeSelector } from './build-tokens.mjs';
 
 // A registered project repo with Style Dictionary installed lends it, read from the projects the toolkit knows
 // (as test-check.mjs does): this read ~/Projects, a folder only one machine has, and skipped silently elsewhere.
@@ -116,6 +116,43 @@ test('two paths that become one property fail the build', { skip }, async () => 
 test('an alias to nothing fails the build rather than writing var() to nothing', { skip }, async () => {
   const broken = { ...LIBRARY, semantic: { light: { text: { strong: { $type: 'color', $value: '{primitive.palette.grey.99}' } } }, dark: { text: { strong: { $type: 'color', $value: '{primitive.palette.grey.1}' } } } } };
   await assert.rejects(build(broken));
+});
+
+test('every mode, the base too, is an attribute an element can set, after the page-wide switches', { skip }, async () => {
+  const css = (await build(LIBRARY))['_tokens.scss'];
+  assert.match(css, /\[data-type="mobile"\] \{[^}]*--body-size: 1rem/);
+  assert.match(css, /\[data-type="desktop"\] \{[^}]*--body-size: 1\.125rem/);
+  assert.match(css, /@media screen \{\s*\[data-theme="light"\] \{[^}]*--text-strong: var\(--palette-grey-12\)/);
+  assert.ok(css.lastIndexOf('@media (min-width') < css.indexOf('[data-type="mobile"]'), 'a scoped mode comes after the breakpoint it overrides');
+});
+
+test('a mode set on an element re-declares the single-mode tokens aliasing it, so they resolve there', { skip }, async () => {
+  const css = (await build(LIBRARY))['_tokens.scss'];
+  const mobile = css.slice(css.indexOf('[data-type="mobile"]')).split('}')[0];
+  assert.match(mobile, /--body-font-size: var\(--body-size\)/);
+  assert.doesNotMatch(mobile, /--text-strong|--palette-/);
+});
+
+test('a chain of aliases through single-mode tokens, and a shadow\'s reference, are re-declared with the mode', { skip }, async () => {
+  const lib = { ...LIBRARY, alias: { value: { lead: { $type: 'dimension', $value: '{text-style.body.font-size}' }, big: { $type: 'dimension', $value: '{type.body.size}' } } },
+    'effect-style': { value: { lift: { $type: 'shadow', $value: { color: '#000000', offsetX: '{type.body.size}', offsetY: { value: 0, unit: 'px' }, blur: { value: 0, unit: 'px' }, spread: { value: 0, unit: 'px' } } } } } };
+  const css = (await build(lib))['_tokens.scss'];
+  const mobile = css.slice(css.indexOf('[data-type="mobile"]')).split('}')[0];
+  assert.match(mobile, /--big: var\(--body-size\)/);
+  assert.match(mobile, /--lead: var\(--body-font-size\)/);
+  assert.match(mobile, /--lift:/);
+});
+
+test('the base theme\'s attribute comes after the system preference, so a part set to Light stays light on a dark system', { skip }, async () => {
+  const css = (await build(LIBRARY))['_tokens.scss'];
+  assert.ok(css.indexOf('prefers-color-scheme: dark') < css.indexOf('[data-theme="light"]'));
+});
+
+test('modeSelector names a mode as the build writes it, from the names Figma gives', () => {
+  const dir = folder({ '5-responsive-type': { mobile: {}, desktop: {} }, '3-semantic': { light: {}, dark: {} }, '1-global': { value: {} } });
+  assert.equal(modeSelector(dir, '5. Responsive type', 'Mobile'), '[data-5-responsive-type="mobile"]');
+  assert.equal(modeSelector(dir, '3. Semantic', 'Dark'), '[data-theme="dark"]');
+  assert.equal(modeSelector(dir, '1. Global', 'Value'), null);
 });
 
 test('a responsive mode with no breakpoint to switch at fails the build', { skip }, async () => {

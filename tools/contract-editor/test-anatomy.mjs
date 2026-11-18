@@ -262,6 +262,15 @@ ok('forms the editor cannot show come back as they went: a gradient, corners apa
   assert.deepEqual(toAnatomy(fromAnatomy(anatomy, [], {}), []).anatomy, anatomy);
 });
 
+ok('fields the derive writes that the editor has no control for come back as they went: a mirror, a mode, an empty slot\'s kept size', () => {
+  const anatomy = {
+    root: { kind: 'container', layout: { direction: 'column' }, modes: { '5. Responsive type': 'Mobile' } },
+    ring: { kind: 'graphic', parent: 'root', order: 0, flip: 'x', position: 'absolute', absolute: { x: -112, y: 0 } },
+    content: { kind: 'slot', parent: 'root', order: 1, height: 'hug', minHeight: 200 },
+  };
+  assert.deepEqual(toAnatomy(fromAnatomy(anatomy, [], {}), []).anatomy, anatomy);
+});
+
 ok('a stored link the editor has no say in stays: to a layer a variant adds, and a second swap of one part', () => {
   const swap16 = draft({ name: 'Icon (16)', type: 'instance' });
   const swap24 = draft({ name: 'Icon (24)', type: 'instance' });

@@ -29,6 +29,12 @@
  *     chosen — both on screen only, because a page printed in the dark tier
  *     prints near-white text on white paper; a Mobile/Tablet/Desktop collection writes Mobile on :root and the
  *     others from the sm/md breakpoint; any other mode is `[data-<collection>="<mode>"]`;
+ *   - every mode, the base too, is also an attribute (`modeSelector`), so a layer
+ *     set to a mode in Figma (a component's small variant at its Mobile type) is
+ *     that mode in code wherever it sits: its block re-declares the axis's tokens
+ *     and every single-mode token aliasing them, since a custom property's
+ *     var() is resolved where it is declared, before it is inherited
+ *     (css-variables-1 §2), and an alias left on :root would keep the page's mode;
  *   - lengths are rem, so they follow the reader's font size, except the ones
  *     that must not scale: radii, strokes, blur and shadow offsets stay px;
  *   - a text style is its fields (`--heading-lg-font-size`, …), never a `font`
@@ -38,13 +44,15 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
+
+const MODES = createRequire(import.meta.url)('./modes.cjs');
 
 const ROOT_PX = 16;
 const FALLBACK = 'system-ui, sans-serif';
 // Lengths that must not scale with the reader's text size.
 const FIXED = /(^|-)(radius|stroke|border|blur|spread|position|offset|shadow|elevation)(-|$)/;
-const THEME = new Set(['light', 'dark']);
-const RESPONSIVE = { mobile: null, tablet: 'sm', desktop: 'md' };
+const { RESPONSIVE } = MODES;
 const CORNER = { 45: 'to top right', 135: 'to bottom right', 225: 'to bottom left', 315: 'to top left' };
 /** The CSS angle a Figma gradient angle becomes. Diagonals are corner
  *  keywords: Figma's angle lives in the node's unit square and stretches with
@@ -79,6 +87,22 @@ function discover(dir) {
   return out;
 }
 
+/* A DTCG folder's single-mode files and its axes (modes.cjs, the one owner of how modes are named in code). */
+function axesOf(collections) {
+  // (an axis names its members and modes by the export's slugs, and they are looked up here by folder and file name:
+  // a folder the export did not write would find nothing)
+  for (const [name, c] of collections) for (const n of [name, ...c.modes.keys()]) if (MODES.slug(n) !== n) throw new Error(`${name}/${n}: not a name the DTCG export writes (${MODES.slug(n)}); export the tokens again`);
+  const single = [...collections].filter(([, c]) => c.modes.size === 1).map(([, c]) => [...c.modes.values()][0]);
+  return { single, axes: MODES.axesOf([...collections].map(([name, c]) => ({ name, modes: [...c.modes.keys()] }))) };
+}
+
+/** The selector a mode of a collection is written under, by the names Figma gives them ("5. Responsive type",
+ *  "Mobile" → `[data-5-responsive-type="mobile"]`); null where the collection has one mode or no such mode. */
+export function modeSelector(tokens, collection, mode) {
+  const m = MODES.modeOf(axesOf(discover(tokens)).axes, collection, mode);
+  return m ? `[${MODES.attribute(m.key)}="${m.value}"]` : null;
+}
+
 /** Walk a DTCG tree, yielding [path, token]. */
 function* tokensOf(node, path = []) {
   for (const [k, v] of Object.entries(node)) {
@@ -94,6 +118,9 @@ const COMPOSITE = new Set(['shadow', 'gradient']);
 const px = (v) => (typeof v === 'object' && v !== null ? (v.unit === 'rem' ? v.value * ROOT_PX : v.value)
   : typeof v === 'string' && /rem\s*$/.test(v) ? parseFloat(v) * ROOT_PX : parseFloat(v));
 const rem = (n) => `${+(n / ROOT_PX).toFixed(4)}rem`;
+
+// a typography token's DTCG fields, by the name each is written under and its type
+const FIELD = { fontFamily: ['font-family', 'fontFamily'], fontWeight: ['font-weight', 'fontWeight'], fontSize: ['font-size', 'dimension'], lineHeight: ['line-height', 'number'], letterSpacing: ['letter-spacing', 'dimension'], paragraphSpacing: ['paragraph-spacing', 'dimension'], listSpacing: ['list-spacing', 'dimension'] };
 
 function register(SD) {
   SD.registerTransform({
@@ -154,7 +181,6 @@ function register(SD) {
      bound to a variable stays `var(--that-variable)`. Style Dictionary's own
      `expand` runs after resolution: a style bound to a Mobile/Desktop size
      came out as a fixed rem and stopped following the breakpoint. */
-  const FIELD = { fontFamily: ['font-family', 'fontFamily'], fontWeight: ['font-weight', 'fontWeight'], fontSize: ['font-size', 'dimension'], lineHeight: ['line-height', 'number'], letterSpacing: ['letter-spacing', 'dimension'], paragraphSpacing: ['paragraph-spacing', 'dimension'], listSpacing: ['list-spacing', 'dimension'] };
   SD.registerPreprocessor({
     name: 'house/expand-typography',
     preprocessor: (dict) => {
@@ -247,27 +273,13 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   const collections = discover(tokens);
   const isBreakpoint = (path) => bpAt(path) > 0;
 
-  // Axes: multi-mode collections sharing a mode set move together.
-  const single = [], axes = new Map();
-  for (const [slug, c] of collections) {
-    if (c.modes.size === 1) { single.push([...c.modes.values()][0]); continue; }
-    const modes = [...c.modes.keys()];
-    const key = [...modes].sort().join('|');
-    if (!axes.has(key)) axes.set(key, { modes, members: [] });
-    axes.get(key).members.push(slug);
-  }
-  const kindOf = (modes) => {
-    const m = modes.map((x) => x.toLowerCase());
-    if (m.every((x) => THEME.has(x))) return 'theme';
-    if (m.every((x) => x in RESPONSIVE)) return 'responsive';
-    return 'other';
-  };
+  const { single, axes } = axesOf(collections);
   const baseMode = (axis) => {
-    const k = kindOf(axis.modes);
+    const k = axis.kind;
     const want = k === 'theme' ? 'light' : k === 'responsive' ? 'mobile' : null;
     return axis.modes.find((m) => m.toLowerCase() === want) || axis.modes[0];
   };
-  const baseFiles = [...single, ...[...axes.values()].flatMap((a) => a.members.map((s) => collections.get(s).modes.get(baseMode(a))))];
+  const baseFiles = [...single, ...axes.flatMap((a) => a.members.map((s) => collections.get(s).modes.get(baseMode(a))))];
 
   // Breakpoints, read straight from the files: they are Sass, not properties.
   const breakpoints = {};
@@ -291,31 +303,52 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   };
 
   const notBreakpoint = (t) => !isBreakpoint(t.path);
+  // every reference a value makes (`{type.body.size}` → 'type.body.size'), and, per axis, the single-mode tokens a
+  // chain of them leads to its tokens from: re-declared beside the axis's own wherever a mode is set on an element
+  const refsIn = (v) => [...JSON.stringify(v ?? '').matchAll(/\{([^{}]+)\}/g)].map((x) => x[1]);
+  const graph = new Map();
+  for (const f of single) for (const [path, t] of tokensOf(read(f))) {
+    graph.set(path.join('.'), refsIn(t.$value));
+    // a text style is written as its fields, each a token another may alias (`{text-style.body.font-size}`)
+    if (t.$type === 'typography' && t.$value && typeof t.$value === 'object') for (const [field, v] of Object.entries(t.$value)) graph.set([...path, (FIELD[field] || [field])[0]].join('.'), refsIn(v));
+  }
+  const reached = (axis) => {
+    const hit = new Set(axis.members.flatMap((s) => [...tokensOf(read(collections.get(s).modes.get(baseMode(axis))))].map(([path]) => path.join('.'))));
+    for (let grew = true; grew;) { grew = false; for (const [k, rs] of graph) if (!hit.has(k) && rs.some((r) => hit.has(r))) { hit.add(k); grew = true; } }
+    // a token of another axis aliasing this one would need both axes' modes at once to be re-declared: not written,
+    // and said, so an element set to this mode is not silently left with it at the page's
+    for (const other of axes) if (other !== axis) for (const s of other.members) for (const [path, t] of tokensOf(read(collections.get(s).modes.get(baseMode(other))))) if (refsIn(t.$value).some((r) => hit.has(r))) console.warn(`tokens: ${path.join('.')} aliases ${axis.key} across two mode axes; an element set to a ${axis.key} mode keeps it at the page's`);
+    return hit;
+  };
+  // (a token's collection is its path's first segment: a typography token the build expands into its fields has no
+  // file of its own)
+  const singleSlugs = new Set([...collections].filter(([, c]) => c.modes.size === 1).map(([k]) => k));
+  const withAliases = (axis, hit) => (t) => notBreakpoint(t) && (axis.members.includes(t.path[0]) || (singleSlugs.has(t.path[0]) && (hit.has(t.path.join('.')) || refsIn(t.original && (t.original.$value ?? t.original.value)).some((r) => hit.has(r)))));
   const parts = [`/* ${banner} */`, '', await block(baseFiles, 'base.css', ':root', notBreakpoint)];
 
-  for (const axis of axes.values()) {
-    const kind = kindOf(axis.modes), base = baseMode(axis);
-    for (const mode of axis.modes.filter((m) => m !== base)) {
+  // the page's own switches first (the system's dark preference, a breakpoint), then every mode as its attribute,
+  // last, so an element set to one wins over what it would inherit (an attribute on :root over a media query's :root)
+  const scoped = [];
+  for (const axis of axes) {
+    const kind = axis.kind, base = baseMode(axis), hit = reached(axis), attr = MODES.attribute(axis.key);
+    for (const mode of axis.modes) {
       const own = axis.members.map((s) => collections.get(s).modes.get(mode));
       const sources = [...baseFiles.filter((f) => !axis.members.some((s) => collections.get(s).modes.get(base) === f)), ...own];
-      const mine = (t) => notBreakpoint(t) && own.includes(t.filePath);
       const m = mode.toLowerCase();
-      if (kind === 'theme') {
-        const body = await block(sources, `${m}.css`, `[data-theme="${m}"]`, mine);
-        if (!body) continue;
-        parts.push('', '@media screen {', indent(body), '}');
-        parts.push('', `@media screen and (prefers-color-scheme: ${m}) {`, indent(body.replace(`[data-theme="${m}"]`, `:root:not([data-theme="${base.toLowerCase()}"])`)), '}');
-      } else if (kind === 'responsive') {
+      const body = await block(sources, `${m}.css`, `[${attr}="${m}"]`, withAliases(axis, hit));
+      if (!body) continue;
+      // (a theme on screen only: a page printed in the dark tier prints near-white text on white paper)
+      scoped.push(kind === 'theme' ? ['', '@media screen {', indent(body), '}'] : ['', body]);
+      if (mode === base) continue;
+      if (kind === 'theme') parts.push('', `@media screen and (prefers-color-scheme: ${m}) {`, indent(body.replace(`[data-theme="${m}"]`, `:root:not([data-theme="${base.toLowerCase()}"])`)), '}');
+      else if (kind === 'responsive') {
         const at = RESPONSIVE[m], bp = breakpoints[at];
         if (bp === undefined) throw new Error(`${axis.members.join(', ')}: mode ${mode} needs Breakpoint/${at}, and no collection defines it`);
-        const body = await block(sources, `${m}.css`, ':root', mine);
-        if (body) parts.push('', `@media (min-width: ${rem(bp)}) {`, indent(body), '}');
-      } else {
-        const body = await block(sources, `${m}.css`, `[data-${axis.members[0]}="${m}"]`, mine);
-        if (body) parts.push('', body);
+        parts.push('', `@media (min-width: ${rem(bp)}) {`, indent(body.replace(`[${attr}="${m}"]`, ':root')), '}');
       }
     }
   }
+  for (const s of scoped) parts.push(...s);
   rmSync(tmp, { recursive: true, force: true });
   const css = parts.join('\n') + '\n';
 
