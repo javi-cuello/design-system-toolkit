@@ -49,7 +49,10 @@ export function wrongWord(names, descriptions) {
     const p = n.split('/');
     // the role: the last capitalised segment that is neither the leaf nor the first below any
     // namespace every name shares (Info in Colour/Text/Info/default, Text/Info/Default)
-    const i = p.map((seg, j) => (j > lead && j < p.length - 1 && /^[A-Z]/.test(seg) ? j : -1)).filter((j) => j >= 0).pop();
+    // (a namespace two or more deep is type and property, Colour/Text, so the role is the first segment after it;
+    // one deep is ambiguous by shape, Colour/Level/x against Text/Info/x, and an all-Text collection with no type goes unchecked)
+    const at = (min) => p.map((seg, j) => (j >= min && j < p.length - 1 && /^[A-Z]/.test(seg) ? j : -1)).filter((j) => j >= 0).pop();
+    const i = at(lead + 1) ?? (lead >= 2 ? at(lead) : undefined);
     if (i === undefined) continue;
     const own = p[i];
     const named = [...kids[p.slice(0, i).join('/')]].filter((w) => w !== own && w.length > 2 && says(text, w));

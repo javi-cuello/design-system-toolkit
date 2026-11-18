@@ -25,6 +25,8 @@ ok('a sibling named only inside a quoted token path is a reference, not raised',
 ok('the type and property segments are not roles', !ww.some((x) => x.name === 'Colour/Level/overlay'));
 const bare = { 'Text/Info/Default': 'Default colour for danger text.', 'Text/Danger/Default': 'Danger text.', 'Icon/Info/Default': 'Info icons.' };
 ok('a name with no type prefix and a capitalised leaf is checked on its role', wrongWord(Object.keys(bare), bare).map((x) => x.name).join() === 'Text/Info/Default');
+const one = { 'Colour/Text/Info/default': 'Default colour for danger text.', 'Colour/Text/Danger/default': 'Danger text.' };
+ok('a collection of one type and property still checks the role', wrongWord(Object.keys(one), one).map((x) => x.name).join() === 'Colour/Text/Info/default');
 ok('the coverage row carries the wrong-word list', Array.isArray(s.wrongWord));
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
