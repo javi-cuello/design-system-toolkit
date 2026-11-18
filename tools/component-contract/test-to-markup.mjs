@@ -223,6 +223,15 @@ ok('its mapping fills the input to draw has-a-value, and maps both texts to the 
 const sheet = toCss(evil, 'quotes-field', { naming: CLASS });
 ok('and to-code styles that input and its placeholder by the same selectors: the hooks are one', sheet.includes(`${fieldParity.layers['Field > Value']} {`) && sheet.includes(`${fieldParity.layers['Field > Value']}::placeholder {`));
 
+/* ── a variant that places a sibling of its own set (a wide screen holding a narrow one) calls its own function ── */
+{
+  const screen = { contract: 1, component: 'Screen', props: { size: { type: 'enum', values: ['wide', 'narrow'], default: 'wide', figma: 'Size' } },
+    anatomy: { root: { kind: 'container' }, inner: { kind: 'instance', parent: 'root', component: 'Screen', with: { Size: 'narrow' } } },
+    variants: [{ when: { size: 'narrow' }, remove: ['inner'] }] };
+  const js = toElement(screen, 'screen', { naming: ELEMENT, library: { Screen: { ...screen, folder: 'screen' } } });
+  ok('a component placing a sibling of its own set does not import itself', !/import \{ renderScreen \}/.test(js) && /export function renderScreen\(/.test(js) && /renderScreen\(\{ size: "narrow"/.test(js));
+}
+
 /* ── what a component puts in a placed component's slot (a menu's items) ── */
 {
   const item = { contract: 1, component: 'Item', props: { label: { type: 'string', default: 'Item', figma: 'Label', sets: ['text'] } }, anatomy: { root: { kind: 'container' }, text: { kind: 'text', parent: 'root', content: '{label}' } }, variants: [] };

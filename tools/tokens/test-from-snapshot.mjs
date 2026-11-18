@@ -45,6 +45,11 @@ test('a string Figma scopes to font family is a fontFamily where its name says n
   // nor one whose name is also a group: typed, Brand/Font would take the path Brand/Font/Family needs
   const grouped = { collections: { T: { modes: ['Base'], values: { Base: { 'Brand/Font': 'Roboto', 'Brand/Font/Family': 'Inter', 'Body/Family': 'Inter' } }, alias: { Base: { 'Body/Family': 'Brand/Font/Family' } }, scopes: { 'Brand/Font': ['FONT_FAMILY'] } } } };
   writeDtcg(grouped, mkdtempSync(join(tmpdir(), 'dtcg-')));
+  // and a string a text style binds as its family is a family, whatever its name and scope
+  const bound = { collections: { Type: { modes: ['Base'], values: { Base: { 'Body/Font family': 'Plex' } }, alias: {}, scopes: { 'Body/Font family': ['ALL_SCOPES'] } } },
+    textStyles: [{ name: 'Body', family: 'Plex', weight: 'Regular', size: 14, lineHeight: 1.5, bound: { fontFamily: { collection: 'Type', name: 'Body/Font family' } } }] };
+  assert.equal(toDtcgSnapshot(bound).collections[0].variables[0].font, 'fontFamily');
+  writeDtcg(bound, mkdtempSync(join(tmpdir(), 'dtcg-')));
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
   writeDtcg(t, dir); // and the build writes: no reference left to a string it skips
 });
@@ -252,4 +257,19 @@ test('a reference that resolves only in another resolution is refused, nothing w
   // (one resolution it fails in is named per reference: the list of every one is the product of the modes)
   assert.throws(() => writeDtcg(s, dir), /1 reference\(s\) do not resolve inside their resolution, nothing written: dark-desktop: \{primitives-colour\.palette\.accent\.9\}/);
   assert.deepEqual(readdirSync(dir), [], 'a refused export writes nothing');
+});
+
+test("another library's variable a local one names is that one: left out, and an alias to it lands on the local one", () => {
+  const t = { collections: {
+    Theme: { modes: ['Light'], values: { Light: { Transparent: '#ffffff00', Ink: '#000000' } }, alias: {} },
+    Colors: { modes: ['Value'], values: { Value: { Transparent: '#00000000', 'Gray/100': '#111111', Shade: '#ffffff00' } }, alias: { Value: { Shade: 'Transparent' } }, remote: true },
+  } };
+  const cols = Object.fromEntries(toDtcgSnapshot(t).collections.map((c) => [c.name, c.variables]));
+  assert.deepEqual(cols.Colors.map((v) => v.name), ['Gray/100', 'Shade']);
+  assert.deepEqual(cols.Colors[1].values.Value, { alias: { collection: 'Theme', name: 'Transparent' } });
+  // and a text style bound to the shadowed one binds the local one, marked a family there
+  const typed = { collections: { Local: { modes: ['M'], values: { M: { 'Body/Font': 'Inter' } }, alias: {} }, Lib: { modes: ['M'], values: { M: { 'Body/Font': 'Inter' } }, alias: {}, remote: true } },
+    textStyles: [{ name: 'Body', family: 'Inter', weight: 'Regular', size: 14, lineHeight: 1.5, bound: { fontFamily: { collection: 'Lib', name: 'Body/Font' } } }] };
+  assert.equal(toDtcgSnapshot(typed).collections.find((c) => c.name === 'Local').variables[0].font, 'fontFamily');
+  writeDtcg(typed, mkdtempSync(join(tmpdir(), 'dtcg-')));
 });

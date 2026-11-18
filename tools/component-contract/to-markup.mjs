@@ -658,7 +658,8 @@ export function toElement(c, folder, { naming, library = {}, settings = HOUSE } 
   const attrsSaid = own.filter((x) => x.attr).map((x) => `${t.n.attr(x.key)}${x.type === 'enum' ? ` (${x.values.map(str).join(' | ')}, default ${str(x.default)})` : ` ("true" | "false", default "${x.default}")`}`);
   return [`/* ${BANNER} */`, ...(t.gaps.length ? ['/*', ...[...new Set(t.gaps)].map((g) => ` * frontend-build: ${said(g)}`), ' */'] : []),
     `import { h } from '../dom.js';`,
-    ...placed.map((p) => `import { ${fnOf(library[p])} } from '../${placedFolder(library[p])}/${placedFolder(library[p])}.js';`),
+    // (a variant that places a sibling of its own set calls this file's own function: no import of itself)
+    ...placed.filter((p) => library[p].component !== c.component).map((p) => `import { ${fnOf(library[p])} } from '../${placedFolder(library[p])}/${placedFolder(library[p])}.js';`),
     '',
     `/**`,
     ` * ${said(`<${tag}>${attrsSaid.length ? `: ${attrsSaid.join('; ')}` : ''}.`)}`,

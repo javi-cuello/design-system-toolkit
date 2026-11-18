@@ -67,9 +67,15 @@ export function toDtcgSnapshot(t) {
   // A name can live in two collections (a semantic `Colour/Primary` over a
   // primitive of the same name); an alias never points at itself, so prefer a
   // collection other than the aliasing variable's own.
+  // Another library's variable (a collection sent `remote`) whose name a local variable holds is that one, as a remote
+  // collection or text style is: CSS drops the collection from a name and a contract names a token without it, so
+  // two of one name could not be told apart (Carbon's theme Transparent and its foundations' Transparent).
+  const localNames = new Set(collections.filter(([, c]) => !c.remote).flatMap(([, c]) => c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {}))));
+  const shadowed = (c, name) => c.remote && localNames.has(name);
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {
+      if (shadowed(c, name)) continue;
       if (!homes.has(name)) homes.set(name, []);
       if (!homes.get(name).includes(cname)) homes.get(name).push(cname);
     }
@@ -81,7 +87,7 @@ export function toDtcgSnapshot(t) {
   const typeOf = (v) => (isColour(v) ? 'COLOR' : typeof v === 'number' ? 'FLOAT' : typeof v === 'boolean' ? 'BOOLEAN' : 'STRING');
 
   const out = collections.map(([cname, c]) => {
-    const names = [...new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})))];
+    const names = [...new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})))].filter((n) => !shadowed(c, n));
     return {
       name: cname,
       modes: c.modes,
@@ -110,6 +116,14 @@ export function toDtcgSnapshot(t) {
   // scale's Font names): passed down every alias until nothing changes. A weight is not passed on: a string a weight
   // names may be no weight the build can map ("Bold Italic"), and a reference to one it skips would refuse the build
   const byName = new Map(out.map((c) => [c.name, new Map(c.variables.map((v) => [v.name, v]))]));
+  // a string a text style binds as its font family is one too, whatever its scope (Carbon's Fixed/Body/Font family,
+  // scoped to everything): Figma took it as the family there
+  for (const st of t.textStyles || []) {
+    // (by where the binding lands: one to another library's variable a local one names is the local one)
+    const b = st.bound && st.bound.fontFamily, h = b && homes.get(b.name), at = h && (h.includes(b.collection) ? b.collection : h[0]);
+    const v = at && (byName.get(at) || new Map()).get(b.name);
+    if (v && v.type === 'STRING' && !v.font) v.font = 'fontFamily';
+  }
   for (let moved = true; moved;) {
     moved = false;
     for (const c of out) for (const v of c.variables) {
