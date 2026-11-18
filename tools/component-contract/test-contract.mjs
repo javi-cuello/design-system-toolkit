@@ -465,6 +465,18 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     variants: [{ name: 'Default', type: 'COMPONENT', w: 10, h: 10, children: [{ name: 'Title', type: 'TEXT', text: 'Hi', w: 5, h: 5 }] }] };
   const c = derive(twin);
   ok('a boolean and a text named alike are two props, the text keeping the name', c.props.title && c.props.title.type === 'string' && c.props.showTitle && c.props.showTitle.type === 'boolean'); }
+{ // a part one layer adds under a parent an earlier layer removed is not drawn, and a later layer putting the parent
+  // back does not bring it with it (a keyboard's emoji glyph, landscape, inside a row the alphanumeric layout drops)
+  const c = { contract: 1, component: 'Keys', props: { config: { type: 'enum', values: ['base', 'alpha'], default: 'base' }, style: { type: 'enum', values: ['portrait', 'landscape'], default: 'portrait' } },
+    anatomy: { root: { kind: 'container' }, row: { kind: 'container', parent: 'root' } },
+    variants: [{ when: { config: 'alpha' }, remove: ['row'] }, { when: { style: 'landscape' }, add: { glyph: { kind: 'graphic', parent: 'row' } } },
+      { when: { config: 'alpha', style: 'landscape' }, add: { row: { kind: 'container', parent: 'root' } } }] };
+  const e = expand(c, { config: 'alpha', style: 'landscape' });
+  ok('a part added while its parent was gone stays gone when the parent comes back', 'row' in e && !('glyph' in e)); }
+{ // options that kebab alike (a slider's -50 and +50) stay two values, their signs spelled
+  const L = await import('./layers.mjs');
+  ok('-50, 0 and +50 are three values', JSON.stringify(L.valueIds(['-50', '0', '+50'])) === '["minus-50","0","plus-50"]');
+  ok('options that differ only by case still differ', JSON.stringify(L.valueIds(['a', 'A'])) === '["a","a-2"]'); }
 { // a layer name may hold a line separator (U+2028, pasted from text): its id is made all the same
   const sep = { name: 'Box', id: '9:3', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 10, h: 10, children: [{ name: 'Replace\u2028with an image', type: 'TEXT', text: 'x', w: 5, h: 5 }] }] };
   ok('a name with a line separator derives, its id camel-cased across it', Object.keys(derive(sep).anatomy).length === 2); }

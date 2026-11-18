@@ -26,7 +26,7 @@ const MODES = require('../tokens/modes.cjs');const { resolve, layerPaths } = req
 const SHAPE = 1;
 const j = (x) => JSON.stringify(x);
 // a combination drawn from its layers: one module, the editor's page reads it too
-const { variantDefaults, apply, expand, partName, camel, kebab, propIds } = require('./layers.mjs');
+const { variantDefaults, apply, expand, partName, camel, kebab, propIds, valueIds, bareProp } = require('./layers.mjs');
 
 /* A variant's name as prop values: "Size=Large, Left icon=True". */
 const { variantValues: valuesOf } = require('../shared/names.js');
@@ -384,7 +384,10 @@ function fold(missing, domains) {
 const isFlag = (t) => Array.isArray(t) && t.length === 2 && t.map((v) => String(v).toLowerCase()).sort().join() === 'false,true';
 function valueFor(figmaProps, p, v) {
   const t = figmaProps[p];
-  return t === 'BOOLEAN' || isFlag(t) ? String(v).toLowerCase() === 'true' : kebab(v);
+  if (t === 'BOOLEAN' || isFlag(t)) return String(v).toLowerCase() === 'true';
+  // an option by the one value rule (layers.mjs valueIds): `-50` and `+50` stay two
+  const i = Array.isArray(t) ? t.indexOf(v) : -1;
+  return i >= 0 ? valueIds(t)[i] : kebab(v);
 }
 
 /* Each Figma prop's contract id (layers.mjs propIds, the editor's rule too), made once per set of props. */
@@ -511,7 +514,7 @@ let M = { ...atProps(m, e.with) };
   const low = (x) => String(x).toLowerCase(), swapped = [];
   for (const [pk, q] of Object.entries(m.props || {})) {
     if (q.type !== 'instance' || !(q.swaps || []).length) continue;
-    const w = Object.entries(e.with || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || pk));
+    const w = Object.entries(e.with || {}).find(([k]) => low(bareProp(k)) === low(q.figma || pk));
     if (!w) continue;
     for (const sid of q.swaps) {
       if (!M[sid] || !M[sid].component) continue;
@@ -668,7 +671,7 @@ function atProps(m, withProps = {}) {
   const by = Object.fromEntries(Object.entries(m.props || {}).map(([k, q]) => [low(q.figma || k), k]));
   const vals = { ...variantDefaults(m) };
   for (const [k, v] of Object.entries(withProps || {})) {
-    const mk = by[low(String(k).split('#')[0])];
+    const mk = by[low(bareProp(k))];
     if (!mk) continue;
     const q = m.props[mk];
     const at = q.type === 'enum' && (q.figmaValues || []).findIndex((x) => low(x) === low(v));
@@ -678,7 +681,7 @@ function atProps(m, withProps = {}) {
   const words = (t) => {
     const r = /^\{(.+)\}$/.exec(t || ''), q = r && m.props[r[1]];
     if (!q) return t;
-    const w = Object.entries(withProps || {}).find(([k]) => low(String(k).split('#')[0]) === low(q.figma || r[1]));
+    const w = Object.entries(withProps || {}).find(([k]) => low(bareProp(k)) === low(q.figma || r[1]));
     return w ? w[1] : q.default ?? t;
   };
   for (const [k, x] of Object.entries(M)) if (x && typeof x.content === 'string') M[k] = { ...x, content: words(x.content) };
@@ -747,7 +750,7 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
     // drawn as False/True variants, said so: the invalid list, folded, need not name it
     if (isFlag(t)) props[id] = { type: 'boolean', default: valueFor(figmaProps, p, base.when[p] ?? 'False'), axis: true };
     else if (Array.isArray(t)) {
-      props[id] = { type: 'enum', values: t.map(kebab), default: kebab(base.when[p] ?? t[0]) };
+      props[id] = { type: 'enum', values: valueIds(t), default: valueFor(figmaProps, p, base.when[p] ?? t[0]) };
       // Figma's spelling of each, which the kebab-case values lose (Primary, Icon only) or the house's would change (lg)
       props[id].figmaValues = [...t];
       if (stateAxis && p === stateAxis) { props[id].role = 'interaction'; props[id].pointer = props[id].values.filter((v) => pointer.has(v)); }

@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.77.0] - 2026-11-18
+### Fixed
+- **A property whose name holds a `#` keeps its name.** Everything from the first `#` was dropped as the id Figma appends (`Label#1:0`), so a variant axis named `# of lines` arrived named nothing; only a trailing `#<n>:<n>` is dropped now.
+
 ## [0.76.0] - 2026-11-18
 ### Fixed
 - **A component set Figma holds in error no longer stops the walk.** Reading its properties, or an instance's of it, throws ("Component set has existing errors": conflicting variant names); the walk lists the set under `unreadable` with Figma's reason and goes on, and the store says it. One such set in a community library lost its whole page.

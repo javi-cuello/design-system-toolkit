@@ -48,10 +48,18 @@ export function expand(contract, when = {}, { skip = null } = {}) {
   const vs = (contract && contract.variants) || [];
   for (const v of vs) {
     if (v.combination || v === skip) continue;
-    if (Object.entries(v.when || {}).every(([k, val]) => full[k] === val)) applyTo(out, v);
+    if (Object.entries(v.when || {}).every(([k, val]) => full[k] === val)) prune(applyTo(out, v));
   }
   const combo = vs.find((v) => v.combination && v !== skip && Object.entries(v.when || {}).every(([k, val]) => full[k] === val));
   return rooted(combo ? applyTo(out, combo) : out);
+}
+
+// after each layer, the parts whose parent is gone go too, so the working copy is what is drawn at every step: left
+// in, a later layer putting the parent back revived them, which no layer said (derive fits each layer to what is drawn)
+function prune(out) {
+  const there = (id) => !out[id].parent || (out[out[id].parent] && there(out[id].parent));
+  for (const id of Object.keys(out).filter((x) => !there(x))) delete out[id];
+  return out;
 }
 
 // a part goes with its parent: one a layer adds inside a part another layer removes is not drawn
@@ -86,6 +94,18 @@ export function propKey(drafts, d) {
   const i = drafts.findIndex((x) => x === d || (d && d.uid && x.uid === d.uid));
   if (i < 0) return camel(d.name);
   return propIds(drafts.map((x) => ({ name: x.name, flag: x.type === 'boolean' && !x.axis })))[i];
+}
+/* Each option's contract value, one rule for derive and the editor: its Figma spelling kebab-cased. Two that kebab
+   alike (a slider's `-50` and `+50`, both `50`) would be one value; those have their signs spelled (`minus-50`,
+   `plus-50`), and any still alike take a number. In the options' order. */
+// a Figma property key without the id Figma appends (`Label#12:3`); a `#` of the name's own (`# of lines`) stays
+export const bareProp = (k) => String(k).replace(/#\d+:\d+$/, '');
+export const spellValue = (v) => kebab(String(v).replace(/^\s*-/, 'minus ').replace(/\+/g, ' plus ').replace(/&/g, ' and '));
+export function valueIds(list) {
+  const k = list.map((v) => kebab(v)), count = (arr, x) => arr.filter((y) => y === x).length;
+  const spelled = list.map((v, i) => (count(k, k[i]) > 1 ? spellValue(v) : k[i]));
+  const seen = new Map();
+  return spelled.map((x) => { if (count(spelled, x) === 1) return x; const n = (seen.get(x) || 0) + 1; seen.set(x, n); return n === 1 ? x : `${x}-${n}`; });
 }
 export const kebab = (s) => String(s).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 export const sentence = (k) => { const w = String(k).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([a-zA-Z])(\d)/g, '$1 $2').toLowerCase(); return w ? w[0].toUpperCase() + w.slice(1) : w; };

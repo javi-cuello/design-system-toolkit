@@ -101,6 +101,15 @@ ok("an icon counts its visible solid paints that no variable or style binds", un
   const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
   ok("each component is filed under its own page", got.map((c) => c.page).join() === "Chip,Tag");
 }
+// 0.77.0: a property named with a `#` of its own (`# of lines`) kept nothing of its name: everything from the `#`
+// was taken for the id Figma appends (`Label#1:0`)
+{
+  const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [comp] }; comp.parent = p; p.findAll = (f) => p.children.filter(f); return p; };
+  const bar = { type: "COMPONENT", name: "Bar", id: "4:1", width: 40, height: 20, children: [], componentPropertyDefinitions: { "# of lines": { type: "VARIANT", defaultValue: "One", variantOptions: ["One", "Two"] }, "Label#1:0": { type: "TEXT", defaultValue: "x" } } };
+  figma.root = { children: [pageOf("Bar", bar)] };
+  const got = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [] });
+  ok("a property's own `#` stays in its name; only Figma's id is dropped", JSON.stringify(Object.keys(got[0].props).sort()) === JSON.stringify(["# of lines", "Label"]));
+}
 // 0.73.0: a scratch page's components are trials, not the library; a snapshot took two as components
 {
   const pageOf = (name, comp) => { const p = { type: "PAGE", name, children: [] }; if (comp) { comp.parent = p; p.children.push(comp); } p.findAll = (f) => p.children.filter(f); return p; };

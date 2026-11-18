@@ -207,9 +207,9 @@ const muiRules = (map) => [
       const table = mui && MUI_ENUMS[mui];
       if (!table) return;
       for (const prop of Object.keys(table)) {
-        const axis = Object.keys(c.props || {}).find((k) => MUI_PROP[prop] && MUI_PROP[prop].test(k.split('#')[0]));
+        const axis = Object.keys(c.props || {}).find((k) => MUI_PROP[prop] && MUI_PROP[prop].test(k.replace(/#\d+:\d+$/, '')));
         if (!axis) continue;
-        const bare = axis.split('#')[0];
+        const bare = axis.replace(/#\d+:\d+$/, '');
         if (canon(bare) === canon(prop)) continue;
         add('MU10', bare, `${mui} calls this property ${prop}`,
           `in Figma: rename the axis ${prop}, so the property panel and the code use one word for one thing; in code: map ${bare} to ${prop} at the boundary and carry the difference for ever (https://mui.com/material-ui/api/${String(mui).replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}/)`,
@@ -224,7 +224,7 @@ const muiRules = (map) => [
       const table = mui && MUI_ENUMS[mui];
       if (!table) return;
       for (const [prop, [values, open, src]] of Object.entries(table)) {
-        const axis = Object.keys(c.props || {}).find((k) => MUI_PROP[prop] && MUI_PROP[prop].test(k.split('#')[0]));
+        const axis = Object.keys(c.props || {}).find((k) => MUI_PROP[prop] && MUI_PROP[prop].test(k.replace(/#\d+:\d+$/, '')));
         if (!axis || !Array.isArray(c.props[axis])) continue;
         const allowed = new Set(values.map(canon));
         const strays = c.props[axis].filter((v) => !allowed.has(canon(v)));
@@ -247,7 +247,7 @@ const muiRules = (map) => [
       const mui = map[c.name];
       if (!mui) return;
       const has = Object.entries(c.props || {}).some(([k, v]) =>
-        /^loading$/i.test(k.split('#')[0]) || (Array.isArray(v) && v.some((x) => /^loading$/i.test(String(x)))));
+        /^loading$/i.test(k.replace(/#\d+:\d+$/, '')) || (Array.isArray(v) && v.some((x) => /^loading$/i.test(String(x)))));
       if (!has) return;
       if (MUI_LOADING.has(mui)) return;
       add('MU3', 'Loading', `${mui} has no loading state to switch on — only Button and IconButton do`,
@@ -291,7 +291,7 @@ const muiRules = (map) => [
   { component: (c, add) => {
       if (map[c.name] !== 'Chip') return;
       const props = c.props || {};
-      const bools = Object.keys(props).filter((k) => props[k] === 'BOOLEAN').map((k) => k.split('#')[0]);
+      const bools = Object.keys(props).filter((k) => props[k] === 'BOOLEAN').map((k) => k.replace(/#\d+:\d+$/, ''));
       const v0 = (c.variants || [])[0];
       const kids = (v0 && v0.children) || [];
       const trailing = kids.length > 1 && kids[kids.length - 1];
@@ -1011,9 +1011,9 @@ export function translations(components, target, { states } = {}) {
       out.push({ id: f.id, component: c.name, ...f.say(named, f.first, ls.length, f.key), layers: ls });
     }
     for (const [name, v] of Object.entries(c.props || {})) {
-      const k = name.split('#')[0].trim().toLowerCase();
+      const k = name.replace(/#\d+:\d+$/, '').trim().toLowerCase();
       const rule = set.props.find(([, test]) => test(k, v, states && states.axis));
-      if (rule) out.push({ id: rule[0], component: c.name, ...rule[2](name.split('#')[0].trim(), v, k), layers: [] });
+      if (rule) out.push({ id: rule[0], component: c.name, ...rule[2](name.replace(/#\d+:\d+$/, '').trim(), v, k), layers: [] });
     }
   }
   return out;

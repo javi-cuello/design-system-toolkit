@@ -1,4 +1,4 @@
-// Design system snapshot — v0.76.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.77.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -262,7 +262,7 @@ async function anatomyOf(set, shown) {
     const bounds0 = inst.absoluteRenderBounds || inst.absoluteBoundingBox;
     if (!bounds0) return null;
     let origin = { x: bounds0.x, y: bounds0.y, width: bounds0.width, height: bounds0.height };
-    const label = (/** @type {string} */ ref) => ref.split('#')[0];
+    const label = (/** @type {string} */ ref) => bare(ref);
     /** @type {{ name: string, type: string, x: number, y: number, w: number, h: number, optional?: string, component?: string, count?: number }[]} */
     const parts = [];
     /** @param {SceneNode} node @param {string | undefined} optional */
@@ -693,7 +693,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.76.0';
+const VERSION = '0.77.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -1003,7 +1003,7 @@ async function walk(n, depth) {
     for (const k of Object.keys(cps)) {
       const cp = cps[k];
       // an instance swap is a node id; the component's name is what a reader needs
-      props[k.split('#')[0]] = cp.type === 'INSTANCE_SWAP' && typeof cp.value === 'string' ? await swapName(cp.value) : cp.value;
+      props[bare(k)] = cp.type === 'INSTANCE_SWAP' && typeof cp.value === 'string' ? await swapName(cp.value) : cp.value;
     }
     o.props = props;
     // an instance is its component's spec — unless something inside it was
@@ -1397,7 +1397,7 @@ function propLinks(roots) {
       const refs = c.componentPropertyReferences;
       if (refs) for (const kind of ['characters', 'visible', 'mainComponent']) {
         if (!refs[kind]) continue;
-        const prop = refs[kind].split('#')[0];
+        const prop = bare(refs[kind]);
         const l = links[prop] || (links[prop] = { kind, layers: [] });
         if (!l.layers.some((x) => x.join('/') === here.join('/') && x.length === here.length)) l.layers.push(here);
         (where[prop] || (where[prop] = new Set())).add(root);
@@ -1486,7 +1486,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
       /** @type {Record<string, unknown>} */ const props = {};
       let defs;
       try { defs = s.componentPropertyDefinitions; } catch (e) { unreadable.push({ name: s.name, page: page.name, reason: message(e) }); continue; }
-      for (const k of Object.keys(defs)) props[k.split('#')[0]] = defs[k].type === 'VARIANT' ? defs[k].variantOptions : defs[k].type;
+      for (const k of Object.keys(defs)) props[bare(k)] = defs[k].type === 'VARIANT' ? defs[k].variantOptions : defs[k].type;
       /*
        * A SLOT's settings, which live on the PROPERTY and not on the node.
        *
@@ -1553,7 +1553,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
         // Everything the runtime DID expose, so a reader can tell a field
         // that is absent from a field this plugin never asked for.
         out.fields = Object.keys(d);
-        slots[k.split('#')[0]] = out;
+        slots[bare(k)] = out;
       }
       /*
        * Which layers each property drives: a text property its words, a
@@ -1595,7 +1595,7 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
             const slots = slotPaths(inst);
             const frame = made = inst.detachInstance();
             const tree = markSlots(await walk(frame, 0), slots);
-            tree.name = `${v.name}, ${k.split('#')[0]}=${flipped ? 'True' : 'False'}`;
+            tree.name = `${v.name}, ${bare(k)}=${flipped ? 'True' : 'False'}`;
             variants.push(tree);
           } finally { if (!made.removed) made.remove(); }
         }
@@ -1697,6 +1697,8 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
 /** A post that reached nothing: the window offers the download instead. */
 class Unreachable extends Error {}
 /** @param {unknown} e */
+// a property's name without the id Figma appends (`Label#12:3`); a `#` the name itself holds (`# of lines`) stays
+const bare = (k) => k.replace(/#\d+:\d+$/, '');
 const message = (e) => String((e && typeof e === 'object' && /** @type {{message?: unknown}} */ (e).message) || e);
 /** The router refused the code: the window asks for it again. */
 class Unpaired extends Error {}

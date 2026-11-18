@@ -35,7 +35,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { partName, figmaWord, camel, sentence, variantDefaults } from './layers.mjs';
+import { partName, figmaWord, camel, sentence, variantDefaults, bareProp } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
 import { ALIGN_DATA, SIZE_ROWS } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
@@ -523,7 +523,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   const withProps = async (n, e) => {
     const defs = n.componentProperties;
     for (const [k, v] of Object.entries(e.with || {})) {
-      const key = Object.keys(defs).find((x) => x.split('#')[0] === k);
+      const key = Object.keys(defs).find((x) => bareProp(x) === k);
       if (!key) continue;
       // a swap names the component by its last name ("x" for Icon/x): set to that component's variant at the one now in
       // place (a 16 for a 16), even where the variant drawn hides it
@@ -920,7 +920,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   }
   // each slot's property, made with its layer, given the slot's settings and description
   for (const sl of P.slots || []) {
-    const key = Object.keys(set.componentPropertyDefinitions).find((k) => k.split('#')[0] === sl.figma && set.componentPropertyDefinitions[k].type === 'SLOT');
+    const key = Object.keys(set.componentPropertyDefinitions).find((k) => bareProp(k) === sl.figma && set.componentPropertyDefinitions[k].type === 'SLOT');
     if (!key) { missing.add(`slot ${sl.figma} (no layer of it drawn)`); continue; }
     // a preferred instance is the snapshot's key of a component set or a component, which Figma takes with its type
     const preferred = [];
@@ -1159,7 +1159,7 @@ export const PATCH_AFTER = `{ __res = await (${(async (res, target, token, patch
   patching();
   const missing = [], changed = { kept: 0, added: 0, removed: 0, layers: 0 };
   // a property's own name, Figma's id less its #suffix
-  const nameOf = (k) => k.split('#')[0];
+  const nameOf = (k) => bareProp(k);
   const defsOf = (n) => n.componentPropertyDefinitions;
   // the properties made the drawing's: removed, added and given their defaults; a variant's are its values, set below
   const ids = {};
@@ -1608,7 +1608,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   for (const x of p.notDrawn) console.log(`note: not drawn: ${x}`);
   if (target) {
     const ch = res.changed;
-    console.log(`${p.name} updated in place (${res.set}): ${ch.kept} variant(s) kept, ${ch.added} added, ${ch.removed} removed${res.orphaned ? ` (${res.orphaned} instance(s) in this file used a removed one)` : ''}, ${ch.layers} change(s) to layers; props ${res.props.map((k) => k.split('#')[0]).join(', ')}; ${res.missing.length ? `not bound or not changed: ${res.missing.join(', ')}` : 'every value bound'}; in ${Math.round((Date.now() - t0) / 1000)}s`);
+    console.log(`${p.name} updated in place (${res.set}): ${ch.kept} variant(s) kept, ${ch.added} added, ${ch.removed} removed${res.orphaned ? ` (${res.orphaned} instance(s) in this file used a removed one)` : ''}, ${ch.layers} change(s) to layers; props ${res.props.map((k) => bareProp(k)).join(', ')}; ${res.missing.length ? `not bound or not changed: ${res.missing.join(', ')}` : 'every value bound'}; in ${Math.round((Date.now() - t0) / 1000)}s`);
     process.exit(0);
   }
   console.log(`${p.name}: ${res.variants} variants into ${into}, laid out ${res.layout}, props ${res.props.join(', ')}; ${res.missing.length ? `not bound: ${res.missing.map((n) => (hidden.has(n) ? `${n} (hidden from publishing in the library: choose a published token)` : n)).join(', ')}` : 'every value bound'}; keys looked up: ${Object.keys(keys.vars || {}).length} variable(s), ${Object.keys(keys.styles).length} style(s), ${Object.keys(keys.icons).length} icon(s)${keys.iconContainer ? ', the icon container' : ''} in ${looked}s; drawn in ${Math.round((Date.now() - t0) / 1000)}s`);

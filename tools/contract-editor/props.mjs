@@ -21,7 +21,7 @@ export const CODE_ONLY = new Set(['number', 'event']);
 export const ONLY = ['both', 'figma', 'code'];
 
 // the words a contract's ids and names are made of, and its interaction states: component-contract's, one way each
-import { camel, kebab, interactionStates, propIds, propKey } from '../component-contract/layers.mjs';
+import { camel, kebab, interactionStates, propIds, propKey, valueIds, spellValue } from '../component-contract/layers.mjs';
 export { camel, kebab, interactionStates };
 
 let next = 0;
@@ -75,7 +75,9 @@ export const kindOf = (d) => (d.role === 'interaction' ? 'state' : TYPES.include
  */
 export function applyKind(d, block) {
   const p = block.make();
-  const out = { ...d, kind: block.id, extra: {} };
+  // (a new kind brings its own options: what the old ones were opened as, and their renames, go)
+  const { origin: _o, renamed: _r, ...rest } = d;
+  const out = { ...rest, kind: block.id, extra: {} };
   if (block.group === 'Kinds' && block.id !== 'state') {
     out.type = p.type;
     // a code-only kind is code's alone; leaving one, a prop goes back to both sides
@@ -160,8 +162,8 @@ export function toContract(component, drafts, base = {}, parts = null) {
   for (const d of drafts) {
     const p = { type: d.type, ...(d.extra || {}) };
     if (d.type === 'enum') {
-      p.values = d.values.map(kebab);
-      if (d.default != null) p.default = kebab(d.default);
+      p.values = valueIds(d.values);
+      if (d.default != null) p.default = p.values[d.values.indexOf(d.default)] ?? kebab(d.default);
       // Figma's spelling of each option, which the kebab-case values lose ("Extra large") or the house's sentence case
       // would change ("lg"), as derive.cjs keeps it
       if (d.only !== 'code') p.figmaValues = d.values.map((v) => v.trim());
@@ -171,7 +173,7 @@ export function toContract(component, drafts, base = {}, parts = null) {
     else if (d.type === 'number' && d.default != null && d.default !== '') p.default = Number(d.default);
     else if (d.type === 'instance' && d.default) p.default = d.default;
     if (d.type === 'boolean' && d.axis && d.only !== 'code') p.axis = true;
-    if (d.type === 'enum' && d.role) { p.role = d.role; p.pointer = (d.pointer || []).map(kebab).filter((v) => p.values.includes(v)); }
+    if (d.type === 'enum' && d.role) { p.role = d.role; p.pointer = (d.pointer || []).map((x) => p.values[d.values.indexOf(x)] ?? kebab(x)).filter((v) => p.values.includes(v)); }
     const only = CODE_ONLY.has(d.type) ? 'code' : d.only;
     // (the name as Figma keeps it, a trailing space and all, where the draft still says it: the library addresses it so)
     if (only !== 'code') p.figma = d.figma && d.figma.trim() === d.name.trim() ? d.figma : d.name.trim();
@@ -225,6 +227,8 @@ export function fromContract(c) {
     ...(p.figma ? { figma: p.figma } : {}),
     type: TYPES.includes(p.type) ? p.type : 'string',
     values: [...(p.figmaValues || p.values || [])],
+    // each option's value as the contract stores it, so a rename follows what the variants name (editor.js optionsField)
+    ...(p.type === 'enum' && Array.isArray(p.values) && (!p.figmaValues || p.figmaValues.length === p.values.length) ? { origin: [...p.values] } : {}),
     default: p.figmaValues && p.values ? (p.figmaValues[p.values.indexOf(p.default)] ?? p.default ?? null) : p.default ?? null,
     axis: !!p.axis || (p.type === 'boolean' && axes.has(key)),
     only: ONLY.includes(p.only) ? p.only : 'both',
@@ -250,13 +254,15 @@ export function problems(component, drafts) {
     if (seen.has(key)) say('name', `"${d.name}" and "${seen.get(key)}" are one prop in code (${camel(d.name)}).`);
     else seen.set(key, d.name);
     if (d.type === 'enum') {
-      const vals = d.values.map(kebab);
+      const vals = valueIds(d.values);
       if (vals.length < 2) say('values', `${d.name} needs at least two options; one is not a choice.`);
       if (vals.some((v) => !v)) say('values', `${d.name} has an empty option.`);
-      const dup = vals.find((v, i) => v && vals.indexOf(v) !== i);
+      // two options one value even with their signs spelled (`a` and `A`) are one option twice; `-50` and `+50` are two
+      const words = d.values.map((v) => String(v).trim()), sp = d.values.map(spellValue);
+      const dup = words.find((v, i) => v && sp.indexOf(sp[i]) !== i);
       if (dup) say('values', `${d.name} lists "${dup}" twice.`);
       // a default is asked for once there are options to choose it from
-      if (vals.length >= 2 && (d.default == null || !vals.includes(kebab(d.default)))) say('default', `${d.name}'s default is not one of its options.`);
+      if (vals.length >= 2 && (d.default == null || !(words.includes(String(d.default).trim()) || vals.includes(kebab(d.default))))) say('default', `${d.name}'s default is not one of its options.`);
     }
     if (d.type === 'number' && d.default != null && d.default !== '' && !Number.isFinite(Number(d.default))) say('default', `${d.name}'s default is not a number.`);
   }

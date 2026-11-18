@@ -1,4 +1,6 @@
-import { propKey } from '../component-contract/layers.mjs';
+import { propKey, spellValue, valueIds } from '../component-contract/layers.mjs';
+// two options are one when they spell alike, signs and all (`a` and `A`); `-50` and `+50` are two (layers.mjs valueIds)
+const sameOption = (a, b) => spellValue(a) === spellValue(b);
 import { blocks, libraryBlocks, suggest, toContract, fromContract, problems, move, kebab, camel, draft, applyKind, kindOf, contractProblems, CODE_ONLY, SIDES } from './props.mjs';
 import { icon } from './icons.mjs';
 import { part, root, tree, homes, holds, ids, partProblems, forField, preview, fromAnatomy, place, variantParts, partName, KINDS as PART_KINDS } from './anatomy.mjs';
@@ -410,18 +412,32 @@ function sides(d, redraw) {
  */
 function optionsField(d, redraw) {
   const at = (k) => `[data-chip="${k}"]`;
+  // each option keeps the contract value it was opened with (`d.origin`, beside `d.values`; a new one none), and the
+  // renames are worked out from that after every change: an option's value can hang on its neighbours (valueIds: adding
+  // `+50` turns `50` into `minus-50`), and a renamed option keeps its variants. Kept by option, never by value, so a new
+  // option that comes to spell an old value takes nothing of the old one's
+  const origin = () => (d.origin = d.origin || valueIds(d.values));
+  const sync = () => {
+    const now = valueIds(d.values), r = {};
+    d.origin.forEach((o, i) => { if (o != null && o !== now[i]) r[o] = now[i]; });
+    d.renamed = r;
+  };
   const add = (input) => {
     const v = input.value.replace(/,$/, '').trim();
     if (!v) return;
-    if (d.values.some((x) => kebab(x) === kebab(v))) { status(`${v} is already an option.`); input.setAttribute('aria-invalid', 'true'); return; }
-    d.values = [...d.values, v];
+    if (d.values.some((x) => sameOption(x, v))) { status(`${v} is already an option.`); input.setAttribute('aria-invalid', 'true'); return; }
+    origin();
+    d.values = [...d.values, v]; d.origin = [...d.origin, null];
+    sync();
     if (d.default == null) d.default = v;
     redraw('[data-chip-input]');
     status(`Added ${v}.`);
   };
   const removeAt = (k) => {
-    const [v] = d.values.splice(k, 1);
-    if (kebab(v) === kebab(d.default ?? '')) d.default = d.values[0] ?? null;
+    origin();
+    const [v] = d.values.splice(k, 1); d.origin = d.origin.filter((_, i) => i !== k);
+    sync();
+    if (String(v).trim() === String(d.default ?? '').trim()) d.default = d.values[0] ?? null;
     redraw(d.values.length ? at(Math.min(k, d.values.length - 1)) : '[data-chip-input]');
     status(`Removed ${v}.`);
   };
@@ -430,12 +446,13 @@ function optionsField(d, redraw) {
   const rename = (k, input) => {
     const was = d.values[k], v = input.value.trim();
     if (!v || v === was) { redraw(at(k)); return; }
-    if (d.values.some((x, i) => i !== k && kebab(x) === kebab(v))) { status(`${v} is already an option.`); input.setAttribute('aria-invalid', 'true'); input.focus(); return false; }
+    if (d.values.some((x, i) => i !== k && sameOption(x, v))) { status(`${v} is already an option.`); input.setAttribute('aria-invalid', 'true'); input.focus(); return false; }
+    // each value as the contract spells it, before and after (valueIds: an option's value can hang on its neighbours)
+    origin();
     d.values = d.values.map((x, i) => (i === k ? v : x));
-    if (kebab(d.default ?? '') === kebab(was)) d.default = v;
-    if (d.pointer) d.pointer = d.pointer.map((x) => (kebab(x) === kebab(was) ? v : x));
-    const first = Object.keys(d.renamed || {}).find((o) => d.renamed[o] === kebab(was)) ?? kebab(was);
-    d.renamed = { ...(d.renamed || {}), [first]: kebab(v) };
+    sync();
+    if (String(d.default ?? '').trim() === was.trim()) d.default = v;
+    if (d.pointer) d.pointer = d.pointer.map((x) => (spellValue(x) === spellValue(was) ? v : x));
     redraw(at(k));
     status(`Renamed ${was} to ${v}.`);
   };
@@ -456,7 +473,9 @@ function optionsField(d, redraw) {
   };
   const shift = (k, to) => {
     if (to < 0 || to >= d.values.length) return;
-    d.values = move(d.values, k, to);
+    origin();
+    d.values = move(d.values, k, to); d.origin = move(d.origin, k, to);
+    sync();
     redraw(at(to));
     status(`Moved ${d.values[to]} to position ${to + 1} of ${d.values.length}.`);
   };
@@ -471,7 +490,7 @@ function optionsField(d, redraw) {
       for (const v of p.figmaValues || p.values || []) if (!seen.has(kebab(v))) { seen.add(kebab(v)); found.push(v); }
     }
     fillChips(offers, 'In the library', found.slice(0, 8).map((v) => ({ text: `+ ${v}`, attrs: { 'data-option-suggestion': v },
-      pick: () => { d.values = [...d.values, v]; if (d.default == null) d.default = v; redraw('[data-chip-input]'); status(`Added ${v}.`); } })));
+      pick: () => { origin(); d.values = [...d.values, v]; d.origin = [...d.origin, null]; sync(); if (d.default == null) d.default = v; redraw('[data-chip-input]'); status(`Added ${v}.`); } })));
   };
   offers.refresh();
   return el('fieldset', { class: 'ce-box' },
@@ -501,7 +520,7 @@ function optionsField(d, redraw) {
 /* An enum's default: its options as pills up to four, a menu past four (design-standard rule 4). */
 function enumDefault(d, redraw) {
   if (!d.values.length) return null;
-  const now = d.values.find((v) => kebab(v) === kebab(d.default ?? '')) ?? d.values[0];
+  const now = d.values.find((v) => v.trim() === String(d.default ?? '').trim()) ?? d.values.find((v) => kebab(v) === kebab(d.default ?? '')) ?? d.values[0];
   if (d.values.length <= 4) return choice('Default', `default-${d.uid}`, d.values.map((v) => [v, v]), now, (v) => { d.default = v; }, 'ce-box');
   return box('Default', picker('Default', d.values.map((v) => ({ name: v })), now, (v) => { d.default = v; }, { none: d.values[0], noun: 'option', clearable: false, field: 'default' }));
 }
@@ -621,6 +640,8 @@ function openProp(d, { isNew = false, at = state.drafts.length } = {}) {
       for (const w of [viewing, filterAt]) if (w && now in w) w[now] = to(w[now]);
       delete work.renamed;
     }
+    // (saved: the options are the contract's as they now stand)
+    delete work.origin;
     // a part named for the prop it takes from is renamed with it; one named otherwise, or a name another part has, stays
     if (!isNew && work.name !== d.name) for (const p of state.parts) if (p[LINK[work.type]] === work.uid && p.name === d.name && !state.parts.some((x) => x.name === work.name)) p.name = work.name;
     if (isNew) state.drafts.splice(at, 0, work);
@@ -668,7 +689,7 @@ function summary(d) {
   return d.extra && d.extra.required ? ['Required', own].filter(Boolean).join(', ') : own;
 }
 function said(d) {
-  if (d.type === 'enum') return d.values.map((v) => (kebab(v) === kebab(d.default ?? '') ? `${v} (default)` : v)).join(', ');
+  if (d.type === 'enum') { const def = d.values.find((v) => v.trim() === String(d.default ?? '').trim()) ?? d.values.find((v) => kebab(v) === kebab(d.default ?? '')); return d.values.map((v) => (v === def ? `${v} (default)` : v)).join(', '); }
   if (d.type === 'boolean') return [d.default ? 'On by default' : '', d.only !== 'code' && d.axis ? 'A variant in Figma' : ''].filter(Boolean).join(', ');
   if (d.type === 'string') return d.default != null && d.default !== '' ? `“${d.default}”` : '';
   if (d.type === 'instance' || d.type === 'number') return d.default != null && d.default !== '' ? String(d.default).split('/').pop() : '';
@@ -1901,7 +1922,7 @@ function partNode(p) {
 const propName = (k) => { const d = state.drafts.find((x) => propKey(state.drafts, x) === k); return d ? d.name : k; };
 const valueText = (k, vs) => {
   const d = state.drafts.find((x) => propKey(state.drafts, x) === k);
-  const say = (v) => (typeof v === 'boolean' ? (v ? 'on' : 'off') : d && d.values ? (d.values.find((o) => kebab(o) === v) ?? v) : v);
+  const say = (v) => (typeof v === 'boolean' ? (v ? 'on' : 'off') : d && d.values ? (d.values[valueIds(d.values).indexOf(v)] ?? v) : v);
   return [].concat(vs).map(say).join(' or ');
 };
 function conditionText(when) {
