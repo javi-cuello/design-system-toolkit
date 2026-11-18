@@ -1426,7 +1426,10 @@ async function main() {
         // token one of a property's vars names settles it: a guess by value there (a reset's var that holds another value)
         // leaves the next property to say
         for (const p of css) { const [prop, part] = p.split(':'), at = `[data-contract-id="${el}"]`; const rawOf = part === 'base' ? await authoredValue(L.tab, at, prop, styles) : null; const vars = part === 'base' ? (() => { const ls = splitTop(String(rawOf || '')), m = ls.length && /^\s*var\(\s*(--[\w-]+)/.exec(ls[ls.length - 1]); return m ? [m[1]] : []; })() : part ? ((insetStrokeVars(await authoredValue(L.tab, at, prop, styles)) || {})[part] || []) : await authoredVars(L.tab, at, p, styles); if (vars.length) { const got = designTokenFor(kind, v, table, usage, under, judge, offered, vars), col = (table.find((t) => t[0] === got.token) || [])[3] || ''; if (got.token && vars.some((x) => x === cssName(col, got.token) || writtenAs(x, got.token, col))) { r = got; break; } } }
-        if (!r && !guess) return ['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(v) : v;
+        // (the toolkit's own rendering names every token it draws with, var() for var(): a value it wrote raw is the design's
+        // raw value, never a token guessed by value, which a project's compiled code may need)
+        // (unless nothing was offered to name a var by: a focus ring's corner, which to-code writes as a calc() of one)
+        if (!r && (!guess || (self && css.length))) return ['background', 'text', 'icon', 'stroke'].includes(kind) ? asRgba(v) : v;
         // a bare 0 is no token by value (Spacing/0 and a raw 0 look alike): zeroTokens gives it the design's where it binds one
         if (!r && (kind === 'space' || kind === 'radius') && parseFloat(v) === 0) return 0;
         if (!r) r = designTokenFor(kind, v, table, usage, under, judge, offered);

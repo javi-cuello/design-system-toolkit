@@ -36,7 +36,8 @@ export const PER_NODE = 40;
 export const CAP = 50000;
 
 /* Whole-line comments only (a line that starts a // or a /* … *‍/ block), so nothing inside a string or a regular
-   expression is touched; indentation dropped. */
+   expression is touched; indentation dropped. And the type checker's inline notes (`/** @type {…} *‍/` before a cast),
+   which no string or expression of the plugin holds: they are a twentieth of what is sent. */
 export function stripped(source) {
   const out = [];
   let block = false;
@@ -47,7 +48,7 @@ export function stripped(source) {
     if (!t || t.startsWith('//')) continue;
     out.push(t);
   }
-  return out.join('\n');
+  return out.join('\n').replace(/\/\*\* @[^*]*\*\/ ?/g, '');
 }
 
 /* After the plugin's file: collect as its own run does, then leave the payload as ASCII (so a character is a byte)

@@ -1,4 +1,4 @@
-// Design system snapshot — v0.77.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.78.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -578,7 +578,13 @@ async function collectTokens() {
   /** @type {(o: { unit: string, value?: number } | null | undefined, fontSize?: number) => number | null} */
   const perFontSize = (o, fontSize) => (!o ? null : o.unit === 'PERCENT' ? +(o.value / 100).toFixed(4) : o.unit === 'PIXELS' && fontSize ? +(o.value / fontSize).toFixed(4) : null);
   const textStyles = [];
-  for (const s of await figma.getLocalTextStylesAsync()) {
+  // and the styles of another library the components' text uses (a component file whose type lives in a foundations
+  // file has no local style), marked remote: a name a local one holds is that one
+  const local = await figma.getLocalTextStylesAsync(), names = new Set(local.map((s) => s.name));
+  const inside = (n) => { for (let p = n.parent; p; p = p.parent) if (p.type === 'COMPONENT' || p.type === 'COMPONENT_SET') return true; return false; };
+  const ids = new Set(figma.root.findAllWithCriteria({ types: ['TEXT'] }).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => t.textStyleId));
+  const remote = /** @type {TextStyle[]} */ ((await Promise.all([...ids].map((i) => figma.getStyleByIdAsync(i)))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
+  for (const s of [...local, ...remote]) {
     let lh, source;
     if (s.lineHeight.unit === 'AUTO') {
       const h = await measureStyle(s);
@@ -587,7 +593,7 @@ async function collectTokens() {
     } else { lh = perFontSize(s.lineHeight, s.fontSize); source = 'style'; }
     textStyles.push({
       // its key, as each effect's: what another file imports it by (tools/component-contract/to-figma.mjs)
-      name: s.name, key: s.key, family: s.fontName.family, weight: s.fontName.style, size: s.fontSize,
+      name: s.name, key: s.key, ...(s.remote && { remote: true }), family: s.fontName.family, weight: s.fontName.style, size: s.fontSize,
       lineHeight: lh, lineHeightSource: source,
       // In em, whichever unit the style uses, as the line height is: pixels
       // were sent raw beside percent as a fraction, and every reader took
@@ -693,7 +699,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.77.0';
+const VERSION = '0.78.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

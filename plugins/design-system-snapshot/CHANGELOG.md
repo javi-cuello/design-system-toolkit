@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.78.0] - 2026-11-18
+### Added
+- **The text styles another library publishes, where this file's components use them.** A component file whose type lives in a foundations file (IBM's Carbon kit has no local text style) sent none, so every typography its contracts name was missing from the tokens; each such style now comes beside the local ones, marked `remote`, with its key. A local style of the same name is that one.
+
 ## [0.77.0] - 2026-11-18
 ### Fixed
 - **A property whose name holds a `#` keeps its name.** Everything from the first `#` was dropped as the id Figma appends (`Label#1:0`), so a variant axis named `# of lines` arrived named nothing; only a trailing `#<n>:<n>` is dropped now.

@@ -759,6 +759,8 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
     comps.icons = [{ name: 'check', size: 16, svg: '<svg/>', fill: 'Colour/Icon/strong' }];
     comps.iconGroups = { check: 'Accessibility' };
     comps.iconDescriptions = { check: 'done, tick' };
+    // the core file's text style, which the components file's text uses: sent as another library's (plugin 0.78.0)
+    comps.tokens.textStyles = [{ name: 'Body', remote: true, family: 'Inter', size: 14, lineHeight: 1.5 }];
     assert.equal((await post('/library', comps)).status, 200);
     assert.ok(fs.existsSync(path.join(docDir, 'snapshot/previews/button.dark.png')), 'a dark render lands beside the light one');
     const ana = JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/previews/button.anatomy.json'), 'utf8'));
@@ -770,6 +772,8 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
     assert.deepEqual(owned('COMPS').iconGroups, { check: 'Accessibility' }, "each icon's group is kept with the file that sent it");
     assert.deepEqual(owned('COMPS').iconDescriptions, { check: 'done, tick' }, 'and its description');
     assert.deepEqual(owned('COMPS').iconColours, { check: 'Colour/Icon/strong' }, 'and the variable its glyph is painted with');
+    assert.deepEqual(owned('COMPS').textStyles, [], "another library's style the components file sends is not its own");
+    assert.equal(JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/tokens.json'), 'utf8')).textStyles.find((x) => x.name === 'Body').size, 16, "nor shown over the copy of the file that owns it");
     // A mobile library draws its own Button: it must land beside the web one, not over it,
     // and must not prune the web file's preview.
     const mobile = lib('MOBILE', { components: [{ ...button, id: '9:9', description: 'Mobile button' }] });

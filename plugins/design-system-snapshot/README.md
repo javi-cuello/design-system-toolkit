@@ -33,6 +33,8 @@ A component set Figma holds in error ("Component set has existing errors") canno
 The manifest sets `enablePrivatePluginApi`, so a development run carries `_meta.fileKey` too, and the router addresses a payload by it. The plugin also stamps `_meta.fileId` into the document once. A duplicated file carries that id too, but its key is its own, so it is never written as the original. A project's context document states both ids (snapshot-standard rule 2).
 
 ## Expects of the library
+**Text styles from another library.** A component file whose type lives in a foundations file has no local text style; the walk sends, beside the local ones, each text style another library publishes that its components' text uses, marked `remote` (a local style of the same name is that one).
+
 **Any variable collections, named anything.** The payload's `collections` key carries every collection under its own Figma name, with each of its modes, values and aliases — that is what a new repo reads, and no library has to be renamed or grow a collection to satisfy this plugin. A file with no variable collections is still a library when it holds component sets and marks no frame Ready for dev: a system may keep its components in a file of their own, and its tokens are then simply empty.
 
 Every collection ships under its own name, with its own modes, and the payload assumes nothing about what any of them is called. Five named lookups (`global`, `semantic`, `layout`, `breakpoints`, `type`) shipped alongside until 0.32.0, for two repo receivers that no longer exist; they compiled five collection names and four mode names into a plugin that serves every project, and nothing read them.

@@ -153,7 +153,7 @@ function mergeTokens(before, incoming, { iconSets = [], iconPage = null, iconGro
     ...(icons.every((i) => typeof i.unbound === 'number') && { unboundIcons: icons.filter((i) => i.unbound > 0).map((i) => `${i.name}@${i.size}`) }),
     // the variable each icon's glyph is painted with (plugin 0.63.0): what an instance is drawn in until given a colour
     ...(icons.some((i) => i.fill) && { iconColours: Object.fromEntries(icons.filter((i) => i.fill).map((i) => [i.name, i.fill])) }) } : null;
-  const owns = { collections: Object.keys(incoming.collections || {}), icons: iconSets, ...(iconPage ? { iconPage } : {}), ...Object.fromEntries(OWNED.map((k) => [k, (incoming[k] || []).map((x) => x.name)])) };
+  const owns = { collections: Object.keys(incoming.collections || {}), icons: iconSets, ...(iconPage ? { iconPage } : {}), ...Object.fromEntries(OWNED.map((k) => [k, (incoming[k] || []).filter((x) => !x.remote).map((x) => x.name)])) };
   const source = { [id]: { file: incoming._meta.file, at: incoming._meta.snapshot, ...(incoming._meta.pages && { pages: incoming._meta.pages }), ...(incoming._meta.plugin && { plugin: incoming._meta.plugin }), owns } };
   const stored = before && before._meta && before._meta.sources;
   // The same file under another of its identities is this entry, not another.
@@ -220,12 +220,15 @@ function mergeTokens(before, incoming, { iconSets = [], iconPage = null, iconGro
     const out = new Map();
     for (const [name, v] of was) {
       const w = writerOf(name);
-      const going = dropped(kind, name) || (w && moved.includes(w));
+      // (and another library's style no source owns, which this file no longer sends: nothing else would ever drop it)
+      const going = dropped(kind, name) || (w && moved.includes(w)) || (v && v.remote && !w && !now.has(name));
       const h = going && heir(name);
       // a moved writer's copy with no live one kept goes: kept, a later write would file it as the live owner's
       if (h) { out.set(name, keep[name][h]); delete keep[name][h]; } else if (!going) out.set(name, v);
     }
-    for (const [name, v] of now) out.set(name, v);
+    // (a style another library publishes, which this file's text uses (plugin 0.78.0), is no source's: shown where no
+    // source owns that name, never over the owner's copy, and never this file's to claim or to drop)
+    for (const [name, v] of now) if (!(v.remote && Object.keys(sources).some((s) => owner(s, name)))) out.set(name, v);
     merged[kind] = kind === 'collections' ? Object.fromEntries(out) : [...out.values()];
     const sort = kind === 'collections' ? sortCollection : (x) => x;
     const names = Object.keys(keep).filter((n) => out.has(n) && Object.keys(keep[n]).length).sort();
@@ -1164,7 +1167,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   // has settled too) is not another file: the warning deletes nothing, so it need not wait.
   const selfIds = new Set([fileRef, p.tokens._meta.fileKey, p.tokens._meta.fileId, ...thisFile].filter(Boolean));
   const otherSources = Object.entries(reported).filter(([k]) => !selfIds.has(k) && !(claimed.size && !claimed.has(k)));
-  const KINDS = [['collections', 'collection', Object.keys(p.tokens.collections || {})], ...OWNED.map((k) => [k, { textStyles: 'text style', paintStyles: 'paint style', effects: 'effect style' }[k], (p.tokens[k] || []).map((x) => x.name)])];
+  const KINDS = [['collections', 'collection', Object.keys(p.tokens.collections || {})], ...OWNED.map((k) => [k, { textStyles: 'text style', paintStyles: 'paint style', effects: 'effect style' }[k], (p.tokens[k] || []).filter((x) => !x.remote).map((x) => x.name)])];
   for (const [k, noun, names] of KINDS) {
     const shared = names.map((c) => [c, otherSources.filter(([, s]) => s && s.owns && (s.owns[k] || []).includes(c)).map(([id, s]) => s.file || id)]).filter(([, by]) => by.length);
     if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store shows this file's copy and keeps other sources' copies under shared where it has them`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
