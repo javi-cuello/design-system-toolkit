@@ -440,6 +440,18 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const up = JSON.parse(JSON.stringify(box)); Object.assign(up.variants[0].children[0], { flip: 'y', x: 0, y: 120, visual: undefined, constraints: 'MIN/MIN' });
   const b = derive(up).anatomy.art;
   ok('a vertical mirror, which the snapshot gives no visual box, stands at its far edge less its height', b && b.flip === 'y' && b.absolute.y === -56); }
+{ // a layer's variable modes are keyed as the token build writes them: a theme under `theme`, another axis under its
+  // first collection's name, one the tokens do not hold under its own; a variant that sets another mode sets it
+  const MODES = require('../tokens/modes.cjs');
+  const axes = MODES.axesOfTokens({ collections: { '2. Primitives - Colour': { modes: ['Light', 'Dark'] }, '3. Semantic': { modes: ['Light', 'Dark'] }, '5. Responsive type': { modes: ['Desktop', 'Mobile'] } } });
+  const v = (bp, mode) => ({ name: `Breakpoint=${bp}`, type: 'COMPONENT', w: 64, h: 64, modes: { '5. Responsive type': mode }, children: [
+    { name: 'Card', type: 'FRAME', w: 64, h: 64, modes: { '3. Semantic': 'Dark', 'Density': 'Compact' } }] });
+  const spec = { name: 'Box', id: '9:2', props: { Breakpoint: ['md', 'sm'] }, variants: [v('md', 'Desktop'), v('sm', 'Mobile')] };
+  const k = derive(spec, [], { modeAxes: axes });
+  ok('a mode is keyed by its axis\'s attribute, a variant\'s own mode set by the variant',
+    k.anatomy.root.modes['5-responsive-type'] === 'desktop' && k.anatomy.card.modes.theme === 'dark' && k.anatomy.card.modes.density === 'compact'
+    && k.variants.some((x) => x.when.breakpoint === 'sm' && x.set['root.modes']['5-responsive-type'] === 'mobile'));
+  ok('the contract it keys holds every variant\'s modes', selfCheck(spec, k, [], { modeAxes: axes }).length === 0); }
 { // an empty auto layout that hugs keeps its last size (a dialog's empty content): that is its least; one a boolean
   // fills in another variant only holds a hidden layer, and keeps nothing
   const frame = (kids, type = 'SLOT') => ({ name: 'Content', type, w: 400, h: 200, layout: 'VERTICAL', pad: [20, 20, 20, 20], gap: 0, align: 'MIN/MIN', sizing: 'FILL/HUG', children: kids });

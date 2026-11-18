@@ -27,6 +27,16 @@ const folders = fs.readdirSync(DIR).filter((f) => fs.existsSync(path.join(DIR, f
 const library = Object.fromEntries(folders.map((f) => { const c = JSON.parse(fs.readFileSync(path.join(DIR, f, 'contract.json'), 'utf8')); return [c.component, { ...c, folder: f }]; }));
 const CLASS = { kind: 'class', prefix: 'ds-', part: '__' }, ELEMENT = { kind: 'element', prefix: 'ds-' }, KIRBY = ELEMENT;
 
+/* ── a part's variable modes ── */
+{ // each under the attribute the token build writes it as: a part's own as it stands, one a variant sets chosen by its props
+  const card = { contract: 1, component: 'Mode card', props: { breakpoint: { type: 'enum', values: ['md', 'sm'], default: 'md', figma: 'Breakpoint' } },
+    anatomy: { root: { kind: 'container', modes: { '5-responsive-type': 'desktop' } }, panel: { kind: 'container', parent: 'root', order: 0, modes: { theme: 'dark' } } },
+    variants: [{ when: { breakpoint: 'sm' }, set: { 'root.modes': { '5-responsive-type': 'mobile' } } }] };
+  const r = toReact(card, 'mode-card', { naming: CLASS, library: {}, stylesheet: '../styles/mode-card.css' });
+  ok('React: a variant\'s mode is chosen by its props, a part\'s own written as it stands',
+    /data-5-responsive-type=\{\(breakpoint === "sm"\) \? "mobile" : "desktop"\}/.test(r) && /data-theme="dark"/.test(r), r);
+}
+
 /* ── React, as text ── */
 const button = toReact(library.Button, 'button', { naming: CLASS, library, stylesheet: '../styles/button.css' });
 ok('React: its own props typed, and every other prop the button takes, its ref and its events with them', /export type ButtonProps = Own & Omit<ComponentPropsWithRef<"button">, keyof Own>;/.test(button) && /type = "button", className, onClick, \.\.\.rest \}: ButtonProps/.test(button));

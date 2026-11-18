@@ -32,6 +32,7 @@ import { officials, homeIn } from './official.mjs';
 import { partName, figmaWord, camel } from './layers.mjs';
 
 const require = createRequire(import.meta.url);
+const MODES = require('../tokens/modes.cjs');
 const { atProps, asPlaced } = require('./derive.cjs');
 export const BANNER = "Generated from the component's contract by the toolkit's to-markup. A gap marked frontend-build: is that skill's to fill; once filled, take this line out and the file is the project's.";
 export const FRAMEWORKS = ['react', 'web-components', 'kirby'];
@@ -339,7 +340,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   // and the design's own name for a layer whose name its id does not give back (Icon on a part called show-icon-icon), so
   // reading the code back names it as the design does
   const nameAttr = (id) => { const nm = ((parts.get(id) || {}).e || {}).name; return nm ? [['data-figma-name', { lit: nm }]] : []; };
-  const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id)];
+  const hook = (id) => [...(n.element ? [['data-part', { lit: seg(id) }]] : [['className', { lit: n.part(seg(id)).slice(1) }]]), ...nameAttr(id), ...modeAttrs(id)];
   const named = (key) => props.find((x) => x.key === key);
   // the code that holds at a variant's props (null: never in markup; 'true': always)
   const testOf = (when) => {
@@ -373,6 +374,19 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     let code = lang.str(e.content || ''), any = false;
     for (const [when, w] of words) { const t = testOf(when); if (!t) continue; code = t === 'true' ? lang.str(w) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${lang.str(w)} : ${any ? `(${code})` : code}`; any = true; }
     return any ? { code } : { lit: e.content || '' };
+  };
+  // a part's variable modes, each under the attribute the token build writes it as (tools/tokens/modes.cjs): its own,
+  // else what a variant sets, the later variant first; one a variant leaves unset is empty there, which no mode matches
+  const modeAttrs = (id) => {
+    const e = id === 'root' ? (c.anatomy || {}).root || {} : ((parts.get(id) || {}).e || {});
+    // (as expand() layers them: a combination last, over the rest)
+    const sets = (c.variants || []).filter((v) => v.set && `${id}.modes` in v.set).sort((x, y) => !!x.combination - !!y.combination);
+    const keys = new Set([...Object.keys(e.modes || {}), ...sets.flatMap((v) => Object.keys(v.set[`${id}.modes`] || {}))]);
+    return [...keys].sort().map((k) => {
+      let code = lang.str((e.modes || {})[k] || ''), any = false;
+      for (const v of sets) { const t = testOf(v.when), w = lang.str((v.set[`${id}.modes`] || {})[k] || ''); if (!t) continue; code = t === 'true' ? w : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${w} : ${any ? `(${code})` : code}`; any = true; }
+      return [MODES.attribute(k), any ? { code } : { lit: (e.modes || {})[k] || '' }];
+    });
   };
   const busy = props.find((x) => x.busy && x.busy.length);
   const busyCode = busy && busy.busy.map((v) => `${ref(busy.name)} === ${lang.str(v)}`).join(' || ');
@@ -511,7 +525,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   };
   // the root's hooks: each prop value an attribute (a boolean "true" or "false", as the sheet reads both defaults),
   // Disabled the control's own, a busy state the control's aria-disabled
-  const hooks = props.filter((x) => x.attr).map((x) => [n.attr(x.key), x.type === 'boolean' ? { code: lang.php ? `${ref(x.name)} ? 'true' : 'false'` : `String(${x.name})` } : { code: ref(x.name) }]);
+  const hooks = [...props.filter((x) => x.attr).map((x) => [n.attr(x.key), x.type === 'boolean' ? { code: lang.php ? `${ref(x.name)} ? 'true' : 'false'` : `String(${x.name})` } : { code: ref(x.name) }]), ...modeAttrs('root')];
   const own = [];
   // busy, a submit button is a plain one, so the form it is in is not sent either
   if (control) own.push(['type', { code: busyCode ? (lang.php ? `(${busyCode}) ? 'button' : $type` : `${busyCode} ? "button" : type`) : ref('type') }]);
@@ -550,7 +564,7 @@ function jsxOf(item, depth) {
   const attr = ([k, v]) => (v.nodes ? ` ${k}={<>\n${v.nodes.map((x) => jsxOf(x, depth + 2)).join('\n')}\n${pad}  </>}` : v.lit === true ? ` ${k}` : typeof v.lit === 'boolean' || typeof v.lit === 'number' ? ` ${k}={${v.lit}}` : v.lit !== undefined ? ` ${k}=${/^[^"{}<>&\\\n\r\t]*$/.test(v.lit) ? str(v.lit) : `{${str(v.lit)}}`}` : ` ${k}={${v.code}}`);
   if (item.placed) {
     // its class and its layer name; data-part is the element's own, and a placed component renders its own root
-    const own = item.hook.filter(([k]) => k === 'className' || k === 'data-figma-name');
+    const own = item.hook.filter(([k]) => k === 'className' || k === 'data-figma-name' || (k.startsWith('data-') && k !== 'data-part'));
     return `${pad}<${pascal(item.placed.component)}${own.map(attr).join('')}${item.attrs.map(attr).join('')} />`;
   }
   const open = `<${item.tag}${(item.spread || '')}${item.attrs.map(attr).join('')}`;

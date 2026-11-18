@@ -54,10 +54,18 @@ function modeOf(axes, collection, mode) {
   return axis && axis.modes.includes(m) ? { key: axis.key, value: m } : null;
 }
 
+/** A layer's modes ({ collection: mode }, by Figma names) as code names them ({ key: value }); a collection no
+ *  axis holds (a tokens file that lacks it) keyed under its own slug, so it is still said, not dropped. */
+function keyed(axes, modes) {
+  const out = {};
+  for (const [c, m] of Object.entries(modes || {})) { const k = modeOf(axes, c, m) || { key: slug(c), value: slug(m) }; out[k.key] = k.value; }
+  return out;
+}
+
 /** The attribute a mode is written under: `data-<key>`. */
 const attribute = (key) => `data-${key}`;
 
 /** The axes of a snapshot's tokens file (`collections: { name: { modes } }`). */
 const axesOfTokens = (tokens) => axesOf(Object.entries((tokens && tokens.collections) || {}).map(([name, c]) => ({ name, modes: c.modes || [] })));
 
-module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, attribute };
+module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, keyed, attribute };

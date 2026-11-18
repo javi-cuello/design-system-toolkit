@@ -20,7 +20,8 @@
  * variant from the contract, and `selfCheck` says where it does not.
  */
 
-const { nameOf } = require('../snapshot/graph.cjs');const { resolve, layerPaths } = require('../snapshot/spec.cjs');
+const { nameOf } = require('../snapshot/graph.cjs');
+const MODES = require('../tokens/modes.cjs');const { resolve, layerPaths } = require('../snapshot/spec.cjs');
 
 const SHAPE = 1;
 const j = (x) => JSON.stringify(x);
@@ -48,7 +49,7 @@ const TEXT_ALIGN = { LEFT: 'start', CENTER: 'center', RIGHT: 'end', JUSTIFIED: '
    an unbound one is the number Figma drew. Position (x, y) and the size a
    hug or fill resolves to are drawing, not intent, and are left to the
    snapshot. */
-function element(n, parent, known, up = null) {
+function element(n, parent, known, up = null, axes = []) {
   const b = n.bindings || {};
   const e = { kind: KIND[n.type] || 'graphic' };
   if (parent) e.parent = parent;
@@ -122,6 +123,8 @@ function element(n, parent, known, up = null) {
   if (n.rotation) e.rotation = n.rotation;
   // a mirror, as the snapshot takes it out of the matrix (x: horizontal, y: vertical)
   if (n.flip) e.flip = n.flip;
+  // a variable mode the layer sets (snapshot 0.75.0 on), under the attribute the token build writes it as
+  if (n.modes) { const m = MODES.keyed(axes, n.modes); if (Object.keys(m).length) e.modes = m; }
   if (n.type === 'TEXT') {
     if (n.textStyle) e.typography = n.textStyle;
     if (n.textAlign) e.textAlign = TEXT_ALIGN[n.textAlign] || n.textAlign;
@@ -293,13 +296,13 @@ function partConditions(rows, props) {
   return out;
 }
 
-function flatten(list, characters = new Map(), known = []) {
+function flatten(list, characters = new Map(), known = [], axes = []) {
   const out = {};
   const nodeAt = new Map(list.map((x) => [keyOf(x.segs), x.node]));
   for (const { node, segs, parent, order } of list) {
     // in a box no auto layout places (nor an instance, whose own layers it are), a part is at its point in it
     const up = parent == null ? null : nodeAt.get(keyOf(parent));
-    const e = element(node, parent == null ? null : idOf(parent), known, up);
+    const e = element(node, parent == null ? null : idOf(parent), known, up, axes);
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
     if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
     // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
@@ -388,8 +391,8 @@ function read(stored) {
 }
 
 /* Each walked tree's flat anatomy, as derive() layers them and selfCheck() holds the contract to them. */
-function anatomies(trees, characters, known, L, mains = null, found = null) {
-  const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known) }));
+function anatomies(trees, characters, known, L, mains = null, found = null, axes = []) {
+  const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known, axes) }));
   // a boolean only shows and hides: a layer its flipped tree shares with the variant it was flipped from is that
   // variant's, but for its place (a flip is walked from a detached instance, whose sizes are its own: a root 420 wide)
   trees.forEach((t, i) => {
@@ -688,12 +691,12 @@ function mainsFrom(specs, known = [], optionsOf = () => ({})) {
 
 /* `known` is every stored component name, so an instance of `Table - Cell / Fill`
    resolves to that set and not to `Table - Cell` (graph.cjs nameOf). */
-function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null, found = null } = {}) {
+function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, pointerStates = HOUSE.pointerStates || [], mains = null, found = null, modeAxes = [] } = {}) {
   const pointer = new Set(pointerStates.map(kebab));
   const { spec, trees, hides, characters } = read(stored);
   const figmaProps = spec.props || {};
   const L = spec.links || {};
-  const flat = anatomies(trees, characters, known, L, mains, found);
+  const flat = anatomies(trees, characters, known, L, mains, found, modeAxes);
   const addresses = new Map();
   for (const t of trees) for (const e of t.list) addresses.set(keyOf(e.segs), e.segs);
   const base = flat[0];
@@ -806,7 +809,7 @@ function selfCheck(stored, contract, known = [], options = {}) {
   contract = contract || derive(stored, known, options);
   const { spec, trees, characters } = read(stored);
   const figmaProps = spec.props || {};
-  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null);
+  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null, null, options.modeAxes || []);
   const bad = [];
   for (const [i, t] of trees.entries()) {
     const when = Object.fromEntries(Object.entries(t.when).filter(([p]) => p in figmaProps).map(([p, v]) => [camel(p), valueFor(figmaProps, p, v)]));

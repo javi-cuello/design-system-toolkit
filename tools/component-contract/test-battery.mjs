@@ -226,7 +226,7 @@ async function figmaSide(into, project) {
   const live = await figmaExec(svc, into, `const SCOPE = ${JSON.stringify([setId])};\n${walk}\nreturn __headless();`, 180000);
   const { compact } = req('../snapshot/spec.cjs');
   const { derive } = req('./derive.cjs');
-  const now = derive(compact(live.components.find((x) => x.id === setId)), [], P.deriveOptions(P.auditContext(where.doc), into));
+  const now = derive(compact(live.components.find((x) => x.id === setId)), [], P.deriveOptions(P.auditContext(where.doc), into, P.tokensOf(where.paths)));
   const { roundTrip } = await import('./to-figma.mjs');
   const rows = {};
   for (const r of roundTrip(contract, now).rows) (rows[caseOf(r.at)] = rows[caseOf(r.at)] || []).push(`${r.at}: wrote ${JSON.stringify(r.library)}, read ${JSON.stringify(r.drawn)}`);

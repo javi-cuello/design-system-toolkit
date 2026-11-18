@@ -1087,7 +1087,7 @@ const server = createServer(async (req, res) => {
       const { rowsFromWalk } = await import(pathToFileURL(ROWS_OF).href + "?m=" + statSync(ROWS_OF).mtimeMs);
       const out = rowsFromWalk(walk.components, {
         known: Object.values(index.components || {}).map((x) => x.name),
-        deriveWith: LAYOUT && LAYOUT.doc ? contract.deriveOptions(contract.auditContext(LAYOUT.doc), entry.key) : {},
+        deriveWith: LAYOUT && LAYOUT.doc ? contract.deriveOptions(contract.auditContext(LAYOUT.doc), entry.key, contract.tokensOf(LAYOUT.paths)) : {},
         platform: entry.platform || null,
       });
       return json(res, 200, { ok: true, ...out, fileName: walk.fileName || null });

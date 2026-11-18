@@ -439,6 +439,20 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
     silent = vars[n] ? 0 : missing.has(`${n} (no answer)`) ? silent + 1 : 0;
   }
   const V = async (n) => { if (typeof n !== 'string' || !n.includes('/')) return null; if (!vars[n]) missing.add(n); return vars[n] || null; };
+  // a layer's variable modes, set on every collection of its axis (K.modes: { axis: [{ collection, key, names }] },
+  // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
+  const cols = {};
+  const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
+  await Promise.all(modeSets.map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => figma.variables.importVariableByKeyAsync(m.key)); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
+  // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
+  const setModes = (n, e, id) => {
+    if (!('setExplicitVariableModeForCollection' in n)) { missing.add(`${e.name || id} (its modes: a ${n.type} holds none)`); return; }
+    for (const [a, val] of Object.entries(e.modes || {})) {
+      const sets = (K.modes || {})[a];
+      if (!sets) { missing.add(`${e.name || id} (its ${a} mode ${val}: no collection the tokens hold)`); continue; }
+      for (const m of sets) { const c = cols[m.key], mode = c && c.modes.find((x) => x.name === m.names[val]); try { if (!mode) throw new Error('not reached'); n.setExplicitVariableModeForCollection(c, mode.modeId); } catch (x) { missing.add(`${e.name || id} (its mode ${m.collection}: ${val}, ${x.message})`); } }
+    }
+  };
   // unbound, a value is drawn as the token's own value from the snapshot (K.values), never grey or square:
   // the drawing looks right, and the report still says what is not bound
   // read as the parity engine reads a colour (its parseColour, written into the plugin code beside this, as the
@@ -636,6 +650,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         levels.get(e.parent).add(id);
         nodes[id] = at;
         await override(at, e);
+        if (e.modes) setModes(at, e, id);
         continue;
       }
       let n;
@@ -795,6 +810,7 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
       // a mirror about the layer's own point, as Figma's matrix keeps it (its x stays where the snapshot read it)
       // (the contract's x and y are the box's near edge, as CSS's; Figma's matrix takes the far one as its origin)
       if (e.flip && !e.rotation && 'relativeTransform' in n) { try { n.relativeTransform = e.flip === 'x' ? [[-1, 0, n.x + n.width], [0, 1, n.y]] : [[1, 0, n.x], [0, -1, n.y + n.height]]; } catch { missing.add(`${e.name || id} (its mirror)`); } }
+      if (e.modes) setModes(n, e, id);
       if (id !== 'root' && (e.absolute || e.constraints)) toPlace.push([n, e]);
       nodes[id] = n;
     }
@@ -995,6 +1011,16 @@ export function needs(p) {
    named, found where the library uses them (a text node in that style, an
    instance of that icon), since a style or icon another library owns is not
    among this file's own. Passed to the service's /exec. */
+/** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, names }] },
+ *  `key` one variable of the collection (imported to reach it), `names` its modes by the contract's spelling. */
+export function modeSets(tokenFile) {
+  const MODES = createRequire(import.meta.url)('../tokens/modes.cjs');
+  const cols = Object.entries((tokenFile && tokenFile.collections) || {});
+  return Object.fromEntries(MODES.axesOfTokens(tokenFile).map((a) => [a.key, cols.filter(([n]) => a.members.includes(MODES.slug(n)))
+    .map(([n, col]) => ({ collection: n, key: Object.values(col.keys || {})[0], names: Object.fromEntries((col.modes || []).map((m) => [MODES.slug(m), m])) }))
+    .filter((m) => m.key)]));
+}
+
 const LOOKUP = async (want) => {
   await figma.loadAllPagesAsync();
   const styles = {}, icons = {}, vars = {}, sets = {}, swaps = {};
@@ -1457,7 +1483,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       if (comp) {
         const { compact } = req('../snapshot/spec.cjs');
         const { derive } = req('./derive.cjs');
-        const now = derive(compact(comp), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
+        const now = derive(compact(comp), Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
         // the library's components by name, as eval.mjs compares with them: the same rules on every leg
         const { contracts } = await import('./official.mjs');
         const rt = roundTrip(JSON.parse(fs.readFileSync(libFile, 'utf8')), now, { mains: req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract)) });
@@ -1490,6 +1516,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // an effect style's key from the snapshot, which has always recorded it
   keys.effects = Object.fromEntries((tokenFile.effects || []).filter((fx) => fx.key && want.effects.includes(fx.name)).map((fx) => [fx.name, fx.key]));
   keys.values = Object.fromEntries(want.vars.map((n) => [n, valueOf(tokenFile, n, map.mode)]).filter(([, v]) => v != null));
+  keys.modes = modeSets(tokenFile);
   // each component's variants as the snapshot met them (an instance's `instanceOfKey`): no library file needs to be open
   keys.variants = variantKeys(where.paths.components, want.components, want.swaps);
   missing.swaps = (want.swaps || []).filter((t) => !Object.keys(keys.variants).some((n) => n === t || n.endsWith('/' + t)));
@@ -1517,7 +1544,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: only its own name is known */ }
     const entry = Object.values(index).find((x) => x.name === comp.name) || {};
     const spec = entry.platform ? { ...compact(comp), platform: entry.platform } : compact(comp);
-    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
+    const now = derive(spec, [...Object.values(index).map((x) => x.name), comp.name], { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains });
     if (process.env.DEBUG) console.error('live', JSON.stringify(now));
     const sorted = (x) => (Array.isArray(x) ? x.map(sorted) : x && typeof x === 'object' ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sorted(x[k])])) : x);
     if (JSON.stringify(sorted(now)) !== JSON.stringify(sorted(JSON.parse(fs.readFileSync(baseFile, 'utf8'))))) {
@@ -1526,7 +1553,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
       const folder = Object.keys(index).find((k) => index[k].name === comp.name);
       const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(where.paths.components, folder, f), 'utf8')); } catch { return null; } };
       const stored = folder && read('figma.json'), kept = folder && read('contract.json');
-      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains }))) !== JSON.stringify(sorted(kept));
+      const older = stored && kept && JSON.stringify(sorted(derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(Object.keys(index).find((k) => index[k].name === comp.name)).mains }))) !== JSON.stringify(sorted(kept));
       console.error(older ? `refused: ${comp.name}'s snapshot is older than the toolkit's contracts, so it cannot be told whether the library changed; take a snapshot, then open it again and make the change; nothing was changed` : `refused: ${comp.name} has changed in the library since this draft was made; nothing was changed`);
       process.exit(1);
     }
@@ -1557,7 +1584,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     // only for the library's own contract: another (a report from code) names its parts its own way
     if (!stored || !own || JSON.stringify(own) !== JSON.stringify(c)) return null;
     const found = new Map();
-    try { req('./derive.cjs').derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into), mains: contractRouter.deriveOptionsFor(where.paths.components)(folder).mains, found }); } catch { return null; }
+    try { req('./derive.cjs').derive(stored, Object.values(index).map((x) => x.name), { ...contractRouter.deriveOptions(contractRouter.auditContext(where.doc), into, contractRouter.tokensOf(where.paths)), mains: contractRouter.deriveOptionsFor(where.paths.components)(folder).mains, found }); } catch { return null; }
     // by the variant's name as the plan gives it (Breakpoint=md, State=Initial)
     return Object.fromEntries([...found].map(([when, ids]) => [Object.entries(JSON.parse(when)).map(([k, v]) => `${k}=${v}`).sort().join(', '), ids]));
   })();

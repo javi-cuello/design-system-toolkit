@@ -1104,6 +1104,11 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const fresh = {};
   for (const c of p.components) fresh[c.name] = platform ? { ...compact(c), platform } : compact(c);
   // (each component derived as itself, under the library's own options, as write.cjs derives it from the store)
+  // the tokens as this delivery leaves them, every routed file's collections merged: a layer's mode is keyed by the
+  // axes they make (tools/tokens/modes.cjs), as write.cjs and check-specs key it from the stored file
+  const tokens = mergeTokens(tokensBefore, p.tokens, { iconSets: p.iconSets || [...new Set(p.icons.map((i) => i.name))], iconPage: p.iconPage || null, iconGroups: p.iconGroups || null, iconDescriptions: p.iconDescriptions || null, icons: p.icons, ref: fileRef, ids: [...thisFile], orphan });
+  const axes = require('../tokens/modes.cjs').axesOfTokens(tokens);
+  if (axes.length) deriveWith = { ...deriveWith, modeAxes: axes };
   const own = deriveWith;
   deriveWith = { ...deriveWith, mains: contract.mainsFrom(fresh, known, () => own) };
   for (const c of p.components) {
@@ -1151,7 +1156,6 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
     const shared = names.map((c) => [c, otherSources.filter(([, s]) => s && s.owns && (s.owns[k] || []).includes(c)).map(([id, s]) => s.file || id)]).filter(([, by]) => by.length);
     if (shared.length) say('warning', `${shared.length} ${noun}(s) share a name with another source file's; the store shows this file's copy and keeps other sources' copies under shared where it has them`, shared.map(([c, by]) => `${c} — also owned by ${by.join(', ')}`));
   }
-  const tokens = mergeTokens(tokensBefore, p.tokens, { iconSets: p.iconSets || [...new Set(p.icons.map((i) => i.name))], iconPage: p.iconPage || null, iconGroups: p.iconGroups || null, iconDescriptions: p.iconDescriptions || null, icons: p.icons, ref: fileRef, ids: [...thisFile], orphan });
   const { _meta: m, ...content } = tokens;
   const hash = hashOf(JSON.stringify({ t: content, c: p.components, i: p.icons.map((x) => [x.name, x.size, attrsOrdered(x.svg)]), is: p.iconSets, ip: p.iconPage || null, ig: p.iconGroups || null, id: p.iconDescriptions || null }));
   // nothing moved, so neither does the day each file was taken (toolkit-standard §D 23)
