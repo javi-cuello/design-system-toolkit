@@ -630,24 +630,13 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // an instance a swap renamed after its new component ("x" for an Icon): the instance at its place, named back
         const named = (c) => Object.values(variant.anatomy).some((x) => x.parent === e.parent && x.name === c.name);
         if (!at && e.kind === 'instance' && kids[e.order ?? 0] && kids[e.order ?? 0].type === 'INSTANCE' && !named(kids[e.order ?? 0])) { at = kids[e.order ?? 0]; at.name = e.name; }
-        // more in a slot of the instance than its main holds (a menu's second and third item): made below and put in
-        // that slot, as anyone fills one
-        // (only a slot whose every layer now is one the contract names: a sample of another name would stay beside them)
-        if (!at && up.type === 'SLOT' && e.kind !== 'graphic' && kids.every(named)) {
-          inner.delete(id);
-          // kept where the slot's unlisted layers are hidden
-          if (!levels.has(e.parent)) levels.set(e.parent, new Set());
-          levels.get(e.parent).add(id);
-        }
-        else {
-          // not there (the instance draws another variant than the one read): an icon's colour still goes on its vectors
-          if (!at) { if (e.kind === 'graphic' && e.background) recolour(up, await solid(e.background)); else missing.add(`${e.name} inside ${up.name}`); nodes[id] = up; continue; }
-          if (!levels.has(e.parent)) levels.set(e.parent, new Set());
-          levels.get(e.parent).add(id);
-          nodes[id] = at;
-          await override(at, e);
-          continue;
-        }
+        // not there (the instance draws another variant than the one read): an icon's colour still goes on its vectors
+        if (!at) { if (e.kind === 'graphic' && e.background) recolour(up, await solid(e.background)); else missing.add(`${e.name} inside ${up.name}`); nodes[id] = up; continue; }
+        if (!levels.has(e.parent)) levels.set(e.parent, new Set());
+        levels.get(e.parent).add(id);
+        nodes[id] = at;
+        await override(at, e);
+        continue;
       }
       let n;
       // recorded the moment it exists, so a drawing that fails partway is this tool's to clear, not a stranger
