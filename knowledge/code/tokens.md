@@ -63,20 +63,20 @@ An illustrative Button, built to show the whole taxonomy at once: axes `Variant=
 
 ```
 Figma, 05. Semantic - Brand, group Component/Button     aliases (Light and Dark)
-Component/Button/Container/background-primary-rest           Colour/Control/Primary/inverse-rest
-Component/Button/Container/background-primary-hover          Colour/Control/Primary/inverse-hover
-Component/Button/Container/background-primary-press          Colour/Control/Primary/inverse-press
-Component/Button/Container/background-primary-danger-rest    Colour/Control/Feedback/Danger/inverse-rest
-Component/Button/Container/background-primary-danger-hover   Colour/Control/Feedback/Danger/inverse-hover
+Component/Button/Container/background-primary-rest           Colour/Control/Primary/emphasis-rest
+Component/Button/Container/background-primary-hover          Colour/Control/Primary/emphasis-hover
+Component/Button/Container/background-primary-press          Colour/Control/Primary/emphasis-press
+Component/Button/Container/background-primary-danger-rest    Colour/Control/Danger/emphasis-rest
+Component/Button/Container/background-primary-danger-hover   Colour/Control/Danger/emphasis-hover
 Component/Button/Container/border-outline-rest               Colour/Stroke/Neutral/medium
 Component/Button/Container/border-focus                      Colour/State/Focus/stroke-colour-default
-Component/Button/Label/text-primary                          Colour/Text/Primary/inverse
+Component/Button/Label/text-primary                          Colour/Text/Primary/on-emphasis
 Component/Button/Label/text-outline                          Colour/Text/Neutral/strong
-Component/Button/Icon/icon-primary                           Colour/Icon/Primary/inverse
+Component/Button/Icon/icon-primary                           Colour/Icon/Primary/on-emphasis
 
 Brand C extension, same names, overridden per mode
-Component/Button/Container/background-primary-rest   Light → Colour/Background/Primary/inverse
-                                                     Dark  → Colour/Background/Primary/inverse
+Component/Button/Container/background-primary-rest   Light → Colour/Background/Primary/emphasis
+                                                     Dark  → Colour/Background/Primary/emphasis
 ```
 
 - [moderate] Shipping component tokens put the variant right after the component and the state last: Fluent's written order is component, variant, part, property, modifier ([Fluent extended tokens RFC](https://github.com/microsoft/fluentui/blob/master/docs/react-v9/contributing/rfcs/react-components/convergence/extended-design-tokens.md)); Primer writes `button-primary-bgColor-hover`; SLDS `--slds-c-button-brand-color-background-hover` ([styling hooks table](https://raw.githubusercontent.com/salesforce-ux/design-system/main/shared/components/StylingHooksTable.jsx)); Material Web folds the variant into the component name and alone moves the state before the part ([Material Web theming](https://github.com/material-components/material-web/blob/main/docs/theming/README.md)). figma-standard rule 49 departs: it puts the variant on the leaf, so all of a layer's tokens sort together. Moderate, not strong: Fluent's order is an RFC and SLDS's hooks are unsupported in its newer UI.
@@ -87,14 +87,14 @@ Component/Button/Container/background-primary-rest   Light → Colour/Background
 
 ```css
 :root {
-  --component-button-container-background-primary-rest: var(--colour-control-primary-inverse-rest);
-  --component-button-container-background-primary-hover: var(--colour-control-primary-inverse-hover);
-  --component-button-container-background-primary-danger-rest: var(--colour-control-feedback-danger-inverse-rest);
+  --component-button-container-background-primary-rest: var(--colour-control-primary-emphasis-rest);
+  --component-button-container-background-primary-hover: var(--colour-control-primary-emphasis-hover);
+  --component-button-container-background-primary-danger-rest: var(--colour-control-danger-emphasis-rest);
   --component-button-container-border-focus: var(--colour-state-focus-stroke-colour-default);
-  --component-button-label-text-primary: var(--colour-text-primary-inverse);
+  --component-button-label-text-primary: var(--colour-text-primary-on-emphasis);
 }
 [data-brand="brand-c"] {
-  --component-button-container-background-primary-rest: var(--colour-background-primary-inverse);
+  --component-button-container-background-primary-rest: var(--colour-background-primary-emphasis);
 }
 ```
 
