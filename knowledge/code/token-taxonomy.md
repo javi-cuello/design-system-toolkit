@@ -66,7 +66,7 @@ Sources for the table: the files linked in this section and [Carbon white theme]
 - A palette names `color-foreground` and `color-text` for the same use → Canvas ships `fg` and `text` side by side; Polaris v11 cut its property slot to four words.
 
 **Accessibility**
-- [moderate] A separate icon property lets icons take a value tuned for 3:1 (WCAG 1.4.11) where text needs 4.5:1: Atlassian's `icon-danger` is `#C9372C` against `text-danger` `#AE2E24`; Polaris's `color-icon` is `#4a4a4a` against `color-text` `#303030`.
+- [moderate] A separate icon property lets icons take a value of their own (icons need 3:1 under WCAG 1.4.11, text 4.5:1): Atlassian's `icon-danger` is `#C9372C` against `text-danger` `#AE2E24`; Polaris's `color-icon` is `#4a4a4a` against `color-text` `#303030`.
 
 **Check**
 - *Script:* list every distinct word in the property slot; more than one per concept is the finding.
@@ -107,8 +107,8 @@ Sources for the table: the files linked in this section and [Carbon white theme]
 ## Intensity levels per property
 
 **What good looks like**
-- [strong] Text has two or three neutral levels plus disabled and inverse; backgrounds, surfaces and borders have more. Two levels: Primer, Polaris, Material, GOV.UK; three: Atlassian, GitLab, Fluent; four: Ant (alphas 0.88, 0.65, 0.45, 0.25 on one base). Backgrounds reach six in Paste and Canvas, surfaces five in Material.
-- [moderate] The intensity vocabulary varies most of any slot across the systems below (Atlassian and Blade share `subtle`, few share more). Three families recur: adjectives around an unnamed default, ordinals, and numbers.
+- [strong] Text has two to four neutral levels plus disabled and inverse; backgrounds, surfaces and borders have more. Two levels: Primer, Polaris, Material, GOV.UK; three: Atlassian, GitLab, Fluent; four: Ant (alphas 0.88, 0.65, 0.45, 0.25 on one base). Backgrounds reach six in Paste and Canvas, surfaces five in Material.
+- [moderate] Intensity words differ between the systems below (Atlassian and Blade share `subtle`, few share more). Three families recur: adjectives around an unnamed default, ordinals, and numbers.
 
 **How**
 - [strong] **Adjectives around a default:**
@@ -231,7 +231,7 @@ Sources for the table: the files linked in this section and [Carbon white theme]
 
 **What good looks like**
 - [strong] Focus is its own token group, not a borrowed border: colour, width and offset at least, often an inner colour and an inverse variant. Primer `--focus-outline-color`, `--focus-outline-width` (0.125rem, its description citing WCAG 2.4.7), `--focus-outline-offset` (−0.125rem, "creates an inset outline"); SAP `--sapContent_FocusColor`, `_FocusWidth`, `_FocusStyle`; Spectrum `focus-indicator-color`, `focus-indicator-thickness` 2px, `focus-ring-gap`.
-- [moderate] Every system with a double ring also ships a variant for dark or brand backgrounds: Carbon `focusInverse`, Canvas `--cnvs-sys-color-focus-inverse` ("Focus ring for use on dark backgrounds"), Gestalt `--sema-color-border-focus-outer-inverse`, Paste `--shadow-focus-inverse`, Spectrum `static-white-focus-indicator-color`, Telekom `--telekom-color-functional-focus-on-dark-background`.
+- [moderate] Carbon, Canvas, Gestalt, Paste, Spectrum and Telekom ship a focus variant for dark or brand backgrounds: Carbon `focusInverse`, Canvas `--cnvs-sys-color-focus-inverse` ("Focus ring for use on dark backgrounds"), Gestalt `--sema-color-border-focus-outer-inverse`, Paste `--shadow-focus-inverse`, Spectrum `static-white-focus-indicator-color`, Telekom `--telekom-color-functional-focus-on-dark-background`.
 
 **How**
 - [moderate] **Single ring:** Atlassian `color.border.focused` with `border.width.focused` 2px; Polaris `--p-color-border-focus`; Radix `outline: 2px solid var(--focus-8)`; USWDS `$theme-focus-color`, `-width`, `-offset`, `-style`.
@@ -357,7 +357,6 @@ Sources for the table: the files linked in this section and [Carbon white theme]
 
 **What good looks like**
 - [moderate] Polaris, Primer, Atlassian and Spectrum each publish a written grammar or decision record, deprecation metadata naming the replacement, and lint rules or codemods (below).
-Carbon v11 (number endings to words) and Primer v8 (one token per property) are in [tokens: three tiers](tokens.md#three-tiers).
 
 **How**
 - [strong] **Written grammar and decisions:** Polaris's formula, Primer's ADRs (`default` in names, prefix, naming, variant words, structure, [Primer ADRs](https://github.com/primer/primitives/tree/main/contributor-docs/adrs)), Codex's ADRs ([Codex ADRs](https://github.com/wikimedia/design-codex/tree/main/packages/codex-docs/docs/using-codex/adrs)), Spectrum's taxonomy spec, Fluent's naming page, NL's design-token handbook.
@@ -367,7 +366,7 @@ Carbon v11 (number endings to words) and Primer v8 (one token per property) are 
 - [moderate] **A staged lifecycle:** Atlassian moves tokens deprecated → deleted → sunset → removed, removing in major versions only; 1.0.0 removed 102 tokens and cut theme files by 62% ([Atlassian 1.0.0 announcement](https://community.developer.atlassian.com/t/upcoming-changes-in-design-tokens-1-0-0-action-required-soon-edit-now-live/66243)). Spectrum: mark deprecated, alias to the replacement, remove at a later major ([Spectrum README](https://cdn.jsdelivr.net/npm/@adobe/spectrum-tokens@15.7.0/README.md)).
 - [moderate] **Promotion rules for tiers:** Codex keeps component tokens as "exceptions, meant for single-use cases" and promotes a reused one to a decision token; each tier references only the one below, and only option tokens hold raw values ([Codex ADR 08](https://github.com/wikimedia/design-codex/blob/main/packages/codex-docs/docs/using-codex/adrs/08-adr-color-modes.md)). NL starts broad on purpose: "easier to delete unused tokens than to keep adding", and lets `accent-2` alias `accent-1` until an organisation needs them apart.
 - [moderate] **Brand as an input, not new names:** Fluent's `createLightTheme(brand)` over a 16-stop ramp; Ant's seed with composable `darkAlgorithm` and `compactAlgorithm` ([Ant customize theme](https://ant.design/docs/react/customize-theme)); Workday's brand tier, overridden per tenant; NL's shared middle tier, so components move between organisations.
-- [moderate] **Keep theme axes independent:** the DTCG Resolver Module counts resolutions as the product of each modifier's contexts (three modifiers of 4, 3 and 2 give 24) and warns that modifiers setting the same token are "non-orthogonal" ([DTCG Resolver 2025.10](https://www.designtokens.org/TR/2025.10/resolver/)). Paste multiplies brand and mode into five named theme builds; Atlassian ships 19 theme artifacts.
+- [weak] **Keep theme axes independent:** the DTCG Resolver Module counts resolutions as the product of each modifier's contexts (three modifiers of 4, 3 and 2 give 24) and warns that modifiers setting the same token are "non-orthogonal" ([DTCG Resolver 2025.10](https://www.designtokens.org/TR/2025.10/resolver/)). Paste multiplies brand and mode into five named theme builds; Atlassian ships 19 theme artifacts.
 - [weak] **A shared middle tier across organisations:** NL's basis tokens let components be exchanged between Dutch government bodies, each keeping its own brand-tier words ([NL design tokens](https://github.com/nl-design-system/documentatie/blob/main/docs/handboek/huisstijl-vastleggen/design-tokens.mdx)).
 
 **Cases**
