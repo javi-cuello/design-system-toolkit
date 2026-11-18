@@ -1,4 +1,6 @@
-# Eval cases — design-system-research (v3.10.1)
+# Eval cases — design-system-research (v3.12.0)
+
+**Walked: 2026-11-18 for 3.12.0** — A36 added, observed on the token-taxonomy run; the roster gains a section and no step changes, so A1 to A35 read against it: none asserts on the roster's contents. A5 (an index or survey is never cited alone) and the case at line 87 (user research outranks six rostered systems) were read: a longer roster changes neither.
 
 **Walked: 2026-11-17 for 3.10.1** — Step 8 wording: A15's Assert said the knowledge section records "the way the toolkit goes" and now defers to knowledge/README.md and §D 21 as read in the run; walked on paper against the new Step 8. The rest unchanged.
 
@@ -331,3 +333,10 @@ Negative: a neighbour search by title or the run's own words only, so an article
 Observed: 2026-11-18 — the token-tiers run missed how-surfaces-stack.md, which names the same surface tokens; the maintainer pointed it out.
 Traced: 2026-11-18 for 3.11.0 — to SKILL.md's "Find neighbours by identifier" and the quality checklist.
 Walked live: 2026-11-18 on research/components-and-naming/token-tiers-and-names.md: grepping its backticked names hits how-surfaces-stack.md on `bg-surface` and `background-hover`.
+## A36 · A naming question reads built token files from beyond the usual cluster
+Fixture: light or deep mode, "how do systems name intensity levels for text, borders and backgrounds?"
+Assert: the roster includes at least one system from *Token files beyond the usual cluster*, and its token names are quoted from the built file at a named version (`cdn.jsdelivr.net/npm/<package>@<version>/…`), not from its docs site.
+Negative: names quoted only from Polaris, Primer, Carbon, Material, Atlassian and Fluent docs pages, or names given with no version.
+Observed: 2026-11-18 — the token-taxonomy run went beyond the cluster at the user's request and found NL Design System's written grammar, Canvas's locked status set and Codex's numeric-size rename, none of which the first six systems show.
+Traced: 2026-11-18 for 3.12.0 — to references/system-sources.md, *Token files beyond the usual cluster*, and Step 3's cluster guidance.
+Walked live: 2026-11-18 on knowledge/code/token-taxonomy.md, whose intensity section cites Paste, Canvas, Nord, Telekom, Siemens iX and Helios from their built files.

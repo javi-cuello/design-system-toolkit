@@ -88,6 +88,32 @@ Everything above is a system someone is still paying for. SKILL.md Step 3 asks f
 
 **Uber Base Web** — base.uber.com (design) · baseweb.design · github.com/uber/baseweb Uniquely good for: the override/theming API as a distribution model, and as a live case of reduced investment — the repo states Uber limits its engagement while mirroring internal work. What happens to a public system when its sponsor's priorities move is evidence no healthy system can give you.
 
+## Token files beyond the usual cluster (read the built names)
+
+For a token or naming question, the built token file is the primary source: the names as shipped, not as documented. Every package below publishes one on npm, readable at `cdn.jsdelivr.net/npm/<package>@<version>/…` (pin the version you read and name it). These systems sit outside the Polaris–Primer–Carbon–Material cluster, and several argue their grammar in writing. Found on the 2026-11-18 token-taxonomy run; the knowledge base's token-taxonomy page cites each one.
+
+**NL Design System tokens** — `@nl-design-system-unstable/start-design-tokens` · github.com/nl-design-system/documentatie (handboek, design-tokens) Uniquely good for: a written grammar (`prefix.block.element.modifier.property`, modifiers in a fixed order), a shared middle tier across organisations, free brand-tier names, focus tokens protected from theming, and logical CSS properties in names. Docs in Dutch.
+
+**AWS Cloudscape** — `@cloudscape-design/design-tokens` · cloudscape.design/foundation/visual-foundation/design-tokens Uniquely good for: a documented Category > Type > Item > State order, scaled versus static spacing for density, and a severity ladder beside status.
+
+**Wikimedia Codex tokens** — `@wikimedia/codex-design-tokens` · the ADRs under packages/codex-docs/docs/using-codex/adrs Uniquely good for: tier rules written as ADRs (each tier references only the one below), theme versus mode, and the t-shirt-to-numeric font-size rename with its reason (ADR 13).
+
+**SAP theming parameters** — `@sap-theming/theming-base-content` (Base/baseLib/sap_horizon/css_variables.css) Uniquely good for: 1,500-plus parameters in a control-variant-state-property grammar, focus as colour, width and style, and a contrast threshold stored as a token.
+
+**HashiCorp Helios** — `@hashicorp/design-system-tokens` · MIGRATION-6.0.0.md in github.com/hashicorp/design-system Uniquely good for: a recent rename moving the property before `color`, with a verbatim old-to-new table.
+
+**Workday Canvas tokens** — `@workday/canvas-tokens-web` (base, brand, sys) Uniquely good for: a seven-step softest-to-strongest ladder, and themeable against locked status sets marked in file comments.
+
+**Twilio Paste tokens** — `@twilio-paste/design-tokens` Uniquely good for: a weakest-to-strongest ladder on every property, product-state roles, and borders and focus drawn as shadows.
+
+**Pinterest Gestalt** — `gestalt-design-tokens` (vr-theme) Uniquely good for: base/sema/comp tiers as prefixes, state before property (the outlier), double focus rings, and per-script line-height files.
+
+**PatternFly 6** — `@patternfly/patternfly` (base/tokens) · patternfly-org design-tokens docs Uniquely good for: a documented general-to-specific grammar with skippable segments, `clicked` for pressed, and spacing named by relationship (`action-to-action`).
+
+**Siemens iX, Deutsche Telekom Scale, Deutsche Bahn DB UX, Swiss Post, Equinor EDS, Nordhealth** — `@siemens/ix`, `@telekom/design-tokens`, `@db-ux/core-foundations`, `@swisspost/design-system-tokens`, `@equinor/eds-tokens`, `@nordhealth/tokens` Uniquely good for: European industrial, transport, telecom, energy and healthcare systems with distinct answers. Siemens iX has `std`/`soft`/`weak` text and `inv-` inverse. Telekom has focus colours per background and baseline versus composition spacing. DB has adaptive colour families and responsive spacing with the device in the name. Swiss Post has Figma collections as tiers. Equinor has an intent × fill × emphasis grammar. Nord has weak/weaker/weakest text and high-contrast healthcare themes.
+
+**Elastic EUI, Grafana, GitLab Pajamas, HPE, Kiwi Orbit, Skyscanner Backpack, Razorpay Blade, Zendesk Garden, Red Hat** — `@elastic/eui-theme-borealis`, grafana/grafana `createColors.ts`, `@gitlab/ui` (src/tokens), `hpe-design-tokens`, `@kiwicom/orbit-design-tokens`, `@skyscanner/bpk-foundations-web`, `@razorpay/blade`, `@zendeskgarden/react-theming`, `@rhds/tokens` Uniquely good for: data-dense products (EUI's `risk` severity, Grafana's contrast threshold and hover factor), feedback against status with a decision table (GitLab), renames from t-shirt to numeric (Orbit), the mode in the name (Backpack `-day`/`-night`, Red Hat `-on-light`/`-on-dark`), and states computed rather than stored (Garden).
+
 ## User-outcome research (outranks adoption evidence)
 
 That many systems ship a pattern proves organizational survival, not user benefit. When these sources speak to the topic, they outrank the roster above.
