@@ -26,7 +26,7 @@ const MODES = require('../tokens/modes.cjs');const { resolve, layerPaths } = req
 const SHAPE = 1;
 const j = (x) => JSON.stringify(x);
 // a combination drawn from its layers: one module, the editor's page reads it too
-const { variantDefaults, apply, expand, partName, camel, kebab, propIds, valueIds, bareProp } = require('./layers.mjs');
+const { variantDefaults, apply, expand, partName, camel, kebab, propIds, valueIds, bareProp, keyMatches } = require('./layers.mjs');
 
 /* A variant's name as prop values: "Size=Large, Left icon=True". */
 const { variantValues: valuesOf } = require('../shared/names.js');
@@ -55,6 +55,9 @@ function element(n, parent, known, up = null, axes = []) {
   if (parent) e.parent = parent;
   if (n.type === 'INSTANCE' && n.instanceOf) {
     e.component = nameOf(n.instanceOf, known);
+    // its published key (a set's where the main is a variant): a name another component of the store may also carry (an
+    // icon named Checkbox beside the Checkbox set), the key says which it is (layers.mjs keyMatches); a local one has none
+    if (n.instanceOfKey) e.key = n.instanceOfKey;
     if (n.props && Object.keys(n.props).length) e.with = n.props;
   }
   if (n.layout === 'HORIZONTAL' || n.layout === 'VERTICAL') {
@@ -465,7 +468,8 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
    exactly the component's is the component's and left out; one that differs is an override and kept, with the
    layers above it. Only the component's own reading decides: where it has no contract, or no such layer, the layer
    is kept. (A contract annotation of the component's own props, swappedBy, says nothing of how a layer looks.) */
-const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy']);
+// (nor does an instance's key, a look a reading from code never has: two keys that differ are held apart in own())
+const IGNORED = new Set(['parent', 'order', 'name', 'swappedBy', 'key']);
 const look = (e) => j(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNORED.has(k)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
 /* An instance's own styling is its component's root's too: a field the instance states (its layout, corners, fill,
    stroke, effect, opacity, clipping, smoothing, min and max sizes) that equals its component's root at the instance's
@@ -495,7 +499,7 @@ const sorted = (v) => JSON.stringify(v, (_, w) => (w && typeof w === 'object' &&
 // one rule for every reading of a contract: derive's (Figma), from-code's (code)
 function ownStyling(anatomy, mains) {
   for (const e of Object.values(anatomy)) {
-    const m = e && e.kind === 'instance' && e.component && mains(e.component);
+    const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
     if (!m) continue;
     const root = atProps(m, e.with).root;
     if (root) for (const f of OWN) if (e[f] !== undefined && sorted(e[f]) === sorted(root[f])) delete e[f];
@@ -522,9 +526,11 @@ let M = { ...atProps(m, e.with) };
       // there says which, where its name ends in that one
       const set = M[sid].component.split('/').slice(0, -1).join('/'), v = String(w[1]), placed = (anatomy[`${id}/${sid}`] || {}).component;
       const target = placed && (low(placed) === low(v) || low(placed).endsWith(`/${low(v)}`)) ? placed : v.includes('/') || !set ? v : `${set}/${v}`;
-      M[sid] = { ...M[sid], component: target };
+      // and its key: the placed instance's where it is the target, else none known (the main's own icon's is not it)
+      const { key: _k, ...was } = M[sid], tkey = target === placed ? (anatomy[`${id}/${sid}`] || {}).key : null;
+      M[sid] = { ...was, component: target, ...(tkey && { key: tkey }) };
       // the target's own drawing where this library holds it (its insides are what the swap draws); else only its colour
-      const T = mains(target);
+      const T = mains(target, tkey);
       if (T) {
         const tA = atProps(T, M[sid].with);
         for (const k of Object.keys(M)) if (k.startsWith(`${sid}/`)) delete M[k];
@@ -551,7 +557,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
     if (!e || e.kind !== 'instance' || !e.component) continue;
-    const m = mains(e.component);
+    const m = mains(e.component, e.key);
     if (!m) { ownGlyph(anatomy, id); continue; }
     const { M, swapped } = placedAs(anatomy, id, m, mains);
     const SHAPE_OF = new Set(['width', 'height', 'constraints']);
@@ -587,7 +593,8 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
     if (!partial && Object.keys(M).some((mk) => mk !== 'root' && !drawnAs.has(mk) && !delegated(mk) && !sampled(mk))) { if (found) found.add(id); continue; }
     const own = (k) => {
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
-      if (!x) return false;
+      // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
+      if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
       if (look(anatomy[k]) === look(x)) return true;
       // a part pinned to its parent's far edge (bottom, end) stands where the parent's size puts it: its near offset
@@ -697,7 +704,9 @@ function byComponentName(contracts) {
   const low = (x) => String(x).toLowerCase(), count = {};
   for (const c of contracts) count[low(c.component)] = (count[low(c.component)] || 0) + 1;
   const by = new Map(contracts.filter((c) => count[low(c.component)] === 1).map((c) => [low(c.component), c]));
-  return (name) => by.get(low(name)) || null;
+  const byKey = new Map(contracts.filter((c) => c.figma && c.figma.key).map((c) => [c.figma.key, c]));
+  // by its key where one is given and held; else by name, never the one a key says it is not
+  return (name, key = null) => (key && byKey.get(key)) || [by.get(low(name)) || null].filter((c) => c && keyMatches(c.figma && c.figma.key, key))[0] || null;
 }
 function mainsFrom(specs, known = [], optionsOf = () => ({})) {
   const done = new Map(), low = (x) => String(x).toLowerCase();
@@ -705,9 +714,12 @@ function mainsFrom(specs, known = [], optionsOf = () => ({})) {
   const count = {};
   for (const n of Object.keys(specs)) count[low(n)] = (count[low(n)] || 0) + 1;
   const byName = new Map(Object.entries(specs).filter(([n]) => count[low(n)] === 1).map(([n, sp]) => [low(n), [n, sp]]));
-  return (name) => {
-    // (by its whole name only: Icons/Close is not this library's Close)
-    const hit = byName.get(low(name));
+  const byKey = new Map(Object.entries(specs).filter(([, sp]) => sp && sp.key).map(([n, sp]) => [sp.key, [n, sp]]));
+  return (name, key = null) => {
+    // by its key where one is given and held; else by its whole name only (Icons/Close is not this library's Close), and
+    // never a component the key says it is not (an icon named Checkbox is not the Checkbox set)
+    const named = byName.get(low(name));
+    const hit = (key && byKey.get(key)) || (named && keyMatches(named[1].key, key) ? named : null);
     if (!hit) return null;
     if (!done.has(hit[0])) { try { done.set(hit[0], derive(hit[1], known, optionsOf(hit[0]))); } catch { done.set(hit[0], null); } }
     return done.get(hit[0]);

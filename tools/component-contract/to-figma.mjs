@@ -35,7 +35,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { partName, figmaWord, camel, sentence, variantDefaults, bareProp } from './layers.mjs';
+import { partName, figmaWord, camel, sentence, variantDefaults, bareProp, keyMatches } from './layers.mjs';
 import { parseColour } from '../parity/values.mjs';
 import { ALIGN_DATA, SIZE_ROWS } from './rules.mjs';
 import { variantValues } from '../shared/names.js';
@@ -212,7 +212,7 @@ function atDefault(x, mains) {
   const low = (v) => String(v).toLowerCase();
   const out = { ...x };
   for (const [id, e] of Object.entries(x)) {
-    const main = e && e.kind === 'instance' && e.with && mains(e.component);
+    const main = e && e.kind === 'instance' && e.with && mains(e.component, e.key);
     if (!main) continue;
     const byFigma = Object.fromEntries(Object.values(main.props || {}).map((q) => [low(q.figma || ''), q]));
     const rest = Object.fromEntries(Object.entries(e.with).filter(([k, v]) => {
@@ -245,6 +245,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
   const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
+    // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
+    // may hold none): two that differ are two components of one name
+    if (/^[^.]+\.key$/.test(at) && (a == null || b == null)) return;
     // another library component, named in the drawing's file by its set alone (house): the library's stored name
     // carries the path it sits under in its own file (Icon/house), which no other file can read
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;
@@ -559,11 +562,21 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   };
   // a component the library hides from publishing (`_`, `.`) imports nowhere: one drawn here is placed without trying
   const hiddenName = (name) => /^[_.]/.test(name);
+  // a placed component's set and variants, as its name finds them, where its key does not say it is another (an icon
+  // named Checkbox beside the Checkbox set: layers.mjs keyMatches); a key the snapshot met nowhere else is its own entry
+  const setOf = (e) => (sets[e.component] && keyMatches(sets[e.component].key, e.key) ? sets[e.component] : null);
+  const variantsOf = (e) => {
+    const vs = (K.variants || {})[e.component] || {};
+    if (!e.key) return vs;
+    const mine = Object.fromEntries(Object.entries(vs).filter(([, k]) => k === e.key));
+    return Object.keys(mine).length ? mine : { [e.component]: e.key };
+  };
   const swapTo = async (n, e) => {
     const main = await n.getMainComponentAsync();
-    const now = main && (main.parent && main.parent.type === 'COMPONENT_SET' ? main.parent.name : main.name);
-    if (now === e.component) return;
-    const vs = K.variants && K.variants[e.component];
+    const owner = main && (main.parent && main.parent.type === 'COMPONENT_SET' ? main.parent : main);
+    // the one it should be by key where both say one (two libraries' Buttons share a name), else by name
+    if (owner && (e.key && owner.key ? owner.key === e.key : owner.name === e.component)) return;
+    const vs = K.variants && K.variants[e.component] && variantsOf(e);
     if (!vs) { missing.add(`${e.component} (not found in the library)`); return; }
     const fit = (name) => Object.entries(variantValues(name)).filter(([k, v]) => String((e.with || {})[k]) === v).length;
     const name = Object.keys(vs).reduce((a, b) => (fit(b) > fit(a) ? b : a));
@@ -694,8 +707,8 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         // valued in pixels), a photo where the code shows an image (a Content axis whose options name one); not in the library, a plain frame
         // the library's, else one drawn in this file (a component the library hides from publishing, `_`, imports
         // nowhere; drawn from its own code on its own page here, it is placed rather than a frame standing in)
-        const local = !sets[e.component] && (hiddenName(e.component) || !(K.variants && K.variants[e.component] && Object.keys(K.variants[e.component]).length)) ? await localOf(e.component) : null;
-        const set = sets[e.component] || (local && local.type === 'COMPONENT_SET' ? local : null);
+        const local = !setOf(e) && (hiddenName(e.component) || !Object.keys(variantsOf(e)).length) ? await localOf(e.component) : null;
+        const set = setOf(e) || (local && local.type === 'COMPONENT_SET' ? local : null);
         if (local && local.type === 'COMPONENT') { n = local.createInstance(); await withProps(n, e); }
         else if (set) {
           const opts = set.componentPropertyDefinitions;
@@ -710,9 +723,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           n = (set.children.find(pick) || set.defaultVariant).createInstance();
           await withProps(n, e);
           if (typeof e.width === 'number' && Math.round(n.width) !== Math.round(e.width)) missing.add(`${e.component} at ${e.width}px (the library's nearest is ${Math.round(n.width)})`);
-        } else if (Object.keys((K.variants || {})[e.component] || {}).length) {
+        } else if (Object.keys(variantsOf(e)).length) {
           // a variant the snapshot met: the one whose pixel size (on the settings' size axis) is nearest the part's, else the first
-          const vs = K.variants[e.component];
+          const vs = variantsOf(e);
           const sizeOf = (name) => { const m = P.sizeAxis && new RegExp(`(?:^|, )${P.sizeAxis.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=(\\d+)(?:,|$)`).exec(name); return m ? +m[1] : null; };
           const sized = Object.keys(vs).filter((x) => sizeOf(x) !== null);
           const name = px(e.width) && sized.length ? sized.reduce((a, b) => (Math.abs(sizeOf(b) - e.width) < Math.abs(sizeOf(a) - e.width) ? b : a)) : Object.keys(vs)[0];

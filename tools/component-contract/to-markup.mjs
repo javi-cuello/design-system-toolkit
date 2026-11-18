@@ -29,7 +29,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { namer, partSeg, copyOf, entryOf, controlOf, selectorOf, nestedSelector, ringOf, placedIn, PREFIX, said, HOUSE, pseudoClasses, disabledKey } from './to-code.mjs';
 import { officials, homeIn } from './official.mjs';
-import { partName, figmaWord, camel } from './layers.mjs';
+import { partName, figmaWord, camel, placedOf } from './layers.mjs';
 
 const require = createRequire(import.meta.url);
 const MODES = require('../tokens/modes.cjs');
@@ -144,7 +144,8 @@ export function unexposed(c, id, mainOf) {
   const parts = partsOf(c), part = parts.get(id);
   const host = overrideHost(c, id);
   if (!host) return false;
-  const main = mainOf(((parts.get(host) || {}).e || {}).component);
+  const he = (parts.get(host) || {}).e || {};
+  const main = mainOf(he.component, he.key);
   if (!main) return false;
   const rel = id.slice(host.length + 1);
   const own = (main.anatomy || {})[rel], props = Object.values(main.props || {});
@@ -173,8 +174,8 @@ function swapOf(c, p, library, lang) {
   const e = id && at(c, id);
   for (let up = id && id.includes('/') ? id.slice(0, id.lastIndexOf('/')) : null; up; up = up.includes('/') ? up.slice(0, up.lastIndexOf('/')) : null) {
     const holder = at(c, up);
-    if (!holder || holder.kind !== 'instance' || !library[holder.component]) continue;
-    const placed = library[holder.component], rel = id.slice(up.length + 1);
+    if (!holder || holder.kind !== 'instance' || !placedOf(library, holder)) continue;
+    const placed = placedOf(library, holder), rel = id.slice(up.length + 1);
     // the placed component's own swap: by the part it swaps, else by its name, as Figma surfaces a nested instance's
     // property under the name it has there
     const [to, q] = Object.entries(placed.props || {}).find(([, x]) => (x.swaps || []).includes(rel)) || Object.entries(placed.props || {}).find(([, x]) => x.type === 'instance' && x.figma && x.figma === p.figma) || [];
@@ -186,7 +187,7 @@ function swapOf(c, p, library, lang) {
   // a swap of a drawing the code takes by name, as an icon is: one no main in the library draws, or one whose main is a
   // drawing alone (no props, no words, nothing placed: an empty state's ghost), where a component is the caller's to place
   const drawing = (m) => m && !Object.keys(m.props || {}).length && Object.values(m.anatomy || {}).every((x) => x && ['container', 'graphic'].includes(x.kind));
-  if (e && e.kind === 'instance' && (!library[e.component] || drawing(library[e.component]))) return { type: 'icon', default: e.component || '' };
+  if (e && e.kind === 'instance' && (!placedOf(library, e) || drawing(placedOf(library, e)))) return { type: 'icon', default: e.component || '' };
   return { type: 'node' };
 }
 // a slot prop's part: the slot whose content names it, else the slot part of its name, which a boolean that shows it
@@ -404,7 +405,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     const slot = props.find((x) => x.type === 'node' && ((x.slots || [x.slot]).includes(id) || (x.p.swaps || []).includes(id)));
     const tag = e.kind === 'text' || control || inline ? 'span' : 'div';
     let out;
-    if (icon || (e.kind === 'instance' && !library[e.component])) {
+    if (icon || (e.kind === 'instance' && !placedOf(library, e))) {
       gaps.push(`${partName(id)}: draw the icon ${icon ? `its ${icon.name} names` : e.component}, as the project draws icons`);
       // the glyph a variant changes (an alert's error icon): the one its condition draws, else the part's own
       let glyph = icon ? { code: ref(icon.name) } : { lit: e.component };
@@ -424,7 +425,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       out = { tag, attrs: [...hook(id), ...((slot.slots || [slot.slot]).includes(id) ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
     } else if (e.kind === 'instance') {
-      const placed = library[e.component], theirs = propsOf(placed, library, lang, settings);
+      const placed = placedOf(library, e), theirs = propsOf(placed, library, lang, settings);
       const valueOf = (fig, v, w = e.with || {}) => {
         const x = theirs.find((y) => (y.figmas || [y.p.figma]).includes(fig));
         if (!x) return null;
@@ -540,7 +541,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
   const children = (kids.get('root') || []).map((k) => node(k)).filter(Boolean);
   // an override a placed component has no prop for: the markup cannot pass it (only the outermost such part is named)
   const ancestors = (id) => { const out = []; for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) out.push(up); return out; };
-  for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name) => library[name]) && !ancestors(part.id).some((up) => unexposed(c, up, (name) => library[name]) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
+  for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name, key) => placedOf(library, { component: name, key })) && !ancestors(part.id).some((up) => unexposed(c, up, (name, key) => placedOf(library, { component: name, key })) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
   if (!control && !entry) gaps.push(`its element and role: a ${n.element ? 'custom element' : inline ? 'span' : 'div'} until frontend-build says what it is (code-standard rule 8)`);
   if (!entry && props.some((x) => /^placeholder$/i.test(x.key))) gaps.push('a field drawn with a Placeholder and no Value text: its <input>, and its text the input\'s ::placeholder (to-code reads a text entry from the two texts)');
   for (const x of props) if (x.type === 'event') gaps.push(`${x.name}: when it fires, frontend-build's to wire (taken here, so it reaches no element)`);
@@ -813,7 +814,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };
   const pathOf = (id) => { const names = []; for (let up = id; up && up !== 'root'; up = (parts.get(up) || {}).e?.parent) names.unshift(nameOf(up)); return names.join(' > '); };
   const layers = {};
-  const mains = (name) => library[name] || null;
+  const mains = (name, key = null) => placedOf(library, { component: name, key });
   // what this component puts in a placed component's slot, at any depth there: that slot's selector, then each box's own
   // hook down to it; inside an instance it puts there, that instance's own (not read here)
   const fillSelector = (id) => {

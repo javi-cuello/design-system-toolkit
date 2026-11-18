@@ -754,7 +754,7 @@ async function selfSource(project, name, { second = false } = {}) {
     const glyphOf = (id, e, scope) => {
       // (a part inside it, here or added by a variant: it is open, and its glyph is read as it is)
       if (!e || e.kind !== 'instance' || [...Object.keys(scope), ...opened].some((k) => k.startsWith(`${id}/`))) return null;
-      const m = mainOf(e.component);
+      const m = mainOf(e.component, e.key);
       if (!m) return [`${id}/icon`, {}];
       const rest = Object.entries(m.anatomy).filter(([k]) => k !== 'root');
       if (rest.length !== 1 || rest[0][1].kind !== 'graphic' || rest[0][1].parent !== 'root') return null;
@@ -903,6 +903,17 @@ async function main() {
   if (!Object.keys(byName).length && L.instancePattern) for (const [f, c] of official) (byName[f] = byName[f] || []).push(c.component);
   const ownName = (figmaContract && (L.lib.frameworkComponents || {})[figmaContract.component]) || name;
   const others = Object.fromEntries(Object.entries(byName).filter(([code, figs]) => figs.length === 1 && code !== ownName).map(([code, figs]) => [code, figs[0]]));
+  // and the key of each such component, from the library's own contract: a reading names what it places, and that
+  // contract says which component that is, so the reading resolves its instances as the design's do (layers.mjs
+  // keyMatches; an icon of the same name is not it). A framework's name kept by more than one contract has none.
+  const keyOfPlaced = {};
+  for (const [code, fig] of Object.entries(others)) {
+    const by = L.instancePattern && official.get(code), named = [...official.values()].filter((c) => c.component === fig);
+    const c = by && by.component === fig ? by : named.length === 1 ? named[0] : null;
+    // (two code names for one Figma name with different keys say none: which one the reading placed is the name's)
+    const k = (c && c.figma && c.figma.key) || null;
+    keyOfPlaced[fig] = fig in keyOfPlaced && keyOfPlaced[fig] !== k ? null : k;
+  }
   // how the markup names a part and an icon: the library's own (code.partClass, code.iconClass), else its framework's (audit-defaults frameworks)
   const partClass = (L.lib.code && L.lib.code.partClass) || L.lib.frameworkProfile?.partClass || null;
   const partModifiers = L.lib.frameworkProfile?.partModifiers || null;
@@ -1008,7 +1019,7 @@ async function main() {
     if (figmaContract) {
       const all = Object.assign({}, ...[...(figmaContract.variants || [])].reverse().map((v) => v.add || {}), figmaContract.anatomy);
       for (const [id, x] of Object.entries(all)) {
-        if (x.kind !== 'instance' || !mainOf(x.component)) continue;
+        if (x.kind !== 'instance' || !mainOf(x.component, x.key)) continue;
         const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
         const n = Object.keys(sub).length;
         ownInsides(sub, mainOf, { partial: true });
@@ -1582,8 +1593,9 @@ async function main() {
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
       // one equal to its component's own is folded below
+      for (const h of Object.values(anatomy)) if (h.kind === 'instance' && !h.key && keyOfPlaced[h.component]) h.key = keyOfPlaced[h.component];
       for (const [hid, h] of Object.entries(anatomy)) {
-        const hm = h.kind === 'instance' && mainOf(h.component);
+        const hm = h.kind === 'instance' && mainOf(h.component, h.key);
         if (!hm || Object.keys(anatomy).some((k) => k.startsWith(`${hid}/`))) continue;
         const M = atProps(hm, h.with || {}), gs = Object.entries(M).filter(([, g]) => g && g.kind === 'graphic');
         if (gs.length !== 1 || gs[0][1].parent !== 'root' || typeof gs[0][1].background !== 'string' || Object.values(M).filter((g) => g && g.kind !== 'container' && g.kind !== 'graphic').length) continue;
@@ -1598,7 +1610,7 @@ async function main() {
       // and a layer read inside it that equals its component's there (a contract keeps an override only where it differs)
       // (a zero the code leaves unsaid inside it is its component's own token there, as zeroTokens says it of this one's)
       for (const [hid, h] of Object.entries(anatomy)) {
-        const hm = h.kind === 'instance' && mainOf(h.component);
+        const hm = h.kind === 'instance' && mainOf(h.component, h.key);
         if (!hm) continue;
         const inner = Object.fromEntries(Object.keys(anatomy).filter((k) => k.startsWith(`${hid}/`)).map((k) => [k.slice(hid.length + 1), anatomy[k]]));
         if (!Object.keys(inner).length) continue;

@@ -410,6 +410,15 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const ib = { component: 'Icon button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['content/icon'] } }, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/icon': { kind: 'instance', parent: 'content', component: 'Icon/plus' } }, variants: [] };
   const placedIb = (inner) => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Icon button', with: { Icon: 'x' } }, 'b/content': { kind: 'container', parent: 'b' }, 'b/content/icon': { kind: 'instance', parent: 'b/content', component: inner } }; ownInsides(x, (n) => (n === 'Icon button' ? ib : null)); return Object.keys(x).length; };
   ok('an instance swapped to x is its component as placed, whether x is named whole or in its folder; another icon is kept', placedIb('x') === 2 && placedIb('Icon/x') === 2 && placedIb('y') === 4);
+  // keyed (each instance carries its key): the swap's icon is the placed one's, never the main's default icon's key
+  const ibK = structuredClone(ib); ibK.anatomy['content/icon'].key = 'plus';
+  const keyed = () => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Icon button', with: { Icon: 'x' } }, 'b/content': { kind: 'container', parent: 'b' }, 'b/content/icon': { kind: 'instance', parent: 'b/content', component: 'x', key: 'xk' } }; ownInsides(x, (n) => (n === 'Icon button' ? ibK : null)); return Object.keys(x).length; };
+  ok('a keyed instance swapped to x is its component as placed (the default icon\'s key is not carried to x)', keyed() === 2);
+  // a reading from code holds no key: an unswapped icon equal to the keyed main's is still the main's own
+  const unkeyed = () => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Icon button' }, 'b/content': { kind: 'container', parent: 'b' }, 'b/content/icon': { kind: 'instance', parent: 'b/content', component: 'Icon/plus' } }; ownInsides(x, (n) => (n === 'Icon button' ? ibK : null)); return Object.keys(x).length; };
+  ok('an instance\'s key is no look: a reading without one folds into its keyed component', unkeyed() === 2);
+  const otherKey = () => { const x = { root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Icon button' }, 'b/content': { kind: 'container', parent: 'b' }, 'b/content/icon': { kind: 'instance', parent: 'b/content', component: 'Icon/plus', key: 'another' } }; ownInsides(x, (n) => (n === 'Icon button' ? ibK : null)); return Object.keys(x).length; };
+  ok('a nested instance of the same name but another key is an override, kept', otherKey() === 4);
   // a swap to a component this library holds draws that component's insides: a colour is held to its, not the default's
   const iconC = (name, bg) => ({ component: name, props: {}, anatomy: { root: { kind: 'container' }, v: { kind: 'graphic', parent: 'root', background: bg } }, variants: [] });
   const swapBy = { Button: { component: 'Button', props: { icon: { type: 'instance', figma: 'Icon', swaps: ['i'] } }, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Icon/check' }, 'i/v': { kind: 'graphic', parent: 'i', background: 'Text/strong' } }, variants: [] }, 'Icon/alert': iconC('Icon/alert', 'Status/danger'), 'Icon/check': iconC('Icon/check', 'Text/strong') };
@@ -492,4 +501,19 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('another variant filling a part of that name leaves this one\'s kept size', derive(two).anatomy.content.minHeight === 200);
   const plain = spec([]); plain.variants[0].children = [frame([], 'FRAME')];
   ok('a plain frame recorded empty keeps nothing (its layers may be hidden ones the walk skipped)', derive(plain).anatomy.content.minHeight === undefined); }
+{ // a placed instance is the component its key says: a name another component carries (an icon named Checkbox beside
+  // the Checkbox set) is a fallback only where the key does not contradict it (layers.mjs keyMatches, placedOf)
+  const box = { component: 'Checkbox', figma: { key: 'set' } }, chip = { component: 'Chip' };
+  const by = byComponentName([box, chip]);
+  ok('a key the store holds places that component', by('Anything', 'set') === box);
+  ok('a name whose component has another key is not that component', by('Checkbox', 'icon') === null);
+  ok('no key, or a component with none, falls back to the name', by('Checkbox') === box && by('Chip', 'x') === chip);
+  const { placedOf } = await import('./layers.mjs');
+  const lib = { Checkbox: box, Chip: chip };
+  ok('placedOf holds the same rule', placedOf(lib, { component: 'Checkbox', key: 'icon' }) === null && placedOf(lib, { component: 'Checkbox', key: 'set' }) === box && placedOf(lib, { component: 'Chip' }) === chip);
+  const icon = { name: 'Row', id: '9:4', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 20, h: 20, children: [{ name: 'Checkbox', type: 'INSTANCE', instanceOf: 'Checkbox', instanceOfKey: 'icon', w: 16, h: 16 }] }] };
+  const e = Object.values(derive(icon).anatomy).find((x) => x.kind === 'instance');
+  ok('derive writes the key the snapshot recorded on the instance', e && e.key === 'icon');
+  const local = structuredClone(icon); delete local.variants[0].children[0].instanceOfKey;
+  ok('a local component (no key) is written without one', !('key' in Object.values(derive(local).anatomy).find((x) => x.kind === 'instance'))); }
 console.log(`${n}/${n} passed`);

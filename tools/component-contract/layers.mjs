@@ -99,6 +99,19 @@ export function propKey(drafts, d) {
    alike (a slider's `-50` and `+50`, both `50`) would be one value; those have their signs spelled (`minus-50`,
    `plus-50`), and any still alike take a number. In the options' order. */
 // a Figma property key without the id Figma appends (`Label#12:3`); a `#` of the name's own (`# of lines`) stays
+/* Whether a placed instance's key allows it to be the component that carries `own`: either says no key (a local
+   component, a contract authored by hand or read from code), or the two are one. The one rule for every reader that
+   places a component by name: a name is a fallback, never a match the key contradicts. */
+export const keyMatches = (own, key) => !own || !key || own === key;
+/* The component a placed instance `e` is, in a library keyed by name: by its key where the library holds it, else by
+   its name where the key does not say otherwise. (Looked up each time: a reader replaces a library's entries as it goes.) */
+export function placedOf(library, e) {
+  if (!library || !e || !e.component) return null;
+  const keyed = e.key && Object.values(library).find((c) => c && c.figma && c.figma.key === e.key);
+  if (keyed) return keyed;
+  const named = library[e.component];
+  return named && keyMatches(named.figma && named.figma.key, e.key) ? named : null;
+}
 export const bareProp = (k) => String(k).replace(/#\d+:\d+$/, '');
 export const spellValue = (v) => kebab(String(v).replace(/^\s*-/, 'minus ').replace(/\+/g, ' plus ').replace(/&/g, ' and '));
 export function valueIds(list) {

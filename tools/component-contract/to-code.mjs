@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { officials, homeIn } from './official.mjs';
-import { expand, variantDefaults, kebab, camel } from './layers.mjs';
+import { expand, variantDefaults, kebab, camel, keyMatches } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative } from './rules.mjs';
 const { atProps, asPlaced, placedMatch, placedAs } = createRequire(import.meta.url)('./derive.cjs');
@@ -351,7 +351,7 @@ function overrideOf(a, host, rel, m, mains, B = a) {
 const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a).filter((k) => k.startsWith(`${host}/`)).map((k) => [k.slice(host.length + 1), a[k]])));
 
 /* Whether a part is inside a placed component this library holds, so named as that component's own. */
-const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component);
+const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component, a[h].key);
   if (!m || (a[id].parent === h && a[id].kind === 'graphic') || copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h)) return false;
   return !!placedOf(a, h, placedAs(a, h, m, mains).M)[id.slice(h.length + 1)]; };
 
@@ -367,7 +367,7 @@ export function drawn(c, when, mains = () => null) {
   // gives it at the instance's props: the same colour, said the same way, as an opened instance's recorded glyph
   for (const [id, e] of Object.entries(a)) {
     if (e.kind !== 'instance' || Object.values(a).some((x) => x.parent === id && x.kind === 'graphic')) continue;
-    const m = e.component && mains(e.component);
+    const m = e.component && mains(e.component, e.key);
     if (!m) continue;
     const glyphs = [...new Set(Object.values(atProps(m, e.with)).filter((x) => x.parent === 'root' && x.kind === 'graphic' && typeof x.background === 'string').map((x) => x.background))];
     if (glyphs.length === 1) extra.push([id, [['color', tokenNames.token(glyphs[0])]]]);
@@ -389,7 +389,7 @@ export function drawn(c, when, mains = () => null) {
       // an override inside a placed component this library holds (derive keeps only a part that differs from that
       // component drawn at the instance's props): what it changes there, on that component's own part, reached through
       // the instance (chain); one level of placing deep, a part the placed component no longer has said, not guessed
-      const host = hostOf(a, id), m = host && a[host].component && mains(a[host].component);
+      const host = hostOf(a, id), m = host && a[host].component && mains(a[host].component, a[host].key);
       if (!m) continue;
       const rel = id.slice(host.length + 1);
       // the selector names the part by the component the instance places in its base (chain): a variant that places
@@ -475,7 +475,7 @@ export function drawn(c, when, mains = () => null) {
   // to unset (rulesOf); nowhere set, nothing is written, so the component's own sheet, its states included, holds
   for (const id of Object.keys(ALL)) {
     if (id in a || out[id]) continue;
-    const host = hostOf(ALL, id), m = host && a[host] && ALL[host].component === a[host].component && mains(a[host].component);
+    const host = hostOf(ALL, id), m = host && a[host] && ALL[host].component === a[host].component && mains(a[host].component, a[host].key);
     if (!m || (ALL[id].parent === host && ALL[id].kind === 'graphic' && typeof ALL[id].background === 'string') || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
     const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
@@ -598,7 +598,7 @@ function chain(c, n, id, rootCond, mains = () => null) {
   const seg = (s) => (s === '*' ? '*' : n.part(s === 'input' && entry && own === entry.input ? 'input' : partSeg(c, s)) + through(n, ((c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance' && (c.anatomy[s] || findAdded(c, s)).component), heldIn(c, s)));
   // a part inside a placed component is that component's own: named as its own sheet names it, under the instance
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
-  const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && mains((c.anatomy[host] || findAdded(c, host)).component);
+  const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
   if (m) {
     const n2 = namer(m.folder || folderOf(m.component), n.naming);
     const all = allOf(c);
@@ -710,16 +710,18 @@ if (isMain) {
   // hold (in any case) none; a store no project registers, or a draft of no known library, looks across the store
   const lib = require('../snapshot/projects.cjs').storeLibraries(dir);
   const fileOf = (d) => (lib ? lib.fileOf(d) : undefined);
-  const byName = new Map(), add = (k, x) => byName.set(k, byName.has(k) ? null : x);
+  const byName = new Map(), byKey = new Map(), add = (k, x) => byName.set(k, byName.has(k) ? null : x);
   for (const d of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
     try {
       const x = of(JSON.parse(fs.readFileSync(path.join(dir, d, 'contract.json'), 'utf8'))), n = String(x.component).toLowerCase();
       x.folder ||= d;
       add(`${fileOf(d)}\0${n}`, x);
       add(`*\0${n}`, x);
+      if (x.figma && x.figma.key) byKey.set(x.figma.key, x);
     } catch { /* not a component */ }
   }
-  const mainsFor = (f) => (name) => byName.get(`${!lib || (draft && fileOf(f) == null) ? '*' : fileOf(f)}\0${String(name).toLowerCase()}`) || null;
+  // by the instance's key where the store holds it; else by name, never one the key says it is not (layers.mjs keyMatches)
+  const mainsFor = (f) => (name, key = null) => (key && byKey.get(key)) || [byName.get(`${!lib || (draft && fileOf(f) == null) ? '*' : fileOf(f)}\0${String(name).toLowerCase()}`) || null].filter((x) => x && keyMatches(x.figma && x.figma.key, key))[0] || null;
   for (const f of folders) {
     const c = draft || of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8')));
     const mains = mainsFor(f);

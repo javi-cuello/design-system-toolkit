@@ -124,6 +124,11 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     !('graphic' in f.props) && f.variants.length === 2 && JSON.stringify(f.variants[1].when) === '{"size":"lg"}' && plan(two).variants.length === 2);
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
+  { // a placed instance's key is compared only where both sides hold one: a reading from code holds none
+    const placed = (key) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Button', ...(key && { key }) } } });
+    const at = (a, b) => roundTrip(placed(a), placed(b)).rows.filter((r) => r.at === 'i.key').length;
+    ok('a key one side lacks is no row; two keys that differ are one', at('web', null) === 0 && at('web', 'mobile') === 1 && at('web', 'web') === 0);
+  }
   ok('every combination is compared unless a caller cuts them, and a cut is said, never silent', roundTrip(two, two).cut === undefined && roundTrip(two, two, { limit: 1 }).cut === 1 && roundTrip(two, two, { limit: 1 }).combinations === 1);
   const g = figmaSide({ ...two, variants: [{ when: { graphic: 'none' }, set: { 'root.radius': 'R/1' } }], invalid: [{ size: 'lg', graphic: 'none' }, { graphic: 'cup' }] });
   ok('a variant naming only its default holds everywhere; a combination not drawn loses it, or goes with its other values',
