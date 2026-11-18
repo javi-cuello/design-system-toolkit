@@ -163,7 +163,7 @@ A useful role layer is small, tens of tokens rather than hundreds, and component
 
 The scene, a year on: the team has added `card-header-padding-top`, `card-header-padding-top-compact` and `modal-footer-gap-mobile`, one request at a time. Nobody remembers which of the 300 names alias a role and which hold a number someone typed.
 
-Counting tells the story. Braid has one role name, Polaris four aliases, Fluent 22, SLDS 24, Primer about 44. Spectrum has several hundred, because it names relationships per component (`component-edge-to-text-100`, `field-label-to-component`). It also shows the cost: roughly 387 of its layout values are literal pixels against 88 aliases. A literal in the semantic layer breaks the link to the scale, so changing the scale changes nothing below it, and an audit cannot tell an on-scale literal from an off-scale one.
+Counting tells the story. Braid has one role name, Polaris four aliases, Fluent 22, SLDS 24, Primer about 44. Spectrum has several hundred, named per component (`component-edge-to-text-100`), though in March 2026 it deprecated 540 for about 100 semantic gaps and paddings. It also shows the cost: roughly 387 of its layout values are literal pixels against 88 aliases. A literal in the semantic layer breaks the link to the scale, so changing the scale changes nothing below it, and an audit cannot tell an on-scale literal from an off-scale one.
 
 The three layers line up like this, with the scene's card padding at 24px:
 
@@ -211,7 +211,7 @@ Here is the same button at three times its size, both ways.
 
 On the left the border sits outside the padding and the button grows to 34px. On the right the height is fixed and the padding is whatever fits inside it once the border is counted.
 
-Gaps inside a component are roles of their own. Primer has `control.*.gap` (4px small, 8px medium and up) for icon to label; Spectrum has `text-to-visual-100` (6px desktop, 8px mobile), and its `field-label-to-component` is 0px because the label's own line box supplies the gap. These are the gaps a designer most often judges by eye, which is why they are worth naming.
+Gaps inside a component are roles of their own. Primer has `control.*.gap` (4px small, 8px medium and up) for icon to label; Spectrum's `text-to-visual-100` (6px desktop, 8px mobile) was deprecated for `base-gap-medium`. Designers judge these gaps by eye most often, so they are worth naming.
 
 Size and space are separate questions. Spectrum keeps `spacing-*` (fixed across platforms) apart from `component-height-*` (which changes); Primer uses one `base.size` scale for both. Mixing them works until a mode changes heights but not gaps, or the reverse.
 
@@ -335,7 +335,7 @@ Use the roles where they belong. Inside a control, make height its own token and
 
 ## What to re-check later
 
-Researched 2026-11-16 from the systems' source files, documentation and migration guides, read that day.
+Researched 2026-11-16 from source files, documentation and migration guides; Spectrum's March 2026 deprecations added 2026-11-18.
 
 - **Atlassian's `space.gap.*` and `space.inset.*`** are marked experimental in `@atlaskit/tokens` 20.12; names may change before they are stable.
 - **`text-box-trim`** became Baseline in August 2026 per MDN; MDN's compatibility data lists Chrome and Edge 133, Safari 18.2 and Firefox 154.
@@ -368,6 +368,7 @@ Researched 2026-11-16 from the systems' source files, documentation and migratio
 - [Primer, functional size tokens](https://raw.githubusercontent.com/primer/primitives/main/src/tokens/functional/size/size.json5)
 - [Primer React, Stack](https://primer.style/product/components/stack/)
 - [Spectrum, layout tokens](https://raw.githubusercontent.com/adobe/spectrum-design-data/main/packages/tokens/src/layout.json)
+- [Spectrum tokens changelog](https://raw.githubusercontent.com/adobe/spectrum-design-data/main/packages/tokens/CHANGELOG.md)
 - [Workday Canvas, system tokens `sys.json`](https://github.com/Workday/canvas-tokens/blob/main/packages/canvas-tokens/tokens/web/sys.json)
 - [PatternFly, `tokens-default.scss`](https://github.com/patternfly/patternfly/blob/main/src/patternfly/base/tokens/tokens-default.scss)
 - [Fluent 2, global spacings](https://raw.githubusercontent.com/microsoft/fluentui/master/packages/tokens/src/global/spacings.ts)

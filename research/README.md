@@ -52,6 +52,7 @@ How a component is cut, named and given its states.
 
 - [Naming inside a Figma component](components-and-naming/naming-inside-figma-components.md)
 - [What the State axis models](components-and-naming/what-the-state-axis-models.md)
+- [Token tiers and names](components-and-naming/token-tiers-and-names.md)
 
 ### Cutting and mapping
 
