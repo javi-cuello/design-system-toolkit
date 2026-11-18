@@ -323,3 +323,11 @@ Negative: a guide that retells a neighbour's worked example, states a fact a nei
 Observed: 2026-11-17 — an audit of 35 articles found 19 contradictions and 10 overlapping sections (corner radius endorsed t-shirt names that spacing tokens said to drop; elevation stated Figma's stroke default the opposite way to the Figma-and-CSS piece), and 22 of 35 articles ran past 20 minutes at 238 words a minute, figures not counted (the longest 40).
 Traced: 2026-11-17 for 3.10.0 — to SKILL.md's deep-mode paragraph and the quality checklist.
 
+
+## A35 · Neighbours are found by the identifiers the draft cites
+Fixture: deep mode, a guide on token tiers and names whose draft cites surface tokens (`bg-surface`, `background-hover`) while research/ holds a surfaces article titled for layering, not naming.
+Assert: before delivery the run greps research/ for each backticked identifier the draft cites and each system's term for the subject; every article a hit lands in is read, and the guide links its section or the reply names it as untouched.
+Negative: a neighbour search by title or the run's own words only, so an article sharing the cited names goes unread.
+Observed: 2026-11-18 — the token-tiers run missed how-surfaces-stack.md, which names the same surface tokens; the maintainer pointed it out.
+Traced: 2026-11-18 for 3.11.0 — to SKILL.md's "Find neighbours by identifier" and the quality checklist.
+Walked live: 2026-11-18 on research/components-and-naming/token-tiers-and-names.md: grepping its backticked names hits how-surfaces-stack.md on `bg-surface` and `background-hover`.

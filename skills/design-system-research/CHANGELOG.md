@@ -1,5 +1,6 @@
 # Changelog — design-system-research
 
+- 3.11.0 (2026-11-18): deep mode finds neighbours by identifier: the draft's backticked names and each system's term for the subject are grepped across research/, every hit an article to read. Case A35.
 - 3.10.1 (2026-11-17): Step 8 carries evidence into the knowledge base by §D 21 and knowledge/README.md as read at the time, restating neither; the article's recommendation stays in the article.
 - 3.10.0 (2026-11-17): deep mode starts from the articles research/ already holds (reads the neighbours, updates the one that asks the question) and ends by correcting every neighbour the finding touches, with its `updated` day; an article reads in 20 minutes at most (about 4,700 words). Case A34.
 - 3.9.0 (2026-11-17): one idea per figure, drawn with real content instead of grey placeholder bars (voice §6, the checklist). Case A33.
