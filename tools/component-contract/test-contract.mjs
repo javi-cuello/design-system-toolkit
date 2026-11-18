@@ -452,6 +452,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     k.anatomy.root.modes['5-responsive-type'] === 'desktop' && k.anatomy.card.modes.theme === 'dark' && k.anatomy.card.modes.density === 'compact'
     && k.variants.some((x) => x.when.breakpoint === 'sm' && x.set['root.modes']['5-responsive-type'] === 'mobile'));
   ok('the contract it keys holds every variant\'s modes', selfCheck(spec, k, [], { modeAxes: axes }).length === 0); }
+{ // a part a layer removes takes its parts with it: a later layer adding it back brings back only what it adds (a
+  // helper hidden, then its margin put back for a warning, without the warning's words)
+  const c = { contract: 1, component: 'Field', props: { help: { type: 'boolean', default: true }, state: { type: 'enum', values: ['rest', 'warning'], default: 'rest' } },
+    anatomy: { root: { kind: 'container' }, margin: { kind: 'container', parent: 'root' } },
+    variants: [{ when: { state: 'warning' }, add: { words: { kind: 'text', parent: 'margin' } } }, { when: { help: false }, remove: ['margin'] },
+      { when: { help: false, state: 'warning' }, add: { margin: { kind: 'container', parent: 'root' } } }] };
+  const e = expand(c, { help: false, state: 'warning' });
+  ok('a part put back comes back without the parts its removal took', 'margin' in e && !('words' in e)); }
 { // a layer name may hold a line separator (U+2028, pasted from text): its id is made all the same
   const sep = { name: 'Box', id: '9:3', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 10, h: 10, children: [{ name: 'Replace\u2028with an image', type: 'TEXT', text: 'x', w: 5, h: 5 }] }] };
   ok('a name with a line separator derives, its id camel-cased across it', Object.keys(derive(sep).anatomy).length === 2); }

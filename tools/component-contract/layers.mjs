@@ -21,7 +21,12 @@ export function apply(flat, d) {
 }
 // the same, on an anatomy that is already the caller's copy
 function applyTo(out, d) {
-  for (const id of d.remove || []) delete out[id];
+  // a part removed takes its parts with it, here and not only in what expand() returns: left in, a later layer adding
+  // the part back brought them back too, which no layer said (derive fits each layer to expand()'s output, where they
+  // were gone)
+  const gone = new Set(d.remove || []);
+  const under = (id) => { for (let up = out[id] && out[id].parent; up; up = out[up] && out[up].parent) if (gone.has(up)) return true; return false; };
+  if (gone.size) for (const id of Object.keys(out).filter((x) => gone.has(x) || under(x))) delete out[id];
   for (const [id, e] of Object.entries(d.add || {})) out[id] = structuredClone(e);
   for (const [k, v] of Object.entries(d.set || {})) {
     const i = k.indexOf('.'); const id = k.slice(0, i), f = k.slice(i + 1);
