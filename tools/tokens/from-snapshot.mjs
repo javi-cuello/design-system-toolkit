@@ -186,7 +186,7 @@ export function writeDtcg(tokens, dir, opts = {}) {
   // file is written: verify-ts resolves across every module at once, so a
   // reference that resolves only in another resolution's sources passed it
   // and failed in Style Dictionary. A refused export leaves the last one in place.
-  const refs = DTCG.verifyReferences(Object.fromEntries(built.files.map((f) => [f.name, f.tokens])), built.resolutions);
+  const refs = DTCG.verifyReferences(Object.fromEntries(built.files.map((f) => [f.name, f.tokens])), built.axes);
   if (!refs.ok) {
     const list = refs.dangling.slice(0, 10).map((d) => `${d.build}: {${d.reference}}`).join('; ');
     throw Object.assign(new Error(`${refs.dangling.length} reference(s) do not resolve inside their resolution, nothing written: ${list}${refs.dangling.length > 10 ? '; …' : ''}`), { refused: true });

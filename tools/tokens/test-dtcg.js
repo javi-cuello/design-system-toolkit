@@ -191,6 +191,18 @@ var sharedIn = [
   { collection: 'Semantic', single: false, variants: [{ mode: 'Light', file: 's/light.json' }, { mode: 'Dark', file: 's/dark.json' }] },
   { collection: 'Brand', single: false, variants: [{ mode: 'One', file: 'b/one.json' }, { mode: 'Two', file: 'b/two.json' }] }
 ];
+// the reference check over the axes agrees with the one over the list, without listing it (a library with a dozen
+// mode collections has millions of resolutions)
+(function () {
+  var g = { fixed: [], axes: [{ steps: [{ mode: 'Light', files: ['a/light.json'] }, { mode: 'Dark', files: ['a/dark.json'] }] }, { steps: [{ mode: 'One', files: ['b/one.json'] }, { mode: 'Two', files: ['b/two.json'] }] }] };
+  var tok = function (v) { return { $value: v }; };
+  // dark reads x, which axis B defines in One only: it fails in dark-two; y, which B defines in both, never fails
+  var files = { 'a/light.json': { c: tok('#fff') }, 'a/dark.json': { c: tok('{x}'), d: tok('{y}') }, 'b/one.json': { x: tok('#000'), y: tok('#111') }, 'b/two.json': { y: tok('#222') } };
+  var byList = DTCG.verifyReferences(files, DTCG.resolutions(twoAxesIn)), byAxes = DTCG.verifyReferences(files, g);
+  eq('the axes check counts the resolutions, agrees with the list, and names a resolution it fails in',
+    [byAxes.builds, byAxes.ok, byAxes.dangling], [byList.builds, byList.ok, [{ build: 'dark-two', reference: 'x' }]]);
+  eq('…as the list names it', byList.dangling, [{ build: 'dark-two', reference: 'x' }]);
+})();
 var shared = DTCG.resolutions(sharedIn);
 eq('collections sharing a mode set share an axis — 2x2, not 2x2x2',
   shared.map(function (b) { return b.name; }), ['light-one', 'light-two', 'dark-one', 'dark-two']);

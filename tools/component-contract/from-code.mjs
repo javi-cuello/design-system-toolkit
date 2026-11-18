@@ -444,7 +444,7 @@ async function forceAt(tab, at) {
 
 export async function openSource(label, name, { rebuild, codeOnly, self, second } = {}) {
   const { loadParity } = await import('../parity/project.mjs');
-  const project = await loadParity(label);
+  const project = await loadParity(label, { self: !!self });
   if (self) return selfSource(project, name, { second });
   if (codeOnly && project.mode !== 'compared') throw Object.assign(new Error(`${label}: its code is built from the design (governed), so it has no component of its own to read`), { usage: true });
   if (codeOnly) return codeOnlySource(label, name, rebuild);
@@ -550,7 +550,7 @@ export function governedReading(t, b, { stateAxis = null, container = '' } = {})
         if (map.props[k] || p.role === 'interaction' || !(p.type === 'boolean' || p.type === 'enum')) continue;
         const table = (t.mapping.axes || {})[p.figma];
         if (!table || typeof table !== 'object') continue;
-        const valueOf = (o) => (p.type === 'boolean' ? (/^true$/i.test(o) ? true : /^false$/i.test(o) ? false : null) : p.values.find((v) => sq(v) === sq(o)) ?? null);
+        const valueOf = (o) => (p.type === 'boolean' ? (/^true$/i.test(o) ? true : /^false$/i.test(o) ? false : null) : ((p.figmaValues || []).indexOf(o) >= 0 ? p.values[p.figmaValues.indexOf(o)] : p.values.find((v) => sq(v) === sq(o)) ?? null));
         const args = new Set(Object.values(table).flatMap((x) => (x && typeof x === 'object' ? Object.keys(x.args || x).filter((a) => !['pseudo', 'on', 'args'].includes(a)) : [])));
         if (args.size !== 1) continue;
         const [arg] = args;

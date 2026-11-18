@@ -227,6 +227,7 @@ test('a reference that resolves only in another resolution is refused, nothing w
   s.collections['Primitives - Colour'].values.Light['Palette/Accent/9'] = '#0055ff';
   s.collections.Brand = { modes: ['Value'], values: { Value: { 'Accent/base': '#0055ff' } }, alias: { Value: { 'Accent/base': 'Palette/Accent/9' } } };
   const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
-  assert.throws(() => writeDtcg(s, dir), /2 reference\(s\) do not resolve inside their resolution, nothing written: dark-desktop: \{primitives-colour\.palette\.accent\.9\}; dark-mobile: /);
+  // (one resolution it fails in is named per reference: the list of every one is the product of the modes)
+  assert.throws(() => writeDtcg(s, dir), /1 reference\(s\) do not resolve inside their resolution, nothing written: dark-desktop: \{primitives-colour\.palette\.accent\.9\}/);
   assert.deepEqual(readdirSync(dir), [], 'a refused export writes nothing');
 });

@@ -272,7 +272,7 @@ function readerCode() {
    inputs are the same reading (--twice holds the leg to that), so --changed reads only the components whose hash moved. */
 export async function selfInputs(label, where) {
   const { loadParity } = await import('../parity/project.mjs');
-  const project = await loadParity(label);
+  const project = await loadParity(label, { self: true });
   const { toElement, toParity, propsOf, DOM } = await import('./to-markup.mjs');
   const { toCss, BASE, pseudoClasses } = await import('./to-code.mjs');
   const { ELEMENT } = await import('./site.mjs');

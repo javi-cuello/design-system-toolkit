@@ -557,7 +557,12 @@
       folders[folder] = axes[w].collection;
     }
 
-    return { files: files, resolver: buildResolver(axes), resolutions: resolutions(axes), report: report };
+    // the resolutions listed only when asked for: they are every combination of the modes, and a library with a dozen
+    // mode collections has millions (one community library ran out of memory listing them). The check that every
+    // reference resolves needs only the axes (verifyReferences)
+    var out = { files: files, resolver: buildResolver(axes), axes: groupAxes(axes), report: report };
+    Object.defineProperty(out, 'resolutions', { enumerable: false, get: function () { return resolutions(axes); } });
+    return out;
   }
 
   /* Cartesian product over the *distinct* mode axes; single-mode files are in
@@ -698,9 +703,43 @@
     }
     return into;
   }
+  /* The same check over the axes rather than the list (buildFiles' `axes`): the axes are independent, so a reference
+   * in a file resolves in every resolution that reads that file exactly when it is defined in the single-mode files,
+   * in its own file's step, or in every step of some other axis; where it is not, a resolution it fails in is named
+   * (its own step, and for each other axis a step that lacks it). Linear in the files, where the list is the product
+   * of the modes. */
+  function verifyAxes(files, g) {
+    var defs = function (list) { var d = {}; for (var i = 0; i < list.length; i++) if (files[list[i]]) tokenPaths(files[list[i]], '', d); return d; };
+    var fixed = defs(g.fixed);
+    var steps = g.axes.map(function (a) { return a.steps.map(function (s) { return defs(s.files); }); });
+    var count = g.axes.reduce(function (n, a) { return n * a.steps.length; }, 1);
+    var bad = [], seen = {};
+    var check = function (file, at, si) {
+      if (!files[file]) return;
+      var used = tokenRefs(files[file], []);
+      for (var u = 0; u < used.length; u++) {
+        var r = used[u];
+        if (fixed[r] || (at >= 0 && steps[at][si][r])) continue;
+        var somewhere = false;
+        for (var x = 0; x < g.axes.length && !somewhere; x++) if (x !== at && steps[x].every(function (d) { return d[r]; })) somewhere = true;
+        if (somewhere) continue;
+        var names = g.axes.map(function (a, x) {
+          if (x === at) return slug(a.steps[si].mode);
+          var lack = steps[x].findIndex(function (d) { return !d[r]; });
+          return slug(a.steps[lack < 0 ? 0 : lack].mode);
+        });
+        var name = names.join('-') || 'default';
+        if (!seen[name + '\u0000' + r]) { seen[name + '\u0000' + r] = true; bad.push({ build: name, reference: r }); }
+      }
+    };
+    for (var f = 0; f < g.fixed.length; f++) check(g.fixed[f], -1, -1);
+    for (var a = 0; a < g.axes.length; a++) for (var s = 0; s < g.axes[a].steps.length; s++) for (var k = 0; k < g.axes[a].steps[s].files.length; k++) check(g.axes[a].steps[s].files[k], a, s);
+    return { builds: count, dangling: bad, ok: bad.length === 0 };
+  }
   function verifyReferences(files, builds) {
+    if (builds && !Array.isArray(builds) && Array.isArray(builds.axes) && Array.isArray(builds.fixed)) return verifyAxes(files, builds);
     // the old call passed { builds }: a list of nothing would pass every check
-    if (!Array.isArray(builds)) throw new TypeError('verifyReferences takes the resolutions list, not ' + typeof builds);
+    if (!Array.isArray(builds)) throw new TypeError('verifyReferences takes the resolutions list or buildFiles\' axes, not ' + typeof builds);
     var bad = [], seen = {};
     for (var b = 0; b < builds.length; b++) {
       var build = builds[b];

@@ -400,12 +400,22 @@ export function parityMode(label) {
   return { mode: 'compared', where, libKey, lib, mappings: m ? path.join(where.projectDir, m) : null };
 }
 
-export async function loadParity(label) {
+export async function loadParity(label, { self = false } = {}) {
   const projects = require('../snapshot/projects.cjs');
   const found = parityMode(label);
   if (found.error) throw said(`${label}: ${found.error}`);
   const { where, libKey, lib } = found;
   if (found.mode === 'governed') return { ...(await loadProject(where.repo)), mode: 'governed', label, where, lib, libKey };
+  // the self leg (the toolkit's own rendering of the contracts, read back: eval.mjs --self) reads the project's store
+  // and nothing of its code, so a project with no code yet (designed first, or a library tried in scratch) runs it
+  // (its parity facts, where the context document gives them — the tier the page is measured in — without the code's)
+  if (self) {
+    const P = (lib && lib.code && lib.code.parity) || {};
+    if (!lib || !lib.code.repo) {
+      if (!Array.isArray(P.tiers) || !P.tiers.length) throw said(`${label}: the self leg needs the tier its page is measured in: a library's \`code.parity.tiers\` in the context document`);
+      return { mode: 'self', label, where, lib: lib || null, libKey, config: { project: label, parity: P }, parity: P, paths: where.paths, snapshot: readJson(where.paths.tokens, null) };
+    }
+  }
   if (!lib) throw said(`${label}: no parity facts — a repo's snapshot.config.json \`parity\` block, or a library's \`code.parity\` in the context document`);
   const P = lib.code.parity;
   const config = { project: label, parity: P, compared: true };
