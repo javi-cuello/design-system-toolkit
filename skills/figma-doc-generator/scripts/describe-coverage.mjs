@@ -50,7 +50,8 @@ export function wrongWord(names, descriptions) {
     // the role: the last capitalised segment that is neither the leaf nor the first below any
     // namespace every name shares (Info in Colour/Text/Info/default, Text/Info/Default)
     // (a namespace two or more deep is type and property, Colour/Text, so the role is the first segment after it;
-    // one deep is ambiguous by shape, Colour/Level/x against Text/Info/x, and an all-Text collection with no type goes unchecked)
+    // one deep is ambiguous by shape, Colour/Level/x against Text/Info/x, and an all-Text collection with no type goes unchecked;
+    // a two-deep namespace that is a prefix and type, Semantic/Colour/Text/x, has its property read as a role: a false hit to read past)
     const at = (min) => p.map((seg, j) => (j >= min && j < p.length - 1 && /^[A-Z]/.test(seg) ? j : -1)).filter((j) => j >= 0).pop();
     const i = at(lead + 1) ?? (lead >= 2 ? at(lead) : undefined);
     if (i === undefined) continue;

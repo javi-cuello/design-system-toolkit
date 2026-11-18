@@ -1,6 +1,6 @@
 # Eval cases — figma-doc-generator (v1.25.0)
 
-**Walked: 2026-11-19 for 1.25.0** — D49 executed: `node tests/test-describe-coverage.mjs` 11/11; `describe-coverage.mjs --only semantic` over three projects' stored snapshots listed 28 in one (24 copied descriptions naming a sibling hue, 4 false hits on prose words) and 0 in the other two.
+**Walked: 2026-11-19 for 1.25.0** — D49 executed: `node tests/test-describe-coverage.mjs` 11/11; `describe-coverage.mjs --only semantic` over three projects' stored snapshots listed 28 in one (24 copied descriptions naming a sibling hue, 4 false hits on prose words) and 0 in the other two, unchanged when re-run after the one-type-and-property fallback.
 
 **Walked: 2026-11-11 for 1.24.1** — D49 executed on a real library: coverage counted from a repo's `paths.tokens` file (3/145 described, 46 groups), one template per element drafted, a sample covering every template approved by the maintainer, `describe-write.js` wrote 142 and read each back (0 kept, missing or mismatched), the yes recorded as a §6 decision. Step 5's re-count waits on the next snapshot.
 
