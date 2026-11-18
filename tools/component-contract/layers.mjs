@@ -66,6 +66,27 @@ function rooted(flat) {
    `Size 2`; figma-standard rule 18). to-figma, from-code, derive and the editor each kept their own: one split
    a number off its word and one did not, so `icon20` drew as "Icon 20" and read back as "Icon20". */
 export const camel = (s) => String(s).trim().replace(/[^A-Za-z0-9]+(.)?/g, (_, c) => (c ? c.toUpperCase() : '')).replace(/^[A-Z]/, (c) => c.toLowerCase()) || 'layer';
+/* Each prop's contract id, one rule for derive and the editor: its Figma name camel-cased. Two names that camel-case
+   alike (a boolean `title` beside its text `↳ ✏️ title`, one community library's habit) would be one id, the second
+   written over the first; the one that is not a boolean keeps the name, the boolean is `show<Name>`, and any still alike
+   take a number. `list` is [{ name, flag }] (flag: a boolean that is not a variant axis), in the props' order; the ids
+   come back in that order. */
+export function propIds(list) {
+  const c = list.map((x) => camel(x.name)), count = new Map();
+  for (const x of c) count.set(x, (count.get(x) || 0) + 1);
+  const used = new Set(c.filter((x) => count.get(x) === 1)), out = c.map((x) => (count.get(x) === 1 ? x : null));
+  const claim = (i, want) => { let id = want, n = 2; while (used.has(id)) id = `${want}_${n++}`; used.add(id); out[i] = id; };
+  list.forEach((x, i) => { if (!out[i] && !x.flag) claim(i, c[i]); });
+  list.forEach((x, i) => { if (!out[i]) claim(i, `show${c[i][0].toUpperCase()}${c[i].slice(1)}`); });
+  return out;
+}
+/* A draft's contract id among its drafts, by the rule derive names props by (layers.mjs propIds): two whose names
+   camel-case alike are told apart as derive told them apart, so a contract opened and saved keeps both. */
+export function propKey(drafts, d) {
+  const i = drafts.findIndex((x) => x === d || (d && d.uid && x.uid === d.uid));
+  if (i < 0) return camel(d.name);
+  return propIds(drafts.map((x) => ({ name: x.name, flag: x.type === 'boolean' && !x.axis })))[i];
+}
 export const kebab = (s) => String(s).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 export const sentence = (k) => { const w = String(k).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([a-zA-Z])(\d)/g, '$1 $2').toLowerCase(); return w ? w[0].toUpperCase() + w.slice(1) : w; };
 

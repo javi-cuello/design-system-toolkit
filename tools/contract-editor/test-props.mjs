@@ -212,4 +212,13 @@ ok('a malformed variant is refused, said where it is, before it can break the pa
   assert.deepEqual(where([{ when: { size: 'b' }, set: { 'root.radius': 'R' } }]), []);
 });
 
+ok('a contract whose props camel-case alike (a boolean and its text, derive told apart) opens and saves with both', () => {
+  const c = { contract: 1, component: 'Header', props: { title: { type: 'string', default: 'Hi', figma: '↳ ✏️ title' }, showTitle: { type: 'boolean', default: true, figma: 'title' }, trigger: { type: 'boolean', default: false, figma: 'Trigger ' } }, anatomy: { root: { kind: 'container' } } };
+  assert.deepEqual(contractProblems(c), [], 'the ids are the ones derive makes');
+  const r = fromContract(c);
+  const back = toContract(r.component, r.drafts, r.base);
+  assert.deepEqual(Object.keys(back.props).sort(), ['showTitle', 'title', 'trigger']);
+  assert.equal(back.props.trigger.figma, 'Trigger ', 'a Figma name kept as the library spells it, its trailing space too');
+});
+
 console.log(`${n} passed`);

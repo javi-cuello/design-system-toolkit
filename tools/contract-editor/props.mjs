@@ -21,7 +21,7 @@ export const CODE_ONLY = new Set(['number', 'event']);
 export const ONLY = ['both', 'figma', 'code'];
 
 // the words a contract's ids and names are made of, and its interaction states: component-contract's, one way each
-import { camel, kebab, interactionStates } from '../component-contract/layers.mjs';
+import { camel, kebab, interactionStates, propIds, propKey } from '../component-contract/layers.mjs';
 export { camel, kebab, interactionStates };
 
 let next = 0;
@@ -173,12 +173,13 @@ export function toContract(component, drafts, base = {}, parts = null) {
     if (d.type === 'boolean' && d.axis && d.only !== 'code') p.axis = true;
     if (d.type === 'enum' && d.role) { p.role = d.role; p.pointer = (d.pointer || []).map(kebab).filter((v) => p.values.includes(v)); }
     const only = CODE_ONLY.has(d.type) ? 'code' : d.only;
-    if (only !== 'code') p.figma = d.name.trim();
+    // (the name as Figma keeps it, a trailing space and all, where the draft still says it: the library addresses it so)
+    if (only !== 'code') p.figma = d.figma && d.figma.trim() === d.name.trim() ? d.figma : d.name.trim();
     if (only !== 'both') p.only = only;
     // the parts' links, and the contract's own where the editor has no say: a layer a variant adds (not in this
     // anatomy), one inside an instance, or a part whose link the editor has not touched
     for (const f of ['shows', 'sets', 'swaps']) {
-      const linked = (links[camel(d.name)] || {})[f] || [];
+      const linked = (links[propKey(drafts, d)] || {})[f] || [];
       // a stored link follows its part through a rename or a move
       const stored = [...new Set((p[f] || []).map(renamed))];
       // in the order stored, then what the editor links anew
@@ -186,12 +187,12 @@ export function toContract(component, drafts, base = {}, parts = null) {
       const all = [...stored.filter((t) => linked.includes(t) || !anatomy || (t in anatomy && inner[f].has(t)) || (!(t in anatomy) && !read.has(t))), ...linked.filter((t) => !stored.includes(t))];
       if (all.length) p[f] = all; else if (parts) delete p[f];
     }
-    props[camel(d.name)] = p;
+    props[propKey(drafts, d)] = p;
   }
   const rest = Object.fromEntries(Object.entries(base).filter(([k]) => !TOP.has(k)));
   // a renamed prop, and a renamed or moved part, carried through what names them; a combination, a variant
   // layer or a condition that names a prop no longer here describes nothing, and goes
-  const key = new Map(drafts.filter((d) => d.was && d.was !== camel(d.name)).map((d) => [d.was, camel(d.name)]));
+  const key = new Map(drafts.filter((d) => d.was && d.was !== propKey(drafts, d)).map((d) => [d.was, propKey(drafts, d)]));
   const rekey = (w) => Object.fromEntries(Object.entries(w || {}).map(([k, v]) => [key.get(k) || k, v]));
   const known = (when) => Object.keys(when || {}).every((k) => k in props);
   const field = (k) => { const i = k.lastIndexOf('.'); return renamed(k.slice(0, i)) + k.slice(i); };
@@ -221,6 +222,7 @@ export function fromContract(c) {
   const axes = new Set(((c && c.invalid) || []).flatMap((x) => Object.keys(x || {})));
   const drafts = Object.entries((c && c.props) || {}).map(([key, p]) => draft({
     name: p.figma || key,
+    ...(p.figma ? { figma: p.figma } : {}),
     type: TYPES.includes(p.type) ? p.type : 'string',
     values: [...(p.figmaValues || p.values || [])],
     default: p.figmaValues && p.values ? (p.figmaValues[p.values.indexOf(p.default)] ?? p.default ?? null) : p.default ?? null,
@@ -243,8 +245,9 @@ export function problems(component, drafts) {
   for (const d of drafts) {
     const say = (field, message) => out.push({ uid: d.uid, field, message });
     if (!d.name.trim()) { say('name', 'A prop needs a name.'); continue; }
-    const key = camel(d.name);
-    if (seen.has(key)) say('name', `"${d.name}" and "${seen.get(key)}" are one prop in code (${key}).`);
+    // two names alike in code are one prop unless one is a boolean (which derive names show<Name>): a slip, said
+    const key = `${camel(d.name)}|${d.type === 'boolean' && !d.axis}`;
+    if (seen.has(key)) say('name', `"${d.name}" and "${seen.get(key)}" are one prop in code (${camel(d.name)}).`);
     else seen.set(key, d.name);
     if (d.type === 'enum') {
       const vals = d.values.map(kebab);
@@ -308,6 +311,9 @@ export function contractProblems(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c)) return [{ where: '', message: 'A contract is an object, with "props".' }];
   if (!c.props || typeof c.props !== 'object' || Array.isArray(c.props)) say('props', 'needs to be an object of props.');
   if (c.component != null && typeof c.component !== 'string') say('component', 'is a name, written as text.');
+  // each prop's id as its Figma name makes it (propIds: two alike told apart as derive tells them apart)
+  const inv = new Set((Array.isArray(c.invalid) ? c.invalid : []).flatMap((x) => Object.keys(x || {})));
+  const named = Object.entries(c.props || {}), made = propIds(named.map(([key, p]) => ({ name: p.figma || key, flag: p.type === 'boolean' && !p.axis && !inv.has(key) })));
   for (const [key, p] of Object.entries(c.props || {})) {
     const at = `props.${key}`;
     if (!p || typeof p !== 'object') { say(at, 'is not a prop.'); continue; }
@@ -321,7 +327,7 @@ export function contractProblems(c) {
     if (p.type === 'number' && p.default != null && typeof p.default !== 'number') say(`${at}.default`, 'is a number.');
     if (CODE_ONLY.has(p.type) && p.only !== 'code') say(`${at}.only`, `a ${p.type} exists in code only: Figma has no property for one.`);
     if (p.only != null && !['figma', 'code'].includes(p.only)) say(`${at}.only`, 'is "figma" or "code", or left out for both.');
-    const k = camel(p.figma || key);
+    const k = made[named.findIndex(([x]) => x === key)];
     if (p.figma != null && k !== key) say(at, `its Figma name "${p.figma}" makes "${k}" in code, not "${key}".`);
   }
   const a = c.anatomy && typeof c.anatomy === 'object' ? c.anatomy : {};

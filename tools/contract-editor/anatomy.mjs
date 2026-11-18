@@ -10,7 +10,7 @@
  * root, joined with `/`, a repeated name numbered from its second.
  */
 import { camel } from './props.mjs';
-import { partName } from '../component-contract/layers.mjs';
+import { partName, propKey } from '../component-contract/layers.mjs';
 import { declarations, holds } from '../component-contract/css.mjs';
 import { fillCss, rawColour } from '../component-contract/rules.mjs';
 import { figmaWeight } from '../parity/values.mjs';
@@ -94,7 +94,7 @@ export function ids(parts) {
  */
 export function toAnatomy(parts, drafts) {
   const id = ids(parts);
-  const keyOf = (uid) => { const d = drafts.find((x) => x.uid === uid); return d ? camel(d.name) : null; };
+  const keyOf = (uid) => { const d = drafts.find((x) => x.uid === uid); return d ? propKey(drafts, d) : null; };
   const anatomy = {};
   const links = {};
   const link = (uid, field, target) => {
@@ -355,7 +355,7 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
     if (style.unsaid.some((u) => /diagonal gradient on a box/.test(u))) { const side = (v) => (typeof v === 'number' ? v : typeof value('lengths', v) === 'number' ? value('lengths', v) : 100); const f = fillCss(e.background, { w: side(e.width), h: side(e.height) }, paint); if (f.value && f.value !== style.background) { style.background = f.value; near = 'its fill drawn with each side it has no size for taken as 100: the code says it once the box has a size'; } }
     const out = { uid: p.uid, kind: p.kind, name: p.uid === 'root' ? 'Outer box' : p.name, style, children: [], ...(near && { near }) };
     // a part its on/off prop hides by default is marked with that prop: drawn as any part, its title saying so (figma-handoff: the preview)
-    if (shownBy && shownBy.type === 'boolean' && !shownBy.default) out.off = shownBy.name;
+    if (shownBy && shownBy.type === 'boolean' && !shownBy.default) { out.off = shownBy.name; out.offKey = propKey(drafts, shownBy); }
     // the outer box laid out as the sketch's own block, over the parts it lays out
     if (p.uid === 'root' && style.display === 'inline-flex') style.display = 'flex';
     if (p.uid === 'root' && style.display === 'inline-block') style.display = 'block';
@@ -437,7 +437,7 @@ const words = (seg) => partName(seg);
 const glyphOf = (inner) => { const g = Object.entries(inner || {}).filter(([, x]) => x.kind === 'graphic'); return g.length === 1 ? g[0][0] : null; };
 const READ = ['width', 'height', 'minWidth', 'minHeight', 'position', 'absolute', 'constraints', 'layout', 'background', 'radius', 'shadow', 'stroke', 'strokeWidth', 'typography', 'textAlign', 'color', 'component', 'with', 'text', 'textProp', 'slotProp', 'shownBy', 'swapProp', 'opacity'];
 export function fromAnatomy(anatomy = {}, drafts = [], props = {}) {
-  const byKey = new Map(drafts.map((d) => [camel(d.name), d.uid]));
+  const byKey = new Map(drafts.map((d) => [propKey(drafts, d), d.uid]));
   const linked = (field, id) => { for (const [k, p] of Object.entries(props)) if ((p[field] || []).includes(id)) return byKey.get(k) || null; return null; };
   const uid = { root: 'root' };
   const out = [];

@@ -1100,11 +1100,17 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const specsBefore = {}, specsAfter = {};
   const mine = new Set(), changed = [], noContract = [];
   // every name a component instance could resolve to: this library's and what the store already holds
-  const known = [...p.components.map((c) => c.name), ...Object.values(index.components || {}).map((x) => x.name)];
+  // two of a file's components under one folder (one name, twice published, or a private `.Name` beside its public
+  // one): the first kept, the clash said below; the second takes no part in deriving either, so the contracts written
+  // now are the ones a reader deriving from the store makes again
+  const firsts = new Map();
+  for (const c of p.components) if (!firsts.has(key(c.name))) firsts.set(key(c.name), c);
+  const kept = p.components.filter((c) => firsts.get(key(c.name)) === c);
+  const known = [...kept.map((c) => c.name), ...Object.values(index.components || {}).map((x) => x.name)];
   // an instance's insides held to its own component (derive.cjs mains): this library's components, as walked now; one
   // of another library keeps its insides, so a contract here never goes stale when that library is snapshotted
   const fresh = {};
-  for (const c of p.components) fresh[c.name] = platform ? { ...compact(c), platform } : compact(c);
+  for (const c of kept) fresh[c.name] = platform ? { ...compact(c), platform } : compact(c);
   // (each component derived as itself, under the library's own options, as write.cjs derives it from the store)
   // the tokens as this delivery leaves them, every routed file's collections merged: a layer's mode is keyed by the
   // axes they make (tools/tokens/modes.cjs), as write.cjs and check-specs key it from the stored file

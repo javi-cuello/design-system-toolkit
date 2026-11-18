@@ -26,7 +26,7 @@ const MODES = require('../tokens/modes.cjs');const { resolve, layerPaths } = req
 const SHAPE = 1;
 const j = (x) => JSON.stringify(x);
 // a combination drawn from its layers: one module, the editor's page reads it too
-const { variantDefaults, apply, expand, partName, camel, kebab } = require('./layers.mjs');
+const { variantDefaults, apply, expand, partName, camel, kebab, propIds } = require('./layers.mjs');
 
 /* A variant's name as prop values: "Size=Large, Left icon=True". */
 const { variantValues: valuesOf } = require('../shared/names.js');
@@ -215,13 +215,21 @@ function alignFlip(base, flip, prop) {
   return { list, hidden };
 }
 
+/* A variant name's values, each under its prop's own name: a name splits trimmed (`Shortcuts or Trigger =True`), and a
+   prop Figma keeps with a trailing space (`Shortcuts or Trigger `) would not be found by it, its trees read as the
+   variant's own. */
+function valuesIn(props, name) {
+  const own = new Map(Object.keys(props || {}).map((p) => [p.trim(), p]));
+  return Object.fromEntries(Object.entries(valuesOf(name)).map(([k, v]) => [own.get(k) ?? k, v]));
+}
+
 function layout(spec) {
   const trees = spec.variants || [];
   const byName = new Map(trees.map((t) => [t.name, t]));
   const booleans = Object.keys(spec.props || {}).filter((p) => spec.props[p] === 'BOOLEAN');
   const hides = {};
   const out = trees.map((t) => {
-    const w = valuesOf(t.name);
+    const w = valuesIn(spec.props, t.name);
     const flipped = booleans.find((p) => p in w);
     const base = flipped && byName.get(String(t.name).split(/,\s*/).filter((x) => !x.startsWith(flipped + '=')).join(', '));
     if (!base) return { tree: t, when: w, list: paths(t) };
@@ -379,24 +387,15 @@ function valueFor(figmaProps, p, v) {
   return t === 'BOOLEAN' || isFlag(t) ? String(v).toLowerCase() === 'true' : kebab(v);
 }
 
-/* Each Figma prop's contract id: its name camel-cased, the one rule. Two names that camel-case alike (a boolean `title`
-   beside its text `↳ ✏️ title`, one community library's habit) would be one id, the second written over the first; the
-   one that is not a boolean keeps the name, the boolean is `show<Name>`, and any still alike take a number. Made once
-   per set of props (a WeakMap), so every reader in this file names a prop the same. */
+/* Each Figma prop's contract id (layers.mjs propIds, the editor's rule too), made once per set of props. */
 const PROP_IDS = new WeakMap();
 function propId(figmaProps, p) {
   if (!figmaProps || typeof figmaProps !== 'object') return camel(p);
   let ids = PROP_IDS.get(figmaProps);
   if (!ids) {
-    ids = new Map();
-    const names = Object.keys(figmaProps), count = new Map();
-    for (const n of names) count.set(camel(n), (count.get(camel(n)) || 0) + 1);
-    const used = new Set(names.filter((n) => count.get(camel(n)) === 1).map(camel));
-    const claim = (n, want) => { let id = want, i = 2; while (used.has(id)) id = `${want}_${i++}`; used.add(id); ids.set(n, id); };
-    for (const n of names) if (count.get(camel(n)) === 1) ids.set(n, camel(n));
-    for (const n of names) if (count.get(camel(n)) > 1 && figmaProps[n] !== 'BOOLEAN') claim(n, camel(n));
-    for (const n of names) if (count.get(camel(n)) > 1 && figmaProps[n] === 'BOOLEAN') { const c = camel(n); claim(n, `show${c[0].toUpperCase()}${c.slice(1)}`); }
-    PROP_IDS.set(figmaProps, ids);
+    const names = Object.keys(figmaProps);
+    const got = propIds(names.map((n) => ({ name: n, flag: figmaProps[n] === 'BOOLEAN' })));
+    PROP_IDS.set(figmaProps, (ids = new Map(names.map((n, i) => [n, got[i]]))));
   }
   return ids.get(p) || camel(p);
 }
@@ -427,7 +426,7 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   // set giving each size its own icon swap on the one layer keeps which is whose; elsewhere a text keeps its own words
   for (const [p, l] of Object.entries(L)) if (l.variants && l.kind !== 'visible') {
     const want = new Set(l.layers.map((at) => keyOf([].concat(at))));
-    const ws = l.variants.map(valuesOf);
+    const ws = l.variants.map((n) => valuesIn(figmaProps, n));
     trees.forEach((t, i) => {
       const holds = ws.some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v));
       for (const e of t.list) if (want.has(keyOf(e.segs)) || want.has(plain(e.segs))) {

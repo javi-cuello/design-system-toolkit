@@ -949,6 +949,21 @@ test('components: two of a file\'s components under one name keep the first and 
   assert.equal(JSON.parse(fs.readFileSync(path.join(P.components, 'tracker', 'figma.json'), 'utf8')).id, '1:1', 'the first is the one kept');
 });
 
+test('a store no project registers is re-derived as the store wrote it: its instances held to what it holds, a dropped twin no main', async () => {
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const store = req('./store.cjs'), { checkSpecs } = req('./check-specs.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'loose-'));
+  const P = store.paths(dir);
+  const chip = (id, label) => ({ name: 'Chip', id, page: 'A', props: { Size: ['sm', 'md'] }, variants: [{ name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10, children: [{ name: label, type: 'TEXT', text: 'x', w: 5, h: 5 }] }, { name: 'Size=md', type: 'COMPONENT', w: 20, h: 10, children: [{ name: label, type: 'TEXT', text: 'x', w: 5, h: 5 }] }] });
+  const row = { name: 'Row', id: '3:3', page: 'A', props: { Size: ['sm', 'md'] }, variants: ['sm', 'md'].map((sz) => ({ name: `Size=${sz}`, type: 'COMPONENT', w: 40, h: 10, children: [{ name: 'Chip', type: 'INSTANCE', instanceOf: `.Chip / Size=${sz}`, w: 10, h: 10, children: [{ name: 'Other', type: 'TEXT', text: 'x', w: 5, h: 5 }] }] })) };
+  const twin = { ...chip('2:2', 'Other'), name: '.Chip' };
+  store.writeLibrary(lib('L', { components: [chip('1:1', 'Label'), twin, row] }), P);
+  const r = checkSpecs(P.components);
+  assert.deepEqual(r.bad, [], 'every stored contract is what the store re-derives');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('tokens: a same-named collection or style from another source is warned of, never one from this file under another identity', async () => {
   const { createRequire } = await import('node:module');
   const store = createRequire(import.meta.url)('./store.cjs');

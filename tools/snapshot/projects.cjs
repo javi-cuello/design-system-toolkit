@@ -913,8 +913,16 @@ function deriveOptionsFor(componentsDir, projectsDir) {
   // a component's instances held to components of its own library only: one in another library is snapshotted on its
   // own, and a contract here must not go stale when it is
   const byFile = new Map();
-  // (a store no project registers has no library to hold its instances to: they keep all they record)
-  if (!of) return () => ({});
+  // a store no project registers (one unpacked to try a library) is one library: its instances held to what it holds,
+  // its layers' modes keyed by the tokens beside it, as the store derived it when it wrote it (store.cjs writeLibrary)
+  if (!of) {
+    let tokens = null;
+    try { tokens = JSON.parse(fs.readFileSync(path.join(componentsDir, '..', 'tokens.json'), 'utf8')); } catch { /* none */ }
+    const axes = tokens ? require('../tokens/modes.cjs').axesOfTokens(tokens) : [];
+    const base = axes.length ? { modeAxes: axes } : {};
+    let mains = null;
+    return () => ({ ...base, mains: (mains = mains || mainsIn(componentsDir, () => base)) });
+  }
   const mainsOf = (folder) => {
     const file = of.fileOf(folder);
     if (!byFile.has(file)) byFile.set(file, mainsIn(componentsDir, own, (d) => of.fileOf(d) === file));

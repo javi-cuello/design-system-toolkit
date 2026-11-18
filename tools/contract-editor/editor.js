@@ -1,3 +1,4 @@
+import { propKey } from '../component-contract/layers.mjs';
 import { blocks, libraryBlocks, suggest, toContract, fromContract, problems, move, kebab, camel, draft, applyKind, kindOf, contractProblems, CODE_ONLY, SIDES } from './props.mjs';
 import { icon } from './icons.mjs';
 import { part, root, tree, homes, holds, ids, partProblems, forField, preview, fromAnatomy, place, variantParts, partName, KINDS as PART_KINDS } from './anatomy.mjs';
@@ -612,7 +613,7 @@ function openProp(d, { isNew = false, at = state.drafts.length } = {}) {
     /* options renamed: the variants, the combinations not drawn and the parts' conditions name them by the prop's key
        as the page keeps it; the preview and the Variants grid by the contract's */
     if (work.renamed) {
-      const key = d.was || camel(d.name), now = camel(d.name), to = (x) => (typeof x === 'string' && x in work.renamed ? work.renamed[x] : x);
+      const key = d.was || propKey(state.drafts, d), now = propKey(state.drafts, d), to = (x) => (typeof x === 'string' && x in work.renamed ? work.renamed[x] : x);
       const named = (w) => (w && key in w ? { ...w, [key]: Array.isArray(w[key]) ? w[key].map(to) : to(w[key]) } : w);
       state.base.variants = (state.base.variants || []).map((v) => ({ ...v, when: named(v.when) }));
       if (state.base.invalid) state.base.invalid = state.base.invalid.map(named);
@@ -639,7 +640,7 @@ function openProp(d, { isNew = false, at = state.drafts.length } = {}) {
 // as an icon's swap is seen only when Show icon is on
 function onlyWhen(d) {
   const c = contractNow();
-  const key = Object.keys(c.props || {}).find((k) => k === camel(d.name));
+  const key = Object.keys(c.props || {}).find((k) => k === propKey(state.drafts, d));
   const prop = key && c.props[key];
   if (!prop) return '';
   const added = (id) => (c.variants || []).filter((v) => !v.combination && v.add && id in v.add);
@@ -716,7 +717,7 @@ function condChip(d) {
   const when = onlyWhen(d);
   if (!when) return null;
   const said = `Only when ${conditionText(when)}`;
-  return withSvg(el('span', { class: 'ce-cond', title: said }, el('span', { 'aria-hidden': 'true', text: Object.keys(when).map((k) => when[k] === true ? (state.drafts.find((x) => camel(x.name) === k) || {}).name || k : conditionText({ [k]: when[k] })).join(', ') }),
+  return withSvg(el('span', { class: 'ce-cond', title: said }, el('span', { 'aria-hidden': 'true', text: Object.keys(when).map((k) => when[k] === true ? (state.drafts.find((x) => propKey(state.drafts, x) === k) || {}).name || k : conditionText({ [k]: when[k] })).join(', ') }),
     el('span', { class: 'visually-hidden', text: `${said}. ` })), '<path d="m15 10 5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/>');
 }
 function propRow(d, i, n) {
@@ -746,7 +747,7 @@ function render({ uid, focus } = {}) {
   const list = $('[data-list]');
   // a prop seen only behind an on/off is listed under it, indented, which says it without the chip; shown in that
   // order, kept in the contract's
-  const gateOf = (d) => { const w = onlyWhen(d); const k = w && Object.keys(w).find((x) => w[x] === true); return k ? state.drafts.find((x) => x !== d && x.type === 'boolean' && camel(x.name) === k) : null; };
+  const gateOf = (d) => { const w = onlyWhen(d); const k = w && Object.keys(w).find((x) => w[x] === true); return k ? state.drafts.find((x) => x !== d && x.type === 'boolean' && propKey(state.drafts, x) === k) : null; };
   const under = new Map(state.drafts.map((d) => [d, gateOf(d)]).filter(([, g]) => g));
   const rows = [];
   state.drafts.forEach((d, i, a) => {
@@ -811,7 +812,7 @@ function remove(i) {
   if (held.length) { told(`${state.drafts[i].name} is still in use`, `${held.join(', ')} ${held.length > 1 ? 'take' : 'takes'} something from it. Unlink ${held.length > 1 ? 'them' : 'it'} in Anatomy first, then delete it.`); return; }
   // what goes with it: the variants, combinations and conditions that name it (said, and back on Undo)
   // as the contract names it: the key it was read with, before any rename
-  const k = state.drafts[i].was || camel(state.drafts[i].name);
+  const k = state.drafts[i].was || propKey(state.drafts, state.drafts[i]);
   const named = (state.base.variants || []).filter((v) => k in (v.when || {})).length + (state.base.invalid || []).filter((w) => k in (w || {})).length;
   const base = state.base;
   const [d] = state.drafts.splice(i, 1);
@@ -963,7 +964,7 @@ const propSelect = (label, type, value, set, none, fieldName = null) => !linkabl
 // snapshot does not record
 function drawnBy(d) {
   const c = contractNow();
-  const prop = (c.props || {})[camel(d.name)];
+  const prop = (c.props || {})[propKey(state.drafts, d)];
   for (const id of (prop && prop.swaps) || []) {
     const e = (c.anatomy || {})[id] || ((c.variants || []).find((v) => v.add && id in v.add) || { add: {} }).add[id];
     if (e && typeof e.component === 'string') return e.component;
@@ -1057,7 +1058,7 @@ function toBase(c, variants) {
     return hit ? hit[1] + t.slice(hit[0].length) : t;
   };
   const field = (k) => { const i = k.lastIndexOf('.'); return part(k.slice(0, i)) + k.slice(i); };
-  const was = new Map(state.drafts.filter((d) => d.was && d.was !== camel(d.name)).map((d) => [camel(d.name), d.was]));
+  const was = new Map(state.drafts.filter((d) => d.was && d.was !== propKey(state.drafts, d)).map((d) => [propKey(state.drafts, d), d.was]));
   const now = new Map([...was].map(([k, v]) => [v, k]));
   const when = (w) => Object.fromEntries(Object.entries(w || {}).map(([k, v]) => [was.get(k) || k, v]));
   const out = variants.map((v) => ({ ...v, when: when(v.when),
@@ -1103,7 +1104,7 @@ function write(changes, into = null, stage = null) {
     // would be read back as that one's, so an edit there waits until the page is saved and opened again
     const id = ids(state.parts);
     const oldPart = new Set(state.parts.filter((p) => p.at && p.at !== id[p.uid]).map((p) => p.at));
-    const oldProp = new Set(state.drafts.filter((d) => d.was && d.was !== camel(d.name)).map((d) => d.was));
+    const oldProp = new Set(state.drafts.filter((d) => d.was && d.was !== propKey(state.drafts, d)).map((d) => d.was));
     const clash = changes.map(([i]) => i).find((i) => oldPart.has(i)) || Object.keys(off).find((k) => oldProp.has(k));
     if (clash) { told('Not changed in this variant', `"${clash}" was the name of another part or prop before it was renamed here. Save the work, open it again, then make this change.`); return; }
     let next = c;
@@ -1172,7 +1173,7 @@ function renderStage() {
   const anatomy = expand(c, viewing);
   if (selected.startsWith('at:') && !(idOf(selected) in anatomy)) selected = 'root';
   // the values chosen stand in for the defaults: an on/off part shown or hidden as its prop is
-  const drafts = state.drafts.map((d) => (d.type === 'boolean' && camel(d.name) in viewing ? { ...d, default: viewing[camel(d.name)] } : d));
+  const drafts = state.drafts.map((d) => (d.type === 'boolean' && propKey(state.drafts, d) in viewing ? { ...d, default: viewing[propKey(state.drafts, d)] } : d));
   const parts = fromAnatomy(anatomy, drafts, c.props);
   const keyOf = (n) => { const p = parts.find((x) => x.uid === n.uid); return !p || p.uid === 'root' ? 'root' : uidOf.get(p.at) || `at:${p.at}`; };
   const tree = preview(parts, drafts, tokens, { dark: isDark(), nested: nestedContract, iconOf, imageOf, sizeAxis, name: state.component.trim() });
@@ -1221,7 +1222,7 @@ function renderStage() {
     }));
   // the component's name above its outer box, as Figma labels a frame: pointed at or clicked, it is the outer box
   // a part an on/off shows is drawn as any part until that switch is turned Off
-  const hide = (n) => ({ ...n, children: n.children.filter((x) => !(x.off && viewing[camel(x.off)] === false)).map(hide) });
+  const hide = (n) => ({ ...n, children: n.children.filter((x) => !(x.off && viewing[x.offKey] === false)).map(hide) });
   const zoom = el('div', { class: 'ce-stage__zoom' }, tree ? drawPart(hide(tree), keyOf) : null,
     tree ? el('span', { class: 'ce-stage__name', 'data-stage-name': true, 'aria-hidden': 'true', text: state.component || 'Component' }) : null);
   const canvas = el('div', { class: 'ce-stage__canvas', 'data-zoom-at': zoomAt }, zoom);
@@ -1897,9 +1898,9 @@ function partNode(p) {
 }
 
 // a condition in words: "Size is Large, State is Focus", with the props' own names and Figma's spelling of their options
-const propName = (k) => { const d = state.drafts.find((x) => camel(x.name) === k); return d ? d.name : k; };
+const propName = (k) => { const d = state.drafts.find((x) => propKey(state.drafts, x) === k); return d ? d.name : k; };
 const valueText = (k, vs) => {
-  const d = state.drafts.find((x) => camel(x.name) === k);
+  const d = state.drafts.find((x) => propKey(state.drafts, x) === k);
   const say = (v) => (typeof v === 'boolean' ? (v ? 'on' : 'off') : d && d.values ? (d.values.find((o) => kebab(o) === v) ?? v) : v);
   return [].concat(vs).map(say).join(' or ');
 };
