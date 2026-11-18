@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.78.1] - 2026-11-18
+### Fixed
+- **Another library's text style carries its font.** One whose family is bound to that library's variable says its font is mixed, so it came with no family or weight; it takes them from the first character of a text that uses it. Where that is mixed too (a variable this file cannot resolve) it still comes without, and the token build says so.
+
 ## [0.78.0] - 2026-11-18
 ### Added
 - **The text styles another library publishes, where this file's components use them.** A component file whose type lives in a foundations file (IBM's Carbon kit has no local text style) sent none, so every typography its contracts name was missing from the tokens; each such style now comes beside the local ones, marked `remote`, with its key. A local style of the same name is that one.

@@ -1,4 +1,4 @@
-// Design system snapshot — v0.78.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.78.1 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -454,13 +454,14 @@ async function paintNames(paints) {
 // source is recorded either way.
 /** @type {Record<string, number>} */
 const METRIC = { Inter: 1.2109375, 'Inter Display': 1.2109375 };
-/** @param {TextStyle} s @returns {Promise<number | null>} */
-const measureStyle = (s) => new Promise((resolve) => {
+// (`font`: another library's style whose own font reads mixed gives the one its text uses)
+/** @param {TextStyle} s @param {FontName} font @returns {Promise<number | null>} */
+const measureStyle = (s, font) => new Promise((resolve) => {
   const timer = setTimeout(() => resolve(null), 4000);
-  figma.loadFontAsync(s.fontName).then(() => {
+  Promise.resolve().then(() => figma.loadFontAsync(font)).then(() => {
     const t = figma.createText();
     scratch().appendChild(t);
-    t.fontName = s.fontName; t.fontSize = s.fontSize; t.characters = 'Hg';
+    t.fontName = font; t.fontSize = s.fontSize; t.characters = 'Hg';
     const h = t.height; t.remove();
     clearTimeout(timer); resolve(h);
   }).catch(() => { clearTimeout(timer); resolve(drawnIn(s)); });
@@ -582,18 +583,22 @@ async function collectTokens() {
   // file has no local style), marked remote: a name a local one holds is that one
   const local = await figma.getLocalTextStylesAsync(), names = new Set(local.map((s) => s.name));
   const inside = (n) => { for (let p = n.parent; p; p = p.parent) if (p.type === 'COMPONENT' || p.type === 'COMPONENT_SET') return true; return false; };
-  const ids = new Set(figma.root.findAllWithCriteria({ types: ['TEXT'] }).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => t.textStyleId));
-  const remote = /** @type {TextStyle[]} */ ((await Promise.all([...ids].map((i) => figma.getStyleByIdAsync(i)))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
+  const at = new Map(figma.root.findAllWithCriteria({ types: ['TEXT'] }).filter((t) => typeof t.textStyleId === 'string' && t.textStyleId && inside(t)).map((t) => [t.textStyleId, t]));
+  const textOf = new Map();
+  const remote = /** @type {TextStyle[]} */ ((await Promise.all([...at.keys()].map(async (i) => { const s = await figma.getStyleByIdAsync(i); if (s) textOf.set(s, at.get(i)); return s; }))).filter((s) => s && s.remote && !names.has(s.name) && names.add(s.name)));
   for (const s of [...local, ...remote]) {
+    // (a remote style whose family is bound to that library's variable says its font is mixed: a text using it says which)
+    const node = textOf.get(s), first = node && node.characters.length ? node.getRangeFontName(0, 1) : null;
+    const font = typeof s.fontName === 'object' ? s.fontName : typeof first === 'object' && first ? first : { family: undefined, style: undefined };
     let lh, source;
     if (s.lineHeight.unit === 'AUTO') {
-      const h = await measureStyle(s);
+      const h = await measureStyle(s, font);
       if (h !== null) { lh = +(h / s.fontSize).toFixed(4); source = 'measured'; }
-      else { lh = +(Math.round(s.fontSize * (METRIC[s.fontName.family] || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
+      else { lh = +(Math.round(s.fontSize * (METRIC[font.family] || 1.2)) / s.fontSize).toFixed(4); source = 'metric'; }
     } else { lh = perFontSize(s.lineHeight, s.fontSize); source = 'style'; }
     textStyles.push({
       // its key, as each effect's: what another file imports it by (tools/component-contract/to-figma.mjs)
-      name: s.name, key: s.key, ...(s.remote && { remote: true }), family: s.fontName.family, weight: s.fontName.style, size: s.fontSize,
+      name: s.name, key: s.key, ...(s.remote && { remote: true }), family: font.family, weight: font.style, size: s.fontSize,
       lineHeight: lh, lineHeightSource: source,
       // In em, whichever unit the style uses, as the line height is: pixels
       // were sent raw beside percent as a fraction, and every reader took
@@ -699,7 +704,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.78.0';
+const VERSION = '0.78.1';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
