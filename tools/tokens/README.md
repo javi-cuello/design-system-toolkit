@@ -49,6 +49,8 @@ Three shapes to expect, all worth fixing at the source rather than in the pipeli
 
 ### One bundle per resolution is usually too many
 
+The build never lists the resolutions to check them: every reference is checked per axis (defined in the single-mode files, in its own mode's file, or in every mode of another axis), which is exact because the axes are independent. A library with a dozen mode collections has millions of resolutions; listing them ran one out of memory.
+
 The resolver says which source sets are *valid*, not how many files to ship. Before building one bundle per resolution, diff two of them. Where a mode axis moves a single token — a brand switch that only repoints one alias is the common case — the bundles come out near-identical, and the right shape is one file per *theme* plus a small file of per-mode overrides scoped to an attribute.
 
 Measured on a real library: two brand bundles of the same theme differed by **one declaration out of 593**, and each carried seven brand ramps nobody in that bundle used. Sixteen files became three, 15MB became 744KB, and every one of the sixteen combinations was still reproducible. The tell is cheap to check and easy to skip: `diff` two built bundles before deciding the shape.
