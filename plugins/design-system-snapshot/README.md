@@ -28,6 +28,8 @@ The **Export icons** switch (icons, graphics and component previews; shown for a
 The first run in a file writes the Tools-panel button (relaunch data), which Figma counts as an edit after the release; a receiver that notes snapshots taken after unreleased edits will note that first one. The manifest's `id` is what keeps the button across re-imports: without one, a development plugin gets a fresh id each import and the button points at nothing.
 
 ## Known limit
+A component set Figma holds in error ("Component set has existing errors") cannot have its properties read; the walk lists it under `unreadable` and goes on. The code, with whole-line comments dropped, must stay under use_figma's 50,000 characters for the MCP path (`tools/snapshot/mcp.mjs`, checked by its test); at 0.76.0 it is about 50 under, so a change that adds code must take some out.
+
 The manifest sets `enablePrivatePluginApi`, so a development run carries `_meta.fileKey` too, and the router addresses a payload by it. The plugin also stamps `_meta.fileId` into the document once. A duplicated file carries that id too, but its key is its own, so it is never written as the original. A project's context document states both ids (snapshot-standard rule 2).
 
 ## Expects of the library

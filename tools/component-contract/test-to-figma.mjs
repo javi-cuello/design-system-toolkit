@@ -133,9 +133,9 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
 
 { // a mode is set on every collection of its axis, each reached by one of its variables, its mode by the name Figma gives it
   const m = modeSets({ collections: { '2. Primitives - Colour': { modes: ['Light', 'Dark'], keys: { 'Blue/1': 'k1' } }, '3. Semantic': { modes: ['Light', 'Dark'], keys: { 'Text/strong': 'k2' } },
-    '5. Responsive type': { modes: ['Desktop', 'Mobile'], keys: { 'Body/size': 'k3' } }, '1. Global': { modes: ['Mode 1'], keys: { 'S/1': 'k4' } } } });
-  ok('each axis names its collections, a variable of each, and its modes by the contract\'s spelling',
-    m.theme.map((x) => x.key).join() === 'k1,k2' && m.theme[0].names.dark === 'Dark' && m['5-responsive-type'][0].names.mobile === 'Mobile' && Object.keys(m).length === 2);
+    '5. Responsive type': { modes: ['Desktop', 'Mobile'], hidden: ['Heading/size'], keys: { 'Heading/size': 'k5', 'Body/size': 'k3' } }, '1. Global': { modes: ['Mode 1'], keys: { 'S/1': 'k4' } } } });
+  ok('each axis names its collections, a published variable of each, and its modes by the contract\'s spelling',
+    m.theme.map((x) => x.key).join() === 'k1,k2' && m.theme[0].names.dark === 'Dark' && m['5-responsive-type'][0].names.mobile === 'Mobile' && m['5-responsive-type'][0].key === 'k3' && Object.keys(m).length === 2);
 }
 
 // the run's guards, run against a stand-in for Figma's file: its pages, and the plugin data each keeps

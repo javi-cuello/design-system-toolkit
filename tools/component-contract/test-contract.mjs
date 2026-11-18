@@ -452,6 +452,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     k.anatomy.root.modes['5-responsive-type'] === 'desktop' && k.anatomy.card.modes.theme === 'dark' && k.anatomy.card.modes.density === 'compact'
     && k.variants.some((x) => x.when.breakpoint === 'sm' && x.set['root.modes']['5-responsive-type'] === 'mobile'));
   ok('the contract it keys holds every variant\'s modes', selfCheck(spec, k, [], { modeAxes: axes }).length === 0); }
+{ // a layer name may hold a line separator (U+2028, pasted from text): its id is made all the same
+  const sep = { name: 'Box', id: '9:3', props: {}, variants: [{ name: 'Default', type: 'COMPONENT', w: 10, h: 10, children: [{ name: 'Replace\u2028with an image', type: 'TEXT', text: 'x', w: 5, h: 5 }] }] };
+  ok('a name with a line separator derives, its id camel-cased across it', Object.keys(derive(sep).anatomy).length === 2); }
 { // an empty auto layout that hugs keeps its last size (a dialog's empty content): that is its least; one a boolean
   // fills in another variant only holds a hidden layer, and keeps nothing
   const frame = (kids, type = 'SLOT') => ({ name: 'Content', type, w: 400, h: 200, layout: 'VERTICAL', pad: [20, 20, 20, 20], gap: 0, align: 'MIN/MIN', sizing: 'FILL/HUG', children: kids });

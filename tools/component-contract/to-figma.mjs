@@ -443,14 +443,17 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
   // `key` one variable of that collection, imported to reach it; `names` its modes by the contract's spelling)
   const cols = {};
   const modeSets = [...new Set(els.flatMap((e) => Object.keys(e.modes || {})))].flatMap((a) => (K.modes || {})[a] || []);
-  await Promise.all(modeSets.map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => figma.variables.importVariableByKeyAsync(m.key)); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
+  await Promise.all(modeSets.filter((m) => m.key).map(async (m) => { const v = await tried(`a variable of ${m.collection}`, () => figma.variables.importVariableByKeyAsync(m.key)); cols[m.key] = v ? await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId) : null; }));
   // (each collection on its own, a failure said and the rest still set; a layer that cannot hold a mode, said)
   const setModes = (n, e, id) => {
     if (!('setExplicitVariableModeForCollection' in n)) { missing.add(`${e.name || id} (its modes: a ${n.type} holds none)`); return; }
     for (const [a, val] of Object.entries(e.modes || {})) {
       const sets = (K.modes || {})[a];
-      if (!sets) { missing.add(`${e.name || id} (its ${a} mode ${val}: no collection the tokens hold)`); continue; }
-      for (const m of sets) { const c = cols[m.key], mode = c && c.modes.find((x) => x.name === m.names[val]); try { if (!mode) throw new Error('not reached'); n.setExplicitVariableModeForCollection(c, mode.modeId); } catch (x) { missing.add(`${e.name || id} (its mode ${m.collection}: ${val}, ${x.message})`); } }
+      if (!sets || !sets.length) { missing.add(`${e.name || id} (its ${a} mode ${val}: no collection the tokens hold)`); continue; }
+      for (const m of sets) {
+        // a collection none of whose variables is published cannot be reached from another file
+        if (!m.key) { missing.add(`${e.name || id} (its mode ${m.collection}: ${val}; the collection publishes no variable, so another file cannot set it)`); continue; }
+        const c = cols[m.key], mode = c && c.modes.find((x) => x.name === m.names[val]); try { if (!mode) throw new Error('not reached'); n.setExplicitVariableModeForCollection(c, mode.modeId); } catch (x) { missing.add(`${e.name || id} (its mode ${m.collection}: ${val}, ${x.message})`); } }
     }
   };
   // unbound, a value is drawn as the token's own value from the snapshot (K.values), never grey or square:
@@ -1012,13 +1015,14 @@ export function needs(p) {
    instance of that icon), since a style or icon another library owns is not
    among this file's own. Passed to the service's /exec. */
 /** Each mode axis's collections, as the drawing sets a layer's mode on them: { axis: [{ collection, key, names }] },
- *  `key` one variable of the collection (imported to reach it), `names` its modes by the contract's spelling. */
+ *  `key` one variable of the collection, imported to reach it (one hidden from publishing cannot be), `names` its modes
+ *  by the contract's spelling. */
 export function modeSets(tokenFile) {
   const MODES = createRequire(import.meta.url)('../tokens/modes.cjs');
   const cols = Object.entries((tokenFile && tokenFile.collections) || {});
   return Object.fromEntries(MODES.axesOfTokens(tokenFile).map((a) => [a.key, cols.filter(([n]) => a.members.includes(MODES.slug(n)))
-    .map(([n, col]) => ({ collection: n, key: Object.values(col.keys || {})[0], names: Object.fromEntries((col.modes || []).map((m) => [MODES.slug(m), m])) }))
-    .filter((m) => m.key)]));
+    .map(([n, col]) => ({ collection: n, key: (Object.entries(col.keys || {}).find(([v]) => !(col.hidden || []).includes(v)) || [])[1], names: Object.fromEntries((col.modes || []).map((m) => [MODES.slug(m), m])) }))
+    ]));
 }
 
 const LOOKUP = async (want) => {

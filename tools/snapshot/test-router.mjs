@@ -938,6 +938,17 @@ test('screens: a bound name the library no longer has is warned of; a raw colour
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('components: two of a file\'s components under one name keep the first and say the clash, never write one over the other unseen', async () => {
+  const { createRequire } = await import('node:module');
+  const store = createRequire(import.meta.url)('./store.cjs');
+  const P = store.paths(fs.mkdtempSync(path.join(os.tmpdir(), 'twice-')));
+  const v = { name: 'Size=sm', type: 'COMPONENT', w: 10, h: 10 };
+  const r = store.writeLibrary(lib('T', { components: [{ name: 'Tracker', id: '1:1', page: 'A', props: { Size: ['sm'] }, variants: [v] }, { name: 'Tracker', id: '2:2', page: 'A', props: { Size: ['sm'] }, variants: [v] }] }), P);
+  const said = r.lines.find((l) => l.label === 'warning' && /share a folder/.test(l.text));
+  assert.ok(said && said.detail.length === 1 && /2:2/.test(said.detail[0]), 'the second is named, with its id');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(P.components, 'tracker', 'figma.json'), 'utf8')).id, '1:1', 'the first is the one kept');
+});
+
 test('tokens: a same-named collection or style from another source is warned of, never one from this file under another identity', async () => {
   const { createRequire } = await import('node:module');
   const store = createRequire(import.meta.url)('./store.cjs');

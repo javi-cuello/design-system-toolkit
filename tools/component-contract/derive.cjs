@@ -240,14 +240,15 @@ function layout(spec) {
 function idOf(segs) {
   if (!segs.length) return 'root';
   return segs.map((seg) => {
-    const [, name, n, prop] = seg.match(/^(.*?)(?:\[(\d+)\])?(?:#(.+))?$/);
+    // (`s`: a name may hold a line separator, U+2028, which `.` alone does not match)
+    const [, name, n, prop] = seg.match(/^(.*?)(?:\[(\d+)\])?(?:#(.+))?$/s);
     // a repeat is numbered past a separator no name camel-cases to: "Item 2" is item2, the second "Item" item_2
     const base = camel(name) + (n ? `_${n}` : '');
     return prop ? camel(prop) + base.charAt(0).toUpperCase() + base.slice(1) : base;
   }).join('/');
 }
 // the address with the boolean tags and numbers off, as the plugin's links spell it
-const plain = (segs) => segs.map((s) => s.replace(/#.*$/, '')).join(SEP);
+const plain = (segs) => segs.map((s) => s.replace(/#.*$/s, '')).join(SEP);
 
 /*
  * Where each part is drawn, as a condition on the props that choose a
@@ -841,7 +842,7 @@ function bridge(stored) {
     layerPaths(t.tree, (node, p) => { at.set(node, p); });
     for (const e of t.list) {
       const id = idOf(e.segs);
-      const key = keyOf(e.segs.map((s) => s.replace(/#.*$/, '')));
+      const key = keyOf(e.segs.map((s) => s.replace(/#.*$/s, '')));
       if (owner[id] !== undefined && owner[id] !== key) { clashes.push(`${id}: ${owner[id].split(SEP).join(' > ')} and ${key.split(SEP).join(' > ')}`); continue; }
       owner[id] = key;
       const p = at.get(e.node);

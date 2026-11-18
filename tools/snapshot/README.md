@@ -131,6 +131,8 @@ place every unrecognised snapshot lands.
 
 ## What a payload contains, and where it lands
 
+A library payload may carry `unreadable`: the component sets the plugin could not read because Figma holds them in error (conflicting variant names), each with Figma's reason. The store prints them as a warning, so a missing component never reads as the library's choice.
+
 `payload.cjs` is the schema for both payloads; a payload that does not match
 is refused with a 400 naming the field, before anything is routed.
 `spec.cjs` is the one compact/resolve for component specs, and every repo

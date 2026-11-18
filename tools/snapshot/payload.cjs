@@ -113,6 +113,7 @@ function library(p) {
   if (need(Array.isArray(p.icons), 'icons', 'must be an array')) {
     p.icons.forEach((x, i) => need(isObj(x) && isStr(x.name) && isNum(x.size) && isStr(x.svg) && (x.unbound === undefined || isNum(x.unbound)) && (x.fill === undefined || isStr(x.fill)), `icons[${i}]`, 'needs name, size and svg, unbound is a count and fill a variable name when present'));
   }
+  need(p.unreadable === undefined || (Array.isArray(p.unreadable) && p.unreadable.every((x) => isObj(x) && isStr(x.name) && isStr(x.reason))), 'unreadable', 'must list { name, reason } when present');
   need(p.iconSets === undefined || (Array.isArray(p.iconSets) && p.iconSets.every(isStr)), 'iconSets', 'must list names when present');
   need(p.iconDescriptions === undefined || (isObj(p.iconDescriptions) && Object.values(p.iconDescriptions).every(isStr)), 'iconDescriptions', 'must map icon names to descriptions when present');
   need(p.iconGroups === undefined || (isObj(p.iconGroups) && Object.values(p.iconGroups).every(isStr)), 'iconGroups', 'must map icon names to group names when present');

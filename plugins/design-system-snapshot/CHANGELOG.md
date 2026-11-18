@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.76.0] - 2026-11-18
+### Fixed
+- **A component set Figma holds in error no longer stops the walk.** Reading its properties, or an instance's of it, throws ("Component set has existing errors": conflicting variant names); the walk lists the set under `unreadable` with Figma's reason and goes on, and the store says it. One such set in a community library lost its whole page.
+
 ## [0.75.0] - 2026-11-18
 ### Added
 - **A layer's variable modes are recorded** (`modes`: collection name → mode name, only where the layer sets one). A component's small variant set to its Mobile type read as if at the collection's default, so no contract, drawing or stylesheet carried the sizes it shows.

@@ -1073,6 +1073,8 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   const lines = [];
   const say = (label, text, detail = []) => lines.push({ label, text, detail });
   say('payload', `${p.components.length} components, ${(p.iconSets || []).length} icon sets named, ${p.icons.length} icon files`);
+  // a set the plugin could not read (Figma holds it in error): said, so its absence is never read as the library's
+  if ((p.unreadable || []).length) say('warning', `${p.unreadable.length} component set(s) Figma could not read; fix them in the file and snapshot again`, p.unreadable.map((x) => `${x.name}${x.page ? ` (${x.page})` : ''} — ${x.reason}`));
 
   const tokensBefore = readJson(P.tokens, null);
   const index = readJson(P.index, { components: {} });
@@ -1111,8 +1113,12 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   if (axes.length) deriveWith = { ...deriveWith, modeAxes: axes };
   const own = deriveWith;
   deriveWith = { ...deriveWith, mains: contract.mainsFrom(fresh, known, () => own) };
+  // two of the file's components under one folder (one name, twice published): the first kept, the clash said, never
+  // the second written over the first unseen
+  const clash = [];
   for (const c of p.components) {
     const s = key(c.name);
+    if (mine.has(s)) { clash.push(`${c.name}${c.page ? ` (${c.page})` : ''}, ${c.id}: its folder ${s} holds another of this file's components; rename one in the library`); continue; }
     mine.add(s);
     const { spec, contract: derived, error } = recordOf(c, known, deriveWith, platform);
     const file = path.join(P.components, s, 'figma.json');
@@ -1139,6 +1145,7 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
     ...pruned.kept.map((d) => `the library no longer has "${d}", and there is code beside its spec — left alone. A renamed component? Move the code to the new folder; a dropped one? Delete it.`),
     ...noContract.map((m) => `no contract derived — ${m}`),
   ]);
+  if (clash.length) say('warning', `${clash.length} component(s) share a folder with another of this file's; the first is kept`, clash);
 
   // Tokens, with what the rest of the loop reads off them: the components and
   // icon sets the library names, and a stamp that moves only with content.
@@ -1223,7 +1230,9 @@ function writeLibrary(p, P, { now = new Date(), platform = null, version, ids = 
   if (P.graphics && (p.graphics || []).length) say('graphics', assets('graphics', P.graphics, '.png', previewFiles(p.graphics, slug)));
   if ((p.previews || []).length) {
     let written = 0;
-    const files = previewFiles(p.previews, key);
+    // (the first of two components under one folder is the one kept, its preview with it: the walk sends previews in
+    // its components' order)
+    const files = previewFiles(p.previews.filter((g, i) => p.previews.findIndex((x) => key(x.name) === key(g.name)) === i), key);
     for (const [f, bytes] of files) if (writeIfChanged(path.join(P.previews, f), bytes)) written++;
     // Only this file's previews are pruned: another file's stay. One of its
     // own goes when this run did not send it (a dark render the library lost).

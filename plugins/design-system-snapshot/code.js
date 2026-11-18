@@ -1,4 +1,4 @@
-// Design system snapshot — v0.75.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.76.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -693,7 +693,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.75.0';
+const VERSION = '0.76.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -991,14 +991,17 @@ async function walk(n, depth) {
      * is the variant's own. A local-only component has no key, so the id is
      * kept as the within-file fallback.
      */
+    const owner = mc && mc.parent && mc.parent.type === 'COMPONENT_SET' ? mc.parent : mc;
     if (mc) {
-      const owner = mc.parent && mc.parent.type === 'COMPONENT_SET' ? mc.parent : mc;
       if (owner.key) o.instanceOfKey = owner.key;
       o.instanceOfId = owner.id;
     }
     /** @type {Record<string, unknown>} */ const props = {};
-    for (const k of Object.keys(n.componentProperties)) {
-      const cp = n.componentProperties[k];
+    // an instance of a set Figma holds in error throws as its set does: its props unread, the set said once
+    let cps = {};
+    try { cps = n.componentProperties; } catch (e) { const name = (owner || n).name; if (!unreadable.some((x) => x.name === name)) unreadable.push({ name, reason: message(e) }); }
+    for (const k of Object.keys(cps)) {
+      const cp = cps[k];
       // an instance swap is a node id; the component's name is what a reader needs
       props[k.split('#')[0]] = cp.type === 'INSTANCE_SWAP' && typeof cp.value === 'string' ? await swapName(cp.value) : cp.value;
     }
@@ -1209,7 +1212,7 @@ async function collectLibrary(withIcons) {
   // Each icon's description, where it has one: an icon library keeps its
   // search keywords there (Lucide's tags), which the docs show and search.
   const iconDescriptions = Object.fromEntries(iconSets.map((s) => [s.name, unescaped(s.description || '').trim()]).filter(([, d]) => d));
-  return { tokens, components, icons, iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }), graphics, previews };
+  return { tokens, components, icons, iconSets: iconSets.map((s) => s.name), iconPage: iconPage ? iconPage.name : null, ...(Object.keys(iconGroups).length && { iconGroups }), ...(Object.keys(iconDescriptions).length && { iconDescriptions }), graphics, previews, ...(unreadable.length && { unreadable }) };
 }
 
 async function collectScreens() {
@@ -1428,6 +1431,9 @@ function propLinks(roots) {
  * never guessed.
  */
 /** @type {Map<string, string|null>} */ const prefNames = new Map();
+// the sets the last walk could not read, each with Figma's reason (a set Figma itself holds in error: conflicting
+// variant names), sent beside the components so the store says them rather than the walk stopping on the first
+/** @type {{ name: string, page?: string, reason: string }[]} */ let unreadable = [];
 /** @type {Map<string, string>|null} */ let localKeys = null;
 async function preferredName(/** @type {any} */ x) {
   const key = typeof x === 'string' ? x : x && x.key;
@@ -1451,7 +1457,7 @@ async function preferredName(/** @type {any} */ x) {
 
 async function collectComponents({ withIcons, previews, darkModes, scope = null, pages = null, section = null, exclude = null }) {
   // a run names from the file as it is now: a component renamed since the last run is read again
-  localKeys = null; prefNames.clear();
+  localKeys = null; prefNames.clear(); unreadable = [];
   const components = [];
   // A file with an icon page is an asset library (illustrations, photos,
   // graphics): each variant of its sets is an asset of its own, so each gets
@@ -1478,7 +1484,8 @@ async function collectComponents({ withIcons, previews, darkModes, scope = null,
     for (const s of list) {
       say('reading components', read++, count);
       /** @type {Record<string, unknown>} */ const props = {};
-      const defs = s.componentPropertyDefinitions;
+      let defs;
+      try { defs = s.componentPropertyDefinitions; } catch (e) { unreadable.push({ name: s.name, page: page.name, reason: message(e) }); continue; }
       for (const k of Object.keys(defs)) props[k.split('#')[0]] = defs[k].type === 'VARIANT' ? defs[k].variantOptions : defs[k].type;
       /*
        * A SLOT's settings, which live on the PROPERTY and not on the node.
@@ -1769,6 +1776,6 @@ async function __headless() {
   try {
     if (typeof FULL !== 'undefined' && FULL) return Object.assign(await collectLibrary(true), { fileKey: figma.fileKey || null, fileName: figma.root.name });
     const components = await collectComponents({ withIcons: false, previews: [], darkModes: async () => [], scope, pages, section, exclude });
-    return { components, fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() };
+    return { components, ...(unreadable.length && { unreadable }), fileKey: figma.fileKey || null, fileName: figma.root.name, at: new Date().toISOString() };
   } finally { if (scratchPage) { scratchPage.remove(); scratchPage = null; } }
 }
