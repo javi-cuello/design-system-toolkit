@@ -1,4 +1,4 @@
-// Design system snapshot — v0.78.1 · plugin-standard v1.1.0
+// Design system snapshot — v0.79.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -428,13 +428,21 @@ async function gradient(p) {
   return { type: 'GRADIENT_LINEAR', angle, transform, stops };
 }
 
-async function paintNames(paints) {
+// (`all`: a style's own paints, or a stroke's, a clear one included: the style is a token whatever it paints, and a
+// stroke takes its room in the layout whatever it paints)
+async function paintNames(paints, all = false) {
   if (!Array.isArray(paints)) return 'mixed';
   const out = [];
   for (const p of paints) {
-    if (p.visible === false) continue;
+    // a paint that paints nothing is none: at no opacity, or bound to a colour clear in every mode (a Transparent token
+    // on an icon's frame, which a reader took for a fill to draw). Clear: under half an 8-bit step, which a screen draws
+    // as 0 (Figma stores Carbon's Transparent at 0.00001)
+    const clear = (a) => a < 0.5 / 255;
+    if (p.visible === false || (!all && clear(p.opacity))) continue;
     const bound = p.boundVariables && p.boundVariables.color;
-    if (bound) { const v = await variable(bound.id); out.push(v ? v.name : bound.id); }
+    const v = bound && await variable(bound.id);
+    if (!all && v && Object.values(v.valuesByMode).every((c) => c && typeof c === 'object' && 'a' in c && clear(c.a))) continue;
+    if (bound) out.push(v ? v.name : bound.id);
     else if (p.type === 'SOLID') out.push(colour(p.color, p.opacity));
     else if (p.type === 'GRADIENT_LINEAR') out.push(await gradient(p));
     // An image's scale mode is the whole question for a reader: Crop and Tile
@@ -590,6 +598,8 @@ async function collectTokens() {
     // (a remote style whose family is bound to that library's variable says its font is mixed: a text using it says which)
     const node = textOf.get(s), first = node && node.characters.length ? node.getRangeFontName(0, 1) : null;
     const font = typeof s.fontName === 'object' ? s.fontName : typeof first === 'object' && first ? first : { family: undefined, style: undefined };
+    // (one whose font nothing here can tell, bound to a variable this file cannot resolve, is no style a build can write)
+    if (s.remote && !font.family) continue;
     let lh, source;
     if (s.lineHeight.unit === 'AUTO') {
       const h = await measureStyle(s, font);
@@ -634,7 +644,7 @@ async function collectTokens() {
     const paints = [];
     for (const p of ps.paints) {
       if (p.visible === false) continue;
-      if (p.type === 'SOLID') { paints.push({ type: 'SOLID', color: (await paintNames([p]))[0] }); continue; }
+      if (p.type === 'SOLID') { paints.push({ type: 'SOLID', color: (await paintNames([p], true))[0] }); continue; }
       if (p.type === 'GRADIENT_LINEAR') { paints.push(await gradient(p)); continue; }
       paints.push({ type: p.type });
     }
@@ -704,7 +714,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.78.1';
+const VERSION = '0.79.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];
@@ -908,7 +918,7 @@ async function walk(n, depth) {
   if ('fills' in n && Array.isArray(n.fills) && n.fills.length) { const f = await paintNames(n.fills); if (f.length) o.fills = f; }
   if ('fillStyleId' in n) { const fs = await styleName(clean(n.fillStyleId)); if (fs) o.fillStyle = fs; }
   if ('strokes' in n && Array.isArray(n.strokes) && n.strokes.length) {
-    o.strokes = await paintNames(n.strokes);
+    o.strokes = await paintNames(n.strokes, true);
     o.strokeSides = 'strokeTopWeight' in n
       ? [n.strokeTopWeight, n.strokeRightWeight, n.strokeBottomWeight, n.strokeLeftWeight]
       : [clean(n.strokeWeight), clean(n.strokeWeight), clean(n.strokeWeight), clean(n.strokeWeight)];

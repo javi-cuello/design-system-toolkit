@@ -1,6 +1,12 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.79.0] - 2026-11-18
+### Changed
+- **A fill that paints nothing is no fill.** A fill at no opacity, or bound to a colour variable clear in every mode (under half an 8-bit step: Figma stores Carbon's Transparent at 0.00001), is left out. Carbon puts one on every icon's frame; the contract kept it as the instance's fill, and code drew the glyph's colour there. A style's own paints are kept whatever they paint, and so is a stroke's, which takes its room in the layout whatever it paints.
+### Fixed
+- **Another library's text style whose font nothing in the file can tell is left out**, rather than sent without a family, which the router refuses.
+
 ## [0.78.1] - 2026-11-18
 ### Fixed
 - **Another library's text style carries its font.** One whose family is bound to that library's variable says its font is mixed, so it came with no family or weight; it takes them from the first character of a text that uses it. Where that is mixed too (a variable this file cannot resolve) it still comes without, and the token build says so.
