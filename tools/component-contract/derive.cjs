@@ -379,6 +379,28 @@ function valueFor(figmaProps, p, v) {
   return t === 'BOOLEAN' || isFlag(t) ? String(v).toLowerCase() === 'true' : kebab(v);
 }
 
+/* Each Figma prop's contract id: its name camel-cased, the one rule. Two names that camel-case alike (a boolean `title`
+   beside its text `↳ ✏️ title`, one community library's habit) would be one id, the second written over the first; the
+   one that is not a boolean keeps the name, the boolean is `show<Name>`, and any still alike take a number. Made once
+   per set of props (a WeakMap), so every reader in this file names a prop the same. */
+const PROP_IDS = new WeakMap();
+function propId(figmaProps, p) {
+  if (!figmaProps || typeof figmaProps !== 'object') return camel(p);
+  let ids = PROP_IDS.get(figmaProps);
+  if (!ids) {
+    ids = new Map();
+    const names = Object.keys(figmaProps), count = new Map();
+    for (const n of names) count.set(camel(n), (count.get(camel(n)) || 0) + 1);
+    const used = new Set(names.filter((n) => count.get(camel(n)) === 1).map(camel));
+    const claim = (n, want) => { let id = want, i = 2; while (used.has(id)) id = `${want}_${i++}`; used.add(id); ids.set(n, id); };
+    for (const n of names) if (count.get(camel(n)) === 1) ids.set(n, camel(n));
+    for (const n of names) if (count.get(camel(n)) > 1 && figmaProps[n] !== 'BOOLEAN') claim(n, camel(n));
+    for (const n of names) if (count.get(camel(n)) > 1 && figmaProps[n] === 'BOOLEAN') { const c = camel(n); claim(n, `show${c[0].toUpperCase()}${c.slice(1)}`); }
+    PROP_IDS.set(figmaProps, ids);
+  }
+  return ids.get(p) || camel(p);
+}
+
 function read(stored) {
   const spec = resolve(stored);
   if (!(spec.variants || []).length) throw new Error(`${spec.name || 'spec'}: no variants to derive a contract from`);
@@ -387,12 +409,12 @@ function read(stored) {
   const { trees, hides } = layout(spec);
   // a link is a list of names below the variant, numbered as paths() numbers them
   const characters = new Map();
-  for (const [p, l] of Object.entries(spec.links || {})) if (l.kind === 'characters') for (const at of l.layers) characters.set(keyOf([].concat(at)), camel(p));
+  for (const [p, l] of Object.entries(spec.links || {})) if (l.kind === 'characters') for (const at of l.layers) characters.set(keyOf([].concat(at)), propId(spec.props, p));
   return { spec, trees, hides, characters };
 }
 
 /* Each walked tree's flat anatomy, as derive() layers them and selfCheck() holds the contract to them. */
-function anatomies(trees, characters, known, L, mains = null, found = null, axes = []) {
+function anatomies(trees, characters, known, L, mains = null, found = null, axes = [], figmaProps = {}) {
   const flat = trees.map((t) => ({ when: t.when, anatomy: flatten(t.list, characters, known, axes) }));
   // a boolean only shows and hides: a layer its flipped tree shares with the variant it was flipped from is that
   // variant's, but for its place (a flip is walked from a detached instance, whose sizes are its own: a root 420 wide)
@@ -411,11 +433,11 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
       for (const e of t.list) if (want.has(keyOf(e.segs)) || want.has(plain(e.segs))) {
         const a = flat[i].anatomy[idOf(e.segs)];
         if (!a) continue;
-        if (l.kind === 'mainComponent' && holds && a.kind === 'instance') a.swappedBy = camel(p);
-        if (l.kind === 'characters' && !holds && a.content === `{${camel(p)}}` && typeof e.node.text === 'string') a.content = e.node.text;
+        if (l.kind === 'mainComponent' && holds && a.kind === 'instance') a.swappedBy = propId(figmaProps, p);
+        if (l.kind === 'characters' && !holds && a.content === `{${propId(figmaProps, p)}}` && typeof e.node.text === 'string') a.content = e.node.text;
         // (and where it holds, its layer is its own: one layer two properties drive in turn, a field's placeholder while
         // empty and its value once filled, names in each variant the one that drives it there)
-        if (l.kind === 'characters' && holds && e.node.type === 'TEXT' && a.kind === 'text') a.content = `{${camel(p)}}`;
+        if (l.kind === 'characters' && holds && e.node.type === 'TEXT' && a.kind === 'text') a.content = `{${propId(figmaProps, p)}}`;
       }
     });
   }
@@ -697,7 +719,7 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   const { spec, trees, hides, characters } = read(stored);
   const figmaProps = spec.props || {};
   const L = spec.links || {};
-  const flat = anatomies(trees, characters, known, L, mains, found, modeAxes);
+  const flat = anatomies(trees, characters, known, L, mains, found, modeAxes, figmaProps);
   const addresses = new Map();
   for (const t of trees) for (const e of t.list) addresses.set(keyOf(e.segs), e.segs);
   const base = flat[0];
@@ -708,12 +730,12 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   // (only where the property drives the layer: a set that binds it in some variants only, snapshot 0.61.0 on, leaves the
   // rest their own words, as anatomies does)
   // (the link found by the layer it names, as anatomies finds it, and by the prop that layer is read as)
-  const drives = (prop, segs, t) => { const l = (Object.entries(L).find(([k, x]) => x.kind === 'characters' && camel(k) === prop && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))) || [])[1]; return !l || !l.variants || l.variants.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v)); };
+  const drives = (prop, segs, t) => { const l = (Object.entries(L).find(([k, x]) => x.kind === 'characters' && propId(figmaProps, k) === prop && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))) || [])[1]; return !l || !l.variants || l.variants.map(valuesOf).some((w) => Object.entries(w).every(([k, v]) => t.when[k] === v)); };
   for (const t of trees) for (const { node, segs } of t.list) {
     // (every property that drives the layer, where one layer takes two in turn)
-    const props = Object.entries(L).filter(([, x]) => x.kind === 'characters' && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))).map(([k]) => camel(k));
+    const props = Object.entries(L).filter(([, x]) => x.kind === 'characters' && x.layers.some((at) => [keyOf(segs), plain(segs)].includes(keyOf([].concat(at))))).map(([k]) => propId(figmaProps, k));
     // (only where each link says the variants it drives in, snapshot 0.61.0 on: before, one property takes the layer, as anatomies has it)
-    const each = props.length > 1 && props.every((pr) => { const l = Object.entries(L).find(([k, x]) => x.kind === 'characters' && camel(k) === pr); return l && l[1].variants; });
+    const each = props.length > 1 && props.every((pr) => { const l = Object.entries(L).find(([k, x]) => x.kind === 'characters' && propId(figmaProps, k) === pr); return l && l[1].variants; });
     for (const prop of each ? props : [characters.get(keyOf(segs)) || characters.get(plain(segs))].filter(Boolean))
       if (node.type === 'TEXT' && typeof node.text === 'string' && !words.has(prop) && drives(prop, segs, t)) words.set(prop, node.text);
   }
@@ -722,7 +744,7 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   // opposite of the value its walked trees were flipped to
   const props = {};
   for (const [p, t] of Object.entries(figmaProps)) {
-    const id = camel(p);
+    const id = propId(figmaProps, p);
     // drawn as False/True variants, said so: the invalid list, folded, need not name it
     if (isFlag(t)) props[id] = { type: 'boolean', default: valueFor(figmaProps, p, base.when[p] ?? 'False'), axis: true };
     else if (Array.isArray(t)) {
@@ -757,7 +779,7 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   // the description is guidance, the docs' and the designer's: Curtis and Pitre both leave it out
 
   const defaults = variantDefaults({ props });
-  const whenOf = (w) => ({ ...defaults, ...Object.fromEntries(Object.entries(w).filter(([p]) => p in figmaProps).map(([p, v]) => [camel(p), valueFor(figmaProps, p, v)])) });
+  const whenOf = (w) => ({ ...defaults, ...Object.fromEntries(Object.entries(w).filter(([p]) => p in figmaProps).map(([p, v]) => [propId(figmaProps, p), valueFor(figmaProps, p, v)])) });
   const rows = flat.map((f) => ({ when: whenOf(f.when), d: delta(base.anatomy, f.anatomy), anatomy: f.anatomy }));
 
   // layers, read the way a grid is read: what one prop value changes with
@@ -785,7 +807,7 @@ function derive(stored, known = [], { stateAxis = HOUSE.stateAxis || null, point
   for (const v of contract.variants) { if (!Object.keys(v.set).length) delete v.set; if (!Object.keys(v.add).length) delete v.add; if (!v.remove.length) delete v.remove; }
 
   // the variant-axis combinations the grid leaves out, where there are few enough to list
-  const axes = Object.entries(figmaProps).filter(([, t]) => Array.isArray(t)).map(([p]) => camel(p));
+  const axes = Object.entries(figmaProps).filter(([, t]) => Array.isArray(t)).map(([p]) => propId(figmaProps, p));
   const total = axes.reduce((n, k) => n * (props[k].type === 'boolean' ? 2 : props[k].values.length), 1);
   if (axes.length > 1 && total <= 4096) {
     const drawn = new Set(rows.map((r) => j(axes.map((k) => r.when[k]))));
@@ -810,10 +832,10 @@ function selfCheck(stored, contract, known = [], options = {}) {
   contract = contract || derive(stored, known, options);
   const { spec, trees, characters } = read(stored);
   const figmaProps = spec.props || {};
-  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null, null, options.modeAxes || []);
+  const flat = anatomies(trees, characters, known, spec.links || {}, options.mains || null, null, options.modeAxes || [], figmaProps);
   const bad = [];
   for (const [i, t] of trees.entries()) {
-    const when = Object.fromEntries(Object.entries(t.when).filter(([p]) => p in figmaProps).map(([p, v]) => [camel(p), valueFor(figmaProps, p, v)]));
+    const when = Object.fromEntries(Object.entries(t.when).filter(([p]) => p in figmaProps).map(([p, v]) => [propId(figmaProps, p), valueFor(figmaProps, p, v)]));
     const d = delta(expand(contract, when), flat[i].anatomy);
     if (!empty(d)) bad.push(`${t.tree.name}: ${[...Object.keys(d.set), ...Object.keys(d.add).map((k) => `+${k}`), ...d.remove.map((k) => `-${k}`)].slice(0, 4).join(', ')}`);
   }
@@ -854,7 +876,7 @@ function bridge(stored) {
   const out = (m) => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].sort()]));
   // each prop by its contract id, with its Figma name and each option by the value the contract spells it (valueFor)
   const figmaProps = resolve(stored).props || {};
-  const props = Object.fromEntries(Object.entries(figmaProps).map(([p, t]) => [camel(p), { figma: p,
+  const props = Object.fromEntries(Object.entries(figmaProps).map(([p, t]) => [propId(figmaProps, p), { figma: p,
     ...(Array.isArray(t) && { values: Object.fromEntries(t.map((v) => [String(valueFor(figmaProps, p, v)), v])) }) }]));
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
