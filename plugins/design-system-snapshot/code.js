@@ -1,4 +1,4 @@
-// Design system snapshot — v0.79.0 · plugin-standard v1.1.0
+// Design system snapshot — v0.80.0 · plugin-standard v1.1.0
 // @ts-check
 // Reads everything a codebase takes from a design file and posts it to a
 // local server (the toolkit's snapshot ROUTER, which hands it to whichever
@@ -558,8 +558,19 @@ async function collectTokens() {
   // reused for the legacy keys below, so nothing is fetched twice.
   /** @type {Record<string, { modes: string[], values: Record<string, unknown>, alias: Record<string, unknown>, descriptions: Record<string, string>, hidden?: string[], keys?: Record<string, string>, scopes?: Record<string, string[]>, codeSyntax?: Record<string, Record<string, string>>, extends?: string }>} */
   const byName = {};
-  for (const c of collections) {
-    const entry = { modes: c.modes.map((m) => m.name), values: {}, alias: {}, descriptions: {} };
+  // and the collections of another library whose variables the components bind (a component file whose colours, spaces
+  // and radii live in a foundations file has none local), marked remote: a name a local one holds is that one
+  const ids = new Set(), others = new Map(), here = new Set(collections.map((c) => c.name));
+  const take = (b) => { if (Array.isArray(b)) b.forEach(take); else if (b && b.type === 'VARIABLE_ALIAS') ids.add(b.id); else if (b && typeof b === 'object') Object.values(b).forEach(take); };
+  for (const c of figma.root.findAllWithCriteria({ types: ['COMPONENT_SET', 'COMPONENT'] }))
+    for (const n of [c, ...c.findAll()]) for (const x of [n, ...[n.fills, n.strokes, n.effects].flatMap((l) => (Array.isArray(l) ? l : []))]) take(x.boundVariables);
+  for (const i of ids) {
+    const v = await variable(i).catch(() => null);
+    const c = v && v.remote && await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(() => null);
+    if (c && !here.has(c.name)) others.set(c.name, c);
+  }
+  for (const c of [...collections, ...others.values()]) {
+    const entry = { modes: c.modes.map((m) => m.name), values: {}, alias: {}, descriptions: {}, ...(c.remote && { remote: true }) };
     // Which collection an extension extends, so a reader can say what it is.
     if (c.isExtension) {
       const parent = await figma.variables.getVariableCollectionByIdAsync(c.parentVariableCollectionId).catch(() => null);
@@ -579,7 +590,7 @@ async function collectTokens() {
     byName[c.name] = entry;
   }
   /** @type {Record<string, number>} */ const collectionCounts = {};
-  for (const c of collections) collectionCounts[c.name] = c.variableIds.length;
+  for (const c of [...collections, ...others.values()]) collectionCounts[c.name] = c.variableIds.length;
 
   say('reading text styles');
   // a line height or letter spacing as a fraction of the font size, to four places: tools/shared/text-units.js's,
@@ -714,7 +725,7 @@ let walkWhole = false;
    as nothing, because the field was recorded nowhere in the older snapshot
    (review of 2 October 2026, round 4). Kept equal to package.json by
    tests/test-walk.mjs. */
-const VERSION = '0.79.0';
+const VERSION = '0.80.0';
 
 /** @type {string[]} */
 const unrecordedSeen = [];

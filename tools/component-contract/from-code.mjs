@@ -828,7 +828,7 @@ async function selfSource(project, name, { second = false } = {}) {
     partsOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); if (!x) return null; try { return Object.fromEntries(Object.entries(governedReading(targetOf(x), bridge(store.readSpec(project.paths.components, slug, { compact: true }))).elements()).map(([id, e]) => [id, e.selector])); } catch { return null; } },
     axesOf: (slug) => { const x = Object.values(library).find((y) => y.folder === slug); return x ? mappingOf(x).axes || null : null; },
     combosOf: () => null,
-    // each read on a fresh page: a forced pointer state never outlives the args it was forced for
+    // each read on a clean page (render, below): a forced pointer state never outlives the args it was forced for
     statesAsArg: true,
     async render(all) {
       const { __state, ...args } = all;
@@ -837,8 +837,15 @@ async function selfSource(project, name, { second = false } = {}) {
       // the has-value flag is the input's: on, it holds its value (the sample where none is given); off, it is left as given,
       // empty unless the mapping's own has-value state gives it one (the story's value starts empty)
       if (flag && flag.name in args) { if (args[flag.name] === flag.on && !args[flag.value]) args[flag.value] = flag.sample; delete args[flag.name]; }
-      await navigate(tab, `${site.url}index.html`);
-      await waitFor(tab, '!!window.ready', { timeout: 10000 }).catch((e) => { throw new Error(`the toolkit's own page did not load: ${(tab.trouble || []).join('; ') || e.message}`); });
+      // a page loaded once serves the next read, unless the last one forced a pointer state or left anything outside the
+      // stage (a popover on the body): then it is loaded again, so nothing a read did reaches the next
+      if (!src.clean || !(await call(tab, () => window.ready && document.body.childElementCount === window.bodyAt && !window.forced))) {
+        await navigate(tab, `${site.url}index.html`);
+        await waitFor(tab, '!!window.ready', { timeout: 10000 }).catch((e) => { throw new Error(`the toolkit's own page did not load: ${(tab.trouble || []).join('; ') || e.message}`); });
+        await call(tab, () => { window.bodyAt = document.body.childElementCount; });
+        src.clean = true;
+      }
+      if (src.pseudoOf[__state]) await call(tab, () => { window.forced = true; });
       await call(tab, ([folder, a, theme]) => {
         document.documentElement.setAttribute('data-theme', theme);
         const s = document.createElement('section'); s.setAttribute('data-parity', 'c'); s.style.cssText = 'display:flow-root;inline-size:max-content;padding:24px';

@@ -749,10 +749,12 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
   const node = (name) => ({ name, type: 'COMPONENT', w: 10, h: 10 });
   const button = { name: 'Button', id: '1:1', page: '🚧 Button', description: '## Usage\n- One per view', props: { Size: ['sm'] }, variants: [node('Size=sm')] };
   await serving(projectsDir, async ({ post }) => {
-    assert.equal((await post('/library', lib('CORE', { tokens: { textStyles: [{ name: 'Body', family: 'Inter', size: 16, lineHeight: 1.5 }] } }))).status, 200);
+    assert.equal((await post('/library', lib('CORE', { tokens: { textStyles: [{ name: 'Body', family: 'Inter', size: 16, lineHeight: 1.5 }], collections: { Base: { modes: ['Mode 1'], values: { 'Mode 1': { 'Spacing/4': 4 } }, alias: {} }, Colour: { modes: ['Light'], values: { Light: { ink: 1 } }, alias: {} } } } }))).status, 200);
     const comps = lib('COMPS', { components: [button] });
     comps.tokens._meta.pages = ['Cover', '---', '🔷 ACTIONS', '🚧 Button'];
-    comps.tokens.collections = { Local: { modes: ['Mode 1'], values: { 'Mode 1': { x: 1 } }, alias: {} } };
+    // and the collections of another library its components bind (plugin 0.80.0): the core file's, and one no file here sends
+    comps.tokens.collections = { Local: { modes: ['Mode 1'], values: { 'Mode 1': { x: 1 } }, alias: {} },
+      Colour: { modes: ['Light'], values: { Light: { ink: 2 } }, alias: {}, remote: true }, Space: { modes: ['Mode 1'], values: { 'Mode 1': { s: 4 } }, alias: {}, remote: true } };
     comps.previews = [{ name: 'Button', w: 10, h: 10, png: Buffer.from('png').toString('base64'), dark: Buffer.from('drk').toString('base64'),
       anatomy: { w: 12, h: 12, png: Buffer.from('ana').toString('base64'), parts: [{ name: 'Label', type: 'text', x: 2, y: 2, w: 8, h: 8 }] },
       variants: [{ name: 'Product=Alpha', png: Buffer.from('aca').toString('base64'), dark: Buffer.from('acd').toString('base64') }] }];
@@ -774,6 +776,9 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
     assert.deepEqual(owned('COMPS').iconColours, { check: 'Colour/Icon/strong' }, 'and the variable its glyph is painted with');
     assert.deepEqual(owned('COMPS').textStyles, [], "another library's style the components file sends is not its own");
     assert.equal(JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/tokens.json'), 'utf8')).textStyles.find((x) => x.name === 'Body').size, 16, "nor shown over the copy of the file that owns it");
+    const stored = JSON.parse(fs.readFileSync(path.join(docDir, 'snapshot/tokens.json'), 'utf8'));
+    assert.deepEqual([owned('COMPS').collections, owned('COMPS').remoteCollections], [['Local'], ['Colour', 'Space']], "another library's collections the components file sends are not its own");
+    assert.deepEqual([stored.collections.Colour.values.Light.ink, stored.collections.Space.values['Mode 1'].s], [1, 4], 'shown where no file owns them, never over the owner\'s copy');
     // A mobile library draws its own Button: it must land beside the web one, not over it,
     // and must not prune the web file's preview.
     const mobile = lib('MOBILE', { components: [{ ...button, id: '9:9', description: 'Mobile button' }] });
@@ -801,7 +806,7 @@ test('DESIGN-ONLY: a project with no repo is stored in its own toolkit folder, a
   });
   const store = path.join(docDir, 'snapshot');
   const tokens = JSON.parse(fs.readFileSync(path.join(store, 'tokens.json'), 'utf8'));
-  assert.deepEqual(Object.keys(tokens.collections).sort(), ['Base', 'Local'], "the components file did not erase the core file's collections");
+  assert.deepEqual(Object.keys(tokens.collections).sort(), ['Base', 'Colour', 'Local', 'Space'], "the components file did not erase the core file's collections");
   assert.equal(tokens.textStyles.length, 1, "nor its text styles");
   assert.deepEqual(Object.keys(tokens._meta.sources).sort(), ['COMPS', 'CORE', 'MOBILE'], 'every file is recorded as a source, the first included');
   assert.deepEqual(tokens._meta.sources.COMPS.pages, ['Cover', '---', '🔷 ACTIONS', '🚧 Button'], "each file's page list stays with that file, not overwritten by the next file");

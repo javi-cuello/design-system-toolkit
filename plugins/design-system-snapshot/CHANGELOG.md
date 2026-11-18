@@ -1,6 +1,10 @@
 # Changelog — Design system snapshot
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.80.0] - 2026-11-18
+### Added
+- **Variables from another library.** Each collection of another library whose variables the components bind is sent, read as this file reads it and marked `remote`; a local collection of the same name is that one. A component file whose colours, spaces and radii live in a foundations file (Atlassian's) had none of its tokens in the store, and code drew every one empty.
+
 ## [0.79.0] - 2026-11-18
 ### Changed
 - **A fill that paints nothing is no fill.** A fill at no opacity, or bound to a colour variable clear in every mode (under half an 8-bit step: Figma stores Carbon's Transparent at 0.00001), is left out. Carbon puts one on every icon's frame; the contract kept it as the instance's fill, and code drew the glyph's colour there. A style's own paints are kept whatever they paint, and so is a stroke's, which takes its room in the layout whatever it paints.

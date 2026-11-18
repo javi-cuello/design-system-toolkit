@@ -154,6 +154,8 @@
     if (variable.type === 'COLOR') return 'color';
     if (variable.type === 'FLOAT') return isOpacity(variable.name) ? 'number' : 'dimension';
     if (variable.type === 'STRING') {
+      // Figma's scope, where the snapshot read one (FONT_FAMILY), says it before the name does
+      if (variable.font === 'fontFamily' || variable.font === 'fontWeight') return variable.font;
       var kind = function (re) { return segments.some(function (seg) { return re.test(seg); }); };
       if (kind(/^famil/i)) return 'fontFamily';
       if (kind(/^weight/i)) return 'fontWeight';

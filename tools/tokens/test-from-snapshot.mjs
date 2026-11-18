@@ -27,6 +27,20 @@ test('an alias recorded by name stays a reference into the collection that defin
   assert.equal(light.semantic.state.disabled.opacity.$value, 0.5, 'opacity authored 0-100 becomes 0-1');
 });
 
+test('a string Figma scopes to font family is a fontFamily, and so is the one it aliases, whatever their names; a weight is not passed on', () => {
+  const t = {
+    collections: {
+      Theme: { modes: ['Base'], values: { Base: { 'Static/Font/Brand': 'Roboto' } }, scopes: { 'Static/Font/Brand': [] } },
+      Scale: { modes: ['Base'], values: { Base: { 'Display/Font': 'Roboto', 'Display/Label': 'x' } }, alias: { Base: { 'Display/Font': 'Static/Font/Brand' } }, scopes: { 'Display/Font': ['FONT_FAMILY'], 'Display/Label': ['TEXT_CONTENT'] } },
+      Weight: { modes: ['Base'], values: { Base: { 'Emphasis': 'Bold Italic', 'Strong': 'Bold Italic' } }, alias: { Base: { Strong: 'Emphasis' } }, scopes: { Strong: ['FONT_WEIGHT'], Emphasis: [] } },
+    },
+  };
+  const vars = Object.fromEntries(toDtcgSnapshot(t).collections.flatMap((c) => c.variables).map((v) => [v.name, v.font]));
+  assert.deepEqual(vars, { 'Static/Font/Brand': 'fontFamily', 'Display/Font': 'fontFamily', 'Display/Label': undefined, Emphasis: undefined, Strong: undefined }, 'a weight is not passed down an alias, nor taken by one');
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(t, dir); // and the build writes: no reference left to a string it skips
+});
+
 test('a text style binds to the variables the snapshot records', () => {
   const t = toDtcgSnapshot(snapshot()).textStyles[0];
   assert.deepEqual(t.bound.fontSize, { collection: 'Responsive type', name: 'Heading/lg/size' });

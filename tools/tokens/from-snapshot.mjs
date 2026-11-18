@@ -97,10 +97,30 @@ export function toDtcgSnapshot(t) {
           if (at) values[mode] = { alias: { collection: at, name: alias } };
           else values[mode] = isColour(raw) ? figmaRgba(raw) : raw;
         }
-        return { name, type, hidden: (c.hidden || []).includes(name), description: (c.descriptions || {})[name] || '', values };
+        // a string's font kind as Figma scopes it (FONT_FAMILY, FONT_WEIGHT): what it is, whatever its name says
+        const scopes = (c.scopes || {})[name] || [];
+        // (a weight only where it holds its own value: an alias's target may be no weight the build can map, and a reference
+        // to one it skips would refuse the build)
+        const own = Object.values(values).every((x) => !(x && x.alias));
+        const font = type === 'STRING' ? (scopes.includes('FONT_FAMILY') ? 'fontFamily' : scopes.includes('FONT_WEIGHT') && own ? 'fontWeight' : undefined) : undefined;
+        return { name, type, hidden: (c.hidden || []).includes(name), description: (c.descriptions || {})[name] || '', values, ...(font && { font }) };
       }),
     };
   });
+  // and a string a family-scoped one aliases is a family too (a theme's Brand font, scoped to nothing, that a type
+  // scale's Font names): passed down every alias until nothing changes. A weight is not passed on: a string a weight
+  // names may be no weight the build can map ("Bold Italic"), and a reference to one it skips would refuse the build
+  const byName = new Map(out.map((c) => [c.name, new Map(c.variables.map((v) => [v.name, v]))]));
+  for (let moved = true; moved;) {
+    moved = false;
+    for (const c of out) for (const v of c.variables) {
+      if (v.font !== 'fontFamily') continue;
+      for (const x of Object.values(v.values)) {
+        const to = x && x.alias && (byName.get(x.alias.collection) || new Map()).get(x.alias.name);
+        if (to && to.type === 'STRING' && !to.font) { to.font = v.font; moved = true; }
+      }
+    }
+  }
 
   // A text style's bindings, as the snapshot records them (plugin 0.24.0 on).
   // A snapshot from before that is refused, not guessed at: the naming

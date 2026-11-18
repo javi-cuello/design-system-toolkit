@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 
 export function coverage(tokens, only) {
   const re = only ? new RegExp(only, 'i') : null;
-  return Object.entries(tokens.collections || {}).filter(([name]) => !re || re.test(name)).map(([name, c]) => {
+  // (another library's collection the components bind, sent `remote`, is described in that library, never this one)
+  return Object.entries(tokens.collections || {}).filter(([name, c]) => !c.remote && (!re || re.test(name))).map(([name, c]) => {
     const names = [...new Set(Object.values(c.values || {}).flatMap((m) => Object.keys(m)))].sort();
     const missing = names.filter((n) => !String((c.descriptions || {})[n] || '').trim());
     const groups = {};

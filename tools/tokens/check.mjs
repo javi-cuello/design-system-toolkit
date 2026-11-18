@@ -103,7 +103,8 @@ const P = store.paths(repo, config.paths);
 if (existsSync(P.tokens)) {
   const snap = JSON.parse(readFileSync(P.tokens, 'utf8'));
   let wrong = 0; const shown = [];
-  for (const [cname, c] of Object.entries(snap.collections || {})) {
+  // (another library's collection, sent `remote`, keeps that library's code syntax: not this build's to answer for)
+  for (const [cname, c] of Object.entries(snap.collections || {}).filter(([, x]) => !x.remote)) {
     for (const [name, syn] of Object.entries(c.codeSyntax || {})) {
       if (!syn.WEB || (c.hidden || []).includes(name)) continue;
       const want = `var(${cssName(cname, name)})`;

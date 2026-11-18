@@ -30,8 +30,9 @@ export const tokenCollections = collectionPages.map((c) => {
   const hidden = new Set(col.hidden || []);
   const published = c.vars.filter((v) => !hidden.has(v.name) && !isPrivateName(v.name));
   const missing = published.filter((v) => !(col.descriptions || {})[v.name]);
-  return { name: c.name, label: c.label, slug: c.slug, published: published.length, missing: missing.map((v) => v.name) };
-}).filter((c) => c.published);
+  return { name: c.name, label: c.label, slug: c.slug, published: published.length, missing: missing.map((v) => v.name), remote: !!col.remote };
+// (another library's collection, sent `remote`, is shown with the tokens but described in that library, not owed here)
+}).filter((c) => c.published && !c.remote);
 export const tokensPublished = tokenCollections.reduce((n, c) => n + c.published, 0);
 export const tokensDescribed = tokensPublished - tokenCollections.reduce((n, c) => n + c.missing.length, 0);
 
