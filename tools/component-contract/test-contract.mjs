@@ -403,6 +403,8 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   // an icon from a set the library does not hold: its scaled graphic's box is the icon's drawing, its colour the override
   const icon = () => ({ i: { kind: 'instance', component: 'Icon/house', width: 20, height: 20 }, 'i/v': { kind: 'graphic', parent: 'i', width: 16.67, height: 17.5, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/icon' } });
   const a = icon(); ownGlyph(a, 'i');
+  const clipped = icon(); clipped.i.overflow = 'hidden'; ownGlyph(clipped, 'i');
+  ok('an icon\'s frame clipping its glyph is the icon\'s own, left out', !('overflow' in clipped.i));
   const fixed = icon(); fixed['i/v'].constraints = { horizontal: 'min', vertical: 'min' }; ownGlyph(fixed, 'i');
   const by = byComponentName([{ component: 'Button' }, { component: 'button' }, { component: 'Chip' }]);
   ok('a component is found by its name in any case; a name two components share finds none', by('CHIP').component === 'Chip' && by('Button') === null);

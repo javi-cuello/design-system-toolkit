@@ -1970,14 +1970,18 @@ async function main() {
       const figmaEl = (id) => figmaContract.anatomy[id] || (figmaContract.variants || []).map((v) => (v.add || {})[id]).find(Boolean);
       const asIcon = (id, e) => {
         const fe = figmaEl(id);
-        if (!e || e.kind !== 'graphic' || !e.asset || !fe || fe.kind !== 'instance' || !/\//.test(fe.component || '')) return;
+        // (an icon in a folder, Icon/house, or one named bare, as a library that keeps its icons unfoldered names them: Add)
+        if (!e || e.kind !== 'graphic' || !e.asset || !fe || fe.kind !== 'instance' || !fe.component) return;
         // a layer a swap shows draws the design's own glyph there (button's house), as the swap's content is a choice
         const swapped = Object.values(fromCode.props).some((p) => p.type === 'swap' && (p.shows || []).includes(id));
         // else only where the design's component is that glyph, or its set holds it elsewhere in the design: an
         // instance of another kind (Avatar/Small) or a glyph outside the set (a logo) stays the code's graphic
         // a glyph named whole (to-markup's mark says Icon/house) is that name; one named alone (house) is in the design's set
-        const set = fe.component.split('/').slice(0, -1).join('/'), whole = (g) => (g.startsWith(`${set}/`) ? g : `${set}/${g}`), named = whole(e.asset);
-        const held = (n) => fe.component === n || JSON.stringify(figmaContract).includes(JSON.stringify(n));
+        const set = fe.component.split('/').slice(0, -1).join('/'), whole = (g) => (!set || g.startsWith(`${set}/`) ? g : `${set}/${g}`), named = whole(e.asset);
+        // (with no folder to scope it, only a component the design places, never any word of it: a layer named Close)
+        const placed = () => [figmaContract.anatomy, ...(figmaContract.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a).map((x) => x.component))
+          .concat((figmaContract.variants || []).flatMap((v) => Object.entries(v.set || {}).filter(([k]) => k.endsWith('.component')).map(([, x]) => x)));
+        const held = (n) => fe.component === n || (set ? JSON.stringify(figmaContract).includes(JSON.stringify(n)) : placed().includes(n));
         // and every glyph a variant changes it to, held the same way, or the whole layer stays the code's graphic
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
         if (!swapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;

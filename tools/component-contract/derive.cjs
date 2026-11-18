@@ -668,6 +668,8 @@ function ownGlyph(anatomy, id) {
   if (!g || g.kind !== 'graphic' || g.parent !== id || !g.constraints || g.constraints.horizontal !== 'scale' || g.constraints.vertical !== 'scale') return;
   const { width, height, constraints, ...rest } = g;
   anatomy[inner[0]] = rest;
+  // and the icon's frame clipping its glyph is the icon's own too: a glyph code draws is cut to its own box (an svg's)
+  if (anatomy[id].overflow === 'hidden') delete anatomy[id].overflow;
 }
 
 /* A component as one of its instances draws it: its contract expanded at the instance's props (`with`, by Figma's
