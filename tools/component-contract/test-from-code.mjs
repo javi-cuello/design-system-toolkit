@@ -29,7 +29,9 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
 { const raw = [{ id: 'root', kind: 'container' }, { id: 'pin', kind: 'instance', parent: 'root' }, { id: 'mark', kind: 'graphic', parent: 'pin' },
     { id: 'box', kind: 'container', parent: 'pin', layout: { direction: 'row' } }, { id: 'dot', kind: 'graphic', parent: 'box' }, { id: 'free', kind: 'graphic', parent: 'root' }];
   ok('a part inside a placed component, in a box with no auto layout, has no place read (the design writes none); in flow or outside one, it does',
-    unplacedIn(raw, raw[2]) && !unplacedIn(raw, raw[4]) && !unplacedIn(raw, raw[5]) && !unplacedIn(raw, raw[0])); }
+    unplacedIn(raw, raw[2]) && !unplacedIn(raw, raw[4]) && !unplacedIn(raw, raw[5]) && !unplacedIn(raw, raw[0]));
+  ok('a part placed absolutely in a placed component whose main has auto layout keeps its place (a button\'s focus ring)',
+    !unplacedIn(raw, raw[2], (u) => (u.kind === 'instance' ? { direction: 'row' } : u.layout))); }
 ok('a placed component\'s arg is read under the attribute markup spells it (isChecked as is-checked or data-is-checked)',
   axisValueOf({ False: {}, True: { isChecked: true } }, { 'is-checked': 'true' }) === 'True' && axisValueOf({ False: {}, True: { isChecked: true } }, { 'data-is-checked': 'false' }) === 'False');
 ok('the token the code wrote holds its value in any of its modes: a contextual field token drawn on a layer, not the base mode, is still the one written',

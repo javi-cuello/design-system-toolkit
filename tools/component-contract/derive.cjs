@@ -607,18 +607,18 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
-      if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
+      if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(anatomy[k]))) === look(arcForm(bare(x))); }
       if (look(arcForm(anatomy[k])) === look(arcForm(x))) return true;
       // a part pinned to its parent's far edge (bottom, end) stands where the parent's size puts it: its near offset
       // follows from that size (a footer pinned to the bottom of a dialog the instance makes taller), so it is no
       // override; compared without it
       const pinned = (y) => { if (!y.absolute) return y; const c = y.constraints || {}, a = { ...y.absolute };
         if (c.vertical === 'max' && a.bottom != null) delete a.y; if (c.horizontal === 'max' && a.end != null) delete a.x; return { ...y, absolute: a }; };
-      if (look(pinned(anatomy[k])) === look(pinned(x))) return true;
+      if (look(arcForm(pinned(anatomy[k]))) === look(arcForm(pinned(x)))) return true;
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
-      return reading && look(sized(anatomy[k])) === look(sized(x));
+      return reading && look(arcForm(sized(anatomy[k]))) === look(arcForm(sized(x)));
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];

@@ -870,10 +870,13 @@ async function selfSource(project, name, { second = false } = {}) {
 
 /* A part inside a placed component, in a box with no auto layout, sits where its component puts it: the design writes
    no place for it (derive.cjs, inInstance) and an instance cannot move it (Figma's help, "Apply changes to
-   instances"), so none is read. A box with auto layout places its children by flow, as the design says it. */
-export function unplacedIn(raw, e) {
+   instances"), so none is read. A box with auto layout places its children by flow, as the design says it, and one
+   placed absolutely inside it keeps its place there (derive keeps it, whatever holds the box). A placed component's own
+   entry carries no layout: its main's root says it (`layoutOf`). */
+export function unplacedIn(raw, e, layoutOf = (u) => u.layout) {
   const up = raw.find((r) => r.id === e.parent);
-  if (!up || (up.layout && up.layout.direction)) return false;
+  const l = up && layoutOf(up);
+  if (!up || (l && l.direction)) return false;
   for (let q = up; q; q = raw.find((r) => r.id === q.parent)) if (q.kind === 'instance') return true;
   return false;
 }
@@ -1375,7 +1378,8 @@ async function main() {
       // for an offset written as a token and for a point placed() never measured
       const insets = await call(L.tab, (src) => { const { restore } = new Function(`return ${src}`)()(document.documentElement); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = n.parentElement.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, unturn.toString());
       // (a part with no place of its own inside a placed component, unplacedIn: the walk's place for it is left out too)
-      for (const e of raw) if (e.parent != null && unplacedIn(raw, e)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
+      const layoutOf = (u) => (u.kind === 'instance' ? (((mainOf(u.component, u.key) || {}).anatomy || {}).root || {}).layout : u.layout);
+      for (const e of raw) if (e.parent != null && unplacedIn(raw, e, layoutOf)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
       for (const e of raw) {
         if (!['container', 'text', 'slot', 'instance', 'graphic'].includes(e.kind)) continue;
         // placed out of the flow: its constraints and far offsets as written, through the table; its point as Figma
@@ -1392,7 +1396,7 @@ async function main() {
             const up = raw.find((r) => r.id === e.parent);
             // (inside a placed component, a part in a box with no auto layout sits where its component puts it: the
             // design writes no place for it (derive.cjs, inInstance) and an instance cannot move it, so none is read)
-            const unplaced = unplacedIn(raw, e);
+            const unplaced = unplacedIn(raw, e, layoutOf);
             if (!unplaced && (!up || up.kind === 'instance' || (up.layout && up.layout.direction))) e.position = 'absolute';
             // where the declarations say an edge (or both) but the box sits centred and sized on its own (a transform
             // the table does not read, auto margins between two insets), the centre the walk measured is the truth
