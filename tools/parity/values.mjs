@@ -66,16 +66,17 @@ export function insetStroke(layer) {
  *  <colour>`, the order css.mjs writes, or one side's `inset 0 calc(-1 * <width>) 0 0 <colour>`; an outside stroke's the same, not inset) names its width and colour with → { width: [name], colour: [name] }, each
  *  empty where that part was written as a value, or null where no layer is such a stroke. What the code meant where
  *  two tokens hold one value (Stroke/2 and the focus ring's width are both 2px). */
-export function insetStrokeVars(raw) {
+export function insetStrokeVars(raw, { outside = false } = {}) {
   if (!raw) return null;
   const top = (str, sep) => { const out = []; let d = 0, cur = ''; for (const ch of str) { if (ch === '(') d++; if (ch === ')') d--; if (d === 0 && sep.test(ch)) { if (cur.trim()) out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
   const name = (t) => { const m = t && /^var\(\s*(--[\w-]+)/.exec(t); return m ? [m[1]] : []; };
   const zero = (w) => /^0(px)?$/.test(w);
-  // (inset layers first; else an outside stroke's, css.mjs's same shape not inset: a sharp side or ring, never an elevation)
+  // (inset layers first; else, for a border the design draws outside (`outside`), its layers not inset, css.mjs's same
+  // shape: never otherwise, where an outer ring is a focus ring's)
   const all = top(raw, /,/).map((layer) => top(layer, /\s/));
   const shaped = (ws) => ws.filter((r) => r.length === 5);
   const inset = shaped(all.filter((w) => w.includes('inset')).map((w) => w.filter((x) => x !== 'inset')));
-  const layers = inset.length ? inset : shaped(all.filter((w) => !w.includes('inset')));
+  const layers = inset.length || !outside ? inset : shaped(all.filter((w) => !w.includes('inset')));
   // a ring all round first, wherever it stands among the layers
   for (const rest of layers) if (rest.slice(0, 3).every(zero)) return { width: name(rest[3]), colour: name(rest[4]) };
   // else a stroke on one side (sideStrokes' shape): shifted by its width along one axis (var(--w), or calc(-1 * var(--w))
