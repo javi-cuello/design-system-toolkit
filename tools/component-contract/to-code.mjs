@@ -349,9 +349,13 @@ function overrideOf(a, host, rel, m, mains, B = a) {
   const theirs = new Map(placedOnly(declarations(own, ctx(own, mid ? ownUp[mid.e.parent] : M[own.parent]), tokenNames).decls).map(([p, v]) => [p, v]));
   if (!e) return { mine: [...theirs], theirs, removed: [], changed: [] };
   // the instance lays its insides out as its component's root does, where it states no layout of its own
-  const mine = placedOnly(declarations(e, ctx(e, e.parent === host ? { ...M.root, ...a[host], layout: (a[host] || {}).layout || M.root.layout } : a[e.parent]), tokenNames).decls);
+  // where a layer sits inside a placed component is never the instance's to change (Figma's help, "Apply changes to
+  // instances": no override of the position of any layer within the component, its constraints or its order): neither
+  // what a record says of it is written, nor what it leaves out (derive keeps no place for a layer two deep) unset
+  const fixed = (p) => /^(position|inset.*|top|right|bottom|left|translate|order|z-index)$/.test(p);
+  const mine = placedOnly(declarations(e, ctx(e, e.parent === host ? { ...M.root, ...a[host], layout: (a[host] || {}).layout || M.root.layout } : a[e.parent]), tokenNames).decls).filter(([p]) => !fixed(p));
   const said = new Set(mine.map(([p]) => p));
-  const removed = [...theirs.keys()].filter((p) => !said.has(p));
+  const removed = [...theirs.keys()].filter((p) => !said.has(p) && !fixed(p));
   return { mine, theirs, removed, changed: [...mine.filter(([p, v]) => theirs.get(p) !== v), ...removed.map((p) => [p, 'unset'])] };
 }
 

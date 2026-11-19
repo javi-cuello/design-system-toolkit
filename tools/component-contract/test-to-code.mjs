@@ -375,6 +375,13 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const sheet2 = toCss(bar2, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (x) => ({ Dot: dot, Row: row2 })[x] || null });
   ok('two deep, what the middle component draws there is the base: set back to the inner\'s value, it is written',
     /\.ds-bar > \.ds-bar__row > \.ds-row__dot > \.ds-dot__mark \{[^}]*background: var\(--c-soft\)/.test(sheet2));
+  // where a layer sits inside a placed component is the component's: a record that leaves its place out never unsets it
+  const pin = { contract: 1, component: 'Pin', props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 }, mark: { kind: 'graphic', parent: 'root', background: 'C/soft', width: 8, height: 10, constraints: { horizontal: 'scale', vertical: 'scale' }, absolute: { x: 4, y: 3 } } }, variants: [] };
+  const note = { contract: 1, component: 'Note', props: {}, anatomy: { root: { kind: 'container' }, pin: { kind: 'instance', parent: 'root', component: 'Pin', with: {} },
+    'pin/mark': { kind: 'graphic', parent: 'pin', background: 'C/strong', width: 8, height: 10, constraints: { horizontal: 'scale', vertical: 'scale' } } }, variants: [] };
+  const ns = toCss(note, 'note', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (x) => (x === 'Pin' ? pin : null) });
+  const markRule = (ns.match(/\.ds-pin__mark \{[^}]*\}/) || [''])[0];
+  ok('a layer\'s place inside a placed component is never unset by a record that leaves it out', /background: var\(--c-strong\)/.test(markRule) && !/position|inset/.test(markRule));
   ok('a graphic directly under a placed component takes its override', /\.ds-bar > \.ds-bar__row > \.ds-row__line \{[^}]*background: var\(--c-strong\)/.test(sheet));
 }
 console.log(`${n} passed`);
