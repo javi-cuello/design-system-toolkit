@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.45.1 (2026-11-19): §D 21 cites figma-standard rule 56 for the shape that mirrors the code, split from rule 21. No rule changes.
 - 2.45.0 (2026-11-19): §D 17 takes figma-standard rule 16: a token alias graph is never transcribed into a document, only its tier policy; reviewed whenever a document about tokens changes.
 - 2.44.0 (2026-11-19): §D 21, a page reports what kits ship and never picks for preference; the alignment pick moved to figma-standard rule 21; a departure is advised and decided per case.
 - 2.43.0 (2026-11-19): §D 21, where kits differ a page recommends the one whose Figma build mirrors its code; asked what the KB says, an agent answers from its pages alone.

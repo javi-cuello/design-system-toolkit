@@ -87,7 +87,7 @@ A text area takes free text longer than one line: a description, a message, a re
 **Properties**
 - [required] `Label`, `Value`, `Placeholder`, `Description`, `Count` and `Error message` are text properties; `Show description` and `Show count` sit directly above what they reveal (figma-standard rules 5, 21 and 37).
 - [strong] `Has value` and `Show label` as on the text input: SDS's `Value Type` and `Has Label` ([SDS TextareaField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/TextareaField.figma.ts)), Primer's `text type` and `label?` ([Primer Textarea.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.figma.tsx)), Carbon's `Text filled` and `Show label` ([Carbon TextArea.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextArea/TextArea.figma.ts)).
-- [required] The resize handle is drawn always or never, as the code renders it (figma-standard rule 51), and becomes a property only where the code lets some text areas resize and not others. The property then takes the code prop's shape (figma-standard rule 21): `Show resize handle`, False/True, for SDS's `isResizable` boolean ([SDS Textarea.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Textarea/Textarea.tsx)); one `Resize` axis valued as Primer's `resize` enum, `None`, `Both`, `Horizontal` and `Vertical` ([Primer Textarea.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.tsx)).
+- [required] The resize handle is drawn always or never, as the code renders it (figma-standard rule 51), and becomes a property only where the code lets some text areas resize and not others. The property then takes the code prop's shape (figma-standard rule 56): `Show resize handle`, False/True, for SDS's `isResizable` boolean ([SDS Textarea.tsx](https://github.com/figma/sds/blob/main/src/ui/primitives/Textarea/Textarea.tsx)); one `Resize` axis valued as Primer's `resize` enum, `None`, `Both`, `Horizontal` and `Vertical` ([Primer Textarea.tsx](https://github.com/primer/react/blob/main/packages/react/src/Textarea/Textarea.tsx)).
 - [moderate] No kit read draws the resize handle as a property: the SDS, Primer and Carbon Code Connect files read none (sources above).
 
 **Variants and states**
@@ -129,7 +129,7 @@ A text area takes free text longer than one line: a description, a message, a re
 
 **Differences**
 - [required] Carbon's `Warning` and skeleton, Primer's `contrast`, and MUI's variants (sources above) are drawn only where the project's code renders them (figma-standard rule 51).
-- [required] `Disabled` and `Validation` are axes of their own where the kits put them in `State` (Code Connect files above; figma-standard rule 1); `Read-only` stays a `State` value, as there ([text input: *In Figma*](text-input.md#in-figma)).
+- [required] `Disabled` and `Validation` are axes of their own where the kits put them in `State` (Code Connect files above; figma-standard rules 1 and 57); `Read-only` stays a `State` value, as there ([text input: *In Figma*](text-input.md#in-figma)).
 
 **Check**
 - *Script*: the component contract lists the set's axes beside the code's props; a `Show count` with no counter prop, or a drawn height that matches no `rows`, shows in the parity report (design-code-parity).

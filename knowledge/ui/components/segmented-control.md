@@ -96,7 +96,7 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 
   | Figma | Code |
   |---|---|
-  | Size axis | `size`; `Size` with t-shirt values where the project writes the code (figma-standard rules 6 and 21) ([In Figma](#in-figma)) |
+  | Size axis | `size`; `Size` with t-shirt values where the project writes the code (figma-standard rules 6 and 56) ([In Figma](#in-figma)) |
   | `Selected=True` on a segment | the group's value; the segment gets `aria-pressed="true"` (Primer's `selected`), or `checked` in a radio build, where the property's name follows the [radio](radio.md#in-figma)'s contested item |
   | `State=Rest` | nothing |
   | `State=Hover`, `Press` | `:hover`, `:active`, set by the browser |

@@ -1,5 +1,6 @@
 # Changelog — component-validator
 
+- 2.32.4 (2026-11-19): WT1 cites figma-standard rule 58 for Loading on the State axis, split from rule 4.
 - 2.32.3 (2026-11-05): the engine's folder is renamed `tools/component-validator/` after its owner, so it is not mistaken for the system MCP's code check `tools/system-mcp/validate.mjs`.
 - 2.32.2 (2026-11-02): WT1 models Loading with `aria-disabled` and a live region, as figma-standard rule 4 now says, not `aria-busy`.
 - 2.32.1 (2026-10-31): SKILL.md names its old engine path in prose, not as a path a reader would follow.

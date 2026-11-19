@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.45.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.45.1** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -734,7 +734,7 @@ A weight drops a level for a source not checked, a study on other users or anoth
 
 **Where a house rule or a project ruling departs from an item, every reader sees it.** A house rule that an item weighted `required` or `strong` shows wrong on the facts (a spec, shipped source, documented or tested behaviour) is fixed in its standard by the maintainer's decree, the item cited as its evidence (§C), with the standard's version and history, not overridden. Where both sides are a choice, the item says so in the same line, naming the rule that departs ("figma-standard rule N departs: …"), and a project ruling that departs from an item names the item (page and heading) in its *Confirms or overrides* column, or in its *Why* where the log has none. A reader acting on a departed item says so in its reply; an audit lists the departures as disagreements, never as defects.
 
-**A page reports what kits and code ship, weighted; it never takes a side for preference.** Where kits differ on a shape the item is `contested` and names each side; a house rule that picks one is a standard's (figma-standard rule 21 takes the shape that mirrors the code), and the item cites it as departing. A departure from an item is deliberate: advised, and decided case by case.
+**A page reports what kits and code ship, weighted; it never takes a side for preference.** Where kits differ on a shape the item is `contested` and names each side; a house rule that picks one is a standard's (figma-standard rule 56 takes the shape that mirrors the code), and the item cites it as departing. A departure from an item is deliberate: advised, and decided case by case.
 
 **Asked what the knowledge base says, an agent answers from its pages alone.** Every point names the page and section it came from, with the item's weight; nothing is added from the agent's own judgement; where the pages are silent or the item is `weak`, the answer says so rather than filling the gap. A suggestion of the agent's own is given only when asked, labelled as its own, and kept apart from what the pages say.
 

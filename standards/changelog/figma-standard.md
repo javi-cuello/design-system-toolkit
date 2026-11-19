@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.31.0 (2026-11-19): rules split out: 56 (Figma and code alike, from 21), 57 (`Open` and `Validation`, from 21 and 1), 58 (Loading, from 4), 59 (Direction axis, from 50), 60 (brand override, from 49).
 - 2.30.0 (2026-11-19): rule 12 moves to Pages beside rule 11; rule 16 retired into toolkit-standard §D 17 and rule 17 into figma-components-audit's tracked metric, each with a tombstone.
 - 2.29.3 (2026-11-19): overlaps merged into one home each: rules 43 (font family), 19 (case test), 45 (asset names), 11 (DEPRECATED), 1 (validation order), 21 (position words), 39 (visible focus); rule 53 retitled. No rule changes.
 - 2.29.2 (2026-11-19): non-rule text trimmed from rules 3, 4, 11, 12, 13, 15, 18, 19 and 21 to dated evidence lines; rule 15's Propstar note, rule 24's hiding cost and rule 49's worked rows and survey move to their skill and the KB; rule 55 links its survey. No rule changes.

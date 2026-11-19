@@ -1,4 +1,6 @@
-# Eval cases — component-validator (v2.32.3)
+# Eval cases — component-validator (v2.32.4)
+
+**Walked: 2026-11-19 for 2.32.4** — one citation in references/web.md WT1 repointed (rule 4 to rule 58); ST1 and the WT1 cases re-read, unchanged; no script reads the line.
 
 **Walked: 2026-11-05 for 2.32.3** — every `Runs:` line re-aimed at `tools/component-validator/`: `node tools/component-validator/test-validate.mjs` 157/157, `node skills/component-validator/tests/test-walk-figma.mjs` 3/3, `node tools/figma-audit/test-paths.mjs` 30/30.
 

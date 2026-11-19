@@ -111,7 +111,7 @@ An accordion stacks headed sections whose content the person opens and closes in
 - [required] `Title` is a text property, the name SDS gives it and the `title` prop of SDS and Carbon (figma-standard rules 21 and 37).
 
 **Variants and states**
-- [strong] On the item, the axes run `Size → Chevron position → Open → Disabled → State`, each where the library draws it; `Open` is a True/False variant, a bare word, `False` first (figma-standard rules 1 and 21); code holds it as a prop beside the states ([*Alignment with code*](#alignment-with-code)).
+- [strong] On the item, the axes run `Size → Chevron position → Open → Disabled → State`, each where the library draws it; `Open` is a True/False variant, a bare word, `False` first (figma-standard rules 1, 21 and 57); code holds it as a prop beside the states ([*Alignment with code*](#alignment-with-code)).
 - [required] `State` runs `Rest → Focus → Hover → Press` on the header, each drawn differently, Focus with a ring (figma-standard rules 4, 31 and 39).
 - [contested] `Disabled`: MUI, Carbon and React Aria each offer it on an item; GOV.UK says "Do not disable sections" ([accordions](#accordions)). Where the library draws it, it pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rule 2).
 - [moderate] Each item owns its `Open`, so several can be open at once, as Carbon, NN/g and GOV.UK allow by default ([accordions](#accordions)); the parent cannot set the variant of what fills its slot (figma-standard rule 38).

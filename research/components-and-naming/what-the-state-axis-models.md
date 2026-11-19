@@ -282,7 +282,7 @@ Researched August to October 2026 from component source code and documentation (
 - **Where this came from.** This guide merges the Figma half of the loading-state guide, the state section of the naming guide, the nested-state study and the open-state survey from the button-merge study. Loading *behaviour* now lives in the toolkit's `knowledge/ui/patterns/actions.md#loading-buttons`.
 - **Selective exposure of nested properties.** Requested since 2022 and still unshipped in November 2026. If Figma ships it, the split in [nested child state](#nested-child-state) becomes unnecessary.
 - **Primer's loading announcement.** Issue [#7881](https://github.com/primer/react/issues/7881) was open in November 2026, with [#7882](https://github.com/primer/react/pull/7882) proposed to document the built-in announcement.
-- **figma-standard rule 4's `aria-busy` wording**, against `actions.md`.
+- **figma-standard rule 58's `aria-busy` wording**, against `actions.md`.
 - **Library loading behaviour** changes with versions; re-read the pinned version's source before relying on the table in [loading as a State](#loading-as-a-state).
 - **Curtis's tenth kit** is counted in his totals but not named in the article.
 
