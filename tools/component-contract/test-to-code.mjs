@@ -348,4 +348,13 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a size kept only while empty is written for the empty box alone, never as the filled box\'s minimum',
     /sheet__body:not\(:has\(\*\)\) \{[^}]*min-block-size: 10\.75rem/.test(css) && !/sheet__body \{[^}]*min-block-size/.test(css));
 }
+{
+  const c = { component: 'Sheet', props: { size: { type: 'enum', values: ['md', 'lg'], default: 'md', figma: 'Size' } }, anatomy: { root: { kind: 'container', layout: { direction: 'column' } },
+    body: { kind: 'slot', parent: 'root', layout: { direction: 'column' }, width: 'fill', height: 'hug', minHeight: 172, whileEmpty: ['minHeight'] },
+    'body/sample': { kind: 'container', parent: 'body', layout: { direction: 'column' }, width: 'fill', height: 'hug', minHeight: 200, whileEmpty: ['minHeight'] } },
+    variants: [{ when: { size: 'lg' }, set: { 'body.whileEmpty': null, 'body.minHeight': 100 } }] };
+  const css = toCss(c, 'sheet');
+  ok('a slot\'s sample frame gives its empty size to nothing a caller places', !/> \*:not\(:has\(\*\)\)/.test(css) && !/10\.5rem|12\.5rem/.test(css));
+  ok('a combination that sets its own minimum keeps it when empty, never unset', /lg[^{]*sheet__body:not\(:has\(\*\)\) \{[^}]*min-block-size: 6\.25rem/.test(css) && !/min-block-size: unset/.test(css));
+}
 console.log(`${n} passed`);

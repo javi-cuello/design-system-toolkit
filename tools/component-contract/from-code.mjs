@@ -1312,7 +1312,7 @@ async function main() {
         if (v && !(field in e)) {
           e[field] = v; if (own == null) viaVar.add(`${e.id}.${field}`);
           // written to hold only while the box holds no element (to-code's whileEmpty, `:not(:has(*))`): said so
-          if (/:not\(:has\(\*\)\)\s*$/.test(await authoredSelector(L.tab, q, css, styles) || '') && !(e.whileEmpty || []).includes(field)) e.whileEmpty = [...(e.whileEmpty || []), field];
+          if (/:not\(:has\(\*\)\)\s*$/.test(await authoredSelector(L.tab, q, css, styles) || '') && !(e.whileEmpty || []).includes(field)) e.whileEmpty = [...(e.whileEmpty || []), field].sort((x, y) => (x === 'minWidth' ? -1 : y === 'minWidth' ? 1 : 0)); // (derive's order: width, then height)
         }
       } }
       // layout and sizing as the code wrote them, read through the one table (rules.mjs) from the element's and its

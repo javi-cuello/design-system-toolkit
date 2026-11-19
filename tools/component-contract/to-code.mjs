@@ -462,6 +462,8 @@ export function drawn(c, when, mains = () => null) {
     const pull = e.parent && pulling.has(e.parent) ? (e.position === 'absolute' || e.absolute || firstInFlow(e.parent) === id || !pulls(parent) ? 0 : parent.layout.gap) : null;
     // a size Figma keeps only while the part is empty (derive's whileEmpty): written under `::empty` (chain: while it holds
     // no element), never as a minimum the filled part keeps
+    // (a slot's sample frame says nothing of what a caller puts there: its empty size is the sample's, written nowhere,
+    // or every leaf a caller places, a <p> or an <img>, would take it)
     const empty = (e.whileEmpty || []).filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
     const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull }, tokenNames);
@@ -472,13 +474,15 @@ export function drawn(c, when, mains = () => null) {
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note]) => [p, { v, note }])), unread: e.kind === 'instance' || slotted ? [] : unread };
-    if (empty.length) {
+    if (slotted) { /* the sample's: above */ } else if (empty.length) {
       const only = declarations(Object.fromEntries(empty.map((f) => [f, a[id][f]])), { root: false, holds: false, row: true, anchors: false, box: null, pull: null }, tokenNames);
       out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(only.decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
     } else if (B[id] && (B[id].whileEmpty || []).length) {
       // a combination where the design fills it: the defaults' empty size does not hold, whatever the page leaves in it
+      // (a size this combination sets itself is its own minimum, empty or not: written again there, never unset)
       const SIZE = { minWidth: 'min-inline-size', minHeight: 'min-block-size', maxWidth: 'max-inline-size', maxHeight: 'max-block-size' };
-      out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(B[id].whileEmpty.filter((f) => SIZE[f]).map((f) => [SIZE[f], { v: 'unset' }])), unread: [] };
+      const own = declarations(Object.fromEntries(B[id].whileEmpty.filter((f) => SIZE[f] && e[f] !== undefined).map((f) => [f, e[f]])), { root: false, holds: false, row: true, anchors: false, box: null, pull: null }, tokenNames).decls;
+      out[`${id}::empty`] = { decls: new Map(B[id].whileEmpty.filter((f) => SIZE[f]).map((f) => { const o = own.find(([p]) => p === SIZE[f]); return o ? [SIZE[f], { v: o[1], note: o[2] }] : [SIZE[f], { v: 'unset' }]; })), unread: [] };
     }
   }
   // an override the defaults write on a layer this combination no longer records (derive dropped it, as it draws as its
