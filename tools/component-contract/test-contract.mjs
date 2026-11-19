@@ -354,6 +354,10 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const tall = (abs) => { const x = { root: { kind: 'container' }, d: { kind: 'instance', parent: 'root', component: 'Dialog', height: 'fill' }, 'd/foot': { kind: 'container', parent: 'd', position: 'absolute', absolute: abs, constraints: { horizontal: 'stretch', vertical: 'max' } } }; ownInsides(x, (n) => (n === 'Dialog' ? dialog : null)); return !!x['d/foot']; };
   ok('a part pinned to the far edge is no override where only its near offset moves with the instance\'s size; its far offset is',
     !tall({ x: 0, y: 794, end: 0, bottom: 0 }) && tall({ x: 0, y: 794, end: 0, bottom: 8 }));
+  // an arc Figma ends at 0 and code at 360 (a sweep from 270) is one arc: equal to its component's, no override
+  const spin = { contract: 1, component: 'Spin', props: {}, anatomy: { root: { kind: 'container' }, arc: { kind: 'graphic', parent: 'root', width: 16, height: 16, background: 'I/strong', shape: 'ellipse', arc: { start: 270, end: 0, inner: 0.75 } } }, variants: [] };
+  const spun = (end) => { const x = { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Spin' }, 's/arc': { kind: 'graphic', parent: 's', width: 16, height: 16, background: 'I/strong', shape: 'ellipse', arc: { start: 270, end, inner: 0.75 } } }; ownInsides(x, (c) => (c === 'Spin' ? spin : null)); return !!x['s/arc']; };
+  ok('an arc ended at 360 is the one its component ends at 0: no override; a different sweep is one', !spun(360) && !spun(0) && spun(90));
   const { asPlaced } = require('./derive.cjs');
   const P = asPlaced({ root: { kind: 'container' }, 'content/icon': { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'root', name: 'Icon' }, 'content/showIconIcon/glyph': { kind: 'graphic', parent: 'content/showIconIcon' } }).M;
   const Q = asPlaced({ root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/showIconIcon': { kind: 'container', parent: 'content', name: 'Icon' }, 'content/showIconIcon/v': { kind: 'graphic', parent: 'content/showIconIcon' } });

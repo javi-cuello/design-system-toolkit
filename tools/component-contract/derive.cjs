@@ -555,6 +555,15 @@ let M = { ...atProps(m, e.with) };
 
 /* `partial`: a reading that holds only some of an instance's layers (from-code reads the ones a contract keeps): no layer
    it lacks says the instance hides one, so none is kept whole for it; each it holds goes where it equals its component's */
+/* An arc in the one form both sides are compared in (to-figma's arcs): its start on the turn and its end that start
+   plus the sweep, a whole turn 360, so a sweep from 270 that Figma ends at 0 and code at 360 is one arc. */
+const arcTurn = (a) => +((((a % 360) + 360) % 360).toFixed(2));
+function arcForm(y) {
+  if (!y || !y.arc) return y;
+  const start = arcTurn(y.arc.start), sweep = arcTurn(y.arc.end - y.arc.start) || 360;
+  return { ...y, arc: { ...y.arc, start, end: +(start + sweep).toFixed(2) } };
+}
+
 function ownInsides(anatomy, mains, { partial = false, whole = new Set(), reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
@@ -599,7 +608,7 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
       if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(bare(anatomy[k])) === look(bare(x)); }
-      if (look(anatomy[k]) === look(x)) return true;
+      if (look(arcForm(anatomy[k])) === look(arcForm(x))) return true;
       // a part pinned to its parent's far edge (bottom, end) stands where the parent's size puts it: its near offset
       // follows from that size (a footer pinned to the bottom of a dialog the instance makes taller), so it is no
       // override; compared without it
