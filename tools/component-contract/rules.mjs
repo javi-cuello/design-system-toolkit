@@ -171,7 +171,8 @@ export function placeFromCss(own) {
       : [one('translateX') || '', one('translateY') || ''];
   const axis = (near, far, i) => {
     const n = near ?? null, f = far ?? null;
-    if (n === '50%' && /^-50%$/.test(shift[i] || '')) return { to: 'center' };
+    // (at the middle, or kept off it, calc(50% ± d): css.mjs's centre either way)
+    if ((n === '50%' || /^calc\(\s*50%\s*[-+]\s*[^)]+\)$/.test(n || '')) && /^-50%$/.test(shift[i] || '')) return { to: 'center' };
     if (n != null && /%$/.test(n) && /%$/.test(sizes[i])) return { to: 'scale', near: n };
     // both edges and a size of its own is over-constrained: the far inset gives way (css2 §10.3.7, §10.6.4), unless
     // auto margins centre it, which the caller measures

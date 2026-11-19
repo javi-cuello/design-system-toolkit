@@ -57,6 +57,12 @@ ok('auto layout from flex: direction, gap along the flow (row-gap column-gap), p
   const all = ['min', 'max', 'center', 'stretch'];
   ok('every constraint CSS can say comes back from css.mjs\'s CSS: an edge, the far edge, the centre, both edges',
     all.every((h) => all.every((v) => { const b = back({ horizontal: h, vertical: v }, { x: 4, y: 8, end: 2, bottom: 6 }); return b.constraints.horizontal === h && b.constraints.vertical === v; })));
+  {
+    const css = declarations({ kind: 'container', position: 'absolute', constraints: { horizontal: 'center', vertical: 'center' }, absolute: { x: -52, y: 4 }, width: 48, height: 44 }, { holds: false, row: true, box: { width: 44, height: 44 } }, names).decls;
+    const left = (css.find(([p]) => p === 'inset-inline-start') || [])[1], top = (css.find(([p]) => p === 'inset-block-start') || [])[1];
+    const b2 = placeFromCss(Object.fromEntries(css.map(([p, v]) => [p, v])));
+    ok('centred off the middle keeps its centre\'s distance from the parent\'s (x -52 on a 44 box at 48 wide: calc(50% - 50px)), and reads back as centred', left === 'calc(50% - 3.125rem)' && top === 'calc(50% + 0.25rem)' && b2.constraints.horizontal === 'center' && b2.constraints.vertical === 'center');
+  }
   const s = back({ horizontal: 'stretch', vertical: 'max' }, { x: 0, y: 228, end: 0, bottom: 0 });
   ok('pinned to both side edges and the bottom: those insets as written, the point left to the caller', s.offsets.x === '0' && s.offsets.end === '0' && s.offsets.bottom === '0' && s.offsets.y === undefined);
   ok('in the flow is no placement; fixed is placed as absolute is; the inset shorthand reads as its four edges',
