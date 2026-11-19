@@ -119,7 +119,8 @@ export function tokenTable(snapshot, mode) {
   const rows = [];
   for (const c of Object.values((snapshot && snapshot.collections) || {})) {
     const md = (c.modes || []).find((x) => x.toLowerCase() === String(mode || '').toLowerCase()) || (c.modes || [])[0];
-    for (const [k, v] of Object.entries((c.values || {})[md] || {})) rows.push([k, v, c.scopes && c.scopes[k], c.name]);
+    // (and its value in every mode, last: a token the code wrote holds what it draws in whichever mode the element is in)
+    for (const [k, v] of Object.entries((c.values || {})[md] || {})) rows.push([k, v, c.scopes && c.scopes[k], c.name, Object.values(c.values || {}).map((m) => m[k])]);
   }
   return rows;
 }
@@ -147,7 +148,8 @@ export function designTokenFor(kind, value, table, usage, under = null, judge = 
   // the token the code wrote, where it holds this value, whatever the field offers: what the code says beats a
   // guess by scope (a dot the code paints with an icon token is a box in the markup and an ellipse in Figma)
   if (vars && vars.length) for (const v of vars) {
-    const holds = (t) => (colour ? sameColour(t[1], value) : typeof t[1] === 'number' && +t[1] === +value);
+    // (in any of its modes: a contextual field token is one colour on the background and another on a layer)
+    const holds = (t) => (t[4] || [t[1]]).some((x) => (colour ? sameColour(x, value) : typeof x === 'number' && +x === +value));
     // the toolkit's own css name for the token first; else the longest name the property ends in
     const said = table.find((t) => v === cssName(t[3] || '', t[0]) && holds(t)) || table.filter((t) => writtenAs(v, t[0], t[3]) && holds(t)).sort((a, b) => b[0].length - a[0].length)[0];
     if (said) return { token: said[0] };

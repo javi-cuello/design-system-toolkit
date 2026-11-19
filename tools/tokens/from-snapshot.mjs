@@ -70,26 +70,42 @@ export function toDtcgSnapshot(t) {
   // Another library's variable (a collection sent `remote`) whose name a local variable holds is that one, as a remote
   // collection or text style is: CSS drops the collection from a name and a contract names a token without it, so
   // two of one name could not be told apart (Carbon's theme Transparent and its foundations' Transparent).
-  const localNames = new Set(collections.filter(([, c]) => !c.remote).flatMap(([, c]) => c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {}))));
-  const shadowed = (c, name) => c.remote && localNames.has(name);
+  // (and between two other libraries' collections, an older copy of a foundations library beside its new one, the
+  // first in the store's order holds the name)
+  const namesOf = (c) => new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})));
+  // (names compared as the custom property CSS writes, the collection dropped (build-tokens nameOf): `🌮 Font
+  // Weight/Bold` and `Font Weight/Bold` are one property, and so are `a - b/c` and `a/b/c` within one collection)
+  const css = (n) => n.split('/').map(DTCG.slug).filter(Boolean).join('-');
+  const holder = new Map();
+  for (const [cname, c] of [...collections.filter(([, x]) => !x.remote), ...collections.filter(([, x]) => x.remote)])
+    for (const n of namesOf(c)) if (!holder.has(css(n))) holder.set(css(n), `${cname}\u0000${n}`);
+  const shadowed = (cname, c, name) => !!c.remote && holder.get(css(name)) !== `${cname}\u0000${name}`;
   const homes = new Map();
   for (const [cname, c] of collections) {
     for (const mode of c.modes) for (const name of Object.keys((c.values || {})[mode] || {})) {
-      if (shadowed(c, name)) continue;
+      if (shadowed(cname, c, name)) continue;
       if (!homes.has(name)) homes.set(name, []);
       if (!homes.get(name).includes(cname)) homes.get(name).push(cname);
     }
   }
+  // a reference to a variable left out for its name is to the one that holds the name (`🌮 Font Weight/Bold` → the local
+  // `Font Weight/Bold`): an alias, a text style's or an effect's binding
+  const held = (n) => (n == null || homes.has(n) ? n : (holder.get(css(n)) || '').split('\u0000')[1] || n);
   const homeOf = (alias, from, name) => {
     const list = homes.get(alias) || [];
     return list.find((c) => c !== from) || (alias !== name ? list[0] : undefined);
   };
   const typeOf = (v) => (isColour(v) ? 'COLOR' : typeof v === 'number' ? 'FLOAT' : typeof v === 'boolean' ? 'BOOLEAN' : 'STRING');
 
+  // each collection under the name its slug is built from (dtcg.js collectionSlugs: another library's that slugs like
+  // one already taken is numbered), its Figma name kept for the export's extensions
+  const S = DTCG.collectionSlugs(collections.map(([name, c]) => ({ name, remote: !!c.remote })));
+  const built = (n) => (S[n] && S[n] !== DTCG.slug(n) ? S[n] : n);
   const out = collections.map(([cname, c]) => {
-    const names = [...new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})))].filter((n) => !shadowed(c, n));
+    const names = [...new Set(c.modes.flatMap((m) => Object.keys((c.values || {})[m] || {})))].filter((n) => !shadowed(cname, c, n));
     return {
-      name: cname,
+      name: built(cname),
+      ...(built(cname) !== cname && { figmaName: cname }),
       modes: c.modes,
       variables: names.map((name) => {
         const values = {};
@@ -98,9 +114,9 @@ export function toDtcgSnapshot(t) {
           const raw = ((c.values || {})[mode] || {})[name];
           if (raw === undefined) continue;
           type = type || typeOf(raw);
-          const alias = ((c.alias || {})[mode] || {})[name];
+          const alias = held(((c.alias || {})[mode] || {})[name]);
           const at = alias && homeOf(alias, cname, name);
-          if (at) values[mode] = { alias: { collection: at, name: alias } };
+          if (at) values[mode] = { alias: { collection: built(at), name: alias } };
           else values[mode] = isColour(raw) ? figmaRgba(raw) : raw;
         }
         // a string Figma scopes to font family (FONT_FAMILY) is a family where its name says no kind (dtcg.js classify:
@@ -115,13 +131,14 @@ export function toDtcgSnapshot(t) {
   // and a string a family-scoped one aliases is a family too (a theme's Brand font, scoped to nothing, that a type
   // scale's Font names): passed down every alias until nothing changes. A weight is not passed on: a string a weight
   // names may be no weight the build can map ("Bold Italic"), and a reference to one it skips would refuse the build
-  const byName = new Map(out.map((c) => [c.name, new Map(c.variables.map((v) => [v.name, v]))]));
+  // (by either name: an alias carries the build's, a text style's binding Figma's)
+  const byName = new Map(out.flatMap((c) => { const m = new Map(c.variables.map((v) => [v.name, v])); return [[c.name, m], ...(c.figmaName ? [[c.figmaName, m]] : [])]; }));
   // a string a text style binds as its font family is one too, whatever its scope (Carbon's Fixed/Body/Font family,
   // scoped to everything): Figma took it as the family there
   for (const st of t.textStyles || []) {
     // (by where the binding lands: one to another library's variable a local one names is the local one)
-    const b = st.bound && st.bound.fontFamily, h = b && homes.get(b.name), at = h && (h.includes(b.collection) ? b.collection : h[0]);
-    const v = at && (byName.get(at) || new Map()).get(b.name);
+    const b = st.bound && st.bound.fontFamily, n = b && held(b.name), h = n && homes.get(n), at = h && (h.includes(b.collection) ? b.collection : h[0]);
+    const v = at && (byName.get(at) || new Map()).get(n);
     if (v && v.type === 'STRING' && !v.font) v.font = 'fontFamily';
   }
   for (let moved = true; moved;) {
@@ -156,7 +173,7 @@ export function toDtcgSnapshot(t) {
   if (old.length) throw new Error(`the snapshot predates plugin 0.24.0 (${old.length} text styles without their bindings, e.g. ${old[0]}): take a new snapshot`);
   // A binding to a variable this snapshot does not hold (another library's)
   // cannot become a reference the build resolves: the literal value stands.
-  const own = (b) => (b && homes.has(b.name) ? { collection: homes.get(b.name).includes(b.collection) ? b.collection : homes.get(b.name)[0], name: b.name } : null);
+  const own = (x) => { const n = x && held(x.name), h = n && homes.get(n); return h ? { collection: built(h.includes(x.collection) ? x.collection : h[0]), name: n } : null; };
   const boundOf = (s) => ({ fontFamily: own(s.bound.fontFamily), fontSize: own(s.bound.fontSize), fontWeight: own(s.bound.fontWeight) });
   const textStyles = (t.textStyles || []).map((s) => ({
     name: s.name,
@@ -186,7 +203,7 @@ export function toDtcgSnapshot(t) {
   }));
 
   // A stop or solid names a variable when it holds a path, a colour otherwise.
-  const paintColour = (c) => (isColour(c) ? { color: figmaRgba(c) } : { color: { r: 0, g: 0, b: 0, a: 1 }, bound: { color: homes.has(c) ? { collection: homes.get(c)[0], name: c } : null } });
+  const paintColour = (c) => (isColour(c) ? { color: figmaRgba(c) } : { color: { r: 0, g: 0, b: 0, a: 1 }, bound: { color: own({ name: c }) } });
   const paintStyles = (t.paintStyles || []).map((s) => ({
     name: s.name,
     description: s.description || '',
@@ -216,9 +233,9 @@ export function writeDtcg(tokens, dir, opts = {}) {
   for (const f of built.files) {
     const walk = (node, path) => {
       for (const [k, v] of Object.entries(node)) {
-        if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+        if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
         if (v.$type === 'typography') {
-          const s = bySlug.get([...path, k].slice(1).join('/'));
+          const s = bySlug.get([...path, k].slice(1).filter((x) => x !== '$root').join('/'));
           if (s) {
             v.$extensions ||= {};
             v.$extensions[vendor] = { ...v.$extensions[vendor], paragraphSpacing: { value: s.paragraphSpacing || 0, unit: 'px' }, listSpacing: { value: s.listSpacing || 0, unit: 'px' } };

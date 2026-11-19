@@ -47,6 +47,23 @@
     return [slug(collectionName)].concat(segs);
   }
 
+  /* Each collection's slug, its folder and its tokens' first path segment, as one pure answer for every reader (the
+   * build, modes.cjs, to-figma): its own slug, except another library's collection (`remote`) whose slug a local one,
+   * or an earlier remote one, already takes, which is numbered (`🌮 Spacing` beside a local `Spacing` is spacing-2):
+   * CSS drops the collection from a name, so only paths and mode keys see it, and no file can rename another
+   * library's. Two local ones that slug alike are still refused. `list` is [{ name, remote }], in the store's order. */
+  function collectionSlugs(list) {
+    var out = {}, taken = {};
+    var ordered = list.filter(function (c) { return !c.remote; }).concat(list.filter(function (c) { return c.remote; }));
+    for (var i = 0; i < ordered.length; i++) {
+      var base = slug(ordered[i].name), at = base, n = 2;
+      if (ordered[i].remote) while (taken[at]) at = base + '-' + n++;
+      taken[at] = true;
+      out[ordered[i].name] = at;
+    }
+    return out;
+  }
+
   function refFor(path) { return '{' + path.join('.') + '}'; }
 
   /* Naming parity: which renames are lossy, and therefore worth reporting.
@@ -182,17 +199,50 @@
    * Two Figma names can slug to one path — a silent overwrite loses a token
    * and the export still looks complete, which is the worst shape a defect
    * can take here. The caller reports the collision instead. */
+  /* A name that is a token and also a group (Atlassian's color.text.warning beside color.text.warning.inverse) is a
+   * group carrying its own token as `$root` (DTCG 2025.10 §6.2, "Root Tokens in Groups"); a reference to it is then
+   * `{….$root}` (rootRefs, after every file is built), and the house build names it without the segment (nameOf). */
+  var ROOT = '$root';
   function setDeep(root, path, token) {
     var node = root;
     for (var i = 0; i < path.length - 1; i++) {
-      if (node[path[i]] && node[path[i]].$value !== undefined) return false;
+      if (node[path[i]] && node[path[i]].$value !== undefined) node[path[i]] = { $root: node[path[i]] };
       if (!node[path[i]] || typeof node[path[i]] !== 'object') node[path[i]] = {};
       node = node[path[i]];
     }
     var leaf = path[path.length - 1];
-    if (node[leaf] !== undefined) return false;
-    node[leaf] = token;
+    if (node[leaf] === undefined) { node[leaf] = token; return true; }
+    if (node[leaf].$value !== undefined || node[leaf][ROOT] !== undefined) return false;
+    node[leaf][ROOT] = token;
     return true;
+  }
+  // every reference to a path that became a group with a root token, pointed at that token
+  function rootRefs(files) {
+    var roots = {};
+    var find = function (node, prefix) {
+      for (var k in node) {
+        if (k.charAt(0) === '$' || !node[k] || typeof node[k] !== 'object') continue;
+        var p = prefix ? prefix + '.' + k : k;
+        if (node[k][ROOT] !== undefined) roots[p] = true;
+        if (node[k].$value === undefined) find(node[k], p);
+      }
+    };
+    for (var i = 0; i < files.length; i++) find(files[i].tokens, '');
+    // one shape in every file: where a name is a group in one mode's file (a mode the export skipped a child in) and a
+    // plain token in another's, the plain one is that group's root too, so a reference reads alike in both
+    for (var r in roots) for (var f = 0; f < files.length; f++) {
+      var seg = r.split('.'), node = files[f].tokens;
+      for (var s = 0; s < seg.length - 1 && node; s++) node = node[seg[s]];
+      var last = seg[seg.length - 1];
+      if (node && node[last] && node[last].$value !== undefined) node[last] = { $root: node[last] };
+    }
+    var fix = function (v) {
+      if (typeof v === 'string') return v.replace(/\{([^{}]+)\}/g, function (m, p) { return roots[p] ? '{' + p + '.' + ROOT + '}' : m; });
+      if (Array.isArray(v)) return v.map(fix);
+      if (v && typeof v === 'object') { for (var k in v) v[k] = fix(v[k]); return v; }
+      return v;
+    };
+    for (var j = 0; j < files.length; j++) fix(files[j].tokens);
   }
 
   function extensions(variable, collectionName, mode, vendor) {
@@ -260,7 +310,7 @@
 
       var token = { $type: type, $value: value };
       if (v.description) token.$description = v.description;
-      if (!o.noExtensions) token.$extensions = extensions(v, collection.name, mode, vendor);
+      if (!o.noExtensions) token.$extensions = extensions(v, collection.figmaName || collection.name, mode, vendor);
       var at = pathFor(collection.name, v.name);
       if (!setDeep(tokens, at, token))
         skipped.push({ name: v.name, reason: 'name collides with another token at ' + at.join('.') });
@@ -562,6 +612,7 @@
     // the resolutions listed only when asked for: they are every combination of the modes, and a library with a dozen
     // mode collections has millions (one community library ran out of memory listing them). The check that every
     // reference resolves needs only the axes (verifyReferences)
+    rootRefs(files);
     var out = { files: files, resolver: buildResolver(axes), axes: groupAxes(axes), report: report };
     Object.defineProperty(out, 'resolutions', { enumerable: false, get: function () { return resolutions(axes); } });
     return out;
@@ -683,7 +734,7 @@
    * skipped. Returns { builds, dangling: [{ build, reference }], ok }. */
   function tokenPaths(node, prefix, into) {
     for (var k in node) {
-      if (k.charAt(0) === '$') continue;
+      if (k.charAt(0) === '$' && k !== ROOT) continue;
       var child = node[k];
       if (!child || typeof child !== 'object') continue;
       var p = prefix ? prefix + '.' + k : k;
@@ -701,7 +752,7 @@
           if (typeof cur === 'string') { var m = /^\{(.+)\}$/.exec(cur); if (m) into.push(m[1]); }
           else if (cur && typeof cur === 'object') for (var j in cur) stack.push(cur[j]);
         }
-      } else if (child && typeof child === 'object' && k.charAt(0) !== '$') tokenRefs(child, into);
+      } else if (child && typeof child === 'object' && (k.charAt(0) !== '$' || k === ROOT)) tokenRefs(child, into);
     }
     return into;
   }
@@ -760,7 +811,7 @@
   }
 
   var DTCG = {
-    slug: slug, pathFor: pathFor, refFor: refFor,
+    slug: slug, pathFor: pathFor, refFor: refFor, collectionSlugs: collectionSlugs,
     colorValue: colorValue, hexOf: hexOf, dimension: dimension,
     fontWeight: fontWeight, WEIGHTS: WEIGHTS, classify: classify, opacityScale: opacityScale,
     buildCollection: buildCollection, typographyToken: typographyToken,

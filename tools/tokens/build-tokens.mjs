@@ -65,13 +65,16 @@ export const gradientAngle = (angle) => CORNER[angle] || `${angle}deg`;
 
 const kebab = (s) => String(s).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 /** The house name: the path without its collection (or style-group) segment. */
-export const nameOf = (path) => path.slice(1).map(kebab).join('-');
+// (a group's own token, `$root`, is named as the group: color.text.warning.$root is --color-text-warning; ROOT_SD is
+// the segment Style Dictionary is handed for it, house/root-segment)
+const ROOT_SD = '@root';
+export const nameOf = (path) => path.slice(1).filter((x) => x !== '$root' && x !== ROOT_SD).map(kebab).join('-');
 const refName = (ref) => nameOf(String(ref).replace(/^\{|\}$/g, '').split('.'));
 // A breakpoint is a `Breakpoint/<name>` variable, or any variable in a
 // collection named for breakpoints; its Sass name is what follows either.
 const bpAt = (path) => (path[1] === 'breakpoint' ? 2 : /(^|-)breakpoints?$/.test(path[0]) ? 1 : 0);
 /** A token path's Sass breakpoint name (`$md`, less the `$`), or null. */
-export const breakpointName = (path) => (bpAt(path) ? path.slice(bpAt(path)).join('-') : null);
+export const breakpointName = (path) => (bpAt(path) ? path.slice(bpAt(path)).filter((x) => x !== '$root' && x !== ROOT_SD).join('-') : null);
 
 const read = (f) => JSON.parse(readFileSync(f, 'utf8'));
 
@@ -106,7 +109,7 @@ export function modeSelector(tokens, collection, mode) {
 /** Walk a DTCG tree, yielding [path, token]. */
 function* tokensOf(node, path = []) {
   for (const [k, v] of Object.entries(node)) {
-    if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+    if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
     if (v.$value !== undefined) yield [[...path, k], v];
     else yield* tokensOf(v, [...path, k]);
   }
@@ -215,6 +218,22 @@ function register(SD) {
       return walk(dict);
     },
   });
+  // Style Dictionary 5.5.3 resolves `{a.b.$root}` but cannot write it as var(): outputReferences builds its match
+  // from the path unescaped (createPropertyFormatter.js:233), so `$` reads as an end anchor and the raw reference
+  // is printed. It is handed `@root` instead, a segment no exported name has (slugs are [a-z0-9-]), named as the
+  // group all the same (nameOf).
+  SD.registerPreprocessor({
+    name: 'house/root-segment',
+    preprocessor: (dict) => {
+      const walk = (n) => {
+        if (typeof n === 'string') return n.replace(/\.\$root(?=[.}])/g, `.${ROOT_SD}`);
+        if (Array.isArray(n)) return n.map(walk);
+        if (!n || typeof n !== 'object') return n;
+        return Object.fromEntries(Object.entries(n).map(([k, v]) => [k === '$root' ? ROOT_SD : k, walk(v)]));
+      };
+      return walk(dict);
+    },
+  });
   SD.registerPreprocessor({
     name: 'house/strip-descriptions',
     preprocessor: (dict) => {
@@ -283,7 +302,8 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
 
   // Breakpoints, read straight from the files: they are Sass, not properties.
   const breakpoints = {};
-  for (const f of baseFiles) for (const [path, t] of tokensOf(read(f))) if (isBreakpoint(path)) breakpoints[breakpointName(path)] = px(t.$value);
+  for (const f of baseFiles) for (const [path, t] of tokensOf(read(f))) if (isBreakpoint(path) && breakpointName(path)) breakpoints[breakpointName(path)] = px(t.$value);
+  // (a `Breakpoint` token beside `Breakpoint/md` names no breakpoint: a Sass name of nothing is not written)
 
   const tmp = mkdtempSync(join(tmpdir(), 'tokens-'));
   const platform = (file, selector, filter) => ({
@@ -295,7 +315,7 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
     },
   });
   const block = async (sources, file, selector, filter) => {
-    const sd = new SD({ source: sources, preprocessors: ['house/strip-descriptions', 'house/expand-typography'], log: { verbosity: 'silent', warnings: 'disabled' }, platforms: platform(file, selector, filter) });
+    const sd = new SD({ source: sources, preprocessors: ['house/root-segment', 'house/strip-descriptions', 'house/expand-typography'], log: { verbosity: 'silent', warnings: 'disabled' }, platforms: platform(file, selector, filter) });
     await sd.buildAllPlatforms();
     // A mode holding nothing CSS can carry (a collection of booleans) writes
     // no file, and gets no block.
@@ -322,8 +342,10 @@ export async function buildTokens(SD, { tokens, out, write = true, banner = 'Gen
   };
   // (a token's collection is its path's first segment: a typography token the build expands into its fields has no
   // file of its own)
+  // (Style Dictionary's paths say `@root` where the files say `$root`, house/root-segment)
+  const asFile = (p) => p.replace(new RegExp(`(^|\\.)${ROOT_SD}(?=\\.|$)`, 'g'), '$1$$root');
   const singleSlugs = new Set([...collections].filter(([, c]) => c.modes.size === 1).map(([k]) => k));
-  const withAliases = (axis, hit) => (t) => notBreakpoint(t) && (axis.members.includes(t.path[0]) || (singleSlugs.has(t.path[0]) && (hit.has(t.path.join('.')) || refsIn(t.original && (t.original.$value ?? t.original.value)).some((r) => hit.has(r)))));
+  const withAliases = (axis, hit) => (t) => notBreakpoint(t) && (axis.members.includes(t.path[0]) || (singleSlugs.has(t.path[0]) && (hit.has(asFile(t.path.join('.'))) || refsIn(t.original && (t.original.$value ?? t.original.value)).some((r) => hit.has(asFile(r))))));
   const parts = [`/* ${banner} */`, '', await block(baseFiles, 'base.css', ':root', notBreakpoint)];
 
   // the page's own switches first (the system's dark preference, a breakpoint), then every mode as its attribute,

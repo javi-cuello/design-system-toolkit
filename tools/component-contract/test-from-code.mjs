@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
+import { designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -26,6 +26,10 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     return designTokenFor('background', '#c00', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === 'Colour/Icon/Feedback/Danger/strong'
       && designTokenFor('background', '#c00', t, {}, null, null, null, ['--some-other-thing']).token !== undefined
       && designTokenFor('background', '#0c0', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === undefined; })());
+ok('the token the code wrote holds its value in any of its modes: a contextual field token drawn on a layer, not the base mode, is still the one written',
+  (() => { const t = tokenTable({ collections: { Layer: { name: 'Layer', modes: ['Background', 'Layer 01'], values: { Background: { 'field (contextual)': '#f4f4f4' }, 'Layer 01': { 'field (contextual)': '#ffffff' } } },
+    Base: { name: 'Base', modes: ['Value'], values: { Value: { 'Default/Neutral/White': '#ffffff' } } } } }, 'Background');
+    return designTokenFor('background', '#ffffff', t, {}, null, null, null, ['--field-contextual']).token === 'field (contextual)'; })());
 ok('of two names a property ends in, the longer: Background/Primary before Primary',
   designTokenFor('background', '#fff', [['Primary', '#fff', null, 'A'], ['Colour/Background/Primary', '#fff', null, 'B']], {}, null, null, null, ['--ds-colour-background-primary']).token === 'Colour/Background/Primary');
 ok('a field nothing is known of (no scopes, never set by the library) names no token rather than guess among every token of that number',

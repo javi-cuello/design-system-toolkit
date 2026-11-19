@@ -57,7 +57,7 @@ const leaves = (o, into = []) => {
 };
 const jsonLeaves = (node, n = 0) => {
   for (const [k, v] of Object.entries(node)) {
-    if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+    if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
     n += v.$value !== undefined ? 1 : jsonLeaves(v);
   }
   return n;
@@ -72,7 +72,7 @@ ok('a module exists for every collection',
 const at = (obj, segs) => segs.reduce((o, k) => (o === undefined || o === null ? undefined : o[k]), obj);
 const tokenPaths = (node, pre, into) => {
   for (const [k, v] of Object.entries(node)) {
-    if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+    if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
     const here = [...pre, camel(k)];
     if (v.$value !== undefined) into.push([here, v]); else tokenPaths(v, here, into);
   }
@@ -130,7 +130,7 @@ for (const { modes, single } of collections.values())
 
 const indexInto = (map, doc, pre = '') => {
   for (const [k, v] of Object.entries(doc)) {
-    if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+    if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
     const at = pre ? `${pre}.${k}` : k;
     if (v.$value !== undefined) map.set(at, v); else indexInto(map, v, at);
   }
@@ -172,7 +172,7 @@ for (const [slug, { modes, single }] of collections) {
     const doc = load(file);
     const walk = (node, at) => {
       for (const [k, v] of Object.entries(node)) {
-        if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+        if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
         const here = [...at, camel(k)];
         if (v.$value === undefined) { walk(v, here); continue; }
         // Every scalar the JSON resolves to is compared, not just colours.

@@ -1033,7 +1033,7 @@ export function needs(p) {
 export function modeSets(tokenFile) {
   const MODES = createRequire(import.meta.url)('../tokens/modes.cjs');
   const cols = Object.entries((tokenFile && tokenFile.collections) || {});
-  return Object.fromEntries(MODES.axesOfTokens(tokenFile).map((a) => [a.key, cols.filter(([n]) => a.members.includes(MODES.slug(n)))
+  return Object.fromEntries(MODES.axesOfTokens(tokenFile).map((a) => [a.key, cols.filter(([n]) => (a.names || []).includes(n) || a.members.includes(MODES.slug(n)))
     .map(([n, col]) => ({ collection: n, key: (Object.entries(col.keys || {}).find(([v]) => !(col.hidden || []).includes(v)) || [])[1], names: Object.fromEntries((col.modes || []).map((m) => [MODES.slug(m), m])) }))
     ]));
 }

@@ -128,7 +128,7 @@ function tree(doc, slug, mode) {
   const walk = node => {
     const out = {};
     for (const [k, v] of Object.entries(node)) {
-      if (k.startsWith('$') || !v || typeof v !== 'object') continue;
+      if ((k.startsWith('$') && k !== '$root') || !v || typeof v !== 'object') continue;
       out[camel(k)] = v.$value === undefined ? walk(v) : leaf(v);
     }
     return out;

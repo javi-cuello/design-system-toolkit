@@ -267,9 +267,78 @@ test("another library's variable a local one names is that one: left out, and an
   const cols = Object.fromEntries(toDtcgSnapshot(t).collections.map((c) => [c.name, c.variables]));
   assert.deepEqual(cols.Colors.map((v) => v.name), ['Gray/100', 'Shade']);
   assert.deepEqual(cols.Colors[1].values.Value, { alias: { collection: 'Theme', name: 'Transparent' } });
+  // and between two other libraries' collections (an old copy of a foundations library beside its new one), the first holds it
+  const two = { collections: { Old: { modes: ['V'], values: { V: { Space0: 0, Space1: 1 } }, alias: {}, remote: true }, New: { modes: ['V'], values: { V: { Space0: 0, Space2: 2 } }, alias: {}, remote: true } } };
+  assert.deepEqual(toDtcgSnapshot(two).collections.map((c) => c.variables.map((v) => v.name)), [['Space0', 'Space1'], ['Space2']]);
+  // compared as CSS writes them: an emoji or a separator CSS drops makes no second property, within one collection too
+  const css = { collections: { Lib: { modes: ['V'], values: { V: { 'logo/text': 1, 'logo - text': 2, '🌮 Weight/Bold': 700, 'Weight/Bold': 700 } }, alias: {}, remote: true } } };
+  assert.deepEqual(toDtcgSnapshot(css).collections[0].variables.map((v) => v.name), ['logo/text', '🌮 Weight/Bold']);
+  // a reference to one left out goes to the one holding its name, an alias and a text style's binding alike
+  const ref = { collections: {
+    Type: { modes: ['V'], values: { V: { 'Font Weight/Bold': 700, 'Font/Sans': 'Inter' } }, alias: {} },
+    Lib: { modes: ['V'], values: { V: { '🌮 Font Weight/Bold': 700, '🌮 Font/Sans': 'Inter', Strong: 700 } }, alias: { V: { Strong: '🌮 Font Weight/Bold' } }, remote: true },
+  }, textStyles: [{ name: 'Body', fontFamily: 'Inter', fontWeight: 700, fontSize: 16, bound: { fontFamily: { collection: 'Lib', name: '🌮 Font/Sans' }, fontWeight: { collection: 'Lib', name: '🌮 Font Weight/Bold' } } }] };
+  const r = toDtcgSnapshot(ref);
+  assert.deepEqual(r.collections[1].variables.find((v) => v.name === 'Strong').values.V, { alias: { collection: 'Type', name: 'Font Weight/Bold' } });
+  assert.deepEqual(r.textStyles[0].bound.fontWeight, { collection: 'Type', name: 'Font Weight/Bold' });
+  assert.equal(r.collections[0].variables.find((v) => v.name === 'Font/Sans').font, 'fontFamily', 'the binding marks the holder a family');
+  // a paint style bound to a numbered remote collection's variable, or to one left out, names its home
+  const paint = { collections: {
+    Color: { modes: ['V'], values: { V: { ink: '#000000' } }, alias: {} },
+    '🌮 Color': { modes: ['V'], values: { V: { brand: '#0000ff', '🌮 ink': '#000000' } }, alias: {}, remote: true },
+  }, paintStyles: [{ name: 'Brand', paints: [{ type: 'SOLID', color: 'brand' }] }, { name: 'Ink', paints: [{ type: 'SOLID', color: '🌮 ink' }] }] };
+  const ps = toDtcgSnapshot(paint).paintStyles;
+  assert.deepEqual([ps[0].paints[0].bound.color, ps[1].paints[0].bound.color], [{ collection: 'color-2', name: 'brand' }, { collection: 'Color', name: 'ink' }]);
   // and a text style bound to the shadowed one binds the local one, marked a family there
   const typed = { collections: { Local: { modes: ['M'], values: { M: { 'Body/Font': 'Inter' } }, alias: {} }, Lib: { modes: ['M'], values: { M: { 'Body/Font': 'Inter' } }, alias: {}, remote: true } },
     textStyles: [{ name: 'Body', family: 'Inter', weight: 'Regular', size: 14, lineHeight: 1.5, bound: { fontFamily: { collection: 'Lib', name: 'Body/Font' } } }] };
   assert.equal(toDtcgSnapshot(typed).collections.find((c) => c.name === 'Local').variables[0].font, 'fontFamily');
   writeDtcg(typed, mkdtempSync(join(tmpdir(), 'dtcg-')));
+});
+
+test("another library's collection that slugs like one already taken is numbered, for the build and the mode axes alike", async () => {
+  const MODES = createRequire(import.meta.url)('./modes.cjs');
+  const t = { collections: {
+    Spacing: { modes: ['Mode 1'], values: { 'Mode 1': { '-025': -2 } }, alias: {} },
+    '🌮 Spacing': { modes: ['Mode 1'], values: { 'Mode 1': { 'space/025': 2 } }, alias: {}, remote: true },
+    Ref: { modes: ['Mode 1'], values: { 'Mode 1': { gap: 2 } }, alias: { 'Mode 1': { gap: 'space/025' } }, remote: true },
+    Color: { modes: ['Light', 'Dark'], values: { Light: { ink: '#000000' }, Dark: { ink: '#ffffff' } }, alias: {}, remote: true },
+    '🌮 Color': { modes: ['Light', 'Dark'], values: { Light: { paper: '#ffffff' }, Dark: { paper: '#000000' } }, alias: {}, remote: true },
+  } };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(t, dir);
+  const two = JSON.parse(readFileSync(join(dir, 'spacing-2/value.json'), 'utf8'))['spacing-2'].space['025'];
+  assert.equal(two.$value.value, 2);
+  assert.equal(two.$extensions['com.figma.variables'].collection, '🌮 Spacing', 'the Figma name stays in the extensions');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'ref/value.json'), 'utf8')).ref.gap.$value, '{spacing-2.space.025}');
+  const axis = MODES.axesOfTokens(t).find((a) => a.kind === 'theme');
+  assert.deepEqual([axis.members, MODES.modeOf([axis], '🌮 Color', 'Dark')], [['color', 'color-2'], { key: 'theme', value: 'dark' }]);
+  // two local ones are still refused
+  assert.throws(() => writeDtcg({ collections: { Spacing: t.collections.Spacing, '🌮 Spacing': { ...t.collections['🌮 Spacing'], remote: false } } }, mkdtempSync(join(tmpdir(), 'dtcg-'))), /both become spacing\//);
+});
+
+test('a name that is a token and a group is a group with its own token, $root, and a reference to it says so', () => {
+  const t = { collections: { Color: { modes: ['Light'], values: { Light: { 'text/warning': '#ff0000', 'text/warning/inverse': '#00ff00', 'icon/warning': '#ff0000' } }, alias: { Light: { 'icon/warning': 'text/warning' } } } } };
+  const dir = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(t, dir);
+  const c = JSON.parse(readFileSync(join(dir, 'color/value.json'), 'utf8')).color;
+  assert.ok(c.text.warning.$root.$value && c.text.warning.inverse.$value);
+  assert.equal(c.icon.warning.$value, '{color.text.warning.$root}');
+  // a text style that is also a group keeps its paragraph and list spacing
+  const ts = { collections: {}, textStyles: [
+    { name: 'Heading', fontFamily: 'Inter', fontWeight: 600, fontSize: 20, lineHeight: { unit: 'AUTO' }, letterSpacing: { unit: 'PIXELS', value: 0 }, paragraphSpacing: 12, bound: {} },
+    { name: 'Heading/Large', fontFamily: 'Inter', fontWeight: 600, fontSize: 28, lineHeight: { unit: 'AUTO' }, letterSpacing: { unit: 'PIXELS', value: 0 }, bound: {} }] };
+  const d3 = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(ts, d3);
+  const tsf = readdirSync(d3, { recursive: true }).find((f) => /text-style.*\.json$/.test(f));
+  const h = JSON.parse(readFileSync(join(d3, tsf), 'utf8'))['text-style'].heading.$root;
+  assert.equal(Object.values(h.$extensions).find((e) => e.paragraphSpacing).paragraphSpacing.value, 12);
+  // a group in one mode's file and a plain token in another's (the child skipped in Dark) is one shape in both
+  const m = { collections: { Type: { modes: ['Light', 'Dark'], values: { Light: { w: '#000000', 'w/x': '#111111' }, Dark: { w: '#ffffff' } }, alias: {} },
+    Use: { modes: ['Value'], values: { Value: { u: '#000000' } }, alias: { Value: { u: 'w' } } } } };
+  const d2 = mkdtempSync(join(tmpdir(), 'dtcg-'));
+  writeDtcg(m, d2);
+  const dark = JSON.parse(readFileSync(join(d2, 'type/dark.json'), 'utf8')).type;
+  assert.ok(dark.w.$root && dark.w.$root.$value, JSON.stringify(dark));
+  assert.equal(JSON.parse(readFileSync(join(d2, 'use/value.json'), 'utf8')).use.u.$value, '{type.w.$root}');
 });

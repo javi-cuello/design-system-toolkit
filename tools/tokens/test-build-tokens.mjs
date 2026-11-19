@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { buildTokens, shadowCss, modeSelector } from './build-tokens.mjs';
+import { buildTokens, shadowCss, modeSelector, breakpointName } from './build-tokens.mjs';
 
 // A registered project repo with Style Dictionary installed lends it, read from the projects the toolkit knows
 // (as test-check.mjs does): this read ~/Projects, a folder only one machine has, and skipped silently elsewhere.
@@ -214,4 +214,35 @@ test('a shadow names each bound member in its own slot, even where values coinci
   const css = (await build(lib))['_tokens.scss'];
   const line = css.split('\n').find((l) => /--card-flat:/.test(l)) || css;
   assert.equal(line.trim(), '--card-flat: 0px var(--position-0) var(--blur-0) var(--spread-0) var(--soft), inset var(--spread-0) 0px 0px 0px rgb(0 0 0 / 0.1);');
+});
+
+test("a group's own token ($root) is named as the group, re-declared under a theme, and a text style one is expanded", { skip }, async () => {
+  const lib = {
+    color: {
+      light: { text: { warning: { $root: colour('#aa0000'), inverse: colour('#ffffff') } } },
+      dark: { text: { warning: { $root: colour('#ff8888'), inverse: colour('#000000') } } },
+    },
+    semantic: { value: { icon: { warning: { $type: 'color', $value: '{color.text.warning.$root}' } },
+      badge: { warning: { $root: { $type: 'color', $value: '{color.text.warning.$root}' }, inverse: { $type: 'color', $value: '{color.text.warning.inverse}' } } } } },
+    'text-style': { value: { heading: {
+      $root: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 600, fontSize: { value: 20, unit: 'px' }, lineHeight: 1.2, letterSpacing: { value: 0, unit: 'px' } } },
+      large: { $type: 'typography', $value: { fontFamily: 'Inter', fontWeight: 600, fontSize: { value: 28, unit: 'px' }, lineHeight: 1.2, letterSpacing: { value: 0, unit: 'px' } } },
+    } } },
+  };
+  const out = await build(lib), css = out['_tokens.scss'];
+  assert.match(css, /--text-warning: #aa0000;/);
+  assert.match(css, /--text-warning-inverse: #ffffff;/);
+  assert.doesNotMatch(css, /-root\b/);
+  assert.match(css, /\[data-theme="dark"\] \{[^}]*--icon-warning: var\(--text-warning\)/);
+  // a root token that is itself the alias is re-declared too
+  assert.match(css, /\[data-theme="dark"\] \{[^}]*--badge-warning: var\(--text-warning\)/);
+  assert.doesNotMatch(css, /@root/);
+  assert.match(out['_text-styles.scss'], /heading/);
+  assert.match(css, /--heading-font-size: 1\.25rem;/);
+});
+
+test("a breakpoint group's own token is named as the group", () => {
+  assert.equal(breakpointName(['bp', 'breakpoint', '$root']), '', 'names nothing, so the build writes no Sass name for it');
+  assert.equal(breakpointName(['breakpoints', 'md', '$root']), 'md');
+  assert.equal(breakpointName(['breakpoints', 'md', 'wide']), 'md-wide');
 });

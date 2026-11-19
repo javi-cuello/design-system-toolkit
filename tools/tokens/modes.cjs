@@ -33,12 +33,15 @@ function kindOf(modes) {
  */
 function axesOf(collections) {
   const bySet = new Map();
-  for (const c of [...collections].sort((a, b) => slug(a.name).localeCompare(slug(b.name)))) {
+  // (each member's slug as the build gives it, dtcg.js collectionSlugs; and its Figma name, which a layer's modes say)
+  const S = DTCG.collectionSlugs(collections);
+  for (const c of [...collections].sort((a, b) => S[a.name].localeCompare(S[b.name]))) {
     if (c.modes.length < 2) continue;
     const modes = c.modes.map(slug);
     const set = [...modes].sort().join('|');
-    if (!bySet.has(set)) bySet.set(set, { modes, members: [] });
-    bySet.get(set).members.push(slug(c.name));
+    if (!bySet.has(set)) bySet.set(set, { modes, members: [], names: [] });
+    bySet.get(set).members.push(S[c.name]);
+    bySet.get(set).names.push(c.name);
   }
   return [...bySet.values()].map((a) => {
     const kind = kindOf(a.modes);
@@ -50,7 +53,7 @@ function axesOf(collections) {
  *  collection is no axis or has no such mode. */
 function modeOf(axes, collection, mode) {
   const c = slug(collection), m = slug(mode);
-  const axis = axes.find((a) => a.members.includes(c));
+  const axis = axes.find((a) => (a.names || []).includes(collection)) || axes.find((a) => a.members.includes(c));
   return axis && axis.modes.includes(m) ? { key: axis.key, value: m } : null;
 }
 
@@ -66,6 +69,6 @@ function keyed(axes, modes) {
 const attribute = (key) => `data-${key}`;
 
 /** The axes of a snapshot's tokens file (`collections: { name: { modes } }`). */
-const axesOfTokens = (tokens) => axesOf(Object.entries((tokens && tokens.collections) || {}).map(([name, c]) => ({ name, modes: c.modes || [] })));
+const axesOfTokens = (tokens) => axesOf(Object.entries((tokens && tokens.collections) || {}).map(([name, c]) => ({ name, modes: c.modes || [], ...(c.remote && { remote: true }) })));
 
 module.exports = { slug, THEME, RESPONSIVE, kindOf, axesOf, axesOfTokens, modeOf, keyed, attribute };

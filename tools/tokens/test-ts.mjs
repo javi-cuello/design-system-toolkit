@@ -77,4 +77,14 @@ const none = run('generate-ts.mjs', empty);
 ok('generate-ts on a folder with no collection fails and says so', none.status === 1 && /no collection folders/.test(none.stderr), none.stderr);
 fs.rmSync(empty, { recursive: true, force: true });
 ok('both name their arguments when given none', run('generate-ts.mjs').status === 2 && run('verify-ts.mjs').status === 2);
+// a name that is a token and a group: the group's own token is `$root`, and a reference to it is an expression into it
+const rooted = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-ts-root-'));
+writeDtcg({ collections: {
+  Theme: { modes: ['Light', 'Dark'], values: { Light: { 'Text/warning': '#aa0000', 'Text/warning/inverse': '#ffffff' }, Dark: { 'Text/warning': '#ff8888', 'Text/warning/inverse': '#000000' } }, alias: {} },
+  Icon: { modes: ['Value'], values: { Value: { warning: '#aa0000' } }, alias: { Value: { warning: 'Text/warning' } } },
+}, textStyles: [], effects: [], paintStyles: [] }, rooted);
+const rg = run('generate-ts.mjs', rooted), rv = run('verify-ts.mjs', rooted);
+const icon = rg.status === 0 ? fs.readFileSync(path.join(rooted, 'dist', 'ts', 'icon.ts'), 'utf8') : rg.stderr;
+ok('a group\'s own token ($root) is generated, referred to, and verified', rg.status === 0 && /\$root/.test(icon) && !/'\{/.test(icon) && rv.status === 0, icon.slice(0, 600) + rv.stdout + rv.stderr);
+fs.rmSync(rooted, { recursive: true, force: true });
 console.log(`${n}/${n} passed`);
