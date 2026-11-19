@@ -34,7 +34,6 @@ Cite a rule as `figma-standard rule N`.
 
 4. **State axis internal order**: `Rest → Focus → Hover → Press (→ Loading)` — Focus immediately precedes Hover, not the reverse. Loading's place on the axis is rule 58's.
 
-
     *Why:* Focus is the persistent, required state — WCAG 2.4.7 treats a visible focus indicator as non-negotiable for keyboard users, where hover is enhancement-only and mouse-specific. Material's state-layer model treats focus as the base state and hover as a temporary overlay on it, and a lint-enforced CSS order (`:link → :visited → :focus → :hover → :active`) agrees; this rationale was reconstructed after the fact and grounds keeping the pattern, not its origin.
 
     *Evidence:* 2026-08-10, two registered projects author `State` with Focus immediately before Hover, no exception.
