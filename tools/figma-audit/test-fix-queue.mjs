@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderQueue, text } from "./fix-queue.mjs";
+import { renderQueue, text, pageData, renderPage } from "./fix-queue.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = (f) => join(HERE, "fixtures", f);
@@ -103,6 +103,20 @@ expect("the order rows sit in the record does not move a line", renderQueue(shuf
   expect("the score report runs over the same scratch record, its deductions those findings'", /\| 92 \| 75 \| 100 \| 90 \| 100 \| 100 \| 100 \| `Button` \|/.test(scored), true);
   expect("a run with no record renders from a scratch one: each finding a numbered row in its bucket",
     [/\| 1\.1 \| 🔴 \| `Button › Label` \| Bind the fill to text\/primary \|/.test(chat), /\| 3\.1 \| 🔵 \| `Button` \| Add Disabled, or record why not \| Add it \|/.test(chat)], [true, true]);
+}
+
+// --page: Audit lite's results page, its data the same open rows in the queue's order.
+{
+  const d = pageData(record(), { notScanned: "contrast" });
+  const queueOrder = (mirror.match(/\| \d\.\d \| \S+ \| \[?`[^`]+`/g) || []).map((l) => l.split("`")[1]);
+  expect("the page holds the queue's rows, in its order", d.rows.map((r) => r.set + (r.layer ? " › " + r.layer : "")), queueOrder);
+  expect("a row's bucket is a number and its where splits into set and layer", [d.rows[0].bucket, d.rows[0].set, d.rows[0].layer, d.rows[0].setId], [1, "Badge", "Fill", "2:4"]);
+  expect("a warning in Decide is a ruling to make on the page too", d.rows.filter((r) => r.bucket === 3 && r.sev !== "error").every((r) => r.sev === "review"), true);
+  expect("a record holds no dropped count, so the page is told none", [d.dropped, d.kept === d.rows.length, d.notScanned], [null, true, ["contrast"]]);
+  const html = renderPage(record());
+  expect("the page is Audit lite's, its data filled and its labels the dashboard's", [html.includes("const DATA = null;"), /const DATA = \{"file"/.test(html), !html.includes("const DASH = {};")], [false, true, true]);
+  const cliPage = execFileSync("node", [join(HERE, "fix-queue.mjs"), "--data", FIX("queue-record.json"), "--page"], { encoding: "utf8" });
+  expect("the CLI prints the same page", cliPage, html);
 }
 
 console.log(passed + " passed, " + failed + " failed");

@@ -2005,3 +2005,9 @@ Fixture: the same library, audited where `knowledge/` is absent (a copy of the s
 Assert: steps 1 to 6 run unchanged; the Scope line says "component knowledge: not available"; no row has the source `knowledge`.
 Negative: a run that stops, guesses component names from memory, or raises a page's item as a universal rule.
 Traced: 2026-11-16 for 2.48.0 — to SKILL.md step 4b and *The two axes*.
+
+## A139 · Where the results go is asked once: here, as a page too, or on the dashboard too
+Fixture: `tools/figma-audit/fixtures/queue-record.json`, the record a run on a project with a dashboard leaves.
+Assert: step 2c asks the one question beside the step-2 confirmation, offering the dashboard only where the project has a record, and never asks when the person already named one; the chat report comes whatever the answer. **As a page too** publishes what `fix-queue.mjs --data <record> --page` prints: Audit lite's page, its rows the queue's open rows in the queue's order, a Decide warning shown as a ruling to make, and *About this run* saying they are the record's open rows (no dropped count).
+Negative: a page assembled by hand or a second page design; an offer to set up a dashboard (the last line only says one can be); a page instead of the chat report.
+Walked: 2026-11-19 for 2.49.0 — `node tools/figma-audit/test-fix-queue.mjs` (30 passed: the page's six assertions, its rows equal to the mirror's order); the question itself traced to SKILL.md step 2c and *Delivery*, not yet met on a live run.

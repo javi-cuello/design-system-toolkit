@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.11.1] - 2026-11-19
+### Changed
+- The results page also shows the full audit's rows (`tools/figma-audit/fix-queue.mjs --page`): with no dropped count, *About this run* says they are the open rows of the project's audit record.
+
 ## [0.11.0] - 2026-11-17
 ### Removed
 - The Rulings section (Upload, Download, Remove, Saved) and every write to the Figma file. Rulings live in the context document only: the results page's Record as ruling and Download rulings now go to the chat, where Claude adds them to the document (a re-ruled finding strikes the earlier row's Ruling cell, the new row saying what it supersedes), and the plugin takes the updated document (maintainer, workshop dry run). Rulings 0.7–0.10 stored as plugin data stay in those files, unread.

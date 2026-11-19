@@ -1,5 +1,6 @@
 # Changelog — figma-components-audit
 
+- 2.49.0 (2026-11-19): step 2c asks where the results go: here, as a page too (Audit lite's results page, from `fix-queue.mjs --page`), or on the dashboard too where the project has a record; no offer to set up a dashboard. A139.
 - 2.48.1 (2026-11-16): step 4b's optional-part example reads `Read-only` as a `State` value, as the field pages now do.
 - 2.48.0 (2026-11-16): step 4b, optional: each set read against its knowledge page (every variant, parts and names only, its own name never a finding); weight sets sev, every row in Decide, a departing ruling is a disagreement, `weak` raises nothing; `rule: knowledge:<page>#<part>`. A137, A138.
 - 2.47.2 (2026-11-15): an opacity bound to a variable that is 0 in every mode hides its layer, so its text is not judged for contrast (live resolver: `zero`). Fixes a 1.1:1 false hit 2.47.1 still raised.

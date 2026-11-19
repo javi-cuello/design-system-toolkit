@@ -78,7 +78,7 @@ textarea::placeholder{color:var(--fg-soft)}
 /* DATA: {
      file: "<library name>", fileKey: "<key or null>", date: "YYYY-MM-DD",
      scanned: { sets: <n>, variants: <n> }, coverage: <token coverage % or null>,
-     kept: <n>, dropped: <n>, notScanned: ["<plain words>", …], contextName: "<the context document's file name, or null>",
+     kept: <n>, dropped: <n, or null for rows read from an audit record (fix-queue.mjs --page)>, notScanned: ["<plain words>", …], contextName: "<the context document's file name, or null>",
      rows: [{ bucket: 1|2|3, breaking: true|false, sev: "error|warning|review|preference|hygiene", visible: true|false,
               area: "components|file", set: "<component set, or Page list>", setId: "<node id or empty>", layer: "<layer path or empty>",
               issue: "<one sentence>", fix: "<one sentence>" }, …] } */
@@ -202,7 +202,7 @@ function render(d) {
 
   // Rulings travel back as one file, to the chat: Claude adds them to the context document, which the plugin then takes.
   html += "<section class=\"bucket\" aria-labelledby=\"rulingsH\"><div class=\"bucket-head\"><h2 id=\"rulingsH\">Rulings</h2></div><div id=\"rulingsBody\"></div></section>";
-  html += "<section class=\"bucket\" aria-labelledby=\"aboutH\"><h2 id=\"aboutH\">About this run</h2><div class=\"gaps\"><p>" + esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions, ruled on, or not defects.</p>"
+  html += "<section class=\"bucket\" aria-labelledby=\"aboutH\"><h2 id=\"aboutH\">About this run</h2><div class=\"gaps\"><p>" + (d.dropped == null ? "These are the open rows in the project's audit record." : esc(d.kept) + " of the " + esc((d.kept || 0) + (d.dropped || 0)) + " possible issues the scan raised are listed above; the rest were the library's own conventions, ruled on, or not defects.") + "</p>"
     + "<p>Settings: " + (d.contextName ? "the context document " + esc(d.contextName) : "the toolkit's defaults; no context document") + ".</p>";
   if ((d.notScanned || []).length) html += "<p>Not checked in this run:</p><ul>" + d.notScanned.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
   html += "</div></section>";
