@@ -1374,6 +1374,8 @@ async function main() {
       // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
       // for an offset written as a token and for a point placed() never measured
       const insets = await call(L.tab, (src) => { const { restore } = new Function(`return ${src}`)()(document.documentElement); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = n.parentElement.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, unturn.toString());
+      // (a part with no place of its own inside a placed component, unplacedIn: the walk's place for it is left out too)
+      for (const e of raw) if (e.parent != null && unplacedIn(raw, e)) { delete e.absolute; if (e.position === 'absolute') delete e.position; }
       for (const e of raw) {
         if (!['container', 'text', 'slot', 'instance', 'graphic'].includes(e.kind)) continue;
         // placed out of the flow: its constraints and far offsets as written, through the table; its point as Figma
