@@ -334,12 +334,19 @@ function overrideOf(a, host, rel, m, mains, B = a) {
   if (!a[host]) return null;
   // the component as placed (swaps applied, as derive compares it); a layer derive dropped here (equal to the
   // component's) is matched by its name at the defaults (B), and draws as the component does
-  const { M } = placedAs(a, host, m, mains), e = a[`${host}/${rel}`], own = M[placedOf(e ? a : B, host, M)[rel]];
-  if (!own) return null;
+  const { M } = placedAs(a, host, m, mains), e = a[`${host}/${rel}`];
+  // placed inside another placed component (a stop's dot in Stops): what that one draws there is the base, its own
+  // override where it keeps one, else the inner component's part; never the inner one's alone, or the middle's rule
+  // (painted over the inner's) would stand where this one goes back to the inner's value
+  let mid = null;
+  for (let p = a[host] && a[host].parent; p && !mid; p = a[p] && a[p].parent) if (a[p] && a[p].kind === 'instance') { const om = mains(a[p].component, a[p].key); const r2 = `${host.slice(p.length + 1)}/${rel}`; if (om && om.anatomy && om.anatomy[r2]) mid = { e: om.anatomy[r2], up: om.anatomy }; }
+  const inner = M[placedOf(e ? a : B, host, M)[rel]];
+  const own = mid ? { ...inner, ...mid.e } : inner, ownUp = mid ? mid.up : M;
+  if (!own || !inner) return null;
   const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null });
   // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
   const placedOnly = (ds) => (own.kind === 'instance' ? ds.filter(([p]) => PLACED.test(p)) : ds);
-  const theirs = new Map(placedOnly(declarations(own, ctx(own, M[own.parent]), tokenNames).decls).map(([p, v]) => [p, v]));
+  const theirs = new Map(placedOnly(declarations(own, ctx(own, mid ? ownUp[mid.e.parent] : M[own.parent]), tokenNames).decls).map(([p, v]) => [p, v]));
   if (!e) return { mine: [...theirs], theirs, removed: [], changed: [] };
   // the instance lays its insides out as its component's root does, where it states no layout of its own
   const mine = placedOnly(declarations(e, ctx(e, e.parent === host ? { ...M.root, ...a[host], layout: (a[host] || {}).layout || M.root.layout } : a[e.parent]), tokenNames).decls);

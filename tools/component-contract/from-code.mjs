@@ -884,6 +884,8 @@ function unturn(root) {
     const spun = !!m && Math.abs(a - d) < 1e-6 && Math.abs(b + c) < 1e-6 && Math.abs(a * a + b * b - 1) < 1e-4 && (Math.abs(b) > 1e-6 || a < 0);
     if (!r && !spun) continue;
     back.push([n, n.style.cssText]);
+    // (no transition either, or a turn set aside would still be easing out when the boxes are measured)
+    n.style.setProperty('transition', 'none', 'important');
     if (r) n.style.setProperty('rotate', 'none', 'important');
     if (spun) n.style.setProperty('transform', `translate(${tx}px, ${ty}px)`, 'important');
     // (clockwise as CSS turns; Figma's turn is the other way, its negative, from -180 to 180)
