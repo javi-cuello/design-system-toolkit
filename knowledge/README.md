@@ -1,6 +1,6 @@
 # Knowledge
 
-What the toolkit knows about doing the work well, past what any run has proven: fundamentals, patterns, cases and practice, each with its public sources. What it may hold, and how it is read, is [toolkit-standard §D 21](../standards/toolkit-standard.md#21--knowledge-is-guidance-with-sources-never-rules): guidance, never rules, each page citing a standard's rule by handle rather than restating it. Any new UI work starts from the pages for what it builds, before its first line; in a project the edit hook names them and the push refuses an interface commit without a `Knowledge:` trailer.
+What the toolkit knows about doing the work well, past what any run has proven: fundamentals, patterns, cases and practice, each with its public sources. What it may hold, and how it is read, is [toolkit-standard §D 21](../standards/toolkit-standard.md#21--knowledge-is-guidance-with-sources-never-rules): guidance, never rules, each page citing a standard's rule by handle rather than restating it. Any new UI work starts from the pages for what it builds, before its first line; in a project the edit hook names them and the push refuses an interface commit without a `Knowledge:` trailer. Asked what the pages say, an agent answers from them alone, each point citing its page and section, and says where they are silent (§D 21).
 
 | Folder | What it holds | Serves |
 |---|---|---|
