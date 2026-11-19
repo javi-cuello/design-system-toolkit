@@ -1,6 +1,6 @@
 # Measuring design system adoption
 
-How much of a product, in Figma and in code, is built from the system, and how to report it. It serves figma-standard rule 17 (what an audit reports, and that a composite score is given only on request) by saying what such a score should count when it is asked for. Scanning a file is the components audit's `FCA.composedFrame` (`skills/figma-components-audit/references/scanner-checks.md` §3.13); the toolkit's scorer is the Adoption score widget (`plugins/adoption-score`).
+How much of a product, in Figma and in code, is built from the system, and how to report it. It serves figma-components-audit's tracked metric (what an audit reports, and that a composite score is given only on request) by saying what such a score should count when it is asked for. Scanning a file is the components audit's `FCA.composedFrame` (`skills/figma-components-audit/references/scanner-checks.md` §3.13); the toolkit's scorer is the Adoption score widget (`plugins/adoption-score`).
 
 **Implements:** no ui pattern; it is how the system's own use is measured.
 
@@ -70,13 +70,13 @@ How much of a product, in Figma and in code, is built from the system, and how t
 ## Token coverage
 
 **What good looks like**
-- [required] Token coverage is reported as a percentage (figma-standard rule 17).
+- [required] Token coverage is reported as a percentage (figma-components-audit's tracked metric).
 - [strong] It is reported beside component adoption, per category (colour, spacing and radius, type): Figma exposes what is bound per property, Atlassian's lint rule counts by domain and Polaris set its target per category (sources under *How*).
 - [moderate] A zero value, an image or a gradient is not judged: it could never have been a token.
 
 **How**
 - [strong] In Figma, a value is bound when the node's `boundVariables` holds it or a style id is set ([Figma plugin API](https://developers.figma.com/docs/plugins/api/node-properties/)); Pinterest's figma-calculations reports style adoption per file ([pinterest/figma-calculations](https://github.com/pinterest/figma-calculations)).
-- [strong] In code, a lint rule finds the raw values: Atlassian's `ensure-design-token-usage` by domain ([Atlassian](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage/usage)), `stylelint-declaration-strict-value` by property ([stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value)). None publishes a coverage formula; the percentage is figma-standard rule 17's.
+- [strong] In code, a lint rule finds the raw values: Atlassian's `ensure-design-token-usage` by domain ([Atlassian](https://atlassian.design/components/eslint-plugin-design-system/ensure-design-token-usage/usage)), `stylelint-declaration-strict-value` by property ([stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value)). None publishes a coverage formula; the percentage is figma-components-audit's tracked metric.
 - [moderate] Shopify set its own library 90% token coverage for colour, motion, type and spacing ([Polaris issue 4528](https://github.com/Shopify/polaris/issues/4528)).
 
 **Check**

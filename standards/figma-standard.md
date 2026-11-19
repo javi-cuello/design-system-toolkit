@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.29.3** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.30.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -328,14 +328,6 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — by the audit's reader: whether a component's words match the tokens' is a reading of both vocabularies.
 
-12. **Category-name reference vocabulary**: `Actions`, `Data & Display`, `Feedback`, `Inputs`, `Layout`, `Navigation`, `Overlays`, `Selection`, `Tables`. A project draws a new category's name from here before inventing one; its header page writes it in capitals (rule 11).
-
-    *Why:* rule 22's precedent applies — that components are organised into named categories is universal (rule 11); the exact words are not, the same way component vocabulary and token vocabulary must match *each other* without either being fixed across projects. A shared reference list still earns its place: two projects independently converging on `Actions`/`Feedback`/`Inputs`/`Navigation`/`Overlays`/`Selection`, unprompted, is evidence a shared starting vocabulary is worth writing down even where it does not bind.
-
-    *Evidence:* the list is the union of two registered projects' live category names, neither of which matches it fully: six matched exactly and a seventh differed only in punctuation (`Data Display`). `Layout` came from one project, and `Auxiliary` stays off the list because rule 11 pins it last as a catch-all.
-
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at each audit, for each page: whether a component belongs under an existing category is judgement.
-
 23. *Retired 2026-10-08: moved to toolkit-standard §D 20, since it governs every tool's output.*
 
 ## Pages
@@ -347,6 +339,14 @@ Cite a rule as `figma-standard rule N`.
     *Evidence:* 2026-08-10, two registered projects ordered categories alphabetically and held the `❖`/`🚧` markers without exception; one project's five out-of-order pages were drift, corrected that day, since the other was alphabetical throughout. Pinning `AUXILIARY` last was one project's override until decreed for every project on 2026-10-07.
 
    *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "page-order|category"; `skills/figma-foundations-audit/scripts/foundations.js` "page-order|pinned".
+
+12. **Category-name reference vocabulary**: `Actions`, `Data & Display`, `Feedback`, `Inputs`, `Layout`, `Navigation`, `Overlays`, `Selection`, `Tables`. A project draws a new category's name from here before inventing one; its header page writes it in capitals (rule 11).
+
+    *Why:* rule 22's precedent applies — that components are organised into named categories is universal (rule 11); the exact words are not, the same way component vocabulary and token vocabulary must match *each other* without either being fixed across projects. A shared reference list still earns its place: two projects independently converging on `Actions`/`Feedback`/`Inputs`/`Navigation`/`Overlays`/`Selection`, unprompted, is evidence a shared starting vocabulary is worth writing down even where it does not bind.
+
+    *Evidence:* the list is the union of two registered projects' live category names, neither of which matches it fully: six matched exactly and a seventh differed only in punctuation (`Data Display`). `Layout` came from one project, and `Auxiliary` stays off the list because rule 11 pins it last as a catch-all.
+
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at each audit, for each page: whether a component belongs under an existing category is judgement.
 
 13. **`🚧` marks a page and every component on it as in progress; generated text never quotes it.** A page still in progress is named `🚧 Name`, and every component on that page carries the marker: a public component starts with it (`🚧 Time input`), and a private part puts it after the `_` that keeps it unpublished (`_🚧 Time input picker`), since Figma publishes any name that does not start with `_` (rule 8). When the page is finished, the page takes `❖` and its components drop the marker. Properties-table titles, component descriptions, page headers, code names and parity pairings read every name with the marker stripped: the table reads `Time input`, a description cites `_Time input picker`.
 
@@ -374,11 +374,7 @@ Cite a rule as `figma-standard rule N`.
 
 ## Tokens in Figma
 
-16. **The alias graph lives in Figma, never transcribed into documents.**
-
-   *Why:* toolkit-standard §D 17's argument in its specific form. An alias chain is multi-level, live-readable in one call, and changes whenever anyone retiers a token — so a transcript is stale the moment the source moves and cannot announce that it has gone stale. What a document can usefully record is the *policy* (which tiers exist, which are consumable), which is stable; the graph itself is state.
-
-   *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a document about tokens changes: nothing a script reads can tell a transcribed alias graph from prose.
+16. *Retired 2026-11-19: moved to toolkit-standard §D 17, whose rule against recording live-readable state it was one case of.*
 
 24. **Semantic-only consumption** where primitives are hidden: a component bound directly to a primitive is a defect. Styles may reference hidden primitives internally — the tier rule binds components, not styles.
 
@@ -480,8 +476,4 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a semantic token is added or renamed: whether its words come from the house lists, or the project's own where it records them, is read in the session.
 
-17. **Tracked metric**: semantic-token coverage % per library, reported in every audit's closing metrics block. No composite score unless asked.
-
-   *Why:* one number moving over time is legible; a composite hides which of its parts moved, and a maintainer cannot act on a score that fell from 82 to 79 without decomposing it again. The "in every report" clause is what makes it a trend rather than an anecdote — a figure reported only when it looks notable is not a metric.
-
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — in every audit's closing metrics block, which `figma-components-audit` writes.
+17. *Retired 2026-11-19: moved to figma-components-audit as its tracked metric (its SKILL.md section "Reporting: the fix queue"), since only that skill reports it.*

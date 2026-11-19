@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.15.2)
+# Eval cases — figma-context-capture (v2.15.3)
+
+**Walked: 2026-11-19 for 2.15.3** — template only: the tracked metric is cited at figma-components-audit, figma-standard rule 17 having retired into it; C10 re-read and its citation repointed, assertion unchanged.
 
 **Walked: 2026-11-15 for 2.15.2** — C19 added and walked against the live failure below; C1–C18 untouched by a one-sentence role rule; `node tests/test-passes.mjs` 78/78.
 
@@ -119,7 +121,7 @@ Traced: 2026-08-08 — to pass M, which exists, runs no code, and is routed from
 
 ## C10 · A house rule is cited, never copied into the document
 Fixture: a capture run for a project that follows every house default, where the maintainer says nothing about finding classification, `[check-token]`, the tracked metric or refills.
-Assert: §5 contains no restatement of the working rules (toolkit-standard §D 14, 15 and 16; figma-standard rule 17) — it cites them by number and stays otherwise blank. Assert the negative, which is the actual bug: a document that helpfully spells out "finding classification: auto-fixable / needs-ruling / manual" fails this case even though the text is correct, because §3's header makes anything recorded here outrank the toolkit's standards. A copy that agrees with the source today silently overrides it tomorrow, stops receiving updates, and cannot be distinguished from a deliberate override.
+Assert: §5 contains no restatement of the working rules (toolkit-standard §D 14, 15 and 16; figma-components-audit's tracked metric) — it cites them by number and stays otherwise blank. Assert the negative, which is the actual bug: a document that helpfully spells out "finding classification: auto-fixable / needs-ruling / manual" fails this case even though the text is correct, because §3's header makes anything recorded here outrank the toolkit's standards. A copy that agrees with the source today silently overrides it tomorrow, stops receiving updates, and cannot be distinguished from a deliberate override.
 Assert also the positive direction: where the project genuinely *does* deviate, §5 records the deviation with the rule number and a §6 ruling behind it. Silence in §5 must mean "house defaults apply", which it cannot if the section is also used to echo them.
 
 Traced: 2026-08-08 — to the template's §5, which names the working rules by number and carries no copy of their text.

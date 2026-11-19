@@ -1,6 +1,6 @@
 # Toolkit standard — the root every other standard defers to
 
-**Version 2.44.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
+**Version 2.45.0** — history in [`changelog/toolkit-standard.md`](changelog/toolkit-standard.md).
 
 What holds for everything the toolkit contains, whatever kind of thing it is: how a rule is admitted, enforced, tested, changed and retired (§C), and how the parts hold together as one system (§D). Anything common to two standards belongs here and nowhere else.
 
@@ -678,11 +678,11 @@ A run that writes documentation fills the structure a page already has, and adds
 
 ### 17 · Never record live-readable state
 
-Rules and rulings belong in a context document; counts, coverage and inventory do not. Anything one tool call can read is re-read live, never quoted from a document. A recorded figure that "never outranks the file" can only be redundant or wrong, and in practice it goes wrong — one project's snapshot simultaneously claimed 18 pages against 4, 3 grid styles against 8, and 47 icons against 43, and every error was caught by a live read contradicting it rather than by the snapshot. The exception is output expensive to recompute, such as a full audit's deep-walked variant grids: keep that beside the fix queue it explains, dated and labelled as evidence of a past run, never as current truth.
+Rules and rulings belong in a context document; counts, coverage and inventory do not. Anything one tool call can read is re-read live, never quoted from a document. A recorded figure that "never outranks the file" can only be redundant or wrong, and in practice it goes wrong — one project's snapshot simultaneously claimed 18 pages against 4, 3 grid styles against 8, and 47 icons against 43, and every error was caught by a live read contradicting it rather than by the snapshot. The exception is output expensive to recompute, such as a full audit's deep-walked variant grids: keep that beside the fix queue it explains, dated and labelled as evidence of a past run, never as current truth. A token alias graph is the plainest case: multi-level, readable live in one call, and changed whenever anyone retiers a token, so a transcript is stale the moment the source moves and cannot announce it; a document records the policy (which tiers exist, which are consumable), which is stable, never the graph, which is state.
 
 *Why:* a figure in a document is read with the document's authority, so a stale count is quoted onward as fact by every run that trusts the document, and the live read that would correct it is skipped because the answer already seems to be there.
 
-*Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the closing pass, question 10 of §D 0.
+*Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — at the closing pass, question 10 of §D 0, and whenever a document about tokens changes, since nothing a script reads can tell a transcribed alias graph from prose.
 
 ### 18 · Control-pass a detector before acting on it
 

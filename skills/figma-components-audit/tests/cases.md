@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.48.1)
+# Eval cases — figma-components-audit (v2.49.1)
+
+**Walked: 2026-11-19 for 2.49.1** — prose only: figma-standard rule 17's tracked metric moves into *Reporting: the fix queue*; the closing-metrics and scoring cases (A24 and the decomposition assertion) re-read against it, unchanged in what they assert; no script reads the moved text.
 
 **Walked: 2026-11-16 for 2.48.1** — 2.48.1 changes one example word; A137 and A138 re-read against it, unchanged. Earlier: — A137 walked live on a project's web-components library by a fresh read-only agent following step 4b (result under the case); A138 traced; `node tools/shared/test-knowledge.mjs` 14 of 14 for the name-to-page lookup. The other cases do not read step 4b.
 
@@ -501,7 +503,7 @@ Assert what caught it: **the impossible result, not any checker** — a ratio of
 Assert the rule: resolved `valuesByMode` entries are rgba; a value with `a < 1` must be alpha-composited over its actual backdrop before luminance is computed, and where the backdrop is unknown the pair is reported verify-by-eye rather than scored. A translucent token read as opaque produces false passes as easily as false failures — this fixture happened to fail loudly, but a 50%-alpha white over a dark surface would fail quietly.
 Assert the boundary: the shipped §3.7c cached-paint path is unaffected (Figma caches the *blended* display colour onto paints); the trap lives specifically in the per-mode variable-resolution path that A10 built, which reads stored values that were never blended.
 Assert the derivation: every deduction on a score row corresponds to a verified, post-judgment finding that also appears in the fix queue — the score is computed from the queue's items, never from raw scanner candidates. A deduction with no queue item is a bug in the report, and the sharpest test runs the other way too: a suppressed accepted-exception (A4's fixture shape) must not deduct.
-Assert the decomposition: no score renders as a bare number — every row carries all six sub-scores, and a re-run reports per-dimension deltas, not just the total. This is figma-standard rule 17's *why* enforced structurally, not a formatting preference.
+Assert the decomposition: no score renders as a bare number — every row carries all six sub-scores, and a re-run reports per-dimension deltas, not just the total. This is the tracked metric's *why* (SKILL.md *Reporting: the fix queue*) enforced structurally, not a formatting preference.
 Assert the N/A discipline: a non-interactive component's States dimension reweights pro-rata rather than scoring 0 or 100; an *unscanned* dimension does the same but marks the score partial and names the gap — silence in arithmetic obeys the same §11 rule as silence in a report, and a partial score without its exclusion list is a false claim of coverage.
 Assert the gate: a component with an unused property (A12's fixture) scores at most 25/100 regardless of its other dimensions, with the cap's reason on the row — a component consumers never receive must not outscore one that publishes with warnings.
 Assert the trigger boundary: no score, no score report, and no per-component numbers appear in any audit output unless the maintainer asked for scoring in that conversation — the default report remains the exception-based fix queue, unchanged.

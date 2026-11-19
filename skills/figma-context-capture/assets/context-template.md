@@ -184,7 +184,7 @@ departs from a preference is filed as one, not as a defect.
 - **properties-table** — target frame · column profile `[TBD until first run]`
 - {other skills as relevant}
 
-**Cross-skill policies.** The toolkit's working rules — finding classification, `[check-token]` on unverified tokens and documentation runs as refills (toolkit-standard §D 14, 15 and 16), and the tracked metric (figma-standard rule 17) — apply as written and are **deliberately not restated here**. Record in this section only where this project *deviates* from one, naming the rule number, with a §6 ruling behind it.
+**Cross-skill policies.** The toolkit's working rules — finding classification, `[check-token]` on unverified tokens and documentation runs as refills (toolkit-standard §D 14, 15 and 16), and the tracked metric (figma-components-audit, *Reporting: the fix queue*) — apply as written and are **deliberately not restated here**. Record in this section only where this project *deviates* from one, naming the rule number, with a §6 ruling behind it.
 
 *Why the blank:* §3's header makes anything recorded in this document outrank the toolkit's standards. A pre-filled copy of a toolkit rule therefore **silently overrides the rule it copies** — it freezes at the date the document was generated, stops receiving updates to the source, and is indistinguishable from a decision someone actually made. Earlier revisions of this template shipped those four rules pre-filled and had exactly that effect. One rule, one home; cite the handle, never the text.
 

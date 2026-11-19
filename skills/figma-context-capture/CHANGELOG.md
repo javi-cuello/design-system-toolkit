@@ -1,5 +1,6 @@
 # Changelog — figma-context-capture
 
+- 2.15.3 (2026-11-19): the template cites the tracked metric at figma-components-audit, since figma-standard rule 17 retired into it. Template only.
 - 2.15.2 (2026-11-15): an icon library is routed with the `icons` role, not `components`; a project's setup gave its icon file `components` and the docs site folded its icons into Foundations. Case C19.
 - 2.15.1 (2026-11-15): the template's project block carries no port (a copied 9232 clashed with a running dashboard) and its naming-preferences block is `{}` (the placeholder failed the standards check). Template only.
 - 2.15.0 (2026-11-11): keeps the project's other documents: the product file, recording a decision in §6 and retiring one, and guidance pages, with both templates; moved from figma-prototype, which now runs this skill for them; the description names them.
