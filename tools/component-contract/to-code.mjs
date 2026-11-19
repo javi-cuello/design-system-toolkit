@@ -464,7 +464,8 @@ export function drawn(c, when, mains = () => null) {
     // no element), never as a minimum the filled part keeps
     // (a slot's sample frame says nothing of what a caller puts there: its empty size is the sample's, written nowhere,
     // or every leaf a caller places, a <p> or an <img>, would take it)
-    const empty = (e.whileEmpty || []).filter((f) => e[f] !== undefined);
+    // (and a combination that drops the sample's mark but keeps its size has the defaults' kept size still: dropped too)
+    const empty = [...new Set([...(e.whileEmpty || []), ...(slotted && B[id] ? (B[id].whileEmpty || []).filter((f) => e[f] === B[id][f]) : [])])].filter((f) => e[f] !== undefined);
     if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
     const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
