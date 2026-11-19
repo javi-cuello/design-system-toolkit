@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.31.1 (2026-11-19): whole-file trim to under 75,000 bytes (84,819 → 74,610), every rule under 3,000 characters; rule 55's KB links fold into one. No rule changes.
 - 2.31.0 (2026-11-19): rules split out: 56 (Figma and code alike, from 21), 57 (`Open` and `Validation`, from 21 and 1), 58 (Loading, from 4), 59 (Direction axis, from 50), 60 (brand override, from 49).
 - 2.30.0 (2026-11-19): rule 12 moves to Pages beside rule 11; rule 16 retired into toolkit-standard §D 17 and rule 17 into figma-components-audit's tracked metric, each with a tombstone.
 - 2.29.3 (2026-11-19): overlaps merged into one home each: rules 43 (font family), 19 (case test), 45 (asset names), 11 (DEPRECATED), 1 (validation order), 21 (position words), 39 (visible focus); rule 53 retitled. No rule changes.

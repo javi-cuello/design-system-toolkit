@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.31.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.31.1** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -26,15 +26,15 @@ Cite a rule as `figma-standard rule N`.
 
 3. **Variant order inside a set: the `Disabled=True` variant sits immediately after its `State=Rest` sibling**, before the other states — each selected/boolean group reads Rest → Disabled → Focus → Hover → Press.
 
-    *Why:* Disabled is the rest state's counterpart, not a sixth interactive state — it pairs with Rest, and with Focus only where the control stays focusable (rule 2) — so placing it beside Rest makes each group read as "the control, its disabled form, then its interactive states", on the canvas and in the variant picker alike. Buried after Press, the sparse grid reads as a gap instead of a pattern.
+    *Why:* Disabled is Rest's counterpart, not a sixth interactive state (rule 2), so beside Rest each group reads as the control, its disabled form, then its states, on the canvas and in the picker. Buried after Press, the sparse grid reads as a gap.
 
-    *Evidence:* maintainer-decreed 2026-08-13; that day 28 of 28 sets in one web library carrying both `Disabled` and `State` placed every `Disabled=True` variant at its Rest sibling's index + 1.
+    *Evidence:* maintainer-decreed 2026-08-13; that day 28 of 28 sets in one web library with both axes placed `Disabled=True` at its Rest sibling's index + 1.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "schema|disabled-order|" — a set's `children` order is its variant order; the rest step is the state scale's first. First run: the fixture library's `Button - CTA` and `Menu button` place Disabled after Loading.
 
 4. **State axis internal order**: `Rest → Focus → Hover → Press (→ Loading)` — Focus immediately precedes Hover, not the reverse. Loading's place on the axis is rule 58's.
 
-    *Why:* Focus is the persistent, required state — WCAG 2.4.7 treats a visible focus indicator as non-negotiable for keyboard users, where hover is enhancement-only and mouse-specific. Material's state-layer model treats focus as the base state and hover as a temporary overlay on it, and a lint-enforced CSS order (`:link → :visited → :focus → :hover → :active`) agrees; this rationale was reconstructed after the fact and grounds keeping the pattern, not its origin.
+    *Why:* Focus is the required state (WCAG 2.4.7) where hover is a mouse-only enhancement; Material layers hover over focus, and the lint-enforced CSS order (`:focus → :hover → :active`) agrees. Reconstructed after the fact: it grounds keeping the pattern, not its origin.
 
     *Evidence:* 2026-08-10, two registered projects author `State` with Focus immediately before Hover, no exception.
 
@@ -60,15 +60,15 @@ Cite a rule as `figma-standard rule N`.
 
 5. **A property that fills a layer sits immediately below the property that reveals it.** Where a BOOLEAN toggles a layer's visibility and another property supplies that same layer's content — a TEXT property for its characters, an INSTANCE_SWAP for its main component — the two are adjacent in the properties panel, revealer first. This refines rule 1's "props/booleans first" clause, which fixes where the props block sits and says nothing about order inside it.
 
-    *Why:* the two properties are one control with two halves, and only their adjacency says so. Split apart, a consumer switching the boolean on is left hunting for the field that fills what just appeared, in a list whose order carries no other meaning; and a consumer who never turns the boolean on reads a content field for a layer that is not there. The panel is also the only place the relationship is expressed at all — nothing in `componentPropertyDefinitions` records that one property governs another — so adjacency is not a convenience, it is the whole of the documentation.
+    *Why:* the two are one control in two halves, and only adjacency says so: nothing in `componentPropertyDefinitions` records that one governs the other. Split apart, a consumer who switches the boolean on hunts for the field that fills what appeared.
 
-    Maintainer-decreed 2026-08-20 from a live pair built the same day: a menu-item component whose count boolean reveals a count layer and whose count text property fills that same layer (today `Show count` and `Count`, under rule 21). The same shape already held unremarked in the same library's button, where an icon boolean and the swap filling the revealed instance sit adjacent in that order — one instance decreed, one found already conforming.
+    Maintainer-decreed 2026-08-20 from a menu item's `Show count` and `Count`; the same library's button already held its icon boolean and swap adjacent.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — in the property panel. The panel's order is not readable: `componentPropertyDefinitions` returned `Label text, Count text, Count` for a set whose panel showed `Count` above `Count text`, so a script would fire on conforming components.
 
 7. **A parent owns the state of a part it drives.** When a component changes a nested part's state (a FAB opening its button), the part is one set with that state as an axis, the parent sets it, and the parent's own property is what a designer touches. Split the part into ` / ` siblings per state (rule 20) only when designers must reach the part's other properties, which Figma exposes all together or not at all; say so in the parent's description.
 
-    *Why:* a part's state is the parent's behaviour, so it belongs on the parent, where code puts it too. Of the kits read for rule 21, Carbon keeps `Open` on its menu button and leaves the nested button's axes alone, and none splits a child per state; the split is the one way to expose a part's icon or badge without its state, which Figma's all-or-nothing exposure otherwise forbids.
+    *Why:* a part's state is the parent's behaviour, and code puts it on the parent too. Carbon keeps `Open` on its menu button and leaves the nested button alone, and no kit read for rule 21 splits a child per state; the split is the one way to expose a part's icon without its state.
 
     Maintainer-decreed 2026-10-07.
 
@@ -76,9 +76,9 @@ Cite a rule as `figma-standard rule N`.
 
 25. **Every public component carries a real description.** A description is not empty, not the component's name repeated, not a placeholder (`TODO`, `TBD`, `lorem`), and longer than a label. A public component's description carries a Usage and a Don't section, and Code gen notes; a slot part (a public part every use of which sits inside other components on its own page, in a slot or directly — decided by where it is used, never by its name, as `figma-component-descriptions` decides it) is chosen through its parent and owes none. A private part takes the compact form `figma-component-descriptions` writes, and its absence is hygiene rather than an error. A variant holds no description of its own unless it is the set's text: whoever reads that variant gets its copy, which goes stale the day the set's is rewritten.
 
-    *Why:* the description is what a designer reads in the assets panel and what Dev Mode and any generated documentation show, so an empty one leaves every consumer to guess the component's job from its name. A placeholder is worse than nothing, because it looks like documentation.
+    *Why:* the description is what the assets panel, Dev Mode and generated docs show; an empty one leaves every consumer guessing, and a placeholder is worse, because it looks like documentation.
 
-    *Evidence:* (Mechanism, not an incident.) The scanner's three tests are the three shapes a non-description takes: empty, the name again, or a stub shorter than any real sentence (`minDescription`, `descriptionPlaceholder`). The variant clause was found on 2026-10-25: after a project's descriptions were rewritten, five sets still held older variant copies, one of them another component's text, and no check saw them.
+    *Evidence:* (Mechanism, not an incident.) The scanner tests the three shapes a non-description takes: empty, the name again, a stub (`minDescription`, `descriptionPlaceholder`). The variant clause, 2026-10-25: after a project's descriptions were rewritten, five sets still held older variant copies, one another component's text.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "metadata|description" — an empty description, an error on a public component and hygiene on a private part; `skills/figma-components-audit/scanner/audit.js` "metadata|placeholder" — the name again, a placeholder word or a stub, tiered the same.
 
@@ -90,11 +90,11 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — whether the text is still true of the component, which no script can read.
 
-26. **An interactive component is at least 24px on each side, and text is at least 12px.** The target minimum comes from WCAG 2.2 SC 2.5.8 (Target Size Minimum, AA), and is stricter than it: the criterion also lets a smaller target pass through spacing, which a library cannot know, since spacing is the product's. A larger transparent hit area around a smaller shape meets it. A component that is not interactive (a divider) and disabled text are exempt.
+26. **An interactive component is at least 24px on each side, and text is at least 12px.** The target is WCAG 2.2 SC 2.5.8 (AA) without its spacing exception, since spacing is the product's. A larger transparent hit area around a smaller shape meets it. A component that is not interactive (a divider) and disabled text are exempt.
 
-    *Why:* a target below the minimum is missed by people with limited dexterity and on touch, and text below 12px stops being readable at normal viewing distance; both are cheapest to fix in the library, before every product repeats them.
+    *Why:* a smaller target is missed by people with limited dexterity and on touch, and smaller text stops being readable; both are cheapest fixed in the library.
 
-    *Evidence:* the check first used 44px, which is SC 2.5.5 (AAA, the mobile touch figure), and flagged nearly every interactive component of one desktop web library as one undifferentiated wall of findings; 24px, the AA figure the project's own accessibility floor named, separated the real cases.
+    *Evidence:* the check first used 44px (SC 2.5.5, AAA) and flagged nearly every interactive component of one desktop library; 24px, the project's own AA floor, separated the real cases.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "### Session probes" — the session's size probe lists every variant under the target and every text under the minimum; the reader drops the components that are not interactive, the ones a hit area covers, and disabled text.
 
@@ -104,15 +104,15 @@ Cite a rule as `figma-standard rule N`.
 
     *Why:* a detached copy keeps the look and loses the link: it misses every later fix to the component, and no audit of the component reaches it.
 
-    *Evidence:* (Mechanism, not an incident.) The scan's first version read pages before loading them and saw none, and treated an unfamiliar page prefix as non-component, which flagged a page's own internal structure; both are fixed in the engine. It matches on name only, so the reader confirms each candidate's ancestry before raising it.
+    *Evidence:* (Mechanism, not an incident.) The scan's first version read pages before loading them and saw none, and treated an unfamiliar prefix as non-component, flagging a page's own structure; both fixed in the engine.
 
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "### Session probes" — the session's detached scan lists frames named like a component outside the component pages, and the reader checks each one's ancestry, since a part of another component may share a name; and an instance whose main component is gone, which no scanner rule finds yet. A remote main reads parentless whenever its source file is not connected, so it is verified by key before it is called gone.
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "### Session probes" — the detached scan lists frames named like a component outside the component pages, and the reader checks each one's ancestry; it also lists an instance whose main is gone, which no scanner rule finds yet, verified by key first, since a remote main reads parentless when its file is not connected.
 
 30. **Every component property drives a layer, in every variant where that layer exists.** No property is declared and applied to nothing, and a layer wired to a property in some variants is wired in all of them. Variant axes and slots are not layer references and are exempt; a layer present only in some variants (a small size's icon, a loading state's spinner) is counted only where it exists.
 
-    *Why:* Figma ignores a component at publication while it declares a property applied to no layer, so consumers never receive it and the publish reports success. A layer whose twins disagree passes every per-layer check, and the property changes the text in some variants and silently not in others.
+    *Why:* Figma skips at publication a component declaring a property applied to no layer, while the publish reports success. A layer whose twins disagree passes every per-layer check, and the property changes its text in some variants only.
 
-    *Evidence:* in one library a button drawn at three sizes was merged into one set and its three label properties collapsed into one; 72 of 108 labels lost their text reference, every check passed over it, and the maintainer found it by eye. The publication consequence was confirmed by the maintainer and reproduced live on 2026-08-08.
+    *Evidence:* one library merged a button's three sizes into one set, collapsing three label properties into one; 72 of 108 labels lost their reference, every check passed, and the maintainer found it by eye. The publication skip reproduced live 2026-08-08.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "properties|unused|"; `skills/figma-components-audit/scanner/audit.js` "properties|wired|" — a declared property no layer references, and a layer wired in some variants and not in others, keyed by path and by what the layer is.
 
@@ -120,23 +120,23 @@ Cite a rule as `figma-standard rule N`.
 
     *Why:* the canvas shows every state at once, so an identical pair hides in the grid; the product shows one at a time, and a user pressing the control sees nothing happen.
 
-    *Evidence:* a run on one live library on 2026-08-13 found two states identical to Rest, confirmed as product bugs because the same set's other side rendered its states correctly. The diff had to include the variant root's opacity and fills first: without them it reported 42 false ones.
+    *Evidence:* 2026-08-13, one live library: two states identical to Rest, product bugs, since the set's other side rendered its states correctly. Without the root's opacity and fills the diff reported 42 false ones.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "states|" — every non-rest state against its Rest sibling: fills, strokes, effects, opacity and visibility of every layer, the root's included.
 
 48. **A state variant binds its own state's tokens.** A Press variant takes no Hover token, a Hover variant no Press token, and a resting token appears in another state only on a layer that carries it at Rest too (a switch knob that never changes). A state no token names, such as Loading, borrows the resting tokens by design.
 
-    *Why:* rule 31 catches a state that looks the same as Rest, not one that looks like a different state: a Hover colour left in Press, or a square Rest fill added behind a rounded Hover button, renders a change, just the wrong one, and the canvas grid hides it.
+    *Why:* rule 31 catches a state that looks like Rest, not one that looks like another state: a Hover colour left in Press renders a change, just the wrong one.
 
-    *Evidence:* 2026-10-15, one live web library: a square Rest fill on the outer frame of 36 rounded Secondary and Outline button variants (Hover, Press, Focus, Disabled), a Hover fill covering a Date picker's whole Press variant, and a Hover fill on two Focus radios, all fixed that day.
+    *Evidence:* 2026-10-15, one live web library: a square Rest fill behind 36 rounded button variants, a Hover fill over a Date picker's Press variant and on two Focus radios, all fixed that day.
 
    *Checked:* `skills/figma-components-audit/tests/test-audit.mjs` "figma-standard rule 48: a resting token added in Hover only, and a Hover token in Press, are raised; a knob at rest in every state is not".
 
 50. **A library that mirrors keeps order in auto layout and says what mirrors.** Where a project ships a right-to-left language (`rtlLanguages`), nothing that must follow reading direction is pinned to one edge or drawn into the component; no layer, property or option says left or right (rule 21's position words); a directional icon records in its description whether it mirrors (`Right to left: mirrors` or `Right to left: stays`); and a component with anything that mirrors, or deliberately does not, says so in a `Right to left` section of its description: uneven padding by leading and trailing, end alignment, corners rounded on one side, a text box wider than its text aligned to a side, a text case only Latin has. Every text style binds its font family (rule 43), so a mode per script switches the typeface. Where the project also draws right-to-left screens first, rule 59 adds a `Direction` axis. A project with no right-to-left language is not held to it.
 
-    *Why:* Figma has no layout direction, so the library is drawn left to right and the product mirrors in code. Code reverses a row's order by itself but not a layer pinned to the left, an arrow drawn into the frame, padding or a radius written as left and right, or a name that says left; and it cannot know that playback controls stay. The description is where Dev Mode, Code Connect and the MCP server show those decisions to whoever builds the component.
+    *Why:* Figma has no layout direction, so the product mirrors in code, which reverses a row by itself but not a pinned layer, a drawn arrow, sided padding or radius, or a name that says left, and cannot know that playback controls stay. The description is where Dev Mode, Code Connect and the MCP server show those decisions.
 
-    *Evidence:* 2026-11-04, one production web library of 82 sets: 58 sets and 461 variants hold a row that must reverse, counted across every variant, after a first-variant count read 41 and 238 and put the primary Button among the safe; a chat bubble's side was one end alignment a padding and radius scan called clean; and Figma's MCP server returned a filter chip's 12 left and 8 right padding as `pl-`/`pr-`, so uneven padding not written down ships unmirrored ([i18n: logical properties and mirroring](../knowledge/code/i18n.md#logical-properties-and-mirroring)).
+    *Evidence:* 2026-11-04, one web library of 82 sets: 58 sets and 461 variants hold a row that must reverse, counted across every variant (a first-variant count read only 41 and 238); a chat bubble's side was an end alignment a padding and radius scan called clean; and Figma's MCP server returned a chip's 12 left and 8 right padding as `pl-`/`pr-`, so uneven padding not written down ships unmirrored ([i18n: logical properties and mirroring](../knowledge/code/i18n.md#logical-properties-and-mirroring)).
 
    *Checked:* `skills/figma-components-audit/tests/test-audit.mjs` "figma-standard rule 50: with rtlLanguages, a pinned layer, a drawn chevron, a side name, uneven padding, end alignment, one-sided corners, an icon with no decision and a set with no Right to left note are raised; a stretched focus ring is not; without it, nothing".
 
@@ -144,15 +144,15 @@ Cite a rule as `figma-standard rule N`.
 
     *Why:* an instance cannot mirror its own parts, and Figma has no layout direction, so a right-to-left screen drawn before code can only place a set that already holds the mirrored drawing.
 
-    *Evidence:* 2026-11-05, the same library drawing right-to-left screens: with the Direction variant asked only of rows, the overview of which sets need it was counted by a hand-written walk, since padding, end alignment, side-aligned text, one-sided corners, pinned layers and directional icons each need it too (figma-components-audit 2.41.0).
+    *Evidence:* 2026-11-05, the same library: with the variant asked only of rows, which sets need it was counted by a hand-written walk, since padding, end alignment, side-aligned text, one-sided corners, pinned layers and directional icons need it too (figma-components-audit 2.41.0).
 
    *Checked:* `skills/figma-components-audit/tests/test-audit.mjs` "rtlVerdicts: a row, uneven padding and a boolean-shown row need the variant; holding one, at any depth, is covered; rtlStays and rtlByHand are kept apart; the rest needs none".
 
 32. **Text meets the project's contrast floor against its surface, in every mode.** Where the project names no floor, WCAG 2.2 SC 1.4.3 (Contrast Minimum, AA) applies: 4.5:1, and 3:1 for large text (24px, or 18.66px bold). Each pair is resolved per mode with its alpha; a translucent pair is checked by eye, and disabled text is exempt.
 
-    *Why:* a contrast failure is user-visible by definition, and it hides in the mode nobody has open: a pair that passes in Light and fails in Dark looks correct to whoever designs in Light. The fix usually belongs to the token pair, never to unbinding the component.
+    *Why:* a contrast failure hides in the mode nobody has open: a pair failing in Dark looks right to whoever designs in Light. The fix belongs to the token pair, never to unbinding.
 
-    *Evidence:* (Mechanism, not an incident.) A paint's cached colour is the value of the mode on screen, so one reading checks one mode. The resolution is from a real run: following each alias into its target's first mode resolved every Dark token to its Light colour, and Light and Dark reported identical ratios, so an alias is followed by mode name.
+    *Evidence:* (Mechanism, not an incident.) A paint caches the colour of the mode on screen, so one reading checks one mode; following aliases into their target's first mode once gave Light and Dark identical ratios, so an alias is followed by mode name.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "accessibility|contrast|" — text over an opaque surface inside its component, in the mode each variant resolves to, disabled variants exempt.
 
@@ -160,9 +160,9 @@ Cite a rule as `figma-standard rule N`.
 
 33. **A component is built from auto-layout frames, never groups, and its text hugs vertically.** A `GROUP` inside a component becomes a frame; a boolean operation inside an icon is not a group. A text layer has no fixed height unless it truncates by design (`ENDING`, a maximum line count) or fills its parent by instruction.
 
-    *Why:* a group ignores the auto-layout everything around it obeys, so it stays put when content moves. Fixed-height text clips instead of reflowing: invisible while it holds the copy it was drawn with, and broken in the locale nobody tested.
+    *Why:* a group ignores auto layout, so it stays put when content moves; fixed-height text clips instead of reflowing, in the locale nobody tested.
 
-    *Evidence:* (Mechanism, not an incident.) The group check, walked 2026-08-08, was silent across 55 real components and fired on a probe holding one. Fixed height is read from `textAutoResize`, never from `layoutSizingVertical`, which reported `FIXED` on 33 layers that hug both ways.
+    *Evidence:* (Mechanism, not an incident.) The group check, 2026-08-08, was silent on 55 real components and fired on a probe. Fixed height is read from `textAutoResize`: `layoutSizingVertical` said `FIXED` on 33 layers that hug.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "structure|group|" — every group in every variant, never inside an instance.
 
@@ -172,9 +172,9 @@ Cite a rule as `figma-standard rule N`.
 
 34. **A hidden layer is hidden by a property, and a switched-off paint, stroke or effect is removed.** A layer hidden in every variant with no boolean controlling it is dead weight or a conditional the property model never captured, while one a sibling variant shows (a focus ring, a loading spinner) is variant-driven and fine; a fill, stroke or effect toggled off in the panel stays in its array, colour and binding included.
 
-    *Why:* both are invisible on the canvas and present in the file: they travel into every instance and into anything that reads the node, and a hidden layer with no property is a state no consumer can reach.
+    *Why:* both are invisible on the canvas and travel into every instance and every reader of the node; a hidden layer with no property is a state no consumer can reach.
 
-    *Evidence:* (Mechanism, not an incident.) A switched-off paint is an array entry with its own `visible: false` on a node that is itself visible, so the hidden-layer walk cannot see it and the two need separate walks.
+    *Evidence:* (Mechanism, not an incident.) A switched-off paint is an entry with its own `visible: false` on a visible node, so the hidden-layer walk cannot see it.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "structure|hidden|" — a hidden layer wired to no visibility property, filed as hygiene.
 
@@ -182,39 +182,39 @@ Cite a rule as `figma-standard rule N`.
 
 35. **Every variant axis offers a real choice.** No axis carries a single option, none keeps an option left behind by a rename, and an axis whose only effect is showing or hiding one subtree is a boolean instead, unless it reflects content the component holds (rule 21's `Has number`). A single-option axis can be deliberate (staged for planned options, or matching a sibling library's API), which is a ruling to record; removing or merging an axis deletes a property, which loses every consumer's choice on it, so a hit is a decision, never a batch fix.
 
-    *Why:* an axis with one value does a constant's job while widening the API and stamping `Axis=Value` into every variant name; a stray option offers a choice nobody designed; a visibility-only axis doubles the grid for what one boolean expresses.
+    *Why:* a one-value axis does a constant's job while widening the API; a stray option offers a choice nobody designed; a visibility-only axis doubles the grid for one boolean.
 
-    *Evidence:* (Mechanism, not an incident.) The single-option probe, walked 2026-08-13, was silent across the 54 sets of a live library and fired on a probe set carrying one; no library has yet shown a stray option or a visibility-only axis.
+    *Evidence:* (Mechanism, not an incident.) The single-option probe, 2026-08-13, was silent on a live library's 54 sets and fired on a probe set; no library has yet shown the other two.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at each audit: the session's schema probe lists single-option axes, and stray options and visibility-only axes are the reader's.
 
 36. **An interactive component carries the full state set of its archetype.** The archetype's states are the ones this library's own components of the same kind use, never a fixed table. A state missing on one component is a question; missing library-wide it is conformance (a touch-first library has no `Hover`). Whether a control should carry the loading state is a judgement to surface, not assume.
 
-    *Why:* a state the design never drew is one the code improvises, and the improvised one matches nothing else in the product. The library's own baseline is the yardstick because a fixed table fails a library that legitimately lacks a state.
+    *Why:* a state never drawn is one code improvises, matching nothing else; a fixed table would fail a library that rightly lacks a state.
 
-    *Evidence:* (Mechanism, not an incident.) The schema probe this baseline replaced hard-coded one library's `Rest · Focus · Hover · Press · Loading`, which a library with no `Hover` would have failed wholesale.
+    *Evidence:* (Mechanism, not an incident.) The probe this replaced hard-coded one library's states, which a library with no `Hover` would have failed wholesale.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at each audit, per component, once its archetype is decided during scoping.
 
 37. **Text a consumer would legitimately set is exposed as a text property.** A heading, a caption, a message, a filename or a person's initials carries one. Two exceptions, both a minority: text static by design (a calendar's weekday headings, a mandatory-field asterisk, a currency symbol) and text code writes at runtime (`Uploading - 64%`). Text inside a slot needs none. The test is whether a consumer would ever set the string, not whether it varies today.
 
-    *Why:* the property puts the string in the panel where a designer sets it and gives a code mapping a prop to pair; without one the content is buried in the layer tree and missing from the component's API. A property on static text invites changing what should not change.
+    *Why:* the property puts the string in the panel and gives code a prop to pair; without one the content is buried in the layer tree. A property on static text invites changing what should not change.
 
-    *Evidence:* one library's single-variant message card held a lorem paragraph with no property and passed a full clean audit; it was caught only when someone went to write its description. A sweep of that library's 71 sets then raised 7, four cleared on sight as static by design.
+    *Evidence:* one library's message card held a lorem paragraph with no property through a clean audit, caught only when its description was written; a sweep of 71 sets then raised 7, four static by design.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at each audit: the session's text-coverage probe lists text with no property, and the reader clears static and runtime text.
 
 38. **Text an item carries, inside a component whose items have variants, lives in a slot, never in a text override on a nested instance.** A text override inside a nested instance is stored per variant of that instance, so it is dropped when the instance changes variant from inside its parent; switching back restores it. Swapping the parent's own variant keeps the edits inside it, and a top-level or slotted instance keeps its text across its own variant switch. So per-item text where the item has variants goes in a slot, which keeps each item's text without duplicating the item; a component cannot change the variant of what fills its slots, so a parent-level switch never reaches slotted items, and choosing their variant becomes the consumer's.
 
-    *Why:* the loss is silent. The text looks set in every variant the designer checks, and disappears in a consumer's file the moment someone switches the item, with nothing to say it was there. Exposing the nested instance's properties on the parent does not keep it.
+    *Why:* the loss is silent: the text looks set in every variant checked, and vanishes in a consumer's file at the switch. Exposing the nested instance's properties does not keep it.
 
-    *Evidence:* tested on throwaway copies in one library on 2026-10-08: a tree whose rows changed variant inside their parent lost each row's edited label on the switch and recovered it on switching back; the same rows placed in a slot kept their labels. The same run found that a layer-name override on a nested instance resets on a parent variant switch, which is why rule 10 names layers in the component.
+    *Evidence:* throwaway copies, 2026-10-08: tree rows switched inside their parent lost their labels and recovered them on switching back; slotted, they kept them. A nested layer-name override reset too, hence rule 10.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "overrides|nested-text|" — a nested instance whose main has variants and whose text is set by override, filed as a question: a parent that sets the same text on purpose in every variant (a dialog's `Cancel`) is the reader's to clear.
 
 39. **An interactive component has a focus state, visibly indicated.** A component with the state axis carries its `focusState` option (Focus), so keyboard users can see where they are, and Focus differs from Rest by a ring a keyboard user can see; that it renders differently at all is rule 31's states check.
 
-    *Why:* WCAG 2.2 SC 2.4.7 (Focus Visible, AA) needs a visible focus indicator, since without one a keyboard user cannot tell where they are, and a library without a focus variant leaves every product team to invent one, differently.
+    *Why:* WCAG 2.2 SC 2.4.7 (AA) needs a visible focus indicator, and a library without one leaves every product to invent its own.
 
     *Evidence:* (Mechanism, not an incident.) The state axis's options are the variant set's own `variantOptions`; a missing option is read directly, before anything is built.
 
@@ -224,7 +224,7 @@ Cite a rule as `figma-standard rule N`.
 
 40. **An interactive component with no text of its own carries its accessible name.** An icon-only component exposes a text property for its label, or a Dev Mode annotation saying what its accessible name is.
 
-    *Why:* WCAG 2.2 SC 4.1.2 (Name, Role, Value, A) needs every control to have a name; a component that shows only an icon has nothing a screen reader can say unless the library gives the builder a place to put one.
+    *Why:* WCAG 2.2 SC 4.1.2 (A) needs every control named; an icon gives a screen reader nothing to say unless the library gives the name a place.
 
     *Evidence:* (Mechanism, not an incident.) A set's text layers, text properties and annotations are all readable from the file; a set with none of the three has no name anywhere.
 
@@ -232,7 +232,7 @@ Cite a rule as `figma-standard rule N`.
 
 45. **An icon library draws every set at its sizes, in bound paint, under its source's name.** Each icon set offers the sizes most sets do; every glyph's fill or stroke binds a variable or a style; and where the icons come from a published set (Lucide, say) each keeps that set's name, a drawn-here icon recorded as a ruling.
 
-    *Why:* a size missing from one set is a resize nobody notices until it blurs; an unbound paint is a glyph that stays one colour in a theme that re-points the icon token; and a renamed icon is one code cannot find by the name its package uses.
+    *Why:* a missing size is a resize that blurs; an unbound paint ignores a theme; a renamed icon is one code cannot find by its package's name.
 
     *Evidence:* maintainer-decreed 2026-10-11. One project's 262 icon sets, read from the stored icons that day: 5 named outside Lucide, all suffixed `-custom`.
 
@@ -240,45 +240,45 @@ Cite a rule as `figma-standard rule N`.
 
 51. **A kit draws what its code renders, and only that; a departure is recorded.** Each set draws the variants, parts and defaults the project's code ships, its parts in the code's order (variants in rules 3 and 4's): the rows a text area opens at, the resize handle the browser draws, a separator where the stylesheet puts it. A value another system ships and this code does not (a `Warning` state, `Read-only`, a skeleton, an inline form, multiple selection) is not drawn. Adding one before the code has it, or drawing what the code lacks, is a ruling in the context document; the parity report raises anything unrecorded.
 
-    *Why:* a frame the code cannot reach is a promise nobody keeps, and a state the code reaches with no frame is a screen nobody designed; both surface only when a developer builds from the drawing or a designer from the code.
+    *Why:* a frame the code cannot reach is a promise nobody keeps, and a state with no frame a screen nobody designed.
 
-    *Evidence:* maintainer-decreed 2026-11-16, when the knowledge base became external evidence only (toolkit-standard §D 21) and twelve component-page items stating this convention, with no source outside the toolkit, moved here.
+    *Evidence:* maintainer-decreed 2026-11-16, twelve component-page items moved here (toolkit-standard §D 21).
 
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the project's code or context document; no script can tell what the code renders.
 
 52. **What Figma cannot show is not a variant: its values are tokens, and behaviour goes in an annotation.** A frame draws one still moment. Motion, timing, swipe and entering or exiting states, which code reaches at run time, get no frame and no axis; their durations and easings are motion tokens (rule 42). Behaviour with nothing to draw (a dialog's role, which text names it and which describes it, where focus returns when its trigger is gone) is a Dev Mode annotation on the frame that places the component.
 
     *Why:* an axis whose only difference is motion or timing offers a choice the canvas cannot show (rule 35), and behaviour left out of the file is guessed in code.
 
-    *Evidence:* maintainer-decreed 2026-11-16, ten component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
+    *Evidence:* maintainer-decreed 2026-11-16, ten component-page items moved here (toolkit-standard §D 21).
 
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the project's code or context document; no script can tell what the code renders.
 
 53. **What a component attaches to stays outside it.** A trigger, an anchor or the paragraph a component sits in is not part of it: a frame showing it open places the trigger beside it as its own instance. A part that runs inside text, an inline link, is a text style on a range, since Figma cannot place an instance inside text. A composite such as a breadcrumb trail places the existing component for each item rather than redrawing it.
 
     *Why:* a trigger drawn inside a popover's set is a second button nobody maintains, and a redrawn item drifts from the component it copies.
 
-    *Evidence:* maintainer-decreed 2026-11-16, four component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
+    *Evidence:* maintainer-decreed 2026-11-16, four component-page items moved here (toolkit-standard §D 21).
 
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the project's code or context document; no script can tell what the code renders.
 
 54. **A field and its control are one set, unless the bare control is placed alone.** The label, hint and message take no pointer state, so a wrapper set around the control repeats every axis for nothing. The bare control is a set of its own only where it has a layout of its own, such as a checkbox in a table row; Code Connect then switches component on `Show label`.
 
     *Why:* two sets that differ only by a label double the variants and drift apart at the first change made to one.
 
-    *Evidence:* maintainer-decreed 2026-11-16, two component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
+    *Evidence:* maintainer-decreed 2026-11-16, two component-page items moved here (toolkit-standard §D 21).
 
-   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+   *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the project's code or context document; no script can tell what the code renders.
 
 46. *Retired 2026-10-13: withdrawn to the one project that asks for it, in its context document; the components audit's check stays, driven by `overlayComponents`.*
 
 ## Naming
 
-**The values these rules name are preferences, kept in [`naming-preferences.json`](naming-preferences.json).** The separators, the private prefix, the case and the words a property starts or ends with are the house's answer, which a project overrides in its context document's `naming-preferences` block. A name that departs from one still works; it reads unlike the rest. So an audit files the departure as a preference, never as a defect, and it holds no component back. A name that breaks something is not a preference and keeps its tier: a space at the end, Figma's default name, two names that differ only in case, a private prefix behind a marker.
+**The values these rules name are preferences, kept in [`naming-preferences.json`](naming-preferences.json)**: separators, the private prefix, the case and a property's opening and closing words, which a project overrides in its context document's `naming-preferences` block. A departure still works, so an audit files it as a preference that holds nothing back. A name that breaks something keeps its tier: a trailing space, Figma's default name, names that differ only in case, a private prefix behind a marker.
 
-18. **Sentence case everywhere — tokens, styles, components, properties, values, pages and layers.** Capitalise the first letter of each path segment and leave the rest lowercase: `Colour/Background/Danger/soft`, `Corner radius/full`, `Text input`, `Content slot`. Two carve-outs, both evidenced rather than granted: **in a token or style path, the leaf stays lowercase whenever it is a value, and may join its parts with a hyphen** (`soft`, `base-rest`, `md-medium`, `span-2`, `9-source`, `regular`, `semibold`), and **assets keep their source names** (`arrow-left`, `chevron-down` from an icon set), as rule 45 sets out for icons. Every other name is plain words separated by single spaces: never camelCase, snake_case or kebab-case as a separator, with a hyphen only inside a word that is spelt with one (`Pre-header`, `Sub-items slot`). Acronyms keep their capitals (`AI`, `AM-PM`); abbreviations are written out (`Maximum height`, never `Max. height`; `Menu position`, never `Menu pos.`); numbers are digits (`Item 3`). Variant values are names, not token values, so they are capitalised (`Rest`, `Danger`), except the lowercase t-shirt sizes of rule 6 and Figma's own `True`/`False`. Any mark a name carries beyond words is one rules 8, 13, 14 and 20 give it, or the `/` between a token or style path's groups. Page furniture is the one place outside this rule: category headers in capitals, dividers, and the page markers of rules 11, 13 and 14. Any leaf naming a value is lowercase, whatever kind of value it is; the one exception is the elevation effect styles (`Elevation/Raised`, `Elevation/Floating`, `Elevation/Modal`), a three-name allowlist rather than a judgement clause.
+18. **Sentence case everywhere — tokens, styles, components, properties, values, pages and layers.** Capitalise the first letter of each path segment, the rest lowercase: `Colour/Background/Danger/soft`, `Text input`, `Content slot`. Two carve-outs: **in a token or style path, a leaf that is a value stays lowercase and may join its parts with a hyphen** (`soft`, `base-rest`, `md-medium`, `span-2`, `9-source`, `regular`, `semibold`), and **assets keep their source names** (`arrow-left`, `chevron-down` from an icon set), as rule 45 sets out for icons. Every other name is words joined by single spaces, never camelCase, snake_case or kebab-case, with a hyphen only inside a word spelt with one (`Pre-header`). Acronyms keep their capitals (`AI`, `AM-PM`); abbreviations are written out (`Maximum height`, never `Max. height`); numbers are digits (`Item 3`). Variant values are names, not token values, so they are capitalised (`Rest`, `Danger`), except the lowercase t-shirt sizes of rule 6 and Figma's own `True`/`False`. Any mark a name carries beyond words is one rules 8, 13, 14 and 20 give it, or the `/` between a token or style path's groups. Page furniture is the one place outside this rule: category headers in capitals, dividers, and the page markers of rules 11, 13 and 14. The one exception to a lowercase value leaf, of any kind, is a three-name allowlist: `Elevation/Raised`, `Elevation/Floating`, `Elevation/Modal`.
 
-    *Why:* one rule spanning every class of name is one rule to remember and one to check, and every name in a design tool is read by a person in a picker or a layers panel before it is read by anything else. Sentence case is what a person reads fastest in a list — it marks word boundaries without the shouting of Title Case or the run-together of camelCase — and it survives translation to code, since every export path in this toolkit lowercases and hyphenates on the way out. The case a designer sees and the case a developer types are allowed to differ precisely because the transform is total and lossless in that direction.
+    *Why:* one rule for every class of name is one to remember and check, and every name is read by a person in a picker or layers panel first. Sentence case reads fastest in a list, marking word boundaries without Title Case's shouting or camelCase's run-together, and every toolkit export lowercases and hyphenates losslessly, so designer and developer may see different cases.
 
     *Evidence:* 2026-08-20, all three registered projects: tokens, components and layers already in sentence case or realigned that day; a "scale or state" leaf clause left `Font/Weight/Medium` beside `Icon/Neutral/medium`, so it became "any value"; 511 layer renames lost none of 2,050 overrides across 877 instances in a consumer file (overrides match by name only on a swap).
 
@@ -288,49 +288,47 @@ Cite a rule as `figma-standard rule N`.
 
 19. **One case per name space: no two component, variable, style or token names may differ only in case.** Rule 18 fixes which case; this rule binds even where a project departs from it.
 
-    *Why:* the two halves of a split are both valid and one of them silently loses. DTCG makes token names case-sensitive, so `Background/Danger/soft` and `Background/danger/soft` are two legitimate tokens, and the spec's own non-normative note is that tools *may* warn when names differ only by case ([Design Tokens Format Module](https://www.designtokens.org/tr/drafts/format/)). Every export path in this toolkit then lowercases: the token export's `tools/tokens/dtcg.js` lowercases and hyphenates every segment, so the pair collapses to one path — and it is only because `setDeep` refuses to overwrite an occupied path that the second one is reported instead of overwriting the first. A pipeline without that guard ships one token and drops the other, while both still look present in the design tool.
+    *Why:* both halves of a split are valid and one silently loses. DTCG names are case-sensitive, and tools *may* warn when names differ only by case ([Design Tokens Format Module](https://www.designtokens.org/tr/drafts/format/)); the toolkit's export (`tools/tokens/dtcg.js`) lowercases every segment, so the pair collapses to one path, reported only because `setDeep` refuses to overwrite. A pipeline without that guard ships one token while both look present in Figma.
 
-    *Evidence:* admitted 2026-08-20 from a real split: one project's `Semantic` collection spelled the Role slot capitalised in its `Icon/*` and `Text/*` tokens and lowercase in every `Background/*` one, unnoticed across several library versions because both forms render correctly in the picker; the two other registered projects were internally consistent.
+    *Evidence:* admitted 2026-08-20: one project's `Semantic` collection capitalised the Role slot in `Icon/*` and `Text/*` and lowercased it in `Background/*`, unnoticed across several versions because both render correctly in the picker.
 
    *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "differ only in case" — components; `skills/figma-foundations-audit/scripts/library.mjs` "differ only in case or separator" — a tokens library's variables, from the snapshot; `tools/tokens/dtcg.js` "name collides with another token at"; `tools/tokens/dtcg.js` "name collides with another style at" — variables and styles, refused when exported; `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: two names that differ only in case are an error". figma-foundations-audit owns the check; the components audit classifies case for rule 18 and reports no collision.
 
 20. **In a component name, ` / ` separates equivalent siblings only; a family and its part are joined by a space.** ` / ` marks a virtual set: one part split into interchangeable alternatives a designer picks between, which share one byte-identical description (`Cell / Fill` and `Cell / Hug`, `FAB button / Default` and `/ Open`). Anything that is not an alternative, such as a level or a sub-part, is a word in the name (rule 9). A component that relates to another but is built separately, a flavour of it, takes the other's name, ` - ` and the flavour: `Button - CTA`, `FAB - AI`, never `FAB (AI)`; its parts follow rule 9 from that name (`_FAB - AI button`). Token and style paths group with an unspaced `/` (rule 18).
 
-   *Why:* the two separators carry different obligations, and only the separator distinguishes them. Virtual-set siblings must hold identical description text; family members must not. A tool that cannot tell which it is looking at either propagates a description across components that should differ, or leaves siblings inconsistent, both silently. Levels written after a slash (`Item / L1`) read as alternatives when one nests inside the other.
+   *Why:* only the separator tells siblings, which share one description, from family members, which must not; a tool that cannot tell copies a description where it should differ, or leaves siblings inconsistent. Levels after a slash (`Item / L1`) read as alternatives.
 
    *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "naming|separator".
 
 8. **A component that does not publish starts with `_`; a building block that fills a slot does not.** The prefix marks an internal part. A part consumed through a slot is deliberately public and unprefixed, because Figma offers only published components in a slot. An audit verifies slot consumption before raising a bare name.
 
-   *Why:* Figma leaves a component whose name starts with `_` out of the published library, so the prefix is what keeps an internal part out of every consumer's asset panel. A slot filler has to be published for the slot to offer it, so prefixing it would break the slot; raising its bare name would push a designer to do exactly that. *(Mechanism, not an incident.)*
+   *Why:* Figma leaves a `_` name out of the published library, keeping an internal part out of every asset panel; a slot filler must publish for the slot to offer it, so raising its bare name would push a designer to break the slot. *(Mechanism, not an incident.)*
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — by the audit's reader, after it verifies slot consumption, since an unprefixed slot filler is public on purpose.
 
 9. **A part is named for its family and its own last word, joined by a space; inside its parent the layer keeps only the last word.** A part built for one component is named after the component its page documents plus the part's own last word, in sentence case, with every level in between dropped: `Card header`, `Sidebar dialog item`, `Date picker single day`, never `Sidebar dialog - Modal - Sidebar - Section - Item`. Levels that are not alternatives go into the name as words, not after a slash: `File explorer level 1 item`. A family large enough to have its own category (`🔷 TABLES`) names its members without the family word, which the category already supplies: `Cell / Fill`, `Context flyover item`, `Toolbar`, while the family's root keeps it (`Table`). The **layer name** of a part where it sits inside its parent is that last word alone: `Item`, `Cell`, `Header`; copies that must be told apart keep role names or numbers (`Up`, `Down`, `Section 1`). The rule binds *parts*, never a public component that merely happens to be composed somewhere; and a part consumed by **more than one** parent has no single family to take, so it keeps a functional name.
 
-   *Why:* the family word is what makes a part findable from the thing it belongs to; without it the asset panel is a flat list in which `Item`, `Section` and `Day` sit side by side. Chaining every ancestor did the opposite of helping: real kits name a part as parent plus part, one level deep, and none of 33 surveyed chains ancestors with ` - ` (research 2026-10-07: space joins in 12 kits, the most common form, with Figma's own Simple Design System among them). Dropping the middle levels keeps names short enough to read in an instance picker, and the category exception follows from the same reasoning: once a family has its own category, every page in it already says which family it is. Inside the parent, position establishes ownership, so repeating it turns the layer tree into an index instead of an anatomy.
+   *Why:* the family word makes a part findable from its owner; without it the asset panel is a flat list of `Item`, `Section` and `Day`. Real kits name a part as parent plus part, one level deep: none of 33 surveyed chains ancestors with ` - `, and a space join is the most common form (12 kits, Figma's Simple Design System among them; research 2026-10-07). A family's own category already names it; inside the parent, position shows ownership, so repeating it makes the layer tree an index.
 
-   Maintainer-decreed 2026-10-07, replacing the ` - ` chain this rule required since 2026-08; applied the same day to one library (72 components, 29 nested instances renamed).
+   Maintainer-decreed 2026-10-07, replacing the ` - ` chain of 2026-08; applied that day to one library (72 components, 29 instances renamed).
 
    *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "naming|parent-name|"; `skills/figma-components-audit/scanner/audit.js` "naming|part-layer|" — a part's layer still carrying the part's whole name.
 
 10. **Every layer is named for its role.** A layer is named in the component, never by an override on a consumer's instance, and says what it is (`Label`, `Icon`, `Divider`, `Container`), never Figma's default (`Frame 12`, `Rectangle 4`) and never the sample copy it happens to show (`Connection successful.`). A text layer bound to a property takes that property's name (`Value`, `Helper text`), a nested part takes its last word (rule 9), and a nested public component keeps its own name.
 
-    *Why:* the layer name is what a developer reads in Dev Mode and what Figma matches overrides by when an instance is swapped (rule 18), so a default name tells them nothing and a sample-copy name goes stale the moment the copy changes. Across the kits read for rule 21, text layers are bare role nouns; the ones named after sample copy (16 of 101 in 5 kits) are the exceptions those kits carry as debt.
+    *Why:* the layer name is what Dev Mode shows and what Figma matches overrides by on a swap (rule 18); a default name says nothing and a sample-copy name goes stale. In the kits read for rule 21, text layers are role nouns, with 16 of 101 named after sample copy carried as debt.
 
-    Maintainer-decreed 2026-10-07, gathering what rule 9 and the property rule already said about bound text and nested parts and adding the rest.
+    Maintainer-decreed 2026-10-07, gathering what rules 9 and 21 said of bound text and nested parts, and adding the rest.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "naming|default|" — Figma's default names.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — a layer named after its sample copy, which Figma's default naming of a text layer makes indistinguishable to a script.
 
-21. **Properties are named for what they hold, in the code's words.** A text property is the bare noun, matching the code prop where one exists (`Label`, `Title`, `Placeholder`, `Value`), keeping "text" only where the code prop has it (`Helper text` for a `helperText` prop). A boolean property that reveals an element (text, an instance or a slot) takes `Show` (`Show avatar`, `Show icon` beside `Icon`, `Show value` beside `Value`); one that switches a style and reveals no element, such as a decorative stroke, is a bare word, as a state is (`AI`); a True/False variant property is a state and stays a bare word (`Disabled`, `Selected`), never `Is` (`Is selected`), or takes `Has` when it reflects content the component holds rather than an interaction (`Has value`, `Has number`), a word no boolean takes; `Show` never names a variant. An instance swap is named for the thing it holds (`Icon`, `Graphic`), never the mechanism (`Icon swap`), with `Leading`/`Trailing` for position. A slot property is `Slot` by default. A slot that sits first or last in a horizontal layout is `Leading slot` or `Trailing slot`, even when it is the only one; a slot that holds a repeated element is named for what it hosts (`Items slot`, `Tabs slot`). A boolean that shows a slot is `Show` plus the slot's name (`Show leading slot`), never a second name such as `Leading slot content`. Position is `Leading`/`Trailing` wherever it appears, in a name or a value, never `Left`/`Right`, since a role survives a right-to-left layout where a side does not; this rule says it for every project, mirrored or not. No two properties of one component share a name: Figma then shows its internal ids (`Label#330:11`) to everyone who sets them. That Figma and code hold the same properties is rule 56's; `Open` and `Validation` are rule 57's.
+21. **Properties are named for what they hold, in the code's words.** A text property is the bare noun, its code prop's where one exists (`Label`, `Value`), keeping "text" only where the prop has it (`Helper text` for `helperText`). A boolean property that reveals an element (text, an instance or a slot) takes `Show` (`Show avatar`, `Show icon` beside `Icon`, `Show value` beside `Value`); one that switches a style and reveals no element, such as a decorative stroke, is a bare word, as a state is (`AI`); a True/False variant property is a state and stays a bare word (`Disabled`, `Selected`), never `Is` (`Is selected`), or takes `Has` when it reflects content the component holds rather than an interaction (`Has value`, `Has number`), a word no boolean takes; `Show` never names a variant. An instance swap is named for the thing it holds (`Icon`, `Graphic`), never the mechanism (`Icon swap`), with `Leading`/`Trailing` for position. A slot property is `Slot` by default, `Leading slot` or `Trailing slot` when first or last in a horizontal layout, even alone, and named for what it hosts when that repeats (`Items slot`). A boolean that shows a slot is `Show` plus the slot's name (`Show leading slot`), never a second name such as `Leading slot content`. Position is `Leading`/`Trailing` in any name or value, never `Left`/`Right`, in every project, mirrored or not: a role survives right to left, a side does not. No two properties of one component share a name: Figma then shows its internal ids (`Label#330:11`) to everyone who sets them. That Figma and code hold the same properties is rule 56's; `Open` and `Validation` are rule 57's.
 
-    *Why:* names that match the code let a designer's file read as the specification and let tools pair Figma with code without a lookup table; a small test with Claude writing code from Figma found aligned names cut wrong props by more than half when the component API was not in its context (research 2026-10-07). Across 23 kits' Code Connect files, bare nouns are the majority form for text properties (50%, main style in 14 kits), `Show X` beside a bare `X` is the most common way to separate a boolean from the content it reveals, and plain `Icon` is the most common swap name.
+    *Why:* names that match the code make the file the specification and let tools pair Figma with code without a lookup table; in a small test, aligned names cut the wrong props Claude wrote from Figma by over half without the API in context (research 2026-10-07). Across 23 kits' Code Connect files, bare nouns lead for text properties, `Show X` beside `X` for a revealing boolean, and `Icon` for a swap.
 
-    The style-switch carve-out is maintainer-ruled 2026-10-12, on a button's `AI` boolean that shows a gradient stroke: the code has no `show` prop for it (`variant="ai"`), and across 23 kits 65% of boolean names are bare while `Show X` is the form beside a content property.
-
-    Maintainer-decreed 2026-10-07; applied the same day to one library (102 text properties, 25 shared-noun booleans and variants, 5 swaps and icon booleans, 23 text layers).
+    Maintainer-decreed 2026-10-07, applied that day to one library (102 text properties, 25 shared-noun booleans and variants, 5 swaps and icon booleans, 23 text layers). The style switch, maintainer-ruled 2026-10-12 on a button's `AI` stroke: code has `variant="ai"`, and 65% of the 23 kits' booleans are bare.
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "naming|prop-boolean|"; `skills/figma-components-audit/scanner/audit.js` "naming|prop-state|"; `skills/figma-components-audit/scanner/audit.js` "naming|prop-text|"; `skills/figma-components-audit/scanner/audit.js` "naming|prop-swap|".
 
@@ -344,15 +342,15 @@ Cite a rule as `figma-standard rule N`.
 
 6. **Sizes use a t-shirt scale.** A size property is named `Size` and its values are t-shirt names, written lowercase and ordered largest first: for example `2xl`, `xl`, `lg`, `md`, `sm`, `xs`, `2xs`. A component uses only the steps it needs, as one unbroken run of the scale: `lg`, `md`, `sm`, never `xl`, `md`, `sm`, `2xs`, because a gap says a size is missing and leaves the next one added nowhere to go. The rule sets the names, not the measurements: what each step measures is the project's choice. Ideally each name pairs with one value across the library, so a `md` button, a `md` icon button and a `md` input stand the same height and line up in one row.
 
-    *Why:* t-shirt names match how most kits and frameworks write size props in code (`size="sm"`), and they leave room above and below without renaming: a new step is `2xl`, never `Extra large 2`. Sharing one value per name is the ideal rather than the rule, because it pays off only where components sit side by side: when `md` is 40px on a button and 36px on an icon button, a designer pairing the two by name gets a misaligned row, and the code repeats the mismatch in every prop.
+    *Why:* t-shirt names match code's size props (`size="sm"`) and grow without renaming (`2xl`, never `Extra large 2`). One value per name is the ideal, not the rule: it pays only side by side, where a 40px `md` button beside a 36px `md` icon button misaligns the row.
 
-    Maintainer-decreed 2026-10-07. One registered project had already ruled the largest-first order (2026-09-05), and another had aligned its icon button to its button's heights for exactly the misaligned-row reason (2026-08-28).
+    Maintainer-decreed 2026-10-07; one project had ruled largest-first (2026-09-05), another aligned its icon button to its button's heights for that misaligned-row reason (2026-08-28).
 
    *Checked:* `skills/figma-components-audit/scanner/audit.js` "schema|size-values|"; `skills/figma-components-audit/scanner/audit.js` "schema|size-name|"; `skills/figma-components-audit/scanner/audit.js` "schema|size-gap|".
 
 22. **Component vocabulary matches token vocabulary** — whatever that vocabulary is per project (one project canonises `Success`, another `Positive`; the *matching* is the standard, the words are not).
 
-   *Why:* a mismatch is invisible in either artifact alone and only appears when someone holds both — a `Success` variant bound to `…/Positive/…` forces every reader, human or generated, to carry a translation table that exists nowhere in the file. The cost lands on readers who never see the two side by side. *(Mechanism, not an incident.)*
+   *Why:* a mismatch shows only to someone holding both: a `Success` variant bound to `…/Positive/…` makes every reader carry a translation table that exists nowhere in the file. *(Mechanism, not an incident.)*
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — by the audit's reader: whether a component's words match the tokens' is a reading of both vocabularies.
 
@@ -362,23 +360,23 @@ Cite a rule as `figma-standard rule N`.
 
 11. **Pages are grouped into named categories; categories are ordered alphabetically, and pages within each category are ordered alphabetically too.** A finished component page's name starts with `❖`; a page still in progress starts with `🚧` instead (rule 13). **A category is a header page named `🔷 CATEGORY`** — blue diamond, capitals — and **categories are separated by a divider page named `---`**, which Figma draws as a rule; both are furniture, never members of a category. Two categories are pinned last regardless of alphabetical position, in this order: `AUXILIARY`, the catch-all for parts and support pages, then `DEPRECATED` (rule 14).
 
-    *Why:* an alphabetised page list is navigable by a maintainer, or by a generated file browser, without a separate index — the ordering itself is the index. The `❖`/`🚧` marker is what lets a glance, or a script, tell a shippable component from a draft one without opening the page.
+    *Why:* alphabetical order is the index, for a maintainer or a generated browser; the `❖`/`🚧` marker tells shippable from draft without opening the page.
 
-    *Evidence:* 2026-08-10, two registered projects ordered categories alphabetically and held the `❖`/`🚧` markers without exception; one project's five out-of-order pages were drift, corrected that day, since the other was alphabetical throughout. Pinning `AUXILIARY` last was one project's override until decreed for every project on 2026-10-07.
+    *Evidence:* 2026-08-10, two projects held order and markers, bar one's five drifted pages, corrected that day. Pinning `AUXILIARY` last, one project's override, was decreed for all 2026-10-07.
 
    *Checked:* `skills/figma-foundations-audit/scripts/foundations.js` "page-order|category"; `skills/figma-foundations-audit/scripts/foundations.js` "page-order|pinned".
 
 12. **Category-name reference vocabulary**: `Actions`, `Data & Display`, `Feedback`, `Inputs`, `Layout`, `Navigation`, `Overlays`, `Selection`, `Tables`. A project draws a new category's name from here before inventing one; its header page writes it in capitals (rule 11).
 
-    *Why:* rule 22's precedent applies — that components are organised into named categories is universal (rule 11); the exact words are not, the same way component vocabulary and token vocabulary must match *each other* without either being fixed across projects. A shared reference list still earns its place: two projects independently converging on `Actions`/`Feedback`/`Inputs`/`Navigation`/`Overlays`/`Selection`, unprompted, is evidence a shared starting vocabulary is worth writing down even where it does not bind.
+    *Why:* categories are universal (rule 11) but their words are not, as with rule 22; two projects converging unprompted on six of these names makes a starting list worth writing down, though it does not bind.
 
-    *Evidence:* the list is the union of two registered projects' live category names, neither of which matches it fully: six matched exactly and a seventh differed only in punctuation (`Data Display`). `Layout` came from one project, and `Auxiliary` stays off the list because rule 11 pins it last as a catch-all.
+    *Evidence:* the union of two projects' live categories: six matched exactly, a seventh differed only in punctuation (`Data Display`); `Layout` from one; `Auxiliary` off the list, as rule 11 pins it.
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at each audit, for each page: whether a component belongs under an existing category is judgement.
 
 13. **`🚧` marks a page and every component on it as in progress; generated text never quotes it.** A page still in progress is named `🚧 Name`, and every component on that page carries the marker: a public component starts with it (`🚧 Time input`), and a private part puts it after the `_` that keeps it unpublished (`_🚧 Time input picker`), since Figma publishes any name that does not start with `_` (rule 8). When the page is finished, the page takes `❖` and its components drop the marker. Properties-table titles, component descriptions, page headers, code names and parity pairings read every name with the marker stripped: the table reads `Time input`, a description cites `_Time input picker`.
 
-    *Why:* the marker is a status, not part of the name. On the component it shows a draft wherever an instance is picked, not only in the page list; in generated text it would go stale the day the page becomes `❖`, and every table, description and code mapping that quoted it would need editing for a change that altered nothing about the component.
+    *Why:* the marker is a status, not a name: on the component it shows a draft wherever an instance is picked, and in generated text it would go stale the day the page becomes `❖`.
 
     *Evidence:* maintainer-decreed 2026-10-07.
 
@@ -386,7 +384,7 @@ Cite a rule as `figma-standard rule N`.
 
 14. **A deprecated component is marked in its page, its name and its description, and keeps working until it is removed.** Its page is named `🚫 Name` and moves to the `🔷 DEPRECATED` category, which rule 11 pins last. The component is renamed `[🚫 DEPRECATED] - Name` (`[🚫 DEPRECATED] - Side navigation`), and a private part keeps its `_` first (`_[🚫 DEPRECATED] - Side navigation item`, rule 8), which keeps the warning visible in every instance's name. Its description says what replaces it in its first paragraph (`Deprecated: use List instead.`) and keeps the rest until removal. Generated text keeps the deprecation prefix, unlike `🚧`: it is a warning a consumer must see, not a status that goes stale.
 
-    *Why:* deprecation has to reach the person placing an instance, not only the person browsing pages. A page marker alone is invisible from inside a product file; the name prefix shows wherever the instance sits, and the description tells them what to use instead. Keeping the component published until removal lets product files migrate on their own schedule instead of breaking.
+    *Why:* deprecation must reach whoever places an instance: a page marker is invisible from a product file, while the name shows wherever the instance sits and the description names the replacement. Staying published lets product files migrate on their own schedule.
 
     Maintainer-decreed 2026-10-07 from the convention one library already used for `Side navigation`.
 
@@ -394,7 +392,7 @@ Cite a rule as `figma-standard rule N`.
 
 15. **A component page documents its subject with the five-section template, in order**: a page **header** carrying the component name and the first sentence of its description, then section cards — `Examples` (instances as published with the library) · `Component` (the main editable component) · `Parts` (sub-components, usually unpublished) · `Properties` (the generated properties table, one per component on the page) · `Matrix` (component permutations, **generated with the Propstar plugin**). A section with nothing to hold is omitted — a leaf component has no `Parts` — and **`Matrix` is present exactly when the page's primary component has variant axes or booleans**, since permutations are generated from those and a component with neither has nothing to permute. **Building-block pages are exempt from the template entirely** `[maintainer-ruled 2026-08-13, widened the same day]` — pages holding only components that take the compact description tier: internal-prefixed, or slot-only. Their consumers are the components that compose them, documented on those components' own pages. The template tier and the description tier are the same boundary, deliberately: a component too internal for a full description is too internal for a documentation page.
 
-    *Why:* one page shape means a reader — or a generated file browser, or an AI walking the file — knows where everything is on any component page before reading it. The header-mirrors-description rule keeps canvas and panel from drifting: the header is generated from the description, never typed (toolkit-standard §D 23; the description skill enforces it as a sync). Naming the generating tool per section (Propstar for `Matrix`, the properties-table skill for `Properties`) is toolkit-standard §D 16's argument at page scale: a section with a named generator is a refill, and a section without one quietly becomes hand-maintained and stale.
+    *Why:* one page shape tells a reader, a generated browser or an agent where everything is before reading. The header is generated from the description, never typed (toolkit-standard §D 23), so canvas and panel do not drift; a section with a named generator is a refill, and one without goes stale (§D 16).
 
     *Evidence:* maintainer-decreed 2026-08-13 from a live page; that day's sweep of one project found the template on 32 of 35 component pages and the Matrix tied exactly to the *primary* component's axes, where counting any component on the page reported five false gaps.
 
@@ -472,7 +470,7 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `skills/oklch-color-scale-system/SKILL.md` "solidForeground" — the ramp's measured foreground for its solid, per mode; whether the brand's mapping follows it is read in the session that maps the brand.
 
-49. **A component token is named `Component/<Component>/<Element>/<property>[-<variant>][-<state>]`, in the component's own words, and aliases a semantic token.** The component segment is the component's name (rule 13's marker stripped), or a component group where tokens are shared across a family (`Input`). The element is the layer the token paints, by its role name (rule 10); a token on the component's own frame takes `Container`. The leaf is lowercase (rule 18): the property first, then the modifiers it needs, joined by hyphens: the variant value, spelt as the variant is, then the state or a gradient stop (`background-primary-hover`, `background-start`). A modifier appears only where the value differs by it: a label that does not change on hover has no state, and a default value (`Feedback=None`) adds nothing. Two variant values follow axis order (rule 1). A brand never appears in the name: its override lives in the brand's extension under the same name, bound as rule 60 says. A collection that holds only component tokens may drop the `Component/` prefix, since the collection already says it. One component worked through end to end, Figma path to stylesheet, with its cases: [tokens: component token names](../knowledge/code/tokens.md#component-token-names-worked-through). The wrong shapes:
+49. **A component token is named `Component/<Component>/<Element>/<property>[-<variant>][-<state>]`, in the component's own words, and aliases a semantic token.** The component segment is the component's name (rule 13's marker stripped), or a family that shares tokens (`Input`). The element is the painted layer's role name (rule 10), `Container` for the component's frame. The lowercase leaf (rule 18) is the property, then hyphenated modifiers: the variant value as the file spells it, then the state or a gradient stop (`background-primary-hover`, `background-start`). A modifier appears only where the value differs by it: a label that does not change on hover has no state, and a default value (`Feedback=None`) adds nothing. Two variant values follow axis order (rule 1). A brand never appears in the name: its override lives in the brand's extension under the same name, bound as rule 60 says. A collection that holds only component tokens may drop the `Component/` prefix, since the collection already says it. One component worked through end to end, Figma path to stylesheet, with its cases: [tokens: component token names](../knowledge/code/tokens.md#component-token-names-worked-through). The wrong shapes:
 
     | Case | Name |
     |---|---|
@@ -480,9 +478,9 @@ Cite a rule as `figma-standard rule N`.
     | Wrong: a variant as a segment | `Avatar/With image/background` → `Component/Avatar/Container/background-photo` |
     | Wrong: a brand in the path | `Component/Avatar/Brand C/background` → the same name, overridden in Brand C |
 
-    *Why:* code takes the token's path as its name (code-standard rule 52), so a token a reader cannot map to one layer of one component is one an engineer maps by guessing. The element before the property groups a component's tokens by the layer they paint, which is how both the picker and a stylesheet are read. Modifiers last keep every token for one layer together whatever its variants and states, and give each name one fixed shape however many axes the component grows; a variant as a path segment would scatter one layer's tokens across as many groups as it has variants. A brand segment would multiply the tokens by the brands and leave the components to switch between them, which is the extension's job.
+    *Why:* code takes the path as its name (code-standard rule 52), so a token not mappable to one layer is mapped by guessing. Element before property groups tokens by layer, as picker and stylesheet are read; modifiers last keep one layer's tokens together in one fixed shape, where a variant segment would scatter them. A brand segment would multiply tokens by brands and make components switch between them, the extension's job.
 
-    *Evidence:* 2026-10-15, one project's eight component colour tokens had four shapes: the property before the element, no element, a variant as a segment spelt `With image` for a variant named `Photo`, and a component name in the wrong case. Renamed in two passes, bindings kept. The order is the published consensus, with Material Web the one counter-example ([tokens: component token names](../knowledge/code/tokens.md#component-token-names-worked-through)).
+    *Evidence:* 2026-10-15, one project's eight component colour tokens had four shapes: property before element, no element, a variant segment spelt `With image` for `Photo`, a miscased name. Renamed, bindings kept. The order is the published consensus, with Material Web the one counter-example ([tokens: component token names](../knowledge/code/tokens.md#component-token-names-worked-through)).
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a component token is added or renamed: whether its element is a layer and its modifiers are the variant values spelt as the file spells them is read in the session.
 
@@ -494,22 +492,22 @@ Cite a rule as `figma-standard rule N`.
 
    *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a brand override is added or rebound: whether a semantic token resolves to the same value is read in the session.
 
-55. **A semantic token is named `<Type>/<Property>/<Role>/<level>[-<state>]`: the slots in that order, each filled from a short list: the house's below, unless the project records its own.** The type is the token's kind (`Colour`). The property is what the token paints, from a closed set: background, text, icon and border, plus the groups the project rules in (control fills, surfaces, shadow), one word each (`Stroke` or `Border`, never both). The role is neutral, brand or a status, the status word in the role slot itself, with no category segment (`Feedback`, `Status`) above it; a non-status colour set (decorative hues, charts) marks itself on its own side (`Accent/Blue`) rather than making status carry a category. The level is the lowercase leaf (rule 18), from one intensity ladder for the whole library around a `default` or unnamed middle (`softer`, `soft`, `default`, `emphasis`): each property takes the steps it needs, and a word means the same step wherever it appears. A colour drawn on a solid fill is named for that fill (`on-emphasis` beside `emphasis`). A state comes last, only where the value changes, one word per state (`rest`, `hover`, `press`). Surfaces are named by their layer's role (`page`, `raised`, `overlay`, `scrim`), not by number, and take no role slot: `Colour/Surface/<layer>`. The order and the closed lists are the rule; the house words below are the defaults, and a project records in its context document only the words it uses instead (rule 22, toolkit-standard §D 7):
+55. **A semantic token is named `<Type>/<Property>/<Role>/<level>[-<state>]`, its slots in that order, each from a closed list.** The type is the token's kind (`Colour`). The property is what it paints, from a closed set: background, text, icon and border, plus control, surface and shadow where the project rules them in, one word each (`Stroke` or `Border`, never both). The role is neutral, brand or a status word, with no category segment (`Feedback`) above it; a non-status set marks itself (`Accent/Blue`). The level is the lowercase leaf (rule 18), from one library-wide intensity ladder around a `default` or unnamed middle: each property takes the steps it needs, and a word means the same step everywhere. A colour on a solid fill is named for it (`on-emphasis`). A state comes last, only where the value changes, one word per state (`rest`, `hover`, `press`). Surfaces take their layer's role, not a number, and no role slot: `Colour/Surface/<layer>`. The house words are defaults; a project's context document records only the words it uses instead (rule 22, toolkit-standard §D 7):
 
     | Slot | House words |
     |---|---|
     | Property | `Background`, `Surface`, `Control`, `Text`, `Icon`, `Stroke`, `Shadow` |
     | Role | `Neutral`, `Brand`, `Danger`, `Info`, `Success`, `Warning` |
-    | Level | `softer`, `soft`, `default`, `emphasis`; `on-emphasis` for a colour drawn on an `emphasis` fill |
+    | Level | `softer`, `soft`, `default`, `emphasis`; `on-emphasis` on an `emphasis` fill |
     | State | `rest`, `hover`, `press` |
     | Surface layer | `page`, `raised`, `overlay`, `scrim` |
 
-    So `Colour/Background/Danger/soft`, `Colour/Control/Brand/emphasis-hover`, `Colour/Text/Neutral/on-emphasis`, `Colour/Surface/raised`. Component tokens are rule 49's.
+    So `Colour/Background/Danger/soft`, `Colour/Control/Brand/emphasis-hover`, `Colour/Text/Neutral/on-emphasis`. Component tokens are rule 49's.
 
-    *Why:* code takes the path as its name (code-standard rule 52), and a designer or an agent at the picker has only the name to go on. A written order and closed word lists let either derive the name from the use and the use from the name; a word with two meanings, or two words for one, turns every pick into a lookup. The lists also govern growth: a new need adds a word to one list, never a new shape beside the old ones.
+    *Why:* code takes the path as its name (code-standard rule 52), and at the picker the name is all there is. A fixed order and closed lists let anyone derive name from use and use from name, where a word with two meanings turns every pick into a lookup; a new need adds a word, never a new shape.
 
-    *Evidence:* 2026-11-18, one project's semantic collection (102 tokens) carried a `Feedback` segment over every status role with no non-status set beside it, `medium` on text where backgrounds used `soft` for the same step, the solid fill and the text on it both named `inverse`, surfaces numbered (`Level/level 1`), and descriptions copied across roles (info tokens described as danger). Renamed to this shape in one session, bindings kept, and every description regenerated from the grammar. Shipping systems back each slot, with the strength the knowledge base gives it: [name grammar](../knowledge/code/token-taxonomy.md#name-grammar-and-segment-order), [role and status words](../knowledge/code/token-taxonomy.md#role-and-status-words), [intensity levels](../knowledge/code/token-taxonomy.md#intensity-levels-per-property), [inverse and on-colour](../knowledge/code/token-taxonomy.md#inverse-on-colour-and-fixed-colours), [what makes a taxonomy last](../knowledge/code/token-taxonomy.md#what-makes-a-taxonomy-last) and [surfaces and elevation levels](../knowledge/ui/design/visual.md#surfaces-and-elevation-levels). The house words are a choice, not a finding: the maintainer settled them on that project, 2026-11-18, among words the knowledge base shows in wide use (`danger` beside `critical` and `error`; `Stroke` is Figma's own word for the property, where most code systems say `border`), and the middle step is named `default` rather than left unnamed.
+    *Evidence:* 2026-11-18, one project's 102 semantic tokens: a `Feedback` segment over every status, `medium` on text where backgrounds used `soft`, a solid and its text both `inverse`, numbered surfaces, descriptions copied across roles. Renamed, bindings kept. Systems back each slot as strongly as the KB shows: [token taxonomy](../knowledge/code/token-taxonomy.md#name-grammar-and-segment-order) (grammar, roles, levels, on-colour, what lasts) and [surfaces](../knowledge/ui/design/visual.md#surfaces-and-elevation-levels). The house words are the maintainer's choice that day among words in wide use (`danger` beside `critical`; `Stroke`, Figma's word, over code's `border`), and a named middle `default`.
 
-   *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a semantic token is added or renamed: whether its words come from the house lists, or the project's own where it records them, is read in the session.
+   *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — whenever a semantic token is added or renamed: whether its words come from the house's lists or the project's is read in the session.
 
 17. *Retired 2026-11-19: moved to figma-components-audit as its tracked metric (its SKILL.md section "Reporting: the fix queue"), since only that skill reports it.*
