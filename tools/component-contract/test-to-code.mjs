@@ -357,4 +357,18 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a slot\'s sample frame gives its empty size to nothing a caller places', !/> \*:not\(:has\(\*\)\)/.test(css) && !/10\.5rem|12\.5rem/.test(css));
   ok('a combination that sets its own minimum keeps it when empty, never unset', /lg[^{]*sheet__body:not\(:has\(\*\)\) \{[^}]*min-block-size: 6\.25rem/.test(css) && !/min-block-size: unset/.test(css));
 }
+// an override two placed components deep is the innermost one's part, named level by level; a graphic directly under a
+// placed component is its part too (a slider's stop dot, a track's line)
+{
+  const dot = { contract: 1, component: 'Dot', props: {}, anatomy: { root: { kind: 'container' }, mark: { kind: 'graphic', parent: 'root', background: 'C/soft', width: 4, height: 4 } }, variants: [] };
+  const row = { contract: 1, component: 'Row', props: {}, anatomy: { root: { kind: 'container' }, dot: { kind: 'instance', parent: 'root', component: 'Dot', with: {} }, line: { kind: 'graphic', parent: 'root', background: 'C/soft', width: 10, height: 2 } }, variants: [] };
+  const bar = { contract: 1, component: 'Bar', props: {}, anatomy: { root: { kind: 'container' }, row: { kind: 'instance', parent: 'root', component: 'Row', with: {} },
+    'row/dot': { kind: 'instance', parent: 'row', component: 'Dot', with: {} }, 'row/dot/mark': { kind: 'graphic', parent: 'row/dot', background: 'C/strong', width: 4, height: 4 },
+    'row/line': { kind: 'graphic', parent: 'row', background: 'C/strong', width: 10, height: 2 } }, variants: [] };
+  const mains = (x) => ({ Dot: dot, Row: row })[x] || null;
+  const sheet = toCss(bar, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override two placed components deep is written on the innermost one\'s part, level by level',
+    /\.ds-bar > \.ds-bar__row > \.ds-row__dot > \.ds-dot__mark \{[^}]*background: var\(--c-strong\)/.test(sheet));
+  ok('a graphic directly under a placed component takes its override', /\.ds-bar > \.ds-bar__row > \.ds-row__line \{[^}]*background: var\(--c-strong\)/.test(sheet));
+}
 console.log(`${n} passed`);

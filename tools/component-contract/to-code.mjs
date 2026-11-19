@@ -312,14 +312,15 @@ function everPulls(c) {
   return ids;
 }
 
-/* The placed instance a part is inside, where it is inside exactly one and no slot: the component whose own part it is. */
+/* The nearest placed instance a part is inside, where none above it sits in a slot: the component whose own part it is
+   (one placed inside another is reached through both: hostIn, chain). */
 function hostOf(a, id) {
   let host = null;
   if ((a[(a[id] || {}).parent] || {}).kind === 'slot') return null;
   for (let p = a[id] && a[id].parent; p; p = a[p] && a[p].parent) {
     if (!a[p]) return null;
     if ((a[a[p].parent] || {}).kind === 'slot') return null;
-    if (a[p].kind === 'instance') { if (host) return null; host = p; }
+    if (a[p].kind === 'instance' && !host) host = p;
   }
   return host;
 }
@@ -352,7 +353,7 @@ const placedOf = (a, host, M) => placedMatch(M, Object.fromEntries(Object.keys(a
 
 /* Whether a part is inside a placed component this library holds, so named as that component's own. */
 const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), m = h && a[h].component && mains(a[h].component, a[h].key);
-  if (!m || (a[id].parent === h && a[id].kind === 'graphic') || copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h)) return false;
+  if (!m || copyOf(c, h) || Object.keys(a).some((k) => k !== h && copyOf(c, k) === h) || (hostOf(a, h) && !hostIn(c, h, mains))) return false;
   return !!placedOf(a, h, placedAs(a, h, m, mains).M)[id.slice(h.length + 1)]; };
 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
@@ -385,12 +386,14 @@ export function drawn(c, when, mains = () => null) {
     if (inside(id)) {
       // save the colour the instance's glyph is drawn in, which the placing component sets on it: an icon draws
       // in its element's color (currentColor), so the colour is the instance's
-      if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') { extra.push([e.parent, [['color', tokenNames.token(e.background)]]]); continue; }
+      // (a component this library holds draws it as its own part: an override on that part, below)
+      if (a[e.parent] && a[e.parent].kind === 'instance' && e.kind === 'graphic' && typeof e.background === 'string') extra.push([e.parent, [['color', tokenNames.token(e.background)]]]);
       // an override inside a placed component this library holds (derive keeps only a part that differs from that
       // component drawn at the instance's props): what it changes there, on that component's own part, reached through
-      // the instance (chain); one level of placing deep, a part the placed component no longer has said, not guessed
+      // the instance (chain); at any depth of placing (each placed component names its own parts down to the next it holds), a part the placed component no longer has said, not guessed
       const host = hostOf(a, id), m = host && a[host].component && mains(a[host].component, a[host].key);
-      if (!m) continue;
+      // (inside one placed inside another: the inner one is reached as the outer one's own part, or not at all)
+      if (!m || (hostOf(a, host) && !hostIn(c, host, mains))) continue;
       const rel = id.slice(host.length + 1);
       // the selector names the part by the component the instance places in its base (chain): a variant that places
       // another there is said, not written under the first one's names
@@ -493,7 +496,7 @@ export function drawn(c, when, mains = () => null) {
   for (const id of Object.keys(ALL)) {
     if (id in a || out[id]) continue;
     const host = hostOf(ALL, id), m = host && a[host] && ALL[host].component === a[host].component && mains(a[host].component, a[host].key);
-    if (!m || (ALL[id].parent === host && ALL[id].kind === 'graphic' && typeof ALL[id].background === 'string') || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
+    if (!m || (hostOf(ALL, host) && !hostIn(c, host, mains)) || copyOf(c, host) || Object.keys(ALL).some((k) => k !== host && copyOf(c, k) === host)) continue;
     const now = overrideOf(a, host, id.slice(host.length + 1), m, mains, ALL);
     if (now) out[id] = { decls: new Map([...now.theirs].map(([p, v]) => [p, { v, given: true }])), unread: [] };
   }
@@ -620,10 +623,17 @@ function chain(c, n, id, rootCond, mains = () => null) {
   const hostAt = segs.findIndex((s) => (c.anatomy[s] || findAdded(c, s) || {}).kind === 'instance');
   const host = hostAt >= 0 && hostAt < segs.length - 1 && segs[hostAt], m = host && (() => { const he = c.anatomy[host] || findAdded(c, host); return mains(he.component, he.key); })();
   if (m) {
-    const n2 = namer(m.folder || folderOf(m.component), n.naming);
-    const all = allOf(c);
-    const { M, back } = placedAs(all, host, m, mains), match = placedOf(all, host, M);
-    const inner = segs.slice(hostAt + 1).map((s) => { const rel = s.slice(host.length + 1); return n2.part(partSeg(m, back[match[rel]] || rel)); });
+    const all = allOf(c), inner = [];
+    // each placed component names its own parts, down to the next one placed in it, which names the rest
+    for (let h = host, hm = m, rest = segs.slice(hostAt + 1); rest.length && hm;) {
+      const n2 = namer(hm.folder || folderOf(hm.component), n.naming);
+      const { M, back } = placedAs(all, h, hm, mains), match = placedOf(all, h, M), own = (s) => back[match[s.slice(h.length + 1)]] || s.slice(h.length + 1);
+      const next = rest.slice(0, -1).findIndex((s) => all[s] && all[s].kind === 'instance' && mains(all[s].component, all[s].key));
+      const take = next >= 0 ? rest.slice(0, next + 1) : rest;
+      inner.push(...take.map((s, i) => n2.part(partSeg(hm, own(s))) + (i === next ? through(n, all[s].component, heldIn(hm, own(s))) : '')));
+      rest = rest.slice(take.length);
+      if (rest.length) { h = take[take.length - 1]; hm = mains(all[h].component, all[h].key); }
+    }
     return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.slice(0, hostAt + 1).map(seg), ...inner].join(' > ') + pseudoSel(pseudo);
   }
   return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.map(seg)].join(' > ') + pseudoSel(pseudo);
