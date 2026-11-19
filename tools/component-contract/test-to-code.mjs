@@ -341,4 +341,11 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('and stays hidden where a rule of the same weight gives the part a display of its own (a layout at a size)', selfCheck(lg, rulesOf(lg).rules).length === 0);
   ok('a part a pointer state takes away is hidden by the sheet at that state, its insides with it, once',
     /:focus-visible[^{]*> \.pick__down \{[^}]*display: none/.test(css) && !/pick__dot \{[^}]*display: none/.test(css) && (css.match(/display: none/g) || []).length === 1); }
+{
+  const c = { component: 'Sheet', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } },
+    body: { kind: 'slot', parent: 'root', layout: { direction: 'column' }, width: 'fill', height: 'hug', minHeight: 172, whileEmpty: ['minHeight'] } }, variants: [] };
+  const css = toCss(c, 'sheet');
+  ok('a size kept only while empty is written for the empty box alone, never as the filled box\'s minimum',
+    /sheet__body:not\(:has\(\*\)\) \{[^}]*min-block-size: 10\.75rem/.test(css) && !/sheet__body \{[^}]*min-block-size/.test(css));
+}
 console.log(`${n} passed`);

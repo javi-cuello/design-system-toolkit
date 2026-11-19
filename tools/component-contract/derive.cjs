@@ -455,7 +455,10 @@ function anatomies(trees, characters, known, L, mains = null, found = null, axes
   const base = (i) => (trees[i].from != null && trees[i].from >= 0 ? trees[i].from : i);
   const filled = new Map();
   flat.forEach((f, i) => { const s = filled.get(base(i)) || new Set(); for (const x of Object.values(f.anatomy)) if (x && x.parent) s.add(x.parent); filled.set(base(i), s); });
-  flat.forEach((f, i) => { for (const [k, x] of Object.entries(f.anatomy)) if (x && x.emptyKept) { if (filled.get(base(i)).has(k)) for (const m of x.emptyKept) delete x[m]; delete x.emptyKept; } });
+  // (kept, the sizes say they hold only while the part is empty, `whileEmpty`: Figma's empty frame keeps the size it
+  // last had, and the same frame filled hugs what it holds, which a minimum would not: a dialog's content 172 empty, 146
+  // filled on a screen)
+  flat.forEach((f, i) => { for (const [k, x] of Object.entries(f.anatomy)) if (x && x.emptyKept) { if (filled.get(base(i)).has(k)) for (const m of x.emptyKept) delete x[m]; else x.whileEmpty = x.emptyKept; delete x.emptyKept; } });
   // (`found`: a Map, by each variant's `when`, of the instances its insides are kept whole in)
   if (mains) for (const f of flat) { const here = found ? new Set() : null; ownInsides(f.anatomy, mains, { found: here }); if (found) found.set(JSON.stringify(f.when), [...here]); }
   return flat;

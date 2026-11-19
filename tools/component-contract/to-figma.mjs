@@ -772,7 +772,15 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
           for (const [side, f] of [['top', 'paddingTop'], ['end', 'paddingRight'], ['bottom', 'paddingBottom'], ['start', 'paddingLeft']]) if (pad[side] != null) await num(n, f, pad[side]);
           // a box with nothing inside: its measured size, not Figma's 100 for an empty auto layout
           if (px(e.width) && !ids.some((x) => variant.anatomy[x].parent === id)) { n.primaryAxisSizingMode = 'FIXED'; n.counterAxisSizingMode = 'FIXED'; n.resize(px(e.width), px(e.height) || px(e.width)); }
-          for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null) await num(n, f, e[f]);
+          // a size kept only while empty (derive's whileEmpty) is no minimum: the empty frame is drawn at it and keeps
+          // hugging, as the source's empty slot does (a filled one hugs what it holds)
+          const onlyEmpty = new Set(e.whileEmpty || []);
+          for (const f of ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']) if (e[f] != null && !onlyEmpty.has(f)) await num(n, f, e[f]);
+          if (onlyEmpty.size && !ids.some((x) => variant.anatomy[x].parent === id)) {
+            const modes = [n.primaryAxisSizingMode, n.counterAxisSizingMode];
+            n.resize(onlyEmpty.has('minWidth') ? px(e.minWidth) : n.width, onlyEmpty.has('minHeight') ? px(e.minHeight) : n.height);
+            [n.primaryAxisSizingMode, n.counterAxisSizingMode] = modes;
+          }
         } else if (n.type !== 'VECTOR' && n.type !== 'ELLIPSE' && ids.some((x) => variant.anatomy[x].parent === id && !variant.anatomy[x].absolute)) {
           // a box no flex lays out that holds parts: they flow side by side, as inline content does (a label and
           // its required mark), never stacked at one point

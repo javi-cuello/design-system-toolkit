@@ -879,6 +879,20 @@ export async function authoredWidth(tab, selector, property, { raw = false, cach
   return levels ? winning(levels[0], property, { raw }) : null;
 }
 
+/* The selector of the rule a property's winning declaration on the element came from (null: inline, or none): which
+   condition the code wrote it under (to-code's empty-only size, `:not(:has(*))`). */
+export async function authoredSelector(tab, selector, property, cache = null) {
+  const levels = await matchedLevels(tab, selector, cache);
+  if (!levels) return null;
+  let normal = null, important = null;
+  for (const st of levels[0] || []) for (const p of st.cssProperties || []) {
+    if (p.name !== property || p.disabled || p.parsedOk === false || p.value == null) continue;
+    if (p.important || /!important/.test(p.value)) important = st; else normal = st;
+  }
+  const st = important || normal;
+  return (st && st.selector) || null;
+}
+
 /* An element's matched styles, its own and then each ancestor's (lowest precedence first in each), fetched once per
    `cache` (a Map one render's reads share) for every property read of it. */
 async function matchedLevels(tab, selector, cache) {
@@ -895,7 +909,8 @@ async function matchedLevels(tab, selector, cache) {
   await tab.send('Runtime.releaseObject', { objectId: result.objectId }).catch(() => {});
   if (!nodeId) return null;
   const r = await tab.send('CSS.getMatchedStylesForNode', { nodeId });
-  const own = [...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])];
+  // (each rule's style keeps its selector, `selector`: which rule a declaration won from, authoredSelector)
+  const own = [...(r.matchedCSSRules || []).map((x) => ({ ...x.rule.style, selector: x.rule.selectorList && x.rule.selectorList.text })), ...(r.inlineStyle ? [r.inlineStyle] : [])];
   const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => m.rule.style), ...(x.inlineStyle ? [x.inlineStyle] : [])]);
   levels = [own, ...inherited];
   // the element's ::after, as a level of its own before the element's (it inherits the element's custom properties):

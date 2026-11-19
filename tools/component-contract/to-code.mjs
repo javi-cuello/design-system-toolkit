@@ -460,6 +460,10 @@ export function drawn(c, when, mains = () => null) {
     // the first in the flow, 0 for the first and for a placed part, 0 where the gap is not below 0 (a variant's own
     // value, never an unset that would leave the base's)
     const pull = e.parent && pulling.has(e.parent) ? (e.position === 'absolute' || e.absolute || firstInFlow(e.parent) === id || !pulls(parent) ? 0 : parent.layout.gap) : null;
+    // a size Figma keeps only while the part is empty (derive's whileEmpty): written under `::empty` (chain: while it holds
+    // no element), never as a minimum the filled part keeps
+    const empty = (e.whileEmpty || []).filter((f) => e[f] !== undefined);
+    if (empty.length) { e = { ...e }; for (const f of empty) delete e[f]; delete e.whileEmpty; }
     const { decls, unread } = declarations(e, { root: id === 'root', holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors, box, pull }, tokenNames);
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
@@ -468,6 +472,14 @@ export function drawn(c, when, mains = () => null) {
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
     out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note]) => [p, { v, note }])), unread: e.kind === 'instance' || slotted ? [] : unread };
+    if (empty.length) {
+      const only = declarations(Object.fromEntries(empty.map((f) => [f, a[id][f]])), { root: false, holds: false, row: true, anchors: false, box: null, pull: null }, tokenNames);
+      out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(only.decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
+    } else if (B[id] && (B[id].whileEmpty || []).length) {
+      // a combination where the design fills it: the defaults' empty size does not hold, whatever the page leaves in it
+      const SIZE = { minWidth: 'min-inline-size', minHeight: 'min-block-size', maxWidth: 'max-inline-size', maxHeight: 'max-block-size' };
+      out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(B[id].whileEmpty.filter((f) => SIZE[f]).map((f) => [SIZE[f], { v: 'unset' }])), unread: [] };
+    }
   }
   // an override the defaults write on a layer this combination no longer records (derive dropped it, as it draws as its
   // component does): the component's own value here, so the base rule's override does not hold where it is gone
@@ -586,6 +598,9 @@ export function selfCheck(c, rules, mains) {
   return out;
 }
 
+// a part's state written after its id (`::after`); `::empty`, the part while it holds no element (Figma's empty frame,
+// which keeps its size there: a text alone in it does not count, a limit named in the README)
+const pseudoSel = (p) => (!p ? '' : p === 'empty' ? ':not(:has(*))' : `::${p}`);
 /* A part's selector: the root, then each part on its way down, by child combinators (code-standard rule 5). */
 function chain(c, n, id, rootCond, mains = () => null) {
   const [own, pseudo = ''] = id.split('::');
@@ -604,9 +619,9 @@ function chain(c, n, id, rootCond, mains = () => null) {
     const all = allOf(c);
     const { M, back } = placedAs(all, host, m, mains), match = placedOf(all, host, M);
     const inner = segs.slice(hostAt + 1).map((s) => { const rel = s.slice(host.length + 1); return n2.part(partSeg(m, back[match[rel]] || rel)); });
-    return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.slice(0, hostAt + 1).map(seg), ...inner].join(' > ') + (pseudo ? `::${pseudo}` : '');
+    return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.slice(0, hostAt + 1).map(seg), ...inner].join(' > ') + pseudoSel(pseudo);
   }
-  return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.map(seg)].join(' > ') + (pseudo ? `::${pseudo}` : '');
+  return [n.root + rootCond + through(n, c.component, placedIn(c)), ...segs.map(seg)].join(' > ') + pseudoSel(pseudo);
 }
 // the selector the sheet styles a part by, at no condition: what the markup's parity mapping names it by
 /* A part inside a placed component this library holds, by that component's own names under the instance; else null. */

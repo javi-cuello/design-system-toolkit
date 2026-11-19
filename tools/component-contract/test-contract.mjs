@@ -498,7 +498,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     variants: [{ name: 'Size=md', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([])] }, ...second] });
   const empty = derive(spec([])).anatomy.content;
   const shown = derive(spec([{ name: 'Size=md, Show=True', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([{ name: 'Body', type: 'TEXT', w: 360, h: 160 }])] }])).anatomy.content;
-  ok('an empty hugging frame keeps its size as its least; one a variant fills does not', empty.minHeight === 200 && !('emptyKept' in empty) && shown.minHeight === undefined && !('emptyKept' in shown));
+  ok('an empty hugging frame keeps its size while it is empty (whileEmpty); one a variant fills does not', empty.minHeight === 200 && JSON.stringify(empty.whileEmpty) === '["minHeight"]' && !('emptyKept' in empty) && shown.minHeight === undefined && !('whileEmpty' in shown) && !('emptyKept' in shown));
   const two = spec([]); two.props.Size = ['md', 'lg']; two.variants.push({ name: 'Size=lg', type: 'COMPONENT', w: 400, h: 200, layout: 'VERTICAL', pad: [0, 0, 0, 0], sizing: 'FIXED/HUG', children: [frame([{ name: 'Body', type: 'TEXT', w: 360, h: 160 }])] });
   ok('another variant filling a part of that name leaves this one\'s kept size', derive(two).anatomy.content.minHeight === 200);
   const plain = spec([]); plain.variants[0].children = [frame([], 'FRAME')];

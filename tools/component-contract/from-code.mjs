@@ -878,7 +878,7 @@ async function main() {
   const self = argv.includes('--self') || second; if (argv.includes('--self')) argv.splice(argv.indexOf('--self'), 1);
   const name = argv[0];
   if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self | --second]'); process.exit(2); }
-  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
+  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
   try { L = await openSource(label, name, { rebuild, codeOnly, self, second }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
@@ -1309,7 +1309,11 @@ async function main() {
         const w = await authoredWidth(L.tab, q, css, { raw: true, cache: styles });
         // (one written as a token, var(): the length it computes to, which the tokens below name back as that token)
         const own = lengthOf(w), v = own ?? (/^\s*var\(/.test(w || '') ? lengthOf(await call(L.tab, ([q, prop]) => { const n = document.querySelector(q); return n ? getComputedStyle(n).getPropertyValue(prop) : null; }, [q, css])) : null);
-        if (v && !(field in e)) { e[field] = v; if (own == null) viaVar.add(`${e.id}.${field}`); }
+        if (v && !(field in e)) {
+          e[field] = v; if (own == null) viaVar.add(`${e.id}.${field}`);
+          // written to hold only while the box holds no element (to-code's whileEmpty, `:not(:has(*))`): said so
+          if (/:not\(:has\(\*\)\)\s*$/.test(await authoredSelector(L.tab, q, css, styles) || '') && !(e.whileEmpty || []).includes(field)) e.whileEmpty = [...(e.whileEmpty || []), field];
+        }
       } }
       // layout and sizing as the code wrote them, read through the one table (rules.mjs) from the element's and its
       // parent's authored declarations: never a measured box, which keeps no hug or fill (CSSOM gives used pixels).
