@@ -1,5 +1,6 @@
 # Changelog — figma-foundations-audit
 
+- 1.27.2 (2026-11-19): the note that Propstar displaces the Desktop Bridge, so the template check runs apart from Matrix generation, moves here from figma-standard rule 15.
 - 1.27.1 (2026-11-16): the unused-token check counts every style's bindings, used by a component or not, as figma-standard rule 42 says. Case F27.
 - 1.27.0 (2026-11-12): the style-binding check leaves a text style's letter spacing set in percent unraised, figma-standard rule 43's new exception: Figma binds a number variable to it only as px. Case F26.
 - 1.26.1 (2026-11-12): `scripts/from-snapshot.mjs`'s header names `--parents`, which it reads and SKILL.md documents.

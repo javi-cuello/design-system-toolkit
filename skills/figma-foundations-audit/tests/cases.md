@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.27.0)
+# Eval cases — figma-foundations-audit (v1.27.2)
+
+**Walked: 2026-11-19 for 1.27.2** — prose only (the Propstar note moved in from figma-standard rule 15); `node tests/test-foundations.mjs` 88 of 88, F-cases on the template unchanged.
 
 **Walked: 2026-11-12 for 1.27.0** — F26 added and executed: `node tests/test-foundations.mjs` 88 of 88; on 1.26.1's `library.mjs` F26 fails (87 of 88). F20's assertions unchanged.
 
