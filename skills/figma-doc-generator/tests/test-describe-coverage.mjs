@@ -27,6 +27,8 @@ const bare = { 'Text/Info/Default': 'Default colour for danger text.', 'Text/Dan
 ok('a name with no type prefix and a capitalised leaf is checked on its role', wrongWord(Object.keys(bare), bare).map((x) => x.name).join() === 'Text/Info/Default');
 const one = { 'Colour/Text/Info/default': 'Default colour for danger text.', 'Colour/Text/Danger/default': 'Danger text.' };
 ok('a collection of one type and property still checks the role', wrongWord(Object.keys(one), one).map((x) => x.name).join() === 'Colour/Text/Info/default');
+const short = { ...w, Elevation: '' };
+ok('a short name beside them (Elevation) does not hide the shared namespace', !wrongWord(Object.keys(short), short).some((x) => x.name === 'Colour/Level/overlay'));
 ok('the coverage row carries the wrong-word list', Array.isArray(s.wrongWord));
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

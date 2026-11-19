@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.26.1 (2026-11-19): rule 47's title says on-emphasis pair, as its body does; rule 18's evidence notes that the `Feedback` segment it quotes is the one rule 55 retired. No rule changes.
 - 2.26.0 (2026-11-18): rule 55, the semantic token grammar (slot order, closed word lists, one intensity ladder, on-colour named for its fill, surfaces by role), from one project's rename and the token-taxonomy knowledge page; rule 18's example drops the retired `Feedback` segment.
 - 2.25.1 (2026-11-17): rule 21's True/False examples drop `Open`, which a menu trigger carries as a `State` value (the State-axis research article); the rule is unchanged.
 - 2.25.0 (2026-11-16): rules 51–54 by decree, the knowledge base's house conventions moved here (toolkit-standard §D 21): a kit draws what its code renders; what Figma cannot show is not a variant; a trigger stays outside; a field and its control are one set.

@@ -1,4 +1,6 @@
-# Eval cases — figma-doc-generator (v1.25.0)
+# Eval cases — figma-doc-generator (v1.25.1)
+
+**Walked: 2026-11-19 for 1.25.1** — D49's test re-run, 12/12, with a short name (`Elevation`) beside the deep ones; the new check fails on 1.25.0 (11/12).
 
 **Walked: 2026-11-19 for 1.25.0** — D49 executed: `node tests/test-describe-coverage.mjs` 11/11; `describe-coverage.mjs --only semantic` over three projects' stored snapshots listed 28 in one (24 copied descriptions naming a sibling hue, 4 false hits on prose words) and 0 in the other two, unchanged when re-run after the one-type-and-property fallback.
 

@@ -1,5 +1,6 @@
 # Changelog — figma-doc-generator
 
+- 1.25.1 (2026-11-19): `wrongWord` finds the shared namespace over the names deep enough to carry a role, so one short name beside them (`Elevation`) no longer makes the type and property read as roles.
 - 1.25.0 (2026-11-19): `describe-coverage.mjs` lists a description naming a sibling role and not its own (`wrongWord`); over three projects' snapshots, 28 listed, 24 of them real copies. D49 gains six assertions.
 - 1.24.2 (2026-11-18): `describe-coverage.mjs` leaves out a collection the snapshot marks `remote` (another library's, which the components bind; snapshot plugin 0.80.0): its descriptions are written in that library. D49's test gains the case.
 - 1.24.1 (2026-11-11): *Variable descriptions* step 1 reads the token snapshot where the project keeps it (`paths.tokens` in a repo), not only `snapshot/tokens.json`; found on the first real run. D49 executed end to end.

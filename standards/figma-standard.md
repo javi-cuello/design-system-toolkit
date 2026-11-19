@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.26.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.26.1** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -256,7 +256,7 @@ Cite a rule as `figma-standard rule N`.
 
     *Why:* one rule spanning every class of name is one rule to remember and one to check, and every name in a design tool is read by a person in a picker or a layers panel before it is read by anything else. Sentence case is what a person reads fastest in a list — it marks word boundaries without the shouting of Title Case or the run-together of camelCase — and it survives translation to code, since every export path in this toolkit lowercases and hyphenates on the way out. The case a designer sees and the case a developer types are allowed to differ precisely because the transform is total and lossless in that direction.
 
-    Checked live across all three registered projects, 2026-08-20. Tokens: two projects already wrote `Colour/Background/Feedback/Danger/soft`, and the third adopted the identical shape the same day, having briefly gone lowercase for exporter parity before the maintainer ruled for one convention across all name classes instead. Components: sentence case in all three, unanimous and unprompted (`Text input`, `Compact button`, `Filter chip`). Layers: same, with one project's audit history recording a `Labe` → `Label` fix as a defect rather than a variant spelling — which is the tell that the convention was already binding there before anyone wrote it down.
+    Checked live across all three registered projects, 2026-08-20. Tokens: two projects already wrote `Colour/Background/Feedback/Danger/soft` (its casing is the evidence here; its `Feedback` segment is what rule 55 later retired), and the third adopted the identical shape the same day, having briefly gone lowercase for exporter parity before the maintainer ruled for one convention across all name classes instead. Components: sentence case in all three, unanimous and unprompted (`Text input`, `Compact button`, `Filter chip`). Layers: same, with one project's audit history recording a `Labe` → `Label` fix as a defect rather than a variant spelling — which is the tell that the convention was already binding there before anyone wrote it down.
 
     **What this rule cost to establish, recorded because it is the interesting part.** The argument against aligning all four classes was that a layer name is Figma's override-matching key, so renaming layers inside published components would drop overrides on instances downstream. That argument was **wrong, and measured to be wrong**: 511 layer renames across one library, against a consumer file holding 877 instances with 2050 overridden fields, cost **zero** overrides. Figma's name-matching rule governs *swaps* — changing a variant, swapping an instance — not a rename inside a main component, where the instance layer follows by lineage. A mechanism cited from documentation and never measured is a plausible reason, not a proven one.
 
@@ -440,7 +440,7 @@ Cite a rule as `figma-standard rule N`.
 
    *Checked:* `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: a group holding tokens and groups, and a sibling group missing a common leaf, are one structure row"; `skills/figma-foundations-audit/tests/test-foundations.mjs` "tokens: two names that differ only in case are an error".
 
-47. **A brand's inverse pair moves with its solid, in each mode.** When a brand's semantic mapping is copied from another brand and its solid fill (an `emphasis` background or control, rule 55) moves to a different step, the text and icon tokens drawn on that fill move with it, and each mode is mapped on its own: a light hue's solid takes the dark end for its text, and its dark-mode solid sits where that mode's ramp holds the hue, not at the light mode's step number.
+47. **A brand's on-emphasis pair moves with its solid, in each mode.** When a brand's semantic mapping is copied from another brand and its solid fill (an `emphasis` background or control, rule 55) moves to a different step, the text and icon tokens drawn on that fill move with it, and each mode is mapped on its own: a light hue's solid takes the dark end for its text, and its dark-mode solid sits where that mode's ramp holds the hue, not at the light mode's step number.
 
     *Why:* a copied mapping copies the pairing the source brand's hue needed, and a step number is a different lightness in each mode's ramp, so a pair that reads in one brand or mode can vanish in the next.
 

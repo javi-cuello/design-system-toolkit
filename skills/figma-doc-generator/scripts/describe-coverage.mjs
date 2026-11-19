@@ -39,8 +39,10 @@ export function wrongWord(names, descriptions) {
   for (const n of names) { const p = n.split('/'); p.forEach((seg, i) => { const k = p.slice(0, i).join('/'); (kids[k] = kids[k] || new Set()).add(seg); }); }
   const says = (text, w) => new RegExp(`(^|[^a-z])${w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(text);
   // leading segments every name shares are a namespace, not a grammar slot
+  // (over the names deep enough to carry a role: one short name beside them, Elevation, is no grammar to share)
+  const deep = names.filter((n) => n.split('/').length > 2);
   let lead = 0;
-  while (names.length > 1 && names.every((n) => n.split('/').length > lead + 2 && n.split('/')[lead] === names[0].split('/')[lead])) lead++;
+  while (deep.length > 1 && deep.every((n) => n.split('/').length > lead + 2 && n.split('/')[lead] === deep[0].split('/')[lead])) lead++;
   const out = [];
   for (const n of names) {
     const full = String(descriptions[n] || '').toLowerCase();
