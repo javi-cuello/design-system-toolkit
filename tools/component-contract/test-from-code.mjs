@@ -26,6 +26,8 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     return designTokenFor('background', '#c00', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === 'Colour/Icon/Feedback/Danger/strong'
       && designTokenFor('background', '#c00', t, {}, null, null, null, ['--some-other-thing']).token !== undefined
       && designTokenFor('background', '#0c0', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === undefined; })());
+ok('a placed component\'s arg is read under the attribute markup spells it (isChecked as is-checked or data-is-checked)',
+  axisValueOf({ False: {}, True: { isChecked: true } }, { 'is-checked': 'true' }) === 'True' && axisValueOf({ False: {}, True: { isChecked: true } }, { 'data-is-checked': 'false' }) === 'False');
 ok('the token the code wrote holds its value in any of its modes: a contextual field token drawn on a layer, not the base mode, is still the one written',
   (() => { const t = tokenTable({ collections: { Layer: { name: 'Layer', modes: ['Background', 'Layer 01'], values: { Background: { 'field (contextual)': '#f4f4f4' }, 'Layer 01': { 'field (contextual)': '#ffffff' } } },
     Base: { name: 'Base', modes: ['Value'], values: { Value: { 'Default/Neutral/White': '#ffffff' } } } } }, 'Background');

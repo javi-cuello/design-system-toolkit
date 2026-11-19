@@ -206,7 +206,9 @@ export function usageIn(contracts) {
    and not "false" (markup that writes every flag as a string: selected="false"), off where it is absent or "false".
    Never class, style or the walk's own marks. */
 export function carries(attrs, k, v) {
-  const own = attrs[k] ?? attrs[`data-${k}`] ?? attrs[`aria-${k}`];
+  // (an arg as markup spells an attribute: isChecked as is-checked, the house's own words for a placed web component)
+  const kk = String(k).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  const own = attrs[k] ?? attrs[`data-${k}`] ?? attrs[`aria-${k}`] ?? (kk !== k ? attrs[kk] ?? attrs[`data-${kk}`] : undefined);
   if (v === true) return own != null && own !== 'false';
   if (v === false) return own == null || own === 'false';
   if (own != null) return own === String(v);
