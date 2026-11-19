@@ -868,6 +868,16 @@ async function selfSource(project, name, { second = false } = {}) {
   return src;
 }
 
+/* A part inside a placed component, in a box with no auto layout, sits where its component puts it: the design writes
+   no place for it (derive.cjs, inInstance) and an instance cannot move it (Figma's help, "Apply changes to
+   instances"), so none is read. A box with auto layout places its children by flow, as the design says it. */
+export function unplacedIn(raw, e) {
+  const up = raw.find((r) => r.id === e.parent);
+  if (!up || (up.layout && up.layout.direction)) return false;
+  for (let q = up; q; q = raw.find((r) => r.id === q.parent)) if (q.kind === 'instance') return true;
+  return false;
+}
+
 /* ---- the run ---- */
 
 /* A part turned (CSS rotate, or a transform that only turns and moves it) is measured as laid out, in its parent's axes as
@@ -1378,7 +1388,10 @@ async function main() {
             // (in a box of this component's with no auto layout every part is placed so, and the design writes no
             // position there; a placed component's insides keep it, as its entry here carries no layout of its own)
             const up = raw.find((r) => r.id === e.parent);
-            if (!up || up.kind === 'instance' || (up.layout && up.layout.direction)) e.position = 'absolute';
+            // (inside a placed component, a part in a box with no auto layout sits where its component puts it: the
+            // design writes no place for it (derive.cjs, inInstance) and an instance cannot move it, so none is read)
+            const unplaced = unplacedIn(raw, e);
+            if (!unplaced && (!up || up.kind === 'instance' || (up.layout && up.layout.direction))) e.position = 'absolute';
             // where the declarations say an edge (or both) but the box sits centred and sized on its own (a transform
             // the table does not read, auto margins between two insets), the centre the walk measured is the truth
             const measured = (e.constraints || {});
@@ -1397,7 +1410,7 @@ async function main() {
             const o = place.offsets, at = { x: insets[e.id].x, y: insets[e.id].y, ...(e.absolute || {}) };
             if (o.end != null) at.end = lengthOf(o.end) ?? insets[e.id].end;
             if (o.bottom != null) at.bottom = lengthOf(o.bottom) ?? insets[e.id].bottom;
-            e.absolute = at;
+            if (!unplaced) e.absolute = at;
             // pinned to both edges, its size is theirs; on an axis it is not, its own or what it holds
             for (const [axis, to, i] of [['width', place.constraints.horizontal, 0], ['height', place.constraints.vertical, 1]]) {
               if (to === 'stretch') { delete e[axis]; continue; }

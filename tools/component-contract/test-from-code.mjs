@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
+import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -26,6 +26,10 @@ ok('the token the code wrote wins over the field\'s guess, where it holds the va
     return designTokenFor('background', '#c00', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === 'Colour/Icon/Feedback/Danger/strong'
       && designTokenFor('background', '#c00', t, {}, null, null, null, ['--some-other-thing']).token !== undefined
       && designTokenFor('background', '#0c0', t, {}, null, null, null, ['--colour-icon-feedback-danger-strong']).token === undefined; })());
+{ const raw = [{ id: 'root', kind: 'container' }, { id: 'pin', kind: 'instance', parent: 'root' }, { id: 'mark', kind: 'graphic', parent: 'pin' },
+    { id: 'box', kind: 'container', parent: 'pin', layout: { direction: 'row' } }, { id: 'dot', kind: 'graphic', parent: 'box' }, { id: 'free', kind: 'graphic', parent: 'root' }];
+  ok('a part inside a placed component, in a box with no auto layout, has no place read (the design writes none); in flow or outside one, it does',
+    unplacedIn(raw, raw[2]) && !unplacedIn(raw, raw[4]) && !unplacedIn(raw, raw[5]) && !unplacedIn(raw, raw[0])); }
 ok('a placed component\'s arg is read under the attribute markup spells it (isChecked as is-checked or data-is-checked)',
   axisValueOf({ False: {}, True: { isChecked: true } }, { 'is-checked': 'true' }) === 'True' && axisValueOf({ False: {}, True: { isChecked: true } }, { 'data-is-checked': 'false' }) === 'False');
 ok('the token the code wrote holds its value in any of its modes: a contextual field token drawn on a layer, not the base mode, is still the one written',
