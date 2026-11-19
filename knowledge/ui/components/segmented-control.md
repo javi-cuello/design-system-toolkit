@@ -64,13 +64,13 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 
 **Properties**
 - [required] The control exposes `Size` and its `Segments slot`; the segment exposes `Label` as a text property, `Show icon` directly above the `Icon` swap, and `Show count` directly above `Count` (figma-standard rules 5, 21 and 37).
-- [required] An icon-only segment exposes its accessible name as a text property or an annotation (figma-standard rule 40).
+- [required] An icon-only segment exposes its accessible name as a text property or an annotation (figma-standard rule 40). Primer's and Carbon's kits draw it as a component of its own, as their code has it; MUI's and Radix's code has one item for both ([Alignment with code](#alignment-with-code)).
 
 **Variants and states**
 - [required] The segment's axes run `Size → Selected → Disabled → State`, `Selected` a True/False variant with False first; `State` runs `Rest → Focus → Hover → Press`, and Disabled pairs only with Rest, and with Focus too where the code keeps it focusable (figma-standard rules 1 to 4).
 - [required] Selected draws differently from unselected by more than colour, and each state differs from its Rest sibling (figma-standard rule 31).
 - [weak] Selected lives on each segment and the designer picks one; the control cannot enforce that only one is on, which the toolkit's research accepts for this case, citing Primer's `SegmentedControl.Button` ([what the State axis models: nested child state](../../../research/components-and-naming/what-the-state-axis-models.md#nested-child-state)). Code enforces it: the group holds the value.
-- [required] Sizes are `Size` with t-shirt values, largest first (figma-standard rule 6); Primer offers `small` and `medium`.
+- [contested] **Size's name and values.** Primer's kit draws `size` with `medium` and `small`, mapped one to one to its code's `size` ([SegmentedControl.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/SegmentedControl/SegmentedControl.figma.tsx)); Carbon's kit draws `Size` with `Large`, `Medium` and `Small`, which its Code Connect translates to `lg`, `md` and `sm` ([ContentSwitcher.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/ContentSwitcher/ContentSwitcher.figma.ts)). figma-standard rule 21 departs from kits that name it otherwise: `Size` with figma-standard rule 6's lowercase t-shirt values, largest first, which code the project writes takes too; over a library used as shipped, the library's own prop name and values.
 
 **Tokens**
 - [required] Every fill, stroke, radius, padding and gap is bound to a semantic variable (figma-standard rules 24 and 29); the label takes a text-role token (figma-standard rule 28).
@@ -89,15 +89,15 @@ A segmented control is a row of joined buttons that picks one of two to four sho
 **Structure**
 - [strong] Code splits the control into a group and its segments, never one component holding the labels as props: Primer's `SegmentedControl` with `SegmentedControl.Button` and `SegmentedControl.IconButton` ([SegmentedControl.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/SegmentedControl/SegmentedControl.tsx)), MUI's `ToggleButtonGroup` with `ToggleButton` ([ToggleButtonGroup.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/ToggleButtonGroup/ToggleButtonGroup.js)), Radix's `ToggleGroup` root with its items ([toggle-group.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toggle-group/src/toggle-group.tsx)), Carbon's `ContentSwitcher` with `Switch` and `IconSwitch` ([ContentSwitcher.tsx](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/ContentSwitcher/ContentSwitcher.tsx)). The Figma build mirrors it: a control holding a slot of segment instances ([*In Figma*](#in-figma), Layers).
 - [moderate] Two kits connect a Figma component to each code part: Primer's Code Connect maps three Figma components to `SegmentedControl`, `SegmentedControl.Button` and `SegmentedControl.IconButton` ([SegmentedControl.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/SegmentedControl/SegmentedControl.figma.tsx)), and Carbon's maps its control to `ContentSwitcher` and its text and icon items to `Switch` and `IconSwitch` ([ContentSwitcher.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/ContentSwitcher/ContentSwitcher.figma.ts)).
-- [moderate] Both make the icon-only segment a component of its own in code and in Figma (`SegmentedControl.IconButton`, `IconSwitch`), so its name can be required. This page's single segment set covers it with a name property ([*In Figma*](#in-figma), Properties); a project whose code ships a separate icon segment splits the Figma set to match.
+- [moderate] The icon-only segment is split in Figma where code splits it. Primer and Carbon make it a component of its own in code (`SegmentedControl.IconButton`, `IconSwitch`) and their kits mirror that with a Figma component each, mapped in the Code Connect files above, so its name can be required. MUI's `ToggleButton` and Radix's toggle-group item take an icon or text as children, so a set split the same way has nothing to mirror there (figma-standard rule 53: a component is what its code renders).
 
 **Mapping**
 - [required] Each Figma axis maps to one attribute or prop, recorded once (code-standard rules 9 and 10; [figma-handoff: *Variants to attributes*](../../code/figma-handoff.md#variants-to-attributes)):
 
   | Figma | Code |
   |---|---|
-  | `Size` | `size` |
-  | `Selected=True` on a segment | the group's value; the segment gets `aria-pressed="true"`, or `checked` in a radio build |
+  | Size axis | `size`; `Size` with t-shirt values where the project writes the code (figma-standard rules 6 and 21) ([In Figma](#in-figma)) |
+  | `Selected=True` on a segment | the group's value; the segment gets `aria-pressed="true"` (Primer's `selected`), or `checked` in a radio build, where the property's name follows the [radio](radio.md#in-figma)'s contested item |
   | `State=Rest` | nothing |
   | `State=Hover`, `Press` | `:hover`, `:active`, set by the browser |
   | `State=Focus` | `:focus-visible` |

@@ -130,7 +130,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - [required] Where the project mirrors, the separator glyph records in its description whether it mirrors (figma-standard rule 50).
 
 **Properties**
-- [required] `Label` is a text property; the separator is an instance swap `Separator` with `Show separator` directly above it (figma-standard rules 5, 21 and 37).
+- [required] `Label` is a text property; the separator is an instance swap `Separator` with `Show separator` directly above it (figma-standard rules 5, 21 and 37). Neither maps to a prop on the item: the boolean draws on the first item what `li + li` leaves out by position ([Differences](#alignment-with-code)).
 - [weak] A sideways chevron is a placed icon button after the label, revealed by a `Show` boolean and carrying its own accessible name ([sideways breadcrumbs](#sideways-breadcrumbs); figma-standard rules 21 and 40).
 
 **Variants and states**
@@ -180,6 +180,7 @@ Breadcrumbs show where a page sits in the site: a trail of links from the top le
 - [moderate] Carbon's code reaches a separator after the current item unless the trail sets `noTrailingSlash`, which its Code Connect sets whenever an item is Current ([Carbon Breadcrumb.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/Breadcrumb.figma.ts)); a set draws that separator only where its code renders it (figma-standard rule 51).
 
 **Differences**
+- [strong] `Show separator` and `Separator` have no prop on the item in any code read here: Carbon and Primer draw the separator in CSS (sources above), and MUI takes one `separator` node on the trail ([MUI Breadcrumbs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Breadcrumbs/Breadcrumbs.d.ts)); neither Carbon's nor Primer's Code Connect reads a separator property ([Carbon BreadcrumbItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/BreadcrumbItem.figma.ts), [Primer Breadcrumbs.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/Breadcrumbs/Breadcrumbs.figma.tsx)). The boolean is how a Figma item hides the separator the stylesheet omits on the first item, and the mapping row sends both to the stylesheet; on MUI, `Separator` maps to the trail's `separator`.
 - [moderate] `Current` is a True/False variant on the item here, as in Carbon's kit (`Current`, or `State=Current`) and Primer's (`selected`) (Code Connect files as above), where React Aria takes it from the item's position; the mapping row writes it on the item either way.
 - [contested] No overflow item: Carbon's kit draws `Type=Overflow`, which maps to a `BreadcrumbItem` holding an `OverflowMenu` ([Carbon BreadcrumbItem.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Breadcrumb/BreadcrumbItem.figma.ts)); a set draws none where the project takes the side that its trail scrolls ([In Figma](#in-figma)).
 - [weak] No skeleton: Carbon's kit draws `State=Skeleton` on the item, which maps to a separate `BreadcrumbSkeleton` component (same source); a project that loads its trail late names its own here.

@@ -88,7 +88,7 @@ A feedback message is the short line on one form field that says what is wrong w
 - [required] On a field: `Show error message` directly above `Error message` (figma-standard rules 5 and 21), with the field's `Validation` axis choosing the look.
 
 **Variants and states**
-- [moderate] One axis for the type, named in the project's token words (figma-standard rule 22): `Feedback` with `Error`, then `Warning`, `Success` and `Info` as the code has them (figma-standard rule 1 places a `Feedback` axis after `Size`). Primer names it `variant` ([Primer InlineMessage.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/InlineMessage/InlineMessage.figma.tsx)).
+- [moderate] One axis for the type, named and valued as the code's prop and in the project's token words (figma-standard rules 21 and 22), in figma-standard rule 1's `Feedback/…` slot after `Size`. Primer's kit does this: `variant` with `error` and `success` on `FormControl.Validation` ([Primer FormControl.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControl.figma.tsx)), and `variant` with `critical`, `warning`, `success` and `unavailable` on `InlineMessage` ([Primer InlineMessage.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/InlineMessage/InlineMessage.figma.tsx)). Carbon has no type prop, only the booleans `invalid` and `warn` ([Alignment with code](#alignment-with-code)), so its project's axis holds the two looks they give. No code read here has an info type on a field message.
 - [moderate] `Size` only where the code has one: Primer's `InlineMessage` has `small` and `medium`, and the small one takes a filled 12px icon ([Primer InlineMessage source](https://github.com/primer/react/blob/main/packages/react/src/InlineMessage/InlineMessage.tsx)); figma-standard rule 6 names the values.
 - [moderate] No `State` and no `Disabled` axis: the message takes no focus, and a disabled field shows none ([Feedback message: *How*](#feedback-message)).
 - [required] The field owns the message's type: the field's `Validation=Error` shows its `Error` look, and a designer never sets them apart (figma-standard rule 7).
@@ -99,7 +99,7 @@ A feedback message is the short line on one form field that says what is wrong w
 - [required] Component tokens, where the project has them, are `Component/Feedback message/<Element>/<property>[-<variant>]`, aliasing semantic ones (figma-standard rule 49).
 
 **Check**
-- *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists `Feedback`, so a type the code lacks shows in the parity report.
+- *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists the type axis, so a type the code lacks shows in the parity report.
 - *Judgement*: does each type differ from the others by its icon as well as its colour?
 
 **Sources.** Primer, SDS and Carbon Code Connect files as linked; the toolkit's research article [naming inside Figma components](../../../research/components-and-naming/naming-inside-figma-components.md) for nested text on a variant switch.
@@ -115,9 +115,9 @@ A feedback message is the short line on one form field that says what is wrong w
 
   | Figma | Code |
   |---|---|
-  | `Feedback=Error` | the field's `aria-invalid="true"`; the message is `FieldError`, `variant="error"`, `invalidText` or `error` |
-  | `Feedback=Warning` | `warn` and `warnText` (Carbon), `variant="warning"` (Primer `InlineMessage`); no `aria-invalid` |
-  | `Feedback=Success` | `variant="success"` (Primer), `ValidMessage` (Atlassian); no `aria-invalid` |
+  | the type's error value | the field's `aria-invalid="true"`; the message is `FieldError`, `invalidText` or `error`; Primer `FormControl.Validation` `variant="error"`, `InlineMessage` `variant="critical"` |
+  | the type's warning value | `warn` and `warnText` (Carbon), `variant="warning"` (Primer `InlineMessage`); no `aria-invalid` |
+  | the type's success value | `variant="success"` (Primer), `ValidMessage` (Atlassian); no `aria-invalid` |
   | `Text` | the message's children, its `id` in `aria-describedby` after the hint's |
   | `Icon` | rendered from the type, `aria-hidden="true"` |
   | the field's `Show error message` | the message rendered or not |
@@ -125,7 +125,7 @@ A feedback message is the short line on one form field that says what is wrong w
 **States**
 - [required] The browser sets `:user-invalid` on the control once the person has interacted or submitted, and a stylesheet may show the message from it; every other type is set by a prop, since no pseudo-class means warning or success.
 - [required] Code cannot reach a message on a disabled field: a disabled control is barred from constraint validation, and Carbon drops `invalid` and `warn` under `disabled` ([Carbon useNormalizedInputProps](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/internal/useNormalizedInputProps.tsx)). So Figma draws none.
-- [moderate] Carbon lets only one of `invalid` and `warn` hold, `invalid` winning (same source); the one `Feedback` axis draws the same.
+- [moderate] Carbon lets only one of `invalid` and `warn` hold, `invalid` winning (same source); the one type axis draws the same.
 
 **Differences**
 - [moderate] Where the project takes the icon side, the icon is in the message, where Carbon's code puts it inside the input; a project on Carbon draws the icon in the field and the message as text, and records that.
@@ -133,7 +133,7 @@ A feedback message is the short line on one form field that says what is wrong w
 - [moderate] The text property is `Error message`, after SDS's `errorMessage` prop; Primer's is the `Validation` slot's children and Carbon's `invalidText`. The mapping row is where a project's names meet its kit's (figma-standard rule 21).
 
 **Check**
-- *Script*: the component contract lists `Feedback`'s values beside the code's types; a type drawn with no prop, or a prop with no frame and no line under *Differences*, is a finding (design-code-parity).
+- *Script*: the component contract lists the type axis's values beside the code's types; a type drawn with no prop, or a prop with no frame and no line under *Differences*, is a finding (design-code-parity).
 - *Judgement*: does each field in error in code name its message in `aria-describedby`, as the Figma frame shows it?
 
 **Sources.** SDS, React Aria, Primer, MUI, Atlassian and Carbon source as linked.

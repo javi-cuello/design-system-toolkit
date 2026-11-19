@@ -52,7 +52,7 @@ A label names a form field: the words above a text field or select, or beside a 
 - [contested] Which fields carry a mark, and whether it is the asterisk, "(optional)" or both, is decided once per form by its layout: [forms: *Required and optional fields*](../patterns/forms.md#required-and-optional-fields) owns it. This section owns how the mark is drawn and built.
 
 **How**
-- [strong] **Inside the label, after the words.** Primer renders the label's text and then the mark in one flex row with a 4px gap ([Primer InputLabel source](https://github.com/primer/react/blob/main/packages/react/src/internal/components/InputLabel.tsx)), MUI appends a thin space and `*` ([MUI FormLabel source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/FormLabel/FormLabel.js)), and Spectrum appends an asterisk icon or the words "(required)" or "(optional)" through one `necessityIndicator` prop ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)).
+- [strong] **Inside the label, after the words.** Primer renders the label's text and then the mark in one flex row with a 4px gap ([Primer InputLabel source](https://github.com/primer/react/blob/main/packages/react/src/internal/components/InputLabel.tsx)), MUI appends a thin space and `*` ([MUI FormLabel source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/FormLabel/FormLabel.js)), and Spectrum appends an asterisk icon or the words "(required)" or "(optional)" from its `isRequired` and `necessityIndicator` props ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)).
 - [required] The mark is never colour alone and meets contrast where it is coloured (WCAG 1.4.1, 1.4.3); an asterisk is explained at the start of the form ([forms: *Required and optional fields*](../patterns/forms.md#required-and-optional-fields)).
 - [weak] **The words are translatable text.** Spectrum formats "(required)" and "(optional)" from its localised strings ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)); a mark baked into each label string drifts between fields.
 
@@ -110,10 +110,10 @@ A label names a form field: the words above a text field or select, or beside a 
 
 **Properties**
 - [required] On a field: `Label` as a text property, `Show description` directly above `Description`, `Show error message` directly above `Error message` (figma-standard rules 5, 21 and 37). The asterisk is static text, exempt from a text property (figma-standard rule 37).
-- [weak] The mark is one variant axis, `Necessity`, with `None`, `Required` and `Optional`, never two booleans that let a label be both; named after Spectrum's `necessityIndicator` ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)) and placed with the content axes before `Disabled` (figma-standard rules 1 and 2).
+- [required] **The mark takes its code's props, named and valued as they are** (figma-standard rule 21), placed with the content axes before `Disabled` (figma-standard rules 1 and 2). Code has two: whether the field is required and how the mark shows. Spectrum's are `isRequired` and `necessityIndicator: 'icon' | 'label'`, so `Required` (`False`, `True`) and `Necessity indicator` (`Icon`, `Label`): `True` with `Icon` draws the asterisk, `True` with `Label` "(required)", `False` with `Label` "(optional)", `False` with `Icon` nothing ([Spectrum Label source](https://github.com/adobe/react-spectrum/blob/main/packages/@adobe/react-spectrum/src/label/Label.tsx)). Primer's are `required` on `FormControl` and a `requiredIndicator` boolean on its label, so `Required` and `Required indicator` ([Primer FormControlLabel source](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControlLabel.tsx)); a native build with `required` alone draws `Required` only. Neither shape lets a label be required and optional at once. No kit read maps the mark: Primer's `FormControl.Label` connects only its text ([Primer FormControl.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControl.figma.tsx)), and SDS's and Carbon's field mappings read no required prop ([SDS InputField.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/InputField.figma.ts), [Carbon TextInput.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/TextInput/TextInput.figma.ts)).
 
 **Variants and states**
-- [required] The `Label` component has `Necessity` and no state axis: no `State`, since it takes no focus of its own, and no `Disabled`, since a nested label is exposed on the field and its axis would show there as a toggle a designer could set apart from the field's (figma-standard rules 7 and 35).
+- [required] The `Label` component has the mark's properties and no state axis: no `State`, since it takes no focus of its own, and no `Disabled`, since a nested label is exposed on the field and its axis would show there as a toggle a designer could set apart from the field's (figma-standard rules 7 and 35).
 - [required] A field owns its label's state: its own `Disabled=True` dims the label and the description, and a designer never sets them apart (figma-standard rule 7).
 - [moderate] No error variant on the label; error lives on the field's `Validation` axis and its message ([Label: *How*](#label)).
 
@@ -123,10 +123,10 @@ A label names a form field: the words above a text field or select, or beside a 
 - [required] Component tokens, where the project has them, are `Component/Label/<Element>/<property>[-<variant>]`, aliasing semantic ones (figma-standard rule 49).
 
 **Check**
-- *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists `Necessity` and `Disabled`, so a value with no code counterpart shows in the parity report.
+- *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists `Required` and the indicator property, so a value with no code counterpart shows in the parity report.
 - *Judgement*: does a field keep the label text a designer typed after switching `Disabled` on and off?
 
-**Sources.** Primer, SDS and Carbon Code Connect files as linked; Spectrum for the single necessity prop; the toolkit's research article [naming inside Figma components](../../../research/components-and-naming/naming-inside-figma-components.md) for why text in a nested instance is lost on its variant switch.
+**Sources.** Primer, SDS and Carbon Code Connect files as linked; Spectrum and Primer source for the mark's props; the toolkit's research article [naming inside Figma components](../../../research/components-and-naming/naming-inside-figma-components.md) for why text in a nested instance is lost on its variant switch.
 
 ## Alignment with code
 
@@ -140,9 +140,8 @@ A label names a form field: the words above a text field or select, or beside a 
   | Figma | Code |
   |---|---|
   | `Label` | the `label` element's text (`label`, `labelText`, `children`) |
-  | `Necessity=Required` | `required` on the control; the asterisk rendered from it, `aria-hidden` |
-  | `Necessity=Optional` | no `required`; "(optional)" rendered as label text |
-  | `Necessity=None` | no mark; `required` or not as the form's convention says |
+  | `Required` | `required` on the control (`isRequired` in Spectrum); the asterisk rendered from it, `aria-hidden` |
+  | `Necessity indicator` or `Required indicator` | the mark prop as the code names it: Spectrum `necessityIndicator` (`icon`, `label`, where `label` with no `isRequired` renders "(optional)"), Primer `requiredIndicator` |
   | `Disabled=True` | `disabled` on the control, read by the field host |
   | `Show description`, `Description` | the hint element, its `id` first in `aria-describedby` |
 
@@ -151,11 +150,11 @@ A label names a form field: the words above a text field or select, or beside a 
 - [moderate] Libraries pass the field's state down by context: Primer's `FormControl` hands `disabled` and `required` to its label ([Primer FormControlLabel source](https://github.com/primer/react/blob/main/packages/react/src/FormControl/FormControlLabel.tsx)), MUI's `FormLabel` reads them from `FormControl`, SDS styles from `[data-disabled]`; a native build reads them from the markup.
 
 **Differences**
-- [weak] `Necessity` is one three-value axis where code has a `required` boolean and, in Primer and Spectrum, a separate prop for the mark (`requiredIndicator`, `necessityIndicator`); the axis keeps a designer from drawing a label both required and optional.
+- [required] None for the mark where the label takes its code's two props (figma-standard rule 21); a single three-value axis over `required` and the mark prop is a departure its Code Connect has to split ([In Figma](#in-figma)).
 - [moderate] The field draws its label as a layer, not as the nested `Label` component that code composes, because of how Figma stores nested text ([In Figma](#in-figma)).
 
 **Check**
-- *Script*: the component contract lists the label's axes beside the code's props; a `Necessity` value with no matching `required` in the story is a finding (design-code-parity).
+- *Script*: the component contract lists the label's axes beside the code's props; a `Required` value with no matching `required` in the story is a finding (design-code-parity).
 - *Judgement*: does every label in code come from the same definition as its field's `required`?
 
 **Sources.** SDS, React Aria, Primer, MUI and Carbon source as linked.

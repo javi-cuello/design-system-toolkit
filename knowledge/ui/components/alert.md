@@ -55,15 +55,16 @@ An alert is a message with a severity, shown in the page: a banner about the who
 
 **Layers**
 - [required] Auto layout throughout; the container fills its parent's width and the text hugs vertically, so a longer body grows the alert downward (figma-standard rule 33).
-- [required] Layers named for their role, the same in every tone: `Icon`, `Title`, `Body`, `Actions`; nested buttons keep their component's name (figma-standard rule 10).
+- [required] Layers named for their role, the same in every tone: `Icon`, `Title`, the body text (named as its text property, below), `Actions`; nested buttons keep their component's name (figma-standard rule 10).
 
 **Properties**
-- [required] `Title` and `Body` are text properties, in the code's words: Primer says `title` and `description`, SDS `Title` and `Body` (figma-standard rules 21 and 37).
-- [moderate] The icon follows the tone and is drawn in each `Feedback` variant, not offered as a swap: Primer's `Banner` picks its icon from `variant` (`critical` a stop sign, `warning` an alert sign), and MUI's `iconMapping` maps an icon to each severity.
+- [contested] **What the body text is called.** Kits name it apart from their code: Carbon's kit has `Message text` for `subtitle` and `Title text` for `title` ([Carbon InlineNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/InlineNotification.figma.ts)), and SDS's a `Body` text property for text its `Notification` takes as children ([SDS Notification.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Notification.figma.ts)); Primer's has no text property for either, its Code Connect reading the `Title` and `Body` layers' text into `title` and `description`, and falling back to `Body` for `title` when its `Title?` boolean is off ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)). figma-standard rule 21 departs: it names each text property as the code's prop, `Title` and `Description` for Primer's code, `Title` and `Subtitle` for Carbon's, and the bare noun `Body` where the code takes children (figma-standard rule 37).
+- [moderate] The icon follows the tone and is drawn in each value of the tone axis, not offered as a swap: Primer's `Banner` picks its icon from `variant` (`critical` a stop sign, `warning` an alert sign), and MUI's `iconMapping` maps an icon to each severity.
 - [required] `Show close button` reveals the close; `Show actions slot` reveals the `Actions slot` (figma-standard rules 5 and 21). SDS's `Dismissible` is a bare word, which figma-standard rule 21 keeps for a boolean that switches a style and reveals nothing.
 
 **Variants and states**
-- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the toast's and the badge's. Unless colour is split off (below), it is the alert's only axis, so its order is `Feedback` alone. The systems' words differ: Primer `critical`, `info`, `success`, `upsell`, `warning`; MUI `success`, `info`, `warning`, `error`; Carbon adds `info-square` and `warning-alt`.
+- [required] One tone axis in figma-standard rule 1's `Feedback/…` slot, its values the code's and the status tokens' words (figma-standard rules 21 and 22), such as `Info`, `Success`, `Warning`, `Error`. Unless colour is split off (below), it is the alert's only axis. The systems' words differ: Primer `critical`, `info`, `success`, `upsell`, `warning`; MUI `success`, `info`, `warning`, `error`; Carbon adds `info-square` and `warning-alt`.
+- [contested] **What the tone axis is called.** Primer's kit names it as its code does, `Variant` for `variant` ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)); Carbon's names it `Status` for the prop `kind` ([Carbon InlineNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/InlineNotification.figma.ts)). figma-standard rule 21 departs: it takes the code prop's name, `Tone` for this page's `tone` attribute ([Build](#banners-and-alerts)), `Variant` on Primer, `Severity` on MUI, `Kind` on Carbon.
 - [contested] **Tone and colour as one axis or two.** MUI keeps `severity` and `color` as separate props ([MUI Alert.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Alert/Alert.js)); Primer's `variant` and Carbon's `kind` set tone and colour together (sources below). A project splits them only where its brand must recolour a severity.
 - [weak] No `State` axis on the alert; its buttons are instances carrying their own states.
 
@@ -76,7 +77,7 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - *Script*: figma-components-audit runs the rules cited above; the parity report compares the tone values with the code's.
 - *Judgement*: read in greyscale, does each tone still say its severity by icon and title?
 
-**Sources.** Primer, MUI, Carbon and SDS for the parts and tone names, and MUI against them for colour apart from severity.
+**Sources.** Primer, MUI, Carbon and SDS for the parts and tone names, and MUI against them for colour apart from severity; Primer's, Carbon's and SDS's Code Connect files for what each kit calls the tone axis and the body text.
 
 ## Alignment with code
 
@@ -90,8 +91,8 @@ An alert is a message with a severity, shown in the page: a banner about the who
 
   | Figma | Code |
   |---|---|
-  | `Feedback` | `tone`, the same word lowercased (Primer `variant`, MUI `severity`, Carbon `kind`) |
-  | `Title`, `Body` | the heading and body text |
+  | `Tone` (Primer `Variant`, MUI `Severity`, Carbon `Kind`) | `tone`, the same word lowercased (Primer `variant`, MUI `severity`, Carbon `kind`) |
+  | `Title`, `Body` (Primer `Description`, Carbon `Subtitle`) | the heading and body text: `title`, and `description`, `subtitle` or children |
   | the tone's icon | an `aria-hidden` icon chosen by tone (code-standard rule 18) |
   | `Show actions slot`, `Actions slot` | the actions, buttons or links |
   | `Show close button` | a dismiss handler and a named close `button` |
@@ -103,11 +104,12 @@ An alert is a message with a severity, shown in the page: a banner about the who
 - [weak] A combination code reaches that a frame may need: Primer's `hideTitle` keeps the title for assistive technology and hides it on screen, and its Figma `Title?` boolean maps onto it ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)). A project that uses it draws the compact alert with its `Title` text still filled and hidden, never emptied, so the region keeps its name.
 
 **Differences**
+- [contested] None for the tone axis and the body text where the set takes the code's names ([In Figma](#in-figma)). Carbon's kit departs on both, `Status` for `kind` and `Message text` for `subtitle` ([Carbon InlineNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/InlineNotification.figma.ts)); Primer's kit has no text property, reading its `Title` and `Body` layers into `title` and `description` ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)).
 - [strong] `Show close button` is a boolean where code has a handler: Primer's Figma `Dismissible?` becomes `onDismiss`, SDS's `Dismissible` becomes `isDismissible`, and Carbon's `Close` becomes `hideCloseButton`, inverted ([Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx), [SDS Notification.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/Notification.figma.ts), [Carbon InlineNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/InlineNotification.figma.ts)). The Figma name says what it reveals (figma-standard rule 21) and the mapping row turns it into the handler.
 - [weak] The icon is fixed per tone, though Primer's code takes a `leadingVisual` for `info` and `upsell` and its Figma exposes an `Icon` instance ([Banner.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.tsx), [Primer Banner.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Banner/Banner.figma.tsx)); Primer's `variant` and MUI's `iconMapping` tie the icon to severity ([In Figma](#in-figma)), so a custom icon is a project's ruling.
 
 **Check**
-- *Script*: the component contract lists the `Feedback` values, `Title`, `Body`, `Show close button` and the actions slot beside the props the code takes (design-code-parity). A test can assert that an alert with a close has a named button and that pressing it removes the alert.
+- *Script*: the component contract lists the tone axis's values, `Title`, the body text, `Show close button` and the actions slot beside the props the code takes (design-code-parity). A test can assert that an alert with a close has a named button and that pressing it removes the alert.
 - *Judgement*: does every frame with the close shown stand for a condition that can end, and could the code reach every combination of actions and close the frames show?
 
 **Sources.** Primer, MUI, Carbon and Figma's SDS source and Code Connect files as linked. They agree on one component with the close built in and on dismissal as a handler; Carbon alone splits by behaviour into components.

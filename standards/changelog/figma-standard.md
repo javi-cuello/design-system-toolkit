@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.28.0 (2026-11-19): rule 21, Figma and code align both ways: code the project writes takes the house names (`Show …`, `Leading`/`Trailing`, rule 6's sizes); Figma takes the code's only where a prop cannot be renamed; `Open` is a boolean, never a State value; the validation axis is excepted.
 - 2.27.0 (2026-11-19): rule 21, a property takes its code prop's shape and values as well as its name; where kits differ, the build takes the shape that mirrors its code (moved from toolkit-standard §D 21).
 - 2.26.1 (2026-11-19): rule 47's title says on-emphasis pair, as its body does; rule 18's evidence notes that the `Feedback` segment it quotes is the one rule 55 retired. No rule changes.
 - 2.26.0 (2026-11-18): rule 55, the semantic token grammar (slot order, closed word lists, one intensity ladder, on-colour named for its fill, surfaces by role), from one project's rename and the token-taxonomy knowledge page; rule 18's example drops the retired `Feedback` segment.

@@ -59,16 +59,17 @@ A popover shows a little information or a few related controls next to the one e
 
 **Layers**
 - [required] Auto layout throughout: the surface hugs its content up to a maximum width, the text wraps and hugs vertically (figma-standard rule 33).
-- [required] Layers are named for their role (`Caret`, `Title`, `Description`, `Body`, `Close`), the same in every variant (figma-standard rules 9 and 10).
+- [required] Layers are named for their role (the pointer by the code's word for it, below; `Title`, `Description`, `Body`, `Close`), the same in every variant (figma-standard rules 9 and 10).
 
 **Properties**
 - [required] `Title` and `Description` are text properties, each revealed by a boolean directly above it (`Show title`, `Show description`); the content is a slot named `Slot` (figma-standard rules 5, 21, 37 and 38).
-- [required] The caret is revealed by `Show caret`, and the close button by `Show close button` (figma-standard rule 21); [popovers](#popovers) says when each is wanted.
+- [required] The close button is revealed by `Show close button` (figma-standard rule 21); [popovers](#popovers) says when it and the pointer are wanted.
+- [weak] The pointer is revealed by `Show` plus the code's word for it (figma-standard rule 21): `Show caret` for Primer's and Carbon's `caret`, `Show arrow` for Radix's `Arrow` part (sources in [Alignment with code](#alignment-with-code) and [In code](#in-code)). Carbon's kit calls it `Caret tip` ([Carbon Popover.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Popover/Popover.figma.ts)), where figma-standard rule 21 departs.
 
 **Variants and states**
-- [moderate] `Placement` is an axis naming the side the popover opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, never `Left` or `Right` (figma-standard rule 21, and figma-standard rule 50 where the project mirrors). Radix places by `side` (`top`, `right`, `bottom`, `left`) and `align` (`start`, `center`, `end`) ([Radix Popper source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx)); Primer's `caret` takes twelve values, a side and an end ([Primer Popover source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Popover/Popover.tsx)).
+- [moderate] `Placement` is an axis naming the side the popover opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, which code the project writes takes too; over a library's `side` used as shipped, its `Left` and `Right` (figma-standard rule 21, and figma-standard rule 50 where the project mirrors). Radix places by `side` (`top`, `right`, `bottom`, `left`) and `align` (`start`, `center`, `end`) ([Radix Popper source](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx)); Primer's `caret` takes twelve values, a side and an end ([Primer Popover source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Popover/Popover.tsx)).
 - [weak] Alignment along the side (start, centre, end) is drawn only where the library's frames need it; four `Placement` values cover most screens, and code computes the rest.
-- [weak] No `State` axis: the surface takes no hover, press or focus; its controls carry their own (beyond figma-standard rule 35). The trigger shows the popover open with its own `Open` value ([button: *In Figma*](button.md#in-figma)).
+- [weak] No `State` axis: the surface takes no hover, press or focus; its controls carry their own (beyond figma-standard rule 35). The trigger shows the popover open with its own `Open` property ([button: *In Figma*](button.md#in-figma)).
 
 **Tokens**
 - [required] Fill, border, radius, shadow, padding and gap are bound to variables, semantic and never primitive, the caret taking the surface's fill and border (figma-standard rules 24 and 29); text fills take text-role tokens (figma-standard rule 28).
@@ -92,7 +93,7 @@ A popover shows a little information or a few related controls next to the one e
   | Figma | Code |
   |---|---|
   | `Placement` | the preferred side, a `placement` attribute read by the positioning; the side it lands on may flip to stay in view |
-  | `Show caret` | the caret element, drawn on the edge facing the trigger |
+  | `Show caret` or `Show arrow` | Primer's and Carbon's `caret`, Radix's `Arrow`: the pointer, drawn on the edge facing the trigger |
   | `Show title`, `Title` | a heading, referenced by `aria-labelledby` when the popover has a role |
   | `Show description`, `Description` | a paragraph |
   | `Slot` | the popover's children |
@@ -108,7 +109,7 @@ A popover shows a little information or a few related controls next to the one e
 **Differences**
 - [moderate] `Placement` names a logical side here and a physical one in code: Radix's `side`, Carbon's `align`, Primer's `caret` (sources as above; figma-standard rule 21). The mapping's second item resolves `Leading` and `Trailing` against the page's direction.
 - [weak] Carbon's kit has a `Visible` boolean that maps to `open` ([Carbon Popover.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Popover/Popover.figma.ts)); this page has no open property, since a closed popover draws nothing and the trigger shows Open ([In Figma](#in-figma)).
-- [weak] Carbon's kit toggles `Caret tip` and `Shadow`, mapping to `caret` and `dropShadow` (same source); this page has `Show caret` and binds the shadow to a token, with no toggle ([In Figma](#in-figma)).
+- [weak] Carbon's kit toggles `Caret tip` and `Shadow`, mapping to `caret` and `dropShadow` (same source); this page has `Show caret` or `Show arrow` and binds the shadow to a token, with no toggle ([In Figma](#in-figma)).
 
 **Check**
 - *Script*: the component contract lists every Figma axis, property and slot beside the popover's props and parts; a row in one with no partner in the other, and no line under *Differences*, is a finding (design-code-parity).

@@ -59,15 +59,15 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 
 **Layers**
 - [required] Auto layout throughout: the surface hugs its text up to a maximum width, past which the text wraps, and the text hugs vertically (figma-standard rule 33).
-- [required] Layers are named for their role (`Label`, `Caret`), the same in every variant (figma-standard rule 10).
+- [required] Layers are named for their role (`Label`, and the pointer by the code's word for it, below), the same in every variant (figma-standard rule 10).
 
 **Properties**
 - [required] The text is one text property named as the code's prop: `Text` where the code says `text` (Primer), `Title` where it says `title` (MUI, SDS) (figma-standard rules 21 and 37; [SDS Tooltip.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Tooltip.figma.ts)).
-- [required] `Show caret` reveals the caret (figma-standard rule 21).
+- [strong] A boolean reveals the pointer, `Show` plus the code's word for it (figma-standard rule 21): `Show arrow` for MUI's `arrow` boolean ([MUI Tooltip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.d.ts)), Radix's `TooltipArrow` and React Aria's `OverlayArrow` ([Alignment with code](#alignment-with-code)), `Show caret` for the `caret` of Carbon's `Popover`, on which its `Tooltip` is built ([Carbon Popover source](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/src/components/Popover/index.tsx)). None of the SDS, Primer or Carbon Code Connect files reads a pointer property ([SDS Tooltip.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Tooltip.figma.ts), [Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx), [Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)).
 - [required] Whether the tooltip names its trigger or describes it is an annotation on the frame that places it, not a property (figma-standard rule 52).
 
 **Variants and states**
-- [moderate] `Placement` is an axis naming the side the tooltip opens toward, which moves the caret to the facing edge: `Top`, `Bottom`, `Leading`, `Trailing`, never `Left` or `Right` (figma-standard rule 21, and figma-standard rule 50 where the project mirrors). SDS draws `Placement` as `Top`, `Bottom`, `Left` and `Right` ([SDS Tooltip.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Tooltip.figma.ts)); Primer's `direction` takes eight compass values ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx)).
+- [contested] **The side axis's name and values.** One axis names the side the tooltip opens toward, which moves the pointer to the facing edge. SDS's kit names it as its code does, `Placement` for `placement`, valued `Top`, `Bottom`, `Left` and `Right` ([SDS Tooltip.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Tooltip.figma.ts)); Carbon's draws `Position` and `Alignment` for the one prop `align` ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)). The code's names differ: MUI's and React Aria's `placement`, Radix's `side` (`top`, `right`, `bottom`, `left`), Primer's `direction` with eight compass values ([Primer Tooltip source](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.tsx), [MUI Tooltip types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Tooltip/Tooltip.d.ts), [Radix popper.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/popper/src/popper.tsx)). figma-standard rule 21 departs from both kits where the project writes the tooltip: it names the axis as the code's prop (`Placement`, `Side`, `Direction`) and writes its values `Top`, `Bottom`, `Leading`, `Trailing`, which the code takes too, never `Left` or `Right`; over a library's `placement` the project uses as shipped, it takes the library's `Left` and `Right` (and figma-standard rule 50 where the project mirrors).
 - [weak] No `State` axis and no hover or focus frame: the tooltip has no interaction of its own; its trigger's Hover and Focus variants are where it shows (beyond figma-standard rule 35).
 
 **Tokens**
@@ -78,7 +78,7 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - *Script*: figma-components-audit runs the rules cited above on the set; the snapshot's contract lists every axis and property for the parity report.
 - *Judgement*: is every tooltip drawn in the library a few words, and does each icon-only trigger that needs one have it?
 
-**Sources.** Figma's SDS, Primer, MUI and Radix for parts and names; figma-standard for names. SDS's tooltip carries a title and a body, more than the supplementary label [tooltips](#tooltips) describes.
+**Sources.** Figma's SDS, Primer, MUI, Radix, React Aria and Carbon for parts and names, SDS's and Carbon's Code Connect for what their kits call the side axis; figma-standard for names. SDS's tooltip carries a title and a body, more than the supplementary label [tooltips](#tooltips) describes.
 
 ## Alignment with code
 
@@ -93,8 +93,8 @@ A tooltip is a few words that appear beside an interactive element on hover and 
   | Figma | Code |
   |---|---|
   | `Text` or `Title` | the tip's text, and the trigger's name when it labels it |
-  | `Placement` | the preferred side; the side it lands on may flip to stay in view |
-  | `Show caret` | the caret element, on the edge facing the trigger |
+  | `Placement` (Radix `Side`, Primer `Direction`) | the preferred side, `placement`, `side` or `direction`; the side it lands on may flip to stay in view |
+  | `Show arrow` or `Show caret` | MUI's `arrow`, Radix's `TooltipArrow`, React Aria's `OverlayArrow`, Carbon's `caret`: the pointer, on the edge facing the trigger |
   | Name or description annotation | `aria-labelledby` or `aria-describedby` on the trigger |
 - [required] `Leading` and `Trailing` resolve to the logical side, so a right-to-left page mirrors the placement ([i18n: *Logical properties and mirroring*](../../code/i18n.md#logical-properties-and-mirroring)).
 
@@ -105,15 +105,16 @@ A tooltip is a few words that appear beside an interactive element on hover and 
 - [required] Timing states have no frame: Radix's `data-state` tells `delayed-open` from `instant-open`, the second for a tip that opens right after another closed ([Radix tooltip.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/tooltip/src/tooltip.tsx)); React Aria's `[data-entering]` and `[data-exiting]` are motion (figma-standard rule 52).
 
 **Differences**
+- [moderate] Both kits that draw a side draw `Left` and `Right` for the side (SDS's `Placement`, Carbon's `Position`; sources in [In Figma](#in-figma)), where figma-standard rule 21 writes `Leading` and `Trailing` unless the code is a library's that keeps `left` and `right`; the mapping row resolves them to the logical side.
 - [weak] `Placement` has four sides, where Primer's `direction` takes eight compass values and Carbon's Figma pairs `Position` with an `Alignment` of `Start`, `Center` or `End` to give `top-start` and the rest ([Carbon Tooltip.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tooltip/Tooltip.figma.ts)).
 - [weak] A kit's own property can stray from its code's name: Primer's Figma says `Label` for the prop `text` ([Primer Tooltip.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/TooltipV2/Tooltip.figma.tsx)). figma-standard rule 21 names the property as the code does, so the mapping row has nothing to translate.
 - [moderate] Name or description is a prop in code (Primer's `type`, MUI's `describeChild`; sources above) and an annotation in Figma (figma-standard rule 52); the mapping row carries it to `aria-labelledby` or `aria-describedby`.
 
 **Check**
-- *Script*: the component contract lists `Text`, `Placement` and `Show caret` beside the props the code takes (design-code-parity). A test can focus the trigger by keyboard, assert the tip shows, and compare its text with the trigger's accessible name or description.
+- *Script*: the component contract lists the text, the side axis and the pointer's boolean beside the props the code takes (design-code-parity). A test can focus the trigger by keyboard, assert the tip shows, and compare its text with the trigger's accessible name or description.
 - *Judgement*: does each placement frame match where the code puts the tip when it flips, and is the trigger in every frame a real instance of its own component?
 
-**Sources.** Radix, React Aria, MUI, Primer and Carbon source and Code Connect files as linked, with SDS's; the HTML standard for `:popover-open`. The libraries agree that the trigger is separate and opens the tip on hover and keyboard focus; their Figma kits split on whether the trigger is drawn inside.
+**Sources.** Radix, React Aria, MUI, Primer and Carbon source and Code Connect files as linked, with SDS's; MUI's types and Carbon's Popover source for the pointer's prop; the HTML standard for `:popover-open`. The libraries agree that the trigger is separate and opens the tip on hover and keyboard focus; their Figma kits split on whether the trigger is drawn inside.
 
 ## In code
 

@@ -66,11 +66,12 @@ A toast is a brief message that appears over the page, in one corner, about some
 
 **Properties**
 - [required] `Title` and `Message` are text properties (figma-standard rule 37); `Show icon` reveals the tone's icon and `Show action` the action button (figma-standard rules 5 and 21).
-- [moderate] The icon follows the tone and is drawn in each `Feedback` variant, not offered as a swap, as on the [alert](alert.md#in-figma), whose tones the toast shares.
+- [moderate] The icon follows the tone and is drawn in each value of the tone axis, not offered as a swap, as on the [alert](alert.md#in-figma), whose tones the toast shares.
 - [weak] No boolean for the close button: every toast has one ([*Toasts*](#toasts), Build). Figma's Simple Design System gives its notification a `Dismissible` boolean ([SDS Notification.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/Notification.figma.ts)) because the same component serves in-page messages, which may not be dismissible.
 
 **Variants and states**
-- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's status token words (figma-standard rule 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the alert's and the badge's. With `State` (below) its order is `Feedback → State` (figma-standard rule 1).
+- [required] One tone axis in figma-standard rule 1's `Feedback/…` slot, its values the code's and the status tokens' words (figma-standard rules 21 and 22), such as `Info`, `Success`, `Warning`, `Error`, the same as the alert's and the badge's. With `State` (below) its order is the tone axis, then `State` (figma-standard rule 1).
+- [weak] **What the tone axis is called.** The one toast kit read here, Carbon's, names it `Status` for the prop `kind` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts)); kits differ on the in-page alert's axis ([alert](alert.md#in-figma)). figma-standard rule 21 departs from Carbon's: it takes the code prop's name, `Tone` for a `tone` attribute, `Kind` on Carbon.
 - [moderate] A `State` axis of `Rest` and `Focus` only: the toast is no control, but Radix and React Aria make it focusable, so code reaches a focus ring a frame must show ([Alignment with code](#alignment-with-code)); hover and press change nothing, and its action and close buttons are instances that carry their own states.
 - [weak] No timing in Figma: a duration is a product token in code, and a toast with an action has none.
 
@@ -83,7 +84,7 @@ A toast is a brief message that appears over the page, in one corner, about some
 - *Script*: figma-components-audit runs the rules cited above; the snapshot's contract lists the tone values, which the parity report compares with the code's.
 - *Judgement*: does the drawn toast hold its line limit at its width in the longest language the product ships?
 
-**Sources.** Carbon, MUI and Radix for the parts; SDS for a notification's Figma properties. The close boolean is left out where every toast has a close button ([*Toasts*](#toasts), Build).
+**Sources.** Carbon, MUI and Radix for the parts; SDS for a notification's Figma properties; Carbon's Code Connect for what its kit calls the tone axis. The close boolean is left out where every toast has a close button ([*Toasts*](#toasts), Build).
 
 ## Alignment with code
 
@@ -97,7 +98,7 @@ A toast is a brief message that appears over the page, in one corner, about some
 
   | Figma | Code |
   |---|---|
-  | `Feedback` | `tone`, the same word lowercased (Carbon `kind`) |
+  | `Tone` (Carbon `Kind`) | `tone`, the same word lowercased (Carbon `kind`) |
   | `State=Focus` | `:focus-visible` on the focusable toast, set by the browser |
   | `Title`, `Message` | the title and message text |
   | `Show icon` | the tone's icon, chosen by tone, `aria-hidden` (code-standard rule 18) |
@@ -111,12 +112,13 @@ A toast is a brief message that appears over the page, in one corner, about some
 - [required] Swipe and motion states are drawn in no frame: Radix sets `data-swipe` to `start`, `move`, `cancel` or `end` and `data-swipe-direction` on the toast ([Radix toast.tsx](https://raw.githubusercontent.com/radix-ui/primitives/main/packages/react/toast/src/toast.tsx)) (figma-standard rule 52).
 
 **Differences**
+- [weak] None for the tone axis where the set takes the code's name ([In Figma](#in-figma)); Carbon's kit departs, `Status` for `kind` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts)).
 - [weak] Figma draws no region and no stack: the region's role, label and position are code (the structure above); how many show at once is [*Toasts*](#toasts)' contested item.
 - [weak] No close boolean, where Carbon's Figma toast has a `Close` boolean that becomes `hideCloseButton` ([Carbon ToastNotification.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Notification/ToastNotification.figma.ts)): this page's Build gives every toast a close button ([In Figma](#in-figma)), so a coded `hideCloseButton` is the departure.
 - [weak] The role is code's alone and the libraries split on it (Carbon and Radix `status`, MUI's `SnackbarContent` `alert`, React Aria `alertdialog`; [SnackbarContent.js](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/SnackbarContent/SnackbarContent.js)); nothing drawn changes with it, and [In code](#in-code) sets out the split.
 
 **Check**
-- *Script*: the component contract lists `Feedback`, `State`, `Title`, `Message`, `Show icon` and `Show action` beside the props the code takes (design-code-parity). A test can fire a toast, assert the region existed before it, then focus the toast by keyboard and compare its ring with the `Focus` frame.
+- *Script*: the component contract lists the tone axis, `State`, `Title`, `Message`, `Show icon` and `Show action` beside the props the code takes (design-code-parity). A test can fire a toast, assert the region existed before it, then focus the toast by keyboard and compare its ring with the `Focus` frame.
 - *Judgement*: could a developer tell from the frames alone that the region, the timer and its pause are theirs to build?
 
 **Sources.** Radix, React Aria, MUI and Carbon source and Code Connect files as linked, with SDS's. They agree on a region apart from the toasts; Radix and React Aria make the toast focusable, and the libraries split on its role.

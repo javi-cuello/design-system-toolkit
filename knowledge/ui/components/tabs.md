@@ -60,11 +60,12 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 **Layers**
 - [contested] Link tabs and panel tabs are separate Figma sets, as they are separate components in code ([*In code*](#in-code) weighs the split): `Tabs` and `Tab` for panel tabs, `Link tabs` and `Link tab` for link tabs, drawn alike, so a designer picks the one whose markup the screen needs (figma-standard rule 9).
 - [required] Each kind has two components: the item (`Tab`), and the row (`Tabs`), which holds its tabs in a slot named `Tabs slot`, never as nested instances with text overrides: a tab has a Selected variant, and an override inside a nested instance is dropped when it switches (figma-standard rules 21 and 38). The Simple Design System's `Tabs` takes its `Tab` instances as children the same way ([SDS Tabs.figma.ts](https://github.com/figma/sds/blob/main/src/figma/primitives/tab/Tabs.figma.ts)).
-- [required] Auto layout throughout; the label hugs, the row hugs or fills, and each layer is named for its role: `Label`, `Icon`, `Count`, `Indicator` (figma-standard rules 10 and 33).
+- [required] Auto layout throughout; the label hugs, the row hugs or fills, and each layer is named for its role: `Label`, `Icon`, the count (named as its property, below), `Indicator` (figma-standard rules 10 and 33).
 - [required] The icon leads the label as `Leading`, never `Left`, so a mirrored row keeps its names true (figma-standard rule 21).
 
 **Properties**
-- [required] `Label` is a text property; the icon is an instance swap `Icon` with `Show icon` directly above it, and the count a text property `Count` with `Show count` above it (figma-standard rules 5, 21 and 37).
+- [required] `Label` is a text property; the icon is an instance swap `Icon` with `Show icon` directly above it (figma-standard rules 5, 21 and 37).
+- [weak] The count is a text property named as the code's prop with its `Show` boolean above it: `Counter` and `Show counter` for Primer's `counter`, the bare noun `Count` where the code has no prop (figma-standard rules 5, 21 and 37). Primer's kit draws the count as a nested `CounterLabel` instance whose `text` its Code Connect reads into `counter`, behind a `counter?` boolean on the panel tab, where figma-standard rule 21 departs ([Primer UnderlinePanels.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/experimental/UnderlinePanels/UnderlinePanels.figma.tsx), [Primer UnderlineNav.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/UnderlineNav/UnderlineNav.figma.tsx)).
 
 **Variants and states**
 - [required] On the item, the axes run `Size → Selected → Disabled → State`; `Selected` is a True/False variant, a bare word, `False` first (figma-standard rules 1 and 21).
@@ -97,7 +98,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
   |---|---|
   | `Tabs slot` | the tabs, children of the list |
   | `Label`, `Icon` | the tab's label and leading icon, `aria-hidden="true"` |
-  | `Count` | the count, a description, not part of the name (code-standard rule 15) |
+  | `Counter` or `Count` | Primer's `counter`, or the count; a description, not part of the name (code-standard rule 15) |
   | `Size` | `size` |
   | `Selected=True` | `aria-selected="true"` on a panel tab, `aria-current="page"` on a link tab |
   | `Disabled=True` | `disabled` on a panel tab; a link tab without `href`, `aria-disabled="true"` |
@@ -114,7 +115,7 @@ Tabs switch between views of one context without leaving it: a row of labels ove
 **Differences**
 - [moderate] Selection lives on each `Tab` here, and on the row in code: a component cannot set the variant of what fills its slot ([In Figma](#in-figma); figma-standard rule 38). The mapping row writes each tab's `aria-selected`, and the row's value is whichever tab the frame draws Selected.
 - [moderate] The indicator is a layer in each tab here; MUI renders one indicator on the row that slides to the selected tab (its `indicator` slot, [MUI Tabs types](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Tabs/Tabs.d.ts)), and SDS draws it as each tab's bottom border ([SDS tab.css](https://github.com/figma/sds/blob/main/src/ui/primitives/Tab/tab.css)). Either code matches the frame while the indicator sits on the selected tab's edge.
-- [weak] `Size` is on the tab here and on the list in code: Carbon's `size` is a `TabList` prop that its Code Connect reads from the first nested tab ([Carbon Tabs.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tabs.figma.ts)).
+- [weak] `Size` is on the tab here and on the list in code: Carbon's `size` is a `TabList` prop, and Carbon's own kit draws `Size` on the tab too, its Code Connect reading it from the first nested tab ([Carbon Tabs.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tabs.figma.ts)); a row cannot set the variant of the tabs in its slot (figma-standard rule 38).
 - [required] `Disabled` is a True/False variant before `State` (figma-standard rule 1), where Carbon's kit draws `State=Disabled` and Primer's folds `selected` into its `state` axis ([Carbon Tab.figma.ts](https://github.com/carbon-design-system/carbon/blob/main/packages/react/code-connect/Tabs/Tab.figma.ts), [Primer UnderlineNav.figma.tsx](https://github.com/primer/react/blob/main/packages/react/src/UnderlineNav/UnderlineNav.figma.tsx)); each maps to a boolean or an attribute, never to a state.
 
 **Check**

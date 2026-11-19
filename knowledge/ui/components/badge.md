@@ -61,10 +61,11 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - [required] `Label` is a text property; `Show icon` sits directly above `Icon` (figma-standard rules 5, 21 and 37). The icon is a swap because each status in the vocabulary has its own icon, while the tone is shared by several statuses ([*Status badges and pills*](#status-badges-and-pills)).
 
 **Variants and states**
-- [required] One tone axis, `Feedback`, in figma-standard rule 1's slot, its values the project's tone token words (figma-standard rule 22), mapped to the code's `tone` attribute: the axis takes figma-standard rule 1's slot name, the values the code's words, such as `Info`, `Success`, `Warning`, `Error`: the words the Build's `tone="error"` uses, so Figma, the attribute and the token say the same. SDS's `Scheme` offers `Danger`, `Positive`, `Warning`, `Neutral`; Primer's `variant` ten values; Atlassian's `appearance` adds workflow words (`inprogress`, `moved`, `new`, `removed`).
-- [weak] A `Feedback` value is a tone, never a status: each status in the vocabulary takes one tone, and the project decides which tone each attention level uses, so twelve statuses share a few values and the status's own word is the `Label` (beyond figma-standard rule 22; [*Status badges and pills*](#status-badges-and-pills), after Carbon's attention levels).
+- [required] One tone axis in figma-standard rule 1's `Feedback/…` slot, its values the code's and the tone tokens' words (figma-standard rules 21 and 22), such as `Info`, `Success`, `Warning`, `Error`: the words the Build's `tone="error"` uses, so Figma, the attribute and the token say the same. SDS's `Scheme` offers `Danger`, `Positive`, `Warning`, `Neutral`; Primer's `variant` ten values; Atlassian's `appearance` adds workflow words (`inprogress`, `moved`, `new`, `removed`).
+- [contested] **What the tone axis is called.** Primer's and SDS's kits name it as their code does, `variant` for `variant` ([Label.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Label/Label.figma.tsx)) and `Scheme` for `scheme` ([Tag.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/Tag.figma.ts)); Carbon's names it `Color` for the prop `type` ([Carbon Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)). figma-standard rule 21 departs: it takes the code prop's name, `Tone` for the Build's `tone` attribute.
+- [weak] A tone value is a tone, never a status: each status in the vocabulary takes one tone, and the project decides which tone each attention level uses, so twelve statuses share a few values and the status's own word is the `Label` (beyond figma-standard rule 22; [*Status badges and pills*](#status-badges-and-pills), after Carbon's attention levels).
 - [moderate] An `Emphasis` axis, `Subtle` then `Bold`, where the product uses both: Atlassian's `isBold` and SDS's `Variant` (`primary`, `secondary`) do this.
-- [required] Sizes are `Size` with t-shirt values, largest first (figma-standard rule 6); Primer offers `small` and `large`. The full order is `Size → Emphasis → Feedback`, `Emphasis` in figma-standard rule 1's role slot (figma-standard rule 1).
+- [required] Sizes are `Size` with t-shirt values, largest first (figma-standard rule 6); Primer offers `small` and `large`, which a build over Primer's badge as shipped takes instead (figma-standard rule 21). The full order is `Size → Emphasis → Tone`, `Emphasis` in figma-standard rule 1's role slot and the tone in its `Feedback/…` slot (figma-standard rule 1).
 - [required] No `State` axis: the badge is not interactive, so a `State` would hold `Rest` alone, an axis with no choice (figma-standard rule 35).
 
 **Tokens**
@@ -74,9 +75,9 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 
 **Check**
 - *Script*: figma-components-audit runs the rules cited above; a token-vocabulary check compares the tone values with the status token names (figma-standard rule 22).
-- *Judgement*: does `Feedback` hold the status tokens' tones, and no status of its own?
+- *Judgement*: does the tone axis hold the status tokens' tones, and no status of its own?
 
-**Sources.** Primer, Atlassian, MUI and SDS as linked. They agree on the parts; their tone lists differ in length, so the axis holds the project's status tokens' tones, never one value per status (figma-standard rule 22; design-standard rule 15).
+**Sources.** Primer, Atlassian, MUI and SDS as linked, with Carbon's Tag Code Connect for what its kit calls the tone axis. They agree on the parts; their tone lists differ in length, so the axis holds the project's status tokens' tones, never one value per status (figma-standard rule 22; design-standard rule 15).
 
 ## Alignment with code
 
@@ -90,7 +91,7 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 
   | Figma | Code |
   |---|---|
-  | `Feedback` | `tone`, the same word lowercased (`tone="error"`) |
+  | `Tone` (Primer `variant`, SDS `Scheme`, Carbon `Color`) | `tone`, the same word lowercased (`tone="error"`); Primer `variant`, SDS `scheme`, Carbon `type` |
   | `Emphasis` | an attribute, such as `emphasis="bold"` |
   | `Size` | `size` |
   | `Label` | the text, children |
@@ -102,12 +103,12 @@ A badge is a short label for the state of an object, in a list, a table or a hea
 - [moderate] A count's frames show what its props produce: MUI's `max` and Atlassian's `max` (99 by default) cap the number with a plus, and MUI's `showZero` and `invisible` decide whether zero shows ([Badge types](https://raw.githubusercontent.com/mui/material-ui/master/packages/mui-material/src/Badge/Badge.d.ts), [Atlassian badge](https://atlassian.design/components/badge/code)). A count set draws the capped value; the status badge has none of these.
 
 **Differences**
-- [weak] The tone axis is `Feedback` in Figma and `tone` in code, the values the same words (Mapping); kits keep their code's names instead, Primer `variant` and Carbon `Color` for `type` ([Label.figma.tsx](https://raw.githubusercontent.com/primer/react/main/packages/react/src/Label/Label.figma.tsx), [Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)), which figma-standard rule 1's slot name does not.
+- [contested] None for the tone axis where the set takes the code's name ([In Figma](#in-figma)), as Primer's and SDS's kits do; Carbon's kit departs, `Color` for `type` ([Carbon Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)).
 - [weak] No `Disabled` and no loading value: Carbon's kit draws `State=Disabled` and `State=Skeleton` on its tag, mapping them to `disabled` and to a separate `TagSkeleton` ([Tag.figma.ts](https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/react/code-connect/Tag/Tag.figma.ts)). A passive badge has nothing to disable, and a loading placeholder is not a state of the badge.
 - [weak] `Emphasis` names the attribute the code adds where it ships both looks; SDS calls the axis `Variant` and maps only `Secondary` to `variant="secondary"`, primary being the default ([Tag.figma.ts](https://raw.githubusercontent.com/figma/sds/main/src/figma/primitives/tag/Tag.figma.ts)).
 
 **Check**
-- *Script*: the component contract lists `Size`, `Emphasis` and `Feedback` beside the badge's attributes; a tone value in one with no partner in the other, or a `State` axis on the set, is a finding unless *Differences* names it (design-code-parity).
+- *Script*: the component contract lists `Size`, `Emphasis` and the tone axis beside the badge's attributes; a tone value in one with no partner in the other, or a `State` axis on the set, is a finding unless *Differences* names it (design-code-parity).
 - *Judgement*: is every tone in Figma a tone attribute in code, word for word, and is any count drawn as its own set?
 
 **Sources.** Primer's Label, StateLabel and CounterLabel Code Connect files and source, Atlassian's badge code page, MUI's Badge types, and SDS's and Carbon's Tag source and Code Connect files, all as linked. They agree that a count and a status label are different components, and differ on whether a removable tag shares the passive one's component.
