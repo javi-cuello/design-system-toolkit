@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.29.1 (2026-11-19): rule 46 gets the tombstone its 2.12.0 withdrawal never left; no rule changes.
 - 2.29.0 (2026-11-19): rule 55 gives the house words for each slot as defaults; a project's context document records only the words it uses instead.
 - 2.28.0 (2026-11-19): rule 21, Figma and code align both ways: code the project writes takes the house names (`Show …`, `Leading`/`Trailing`, rule 6's sizes); Figma takes the code's only where a prop cannot be renamed; `Open` is a boolean, never a State value; the validation axis is excepted.
 - 2.27.0 (2026-11-19): rule 21, a property takes its code prop's shape and values as well as its name; where kits differ, the build takes the shape that mirrors its code (moved from toolkit-standard §D 21).

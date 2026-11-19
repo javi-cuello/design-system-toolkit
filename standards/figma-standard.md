@@ -1,6 +1,6 @@
 # Figma standard — how a design-system library is built in Figma
 
-**Version 2.29.0** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
+**Version 2.29.1** — history in [`changelog/figma-standard.md`](changelog/figma-standard.md).
 
 **Scope.** How a component library is built inside Figma: variant axes and states, how everything in it is named (components, properties and their values, parts, layers, pages, tokens and styles, which code takes as written), page structure, and the token rules that only Figma can hold. How any rule is admitted, enforced, changed and retired is [`toolkit-standard.md`](toolkit-standard.md)'s (§C).
 
@@ -245,6 +245,8 @@ Cite a rule as `figma-standard rule N`.
     *Evidence:* maintainer-decreed 2026-11-16, two component-page items stating it with no source outside the toolkit moved here (toolkit-standard §D 21).
 
    *Reviewed:* `skills/figma-components-audit/SKILL.md` "bin/closing --judgement figma-standard" — at every audit, against the set and the project's code or context document; no script can tell what the code renders.
+
+46. *Retired 2026-10-13: withdrawn to the one project that asks for it, in its context document; the components audit's check stays, driven by `overlayComponents`.*
 
 ## Naming
 
