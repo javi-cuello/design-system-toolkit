@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.29.3 (2026-11-19): overlaps merged into one home each: rules 43 (font family), 19 (case test), 45 (asset names), 11 (DEPRECATED), 1 (validation order), 21 (position words), 39 (visible focus); rule 53 retitled. No rule changes.
 - 2.29.2 (2026-11-19): non-rule text trimmed from rules 3, 4, 11, 12, 13, 15, 18, 19 and 21 to dated evidence lines; rule 15's Propstar note, rule 24's hiding cost and rule 49's worked rows and survey move to their skill and the KB; rule 55 links its survey. No rule changes.
 - 2.29.1 (2026-11-19): rule 46 gets the tombstone its 2.12.0 withdrawal never left; no rule changes.
 - 2.29.0 (2026-11-19): rule 55 gives the house words for each slot as defaults; a project's context document records only the words it uses instead.
