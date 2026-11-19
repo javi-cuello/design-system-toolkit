@@ -1044,9 +1044,13 @@ async function main() {
       if (!figmaContract) return room;
       const combo = {};
       for (const [k, q] of Object.entries(props)) {
-        const d = figmaContract.props[k];
+        // (by its key, else the design prop the mapping's joins give this code prop: one the code names otherwise,
+        // Carbon's styleOption for Style)
+        const joinedTo = (j) => (typeof j === 'string' ? j : j && typeof j === 'object' ? j.code || j.arg : null);
+        const named = !figmaContract.props[k] && Object.keys(figmaContract.props).find((dk2) => joinedTo(joinedProps[dk2]) === q.code);
+        const dk = figmaContract.props[k] ? k : named || k, d = figmaContract.props[dk];
         if (!d || !q.code || args[q.code] === undefined) continue;
-        combo[k] = d.type === 'enum' ? (d.values || []).find((w) => String(w).toLowerCase() === String(args[q.code]).toLowerCase()) ?? args[q.code] : args[q.code];
+        combo[dk] = d.type === 'enum' ? (d.values || []).find((w) => String(w).toLowerCase() === String(args[q.code]).toLowerCase()) ?? args[q.code] : args[q.code];
       }
       const r = expand(figmaContract, { ...variantDefaults(figmaContract), ...combo }).root || {};
       return typeof r.width === 'number' ? r.width : r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? r.canvas.width : room;
@@ -1750,7 +1754,9 @@ async function main() {
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
-      if (Object.keys(d).length) { variants.push({ when, ...d }); fourLayers++; }
+      // (held only where it was read, every other prop at its default, as derive pins what is left over: an open four-prop
+      // layer reached combinations no read saw, a Carbon tag's close button Cyan where its icon draws it Blue)
+      if (Object.keys(d).length) { variants.push({ when: { ...allDefaults, ...when }, combination: true, ...d }); fourLayers++; }
     }
 
     // self-check, as derive.cjs's: every render rebuilt by expand(), and every unread one predicted
