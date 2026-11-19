@@ -348,7 +348,10 @@ export function preview(parts, drafts, tokens = {}, { dark = false, nested = () 
     const kids = parts.filter((x) => x.parent === p.uid);
     // the contract's own translation (sizes, layout, fills and gradients as to-code writes them, strokes, type, a layer
     // placed out of the flow pinned as its constraints say); the sketch adds what a drawing needs and code does not
-    const style = styleOf(e, { root: p.uid === 'root', holds: holds(p.kind), row, anchors: true });
+    // (the parent's size where it is a number, as to-code passes it: what a centred part keeps its offset from)
+    const up = p.uid === 'root' ? null : anatomy[p.parent === 'root' ? 'root' : id[p.parent]] || null;
+    const box = up ? { width: typeof up.width === 'number' ? up.width : null, height: typeof up.height === 'number' ? up.height : null } : null;
+    const style = styleOf(e, { root: p.uid === 'root', holds: holds(p.kind), row, anchors: true, box });
     let near;
     // a fill code cannot say exactly before the box is drawn (a diagonal on a hugging box) is sketched with each side it has
     // no size for taken as 100, through the same translation, and said to be near
