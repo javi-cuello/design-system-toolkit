@@ -1134,9 +1134,11 @@ async function main() {
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
           const figmaName = n.getAttribute('data-figma-name');
           // a variable mode it sets, under the attribute the token build writes it as (to-markup writes it so)
-          // (the root's, where a custom element hosts the control and carries the root's hooks, its host's: never further up,
-          // where a page's own theme attribute is no mode the component sets)
-          const host = parent == null && n.parentElement && n.parentElement.tagName.includes('-') ? n.parentElement : null;
+          // (the root's, where a custom element hosts the control and carries the root's hooks, its host's: only the host the
+          // root's own selector names as its parent (`ds-button > button`), never a wrapper around it, a story's decorator or
+          // a component placing this one, nor further up, where a page's own theme attribute is no mode the component sets)
+          const hostSel = /^(.*\S)\s*>\s*[^>]+$/.exec(sel || '');
+          const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
           const modes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
           const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
