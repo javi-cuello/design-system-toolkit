@@ -335,15 +335,16 @@ export const KINDS = {
     compare: (e, a, _, t = {}) => near(e, a, t.position),
   },
 
-  // A turn in degrees, against the computed `rotate` (`none`, `180deg`).
+  // A turn in degrees, against the computed `rotate` (`none`, `180deg`). Figma's turns counter-clockwise on screen (the
+  // Plugin API: atan2(-m10, m00), y down) and CSS's clockwise: Figma's 90 is rotate: -90deg.
   rotation: {
     compare: (e, a) => {
       const norm = (d) => ((Math.round(d) % 360) + 360) % 360;
-      return norm(e) === norm(a === 'none' || a === undefined ? 0 : parseFloat(a));
+      return norm(e) === norm(-(a === 'none' || a === undefined ? 0 : parseFloat(a)));
     },
     // the shorter way round, in degrees: 350 against 10 is 20 apart
     off: (e, a) => {
-      const d = Math.abs(parseFloat(e) - (a === 'none' || a === undefined ? 0 : parseFloat(a))) % 360;
+      const d = Math.abs(parseFloat(e) + (a === 'none' || a === undefined ? 0 : parseFloat(a))) % 360;
       return Math.min(d, 360 - d);
     },
   },

@@ -51,6 +51,8 @@ ok('auto layout from flex: direction, gap along the flow (row-gap column-gap), p
     back.direction === 'row' && back.align === 'space-between' && back.crossAlign === 'center' && back.padding.end === 'var(--Spacing/4)' && back.gap === undefined);
 }
 
+ok('Figma\'s rotation (counter-clockwise) is CSS\'s rotate the other way: 90 → rotate: -90deg',
+  declarations({ kind: 'container', rotation: 90 }, { holds: false, row: true }, names).decls.some(([p, v]) => p === 'rotate' && v === '-90deg'));
 // placement: what css.mjs writes for each constraint reads back as that constraint, its far offsets as written
 {
   const back = (constraints, absolute) => placeFromCss(Object.fromEntries(declarations({ kind: 'container', position: 'absolute', constraints, absolute }, { holds: false, row: true }, names).decls.map(([p, v]) => [p, v])));

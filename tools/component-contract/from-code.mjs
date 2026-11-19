@@ -870,6 +870,30 @@ async function selfSource(project, name, { second = false } = {}) {
 
 /* ---- the run ---- */
 
+/* A part turned (CSS rotate, or a transform that only turns and moves it) is measured as laid out, in its parent's axes as
+   Figma measures a rotated layer, never the page's, where a quarter turn swaps x and y: each turn set aside while the
+   boxes are measured, then put back. Its degrees are Figma's, counter-clockwise from -180 to 180 (css.mjs writes rotation as rotate: -<n>deg; a
+   transform's turn read the same way). Runs in the page (passed as source). */
+function unturn(root) {
+  const deg = (v) => { const m = /^(?:z\s+|0\s+0\s+1\s+)?(-?[\d.]+(?:e-?\d+)?)(deg|turn|rad|grad)$/.exec(String(v || '').trim()); return m ? +m[1] * { deg: 1, turn: 360, rad: 180 / Math.PI, grad: 0.9 }[m[2]] : 0; };
+  const turned = new Map(), back = [];
+  for (const n of [root, ...root.querySelectorAll('*')]) {
+    const s = getComputedStyle(n), r = deg(s.rotate);
+    const m = /^matrix\(([^)]+)\)$/.exec(s.transform || ''), [a, b, c, d, tx, ty] = m ? m[1].split(',').map(Number) : [];
+    // (a turn and a move only: a mirror or a scale is mirrored()'s, and left as it is)
+    const spun = !!m && Math.abs(a - d) < 1e-6 && Math.abs(b + c) < 1e-6 && Math.abs(a * a + b * b - 1) < 1e-4 && (Math.abs(b) > 1e-6 || a < 0);
+    if (!r && !spun) continue;
+    back.push([n, n.style.cssText]);
+    if (r) n.style.setProperty('rotate', 'none', 'important');
+    if (spun) n.style.setProperty('transform', `translate(${tx}px, ${ty}px)`, 'important');
+    // (clockwise as CSS turns; Figma's turn is the other way, its negative, from -180 to 180)
+    const cw = r + (spun ? Math.atan2(b, a) * 180 / Math.PI : 0), fig = ((-cw % 360) + 540) % 360 - 180;
+    const all = +(Math.abs(fig + 180) < 1e-9 ? 180 : fig).toFixed(2);
+    if (all) turned.set(n, all);
+  }
+  return { turned, restore: () => { for (const [n, css] of back) n.style.cssText = css; } };
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
@@ -1073,7 +1097,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)).map((a) => a.key);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1146,7 +1170,7 @@ async function main() {
           const hostSel = /^(.*\S)\s*>\s*[^>]+$/.exec(sel || '');
           const host = parent == null && hostSel && n.parentElement && n.parentElement.tagName.includes('-') && (() => { try { return n.parentElement.matches(hostSel[1]); } catch { return false; } })() ? n.parentElement : null;
           const modes = Object.fromEntries(modeKeys.map((k) => [k, n.getAttribute(`data-${k}`) || (host && host.getAttribute(`data-${k}`))]).filter(([, v]) => v));
-          const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
+          const e = { id, kind, ...(parent != null && { parent, order }), ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(figmaName && { name: figmaName }), ...(+s.opacity < 1 && { opacity: +(+s.opacity).toFixed(3) }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(filled && { content: `{${filled[1]}}` }), ...(fills && { content: `{${fills}}` }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }) };
           // the box it renders at, kept beside the reading (never in it: it moves with content), for sizes the design states
           // (a host that draws no box, display: contents, renders at its control's: the box in the flow)
           { const b = s.display === 'contents' && n.firstElementChild ? n.firstElementChild : n, r = b.getBoundingClientRect(); e.box = [px(r.width), px(r.height)]; }
@@ -1166,7 +1190,7 @@ async function main() {
           if (other && !n.hasAttribute('data-figma-id')) { seen[counted]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id]; }
           if (other) {
             n.setAttribute('data-contract-id', id); up(id);
-            out.push({ id, kind: 'instance', parent, order, ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(mirrored(s) && { flip: mirrored(s) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            out.push({ id, kind: 'instance', parent, order, ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
@@ -1280,14 +1304,16 @@ async function main() {
             }
           }
         };
-        walk(root, null, 0);
+        // (measured as laid out, each turn kept: unturn)
+        const { turned, restore } = new Function(`return ${unturnSrc}`)()(root);
+        try { walk(root, null, 0); } finally { restore(); }
         // an order counts only the siblings drawn
         const byParent = {}; for (const e of out) if (e.parent != null) (byParent[e.parent] = byParent[e.parent] || []).push(e);
         // (one inside a placed component keeps its place among that component's own, most of which are not read here)
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -1335,7 +1361,7 @@ async function main() {
       const shown = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => [n.getAttribute('data-contract-id'), [getComputedStyle(n).display, n.parentElement ? getComputedStyle(n.parentElement).display : 'block']])));
       // where each part sits in its parent, all four edges measured from the parent's box (as Figma measures x and y),
       // for an offset written as a token and for a point placed() never measured
-      const insets = await call(L.tab, () => Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = n.parentElement.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })));
+      const insets = await call(L.tab, (src) => { const { restore } = new Function(`return ${src}`)()(document.documentElement); try { return Object.fromEntries([...document.querySelectorAll('[data-contract-id]')].map((n) => { const r = n.getBoundingClientRect(), p = n.parentElement.getBoundingClientRect(), q = (v) => +v.toFixed(2); return [n.getAttribute('data-contract-id'), { x: q(r.left - p.left), y: q(r.top - p.top), end: q(p.right - r.right), bottom: q(p.bottom - r.bottom) }]; })); } finally { restore(); } }, unturn.toString());
       for (const e of raw) {
         if (!['container', 'text', 'slot', 'instance', 'graphic'].includes(e.kind)) continue;
         // placed out of the flow: its constraints and far offsets as written, through the table; its point as Figma

@@ -42,7 +42,9 @@ ok('50% on an 80×44 box is a 40×22 ellipse, not the 22 pill Figma\'s 999 draws
 ok('a radius is a number whose distance is its largest per-corner difference as drawn, and a turn the shorter way round',
   NUMERIC.has('border-radius') && NUMERIC.has('rotate')
   && KINDS.radius.off('999px', { r: '8px', w: 80, h: 44 }) === 14 && KINDS.radius.off('8px 8px 0px 0px', { r: '8px', w: 80, h: 44 }) === 8
-  && KINDS.rotation.off(180, 'none') === 180 && KINDS.rotation.off(350, '10deg') === 20);
+  && KINDS.rotation.off(180, 'none') === 180 && KINDS.rotation.off(350, '-10deg') === 20 && KINDS.rotation.off(350, '10deg') === 0
+  // Figma's turn is counter-clockwise, CSS's clockwise: Figma's 90 is rotate: -90deg
+  && KINDS.rotation.compare(90, '-90deg') && !KINDS.rotation.compare(90, '90deg'));
 // Review 2026-10-02 round 3, S7: Chrome reports a 0.5px border as 1px and a
 // 1.5px one as 1px, so exact 0.5px was red on correct code.
 const sw = (e, a, prop) => KINDS.strokeWidth.compare(e, a, { prop });
