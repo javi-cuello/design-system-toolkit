@@ -218,6 +218,13 @@ ok('the custom properties a value was written with, followed through the element
   varChain([[D('background-color', 'var(--button-bg)'), D('--button-bg', 'var(--color-primary, red)')], [D('--color-primary', '#00f')]], 'background-color').join() === '--button-bg,--color-primary'
   && varChain([[D('background-color', '#00f')]], 'background-color').length === 0
   && varChain([[D('color', 'var(--a)'), D('--a', 'var(--a)')]], 'color').join() === '--a');
+ok('an unset custom property draws its fallback: the vars the fallback writes are what the value came through (a focus ring a host may restyle)',
+  varChain([[D('outline', 'var(--ds-ring, var(--focus-width) solid var(--focus-colour))'), D('--focus-colour', 'var(--grey-12)')]], 'outline').join() === '--ds-ring,--focus-width,--focus-colour,--grey-12'
+  && varChain([[D('outline', 'var(--ds-ring, var(--focus-width))'), D('--ds-ring', '2px solid red')]], 'outline').join() === '--ds-ring'
+  && varChain([[D('border-top', 'var(--stroke-1) solid var(--stroke-soft)')]], 'border-top').join() === '--stroke-1,--stroke-soft'
+  && varChain([[D('box-shadow', '0 2px 4px var(--shadow-colour)')]], 'box-shadow', { leading: true }).length === 0
+  && varChain([[D('box-shadow', 'var(--elevation-raised)'), D('--elevation-raised', '0 1px 2px var(--grey)')]], 'box-shadow', { leading: true }).join() === '--elevation-raised'
+  && varChain([[D('box-shadow', 'var(--elev, var(--shadow-colour) 0 1px 2px)')]], 'box-shadow', { leading: true }).join() === '--elev');
 
 ok('a border drawn in a colour that shows as the fill under it is not seen; one that shows is',
   invisibleBorder({ 'border-color': 'rgba(22, 22, 22, 0.43)', background: 'rgba(0, 0, 0, 0.914)', under: 'rgb(255, 255, 255)' })

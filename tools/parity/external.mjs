@@ -898,8 +898,20 @@ async function matchedLevels(tab, selector, cache) {
   const own = [...(r.matchedCSSRules || []).map((x) => x.rule.style), ...(r.inlineStyle ? [r.inlineStyle] : [])];
   const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => m.rule.style), ...(x.inlineStyle ? [x.inlineStyle] : [])]);
   levels = [own, ...inherited];
+  // the element's ::after, as a level of its own before the element's (it inherits the element's custom properties):
+  // read as `<selector>::after` (a focus ring to-code draws on a box of its own over the element)
+  const after = (r.pseudoElements || []).find((x) => x.pseudoType === 'after');
+  if (cache && after) cache.set(`${selector}::after`, [(after.matches || []).map((m) => m.rule.style), own, ...inherited]);
   if (cache) cache.set(selector, levels);
   return levels;
+}
+// a property asked of an element's ::after (`outline::after`): that pseudo-element's levels, the property's own name
+async function levelsFor(tab, selector, property, cache) {
+  const pseudo = /::after$/.test(property);
+  if (!pseudo) return { levels: await matchedLevels(tab, selector, cache), property };
+  const c = cache || new Map();
+  await matchedLevels(tab, selector, c);
+  return { levels: c.get(`${selector}::after`) || null, property: property.replace(/::after$/, '') };
 }
 
 /* The custom properties a property's value was written with, outermost first
@@ -907,9 +919,9 @@ async function matchedLevels(tab, selector, cache) {
    code meant, where two tokens hold the value it computes to. Empty where it
    was written as a value. Read from the element's matched styles and those
    it inherits, nearest first, as a custom property inherits. */
-export async function authoredVars(tab, selector, property, cache = null) {
-  const levels = await matchedLevels(tab, selector, cache);
-  return levels ? varChain(levels, property) : [];
+export async function authoredVars(tab, selector, property, cache = null, opts = {}) {
+  const { levels, property: name } = await levelsFor(tab, selector, property, cache);
+  return levels ? varChain(levels, name, opts) : [];
 }
 
 /* The custom properties a value lists as whole layers of its own (a box-shadow that adds a ring to an effect token:
@@ -927,16 +939,30 @@ export const wholeVars = (raw) => (raw ? splitTop(raw).map((p) => /^\s*var\(\s*(
 
 /* varChain, with nothing opened: `levels` are the styles of the element and
    then of each ancestor, each listed lowest precedence first. Tested by test-external.mjs. */
-export function varChain(levels, property) {
+export function varChain(levels, property, { leading = false } = {}) {
   const first = (name) => { for (const styles of levels) { const v = winning(styles, name, { raw: true }); if (v != null) return v; } return null; };
   const names = [];
-  let v = winning(levels[0] || [], property, { raw: true });
-  for (let hop = 0; v && hop < 8; hop++) {
-    const m = /^\s*var\(\s*(--[\w-]+)/.exec(v);
-    if (!m || names.includes(m[1])) break;
-    names.push(m[1]);
-    v = first(m[1]);
-  }
+  // every var() a value writes, in order (a shorthand's `var(--stroke-1) solid var(--stroke-neutral-soft)` writes two),
+  // each followed to where it is set; an unset one draws its fallback (`var(--ds-ring, var(--focus-width) solid
+  // var(--focus-colour))`, a focus ring a host may restyle), so the vars that fallback writes are followed instead
+  // (`leading`: only a value that is a var() from its start, and that var alone, as a whole effect token is written:
+  // a box-shadow's colour var inside a layer is not the effect the code wrote)
+  const walk = (v, depth) => {
+    if (!v || depth > 8) return;
+    if (leading && !/^\s*var\(/.test(v)) return;
+    for (let at = v.indexOf('var('); at >= 0; ) {
+      let d = 0, end = at + 3;
+      for (; end < v.length; end++) { if (v[end] === '(') d++; else if (v[end] === ')' && --d === 0) break; }
+      const inner = v.slice(at + 4, end), m = /^\s*(--[\w-]+)\s*(?:,([\s\S]*))?$/.exec(inner);
+      if (m && !names.includes(m[1])) {
+        names.push(m[1]);
+        const set = first(m[1]);
+        if (set != null) walk(set, depth + 1); else if (!leading) walk(m[2], depth + 1);
+      }
+      at = leading ? -1 : v.indexOf('var(', end);
+    }
+  };
+  walk(winning(levels[0] || [], property, { raw: true }), 0);
   return names;
 }
 

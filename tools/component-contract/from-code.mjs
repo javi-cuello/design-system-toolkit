@@ -1065,7 +1065,8 @@ async function main() {
       const entry = figmaContract ? (await import('./to-code.mjs')).entryOf(figmaContract) : null, entryIds = entry ? [entry.placeholder, entry.value] : null;
       // the mode axes of the project's tokens, each an attribute an element may carry (tools/tokens/modes.cjs)
       const P = req('../snapshot/projects.cjs');
-      const modeKeys = L.where && L.where.paths ? req('../tokens/modes.cjs').axesOfTokens(P.tokensOf(L.where.paths)).map((a) => a.key) : [];
+      // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
+      const modeKeys = req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)).map((a) => a.key);
       const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
@@ -1215,7 +1216,7 @@ async function main() {
             // or as the outline of a box of its own over this one (::after, to-code's ring where this box keeps its corners):
             // read the same way, its corners that box's, its offset from this box's edge (that box stands `d` inside it)
             // (beside its own outline too: then that outline is the box's own stroke, as css.mjs draws one outside, centred or dashed)
-            { const f = getComputedStyle(n, '::after'); if (f.content && f.content !== 'none' && f.position === 'absolute' && !['none', 'auto'].includes(f.outlineStyle) && px(f.outlineWidth) > 0) { const r = n.getBoundingClientRect(), d = px(s.borderTopWidth) + px(f.top), c = corner(f.borderTopLeftRadius, r.width - 2 * d, r.height - 2 * d); if (e.outline) e.ownOutline = e.outline; e.outline = { color: f.outlineColor, width: px(f.outlineWidth), offset: px(f.outlineOffset) - d, radius: c.radius, full: !!c.full }; } }
+            { const f = getComputedStyle(n, '::after'); if (f.content && f.content !== 'none' && f.position === 'absolute' && !['none', 'auto'].includes(f.outlineStyle) && px(f.outlineWidth) > 0) { const r = n.getBoundingClientRect(), d = px(s.borderTopWidth) + px(f.top), c = corner(f.borderTopLeftRadius, r.width - 2 * d, r.height - 2 * d); if (e.outline) e.ownOutline = e.outline; e.outline = { color: f.outlineColor, width: px(f.outlineWidth), offset: px(f.outlineOffset) - d, radius: c.radius, full: !!c.full, after: true }; } }
             // a css border takes room, as a Figma stroke in the layout does: each side's width, one where all are alike
             const EDGES = ['Top', 'Right', 'Bottom', 'Left'];
             const bw = EDGES.map((k) => (s[`border${k}Style`] !== 'none' ? px(s[`border${k}Width`]) || 0 : 0));
@@ -1541,8 +1542,8 @@ async function main() {
           const raw0 = x.border.width;
           // a width per side where the sides differ: each side's token, 0 where it draws none. The token is the one the code
           // wrote, in a border or in the inset shadow to-code draws a stroke inside the box with (Figma's inside stroke)
-          const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, 'border-width', 'box-shadow:width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width', 'box-shadow:width']);
-          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'box-shadow:colour']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }), ...(x.border.dash && { dash: x.border.dash }) };
+          const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, `border-${['top', 'right', 'bottom', 'left'][i]}`, 'border-width', 'border', 'box-shadow:width']) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'box-shadow:width']);
+          x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'box-shadow:colour']), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }), ...(x.border.dash && { dash: x.border.dash }) };
           // a line (a shape no wide or no tall): css.mjs draws its stroke as the one edge it has, the leading one, so that
           // edge is the shape's whole stroke
           // (no wide: 0, or the edge's own width where a border-box reset counts it in)
@@ -1563,7 +1564,8 @@ async function main() {
         if (x.outline) {
           const o = x.outline, clear = +(o.offset + o.width).toFixed(2);
           ring.push([id, { kind: 'graphic', shape: 'rectangle', parent: id, position: 'absolute', absolute: { x: -clear, y: -clear, end: -clear, bottom: -clear }, constraints: { horizontal: 'stretch', vertical: 'stretch' },
-            border: { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']) },
+            // (its tokens where the ring was written: the box's own outline, or its ::after's)
+            border: { color: await tok('stroke', o.color, `${id}.outline`, (o.after ? ['outline-color::after', 'outline::after'] : ['outline-color', 'outline'])), width: await tok('width', o.width, `${id}.outline-width`, (o.after ? ['outline-width::after', 'outline::after'] : ['outline-width', 'outline'])) },
             ...(o.radius > 0 && { radius: o.full ? fullest() || await tok('radius', o.radius + clear, `${id}.ring-radius`, []) : await tok('radius', o.radius + clear, `${id}.ring-radius`, []) }) }]);
           delete x.outline;
         }
@@ -1571,7 +1573,7 @@ async function main() {
         // the effect style the code wrote (box-shadow: var(--elevation-raised)), else the one that draws the same layers
         if (x.shadow || x.shadowAll) {
           const at = `[data-contract-id="${id}"]`;
-          const said = [...await authoredVars(L.tab, at, 'box-shadow', styles), ...await layerVars(L.tab, at, 'box-shadow', styles)];
+          const said = [...await authoredVars(L.tab, at, 'box-shadow', styles, { leading: true }), ...await layerVars(L.tab, at, 'box-shadow', styles)];
           const effects = L.tokens.effects || [];
           const named = said.length && effects.find((fx) => said.some((v) => writtenAs(v, fx.name)));
           const keyOf = (fx) => shadowKey((fx.layers || []).filter((l) => /SHADOW/.test(l.type)).map((l) => ({ inset: l.type === 'INNER_SHADOW', x: l.x, y: l.y, blur: l.blur, spread: l.spread, color: l.color })));

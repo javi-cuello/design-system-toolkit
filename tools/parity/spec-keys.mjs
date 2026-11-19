@@ -41,8 +41,8 @@ export const REASONS = ['identity', 'elsewhere', 'carried', 'notDrawn', 'unobser
 const require = createRequire(import.meta.url);
 
 // Maps whose keys are Figma's own names (a component's props, a variable's
-// name), not properties of the node; the rules that read them read the map.
-const OPAQUE = new Set(['props', 'bindings', 'overrides']);
+// name, a variable collection's), not properties of the node; the rules that read them read the map.
+const OPAQUE = new Set(['props', 'bindings', 'overrides', 'modes']);
 
 /** Every key under the given trees, nested values included. */
 export function keysIn(trees) {

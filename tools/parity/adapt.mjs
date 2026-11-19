@@ -959,6 +959,7 @@ export const SPEC_KEYS = {
   end: why('carried', 'an arc\'s ending angle, inside arc'),
   inner: why('carried', 'an arc\'s inner radius, inside arc'),
   constraints: why('carried', 'how an absolutely placed layer resizes with its parent, for the component contract; where it lands is measured by x and y'),
+  modes: why('elsewhere', 'the variable modes a layer sets (snapshot 0.75.0 on: `5. Responsive type: Mobile`): no parity rule reads them; ../component-contract/derive.cjs carries them into the contract, as the attribute code sets the mode by'),
   firstOnTop: why('carried', 'which way an auto-layout stacks its overlapping children, for the component contract; paint order is not a measured property'),
 };
 

@@ -12,6 +12,7 @@ const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name)
 const tree = { name: 'Size=md', type: 'COMPONENT', fills: [{ stops: [{ color: '#fff', position: 0 }], angle: 90 }], props: { Size: 'md' },
   children: [{ name: 'Label', type: 'TEXT', rotation: 15, bindings: { gap: 'Spacing/4' } }] };
 const keys = keysIn([tree]);
+ok('a layer\'s variable modes are an opaque map: the collection names under it are no spec keys', keysIn([{ name: 'S', modes: { '5. Responsive type': 'Mobile' } }]).has('modes') && !keysIn([{ name: 'S', modes: { '5. Responsive type': 'Mobile' } }]).has('5. Responsive type'));
 ok('nested values count (a gradient\'s stops), opaque maps do not (props, bindings)', ['stops', 'color', 'angle', 'rotation', 'props', 'bindings'].every((k) => keys.has(k)) && !keys.has('Size') && !keys.has('gap'));
 
 const declared = {
