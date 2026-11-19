@@ -31,6 +31,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { rulesOf } from './rules.mjs';
 import { areas } from '../claude-hooks/standards-read.mjs';
+import { sweep } from './leftovers.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = path.resolve(HERE, '../..');
@@ -260,6 +261,9 @@ if ((process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]); 
   const flag = (l) => { open++; console.log(BRIEF ? `${where.split(' — ')[0]}: ${l}` : `  ! ${l}`); };
   for (const [name, repo] of repos) {
     say(`\n${name} — ${repo}`);
+    // worktrees and branches merged, clean and a day old go without asking; the rest bin/check warns of (leftovers.mjs)
+    const gone = sweep(repo);
+    if (gone.length) console.log(`${BRIEF ? `${name}: ` : '  '}removed ${gone.length} merged worktree(s) or branch(es): ${gone.join(', ')}`);
     const s = repoState(repo);
     if (s.dirty.length) flag(`${s.dirty.length} uncommitted: ${s.dirty.slice(0, 5).map((l) => l.slice(3)).join(', ')}${s.dirty.length > 5 ? ' …' : ''}`);
     if (!s.upstream) flag('no upstream branch: nothing here is shipped');

@@ -139,3 +139,42 @@ export function isOwn(key, own, repoDirs = {}) {
   if (kind !== 'uncommitted') return true;
   return [...own].some((f) => f === file || f.endsWith('/' + file));
 }
+
+/* The files this session wrote that are still uncommitted, by repo: { repo: [relative path…] }. Only its own paths, as
+   git reports them now: a file it wrote and then saw committed (by itself or anyone) and that is changed again since is
+   another session's, since ownFiles cannot tell every commit's files (`git -C x commit`, `git add a && git commit`). */
+export async function ownUncommitted(transcript, repos) {
+  const { default: fs } = await import('node:fs');
+  const { execFileSync } = await import('node:child_process');
+  const out = {};
+  if (!transcript || !fs.existsSync(transcript)) return out;
+  const last = new Map(); // file → when this session last wrote it
+  for (const line of transcriptLines(fs, transcript)) {
+    if (!line.includes('"tool_use"')) continue;
+    let rec; try { rec = JSON.parse(line); } catch { continue; }
+    for (const c of rec.message?.content || []) if (c.type === 'tool_use') for (const f of written(c, rec.cwd || process.cwd())) last.set(f, Date.parse(rec.timestamp) || 0);
+  }
+  // macOS folders are case-insensitive: ~/projects/toolkit is ~/Projects/toolkit
+  const fold = process.platform === 'darwin' ? (x) => x.toLowerCase() : (x) => x;
+  for (const repo of repos) {
+    const mine = [...last.keys()].filter((f) => fold(f).startsWith(fold(repo + path.sep)) && !/\/\.claude\/worktrees\//.test(f)).map((f) => [f, repo + f.slice(repo.length)]);
+    if (!mine.length) continue;
+    const g = (args) => execFileSync('git', ['-C', repo, '--literal-pathspecs', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    let st = '';
+    try { st = g(['status', '--porcelain', '-z', '-unormal', '--', ...mine.map(([, f]) => path.relative(repo, f))]); } catch { continue; }
+    const loose = [];
+    const parts = st.split('\0');
+    for (let i = 0; i < parts.length; i++) {
+      const e = parts[i];
+      if (e.length < 4) continue;
+      if (/[RC]/.test(e.slice(0, 2))) i++; // a rename's source path follows
+      const rel = e.slice(3);
+      const wrote = mine.find(([, f]) => fold(path.relative(repo, f)) === fold(rel))?.[0];
+      let committed = 0;
+      try { committed = Date.parse(g(['log', '-1', '--format=%cI', '--', rel]).trim()) || 0; } catch { /* never committed */ }
+      if (wrote && !(committed > last.get(wrote))) loose.push(rel);
+    }
+    if (loose.length) out[repo] = loose;
+  }
+  return out;
+}

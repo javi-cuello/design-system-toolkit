@@ -86,7 +86,7 @@ if (mode === 'edit') {
   // A gate that throws would exit 1, which Claude Code lets through with a one-line notice the session never
   // reads: it is said to the session instead, once a session, beside the rule list. Not denied: a deny would
   // also refuse the edit that fixes the gate.
-  let refused, broken = '';
+  let refused, broken = '', note = '';
   const gatesOff = process.env.TOOLKIT_GATES === 'off' || !!process.env.TOOLKIT_EVAL_COPY;
   try {
     const { planGate } = await import('./gates.mjs');
@@ -106,10 +106,19 @@ if (mode === 'edit') {
   if (broken && seen.has('gate-broken')) broken = '';
   const say = (text) => {
     if (broken) { seen.add('gate-broken'); try { fs.writeFileSync(seenFile, [...seen].join('\n')); } catch { /* said again next call */ } }
-    const all = [broken, text].filter(Boolean).join('\n\n');
+    const all = [broken, note, text].filter(Boolean).join('\n\n');
     if (all) console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: all } }));
     process.exit(0);
   };
+  // a push whose bin/check will wait for the measuring lock says who holds it (tools/shared/lock.mjs)
+  if (payload.tool_name === 'Bash') {
+    try {
+      const { isPush } = await import('./gates.mjs');
+      const { holder, describe } = await import('../shared/lock.mjs');
+      const h = isPush(payload.tool_input?.command) && holder();
+      if (h) note = `This push's bin/check waits for the measuring lock, now held by ${describe(h)}.`;
+    } catch { /* said nothing: the check itself says whom it waits for */ }
+  }
   if (process.env.TOOLKIT_RULES === 'off') say('');
   const { areas, areaKey, targets, ruleIndex, knowledge } = await import('./standards-read.mjs');
   let repos = process.env.TOOLKIT_EVAL_COPY ? [path.resolve(process.env.TOOLKIT_EVAL_COPY)] : [];
@@ -196,6 +205,20 @@ if (mode === 'stop') {
     reason = payload.stop_hook_active || off || !inEcosystem(payload.cwd || process.cwd()) ? null : `The review gate (${SHOWN}/tools/claude-hooks/gates.mjs) failed and did not judge this turn: ${String(e?.message ?? e)}. Fix it, then run the review it would have asked for.`;
   }
   if (reason) { console.log(JSON.stringify({ decision: 'block', reason })); process.exit(0); }
+  // the session's own edits, left uncommitted, block every other session's push (the user's standing rule: commit
+  // each green step at once, unfinished work too, saying what is left). Once a turn; never another session's paths.
+  if (!payload.stop_hook_active && process.env.TOOLKIT_GATES !== 'off' && !process.env.TOOLKIT_EVAL_COPY) {
+    let loose = {};
+    try {
+      const { ownUncommitted } = await import('./stop-items.mjs');
+      loose = await ownUncommitted(payload.transcript_path, ecosystemDirs());
+    } catch { loose = {}; /* unreadable: the closing pass still lists uncommitted work */ }
+    const where = Object.entries(loose);
+    if (where.length) {
+      console.log(JSON.stringify({ decision: 'block', reason: `Your own edits are uncommitted, and an uncommitted tree blocks every other session's push. Commit them now, only these paths (git -C <repo> commit -- <paths>), unfinished work too with a message saying what is left:\n${where.map(([r, fs_]) => `  ${r}: ${fs_.join(' ')}`).join('\n')}` }));
+      process.exit(0);
+    }
+  }
 }
 
 if (!inEcosystem(payload.cwd || process.cwd())) process.exit(0);

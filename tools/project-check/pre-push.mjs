@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 const REPO = path.resolve(process.argv[2] || '.');
 const git = (args) => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
@@ -49,6 +50,8 @@ for (const l of input) {
   const pushed = git(['rev-parse', `${localSha}^{commit}`]).trim();
   if (head !== pushed || loose.length) {
     console.log(`pre-push: bin/check reads the working tree, so it checks only the commit checked out with nothing uncommitted — ${head !== pushed ? `this push sends ${pushed.slice(0, 10)}, HEAD is ${head.slice(0, 10)}` : `${loose.length} uncommitted or untracked path(s): ${loose.slice(0, 3).map((x) => x.slice(3)).join(', ')}`}. Check out what you push, commit or remove the rest, and push again.`);
+    // another session's work is named with its session, so the blocked one messages it (owners.mjs)
+    spawnSync('node', [path.join(path.dirname(fileURLToPath(import.meta.url)), '../claude-hooks/owners.mjs'), REPO], { stdio: 'inherit' });
     process.exit(1);
   }
   console.log('pre-push: code is in this push — running bin/check');

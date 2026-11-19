@@ -18,6 +18,10 @@ set -u
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX GIT_NAMESPACE
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
+# One measuring lock (tools/shared/lock.mjs): a second bin/check, or an eval beside it, waits and says who holds
+# it, and the run is niced. Two at once took 8 to 10+ minutes each (2026-11-20). The usage check below runs first.
+for a in "$@"; do case "$a" in --quick|--no-fix) ;; *) A_BAD=1 ;; esac; done
+if [ -z "${TOOLKIT_LOCK_HELD:-}" ] && [ -z "${A_BAD:-}" ]; then exec node "$REPO/tools/shared/lock.mjs" --run "bin/check${*:+ $*}" -- "$REPO/bin/check" "$@"; fi
 FAIL=0
 QUICK=0
 # an option it does not know is refused, never read as "everything": --help or a
@@ -84,6 +88,12 @@ print('\n'.join(line for _, line in sorted(old, reverse=True)))
 PY
 )
 if [ -z "$OUT" ]; then ok; else echo "warn $(took)"; printf '%s\n' "$OUT" | head -12 | sed 's/^/  /'; N=$(printf '%s\n' "$OUT" | wc -l | tr -d ' '); [ "$N" -gt 12 ] && echo "  … and $((N - 12)) more"; fi
+
+# Worktrees, branches and stashes over a day old that the closing pass cannot remove on its own (unmerged, dirty, a
+# stash): warned, never failed, with the session that left each when known (tools/toolkit-check/leftovers.mjs).
+step "no worktree, branch or stash left behind"
+OUT=$(node tools/toolkit-check/leftovers.mjs . 2>&1)
+if [ -z "$OUT" ]; then ok; else echo "warn $(took)"; printf '%s\n' "$OUT" | sed 's/^/  /'; fi
 
 step "no job the toolkit owns is written twice"
 OUT=$(node tools/toolkit-check/owned-check.mjs --repo . 2>&1)

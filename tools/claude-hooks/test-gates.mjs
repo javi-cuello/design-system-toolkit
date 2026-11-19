@@ -13,6 +13,7 @@ const REPOS = [TOOLKIT];
 delete process.env.TOOLKIT_GATES; delete process.env.TOOLKIT_EVAL_COPY;
 // state, plans and the carry between sessions live in tmp: the tests keep their own
 process.env.TMPDIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-gates-')));
+process.env.TOOLKIT_LOCK_DIR = path.join(process.env.TMPDIR, 'toolkit-measure.lock'); // never the real lock
 
 let n = 0;
 /* A session: a transcript built from turns, and its own id so no state leaks.
@@ -657,4 +658,68 @@ test("impact: a file sharing its name with another lists its own readers, not it
   assert.ok(hooks.readers.includes('toolkit: tools/claude-hooks/hooks.mjs'), 'a relative import beside it');
   assert.ok(!hooks.readers.includes('toolkit: tools/parity/run.mjs'), "the twin's reader");
   assert.ok(parity.readers.includes('toolkit: tools/parity/run.mjs'));
+});
+
+test("a refused push names what changed since the last review, and a refused compound command says its other parts did not run", () => {
+  const s = session([user('build it'), edit('a.mjs', 200)]);
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT);
+  const plain = planGate(s.id, s.file, REPOS, { id: 'q1', name: 'Bash', input: { command: 'git push' } }, TOOLKIT);
+  assert.match(plain, /Changed since the last review, lines: a\.mjs \(200\)/, 'the files the next review must cover, with their lines');
+  assert.doesNotMatch(plain, /other parts/, 'a lone push has no other parts');
+  assert.doesNotMatch(planGate(s.id, s.file, REPOS, { id: 'q2', name: 'Bash', input: { command: 'git push 2>&1 | tail -3' } }, TOOLKIT), /other parts/, 'a pipe is the push, not another part');
+  assert.match(planGate(s.id, s.file, REPOS, { id: 'q3', name: 'Bash', input: { command: "printf 'after: x' >> plan.md && git commit -qm x && git push" } }, TOOLKIT), /None of this command's other parts ran/);
+  s.clean();
+});
+
+test("a subagent's own bin/check run is credited; one in its worktree is not", () => {
+  for (const [cwd, credited] of [[TOOLKIT, true], [path.join(TOOLKIT, '.claude/worktrees/agent-x1'), false]]) {
+    const s = session([user('build it'), call('Agent', { description: 'Check it', prompt: 'run bin/check', subagent_type: 'general-purpose' })], { checked: false });
+    const dir = path.join(s.file.replace(/\.jsonl$/, ''), 'subagents');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'agent-x1.jsonl'), [{ ...withId(call('Bash', { command: 'bin/check 2>&1 | tail -3' }), `sc-${cwd.length}`), cwd }, checkResult(`sc-${cwd.length}`, 'green')].map((l) => JSON.stringify(l)).join('\n') + '\n');
+    fs.writeFileSync(planPath(s.id), PLAN_TEXT); // a plan, so what it still lacks is listed
+    const said = String(planGate(s.id, s.file, REPOS, { id: `w-${cwd.length}`, name: 'Write', input: { file_path: path.join(TOOLKIT, 'big.mjs'), content: lines(300) } }, TOOLKIT));
+    assert.equal(/a bin\/check run in/.test(said), !credited, credited ? "the subagent's run counts" : 'a run in its worktree checks another tree');
+    fs.rmSync(dir.replace(/\/subagents$/, ''), { recursive: true, force: true }); s.clean();
+  }
+});
+
+test('the plan gate says who holds the measuring lock when it asks for a bin/check run', async () => {
+  const { lockDir, release } = await import('../shared/lock.mjs');
+  fs.mkdirSync(lockDir(), { recursive: true });
+  fs.writeFileSync(path.join(lockDir(), 'holder.json'), JSON.stringify({ pid: process.pid, what: 'eval.mjs --self', at: Date.now() }));
+  const s = session([user('build it')], { checked: false });
+  assert.match(String(planGate(s.id, s.file, REPOS, { id: 'lk', name: 'Write', input: { file_path: path.join(TOOLKIT, 'big.mjs'), content: lines(300) } }, TOOLKIT)), /measuring lock, now held by eval\.mjs --self/);
+  release(); s.clean();
+});
+
+test("the stop gate names the session whose uncommitted work counts in this one's size", () => {
+  const dir = repo();
+  fs.writeFileSync(path.join(dir, 'base.mjs'), lines(61));
+  const editOf = (f, n) => call('Edit', { file_path: path.join(dir, f), old_string: 'x', new_string: lines(n) });
+  const a = session([user('fix it'), editOf('base.mjs', 60)]);
+  const b = session([user('more'), editOf('next.mjs', 60)]);
+  try {
+    assert.equal(stopGate(a.id, a.file, [dir], 'Fixed.', dir), null);
+    const said = stopGate(b.id, b.file, [dir], 'Done.', dir);
+    assert.match(said, new RegExp(`another session's uncommitted work.*session ${a.id.slice(0, 8)} \\(not running\\): base\\.mjs`), 'named, with its file');
+    assert.doesNotMatch(said, /next\.mjs\./, "this session's own file is not said to be another's");
+  } finally { for (const x of [a, b]) x.clean(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("the stop check lists this session's own uncommitted paths, never another's, and nothing once committed", async () => {
+  const { ownUncommitted } = await import('./stop-items.mjs');
+  const dir = repo();
+  const git = (...a) => spawnSync('git', ['-C', dir, ...a], { encoding: 'utf8' });
+  fs.writeFileSync(path.join(dir, 'mine.mjs'), 'x'); fs.writeFileSync(path.join(dir, 'theirs.mjs'), 'y'); fs.writeFileSync(path.join(dir, '[id].mjs'), 'z'); fs.writeFileSync(path.join(dir, 'i.mjs'), 'w');
+  const wrote = (f) => at({ ...call('Write', { file_path: f, content: 'x' }), cwd: dir }, Date.now() - 60000);
+  const t = path.join(os.tmpdir(), `own-${process.pid}.jsonl`);
+  fs.writeFileSync(t, [wrote(path.join(dir, 'mine.mjs')), wrote(path.join(dir, '[id].mjs')), wrote(path.join(os.tmpdir(), 'plan.md'))].map((l) => JSON.stringify(l)).join('\n') + '\n');
+  assert.deepEqual(await ownUncommitted(t, [dir]), { [dir]: ['[id].mjs', 'mine.mjs'] }, 'only its own paths inside the repo; a bracket is a name, not a pattern matching i.mjs');
+  git('add', '-A'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'all');
+  assert.deepEqual(await ownUncommitted(t, [dir]), {}, 'committed: nothing');
+  fs.writeFileSync(path.join(dir, 'mine.mjs'), 'changed by another session after the commit');
+  assert.deepEqual(await ownUncommitted(t, [dir]), {}, 'a change made after its commit is not this session\'s');
+  assert.equal(fs.readFileSync(path.join(dir, 'theirs.mjs'), 'utf8'), 'y', "another session's file is never touched");
+  fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(t, { force: true });
 });

@@ -40,5 +40,6 @@ fi
 LOG="$(git rev-parse --git-dir)/pre-push.log"
 rm -f "$LOG.status"
 { "$REPO/bin/check" --no-fix; echo $? > "$LOG.status"; } 2>&1 | tee "$LOG"
-[ "$(cat "$LOG.status")" = 0 ] || { echo "pre-push: bin/check failed, whole output in $LOG; push refused (git push --no-verify to override)"; exit 1; }
+# another session's uncommitted or unpushed work is named with its session, so the blocked one messages it
+[ "$(cat "$LOG.status")" = 0 ] || { echo "pre-push: bin/check failed, whole output in $LOG; push refused (git push --no-verify to override)"; node "$REPO/tools/claude-hooks/owners.mjs" "$REPO"; exit 1; }
 exit 0

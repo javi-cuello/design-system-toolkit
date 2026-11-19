@@ -26,6 +26,7 @@ import { written } from './stop-items.mjs';
 import { realPath, expandHome } from '../shared/real-path.mjs';
 import { fileURLToPath } from 'node:url';
 import { rulesOf, citations } from '../toolkit-check/rules.mjs';
+import { holder, describe, sessionName } from '../shared/lock.mjs';
 // the toolkit as a message names it: this checkout, ~ for the home folder
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SHOWN = HERE.startsWith(os.homedir() + path.sep) ? '~' + HERE.slice(os.homedir().length) : HERE;
@@ -309,6 +310,19 @@ function inherit(st, session, repos, cwd) {
     if (c.wide.includes(f) && !st.inherited.wide.includes(f)) st.inherited.wide.push(f);
   }
 }
+/* Whose unreviewed work, inherited, counts in this session's size: each session by name and its files, so it can be
+   messaged rather than its work reviewed or committed here. */
+function theirs(st, session) {
+  const inherited = Object.keys(st.inherited?.files || {});
+  if (!inherited.length) return '';
+  const by = [];
+  for (const [id, c] of Object.entries(readCarry())) {
+    if (id === session) continue;
+    const fs_ = Object.keys(c.files).filter((f) => inherited.includes(f));
+    if (fs_.length) by.push(`${sessionName(id)}: ${fs_.map((f) => path.basename(f)).join(', ')}`);
+  }
+  return by.length ? ` Part of this is another session's uncommitted work, counted here; message it (SendMessage to its name) to review or commit its own — ${by.join('; ')}.` : '';
+}
 const plus = (a, b) => {
   const files = { ...a.files };
   for (const [f, n] of Object.entries(b.files)) files[f] = (files[f] || 0) + n;
@@ -489,7 +503,9 @@ function record(st, line, repos, sub) {
     }
     // a shell call's own code may write anything: its span is checked on disk when its result is in
     // the repo's own check, run in that repo: a run elsewhere is that repo's
-    if (!sub && c.name === 'Bash' && c.id && CHECK_RUN.test(bareShell(c.input?.command))) { const d = checkDir(bareShell(c.input?.command), rec.cwd || process.cwd()); st.checks[c.id] = (d && where(d, repos)?.repo) || ''; }
+    // a subagent's run counts as the session's (a background agent that spans turns ran it), except in its own
+    // worktree, whose tree is not the repo's
+    if (c.name === 'Bash' && c.id && CHECK_RUN.test(bareShell(c.input?.command))) { const d = checkDir(bareShell(c.input?.command), rec.cwd || process.cwd()); if (!(sub && d && /\/\.claude\/worktrees\//.test(d + '/'))) st.checks[c.id] = (d && where(d, repos)?.repo) || ''; }
     if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart };
     if (c.id && st.counted[c.id]) continue; // counted when the plan gate saw it pending
     if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) continue; // a subagent's edit the session's review already covered
@@ -583,10 +599,16 @@ const planGaps = (text, st = {}, work = [], changed = Infinity) => [
   ...(/^\W*before\W*:[ \t*_`"(-]*(?!(?:tbd|todo|later|n\/a)(?![a-z0-9]))[a-z0-9]/im.test(section(text, 'Measure')) ? [] : ['a "before:" line under Measure: the goal measured end to end before any part is built — the command and what it said']),
   ...(/\(\d+ readers?\)/.test(text) ? [] : ["impact.mjs's output under Impact (its \"(N readers)\" lines, pasted, not summarised)"])];
 
+/* A refused shell call is refused whole: what else it carried did not run either (a plan's end lines were lost with a
+   refused push on 2026-11-20). */
+export const compound = (call) => call.name === 'Bash' && bareShell(call.input?.command).replace(/\\;/g, '').trim().split(/&&|\|\||;|\n/).filter((x) => x.trim()).length > 1
+  ? ' None of this command\'s other parts ran: it was refused whole, so run them again on their own.' : '';
+
 /* PreToolUse: measures a rewrite against the file it replaces, then refuses
    the call that makes the session's work full-size until the plan exists. */
 export function planGate(session, transcript, repos, call, cwd, sub = false) {
   if (off()) return null;
+  let h;
   const st = load(session);
   // what a shell call's repo holds before it runs, so its script's writes are measured from here
   if (call.name === 'Bash' && call.id) { const r = where(shellDir(bareShell(call.input?.command), cwd), repos); if (r) st.pre[call.id] = { ...diffs(r.repo), at: Date.now() }; }
@@ -611,7 +633,10 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     if (why) {
       if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; }
       save(session, st);
-      return `Not pushed: ${why}, and full-size work is reviewed before it leaves the machine (toolkit-standard §D 13). ${s.full ? 'Run the review (the Stop gate\'s terms: fresh Explore agents with "review" in the description), fix what is real, then push.' : 'Wait for its report, fix what is real, then push.'}`;
+      // what the next review must cover: the edits since the last one credited (a review is credited when launched)
+      const since = Object.entries(files).sort((a, b) => b[1] - a[1]).map(([f, n]) => `${path.relative(repo, f)} (${n})`);
+      const list = s.full ? ` Changed since the last review${st.reviewedAt ? ` (launched ${st.reviewedAt.slice(0, 16).replace('T', ' ')})` : ''}, lines: ${since.slice(0, 10).join(', ')}${since.length > 10 ? ` and ${since.length - 10} more` : ''}.` : '';
+      return `Not pushed: ${why}, and full-size work is reviewed before it leaves the machine (toolkit-standard §D 13).${list} ${s.full ? 'Run the review on these (the Stop gate\'s terms: fresh Explore agents with "review" in the description), fix what is real, then push.' : 'Wait for its report, fix what is real, then push.'}${compound(call)}`;
     }
   }
   if (planned) { save(session, st); return null; }
@@ -634,7 +659,8 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     + `  ## Beyond scope — what nearby is broken, missing or stale, and whether this change fixes it (no loose ends: what is not fixed is named and why)\n`
     + `  ## Budget — agent time, review rounds\n`
     + `  ## Review — who reviews which area\n`
-    + `Then tell the user the plan in a few lines and carry on: it is the work's contract, not a request for approval.`;
+    + `Then tell the user the plan in a few lines and carry on: it is the work's contract, not a request for approval.${compound(call)}`
+    + (work.some((r) => !st.checkedAt?.[r] && fs.existsSync(path.join(r, 'bin', 'check'))) && (h = holder()) ? `\nbin/check waits for the measuring lock, now held by ${describe(h)}.` : '');
 }
 
 /* A closed piece of work: its window empties; its plan is kept for the next piece, which reviews it first, and put
@@ -687,7 +713,7 @@ export function stopGate(session, transcript, repos, lastMessage, cwd = process.
     // the person sees this too: short, the method in §D 13
     return `Not done yet: ${s.why.join(', ')} changed since the last review (toolkit-standard §D 13). `
       + `Run the checks, then fresh read-only reviewers (Explore, never a fork, "review" in the description) on the diff (git -C ${dirs.join(' / git -C ')} diff) and the plan at ${planPath(session)}, one area each. `
-      + `Fix what is real; repeat until no new High. End with "Measure:" (before → after), "Toolkit:", "Open:" and "Docs:" lines.`;
+      + `Fix what is real; repeat until no new High. End with "Measure:" (before → after), "Toolkit:", "Open:" and "Docs:" lines.${theirs(st, session)}`;
   }
   // a review still running has not closed the work: launching one is not finishing (28 Oct, the gate's first run)
   if (st.owed && !st.reviewing.length) {
