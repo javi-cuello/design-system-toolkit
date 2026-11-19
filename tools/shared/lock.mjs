@@ -56,6 +56,8 @@ export function tryAcquire(what, dir = lockDir(), pid = process.pid) {
       fs.writeFileSync(path.join(dir, 'holder.json'), JSON.stringify({ pid, start: started(pid), what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() }));
       return null;
     } catch (e) {
+      // a sandbox that cannot write the lock runs the measure unlocked, said, rather than not at all
+      if (e.code === 'EPERM' || e.code === 'EACCES' || e.code === 'EROFS') { console.error(`measuring lock: cannot write ${dir} (${e.code}); running without it`); return null; }
       if (e.code !== 'EEXIST') throw e;
       const h = holder(dir);
       const stale = !h || (h.starting && Date.now() - fs.statSync(dir).mtimeMs > 60000);
