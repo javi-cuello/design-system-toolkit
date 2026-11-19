@@ -1,5 +1,6 @@
 # History — figma-standard
 
+- 2.27.0 (2026-11-19): rule 21, a property takes its code prop's shape and values as well as its name; where kits differ, the build takes the shape that mirrors its code (moved from toolkit-standard §D 21).
 - 2.26.1 (2026-11-19): rule 47's title says on-emphasis pair, as its body does; rule 18's evidence notes that the `Feedback` segment it quotes is the one rule 55 retired. No rule changes.
 - 2.26.0 (2026-11-18): rule 55, the semantic token grammar (slot order, closed word lists, one intensity ladder, on-colour named for its fill, surfaces by role), from one project's rename and the token-taxonomy knowledge page; rule 18's example drops the retired `Feedback` segment.
 - 2.25.1 (2026-11-17): rule 21's True/False examples drop `Open`, which a menu trigger carries as a `State` value (the State-axis research article); the rule is unchanged.

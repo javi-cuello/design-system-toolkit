@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.44.0 (2026-11-19): §D 21, a page reports what kits ship and never picks for preference; the alignment pick moved to figma-standard rule 21; a departure is advised and decided per case.
 - 2.43.0 (2026-11-19): §D 21, where kits differ a page recommends the one whose Figma build mirrors its code; asked what the KB says, an agent answers from its pages alone.
 - 2.42.0 (2026-11-16): §D 21, the knowledge base is external, evidenced knowledge; a convention with no evidence outside the toolkit is a house rule in the standard that owns its subject, and the page cites it.
 - 2.41.0 (2026-11-16): §D 21: evidence and how-to only, no toolkit reasoning; `weak` is the research queue, never acted on; restated rules cut; a house rule wrong on the facts is fixed, a departure by choice shown to every reader.
