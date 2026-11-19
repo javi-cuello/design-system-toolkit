@@ -27,7 +27,7 @@ A changed manifest needs a re-import; "run last plugin" will not pick it up.
 ## Files
 
 - `code.js`: the plugin. Its generated block (the components and foundations scanners, the full audit's context-document readers and discovery, the judging prompt, the buckets, the universal conventions, the house settings, `instructions.md` and `report.html`) is written by `node plugins/audit-lite/sync.mjs`, never by hand; `bin/check` runs `sync.mjs --check` (through `standards/tests/check.sh`) and fails when it differs from its sources.
-- `instructions.md`: what Claude does with the report. `report.html`: the page Claude fills in.
+- `instructions.md`: what Claude does with the report. `report.html`: the page Claude fills in; figma-components-audit publishes the same page, filled by `tools/figma-audit/fix-queue.mjs --page`.
 - `tests/test-audit-lite.mjs` (`node plugins/audit-lite/tests/test-audit-lite.mjs`; `bin/check` runs it): builds a report from the scanner's fixture, checks that a context document gives the settings and rulings the full audit reads from it (`tests/fixtures/design-system-context.md`), and renders the page.
 
 ## Data this plugin stores
