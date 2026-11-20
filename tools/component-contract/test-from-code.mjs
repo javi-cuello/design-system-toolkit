@@ -297,7 +297,7 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
 }
 // a render's args as the design's props: its state as the design's interaction prop, whatever it is called
 {
-  const { designCombo, placeRings, openSource } = await import('./from-code.mjs');
+  const { designCombo, placeRings, openSource, keepsRing } = await import('./from-code.mjs');
   const code = { state: { type: 'enum', values: ['rest', 'focus'], role: 'interaction', code: '__state' }, invalid: { type: 'boolean', code: 'invalid' } };
   const design = { props: { interaction: { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction' }, invalid: { type: 'boolean', default: false } } };
   ok('the render\'s state is the design\'s interaction prop, by its word or by the pseudo-class both force',
@@ -313,6 +313,14 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'F', width: 2 }, shape: 'rectangle' };
   const d2 = { props: { interaction: { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction' }, invalid: design.props.invalid }, anatomy: { root: { kind: 'container' } },
     variants: [{ when: { interaction: 'focus' }, add: { focusBorder: { ...ring, parent: 'root' } } }, { when: { interaction: 'focus', invalid: true }, add: { errorBorder: { ...ring, parent: 'root' } } }] };
+  // (a library whose focus state is two words: its own settings say which pseudo-class draws it, the house's do not)
+  { const own = { pseudoClasses: { Rest: ':not(:hover)', 'Focus visible': ':focus-visible' } };
+    const d3 = { props: { interaction: { type: 'enum', values: ['rest', 'focus-visible'], default: 'rest', role: 'interaction' } }, anatomy: { root: { kind: 'container' } },
+      variants: [{ when: { interaction: 'focus-visible' }, add: { focusBorder: { ...ring, parent: 'root' } } }] };
+    const combo = designCombo(d3, code, {}, { __state: 'keyboard' }, { keyboard: { pseudo: ':focus-visible' } }, own);
+    ok('under the library\'s own settings a two-word focus state is the render\'s, and its ring the design\'s layer',
+      JSON.stringify(combo) === '{"interaction":"focus-visible"}' && placeRings({ root: {} }, [['root', { ...ring, parent: 'root' }]], d3, combo, own).rings.join() === 'focusBorder'
+      && keepsRing(d3, 'root', own) && !keepsRing(d3, 'root')); }
   ok('so a focus error render\'s ring is the error stroke there, read from the first reading with no design beside it',
     placeRings({ root: {} }, [['root', { ...ring, parent: 'root' }]], d2, designCombo(d2, code, {}, { __state: 'focus', invalid: true })).rings.join() === 'errorBorder');
 }

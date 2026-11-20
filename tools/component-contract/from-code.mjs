@@ -135,21 +135,22 @@ export function layerNames(ids, design, drawnFrom = null) {
    With no render, or none there, the one most focus variants add, then the broadest of them's (fewest props in its
    `when`). A design layer the reading already holds (code drew it as a box of its own) is not taken twice. Only a layer
    a variant adds is found, as ringOf finds one: a ring kept in the base anatomy and shown by a variant's `set` is not,
-   and stays a focusRing. Tested by test-from-code.mjs. */
-export function ringKeyOf(design, id, taken = {}, when = null) {
+   and stays a focusRing. `settings`: the library's, as to-code writes under them (the house's unless given).
+   Tested by test-from-code.mjs. */
+export function ringKeyOf(design, id, taken = {}, when = null, settings = undefined) {
   const own = `${id === 'root' ? '' : `${id}/`}focusRing`;
   if (!design || !design.props) return { key: own };
   const named = ([k, e]) => ({ key: k, ...(e.name && { name: e.name }) });
   if (when) {
     const w = { ...variantDefaults(design), ...when }, a = expand(design, w);
-    const here = Object.entries(a).filter(([k, e]) => e && e.parent === id && !(k in taken) && ringOf(design, w, k, e, a));
+    const here = Object.entries(a).filter(([k, e]) => e && e.parent === id && !(k in taken) && ringOf(design, w, k, e, a, settings));
     if (here.length) return named(here[here.length - 1]);
   }
   const hits = new Map(); // key → { name, n: focus variants adding it, keys: the fewest props a variant adding it names }
   for (const v of design.variants || []) {
     const a = { ...(design.anatomy || {}), ...(v.add || {}) };
     for (const [k, e] of Object.entries(v.add || {})) {
-      if (e.parent !== id || k in taken || !ringOf(design, v.when || {}, k, e, a)) continue;
+      if (e.parent !== id || k in taken || !ringOf(design, v.when || {}, k, e, a, settings)) continue;
       const h = hits.get(k) || { ...named([k, e]), n: 0, keys: Infinity };
       h.n++; h.keys = Math.min(h.keys, Object.keys(v.when || {}).length); hits.set(k, h);
     }
@@ -189,18 +190,18 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
 
 /* Whether a design keeps a focus ring on box `id`: its `<id>/focusRing`, or a ring layer of its own name (ringKeyOf).
    Tested by test-from-code.mjs. */
-export function keepsRing(c, id) {
+export function keepsRing(c, id, settings = undefined) {
   const own = `${id === 'root' ? '' : `${id}/`}focusRing`;
-  return !!c && ([c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => own in a) || ringKeyOf(c, id).key !== own);
+  return !!c && ([c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => own in a) || ringKeyOf(c, id, {}, null, settings).key !== own);
 }
 
 /* A render's rings read from outlines (`ring`: [box id, layer]) placed in its reading as the design's ring layers
    (ringKeyOf), after the box's other children; the keys listed on the reading as `rings` (not enumerable), so delta
    knows them whatever they are called; `combo` the render's design props. Tested by test-from-code.mjs. */
-export function placeRings(anatomy, ring, design, combo) {
+export function placeRings(anatomy, ring, design, combo, settings = undefined) {
   // (the render's props, each it leaves unset at its default: an unset prop never matches another value's variant)
   const when = combo && design && design.props ? { ...variantDefaults(design), ...combo } : combo, rings = [];
-  for (const [id, e] of ring) { const { key, name } = ringKeyOf(design, id, anatomy, when); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
+  for (const [id, e] of ring) { const { key, name } = ringKeyOf(design, id, anatomy, when, settings); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
   Object.defineProperty(anatomy, 'rings', { value: rings, configurable: true });
   return anatomy;
 }
@@ -1155,6 +1156,9 @@ async function main() {
   // the library's official contracts (official.mjs): Figma's readings, or the project's own where it takes the contract as its source
   const { contracts: officialContracts } = await import('./official.mjs');
   const official = new Map(officialContracts(req('../snapshot/projects.cjs').layout(null, label)).map((x) => [x.folder, x.contract]));
+  // the library's own settings, the ones to-code and to-markup write its sheet under (its pointer states' pseudo-classes:
+  // which outline is a focus ring, and which design value a forced state is)
+  const settings = req('../snapshot/projects.cjs').librarySettingsFor(req('../snapshot/projects.cjs').layout(null, label).paths.components)(name);
   // a component only in code has no Figma contract: nothing to pair its elements with or compare it to
   const figmaContract = codeOnly ? null : official.get(name);
   if (!codeOnly && !figmaContract) { console.error(`from-code: ${name} has no contract: snapshot the library first`); process.exit(2); }
@@ -1311,7 +1315,7 @@ async function main() {
     // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.
     // Joined by name, as the code's props are the design's on the toolkit's own render; a project's own names that
     // differ fall back to the base room, as before
-    const comboOf = (args, design = figmaContract) => designCombo(design, props, joinedProps, args, L.pseudoOf);
+    const comboOf = (args, design = figmaContract) => designCombo(design, props, joinedProps, args, L.pseudoOf, settings);
     const roomOf = (args) => {
       if (!figmaContract) return room;
       const combo = comboOf(args);
@@ -1864,7 +1868,7 @@ async function main() {
         // keeps it: there the outline is no stroke of the design's)
         // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
         // (a design that keeps a ring there keeps it a ring: outlineIsOwn)
-        if (outlineIsOwn(x, focused, insidePlaced(raw, id), keepsRing(L.drawnFrom || figmaContract, id))) { x.ownOutline = x.outline; delete x.outline; }
+        if (outlineIsOwn(x, focused, insidePlaced(raw, id), keepsRing(L.drawnFrom || figmaContract, id, settings))) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
@@ -1918,7 +1922,7 @@ async function main() {
       // (as the design's own ring layer where it draws one: ringKeyOf)
       // (the rings and the combination both in the contract the markup was drawn from: drawnFrom is set only on --second,
       // which runs beside a design, from-code exiting without one; code-only reads have neither, and no combination)
-      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(args, L.drawnFrom || figmaContract) : null);
+      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(args, L.drawnFrom || figmaContract) : null, settings);
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
