@@ -8,9 +8,10 @@
  *                                          the command is no such commit
  *
  * The `edit` hook (hooks.mjs) refuses the commit until each is read. Whole
- * means every line was shown: Read calls whose ranges together reach from the
- * first line to the last (a long page is cut at the tool's cap and read on by
- * offset; the cut is read from the result), or a `cat` of it: a section read by line range, a grep or a heading list has
+ * means every line was shown: Read calls whose recorded ranges (each result
+ * row's startLine and numLines) together reach from the first line to the
+ * last, a long page being cut at the tool's cap and read on by offset; or a
+ * `cat` of it, unpiped: a section read by line range, a grep or a heading list has
  * not walked the page, which is what toolkit-standard §D 21 asks.
  *
  * Written 2026-11-20, after a session built a project's first screens having
@@ -18,7 +19,8 @@
  * check, which tests only that the trailer is there, let it through.
  *
  * Limits: a message given by -F <file> or typed in an editor is not seen; a
- * subagent's reads are in its own transcript and do not count.
+ * subagent's reads are in its own transcript and do not count; a cat whose
+ * output the shell tool cut to a preview still counts as whole.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -33,24 +35,14 @@ export function trailerPages(command) {
   return [...pages];
 }
 
-const lines = (file) => { try { return fs.readFileSync(file, 'utf8').split('\n').length; } catch { return Infinity; } };
+const lines = (file) => { try { const t = fs.readFileSync(file, 'utf8'); return t.split('\n').length - (t.endsWith('\n') ? 1 : 0); } catch { return Infinity; } };
 
-/* The lines one tool call read of the page, as [first, last], or null. A Read shows from its offset (1 when
-   absent) for its limit, and to the end without one, unless its result says it stopped short ("PARTIAL view …
-   showing lines a-b"): a long page is cut at the tool's size cap, and the rest is read by offset. A cat reads it all. */
-function linesRead(call, page, result) {
-  const input = call.input || {};
-  if (call.name === 'Read' && typeof input.file_path === 'string' && input.file_path.endsWith('/' + page)) {
-    const first = input.offset > 1 ? input.offset : 1;
-    let last = input.limit > 0 ? first + input.limit - 1 : Infinity;
-    const cut = /showing lines (\d+)-(\d+) of \d+/.exec(result || '');
-    if (cut) last = Math.min(last, Number(cut[2]));
-    return [first, last];
-  }
-  if (call.name === 'Bash' && typeof input.command === 'string'
-    && input.command.split(/[;&|]+/).some((part) => new RegExp(`^\\s*cat\\s+(\\S*/)?${page.replace(/[.]/g, '\\.')}\\s*$`).test(part))) return [1, Infinity];
-  return null;
-}
+/* A Read's lines are what its result row records it showed (toolUseResult.file: startLine, numLines, totalLines),
+   not what it asked for: a long page is cut at the tool's size cap with no limit asked, and the rest is read by
+   offset. A Read with no such record counts for nothing. A cat counts as the whole page when it is a command of
+   its own, not piped into a head or a grep. */
+const catOf = (command, page) => command.split(/;|&&|\|\|/).some((part) =>
+  new RegExp(`^\\s*cat\\s+(\\S*/)?${page.replace(/[.]/g, '\\.')}\\s*$`).test(part));
 
 /* whether the ranges cover lines 1 to n */
 function covers(ranges, n) {
@@ -59,8 +51,6 @@ function covers(ranges, n) {
   return upTo >= n;
 }
 
-const resultText = (c) => (typeof c.content === 'string' ? c.content : (c.content || []).map((x) => x.text || '').join('\n'));
-
 export function unread(command, transcript, toolkit) {
   const pages = trailerPages(command);
   if (!pages.length) return [];
@@ -68,17 +58,28 @@ export function unread(command, transcript, toolkit) {
   try { text = fs.readFileSync(transcript, 'utf8'); } catch { return pages; }
   const rows = [];
   for (const line of text.split('\n')) {
-    // a call naming a page, or a result naming one (a cut Read's notice names its file); nothing else is parsed
-    if (!pages.some((p) => line.includes(p)) || !(line.includes('"tool_use"') || line.includes('"tool_result"'))) continue;
+    // only rows naming a page are parsed: a Read's call and its result both carry the path, a cat's call too
+    if (!pages.some((p) => line.includes(p))) continue;
     try { rows.push(JSON.parse(line)); } catch { /* a torn line */ }
   }
-  const results = new Map();
-  for (const row of rows) for (const c of (row.message && row.message.content) || []) if (c.type === 'tool_result') results.set(c.tool_use_id, resultText(c));
+  const reads = new Map(); // tool_use id → the page it was a Read of
   const ranges = new Map(pages.map((p) => [p, []]));
-  for (const row of rows) for (const c of (row.message && row.message.content) || []) {
-    if (c.type !== 'tool_use') continue;
-    for (const p of pages) { const r = linesRead(c, p, results.get(c.id)); if (r) ranges.get(p).push(r); }
+  const total = new Map();
+  for (const row of rows) for (const c of (row.message && Array.isArray(row.message.content) && row.message.content) || []) {
+    if (c.type !== 'tool_use' || !c.input) continue;
+    for (const p of pages) {
+      if (c.name === 'Read' && typeof c.input.file_path === 'string' && c.input.file_path.endsWith('/' + p)) reads.set(c.id, p);
+      if (c.name === 'Bash' && typeof c.input.command === 'string' && catOf(c.input.command, p)) ranges.get(p).push([1, Infinity]);
+    }
   }
-  const done = new Set(pages.filter((p) => covers(ranges.get(p), lines(path.join(toolkit, p)))));
+  for (const row of rows) {
+    const f = row.toolUseResult && row.toolUseResult.file;
+    const id = ((row.message && Array.isArray(row.message.content) && row.message.content) || []).find((c) => c.type === 'tool_result')?.tool_use_id;
+    const p = id && reads.get(id);
+    if (!p || !f || !(f.numLines > 0)) continue;
+    ranges.get(p).push([f.startLine || 1, (f.startLine || 1) + f.numLines - 1]);
+    if (f.totalLines > 0) total.set(p, f.totalLines);
+  }
+  const done = new Set(pages.filter((p) => covers(ranges.get(p), total.get(p) ?? lines(path.join(toolkit, p)))));
   return pages.filter((p) => !done.has(p));
 }

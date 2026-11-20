@@ -1,6 +1,6 @@
 {
   "styles": {
-    "sources": ["src/styles", "src/dashboard"],
+    "sources": ["../../stock-ui", "src/styles", "src/dashboard"],
     "compile": { "loadPaths": ["src/styles"] },
     "naming": { "kind": "class" },
     "markup": ["src"],
