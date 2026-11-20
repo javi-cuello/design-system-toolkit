@@ -3,13 +3,12 @@
 {
   const root = document.documentElement;
 
-  // The sections' Menu button (below 40rem; stock-ui.css hides it wider). Shown only with script, so without one
-  // the sections scroll in their row. It opens the list under the masthead; Escape, a click outside or focus
+  // The sections' Menu button (below 40rem; stock-ui.css hides it wider), shown by an inline line after the nav
+  // (the frame's markup), so without script the sections scroll in their row. It opens the list under the masthead; Escape, a click outside or focus
   // leaving close it, Escape returning focus to the button (menus.md *Hamburger and mobile menus*).
   const menu = document.querySelector('[data-menu]');
   const toggle = menu && menu.querySelector('button');
   if (toggle) {
-    toggle.hidden = false;
     const openMenu = (open) => toggle.setAttribute('aria-expanded', String(open));
     toggle.addEventListener('click', () => openMenu(toggle.getAttribute('aria-expanded') !== 'true'));
     menu.addEventListener('keydown', (e) => { if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') { openMenu(false); toggle.focus(); } });

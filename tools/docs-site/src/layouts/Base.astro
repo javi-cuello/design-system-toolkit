@@ -139,6 +139,7 @@ import frameScript from '../../../../stock-ui/frame.js?raw';
           <button type="button" class="button topnav__toggle" aria-expanded="false" aria-controls="topnav-list" hidden>Menu</button>
           <ul id="topnav-list">{sections.map(([key, href, label]) => <li><a href={base + href} aria-current={section === key ? 'true' : undefined}>{label}</a></li>)}</ul>
         </nav>
+        <script is:inline>document.querySelector('[data-menu] > button').hidden = false;</script>
         <div class="segmented theme" role="group" aria-label="Theme">
           {[['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([value, label]) => <button type="button" class="seg" data-theme-choice={value} aria-pressed={value === 'system' ? 'true' : 'false'}>{label}</button>)}
         </div>

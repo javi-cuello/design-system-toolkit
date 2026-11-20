@@ -187,8 +187,9 @@
 }
 
 @layer base {
-  /* A target scrolled to, or a control focused, is never under the masthead (the frame, below). */
-  html { scroll-padding-block-start: calc(var(--site-header) + var(--space-16)); }
+  /* A target scrolled to, or a control focused, is never under the masthead (the frame, below); a page with no
+     masthead keeps its own scroll padding. */
+  html:has([data-masthead]) { scroll-padding-block-start: calc(var(--site-header) + var(--space-16)); }
   body {
     font-family: var(--font-sans);
     font-size: var(--text-md);
@@ -253,12 +254,14 @@
            <button type="button" class="button topnav__toggle" aria-expanded="false" aria-controls="topnav-list" hidden>Menu</button>
            <ul id="topnav-list"><li><a href="…" aria-current="page">…</a></li>…</ul>
          </nav>
+         <script>document.querySelector('[data-menu] > button').hidden = false;</script>
          <div class="segmented theme" role="group" aria-label="Theme">…three .seg buttons, data-theme-choice…</div>
        </header>
        <main id="main" tabindex="-1"><div class="container">…</div></main>
        <footer class="site-foot">…</footer>
      </div>
-   frame.js wires the Menu button and measures the masthead. Breakpoints: 40rem (one-row masthead, sections in
+   The inline line after the nav shows the Menu button as soon as it is parsed, so a long page on a phone does not
+   paint the sections' row first and then collapse it. frame.js wires the button and measures the masthead. Breakpoints: 40rem (one-row masthead, sections in
    sight) and 60rem (wider gutters), the docs site's $sm and $lg. */
 @layer layout {
   .shell {
