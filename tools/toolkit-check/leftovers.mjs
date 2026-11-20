@@ -7,6 +7,8 @@
  *   sweep(repo)      bin/closing (the Stop hook): removes, without asking, each linked worktree and its branch, and
  *                    each other local branch, that is clean, over a day old, and merged into main — no commit of its own
  *                    (rev-list main..<it> is empty) or every commit's subject already on main (a rebase or cherry-pick)
+ *                    — and parks each worktree of a piece of work (.claude/worktrees/<work>) left clean but unlanded and
+ *                    untouched for a week: its folder goes, its branch stays, and bin/worktree <work> reopens it
  *   leftovers(repo)  bin/check (--warn): what is over a day old and cannot go that way — a worktree or branch with
  *                    unmerged commits or uncommitted files, and every stash — with its age and its session when known
  *
@@ -75,6 +77,11 @@ function inventory(repo, now) {
 }
 
 const removable = (x) => x.kind !== 'stash' && !x.dirty && x.merged && !x.locked && x.age > DAY;
+/* An abandoned piece of work: a worktree bin/worktree made, every change committed, not landed, a week untouched. Its
+   folder is all that goes; the commits stay on its branch. Never another tool's worktree, an agent's, or one with dirt. */
+const PARK = 7 * DAY;
+const parkable = (x, repo) => x.kind === 'worktree' && !x.dirty && !x.merged && !x.locked && x.age > PARK && x.branch
+  && path.dirname(x.path) === path.join(repo, '.claude', 'worktrees') && !path.basename(x.path).startsWith('agent-') && !path.basename(x.path).startsWith('.');
 
 /* Remove what is merged, clean and over a day old; returns what went, one name each. */
 export function sweep(repo, now = Date.now()) {
@@ -89,6 +96,10 @@ export function sweep(repo, now = Date.now()) {
     if (x.branch && git(repo, ['branch', '-D', x.branch]) === null && x.kind === 'branch') continue;
     // the tip is said, so a removal judged by subject alone can be undone (git branch <name> <tip>)
     gone.push(`${x.kind === 'worktree' ? path.relative(repo, x.path) || x.path : x.branch} (was ${x.tip.slice(0, 8)})`);
+  }
+  for (const x of items.filter((i) => parkable(i, repo))) {
+    if (git(repo, ['worktree', 'remove', x.path]) === null) continue; // changed since it was read: stays
+    gone.push(`${path.relative(repo, x.path)} parked: its work stays on ${x.branch}; bin/worktree ${path.basename(x.path)} reopens it`);
   }
   return gone;
 }

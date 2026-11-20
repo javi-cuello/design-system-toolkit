@@ -35,6 +35,10 @@ const linked = wt('linked');               // merged, holding only bin/worktree'
 fs.appendFileSync(path.join(repo, '.git/info/exclude'), '/tool-bin\n/.astro/\n');
 fs.writeFileSync(path.join(repo, 'tool'), 'x'); fs.symlinkSync(path.join(repo, 'tool'), path.join(linked, 'tool-bin'));
 fs.mkdirSync(path.join(linked, '.astro')); fs.writeFileSync(path.join(linked, '.astro', 'c'), 'x');
+const parked = wt('half-done');             // a piece of work committed but never landed
+commit(parked, 'h.txt', 'unfinished: what is left');
+const halfDirty = wt('half-dirty');        // the same, with a file never committed
+commit(halfDirty, 'd.txt', 'unfinished'); fs.writeFileSync(path.join(halfDirty, 'loose.txt'), 'x');
 const wip = wt('agent-wip');              // a "wip" that only shares its subject with one on main
 commit(wip, 'w.txt', 'wip'); commit(repo, 'other.txt', 'wip');
 git(repo, 'branch', 'old-merged');        // a branch alone, merged
@@ -65,7 +69,7 @@ assert.match(git(repo, 'stash', 'list'), /stash@\{0\}/, 'the stash is untouched'
 assert.match(git(repo, 'branch', '--list', 'old-open'), /old-open/, 'the unmerged branch is untouched');
 
 const warned = await leftovers(repo, later);
-assert.equal(warned.length, 7, warned.join('\n'));
+assert.equal(warned.length, 9, warned.join('\n')); // with half-done and half-dirty: under a week, warned of, not yet parked
 assert.ok(warned.some((l) => /worktree \.claude\/worktrees\/agent-abc123 \(wt-agent-abc123\): commits not on main — session sess-000/.test(l)), 'the unmerged worktree, with the session that ran its agent');
 assert.ok(warned.some((l) => /agent-dirty.*uncommitted files/.test(l)), 'the dirty worktree');
 assert.ok(warned.some((l) => /branch old-open: commits not on main/.test(l)), 'the unmerged branch');
@@ -78,6 +82,16 @@ git(side, 'init', '-q', '-b', 'main'); commit(side, 'a.txt', 'one'); git(side, '
 git(side, 'worktree', 'add', '-q', path.join(side, '.claude/worktrees/on-main'), 'main');
 assert.deepEqual(sweep(side, later), [], 'a worktree holding main stays');
 assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
+
+// a week on, the unlanded clean worktree is parked: folder gone, branch kept; the dirty one stays, warned of
+{
+  const week = Date.now() + 8 * 864e5;
+  const res = sweep(repo, week);
+  assert.ok(res.some((g) => /^\.claude\/worktrees\/half-done parked: its work stays on wt-half-done; bin\/worktree half-done reopens it$/.test(g)), res.join('\n'));
+  assert.ok(!fs.existsSync(parked) && git(repo, 'rev-parse', '--verify', '-q', 'wt-half-done').trim(), 'its folder is gone, its branch and commits stay');
+  assert.ok(fs.existsSync(path.join(halfDirty, 'loose.txt')), 'a worktree with an uncommitted file is never parked');
+  assert.ok(fs.existsSync(open), "an agent's worktree is not parked: its session merges it");
+}
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-leftovers: 21 assertions passed');
