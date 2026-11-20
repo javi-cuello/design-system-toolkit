@@ -513,6 +513,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const have = new Set(contracts(where).map(({ folder }) => folder));
     for (const c of argv.filter((x) => !have.has(x))) console.log(p.includes(c) ? `panel: ${c} is not in the library now` : `${c}: no such component`);
   }
+  // the official contracts as today's derive.cjs writes them: one written by an older derive (a change to it since, the
+  // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
+  // refuse, and the short ones say so
+  { const old = staleContracts(where.paths.components);
+    if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run node tools/component-contract/write.cjs ${where.paths.components}`;
+      if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);
   if (into) {
@@ -524,12 +530,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     if (bad) { console.log(`the bridge is not fit to draw (${bad.check}): ${bad.said}`); process.exit(1); }
     for (const h of health.filter((x) => x.skipped)) console.log(`the bridge's ${h.check} check had nothing to check: ${h.said}`);
   }
-  // the official contracts as today's derive.cjs writes them: one written by an older derive (a change to it since, the
-  // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
-  // refuse, and the short ones say so
-  { const old = staleContracts(where.paths.components);
-    if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run node tools/component-contract/write.cjs ${where.paths.components}`;
-      if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
   if (into) { draw(where, label, into, argv); process.exit(); }
   if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
   if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
