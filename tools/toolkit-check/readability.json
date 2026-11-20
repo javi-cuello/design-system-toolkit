@@ -60,38 +60,38 @@
   "longSentences": 48,
   "longParagraphs": 5,
   "codeParagraphs": 1,
-  "grade": 13.6
+  "grade": 13.7
  },
  "plugins/component-guidelines/README.md": {
-  "words": 143,
+  "words": 172,
   "longSentences": 1,
   "longParagraphs": 0,
   "codeParagraphs": 0,
   "grade": 10.9
  },
  "plugins/design-system-snapshot/README.md": {
-  "words": 1312,
+  "words": 1314,
   "longSentences": 24,
   "longParagraphs": 3,
   "codeParagraphs": 2,
   "grade": 12.5
  },
  "plugins/lucide-icon-importer/README.md": {
-  "words": 804,
+  "words": 812,
   "longSentences": 12,
   "longParagraphs": 1,
   "codeParagraphs": 1,
   "grade": 9.3
  },
  "plugins/organize-layers/README.md": {
-  "words": 671,
+  "words": 673,
   "longSentences": 10,
   "longParagraphs": 0,
   "codeParagraphs": 0,
   "grade": 9.1
  },
  "plugins/theme-switcher/README.md": {
-  "words": 981,
+  "words": 983,
   "longSentences": 18,
   "longParagraphs": 1,
   "codeParagraphs": 0,
@@ -110,13 +110,6 @@
   "longParagraphs": 0,
   "codeParagraphs": 0,
   "grade": 8.8
- },
- "skills/frontend-build/assets/design-system-scaffold/design-system/README.md": {
-  "words": 409,
-  "longSentences": 3,
-  "longParagraphs": 0,
-  "codeParagraphs": 0,
-  "grade": 9.3
  },
  "standards/README.md": {
   "words": 398,
@@ -147,11 +140,11 @@
   "grade": 12.1
  },
  "tools/component-contract/README.md": {
-  "words": 7394,
-  "longSentences": 98,
-  "longParagraphs": 12,
+  "words": 7508,
+  "longSentences": 99,
+  "longParagraphs": 13,
   "codeParagraphs": 14,
-  "grade": 18.1
+  "grade": 18.3
  },
  "tools/component-validator/README.md": {
   "words": 193,
@@ -168,32 +161,32 @@
   "grade": 10.4
  },
  "tools/css-lint/README.md": {
-  "words": 550,
+  "words": 559,
   "longSentences": 3,
   "longParagraphs": 0,
   "codeParagraphs": 1,
-  "grade": 5
+  "grade": 5.2
  },
  "tools/docs-site/README.md": {
-  "words": 1446,
-  "longSentences": 24,
+  "words": 1472,
+  "longSentences": 25,
   "longParagraphs": 3,
   "codeParagraphs": 4,
   "grade": 10.6
  },
  "tools/figma-audit/README.md": {
-  "words": 5458,
+  "words": 5474,
   "longSentences": 85,
   "longParagraphs": 12,
   "codeParagraphs": 22,
   "grade": 10.8
  },
  "tools/project-check/README.md": {
-  "words": 922,
+  "words": 945,
   "longSentences": 15,
   "longParagraphs": 1,
   "codeParagraphs": 4,
-  "grade": 8.7
+  "grade": 8.8
  },
  "tools/shared/README.md": {
   "words": 1151,
@@ -203,25 +196,25 @@
   "grade": 7.9
  },
  "tools/skill-evals/README.md": {
-  "words": 2477,
+  "words": 2513,
   "longSentences": 37,
   "longParagraphs": 9,
   "codeParagraphs": 6,
   "grade": 11.1
  },
  "tools/snapshot/README.md": {
-  "words": 2834,
-  "longSentences": 45,
+  "words": 2881,
+  "longSentences": 46,
   "longParagraphs": 8,
   "codeParagraphs": 10,
   "grade": 11.2
  },
  "tools/system-mcp/README.md": {
-  "words": 822,
+  "words": 864,
   "longSentences": 10,
   "longParagraphs": 0,
   "codeParagraphs": 2,
-  "grade": 7.4
+  "grade": 7.7
  },
  "tools/tokens/README.md": {
   "words": 2399,

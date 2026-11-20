@@ -1,6 +1,6 @@
-# Eval cases — design-code-parity (v1.70.2)
+# Eval cases — design-code-parity (v1.70.3)
 
-**Walked: 2026-11-16 against v1.70.2** — wording in one example; no case reads it.
+**Walked: 2026-11-20 against v1.70.3** — a citation moved to tools/parity/REFERENCE.md; no case reads it, so none re-walked. 
 
 **Walked: 2026-11-11 against v1.70.1** — T104 re-read for `exercises`: `node tools/parity/test-waivers.mjs` 31/31; `run.mjs` and `session.mjs` parse; `test-adapt.mjs` 71 (one added: a set named `Table - Cell / Fill` matched whole by `props.skip`); no full run (no project change needed it).
 

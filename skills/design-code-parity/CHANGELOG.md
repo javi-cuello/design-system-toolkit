@@ -1,5 +1,6 @@
 # Changelog — design-code-parity
 
+- 1.70.3 (2026-11-20): the mapping format is cited in `tools/parity/REFERENCE.md`, where the README rewrite moved it; no rule changed.
 - 1.70.2 (2026-11-16): the story example names the axis `Variant`, as figma-standard 2.24.0 rule 1 does; no rule changed.
 - 1.70.1 (2026-11-11): a translation is used only where it excused a row; the summary counts rows let through as data; an unbounded `content` waiver on a `#` key is deleted by hand; `props.skip` matches a ` / `-named set whole. T104.
 - 1.70.0 (2026-11-10): accepted translations — `parity.translations` states a conversion rule once for every target it matches; rows it excuses are counted as translated; stale and shape-checked; `on`/`except` scope a rule to no more targets than the waivers it replaces. Case T104.
