@@ -320,7 +320,8 @@ function flatten(list, characters = new Map(), known = [], axes = []) {
     // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
     // instance cannot override them (figma-fact: no-nested-position-override), so they are the component's, and code reads
     // none there (one placed absolutely in an auto layout keeps them, with the position it states)
-    if (inInstance && !e.absolute) delete e.constraints;
+    // (but a glyph's scale both ways, which ownGlyph reads after to fold an icon's insides into the icon)
+    if (inInstance && !e.absolute && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale')) delete e.constraints;
     // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
     // parent's end and bottom, as CSS's right and bottom say it; stretched, its size is its parent's less both
     // offsets, never a number measured at one label's width

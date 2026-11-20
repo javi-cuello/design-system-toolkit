@@ -337,7 +337,9 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
    that wants otherwise than the rest of its layout's gets a layer of its own. `code` is changed in place. */
 export function stackLikeDesign(code, design, value) {
   const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
+  // (no more combinations than derive draws, 4096: past that the layouts are left as written, said by the rows)
   const axes = Object.entries(design.props || {}).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
+  if (axes.reduce((n, [, vs]) => n * vs.length, 1) > 4096) return code;
   let combos = [{}];
   for (const [k, vs] of axes) combos = combos.flatMap((c) => vs.map((v) => ({ ...c, [k]: v })));
   combos = combos.filter((c) => !(design.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v))));
@@ -374,7 +376,8 @@ export function stackLikeDesign(code, design, value) {
     set(sources[s], w);
     for (const [i, id, want] of list) {
       if (want === w) continue;
-      if (!own.has(i)) { const layer = { when: theirs[i], set: {} }; vars.push(layer); own.set(i, layer); }
+      // (said in the code's props alone: a design prop the code has none for would match no combination)
+      if (!own.has(i)) { const layer = { when: Object.fromEntries(Object.entries(theirs[i]).filter(([k]) => k in (code.props || {}))), set: {} }; vars.push(layer); own.set(i, layer); }
       const { __src: _, ...l } = C[i][id].layout;
       set(l, want);
       own.get(i).set[`${id}.layout`] = l;

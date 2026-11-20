@@ -419,6 +419,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const clipped = icon(); clipped.i.overflow = 'hidden'; ownGlyph(clipped, 'i');
   ok('an icon\'s frame clipping its glyph is the icon\'s own, left out', !('overflow' in clipped.i));
   const fixed = icon(); fixed['i/v'].constraints = { horizontal: 'min', vertical: 'min' }; ownGlyph(fixed, 'i');
+  { const wrap = derive({ name: 'Wrap', props: {}, variants: [{ name: 'Wrap', type: 'COMPONENT', layout: 'HORIZONTAL', children: [
+      { name: 'I', type: 'INSTANCE', instanceOf: 'Icon/house', w: 20, h: 20, sizing: 'FIXED/FIXED', children: [{ name: 'V', type: 'VECTOR', x: 2, y: 1, w: 16.67, h: 17.5, sizing: 'FIXED/FIXED', constraints: 'SCALE/SCALE', fills: ['C/icon'] }] }] }] }, [], { mains: () => null }).anatomy;
+    ok('through derive, an outside icon\'s scaled glyph keeps its scale until ownGlyph folds it: no box of its own left', !!wrap['i/v'] && (wrap['i/v'].width === undefined && wrap['i/v'].constraints === undefined)); }
   const by = byComponentName([{ component: 'Button' }, { component: 'button' }, { component: 'Chip' }]);
   ok('a component is found by its name in any case; a name two components share finds none', by('CHIP').component === 'Chip' && by('Button') === null);
   // a swap names its target by its own name or by its main's folder: the instance placed there says which
