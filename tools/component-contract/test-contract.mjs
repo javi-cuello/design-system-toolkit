@@ -231,6 +231,8 @@ ok('combinations too many to list are said to be unlisted, never left to read as
       { name: 'Items', type: 'SLOT', layout: 'VERTICAL' },
       { name: 'Words', type: 'TEXT', text: 'Hi', textAutoResize: 'HEIGHT', textAlignVertical: 'CENTER', letterSpacing: '2%', textCase: 'UPPER' }] }] });
   const A1 = one.anatomy;
+  { const t = (r) => derive({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi', textAutoResize: r, textAlignVertical: 'CENTER' }] }] }).anatomy.w.verticalAlign;
+    ok('a text that grows to its words places them nowhere: its vertical alignment is said only where its height is its own', t('HEIGHT') === undefined && t('WIDTH_AND_HEIGHT') === undefined && t('NONE') === 'center'); }
   { const held = derive({ name: 'Held', props: {}, variants: [{ name: 'Held', type: 'COMPONENT', layout: 'VERTICAL', children: [
       { name: 'Skel', type: 'INSTANCE', instanceOf: 'Skeleton', w: 40, h: 8, children: [{ name: 'Bar', type: 'RECTANGLE', x: 0, y: 0, w: 40, h: 8, constraints: 'STRETCH/STRETCH', fills: ['C/x'] }] }] }] }).anatomy;
     ok('a layer inside an instance keeps no constraints, as no position: an instance cannot override them (figma-fact: no-nested-position-override)', !!held['skel/bar'] && held['skel/bar'].constraints === undefined); }
@@ -249,7 +251,7 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ok('wrapped rows keep the gap between them, and a box stacked first on top says so', A1.box.layout.firstOnTop === true && A1.box.layout.wrap === true && A1.box.layout.crossGap === 'S/8');
   ok('a repeat takes its name from its id; a part in a box no layout places is at its point there', !A1['box/option_2'].name && JSON.stringify(A1['free/dot'].absolute) === '{"x":6,"y":4}' && !A1['box/option'].absolute);
   ok('a slot is its prop\'s, and the prop keeps its description', A1.items.content === '{items}' && one.props.items.description === 'What it lists');
-  ok('words no style sets keep their spacing and case, and how their box follows them', A1.words.autoResize === 'height' && A1.words.verticalAlign === 'center' && A1.words.letterSpacing === '2%' && A1.words.textCase === 'upper');
+  ok('words no style sets keep their spacing and case, and how their box follows them', A1.words.autoResize === 'height' && A1.words.verticalAlign === undefined && A1.words.letterSpacing === '2%' && A1.words.textCase === 'upper');
 }
 
 // a set giving each size its own icon swap on the one layer (snapshot 0.61.0): each instance names its own

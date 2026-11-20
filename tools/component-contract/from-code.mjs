@@ -1693,7 +1693,10 @@ async function main() {
         for (const [axis, css] of [['width', ['inline-size', 'width']], ['height', ['block-size', 'height']]]) if (typeof x[axis] === 'number') x[axis] = await tok('size', x[axis], `${id}.${axis}`, css, null, false);
         // and a minimum or maximum written as a token (a container's max width, the screen's height)
         for (const [f, css] of [['minWidth', ['min-inline-size', 'min-width']], ['minHeight', ['min-block-size', 'min-height']], ['maxWidth', ['max-inline-size', 'max-width']], ['maxHeight', ['max-block-size', 'max-height']]]) if (typeof x[f] === 'number') { x[f] = await tok('size', x[f], `${id}.${f}`, css, null, false); if (typeof x[f] !== 'string' && viaVar.has(`${id}.${f}`)) delete x[f]; }
-        if (x.radius) x.radius = x.full ? fullest() || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
+        // (a fully round corner is the library's fullest radius token only where the code names a token there: a raw
+        // 100px the design draws raw stays its number, never a token found for it)
+        const namesOne = async () => { for (const p of ['border-top-left-radius', 'border-radius']) if ((await authoredVars(L.tab, `[data-contract-id="${id}"]`, p, styles)).length) return true; return false; };
+        if (x.radius) x.radius = x.full ? ((await namesOne()) && fullest()) || x.radius : await tok('radius', x.radius, `${id}.radius`, ['border-top-left-radius', 'border-radius']);
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {
