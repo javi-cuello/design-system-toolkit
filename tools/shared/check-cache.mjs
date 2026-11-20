@@ -62,10 +62,13 @@ export async function run(repo, args) {
   if (hit) return replay(hit);
   // --quick (under a minute, no suites) takes no lock: it was waiting behind six-minute runs for nothing. Unlocked
   // (no python3) a run is still marked held, or the child bin/check would come back here without end.
-  if (mode(args) === 'quick' || !(await hold(`bin/check${args.length ? ' ' + args.join(' ') : ''}`))) process.env.TOOLKIT_LOCK_HELD = String(process.pid);
+  // a caller that already holds the lock (bin/land) keeps it: this run neither takes nor lets go of it
+  const outer = !!process.env.TOOLKIT_LOCK_HELD;
+  const let_go = () => { if (!outer) release(); };
+  if (!outer && (mode(args) === 'quick' || !(await hold(`bin/check${args.length ? ' ' + args.join(' ') : ''}`)))) process.env.TOOLKIT_LOCK_HELD = String(process.pid);
   const before = can ? treeKey(repo) : null;
   hit = before && lookup(before, args);
-  if (hit) { release(); return replay(hit); }
+  if (hit) { let_go(); return replay(hit); }
   const result = await new Promise((resolve) => {
     let tail = '';
     const c = spawn(path.join(repo, 'bin', 'check'), args, { cwd: repo, stdio: ['inherit', 'pipe', 'inherit'], env: process.env });
@@ -76,7 +79,7 @@ export async function run(repo, args) {
   });
   // only a green that ran to its end: a red may be a flake that a plain re-run should retry, and a killed run proves nothing
   if (before && result.code === 0 && !result.signal && treeKey(repo) === before) store({ tree: before, mode: mode(args), status: result.code, tail: result.tail, at: Date.now() });
-  release();
+  let_go();
   return result.code;
 }
 

@@ -93,5 +93,29 @@ const at = spawnSync('node', [path.join(HERE, 'check-cache.mjs'), '--commit', ma
 assert.equal(at.status, 0, at.stderr);
 assert.equal(runs(), n, 'the pre-push check of a landed commit is answered from the record');
 
+// (g) main itself never lands: it holds whatever anyone committed there
+r = await quiet(() => land(main));
+assert.equal(r.code, 2); assert.match(r.out, /main itself does not land/);
+
+// (h) a queued commit that no longer exists is dropped and holds no one; a corrupt queue file empties nothing
+const G = wt('g');
+edit(G, 'c.txt', 'c2\n');
+fs.writeFileSync(path.join(main, '.git', 'land-queue', 'worktree-gone'), JSON.stringify({ branch: 'worktree-gone', sha: 'f'.repeat(40), at: 1 }));
+fs.writeFileSync(path.join(main, '.git', 'land-queue', 'half'), '{"branch":');
+r = await quiet(() => land(G));
+assert.equal(r.code, 0, r.out);
+assert.match(r.out, /worktree-gone: commit ffffffff no longer exists: dropped/);
+assert.equal(remoteHas('c.txt'), 'c2');
+
+// (i) a branch queued again at a newer commit while the holder handles the older one stays queued
+const H = wt('h');
+edit(H, 'b.txt', 'b2\n');
+const old = git(H, 'rev-parse', 'HEAD');
+edit(H, 'b.txt', 'b3\n');
+fs.writeFileSync(path.join(main, '.git', 'land-queue', 'worktree-h'), JSON.stringify({ branch: 'worktree-h', sha: git(H, 'rev-parse', 'HEAD'), at: Date.now() }));
+const { unqueueForTest } = await import('./land.mjs');
+unqueueForTest(main, { branch: 'worktree-h', sha: old }, 'landed');
+assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'rev-parse', 'HEAD'), 'the newer entry is kept');
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

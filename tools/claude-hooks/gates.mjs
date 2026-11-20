@@ -230,9 +230,12 @@ export function shellWrites(cmd, cwd) {
 const PUSH = /(?:^|[;&|(]\s*|\s)(?:\S*\/)?git((?:\s+(?:-[Cc]\s+\S+|--(?:git-dir|work-tree|namespace)\s+\S+|--[\w-]+(?:=\S+)?|-[pP]))*)\s+push\b([^;&|]*)/;
 // bin/land is the push of a worktree's branch (tools/shared/land.mjs): the same review holds it
 const LAND = /(?:^|[\n;&|(]\s*)(?:[^\s;&|()]*\/)?bin\/land(?![\w.-])(?:[ \t]+([^\s;&|()-][^\s;&|()]*))?/;
-export const isPush = (cmd) => { const b = bareShell(cmd); if (LAND.test(b) && !/--queue/.test(b)) return true; const m = b.match(PUSH); return !!m && !/--dry-run|\s-n\b/.test(m[2]); };
+export const isPush = (cmd) => { const b = bareShell(cmd); if (LAND.test(b) && !/bin\/land[ \t]+--queue\b/.test(b)) return true; const m = b.match(PUSH); return !!m && !/--dry-run|\s-n\b/.test(m[2]); };
 /* The repo a push sends: its -C folder, else where the command runs. */
-const pushDir = (cmd, cwd) => { const bare = bareShell(cmd); const l = bare.match(LAND); if (l && !bare.match(PUSH)) { const d = shellDir(bare, cwd); return l[1] && !/^worktree-|^[\w.-]+$/.test(l[1]) ? path.resolve(d, expandHome(l[1])) : d; } const m = bare.match(PUSH); const c = (m?.[1] || '').match(/-C\s+(\S+)/); return path.resolve(shellDir(bare, cwd), expandHome(c ? c[1] : '.')); };
+const pushDir = (cmd, cwd, repos = []) => { const bare = bareShell(cmd); const l = bare.match(LAND); if (l && !bare.match(PUSH)) { const d = shellDir(bare, cwd); if (!l[1]) return d; if (/[/~]/.test(l[1]) || l[1] === '.' || l[1] === '..') return path.resolve(d, expandHome(l[1]));
+    // a branch name: its worktree, under the main checkout that holds the folder it ran in
+    const home = repos.filter((r) => d === r || d.startsWith(r + path.sep)).sort((a, b) => b.length - a.length)[0] || d.replace(/\/\.claude\/worktrees\/.*$/, '');
+    return path.join(home, '.claude', 'worktrees', l[1].replace(/^worktree-/, '')); } const m = bare.match(PUSH); const c = (m?.[1] || '').match(/-C\s+(\S+)/); return path.resolve(shellDir(bare, cwd), expandHome(c ? c[1] : '.')); };
 
 /* The uncommitted files among these: { file: true }. A repo git cannot read
    holds nothing uncommitted. */
@@ -408,7 +411,8 @@ function add(st, c, cwd, repos, sub = false) {
    the nearest README.md above each file, inside its repo. A README the work
    left alone may still be right; the agent says so or fixes it (§D 22). */
 export function staleDocs(st, repos) {
-  const roots = repos.map(realPath);
+  // a worktree is a root of its own, found before the repo that holds it
+  const roots = [...new Set([...Object.keys(st.total.files).map((f) => where(f, repos)?.repo).filter(Boolean), ...repos].map(realPath))].sort((a, b) => b.length - a.length);
   const out = new Set();
   for (const f of Object.keys(st.total.files)) {
     const root = roots.find((d) => f.startsWith(d + path.sep));
@@ -600,15 +604,24 @@ function restored(st, repos) {
   const files = Object.keys(st.since.files);
   if (!files.length) return;
   const open = dirty(files);
+  const byRepo = {};
   for (const f of files) {
     if (open[f] || !fs.existsSync(f)) continue; // a file gone or never written is not one put back
-    const w = where(f, repos), first = w && st.firstEdit?.[w.repo];
-    if (!w || !first) continue;
-    const g = spawnSync('git', ['-C', w.repo, 'log', '-1', '--format=%cI', '--', w.rel], { encoding: 'utf8' });
-    const last = g.status === 0 ? g.stdout.trim() : '';
-    if (!last) continue; // untracked or unreadable: not known to be put back
-    if (last && Date.parse(last) >= Date.parse(first)) continue; // committed since: work, reviewed before it leaves
-    for (const a of [st.since, st.total]) { delete a.files[f]; a.wide = a.wide.filter((x) => x !== f); }
+    const w = where(f, repos);
+    if (w && st.firstEdit?.[w.repo]) (byRepo[w.repo] ||= []).push([f, w.rel]);
+  }
+  // two git calls a repo, not one a file: this runs at every hook call
+  for (const [repo, list] of Object.entries(byRepo)) {
+    const g = (...a) => { const r = spawnSync('git', ['-C', repo, '--literal-pathspecs', ...a], { encoding: 'utf8', maxBuffer: 64 << 20 }); return r.status === 0 ? r.stdout : null; };
+    const tracked = g('ls-files', '-z', '--', ...list.map(([, r]) => r));
+    // git dates are whole seconds: a commit in the second of the first edit counts as after it
+    const since = g('log', `--since=${new Date(Date.parse(st.firstEdit[repo]) - 2000).toISOString()}`, '--name-only', '--format=', '--', ...list.map(([, r]) => r));
+    if (tracked === null || since === null) continue;
+    const isTracked = new Set(tracked.split('\0')), committed = new Set(since.split('\n'));
+    for (const [f, rel] of list) {
+      if (!isTracked.has(rel) || committed.has(rel)) continue; // untracked: not known to be put back; committed since: work
+      for (const a of [st.since, st.total]) { delete a.files[f]; a.wide = a.wide.filter((x) => x !== f); }
+    }
   }
 }
 
@@ -711,7 +724,8 @@ function intoMain(st, call, cwd, repos, session) {
   if (process.env.TOOLKIT_WORKTREES === 'off') return null;
   for (const f of writes(call, cwd)) {
     const w = where(f, repos);
-    if (!w || w.worktree || w.rel.startsWith('.claude' + path.sep) || !fs.existsSync(path.join(w.repo, 'bin', 'land'))) continue;
+    if (!w || w.worktree || /^\.(claude|git)(\/|$)/.test(w.rel) || !fs.existsSync(path.join(w.repo, 'bin', 'land'))) continue;
+    if (spawnSync('git', ['-C', w.repo, 'check-ignore', '-q', '--', w.rel]).status === 0) continue; // an ignored file is no one's work
     if (st.firstEdit?.[w.repo]) continue;
     let mine = [];
     try { mine = JSON.parse(fs.readFileSync(path.join(w.repo, '.git', 'worktree-sessions.json'), 'utf8'))[session] || []; } catch { /* none yet */ }
@@ -746,7 +760,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   // a push carries the work out of reach of the review: unreviewed full-size work stays home
   if (call.name === 'Bash' && isPush(call.input?.command)) {
     // only the pushed repo's work: unreviewed work elsewhere does not hold this one back
-    const repo = where(pushDir(call.input.command, cwd), repos)?.repo;
+    const repo = where(pushDir(call.input.command, cwd, repos), repos)?.repo;
     const files = Object.fromEntries(Object.entries(st.since.files).filter(([f]) => repo && where(f, repos)?.repo === repo));
     const s = size({ files, wide: st.since.wide.filter((f) => files[f] !== undefined) });
     const why = s.full ? `${s.why.join(', ')} changed since the last independent review` : st.reviewing.length ? 'a review is still running' : '';

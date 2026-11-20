@@ -28,8 +28,18 @@ const say = (l) => console.log(`land: ${l}`);
 
 const queueDir = (main) => path.join(git(main, 'rev-parse', '--path-format=absolute', '--git-common-dir'), 'land-queue');
 const qfile = (main, branch) => path.join(queueDir(main), encodeURIComponent(branch));
-export const queued = (main) => { try { return fs.readdirSync(queueDir(main)).map((f) => JSON.parse(fs.readFileSync(path.join(queueDir(main), f), 'utf8'))).sort((a, b) => a.at - b.at); } catch { return []; } };
-const unqueue = (main, branch) => fs.rmSync(qfile(main, branch), { force: true });
+const readJSON = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+const writeJSON = (f, v) => { const tmp = `${f}.${process.pid}.tmp`; fs.writeFileSync(tmp, JSON.stringify(v)); fs.renameSync(tmp, f); };
+export const queued = (main) => { let names = []; try { names = fs.readdirSync(queueDir(main)); } catch { return []; }
+  return names.filter((f) => !f.endsWith('.tmp') && !f.startsWith('.')).map((f) => readJSON(path.join(queueDir(main), f))).filter((q) => q?.branch && q.sha).sort((a, b) => a.at - b.at); };
+const outcomes = (main) => path.join(queueDir(main), '.outcomes');
+/* Off the queue, only as queued: a branch queued again at a newer commit meanwhile stays. The outcome is kept for the
+   bin/land that queued it, which may be another process waiting on the lock. */
+function unqueue(main, b, outcome) {
+  fs.mkdirSync(outcomes(main), { recursive: true });
+  writeJSON(path.join(outcomes(main), `${encodeURIComponent(b.branch)}@${b.sha}`), { outcome, at: Date.now() });
+  if (readJSON(qfile(main, b.branch))?.sha === b.sha) fs.rmSync(qfile(main, b.branch), { force: true });
+}
 
 /* The worktree a branch is checked out in, or null. */
 export function worktreeOf(main, branch) {
@@ -42,14 +52,17 @@ export function worktreeOf(main, branch) {
 }
 /* The branch's commits origin/main does not hold by content, oldest first; merge commits left out. */
 function fresh(dir, sha) {
-  return git(dir, 'cherry', 'origin/main', sha).split('\n').filter((l) => l.startsWith('+ ')).map((l) => l.slice(2))
+  const c = tryGit(dir, 'cherry', 'origin/main', sha);
+  if (!c.ok) return null; // the commit is gone (branch deleted, gc): nothing to land
+  return c.out.split('\n').filter((l) => l.startsWith('+ ')).map((l) => l.slice(2))
     .filter((c) => git(dir, 'rev-list', '--parents', '-n', '1', c).split(' ').length === 2);
 }
 
 /* The integration worktree: detached and clean, under the main checkout's .claude/worktrees. */
 function integration(main) {
   const dir = path.join(main, '.claude', 'worktrees', '.land');
-  if (!fs.existsSync(path.join(dir, '.git'))) { git(main, 'worktree', 'add', '-q', '--detach', dir, 'origin/main'); link(main, dir); }
+  if (!fs.existsSync(path.join(dir, '.git'))) { tryGit(main, 'worktree', 'prune'); git(main, 'worktree', 'add', '-q', '--detach', dir, 'origin/main'); }
+  link(main, dir); // each time: an install added since is linked too
   return dir;
 }
 function reset(dir, to) {
@@ -65,6 +78,7 @@ function replay(dir, base, branches) {
   for (const b of branches) {
     const before = git(dir, 'rev-parse', 'HEAD');
     const commits = fresh(dir, b.sha);
+    if (!commits) { conflicted.push({ ...b, files: [], gone: true }); continue; }
     if (!commits.length) { applied.push({ ...b, commits: 0 }); continue; }
     const r = tryGit(dir, 'cherry-pick', '--allow-empty', '--keep-redundant-commits', ...commits);
     if (r.ok) { applied.push({ ...b, commits: commits.length }); continue; }
@@ -75,32 +89,50 @@ function replay(dir, base, branches) {
   return { applied, conflicted };
 }
 
-async function landBatch(main, mine) {
+export const unqueueForTest = unqueue;
+
+/* What became of this bin/land's own branch at its own commit, when a holder before it handled it. */
+function settled(main, me) {
+  const q = readJSON(qfile(main, me.branch));
+  if (q?.sha === me.sha) return null; // still queued: this holder lands it
+  const o = readJSON(path.join(outcomes(main), `${encodeURIComponent(me.branch)}@${me.sha}`));
+  if (o) { if (o.outcome !== 'landed') say(`${me.branch} at ${me.sha.slice(0, 8)}: ${o.outcome} (told above, in the run that held the lock)`); return o.outcome; }
+  if (fresh(main, me.sha)?.length === 0) return 'landed';
+  if (q) { say(`${me.branch} was queued again at ${q.sha.slice(0, 8)} by a later bin/land, which lands it`); return 'landed'; }
+  say(`${me.branch} left the queue unlanded and no outcome was kept: run bin/land again`); return 'lost';
+}
+
+async function landBatch(main, me) {
   const dir = integration(main);
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let alone = null; // a batch red together though each is green alone: one branch at a time
+  for (let attempt = 0; attempt < 4; attempt++) {
     tryGit(main, 'fetch', '-q', 'origin');
-    const batch = queued(main);
-    if (!batch.some((b) => b.branch === mine)) return 'landed'; // a holder before this one landed it
+    const done = settled(main, me);
+    if (done) return done;
+    let batch = queued(main);
+    if (alone) batch = batch.filter((b) => b.branch === alone).concat(batch.some((b) => b.branch === alone) ? [] : batch.slice(0, 1)).slice(0, 1);
     const { applied, conflicted } = replay(dir, 'origin/main', batch);
-    for (const c of conflicted) { say(`${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c.branch); }
-    if (conflicted.some((c) => c.branch === mine)) return 'conflict';
+    for (const c of conflicted) { say(c.gone ? `${c.branch}: commit ${c.sha.slice(0, 8)} no longer exists: dropped` : `${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c, 'conflict'); }
+    if (conflicted.length) continue;
     if (!applied.length) return 'landed';
     const code = applied.some((a) => a.commits) ? await check(dir, ['--no-fix']) : 0;
     if (code !== 0) {
-      if (applied.length === 1) { say(`${applied[0].branch} is red on main: fix it, then land again`); unqueue(main, applied[0].branch); return applied[0].branch === mine ? 'red' : 'landed'; }
+      if (applied.length === 1) { say(`${applied[0].branch} is red on main: fix it, then land again`); unqueue(main, applied[0], 'red'); continue; }
       // one red branch must not hold the others: each alone; the green ones land together on the next attempt
       say(`the batch of ${applied.length} is red: trying each alone`);
+      let dropped = 0;
       for (const a of applied) {
         replay(dir, 'origin/main', [a]);
-        if (await check(dir, ['--no-fix']) !== 0) { say(`${a.branch} is red on main: fix it, then land again`); unqueue(main, a.branch); if (a.branch === mine) return 'red'; }
+        if (await check(dir, ['--no-fix']) !== 0) { say(`${a.branch} is red on main: fix it, then land again`); unqueue(main, a, 'red'); dropped++; }
       }
+      if (!dropped) { alone = applied[0].branch; say('each is green alone, red together: landing one at a time'); }
       continue;
     }
     const sha = git(dir, 'rev-parse', 'HEAD');
     const push = tryGit(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
     if (!push.ok) { say(`main moved during the check (${push.out.split('\n').pop()}): again`); continue; }
     for (const a of applied) {
-      unqueue(main, a.branch);
+      unqueue(main, a, 'landed');
       say(`landed ${a.branch} (${a.commits} commit${a.commits === 1 ? '' : 's'}) at ${sha.slice(0, 8)}`);
       const wt = worktreeOf(main, a.branch);
       // a branch not moved since it was queued now is main; one committed on since keeps its work for the next landing
@@ -110,11 +142,15 @@ async function landBatch(main, mine) {
       }
     }
     tryGit(main, 'fetch', '-q', 'origin');
-    const ff = tryGit(main, 'merge', '-q', '--ff-only', 'origin/main');
-    if (!ff.ok) say(`the main checkout stays where it was (${ff.out.split('\n')[0]}); main itself is landed`);
-    return 'landed';
+    if (tryGit(main, 'symbolic-ref', '-q', 'HEAD').out === 'refs/heads/main') {
+      const ff = tryGit(main, 'merge', '-q', '--ff-only', 'origin/main');
+      if (!ff.ok) say(`the main checkout stays where it was (${ff.out.split('\n')[0]}); main itself is landed`);
+    }
+    alone = null;
   }
-  say('main kept moving through three attempts: run bin/land again');
+  const end = settled(main, me);
+  if (end) return end;
+  say('main kept moving, or other branches kept failing, through four attempts: run bin/land again');
   return 'busy';
 }
 
@@ -123,16 +159,18 @@ export async function land(from, target) {
   const asDir = target && fs.existsSync(target) ? path.resolve(target) : null;
   const branch = target && !asDir ? target : git(asDir || from, 'rev-parse', '--abbrev-ref', 'HEAD');
   if (branch === 'HEAD') { say('nothing to land: no branch is checked out here'); return 2; }
+  // main in the main checkout holds whatever any session committed there, landed by nobody's choice
+  if (branch === 'main') { say('main itself does not land: commit the work on a worktree branch (bin/worktree <work>) and land that'); return 2; }
   const wt = worktreeOf(main, branch);
   // only commits land: what is uncommitted stays where it is, said so nobody thinks it went
   if (wt && git(wt, 'status', '--porcelain', '--untracked-files=no')) say(`${branch} has uncommitted changes in ${wt}: they stay there; only its commits land`);
   const sha = git(main, 'rev-parse', `refs/heads/${branch}`);
   fs.mkdirSync(queueDir(main), { recursive: true });
-  fs.writeFileSync(qfile(main, branch), JSON.stringify({ branch, sha, at: Date.now() }));
+  writeJSON(qfile(main, branch), { branch, sha, at: Date.now() });
   say(`${branch} queued at ${sha.slice(0, 8)}`);
   // a run inside a holder (a test, a nested call) holds nothing new
   await hold(`bin/land ${branch}`);
-  try { return (await landBatch(main, branch)) === 'landed' ? 0 : 1; } finally { release(); }
+  try { return (await landBatch(main, { branch, sha })) === 'landed' ? 0 : 1; } finally { release(); }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {

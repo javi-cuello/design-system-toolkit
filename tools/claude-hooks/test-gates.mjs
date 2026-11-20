@@ -312,11 +312,14 @@ test('worktrees: each is its own repo; bin/land is its push; its reviewers diff 
   assert.equal(isPush('bin/land'), true);
   assert.equal(isPush('cd ~/Projects/toolkit/.claude/worktrees/w1 && bin/land 2>&1 | tail -5'), true);
   assert.equal(isPush('bin/land --queue'), false, 'listing the queue sends nothing');
+  assert.equal(isPush('bin/land worktree-x --queue-later'), true, 'only bin/land --queue itself is a listing');
   const W1 = path.join(TOOLKIT, '.claude/worktrees/w1');
   const s = session([user('build it'), edit('.claude/worktrees/w1/a.mjs', 200)]);
   fs.writeFileSync(planPath(s.id), PLAN_TEXT);
   assert.match(planGate(s.id, s.file, REPOS, { id: 'l1', name: 'Bash', input: { command: `cd ${W1} && bin/land` } }, W1), /^Not pushed/, "the worktree's unreviewed work does not land");
   assert.equal(planGate(s.id, s.file, REPOS, { id: 'l2', name: 'Bash', input: { command: 'git push' } }, TOOLKIT), null, "nor does it hold a push of the main checkout, another repo");
+  assert.match(String(planGate(s.id, s.file, REPOS, { id: 'l3', name: 'Bash', input: { command: 'bin/land worktree-w1' } }, TOOLKIT)), /^Not pushed/, 'a branch named from the main checkout is its worktree');
+  assert.match(String(planGate(s.id, s.file, REPOS, { id: 'l4', name: 'Bash', input: { command: 'bin/land w1' } }, TOOLKIT)), /^Not pushed/, 'and so is its work name');
   assert.match(String(stopGate(s.id, s.file, REPOS, 'Done.', W1)), new RegExp(`git -C ${W1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} diff \\$\\(git -C [^)]* merge-base origin/main HEAD\\)`), 'the reviewers see the committed work too');
   s.clean();
 });
@@ -330,6 +333,8 @@ test('a repo that lands through bin/land is edited in a worktree; a session alre
     assert.match(said, /worked on in a worktree[\s\S]*bin\/worktree <work-name>[\s\S]*<folder>\/tools\/x\.mjs/, 'the edit is sent to a worktree, with the command and the path to use');
     assert.equal(planGate(s.id, s.file, REPOS, W('r2', '.claude/worktrees/w1/tools/x.mjs'), TOOLKIT), null, 'its worktree takes the edit');
     assert.equal(planGate(s.id, s.file, REPOS, W('r3', '.claude/settings.local.json'), TOOLKIT), null, "the checkout's own .claude is not work");
+    assert.equal(planGate(s.id, s.file, REPOS, W('r3b', '.git/info/exclude'), TOOLKIT), null, 'nor is its .git');
+    assert.equal(planGate(s.id, s.file, REPOS, W('r3c', 'node_modules/x.js'), TOOLKIT), null, 'nor an ignored file');
     assert.match(String(planGate(s.id, s.file, REPOS, { id: 'r4', name: 'Bash', input: { command: `echo x > ${path.join(TOOLKIT, 'tools/y.mjs')}` } }, TOOLKIT)), /worked on in a worktree/, 'a shell write too');
     s.clean();
     const old = session([user('build it'), edit('tools/z.mjs', 3)]);
