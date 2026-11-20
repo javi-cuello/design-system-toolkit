@@ -789,5 +789,37 @@ expect("a layer that is the same in every variant still fires when some forget i
     ["Bubble: aligned to the trailing side", "Bubble: corners 12 12 12 0 (top leading, top trailing, bottom trailing, bottom leading)", "Text: aligned to the leading side", "Padding: 12 leading, 8 trailing"]);
   expect("a twin's finding names the project's language, not Arabic", bn.filter((c) => /^direction\|rtl-order/.test(c.key)).map((c) => /Hebrew mockup/.test(c.text)), [true]);
 }
+// ---- The checks moved from probes.js on 2026-11-20 ----------------------
+{
+  const fx = fresh();
+  const chip = find(fx, "Chip"), v0 = chip.children[0];
+  let text = null; descend(v0, (n) => { if (!text && n.type === "TEXT") text = n; });
+  text.textAutoResize = "NONE"; text.layoutSizingVertical = "FIXED";
+  v0.strokes[0].visible = false;
+  v0.minHeight = 40;
+  v0.children.push(leaf("INSTANCE", "Ghost", { getMainComponentAsync: async () => null }));
+  chip.componentPropertyDefinitions.Tone = { type: "VARIANT", variantOptions: ["Only"] };
+  const ac = find(fx, "Autocomplete input");
+  ac.children = ac.children.filter((v) => v.name !== "Value=True, Validation=Error, Menu=True, Disabled=False, State=Focus");
+  const page = fx.pages.find((p) => p.sets.includes(chip));
+  const glyph = (extra) => leaf("FRAME", "Glyph", Object.assign({ width: 16, height: 16, fills: paint(0, 0, 0) }, extra));
+  page.sets.push({ id: "0:9", type: "COMPONENT_SET", name: "Toggle", description: "A toggle.", visible: true, fills: [], strokes: [], effects: [], boundVariables: {},
+    componentPropertyDefinitions: { Icon: { type: "VARIANT", variantOptions: ["On", "Off"] } },
+    children: [leaf("COMPONENT", "Icon=On", { children: [glyph()] }), leaf("COMPONENT", "Icon=Off", { children: [glyph({ visible: false })] })] });
+  page.sets.push({ id: "0:10", type: "COMPONENT_SET", name: "Pick", description: "A pick.", visible: true, fills: [], strokes: [], effects: [], boundVariables: {},
+    componentPropertyDefinitions: { Selected: { type: "VARIANT", variantOptions: ["False", "True"] } },
+    children: [leaf("COMPONENT", "Selected=False", { children: [glyph({ visible: false })] }), leaf("COMPONENT", "Selected=True", { children: [glyph({ fills: paint(0, 0, 1) })] })] });
+  const r2 = await run(fx);
+  const ks = (set, re) => r2.audited.filter((e) => e.set === set).flatMap((e) => e.candidates.filter((c) => re.test(c.key)).map((c) => c.key + " " + c.rule + (c.visible ? " visible" : "") + (c.breaking ? " breaking" : "")));
+  expect("text fixed in height is one user-visible structure finding", ks("Chip", /^structure\|fixed-text\|/).map((k) => k.replace(/^structure\|fixed-text\|[^ ]* /, "")), ["structure visible"]);
+  expect("a switched-off stroke is a structure finding", ks("Chip", /^structure\|disabled-paint\|/), ["structure|disabled-paint|/|strokes structure"]);
+  expect("an instance whose main cannot be resolved is an orphan", ks("Chip", /^structure\|orphan\|/), ["structure|orphan|/Ghost structure"]);
+  expect("a raw minimum height asks for a size token, once", ks("Chip", /^tokens\|minHeight\|/), ["tokens|minHeight|/ tokens"]);
+  expect("an axis with one option is a breaking properties question", ks("Chip", /^properties\|single-option\|/), ["properties|single-option|Tone properties breaking"]);
+  expect("a state the set draws elsewhere but not in one row is a visible states question",
+    ks("Autocomplete input", /^states\|gap\|/), ["states|gap|Disabled=False, Menu=False, Validation=Error, Value=True states visible"]);
+  expect("an axis that only shows or hides a layer is a breaking boolean question", ks("Toggle", /^properties\|visibility-axis\|/), ["properties|visibility-axis|Icon properties breaking"]);
+  expect("an axis that also changes a colour is a real axis, not a boolean", ks("Pick", /^properties\|visibility-axis\|/), []);
+}
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");
 process.exit(failed ? 1 : 0);

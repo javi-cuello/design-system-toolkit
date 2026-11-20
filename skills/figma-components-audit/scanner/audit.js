@@ -219,7 +219,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const styleOf=async n=>{ if(n.textStyle) return n.textStyle; const id=n.textStyleId; if(typeof id!=="string"||!id||typeof figma==="undefined") return null;
     if(!STYLES.has(id)) STYLES.set(id,await figma.getStyleByIdAsync(id).catch(()=>null)); return STYLES.get(id); };
   const mainOf=async n=>{ if(MAINS.has(n)) return MAINS.get(n); const m=typeof n.getMainComponentAsync==="function"?await n.getMainComponentAsync().catch(()=>null):(n.mainComponent||null); MAINS.set(n,m); return m; };
-  const RAW_KEY=/^tokens\|(padding(Top|Right|Bottom|Left)|grid(Row|Column)Gap|itemSpacing|(top|bottom)(Left|Right)Radius|fill|stroke|strokeWeight|fontFamily|fontSize|fontStyle)\|/;
+  const RAW_KEY=/^tokens\|(padding(Top|Right|Bottom|Left)|grid(Row|Column)Gap|itemSpacing|(top|bottom)(Left|Right)Radius|fill|stroke|strokeWeight|fontFamily|fontSize|fontStyle|minWidth|maxWidth|minHeight|maxHeight)\|/;
   const out=[];
   for(const p of facts.pages){
     if(p.name!==p.name.trim()) out.push({set:p.name, id:p.id, variants:0, axes:[], described:true, page:p.name,
@@ -243,7 +243,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // floor (WCAG 1.4.3, figma-standard rule 32).
       let curV=null, curDisabled=false; const contrast={};
       const overlay={};
-      const fixedText={}, offPaint={}, orphan={};
+      const fixedText={}, offPaint={}, orphan={}, rawSize={};
       const walk=async(n,path,par)=>{
         if(n.type==="SLOT") return;
         M.nodes++;
@@ -269,25 +269,23 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         // Text with a fixed height clips a longer label or a translation instead of
         // growing (probes.js §3.10f, moved here 2026-11-20). textAutoResize alone
         // decides; FILL in auto layout grows with its parent, and a truncation is a choice.
-        if(n.type==="TEXT"&&n.textAutoResize==="NONE"&&n.layoutSizingVertical!=="FILL"&&n.textTruncation!=="ENDING"&&!(typeof n.maxLines==="number"&&n.maxLines>0)){
+        if(shown.has(at)&&n.type==="TEXT"&&n.textAutoResize==="NONE"&&n.layoutSizingVertical!=="FILL"&&n.textTruncation!=="ENDING"&&!(typeof n.maxLines==="number"&&n.maxLines>0)){
           const e=(fixedText[at]=fixedText[at]||{name:n.name,w:Math.round(n.width),h:Math.round(n.height),variants:[]}); e.variants.push(curV); }
         // A paint, stroke or effect switched off in the panel still carries its colour
         // and binding into Dev Mode and generated code (probes.js §3.10a).
-        if(n.type!=="INSTANCE") for(const prop of ["fills","strokes","effects"]){ const arr=n[prop];
+        if(n.type!=="INSTANCE"&&shown.has(at)) for(const prop of ["fills","strokes","effects"]){ const arr=n[prop];
           if(Array.isArray(arr)&&arr.some(x=>x&&x.visible===false)){ const k=at+"|"+prop; const e=(offPaint[k]=offPaint[k]||{name:n.name,prop,variants:[]}); e.variants.push(curV); } }
         // An instance whose main component cannot be resolved, or sits outside the
         // document with no publish key, stops receiving updates while it keeps looking
         // right (probes.js §3.10d). A remote main with a key is not judged: proving it
         // gone means importing it, and the scanner writes nothing to the file.
         if(n.type==="INSTANCE"&&typeof n.getMainComponentAsync==="function"){
-          const m=await n.getMainComponentAsync().catch(()=>null);
+          const m=await mainOf(n);
           if(!m||(!m.parent&&!m.key)){ const e=(orphan[at]=orphan[at]||{name:n.name,variants:[]}); e.variants.push(curV); } }
         // min/max width and height are layout constraints a size token should hold;
         // fixed geometry (an icon, a ring) is drawn, not constrained, so only these four are read.
         if(n.type!=="INSTANCE") for(const k of ["minWidth","maxWidth","minHeight","maxHeight"])
-          if(typeof n[k]==="number"&&n[k]>0&&!b(n,k)) F.push({sev:"warning",rule:"tokens",key:"tokens|"+k+"|"+at,
-            text:n.name+" has a raw "+SAY[k]+" of "+n[k]+onScale(n[k],SIZING,"sizing")+", so a change to the size tokens never reaches it",
-            advice:bindTo(SAY[k],n[k],SIZING,"sizing")});
+          if(typeof n[k]==="number"&&n[k]>0&&!b(n,k)){ const e=(rawSize[k+"|"+at]=rawSize[k+"|"+at]||{k,name:n.name,values:new Set(),variants:[]}); e.values.add(n[k]); e.variants.push(curV); }
         if(n.type!=="INSTANCE"){
           if("layoutMode" in n&&n.layoutMode!=="NONE"){
             // An off-scale padding of the settings' mechanismPadding or more is
@@ -452,6 +450,10 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         for(const h of (v.findAll?v.findAll(x=>x.opacity===0&&b(x,"opacity")):[])){ const t=await resolveVar(h.boundVariables.opacity.id); if(t&&t.zero) hidden.add(h); }
         shade(v,"",null); }
       const nV=n=>n+" variant"+(n===1?"":"s");
+      for(const [kk,e] of Object.entries(rawSize)){ const vals=[...e.values], v=vals[0];
+        F.push({sev:"warning",rule:"tokens",key:"tokens|"+kk,
+          text:e.name+" has a raw "+SAY[e.k]+" of "+vals.join(", ")+(vals.length===1?onScale(v,SIZING,"sizing"):"")+" in "+nV(e.variants.length)+", so a change to the size tokens never reaches it",
+          advice:bindTo(SAY[e.k],v,SIZING,"sizing")}); }
       for(const [at,e] of Object.entries(fixedText))
         F.push({sev:"warning",rule:"structure",visible:true,key:"structure|fixed-text|"+at,
           text:'Text "'+e.name+'" is fixed at '+e.w+"\u00d7"+e.h+" in "+nV(e.variants.length)+", so a longer label or a translation is clipped instead of growing \u2014 e.g. "+e.variants.slice(0,3).join("; "),
@@ -924,7 +926,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // doubles the grid. One pair proves nothing; every pair must agree.
       if(set.type==="COMPONENT_SET"){
         const vsig=v=>{const out=[];(function g(n,d,path){ if(n.type==="INSTANCE"||d>6) return;
-            if(d>0) out.push(path+"|"+n.name+"|"+n.type+"|"+(n.visible!==false));
+            const pt=x=>Array.isArray(x)?x.filter(y=>y&&y.visible!==false).map(y=>y.type==="SOLID"&&y.color?[y.color.r,y.color.g,y.color.b,def(y.opacity,1)].map(z=>Math.round(z*255)).join(","):y.type).join("/"):"";
+            if(d>0) out.push(path+"|"+n.name+"|"+n.type+"|f"+pt(n.fills)+"|s"+pt(n.strokes)+"|"+Math.round(def(n.width,0))+"x"+Math.round(def(n.height,0))+"|"+(n.characters||"")+"|"+(n.visible!==false));
             if(n.children) n.children.forEach((c,i)=>g(c,d+1,path+"/"+i)); })(v,0,""); return out;};
         const rows=vs.map(v=>({props:variantValues(v.name),sig:vsig(v)})), tally={};
         for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++){ const a=rows[i],c=rows[j];
@@ -934,7 +937,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
           if(a.sig.length!==c.sig.length) continue;
           const dd=a.sig.map((x,k)=>[x,c.sig[k]]).filter(([x,y])=>x!==y);
           if(dd.length&&dd.every(([x,y])=>x.slice(0,x.lastIndexOf("|"))===y.slice(0,y.lastIndexOf("|")))) t.hits++; }
-        for(const [axis,t] of Object.entries(tally)) if(axis!==SAXIS&&t.pairs&&t.hits===t.pairs)
+        for(const [axis,t] of Object.entries(tally)) if(axis!==SAXIS&&axis!==TOK.disabledAxis&&t.pairs&&t.hits===t.pairs)
           F.push({sev:"warning",rule:"properties",breaking:true,key:"properties|visibility-axis|"+axis,
             text:'Axis "'+axis+'" only shows or hides layers, so it doubles the variant grid where a boolean property would do the same',
             advice:"Replace it with a boolean property wired to those layers' visibility; this is breaking for instances and code that set the axis."});

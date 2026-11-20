@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.12.0] - 2026-11-20
+### Added
+- The scanner's new rules: text fixed in height, a state missing from one combination of a set, switched-off paints, orphan instances, single-option and visibility-only axes, and raw min/max sizes.
+
 ## [0.11.5] - 2026-11-20
 ### Changed
 - The dashboard's colour tokens are read from stock-ui (`stock-ui/stock-ui.css`), the toolkit's design system, where the stylesheet moved from the docs site; no value changed.
