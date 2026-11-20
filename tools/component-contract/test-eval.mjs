@@ -140,7 +140,13 @@ ok('a component measured since the accept is held until accepted; one that came 
   const left = leftToCode(c, (n) => (n === 'Pill' ? pill : null));
   ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
     left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
-    && !leftToCode(c, () => null)('p.layout', { library: { align: 'center' } }) && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+    && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+{ const c = { contract: 1, component: 'Tile', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', width: 'fill', with: { size: 'S' } }, 'icon/glyph': { kind: 'graphic', parent: 'icon' } }, variants: [] };
+  const left = leftToCode(c, () => null), known = leftToCode(c, (n) => (n === 'Glyph' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null));
+  ok('a placed component the library does not hold (marked, data-icon) leaves its insides, props, layout and clipping to code; its size and place stay measured, and a held one\'s are not left',
+    left('icon/glyph', { library: {}, drawn: null }) && left('icon/glyph.width', { library: 12 }) && left('icon.with', { library: { size: 'S' } }) && left('icon.with.size', { library: 'S' }) && left('icon.layout', { library: {} })
+    && !left('icon.width', { library: 'fill' }) && !left('icon.minWidth', { library: 24 }) && !left('root.layout', { library: {} })
+    && !known('icon.with.size', { library: 'S' })); }
 
 {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'closure-')), w = (f, s) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), s); };

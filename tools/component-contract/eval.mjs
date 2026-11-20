@@ -124,7 +124,13 @@ export function leftToCode(contract, mainOf = null) {
   // (only where the design states one: a look the reading shows and the design leaves to the component is the
   // component's own sheet drifting, a difference)
   const ownLook = (el, field, row) => !!mainOf && !!row && row.library != null && LOOK.has(field.split('.')[0]) && (all[el] || {}).kind === 'instance' && !!mainOf(all[el].component, all[el].key);
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
+  // a component the library does not hold (an icon set's, or one the snapshot never read): to-markup can only mark where
+  // it goes (data-icon), so its insides, the props it is given and its own layout and clipping are its own component's,
+  // which code draws; its size and place in this one are this one's, and stay measured
+  const foreign = (el) => !!mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
+  const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
+  const foreignOwn = (el, field) => foreign(el) && /^(with|layout|overflow)(\.|$)/.test(field);
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
