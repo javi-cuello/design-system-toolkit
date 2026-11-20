@@ -34,7 +34,7 @@ ok('a commit\'s trailer names its pages; none — why, no trailer and a non-comm
   && trailerPages('git commit -m "x"').length === 0
   && trailerPages(`echo "Knowledge: ${FORMS}"`).length === 0);
 ok('a page read whole by Read, or by cat, counts',
-  unread(commit, transcript(call('Read', { file_path: path.join(TK, FORMS) }), call('Bash', { command: `cd ~/Projects/toolkit; cat ${TABLES}` })), TK).length === 0);
+  unread(commit, transcript(call('Read', { file_path: path.join(TK, FORMS) }), call('Bash', { command: `cd /repo; cat ${TABLES}` })), TK).length === 0);
 ok('a section by line range, a Read with a short limit, or a grep does not',
   unread(commit, transcript(call('Bash', { command: `sed -n 5,47p ${FORMS}` }), call('Read', { file_path: path.join(TK, TABLES), offset: 340, limit: 30 })), TK).join() === [FORMS, TABLES].join()
   && unread(commit, transcript(call('Read', { file_path: path.join(TK, FORMS), limit: 10 }), call('Bash', { command: `grep -n "^#" ${TABLES}` })), TK).length === 2);
