@@ -179,6 +179,12 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   fs.writeFileSync(planPath(bg.id), PLAN_TEXT);
   assert.equal(planGate(bg.id, bg.file, REPOS, next, TOOLKIT), null, 'a background run counts once its notification says it ended');
   bg.clean();
+  // a foreground run past the tool's timeout is moved to the background, and its message says so in other words
+  // (20 Nov 2026: the gate dropped such a run and an edit waited an hour for a check it had already had)
+  const moved = session([dated(withId(call('Bash', { command: 'bin/check 2>&1 | tail -12', timeout: 600000 }), 'mv1')), dated(checkResult('mv1', 'Command did not complete within its 600s timeout and was moved to the background (ID: b2). Output is being written to: /tmp/b2.output.')), harness('<task-notification>\n<tool-use-id>mv1</tool-use-id>\n<status>completed</status>\n</task-notification>'), user('go'), edit('a.mjs', 200)], { checked: false });
+  fs.writeFileSync(planPath(moved.id), PLAN_TEXT);
+  assert.equal(planGate(moved.id, moved.file, REPOS, next, TOOLKIT), null, 'a run the timeout moved to the background counts once its notification says it ended');
+  moved.clean();
   // each repo's own check, in that repo: another repo's run, or reading the check's helper, is not one
   const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gates-other-')));
   const away = session([dated(withId(call('Bash', { command: `cd ${other} && bin/check` }), 'o1')), dated(checkResult('o1', '== all green')), dated(withId(call('Bash', { command: 'sed -n 20,40p bin/check-lib.sh' }), 'o2')), dated(checkResult('o2', 'green() {')), user('go'), edit('a.mjs', 200)], { checked: false });
