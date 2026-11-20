@@ -7,6 +7,7 @@ Parts A and B moved to skill-standard in 2.0.0; a citation of the old form resol
 | toolkit-standard §A | skill-standard §A |
 | toolkit-standard §B | skill-standard §B |
 
+- 2.47.0 (2026-11-20): §D 13's Plan row: where the Aim lists an agreed method, each piece ticks every term of it under Method and a Course review zooms out every third piece or day; the plan gate refuses the edit until both are there.
 - 2.46.0 (2026-11-20): §D 13's Close row: a turn that leaves the session's own edits uncommitted is blocked once by the Stop hook, never on another session's paths.
 - 2.45.1 (2026-11-19): §D 21 cites figma-standard rule 56 for the shape that mirrors the code, split from rule 21. No rule changes.
 - 2.45.0 (2026-11-19): §D 17 takes figma-standard rule 16: a token alias graph is never transcribed into a document, only its tier policy; reviewed whenever a document about tokens changes.

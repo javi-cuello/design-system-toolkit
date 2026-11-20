@@ -599,7 +599,41 @@ const planGaps = (text, st = {}, work = [], changed = Infinity) => [
   ...(['§D 1', '§D 2', '§D 5'].every((q) => new RegExp(`${q}(?!\\d)`).test(section(text, 'Before'))) ? [] : ['the answers to §D 1, §D 2 and §D 5 under Before']),
   // top-down: the whole goal is measured before a part is built, so parts are chosen by what the measure says (14 Nov)
   ...(/^\W*before\W*:[ \t*_`"(-]*(?!(?:tbd|todo|later|n\/a)(?![a-z0-9]))[a-z0-9]/im.test(section(text, 'Measure')) ? [] : ['a "before:" line under Measure: the goal measured end to end before any part is built — the command and what it said']),
-  ...(/\(\d+ readers?\)/.test(text) ? [] : ["impact.mjs's output under Impact (its \"(N readers)\" lines, pasted, not summarised)"])];
+  ...(/\(\d+ readers?\)/.test(text) ? [] : ["impact.mjs's output under Impact (its \"(N readers)\" lines, pasted, not summarised)"]),
+  ...methodGaps(text)];
+
+/* A method agreed with the person, kept by the gate rather than by memory (2026-11-19, "make the method mechanical"):
+   an Aim that lists one (a line starting "Method", then bullets) has each bullet's lead term ("Top-down:") ticked by
+   every piece, in a line under Method starting with the piece's label (the Goal's first line, up to its colon), and a
+   Course review, a zoom-out, at least every third course line or once a day. A plan whose Aim lists none is untouched. */
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const plain = (s) => s.replace(/[*_`]/g, '');
+// "course: …" and "course (2026-11-19, Phase 14): …" alike
+const COURSE = /^\W*course\b[^:\n]{0,80}:/im;
+export const methodTerms = (aim) => {
+  const m = aim.match(/^\W*method\b\s*[,:(\u2014-][^\n]*\n((?:[ \t]*\n)*(?:[ \t]*(?:[-*]|\d+[.)])[^\n]*(?:\n|$))+)/im);
+  return m ? [...m[1].matchAll(/^[ \t]*(?:[-*]|\d+[.)])\s+([^:\n]{1,40}):[*_`]*(?=\s|$)/gm)].map((x) => plain(x[1]).trim()).filter(Boolean) : [];
+};
+const localDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export function methodGaps(text, today = new Date()) {
+  const aim = section(text, 'Aim');
+  const terms = methodTerms(aim);
+  if (!terms.length) return [];
+  // the Aim may list its method under its own "### Method": the piece's Method section is read from the rest
+  const rest = aim ? text.replace(aim, '\n') : text;
+  const gaps = [];
+  const goal = section(rest, 'Goal');
+  const label = plain((goal.split('\n').map((l) => l.trim()).find((l) => l && !COURSE.test(l)) || '').split(':')[0].replace(/^[\s>#-]+/, '')).trim();
+  const ticks = label ? section(rest, 'Method').split('\n').map((l) => plain(l).replace(/^[\s>#-]+/, '')).filter((l) => l.startsWith(label) && /^\s*:/.test(l.slice(label.length))) : [];
+  const unmet = (l) => terms.filter((t) => !new RegExp(`(?<![\\w-])${esc(t)}\\s*:`, 'i').test(l.slice(label.length + 1)));
+  const missing = ticks.map(unmet).sort((a, b) => a.length - b.length)[0] || terms;
+  if (missing.length) gaps.push(`a tick line under a Method section for this piece: one line starting "${label || 'the Goal\'s first piece label'}:" that answers each method term the Aim lists (${missing.map((t) => `"${t}:"`).join(', ')}): how this piece kept it, or why not`);
+  const courses = (goal.match(new RegExp(COURSE.source, 'gim')) || []).length;
+  const last = [...section(rest, 'Course review').matchAll(/(\d{4}-\d{2}-\d{2})[^\n]*?\bafter\s+(\d+)/gi)].map((x) => ({ date: x[1], n: Number(x[2]) })).sort((a, b) => b.n - a.n || b.date.localeCompare(a.date))[0];
+  const day = localDay(today);
+  if (!last || last.n > courses || courses - last.n >= 3 || (last.date < day && courses > last.n)) gaps.push(`a Course review entry, "${day}, after ${courses}: …" (${courses} is the course lines under Goal now): zoom out before the next edit, as the Aim's method asks — the measure's trend across pieces, whether the method still holds, and what to stop (${last ? `the last was ${last.date}, after ${last.n}` : 'none yet'}; one is due every third course line or once a day)`);
+  return gaps;
+}
 
 /* The files a shell call's own code wrote this session (found on disk, as scriptWrites finds them), with when: the
    transcript shows only redirects and sed -i, so a python or cp edit is known here alone. { file: ms } */

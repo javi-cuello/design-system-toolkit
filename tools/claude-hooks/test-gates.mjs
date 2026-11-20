@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lineDiff, isPush, citing, openPlans, planDone } from './gates.mjs';
+import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lineDiff, isPush, citing, openPlans, planDone, methodGaps, methodTerms } from './gates.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = fs.realpathSync(path.resolve(HERE, '../..'));
@@ -155,6 +155,12 @@ test('plan gate: the call that makes the work full is refused until a plan with 
   assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'a placeholder in bold or code is still a placeholder');
   fs.writeFileSync(planPath(s.id), PLAN_TEXT.replace('## Measure\nbefore: node eval.mjs — 3 of 9 differ\n', '## Measure\n').replace('## Goal\nx', '## Goal\nbefore: x'));
   assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /"before:" line under Measure/, 'the line counts only under Measure');
+  // the method made mechanical (2026-11-19): an Aim that lists a Method is ticked by each piece, and zoomed out from
+  const METHOD = PLAN_TEXT.replace('what the person asked\n', 'what the person asked\nMethod, agreed:\n- Top-down: from the measure.\n- Agents: in parallel.\n- Never re-ask.\n').replace('## Goal\nx', '## Goal\nPiece 2 (2026-11-20): x');
+  fs.writeFileSync(planPath(s.id), METHOD);
+  assert.match(String(planGate(s.id, s.file, REPOS, next, TOOLKIT)), /tick line under a Method section[^]*"Piece 2 \(2026-11-20\):"[^]*"Top-down:", "Agents:"/, 'an agreed method unticked is refused before the edit');
+  fs.writeFileSync(planPath(s.id), METHOD + `## Method\nPiece 2 (2026-11-20): top-down: eval's top cause; agents: two\n## Course review\n${new Date().toLocaleDateString('sv')}, after 0: kept\n`);
+  assert.equal(planGate(s.id, s.file, REPOS, next, TOOLKIT), null, 'ticked and reviewed, the plan proceeds');
   fs.writeFileSync(planPath(s.id), PLAN_TEXT);
   // the run itself, read from the transcript: a pasted line can be written after the fact
   const unrun = session([user('go'), edit('a.mjs', 200)], { checked: false });
@@ -740,4 +746,32 @@ test("the stop check lists this session's own uncommitted paths, never another's
   fs.writeFileSync(path.join(other, 'other-session.jsonl'), JSON.stringify(at({ ...call('Write', { file_path: path.join(dir, 'rev.mjs'), content: 'theirs' }), cwd: dir }, Date.now() - 1000)) + '\n');
   assert.deepEqual(await ownUncommitted(t, [dir]), {}, 'another session wrote it later: theirs');
   fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(t, { force: true });
+});
+
+test('method: the terms an Aim lists, each piece\'s ticks, and the course review every third piece or day', () => {
+  const day = new Date(2026, 10, 20);
+  assert.deepEqual(methodTerms('Method, agreed with the person:\n- Top-down: a\n* **Direction**-agnostic: b\n- Never re-ask.\n\nApproved: x'), ['Top-down', 'Direction-agnostic']);
+  assert.deepEqual(methodTerms('what the person asked'), [], 'no method listed');
+  assert.deepEqual(methodTerms('Method:\n\n1. **Top-down:** a\n2. See https://x\n'), ['Top-down'], 'a blank line, a numbered list, bold; a URL is no term');
+  assert.deepEqual(methodTerms('Method is not decided yet; options:\n- A: x'), [], 'prose starting with the word is no method');
+  assert.deepEqual(methodGaps('## Aim\nkeep it\n## Goal\nx\n', day), [], 'a plan with no method listed is untouched');
+  const plan = (goal, method, review) => `## Aim\nMethod:\n- Top-down: a\n- Agents: b\n## Goal\n${goal}\n## Method\n${method}\n## Course review\n${review}\n`;
+  const ok = 'P3 (2026-11-20): z\ncourse: kept\nP2: y\ncourse: kept';
+  assert.deepEqual(methodGaps(plan(ok, '- P3 (2026-11-20): **Top-down:** eval; Agents: none, one cause\nP2: top-down: a', '2026-11-20, after 2: kept'), day), []);
+  assert.match(methodGaps(plan(ok, 'P2: top-down: a; agents: b', '2026-11-20, after 2'), day).join(), /starting "P3 \(2026-11-20\):"/, 'the last piece\'s ticks are not this one\'s');
+  assert.match(methodGaps(plan(ok, 'P3 (2026-11-20): top-down: a', '2026-11-20, after 2'), day).join(), /\("Agents:"\)/, 'every term, each named when missing');
+  assert.match(methodGaps(plan(ok, 'P3 (2026-11-20): top-down and agents', '2026-11-20, after 2'), day).join(), /"Top-down:", "Agents:"/, 'a term is answered, not mentioned');
+  assert.match(methodGaps(plan(ok, 'P3 (2026-11-20): top-down: a; subagents: b', '2026-11-20, after 2'), day).join(), /\("Agents:"\)/, 'a term inside a longer word is not it');
+  assert.deepEqual(methodGaps(plan(ok, 'P3 (2026-11-20): top-down: old\nP3 (2026-11-20): top-down: a; agents: b', '2026-11-20, after 2'), day), [], 'a stale line of the same piece does not hide the full one');
+  assert.match(methodGaps(plan('P1: z', 'P10: top-down: a; agents: b', '2026-11-20, after 0'), day).join(), /starting "P1:"/, 'P10 is not P1');
+  assert.deepEqual(methodGaps(plan('course (2026-11-20, P1): kept\n### P1: z', '### P1: top-down: a; agents: b', '2026-11-20, after 1'), day), [], 'course with a parenthesis is a course line, never the label; headings stripped alike');
+  assert.match(methodGaps('## Aim\n### Method\n- Top-down: a\n## Goal\nP1: x\n## Method\nP1: top-down: y\n## Course review\n2026-11-20, after 0\n', day).join(), /^$/, 'a Method heading inside the Aim is not the piece\'s Method');
+  assert.match(methodGaps(plan('P1: z', 'P1: top-down: a; agents: b', '2026-11-01, after 20'), day).join(), /after 0/, 'an entry ahead of the count is stale');
+  const tick = 'P3 (2026-11-20): top-down: a; agents: b';
+  assert.match(methodGaps(plan(ok, tick, ''), day).join(), /Course review entry, "2026-11-20, after 2: …"[^]*none yet/, 'the first piece under a method zooms out');
+  assert.deepEqual(methodGaps(plan(ok, tick, '2026-11-19, after 2'), day), [], 'a day old with no piece since: nothing to review');
+  assert.match(methodGaps(plan(ok, tick, '2026-11-19, after 1'), day).join(), /the last was 2026-11-19, after 1/, 'a day old with a piece since');
+  assert.deepEqual(methodGaps(plan(ok + '\ncourse: a\ncourse: b', tick, '2026-11-20, after 2'), day), [], 'two pieces since, the same day');
+  assert.match(methodGaps(plan(ok + '\ncourse: a\ncourse: b\ncourse: c', tick, '2026-11-20, after 2'), day).join(), /after 5/, 'every third course line');
+  assert.deepEqual(methodGaps(plan(ok + '\ncourse: a\ncourse: b\ncourse: c', tick, '2026-11-20, after 2\n2026-11-20, after 5: stop the field-by-field fixes'), day), [], 'the latest entry counts');
 });
