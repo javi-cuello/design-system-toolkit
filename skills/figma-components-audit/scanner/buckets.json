@@ -8,5 +8,6 @@
     "b2": "Figma-UI-only operations. Option and axis reorders cannot be written through the plugin API, confirmed by reordering a set's children and watching variantOptions stay put.",
     "b3": "Each item is a question with options, not a fix. A missing state may be a gap or a decision, and only the maintainer knows which."
   },
-  "_default": "b3"
+  "_default": "b3",
+  "_breaking": "A candidate with breaking: true goes to b3 and is marked breaking, whatever its rule: renaming or removing what consumers name is a question to schedule, never a batch fix."
 }

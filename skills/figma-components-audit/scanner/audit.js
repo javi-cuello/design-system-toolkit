@@ -893,7 +893,12 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             advice:"Move it to sit right after its "+S+"="+rest+" sibling."});
         });
       }
-      // Property names, each check from its setting and skipped without it:
+      // Property names, each check from its setting and skipped without it.
+      // A property's name is the component's API (code and Code Connect read it,
+      // and a renamed option resets instances that set it), so each finding here
+      // carries breaking:true and goes to bucket 3 whatever its rule (buckets.json).
+      // Left to the judge, a live run filed "Close Button" in bucket 1 unmarked.
+      // Each check from its setting and skipped without it:
       // booleanPrefix (every BOOLEAN property starts with it), textPropertyAvoid
       // with textPropertyExceptions (a TEXT property does not end with it unless
       // excepted), swapAvoid (an INSTANCE_SWAP does not end with it), and
@@ -908,7 +913,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         const reveals=d.type==="BOOLEAN"&&revealsElement(k);
         if(reveals&&TOK.booleanPrefix&&!nm.startsWith(TOK.booleanPrefix)){
           const base=nm.replace(/^(Is|Has)\s+/,"");
-          F.push({sev:"preference",rule:"naming",key:"naming|prop-boolean|"+nm,text:'Boolean property "'+nm+'" does not start with "'+TOK.booleanPrefix.trim()+'", so it does not read as an on-off switch beside the others',
+          F.push({sev:"preference",rule:"naming",breaking:true,key:"naming|prop-boolean|"+nm,text:'Boolean property "'+nm+'" does not start with "'+TOK.booleanPrefix.trim()+'", so it does not read as an on-off switch beside the others',
             advice:'Rename it "'+TOK.booleanPrefix+(/^[A-Z0-9]{2,}\b/.test(base)?base:base.charAt(0).toLowerCase()+base.slice(1))+'".'});
         }
         // A state is a bare word, never "Is …"; "Has" is kept for a True/False variant
@@ -918,22 +923,22 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         const stateWord=!TOK.booleanPrefix?null:d.type==="VARIANT"?/^Is\s+/:(d.type==="BOOLEAN"&&!reveals?/^(Is|Has)\s+/:null);
         if(stateWord&&stateWord.test(nm)){
           const bare=nm.replace(stateWord,"");
-          F.push({sev:"preference",rule:"naming",key:"naming|prop-state|"+nm,text:'Property "'+nm+'" starts with "'+nm.split(/\s/)[0]+'", so it reads unlike the bare states beside it (Disabled, Selected, Open)',
+          F.push({sev:"preference",rule:"naming",breaking:true,key:"naming|prop-state|"+nm,text:'Property "'+nm+'" starts with "'+nm.split(/\s/)[0]+'", so it reads unlike the bare states beside it (Disabled, Selected, Open)',
             advice:'Rename it "'+bare.charAt(0).toUpperCase()+bare.slice(1)+'".'});
         }
         if(d.type==="TEXT"&&TOK.textPropertyAvoid&&nm.endsWith(TOK.textPropertyAvoid)&&(TOK.textPropertyExceptions||[]).indexOf(nm)<0)
-          F.push({sev:"preference",rule:"naming",key:"naming|prop-text|"+nm,text:'Text property "'+nm+'" ends in "'+TOK.textPropertyAvoid.trim()+'", a word the properties panel already shows, so its names read unlike the rest',
+          F.push({sev:"preference",rule:"naming",breaking:true,key:"naming|prop-text|"+nm,text:'Text property "'+nm+'" ends in "'+TOK.textPropertyAvoid.trim()+'", a word the properties panel already shows, so its names read unlike the rest',
             advice:'Rename it "'+nm.slice(0,nm.length-TOK.textPropertyAvoid.length)+'".'});
         if(d.type==="INSTANCE_SWAP"&&TOK.swapAvoid&&nm.endsWith(TOK.swapAvoid))
-          F.push({sev:"preference",rule:"naming",key:"naming|prop-swap|"+nm,text:'Swap property "'+nm+'" ends in "'+TOK.swapAvoid.trim()+'", a word the properties panel already shows, so its names read unlike the rest',
+          F.push({sev:"preference",rule:"naming",breaking:true,key:"naming|prop-swap|"+nm,text:'Swap property "'+nm+'" ends in "'+TOK.swapAvoid.trim()+'", a word the properties panel already shows, so its names read unlike the rest',
             advice:'Rename it "'+nm.slice(0,nm.length-TOK.swapAvoid.length)+'".'});
         // A later word starting with a capital breaks sentence case, unless it is all capitals:
         // an acronym keeps them (figma-standard rule 18: `Show AM-PM`, `Button - CTA`).
         if(TOK.propertyCase==="sentence"&&capsInside(nm))
-          F.push({sev:"preference",rule:"naming",key:"naming|prop-case|"+nm,text:'Property "'+nm+'" is not in sentence case, so it reads unlike the rest of the properties panel',
+          F.push({sev:"preference",rule:"naming",breaking:true,key:"naming|prop-case|"+nm,text:'Property "'+nm+'" is not in sentence case, so it reads unlike the rest of the properties panel',
             advice:"Rename it in sentence case, keeping acronyms in capitals."});
         if(TOK.propertyCase==="sentence"&&d.type==="VARIANT") for(const o of (d.variantOptions||[]).filter(capsInside))
-          F.push({sev:"preference",rule:"naming",key:"naming|value-case|"+nm+"|"+o,text:'Option "'+o+'" of '+nm+' is not in sentence case, so it reads unlike the other options in the picker',
+          F.push({sev:"preference",rule:"naming",breaking:true,key:"naming|value-case|"+nm+"|"+o,text:'Option "'+o+'" of '+nm+' is not in sentence case, so it reads unlike the other options in the picker',
             advice:"Rename it in sentence case, keeping acronyms in capitals."});
       }
       // Sizes. The size property's name, the pattern for size properties under
