@@ -74,7 +74,8 @@ ok('a placed component with a swap per size is given the one its size draws (xs:
   const r = toReact(card, 'card', { naming: CLASS, library: lib }), w = toElement(card, 'card', { naming: ELEMENT, library: lib }), k = toSnippet(card, 'card', { naming: KIRBY, library: lib });
   ok('a variant that swaps a placed component draws the one it swaps in where it holds, the base\'s elsewhere',
     /\{show && \(styleOption === "elevated"\) && \(\s*<Elevated/.test(r) && /\{show && \(styleOption === "filled"\) && \(\s*<Filled/.test(r) && /\{show && \(!\(styleOption === "elevated"\) && !\(styleOption === "filled"\)\) && \(\s*<Outlined/.test(r)
-    && /renderElevated\(/.test(w) && /renderFilled\(/.test(w) && /renderOutlined\(/.test(w) && /elevated/.test(k) && /filled/.test(k), r);
+    && /\(show && \(styleOption === "elevated"\)\) && renderElevated\(/.test(w) && /\(show && \(styleOption === "filled"\)\) && renderFilled\(/.test(w) && /\(show && \(!\(styleOption === "elevated"\) && !\(styleOption === "filled"\)\)\) && renderOutlined\(/.test(w)
+    && /if \(\$show && \(\$styleOption === 'elevated'\)\): \?>\s*<\?php snippet\('ds\/elevated'/.test(k) && /if \(\$show && \(\$styleOption === 'filled'\)\): \?>\s*<\?php snippet\('ds\/filled'/.test(k) && /'filled'\)\)\): \?>\s*<\?php snippet\('ds\/outlined'/.test(k), r);
   const combos = { ...card, variants: [{ when: { style: 'elevated', show: true }, combination: true, set: { 'bg.component': 'Elevated', 'bg.key': 'k-Elevated' } }, { when: { style: 'elevated' }, combination: true, set: { 'bg.component': 'Filled', 'bg.key': 'k-Filled' } }] };
   const rc = toReact(combos, 'card', { naming: CLASS, library: { ...lib, Card: combos } });
   ok('of two combinations that swap it, the first that holds is drawn, as expand takes it', /\{styleOption === "elevated" && show && \(\s*<Elevated/.test(rc) && /!\(styleOption === "elevated" && show\) && \(\s*<Filled/.test(rc), rc); }
