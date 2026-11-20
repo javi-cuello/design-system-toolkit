@@ -123,8 +123,8 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
   ok('a code-only prop is no axis of the drawing; a combination at its default stays, one away from it goes',
     !('graphic' in f.props) && f.variants.length === 2 && JSON.stringify(f.variants[1].when) === '{"size":"lg"}' && plan(two).variants.length === 2);
   { const pin = (y) => ({ contract: 1, component: 'P', props: {}, anatomy: { root: { kind: 'container' }, dot: { kind: 'graphic', parent: 'root', absolute: { x: 0, y } } }, variants: [] });
-    const n = (a, b) => roundTrip(pin(a), pin(b)).rows.filter((r) => r.at.startsWith('dot.absolute')).length;
-    ok('a place within a browser\'s layout unit (1/64 px) of the design\'s is the same place; one further is not', n(30.78, 30.77) === 0 && n(-15.76, -15.75) === 0 && n(30.78, 30.75) === 1); }
+    const n = (a, b, o = { layoutUnit: true }) => roundTrip(pin(a), pin(b), o).rows.filter((r) => r.at.startsWith('dot.absolute')).length;
+    ok('a place within a browser\'s layout unit (1/64 px) of the design\'s is the same place where a browser read it; one further is not, nor any difference between Figma\'s own numbers', n(30.78, 30.77) === 0 && n(-15.76, -15.75) === 0 && n(30.78, 30.75) === 1 && n(30.78, 30.76) === 0 && n(30.78, 30.77, {}) === 1); }
   ok('and the round trip compares no combination of it', roundTrip(two, two).combinations === 2);
   ok('a combination the library does not draw is not compared, and counted', (() => { const r = roundTrip({ ...two, invalid: [{ size: 'lg' }] }, two); return r.combinations === 1 && r.invalid === 1; })());
   { // a placed instance's key is compared only where both sides hold one: a reading from code holds none
