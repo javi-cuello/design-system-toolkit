@@ -105,9 +105,11 @@ OUT=$(node tools/toolkit-check/owned-check.mjs --repo . 2>&1)
 # and comments may name the folder, and a line saying why carries
 # `projects-path:` (a test's fixture tree).
 step "no tool builds a project's path itself"
-OUT=$(git ls-files 'tools/*.mjs' 'tools/*.cjs' 'tools/*.js' 'tools/*.sh' 'tools/*.py' 'bin/*' 'skills/*.mjs' 'skills/*.cjs' 'skills/*.js' 'skills/*.sh' 'skills/*.py' 'plugins/*.js' 'plugins/*.mjs' '*.sh' \
+# -co --exclude-standard: untracked files too, as every other step reads the working tree; a new file passed here and
+# failed only at the push, once committed (owners.mjs, 2026-11-20)
+OUT=$(git ls-files -co --exclude-standard 'tools/*.mjs' 'tools/*.cjs' 'tools/*.js' 'tools/*.sh' 'tools/*.py' 'bin/*' 'skills/*.mjs' 'skills/*.cjs' 'skills/*.js' 'skills/*.sh' 'skills/*.py' 'plugins/*.js' 'plugins/*.mjs' '*.sh' \
   | grep -vE '(^|/)test-|/contract\.cjs$|/node_modules/|^bin/check$' \
-  | xargs grep -nE "['\"]projects['\"] *[,)]|\.\./\.\./projects|/projects/\\\$|\\\$REPO/projects" 2>/dev/null \
+  | xargs grep -InE "['\"]projects['\"] *[,)]|\.\./\.\./projects|/projects/\\\$|\\\$REPO/projects" 2>/dev/null \
   | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|projects-path:')
 [ -z "$OUT" ] && ok || bad "$OUT"
 
@@ -115,8 +117,8 @@ OUT=$(git ls-files 'tools/*.mjs' 'tools/*.cjs' 'tools/*.js' 'tools/*.sh' 'tools/
 # everywhere else; one reached CI red on 2026-11-01. A test takes the repo's path
 # from where it runs. A line where the text is only data carries `machine-path:`.
 step "no test needs this machine's home"
-OUT=$(git ls-files | grep -E '(^|/)test-[^/]*\.(mjs|cjs|js|py|sh)$' \
-  | xargs grep -niE '~/Projects|\$\{?HOME\}?"?/Projects|/Users/[^/ '"'"'"]+/Projects' 2>/dev/null \
+OUT=$(git ls-files -co --exclude-standard | grep -E '(^|/)test-[^/]*\.(mjs|cjs|js|py|sh)$' \
+  | xargs grep -IniE '~/Projects|\$\{?HOME\}?"?/Projects|/Users/[^/ '"'"'"]+/Projects' 2>/dev/null \
   | grep -vE '^[^:]+:[0-9]+: *(//|\*|#)|machine-path:')
 [ -z "$OUT" ] && ok || bad "$OUT"
 
@@ -153,10 +155,10 @@ step "no project is named in the toolkit"
 OUT=""
 NAMES=$(tools/toolkit-check/project-names.sh 2>&1) || { OUT="nothing was searched: $NAMES"; NAMES=""; }
 # NUL-separated: a file name with a space in it was split and never read (2026-11-13)
-[ -n "$NAMES" ] && OUT="$OUT$(git ls-files -z | xargs -0 grep -inE "\b($NAMES)\b" 2>/dev/null | cut -c1-200)"
+[ -n "$NAMES" ] && OUT="$OUT$(git ls-files -co --exclude-standard -z | xargs -0 grep -IinE "\b($NAMES)\b" 2>/dev/null | cut -c1-200)"
 # a compressed fixture is read through gzip: grep sees only its bytes
 # (no projects on this machine, as in a fresh clone: nothing to look for)
-[ -n "$NAMES" ] && for gz in $(git ls-files '*.gz'); do
+[ -n "$NAMES" ] && for gz in $(git ls-files -co --exclude-standard '*.gz'); do
     gzip -dc "$gz" 2>/dev/null | grep -qiE "\b($NAMES)\b" && OUT="$OUT
 $gz: names a project inside the compressed file"
 done

@@ -32,6 +32,21 @@ assert.equal(holder(), null, 'a reused pid is not the holder');
 assert.equal(tryAcquire('fresh'), null, 'and its lock is taken over');
 release();
 
+// a takeover that died leaves its mutex: after a minute it is cleared and the dead holder's lock is taken over
+fs.mkdirSync(lockDir());
+fs.writeFileSync(path.join(lockDir(), 'holder.json'), JSON.stringify({ pid: 999999, what: 'dead', at: Date.now() }));
+fs.mkdirSync(`${lockDir()}.takeover`);
+assert.notEqual(tryAcquire('blocked'), null, 'a taker in progress: not taken now');
+const old = new Date(Date.now() - 120000); fs.utimesSync(`${lockDir()}.takeover`, old, old);
+assert.equal(tryAcquire('after a minute'), null, 'its stale mutex cleared, the lock is taken');
+release();
+
+// ps unreadable cannot be faked here; a holder whose start is unknown is trusted by its pid
+fs.mkdirSync(lockDir());
+fs.writeFileSync(path.join(lockDir(), 'holder.json'), JSON.stringify({ pid: process.pid, what: 'old style', at: Date.now() }));
+assert.equal(holder().what, 'old style', 'a live pid with no start recorded holds it');
+fs.rmSync(lockDir(), { recursive: true, force: true });
+
 // two runs: the second waits for the first, says who it waits for, and both finish in turn
 const env = { ...process.env };
 const a = spawn('node', [LOCK, '--run', 'first run', '--', 'sh', '-c', 'echo start-a; sleep 2; echo end-a'], { env });
@@ -50,4 +65,4 @@ assert.equal(holder(), null, 'both released');
 const c = spawnSync('node', [LOCK, '--run', 'outer', '--', 'node', LOCK, '--run', 'inner', '--', 'echo', 'nested'], { env, encoding: 'utf8', timeout: 10000 });
 assert.equal(c.stdout.trim(), 'nested', 'a run inside a held run goes straight through');
 assert.equal(spawnSync('node', [LOCK, '--run', 'x', '--', 'sh', '-c', 'exit 3'], { env }).status, 3, "the command's exit code is the lock's");
-console.log('test-lock: 13 assertions passed');
+console.log('test-lock: 16 assertions passed');

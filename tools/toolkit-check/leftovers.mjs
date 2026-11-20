@@ -23,24 +23,14 @@ const git = (repo, args) => { try { return execFileSync('git', ['-C', repo, ...a
 /* The branch work lands on: main, else master. */
 const mainOf = (repo) => ['main', 'master'].map((b) => `refs/heads/${b}`).find((b) => git(repo, ['rev-parse', '--verify', '-q', b]) !== null) || null;
 
-/* Merged: nothing of its own past main, or each commit of its own already on main under another hash — the same
-   patch (git cherry), or the same subject over the same files (a rebase that resolved a conflict changes the patch). A
-   subject alone is not enough: "wip" on a branch and an unrelated "wip" on main would delete unmerged work. */
-const files = (repo, sha) => (git(repo, ['show', '--name-only', '--format=', sha]) || '').split('\n').filter(Boolean).sort().join('\n');
+/* Merged: nothing of its own past main, or merging it into main would change nothing (git merge-tree: the merged tree
+   is main's own). That covers a rebase, a cherry-pick and a squash, whatever their hashes, and a commit whose subject
+   matches one on main ("wip") but whose content main lacks is unmerged: it changes the tree. The brief's subject test
+   is subsumed: every subject on main with its content on main merges to main's tree. */
 export function merged(repo, ref, main) {
   if (git(repo, ['rev-list', '--count', `${main}..${ref}`]) === '0') return true;
-  const cherry = git(repo, ['cherry', main, ref]);
-  const base = git(repo, ['merge-base', main, ref]);
-  if (cherry === null || !base) return false;
-  const left = cherry.split('\n').filter((l) => l.startsWith('+ ')).map((l) => l.slice(2));
-  if (!left.length) return true;
-  const on = new Map();
-  for (const l of (git(repo, ['log', '--format=%H %s', `${base}..${main}`]) || '').split('\n').filter(Boolean)) {
-    const i = l.indexOf(' '); const subj = l.slice(i + 1);
-    if (!on.has(subj)) on.set(subj, []);
-    on.get(subj).push(l.slice(0, i));
-  }
-  return left.every((sha) => { const subj = git(repo, ['log', '-1', '--format=%s', sha]); const f = files(repo, sha); return (on.get(subj) || []).some((m) => files(repo, m) === f); });
+  const tree = git(repo, ['merge-tree', '--write-tree', main, ref]); // fails (null) on a conflict: not merged
+  return !!tree && tree.split('\n')[0] === git(repo, ['rev-parse', `${main}^{tree}`]);
 }
 
 const mtime = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } };

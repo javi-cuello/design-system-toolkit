@@ -43,12 +43,16 @@ export function holder(dir = lockDir()) {
   try { h = JSON.parse(fs.readFileSync(path.join(dir, 'holder.json'), 'utf8')); } catch { return fs.existsSync(dir) ? { pid: 0, what: 'unknown', at: 0, starting: true } : null; }
   if (!alive(h.pid)) return null;
   const now = h.start ? started(h.pid) : '';
-  return !h.start || !now || now === h.start ? h : null; // ps unreadable here: the pid alone decides
+  // ps unreadable here: the pid alone decides, for twelve hours (a reused pid would otherwise hold it for ever)
+  if (h.start && !now) return Date.now() - h.at < 12 * 3600e3 ? h : null;
+  return !h.start || now === h.start ? h : null;
 }
 export const describe = (h) => `${h.what} (pid ${h.pid}${h.session ? `, ${sessionName(h.session)}` : ''}, since ${new Date(h.at).toTimeString().slice(0, 5)})`;
 
 /* Take the lock for `what`, or return the holder. A folder left by a dead holder, or one half-made for over a
    minute, is taken over. */
+// how long ago a folder was made or changed; 0 when it is gone (a folder that vanished mid-look is never stale)
+const ageOf = (d) => { try { return Date.now() - fs.statSync(d).mtimeMs; } catch { return 0; } };
 export function tryAcquire(what, dir = lockDir(), pid = process.pid) {
   for (let i = 0; i < 2; i++) {
     try {
@@ -60,18 +64,25 @@ export function tryAcquire(what, dir = lockDir(), pid = process.pid) {
       if (e.code === 'EPERM' || e.code === 'EACCES' || e.code === 'EROFS') { console.error(`measuring lock: cannot write ${dir} (${e.code}); running without it`); return null; }
       if (e.code !== 'EEXIST') throw e;
       const h = holder(dir);
-      const stale = !h || (h.starting && Date.now() - fs.statSync(dir).mtimeMs > 60000);
+      const stale = !h || (h.starting && ageOf(dir) > 60000);
       if (!stale) return h;
-      // moved aside by rename, which one waiter wins, and only if it still holds the holder judged gone: another waiter
-      // that took it over in between is left alone
-      let seen = '';
-      try { seen = fs.readFileSync(path.join(dir, 'holder.json'), 'utf8'); } catch { /* half-made */ }
-      const aside = `${dir}.gone-${process.pid}-${Date.now()}`;
-      try { fs.renameSync(dir, aside); } catch { continue; }
-      let moved = '';
-      try { moved = fs.readFileSync(path.join(aside, 'holder.json'), 'utf8'); } catch { /* half-made */ }
-      if (moved !== seen) { try { fs.renameSync(aside, dir); } catch { /* a third took it: theirs */ } continue; }
-      fs.rmSync(aside, { recursive: true, force: true });
+      // one taker at a time (a second folder, made atomically), and the holder judged again under it, so a lock another
+      // waiter has just taken over is never removed; a taker that died leaves its mutex, gone after a minute
+      const mutex = `${dir}.takeover`;
+      // a stale mutex is renamed aside, which one waiter wins, never removed by path: a second waiter would remove the
+      // first's fresh one
+      if (ageOf(mutex) > 60000) {
+        const aside = `${mutex}.gone-${process.pid}-${Date.now()}`;
+        try {
+          fs.renameSync(mutex, aside);
+          // moved a fresh one (another waiter cleared the stale one first and made its own): put it back, untouched
+          if (ageOf(aside) <= 60000) { try { fs.renameSync(aside, mutex); } catch { fs.rmSync(aside, { recursive: true, force: true }); } continue; }
+          fs.rmSync(aside, { recursive: true, force: true });
+        } catch { /* another moved it */ }
+      }
+      try { fs.mkdirSync(mutex); } catch { continue; }
+      try { const again = holder(dir); if (!again || (again.starting && ageOf(dir) > 60000)) fs.rmSync(dir, { recursive: true, force: true }); }
+      finally { fs.rmSync(mutex, { recursive: true, force: true }); }
     }
   }
   return holder(dir) || { pid: 0, what: 'unknown', at: Date.now() };

@@ -176,5 +176,14 @@ export async function ownUncommitted(transcript, repos) {
     }
     if (loose.length) out[repo] = loose;
   }
+  // a file another session wrote after this one's last write is that session's now (this one reverted or stashed it)
+  const all = Object.entries(out).flatMap(([r, fs_]) => fs_.map((f) => path.join(r, f)));
+  if (all.length) {
+    const self = path.basename(transcript).replace(/\.jsonl$/, '');
+    const { lastWrites } = await import('./owners.mjs');
+    const later = await lastWrites(all, { except: self });
+    const mineAt = (abs) => [...last].find(([f]) => fold(f) === fold(abs))?.[1] || 0;
+    for (const [r, fs_] of Object.entries(out)) { out[r] = fs_.filter((f) => !(later[path.join(r, f)] > mineAt(path.join(r, f)))); if (!out[r].length) delete out[r]; }
+  }
   return out;
 }

@@ -41,7 +41,8 @@ export function transcripts(root = PROJECTS(), now = Date.now()) {
 function naming(list, needles) {
   if (!list.length || !needles.length) return [];
   try {
-    const hit = execFileSync('grep', ['-l', '-F', ...needles.flatMap((n) => ['-e', n]), ...list.map((t) => t.file)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 16 << 20 });
+    // case folded on macOS, whose folders are: ~/projects/toolkit is ~/Projects/toolkit
+    const hit = execFileSync('grep', ['-l', '-F', ...(process.platform === 'darwin' ? ['-i'] : []), ...needles.flatMap((n) => ['-e', n]), ...list.map((t) => t.file)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 16 << 20 });
     const set = new Set(hit.split('\n').filter(Boolean));
     return list.filter((t) => set.has(t.file));
   } catch { return []; } // grep exits 1 when nothing matches
@@ -54,6 +55,27 @@ export async function ownersOf(paths, { except = '', root = PROJECTS() } = {}) {
   for (const t of naming(list, paths)) {
     const own = await ownFiles(t.file);
     for (const p of paths) if (own && own.has(p)) (out[p] ||= []).push(sessionName(t.id));
+  }
+  return out;
+}
+
+/* When any session but `except` last wrote each of these paths: { path: ms }. A file this session wrote, then reverted,
+   that another wrote since, is the other's. */
+export async function lastWrites(paths, { except = '', root = PROJECTS() } = {}) {
+  const { written, transcriptLines } = await import('./stop-items.mjs');
+  const fold = process.platform === 'darwin' ? (x) => x.toLowerCase() : (x) => x;
+  const want = new Map(paths.map((p) => [fold(p), p])), out = {};
+  for (const t of naming(transcripts(root).filter((x) => x.id !== except), paths)) {
+    const at = [], failed = new Set(); // a refused or failed edit wrote nothing (a failed shell call may have)
+    for (const line of transcriptLines(fs, t.file)) {
+      if (!line.includes('"tool_use"') && !line.includes('"is_error":true')) continue;
+      let rec; try { rec = JSON.parse(line); } catch { continue; }
+      for (const c of rec.message?.content || []) {
+        if (c.type === 'tool_result' && c.is_error) failed.add(c.tool_use_id);
+        if (c.type === 'tool_use') for (const f of written(c, rec.cwd || process.cwd())) if (want.has(fold(f))) at.push([c.name === 'Bash' ? null : c.id, want.get(fold(f)), Date.parse(rec.timestamp) || 0]);
+      }
+    }
+    for (const [id, p, ms] of at) if (!id || !failed.has(id)) out[p] = Math.max(out[p] || 0, ms);
   }
   return out;
 }
@@ -100,7 +122,9 @@ export async function blockedBy(repo, except = process.env.CLAUDE_CODE_SESSION_I
   // a path no transcript wrote (a script's own write, a terminal) is left unnamed: the refusal that called this lists it
   for (const l of run(['log', '--format=%h %s', '@{u}..HEAD']).split('\n').filter(Boolean)) {
     const owner = commitOwner(l.split(' ')[0], { except });
+    // this session's own commits are not another's; one no transcript shows was made outside Claude Code
     if (owner) out.push(`unpushed, ${owner}: ${l}`);
+    else if (!naming(transcripts().filter((t) => t.id === except), [` ${l.split(' ')[0]}] `]).length) out.push(`unpushed, no session's transcript shows it (made in a terminal, with git commit -q, amended, or over three days ago): ${l}`);
   }
   return out;
 }

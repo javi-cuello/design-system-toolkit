@@ -14,6 +14,7 @@ delete process.env.TOOLKIT_GATES; delete process.env.TOOLKIT_EVAL_COPY;
 // state, plans and the carry between sessions live in tmp: the tests keep their own
 process.env.TMPDIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-gates-')));
 process.env.TOOLKIT_LOCK_DIR = path.join(process.env.TMPDIR, 'toolkit-measure.lock'); // never the real lock
+process.env.TOOLKIT_TRANSCRIPTS = path.join(process.env.TMPDIR, 'projects'); // never the real sessions' transcripts
 
 let n = 0;
 /* A session: a transcript built from turns, and its own id so no state leaks.
@@ -721,5 +722,19 @@ test("the stop check lists this session's own uncommitted paths, never another's
   fs.writeFileSync(path.join(dir, 'mine.mjs'), 'changed by another session after the commit');
   assert.deepEqual(await ownUncommitted(t, [dir]), {}, 'a change made after its commit is not this session\'s');
   assert.equal(fs.readFileSync(path.join(dir, 'theirs.mjs'), 'utf8'), 'y', "another session's file is never touched");
+  // written by this session, reverted, then written by another session since: the other's
+  fs.writeFileSync(path.join(dir, 'later.mjs'), 'mine first'); git('add', 'later.mjs'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'base', '--', 'later.mjs');
+  fs.appendFileSync(t, JSON.stringify(wrote(path.join(dir, 'later.mjs'))) + '\n');
+  fs.writeFileSync(path.join(dir, 'later.mjs'), 'theirs now');
+  assert.deepEqual(await ownUncommitted(t, [dir]), {}, 'its commit came after this session\'s write, so no');
+  const other = path.join(process.env.TOOLKIT_TRANSCRIPTS, 'p'); fs.mkdirSync(other, { recursive: true });
+  fs.appendFileSync(t, JSON.stringify(at({ ...call('Write', { file_path: path.join(dir, 'rev.mjs'), content: 'x' }), cwd: dir }, Date.now() - 30000)) + '\n');
+  fs.writeFileSync(path.join(dir, 'rev.mjs'), 'theirs');
+  assert.deepEqual(await ownUncommitted(t, [dir]), { [dir]: ['rev.mjs'] }, 'no one else wrote it: this session\'s');
+  const failedWrite = withId(at({ ...call('Write', { file_path: path.join(dir, 'rev.mjs'), content: 'theirs' }), cwd: dir }, Date.now() - 2000), 'fw1');
+  fs.writeFileSync(path.join(other, 'failed-session.jsonl'), [failedWrite, result('fw1', true)].map((l) => JSON.stringify(l)).join('\n') + '\n');
+  assert.deepEqual(await ownUncommitted(t, [dir]), { [dir]: ['rev.mjs'] }, "another session's failed write wrote nothing");
+  fs.writeFileSync(path.join(other, 'other-session.jsonl'), JSON.stringify(at({ ...call('Write', { file_path: path.join(dir, 'rev.mjs'), content: 'theirs' }), cwd: dir }, Date.now() - 1000)) + '\n');
+  assert.deepEqual(await ownUncommitted(t, [dir]), {}, 'another session wrote it later: theirs');
   fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(t, { force: true });
 });

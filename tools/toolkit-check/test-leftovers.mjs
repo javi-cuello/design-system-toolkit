@@ -23,7 +23,8 @@ const wt = (name) => { const d = path.join(repo, '.claude/worktrees', name); git
 
 const fast = wt('agent-merged');          // no commit of its own: merged
 const picked = wt('agent-picked');        // its commit reached main under another hash
-commit(picked, 'p.txt', 'the picked change'); commit(repo, 'p.txt', 'the picked change');
+git(picked, 'commit', '-q', '--allow-empty', '-m', 'base'); fs.writeFileSync(path.join(picked, 'p.txt'), 'same'); git(picked, 'add', 'p.txt'); git(picked, 'commit', '-q', '-m', 'the picked change');
+git(repo, 'cherry-pick', 'wt-agent-picked'); // the same change on main under another hash
 const open = wt('agent-abc123');          // a commit main does not have
 commit(open, 'o.txt', 'unmerged work');
 const dirty = wt('agent-dirty');          // merged, but an uncommitted file
@@ -36,9 +37,13 @@ git(repo, 'branch', 'old-merged');        // a branch alone, merged
 git(repo, 'branch', 'old-open', 'wt-agent-abc123'); // a branch alone, unmerged
 fs.writeFileSync(path.join(repo, 'a.txt'), 'stashed'); git(repo, 'stash', '-q');
 
-assert.equal(merged(repo, 'wt-agent-picked', 'main'), true, 'every subject on main counts as merged');
+assert.equal(merged(repo, 'wt-agent-picked', 'main'), true, 'a change on main under another hash counts as merged');
 assert.equal(merged(repo, 'wt-agent-abc123', 'main'), false);
 assert.equal(merged(repo, 'wt-agent-wip', 'main'), false, 'a subject on main over other files is not the same commit');
+// a "fix typo" on the same file with other content is not merged either (the subject-and-files test let it through)
+const typo = wt('agent-typo'); fs.writeFileSync(path.join(typo, 'a.txt'), 'their fix'); git(typo, 'commit', '-qam', 'fix typo');
+fs.writeFileSync(path.join(repo, 'a.txt'), 'main fix'); git(repo, 'commit', '-qam', 'fix typo');
+assert.equal(merged(repo, 'wt-agent-typo', 'main'), false, 'same subject, same file, other content: unmerged');
 
 // under a day old: nothing goes, nothing is warned of
 assert.deepEqual(sweep(repo), [], 'a worktree under a day old is left alone');
@@ -55,7 +60,7 @@ assert.match(git(repo, 'stash', 'list'), /stash@\{0\}/, 'the stash is untouched'
 assert.match(git(repo, 'branch', '--list', 'old-open'), /old-open/, 'the unmerged branch is untouched');
 
 const warned = await leftovers(repo, later);
-assert.equal(warned.length, 6, warned.join('\n'));
+assert.equal(warned.length, 7, warned.join('\n'));
 assert.ok(warned.some((l) => /worktree \.claude\/worktrees\/agent-abc123 \(wt-agent-abc123\): commits not on main — session sess-000/.test(l)), 'the unmerged worktree, with the session that ran its agent');
 assert.ok(warned.some((l) => /agent-dirty.*uncommitted files/.test(l)), 'the dirty worktree');
 assert.ok(warned.some((l) => /branch old-open: commits not on main/.test(l)), 'the unmerged branch');
@@ -70,4 +75,4 @@ assert.deepEqual(sweep(side, later), [], 'a worktree holding main stays');
 assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
 
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('test-leftovers: 20 assertions passed');
+console.log('test-leftovers: 21 assertions passed');

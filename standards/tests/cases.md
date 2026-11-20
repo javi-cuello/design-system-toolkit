@@ -4,6 +4,8 @@ Cases for the standards themselves, not for any one skill (toolkit-standard §C 
 
 Three scripts live in this directory, all run from the repo root: `check-frontmatter.sh` (clause F), `check.sh` (skills, plugins, markdown shape and each standard's scope line, delegating clause F), and `scan-clause-d.py` (advisory: clause D needs a read). Rules, citations, histories and settings are `tools/toolkit-check/check-standards.mjs`'s, run by `bin/check`.
 
+**Walked: 2026-11-20, for toolkit-standard 2.46.0** — §D 13's Close row gains the Stop block on a session's own uncommitted edits; its cases are the five new ones in `tools/claude-hooks/test-gates.mjs` (45 passed), and S21 re-walked for bin/check's scans now reading untracked files. No other case reads §D 13's Close row.
+
 **Walked: 2026-11-16, for toolkit-standard 2.41.0, design-standard 1.5.0, code-standard 1.34.0 and figma-standard 2.24.0** — S22 re-run (`node tools/toolkit-check/check-standards.mjs`: clean) after §D 21's new bar and the cut of one line restated on 21 component pages; S18 reads §D 0 question 13's new wording through `closing.mjs`. The four facts fixed (code-standard rules 3, 9 and 18, figma-standard rule 2) and rule 1's slot renamed read against the cases citing them (none asserts the old wording) and against the knowledge pages applying them: four lines calling every band a landmark and fourteen component pages pairing Disabled with Rest alone were corrected in the same change.
 
 **Walked: 2026-11-12, for toolkit-standard 2.31.1** — §D 21's "(beyond <rule>)" clause read against S22: it adds a citation form, not a weight; S22's fixture holds (`grep -rn '(beyond ' knowledge` lists 14 items, none `[required]`).
@@ -287,6 +289,7 @@ Walked 2026-10-31 for skill-standard 1.5.0: the fixtures above, made by hand in 
 Fixture: in a throwaway clone, a tracked `test-*` file holding `command: 'cd ~/Projects/toolkit && bin/check'` (the line that reached CI red), `/Users/me/Projects/y`, `/Users/first.last/Projects/y`, `$HOME/Projects/z`, `${HOME}/Projects/z`, `"$HOME"/Projects/z` and `~/projects/toolkit`, a comment naming `~/Projects`, a line carrying `machine-path:`; and `~/Projects` in a tracked file not named `test-*`.
 Assert: bin/check's "no test needs this machine's home" fails on those seven lines and no others; on the repo itself it passes.
 Walked 2026-11-01 for toolkit-standard 2.23.0: the fixture above, each assertion observed, then removed with the clone.
+Walked 2026-11-20 for 2.46.0: the scans read untracked files too (`git ls-files -co --exclude-standard`); an untracked `tools/zz-probe/probe.mjs` building `path.join(home, 'projects')` failed "no tool builds a project's path itself" on `bin/check --quick`, then was removed. Before the change owners.mjs passed untracked and failed at the push.
 
 ## S22 · Every knowledge item carries a weight — WALKED 2026-11-11
 Fixture: a knowledge page with a weighed item, a bold-led item with no weight, one starting with a word that is not a weight, a *Cases* bullet and a fenced bullet.
