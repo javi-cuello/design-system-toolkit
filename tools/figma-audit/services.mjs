@@ -56,7 +56,7 @@ export function parse(ps, { server = SERVER, tmp = os.tmpdir(), cwd = cwdOf } = 
     for (let i = at + 1; i < parts.length; i++) {
       if (parts[i] !== '--data' || !parts[i + 1]) continue;
       const data = from(parts[i + 1]) || resolve(parts[i + 1]);
-      out.push({ data, test: under(data) || under(realPath(data)), port: parts[parts.indexOf('--port', i)] ? parts[parts.indexOf('--port', i) + 1] : null, started });
+      out.push({ pid: Number(pid), data, test: under(data) || under(realPath(data)), port: parts[parts.indexOf('--port', i)] ? parts[parts.indexOf('--port', i) + 1] : null, started });
     }
   }
   return out;

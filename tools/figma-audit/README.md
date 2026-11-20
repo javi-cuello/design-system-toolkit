@@ -220,6 +220,8 @@ never audited, beside a green "Figma connected". An absent record and an
 unaudited library are the same answer from the page's side, which is why
 nothing could see it.
 
+**Is the bridge fit to draw?** `node tools/figma-audit/probe.mjs --project <label> [--file <fileKey>]` (default: the library's `draw.scratch`) runs one check per known failure mode, in the order a fault hides the next, and stops at the first that fails, naming the mode and its fix: the service runs; nothing else listens on its port (a console MCP holding it: mode 4); the file's Desktop Bridge is connected (mode 1); a trivial call answers within 12 s (mode 1, stalled); a layer inside an instance reads back by id (mode 5, the plugin degraded: restart it); a font loads and a library component imports (mode 3, the library API stalled: reopen the plugin). What is left when all pass and one script still fails is that script (mode 2). `eval.mjs --draw` runs it first and refuses to draw on a failure. Tested by `test-probe.mjs`; first real run (2026-11-20): two projects' services up, their scratch files not connected, each said as mode 1.
+
 Two things now catch it: the service **refuses to start** when `--data` names
 the legacy `audit.json` while its folder holds other records (the shim's only
 case — a `--data` naming a missing `<fileKey>.json` still starts), and
