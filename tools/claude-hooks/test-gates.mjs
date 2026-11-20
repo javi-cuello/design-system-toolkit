@@ -14,6 +14,7 @@ delete process.env.TOOLKIT_GATES; delete process.env.TOOLKIT_EVAL_COPY;
 // state, plans and the carry between sessions live in tmp: the tests keep their own
 process.env.TMPDIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-gates-')));
 process.env.TOOLKIT_LOCK_DIR = path.join(process.env.TMPDIR, 'toolkit-measure.lock'); // never the real lock
+delete process.env.TOOLKIT_LOCK_HELD; // run under bin/check, which holds it: this test takes its own
 process.env.TOOLKIT_TRANSCRIPTS = path.join(process.env.TMPDIR, 'projects'); // never the real sessions' transcripts
 
 let n = 0;

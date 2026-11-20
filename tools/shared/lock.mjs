@@ -31,7 +31,8 @@ const infoFile = () => path.join(lockDir(), 'toolkit-measure.holder.json');
 // try: exit 0 when free (taken and let go at once), 1 when held, 2 when it cannot be opened
 const TRY = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception: sys.exit(2)\ntry: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\nexcept OSError: sys.exit(1)\n';
 // hold: "busy" when it must wait, "held" once it holds, then keep it until stdin closes (the holder gone)
-const HOLD = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception:\n  print("nolock",flush=True); sys.exit(0)\ntry: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\nexcept OSError:\n  print("busy",flush=True); fcntl.flock(f,fcntl.LOCK_EX)\nprint("held",flush=True)\nsys.stdin.read()\n';
+// the note (argv[2] into argv[3]) is written under the lock, before "held", so a waiter never reads the last holder's
+const HOLD = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception:\n  print("nolock",flush=True); sys.exit(0)\ntry: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\nexcept OSError:\n  print("busy",flush=True); fcntl.flock(f,fcntl.LOCK_EX)\ntry: open(sys.argv[3],"w").write(sys.argv[2])\nexcept Exception: pass\nprint("held",flush=True)\nsys.stdin.read()\n';
 
 /* The live session's name, from Claude Code's registry (~/.claude/sessions/<pid>.json), else its id. */
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
@@ -63,9 +64,10 @@ export function hold(what, { say = (l) => console.error(l) } = {}) {
   return new Promise((resolve) => {
     let timer = null, buf = '', done = false;
     const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
-    child = spawn('python3', ['-c', HOLD, lockFile()], { stdio: ['pipe', 'pipe', 'ignore'] });
+    const note = JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() });
+    child = spawn('python3', ['-c', HOLD, lockFile(), note, infoFile()], { stdio: ['pipe', 'pipe', 'ignore'] });
     child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
-    child.on('exit', () => finish(false, 'the lock holder stopped before taking it'));
+    child.on('close', () => finish(false, 'the lock holder stopped before taking it')); // after its output is read
     child.stdout.on('data', (d) => {
       buf += d;
       for (let i; (i = buf.indexOf('\n')) >= 0;) {
@@ -75,11 +77,10 @@ export function hold(what, { say = (l) => console.error(l) } = {}) {
           tell(); timer = setInterval(tell, 60000);
         } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
         else if (l === 'held') {
-          try { fs.writeFileSync(infoFile(), JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() })); } catch { /* the note only names it */ }
           process.env.TOOLKIT_LOCK_HELD = String(process.pid);
           try { os.setPriority(10); } catch { /* not allowed: run at the priority given */ }
           // the child must not keep this process alive: when this process ends, its pipe closes and the lock goes
-          child.removeAllListeners('exit'); child.unref(); child.stdin.unref?.(); child.stdout.destroy();
+          child.removeAllListeners('close'); child.unref(); child.stdin.unref?.(); child.stdout.destroy();
           finish(true);
         }
       }
