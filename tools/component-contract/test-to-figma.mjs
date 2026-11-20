@@ -129,6 +129,12 @@ ok('and its drawing, a component of its own name, is held to it', verify(one, { 
     const at = (a, b) => roundTrip(placed(a), placed(b)).rows.filter((r) => r.at === 'i.key').length;
     ok('a key one side lacks is no row; two keys that differ are one', at('web', null) === 0 && at('web', 'mobile') === 1 && at('web', 'web') === 0);
   }
+  { // a placed instance's boolean axis in the design's spelling (true) and a reading's (True) is one value; a text is its own words
+    const placed = (w) => ({ ...two, anatomy: { ...two.anatomy, i: { kind: 'instance', parent: 'root', component: 'Box', with: w } } });
+    const rows = (a, b) => roundTrip(placed(a), placed(b)).rows.filter((r) => r.at.startsWith('i.with')).length;
+    ok('a boolean word is the boolean in any case; true against False, or a text in another case, still differs',
+      rows({ isChecked: 'true' }, { isChecked: 'True' }) === 0 && rows({ on: true }, { on: 'True' }) === 0 && rows({ isChecked: 'true' }, { isChecked: 'False' }) === 1 && rows({ Label: 'Go' }, { Label: 'go' }) === 1);
+  }
   ok('every combination is compared unless a caller cuts them, and a cut is said, never silent', roundTrip(two, two).cut === undefined && roundTrip(two, two, { limit: 1 }).cut === 1 && roundTrip(two, two, { limit: 1 }).combinations === 1);
   const g = figmaSide({ ...two, variants: [{ when: { graphic: 'none' }, set: { 'root.radius': 'R/1' } }], invalid: [{ size: 'lg', graphic: 'none' }, { graphic: 'cup' }] });
   ok('a variant naming only its default holds everywhere; a combination not drawn loses it, or goes with its other values',

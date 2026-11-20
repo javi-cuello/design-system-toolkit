@@ -250,6 +250,10 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null } = {
     if (/^[^.]+\.key$/.test(at) && (a == null || b == null)) return;
     // another library component, named in the drawing's file by its set alone (house): the library's stored name
     // carries the path it sits under in its own file (Icon/house), which no other file can read
+    // a placed instance's prop at a boolean word is that boolean in any spelling: the design's variant says true where a
+    // reading from code names the axis True (to-markup's word for a boolean axis), or a boolean prop says true itself
+    const bool = (v) => (typeof v === 'boolean' ? v : typeof v === 'string' && /^(true|false)$/i.test(v) ? v.toLowerCase() === 'true' : undefined);
+    if (/\.with\.[^.]+$/.test(at) && bool(a) !== undefined && bool(a) === bool(b)) return;
     if (/(^|\.)component$/.test(at) && typeof a === 'string' && typeof b === 'string' && !b.includes('/') && a.split('/').pop() === b) return;
     if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) { for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) diff(a[k], b[k], at ? `${at}.${k}` : k); }
     else add(at, a, b);

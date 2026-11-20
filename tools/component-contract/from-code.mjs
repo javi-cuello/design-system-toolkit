@@ -239,6 +239,18 @@ export function asDesignSwaps(props, design) {
   return props;
 }
 
+/* A placed component's booleans read from whether their layers are drawn in it: only where its main draws that layer
+   at the props read so far with the boolean on; where it draws it there at no value (a checkbox's error part, drawn
+   only when invalid), being unseen says nothing, and the boolean is left unread. Tested by test-from-code.mjs. */
+export function shownRead(fc, w, shown) {
+  const out = {};
+  for (const [p, v] of Object.entries(shown || {})) {
+    const q = fc && Object.values(fc.props || {}).find((x) => x.type === 'boolean' && (x.figma || '') === p);
+    if (!q || !q.shows || atProps(fc, { ...w, [p]: true })[q.shows[0]]) out[p] = v;
+  }
+  return out;
+}
+
 /* The swaps a placed component's glyph goes to, by Figma name: the one that drives a layer drawn at these props (a
    button's Icon (16) or Icon (20), by its size, never both), or one that names no layer; a prop no drawn layer of
    which it drives keeps its default. Tested by test-from-code.mjs. */
@@ -1568,7 +1580,7 @@ async function main() {
             if (best) for (const part of best[0].split(', ')) { const [ax, v] = part.split('='); if (ax && v) w[ax] = v; }
           }
           if (fc && x.texts) Object.assign(w, wordsOf(fc, x.texts, props));
-          for (const [p, v] of Object.entries(x.shown || {})) w[p] = v;
+          Object.assign(w, shownRead(fc, w, x.shown));
           const glyphOf = [];
           // the glyph goes to the swap that drives a layer drawn at these props: a button's Icon (16) or Icon (20), by its
           // size, never both; a prop no drawn layer of which it drives is left its default
