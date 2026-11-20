@@ -112,6 +112,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   const overW = leftToCode(holderW, (n) => (n === 'Switcher' ? swW : null));
   ok('a swap no prop passes is left, its insides with it, even where a deeper prop sets them; words no prop passes are left, the insides\' styles stay differences',
     overW('org/icon.component') && overW('org/icon/glyph.background') && overW('org/box/t.content') && !overW('org/box/t/x.background') && !overW('org/box/t.width'));
+  ok('a part whose override is a field, not a swap, keeps its key a difference: two components of one name', !overW('org/box/t.key'));
   ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
     over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
   // (Atlassian's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
@@ -164,9 +165,9 @@ ok('a component measured since the accept is held until accepted; one that came 
 { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-')), r = createRequire(import.meta.url);
   const { compact } = r('../snapshot/spec.cjs'), { derive } = r('./derive.cjs');
   const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });
-  for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }]]) {
-    fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
-  ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["old"]' && staleContracts(path.join(d, 'none')).length === 0);
+  for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }], ['gone', null]]) {
+    fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); if (c) fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
+  ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["gone","old"]' && staleContracts(path.join(d, 'none')).length === 0);
   fs.rmSync(d, { recursive: true, force: true }); }
 {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'closure-')), w = (f, s) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), s); };
