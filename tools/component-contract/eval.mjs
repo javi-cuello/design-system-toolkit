@@ -138,6 +138,13 @@ export function leftToCode(contract, mainOf = null) {
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
+/* The components whose stored contract.json is not what derive.cjs makes of their spec today (check-specs' own test). */
+export function staleContracts(dir) {
+  if (!dir || !fs.existsSync(dir)) return [];
+  const { checkSpecs } = req('../snapshot/check-specs.cjs');
+  return (checkSpecs(dir).bad || []).filter((b) => /contract\.json is not what the spec derives/.test(b)).map((b) => b.split(':')[0].trim());
+}
+
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
 export function measure(where, only = []) {
   const home = where.projectDir;
@@ -156,17 +163,17 @@ export function measure(where, only = []) {
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
     // from-code fingerprints a reading from code with the contract it read against (`of`)
-    else { const r = roundTrip(contract, code.asFigma, { mains }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : null; legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : null; legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
     else {
       // held to the first reading as it stands: one taken again since the second trip went round is stale
       // only the combinations the library draws (a reading carries no invalid list of its own)
-      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains }), t = (taken.second || {})[folder];
+      const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true }), t = (taken.second || {})[folder];
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : null;
       legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
@@ -506,6 +513,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const have = new Set(contracts(where).map(({ folder }) => folder));
     for (const c of argv.filter((x) => !have.has(x))) console.log(p.includes(c) ? `panel: ${c} is not in the library now` : `${c}: no such component`);
   }
+  // the official contracts as today's derive.cjs writes them: one written by an older derive (a change to it since, the
+  // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
+  // refuse, and the short ones say so
+  { const old = staleContracts(where.paths.components);
+    if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run node tools/component-contract/write.cjs ${where.paths.components}`;
+      if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);
   if (into) {

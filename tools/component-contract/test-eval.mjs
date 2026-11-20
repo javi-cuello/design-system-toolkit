@@ -3,8 +3,9 @@
 import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
+import { createRequire } from 'node:module';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts } from './eval.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -160,6 +161,13 @@ ok('a component measured since the accept is held until accepted; one that came 
     && !left('icon.with.Size', { library: '16' }) && !left('icon.width', { library: 'fill' }) && !left('icon.minWidth', { library: 24 }) && !left('root.layout', { library: {} })
     && !known('icon.with.size', { library: 'S' })); }
 
+{ const d = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-')), r = createRequire(import.meta.url);
+  const { compact } = r('../snapshot/spec.cjs'), { derive } = r('./derive.cjs');
+  const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });
+  for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }]]) {
+    fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
+  ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["old"]' && staleContracts(path.join(d, 'none')).length === 0);
+  fs.rmSync(d, { recursive: true, force: true }); }
 {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'closure-')), w = (f, s) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), s); };
   w('a.mjs', "const s = createRequire(import.meta.url)('./h.cjs');\nrequire(`./i`);\nimport { x } from './b.mjs';\nconst c = await import('./sub/c.mjs');\nconst req = createRequire(import.meta.url); req('./d.cjs');\nimport(path.join(HERE, 'e.mjs'));\nimport './skip.mjs';");

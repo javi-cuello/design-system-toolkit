@@ -66,8 +66,9 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
     const v = take(k);
     // an outer box that hugs keeps its own width where a parent would stretch it
     if (v === 'hug' && root && k === 'width' && l && holds) put('inline-size', 'fit-content');
-    // a placed component that hugs takes its own main's size, never one the main's sheet gives it to fill
-    if (v === 'hug' && !root && e.kind === 'instance' && k === 'width') { put('inline-size', 'fit-content'); if (along) put('flex', 'none'); }
+    // a placed component that hugs takes its own main's size, never one the main's sheet gives it to fill or fixes
+    // (down as across: a list's item that hugs, its main 56 high at those props, is as high as what it holds)
+    if (v === 'hug' && !root && e.kind === 'instance') { put(prop, 'fit-content'); if (along) put('flex', 'none'); }
     if (v === undefined || v === 'hug') continue;
     // filled across and capped (a dialog's panel to 556): stretched, the cap would pin it to the start, so it takes
     // the full size instead and sits where its parent aligns it, as Figma has it
