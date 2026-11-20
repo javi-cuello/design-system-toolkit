@@ -138,11 +138,11 @@ export function leftToCode(contract, mainOf = null) {
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
-/* The components whose stored contract.json is not what derive.cjs makes of their spec today (check-specs' own test). */
+/* The components whose stored contract.json is missing, or not what derive.cjs makes of their spec today (check-specs' own test). */
 export function staleContracts(dir) {
   if (!dir || !fs.existsSync(dir)) return [];
   const { checkSpecs } = req('../snapshot/check-specs.cjs');
-  return (checkSpecs(dir).bad || []).filter((b) => /contract\.json is not what the spec derives/.test(b)).map((b) => b.split(':')[0].trim());
+  return (checkSpecs(dir).bad || []).filter((b) => /contract\.json is not what the spec derives|no contract\.json beside the spec|no contract can be derived/.test(b)).map((b) => b.split(':')[0].trim());
 }
 
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
@@ -516,7 +516,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   // the official contracts as today's derive.cjs writes them: one written by an older derive (a change to it since, the
   // store not rewritten) holds the design side to yesterday's rules while the reading takes today's, so the long legs
   // refuse, and the short ones say so
-  { const old = staleContracts(where.paths.components);
+  { const old = staleContracts(where.paths.components).filter((f) => !argv.length || argv.includes(f));
     if (old.length) { const say = `${old.length} official contract(s) are not what their specs derive now (${old.slice(0, 3).join(', ')}${old.length > 3 ? ', …' : ''}): derive.cjs changed since the store was written; run node tools/component-contract/write.cjs ${where.paths.components}`;
       if (into || self || second) { console.error(say); process.exit(2); } console.log(`warning: ${say}`); } }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait

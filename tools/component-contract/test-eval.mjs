@@ -165,9 +165,9 @@ ok('a component measured since the accept is held until accepted; one that came 
 { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'stale-')), r = createRequire(import.meta.url);
   const { compact } = r('../snapshot/spec.cjs'), { derive } = r('./derive.cjs');
   const spec = compact({ name: 'T', props: {}, variants: [{ name: 'T', type: 'COMPONENT', layout: 'VERTICAL', children: [{ name: 'W', type: 'TEXT', text: 'Hi' }] }] });
-  for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }]]) {
-    fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
-  ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["old"]' && staleContracts(path.join(d, 'none')).length === 0);
+  for (const [f, c] of [['fresh', derive(spec, ['T'], {})], ['old', { ...derive(spec, ['T'], {}), anatomy: { root: { kind: 'container' } } }], ['gone', null]]) {
+    fs.mkdirSync(path.join(d, f)); fs.writeFileSync(path.join(d, f, 'figma.json'), JSON.stringify(spec)); if (c) fs.writeFileSync(path.join(d, f, 'contract.json'), JSON.stringify(c)); }
+  ok('an official contract an older derive.cjs wrote is named, so a measure is never taken against yesterday\'s rules', JSON.stringify(staleContracts(d)) === '["gone","old"]' && staleContracts(path.join(d, 'none')).length === 0);
   fs.rmSync(d, { recursive: true, force: true }); }
 {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'closure-')), w = (f, s) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), s); };
