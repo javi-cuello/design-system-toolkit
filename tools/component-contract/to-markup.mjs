@@ -451,6 +451,8 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // (a layer's `with` replaces the one before it whole, as expand applies it: a prop it leaves out is the placed
       // component's default there)
       const stated = (v) => {
+        // (a variant that sets it to null draws the instance at its own defaults: every prop the base gives it, unset)
+        if ((v.set || {})[`${id}.with`] === null) return { when: v.when || {}, w: {}, sets: new Set(Object.keys(e.with || {})) };
         const whole = (v.set || {})[`${id}.with`] ?? ((v.add || {})[id] || {}).with;
         if (!whole || typeof whole !== 'object') return { when: v.when || {}, w: {}, sets: new Set() };
         return { when: v.when || {}, w: whole, sets: new Set([...Object.keys(e.with || {}), ...Object.keys(whole)]) };

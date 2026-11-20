@@ -518,6 +518,8 @@ else {
   // a layer's with replaces the one before it whole: what it leaves out is the placed component's default there
   const cleared = { ...lib.Row, variants: [{ when: { size: 'l' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { on: true }, set: { 'check.with': { Selected: 'True' } } }] };
   ok('a later layer\'s with that leaves a prop out gives that prop back to the placed component\'s default', /tone=\{on \? undefined : \(\(size === "l"\) \? "loud" : "plain"\)\}/.test(toReact(cleared, 'row', { naming: CLASS, library: { ...lib, Row: cleared } })));
+  const reset = { ...lib.Row, variants: [{ when: { size: 'l' }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { on: true }, set: { 'check.with': null } }] };
+  ok('a layer that sets with to null draws the placed component at its own defaults there', /tone=\{on \? undefined : \(\(size === "l"\) \? "loud" : "plain"\)\}/.test(toReact(reset, 'row', { naming: CLASS, library: { ...lib, Row: reset } })));
   // a layer at a prop code has no name for, at its default, always holds in the markup: it ends the choice
   const always = { ...lib.Row, variants: [{ when: { on: true }, set: { 'check.with': { Selected: 'False', Tone: 'Loud' } } }, { when: { state: 'rest' }, set: { 'check.with': { Selected: 'True', Tone: 'Plain' } } }] };
   ok('a layer that always holds in the markup outranks what came before it', /selected=\{true\}/.test(toReact(always, 'row', { naming: CLASS, library: { ...lib, Row: always } })) && !/tone=\{on/.test(toReact(always, 'row', { naming: CLASS, library: { ...lib, Row: always } })));
