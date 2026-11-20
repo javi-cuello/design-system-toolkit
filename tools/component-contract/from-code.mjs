@@ -269,6 +269,16 @@ export function boundText(content, id, props, args, design, joined = {}) {
 
 /* Whether a layer's name is its own: not the one its id spells back (layers.mjs partName: Action footer at actionFooter,
    or at actionFooter_2), derive's own test for leaving it unsaid. Tested by test-from-code.mjs. */
+/** The mode keys an element may carry as `data-<key>` (tools/tokens/modes.cjs `attribute`): the axes of the project's
+ *  tokens, and every key the official contract sets a mode under (its parts' own, and what a variant sets), as
+ *  derive keys a collection the tokens lack (modes.cjs `keyed`) and to-markup writes it. */
+export function modeKeysOf(axes, contract) {
+  const set = new Set((axes || []).map((a) => a.key));
+  for (const e of Object.values((contract && contract.anatomy) || {})) for (const k of Object.keys((e && e.modes) || {})) set.add(k);
+  for (const v of (contract && contract.variants) || []) for (const [p, m] of Object.entries(v.set || {})) if (/\.modes$/.test(p)) for (const k of Object.keys(m || {})) set.add(k);
+  return [...set];
+}
+
 export const keepsName = (name, id) => partName(id) !== name;
 
 export function asShape(x, fa, hasChildren) {
@@ -1124,7 +1134,7 @@ async function main() {
       // the mode axes of the project's tokens, each an attribute an element may carry (tools/tokens/modes.cjs)
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
-      const modeKeys = req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)).map((a) => a.key);
+      const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
       const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();

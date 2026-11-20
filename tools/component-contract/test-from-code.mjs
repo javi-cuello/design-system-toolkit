@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
+import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, modeKeysOf } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -237,4 +237,8 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     && boundText('Label', 'message/label', { label: { type: 'string', code: 'label', sample: 'Label' } }, {}, null) === 'label'); }
 ok('a name its id spells back is no name of its own; one it does not (a slash, other words) is kept',
   !keepsName('Action footer', 'footer/menu/actionFooter') && !keepsName('Action footer', 'x/actionFooter_2') && keepsName('Context menu item / Default', 'a/contextMenuItemDefault') && keepsName('Footer', 'x/actionFooter') && keepsName('Item 2', 'list/item2') && keepsName('Icon 24', 'a/icon24'));
+{ const c = { anatomy: { root: { modes: { 'color-palette': 'color-palette-1', 'color-palette-1': 'blue' } }, label: {} }, variants: [{ when: {}, set: { 'root.modes': { 'color-palette-2': 'red' } } }] };
+  const k = modeKeysOf([{ key: 'theme' }, { key: 'color-palette' }], c);
+  ok('the mode keys read are the tokens\' axes and every key the contract sets a mode under, a collection the tokens lack (its own slug) and one a variant sets included',
+    ['theme', 'color-palette', 'color-palette-1', 'color-palette-2'].every((x) => k.includes(x)) && k.length === 4 && modeKeysOf([{ key: 'theme' }], null).join() === 'theme'); }
 console.log(`${n}/${n} passed`);
