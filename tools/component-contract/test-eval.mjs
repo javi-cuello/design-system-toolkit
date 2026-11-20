@@ -39,7 +39,8 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('closureOf: a component and what it places, transitively; hashes asked for some are theirs, from their closure\'s own only', JSON.stringify([...closureOf(lib, ['a', 'gone'])].sort()) === '["a","b","c"]' && JSON.stringify(part) === JSON.stringify({ a: before.a }));
   { const slow = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-')), 'chrome'); fs.writeFileSync(slow, '#!/bin/sh\nsleep 3; echo Chrome 99.0\n'); fs.chmodSync(slow, 0o755);
     const t0 = Date.now(), v = chromeVersion(slow, 300);
-    ok('a Chrome that does not answer its version in time is none, never a hang', v === '' && Date.now() - t0 < 2500); }
+    ok('a Chrome that does not answer its version in time is none, never a hang', v === '' && Date.now() - t0 < 2500);
+    fs.rmSync(path.dirname(slow), { recursive: true, force: true }); }
   { const said = [], t = await todayOf('no-such-project', { projectDir: os.tmpdir(), paths: {} }, [], (l) => said.push(l));
     ok('the installed Chrome is read though the self leg\'s inputs cannot be: the browser leg stays checked', Object.hasOwn(t, 'chrome') && !t.inputs && /inputs not checked/.test(said[0] || '')); }
   ok('a Chrome major read from its version line, none from none', chromeMajor('Google Chrome 158.0.8127.37\n') === 158 && chromeMajor('') === null);
