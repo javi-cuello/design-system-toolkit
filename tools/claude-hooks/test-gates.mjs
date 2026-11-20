@@ -337,6 +337,13 @@ test('a repo that lands through bin/land is edited in a worktree; a session alre
     assert.equal(planGate(s.id, s.file, REPOS, W('r3b', '.git/info/exclude'), TOOLKIT), null, 'nor is its .git');
     assert.equal(planGate(s.id, s.file, REPOS, W('r3c', 'node_modules/x.js'), TOOLKIT), null, 'nor an ignored file');
     assert.match(String(planGate(s.id, s.file, REPOS, { id: 'r4', name: 'Bash', input: { command: `echo x > ${path.join(TOOLKIT, 'tools/y.mjs')}` } }, TOOLKIT)), /worked on in a worktree/, 'a shell write too');
+    const B = (id, command) => planGate(s.id, s.file, REPOS, { id, name: 'Bash', input: { command } }, TOOLKIT);
+    { const said = String(B('w1', 'git worktree add -b p2-x /tmp/p2-x main')); assert.match(said, /^Not made: a worktree in .*bin\/worktree <work-name>/, said); }
+    assert.match(String(B('w2', `cd ${TOOLKIT} && git -C . worktree add ../temp/x`)), /^Not made/, 'with -C too');
+    assert.equal(B('w3', `git worktree add -b worktree-a ${path.join(TOOLKIT, '.claude/worktrees/a')} origin/main`), null, 'one in .claude/worktrees is the layout');
+    assert.equal(B('w4', 'git worktree list'), null, 'listing is not making');
+    assert.equal(B('w5', 'echo "git worktree add x"'), null, 'nor is quoting it');
+    assert.equal(planGate(s.id, s.file, REPOS, { id: 'w6', name: 'Bash', input: { command: 'git worktree add /tmp/y' } }, TOOLKIT, true), null, "a subagent's own call is Claude Code's");
     s.clean();
     const old = session([user('build it'), edit('tools/z.mjs', 3)]);
     assert.equal(planGate(old.id, old.file, REPOS, W('r5', 'tools/x.mjs'), TOOLKIT), null, 'a session that already edited the main checkout finishes there');

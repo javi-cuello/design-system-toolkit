@@ -742,6 +742,27 @@ function intoMain(st, call, cwd, repos, session) {
   return null;
 }
 
+/* A worktree made by hand, outside .claude/worktrees, in a repo with bin/land: the sweep cannot tell its owner or park
+   it, and one session made fifteen such, one per attempt, then combined them by hand (2026-11-20). bin/worktree makes
+   one per piece of work where the sweep looks, and bin/land batches several branches into one check. A subagent's own
+   isolation worktree (.claude/worktrees/agent-*) is Claude Code's, not a call's. TOOLKIT_WORKTREES=off turns it off. */
+const WT_ADD = /(?:^|[\n;&|(]\s*)git(?:\s+-C\s+(\S+)|\s+-c\s+\S+|\s+--no-pager)*\s+worktree\s+add\b([^\n;&|]*)/;
+function strayWorktree(call, cwd, repos, sub) {
+  if (process.env.TOOLKIT_WORKTREES === 'off' || sub || call.name !== 'Bash') return null;
+  const bare = bareShell(call.input?.command || ''), m = bare.match(WT_ADD);
+  if (!m) return null;
+  const d = shellDir(bare, cwd), at = m[1] ? path.resolve(d, expandHome(m[1])) : d;
+  const w = where(at, repos);
+  const home = w && (w.worktree ? w.repo.replace(/\/\.claude\/worktrees\/[^/]+$/, '') : w.repo);
+  if (!home || !fs.existsSync(path.join(home, 'bin', 'land'))) return null;
+  // the first argument that is not an option, or the value of -b/-B: the folder
+  const args = m[2].trim().split(/\s+/).filter(Boolean); let folder = null;
+  for (let i = 0; i < args.length; i++) { if (/^-[bB]$/.test(args[i])) { i++; continue; } if (args[i].startsWith('-')) continue; folder = args[i]; break; }
+  if (folder && path.resolve(at, expandHome(folder)).startsWith(path.join(home, '.claude', 'worktrees') + path.sep)) return null;
+  return `Not made: a worktree in ${home} is made with ${path.join(home, 'bin', 'worktree')} <work-name>, one per piece of work, in .claude/worktrees where the sweep finds it, never by hand elsewhere. `
+    + 'Several attempts at one piece of work are commits on its one branch; several pieces each get a worktree and land with bin/land, which checks them together, so nothing is combined by hand.';
+}
+
 export function planGate(session, transcript, repos, call, cwd, sub = false) {
   if (off()) return null;
   let h;
@@ -754,7 +775,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   }
   const plan = planPath(session);
   advance(session, transcript, repos, st);
-  const away = intoMain(st, call, cwd, repos, session);
+  const away = intoMain(st, call, cwd, repos, session) || strayWorktree(call, cwd, repos, sub);
   if (away) { if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; } save(session, st); return away; }
   // the repos the work is in: those its files are in, and the one this call writes
   const work = [...new Set([...Object.keys(st.total.files), ...writes(call, cwd)].map((f) => where(f, repos)?.repo).filter(Boolean))];

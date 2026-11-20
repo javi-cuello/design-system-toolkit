@@ -103,6 +103,22 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
   try {
     sweep(repo, week);
     assert.ok(fs.existsSync(kept), 'a running session\'s worktree is never parked');
+    // one that never claimed it but works in it (claude -w, or a cd) keeps it too
+    const cdIn = wt('cd-in'); commit(cdIn, 'c.txt', 'in progress');
+    fs.writeFileSync(path.join(reg, 'test-cd.json'), JSON.stringify({ sessionId: 'cd-session', pid: process.pid, cwd: path.join(cdIn) }));
+    sweep(repo, week);
+    assert.ok(fs.existsSync(cdIn), "a running session whose folder is in the worktree keeps it");
+    fs.rmSync(path.join(reg, 'test-cd.json'));
+    // a merge in progress is never committed or removed
+    const mid = wt('mid-merge'); commit(mid, 'm.txt', 'mine');
+    const admin = git(mid, 'rev-parse', '--absolute-git-dir').trim(); fs.writeFileSync(path.join(admin, 'MERGE_HEAD'), git(repo, 'rev-parse', 'main'));
+    fs.writeFileSync(path.join(mid, 'm.txt'), '<<<<<<< conflict');
+    sweep(repo, week);
+    assert.ok(fs.existsSync(path.join(mid, 'm.txt')) && git(repo, 'log', '-1', '--format=%s', 'wt-mid-merge').trim() === 'mine', 'a merge in progress stays as it is');
+    // an ignored file someone wrote (.env) keeps the folder: removing it would delete the file
+    const withEnv = wt('with-env'); commit(withEnv, 'e.txt', 'work'); fs.writeFileSync(path.join(withEnv, '.env'), 'k');
+    sweep(repo, week);
+    assert.ok(fs.existsSync(path.join(withEnv, '.env')), 'an ignored file of its own keeps the folder');
   } finally { delete process.env.TOOLKIT_SESSIONS_DIR; }
 }
 

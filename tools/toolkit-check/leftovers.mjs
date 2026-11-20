@@ -55,13 +55,18 @@ function inventory(repo, now) {
     // ignored files count (git worktree remove deletes them: a local .env, notes), aside from what nobody wrote by hand:
     // installed packages, a build cache, and the links bin/worktree makes to the main checkout's installs
     // (tools/shared/worktree.mjs); -unormal whatever status.showUntrackedFiles says
+    const admin = there ? git(f.worktree, ['rev-parse', '--absolute-git-dir']) : null;
     const st = there ? git(f.worktree, ['status', '--porcelain', '--ignored=matching', '-unormal']) : '';
     const made = (p) => /(^|\/)(node_modules|\.astro)\/?$/.test(p) || (() => { try { return fs.lstatSync(path.join(f.worktree, p.replace(/\/$/, ''))).isSymbolicLink(); } catch { return false; } })();
-    const dirty = st === null || st.split('\n').some((l) => l && !(l.startsWith('!! ') && made(l.slice(3))));
-    const admin = there ? git(f.worktree, ['rev-parse', '--absolute-git-dir']) : null;
+    const lines = st === null ? null : st.split('\n').filter(Boolean);
+    const dirty = lines === null || lines.some((l) => !(l.startsWith('!! ') && made(l.slice(3))));
+    // an ignored file someone wrote (.env, notes): git worktree remove deletes it, and a commit leaves it out
+    const ignoredOwn = lines === null || lines.some((l) => l.startsWith('!! ') && !made(l.slice(3)));
+    // a merge, cherry-pick, revert or rebase in progress: half-done by someone, never committed or removed by a sweep
+    const busy = !!admin && ['MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD', 'rebase-merge', 'rebase-apply', 'BISECT_LOG'].some((x) => fs.existsSync(path.join(admin, x)));
     const tip = Number(git(repo, ['log', '-1', '--format=%ct', f.HEAD])) * 1000 || 0;
     const age = now - Math.max(tip, admin ? mtime(path.join(admin, 'index')) : 0, there ? mtime(f.worktree) : 0);
-    items.push({ kind: 'worktree', path: f.worktree, branch, tip: f.HEAD || '', dirty, merged: !!main && merged(repo, f.HEAD, main), age, locked: 'locked' in f });
+    items.push({ kind: 'worktree', path: f.worktree, branch, tip: f.HEAD || '', dirty, ignoredOwn, busy, merged: !!main && merged(repo, f.HEAD, main), age, locked: 'locked' in f });
   });
   for (const l of (git(repo, ['for-each-ref', 'refs/heads', '--format=%(refname:short) %(committerdate:unix) %(objectname)']) || '').split('\n').filter(Boolean)) {
     const [branch, at, tip] = l.split(' ');
@@ -77,20 +82,25 @@ function inventory(repo, now) {
   return { main, items };
 }
 
-const removable = (x) => x.kind !== 'stash' && !x.dirty && x.merged && !x.locked && x.age > DAY;
+const removable = (x) => x.kind !== 'stash' && !x.dirty && !x.busy && x.merged && !x.locked && x.age > DAY;
 /* An abandoned piece of work: a worktree bin/worktree made, every change committed, not landed, a week untouched. Its
    folder is all that goes; the commits stay on its branch. Never another tool's worktree, an agent's, or one with dirt. */
 const PARK = 7 * DAY;
-/* A running session that made or reopened the worktree (worktree-sessions.json, tools/shared/worktree.mjs) keeps it. */
-function claimed(repo, name) {
-  let all = {}; try { all = JSON.parse(fs.readFileSync(path.join(git(repo, ['rev-parse', '--path-format=absolute', '--git-common-dir']) || '', 'worktree-sessions.json'), 'utf8')); } catch { return false; }
+/* A running session keeps a worktree: one that made or reopened it (worktree-sessions.json, tools/shared/worktree.mjs),
+   or one whose folder is in it (Claude Code's session registry records each session's cwd), which covers `claude -w`
+   and a session that only cd'd in. */
+function claimed(repo, name, dir) {
+  let all = {}; try { all = JSON.parse(fs.readFileSync(path.join(git(repo, ['rev-parse', '--path-format=absolute', '--git-common-dir']) || '', 'worktree-sessions.json'), 'utf8')); } catch { /* no claims: the cwd test alone */ }
   const reg = process.env.TOOLKIT_SESSIONS_DIR || path.join(process.env.HOME || '', '.claude', 'sessions'); // Claude Code's session registry
   let live = []; try { live = fs.readdirSync(reg).filter((f) => f.endsWith('.json')).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(reg, f), 'utf8')); } catch { return null; } }).filter(Boolean); } catch { /* no registry */ }
   const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
-  return Object.entries(all).some(([id, names]) => names.includes(name) && live.some((s) => s.sessionId === id && alive(s.pid)));
+  const running = live.filter((s) => alive(s.pid));
+  const inside = (c) => { const a = real(c || ''), b = real(dir || ''); return !!dir && (a === b || a.startsWith(b + path.sep)); };
+  return running.some((s) => inside(s.cwd)) || Object.entries(all).some(([id, names]) => names.includes(name) && running.some((s) => s.sessionId === id));
 }
-const parkable = (x, repo) => x.kind === 'worktree' && (x.dirty || !x.merged) && !x.locked && x.age > PARK && x.branch
-  && path.dirname(x.path) === path.join(repo, '.claude', 'worktrees') && !path.basename(x.path).startsWith('agent-') && !path.basename(x.path).startsWith('.');
+const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+const parkable = (x, repo) => x.kind === 'worktree' && (x.dirty || !x.merged) && !x.ignoredOwn && !x.busy && !x.locked && x.age > PARK && x.branch
+  && real(path.dirname(x.path)) === real(path.join(repo, '.claude', 'worktrees')) && !path.basename(x.path).startsWith('agent-') && !path.basename(x.path).startsWith('.');
 
 /* Remove what is merged, clean and over a day old; returns what went, one name each. */
 export function sweep(repo, now = Date.now()) {
@@ -98,7 +108,7 @@ export function sweep(repo, now = Date.now()) {
   const { main, items } = inventory(repo, now);
   if (!main) return [];
   const gone = [];
-  for (const x of items.filter(removable)) {
+  for (const x of items.filter((i) => removable(i) && !(i.kind === 'worktree' && claimed(repo, path.basename(i.path), i.path)))) {
     // git refuses to remove a worktree with changes or untracked files (no --force): the last guard against a race
     if (x.kind === 'worktree' && git(repo, ['worktree', 'remove', x.path]) === null) continue;
     // -D, not -d: a rebased branch's commits are on main under other hashes, which -d does not see; merged() checked
@@ -106,14 +116,14 @@ export function sweep(repo, now = Date.now()) {
     // the tip is said, so a removal judged by subject alone can be undone (git branch <name> <tip>)
     gone.push(`${x.kind === 'worktree' ? path.relative(repo, x.path) || x.path : x.branch} (was ${x.tip.slice(0, 8)})`);
   }
-  for (const x of items.filter((i) => parkable(i, repo) && !claimed(repo, path.basename(i.path)))) {
+  for (const x of items.filter((i) => parkable(i, repo) && !claimed(repo, path.basename(i.path), i.path))) {
     // what was never committed goes on its own branch first, never lost and never on main; ignored files stay out
     let saved = '';
     if (x.dirty) {
       if (git(x.path, ['add', '-A']) === null || git(x.path, ['commit', '-q', '--no-verify', '-m', 'Parked by the sweep: files left uncommitted in this worktree for a week, committed as they were']) === null) continue;
       saved = ' (its uncommitted files committed first)';
     }
-    if (git(repo, ['worktree', 'remove', x.path]) === null) continue; // changed since it was read, or an ignored file left: stays
+    if (git(repo, ['worktree', 'remove', x.path]) === null) continue; // changed since it was read: stays
     gone.push(`${path.relative(repo, x.path)} parked${saved}: its work stays on ${x.branch}; bin/worktree ${path.basename(x.path)} reopens it`);
   }
   return gone;
