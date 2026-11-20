@@ -203,6 +203,44 @@ function iconSize(x) {
 }
 
 
+/* A part the library keeps inside a placed instance and the drawn side does not hold: a reading keeps a layer inside a
+   placed component only where it differs from that component's own there (derive's ownInsides, from-code's alike), so
+   to it the part is its component's own at the instance's props, and is compared as that, field by field: an override
+   the library states there is a row of that field (a look code leaves to the component's own sheet, eval's leftToCode),
+   never the whole part missing. The nearest instance the drawn side places above it, its library held, says what it
+   draws there; a part with no such instance above it, or one that instance does not draw (or draws as another kind or
+   component), stays missing. Only the
+   drawn side is filled: a part the library lacks may be one its instance hides. Tested by test-to-figma.mjs. */
+export function ownInPlaced(library, drawn, mains) {
+  if (!mains || !library || !drawn) return drawn;
+  const { placedAs, atProps } = req('./derive.cjs');
+  const out = { ...drawn }, seen = new Map();
+  const missing = Object.keys(library).filter((id) => id.includes('/') && !(id in drawn)).sort((x, y) => x.split('/').length - y.split('/').length);
+  for (const id of missing) {
+    const segs = id.split('/');
+    for (let i = segs.length - 1; i > 0; i--) {
+      const h = segs.slice(0, i).join('/'), e = out[h];
+      const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
+      if (!m) continue;
+      if (!seen.has(h)) seen.set(h, placedAs(out, h, m, mains).M);
+      const rel = id.slice(h.length + 1), x = seen.get(h)[rel], y = library[id];
+      // (the same part: of its kind, and an instance of the same component; another under that name stays missing)
+      if (!(x && y && x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase()))) break;
+      // and as an instance draws it: in a box with no auto layout it keeps no place nor constraints, which the
+      // component's own contract states and no instance can override (figma-fact: no-nested-position-override; derive
+      // keeps none there); one placed absolutely in an auto layout, or a glyph scaled both ways, keeps them
+      const M = seen.get(h), up = M[x.parent || 'root'] || {}, um = up.kind === 'instance' && mains(up.component, up.key);
+      const flow = ((um ? atProps(um, up.with).root : up) || {}).layout;
+      const f = { ...x, parent: !x.parent || x.parent === 'root' ? h : `${h}/${x.parent}` };
+      if (!(flow && flow.direction)) delete f.absolute;
+      if (!f.absolute && !(f.constraints && f.constraints.horizontal === 'scale' && f.constraints.vertical === 'scale')) delete f.constraints;
+      out[id] = f;
+      break;
+    }
+  }
+  return out;
+}
+
 /* A placed instance's prop at its own component's default is that prop unstated: the library's contract states every
    prop of an instance, a reading only the ones it reads. `mains` is derive's byComponentName (name → contract, a
    name two components share none, as the pipeline resolves them); a prop is
@@ -280,7 +318,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     }
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
-    const a = same(expand(library, { ...variantDefaults(library), ...c })), b = same(expand(drawn, { ...variantDefaults(drawn), ...theirs }));
+    const A = expand(library, { ...variantDefaults(library), ...c });
+    const a = same(A), b = same(ownInPlaced(A, expand(drawn, { ...variantDefaults(drawn), ...theirs }), mains));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));

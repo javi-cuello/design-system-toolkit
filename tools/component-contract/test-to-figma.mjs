@@ -352,4 +352,19 @@ delete globalThis.figma;
   const trimmed = { root: { kind: 'container' }, f: { kind: 'instance', parent: 'root', component: 'Field' }, 'f/label': { kind: 'text', parent: 'f', color: 'Z' } };
   const whole = { ...trimmed, 'f/input': { kind: 'container', parent: 'f', background: 'B' } };
   ok('an instance\'s insides are kept whole only where they list a layer that is its component\'s own', keptWhole(trimmed, mains).length === 0 && JSON.stringify(keptWhole(whole, mains)) === '["f"]'); }
+{ // a part the library keeps inside a placed instance (an override there: a flush header's padding) that the reading
+  // does not hold, as a reading keeps none equal to its component's: compared as that component's own, field by field
+  const head = { component: 'Head', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row', padding: { start: 16 } } } }, variants: [] };
+  const item = { component: 'Item', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } },
+    head: { kind: 'instance', parent: 'root', component: 'Head', order: 0, width: 'fill' },
+    box: { kind: 'container', parent: 'root', order: 1 }, 'box/dot': { kind: 'graphic', parent: 'box', order: 0, width: 4, absolute: { x: 2, y: 2 }, constraints: { horizontal: 'min', vertical: 'min' } } }, variants: [] };
+  const mains = (n) => ({ Head: head, Item: item }[n] || null);
+  const host = (insides) => ({ contract: 1, component: 'Host', props: {}, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Item', order: 0 }, ...insides }, variants: [] });
+  const lib = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, width: 'fill', layout: { direction: 'row', padding: { start: 0 } } },
+    'i/box': { kind: 'container', parent: 'i', order: 1 }, 'i/box/dot': { kind: 'graphic', parent: 'i/box', order: 0, width: 6 } });
+  const rows = roundTrip(lib, host({}), { mains }).rows.map((r) => r.at).sort();
+  ok('a part kept inside a placed instance that a reading leaves to its component is compared as that component\'s own, field by field, never the whole part missing; no place inside a box with no auto layout',
+    JSON.stringify(rows) === '["i/box/dot.width","i/head.layout"]');
+  const other = host({ 'i/head': { kind: 'graphic', parent: 'i', order: 0 } });
+  ok('one its component draws as another kind stays missing', roundTrip(other, host({}), { mains }).rows.some((r) => r.at === 'i/head' && r.drawn == null)); }
 console.log(`${n}/${n} passed`);
