@@ -89,8 +89,21 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
   const res = sweep(repo, week);
   assert.ok(res.some((g) => /^\.claude\/worktrees\/half-done parked: its work stays on wt-half-done; bin\/worktree half-done reopens it$/.test(g)), res.join('\n'));
   assert.ok(!fs.existsSync(parked) && git(repo, 'rev-parse', '--verify', '-q', 'wt-half-done').trim(), 'its folder is gone, its branch and commits stay');
-  assert.ok(fs.existsSync(path.join(halfDirty, 'loose.txt')), 'a worktree with an uncommitted file is never parked');
+  assert.ok(res.some((g) => /^\.claude\/worktrees\/half-dirty parked \(its uncommitted files committed first\): its work stays on wt-half-dirty/.test(g)), 'loose files are committed on its own branch, then it is parked');
+  assert.ok(!fs.existsSync(halfDirty) && git(repo, 'show', 'wt-half-dirty:loose.txt').trim() === 'x', 'the loose file is on its branch, not lost');
+  assert.match(git(repo, 'log', '-1', '--format=%s', 'wt-half-dirty'), /^Parked by the sweep/, 'and the commit says why');
+  assert.notEqual(git(repo, 'rev-parse', 'main').trim(), git(repo, 'rev-parse', 'wt-half-dirty').trim(), 'never on main');
   assert.ok(fs.existsSync(open), "an agent's worktree is not parked: its session merges it");
+  // a worktree a running session claims stays, however old
+  const kept = wt('in-use'); commit(kept, 'u.txt', 'in progress');
+  const common = git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir').trim();
+  fs.writeFileSync(path.join(common, 'worktree-sessions.json'), JSON.stringify({ 'live-session': ['in-use'] }));
+  const reg = path.join(tmp, 'sessions'); fs.mkdirSync(reg, { recursive: true }); process.env.TOOLKIT_SESSIONS_DIR = reg;
+  fs.writeFileSync(path.join(reg, 'test-live.json'), JSON.stringify({ sessionId: 'live-session', pid: process.pid }));
+  try {
+    sweep(repo, week);
+    assert.ok(fs.existsSync(kept), 'a running session\'s worktree is never parked');
+  } finally { delete process.env.TOOLKIT_SESSIONS_DIR; }
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });

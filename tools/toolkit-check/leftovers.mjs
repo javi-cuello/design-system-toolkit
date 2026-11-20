@@ -7,8 +7,9 @@
  *   sweep(repo)      bin/closing (the Stop hook): removes, without asking, each linked worktree and its branch, and
  *                    each other local branch, that is clean, over a day old, and merged into main — no commit of its own
  *                    (rev-list main..<it> is empty) or every commit's subject already on main (a rebase or cherry-pick)
- *                    — and parks each worktree of a piece of work (.claude/worktrees/<work>) left clean but unlanded and
- *                    untouched for a week: its folder goes, its branch stays, and bin/worktree <work> reopens it
+ *                    — and parks each worktree of a piece of work (.claude/worktrees/<work>) left unlanded and untouched
+ *                    for a week by every session (none running claims it): files left uncommitted are committed on its
+ *                    branch first, saying so; its folder goes, its branch stays, and bin/worktree <work> reopens it
  *   leftovers(repo)  bin/check (--warn): what is over a day old and cannot go that way — a worktree or branch with
  *                    unmerged commits or uncommitted files, and every stash — with its age and its session when known
  *
@@ -80,7 +81,15 @@ const removable = (x) => x.kind !== 'stash' && !x.dirty && x.merged && !x.locked
 /* An abandoned piece of work: a worktree bin/worktree made, every change committed, not landed, a week untouched. Its
    folder is all that goes; the commits stay on its branch. Never another tool's worktree, an agent's, or one with dirt. */
 const PARK = 7 * DAY;
-const parkable = (x, repo) => x.kind === 'worktree' && !x.dirty && !x.merged && !x.locked && x.age > PARK && x.branch
+/* A running session that made or reopened the worktree (worktree-sessions.json, tools/shared/worktree.mjs) keeps it. */
+function claimed(repo, name) {
+  let all = {}; try { all = JSON.parse(fs.readFileSync(path.join(git(repo, ['rev-parse', '--path-format=absolute', '--git-common-dir']) || '', 'worktree-sessions.json'), 'utf8')); } catch { return false; }
+  const reg = process.env.TOOLKIT_SESSIONS_DIR || path.join(process.env.HOME || '', '.claude', 'sessions'); // Claude Code's session registry
+  let live = []; try { live = fs.readdirSync(reg).filter((f) => f.endsWith('.json')).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(reg, f), 'utf8')); } catch { return null; } }).filter(Boolean); } catch { /* no registry */ }
+  const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+  return Object.entries(all).some(([id, names]) => names.includes(name) && live.some((s) => s.sessionId === id && alive(s.pid)));
+}
+const parkable = (x, repo) => x.kind === 'worktree' && (x.dirty || !x.merged) && !x.locked && x.age > PARK && x.branch
   && path.dirname(x.path) === path.join(repo, '.claude', 'worktrees') && !path.basename(x.path).startsWith('agent-') && !path.basename(x.path).startsWith('.');
 
 /* Remove what is merged, clean and over a day old; returns what went, one name each. */
@@ -97,9 +106,15 @@ export function sweep(repo, now = Date.now()) {
     // the tip is said, so a removal judged by subject alone can be undone (git branch <name> <tip>)
     gone.push(`${x.kind === 'worktree' ? path.relative(repo, x.path) || x.path : x.branch} (was ${x.tip.slice(0, 8)})`);
   }
-  for (const x of items.filter((i) => parkable(i, repo))) {
-    if (git(repo, ['worktree', 'remove', x.path]) === null) continue; // changed since it was read: stays
-    gone.push(`${path.relative(repo, x.path)} parked: its work stays on ${x.branch}; bin/worktree ${path.basename(x.path)} reopens it`);
+  for (const x of items.filter((i) => parkable(i, repo) && !claimed(repo, path.basename(i.path)))) {
+    // what was never committed goes on its own branch first, never lost and never on main; ignored files stay out
+    let saved = '';
+    if (x.dirty) {
+      if (git(x.path, ['add', '-A']) === null || git(x.path, ['commit', '-q', '--no-verify', '-m', 'Parked by the sweep: files left uncommitted in this worktree for a week, committed as they were']) === null) continue;
+      saved = ' (its uncommitted files committed first)';
+    }
+    if (git(repo, ['worktree', 'remove', x.path]) === null) continue; // changed since it was read, or an ignored file left: stays
+    gone.push(`${path.relative(repo, x.path)} parked${saved}: its work stays on ${x.branch}; bin/worktree ${path.basename(x.path)} reopens it`);
   }
   return gone;
 }

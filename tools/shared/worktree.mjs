@@ -56,12 +56,22 @@ export function ensure(anyDir, work, base = 'origin/main') {
   if (!name) throw new Error('a worktree needs a short name for the work, e.g. check-cache');
   const dir = path.join(main, '.claude', 'worktrees', name);
   if (fs.existsSync(path.join(dir, '.git'))) return dir;
+  // a folder deleted by hand, or parked, leaves git thinking the branch is still checked out there
+  try { git(main, 'worktree', 'prune'); } catch { /* nothing to prune */ }
   try { git(main, 'fetch', '-q', 'origin'); } catch { /* offline: the last fetched origin/main */ }
   const branch = `worktree-${name}`;
   const has = (() => { try { git(main, 'rev-parse', '-q', '--verify', `refs/heads/${branch}`); return true; } catch { return false; } })();
   git(main, 'worktree', 'add', '-q', ...(has ? [dir, branch] : ['-b', branch, dir, base]));
   link(main, dir);
   return dir;
+}
+/* The running sessions, other than `me`, that made or reopened the worktree `name`: two sessions in one folder is the
+   shared-tree trouble worktrees are for (2026-11-20). A session no longer running claims nothing. */
+export async function claimedBy(main, name, me) {
+  const file = path.join(git(main, 'rev-parse', '--path-format=absolute', '--git-common-dir'), 'worktree-sessions.json');
+  let all = {}; try { all = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return []; }
+  const { sessionName } = await import('./lock.mjs');
+  return Object.entries(all).filter(([id, names]) => id !== me && names.includes(name)).map(([id]) => sessionName(id, process.env.TOOLKIT_SESSIONS_DIR || undefined)).filter((n) => !n.endsWith('(not running)'));
 }
 /* Which worktrees a session made, so the gate can name them when the session comes back to the main checkout. */
 export function remember(main, session, name) {
@@ -84,7 +94,12 @@ export function temp(anyDir, rev) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
-  const work = process.argv[2];
-  if (!work) { console.error('usage: worktree.mjs <work>   (a short name for the work, e.g. check-cache)'); process.exit(2); }
-  try { const dir = ensure(process.cwd().startsWith(TOOLKIT) ? process.cwd() : TOOLKIT, work); remember(mainOf(dir), process.env.CLAUDE_CODE_SESSION_ID, slug(work)); console.log(dir); } catch (e) { console.error(String(e.stderr || e.message).trim()); process.exit(1); }
+  const work = process.argv.slice(2).find((a) => !a.startsWith('--'));
+  if (!work) { console.error('usage: worktree.mjs <work> [--join]   (a short name for the work, e.g. check-cache; --join shares a worktree a running session holds)'); process.exit(2); }
+  try {
+    const from = process.cwd().startsWith(TOOLKIT) ? process.cwd() : TOOLKIT, main = mainOf(from), me = process.env.CLAUDE_CODE_SESSION_ID;
+    const others = await claimedBy(main, slug(work), me);
+    if (others.length && !process.argv.includes('--join')) { console.error(`${slug(work)} is in use by ${others.join(', ')}: pick another name for this work, or ask that session (--join shares the folder anyway)`); process.exit(1); }
+    const dir = ensure(from, work); remember(main, me, slug(work)); console.log(dir);
+  } catch (e) { console.error(String(e.stderr || e.message).trim()); process.exit(1); }
 }
