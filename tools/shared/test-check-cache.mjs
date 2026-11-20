@@ -18,10 +18,12 @@ fs.writeFileSync(path.join(repo, 'bin', 'check'), `#!/bin/sh
 echo run >> "${count}"
 [ -n "\${SLOW:-}" ] && sleep 2
 [ -n "\${HEAL:-}" ] && echo healed >> "${repo}/a.txt"
+[ -n "\${FAILME_IF_STRAY:-}" ] && [ -f stray.txt ] && { echo "== 1 FAILED (stray)"; exit 1; }
 if [ -n "\${FAILME:-}" ]; then echo "== 1 FAILED (detail above each):"; exit 1; fi
 echo "green: every check passed"
 `, { mode: 0o755 });
 fs.writeFileSync(path.join(repo, 'a.txt'), 'a\n');
+fs.writeFileSync(path.join(repo, '.gitignore'), '.claude/\n');
 const git = (...a) => execFileSync('git', ['-C', repo, ...a], { stdio: 'ignore' });
 git('init', '-q'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'add', '.'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'one');
 
@@ -40,13 +42,17 @@ assert.match(r.stderr, /was checked at \d\d:\d\d/, 'and says it is a reused resu
 assert.equal(r.status, 0);
 
 check(['--no-fix']);
-assert.equal(runs(), 2, '--no-fix, the pre-push check, always runs');
-check(['--no-fix']);
-assert.equal(runs(), 3, 'and is never recorded');
+assert.equal(runs(), 1, '--no-fix reads the same tree the same way: the full run\'s record answers it');
 check([], { TOOLKIT_CHECK_FRESH: '1' });
-assert.equal(runs(), 4, 'TOOLKIT_CHECK_FRESH always runs');
+assert.equal(runs(), 2, 'TOOLKIT_CHECK_FRESH always runs');
 check(['--quick']);
-assert.equal(runs(), 5, 'other options are another record');
+assert.equal(runs(), 3, 'a quick run is another record');
+check(['--quick']);
+assert.equal(runs(), 3, 'and is reused in turn');
+check(['--quick', '--no-fix']);
+assert.equal(runs(), 3, 'quick with --no-fix is still quick');
+check([], { TOOLKIT_CHECK_FRESH: '1' }); check([], { TOOLKIT_CHECK_FRESH: '1' });
+assert.equal(runs(), 5, '(two fresh runs to keep the counts below)');
 
 fs.writeFileSync(path.join(repo, 'new.txt'), 'x');
 check(); check();
@@ -81,6 +87,28 @@ await new Promise((res) => (first.exitCode !== null ? res() : first.on('close', 
 assert.equal(runs(), 13, 'a queued run on the same tree is answered by the run it waited for');
 assert.match(r.stderr, /waiting for bin\/check/, 'after waiting for it');
 assert.match(r.stdout, /^green/m);
+
+// --commit: the commit as committed, in a clean temporary worktree, whatever any working tree holds
+fs.writeFileSync(path.join(repo, 'a.txt'), 'f\n'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', 'six');
+fs.writeFileSync(path.join(repo, 'stray.txt'), 'another session, half-written');
+const at = (env = {}) => spawnSync('node', [CACHE, '--commit', repo, 'HEAD'], { env: { ...base, ...env }, encoding: 'utf8' });
+r = at({ FAILME_IF_STRAY: '1' });
+assert.equal(r.status, 0, 'an uncommitted file in the checkout cannot decide the commit\'s check');
+assert.equal(runs(), 14, 'the commit is checked once');
+assert.equal(fs.readdirSync(path.join(repo, '.claude', 'worktrees')).length, 0, 'and its temporary worktree is gone');
+r = at();
+assert.equal(runs(), 14, 'a commit already checked green is answered from the record');
+assert.match(r.stdout, /^green/m);
+fs.rmSync(path.join(repo, 'stray.txt'));
+
+// --quick takes no lock: it runs while a full run holds it
+fs.writeFileSync(path.join(repo, 'a.txt'), 'g\n'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', 'seven');
+const slow = spawn('node', [CACHE, repo], { env: { ...base, SLOW: '1', TOOLKIT_CHECK_FRESH: '1' }, stdio: 'ignore' });
+for (let i = 0; i < 100 && runs() < 15; i++) await new Promise((res) => setTimeout(res, 50));
+const t0 = Date.now();
+r = check(['--quick'], { TOOLKIT_CHECK_FRESH: '1' });
+assert.ok(Date.now() - t0 < 1500 && !/waiting for/.test(r.stderr), 'a quick run does not wait for the lock');
+await new Promise((res) => (slow.exitCode !== null ? res() : slow.on('close', res)));
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-check-cache: passed');

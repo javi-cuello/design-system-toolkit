@@ -9,11 +9,15 @@
 # is an absolute path to the main checkout's hooks, so the hook's own folder
 # would check the main checkout's tree from every worktree — another
 # session's unfinished work there refused a push it did not carry (2026-11-04)
+REFS=$(cat)
 REPO="$(git rev-parse --show-toplevel 2>/dev/null)" || REPO=""
 [ -n "$REPO" ] || REPO="$(cd "$(dirname "$0")/.." && pwd)"
-# --no-fix: a heal rewrites the working tree, not the commit being pushed.
-# The check reads the working tree, so an uncommitted change counts too: push
-# from a tree holding only what you committed.
+# The commit pushed is checked as committed, in a clean temporary worktree
+# (tools/shared/check-cache.mjs --commit), never the working tree: until
+# 2026-11-20 the working tree was checked, so another session's half-written
+# file turned a push red that did not carry it. A commit already checked green
+# (a landing, or the same tree pushed before) is answered from the record. Only
+# each pushed tip is checked: its tree is what the remote ends up holding.
 # The whole output is kept: a red that does not recur is unreadable once it
 # scrolls away, and one did (2026-10-30).
 # Commit messages reach everyone the repo is shared with, and no file check
@@ -35,11 +39,14 @@ if [ -n "$NAMES" ]; then
 "
     done
     [ -z "$HITS" ] || { printf 'pre-push: these commit messages name a project, so the push is refused (reword them):\n%s\n' "$HITS"; exit 1; }
-  done
+  done <<REFS_END
+$REFS
+REFS_END
 fi
 LOG="$(git rev-parse --git-dir)/pre-push.log"
-rm -f "$LOG.status"
-{ "$REPO/bin/check" --no-fix; echo $? > "$LOG.status"; } 2>&1 | tee "$LOG"
-# another session's uncommitted or unpushed work is named with its session, so the blocked one messages it
-[ "$(cat "$LOG.status")" = 0 ] || { echo "pre-push: bin/check failed, whole output in $LOG; push refused (git push --no-verify to override)"; node "$REPO/tools/claude-hooks/owners.mjs" "$REPO"; exit 1; }
+for TIP in $(printf '%s\n' "$REFS" | awk '$2 ~ /[^0]/ { print $2 }' | sort -u); do
+  rm -f "$LOG.status"
+  { node "$REPO/tools/shared/check-cache.mjs" --commit "$REPO" "$TIP"; echo $? > "$LOG.status"; } 2>&1 | tee "$LOG"
+  [ "$(cat "$LOG.status")" = 0 ] || { echo "pre-push: bin/check failed on $(git log -1 --format='%h %s' "$TIP"), whole output in $LOG; push refused (git push --no-verify to override)"; exit 1; }
+done
 exit 0
