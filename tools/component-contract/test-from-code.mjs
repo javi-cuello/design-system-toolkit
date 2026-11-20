@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, modeKeysOf, shownRead } from './from-code.mjs';
+import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -246,4 +246,23 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const k = modeKeysOf([{ key: 'theme' }, { key: 'color-palette' }], c);
   ok('the mode keys read are the tokens\' axes and every key the contract sets a mode under, a collection the tokens lack (its own slug) and one a variant sets included',
     ['theme', 'color-palette', 'color-palette-1', 'color-palette-2'].every((x) => k.includes(x)) && k.length === 4 && modeKeysOf([{ key: 'theme' }], null).join() === 'theme'); }
+{ // stacking first on top per combination, where the children cannot overlap
+  const design = { props: { size: { type: 'enum', values: ['md', 'sm'], default: 'md' }, open: { type: 'boolean', default: false } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, firstOnTop: true } }, bar: { kind: 'container', parent: 'root', layout: { direction: 'row', firstOnTop: true } },
+      tip: { kind: 'container', parent: 'root', layout: { direction: 'row', firstOnTop: true } }, free: { kind: 'container', parent: 'root', layout: { direction: 'row', firstOnTop: true } } },
+    variants: [{ when: { size: 'sm' }, set: { 'root.layout': { direction: 'row', gap: 0, firstOnTop: true }, 'bar.layout': { direction: 'column' } } },
+      { when: { open: true }, add: { pop: { kind: 'container', parent: 'root', layout: { direction: 'column', firstOnTop: true } } } },
+      { when: { size: 'sm', open: true }, set: { 'pop.layout': { direction: 'column' } } }] };
+  const code = { props: structuredClone(design.props),
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0 } }, bar: { kind: 'container', parent: 'root', layout: { direction: 'row' } },
+      free: { kind: 'container', parent: 'root', layout: { direction: 'row' } }, ring: { kind: 'container', parent: 'free', position: 'absolute' } },
+    variants: [{ when: { size: 'sm' }, set: { 'root.layout': { direction: 'row', gap: 4 } } },
+      { when: { open: true }, add: { pop: { kind: 'container', parent: 'root', layout: { direction: 'column', firstOnTop: true } }, tip: { kind: 'container', parent: 'root', layout: { direction: 'row' } } } }] };
+  stackLikeDesign(code, design, (t) => t);
+  const combos = ['md', 'sm'].flatMap((size) => [true, false].map((open) => ({ size, open })));
+  const fot = (c, w, id) => { const x = expand(c, w)[id]; return x && x.layout ? !!x.layout.firstOnTop : undefined; };
+  ok('stacking first on top is the design\'s at every combination where the children cannot overlap: a layout a variant sets whole, a part only a variant adds, and none where the design stacks none there; a part with a loose absolute child keeps its own',
+    combos.every((w) => ['root', 'bar', 'tip', 'pop'].every((id) => fot(code, w, id) === undefined || fot(code, w, id) === fot(design, w, id)))
+    && fot(code, { size: 'sm', open: false }, 'root') === true && fot(code, { size: 'md', open: true }, 'tip') === true && fot(code, { size: 'sm', open: true }, 'pop') === false
+    && combos.every((w) => fot(code, w, 'free') === false)); }
 console.log(`${n}/${n} passed`);

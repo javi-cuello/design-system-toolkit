@@ -329,6 +329,60 @@ export function zeroTokens(e, fe, value, { fill = false } = {}) {
   return e;
 }
 
+/* Stacking first on top as the design does, where the code's children cannot overlap (no gap below 0 at any
+   combination, read by the number it leads with: 16px, a token written 16px (1rem); none placed absolutely where the
+   design places none): then the order they paint in shows nowhere and the code renders the same either way. Held per combination the design draws, on what each combination expands to,
+   so a part a variant adds, a layout a variant sets whole and one the design stacks at some props only all take the
+   design's there and no other: each layout the contract writes takes what its combinations want, and a combination
+   that wants otherwise than the rest of its layout's gets a layer of its own. `code` is changed in place. */
+export function stackLikeDesign(code, design, value) {
+  const val = (t) => (typeof t === 'string' && t.includes('/') ? value(t) : t);
+  const axes = Object.entries(design.props || {}).filter(([, q]) => q.type === 'enum' || q.type === 'boolean').map(([k, q]) => [k, q.type === 'enum' ? q.values : [true, false]]);
+  let combos = [{}];
+  for (const [k, vs] of axes) combos = combos.flatMap((c) => vs.map((v) => ({ ...c, [k]: v })));
+  combos = combos.filter((c) => !(design.invalid || []).some((w) => Object.entries(w).every(([k, v]) => String(c[k]) === String(v))));
+  const vars = code.variants || (code.variants = []);
+  // a child placed absolutely where the design places none (a focus ring the design places too paints as it stacks it)
+  const placedToo = (cid) => [design.anatomy || {}, ...(design.variants || []).map((v) => v.add || {})].some((a) => (a[cid] || {}).position === 'absolute');
+  const loose = (id) => [code.anatomy, ...vars.map((v) => v.add || {})].some((a) => Object.entries(a).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)))
+    || vars.some((v) => Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && ((code.anatomy[f.slice(0, -9)] || {}).parent === id) && !placedToo(f.slice(0, -9))));
+  // every layout the contract writes, marked so each combination's expanded layout names the one it came from
+  const sources = [];
+  const mark = (l) => { if (!l || typeof l !== 'object') return; if (!sources.includes(l)) sources.push(l); Object.defineProperty(l, '__src', { value: sources.indexOf(l), enumerable: true, configurable: true }); };
+  for (const e of Object.values(code.anatomy)) mark(e.layout);
+  for (const v of vars) { for (const e of Object.values(v.add || {})) mark(e.layout); for (const [k, l] of Object.entries(v.set || {})) if (k.endsWith('.layout')) mark(l); }
+  // each combination in the code's words, as the round trip compares them: its prop of the design's name, its value of the same word in any case
+  const low = (x) => String(x).toLowerCase();
+  const named = Object.fromEntries(Object.entries(code.props || {}).map(([k, q]) => [low(q.figma || k), k]));
+  const theirs = combos.map((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => { const dk = named[low(design.props[k].figma || k)] || k, dq = (code.props || {})[dk]; return [dk, dq && dq.type === 'enum' ? dq.values.find((w) => low(w) === low(v)) ?? v : v]; })));
+  const C = theirs.map((c) => expand(code, { ...variantDefaults(code), ...c })), D = combos.map((c) => expand(design, { ...variantDefaults(design), ...c }));
+  for (const l of sources) delete l.__src;
+  const ids = [...new Set(C.flatMap((x) => Object.keys(x)))];
+  const wants = new Map(); // source → [[combo index, id, want]]
+  for (const id of ids) {
+    if (loose(id) || C.some((x) => x[id] && x[id].layout && x[id].layout.gap != null && !(parseFloat(val(x[id].layout.gap)) >= 0))) continue;
+    C.forEach((x, i) => {
+      const l = x[id] && x[id].layout, dl = D[i][id] && D[i][id].layout;
+      if (!l || !dl || l.__src == null) return;
+      wants.set(l.__src, [...(wants.get(l.__src) || []), [i, id, !!dl.firstOnTop]]);
+    });
+  }
+  const set = (l, w) => { if (w) l.firstOnTop = true; else delete l.firstOnTop; };
+  const own = new Map(); // combo index → its own layer
+  for (const [s, list] of wants) {
+    const yes = list.filter((x) => x[2]).length, w = yes * 2 >= list.length;
+    set(sources[s], w);
+    for (const [i, id, want] of list) {
+      if (want === w) continue;
+      if (!own.has(i)) { const layer = { when: theirs[i], set: {} }; vars.push(layer); own.set(i, layer); }
+      const { __src: _, ...l } = C[i][id].layout;
+      set(l, want);
+      own.get(i).set[`${id}.layout`] = l;
+    }
+  }
+  return code;
+}
+
 /* What a render changes against the default one, as a variant layer's set/add/remove. A field the default has and
    this render lacks (a tertiary button's fill and shadow) is set to null: left undefined, JSON dropped it and the
    drawing kept the default's. */
@@ -2201,25 +2255,8 @@ async function main() {
           if (fe) { zeroFill(holder, fe); v.set[k] = holder.layout; }
         }
       }
-      // stacking first on top, as the design does, where the children cannot overlap (no negative gap, none placed
-      // absolutely): then the order they paint in shows nowhere, and the code renders the same either way
-      // (a part a variant adds too, against the part the design adds at that same variant, none other: a placed
-      // component's box shown by a prop)
-      for (const [id, e, fe] of [...Object.entries(fromCode.anatomy).map(([id, e]) => [id, e, figmaContract.anatomy[id]]),
-        ...(fromCode.variants || []).flatMap((v) => { const dv = (figmaContract.variants || []).find((x) => sameWhen(x.when, v.when)); return Object.entries(v.add || {}).map(([id, e]) => [id, e, dv && (dv.add || {})[id]]); })]) {
-        if (!fe || !fe.layout || !fe.layout.firstOnTop || !e.layout || e.layout.firstOnTop) continue;
-        const gap = e.layout.gap == null ? 0 : Number(val(e.layout.gap));
-        // in any variant: a gap it sets below 0, or a child it adds or places absolutely where the design does not
-        // (a layer the design places too, a focus ring over the box, paints as the design stacks it)
-        const placedToo = (cid) => [figmaContract.anatomy, ...(figmaContract.variants || []).map((v) => v.add || {})].some((a) => (a[cid] || {}).position === 'absolute');
-        const loose = [fromCode.anatomy, ...(fromCode.variants || []).map((v) => v.add || {})].some((a) => Object.entries(a).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)))
-          || fromCode.variants.some((v) => [(v.set || {})[`${id}.layout.gap`], ((v.set || {})[`${id}.layout`] || {}).gap].some((g) => g != null && !(Number(val(g)) >= 0)) ||Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && (fromCode.anatomy[f.slice(0, -9)] || {}).parent === id && !placedToo(f.slice(0, -9))) || Object.entries(v.add || {}).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)));
-        if (gap >= 0 && !loose) {
-          e.layout.firstOnTop = true;
-          // a variant that sets the whole layout (another padding at another size) stacks the same, where the design stacks it so there
-          for (const v of fromCode.variants) { const l = (v.set || {})[`${id}.layout`]; if (l && typeof l === 'object' && ((designOf(id, v.when) || {}).layout || {}).firstOnTop) l.firstOnTop = true; }
-        }
-      }
+      // stacking first on top, as the design does, at each combination, where the children cannot overlap
+      stackLikeDesign(fromCode, figmaContract, L.value);
       // an opacity the code writes raw (0.5 when disabled) takes the design's opacity token that holds it, where exactly
       // one the design uses does (its tokens hold percentages: 50 is 0.5, never 0.5%)
       const opacities = new Set();
