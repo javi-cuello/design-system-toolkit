@@ -20,7 +20,7 @@ Each project is its own entry in the client's config.
 | Tool | What it returns |
 |---|---|
 | `overview` | the project, its components and totals |
-| `search` | components, tokens and styles by name or text |
+| `search` | components by name or guidance text, tokens and styles by name |
 | `get_contract` | a component's contract: what to read before writing its markup |
 | `validate` | generated code checked against the library and its contracts |
 | `get_component` | one component's page in full |

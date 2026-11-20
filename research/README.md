@@ -16,7 +16,7 @@ A curated set of editorial articles on how design systems are built. Each piece 
 - The page computes the reading time from the text at 238 words a minute (Brysbaert 2019), so no one types it.
 - An article reads in 20 minutes or less: 4,760 words, not counting figures and comments. `bin/check` refuses a longer article updated after 2026-11-17. Bring a long one under the limit the next time it is worked on.
 - What does not fit becomes a second article on its own question, or Part 1 and Part 2 of one question. Each part stays under 20 minutes and links to the other. Evidence can also go to the knowledge base, with the article linking to it.
-- Retired pieces go to `_archive/<date>/`, never deleted. [REFERENCE.md](REFERENCE.md#retired-articles) lists them.
+- Retired pieces go to `_archive/<date>/`, never deleted. [REFERENCE.md](REFERENCE.md#retired-articles) notes some.
 
 The `design-system-research` skill reads this file before writing a deep-mode guide. The knowledge base never links to these articles.
 
