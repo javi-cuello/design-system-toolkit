@@ -304,6 +304,7 @@
       "semantic": "name of the semantic variable collection, or a list of names (project)",
       "spacing": "spacing scale values (project)",
       "radius": "radius scale values (project)",
+      "sizing": "size scale values for min and max width and height (project)",
       "allowedKeys": "variable collection keys a binding may come from (project)",
       "brandGroup": "path group in the source library whose child names the brand, `<brandGroup>/<brand>/...`; the extension check reads it (project)",
       "textRole": "the token path segment a text layer's fill binds to (figma-standard rule 28)",

@@ -48,6 +48,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
     settingsNotes.push("tokens."+k+" ignored (not a list of numbers)");return null;};
   const SPACING=scaleOf("spacing"), COLL=TOK.semantic?[].concat(TOK.semantic):null, TEXTROLE=TOK.textRole||null;
   const RADIUS=scaleOf("radius");
+  const SIZING=scaleOf("sizing");
   const sizeSeen={}; // size name -> [{set, height}], compared across sets after the walk
   // The collection KEYS a binding may come from — discovery's `allowedKeys`,
   // a list or the object FCA.discover returns. Names are not unique across
@@ -67,7 +68,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const SAY={paddingTop:"top padding",paddingRight:"right padding",paddingBottom:"bottom padding",paddingLeft:"left padding",
     topLeftRadius:"top-left radius",topRightRadius:"top-right radius",bottomLeftRadius:"bottom-left radius",bottomRightRadius:"bottom-right radius",
     strokeTopWeight:"top",strokeBottomWeight:"bottom",strokeLeftWeight:"left",strokeRightWeight:"right",
-    fontFamily:"font family",fontSize:"font size",fontStyle:"font weight"};
+    fontFamily:"font family",fontSize:"font size",fontStyle:"font weight",
+    minWidth:"minimum width",maxWidth:"maximum width",minHeight:"minimum height",maxHeight:"maximum height"};
   const RAW={spacing:"so a change to the spacing tokens never reaches it",radius:"so a change to the radius tokens never reaches it",
     colour:"so it ignores the theme's modes and every colour change made in the library",type:"so a change to the type tokens never reaches it",
     stroke:"so a change to the stroke tokens never reaches it"};
@@ -241,6 +243,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // floor (WCAG 1.4.3, figma-standard rule 32).
       let curV=null, curDisabled=false; const contrast={};
       const overlay={};
+      const fixedText={}, offPaint={}, orphan={};
       const walk=async(n,path,par)=>{
         if(n.type==="SLOT") return;
         M.nodes++;
@@ -263,6 +266,28 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         if(n.visible===false&&!(n.componentPropertyReferences&&n.componentPropertyReferences.visible)&&!shown.has(at))
           F.push({sev:"hygiene",rule:"structure",key:"structure|hidden|"+at,text:'"'+n.name+'" is hidden in every variant and no property shows it, so it ships in every instance and nobody can turn it on',
             advice:"Delete the layer, or wire its visibility to a boolean property if people should be able to show it."});
+        // Text with a fixed height clips a longer label or a translation instead of
+        // growing (probes.js §3.10f, moved here 2026-11-20). textAutoResize alone
+        // decides; FILL in auto layout grows with its parent, and a truncation is a choice.
+        if(n.type==="TEXT"&&n.textAutoResize==="NONE"&&n.layoutSizingVertical!=="FILL"&&n.textTruncation!=="ENDING"&&!(typeof n.maxLines==="number"&&n.maxLines>0)){
+          const e=(fixedText[at]=fixedText[at]||{name:n.name,w:Math.round(n.width),h:Math.round(n.height),variants:[]}); e.variants.push(curV); }
+        // A paint, stroke or effect switched off in the panel still carries its colour
+        // and binding into Dev Mode and generated code (probes.js §3.10a).
+        if(n.type!=="INSTANCE") for(const prop of ["fills","strokes","effects"]){ const arr=n[prop];
+          if(Array.isArray(arr)&&arr.some(x=>x&&x.visible===false)){ const k=at+"|"+prop; const e=(offPaint[k]=offPaint[k]||{name:n.name,prop,variants:[]}); e.variants.push(curV); } }
+        // An instance whose main component cannot be resolved, or sits outside the
+        // document with no publish key, stops receiving updates while it keeps looking
+        // right (probes.js §3.10d). A remote main with a key is not judged: proving it
+        // gone means importing it, and the scanner writes nothing to the file.
+        if(n.type==="INSTANCE"&&typeof n.getMainComponentAsync==="function"){
+          const m=await n.getMainComponentAsync().catch(()=>null);
+          if(!m||(!m.parent&&!m.key)){ const e=(orphan[at]=orphan[at]||{name:n.name,variants:[]}); e.variants.push(curV); } }
+        // min/max width and height are layout constraints a size token should hold;
+        // fixed geometry (an icon, a ring) is drawn, not constrained, so only these four are read.
+        if(n.type!=="INSTANCE") for(const k of ["minWidth","maxWidth","minHeight","maxHeight"])
+          if(typeof n[k]==="number"&&n[k]>0&&!b(n,k)) F.push({sev:"warning",rule:"tokens",key:"tokens|"+k+"|"+at,
+            text:n.name+" has a raw "+SAY[k]+" of "+n[k]+onScale(n[k],SIZING,"sizing")+", so a change to the size tokens never reaches it",
+            advice:bindTo(SAY[k],n[k],SIZING,"sizing")});
         if(n.type!=="INSTANCE"){
           if("layoutMode" in n&&n.layoutMode!=="NONE"){
             // An off-scale padding of the settings' mechanismPadding or more is
@@ -426,6 +451,19 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         hidden=new Set();
         for(const h of (v.findAll?v.findAll(x=>x.opacity===0&&b(x,"opacity")):[])){ const t=await resolveVar(h.boundVariables.opacity.id); if(t&&t.zero) hidden.add(h); }
         shade(v,"",null); }
+      const nV=n=>n+" variant"+(n===1?"":"s");
+      for(const [at,e] of Object.entries(fixedText))
+        F.push({sev:"warning",rule:"structure",visible:true,key:"structure|fixed-text|"+at,
+          text:'Text "'+e.name+'" is fixed at '+e.w+"\u00d7"+e.h+" in "+nV(e.variants.length)+", so a longer label or a translation is clipped instead of growing \u2014 e.g. "+e.variants.slice(0,3).join("; "),
+          advice:"Set its resizing to Auto width or Auto height, or Fill in auto layout; truncate it only on purpose."});
+      for(const [k,e] of Object.entries(offPaint)){ const what={fills:"fill",strokes:"stroke",effects:"effect"}[e.prop];
+        F.push({sev:"hygiene",rule:"structure",key:"structure|disabled-paint|"+k,
+          text:'"'+e.name+'" keeps a switched-off '+what+" in "+nV(e.variants.length)+", which still carries its colour and binding into Dev Mode and generated code \u2014 e.g. "+e.variants.slice(0,3).join("; "),
+          advice:"Delete the switched-off "+what+"."}); }
+      for(const [at,e] of Object.entries(orphan))
+        F.push({sev:"error",rule:"structure",key:"structure|orphan|"+at,
+          text:'"'+e.name+'" is an instance of a component that is gone from the file, so it no longer receives updates while it keeps looking right \u2014 e.g. '+e.variants.slice(0,3).join("; "),
+          advice:"Swap it for the component it should be, or detach it if it was meant to be drawn here."});
       // figma-standard rule 50: a library meant to mirror keeps order in auto
       // layout and names sides by role. Only with rtlLanguages: a project that
       // never mirrors gets none of these, since every library has a left padding.
@@ -682,6 +720,33 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             text:v.name+" binds another state's token ("+wrong.slice(0,3).join("; ")+"), so it shows the wrong state's colour",
             advice:"Bind the "+q[SAXIS]+" token, or remove the binding if that layer should not change in this state."});}
       }
+      // A state the set draws for some combinations of its other axes and not for
+      // others (probes.js §3.5d, within one set: the set's own pattern is the
+      // baseline, never a fixed table). Disabled variants are set aside, since a
+      // disabled component takes no hover, press or focus. A gap may be a decision,
+      // so it is a question (bucket 3); a missing Focus is one a keyboard user meets.
+      if(set.type==="COMPONENT_SET"&&SAXIS&&defs[SAXIS]){
+        const DA=TOK.disabledAxis;
+        const live=vs.map(v=>variantValues(v.name)).filter(q=>q[SAXIS]&&!(DA&&String(q[DA]).toLowerCase()==="true"));
+        const others=q=>Object.keys(q).filter(k=>k!==SAXIS&&k!==DA).sort();
+        const combo=q=>others(q).map(k=>k+"="+q[k]).join(", ");
+        const groups={}, rowOf={};
+        for(const q of live){ const g=combo(q); (groups[g]=groups[g]||new Set()).add(q[SAXIS]); rowOf[g]=q; }
+        const all=new Set(live.map(q=>q[SAXIS]));
+        // A state drawn only in its own row, one axis away (Focus only as Menu=True),
+        // is coupled to that axis, so the row without it is not missing it.
+        const coupled=(q,st)=>others(q).some(k=>Object.keys(groups).some(g2=>{ const r=rowOf[g2];
+          return r[k]!==q[k]&&others(q).every(j=>j===k||r[j]===q[j])&&groups[g2].size===1&&groups[g2].has(st); }));
+        if(Object.keys(groups).length>1) for(const [g,have] of Object.entries(groups)){
+          // A combination drawing one state only is a static row by design (a disabled row
+          // where the settings name no disabled axis, or a coupled row): only a row with two or more is judged.
+          if(have.size<2) continue;
+          const miss=[...all].filter(x=>!have.has(x)&&!coupled(rowOf[g],x));
+          if(miss.length) F.push({sev:"warning",rule:"states",visible:true,key:"states|gap|"+g,
+            text:g+" has no "+miss.join(", ")+" variant, though the set draws "+(miss.length>1?"them":"it")+" for its other combinations, so an instance set to "+g+" cannot show "+(miss.length>1?"those states":"that state")+(TOK.focusState&&miss.includes(TOK.focusState)?", and a keyboard user loses sight of focus there":""),
+            advice:"Add the "+miss.join(", ")+" variant"+(miss.length>1?"s":"")+" for "+g+", or record why that combination does without."});
+        }
+      }
       // Interactive components: a set with the state axis. Three WCAG checks
       // a library can make before anything is built, each skipped without
       // its setting.
@@ -848,6 +913,32 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         advice:'Rename the component "'+set.name.trim().replace(/\s{2,}/g," ")+'".'});
       if(TOK.propertyCase==="sentence"&&capsInside(set.name)) F.push({sev:"preference",rule:"naming",key:"naming|component-case",text:'Component name "'+set.name+'" is not in sentence case, so it reads unlike the rest of the assets panel and unlike the name code takes from it',
         advice:"Rename it in sentence case, keeping acronyms in capitals."});
+      // An axis with one option offers no choice (probes.js schemaFindings). Removing
+      // it changes the component's API, so it is a question, marked breaking.
+      for(const [k,d] of Object.entries(defs)) if(d.type==="VARIANT"&&(d.variantOptions||[]).length===1)
+        F.push({sev:"warning",rule:"properties",breaking:true,key:"properties|single-option|"+k,
+          text:'Axis "'+k+'" has one option ("'+d.variantOptions[0]+'"), so it offers no choice and still adds a row to the properties panel and a prop to code',
+          advice:"Remove the axis, or add the options it was meant to hold; removing it is breaking for code that sets it."});
+      // An axis whose every pair of variants differing on it alone differs only in
+      // which layers show is a boolean drawn as variants (probes.js §3.10e): it
+      // doubles the grid. One pair proves nothing; every pair must agree.
+      if(set.type==="COMPONENT_SET"){
+        const vsig=v=>{const out=[];(function g(n,d,path){ if(n.type==="INSTANCE"||d>6) return;
+            if(d>0) out.push(path+"|"+n.name+"|"+n.type+"|"+(n.visible!==false));
+            if(n.children) n.children.forEach((c,i)=>g(c,d+1,path+"/"+i)); })(v,0,""); return out;};
+        const rows=vs.map(v=>({props:variantValues(v.name),sig:vsig(v)})), tally={};
+        for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++){ const a=rows[i],c=rows[j];
+          const keys=[...new Set(Object.keys(a.props).concat(Object.keys(c.props)))], diff=keys.filter(k=>a.props[k]!==c.props[k]);
+          if(diff.length!==1) continue;
+          const t=(tally[diff[0]]=tally[diff[0]]||{pairs:0,hits:0}); t.pairs++;
+          if(a.sig.length!==c.sig.length) continue;
+          const dd=a.sig.map((x,k)=>[x,c.sig[k]]).filter(([x,y])=>x!==y);
+          if(dd.length&&dd.every(([x,y])=>x.slice(0,x.lastIndexOf("|"))===y.slice(0,y.lastIndexOf("|")))) t.hits++; }
+        for(const [axis,t] of Object.entries(tally)) if(axis!==SAXIS&&t.pairs&&t.hits===t.pairs)
+          F.push({sev:"warning",rule:"properties",breaking:true,key:"properties|visibility-axis|"+axis,
+            text:'Axis "'+axis+'" only shows or hides layers, so it doubles the variant grid where a boolean property would do the same',
+            advice:"Replace it with a boolean property wired to those layers' visibility; this is breaking for instances and code that set the axis."});
+      }
       // Option ORDER against the recorded scale. Membership is not checked: a set
       // uses whichever subset of the scale it needs, and a missing step is a
       // coverage question, not an ordering one.

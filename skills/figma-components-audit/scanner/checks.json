@@ -134,13 +134,15 @@
      "tier": "review",
      "who": "agent",
      "text": "An axis with a single option — no choice offered, usually a remnant, but removing one is breaking",
-     "status": "backlog"
+     "status": "scanner",
+     "note": "audit.js properties|single-option| (breaking, bucket 3), from probes.js schemaFindings, 2026-11-20."
     },
     {
      "tier": "review",
      "who": "agent",
      "text": "An axis whose only effect is toggling one subtree's visibility should be a boolean",
-     "status": "backlog"
+     "status": "scanner",
+     "note": "audit.js properties|visibility-axis| (breaking, bucket 3): every pair differing on the axis alone differs only in visibility; from probes.js §3.10e, 2026-11-20."
     },
     {
      "tier": "review",
@@ -185,7 +187,8 @@
      "tier": "review",
      "who": "agent",
      "text": "Coverage against the archetype — a state missing library-wide is conformance, missing on one component is a question",
-     "status": "backlog"
+     "status": "scanner",
+     "note": "audit.js states|gap|: within one set, a state drawn for some combinations of the other axes and not others, disabled variants aside; the archetype half (a state missing library-wide) is still the knowledge pages' (step 4b). From probes.js §3.5d, 2026-11-20."
     }
    ]
   },
@@ -198,7 +201,8 @@
      "tier": "warning",
      "who": "scanner",
      "text": "<b>Text hugs vertically.</b> A fixed-height text node clips instead of reflowing — invisible at rest, and it fails in the locale nobody tested",
-     "status": "backlog"
+     "status": "scanner",
+     "note": "audit.js structure|fixed-text| (visible): textAutoResize NONE, not FILL, not truncating; from probes.js §3.10f, 2026-11-20."
     },
     {
      "tier": "warning",
@@ -224,7 +228,8 @@
      "tier": "warning",
      "who": "scanner",
      "text": "An instance whose main component no longer exists — it keeps looking correct while it stops receiving updates",
-     "status": "backlog"
+     "status": "scanner",
+     "note": "audit.js structure|orphan|: main unresolvable, or outside the document with no key; a remote main with a key is not judged, since proving it gone means importing it. From probes.js §3.10d, 2026-11-20."
     },
     {
      "tier": "error",
@@ -274,7 +279,8 @@
      "tier": "hygiene",
      "who": "scanner",
      "text": "Disabled paints, strokes and effects: switched off in the panel, still in the array carrying a colour and a binding",
-     "status": "backlog"
+     "status": "scanner",
+     "note": "audit.js structure|disabled-paint|; from probes.js §3.10a, 2026-11-20."
     }
    ]
   },
