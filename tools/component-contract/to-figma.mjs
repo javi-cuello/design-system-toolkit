@@ -548,7 +548,9 @@ const RUNTIME = async (P, K, page = figma.currentPage, made = [], started = glob
         if (to) n.setProperties({ [key]: to.id }); else missing.add(`${k}=${v} (its key would not import)`);
         continue;
       }
-      try { n.setProperties({ [key]: defs[key].type === 'BOOLEAN' ? v === true || v === 'True' || v === 'true' : String(v) }); } catch (err) { missing.add(`${e.component} ${k}=${v} (${err.message})`); }
+      // (a boolean word as the axis spells it: a reading says True where the design's axis says true; the same value)
+      const opts = defs[key].variantOptions || [], word = opts.includes(String(v)) ? String(v) : opts.find((o) => /^(true|false)$/i.test(o) && o.toLowerCase() === String(v).toLowerCase()) || String(v);
+      try { n.setProperties({ [key]: defs[key].type === 'BOOLEAN' ? v === true || v === 'True' || v === 'true' : word }); } catch (err) { missing.add(`${e.component} ${k}=${v} (${err.message})`); }
     }
   };
   // an instance inside another made the component the contract names, at the variant its props choose
