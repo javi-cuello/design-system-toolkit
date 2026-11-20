@@ -175,6 +175,8 @@ const plugin = ({ fileKey, store = {} }) => {
   ok('nothing selected, or nothing a component, is the whole file', selectedSets([]).length === 0 && selectedSets([frame]).length === 0);
   const scoped = report(Object.assign({}, r, { scope: ['Button', 'Chip'] }), { fileName: 'X', fileKey: 'K', date: 'd' });
   ok('a selection run says its scope, and that the rest was not looked at', /- Scope: the selection only, 2 components \(Button, Chip\); every other component, and the file-level checks, were not looked at/.test(scoped));
+  ok('a selected set the settings keep out is named as not scanned', /Not scanned, as the settings keep their page or section out of the audit: Chip/.test(report(Object.assign({}, r, { scope: ['Button', 'Chip'], unscanned: ['Chip'] }), { fileName: 'X', fileKey: 'K', date: 'd' })));
+  ok('a selection holding no component says so, not "nothing was selected"', /- Scope: the whole file \(the selection held no component\)/.test(report(Object.assign({}, r, { selectionHeldNone: true }), { fileName: 'X', fileKey: 'K', date: 'd' })));
   ok('a whole-file run says so', /- Scope: the whole file \(nothing was selected\)/.test(report(r, { fileName: 'X', fileKey: 'K', date: 'd' })));
 }
 

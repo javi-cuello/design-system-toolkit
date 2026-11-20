@@ -95,10 +95,13 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const suggest=(paint)=>{
     if(!paint||!paint.color||!PALETTE.length) return null;
     const a=(paint.opacity===undefined?1:paint.opacity)*(paint.color.a===undefined?1:paint.color.a);
-    const pool=COLL&&PALETTE.some(c=>COLL.includes(c.collection))?PALETTE.filter(c=>COLL.includes(c.collection)):PALETTE;
-    let best=null;
+    // the semantic collections first; a colour only a primitive holds is still named
+    const pick=(pool)=>{ let best=null;
     for(const c of pool){ if(Math.abs((c.a===undefined?1:c.a)-a)>0.01) continue; const d=oklabDistance(paint.color,c); if(!best||d<best.d) best={c,d}; }
-    if(!best||best.d>NEAR_COLOUR) return {hex:hex(paint.color,a)};
+      return best&&best.d<=NEAR_COLOUR?best:null; };
+    const sem=COLL?PALETTE.filter(c=>COLL.includes(c.collection)):[];
+    const best=(sem.length&&pick(sem))||pick(PALETTE);
+    if(!best) return {hex:hex(paint.color,a)};
     return {hex:hex(paint.color,a),name:best.c.collection+"/"+best.c.name,exact:best.d<0.002};
   };
   const bindColour=(label,paint)=>{ const s=suggest(paint);
@@ -250,7 +253,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const RAW_KEY=/^tokens\|(padding(Top|Right|Bottom|Left)|grid(Row|Column)Gap|itemSpacing|(top|bottom)(Left|Right)Radius|fill|stroke|strokeWeight|fontFamily|fontSize|fontStyle|minWidth|maxWidth|minHeight|maxHeight)\|/;
   const out=[];
   for(const p of facts.pages){
-    if(p.name!==p.name.trim()) out.push({set:p.name, id:p.id, variants:0, axes:[], described:true, page:p.name,
+    // a page's name is the file's, not a component's: a targeted run leaves it to the full one
+    if(all&&p.name!==p.name.trim()) out.push({set:p.name, id:p.id, variants:0, axes:[], described:true, page:p.name,
       candidates:[{sev:"warning",rule:"naming",key:"naming|page-ws",text:'Page name "'+p.name+'" has a space at its start or end, which nobody sees in the page list and which breaks anything matching the page by name',
         advice:'Rename the page "'+p.name.trim().replace(/\s{2,}/g," ")+'".'}]});
     if(SECTION&&SECTION.test(p.name)) section=p.name;
@@ -1141,7 +1145,8 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       if(c.length){ r.verdict="covered"; r.by=[...new Set(c.map(x=>x.set))]; moved=true; } } } }
   // One size name, one value (figma-standard rule 6's ideal): where sets draw the same
   // name at different heights, each set off the most common height is a review.
-  for(const [o,list] of Object.entries(sizeSeen)){
+  // Across the library only: on a targeted run the few sets walked are no majority.
+  if(all) for(const [o,list] of Object.entries(sizeSeen)){
     const hs=[...new Set(list.map(x=>x.h))]; if(hs.length<2) continue;
     const count={}; for(const x of list) count[x.h]=(count[x.h]||0)+1;
     const ranked=Object.keys(count).map(Number).sort((a,b)=>count[b]-count[a]||a-b);
@@ -1191,13 +1196,14 @@ const colls=await figma.variables.getLocalVariableCollectionsAsync();
 // Each local colour variable's value in its collection's default mode, aliases followed
 // (by mode name, then the target's default), for the raw-colour suggestion.
 const collById=Object.fromEntries(colls.map(c=>[c.id,c]));
-async function colourOf(v,modeName,hops=0){ const c=collById[v.variableCollectionId]||await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId); if(!c) return null;
+async function colourOf(v,modeName,hops=0){ const c=collById[v.variableCollectionId]||await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(()=>null); if(!c) return null;
   const mode=(modeName&&c.modes.find(m=>m.name===modeName))||c.modes.find(m=>m.modeId===c.defaultModeId)||c.modes[0];
   const x=v.valuesByMode[mode.modeId];
   if(x&&x.type==="VARIABLE_ALIAS"){ if(hops>4) return null; const t=await figma.variables.getVariableByIdAsync(x.id).catch(()=>null); return t?colourOf(t,mode.name,hops+1):null; }
   return x&&typeof x.r==="number"?x:null; }
-const colours=[];
-for(const v of await figma.variables.getLocalVariablesAsync("COLOR")){ const x=await colourOf(v); if(x) colours.push({name:v.name,collection:(collById[v.variableCollectionId]||{}).name,r:x.r,g:x.g,b:x.b,a:x.a===undefined?1:x.a}); }
+// a value that cannot be read (an alias into a library the file cannot reach) is left out, never the scan
+const colours=(await Promise.all((await figma.variables.getLocalVariablesAsync("COLOR")).map(async v=>{ const x=await colourOf(v).catch(()=>null);
+  return x?{name:v.name,collection:(collById[v.variableCollectionId]||{}).name,r:x.r,g:x.g,b:x.b,a:x.a===undefined?1:x.a}:null; }))).filter(Boolean);
 const file={
   colours,
   collections:colls.map(c=>({modes:c.modes.map(m=>({name:m.name}))})),

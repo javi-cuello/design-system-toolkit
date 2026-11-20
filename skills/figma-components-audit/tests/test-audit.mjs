@@ -864,8 +864,20 @@ expect("a layer that is the same in every variant still fires when some forget i
     "Bind the fill to Semantic/Background/brand, the closest colour variable to #0369FC, or record why it differs.");
   expect("a colour far from every variable names none, and says so", /^Bind the fill to a colour variable from Semantic\. No colour variable holds #33CC33/.test(await advice(pal, { r: 0.2, g: 0.8, b: 0.2 })), true);
   expect("without the file's colours the advice is the plain one", /^Bind the fill to a colour variable from Semantic\.$/.test(await advice(undefined, blue)), true);
+  expect("a colour only a primitive holds is still named, after the semantic collections", await advice([pal[1], pal[2]], blue),
+    "Bind the fill to Primitives/blue/600, which holds this colour (#0066FF).");
   expect("with no semantic collection named, any collection's variable is offered",
     /Primitives\/blue\/600|Semantic\/Background\/brand/.test(await advice(pal, blue, Object.assign({}, fresh().settings.tokens, { semantic: undefined }))), true);
+}
+
+// ---- A targeted run judges only what it walked ---------------------------
+{
+  const fx = fresh();
+  fx.pages[0].name = " " + fx.pages[0].name;
+  const r = await run(fx, { targets: ["Chip"] });
+  expect("a targeted run raises no page-name row: the page is the file's, not the set's", keyed(r, null, /^naming\|page-ws/).length, 0);
+  expect("nor a size-shared review: a few sets are no majority", keyed(r, null, /^schema\|size-shared\|/).length, 0);
+  expect("and the page-name row is the full run's", keyed(await run(fx), null, /^naming\|page-ws/).length, 1);
 }
 
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");

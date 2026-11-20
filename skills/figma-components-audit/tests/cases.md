@@ -1,6 +1,6 @@
 # Eval cases — figma-components-audit (v2.51.0)
 
-**Walked: 2026-11-20 for 2.51.0** — `node tests/test-audit.mjs` 138 of 138 (A140, A141 new; the 2.50.0 rules' cases, in it since, re-run unchanged), `node tests/test-probes.mjs` 56 of 56 (the text-size probe retired, its assertions now A140's), `node ../../tools/shared/test-colour.mjs` 18 (the OKLab copy held character for character).
+**Walked: 2026-11-20 for 2.51.0** — `node tests/test-audit.mjs` 142 of 142 (A140, A141 new, and a targeted run leaving page names and size-shared to the full run; the 2.50.0 rules' cases, in it since, re-run unchanged), `node tests/test-probes.mjs` 56 of 56 (the text-size probe retired, its assertions now A140's), `node ../../tools/shared/test-colour.mjs` 18 (the OKLab copy held character for character).
 
 **Walked: 2026-11-19 for 2.49.1** — prose only: figma-standard rule 17's tracked metric moves into *Reporting: the fix queue*; the closing-metrics and scoring cases (A24 and the decomposition assertion) re-read against it, unchanged in what they assert; no script reads the moved text.
 
@@ -2024,6 +2024,6 @@ Runs: node tests/test-audit.mjs — "text under minText is one row per layer, se
 
 ## A141 · A raw colour's advice names the colour variable that holds it — WALKED 2026-11-20
 Fixture: the library slice, one `Chip` fill unbound and set raw; `file.colours` with a semantic and a primitive variable of the same colour and a far one.
-Assert: the exact colour names the semantic variable; a near copy names the closest and asks why it differs; a far colour names none and says so; no `file.colours` gives the plain advice; with no semantic collection any collection's variable may be named.
+Assert: the exact colour names the semantic variable; a near copy names the closest and asks why it differs; a far colour names none and says so; no `file.colours` gives the plain advice; a colour only a primitive holds is still named; with no semantic collection any collection's variable may be named.
 Negative: a variable suggested across a visible difference (over OKLab 0.03); a second OKLab conversion beside colour.js's.
-Runs: node tests/test-audit.mjs — "an exact colour names the semantic variable holding it", "a colour a hand's breadth off names the closest, and asks why it differs", "a colour far from every variable names none, and says so", "without the file's colours the advice is the plain one", "with no semantic collection named, any collection's variable is offered"; node ../../tools/shared/test-colour.mjs.
+Runs: node tests/test-audit.mjs — "an exact colour names the semantic variable holding it", "a colour a hand's breadth off names the closest, and asks why it differs", "a colour far from every variable names none, and says so", "without the file's colours the advice is the plain one", "a colour only a primitive holds is still named, after the semantic collections", "with no semantic collection named, any collection's variable is offered"; node ../../tools/shared/test-colour.mjs.
