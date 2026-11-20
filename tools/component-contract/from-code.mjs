@@ -1913,7 +1913,9 @@ async function main() {
         anatomy[id] = x;
       }
       // (as the design's own ring layer where it draws one: ringKeyOf)
-      placeRings(anatomy, ring, L.drawnFrom || figmaContract, (L.drawnFrom || figmaContract) ? comboOf(args, L.drawnFrom || figmaContract) : null);
+      // (the rings and the combination both in the contract the markup was drawn from: drawnFrom is set only on --second,
+      // which runs beside a design, from-code exiting without one; code-only reads have neither, and no combination)
+      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(args, L.drawnFrom || figmaContract) : null);
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
