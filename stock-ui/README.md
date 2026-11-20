@@ -4,7 +4,8 @@ The toolkit's own design system, in code only: one stylesheet and one script tha
 
 | File | What it holds |
 |---|---|
-| `stock-ui.css` | Tokens (colour light and dark, type, space, radius, stroke, focus, control height), the reset with the one reduced-motion block, the base look of plain elements (headings, links, focus, tables, code), and the shared components: button, dialog (`.modal`), badge (`.sev`, `.pill`), figures strip (`.kpis`), sidebar list (`.sidenav`), tabs and toolbar, segmented control (`.segmented`, `.seg`) |
+| `stock-ui.css` | Tokens (colour light and dark, type, space, radius, stroke, focus, control height), the reset with the one reduced-motion block, the base look of plain elements (headings, links, focus, tables, code), and the shared components: button, dialog (`.modal`), badge (`.sev`, `.pill`), figures strip (`.kpis`), sidebar list (`.sidenav`), tabs and toolbar, segmented control (`.segmented`, `.seg`); the page frame: skip link, masthead with name, sections and theme switch, reading column (`.container`), footer, its markup in the comment above it |
+| `frame.js` | The frame's behaviour: the sections' Menu button on a phone, and the masthead's measured height |
 | `theme.js` | The theme switch: System, Light, Dark, remembered in the browser, wired to every `[data-theme-choice]` button |
 
 Who uses it: the docs site and its audit dashboard (`tools/docs-site`, imported by `src/layouts/Base.astro`), the contract editor (`tools/contract-editor`, served by `serve.mjs`), and the audit-lite plugin, whose colour tokens `plugins/audit-lite/sync.mjs` reads from it.
@@ -15,6 +16,7 @@ Load `stock-ui.css` before the surface's own stylesheet. Its first line declares
 
 - A bundler (Vite, Astro, Next.js): import the file by its path in the toolkit.
 - A page served by a toolkit server: serve the file from here, as `tools/contract-editor/serve.mjs` does.
+- Load `frame.js` and `theme.js` at the end of `<body>`.
 - The stored theme is applied before paint by one line in the page's head (`document.documentElement.dataset.theme = localStorage.getItem('theme')`, in a `try`), and `theme.js` wires the buttons.
 
 It is read from the toolkit checkout, so a project that is built or deployed somewhere the toolkit is not cannot load it yet: that needs it published as a package, which has not been done.

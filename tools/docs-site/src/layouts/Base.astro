@@ -91,6 +91,7 @@ const stamp = date(taken) || 'none yet';
 // --accent), both themes, inlined so there is no file to serve.
 const favicon = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#8f4100}@media (prefers-color-scheme:dark){rect{fill:#f17300}}</style><rect width="32" height="32" rx="7"/><text x="16" y="22.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" font-weight="600" fill="#fff">${project.name.trim().charAt(0).toUpperCase().replace(/[<&]/g, '')}</text></svg>`);
 import themeScript from '../../../../stock-ui/theme.js?raw';
+import frameScript from '../../../../stock-ui/frame.js?raw';
 ---
 <!doctype html>
 <html lang={language || "en"}>
@@ -138,7 +139,6 @@ import themeScript from '../../../../stock-ui/theme.js?raw';
           <button type="button" class="button topnav__toggle" aria-expanded="false" aria-controls="topnav-list" hidden>Menu</button>
           <ul id="topnav-list">{sections.map(([key, href, label]) => <li><a href={base + href} aria-current={section === key ? 'true' : undefined}>{label}</a></li>)}</ul>
         </nav>
-        <script is:inline>document.querySelector('[data-menu] > button').hidden = false;</script>
         <div class="segmented theme" role="group" aria-label="Theme">
           {[['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([value, label]) => <button type="button" class="seg" data-theme-choice={value} aria-pressed={value === 'system' ? 'true' : 'false'}>{label}</button>)}
         </div>
@@ -202,6 +202,7 @@ import themeScript from '../../../../stock-ui/theme.js?raw';
     </div>
     <p class="visually-hidden" aria-live="polite" data-announce></p>
     <script is:inline set:html={themeScript} />
+    <script is:inline set:html={frameScript} />
 
     <script is:inline>
     // In a block, so nothing here becomes a global a page's own script (the
@@ -241,19 +242,6 @@ import themeScript from '../../../../stock-ui/theme.js?raw';
         });
       }
 
-      // The sections' Menu button (below 40rem; site.scss hides it wider).
-      // It opens the list under the masthead; Escape, a click outside or
-      // focus leaving close it, Escape returning focus to the button
-      // (menus.md *Hamburger and mobile menus*).
-      const menu = document.querySelector('[data-menu]');
-      const toggle = menu.querySelector('button');
-      const openMenu = (open) => toggle.setAttribute('aria-expanded', String(open));
-      toggle.addEventListener('click', () => openMenu(toggle.getAttribute('aria-expanded') !== 'true'));
-      menu.addEventListener('keydown', (e) => { if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') { openMenu(false); toggle.focus(); } });
-      menu.addEventListener('focusout', (e) => { if (!menu.contains(e.relatedTarget)) openMenu(false); });
-      document.addEventListener('click', (e) => { if (!menu.contains(e.target)) openMenu(false); });
-      matchMedia('(min-width: 40rem)').addEventListener('change', () => openMenu(false));
-
       // A list that is a disclosure on a narrow screen (data-nav, the width
       // at which it opens): open on a wide one, where its summary is hidden
       // and could not reopen it, and closed on a narrow one, so the page
@@ -266,12 +254,6 @@ import themeScript from '../../../../stock-ui/theme.js?raw';
         fit();
       };
       for (const d of document.querySelectorAll('details[data-nav]')) followWidth(d);
-
-      // The masthead's real height, for everything that sits below it (anchors,
-      // the sticky sidebar, the Ask drawer): it wraps differently with the
-      // width, the fonts and the reader's text size.
-      const masthead = document.querySelector('[data-masthead]');
-      new ResizeObserver(() => root.style.setProperty('--masthead', masthead.offsetHeight + 'px')).observe(masthead);
 
       // Theme: System follows the system; Light and Dark are remembered.
       // Platform: a choice shows that platform's components in the sidebar.

@@ -59,34 +59,18 @@ $xxl: 90rem;
     --mode-dark-bg: #141414;
     --mode-dark-fg: #f2f2f2;
     --mode-dark-soft: #a7adbd;
-    // The masthead's height, which anchors, the sticky sidebar and the Ask
-    // drawer start below. Measured by Base.astro's script (--masthead); the
-    // fallbacks are its two rows on a phone and its one from 40rem.
-    --site-header: var(--masthead, 6rem);
     // The "On this page" rail, in the reading column's left gutter.
     --page-nav: 15rem;
-    // The reading column, and the line length prose keeps inside it: in ch,
+    // The line length prose keeps inside the reading column (stock-ui's --column): in ch,
     // so it holds about 70 characters whatever the text's size (visual.md
     // *Typography*: 65–75, never above 80); a rem cap let 14px notes run to
     // 89. A ch is Inter's zero, much wider than its average letter: measured,
     // 60ch let a line reach 83 characters, 55ch holds the longest near 75.
-    --column: 60rem;
     --measure: 55ch;
-  }
-  @include from($sm) {
-    :root { --site-header: var(--masthead, 3.5rem); }
-  }
-  // On a short screen the masthead scrolls away (see .masthead), so nothing
-  // need keep clear of it.
-  @media (max-height: 30rem) {
-    :root { --site-header: 0px; }
   }
 }
 
 @layer base {
-  // A target scrolled to, or a control focused, is never under the masthead.
-  html { scroll-padding-block-start: calc(var(--site-header) + var(--space-16)); }
-
   .visually-hidden {
     position: absolute;
     // 1px, not 0: some screen readers skip an element with no size.
@@ -125,75 +109,8 @@ $xxl: 90rem;
   }
 
   @scope (body) to (.dash) {
-    .shell {
-      display: flex;
-      flex-direction: column;
-      min-block-size: 100svh;
-    }
-    .shell > main { flex: 1; }
-
-    // On a phone the sections and the theme share the second row, in source
-    // order, so what is read and tabbed through is what is seen.
-    .masthead {
-      position: sticky;
-      inset-block-start: 0;
-      z-index: 30;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      grid-template-areas: "brand brand" "nav theme";
-      align-items: center;
-      column-gap: var(--space-12);
-      min-block-size: var(--site-header);
-      padding-inline: var(--space-16);
-      border-block-end: var(--stroke-1) solid var(--line);
-      background: color-mix(in srgb, var(--bg) 90%, transparent);
-      backdrop-filter: blur(8px); // keeps text under the bar unreadable; no design value
-    }
-    // Sticky only where it costs little of the screen: at 320 by 256 two
-    // rows of it were over a third of the height.
-    // Relative, not static, so the open Menu list still hangs from it.
-    @media (max-height: 30rem) { .masthead { position: relative; } }
-    .masthead__brand { grid-area: brand; }
-    // a repo of several design systems: the switch between their sites stands where the name would
-    .masthead__systems { grid-area: brand; justify-self: start; margin-block: var(--space-8); }
-    .masthead__systems .seg { text-decoration: none; }
-    // the group scrolls (overflow-x), which would clip a ring drawn outside the link
-    // inside the current link's 2px inset accent, so the ring shows on it too
-    .masthead__systems .seg:focus-visible { outline-offset: -5px; }
-    .topnav { grid-area: nav; min-inline-size: 0; }
-    .theme { grid-area: theme; }
-
-    // The page grid, stated once: the reading column centred in the space
-    // it has, never nearer the edge than --gutter-min. Every band's content
-    // (the hero's, the page's) sits in this one container. --aside is what a
-    // fixed panel takes from the right edge (the Audits page's Ask drawer),
-    // so the column centres beside it instead of shrinking under it. --rail
-    // is what the page's own sections take on the left: when the space is
-    // tight only the left gutter grows for it, so the column loses one rail's
-    // width, not two.
-    .container {
-      --gutter: max(var(--gutter-min), (100% - var(--aside, 0px) - var(--column)) / 2);
-      margin-inline: max(var(--gutter), var(--rail, 0px)) calc(var(--gutter) + var(--aside, 0px));
-    }
-    main { --gutter-min: var(--space-16); }
+    // The page frame (shell, masthead, container, footer) is stock-ui's.
     .page-body { padding-block: var(--space-32) var(--space-80); }
-
-
-    .site-foot {
-      padding: var(--space-16);
-      border-block-start: var(--stroke-1) solid var(--line);
-      font-size: var(--text-xs);
-      color: var(--fg-soft);
-    }
-
-    @include from($sm) {
-      .masthead {
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        grid-template-areas: "brand nav theme";
-        padding-inline: var(--space-24);
-      }
-      .site-foot { padding-inline: var(--space-24); }
-    }
 
     @include from($lg) {
       .shell--sidebar {
@@ -203,7 +120,6 @@ $xxl: 90rem;
         grid-template-rows: auto 1fr auto;
       }
       .shell--sidebar > :is(.masthead, .site-foot) { grid-column: 1 / -1; }
-      main { --gutter-min: var(--space-48); }
       .page-body { padding-block-start: var(--space-48); }
     }
     // The page's own sections (HIG's section rail, on the left). It sits in
@@ -247,90 +163,13 @@ $xxl: 90rem;
 @layer components {
   @scope (body) to (.dash) {
     // ---- Masthead ------------------------------------------------------------
-
-    .skip-link {
-      position: absolute;
-      inset-inline-start: var(--space-16);
-      inset-block-start: calc(-1 * var(--space-80));
-      z-index: 40;
-      padding: var(--space-8) var(--space-12);
-      border-radius: var(--radius-8);
-      background: var(--fg);
-      color: var(--bg);
-      &:focus { inset-block-start: var(--space-8); }
-    }
-    // The skip link's target takes focus (tabindex -1) so the next Tab starts
-    // in the content; it is not a control, so it draws no ring.
-    main[tabindex="-1"]:focus { outline: 0; }
-
-    .masthead__brand {
-      padding-block: var(--space-12);
-      font-family: var(--font-display);
-      font-size: var(--text-lg);
-      font-weight: var(--weight-semibold);
-      text-decoration: none;
-    }
-
-    // On a phone the sections sit behind a Menu button (Base.astro), and
-    // open as a list hanging under the masthead, over the page (menus.md
-    // *Hamburger and mobile menus*). With no script the button never shows
-    // and the sections scroll in their own row, fading at the edge so it is
-    // plain there are more.
-    .topnav { padding-block-end: var(--space-8); }
-    .topnav ul {
-      display: flex;
-      gap: var(--space-4);
-      margin: 0;
-      padding: 0;
-      overflow-x: auto;
-      list-style: none;
-      scrollbar-width: none;
-      // The fade that says the row scrolls; #000 is the mask's opaque, not a colour.
-      mask-image: linear-gradient(to right, #000 calc(100% - var(--space-32)), transparent);
-    }
-    // The theme switch's compact height, so the row keeps its height.
-    .topnav__toggle { min-block-size: 1.75rem; padding-inline: var(--space-8); font-size: var(--text-xs); }
-    .topnav:has(> [aria-expanded="false"]:not([hidden])) ul { display: none; }
-    .topnav:has(> [aria-expanded="true"]) ul {
-      position: absolute;
-      inset-inline: 0;
-      inset-block-start: 100%;
-      flex-direction: column;
-      padding: var(--space-8) var(--space-16);
-      // over the page's content: an overlay (visual.md *Surfaces and elevation levels*)
-      border-block-end: var(--stroke-1) solid var(--line-overlay);
-      background: var(--surface-overlay); --surface: var(--surface-overlay); --hover: var(--overlay-hover);
-      box-shadow: var(--shadow-overlay);
-      mask-image: none;
-      // A list read down: the current section marked by a bar at its start.
-      a[aria-current] { box-shadow: inset var(--stroke-2) 0 0 var(--accent); }
-    }
-    .topnav a {
-      display: block;
-      padding: var(--space-8) var(--space-12);
-      font-size: var(--text-sm);
-      font-weight: var(--weight-medium);
-      color: var(--fg-muted);
-      text-decoration: none;
-      white-space: nowrap;
-      @include hover { color: var(--fg); }
-      // The heavier stroke as an underline drawn in a shadow, so it takes no room.
-      &[aria-current] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
-    }
-    @include from($sm) {
-      .topnav { padding-block-end: 0; }
-      .topnav ul { mask-image: none; }
-      // Wide, the sections are always in sight and the button goes.
-      .topnav__toggle { display: none; }
-      .topnav:has(> [aria-expanded]:not([hidden])) ul { display: flex; }
-      // Fills the one-row masthead (3.5rem) from a link's own line box.
-      .topnav a { padding-block: 1.125rem; }
-    }
-
-    // Theme: System, Light, Dark. System removes the choice, so a toggle can
-    // always go back to following the reader's setting.
-    // Compact: the masthead's one control, not part of a toolbar.
-    .theme .seg { min-block-size: 1.75rem; padding-inline: var(--space-8); font-size: var(--text-xs); }
+    // The masthead, its sections and the theme switch are stock-ui's; the
+    // switch between a repo's design systems, in the name's place, is the site's.
+    .masthead__systems { grid-area: brand; justify-self: start; margin-block: var(--space-8); }
+    .masthead__systems .seg { text-decoration: none; }
+    // the group scrolls (overflow-x), which would clip a ring drawn outside the link
+    // inside the current link's 2px inset accent, so the ring shows on it too
+    .masthead__systems .seg:focus-visible { outline-offset: -5px; }
 
     // ---- Sidebar -------------------------------------------------------------
 
@@ -1681,10 +1520,9 @@ $xxl: 90rem;
   .values-swatch { display: inline-block; inline-size: 1em; block-size: 1em; vertical-align: -0.15em; margin-inline-end: 0.4em; border-radius: var(--radius-4); box-shadow: inset 0 0 0 var(--stroke-1) rgb(0 0 0 / 0.2); }
 
   // Windows high contrast and other forced palettes drop backgrounds and
-  // shadows, which is how the current page, a pressed filter and a default
-  // value are marked; each gets an outline the palette keeps.
+  // shadows; the current page, a pressed filter and a default value get
+  // stock-ui's outline, the site's own marks keep their colours.
   @media (forced-colors: active) {
-    [aria-current="page"], .topnav [aria-current], [aria-pressed="true"], .pill--default { outline: var(--stroke-2) solid Highlight; outline-offset: -2px; }
     .chip, .value__swatch, .progress__seg, .legend__item::before, .status::before { forced-color-adjust: none; }
     :focus-visible { outline: 3px solid Highlight; }
   }
