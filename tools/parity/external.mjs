@@ -219,7 +219,7 @@ export function combinations(contract, map, max = Infinity) {
 
 /*
  * A component's mapping as every parity mapping is written, keyed by
- * Figma's own names (tools/parity/README.md: `storyId`, `axes` — an option's
+ * Figma's own names (tools/parity/REFERENCE.md, The mapping format: `storyId`, `axes` — an option's
  * args, its forced `pseudo`, or `skip` with why — `props` for what no option
  * says, `state` and `layers` by stored layer path, `page`), read into the
  * contract's ids, which the code audit works in. `b` is the component's

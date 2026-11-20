@@ -18,4 +18,8 @@ ok('six code spans in one paragraph is reference written as prose', measure('# T
 ok('a link counts as its text', measure('# T\n\nSee [the guide](../../a/very/long/path/to/somewhere/README.md#with-an-anchor).\n').words === 3);
 ok('over 800 words is named', over(measure('# T\n\n' + ('Short one here now. '.repeat(5) + '\n\n').repeat(41))).some((x) => /words of prose/.test(x)));
 ok('the limits are the standard\'s numbers', JSON.stringify(LIMITS) === JSON.stringify({ words: 800, sentence: 25, paragraphSentences: 5, paragraphWords: 100, paragraphCode: 5, grade: 12 }));
+ok('a ~~~ fence and a fence indented in a list are code', measure('# T\n\n~~~\n' + words(30) + '.\n~~~\n\n- item\n\n   ```\n   ' + words(30) + '\n   ```\n').words === 1);
+ok('a blockquote after a blank line is its own paragraph', prose('One two.\n\n> Three four.\n').length === 2);
+ok('e.g. does not end a sentence', measure('# T\n\nUse a short name, e.g. The button.\n').longSentences === 0 && prose('# T\n\nUse a name, e.g. The button.\n')[0].sentences.length === 1);
+ok('a 1) list splits into items', prose('1) one.\n2) two.\n').length === 2);
 console.log(`test-readability: ${n} assertions passed`);

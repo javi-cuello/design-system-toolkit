@@ -813,7 +813,7 @@ export function partSelector(c, n, id, part = partsOf(c).get(id)) {
   return `${s.slice(0, i)}:nth-child(${Number(/_(\d+)$/.exec(id)[1])} of ${seg})${s.slice(i)}`;
 }
 
-/* The parity mapping (tools/parity/README.md, The mapping format), keyed by Figma's own names: every axis and its every
+/* The parity mapping (tools/parity/REFERENCE.md, The mapping format), keyed by Figma's own names: every axis and its every
    option, so the run measures the whole set (code-standard rule 33), each by the args its story takes; every layer by
    the selector the sheet styles it by (to-code's). */
 export function toParity(c, folder, { naming, library = {}, platform = null, framework = 'react', settings = HOUSE } = {}) {
@@ -822,7 +822,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
   const props = propsOf(c, library, framework === 'kirby' ? PHP : JS, settings);
   const byKey = new Map(props.map((x) => [x.key, x]));
   const entry = entryOf(c);
-  // the mapping's `pseudo` is the class without its colon (tools/parity/README.md, The mapping format)
+  // the mapping's `pseudo` is the class without its colon (tools/parity/REFERENCE.md, The mapping format)
   const PSEUDO = Object.fromEntries(Object.entries(pseudoClasses(settings)).map(([v, ps]) => [v, ps.replace(/^:/, '')]));
   const axes = {};
   for (const [key, p] of Object.entries(c.props || {})) {

@@ -27,13 +27,14 @@ const COUNTS = ['words', 'longSentences', 'longParagraphs', 'codeParagraphs'];
 /* The prose of a markdown page: paragraphs, each { sentences: [word counts], words, code, text }. */
 export function prose(md) {
   // a table cell is a paragraph of its own: prose moved into a cell is still prose (headings and separator rows aside)
-  const text = md.replace(/```[\s\S]*?```/g, '\n\n').replace(/<!--[\s\S]*?-->/g, '')
+  const text = md.replace(/^[ \t]*(```|~~~)[\s\S]*?^[ \t]*\1.*$/gm, '\n\n').replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>\n]+>/g, ' ')
+    .replace(/^[ \t]*>[ \t]?/gm, '').replace(/\b(e\.g|i\.e|vs|cf)\./gi, '$1')
     .split('\n').filter((l) => !/^\s*#/.test(l) && !/^\s*\|[\s:|-]+\|\s*$/.test(l))
     .map((l) => /^\s*\|/.test(l) ? '\n\n' + l.replace(/\\\|/g, '/').split('|').slice(1, -1).map((c) => c.trim()).join('\n\n') + '\n\n' : l).join('\n');
   // a list item is a paragraph of its own; a blank line ends one
-  return text.split(/\n\s*\n|\n(?=\s*(?:[-*+]|\d+\.)\s)/).map((p) => {
+  return text.split(/\n\s*\n|\n(?=\s*(?:[-*+]|\d+[.)])\s)/).map((p) => {
     const code = (p.match(/`[^`\n]+`/g) || []).length;
-    const flat = p.replace(/^\s*(?:[-*+]|\d+\.)\s+/, '').replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`[^`\n]+`/g, 'code').replace(/\s+/g, ' ').trim();
+    const flat = p.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '').replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`[^`\n]+`/g, 'code').replace(/\s+/g, ' ').trim();
     const sentences = flat.split(/(?<=[.!?])\s+(?=[A-Z0-9(*_"'“])/).map((s) => s.split(' ').filter((w) => /\w/.test(w)).length).filter((n) => n > 0);
     return { sentences, words: sentences.reduce((a, b) => a + b, 0), code, text: flat };
   }).filter((p) => p.words);
@@ -52,8 +53,10 @@ export function measure(md) {
     grade: all.length ? Math.round((0.39 * words / all.length + 11.8 * syl / Math.max(1, words) - 15.59) * 10) / 10 : 0,
   };
 }
-const readmes = (root) => execFileSync('git', ['-C', root, 'ls-files', '-co', '--exclude-standard', '*README.md', 'README.md'], { encoding: 'utf8' })
-  .split('\n').filter((f, i, a) => f && a.indexOf(f) === i && fs.existsSync(path.join(root, f)) && !f.includes('node_modules/'));
+// every README, any case; a skill's folder carries no README of its own (skill-standard §A), skills/README.md aside
+const readmes = (root) => execFileSync('git', ['-C', root, 'ls-files', '-co', '--exclude-standard'], { encoding: 'utf8' })
+  .split('\n').filter((f, i, a) => /(^|\/)readme\.md$/i.test(f) && a.indexOf(f) === i && fs.existsSync(path.join(root, f))
+    && !f.includes('node_modules/') && !(f.startsWith('skills/') && f !== 'skills/README.md'));
 /* What a README over the limits breaks, in words. */
 export function over(m) {
   return [m.words > LIMITS.words && `${m.words} words of prose (limit ${LIMITS.words})`,
@@ -67,10 +70,14 @@ export function compare(root, base) {
   for (const f of readmes(root)) {
     const m = measure(fs.readFileSync(path.join(root, f), 'utf8')), b = base[f];
     if (!b) { const o = over(m); if (o.length) worse.push(`${f}: ${o.join('; ')}`); continue; }
-    const grew = [...COUNTS.filter((k) => m[k] > b[k]), ...(m.grade > Math.max(b.grade, LIMITS.grade) ? ['grade'] : [])];
+    // words and grade may move freely under their limits; the counts of broken rules only go down
+    const grew = [...COUNTS.filter((k) => k === 'words' ? m.words > Math.max(b.words, LIMITS.words) : m[k] > b[k]),
+      ...(m.grade > Math.max(b.grade, LIMITS.grade) ? ['grade'] : [])];
     if (grew.length) worse.push(`${f}: ${grew.map((k) => `${k} ${b[k]} → ${m[k]}`).join(', ')} (it may not get worse: split the sentence, make the list a table, move the reference to the code or a standard and link it)`);
     else if (COUNTS.some((k) => m[k] < b[k])) better.push(f);
   }
+  const all = readmes(root);
+  for (const f of Object.keys(base)) if (!all.includes(f)) worse.push(`${f}: recorded but gone (moved or deleted): node tools/toolkit-check/readability.mjs --tighten drops it; a moved README is held to the limits outright`);
   return { worse, better };
 }
 
@@ -81,11 +88,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     const rows = readmes(ROOT).map((f) => ({ f, m: measure(fs.readFileSync(path.join(ROOT, f), 'utf8')) })).sort((a, b) => over(b.m).length - over(a.m).length || b.m.longSentences - a.m.longSentences);
     for (const { f, m } of rows) console.log(`${over(m).length ? 'over ' : 'ok   '} ${f}: ${m.words} words, ${m.longSentences} long sentences, ${m.longParagraphs} long paragraphs, ${m.codeParagraphs} code-heavy, grade ${m.grade}`);
     console.log(`${rows.filter((r) => !over(r.m).length).length} of ${rows.length} within the limits`);
+  } else if (arg === '--record' && Object.keys(base).length) {
+    console.log('readability.json already holds the READMEs written before the rule; --record runs once, and a new or moved README meets the limits');
+    process.exitCode = 2;
   } else if (arg === '--tighten' || arg === '--record') {
     for (const f of readmes(ROOT)) { const m = measure(fs.readFileSync(path.join(ROOT, f), 'utf8')), b = base[f];
       // --record: once, every README as it stands when the rule arrives; --tighten: only a recorded one, only downward
-      if (arg === '--record' ? !b && over(m).length : b && COUNTS.every((k) => m[k] <= b[k])) base[f] = over(m).length ? m : undefined; }
-    const keep = Object.fromEntries(Object.entries(base).filter(([f, v]) => v && fs.existsSync(path.join(ROOT, f))).sort());
+      // --tighten keeps the lower of old and new on every field, so it never loosens a baseline
+      if (arg === '--record' ? over(m).length : b) base[f] = !over(m).length ? undefined : b ? Object.fromEntries(Object.keys(m).map((k) => [k, Math.min(m[k], b[k])])) : m; }
+    const all = readmes(ROOT), keep = Object.fromEntries(Object.entries(base).filter(([f, v]) => v && all.includes(f)).sort());
     fs.writeFileSync(BASE, JSON.stringify(keep, null, 1) + '\n');
     console.log(`readability.json: ${Object.keys(keep).length} README(s) still over the limits`);
   } else {
