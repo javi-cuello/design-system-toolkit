@@ -44,6 +44,7 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
 import { camel, sentence, partName } from './layers.mjs';
+import { ringOf } from './to-code.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
@@ -126,9 +127,25 @@ export function layerNames(ids, design, drawnFrom = null) {
   return Object.fromEntries(ids.map((id) => [id, at(id).name ?? null]));
 }
 
+/* The layer a design draws as box `id`'s focus ring, which code draws as that box's outline (to-code's ringOf, the one
+   rule): its key and name, so a ring read back from an outline is the design's own layer (Carbon's `focusBorder`),
+   and a synthesised `<id>/focusRing` only where the design has none. A design layer the reading already holds (code
+   drew it as a box of its own) is not taken twice. Tested by test-from-code.mjs. */
+export function ringKeyOf(design, id, taken = {}) {
+  const own = `${id === 'root' ? '' : `${id}/`}focusRing`;
+  if (!design || !design.props) return { key: own };
+  const hits = [];
+  for (const v of design.variants || []) {
+    const a = { ...(design.anatomy || {}), ...(v.add || {}) };
+    for (const [k, e] of Object.entries(v.add || {})) if (e.parent === id && !hits.some((h) => h.key === k) && ringOf(design, v.when || {}, k, e, a)) hits.push({ key: k, ...(e.name && { name: e.name }) });
+  }
+  const free = hits.filter((h) => !(h.key in taken));
+  return free.find((h) => h.key === own) || free[0] || { key: own };
+}
+
 /* Whether an outline a box draws is its own stroke (else, in a focused render, a focus ring layer): not one drawn by an
    ::after, nor on a box with a border of its own, nor clear (a placeholder drawing nothing); and at rest, or inside a
-   placed component's insides (insidePlaced) unless the design keeps a ring there (`ringed`: its `<id>/focusRing`).
+   placed component's insides (insidePlaced) unless the design keeps a ring there (`ringed`: its `<id>/focusRing`, or ringKeyOf's).
    Tested by test-from-code.mjs. */
 export function outlineIsOwn(x, focused, inPlaced, ringed) {
   return !!x.outline && !x.outline.after && (!focused || (inPlaced && !ringed)) && !x.border && !/^(rgba\((?:[^,)]*,){3}\s*0\)|transparent)$/.test(String(x.outline.color).trim());
@@ -439,7 +456,8 @@ export function delta(base, other, def = base) {
     if (!base[id]) { add[id] = e; continue; }
     // a corner the code rounds only to shape a focus outline belongs to the ring the design draws, not the box
     // (one the default render lacks: an outline it always has is the box's own, its corners included)
-    const ringed = Object.entries(other).some(([r, y]) => y.parent === id && !def[r] && /(^|\/)focusRing$/.test(r));
+    // (a ring under the design's own name too, ringKeyOf's: the render lists the rings it read from outlines, `rings`)
+    const ringed = Object.entries(other).some(([r, y]) => y.parent === id && !def[r] && (/(^|\/)focusRing$/.test(r) || (other.rings || []).includes(r)));
     for (const k of new Set([...Object.keys(base[id]), ...Object.keys(e)])) if (!(ringed && k === 'radius') && (JSON.stringify(base[id][k]) !== JSON.stringify(e[k]))) set[`${id}.${k}`] = e[k] === undefined ? null : e[k];
   }
   for (const id of Object.keys(base)) if (!other[id]) remove.push(id);
@@ -1790,7 +1808,7 @@ async function main() {
         // keeps it: there the outline is no stroke of the design's)
         // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
         // (a design that keeps a ring there keeps it a ring: outlineIsOwn)
-        const ringIn = (c) => !!c && [c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => `${id}/focusRing` in a);
+        const ringIn = (c) => !!c && ([c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => `${id}/focusRing` in a) || ringKeyOf(c, id).key !== `${id}/focusRing`);
         if (outlineIsOwn(x, focused, insidePlaced(raw, id), ringIn(L.drawnFrom || figmaContract))) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
@@ -1842,7 +1860,9 @@ async function main() {
         if (x.kind === 'text') { const k = boundText(x.content, id, props, args, figmaContract, joinedProps); if (k) x.content = `{${k}}`; }
         anatomy[id] = x;
       }
-      for (const [id, e] of ring) anatomy[`${id === 'root' ? '' : `${id}/`}focusRing`] = { ...e, order: Object.values(anatomy).filter((y) => y.parent === id).length };
+      // (as the design's own ring layer where it draws one: ringKeyOf)
+      const rings = [];
+      for (const [id, e] of ring) { const { key, name } = ringKeyOf(L.drawnFrom || figmaContract, id, anatomy); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
@@ -1873,6 +1893,7 @@ async function main() {
       }
       normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
+      Object.defineProperty(anatomy, 'rings', { value: rings });
       return anatomy;
     };
 

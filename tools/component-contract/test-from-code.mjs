@@ -235,6 +235,23 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('on --second, the first reading\'s names, not the design\'s', JSON.stringify(layerNames(['a', 'c'], design, first)) === '{"a":"<Renamed>","c":"<Only first>"}');
   ok('no contract: no names', layerNames(['a'], null) === null);
 }
+// a ring read from a focused outline is the design's own ring layer where it draws one (Carbon's focusBorder)
+{
+  const { ringKeyOf } = await import('./from-code.mjs');
+  const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/focus', width: 2 }, shape: 'rectangle' };
+  const props = { state: { type: 'enum', values: ['enabled', 'focus'], default: 'enabled', role: 'interaction' } };
+  const carbon = { props, anatomy: { root: { kind: 'container' }, input: { kind: 'container', parent: 'root' } },
+    variants: [{ when: { state: 'focus' }, add: { focusBorder: { ...ring, parent: 'root' }, 'input/focusBorder': { ...ring, parent: 'input' } } }] };
+  ok('the design\'s ring layer is the ring\'s key, at the root and under a part', ringKeyOf(carbon, 'root').key === 'focusBorder' && ringKeyOf(carbon, 'input').key === 'input/focusBorder');
+  ok('a design layer the reading already holds is not taken twice: a ring of its own then', ringKeyOf(carbon, 'root', { focusBorder: {} }).key === 'focusRing');
+  ok('no ring in the design, or no design: a synthesised focusRing', ringKeyOf({ props, anatomy: carbon.anatomy, variants: [] }, 'input').key === 'input/focusRing' && ringKeyOf(null, 'root').key === 'focusRing');
+  ok('a stroke drawn at rest is no ring', ringKeyOf({ props, anatomy: carbon.anatomy, variants: [{ when: { state: 'enabled' }, add: { line: { ...ring, parent: 'root' } } }] }, 'root').key === 'focusRing');
+  ok('the corner rounded to shape a ring under the design\'s name stays the box\'s own',
+    (() => { const got = { root: { radius: 'R12' }, focusBorder: { ...ring, parent: 'root' } }; Object.defineProperty(got, 'rings', { value: ['focusBorder'] });
+      return JSON.stringify(delta({ root: { radius: 'R0' } }, got)) === JSON.stringify({ add: { focusBorder: { ...ring, parent: 'root' } } })
+        // (a stroke box the code draws of its own, an error border, is no ring: the box's corners change as it does)
+        && JSON.stringify(delta({ root: { radius: 'R0' } }, { root: { radius: 'R12' }, errorBorder: { ...ring, parent: 'root' } })) === JSON.stringify({ set: { 'root.radius': 'R12' }, add: { errorBorder: { ...ring, parent: 'root' } } }); })());
+}
 // which outline is a box's own stroke and which a focus ring
 {
   const { outlineIsOwn } = await import('./from-code.mjs');
