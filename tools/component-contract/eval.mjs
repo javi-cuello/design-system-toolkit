@@ -104,7 +104,10 @@ export function leftToCode(contract, mainOf = null) {
   const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unexposed(contract, p.id, mainOf)]).filter(([, w]) => w) : []);
   // (of such an override, only what markup would pass: the part itself, its kind, component, words and props; its
   // styles the sheet reaches, and a name the reading gives it is the reader's)
-  const passed = new Set(['', 'kind', 'component', 'content', 'with']);
+  const passed = new Set(['', 'kind', 'component', 'key', 'content', 'with']);
+  // (a placed instance the markup cannot place at all, a swap no prop passes: its key, modes and look are the swapped-in
+  // component's own, gone with it; its size and place in this one stay, as the sheet reaches them)
+  const swappedOwn = (el, field) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && /^(modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/.test(field);
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay
@@ -131,7 +134,7 @@ export function leftToCode(contract, mainOf = null) {
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
   // (but its Size: to-markup passes that one, data-icon-size, and from-code reads it back)
   const foreignOwn = (el, field) => foreign(el) && field !== 'with.Size' && /^(with|layout|overflow)(\.|$)/.test(field);
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || swappedOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
