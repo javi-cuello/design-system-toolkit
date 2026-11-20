@@ -686,9 +686,8 @@ test("a subagent's own bin/check run is credited; one in its worktree is not", (
 });
 
 test('the plan gate says who holds the measuring lock when it asks for a bin/check run', async () => {
-  const { lockDir, release } = await import('../shared/lock.mjs');
-  fs.mkdirSync(lockDir(), { recursive: true });
-  fs.writeFileSync(path.join(lockDir(), 'holder.json'), JSON.stringify({ pid: process.pid, what: 'eval.mjs --self', at: Date.now() }));
+  const { hold, release } = await import('../shared/lock.mjs');
+  assert.equal(await hold('eval.mjs --self'), true, 'a real lock, held here');
   const s = session([user('build it')], { checked: false });
   assert.match(String(planGate(s.id, s.file, REPOS, { id: 'lk', name: 'Write', input: { file_path: path.join(TOOLKIT, 'big.mjs'), content: lines(300) } }, TOOLKIT)), /measuring lock, now held by eval\.mjs --self/);
   release(); s.clean();

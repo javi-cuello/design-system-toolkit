@@ -2,30 +2,39 @@
 /*
  * The one measuring lock: a long run (bin/check, eval.mjs --self/--second/--draw, from-code) holds it, niced, so two
  * never share the machine. bin/check took 10+ minutes beside a parallel measure, and 8 beside a second bin/check
- * (2026-11-20). A waiter says who holds it, and keeps waiting; a holder whose process has gone is taken over.
+ * (2026-11-20). A waiter says who holds it, and keeps waiting.
  *
  *   node tools/shared/lock.mjs --run <what> -- <command…>   wait for the lock, run the command niced, release
- *   node tools/shared/lock.mjs --who                        who holds it, or nothing
+ *   node tools/shared/lock.mjs --who                        who holds it, or "free"
  *
- * A child of a holder (TOOLKIT_LOCK_HELD in its environment) never waits: bin/check's suites run from-code.
- * The lock is a folder (mkdir is atomic) in the toolkit's own .git folder, holding holder.json: one path for every
- * caller, where $TMPDIR differs between a sandboxed session and a terminal. TOOLKIT_LOCK_DIR moves it (the tests).
+ * A kernel file lock (flock, through python3, which bin/check already needs), held by a small child process for as
+ * long as the holder lives: the system releases it when the holder exits or dies, so there is no stale lock and no
+ * takeover to race (a folder lock with a pid check had three, found by review on 2026-11-20). holder.json beside it
+ * only says who holds it; whether anyone does is asked of the lock itself. A child of a holder (TOOLKIT_LOCK_HELD in
+ * its environment) never waits: bin/check's suites run from-code. The lock lives in the toolkit's common .git, one
+ * path for a sandboxed session, a terminal and a linked worktree; TOOLKIT_LOCK_DIR moves it (the tests). Where it
+ * cannot be taken (no python3, a folder it cannot write) the run goes ahead unlocked and says so.
  */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync, execFileSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 // the common .git, so a run in a linked worktree (.claude/worktrees/agent-*) shares the main checkout's lock
 const common = () => { try { return path.resolve(TOOLKIT, execFileSync('git', ['-C', TOOLKIT, 'rev-parse', '--git-common-dir'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()); } catch { return os.tmpdir(); } };
-export const lockDir = () => process.env.TOOLKIT_LOCK_DIR || path.join(common(), 'toolkit-measure.lock');
-const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
-// when a process started, so a pid reused by another process is not taken for the holder
-const started = (pid) => { try { return execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
+export const lockDir = () => process.env.TOOLKIT_LOCK_DIR || common();
+const lockFile = () => path.join(lockDir(), 'toolkit-measure.flock');
+const infoFile = () => path.join(lockDir(), 'toolkit-measure.holder.json');
+
+// try: exit 0 when free (taken and let go at once), 1 when held, 2 when it cannot be opened
+const TRY = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception: sys.exit(2)\ntry: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\nexcept OSError: sys.exit(1)\n';
+// hold: "busy" when it must wait, "held" once it holds, then keep it until stdin closes (the holder gone)
+const HOLD = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception:\n  print("nolock",flush=True); sys.exit(0)\ntry: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\nexcept OSError:\n  print("busy",flush=True); fcntl.flock(f,fcntl.LOCK_EX)\nprint("held",flush=True)\nsys.stdin.read()\n';
 
 /* The live session's name, from Claude Code's registry (~/.claude/sessions/<pid>.json), else its id. */
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 export function sessionName(id, dir = path.join(os.homedir(), '.claude', 'sessions')) {
   if (!id) return '';
   try {
@@ -37,75 +46,49 @@ export function sessionName(id, dir = path.join(os.homedir(), '.claude', 'sessio
   return `session ${id.slice(0, 8)} (not running)`;
 }
 
-/* Who holds the lock: { pid, what, session, at } — null when free or its holder has gone. */
-export function holder(dir = lockDir()) {
-  let h;
-  try { h = JSON.parse(fs.readFileSync(path.join(dir, 'holder.json'), 'utf8')); } catch { return fs.existsSync(dir) ? { pid: 0, what: 'unknown', at: 0, starting: true } : null; }
-  if (!alive(h.pid)) return null;
-  const now = h.start ? started(h.pid) : '';
-  // ps unreadable here: the pid alone decides, for twelve hours (a reused pid would otherwise hold it for ever)
-  if (h.start && !now) return Date.now() - h.at < 12 * 3600e3 ? h : null;
-  return !h.start || now === h.start ? h : null;
+/* Who holds the lock: { pid, what, session, at }, or null when it is free (asked of the lock, not of the note). */
+export function holder() {
+  const r = spawnSync('python3', ['-c', TRY, lockFile()], { stdio: 'ignore' });
+  if (r.status !== 1) return null;
+  try { return JSON.parse(fs.readFileSync(infoFile(), 'utf8')); } catch { return { pid: 0, what: 'a run', at: Date.now() }; }
 }
 export const describe = (h) => `${h.what} (pid ${h.pid}${h.session ? `, ${sessionName(h.session)}` : ''}, since ${new Date(h.at).toTimeString().slice(0, 5)})`;
 
-/* Take the lock for `what`, or return the holder. A folder left by a dead holder, or one half-made for over a
-   minute, is taken over. */
-// how long ago a folder was made or changed; 0 when it is gone (a folder that vanished mid-look is never stale)
-const ageOf = (d) => { try { return Date.now() - fs.statSync(d).mtimeMs; } catch { return 0; } };
-export function tryAcquire(what, dir = lockDir(), pid = process.pid) {
-  for (let i = 0; i < 2; i++) {
-    try {
-      fs.mkdirSync(dir);
-      fs.writeFileSync(path.join(dir, 'holder.json'), JSON.stringify({ pid, start: started(pid), what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() }));
-      return null;
-    } catch (e) {
-      // a sandbox that cannot write the lock runs the measure unlocked, said, rather than not at all
-      if (e.code === 'EPERM' || e.code === 'EACCES' || e.code === 'EROFS') { console.error(`measuring lock: cannot write ${dir} (${e.code}); running without it`); return null; }
-      if (e.code !== 'EEXIST') throw e;
-      const h = holder(dir);
-      const stale = !h || (h.starting && ageOf(dir) > 60000);
-      if (!stale) return h;
-      // one taker at a time (a second folder, made atomically), and the holder judged again under it, so a lock another
-      // waiter has just taken over is never removed; a taker that died leaves its mutex, gone after a minute
-      const mutex = `${dir}.takeover`;
-      // a stale mutex is renamed aside, which one waiter wins, never removed by path: a second waiter would remove the
-      // first's fresh one
-      if (ageOf(mutex) > 60000) {
-        const aside = `${mutex}.gone-${process.pid}-${Date.now()}`;
-        try {
-          fs.renameSync(mutex, aside);
-          // moved a fresh one (another waiter cleared the stale one first and made its own): put it back, untouched
-          if (ageOf(aside) <= 60000) { try { fs.renameSync(aside, mutex); } catch { fs.rmSync(aside, { recursive: true, force: true }); } continue; }
-          fs.rmSync(aside, { recursive: true, force: true });
-        } catch { /* another moved it */ }
+let child = null;
+/* Wait for the lock (saying who holds it, then each minute), lower this process's priority, and hold it until release()
+   or this process ends. Resolves false when it could not be taken at all: the run goes ahead unlocked, said. */
+export function hold(what, { say = (l) => console.error(l) } = {}) {
+  if (process.env.TOOLKIT_LOCK_HELD) return Promise.resolve(true);
+  try { fs.mkdirSync(lockDir(), { recursive: true }); } catch { /* the open says it */ }
+  return new Promise((resolve) => {
+    let timer = null, buf = '', done = false;
+    const finish = (ok, why) => { if (done) return; done = true; clearInterval(timer); if (!ok) { say(`measuring lock: ${why}; running without it`); child = null; } resolve(ok); };
+    child = spawn('python3', ['-c', HOLD, lockFile()], { stdio: ['pipe', 'pipe', 'ignore'] });
+    child.on('error', (e) => finish(false, `python3 could not run (${e.code || e.message})`));
+    child.on('exit', () => finish(false, 'the lock holder stopped before taking it'));
+    child.stdout.on('data', (d) => {
+      buf += d;
+      for (let i; (i = buf.indexOf('\n')) >= 0;) {
+        const l = buf.slice(0, i); buf = buf.slice(i + 1);
+        if (l === 'busy') {
+          const tell = () => { const h = holder(); if (h) say(`measuring lock: waiting for ${describe(h)}`); };
+          tell(); timer = setInterval(tell, 60000);
+        } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
+        else if (l === 'held') {
+          try { fs.writeFileSync(infoFile(), JSON.stringify({ pid: process.pid, what, session: process.env.CLAUDE_CODE_SESSION_ID || '', at: Date.now() })); } catch { /* the note only names it */ }
+          process.env.TOOLKIT_LOCK_HELD = String(process.pid);
+          try { os.setPriority(10); } catch { /* not allowed: run at the priority given */ }
+          // the child must not keep this process alive: when this process ends, its pipe closes and the lock goes
+          child.removeAllListeners('exit'); child.unref(); child.stdin.unref?.(); child.stdout.destroy();
+          finish(true);
+        }
       }
-      try { fs.mkdirSync(mutex); } catch { continue; }
-      try { const again = holder(dir); if (!again || (again.starting && ageOf(dir) > 60000)) fs.rmSync(dir, { recursive: true, force: true }); }
-      finally { fs.rmSync(mutex, { recursive: true, force: true }); }
-    }
-  }
-  return holder(dir) || { pid: 0, what: 'unknown', at: Date.now() };
+    });
+  });
 }
-export function release(dir = lockDir(), pid = process.pid) {
-  try { if (JSON.parse(fs.readFileSync(path.join(dir, 'holder.json'), 'utf8')).pid === pid) fs.rmSync(dir, { recursive: true, force: true }); } catch { /* not ours */ }
-}
-
-/* In-process, for a node run: wait (saying who holds it each minute), lower this process's priority, release on exit. */
-export function hold(what, { wait = Infinity, say = (l) => console.error(l) } = {}) {
-  if (process.env.TOOLKIT_LOCK_HELD) return true;
-  const until = Date.now() + wait;
-  let told = 0;
-  for (let h; (h = tryAcquire(what));) {
-    if (Date.now() > until) { say(`measuring lock: still held by ${describe(h)}; gave up waiting`); return false; }
-    if (Date.now() - told > 60000) { say(`measuring lock: waiting for ${describe(h)}`); told = Date.now(); }
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
-  }
-  process.env.TOOLKIT_LOCK_HELD = String(process.pid);
-  try { os.setPriority(10); } catch { /* not allowed: run at the priority given */ }
-  process.on('exit', () => release());
-  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { release(); process.exit(128 + os.constants.signals[sig]); });
-  return true;
+export function release() {
+  if (child) { try { child.kill(); } catch { /* already gone */ } child = null; }
+  delete process.env.TOOLKIT_LOCK_HELD;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
@@ -114,8 +97,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const dash = argv.indexOf('--');
   if (argv[0] !== '--run' || dash < 2 || dash === argv.length - 1) { console.error('usage: lock.mjs --run <what> -- <command…> | --who'); process.exit(2); }
   // waits without bound: a waiter that gave up would turn a busy machine into a red check
-  hold(argv[1]);
-  // the child inherits the priority hold() lowered
+  await hold(argv[1]);
+  // the child inherits the priority hold() lowered, and TOOLKIT_LOCK_HELD
   const r = spawnSync(argv[dash + 1], argv.slice(dash + 2), { stdio: 'inherit', env: process.env });
   release();
   process.exit(r.status ?? 1);

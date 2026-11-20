@@ -920,7 +920,7 @@ async function main() {
   const name = argv[0];
   if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self | --second]'); process.exit(2); }
   // a run by hand, or a loop of them, holds the measuring lock; one eval.mjs started already holds it (tools/shared/lock.mjs)
-  (await import('../shared/lock.mjs')).hold(`from-code.mjs ${process.argv.slice(2).join(' ')}`);
+  await (await import('../shared/lock.mjs')).hold(`from-code.mjs ${process.argv.slice(2).join(' ')}`);
   const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
