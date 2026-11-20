@@ -106,7 +106,7 @@ Hand-written fields have a second cost: they rot silently. Nothing detects when 
 
 The design-system toolkit shows one way to make the intent fields checkable. It settled them as a fixed structure in each Figma component's description. One parser, [`tools/snapshot/guidance.cjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/snapshot/guidance.cjs), reads it into purpose, Usage, Don't, Behaviour, Composition and Code gen notes, with every Don't naming the alternative.
 
-Two things then lean on that structure. The docs site links a Don't item that names another component to that component's page ([docs site README](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/README.md), *Where things come from*). And the audit raises a row for a public component missing Usage, Don't or Code gen notes ([documentation profile, the component page](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/ui/profiles/documentation.md#the-component-page)).
+Two things then lean on that structure. The docs site links a Don't item that names another component to that component's page ([docs site reference](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/REFERENCE.md), *Where things come from*). And the audit raises a row for a public component missing Usage, Don't or Code gen notes ([documentation profile, the component page](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/ui/profiles/documentation.md#the-component-page)).
 
 That makes the three intent fields something a check can count: use cases, anti-patterns with alternatives, and the notes a code generator needs.
 
@@ -223,7 +223,7 @@ Researched November 2026, when this part was assembled from guides first researc
 **Toolkit (public repository, read 2 November 2026)**
 
 - [`tools/snapshot/guidance.cjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/snapshot/guidance.cjs): the description parser.
-- [`tools/docs-site/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/README.md): where the docs site's content comes from.
+- [`tools/docs-site/REFERENCE.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/REFERENCE.md#where-things-come-from): where the docs site's content comes from.
 - [`tools/docs-site/src/lib/readiness.js`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/src/lib/readiness.js): the deprecation-with-replacement count.
 - [`knowledge/ui/profiles/documentation.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/knowledge/ui/profiles/documentation.md): the component-page rules.
 

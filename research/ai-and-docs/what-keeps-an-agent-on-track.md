@@ -442,7 +442,7 @@ Researched November 2026; vendor mechanics read from primary pages on 9 November
 **Toolkit (public repository, read 9 November 2026; hooks re-read 17 November 2026)**
 
 - [`tools/claude-hooks/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/README.md): the four hooks and the gates they carry.
-- [`tools/skill-evals/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/skill-evals/README.md): screen tasks, contamination, void and pinned runs, proving the grade.
+- [`tools/skill-evals/REFERENCE.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/skill-evals/REFERENCE.md): screen tasks, contamination, void and pinned runs, proving the grade.
 - [`docs/agent-prototyping-plan.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/docs/agent-prototyping-plan.md), Outcome 6: the on/off runs.
 - [`tools/system-mcp/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/README.md) and [`validate.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/system-mcp/validate.mjs).
 - [`tools/parity/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/README.md) and [`waivers.mjs`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/parity/waivers.mjs): waivers and the measurement baseline.

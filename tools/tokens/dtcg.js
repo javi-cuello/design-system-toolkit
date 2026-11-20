@@ -109,7 +109,7 @@
   // 6-digit hex, per the color module: the `hex` fallback must not carry alpha.
   function hexOf(c) { return '#' + hex2(c.r) + hex2(c.g) + hex2(c.b); }
 
-  // Two shapes, and the choice is a real trade-off — see tools/tokens/README.md.
+  // Two shapes, and the choice is a real trade-off — see tools/tokens/REFERENCE.md, Type mapping.
   //   'object' (default): DTCG 2025.10 compliant — {colorSpace, components, alpha, hex}
   //   'hex':              legacy string form — what Style Dictionary v4 consumes today
   function colorValue(c, format) {

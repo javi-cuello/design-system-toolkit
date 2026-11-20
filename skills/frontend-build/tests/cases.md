@@ -1,4 +1,6 @@
-# Eval cases — frontend-build (v3.3.0)
+# Eval cases — frontend-build (v3.3.1)
+
+**Walked: 2026-11-20 for 3.3.1** — two citations moved to tools/component-contract/REFERENCE.md (the README rewrite); no case reads them, so none re-traced.
 
 **Walked: 2026-11-16 for 3.3.0** — T13 amended and re-traced to §D 21's `weak` row and design-standard rule 14; the other cases do not read weights.
 
@@ -62,7 +64,7 @@
 
 **Walked: 2026-10-30 for 2.6.1** — a closing note removed, no behaviour changed; no case read it, so none moved.
 
-**Walked: 2026-10-30 for 2.6.0** — T11 added and executed, the trial the to-markup row of `tools/component-contract/README.md` records; `test-to-markup.mjs` passes. T7 re-traced: to-markup puts Disabled on the native `<button>` inside the host and writes no pointer state, as T7 asserts. Other cases unchanged.
+**Walked: 2026-10-30 for 2.6.0** — T11 added and executed, the trial the to-markup section of `tools/component-contract/REFERENCE.md` records; `test-to-markup.mjs` passes. T7 re-traced: to-markup puts Disabled on the native `<button>` inside the host and writes no pointer state, as T7 asserts. Other cases unchanged.
 
 **Walked: 2026-10-22 for 2.5.0** — T10 added and executed live on one project (Badge, Progress indicator: 534 parity assertions matched, 0 did not); T6 and T8 traced against the new step 5: the scaffold's worked component has no contract, so it stays hand-written, as the step says. Other cases unchanged.
 
@@ -216,7 +218,7 @@ Walked live: 2026-10-22 — one project's Badge (generated sheet alone) and Prog
 Fixture: a React, web-component or Kirby repo (`framework` in its snapshot.config.json) whose components have stored contracts. Run to-markup, then build a component it marked.
 Assert: the markup is to-markup's, not rewritten: its type-check and lint pass, and parity on it matches with no new waiver.
 Assert: each `frontend-build:` gap at its top is filled (an element and role, a pointer state's part, an icon, a placed control's name) and the banner then taken out; a gap with no answer in the design is asked, not guessed.
-Walked live: 2026-10-30 — the trial in the to-markup row of `tools/component-contract/README.md`; a sample of its gaps read (icon drawings, icon-only names, a dropdown's open state drawn at focus). Parity and the filling of gaps not run: the copy's screens call the hand-built components' API, not this one.
+Walked live: 2026-10-30 — the trial in the to-markup section of `tools/component-contract/REFERENCE.md`; a sample of its gaps read (icon drawings, icon-only names, a dropdown's open state drawn at focus). Parity and the filling of gaps not run: the copy's screens call the hand-built components' API, not this one.
 
 ## T12 · The Sass entry's components list is its folders' — *executed*
 Fixture: a site scaffolded by `scripts/scaffold-design-system.mjs`, its snapshot.config.json naming the toolkit. Add a folder `components/card/` holding `_card.sass`.

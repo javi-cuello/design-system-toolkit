@@ -1,11 +1,14 @@
 # Component guidelines
 
-Select a single component instance; a floating panel appears just below it showing that component's **Usage** and **Don't** guidelines, parsed from its (or its Component Set's) description. Refreshes automatically as selection changes.
+This Figma plugin shows a component's guidelines right where you use it. Select one component instance. A floating panel appears just below it with the **Usage** and **Don't** guidelines. They come from the description of the component or its component set. The panel refreshes as the selection changes.
 
-Hand-written vanilla JS, no build step · import `manifest.json` via Figma → Plugins → Development → Import plugin from manifest…
+## Install
+
+It is hand-written vanilla JS with no build step. In Figma, go to Plugins → Development → Import plugin from manifest… and pick `manifest.json`.
 
 ## Description format expected
-A heading word alone on its own line, followed by one guideline per line, until the next heading or end of text:
+
+Write a heading word alone on its own line. Follow it with one guideline per line, until the next heading or the end of the text:
 
     Usage
     Use Primary for the single most important action
@@ -14,10 +17,11 @@ A heading word alone on its own line, followed by one guideline per line, until 
     Don't
     Use more than one Primary button in the same context
 
-Other headings (Behaviour/Behavior, Composition, Code gen notes) are recognized as section boundaries but not shown. No guidelines found → the panel says so rather than showing nothing silently.
+Other headings mark where a section ends but are not shown. These are Behaviour or Behavior, Composition and Code gen notes. When it finds no guidelines, the panel says so.
 
 ## Data this plugin stores
-One relaunch-data entry on the document root, `component-guidelines`, so the plugin appears under **Tools** in the file's right panel; written on every open. No clientStorage, no other pluginData, no network: it reads descriptions and reports the window's height back to main for resizing.
+
+It writes one relaunch-data entry, `component-guidelines`, on the document root. That puts the plugin under **Tools** in the file's right panel. It writes the entry on every open. It uses no clientStorage, no other pluginData and no network. It only reads descriptions and tells the main code the window's height for resizing.
 
 ## Test
 

@@ -336,7 +336,7 @@ found in an hour once a run said where its time went. So every run prints and sa
 and per target (`timing.mjs`), a full run more than a quarter slower than the
 accepted one warns and names the phase, and waits are on signals, bounded,
 never a fixed sleep; pictures are taken on `--shots` and kept on `--accept
---shots`, not on every push. The engine's README (*Fast by default*) says
+--shots`, not on every push. The engine's reference (`tools/parity/REFERENCE.md`, *Fast by default*) says
 what is reused and keyed on what, what is opt-in, and what a project must not
 do; a change to anything that runs compares its time before and after on the
 same input, the way its output is compared (toolkit-standard §D 0). There is

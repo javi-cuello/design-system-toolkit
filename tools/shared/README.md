@@ -1,35 +1,63 @@
 # Shared
 
-Small libraries more than one tool imports, kept in one place so each has one definition. Nothing here runs on its own.
+This folder holds small libraries that more than one tool imports. Keeping them in one place gives each one a single definition. A file belongs here only when two or more tools import it. A file used by a single tool lives in that tool's folder.
+
+## Status
+
+Most files are libraries that other tools import. A few also run as commands behind `bin/check`, `bin/worktree` and `bin/land`.
+
+## The commands
+
+```sh
+node tools/shared/check-cache.mjs <repo> [--quick] [--no-fix]      # bin/check's front door
+node tools/shared/check-cache.mjs --commit <repo> <commit>         # the pre-push check of one commit
+node tools/shared/lock.mjs --run <what> -- <command…>              # run a command under the measuring lock
+node tools/shared/lock.mjs --who                                   # who holds the lock
+node tools/shared/worktree.mjs <work>                              # make or find a work's worktree
+node tools/shared/model-routing.mjs                                # print the model routes
+```
+
+`bin/land` runs `land.mjs`. The [bin README](../../bin/README.md) documents the `bin/` commands.
+
+## What is in the folder
 
 | File | What it gives |
 |---|---|
-| `walk.mjs` | One walk of a repo's files, skipping what every check skips (`node_modules`, build output, dot-folders). |
-| `push-hook.mjs` | `pushHookProblem`: whether a repo's pushes run its check (the pre-push hook git will actually run, and what it hands the push to): one definition for project-check's `hook` gate and the toolkit's own `bin/check`, which runs it as a script. |
-| `dialect.cjs` | Which English spelling the toolkit's own words use for a project (its `language` setting), so generated text follows the project; the doc generator's sandbox copy is held to it by `test-dialect.mjs`. |
-| `repo-config.cjs` | A repo's `snapshot.config.json`, read one way: `readRepoConfig` tells a missing file from a malformed one, `repoConfig` says which under the tool's name and exits 2. Every command that needs the file reads it here. |
-| `cdp.mjs` | The Chrome DevTools client every browser run uses (parity, ui-check, the docs checks, the contract tools): `findChrome` (`$CHROME`, else the usual macOS and Linux places), `launch` (its own profile, killed at exit), and the page calls its exports name. |
-| `check-cache.mjs` | `bin/check`'s front door: takes the lock (not for `--quick`), and answers a clean tree already checked green with the same kind of run (quick or full; `--no-fix` and a heal that changed nothing count as full) from that run's last 40 lines, under 6 hours old; asked before waiting and again once the lock is held. `--commit <repo> <commit>` is the pre-push check: the commit as committed, in a clean temporary worktree, so no working tree's uncommitted files decide a push. Only a green that ran to its end is recorded; `TOOLKIT_CHECK_FRESH=1` always runs. |
-| `worktree.mjs` | A worktree per piece of work: `node worktree.mjs <work>` (`bin/worktree`) makes or finds `.claude/worktrees/<work>`, refusing a name a running session already holds unless `--join`, and pruning a folder deleted by hand first; on branch `worktree-<work>` (Claude Code's own layout) from `origin/main`, and links the main checkout's ignored installs (node_modules, built binaries) into it, named in the shared `info/exclude` so the worktree reads clean; `temp()` makes the clean worktree a commit is checked in. |
-| `land.mjs` | `bin/land`: the one way work reaches main. The branch joins a queue in the common `.git` (`land-queue/`); whoever holds the measuring lock replays every queued branch's new commits (by content, `git cherry`) onto `origin/main` in an integration worktree (`.claude/worktrees/.land`), runs one full check of the batch and pushes from there. A branch that does not apply is told the files; a red batch is tried branch by branch, so one red branch holds no one; a waiter whose branch the holder landed returns at once. Then, best effort: the main checkout is fast-forwarded and each landed worktree whose branch has not moved is reset to main. `bin/land --queue` lists the queue. |
-| `lock.mjs` | The one measuring lock: `node lock.mjs --run <what> -- <command…>` waits for it (saying who holds it each minute: the run, its pid, its session), runs the command niced and releases it; `--who` says who holds it. `bin/check` runs itself under it, and `eval.mjs --self/--second/--draw` and `from-code.mjs` take it with `hold()`; a child of a holder (`TOOLKIT_LOCK_HELD`) goes straight through. It is a kernel file lock (flock, through python3) held by a child process: the system lets go when the holder exits or dies, so nothing goes stale and nothing is taken over; where it cannot be taken (no python3, an unwritable folder) the run goes ahead unlocked and says so. The lock lives in the toolkit's common `.git`, one path for a sandboxed session and a terminal alike (`TOOLKIT_LOCK_DIR` moves it, for the tests). Two runs at once took 8 to 10+ minutes each (2026-11-20). |
-| `origin.mjs` | `isFigmaOrigin`: whether a request comes from Figma itself (figma.com or a subdomain, by hostname), for the two local services the Figma plugin talks to. |
-| `names.js` | How a component's Figma name is shown to a reader (`displayName`, `fullName`), and a variant's name read as its prop values (`variantValues`): one definition for the docs site, the parity engine, the contract tools and the sandbox scripts that copy it, each held to it by `test-names.mjs`. |
-| `colour.js` | The sRGB transfer both ways, WCAG 2 relative luminance and contrast ratio (WCAG 2.2's 0.04045 threshold), and OKLab to linear sRGB: imported by the parity engine, copied by the components audit's scanner and the OKLCH generator, each copy held to it by `test-colour.mjs`; the contrast matrix's Python builder keeps one too, held by its numbers by that skill's `tests/test-wcag-copy.mjs`. |
-| `real-path.mjs` | `realPath` and `samePath`: a path in its on-disk spelling, so a shell that entered through `~/projects` on a case-insensitive disk still matches a stored `~/Projects` path (project-check, parity, the contract tools). |
-| `knowledge.mjs` | `uiFile` (is a project file interface work) and `pagesFor` (the knowledge pages to read before writing it, by its kind and the words in its path): one notion for the edit hook and the push check's `Knowledge:` gate (toolkit-standard §D 21). |
-| `output.mjs` | What keeps a written file the same for the same input (toolkit-standard §D 23): `compareNames`, one sort order whatever the machine's locale, and `writeReport`, which leaves a run's report alone when only its date and seconds moved (the snapshot store, the contract and parity tools). |
-| `prop-attr.mjs` | A component prop's name as the HTML attribute its value is written in (`propAttr`, `attrWords`): the one rule to-code styles by, to-markup writes and parity's `-attr` check reads, held by `test-prop-attr.mjs`. |
-| `text-units.js` | A text style's line height or letter spacing as a fraction of its font size (`perFontSize`), the unitless and em values the web takes, to four places: copied by the snapshot plugin, the token build's `dtcg.js` and the doc generator, each copy held to it by `test-text-units.mjs`. |
-| `free-port.mjs` | The one free-port probe the tests use: `freePort([ports])`, the first of the list free on every interface (all, 127.0.0.1 and ::1), or 0; `freePort()`, a port the system picks, held to the same rule; `isFree(port)`; `onFreePort([ports], start)`, a server started on the first port it can bind, the next tried when the bind is refused as in use. A 127.0.0.1-only probe passed a port figma-console's bridge held on ::1, and `localhost` reached the bridge (2026-11-01). Used by figma-audit's and ui-check's service tests and parity's `test-propose.mjs`. |
-| `model-routing.json`, `model-routing.mjs` | Which model and effort a piece of work runs on, one row per task family: what ds-model-routing advises from, and what a workflow sets each `agent()` by (`node tools/shared/model-routing.mjs` prints the routes for its `args`). Held by `test-model-routing.mjs`. |
-| `project-knowledge.cjs` | A project's product file, live §6 decisions (the two optional columns included, struck rows left out) and guidance pages, read from its folder (`read`): the docs site's `api/knowledge.json` and so the system MCP's `get_project_knowledge`. Every piece but the context document optional. |
-| `code-inventory.mjs` | What a code library contains, read from its folders, and how its components line up with the ones in Figma (used by the docs site and the audit). |
+| `walk.mjs` | one walk of a repo's files |
+| `repo-config.cjs` | reads a repo's `snapshot.config.json` |
+| `push-hook.mjs` | whether a repo's pushes run its check |
+| `check-cache.mjs` | `bin/check`'s lock and green-run cache |
+| `lock.mjs` | the one measuring lock |
+| `worktree.mjs` | a worktree per piece of work |
+| `land.mjs` | `bin/land`, the one way work reaches main |
+| `cdp.mjs` | the Chrome DevTools client |
+| `free-port.mjs` | a free port for tests |
+| `origin.mjs` | whether a request comes from Figma |
+| `real-path.mjs` | a path in its on-disk spelling |
+| `output.mjs` | the same written file for the same input |
+| `dialect.cjs` | which English spelling a project uses |
+| `names.js` | how a component's Figma name is shown |
+| `prop-attr.mjs` | a prop's name as an HTML attribute |
+| `colour.js` | sRGB, contrast ratio and OKLab maths |
+| `text-units.js` | line height and spacing per font size |
+| `knowledge.mjs` | the knowledge pages for an interface file |
+| `project-knowledge.cjs` | a project's product file, decisions and guidance |
+| `code-inventory.mjs` | what a code library contains |
+| `model-routing.json` | the model and effort per task family |
+| `model-routing.mjs` | reads `model-routing.json` |
+
+Each file's full job, and who uses it, is under [What each file gives](REFERENCE.md#what-each-file-gives).
+
+## How it fits
+
+- [REFERENCE.md](REFERENCE.md) holds each file's detail.
+- [tools/parity](../parity/README.md), [tools/ui-check](../ui-check/README.md) and the docs checks drive Chrome through `cdp.mjs`.
+- Some files are copied, not imported, into a plugin or skill. A test here holds each copy to its source.
+
+## Test
 
 ```sh
 for t in tools/shared/test-*.mjs; do node "$t"; s=$?; [ $s = 0 ] || [ $s = 77 ] || exit 1; done   # 77: skipped (test-cdp.mjs without Chrome)
 ```
 
-`test-mode-description.mjs` holds the OKLCH generator's two-mode description as the doc generator reads it back.
-
-A file belongs here only when two or more tools import it; one used by a single tool lives in that tool's folder.
+See [Tests](REFERENCE.md#tests).

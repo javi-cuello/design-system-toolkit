@@ -1,6 +1,13 @@
 # Skills
 
-Agent skills for design-system work: each folder teaches Claude one job, such as auditing a Figma library, exporting its tokens or keeping code equal to the design. A skill is a folder with a `SKILL.md` (its instructions, and its README), a `CHANGELOG.md`, `tests/cases.md` (what was verified, and how) and, where it needs them, `scripts/` and `references/`.
+Agent skills for design-system work. Each folder teaches Claude one job, such as auditing a Figma library, exporting its tokens or keeping code equal to the design.
+
+A skill is a folder with these files:
+
+- `SKILL.md`: its instructions, and its README;
+- `CHANGELOG.md`;
+- `tests/cases.md`: what was verified, and how;
+- `scripts/` and `references/`, where it needs them.
 
 ## Install
 
@@ -30,7 +37,7 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 | [figma-doc-generator](figma-doc-generator/SKILL.md) | Generates documentation pages that mirror variable collections, effects and text styles. |
 | [figma-tokens-examples](figma-tokens-examples/SKILL.md) | Builds or repairs the tokens-mapping example tables on a page. |
 | [figma-contrast-matrix](figma-contrast-matrix/SKILL.md) | Fills a WCAG contrast-ratio grid between colour-scale steps. |
-| [figma-context-capture](figma-context-capture/SKILL.md) | Reads a library's conventions into the project's context document, which every other skill reads, and keeps the project's other documents: the product file, its decisions and guidance pages. |
+| [figma-context-capture](figma-context-capture/SKILL.md) | Reads a library's conventions into the project's context document, which every other skill reads. Also keeps the project's other documents: the product file, its decisions and guidance pages. |
 | **Tokens and colour** | |
 | [oklch-color-scale-system](oklch-color-scale-system/SKILL.md) | Generates perceptually even 12-step OKLCH colour scales, light and dark. |
 | [type-scale](type-scale/SKILL.md) | Generates a type scale (sizes, line heights, weights, tracking, names, a phone mode), asking the project's choices first. |
@@ -47,4 +54,11 @@ Claude Code then loads each skill when a task matches its `description`. To use 
 
 ## Writing or changing a skill
 
-What a skill must be before it is committed is [skill-standard](../standards/skill-standard.md): a version and a history line in the same commit, its cases walked, no other skill's files read (a toolkit tool, standard or knowledge page it names by repo path is fine: `bin/get` brings it), no project's data. `bin/check` from the repo root checks what a script can see.
+[skill-standard](../standards/skill-standard.md) says what a skill must be before it is committed. In short:
+
+- a version and a history line in the same commit;
+- its cases walked;
+- no other skill's files read. A toolkit tool, standard or knowledge page it names by repo path is fine: `bin/get` brings it;
+- no project's data.
+
+Run `bin/check` from the repo root to check what a script can see.

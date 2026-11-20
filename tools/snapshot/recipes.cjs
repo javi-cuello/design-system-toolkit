@@ -6,7 +6,7 @@
  *   node tools/snapshot/recipes.cjs --repo <dir>
  *
  * Prints JSON, derived from design/screens and never hand-written (§D 23), so
- * the next snapshot changes it; tools/snapshot/README.md, *Screen recipes*,
+ * the next snapshot changes it; tools/snapshot/REFERENCE.md, *Screen recipes*,
  * says what each key holds. A shell is keyed by its top level's node types
  * (`{component}`, `{frame}`, …); a region is a frame; an instance is
  * entered only at its slots, whose content each screen composes; an

@@ -4,16 +4,19 @@ A curated set of editorial articles on how design systems are built. Each piece 
 
 ## What belongs here
 
-- One article per question. A broad survey of what the toolkit knowledge base ([`knowledge/`](../knowledge/README.md)) already holds is not an article; narrow it to the question the knowledge base cannot answer, or add the finding to the knowledge base instead.
-- Update the article that already asks a question rather than writing a second one.
-- Before writing, read the articles on the same or a neighbouring question; link to a section another article owns rather than retelling it. After writing, correct every article the finding changes (a fact, a number, a piece of advice), with its `updated` day: two articles never say a thing two ways.
+- One article per question. Update the article that already asks it rather than writing a second one.
+- The toolkit knowledge base ([`knowledge/`](../knowledge/README.md)) is not repeated here. Narrow an article to a question the knowledge base cannot answer, or add the finding there instead.
+- Before writing, read the articles on the same or a neighbouring question. Link to a section another article owns rather than retelling it.
+- After writing, correct every article the finding changes, and set its `updated` day. Two articles never say a thing two ways.
 - File each article in the topic folder that fits it. A new folder only for a topic none covers.
-- research/ is public: no customer, private project or private person is named, and nothing from a private session is quoted; use neutral descriptions ("a product library", "Project A"). The rule is toolkit-standard §D 6; `bin/check` refuses a project's name, an email, a /Users/ path or the maintainer's name.
+- research/ is public. Name no customer, private project or private person, and quote nothing from a private session. Use neutral descriptions ("a product library", "Project A"). The rule is toolkit-standard §D 6, and `bin/check` refuses a project's name, an email, a /Users/ path or the maintainer's name.
 - No scripts, raw results or experiment data. State their numbers in the prose and keep the files in the toolkit or a scratch folder.
-- An article added or edited goes into `index.html` in the same change, with `built` set to the day: nothing builds the page, and `bin/check` refuses an article missing from it or out of step with it.
-- Each entry carries `researched` (the day the research was done; a month, or a span `2026-08/2026-10`, only where no record holds the day) and `updated` (the day of its last change, set again on every edit), and `subtopic` in a topic that lists `subtopics`. The page computes the reading time from the text at 238 words a minute (Brysbaert 2019), so no one types it.
-- An article reads in 20 minutes or less, 4,760 words with figures and comments not counted; `bin/check` refuses an article updated after 2026-11-17 that runs longer, so a long one is brought under it the next time it is worked on. What does not fit is a second article on its own question, Part 1 and Part 2 of one question (each under 20 minutes, each linking to the other), or evidence the knowledge base holds and the article links to.
-- Retired pieces go to `_archive/<date>/`, never deleted.
+- An article added or edited goes into `index.html` in the same change, with `built` set to the day. Nothing builds the page, and `bin/check` refuses an article missing from it or out of step with it.
+- Each entry carries `researched`, the day the research was done. Use a month or a span (`2026-08/2026-10`) only where no record holds the day. It also carries `updated`, set again on every edit, and `subtopic` in a topic that lists `subtopics`.
+- The page computes the reading time from the text at 238 words a minute (Brysbaert 2019), so no one types it.
+- An article reads in 20 minutes or less: 4,760 words, not counting figures and comments. `bin/check` refuses a longer article updated after 2026-11-17. Bring a long one under the limit the next time it is worked on.
+- What does not fit becomes a second article on its own question, or Part 1 and Part 2 of one question. Each part stays under 20 minutes and links to the other. Evidence can also go to the knowledge base, with the article linking to it.
+- Retired pieces go to `_archive/<date>/`, never deleted. [REFERENCE.md](REFERENCE.md#retired-articles) lists them.
 
 The `design-system-research` skill reads this file before writing a deep-mode guide. The knowledge base never links to these articles.
 
@@ -98,7 +101,7 @@ Checking a library against its own rules, for people and for agents.
 
 ## AI and documentation
 
-Making a system readable to people and to agents. The nine articles form one series, *The agent-ready design system*, read in this order; each part owns one question and links to the parts before and after it.
+Making a system readable to people and to agents. The nine articles form one series, *The agent-ready design system*, read in this order. Each part owns one question and links to the parts before and after it.
 
 1. [What makes a design system agent-ready?](ai-and-docs/what-makes-a-design-system-agent-ready.md)
 2. [What a design system's library should carry for an agent](ai-and-docs/what-the-library-carries-for-an-agent.md)
@@ -109,5 +112,3 @@ Making a system readable to people and to agents. The nine articles form one ser
 7. [Building whole screens with an agent from the design system](ai-and-docs/building-screens-with-an-agent.md)
 8. [Prototyping with a design system's real components](ai-and-docs/prototyping-from-real-components.md)
 9. [Measuring and showing agent readiness](ai-and-docs/measuring-agent-readiness.md)
-
-*Making a design system usable by AI agents* was split into parts 2, 4 and 9 and retired to `_archive/2026-11-09/`. *Marking AI-generated content* was retired to `_archive/2026-11-17/`: it is not about design systems.

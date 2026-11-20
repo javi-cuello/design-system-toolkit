@@ -1,6 +1,6 @@
 # Standards
 
-The rules the toolkit holds itself and every project to: how a Figma library is built and named, how its snapshot reaches code, how an interface looks and reads, how its code is written, and what a skill or plugin must be before it ships. Each rule says why it exists, what evidence admitted it, and which check enforces it, so a rule can be trusted, tested and retired.
+The rules the toolkit holds itself and every project to. They cover how a Figma library is built and named, and how its snapshot reaches code. They cover how an interface looks and reads, and how its code is written. They also say what a skill or plugin must be before it ships. Each rule says why it exists, what evidence admitted it, and which check enforces it, so a rule can be trusted, tested and retired.
 
 ## Which standard to read
 
@@ -13,7 +13,7 @@ The rules the toolkit holds itself and every project to: how a Figma library is 
 | [code-standard](code-standard.md) | write the HTML, CSS and JavaScript of a site, an app or a design-system component. |
 | [skill-standard](skill-standard.md) | write or change a skill (Part A) or a Figma plugin (Part B). |
 
-Which wins when a project's context document, a standard and the session disagree is the root's *Precedence* paragraph ([toolkit-standard](toolkit-standard.md)); a project overrides a rule with a dated ruling and an `**Overrides:**` line. Guidance past the rules, with sources, is in [`knowledge/`](../knowledge/README.md).
+A project's context document, a standard and the session may disagree. The root's *Precedence* paragraph ([toolkit-standard](toolkit-standard.md)) says which wins. A project overrides a rule with a dated ruling and an `**Overrides:**` line. Guidance past the rules, with sources, is in [`knowledge/`](../knowledge/README.md).
 
 ## How a rule is cited
 
@@ -22,10 +22,17 @@ By handle, never by copying its text: `figma-standard rule 11`, `toolkit-standar
 ## What else is here
 
 - [`audit-settings.json`](audit-settings.json): the house defaults the audit tools read (markers, option order, token collections), which a project's context document can override per library.
-- [`naming-preferences.json`](naming-preferences.json): the house's naming preferences (separators, the private prefix, property case and words), owned by figma-standard and read by every tool; a project overrides them in its context document's `naming-preferences` block, and an audit files a departure as a preference, never a defect.
+- [`naming-preferences.json`](naming-preferences.json): the house's naming preferences: separators, the private prefix, property case and words. Figma-standard owns them and every tool reads them. A project overrides them in its context document's `naming-preferences` block. An audit files a departure as a preference, never a defect.
 - [`changelog/`](changelog/): one history file per standard, newest first; a retired standard's file maps its old rules to where they went. A standard's version and its history line move in the same commit.
-- [`tests/`](tests/): `check.sh` (the structural checks over skills, plugins and standards, run by `bin/check`), `check-frontmatter.sh`, `scan-clause-d.py` (project data that escaped into a skill) and `cases.md` (the cases that test the standards themselves).
+- [`tests/`](tests/): the standards' own tests.
+
+| File | What it does |
+|---|---|
+| `check.sh` | the structural checks over skills, plugins and standards, run by `bin/check` |
+| `check-frontmatter.sh` | checks skill frontmatter |
+| `scan-clause-d.py` | finds project data that escaped into a skill |
+| `cases.md` | the cases that test the standards themselves |
 
 ## Changing a standard
 
-Follow [toolkit-standard](toolkit-standard.md) §C: a rule enters from a real run or a decision, names its check, bumps the version and its history line together, and `bin/check` stays green.
+Follow [toolkit-standard](toolkit-standard.md) §C. A rule enters from a real run or a decision, and names its check. The version and its history line move together, and `bin/check` stays green.

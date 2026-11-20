@@ -2,13 +2,13 @@
 
 Claude skills, tools, Figma plugins and standards for building, documenting and checking a design system, in Figma and in code:
 
-- **Audit a Figma library**: how each component is built, the file's structure and naming, broken variable links, the differences between two files, and what a platform (web, iOS, Android) cannot build as drawn.
+- **Audit a Figma library**: how each component is built, and the file's structure and naming. Broken variable links, the differences between two files, and what a platform (web, iOS, Android) cannot build as drawn.
 - **Document it**: component descriptions, properties tables and token pages in Figma, and a documentation site generated from the library.
 - **Colour and tokens**: perceptual OKLCH colour scales, WCAG contrast matrices, and design tokens exported and built for code.
-- **Write a component's contract**: its props and parts, agreed by design and code before anyone draws or builds it, in a browser editor that can also push it to Figma.
-- **Build and check the code**: an accessible, token-driven front end from a design, a measurement of how far coded components are from Figma, and checks for markup, styles and accessibility.
+- **Write a component's contract**: its props and parts, agreed by design and code before anyone draws or builds it. A browser editor holds it and can push it to Figma.
+- **Build and check the code**: an accessible, token-driven front end from a design. A measurement of how far coded components are from Figma. Checks for markup, styles and accessibility.
 - **Figma plugins**: library snapshots, an audit that needs nothing else installed, icon import, theme switching, layer tidying, component graphs and guidelines.
-- **Standards and knowledge**: what good looks like, each rule with its reason and the check that enforces it, sourced guidance on UI and code, and research into how real design systems handle a topic.
+- **Standards and knowledge**: what good looks like, each rule with its reason and the check that enforces it. Sourced guidance on UI and code. Research into how real design systems handle a topic.
 
 The tools read a Figma library through one snapshot, taken by a plugin and stored with the project, so every output agrees with the others.
 
@@ -18,7 +18,7 @@ The toolkit holds no project. Each project keeps its design-system files in its 
 
 | Folder | What it holds |
 |---|---|
-| [`stock-ui/`](stock-ui/README.md) | The toolkit's own design system, in code: the stylesheet and theme switch the docs site, dashboard and contract editor are built on, which a project can build on and extend. |
+| [`stock-ui/`](stock-ui/README.md) | The toolkit's own design system, in code. The docs site, dashboard and contract editor are built on its stylesheet and theme switch. A project can build on it and extend it. |
 | [`plugins/`](plugins/README.md) | Figma plugins: the snapshot plugin every other tool starts from, smaller helpers, and the Adoption score widget. |
 | [`tools/`](tools/README.md) | The shared code: the snapshot router, the docs site and audit service, the token build, the parity engine, the checks. |
 | [`skills/`](skills/README.md) | Claude skills, one job each: audits, documentation, tokens, building and checking code. |
@@ -26,7 +26,7 @@ The toolkit holds no project. Each project keeps its design-system files in its 
 | [`knowledge/`](knowledge/README.md) | Guidance past the rules, with sources: UI fundamentals, patterns and code practice. |
 | [`research/`](research/README.md) | Long-form research articles on how design systems are built; not part of the knowledge base. |
 | [`docs/`](docs/README.md) | Setting up the whole toolkit, and how its parts fit together. |
-| [`bin/`](bin/README.md) | The commands you run: `bin/check`, `bin/worktree`, `bin/land`, `bin/closing`, `bin/review`, `bin/get`, `bin/audit`, `bin/deploy`, `bin/set-key`. |
+| [`bin/`](bin/README.md) | The commands you run, such as `bin/check`, `bin/get` and `bin/land`. |
 
 ## Getting started
 
@@ -38,10 +38,10 @@ git sparse-checkout set --cone bin
 bin/get tools/contract-editor        # or plugins/<name>, skills/<name>; --list prints the folders and changes nothing
 ```
 
-A skill comes with the tools, standards and knowledge pages it names, and an orchestrating skill with the skills it runs. A folder with packages of its own (the docs site) is named with its `pnpm install --frozen-lockfile`; a skill goes into Claude Code with `./install.sh`, which says which services it left out and how to start each. Then follow that tool's README.
+A skill comes with the tools, standards and knowledge pages it names, and an orchestrating skill with the skills it runs. A folder with packages of its own, such as the docs site, is named with its `pnpm install --frozen-lockfile`. A skill goes into Claude Code with `./install.sh`. That script says which services it left out and how to start each. Then follow that tool's README.
 
 **The whole toolkit**, with the skills in Claude Code, the services and a first project: [docs/setup.md](docs/setup.md). How the parts connect, and the words used across them: [docs/how-it-fits.md](docs/how-it-fits.md). To change the toolkit: [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-© Javier Cuello. Use it and change it, client work included, with credit; share it only free and on the same terms; never sell it or a changed copy. The terms are in [LICENSE](LICENSE).
+© Javier Cuello. Use it and change it, client work included, with credit. Share it only free and on the same terms. Never sell it or a changed copy. The terms are in [LICENSE](LICENSE).

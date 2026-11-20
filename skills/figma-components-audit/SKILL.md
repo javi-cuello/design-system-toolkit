@@ -356,7 +356,7 @@ Each dimension starts at its full weight and loses a fraction per verified findi
 | `figma_navigate({ url, lock: true })` | confirm and pin the target library; re-run if the connection silently switches files |
 | `figma_get_status({ probe: true })` | verify the bridge is actually responsive, not just open, before a run — cheap, and catches a stale or switched connection early |
 | `figma_execute({ code, timeout })` | `scanner/audit.js`, and the probes in `scripts/probes.js` (*Session probes*) |
-| the project service's `POST /exec` | the same, when figma-console has no file connected but the dashboard does (`tools/figma-audit/README.md`) |
+| the project service's `POST /exec` | the same, when figma-console has no file connected but the dashboard does (`tools/figma-audit/REFERENCE.md`, *What it exposes*) |
 | `figma_get_annotations({ nodeId, include_children, depth })` | dimension 9 (variant annotations) — not reachable via `figma_execute` |
 | `figma_get_annotation_categories()` | category ids, needed before writing a new annotation |
 | `figma_set_annotations({ nodeId, annotations })` | only after explicit approval of the exact values (judgment-protocol §4 — never invent a timing or cursor value) |

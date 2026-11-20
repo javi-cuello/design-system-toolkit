@@ -1,5 +1,5 @@
 // Tests for the rows read from a contract — run: node tools/component-contract/test-contract-rows.mjs
-// A fixture contract in contract 1's shape (tools/component-contract/README.md).
+// A fixture contract in contract 1's shape (tools/component-contract/REFERENCE.md, The shape (contract 1)).
 import { rowsOf, propsOf, rowsFromWalk } from './contract-rows.mjs';
 
 let pass = 0, fail = 0; const failures = [];

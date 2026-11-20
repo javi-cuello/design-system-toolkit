@@ -1,12 +1,12 @@
 # Tools
 
-The code every project shares, one copy each: the services that take a Figma snapshot and serve a project's docs and audit, and the engines a project's own `bin/` scripts call (token build, parity, checks). A project never keeps a copy of anything here; it calls it, so a fix reaches every project at once. Each folder's README says how to run it.
+The code every project shares, one copy each. Some are services that take a Figma snapshot and serve a project's docs and audit. Others are engines a project's own `bin/` scripts call: token build, parity and checks. A project never keeps a copy of anything here; it calls it, so a fix reaches every project at once. Each folder's README says how to run it.
 
 ## In the order a design travels through them
 
 | Tool | What it does | Runs as |
 |---|---|---|
-| [snapshot](snapshot/README.md) | Receives a snapshot from the Figma plugin and stores it in the project it belongs to; `projects.cjs` is how every tool finds a project and its files. | a local service (launchd), port 9317 |
+| [snapshot](snapshot/README.md) | Receives a snapshot from the Figma plugin and stores it in the project it belongs to. Every tool finds a project and its files through `projects.cjs`. | a local service (launchd), port 9317 |
 | [component-contract](component-contract/README.md) | Derives what each component means (its props, parts and states) from the stored drawing. | a library the snapshot and parity call |
 | [contract-editor](contract-editor/README.md) | A page for writing a component's contract before it is drawn or built, prop by prop, with what it will cost. | a local page, `serve.mjs`, port 9250 |
 | [tokens](tokens/README.md) | Turns the snapshot's tokens into DTCG files, then CSS and Sass, and checks a project's are current. | a CLI each project's `bin/tokens` calls |
@@ -30,4 +30,4 @@ The code every project shares, one copy each: the services that take a Figma sna
 
 ## Requirements
 
-Node, pnpm and Chrome, at the versions [setup](../docs/setup.md) names. `docs-site/` and `system-mcp/` have dependencies (`pnpm install` there once); `tokens/` pins Style Dictionary only for its own suites, since a project installs its own. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).
+Node, pnpm and Chrome, at the versions [setup](../docs/setup.md) names. Two folders have dependencies, `docs-site/` and `system-mcp/`: run `pnpm install` there once. The `tokens/` folder pins Style Dictionary only for its own suites, since a project installs its own. Where a project lives is one rule: `~/Projects/<label>/figma-design-system/` ([setup](../docs/setup.md#a-projects-home)).

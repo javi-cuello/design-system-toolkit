@@ -1,36 +1,54 @@
 # bin
 
-The commands you run from the repo root. Each is a short script that hands over to the tool that does the work, so the command stays the same when the code behind it moves.
+The commands you run from the repo root. Each is a short script that hands over to the tool that does the work. So the command stays the same when the code behind it moves.
 
-| Command | What it does |
-|---|---|
-| `bin/check` | The toolkit's own check: the standards, the scanners and every test a skill or tool ships. Run it before and after a change; the pre-push hook runs it too, so a push cannot carry a red toolkit. By default it also heals what it safely can (it may rewrite a project setting that only repeats a house default); `--no-fix` changes nothing, `--quick` skips the test suites. |
-| `bin/worktree <work>` | Makes or reopens the worktree for one piece of work, `.claude/worktrees/<work>` on branch `worktree-<work>` from `origin/main`, with the main checkout's installs linked in, and prints its folder ([tools/shared](../tools/shared/README.md) `worktree.mjs`). Work is done there, never in the main checkout, which other sessions share. |
-| `bin/land [<branch or folder>]` | Lands a worktree's branch on main: it joins one queue, and whoever holds the measuring lock replays every queued branch onto main, runs one full check of the batch and pushes ([tools/shared](../tools/shared/README.md) `land.mjs`). `bin/land --queue` lists the queue. |
-| `bin/check-lib.sh` | Sourced by `bin/check`, not run: its step helpers and the closing summary, which names every step that failed so the last lines of a run say what blocked it. |
-| `bin/get [--list] <folder>` | One tool from the toolkit, for someone who wants only it: in a clone made with `git clone --filter=blob:none --sparse`, sets git's sparse checkout to the tool's folder and every toolkit folder its code imports or names, followed until nothing new is named. A skill also brings the tools, standards and knowledge pages its `SKILL.md` and references name by repo path, and an orchestrator the skills it runs. The code is git's checkout, never a copy; `git pull` updates it. A kept folder with packages of its own is named on stderr with its `pnpm install --frozen-lockfile`; a file it used but could not check out, or a toolkit path a skill names that does not exist, is said there too. `bin/check` runs the contract editor and takes every skill from a checkout this made. |
-| `bin/closing` | The end-of-work pass: what is uncommitted or unpushed across the toolkit and every project, and the questions no script can answer ([toolkit-standard](../standards/toolkit-standard.md) §D 13). `--brief` prints the open items alone (the session hooks read it); `--queue` prints, as JSON, what was left for later since the last periodic review; `--judgement <standard>… [--prompt <file>]` prints those standards' judgement rules, by handle and title, and with `--prompt` only those whose *Reviewed:* names that file. |
-| `bin/review` | The periodic independent review ([toolkit-standard](../standards/toolkit-standard.md) §D 11), run without the maintainer: a `review/<date>` branch in its own worktree, `bin/check`, the queue (`bin/closing`'s `--queue`), one headless agent over [`review.md`](../tools/toolkit-check/review.md). A fresh read-only reviewer then judges the branch; with no High issue and `bin/check` green on the merge it is pushed to `main`, otherwise held, with the reason handed to the next run. `--if-owed` (what the daily launch agent passes), `--dry-run` (everything but the agent), `--budget <usd>` (default 20). |
-| `bin/audit <project> [fileKey]` | Runs two stages of a project's Figma audit from a Claude session, with no API key: the components scanner and the file-level (foundations) scanner, through the project's audit service, writing a payload for the session to judge ([tools/figma-audit](../tools/figma-audit/README.md)). `bin/audit --file <payload>` shows what filing it would add and close, and `--write` files it. The page's **Audit** also runs the validator and the token-link stages; from a session, run those skills ([component-validator](../skills/component-validator/SKILL.md), [figma-variable-audit](../skills/figma-variable-audit/SKILL.md)). |
-| `bin/deploy <project> --public` or `--password` | Publishes a project's built docs site to Cloudflare ([tools/docs-site](../tools/docs-site/README.md)). |
-| `bin/set-key [name] [--again]` | macOS only. The one command that writes the toolkit's keys: Figma (`figma`), Anthropic (`audit`) and, optionally, the agent's own Figma account (`figma-claude`, which figma-prototype's feedback replies post as), one file each in `~/.config/keys/`, with `keys.conf` beside them saying each key's prefix and who else must hear of it (copied from `keys.conf.example` on the first run). With a name it waits for the key on the clipboard, tests it, saves it 600 and hands it on, so the key never passes through a chat; with none it says which keys work. The usage and the `keys.conf` line format are in the script's header ([set-key](set-key)) and [keys.conf.example](keys.conf.example). A `keys.conf` written before 2026-10-31 keeps working: see *Moving a keys.conf from the old set-key* below. |
-| `bin/keys.conf.example` | Not a command: the `keys.conf` `bin/set-key` starts from, with the format of a line. |
+## Try it
 
 ```sh
 bin/check            # everything
 bin/check --quick    # the standards and the scanners only: under a minute
 ```
 
-Each step prints how long it took. The full run is long because it runs every test suite, several in Chrome, and takes the contract editor and every skill from a fresh `bin/get` checkout; `--quick` is the one to run while working, the full one before a push (the push hook runs it anyway).
-
-Tests sit beside the commands as `test-<command>.mjs`, run by `bin/check` by discovery: `test-set-key.mjs` in a temp `HOME` with fake keys and `pbpaste`, `pbcopy`, `curl`, `launchctl` and `sleep` stubbed (a key its test rejects, or with no network, is never saved; the steps' refusals), and `test-deploy.mjs` with `npx` stubbed (its refusals, both flags at once and an unknown flag beside a valid one among them, and the wrangler call it would make; nothing is published).
-
 Every command needs Node 22.12 or later. `bin/deploy` also needs `npx wrangler login` once.
 
-## Moving a keys.conf from the old set-key
+## The commands
 
-Until 2026-10-31 `bin/set-key` also tested Brave (`BSA`), ElevenLabs (`sk_`) and Resend (`re_`) keys itself, and had an `ssh <host> <config path>` step that copied a key to a server and made its PHP config read it. Both came out: the toolkit keeps only its own keys. A `keys.conf` that relies on them is told so, never half-run:
+| Command | What it does |
+|---|---|
+| `bin/check` | The toolkit's own check: the standards, the scanners and every test a skill or tool ships. Run it before and after a change. The pre-push hook runs it too, so a push cannot carry a red toolkit. |
+| `bin/worktree <work>` | Makes or reopens the worktree for one piece of work, and prints its folder. Work is done there, never in the main checkout, which other sessions share. |
+| `bin/land [<branch or folder>]` | Lands a worktree's branch on main, through one queue that is checked and pushed as a batch. |
+| `bin/check-lib.sh` | Sourced by `bin/check`, not run: its step helpers and the closing summary. |
+| `bin/get [--list] <folder>` | Takes one tool from the toolkit, for someone who wants only it, with every toolkit folder it uses. |
+| `bin/closing` | The end-of-work pass: what is left uncommitted or unpushed, and the questions no script can answer. |
+| `bin/review` | The periodic independent review, run without the maintainer. |
+| `bin/audit <project> [fileKey]` | Runs two stages of a project's Figma audit from a Claude session, with no API key. |
+| `bin/deploy <project> --public` or `--password` | Publishes a project's built docs site to Cloudflare ([tools/docs-site](../tools/docs-site/README.md)). |
+| `bin/set-key [name] [--again]` | macOS only. The one command that writes the toolkit's keys. |
+| `bin/keys.conf.example` | Not a command: the `keys.conf` `bin/set-key` starts from, with the format of a line. |
 
-- **A line with `ssh`** stops before any key is asked for, and set-key prints the line that replaces it, `<name> <prefix> run ~/.config/keys/hooks/ssh-php-config <host> <config path>`, with where to get the hook if it is not there yet (the old step, from git history).
-- **A key whose prefix it no longer tests** is saved and said to be untested, and set-key prints the `test` line that runs the old test from your `keys.conf`.
-- **A file where a `link` goes** (a `~/.figma-dashboard-key` written by hand, as the old setup said) is left alone and named; move it aside and run `bin/set-key <name> --again`.
+[REFERENCE.md](REFERENCE.md) says what each command does in full.
+
+## Options
+
+| Option | What it does |
+|---|---|
+| `bin/check --no-fix` | changes nothing. By default the check heals what it safely can. |
+| `bin/check --quick` | skips the test suites |
+| `bin/land --queue` | lists the queue |
+| `bin/get --list` | prints the folders and changes nothing |
+| `bin/closing --brief` | prints the open items alone. The session hooks read it. |
+| `bin/closing --queue` | prints, as JSON, what was left for later since the last periodic review |
+| `bin/closing --judgement <standard>… [--prompt <file>]` | prints those standards' judgement rules, by handle and title. With `--prompt`, only those whose *Reviewed:* names that file. |
+| `bin/review --if-owed` | what the daily launch agent passes |
+| `bin/review --dry-run` | everything but the agent |
+| `bin/review --budget <usd>` | the spending limit, default 20 |
+| `bin/audit --file <payload>` | shows what filing the payload would add and close |
+| `bin/audit --write` | files it |
+| `bin/set-key <name> --again` | hands the saved key on again, after a hand-on that failed (the script's header) |
+
+## Test
+
+Each step of `bin/check` prints how long it took. The full run is long, because it runs every test suite, several in Chrome. `--quick` is the one to run while working. Run the full one before a push; the push hook runs it anyway.
+
+Tests sit beside the commands as `test-<command>.mjs`, and `bin/check` finds them by discovery. [REFERENCE.md](REFERENCE.md#tests) says what each stubs.

@@ -1,136 +1,50 @@
 # Docs site
 
-A documentation site for a design system, generated from the project's
-committed Figma snapshot. The engine names no project. It finds one the way
-every reader in the toolkit does, through the snapshot contract
-(`tools/snapshot/projects.cjs`, `layout()`), so where a project
-keeps its snapshot, its display name, its phase and its page-marker legend
-all come from the project, stated once.
+This folder builds a documentation site for a design system. It reads the project's stored Figma snapshot, so the site shows what the design holds. To change the docs, change Figma and take a new snapshot. The engine names no project. It finds each one through the snapshot contract, so a project states its own details once.
 
-    pnpm install --frozen-lockfile          # once, in this folder
-    DOCS_PROJECT=<label> pnpm dev           # a project's label: its repo under ~/Projects/
-    DOCS_PROJECT=<label> pnpm build             # → <project home>/site/
-    DOCS_OUT=/tmp/<label>-site …                 # build somewhere else
+## What it needs
 
-A build, by hand or by the dashboard service, runs through `build.mjs`: it
-waits for any other build of the engine to finish (Astro stages every build in
-one folder, `.astro/.prerender`, and two at once break each other; the lock,
-`lock.mjs`, is touched every 30 seconds while a build runs, so only one left
-by a build that died goes stale, after two minutes; a stale lock whose holder
-still runs, the same pid started at the same time, is kept, and any is dead
-after six hours), builds
-beside the site and swaps it in, so a failed build never leaves the site empty.
+- Node and pnpm.
+- A project with a stored snapshot, found through `layout()` in `tools/snapshot/projects.cjs`.
+- Run it from inside this folder. The toolkit is found by walking up from there.
 
-The toolkit is found by walking up from the working directory, so run it
-from inside this folder. You rarely need to: the dashboard service
-([tools/figma-audit](../figma-audit/README.md)) builds every project's site on start and again
-whenever its inputs change, and serves it.
+## Run it
 
-To change the docs, change Figma and take a new snapshot.
+```sh
+pnpm install --frozen-lockfile          # once, in this folder
+DOCS_PROJECT=<label> pnpm dev           # a project's label: its repo under ~/Projects/
+DOCS_PROJECT=<label> pnpm build         # → <project home>/site/
+DOCS_OUT=/tmp/<label>-site …            # build somewhere else
+```
 
-## What the phase changes
+You rarely need to. The dashboard service in [tools/figma-audit](../figma-audit/README.md) builds every project's site when it starts. It builds again whenever the inputs change, and serves the site.
 
-The phase is the `project` block in the project's context document.
+Every build runs through `build.mjs`. It waits for any other build to finish, using the lock in `lock.mjs`. It then builds beside the live site and swaps it in. A failed build never leaves the site empty.
+
+## What it reads and writes
+
+It reads the snapshot's tokens, specs, previews and change log. It reads each component's contract and its Figma description. In the build and maintenance phases it also reads the built Storybook and the last parity report. It writes the site to `<project home>/site/`.
+
+The project's phase decides what a page shows:
 
 | Phase | Shows |
 |---|---|
-| `design` | A handoff spec: guidance from each component's Figma description, the design preview (default variant, exported by the plugin), properties, tokens per layer, status from the page marker, and what changed in the last snapshot. No Parity tab: there is no code to compare |
-| `build` | The same, plus live previews from the project's built Storybook and whether each component is in code, and the Parity tab |
-| `maintenance` | As build |
+| `design` | A handoff spec. There is no Parity tab, because there is no code yet. |
+| `build` | The spec, plus live Storybook previews and the Parity tab. |
+| `maintenance` | The same as `build`. |
 
-A component's status is its page marker, read through the project's legend
-(figma-standard rule 11's `🚧`/`❖` by default, or a project's own review ladder), so
-nobody maintains a second status.
+A component's status is its Figma page marker. Nobody keeps a second status.
 
-## Where things come from
+## Publish it
 
-- **Tokens, specs, previews, icons, changes:** the paths `layout()` returns,
-  which a repo sets in its `snapshot.config.json` `paths` and a design-only
-  project gets by default under `<project home>/snapshot/`.
-- **Properties:** each component's contract (`contract.json`, written beside
-  its spec on every snapshot), read through `propsOf` in
-  `tools/component-contract/contract-rows.mjs`, in the order `rowsOf` gives
-  them, the rows figma-properties-table draws from the same walk run live. A component with no stored contract says so.
-- **States:** the interaction states from the contract too, by the rule the
-  contract editor uses (`statesOf` in `tools/component-contract/layers.mjs`):
-  the axis derive marked as interaction, its default left out, a pointer
-  state set by the browser and any other on that axis (Loading) by the
-  product. A True/False property named for a condition (Disabled, Selected)
-  is listed as set by that property.
-- **Propose a change:** each component with a contract links to it in the
-  project's contract editor (`tools/contract-editor`), at the project block's
-  `editorPort` (9250 where it states none), where its API is edited and
-  proposed. Shown only where the site is served from this machine and the
-  editor answers there; a published copy never offers it. The editor links back
-  to the component's page, read from this site's `api/index.json`, which
-  gives each set's `path`.
-- **For agents:** `/llms.txt` lists every component page with its first line
-  of guidance and its JSON (`api/components/<slug>.json`), then the index,
-  token and change JSON. It points into the JSON API rather than copying the
-  pages again (knowledge/ui/profiles/documentation.md *Docs for agents*).
-- **Guidance:** each component's description, parsed by the toolkit's
-  `guidance.cjs` (purpose, Usage, Don't, Behaviour, Composition, Code gen
-  notes). A Don't item naming another component links to it.
-- **Stories:** matched to components by folder (a story file beside a spec is
-  that component's). The docs service keeps a project's own Storybook built
-  (parity's `watch.mjs` `watchStories`, from `parity.host.build`); the `storybook` path's `hide`
-  names stories that are machinery, and `themeGlobal` the global that
-  switches light and dark. The preview says when the Storybook was built, and "code
-  changed since" when the project's story-build inputs (parity's
-  `host.build.inputs`) moved after it; where `themeGlobal` is set, a Site /
-  Light / Dark control holds the story's theme apart from the site's.
-- **Figma links:** the key from the project's routing block, per component
-  file where a project spans several.
-- **Parity (its own section):** *Coverage* sets a library's component pages
-  against the components in its code: in code when it has one of the component's
-  name, or of the name the project says it is built as (`frameworkComponents`). The project names the code on the
-  library in its `audit-settings`, as `"code": { "repo": "~/Projects/<repo>",
-  "components": "<folder from the repo's root>" }`. A component in code is a
-  folder holding a file of its own name (`tools/shared/code-inventory.mjs`,
-  shared with the audit). Read when the site is built, so a change in the
-  code shows at the next build. Its second table, where a component may be in
-  code under another name, is the audit's open `design-code-parity` rows read
-  from the record: the page works none of them out. *Overview*, *Tokens*,
-  *Properties* and *Visual* read the code audit's last report
-  (`<project parity folder>/report.json`, written by
-  [tools/parity](../parity/README.md)'s `external.mjs`) and say what to set up
-  where there is none.
+`bin/deploy <project> --public` or `--password` uploads the site to Cloudflare. It refuses to run without one of the two flags. That way, who may read a site is decided when it is published. See [bin/README.md](../../bin/README.md) and [Publishing](REFERENCE.md#publishing).
 
-Previews and the built Storybook are served under `/previews` and
-`/storybook` on the site's own origin, in dev and in the build, so the site
-deploys as one folder.
+## How it fits
 
-## Adding a section to a page
-
-Give it an `h2`. Any sidebar page with more than one visible `h2` gets an
-*On this page* column listing them, read from the page itself: a heading
-without an anchor takes one from its text, and tabs, dashboard views and
-filters redraw it by dispatching `contentchange`. A section that should be
-spaced like the others is a `<section class="section">`. Nothing else is
-registered anywhere.
-
-## Where the code is
-
-- [stock-ui](../../stock-ui/README.md), the toolkit's design system, outside this folder — tokens,
-  reset, plain elements, the components the pages, the dashboard and the contract editor
-  share (button, figures strip, segmented filter, dialog), and the theme switch.
-- `src/styles/site.scss` — the pages' own layout and components.
-- `src/pages/changes.astro` — every recorded snapshot change, with the names
-  behind each count; the overview's "Recent changes" is its last five.
-- `src/dashboard/` — the audit dashboard: markup (`Dashboard.astro`),
-  styles, the settings and check catalogue it bakes in for a read-only copy
-  (`data.js`; the audit records are mounted beside the page at `/audit/`), and its
-  behaviour as ES modules, one per concern, started by `main.js`: the record
-  and the service (`record.js`, `api.js`), the queue, audits, Ask, scores,
-  measures, views, owner labels (`labels.js`, shared with the overview).
-  `check.mjs` proves every name each module uses is declared, imported or a
-  browser global, and every import is exported.
-- `src/lib/` — reading the snapshot, the audit record and the project.
-
-- `check-structure.mjs <site dir>` — the markup contract (one `main`, one
-  `h1`, named landmarks, ids that resolve) on one page of each page type of a
-  built site, through parity's structure probe; `bin/check` runs it over each
-  project's built site.
+- [REFERENCE.md](REFERENCE.md) holds the detail. It covers the build lock and [where each part of a page comes from](REFERENCE.md#where-things-come-from). It also covers adding a section, the code's layout, publishing and what is parked.
+- [stock-ui](../../stock-ui/README.md) is the design system the pages share with the dashboard.
+- [tools/parity](../parity/README.md) writes the report the Parity pages read.
+- `check-structure.mjs <site dir>` checks the markup of one page of each type. `bin/check` runs it on each project's built site.
 
 ## Test
 
@@ -138,42 +52,7 @@ registered anywhere.
 node tools/docs-site/src/dashboard/check.mjs     # every name a dashboard module uses is declared
 node tools/docs-site/test-lib.mjs                # format.js: escaping, names, dates
 node tools/docs-site/test-empty-build.mjs        # a project with no component specs still builds
+node tools/docs-site/check-structure.mjs <site dir>
 ```
 
-The other `test-*.mjs` here each name what they hold in their first lines
-(the build lock, the change log, the structure check, the dashboard's logic
-and its handling of text a file wrote, Parity's pages); `bin/check` runs every
-one by discovery. Every page's accessibility is
-[tools/ui-check](../ui-check/README.md)'s `test-own-pages.mjs`.
-
-## Publishing
-
-[`bin/deploy`](../../bin/README.md) `<project> --public` or `--password` uploads the site the service
-built (`<project home>/site`) to Cloudflare as the Worker `<name>-docs`, serving
-it as static assets at `<name>-docs.<account>.workers.dev` (Cloudflare folded
-Pages into Workers; wrangler 4.138's Pages commands no longer deploy a folder),
-at a domain root since the engine sets no base path. It needs `npx wrangler
-login` once. It refuses without one of the two flags, so who may read a site is
-decided when it is published. `--password` puts `tools/docs-site/deploy/password.js`
-in front, the browser's sign-in box asking for the Worker's secret `PASSWORD`;
-until it is set (`npx wrangler secret put PASSWORD --name <name>-docs`) the site
-serves nothing. A project whose context document's `project` block says
-`"publish": "password"` or `"public"` is redeployed by the dashboard service
-after every build; otherwise run it by hand. A published copy's Audits page is
-its read-only dashboard: no actions, no note fields, the record as of the build.
-
-Why Cloudflare (decided 2026-09-19, the password added 2026-10-14): GitHub Pages
-has no access control outside Enterprise, StatiCrypt is one shared password
-re-encrypted on every build, and Tailscale needs every reader to install it.
-Cloudflare Access (a login per person, free to 50 users) was the first choice;
-the maintainer chose one password over it: no card, one password for everyone.
-
-## Not here yet
-
-- **Visual Do and Don't examples.** Parked (2026-09-19). The shape agreed:
-  Claude drafts one frame per guidance bullet in Figma from real instances
-  (named `Do / <bullet>`), the designer reviews them there, the snapshot
-  exports them as it does previews, and a component page shows each beside
-  its bullet. Pilot on one component first.
-- **Specimen faces for design-only projects:** with no repo there is no font
-  folder, so type specimens use the system face.
+Each other `test-*.mjs` here names what it holds in its first lines. `bin/check` runs them all. See [Tests](REFERENCE.md#tests).

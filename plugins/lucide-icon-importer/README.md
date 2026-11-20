@@ -1,50 +1,45 @@
 # Lucide Icon Importer
-Imports Lucide icons as components with size variants.
 
-Runs with no build step: import `manifest.json` via Figma → Plugins → Development → Import plugin from manifest…
+This Figma plugin imports [Lucide](https://lucide.dev) icons as components, with size variants. It saves drawing or pasting each icon by hand.
+
+## Install
+
+It runs with no build step. In Figma, go to Plugins → Development → Import plugin from manifest… and pick `manifest.json`.
 
 ## Right to left
-For a project that ships a right-to-left language (Arabic, Hebrew, Farsi, Urdu), turn on **Mark mirroring** in Settings. Each icon added then gets `Right to left: mirrors` or `Right to left: stays` at the end of its description. That line is what figma-components-audit reads to know the decision is made. With one icon selected, the **Mirrors right to left** checkbox sets it. It's prefilled from the name with the audit's own direction words: arrows, chevrons, undo and send mirror; up/down and playback controls stay. Icons added several at a time get the line only if someone selected each one and saw its box. A guess would silence the audit's question. Update icon keeps a decision already made, including one written by hand.
+
+Some projects ship a right-to-left language, such as Arabic, Hebrew, Farsi or Urdu. For those, turn on **Mark mirroring** in Settings. Each icon added then gets `Right to left: mirrors` or `Right to left: stays` at the end of its description. figma-components-audit reads that line to know the decision is made.
+
+With one icon selected, the **Mirrors right to left** checkbox sets it. The box is prefilled from the name, using the audit's own direction words. Arrows, chevrons, undo and send mirror. Up, down and playback controls stay.
+
+Icons added several at a time get the line only if someone selected each one and saw its box. A guess would silence the audit's question. **Update icon** keeps a decision already made, including one written by hand.
 
 ## Data this plugin stores
-- **The file's settings**, as `pluginData` on the document root under `lucideIconImporterSettings` (frame name, sizes, stroke, colours, the chosen variable, whether to mark right to left), so they travel with the file. No `clientStorage`.
-- **Each icon it builds** keeps `lucideIconName`, `lucideSvgSource`, `lucideTags` and `lucideRtl` (`mirrors`, `stays` or empty) as `pluginData`, which the **Update icon** relaunch button rebuilds it from.
-- **Only this plugin can read that data.** `pluginData` is scoped to the plugin that wrote it (skill-standard Part B 11), so code run through the Desktop Bridge or the audit service reads empty settings and no icon data, even on icons this plugin built. That is no evidence an icon was not imported here. To check a library against the importer, rebuild each icon from Lucide's SVG with this file's `buildMasterIcon` and compare what is drawn (shape, centring in the box, the box's padding and hug, description and link), as one library's 208 icons were checked on 2026-11-04.
-- **Network:** the window fetches Lucide's `tags.json` and each icon's SVG from `cdn.jsdelivr.net` (`lucide-static`, at the version `ui.html` pins), and nothing else. The manifest allows that domain alone.
-- **Libraries:** the `teamlibrary` permission lets the **Variable** picker offer the colour variables the file's enabled libraries publish, besides its own.
+
+| What | Where and why |
+|---|---|
+| The file's settings | `pluginData` on the document root, under `lucideIconImporterSettings`. They travel with the file. There is no `clientStorage`. |
+| Each icon it builds | `pluginData` keys `lucideIconName`, `lucideSvgSource`, `lucideTags` and `lucideRtl`. The **Update icon** relaunch button rebuilds the icon from them. |
+| Network | Lucide's `tags.json` and each icon's SVG, from `cdn.jsdelivr.net`. The manifest allows that domain alone. |
+| Libraries | The `teamlibrary` permission. It lets the **Variable** picker offer the colour variables the file's enabled libraries publish. |
+
+The settings hold the frame name, sizes, stroke, colours, the chosen variable, and whether to mark right to left. `lucideRtl` is `mirrors`, `stays` or empty. The SVGs come from the `lucide-static` package, at the version `ui.html` pins.
+
+Only this plugin can read that data. Other code, such as the Desktop Bridge, reads nothing, even on icons this plugin built. See [Checking a library against the importer](REFERENCE.md#checking-a-library-against-the-importer).
 
 ## Tests
 
-    node tests/test-importer.mjs
+Run each from this folder. `bin/check` runs them all.
 
-Loads `code.js` against a fake Figma and exercises `buildMasterIcon` (stroke weight, filled paths, single shapes, fill-plus-stroke), the paste-a-list parser, the settings normalisers, and the right-to-left line against the audit's own regex and word lists.
+```sh
+node tests/test-importer.mjs      # icon building, list parsing, settings, the right-to-left line
+node tests/test-svg-clean.mjs     # a hostile SVG from the CDN is rebuilt from its shapes only
+node tests/test-ui-keyboard.mjs   # the window works from the keyboard, every control named
+node tests/test-ui-fetch.mjs      # the fetch queue matches its source in figma-plugin-creator
+```
 
-    node tests/test-svg-clean.mjs
+Each test's header says what it holds. [Tests](REFERENCE.md#tests) has the detail.
 
-An icon's SVG comes from a CDN, so the window never writes it as markup: `cleanSvg` parses it as XML and rebuilds it from shape elements and presentation attributes only, and that is what the card shows and what Figma is given. This test feeds it a hostile icon in Chrome (scripts, handlers, a foreignObject, links, URL values) and checks nothing ran and only the shapes survive.
+## How it fits
 
-    node tests/test-ui-keyboard.mjs
-
-The window in Chrome, from the keyboard: the tabs move with Left and Right, the cards and the variable picker are named buttons that say their state, Escape closes the picker and gives focus back, and every control has a name.
-
-    node tests/test-ui-fetch.mjs
-
-The window's fetch queue and retry are a copy of figma-plugin-creator's `assets/fetch-queue.js`; this holds the copy to its source and runs it against fetches that fail at once.
-
-Run each from this folder; `bin/check` runs them all.
-
-## How a full Lucide set is laid out
-
-The maintainer's convention for a file holding the whole set, applied once to one project's icon library on 2026-10-08 (1,875 sets: 232 moved, 1,509 built, none failed). The plugin builds icons; it does not sort a file. Re-sorting is a one-off run through the audit dashboard's `POST /exec`, so the SVGs never pass through a chat; the script that ran it is not in this repo, because it names one file's ids.
-
-- An icon goes to the **first** category Lucide lists for it (`icons/<name>.json`, `categories[0]`); 60% of icons list two or more.
-- An icon already in the file is **moved**, which keeps its component key, never rebuilt.
-- One top-level frame per category, named with Lucide's category title, on a single `Icons` page: Figma's assets panel groups by page and then by top-level frame or section, and by nothing deeper.
-- Each frame is a 10-column grid with automatic positioning (`gridItemsPositioning: ROW_AUTO_FLOW`, `gridAutoTracks: ROWS`), hug tracks, gaps and padding bound to the spacing tokens, children alphabetical.
-- An icon that is not Lucide's (named `… _custom`) goes to a `Custom` frame; the unsorted frame ends empty.
-
-Three Figma behaviours the runs had to work around:
-
-- A grid frame created through the API starts with flexible tracks and takes hug tracks only once the frame itself hugs: set the frame's sizing to hug first, then the tracks.
-- Setting an `Icon` swap again resets the colour override on the icon's vector, so re-apply the fill binding after a swap.
-- An icon whose vertical sizing is `FILL` stretches when it is moved into an auto-layout box, and its `SCALE`-constrained vector stretches with it (24×24 to 24×52, 2026-11-13). Set both sizings to `FIXED` before the move; after one, `resizeWithoutConstraints(24, 24)` and rescale the vector back.
+The plugin builds icons. It does not sort a file. [How a full Lucide set is laid out](REFERENCE.md#how-a-full-lucide-set-is-laid-out) gives the maintainer's convention for a whole set. It also covers three Figma behaviours to work around.

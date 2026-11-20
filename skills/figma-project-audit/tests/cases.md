@@ -1,4 +1,6 @@
-# Eval cases — figma-project-audit (v1.4.0)
+# Eval cases — figma-project-audit (v1.4.1)
+
+**Walked: 2026-11-20 against v1.4.1** — the record contract is cited in tools/figma-audit/REFERENCE.md (the README rewrite); no case reads the path, so none re-traced.
 
 **Walked: 2026-10-31 against v1.4.0** — O6 added and traced; O1 to O5 re-read against the new paragraph, none changed (a missing stage is a skip, as O2's missing setting is).
 

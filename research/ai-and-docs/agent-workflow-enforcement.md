@@ -223,7 +223,7 @@ It also carries unreviewed, uncommitted work another session left in the same re
 
 **The first week.** The plan gate refused the work that built it until that work had a plan, and the feedback gate caught its own bug on its first run. Most commits since have taught the gates to see writes they had missed (an in-place `sed` inside a subshell, a background agent's edits in its own worktree): the refusal rung's hole from [the enforcement ladder](#the-enforcement-ladder), found one shape at a time.
 
-**The holes that remain**, as the [README](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/README.md) lists them:
+**The holes that remain**, as the [reference](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/claude-hooks/REFERENCE.md#status-and-known-limits) lists them:
 
 - A push from a terminal outside Claude Code, or quoted inside another shell, isn't gated.
 - A background shell command's writes land after its call ends and aren't counted.

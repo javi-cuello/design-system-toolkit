@@ -1,16 +1,21 @@
 # CSS lint
 
 The stylesheet rules of [code-standard](../../standards/code-standard.md) that a
-script can read in the source, without rendering a page: each gate below finds
-the violations of one rule. `lint.mjs` holds the gates, as functions of what they read; `check.mjs` runs
-them over a project, which states only facts in `styles` in its
-`snapshot.config.json` (the header of `check.mjs` lists the keys). Each
-project's check calls it ([tools/project-check](../project-check/README.md)'s `styles` gate):
+script can read in the source, without rendering a page. Each gate below finds
+the violations of one rule.
+
+`lint.mjs` holds the gates, as functions of what they read. `check.mjs` runs
+them over a project. The project states only facts, in `styles` in its
+`snapshot.config.json`.
+The header of `check.mjs` lists the keys.
+
+Each
+project's check calls it through the `styles` gate of [tools/project-check](../project-check/README.md):
 
     node tools/css-lint/check.mjs --repo <dir>
 
 A codebase with no snapshot names its sheets in a file holding only
-`styles`, read from that file's folder: the toolkit's own docs site is
+`styles`, read from that file's folder. The toolkit's own docs site does this in
 `tools/docs-site/styles.config.json`, and `bin/check` runs it.
 
     node tools/css-lint/check.mjs --config tools/docs-site/styles.config.json
@@ -18,7 +23,7 @@ A codebase with no snapshot names its sheets in a file holding only
 | Gate | code-standard | What it reads |
 |---|---|---|
 | layers | 4 | every top-level statement of the compiled sheets is a layer, keyframes or a face |
-| own parts | 5 | a component names no other component (parts named by block), or has no descendant combinator and goes no further than a nested component's host (parts as attributes) |
+| own parts | 5 | parts named by block: a component names no other component. Parts as attributes: no descendant combinator, and nothing past a nested component's host |
 | `!important` | 4 | none outside a reduced-motion block |
 | `outline: none` | 40 | none |
 | anchor reset | 48 | no component sheet un-underlines its links; the base layer does, once |

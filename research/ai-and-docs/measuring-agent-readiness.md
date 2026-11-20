@@ -265,7 +265,7 @@ Researched November 2026, when this part was assembled from guides first researc
 - [`tools/docs-site/src/pages/overview/ai-readiness.astro`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/src/pages/overview/ai-readiness.astro): the readiness page.
 - [`tools/docs-site/src/lib/readiness.js`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/docs-site/src/lib/readiness.js): the ratios behind it.
 - [`skills/figma-components-audit/scanner/measures.json`](https://github.com/javi-cuello/design-system-toolkit/blob/main/skills/figma-components-audit/scanner/measures.json): the audit's measures.
-- [`tools/skill-evals/README.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/skill-evals/README.md): the behavioural screen tasks.
+- [`tools/skill-evals/REFERENCE.md`](https://github.com/javi-cuello/design-system-toolkit/blob/main/tools/skill-evals/REFERENCE.md): the behavioural screen tasks.
 
 ---
 
