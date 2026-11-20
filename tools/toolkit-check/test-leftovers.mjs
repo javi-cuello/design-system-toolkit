@@ -109,6 +109,14 @@ assert.match(git(side, 'branch', '--list', 'main'), /main/, 'and main with it');
     sweep(repo, week);
     assert.ok(fs.existsSync(cdIn), "a running session whose folder is in the worktree keeps it");
     fs.rmSync(path.join(reg, 'test-cd.json'));
+    // one started elsewhere that cd'd in: its transcript's last cwd says where it is
+    const later2 = wt('cd-later'); commit(later2, 'l.txt', 'in progress');
+    fs.writeFileSync(path.join(reg, 'test-later.json'), JSON.stringify({ sessionId: 'later-session', pid: process.pid, cwd: tmp }));
+    const proj = path.join(process.env.TOOLKIT_TRANSCRIPTS, 'p'); fs.mkdirSync(proj, { recursive: true });
+    fs.writeFileSync(path.join(proj, 'later-session.jsonl'), JSON.stringify({ cwd: tmp }) + '\n' + JSON.stringify({ cwd: later2 }) + '\n');
+    sweep(repo, week);
+    assert.ok(fs.existsSync(later2), "a running session that cd'd in, by its transcript, keeps it");
+    fs.rmSync(path.join(reg, 'test-later.json'));
     // a merge in progress is never committed or removed
     const mid = wt('mid-merge'); commit(mid, 'm.txt', 'mine');
     const admin = git(mid, 'rev-parse', '--absolute-git-dir').trim(); fs.writeFileSync(path.join(admin, 'MERGE_HEAD'), git(repo, 'rev-parse', 'main'));

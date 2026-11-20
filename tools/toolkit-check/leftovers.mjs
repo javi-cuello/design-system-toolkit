@@ -95,8 +95,16 @@ function claimed(repo, name, dir) {
   let live = []; try { live = fs.readdirSync(reg).filter((f) => f.endsWith('.json')).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(reg, f), 'utf8')); } catch { return null; } }).filter(Boolean); } catch { /* no registry */ }
   const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
   const running = live.filter((s) => alive(s.pid));
+  // the registry's cwd is where the session started; where it is now is the last cwd its transcript records
+  const now = (s) => { try {
+    const projects = process.env.TOOLKIT_TRANSCRIPTS || path.join(process.env.HOME || '', '.claude', 'projects'); // projects-path: Claude Code's transcripts, not a toolkit project
+    for (const d of fs.readdirSync(projects)) { const t = path.join(projects, d, `${s.sessionId}.jsonl`); if (!fs.existsSync(t)) continue;
+      const size = fs.statSync(t).size, fd = fs.openSync(t, 'r'), buf = Buffer.alloc(Math.min(size, 256 * 1024));
+      fs.readSync(fd, buf, 0, buf.length, size - buf.length); fs.closeSync(fd);
+      const m = [...buf.toString('utf8').matchAll(/"cwd":"((?:[^"\\]|\\.)*)"/g)].pop(); return m ? JSON.parse(`"${m[1]}"`) : null; }
+  } catch { /* unreadable: the registry's alone */ } return null; };
   const inside = (c) => { const a = real(c || ''), b = real(dir || ''); return !!dir && (a === b || a.startsWith(b + path.sep)); };
-  return running.some((s) => inside(s.cwd)) || Object.entries(all).some(([id, names]) => names.includes(name) && running.some((s) => s.sessionId === id));
+  return running.some((s) => inside(s.cwd) || inside(now(s))) || Object.entries(all).some(([id, names]) => names.includes(name) && running.some((s) => s.sessionId === id));
 }
 const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
 const parkable = (x, repo) => x.kind === 'worktree' && (x.dirty || !x.merged) && !x.ignoredOwn && !x.busy && !x.locked && x.age > PARK && x.branch

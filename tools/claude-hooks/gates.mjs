@@ -744,21 +744,26 @@ function intoMain(st, call, cwd, repos, session) {
 
 /* A worktree made by hand, outside .claude/worktrees, in a repo with bin/land: the sweep cannot tell its owner or park
    it, and one session made fifteen such, one per attempt, then combined them by hand (2026-11-20). bin/worktree makes
-   one per piece of work where the sweep looks, and bin/land batches several branches into one check. A subagent's own
-   isolation worktree (.claude/worktrees/agent-*) is Claude Code's, not a call's. TOOLKIT_WORKTREES=off turns it off. */
-const WT_ADD = /(?:^|[\n;&|(]\s*)git(?:\s+-C\s+(\S+)|\s+-c\s+\S+|\s+--no-pager)*\s+worktree\s+add\b([^\n;&|]*)/;
+   one per piece of work where the sweep looks, and bin/land batches several branches into one check. A subagent's
+   isolation worktree is made by Claude Code, never by a shell call, so a subagent's call is held the same way.
+   TOOLKIT_WORKTREES=off turns it off. */
+const WT_ADD = /(?:^|[\n;&|(]\s*)(?:\w+=\S*\s+)*git(?:\s+-C\s+(\S+)|\s+-c\s+\S+|\s+--no-pager)*\s+worktree\s+add\b([^\n;&|]*)/;
 function strayWorktree(call, cwd, repos, sub) {
-  if (process.env.TOOLKIT_WORKTREES === 'off' || sub || call.name !== 'Bash') return null;
+  if (process.env.TOOLKIT_WORKTREES === 'off' || call.name !== 'Bash') return null;
   const bare = bareShell(call.input?.command || ''), m = bare.match(WT_ADD);
   if (!m) return null;
   const d = shellDir(bare, cwd), at = m[1] ? path.resolve(d, expandHome(m[1])) : d;
   const w = where(at, repos);
   const home = w && (w.worktree ? w.repo.replace(/\/\.claude\/worktrees\/[^/]+$/, '') : w.repo);
   if (!home || !fs.existsSync(path.join(home, 'bin', 'land'))) return null;
-  // the first argument that is not an option, or the value of -b/-B: the folder
-  const args = m[2].trim().split(/\s+/).filter(Boolean); let folder = null;
-  for (let i = 0; i < args.length; i++) { if (/^-[bB]$/.test(args[i])) { i++; continue; } if (args[i].startsWith('-')) continue; folder = args[i]; break; }
-  if (folder && path.resolve(at, expandHome(folder)).startsWith(path.join(home, '.claude', 'worktrees') + path.sep)) return null;
+  // the folder: the first argument that is neither an option nor an option's value, read from the command as written
+  // (the bare form blanks quoted text, and a quoted path is still a path)
+  const raw = String(call.input?.command || '').match(WT_ADD);
+  const args = ((raw && raw[2]) || m[2]).match(/"[^"]*"|'[^']*'|\S+/g) || []; let folder = null;
+  for (let i = 0; i < args.length; i++) { if (/^(-[bB]|--reason)$/.test(args[i])) { i++; continue; } if (args[i].startsWith('-')) continue; folder = args[i].replace(/^["']|["']$/g, ''); break; }
+  const real = (p) => { try { return fs.realpathSync(p); } catch { return p; } };
+  const layout = path.join(home, '.claude', 'worktrees'), into = folder && path.resolve(at, expandHome(folder));
+  if (into && (into.startsWith(layout + path.sep) || real(path.dirname(into)) === real(layout))) return null;
   return `Not made: a worktree in ${home} is made with ${path.join(home, 'bin', 'worktree')} <work-name>, one per piece of work, in .claude/worktrees where the sweep finds it, never by hand elsewhere. `
     + 'Several attempts at one piece of work are commits on its one branch; several pieces each get a worktree and land with bin/land, which checks them together, so nothing is combined by hand.';
 }
