@@ -59,6 +59,10 @@
     "rules": [
       "properties"
     ],
+    "keys": [
+      "properties|unused|",
+      "properties|wired|"
+    ],
     "cap": 25,
     "reason": "unused property blocks publication"
   },

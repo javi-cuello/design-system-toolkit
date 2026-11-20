@@ -11,7 +11,7 @@ It is the components and foundations audits with nothing else to install: no bri
 3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
 4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
-As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Rulings live in the context document only: decide in the chat (or bring the page's **Download rulings** file to it), ask Claude for the updated context document, and upload it with **Upload…** beside Document; every later run judges by them. Marks and notes stay in that browser.
+As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Rulings live in the context document only: decide in the chat (or bring the page's **Download rulings** file to it), ask Claude for the updated context document, and upload it with **Upload…** in the Context document header; every later run judges by them. Marks and notes stay in that browser.
 
 On a 71-component library Claude's reply takes about a minute, most of it writing the tables.
 

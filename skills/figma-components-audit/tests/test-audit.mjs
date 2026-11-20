@@ -325,7 +325,7 @@ expect("a layer that is the same in every variant still fires when some forget i
   for (const k of ["Show AM-PM", "Show AI badge", "Show Badge"]) s.componentPropertyDefinitions[k + "#0:9"] = { type: "BOOLEAN", defaultValue: false };
   const TK = Object.assign({}, fx.settings.tokens, { propertyCase: "sentence" });
   expect("property naming: an acronym keeps its capitals (figma-standard rule 18)",
-    keyed(await run(fx, { tokens: TK }), "Chip", /^naming\|prop-case\|/), ['Chip | preference naming | Property "Show Badge" is not in sentence case, so it reads unlike the rest of the properties panel']);
+    keyed(await run(fx, { tokens: TK }), "Chip", /^naming\|prop-case\|/), ['Chip | preference properties | Property "Show Badge" is not in sentence case, so it reads unlike the rest of the properties panel']);
 }
 // ---- figma-standard rule 38: text set by override on a nested instance with variants --
 {
@@ -389,8 +389,8 @@ expect("a layer that is the same in every variant still fires when some forget i
   const named = await run(fx, { tokens: TK });
   expect("a bare boolean and a text property ending in text are raised from the settings",
     keyed(named, "Chip", /^naming\|prop-/),
-    ['Chip | preference naming | Text property "Label text" ends in "text", a word the properties panel already shows, so its names read unlike the rest',
-     'Chip | preference naming | Boolean property "Icon" does not start with "Show", so it does not read as an on-off switch beside the others']);
+    ['Chip | preference properties | Text property "Label text" ends in "text", a word the properties panel already shows, so its names read unlike the rest',
+     'Chip | preference properties | Boolean property "Icon" does not start with "Show", so it does not read as an on-off switch beside the others']);
   const plain = await run(fx);
   expect("and without those settings no property name is raised", keyed(plain, null, /^naming\|prop-/), []);
   const st = fresh(); const cs = find(st, "Chip");
@@ -410,8 +410,8 @@ expect("a layer that is the same in every variant still fires when some forget i
   const ihr = await run(ih, { tokens: TK });
   expect("figma-standard rule 21: \"Is open\" and a style boolean \"Has border\" take the bare word; \"Has value\" on a variant stands",
     [keyed(ihr, "Chip", /^naming\|prop-state\|/), ihr.audited.find((e) => e.set === "Chip").candidates.filter((c) => /^naming\|prop-state\|/.test(c.key)).map((c) => c.advice)],
-    [['Chip | preference naming | Property "Is open" starts with "Is", so it reads unlike the bare states beside it (Disabled, Selected, Open)',
-      'Chip | preference naming | Property "Has border" starts with "Has", so it reads unlike the bare states beside it (Disabled, Selected, Open)'],
+    [['Chip | preference properties | Property "Is open" starts with "Is", so it reads unlike the bare states beside it (Disabled, Selected, Open)',
+      'Chip | preference properties | Property "Has border" starts with "Has", so it reads unlike the bare states beside it (Disabled, Selected, Open)'],
      ['Rename it "Open".', 'Rename it "Border".']]);
   expect("a revealing boolean named \"Has badge\" is told to take Show, without the Has",
     ihr.audited.find((e) => e.set === "Chip").candidates.filter((c) => c.key === "naming|prop-boolean|Has badge").map((c) => c.advice), ['Rename it "Show badge".']);
@@ -604,7 +604,7 @@ expect("a layer that is the same in every variant still fires when some forget i
   expect("a layer, an option and a component with a capital inside are preferences; an acronym is not",
     [keyed(r, "Chip", /^naming\|(layer|value)-case\|/), keyed(r, "Data Table", /^naming\|component-case$/).length],
     [['Chip | preference naming | Layer "Leading Icon" is not in sentence case, so it reads unlike the layers beside it and unlike the names code takes from it',
-      'Chip | preference naming | Option "Bold Danger" of Tone is not in sentence case, so it reads unlike the other options in the picker'], 1]);
+      'Chip | preference properties | Option "Bold Danger" of Tone is not in sentence case, so it reads unlike the other options in the picker'], 1]);
   expect("figma-standard rule 9: a part's layer carrying its whole name is told to take the last word; a numbered copy and a renamed one stand",
     r.audited.find((e) => e.set === "Chip").candidates.filter((c) => /^naming\|part-layer\|/.test(c.key)).map((c) => c.advice),
     ['Rename the layer "Button".', 'Rename the layer "Item".']);

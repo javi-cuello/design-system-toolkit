@@ -51,7 +51,9 @@ export function computeScores(sets, rows, scoring, catalogue, at = new Date().to
       const dim = ruleDim[f.rule];
       if (!dim || !scanned[dim]) continue;
       lost[dim] = (lost[dim] || 0) + (pen[f.sev] || 0);
-      if ((gate.rules || []).indexOf(f.rule) > -1) gated = true;
+      // gate.keys narrows the rule to the publication-blocking kinds: since 2026-11-20 the
+      // property-name preferences carry rule "properties" too, and must not cap a component at 25.
+      if ((gate.rules || []).indexOf(f.rule) > -1 && (!gate.keys || gate.keys.some((k) => String(f.key || '').startsWith(k)))) gated = true;
     }
     let score = 0;
     const d = {};

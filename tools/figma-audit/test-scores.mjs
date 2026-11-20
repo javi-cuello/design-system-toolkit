@@ -24,7 +24,7 @@ const sets = [{ set: "Button" }, { set: "Card" }, { set: "Chip" }];
 const rows = {
   a: { where: "Button — properties panel", rule: "tokens", sev: "error" },
   b: { where: "Button", rule: "tokens", sev: "warn" },
-  c: { where: "Card", rule: "properties", sev: "warn" },        // the gate's rule: capped
+  c: { where: "Card", rule: "properties", sev: "warn", key: "properties|unused|Show badge" },        // the gate's kind: capped
   d: { where: "Chip", rule: "tokens", sev: "error", verified: true },   // settled: costs nothing
   e: { where: "Chip", rule: "nobody-scores-this", sev: "error" },
 };
@@ -34,6 +34,8 @@ const tokensW = scoring.dimensions.Tokens.weight / Object.values(scoring.dimensi
 ok("a component loses its open findings' penalties in their dimension, by its name before any panel",
   by.Button.d.Tokens === Math.round((1 - scoring.penalties.error - scoring.penalties.warn) * 100) && by.Button.score === Math.round(100 - tokensW * (scoring.penalties.error + scoring.penalties.warn) * 100), JSON.stringify(by.Button));
 ok("a finding under the gate's rule caps the score and says why", by.Card.score === scoring.gate.cap && by.Card.notes.includes(scoring.gate.reason));
+const named = computeScores([{ set: "Tag" }], { f: { where: "Tag", rule: "properties", sev: "preference", key: "naming|prop-case|Show Badge" } }, scoring, null, "T").rows[0];
+ok("a property-name preference under the gate's rule is not capped: only the keys the gate names are", named.score > scoring.gate.cap && !named.notes.includes(scoring.gate.reason), JSON.stringify(named));
 ok("a settled row and a rule no dimension scores cost nothing", by.Chip.score === 100);
 ok("the median is of every component scored", every.median === by.Button.score && every.rows.length === 3);
 const onlyTokens = { dimensions: [{ dimension: "Tokens", checks: [{ status: "scanner" }] }, { dimension: "Metadata", checks: [{ status: "backlog" }] }] };

@@ -256,7 +256,7 @@
      "who": "agent",
      "text": "Names follow the project's case convention — which case is the project's to state, never this skill's",
      "status": "scanner",
-     "note": "audit.js naming|layer-case|, naming|component-case and naming|value-case|, where <code>propertyCase</code> is sentence (figma-standard rule 18); a part's layer still carrying its whole name is naming|part-layer| (figma-standard rule 9)."
+     "note": "audit.js naming|layer-case| and naming|component-case (naming|value-case| and the property names are scored under Properties since 2026-11-20, being the component's API), where <code>propertyCase</code> is sentence (figma-standard rule 18); a part's layer still carrying its whole name is naming|part-layer| (figma-standard rule 9)."
     },
     {
      "tier": "review",

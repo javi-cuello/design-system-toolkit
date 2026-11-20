@@ -1,6 +1,6 @@
 # Changelog — figma-components-audit
 
-- 2.49.2 (2026-11-20): property-name findings carry `breaking: true`, and `buckets.json` sends a breaking candidate to bucket 3 whatever its rule; a live Audit lite run had filed a renamed boolean as a bucket 1 fix.
+- 2.49.2 (2026-11-20): property-name findings (`naming|prop-*`, `naming|value-case`) take rule `properties`, so they land in bucket 3 on every path, and carry `breaking: true`; scored under Properties, not Structure. A live Audit lite run had filed a renamed boolean as a bucket 1 fix.
 - 2.49.1 (2026-11-19): the tracked metric (semantic-token coverage in every closing metrics block, no composite score unless asked) moves here from figma-standard rule 17, now retired.
 - 2.49.0 (2026-11-19): step 2c asks where the results go: here, as a page too (Audit lite's results page, from `fix-queue.mjs --page`), or on the dashboard too where the project has a record; no offer to set up a dashboard. A139.
 - 2.48.1 (2026-11-16): step 4b's optional-part example reads `Read-only` as a `State` value, as the field pages now do.
