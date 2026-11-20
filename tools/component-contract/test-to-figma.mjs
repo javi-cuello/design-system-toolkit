@@ -366,5 +366,24 @@ delete globalThis.figma;
   ok('a part kept inside a placed instance that a reading leaves to its component is compared as that component\'s own, field by field, never the whole part missing; no place inside a box with no auto layout',
     JSON.stringify(rows) === '["i/box/dot.width","i/head.layout"]');
   const other = host({ 'i/head': { kind: 'graphic', parent: 'i', order: 0 } });
-  ok('one its component draws as another kind stays missing', roundTrip(other, host({}), { mains }).rows.some((r) => r.at === 'i/head' && r.drawn == null)); }
+  ok('one its component draws as another kind stays missing', roundTrip(other, host({}), { mains }).rows.some((r) => r.at === 'i/head' && r.drawn == null));
+  // an instance the library keeps whole (it lists a layer equal to its component's, i/box, so dot is hidden there): the
+  // reading keeps it whole too, so a part it lacks there is one code did not draw
+  const kept = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, width: 'fill', layout: { direction: 'row', padding: { start: 0 } } }, 'i/box': { kind: 'container', parent: 'i', order: 1 } });
+  ok('a part inside an instance the library keeps whole stays missing', roundTrip(kept, host({}), { mains }).rows.some((r) => r.at === 'i/head' && r.drawn == null));
+  // nested: Item restyles its Head's label; the outermost instance that holds the part says its own there
+  const head2 = { component: 'Head', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', order: 0, color: 'A' } }, variants: [] };
+  const item2 = { component: 'Item', props: { size: { type: 'enum', values: ['large', 'small'], default: 'large', figmaValues: ['Large', 'Small'], figma: 'Size' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, head: { kind: 'instance', parent: 'root', component: 'Head', order: 0 }, 'head/label': { kind: 'text', parent: 'head', order: 0, color: 'B' },
+      box: { kind: 'container', parent: 'root', order: 1, layout: { direction: 'row' } }, 'box/dot': { kind: 'graphic', parent: 'box', order: 0, width: 4 } },
+    variants: [{ when: { size: 'small' }, set: { 'box/dot.width': 2 } }] };
+  const mains2 = (n) => ({ Head: head2, Item: item2 }[n] || null);
+  const nested = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0 }, 'i/head/label': { kind: 'text', parent: 'i/head', order: 0, color: 'C' } });
+  ok('a part inside a nested instance is held to the outermost override of it (Item\'s label colour), not the inner component\'s own',
+    JSON.stringify(roundTrip(nested, host({}), { mains: mains2 }).rows.map((r) => [r.at, r.library, r.drawn])) === '[["i/head/label.color","C","B"]]');
+  // the instance's own props pick the variant its component draws there
+  const sized = (x) => ({ ...x, anatomy: { ...x.anatomy, i: { ...x.anatomy.i, with: { Size: 'Small' } } } });
+  const small = sized(host({ 'i/box': { kind: 'container', parent: 'i', order: 1, layout: { direction: 'row' } }, 'i/box/dot': { kind: 'graphic', parent: 'i/box', order: 0, width: 6 } }));
+  ok('the component\'s own is taken at the instance\'s props (its Size picks the variant)',
+    JSON.stringify(roundTrip(small, sized(host({})), { mains: mains2 }).rows.map((r) => [r.at, r.library, r.drawn])) === '[["i/box/dot.width",6,2]]'); }
 console.log(`${n}/${n} passed`);

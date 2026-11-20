@@ -207,29 +207,35 @@ function iconSize(x) {
    placed component only where it differs from that component's own there (derive's ownInsides, from-code's alike), so
    to it the part is its component's own at the instance's props, and is compared as that, field by field: an override
    the library states there is a row of that field (a look code leaves to the component's own sheet, eval's leftToCode),
-   never the whole part missing. The nearest instance the drawn side places above it, its library held, says what it
-   draws there; a part with no such instance above it, or one that instance does not draw (or draws as another kind or
-   component), stays missing. Only the
+   never the whole part missing. An instance the drawn side places above it, its library held, says what it
+   draws there (the outermost that holds it); a part with no such instance above it, one none of them draws (or draws
+   as another kind or component), or one inside an instance the library keeps whole, stays missing. Only the
    drawn side is filled: a part the library lacks may be one its instance hides. Tested by test-to-figma.mjs. */
 export function ownInPlaced(library, drawn, mains) {
   if (!mains || !library || !drawn) return drawn;
   const { placedAs, atProps } = req('./derive.cjs');
   const out = { ...drawn }, seen = new Map();
+  // an instance whose insides the library keeps whole (it hides a layer) is one the reading keeps whole too
+  // (from-code's wholeIn): a part missing there is one code did not draw, never filled
+  const whole = new Set(keptWhole(library, mains));
   const missing = Object.keys(library).filter((id) => id.includes('/') && !(id in drawn)).sort((x, y) => x.split('/').length - y.split('/').length);
   for (const id of missing) {
-    const segs = id.split('/');
-    for (let i = segs.length - 1; i > 0; i--) {
-      const h = segs.slice(0, i).join('/'), e = out[h];
-      const m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
+    const segs = id.split('/'), ups = segs.slice(0, -1).map((_, i) => segs.slice(0, i + 1).join('/'));
+    if (ups.some((h) => whole.has(h))) continue;
+    // the outermost instance that draws the part wins, as Figma's outermost override does (an Item that restyles its
+    // Head's label says that label, not Head's own); an inner one only where no outer one holds the part
+    for (const h of ups) {
+      const e = out[h], m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
       if (!m) continue;
       if (!seen.has(h)) seen.set(h, placedAs(out, h, m, mains).M);
-      const rel = id.slice(h.length + 1), x = seen.get(h)[rel], y = library[id];
+      const M = seen.get(h), x = M[id.slice(h.length + 1)], y = library[id];
+      if (!x) continue;
       // (the same part: of its kind, and an instance of the same component; another under that name stays missing)
-      if (!(x && y && x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase()))) break;
+      if (!(y && x.kind === y.kind && (x.kind !== 'instance' || String(x.component).toLowerCase() === String(y.component).toLowerCase()))) break;
       // and as an instance draws it: in a box with no auto layout it keeps no place nor constraints, which the
       // component's own contract states and no instance can override (figma-fact: no-nested-position-override; derive
       // keeps none there); one placed absolutely in an auto layout, or a glyph scaled both ways, keeps them
-      const M = seen.get(h), up = M[x.parent || 'root'] || {}, um = up.kind === 'instance' && mains(up.component, up.key);
+      const up = M[x.parent || 'root'] || {}, um = up.kind === 'instance' && mains(up.component, up.key);
       const flow = ((um ? atProps(um, up.with).root : up) || {}).layout;
       const f = { ...x, parent: !x.parent || x.parent === 'root' ? h : `${h}/${x.parent}` };
       if (!(flow && flow.direction)) delete f.absolute;
