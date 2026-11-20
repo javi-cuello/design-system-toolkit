@@ -6,7 +6,7 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf, selfDrawn } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 
@@ -236,4 +236,17 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   const r = spawnSync(process.execPath, [new URL('./eval.mjs', import.meta.url).pathname, '--projects', 'x', '--legs', 'draw'], { encoding: 'utf8' });
   ok('--projects refuses a leg it does not run, before any step', r.status === 2 && /usage: eval.mjs --projects/.test(r.stderr));
 }
+// a library whose focus state is two words: its ring is compared, not left, and the self leg's inputs are drawn as it writes them
+{
+  const own = { pseudoClasses: { 'Focus visible': ':focus-visible' } };
+  const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/focus', width: 2 }, shape: 'rectangle' };
+  const tile = { contract: 1, component: 'Tile', folder: 'tile', props: { state: { type: 'enum', values: ['rest', 'focus-visible'], default: 'rest', role: 'interaction', pointer: ['focus-visible'] } },
+    anatomy: { root: { kind: 'container', background: 'Bg/x' } }, variants: [{ when: { state: 'focus-visible' }, add: { focusBorder: { ...ring, parent: 'root' } } }] };
+  ok('under the library\'s settings its focus ring is compared, not left to the code; under the house\'s it would be left',
+    !leftToCode(tile, null, own)('focusBorder.border') && leftToCode(tile, null)('focusBorder.border'));
+  const d = await selfDrawn(tile, { library: { Tile: tile }, mains: () => null, settings: own });
+  ok('the self leg\'s inputs are drawn under the library\'s settings: the ring an outline at its focus, mapped to the box',
+    /:focus-visible[^{]*\{\s*outline:/.test(d.sheet) && d.mapping.layers['Focus border'] === 'ds-tile');
+}
+
 console.log(`${n} passed`);

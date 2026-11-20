@@ -99,11 +99,12 @@ export function causes(rows, combinations) {
 /* What the toolkit's own markup leaves to the code that uses it, by design: a part drawn only at a pointer state (a menu
    open at focus: frontend-build's, said as a gap in the markup), but a focus ring, which to-code draws as an outline;
    and what a slot holds in the design (its sample content: the slot's filler is the caller's). The self legs count the
-   rows of these apart (`left`), never among the differences, and never dropped. */
-export function leftToCode(contract, mainOf = null) {
+   rows of these apart (`left`), never among the differences, and never dropped. `settings`: the library's, as the sheet
+   is written under (which pointer state is focus, so which part is a ring). */
+export function leftToCode(contract, mainOf = null, settings = undefined) {
   // (a slot of a placed component is filled by the markup, its parts drawn: only the component's own slot is a sample;
   // and a part inside a placed component no prop of it carries, an override the markup cannot pass: to-markup's gap)
-  const parts = partsOf(contract);
+  const parts = partsOf(contract, settings);
   const ids = [...parts.values()].filter((p) => (p.pointerOnly && !p.ring) || (p.slotted && !(parts.get(p.slotted) || {}).inside) || (mainOf && !!unexposed(contract, p.id, mainOf))).map((p) => p.id);
   // words only a pointer state changes (a field's "Search" at focus): to-markup's gap, as no markup holds them
   // (per text, the words its pointer states draw: a row is theirs only where the design side holds one of them, as rows
@@ -179,6 +180,8 @@ export function measure(where, only = [], now = {}) {
   // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
   const selfDir = path.join(drawn, 'self', 'from-code');
+  // (what the markup leaves to the code, under the library's settings, the ones the self leg writes under)
+  const settingsOf = req('../snapshot/projects.cjs').librarySettingsFor(where.paths.components);
   for (const { folder, contract } of contracts(where)) {
     if (only.length && !only.includes(folder)) continue;
     const code = read(path.join(readings, `${folder}.json`));
@@ -187,7 +190,7 @@ export function measure(where, only = [], now = {}) {
     else { const r = roundTrip(contract, code.asFigma, { mains, layoutUnit: true }), st = !code.of ? 'taken before readings were fingerprinted' : code.of !== hashOf(contract) ? 'its contract changed since' : browserMoved(code.chrome); legs.browser[folder] = { rows: r.rows, combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     const own = read(path.join(selfDir, `${folder}.json`));
     if (!own || !own.asFigma) legs.self[folder] = { skipped: 'not read from the toolkit\'s own rendering (eval.mjs --self)' };
-    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
+    else { const r = roundTrip(contract, own.asFigma, { mains, layoutUnit: true }), st = stale('self', folder, contract); legs.self[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) }; }
     // the second trip, held to the first: what it changes is the translation not settling (idempotence)
     const again = read(path.join(drawn, 'self2', 'from-code', `${folder}.json`));
     if (!again || !again.asFigma || !own || !own.asFigma) legs.second[folder] = { skipped: 'not read a second time (eval.mjs --second)' };
@@ -197,7 +200,7 @@ export function measure(where, only = [], now = {}) {
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true }), t = (taken.second || {})[folder];
       const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
       const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
-      legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
+      legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains, settingsOf(folder))), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
     const st = back && stale('figma', folder, contract);
@@ -387,6 +390,13 @@ function readerCode() {
    transitively (each one's contract, spec, markup, sheet, parity mapping and props as stories give them), the base sheet,
    the tokens and their values, the project's parity settings, and the reader's own code. Two readings from the same
    inputs are the same reading (--twice holds the leg to that), so --changed reads only the components whose hash moved. */
+/* What the self leg draws of one component, as site.mjs and from-code's self source write it: its markup, its sheet
+   and its parity mapping, under the library's settings (`settings`, the house's where none). Tested by test-eval.mjs. */
+export async function selfDrawn(c, { library, mains, settings }) {
+  const { toElement, toParity } = await import('./to-markup.mjs'), { toCss } = await import('./to-code.mjs'), { ELEMENT } = await import('./site.mjs');
+  return { markup: toElement(c, c.folder, { naming: ELEMENT, library, settings }), sheet: toCss(c, c.folder, { naming: ELEMENT, mains, settings }), mapping: toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components', settings }) };
+}
+
 export async function selfInputs(label, where, only = []) {
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label, { self: true });
@@ -398,16 +408,16 @@ export async function selfInputs(label, where, only = []) {
   const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
   const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
   const hash = (xs) => createHash('sha1').update(xs.join('\0')).digest('hex');
-  const own = {}, unscoped = [], mains = req('./derive.cjs').byComponentName(Object.values(library));
+  const own = {}, unscoped = [], mains = req('./derive.cjs').byComponentName(Object.values(library)), settingsOf = req('../snapshot/projects.cjs').librarySettingsFor(project.paths.components);
   // only what the components asked for place, transitively (every sheet is still made: one unscoped reaches them all)
   const need = only.length ? closureOf(library, only) : new Set(Object.keys(byFolder));
   for (const c of Object.values(library)) {
-    const sheet = toCss(c, c.folder, { naming: ELEMENT, mains });
+    const { sheet, markup, mapping } = await selfDrawn(c, { library, mains, settings: settingsOf(c.folder) });
     // every sheet is on the one page: one whose rules reach past its own element reaches every reading
     if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
     if (!need.has(c.folder)) continue;
     let spec = ''; try { spec = JSON.stringify(store.readSpec(project.paths.components, c.folder, { compact: true })); } catch { /* none: its hash says so */ }
-    own[c.folder] = hash([JSON.stringify(c), spec, toElement(c, c.folder, { naming: ELEMENT, library }), sheet, JSON.stringify(toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components' })), JSON.stringify(propsOf(c, library)), JSON.stringify(entryOf(c) || null)]);
+    own[c.folder] = hash([JSON.stringify(c), spec, markup, sheet, JSON.stringify(mapping), JSON.stringify(propsOf(c, library)), JSON.stringify(entryOf(c) || null)]);
   }
   // what every reading shares: the reader's code and the house settings it reads (standards/audit-settings.json: the
   // pointer states, the pseudo-classes), the base sheet, an unscoped sheet, the tokens and the project's settings, every
