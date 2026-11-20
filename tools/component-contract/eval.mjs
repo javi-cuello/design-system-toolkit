@@ -209,7 +209,8 @@ const panelFile = (home) => path.join(home, 'round-trip', 'panel.json');
    a panel's check, diff and accept touch only its own components. */
 export const scoped = (byLeg, only) => Object.fromEntries(Object.entries(byLeg || {}).map(([leg, cs]) => [leg, Object.fromEntries(Object.entries(cs).filter(([c]) => only.includes(c)))]));
 export const merged = (whole, part, only) => { const out = scoped(whole, Object.keys(Object.assign({}, ...Object.values(whole || {}))).filter((c) => !only.includes(c))); for (const [leg, cs] of Object.entries(part)) out[leg] = { ...(out[leg] || {}), ...cs }; return out; };
-export const readPanel = (home) => { try { const c = JSON.parse(fs.readFileSync(panelFile(home), 'utf8')).components; return Array.isArray(c) && c.length ? c : null; } catch { return null; } };
+// (a file there that does not parse is refused, never taken for no panel: a fixed panel is never silently replaced)
+export const readPanel = (home) => { if (!fs.existsSync(panelFile(home))) return null; let c; try { c = JSON.parse(fs.readFileSync(panelFile(home), 'utf8')).components; } catch (e) { throw new Error(`${panelFile(home)} does not parse (${e.message}): mend it by hand`); } return Array.isArray(c) && c.length ? c : null; };
 
 /* Each component's causes, per leg, as --accept keeps them beside the counts (accepted-causes.json), so --diff can say
    which causes a count moved by. { leg: { component: { cause: rows } } } */
@@ -493,7 +494,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     argv.push(...p.filter((c) => !argv.includes(c)));
     // a panel shrinks only out loud: a component it names that the library no longer has is said
     const have = new Set(contracts(where).map(({ folder }) => folder));
-    for (const c of argv.filter((x) => !have.has(x))) console.log(`panel: ${c} is not in the library now`);
+    for (const c of argv.filter((x) => !have.has(x))) console.log(p.includes(c) ? `panel: ${c} is not in the library now` : `${c}: no such component`);
   }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);

@@ -49,13 +49,16 @@ await step('library', async () => {
   // so up to five are tried, and it fails only when every one did
   let tried = 0, first = null;
   const seen = new Set();
-  for (const n of insts) {
+  // (at most 200 instances looked at, so a page of thousands never runs into the timeout read as a stall)
+  for (const n of insts.slice(0, 200)) {
     if (tried >= 5) break;
-    const m = await n.getMainComponentAsync();
-    if (!m || !m.remote || seen.has(m.key)) continue;
-    seen.add(m.key); tried++;
-    const t1 = Date.now();
-    try { await figma.importComponentByKeyAsync(m.key); return Date.now() - t1; } catch (e) { first = first || String(e && e.message || e); }
+    try {
+      const m = await n.getMainComponentAsync();
+      if (!m || !m.remote || seen.has(m.key)) continue;
+      seen.add(m.key); tried++;
+      const t1 = Date.now();
+      await figma.importComponentByKeyAsync(m.key); return Date.now() - t1;
+    } catch (e) { first = first || String(e && e.message || e); }
   }
   if (first) throw new Error(tried + ' tried, none imported: ' + first);
   return 'no library instance on this page';

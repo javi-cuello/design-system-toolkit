@@ -23,7 +23,7 @@ const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })
   if (e.isDirectory()) { if (!/^(node_modules|\..*|_archive)$/.test(e.name)) walk(path.join(d, e.name)); continue; }
   if (!/\.(mjs|cjs|js|ts|md|html|py|sh|json)$/.test(e.name) || /^(test-figma-facts\.mjs|figma-facts\.json|package-lock\.json)$/.test(e.name)) continue;
   // (a citation is taken whole up to its first character no id holds, so a misspelt one fails rather than vanishes)
-  for (const m of fs.readFileSync(path.join(d, e.name), 'utf8').matchAll(/figma-fact:\s*([^\s,;)`'"]*)/g)) cited.push([path.relative(ROOT, path.join(d, e.name)), m[1].replace(/[.:]$/, '')]);
+  for (const m of fs.readFileSync(path.join(d, e.name), 'utf8').matchAll(/figma-fact:(?!<id>)[ \t]*([^\s,;)`'"*<>[\]]*)/g)) cited.push([path.relative(ROOT, path.join(d, e.name)), m[1].replace(/[.:]+$/, '')]);
 } };
 for (const d of ['tools', 'skills', 'standards', 'plugins', 'knowledge', 'bin']) if (fs.existsSync(path.join(ROOT, d))) walk(path.join(ROOT, d));
 const unknown = cited.filter(([, id]) => id !== '<id>' && !ids.has(id)); // (`<id>`: the form, as a README writes it)
