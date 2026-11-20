@@ -44,7 +44,7 @@ import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
 import { camel, sentence, partName } from './layers.mjs';
-import { ringOf } from './to-code.mjs';
+import { ringOf, pseudoClasses } from './to-code.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
 import { cssName } from '../tokens/names.mjs';
@@ -157,6 +157,33 @@ export function ringKeyOf(design, id, taken = {}, when = null) {
   const all = [...hits.values()];
   const best = all.find((h) => h.key === own) || all.sort((x, y) => y.n - x.n || x.keys - y.keys)[0];
   return best ? { key: best.key, ...(best.name && { name: best.name }) } : { key: own };
+}
+
+/* A render's args as a design's props: each code prop as the design prop of its key, else the one the mapping's joins
+   give it (Carbon's styleOption for Style), its value in the design's spelling. The render's state (the `__state` arg)
+   is the design's interaction prop's, whatever that prop is called: the value of the same word, else the one the
+   house's pseudo-classes (to-code's pseudoClasses, the stylesheet's) force as this state is forced (`pseudoOf`).
+   Tested by test-from-code.mjs. */
+export function designCombo(design, props, joinedProps, args, pseudoOf = {}) {
+  const combo = {};
+  if (!design) return combo;
+  const low = (x) => String(x).toLowerCase(), bare = (x) => String(x || '').replace(/^:+/, '');
+  const joinedTo = (j) => (typeof j === 'string' ? j : j && typeof j === 'object' ? j.code || j.arg : null);
+  for (const [k, q] of Object.entries(props)) {
+    if (!q.code || args[q.code] === undefined) continue;
+    const [ik, ip] = q.code === '__state' ? Object.entries(design.props).find(([, p]) => p.role === 'interaction') || [] : [];
+    if (ip) {
+      const s = args.__state, ps = pseudoClasses(), forced = (pseudoOf[s] || {}).pseudo, dk = ik, d = ip;
+      const v = (d.values || []).find((w) => low(w) === low(s)) ?? (forced ? (d.values || []).find((w) => ps[low(w)] && bare(ps[low(w)]) === bare(forced)) : undefined);
+      if (v !== undefined) combo[dk] = v;
+      continue;
+    }
+    const named = !design.props[k] && Object.keys(design.props).find((dk2) => joinedTo((joinedProps || {})[dk2]) === q.code);
+    const dk = design.props[k] ? k : named || k, d = design.props[dk];
+    if (!d) continue;
+    combo[dk] = d.type === 'enum' ? (d.values || []).find((w) => low(w) === low(args[q.code])) ?? args[q.code] : args[q.code];
+  }
+  return combo;
 }
 
 /* Whether a design keeps a focus ring on box `id`: its `<id>/focusRing`, or a ring layer of its own name (ringKeyOf).
@@ -1281,20 +1308,7 @@ async function main() {
     // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.
     // Joined by name, as the code's props are the design's on the toolkit's own render; a project's own names that
     // differ fall back to the base room, as before
-    // a render's args as the design's props (its prop of the same key, or the one the mapping's joins give it)
-    const comboOf = (args) => {
-      const combo = {};
-      for (const [k, q] of Object.entries(props)) {
-        // (by its key, else the design prop the mapping's joins give this code prop: one the code names otherwise,
-        // Carbon's styleOption for Style)
-        const joinedTo = (j) => (typeof j === 'string' ? j : j && typeof j === 'object' ? j.code || j.arg : null);
-        const named = !figmaContract.props[k] && Object.keys(figmaContract.props).find((dk2) => joinedTo(joinedProps[dk2]) === q.code);
-        const dk = figmaContract.props[k] ? k : named || k, d = figmaContract.props[dk];
-        if (!d || !q.code || args[q.code] === undefined) continue;
-        combo[dk] = d.type === 'enum' ? (d.values || []).find((w) => String(w).toLowerCase() === String(args[q.code]).toLowerCase()) ?? args[q.code] : args[q.code];
-      }
-      return combo;
-    };
+    const comboOf = (args, design = figmaContract) => designCombo(design, props, joinedProps, args, L.pseudoOf);
     const roomOf = (args) => {
       if (!figmaContract) return room;
       const combo = comboOf(args);
@@ -1899,7 +1913,7 @@ async function main() {
         anatomy[id] = x;
       }
       // (as the design's own ring layer where it draws one: ringKeyOf)
-      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(args) : null);
+      placeRings(anatomy, ring, L.drawnFrom || figmaContract, (L.drawnFrom || figmaContract) ? comboOf(args, L.drawnFrom || figmaContract) : null);
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
