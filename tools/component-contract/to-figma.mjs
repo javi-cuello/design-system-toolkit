@@ -211,19 +211,37 @@ function iconSize(x) {
    draws there (the outermost that holds it); a part with no such instance above it, one none of them draws (or draws
    as another kind or component), or one inside an instance the library keeps whole, stays missing. Only the
    drawn side is filled: a part the library lacks may be one its instance hides. Tested by test-to-figma.mjs. */
-export function ownInPlaced(library, drawn, mains) {
+/* The instances a contract keeps whole (one hides a layer no prop shows), over every variant at once, as from-code's
+   wholeIn finds them for its reading: each whose insides a partial cut (derive's ownInsides) would shrink. */
+export function wholeHosts(contract, mains) {
+  const { ownInsides } = req('./derive.cjs'), out = new Set();
+  if (!contract || !mains) return out;
+  const all = Object.assign({}, ...[...(contract.variants || [])].reverse().map((v) => v.add || {}), contract.anatomy || {});
+  for (const [id, x] of Object.entries(all)) {
+    if (!x || x.kind !== 'instance' || !mains(x.component, x.key)) continue;
+    const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
+    const n = Object.keys(sub).length;
+    ownInsides(sub, mains, { partial: true });
+    if (Object.keys(sub).length < n) out.add(id);
+  }
+  return out;
+}
+
+export function ownInPlaced(library, drawn, mains, whole = new Set()) {
   if (!mains || !library || !drawn) return drawn;
   const { placedAs, atProps } = req('./derive.cjs');
   const out = { ...drawn }, seen = new Map();
-  // an instance whose insides the library keeps whole (it hides a layer) is one the reading keeps whole too
-  // (from-code's wholeIn): a part missing there is one code did not draw, never filled
-  const whole = new Set(keptWhole(library, mains));
+  // an instance whose insides the library keeps whole (it hides a layer, in any variant: `whole`, wholeHosts over the
+  // whole contract) is one the reading keeps whole too (from-code's wholeIn): a part missing there is one code did
+  // not draw, never filled
   const missing = Object.keys(library).filter((id) => id.includes('/') && !(id in drawn)).sort((x, y) => x.split('/').length - y.split('/').length);
   for (const id of missing) {
     const segs = id.split('/'), ups = segs.slice(0, -1).map((_, i) => segs.slice(0, i + 1).join('/'));
     if (ups.some((h) => whole.has(h))) continue;
     // the outermost instance that draws the part wins, as Figma's outermost override does (an Item that restyles its
     // Head's label says that label, not Head's own); an inner one only where no outer one holds the part
+    // (an inner one is taken at the props it is placed with, its `with` here, else as the outer one's own places it;
+    // a prop neither states is its component's default: the limit, as derive's atProps reads one)
     for (const h of ups) {
       const e = out[h], m = e && e.kind === 'instance' && e.component && mains(e.component, e.key);
       if (!m) continue;
@@ -316,6 +334,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
   // past the limit the rest are not compared, and said: a cut that is not said reads as the same
   const cut = Math.max(0, combos.length - limit); combos = combos.slice(0, limit);
   const named = Object.fromEntries(Object.entries(drawn.props).map(([k, q]) => [low(q.figma || k), k]));
+  const whole = wholeHosts(library, mains);
   for (const c of combos) {
     const theirs = {};
     for (const [k, v] of Object.entries(c)) {
@@ -325,7 +344,7 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
     // the named equivalences, each the same on both sides
     const same = (x) => spread(atDefault(iconSize(glyph(line(dashes(arcs(outer(words(paint(room(x))))))))), mains));
     const A = expand(library, { ...variantDefaults(library), ...c });
-    const a = same(A), b = same(ownInPlaced(A, expand(drawn, { ...variantDefaults(drawn), ...theirs }), mains));
+    const a = same(A), b = same(ownInPlaced(A, expand(drawn, { ...variantDefaults(drawn), ...theirs }), mains, whole));
     diff(unswapped(pinned(ranked(a, b), b), b), unswapped(pinned(ranked(b, a), a), a), '');
   }
   const kinds = (x) => JSON.stringify(Object.fromEntries(Object.entries(x.props).map(([k, q]) => [q.figma || k, q.type]).sort()));

@@ -385,5 +385,21 @@ delete globalThis.figma;
   const sized = (x) => ({ ...x, anatomy: { ...x.anatomy, i: { ...x.anatomy.i, with: { Size: 'Small' } } } });
   const small = sized(host({ 'i/box': { kind: 'container', parent: 'i', order: 1, layout: { direction: 'row' } }, 'i/box/dot': { kind: 'graphic', parent: 'i/box', order: 0, width: 6 } }));
   ok('the component\'s own is taken at the instance\'s props (its Size picks the variant)',
-    JSON.stringify(roundTrip(small, sized(host({})), { mains: mains2 }).rows.map((r) => [r.at, r.library, r.drawn])) === '[["i/box/dot.width",6,2]]'); }
+    JSON.stringify(roundTrip(small, sized(host({})), { mains: mains2 }).rows.map((r) => [r.at, r.library, r.drawn])) === '[["i/box/dot.width",6,2]]');
+  // kept whole in one variant only (open adds i/box, equal to its component's, so dot is hidden there): whole over the
+  // whole contract, as the reading's wholeIn is, so no combination fills the part
+  const one = { ...host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, width: 'fill', layout: { direction: 'row', padding: { start: 0 } } } }),
+    props: { open: { type: 'boolean', default: false, axis: true, figma: 'Open' } }, variants: [{ when: { open: true }, add: { 'i/box': { kind: 'container', parent: 'i', order: 1 } } }] };
+  const bare = { ...host({}), props: one.props };
+  ok('a host kept whole in one variant is kept whole in every combination: nothing filled in it',
+    roundTrip(one, bare, { mains }).rows.filter((r) => r.at === 'i/head' && r.drawn == null).reduce((t, r) => t + r.in, 0) === 2);
+  // an inner instance placed at props other than its defaults (Item places its Head small): a part inside it that no
+  // outer instance holds is that inner component's own at those props
+  const head3 = { component: 'Head', props: { size: { type: 'enum', values: ['large', 'small'], default: 'large', figmaValues: ['Large', 'Small'], figma: 'Size' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row' } }, label: { kind: 'text', parent: 'root', order: 0, color: 'A' } }, variants: [{ when: { size: 'small' }, set: { 'label.color': 'S' } }] };
+  const item3 = { component: 'Item', props: {}, anatomy: { root: { kind: 'container', layout: { direction: 'column' } }, head: { kind: 'instance', parent: 'root', component: 'Head', order: 0, with: { Size: 'Small' } } }, variants: [] };
+  const mains3 = (n) => ({ Head: head3, Item: item3 }[n] || null);
+  const inner = host({ 'i/head': { kind: 'instance', parent: 'i', component: 'Head', order: 0, with: { Size: 'Small' } }, 'i/head/label': { kind: 'text', parent: 'i/head', order: 0, color: 'C' } });
+  ok('a part inside an inner instance placed at other props is held to that component\'s own at those props',
+    JSON.stringify(roundTrip(inner, host({}), { mains: mains3 }).rows.map((r) => [r.at, r.library, r.drawn])) === '[["i/head/label.color","C","S"]]'); }
 console.log(`${n}/${n} passed`);
