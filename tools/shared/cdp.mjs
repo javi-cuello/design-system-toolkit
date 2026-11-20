@@ -17,7 +17,7 @@
  * each script holds its own port and a second worktree moves them again.
  * Plain node 22+ (global fetch and WebSocket), no dependency.
  */
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -63,6 +63,11 @@ export function findChrome() {
   ];
   return known.find((c) => existsSync(c)) || known[0];
 }
+
+/* The Chrome findChrome finds, as it says its version ('' where there is none), and its major (null where none): what a
+   reading is taken under, so one taken under another major is said stale (Chrome 158 read flex-start as flow-start). */
+export function chromeVersion(chrome = findChrome()) { try { return execFileSync(chrome, ['--version'], { encoding: 'utf8' }); } catch { return ''; } }
+export function chromeMajor(version = chromeVersion()) { const m = /(\d+)\./.exec(version); return m ? +m[1] : null; }
 
 export async function launch({ chrome = findChrome(), port = 0, profile, args = [], timeout = 30_000 }) {
   const dir = profile || mkdtempSync(join(tmpdir(), 'parity-chrome-'));
