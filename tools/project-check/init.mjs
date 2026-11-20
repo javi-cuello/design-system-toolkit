@@ -47,6 +47,8 @@ const PAST = { write: 'wrote', set: 'set', route: 'routed' };
 const did = (verb, what) => console.log((DRY ? `would ${verb}` : PAST[verb]).padEnd(12) + what);
 const kept = (what, note = '') => console.log('kept'.padEnd(12) + what + (note ? ` — ${note}` : ''));
 const later = [];
+// a code-only project ("design": "none" in its project block) has no snapshot to lay out or build tokens from
+const NODESIGN = contract.project(path.join(contract.homeOf(LABEL), 'design-system-context.md')).design === 'none';
 
 /* A file is written only where none is; one already there is checked for the line that matters. */
 function file(rel, content, { mode, holds, why } = {}) {
@@ -64,7 +66,7 @@ function file(rel, content, { mode, holds, why } = {}) {
   fs.writeFileSync(f, content, mode ? { mode } : undefined);
 }
 
-const SKELETON = {
+const SKELETON = NODESIGN ? { toolkit: TK, project: LABEL } : {
   toolkit: TK,
   project: LABEL,
   // the snapshot's layout is the store's (store.cjs DEFAULT_PATHS), under the repo's snapshot folder;
@@ -76,10 +78,10 @@ const SKELETON = {
   after: { library: [{ label: 'tokens', run: 'bin/tokens', required: true }] },
 };
 file('snapshot.config.json', JSON.stringify(SKELETON, null, 2) + '\n', { holds: /"toolkit"[\s\S]*"project"|"project"[\s\S]*"toolkit"/, why: 'names no "toolkit" and "project": add both' });
-if (!existing) later.push('snapshot.config.json: `paths.styles` is a default (src/styles/tokens); move it to where this repo keeps its token stylesheets');
+if (!existing && !NODESIGN) later.push('snapshot.config.json: `paths.styles` is a default (src/styles/tokens); move it to where this repo keeps its token stylesheets');
 // each script finds the toolkit where snapshot.config.json says, the one place a repo names it
 const SHIM = (tool) => `#!/bin/sh\nREPO="$(cd "$(dirname "$0")/.." && pwd)"\nexec node "$(node -e "console.log(require('$REPO/snapshot.config.json').toolkit.replace(/^~/, require('os').homedir()))")/${tool}"`;
-file('bin/tokens', `${SHIM('tools/tokens/build.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755 });
+if (!NODESIGN) file('bin/tokens', `${SHIM('tools/tokens/build.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755 });
 file('bin/check', `${SHIM('tools/project-check/check.mjs')} --repo "$REPO" "$@"\n`, { mode: 0o755,
   holds: /tools\/project-check\/check\.mjs/, why: 'does not run tools/project-check/check.mjs: add the line tools/project-check/README.md step 4 shows beside its own steps' });
 
@@ -107,9 +109,9 @@ else {
 }
 
 const pkg = (() => { try { return JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')); } catch { return null; } })();
-if (!pkg || !{ ...pkg.dependencies, ...pkg.devDependencies }['style-dictionary']) later.push('the token build needs Style Dictionary: `pnpm add -D style-dictionary` (tools/tokens/README.md)');
+if (!NODESIGN && (!pkg || !{ ...pkg.dependencies, ...pkg.devDependencies }['style-dictionary'])) later.push('the token build needs Style Dictionary: `pnpm add -D style-dictionary` (tools/tokens/README.md)');
 const config = existing || SKELETON;
-if (!config.parity) later.push('parity: choose the mapping of stories to Figma components with the design-code-parity skill, or rule the gate out in check.without');
+if (!config.parity && !NODESIGN) later.push('parity: choose the mapping of stories to Figma components with the design-code-parity skill, or rule the gate out in check.without');
 
 if (!DRY || existing) {
   console.log(`\n${tilde(path.join(HERE, 'check.mjs'))} --plan:`);

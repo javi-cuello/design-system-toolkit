@@ -14,7 +14,9 @@
  * A gate a project cannot feed is a failure, not a silence: either the
  * project supplies the fact it needs, or it rules the gate out with a reason
  * in `check.without` of its snapshot.config.json, where the ruling is read
- * like any other. `--plan` lists what would run and what would not, and runs
+ * like any other. A project whose project block says `"design": "none"` (code
+ * only) has no snapshot and no Figma file: a gate that reads either says "not
+ * applicable: no design", which is neither ok nor RED (snapshot-standard rule 18). `--plan` lists what would run and what would not, and runs
  * only the gates that cost nothing — the trailers, the hook, validate, the
  * verdicts (bin/closing reads it).
  *
@@ -81,6 +83,8 @@ const range = BASE ? `${BASE}..HEAD` : upstream ? `${upstream}..HEAD` : null;
 /* Each gate: what it needs (null when fed, else the missing fact) and how it runs. */
 const V = C.validate || {};
 const site = label ? contract.layout(null, label).site : null;
+// a code-only project: the gates that read a snapshot or a Figma file do not apply to it
+const noDesign = () => (label && contract.layout(null, label).design === 'none' ? 'no design' : null);
 const changedCode = () => {
   // three dots: what this branch changed since it left its base, not what the base did since;
   // a moved file counts (R), and -z keeps a path as git wrote it
@@ -95,18 +99,19 @@ const GATES = [
   { id: 'styles', name: 'the stylesheet rules no measurement can see', rule: 'code-standard, as tools/css-lint/README.md lists',
     needs: () => (config.styles ? null : 'no `styles` in snapshot.config.json'), cmd: () => ['node', T('tools/css-lint/check.mjs'), '--repo', REPO] },
   { id: 'tokens', name: 'the front-end standard holds', rule: 'code-standard 51-55',
+    na: () => (noDesign() && !fs.existsSync(path.join(REPO, 'bin/tokens')) ? 'no design and no bin/tokens' : null),
     needs: () => null, cmd: () => ['node', T('tools/tokens/check.mjs'), '--repo', REPO] },
-  { id: 'componentStyles', name: 'each component\'s stylesheet is its contract, generated', rule: 'code-standard 23',
+  { id: 'componentStyles', na: noDesign, name: 'each component\'s stylesheet is its contract, generated', rule: 'code-standard 23',
     needs: () => (config.paths && config.paths.componentStyles ? null : 'no `paths.componentStyles`: where tools/component-contract/to-code.mjs writes the component stylesheets'),
     cmd: () => ['node', T('tools/component-contract/to-code.mjs'), '--repo', REPO, '--check'] },
-  { id: 'roundTrip', name: 'a component read back from code or Figma is the contract it was, no worse than accepted', rule: '§D 23',
+  { id: 'roundTrip', na: noDesign, name: 'a component read back from code or Figma is the contract it was, no worse than accepted', rule: '§D 23',
     needs: () => (!label ? 'not a registered project (no figma-design-system/ context document)' : contract.layout(null, label).error ? `its layout: ${contract.layout(null, label).error}` : fs.existsSync(path.join(contract.layout(null, label).projectDir, 'round-trip', 'accepted.json')) ? null : 'no accepted round-trip counts: node tools/component-contract/eval.mjs --project <label> --accept, once'),
     cmd: () => ['node', T('tools/component-contract/eval.mjs'), '--project', label, '--check'] },
-  { id: 'specs', name: 'component specs resolve and compact to themselves', rule: 'snapshot-standard',
+  { id: 'specs', na: noDesign, name: 'component specs resolve and compact to themselves', rule: 'snapshot-standard',
     needs: () => (fs.existsSync(where.components) ? null : `no stored components at ${path.relative(REPO, where.components)}`), cmd: () => ['node', T('tools/snapshot/check-specs.cjs'), where.components] },
   { id: 'owned', name: 'no job the toolkit owns is written again here', rule: 'code-standard 59, §D 1',
     needs: () => null, cmd: () => ['node', T('tools/toolkit-check/owned-check.mjs'), '--repo', REPO] },
-  { id: 'pinned', name: 'the snapshot is at the published library', rule: 'snapshot-standard',
+  { id: 'pinned', na: noDesign, name: 'the snapshot is at the published library', rule: 'snapshot-standard',
     needs: () => (!label ? 'not a registered project (no figma-design-system/ context document)' : tokenFor(REPO, config) ? null : 'no Figma token: FIGMA_TOKEN, the project\'s `figmaToken` command, or the machine\'s ~/.config/figma/token (bin/set-key figma)'), cmd: () => ['node', T('tools/snapshot/deliver.cjs'), label, '--pinned'] },
   { id: 'lessons', name: 'every commit says where its lesson went', rule: '§D 8, §D 13',
     needs: () => (range ? null : 'no upstream branch to count commits from'), fn: () => {
@@ -117,7 +122,7 @@ const GATES = [
     needs: () => (range ? null : 'no upstream branch to count commits from'), fn: () => knowledgeReport(unread(REPO, range, C.exempt || [], TOOLKIT), range) },
   { id: 'hook', name: 'a push runs this check', rule: '§D 13',
     needs: () => null, fn: () => pushHookProblem(REPO, /tools\/project-check\/pre-push\.mjs/, 'run tools/project-check/init.mjs --repo <dir>, which writes the shim and sets core.hooksPath (two projects\' own hooks had drifted apart: one skipped content-only pushes and cached a green tree, the other did neither)') },
-  { id: 'validate', name: 'changed code uses the system\'s components and tokens', rule: '§D 15, knowledge/code/agent-prototyping.md',
+  { id: 'validate', na: noDesign, name: 'changed code uses the system\'s components and tokens', rule: '§D 15, knowledge/code/agent-prototyping.md',
     needs: () => (!V.system ? 'no `check.validate.system`: the path prefixes of the design system\'s own code'
       : !range ? 'no upstream branch to count commits from'
       : !site || !fs.existsSync(path.join(site, 'api/index.json')) ? 'no built docs site with its api (the docs service builds it after a snapshot)' : null),
@@ -142,7 +147,7 @@ const GATES = [
       const bad = files.flatMap((f) => pipedVerdicts(fs.readFileSync(f, 'utf8')).map((l) => `  ${path.relative(REPO, f)}:${l}`));
       return bad.length ? `${bad.length} check(s) piped on, whose status is then the pipe's:\n${bad.join('\n')}` : null;
     } },
-  { id: 'parity', name: 'parity: every gate, components and screens against Figma', rule: 'design-code-parity', browser: true,
+  { id: 'parity', na: noDesign, name: 'parity: every gate, components and screens against Figma', rule: 'design-code-parity', browser: true,
     needs: () => (config.parity ? null : 'no `parity`'), cmd: () => ['node', T('tools/parity/run.mjs'), '--repo', REPO],
     show: /assertions matched|^time:|warning: slower/ },
   { id: 'structure', name: 'the markup keeps its structural contract', rule: 'code-standard 1', browser: true,
@@ -158,6 +163,8 @@ const stale = Object.keys(without).filter((id) => !GATES.some((g) => g.id === id
 let failed = 0;
 const line = (name, verdict) => console.log(`${name.padEnd(60)}${verdict}`);
 for (const g of GATES) {
+  const na = g.na && g.na();
+  if (na) { line(g.name, `not applicable: ${na}`); continue; }
   const missing = g.needs();
   if (without[g.id]) {
     if (!missing) { line(g.name, `RED — ruled out in check.without, but its facts are here: run it, and drop the ruling`); failed++; }

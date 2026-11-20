@@ -1,6 +1,6 @@
 # Snapshot standard — how a design file reaches a project's snapshot, and how readers find it
 
-**Version 2.26.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
+**Version 2.27.0** — history in [`changelog/snapshot-standard.md`](changelog/snapshot-standard.md).
 
 Governs the chain from a Figma file to a project's stored snapshot: the
 **plugin** (`plugins/design-system-snapshot`), the **router**
@@ -312,14 +312,21 @@ through `bin/deploy` after every build; absent, nothing is published but by
 hand. An optional `port` (9223–9232, the range the Desktop
 Bridge plugin scans) is where the figma-audit service serves the project's
 docs site and audit; the service started with `--all` serves every project
-that has one, so a new project needs no change to the service. *Why:* a
+that has one, so a new project needs no change to the service. An optional
+`design`, whose one value is `"none"`, is a project with no Figma design
+(code only): its routing block names its repo and `"files": {}`, its phase is
+`build` or `maintenance`, every gate and closing item that reads a snapshot or
+a Figma file reports itself "not applicable: no design" (never passed, never
+red), and no docs site or dashboard is built for it. *Why:* a
 design-only project needs a handoff spec and a tracker, a project being built
 needs parity, a project in maintenance needs neither tracker nor handoff; with
 no phase anywhere, every output showed the same thing to all three.
 *Evidence:* no phase concept existed in the dashboard, the context template or
 the router when a docs site was first built over two projects in different
 phases. 2026-11-11: a session parked a code preview feature as waiting for a
-design-only project's stories, a project that has no code to wait for. *Checked:* `tools/snapshot/test-router.mjs` "a project block naming an unknown phase is refused"; `tools/snapshot/test-router.mjs` "a project block naming an unknown publish mode is refused"; `tools/snapshot/test-router.mjs` "a project block naming a port outside the bridge range is refused". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — that nothing a `design` project is listed as owing, or waiting for, reads its code.
+design-only project's stories, a project that has no code to wait for.
+2026-11-20: a code-only project (Next.js on the toolkit's stock-ui, no Figma
+file) could not register without every snapshot gate going red. *Checked:* `tools/snapshot/test-router.mjs` "a project block naming an unknown phase is refused"; `tools/snapshot/test-router.mjs` "is listed and says so; another value, or phase design, is refused"; `tools/project-check/test-check.mjs` "a code-only project: the snapshot and Figma gates are not applicable"; `tools/snapshot/test-router.mjs` "a project block naming an unknown publish mode is refused"; `tools/snapshot/test-router.mjs` "a project block naming a port outside the bridge range is refused". *Reviewed:* `tools/toolkit-check/closing.mjs` "judgement rules to read against this change" — that nothing a `design` project is listed as owing, or waiting for, reads its code.
 
 **19 · What a record stores per file is the identity; the name is resolved
 when it is read.**
@@ -534,7 +541,8 @@ Nothing is registered and no existing project changes. Three steps:
 
 1. **A context document** at `<project home>/design-system-context.md` with a
    `project` block (name, phase, and the `port` the audit service serves it on) and a `snapshot-routing` block naming
-   whatever file keys are known, and the repo if there is one. Until the
+   whatever file keys are known, and the repo if there is one (a project with
+   no Figma design adds `"design": "none"` and routes `"files": {}`, rule 18). Until the
    routing block exists the project claims nothing, which is correct: a
    project part-way through setup must never become the place strays land.
 2. **With a repo:** `<repo>/snapshot.config.json` (`toolkit`, `project`,

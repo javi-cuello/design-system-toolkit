@@ -113,7 +113,8 @@ const discover = () => {
   const found = [], taken = new Map();
   for (const h of contract.homes()) {
     const w = contract.layout(null, h.name);
-    if (w.error || !w.port) { if (w.error) console.error(`figma audit    ${h.name}: ${w.error}`); continue; }
+    // a code-only project ("design": "none") has no docs site or audit to serve
+    if (w.error || !w.port || w.design === 'none') { if (w.error) console.error(`figma audit    ${h.name}: ${w.error}`); continue; }
     if (taken.has(w.port)) { console.error(`figma audit    ${h.name}: port ${w.port} is already ${taken.get(w.port)}'s; give it another in its project block`); continue; }
     taken.set(w.port, h.name);
     found.push({ data: w.audit, port: w.port, label: h.name });

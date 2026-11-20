@@ -1578,6 +1578,26 @@ test('snapshot-standard 18: a project block naming an unknown phase is refused, 
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('snapshot-standard 18: a code-only project ("design": "none") is listed and says so; another value, or phase design, is refused', () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nodesign-'));
+  const doc = (label, block) => { const h = path.join(rootDir, label, contract.HOME); fs.mkdirSync(h, { recursive: true }); fs.writeFileSync(path.join(h, 'design-system-context.md'), `# x\n\n\`\`\`json project\n${JSON.stringify(block)}\n\`\`\`\n\n\`\`\`json snapshot-routing\n${JSON.stringify({ repo: path.join(rootDir, label), files: {} })}\n\`\`\`\n`); return path.join(h, 'design-system-context.md'); };
+  const before = process.env.TOOLKIT_PROJECTS_ROOT;
+  process.env.TOOLKIT_PROJECTS_ROOT = rootDir;
+  try {
+    doc('tracker', { name: 'Tracker', phase: 'build', design: 'none' });
+    doc('acme', { name: 'Acme', phase: 'build' });
+    const { list, errors } = contract.projects();
+    assert.deepEqual(errors, []);
+    assert.equal(list.find((p) => p.name === 'tracker').design, 'none', 'a code-only project is listed');
+    assert.equal(list.find((p) => p.name === 'acme').design, 'figma', 'a project with a design is unchanged');
+    assert.ok(/names design "figma-ish"/.test(contract.project(doc('x', { name: 'X', phase: 'build', design: 'figma-ish' })).error || ''));
+    assert.ok(/phase is build or maintenance/.test(contract.project(doc('y', { name: 'Y', design: 'none' })).error || ''), 'no design and no code is refused');
+  } finally {
+    if (before === undefined) delete process.env.TOOLKIT_PROJECTS_ROOT; else process.env.TOOLKIT_PROJECTS_ROOT = before;
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test('a project is found at <root>/<label>/figma-design-system, its label the repo folder', () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'homes-'));
   const home = path.join(rootDir, 'acme-web', contract.HOME);

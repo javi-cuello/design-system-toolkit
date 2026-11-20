@@ -1,5 +1,6 @@
 # History — snapshot-standard
 
+- 2.27.0 (2026-11-20): rule 18: an optional `design`, `"none"` for a code-only project; its snapshot and Figma gates say not applicable, no docs site is built for it, its phase is build or maintenance. A code-only project could not register without every snapshot gate going red.
 - 2.26.0 (2026-11-11): rule 27: a page named Scratch is not the library; the snapshot reads no component from it. A library snapshot took a scratch page's two templates as components.
 - 2.25.1 (2026-11-11): rule 18's incident moved into its *Evidence*; a *Reviewed:* marker for the `design` phase's no-code clause.
 - 2.25.0 (2026-11-11): rule 18: `design` is a project with no code; a code feature is not owed to it, nothing waits for its code, and moving it to `build` is the project's decision in §6. A session parked a code preview feature as waiting for a design-only project's stories.

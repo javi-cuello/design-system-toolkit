@@ -191,6 +191,12 @@ function routing(contextDoc) {
  * simply the last rung (a ladder that ends in "blocked", or two finished states
  * such as "no comments" and "input addressed"). Always returned as a list.
  *
+ * `design` is `"none"` for a project with no Figma design (code only); absent,
+ * `figma`. Every gate and output that reads a snapshot or a Figma file reports
+ * itself not applicable to such a project, never passed and never red, and no
+ * docs site is built for it. Its phase is `build` or `maintenance`: `design`
+ * would be a project with neither design nor code.
+ *
  * `publish` is who may read the published docs site: `password` or `public`
  * (bin/deploy's two modes). Set, the dashboard service redeploys the site
  * after every build; absent, nothing is published unless by hand.
@@ -229,13 +235,19 @@ function project(contextDoc) {
   try { md = fs.readFileSync(contextDoc, 'utf8'); } catch { return { error: `cannot read ${contextDoc}` }; }
   const block = md.match(/```json project\s*\n([\s\S]*?)\n```/);
   const finished = (m) => Object.keys(m).filter((k) => m[k] === 'Finished');
-  if (!block) { const markers = legendOf(contextDoc); return { name: null, phase: 'design', markers, done: finished(markers), editorPort: EDITOR_PORT }; }
+  if (!block) { const markers = legendOf(contextDoc); return { name: null, phase: 'design', design: 'figma', markers, done: finished(markers), editorPort: EDITOR_PORT }; }
   let parsed;
   try { parsed = JSON.parse(block[1]); } catch (e) {
     return { error: `the project block in ${contextDoc} is not valid JSON: ${e.message}` };
   }
   if (parsed.phase && !PHASES.includes(parsed.phase)) {
     return { error: `the project block in ${contextDoc} names phase ${JSON.stringify(parsed.phase)}; expected ${PHASES.join(', ')}` };
+  }
+  if (parsed.design !== undefined && parsed.design !== 'none') {
+    return { error: `the project block in ${contextDoc} names design ${JSON.stringify(parsed.design)}; the one value is "none" (a project with no Figma design), and absent is a Figma project` };
+  }
+  if (parsed.design === 'none' && (parsed.phase || 'design') === 'design') {
+    return { error: `the project block in ${contextDoc} names design "none" with phase design: a project with no design is built from code, so its phase is build or maintenance` };
   }
   if (parsed.port !== undefined && !(Number.isInteger(parsed.port) && parsed.port >= 9223 && parsed.port <= 9232)) {
     return { error: `the project block in ${contextDoc} names port ${JSON.stringify(parsed.port)}; expected a whole number in 9223–9232 (the range the Desktop Bridge plugin scans)` };
@@ -248,7 +260,7 @@ function project(contextDoc) {
   }
   const markers = parsed.markers || legendOf(contextDoc);
   const done = [].concat(parsed.done || (parsed.markers ? Object.keys(markers).at(-1) : finished(markers)));
-  return { name: parsed.name || null, phase: parsed.phase || 'design', markers, done, publish: parsed.publish || null, port: parsed.port || null, editorPort: parsed.editorPort || EDITOR_PORT };
+  return { name: parsed.name || null, phase: parsed.phase || 'design', design: parsed.design || 'figma', markers, done, publish: parsed.publish || null, port: parsed.port || null, editorPort: parsed.editorPort || EDITOR_PORT };
 }
 
 /** Every name a file answers to. */
@@ -361,10 +373,11 @@ function projects(projectsDir) {
     }
     if (!route.repo) {
       // Design-only: stored in its own folder here, at the canonical layout.
-      list.push({ name: entry.name, home: entry.home, repo: null, doc, files: route.files, store: path.join(entry.home, 'snapshot') });
+      list.push({ name: entry.name, home: entry.home, repo: null, doc, files: route.files, design: project(doc).design || 'figma', store: path.join(entry.home, 'snapshot') });
       continue;
     }
-    list.push({ name: entry.name, home: entry.home, repo: route.repo, doc, files: route.files });
+    // `design` "none": a code-only project, listed like any other; its routing block claims no file
+    list.push({ name: entry.name, home: entry.home, repo: route.repo, doc, files: route.files, design: project(doc).design || 'figma' });
   }
   return { list, errors };
 }
@@ -1015,7 +1028,7 @@ function layout(projectsDir, label) {
   if (facts.error) return { error: facts.error };
   const route = routing(doc);
   const base = {
-    label, name: facts.name || label, phase: facts.phase, markers: facts.markers, done: facts.done, publish: facts.publish, port: facts.port, editorPort: facts.editorPort, doc,
+    label, name: facts.name || label, phase: facts.phase, design: facts.design, markers: facts.markers, done: facts.done, publish: facts.publish, port: facts.port, editorPort: facts.editorPort, doc,
     projectDir: home,
     // Audit records live with the project in the toolkit whatever the
     // project's layout: the dashboard and the audit skills write them there.

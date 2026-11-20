@@ -64,6 +64,7 @@ export const shadowsOf = (snapshot) => new Map(fromSnapshot.toDtcgSnapshot(snaps
   .filter(([, t]) => t).map(([n, t]) => [n, build.shadowCss(t.$value)]));
 
 const where = contract.layout(null, label);
+if (where.design === 'none') throw new Error(`${label}: its project block says "design": "none", so no docs site is built for it (snapshot-standard rule 18)`);
 if (!where.paths) throw new Error(`${label}: ${where.error}`);
 
 const P = where.paths;

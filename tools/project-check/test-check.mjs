@@ -52,4 +52,30 @@ console.log('ok the validate gate asks where the system\'s own code is');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   console.log('ok the validate gate: a finding is RED, a ruling naming it waives it, an unreadable base is RED');
 }
-console.log('3/3 passed');
+// a code-only project ("design": "none"): every gate that reads a snapshot or Figma says not applicable,
+// neither ok nor RED; the code gates still run; the same project with a design is held as before
+{
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nodesign-')));
+  const code = path.join(dir, 'code'), home = path.join(dir, 'projects', 'tracker', 'figma-design-system');
+  fs.mkdirSync(code); fs.mkdirSync(home, { recursive: true });
+  spawnSync('git', ['-C', code, 'init', '-q']);
+  fs.writeFileSync(path.join(code, 'snapshot.config.json'), JSON.stringify({ toolkit: path.join(HERE, '../..'), project: 'tracker' }));
+  const context = (block) => fs.writeFileSync(path.join(home, 'design-system-context.md'), `# tracker\n\n\`\`\`json project\n${JSON.stringify(block)}\n\`\`\`\n\n\`\`\`json snapshot-routing\n${JSON.stringify({ repo: code, files: {} })}\n\`\`\`\n`);
+  const plan = () => spawnSync(process.execPath, [path.join(HERE, 'check.mjs'), '--repo', code, '--plan'], { encoding: 'utf8', env: { ...process.env, TOOLKIT_PROJECTS_ROOT: path.join(dir, 'projects') } }).stdout;
+  const FIGMA = [/the front-end standard holds/, /each component's stylesheet is its contract/, /a component read back from code or Figma/, /component specs resolve/, /the snapshot is at the published library/, /changed code uses the system's components/, /parity: every gate/];
+  try {
+    context({ name: 'Tracker', phase: 'build', design: 'none' });
+    let out = plan();
+    for (const g of FIGMA) assert.match(out.split('\n').find((l) => g.test(l)) || '', /not applicable: no design/, out);
+    assert.match(out, /no job the toolkit owns is written again here\s+runs/, out);
+    assert.doesNotMatch(out.split('\n').filter((l) => /not applicable/.test(l)).join('\n'), /RED|\bok\b/, out);
+    fs.mkdirSync(path.join(code, 'bin')); fs.writeFileSync(path.join(code, 'bin/tokens'), '#!/bin/sh\n');
+    assert.match(plan(), /the front-end standard holds\s+runs/, 'with a bin/tokens the tokens gate runs');
+    context({ name: 'Tracker', phase: 'build' });
+    out = plan();
+    assert.ok(!/not applicable/.test(out), out);
+    assert.match(out, /component specs resolve and compact to themselves\s+RED — not run: no stored components/, out);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  console.log('ok a code-only project: the snapshot and Figma gates are not applicable, the code gates run; with a design, unchanged');
+}
+console.log('4/4 passed');
