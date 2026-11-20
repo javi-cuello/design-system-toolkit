@@ -252,6 +252,30 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
         // (a stroke box the code draws of its own, an error border, is no ring: the box's corners change as it does)
         && JSON.stringify(delta({ root: { radius: 'R0' } }, { root: { radius: 'R12' }, errorBorder: { ...ring, parent: 'root' } })) === JSON.stringify({ set: { 'root.radius': 'R12' }, add: { errorBorder: { ...ring, parent: 'root' } } }); })());
 }
+// of several ring candidates, the one this render's variants draw, then the one most focus variants add
+{
+  const { ringKeyOf, keepsRing, placeRings } = await import('./from-code.mjs');
+  const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'Focus/focus', width: 2 }, shape: 'rectangle' };
+  const props = { state: { type: 'enum', values: ['enabled', 'focus'], default: 'enabled', role: 'interaction' }, invalid: { type: 'boolean', default: false }, type: { type: 'enum', values: ['a', 'b'], default: 'a' } };
+  const anatomy = { root: { kind: 'container' }, input: { kind: 'container', parent: 'root' } };
+  // (the focus error variant first: a first-found pick takes its error stroke for the ring)
+  const errored = { props, anatomy, variants: [{ when: { state: 'focus', invalid: true }, add: { 'input/errorBorder': { ...ring, parent: 'input', border: { color: 'Support/error', width: 2 } } } },
+    { when: { state: 'focus' }, add: { 'input/focusBorder': { ...ring, parent: 'input' } } }, { when: { state: 'focus', type: 'b' }, add: { 'input/focusBorder': { ...ring, parent: 'input' } } }] };
+  ok('a focus error stroke is not the ring: the one every focus draws is, in the error render too',
+    ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: true }).key === 'input/focusBorder' && ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: false }).key === 'input/focusBorder'
+    && ringKeyOf(errored, 'input').key === 'input/focusBorder');
+  const twoRings = { props, anatomy, variants: [{ when: { type: 'a', state: 'focus' }, add: { focusBorder: { ...ring, parent: 'root' } } }, { when: { type: 'b', state: 'focus' }, add: { outerRing: { ...ring, parent: 'root', name: 'Outer ring' } } }] };
+  ok('two candidate rings in one box, each in only some variants: each render takes its own variant\'s',
+    ringKeyOf(twoRings, 'root', {}, { type: 'a', state: 'focus' }).key === 'focusBorder' && JSON.stringify(ringKeyOf(twoRings, 'root', {}, { type: 'b', state: 'focus' })) === '{"key":"outerRing","name":"Outer ring"}');
+  ok('a ring kept in the base anatomy and shown by a set is not found (as ringOf finds none): a focusRing',
+    ringKeyOf({ props, anatomy: { ...anatomy, focusBorder: { ...ring, parent: 'root', visible: false } }, variants: [{ when: { state: 'focus' }, set: { 'focusBorder.visible': true } }] }, 'root', {}, { state: 'focus' }).key === 'focusRing');
+  ok('a design keeps a ring on a box by its focusRing or a ring layer of its own name, and on no other box',
+    keepsRing(errored, 'input') && keepsRing({ props, anatomy, variants: [{ when: { state: 'focus' }, add: { 'input/focusRing': { parent: 'input' } } }] }, 'input') && !keepsRing(errored, 'root') && !keepsRing(null, 'input'));
+  ok('the rings a render reads reach delta by the design\'s name: the corner shaped for the ring stays the box\'s own',
+    (() => { const got = placeRings({ root: { radius: 'R12' } }, [['root', { ...ring, parent: 'root' }]], twoRings, { type: 'a', state: 'focus' });
+      return got.rings.join() === 'focusBorder' && JSON.stringify(Object.keys(got)) === '["root","focusBorder"]' && got.focusBorder.order === 0
+        && JSON.stringify(delta({ root: { radius: 'R0' } }, got)) === JSON.stringify({ add: { focusBorder: { ...ring, parent: 'root', order: 0 } } }); })());
+}
 // which outline is a box's own stroke and which a focus ring
 {
   const { outlineIsOwn } = await import('./from-code.mjs');

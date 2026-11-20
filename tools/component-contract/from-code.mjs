@@ -129,18 +129,46 @@ export function layerNames(ids, design, drawnFrom = null) {
 
 /* The layer a design draws as box `id`'s focus ring, which code draws as that box's outline (to-code's ringOf, the one
    rule): its key and name, so a ring read back from an outline is the design's own layer (Carbon's `focusBorder`),
-   and a synthesised `<id>/focusRing` only where the design has none. A design layer the reading already holds (code
-   drew it as a box of its own) is not taken twice. Tested by test-from-code.mjs. */
-export function ringKeyOf(design, id, taken = {}) {
+   and a synthesised `<id>/focusRing` only where the design has none. Of several stroke boxes that pass ringOf (a focus
+   variant that adds an error border too), the one of the variants this render draws (`when`, the design's props) is
+   taken, then the one most focus variants add: the ring every focus draws, the same key in each. A design layer the
+   reading already holds (code drew it as a box of its own) is not taken twice. Only a layer a variant adds is found,
+   as ringOf finds one: a ring kept in the base anatomy and shown by a variant's `set` is not, and stays a focusRing.
+   Tested by test-from-code.mjs. */
+export function ringKeyOf(design, id, taken = {}, when = null) {
   const own = `${id === 'root' ? '' : `${id}/`}focusRing`;
   if (!design || !design.props) return { key: own };
-  const hits = [];
+  const low = (x) => String(x).toLowerCase();
+  const drawn = (w) => !!when && Object.entries(w || {}).every(([k, v]) => !(k in when) || (Array.isArray(v) ? v : [v]).some((x) => low(x) === low(when[k])));
+  const hits = new Map(); // key → { name, n: focus variants adding it, here: whether this render's variants add it }
   for (const v of design.variants || []) {
     const a = { ...(design.anatomy || {}), ...(v.add || {}) };
-    for (const [k, e] of Object.entries(v.add || {})) if (e.parent === id && !hits.some((h) => h.key === k) && ringOf(design, v.when || {}, k, e, a)) hits.push({ key: k, ...(e.name && { name: e.name }) });
+    for (const [k, e] of Object.entries(v.add || {})) {
+      if (e.parent !== id || k in taken || !ringOf(design, v.when || {}, k, e, a)) continue;
+      const h = hits.get(k) || { key: k, ...(e.name && { name: e.name }), n: 0, here: false };
+      h.n++; h.here = h.here || drawn(v.when); hits.set(k, h);
+    }
   }
-  const free = hits.filter((h) => !(h.key in taken));
-  return free.find((h) => h.key === own) || free[0] || { key: own };
+  const all = [...hits.values()], pool = all.some((h) => h.here) ? all.filter((h) => h.here) : all;
+  const best = pool.find((h) => h.key === own) || pool.sort((x, y) => y.n - x.n)[0];
+  return best ? { key: best.key, ...(best.name && { name: best.name }) } : { key: own };
+}
+
+/* Whether a design keeps a focus ring on box `id`: its `<id>/focusRing`, or a ring layer of its own name (ringKeyOf).
+   Tested by test-from-code.mjs. */
+export function keepsRing(c, id) {
+  const own = `${id === 'root' ? '' : `${id}/`}focusRing`;
+  return !!c && ([c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => own in a) || ringKeyOf(c, id).key !== own);
+}
+
+/* A render's rings read from outlines (`ring`: [box id, layer]) placed in its reading as the design's ring layers
+   (ringKeyOf), after the box's other children; the keys listed on the reading as `rings` (not enumerable), so delta
+   knows them whatever they are called. Tested by test-from-code.mjs. */
+export function placeRings(anatomy, ring, design, when) {
+  const rings = [];
+  for (const [id, e] of ring) { const { key, name } = ringKeyOf(design, id, anatomy, when); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
+  Object.defineProperty(anatomy, 'rings', { value: rings, configurable: true });
+  return anatomy;
 }
 
 /* Whether an outline a box draws is its own stroke (else, in a focused render, a focus ring layer): not one drawn by an
@@ -1247,8 +1275,8 @@ async function main() {
     // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.
     // Joined by name, as the code's props are the design's on the toolkit's own render; a project's own names that
     // differ fall back to the base room, as before
-    const roomOf = (args) => {
-      if (!figmaContract) return room;
+    // a render's args as the design's props (its prop of the same key, or the one the mapping's joins give it)
+    const comboOf = (args) => {
       const combo = {};
       for (const [k, q] of Object.entries(props)) {
         // (by its key, else the design prop the mapping's joins give this code prop: one the code names otherwise,
@@ -1259,6 +1287,11 @@ async function main() {
         if (!d || !q.code || args[q.code] === undefined) continue;
         combo[dk] = d.type === 'enum' ? (d.values || []).find((w) => String(w).toLowerCase() === String(args[q.code]).toLowerCase()) ?? args[q.code] : args[q.code];
       }
+      return combo;
+    };
+    const roomOf = (args) => {
+      if (!figmaContract) return room;
+      const combo = comboOf(args);
       const r = expand(figmaContract, { ...variantDefaults(figmaContract), ...combo }).root || {};
       return typeof r.width === 'number' ? r.width : r.width === 'fill' && r.canvas && typeof r.canvas.width === 'number' ? r.canvas.width : room;
     };
@@ -1808,8 +1841,7 @@ async function main() {
         // keeps it: there the outline is no stroke of the design's)
         // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
         // (a design that keeps a ring there keeps it a ring: outlineIsOwn)
-        const ringIn = (c) => !!c && ([c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => `${id}/focusRing` in a) || ringKeyOf(c, id).key !== `${id}/focusRing`);
-        if (outlineIsOwn(x, focused, insidePlaced(raw, id), ringIn(L.drawnFrom || figmaContract))) { x.ownOutline = x.outline; delete x.outline; }
+        if (outlineIsOwn(x, focused, insidePlaced(raw, id), keepsRing(L.drawnFrom || figmaContract, id))) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
@@ -1861,8 +1893,7 @@ async function main() {
         anatomy[id] = x;
       }
       // (as the design's own ring layer where it draws one: ringKeyOf)
-      const rings = [];
-      for (const [id, e] of ring) { const { key, name } = ringKeyOf(L.drawnFrom || figmaContract, id, anatomy); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
+      placeRings(anatomy, ring, L.drawnFrom || figmaContract, figmaContract ? comboOf(args) : null);
       // a placed component not opened (its insides its own audit's) that draws one graphic, coloured by the colour the
       // code writes on the instance (an svg in currentColor): that colour, said as Figma says it, on the glyph inside,
       // named by the token the code wrote (never one guessed by value), keyed as an instance names it (derive asPlaced);
@@ -1893,7 +1924,6 @@ async function main() {
       }
       normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
-      Object.defineProperty(anatomy, 'rings', { value: rings });
       return anatomy;
     };
 
