@@ -43,7 +43,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { forField, usedGroups } from '../contract-editor/anatomy.mjs';
 import { parseColour, weightName, insetStroke, sideStrokes, insetStrokeVars, splitTop } from '../parity/values.mjs';
-import { camel, sentence, partName } from './layers.mjs';
+import { camel, sentence, partName, kebab } from './layers.mjs';
 import { ringOf, pseudoClasses } from './to-code.mjs';
 import { layoutFromCss, sizeFromCss, placeFromCss, autoResizeOf, styleFromCss, linesFromCss, LINES_CSS, fillsFromCss, smoothingFromCss } from './rules.mjs';
 import { textStyleFields } from '../tokens/build-tokens.mjs';
@@ -162,9 +162,10 @@ export function ringKeyOf(design, id, taken = {}, when = null) {
 /* A render's args as a design's props: each code prop as the design prop of its key, else the one the mapping's joins
    give it (Carbon's styleOption for Style), its value in the design's spelling. The render's state (the `__state` arg)
    is the design's interaction prop's, whatever that prop is called: the value of the same word, else the one the
-   house's pseudo-classes (to-code's pseudoClasses, the stylesheet's) force as this state is forced (`pseudoOf`).
+   house's pseudo-classes (to-code's pseudoClasses, the stylesheet's; `settings` theirs, the house's unless given) force
+   as this state is forced (`pseudoOf`), a value of several words kebab-cased as their keys are.
    Tested by test-from-code.mjs. */
-export function designCombo(design, props, joinedProps, args, pseudoOf = {}) {
+export function designCombo(design, props, joinedProps, args, pseudoOf = {}, settings = undefined) {
   const combo = {};
   if (!design) return combo;
   const low = (x) => String(x).toLowerCase(), bare = (x) => String(x || '').replace(/^:+/, '');
@@ -173,8 +174,8 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}) {
     if (!q.code || args[q.code] === undefined) continue;
     const [ik, ip] = q.code === '__state' ? Object.entries(design.props).find(([, p]) => p.role === 'interaction') || [] : [];
     if (ip) {
-      const s = args.__state, ps = pseudoClasses(), forced = (pseudoOf[s] || {}).pseudo, dk = ik, d = ip;
-      const v = (d.values || []).find((w) => low(w) === low(s)) ?? (forced ? (d.values || []).find((w) => ps[low(w)] && bare(ps[low(w)]) === bare(forced)) : undefined);
+      const s = args.__state, ps = pseudoClasses(settings), forced = (pseudoOf[s] || {}).pseudo, dk = ik, d = ip;
+      const v = (d.values || []).find((w) => low(w) === low(s)) ?? (forced ? (d.values || []).find((w) => ps[kebab(w)] && bare(ps[kebab(w)]) === bare(forced)) : undefined);
       if (v !== undefined) combo[dk] = v;
       continue;
     }
@@ -663,6 +664,8 @@ async function forceAt(tab, at) {
 }
 
 export async function openSource(label, name, { rebuild, codeOnly, self, second } = {}) {
+  // (the round trip's legs read against a design, the one a code-only read has none of)
+  if (codeOnly && (self || second)) throw Object.assign(new Error('from-code: --code-only reads a component with no design, and --self and --second read against one: give one of them'), { usage: true });
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label, { self: !!self });
   if (self) return selfSource(project, name, { second });

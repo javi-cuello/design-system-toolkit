@@ -297,13 +297,18 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
 }
 // a render's args as the design's props: its state as the design's interaction prop, whatever it is called
 {
-  const { designCombo, placeRings } = await import('./from-code.mjs');
+  const { designCombo, placeRings, openSource } = await import('./from-code.mjs');
   const code = { state: { type: 'enum', values: ['rest', 'focus'], role: 'interaction', code: '__state' }, invalid: { type: 'boolean', code: 'invalid' } };
   const design = { props: { interaction: { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction' }, invalid: { type: 'boolean', default: false } } };
   ok('the render\'s state is the design\'s interaction prop, by its word or by the pseudo-class both force',
     JSON.stringify(designCombo(design, code, {}, { __state: 'Focus', invalid: true })) === '{"interaction":"focus","invalid":true}'
     && JSON.stringify(designCombo(design, code, {}, { __state: 'keyboard' }, { keyboard: { pseudo: 'focus-visible' } })) === '{"interaction":"focus"}'
     && JSON.stringify(designCombo(design, code, {}, { __state: 'keyboard' }, {})) === '{}');
+  ok('a design value of several words is matched to the pseudo-class its kebab-cased key forces',
+    JSON.stringify(designCombo({ props: { interaction: { type: 'enum', values: ['Default', 'Focus visible'], default: 'Default', role: 'interaction' } } }, code, {}, { __state: 'keyboard' }, { keyboard: { pseudo: ':focus-visible' } }, { pseudoClasses: { 'Focus visible': ':focus-visible' } }))
+      === '{"interaction":"Focus visible"}');
+  ok('--code-only beside --self or --second is refused as a usage error: those legs read against a design',
+    await Promise.all([{ codeOnly: true, self: true }, { codeOnly: true, second: true, self: true }].map((o) => openSource('any', 'x', o).then(() => false, (e) => !!e.usage && /--code-only/.test(e.message)))).then((r) => r.every(Boolean)));
   // (a design whose ring prop is not `state`: a focus error render takes the error stroke to-code draws last)
   const ring = { kind: 'graphic', position: 'absolute', absolute: { x: 0, y: 0, end: 0, bottom: 0 }, constraints: { horizontal: 'stretch', vertical: 'stretch' }, border: { color: 'F', width: 2 }, shape: 'rectangle' };
   const d2 = { props: { interaction: { type: 'enum', values: ['default', 'focus'], default: 'default', role: 'interaction' }, invalid: design.props.invalid }, anatomy: { root: { kind: 'container' } },
