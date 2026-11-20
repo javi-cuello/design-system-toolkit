@@ -6,8 +6,9 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
+import { chromeMajor } from '../shared/cdp.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -34,6 +35,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   const before = closureHashes(lib, { a: '1', b: '1', c: '1', d: '1' }, 's'), after = closureHashes(lib, { a: '1', b: '1', c: '2', d: '1' }, 's');
   ok('a change to a placed component moves it and every component that places it, through a variant too, and nothing else', ['a', 'b', 'c'].every((f) => before[f] !== after[f]) && before.d === after.d);
   ok('a sheet whose every rule names its element is scoped; one rule past it is not', scopedTo('@layer c { ds-tag { color: red } :where(ds-tag[size="s"]) > [data-part="x"], ds-tag:hover { gap: 0 } }', 'ds-tag') && !scopedTo('ds-tag { a: 0 } button { b: 0 }', 'ds-tag') && !scopedTo('ds-tag-item { a: 0 }', 'ds-tag') && scopedTo('ds-tag:where(:disabled, :has(> :disabled)) > b { a: 0 }', 'ds-tag') && !scopedTo('ds-tag { animation: spin 1s } @keyframes spin { from { a: 0 } }', 'ds-tag'));
+  const part = closureHashes(lib, { a: '1', b: '1', c: '1' }, 's', ['a']);
+  ok('closureOf: a component and what it places, transitively; hashes asked for some are theirs, from their closure\'s own only', JSON.stringify([...closureOf(lib, ['a', 'gone'])].sort()) === '["a","b","c"]' && JSON.stringify(part) === JSON.stringify({ a: before.a }));
+  ok('a Chrome major read from its version line, none from none', chromeMajor('Google Chrome 158.0.8127.37\n') === 158 && chromeMajor('') === null);
   ok('and a change all share moves every one', Object.keys(before).every((f) => closureHashes(lib, { a: '1', b: '1', c: '1', d: '1' }, 't')[f] !== before[f]));
 }
 
@@ -53,6 +57,9 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a reading from code with no fingerprint is stale', /before readings were fingerprinted/.test(m.legs.browser.tag.stale));
   fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ of: hashOf(c), asFigma: c }));
   ok('a reading from code taken against today\'s contract is current', !measure(where).legs.browser.tag.stale);
+  ok('a reading from code taken before its Chrome was recorded is stale once the installed one is known', /before its Chrome was recorded/.test(measure(where, [], { chrome: 158 }).legs.browser.tag.stale));
+  fs.writeFileSync(path.join(home, 'parity', 'from-code', 'tag.json'), JSON.stringify({ of: hashOf(c), chrome: 158, asFigma: c }));
+  ok('a reading from code under the installed Chrome is current; under another major, stale', !measure(where, [], { chrome: 158 }).legs.browser.tag.stale && /taken under Chrome 158, 159 installed now/.test(measure(where, [], { chrome: 159 }).legs.browser.tag.stale));
   // the self leg: a reading with no fingerprint, or of another contract, is measured and said stale; one of today's is not
   const selfDir = path.join(home, 'round-trip', 'self', 'from-code');
   fs.mkdirSync(selfDir, { recursive: true });
@@ -84,7 +91,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c), inputs: 'i1', reader: 'r1', chrome: 158 } } }));
   ok('a reading from today\'s inputs under the installed Chrome is current', !measure(where, [], { inputs: { tag: 'i1' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale);
   ok('a reading whose inputs moved is stale, the reader\'s code named where it moved', /inputs changed since: the reader's code/.test(measure(where, [], { inputs: { tag: 'i2' }, reader: 'r2', chrome: 158 }).legs.self.tag.stale)
-    && /inputs changed since: the generator/.test(measure(where, [], { inputs: { tag: 'i2' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale));
+    && measure(where, [], { inputs: { tag: 'i2' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale === 'its inputs changed since');
   ok('a reading taken under another Chrome major is stale', /taken under Chrome 158, 159 installed now/.test(measure(where, [], { inputs: { tag: 'i1' }, reader: 'r1', chrome: 159 }).legs.self.tag.stale));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c) } } }));
   ok('a reading with no inputs recorded is stale once today\'s are known', /before its inputs were recorded/.test(measure(where, [], { inputs: { tag: 'i1' } }).legs.self.tag.stale));
