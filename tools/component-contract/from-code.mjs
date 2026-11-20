@@ -1974,8 +1974,9 @@ async function main() {
             // another token, or none, that draws the same colour
             // (only a fill read whole: a layer laid over the colour changes what shows, which the colour alone does not say)
             if (verdict === 'differs' && (k === 'background' || k === 'color') && fv && typeof cv === 'string' && !(k === 'background' && layered.has(cid))) {
-              const got = k === 'color' ? c.drawn[cid].color : c.drawn[cid].background;
-              if (got && judge({ color: value(fv) }, got, c.drawn[cid].under) !== 'differs') verdict = 'same on screen';
+              // (a part the reading adds that the walk never drew, a focus ring it builds from an outline, has no colour on screen)
+              const d = (c.drawn || {})[cid], got = d && (k === 'color' ? d.color : d.background);
+              if (got && judge({ color: value(fv) }, got, d.under) !== 'differs') verdict = 'same on screen';
             }
             // a border the design does not draw that code draws in a colour its own fill hides, as the audit judges it
             if (verdict === 'differs' && k === 'border' && !fv && c.drawn[cid].border && !c.drawn[cid].layers && invisibleBorder({ 'border-color': c.drawn[cid].border, background: c.drawn[cid].background, under: c.drawn[cid].under })) verdict = 'same on screen';
