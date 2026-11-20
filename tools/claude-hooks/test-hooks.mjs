@@ -8,11 +8,13 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = path.resolve(HERE, '../..');
+process.env.TOOLKIT_STATE_DIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-hooks-state-'))); // never the real plans
+process.on('exit', () => fs.rmSync(process.env.TOOLKIT_STATE_DIR, { recursive: true, force: true }));
 const run = (mode, payload) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), mode], { input: JSON.stringify(payload), encoding: 'utf8' });
 
 test('prompt hands over what stop kept, once, as context the user does not see', () => {
   const session_id = `test-${process.pid}-${Date.now()}`;
-  const pending = path.join(os.tmpdir(), `toolkit-pending-${session_id}`);
+  const pending = path.join(process.env.TOOLKIT_STATE_DIR, `toolkit-pending-${session_id}`);
   fs.writeFileSync(pending, 'toolkit: 1 uncommitted: a.md\ntoolkit: 1 uncommitted: a.md\n');
   const out = JSON.parse(run('prompt', { session_id }).stdout);
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
@@ -98,7 +100,7 @@ test('a gate that throws, or will not load, is told to the session, not swallowe
     const hooks = path.join(dir, 'tools/claude-hooks');
     try {
       fs.mkdirSync(hooks, { recursive: true });
-      fs.copyFileSync(path.join(HERE, 'hooks.mjs'), path.join(hooks, 'hooks.mjs'));
+      for (const f of ['hooks.mjs', 'state-dir.mjs']) fs.copyFileSync(path.join(HERE, f), path.join(hooks, f));
       fs.writeFileSync(path.join(hooks, 'gates.mjs'), gates);
       const sid = `throw-${process.pid}-${gates.length}`;
       const go = (mode, pl, env = {}) => spawnSync('node', [path.join(hooks, 'hooks.mjs'), mode], { input: JSON.stringify(pl), encoding: 'utf8', env: { ...process.env, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off', TOOLKIT_GATES: '', TOOLKIT_EVAL_COPY: '', ...env } });
@@ -116,11 +118,16 @@ test('a gate that throws, or will not load, is told to the session, not swallowe
       assert.equal(JSON.parse(s1.stdout).decision, 'block');
       assert.match(JSON.parse(s1.stdout).reason, /review gate .* failed .*boom/);
       assert.equal(go('stop', { session_id: sid, stop_hook_active: true, cwd: dir }).stdout.trim(), '');
+      // the start still speaks, the gates' part said as missing
+      const st = go('start', { session_id: sid, cwd: dir });
+      assert.equal(st.status, 0);
+      assert.match(st.stdout, /gates did not load/);
       // switched off: nothing said
       assert.doesNotMatch(go('stop', { session_id: sid, stop_hook_active: false, cwd: dir }, { TOOLKIT_GATES: 'off' }).stdout, /review gate/);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
-      for (const f of ['rules', 'stop', 'pending']) fs.rmSync(path.join(os.tmpdir(), `toolkit-${f}-throw-${process.pid}-${gates.length}`), { force: true });
+      for (const f of ['rules', 'stop']) fs.rmSync(path.join(os.tmpdir(), `toolkit-${f}-throw-${process.pid}-${gates.length}`), { force: true });
+      fs.rmSync(path.join(process.env.TOOLKIT_STATE_DIR, `toolkit-pending-throw-${process.pid}-${gates.length}`), { force: true });
     }
   }
 });
@@ -131,7 +138,7 @@ test('a gate that throws, or will not load, is told to the session, not swallowe
 test('the loop runs end to end: plan, edit, review, close, push', (t) => {
   const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-loop-')));
   t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
-  const env = { ...process.env, TMPDIR: tmp, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off' };
+  const env = { ...process.env, TMPDIR: tmp, TOOLKIT_STATE_DIR: tmp, TOOLKIT_VALIDATE: 'off', TOOLKIT_RULES: 'off' };
   delete env.TOOLKIT_GATES; delete env.TOOLKIT_EVAL_COPY;
   const hook = (m, pl) => spawnSync('node', [path.join(HERE, 'hooks.mjs'), m], { input: JSON.stringify(pl), encoding: 'utf8', env });
   const session_id = `test-loop-${process.pid}-${Date.now()}`;

@@ -13,6 +13,7 @@ const REPOS = [TOOLKIT];
 delete process.env.TOOLKIT_GATES; delete process.env.TOOLKIT_EVAL_COPY;
 // state, plans and the carry between sessions live in tmp: the tests keep their own
 process.env.TMPDIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-gates-')));
+process.env.TOOLKIT_STATE_DIR = process.env.TMPDIR; // never the real plans
 process.env.TOOLKIT_LOCK_DIR = path.join(process.env.TMPDIR, 'toolkit-measure.lock'); // never the real lock
 delete process.env.TOOLKIT_LOCK_HELD; // run under bin/check, which holds it: this test takes its own
 process.env.TOOLKIT_TRANSCRIPTS = path.join(process.env.TMPDIR, 'projects'); // never the real sessions' transcripts
@@ -774,4 +775,19 @@ test('method: the terms an Aim lists, each piece\'s ticks, and the course review
   assert.deepEqual(methodGaps(plan(ok + '\ncourse: a\ncourse: b', tick, '2026-11-20, after 2'), day), [], 'two pieces since, the same day');
   assert.match(methodGaps(plan(ok + '\ncourse: a\ncourse: b\ncourse: c', tick, '2026-11-20, after 2'), day).join(), /after 5/, 'every third course line');
   assert.deepEqual(methodGaps(plan(ok + '\ncourse: a\ncourse: b\ncourse: c', tick, '2026-11-20, after 2\n2026-11-20, after 5: stop the field-by-field fixes'), day), [], 'the latest entry counts');
+});
+
+test('plans and gate state live where a reboot leaves them; an older gate\'s files move there, finished ones a month old go', async () => {
+  const { stateDir, sweepState } = await import('./gates.mjs');
+  assert.equal(path.dirname(planPath('x')), stateDir());
+  const from = fs.mkdtempSync(path.join(os.tmpdir(), 'sweep-from-')), to = fs.mkdtempSync(path.join(os.tmpdir(), 'sweep-to-'));
+  for (const n of ['toolkit-plan-a.md', 'toolkit-gates-a.json', 'toolkit-pending-a', 'toolkit-rules-a', 'toolkit-plan-b.md']) fs.writeFileSync(path.join(from, n), 'old');
+  fs.writeFileSync(path.join(to, 'toolkit-plan-b.md'), 'newer');
+  const month = (n) => { fs.writeFileSync(path.join(to, n), 'x'); const t = new Date(Date.now() - 31 * 864e5); fs.utimesSync(path.join(to, n), t, t); };
+  ['toolkit-plan-c-' + (Date.now() - 31 * 864e5) + '.done.md', 'toolkit-gates-c.json', 'toolkit-pending-c', 'toolkit-plan-d.md', 'toolkit-gates-carry.json'].forEach(month);
+  month('toolkit-plan-e-' + Date.now() + '.done.md'); // edited long ago, finished today: kept
+  sweepState(from, to);
+  assert.deepEqual(fs.readdirSync(from).sort(), ['toolkit-plan-b.md', 'toolkit-rules-a'], 'moved, never over a newer file; per-turn markers stay');
+  assert.equal(fs.readFileSync(path.join(to, 'toolkit-plan-b.md'), 'utf8'), 'newer');
+  assert.deepEqual(fs.readdirSync(to).sort(), ['toolkit-gates-a.json', 'toolkit-gates-carry.json', 'toolkit-pending-a', 'toolkit-plan-a.md', 'toolkit-plan-b.md', 'toolkit-plan-d.md', 'toolkit-plan-e-' + fs.readdirSync(to).find((n) => n.startsWith('toolkit-plan-e-')).slice(15)].sort(), 'an open plan and the carry are never swept');
 });

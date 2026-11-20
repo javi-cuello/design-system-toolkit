@@ -21,6 +21,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { stateDir } from './state-dir.mjs';
 import { spawnSync } from 'node:child_process';
 import { written } from './stop-items.mjs';
 import { realPath, expandHome } from '../shared/real-path.mjs';
@@ -49,12 +50,35 @@ export const PLAN = ['Before', 'Aim', 'Goal', 'Measure', 'Impact', 'Claims', 'Be
 
 /* Unreviewed work a session left uncommitted, kept for the next session in
    the same repo: two small halves in two sessions are one full-size change. */
-const carryPath = () => path.join(os.tmpdir(), 'toolkit-gates-carry.json');
+const carryPath = () => path.join(stateDir(), 'toolkit-gates-carry.json');
+
+const KEPT = /^toolkit-(plan-.+\.md|gates-.+\.json|pending-.+)$/;
+/* At a session's start: what an older gate left in $TMPDIR moves here, never over a file already here (copied where the
+   two are on different volumes), and finished plans (by when they finished, the time in their name), the state and the
+   handed-over items of sessions gone a month are removed, since no reboot sweeps this folder. A session idle longer
+   than that starts its gates afresh; its open plan is kept, though the start stops listing it after two weeks. */
+export { stateDir };
+export function sweepState(from = os.tmpdir(), to = stateDir(), days = 30) {
+  const list = (d) => { try { return fs.readdirSync(d); } catch { return []; } };
+  if (path.resolve(from) !== path.resolve(to)) for (const n of list(from).filter((n) => KEPT.test(n))) {
+    const a = path.join(from, n), b = path.join(to, n);
+    try {
+      if (fs.existsSync(b)) continue;
+      try { fs.renameSync(a, b); } catch (e) { if (e.code !== 'EXDEV') throw e; fs.copyFileSync(a, b); const st = fs.statSync(a); fs.utimesSync(b, st.atime, st.mtime); fs.rmSync(a); }
+    } catch { /* busy: the next start */ }
+  }
+  const cut = Date.now() - days * 864e5;
+  for (const n of list(to)) {
+    const done = n.match(/^toolkit-plan-.+-(\d{12,})\.done\.md$/);
+    if (!done && !/^toolkit-gates-(?!carry).+\.json$|^toolkit-pending-/.test(n)) continue;
+    try { if ((done ? Number(done[1]) : fs.statSync(path.join(to, n)).mtimeMs) < cut) fs.rmSync(path.join(to, n)); } catch { /* gone already */ }
+  }
+}
 const WEEK = 7 * 24 * 3600 * 1000;
 
 export const off = () => process.env.TOOLKIT_GATES === 'off' || !!process.env.TOOLKIT_EVAL_COPY;
-export const planPath = (session) => path.join(os.tmpdir(), `toolkit-plan-${session || 'none'}.md`);
-const statePath = (session) => path.join(os.tmpdir(), `toolkit-gates-${session || 'none'}.json`);
+export const planPath = (session) => path.join(stateDir(), `toolkit-plan-${session || 'none'}.md`);
+const statePath = (session) => path.join(stateDir(), `toolkit-gates-${session || 'none'}.json`);
 
 const empty = () => ({ files: {}, wide: [] });
 const VERSION = 4;
@@ -63,7 +87,7 @@ const VERSION = 4;
 const CARRIES = [3, VERSION];
 const fresh = () => ({ version: VERSION, closedAt: '', turnStart: '', offsets: {}, total: empty(), since: empty(), docs: [], turnEdited: false, owed: false, measured: {}, denied: [], counted: {}, shell: {}, pre: {}, reviewing: [], checks: {}, checkedAt: {}, firstEdit: {}, inherited: empty(), cleared: [], reviewedAt: '', wrote: {} });
 // Read afresh, the work a closed plan already ended stays ended: its edits are not counted again.
-const closedBefore = (session) => { try { const pre = path.basename(planPath(session)).replace(/\.md$/, '-'); return fs.readdirSync(os.tmpdir()).map((f) => f.startsWith(pre) && Number(f.slice(pre.length).replace(/\.done\.md$/, ''))).filter(Boolean).reduce((a, b) => Math.max(a, b), 0); } catch { return 0; } };
+const closedBefore = (session) => { try { const pre = path.basename(planPath(session)).replace(/\.md$/, '-'); return fs.readdirSync(stateDir()).map((f) => f.startsWith(pre) && Number(f.slice(pre.length).replace(/\.done\.md$/, ''))).filter(Boolean).reduce((a, b) => Math.max(a, b), 0); } catch { return 0; } };
 const load = (session) => {
   try { const st = JSON.parse(fs.readFileSync(statePath(session), 'utf8')); if (CARRIES.includes(st.version)) return { ...fresh(), ...st, ...(st.version < 4 && { checks: {}, checkedAt: {}, firstEdit: {} }), version: VERSION }; } catch { /* none yet */ } // 3 kept one check for the session, 4 one per repo
   const at = closedBefore(session);
@@ -724,7 +748,7 @@ const remeasured = (text) => /^\W*after\W*:[ \t*_`"(-]*[a-z0-9]/im.test(section(
 const reassessed = (text) => /^\W*course\W*:[ \t*_`"(-]*[a-z0-9]/im.test(section(text, 'Goal'));
 
 /* Plans other sessions left open (no Status: done), oldest first: each is taken up, revised or marked done. */
-export function openPlans(session, dir = os.tmpdir()) {
+export function openPlans(session, dir = stateDir()) {
   let names = [];
   try { names = fs.readdirSync(dir); } catch { return []; }
   return names.filter((f) => /^toolkit-plan-.+\.md$/.test(f) && !f.endsWith('.done.md') && f !== path.basename(planPath(session)))

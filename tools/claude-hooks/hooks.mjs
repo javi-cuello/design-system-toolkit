@@ -33,6 +33,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { stateDir } from './state-dir.mjs';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 // the toolkit as a message names it: where this checkout is, never a folder assumed (~ for the home folder)
@@ -162,7 +163,7 @@ if (mode === 'edit') {
   say([rules, kb].filter(Boolean).join('\n\n'));
 }
 
-const pendingFile = () => path.join(os.tmpdir(), `toolkit-pending-${payload.session_id || 'none'}`);
+const pendingFile = () => path.join(stateDir(), `toolkit-pending-${payload.session_id || 'none'}`);
 
 /* prompt (UserPromptSubmit): what the last turn's stop kept, handed to the
    session with the user's next message, then dropped. */
@@ -230,11 +231,16 @@ const items = r.status === 0 ? (r.stdout || '').trim() : `the closing pass did n
 const open = items && !/^nothing the script can see is open$/.test(items);
 
 if (mode === 'start') {
-  const { stale } = await import('./standards-read.mjs');
-  for (const f of stale()) fs.rmSync(f, { force: true });
+  try { const { stale } = await import('./standards-read.mjs'); for (const f of stale()) fs.rmSync(f, { force: true }); } catch { /* swept at the next start */ }
   // a plan another session left open is work in flight: taken up, revised or marked done, never left to lapse
-  const { openPlans, planPath } = await import('./gates.mjs');
-  const plans = openPlans(payload.session_id).map((p) => `  - "${p.title}", last changed ${p.at.toISOString().slice(0, 16).replace('T', ' ')}: ${p.path}${p.live ? ' (its session acted within the hour and may still hold it: ask before moving it)' : ''}`);
+  // (a gate that will not load costs this note, never the start: the session still hears the rest)
+  let plans = [], planPath = () => '';
+  try {
+    const g = await import('./gates.mjs');
+    g.sweepState(); planPath = g.planPath;
+    plans = g.openPlans(payload.session_id);
+  } catch (e) { plans = []; console.log(`The gates did not load (${e.message}): plans left open are not listed.`); }
+  plans = plans.map((p) => `  - "${p.title}", last changed ${p.at.toISOString().slice(0, 16).replace('T', ' ')}: ${p.path}${p.live ? ' (its session acted within the hour and may still hold it: ask before moving it)' : ''}`);
   const planNote = plans.length ? `\nPlans still open (no "Status: done"): read each; take one up by moving it to this session's plan (mv <it> ${planPath(payload.session_id)}) and carrying on, revise it, or mark it "Status: done". One untouched for two weeks is not listed.\n${plans.join('\n')}` : '';
   console.log(`The toolkit's loop (toolkit-standard §D 13) is not optional. Before the work: read the standard that governs it and run the repo's check. Every project commit carries a "Toolkit:" trailer naming where its lesson went, or "none — <why>"; one that touches interface files also a "Knowledge:" trailer naming the knowledge pages it followed, or "none — <why>".${open ? `\nInherited, open now:\n${items}` : '\nNothing the closing pass can see is open.'}${planNote}`);
   process.exit(0);
@@ -255,6 +261,6 @@ if (mode === 'stop') {
   const fresh = unseen(items, seenKeys, await ownFiles(payload.transcript_path), repoDirs);
   if (!fresh.lines.length) process.exit(0);
   fs.writeFileSync(seenFile, [...seenKeys, ...fresh.keys].join('\n'));
-  fs.appendFileSync(pendingFile(), fresh.lines.join('\n') + '\n');
+  try { fs.appendFileSync(pendingFile(), fresh.lines.join('\n') + '\n'); } catch (e) { console.error(`open items not handed over: ${e.message}`); }
   process.exit(0);
 }
