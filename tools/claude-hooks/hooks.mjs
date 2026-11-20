@@ -97,6 +97,15 @@ if (mode === 'edit') {
     // said where the gates act, as at Stop
     if (!gatesOff && inEcosystem(payload.cwd || process.cwd())) broken = `The plan gate (${SHOWN}/tools/claude-hooks/gates.mjs) failed and did not judge this call: ${String(e?.message ?? e)}. Fix it before more full-size work: until then nothing here is gated.`;
   }
+  // a commit's Knowledge: trailer names pages read whole, in any repo, registered or not (knowledge-read.mjs);
+  // refused every time until they are, since a trailer is the only proof the push check has
+  if (!refused && !gatesOff && payload.tool_name === 'Bash') {
+    try {
+      const { unread } = await import('./knowledge-read.mjs');
+      const missing = unread(payload.tool_input?.command, payload.transcript_path, TOOLKIT);
+      if (missing.length) refused = `This commit's Knowledge: trailer names pages this session has not read whole (toolkit-standard §D 21). Read each with the Read tool, no offset or limit, walk it against the work, then retry; or name only the pages you did read:\n${missing.map((p) => `  ${SHOWN}/${p}`).join('\n')}`;
+    } catch (e) { note = `The Knowledge: read check (${SHOWN}/tools/claude-hooks/knowledge-read.mjs) failed and did not judge this commit: ${String(e?.message ?? e)}.`; }
+  }
   if (refused) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: refused } }));
     process.exit(0);
