@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode } from './eval.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -150,4 +150,14 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('importClosure: static, literal dynamic and require()d files, transitively; a skipped file and what only it imports left out; a built path not followed', JSON.stringify(got) === JSON.stringify(['a.mjs', 'b.mjs', 'd.cjs', 'f.json', 'h.cjs', 'i.js', 'sub/c.mjs']));
   fs.rmSync(d, { recursive: true, force: true });
 }
+{
+  const all = [['a1', 'A'], ['a2', 'A'], ['a3', 'A'], ['b1', 'B'], ['c1', 'C'], ['c2', 'C'], ['r', 'R']].map(([folder, page]) => ({ folder, page }));
+  const p = pickPanel(all, ['r', 'gone'], 5);
+  ok('pickPanel: the components already read first, then pages in turn, never twice, at most n', p[0] === 'r' && p.length === 5 && new Set(p).size === 5 && ['A', 'B', 'C'].every((pg) => p.some((f) => f[0] === pg.toLowerCase())));
+  ok('pickPanel: the same library gives the same panel, whatever order it comes in', JSON.stringify(pickPanel([...all].reverse(), ['r'], 5)) === JSON.stringify(p));
+  ok('pickPanel: every published component before any hidden one, a page of building blocks included', JSON.stringify(pickPanel([{ folder: 'x1', page: 'X', hidden: true }, { folder: 'x2', page: 'X' }, { folder: 'y1', page: 'Y', hidden: true }, { folder: 'z', page: 'Z' }], [], 3).slice(0, 2).sort()) === '["x2","z"]');
+  ok('pickPanel: a library smaller than n is taken whole', pickPanel(all, [], 30).length === 7);
+}
+ok('a panel\'s check and diff hold only its own components', JSON.stringify(scoped({ self: { a: 1, b: 2 }, figma: { b: 3 } }, ['a'])) === '{"self":{"a":1},"figma":{}}');
+ok('a panel\'s accept replaces its own components and keeps every other\'s', JSON.stringify(merged({ self: { a: 1, b: 2 } }, { self: { a: 5 }, second: { a: 0 } }, ['a'])) === '{"self":{"b":2,"a":5},"second":{"a":0}}');
 console.log(`${n} passed`);

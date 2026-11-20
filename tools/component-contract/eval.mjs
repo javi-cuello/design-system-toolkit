@@ -22,6 +22,7 @@
  *   node tools/component-contract/eval.mjs --project <label> --self [--twice] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --causes
  *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
+ *   node tools/component-contract/eval.mjs --project <label> --make-panel 30, then --panel with any of the above
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
@@ -128,7 +129,7 @@ export function leftToCode(contract, mainOf = null) {
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 
 /* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
-export function measure(where) {
+export function measure(where, only = []) {
   const home = where.projectDir;
   const readings = path.join(home, 'parity', 'from-code');
   const drawn = path.join(home, 'round-trip');
@@ -141,6 +142,7 @@ export function measure(where) {
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
   const selfDir = path.join(drawn, 'self', 'from-code');
   for (const { folder, contract } of contracts(where)) {
+    if (only.length && !only.includes(folder)) continue;
     const code = read(path.join(readings, `${folder}.json`));
     if (!code || !code.asFigma) legs.browser[folder] = { skipped: 'no reading from code (from-code.mjs has not read it)' };
     // from-code fingerprints a reading from code with the contract it read against (`of`)
@@ -185,6 +187,29 @@ export function worse(now, accepted) {
   for (const [leg, cs] of Object.entries(now)) for (const [c, m] of Object.entries(cs)) if (m > 0 && ((accepted || {})[leg] || {})[c] === undefined) out.push(`${leg} ${c}: newly measured at ${m}, not accepted yet`);
   return out;
 }
+
+/* A fixed panel of components to measure a library on, so a trend compares the same components run to run: those
+   already read from the toolkit's own rendering first (the measure so far stays comparable), then one page at a time
+   in a fixed order (by a hash of the page's name), each page's next component by a hash of its folder, every published
+   one before any hidden from publishing (a name with a part starting `.` or `_`, a building block), until n. Pure: the
+   same library gives the same panel. [{ folder, page, hidden }] → [folder] */
+export function pickPanel(all, read, n = 30) {
+  const h = (s) => createHash('sha1').update(s).digest('hex');
+  const out = all.filter((c) => read.includes(c.folder)).map((c) => c.folder).sort().slice(0, n);
+  for (const hidden of [false, true]) {
+    const pages = new Map();
+    for (const c of all.filter((x) => !out.includes(x.folder) && !!x.hidden === hidden).sort((a, b) => h(a.folder).localeCompare(h(b.folder)))) pages.set(c.page || '', [...(pages.get(c.page || '') || []), c.folder]);
+    const order = [...pages.keys()].sort((a, b) => h(a).localeCompare(h(b)));
+    for (let i = 0; out.length < n && order.some((p) => pages.get(p).length > i); i++) for (const p of order) if (out.length < n && pages.get(p)[i]) out.push(pages.get(p)[i]);
+  }
+  return out;
+}
+const panelFile = (home) => path.join(home, 'round-trip', 'panel.json');
+/* Accepted counts or causes kept to some components ({ leg: { component: x } }), and those merged back over the whole:
+   a panel's check, diff and accept touch only its own components. */
+export const scoped = (byLeg, only) => Object.fromEntries(Object.entries(byLeg || {}).map(([leg, cs]) => [leg, Object.fromEntries(Object.entries(cs).filter(([c]) => only.includes(c)))]));
+export const merged = (whole, part, only) => { const out = scoped(whole, Object.keys(Object.assign({}, ...Object.values(whole || {}))).filter((c) => !only.includes(c))); for (const [leg, cs] of Object.entries(part)) out[leg] = { ...(out[leg] || {}), ...cs }; return out; };
+export const readPanel = (home) => { try { const c = JSON.parse(fs.readFileSync(panelFile(home), 'utf8')).components; return Array.isArray(c) && c.length ? c : null; } catch { return null; } };
 
 /* Each component's causes, per leg, as --accept keeps them beside the counts (accepted-causes.json), so --diff can say
    which causes a count moved by. { leg: { component: { cause: rows } } } */
@@ -442,27 +467,51 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
-  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
+  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), panel = flag('--panel'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
+  const makeAt = argv.indexOf('--make-panel'), makePanel = makeAt >= 0 ? argv.splice(makeAt, 2)[1] : null;
+  if (makeAt >= 0 && !/^[1-9]\d*$/.test(makePanel || '')) { console.error('--make-panel takes the panel\'s size, a whole number (30)'); process.exit(2); }
   const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
-  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
+  if (makePanel) {
+    // fixed once made: a panel that moved would make the trend it exists for compare other components
+    if (readPanel(where.projectDir)) { console.error(`${panelFile(where.projectDir)} exists: a panel is fixed once made`); process.exit(2); }
+    let index = {}; try { index = JSON.parse(fs.readFileSync(where.paths.index, 'utf8')).components || {}; } catch { /* no index: no pages */ }
+    const selfDir = path.join(where.projectDir, 'round-trip', 'self', 'from-code');
+    const read = (() => { try { return fs.readdirSync(selfDir).map((f) => f.replace(/\.json$/, '')); } catch { return []; } })();
+    const components = pickPanel(contracts(where).map(({ folder, contract }) => ({ folder, page: (index[folder] || {}).page, hidden: (contract.component || '').split('/').some((s) => /^\s*[._]/.test(s)) })), read, Math.max(1, +makePanel || 30));
+    if (!components.length) { console.error(`${label}: no components to pick from (snapshot the library first)`); process.exit(2); }
+    fs.mkdirSync(path.dirname(panelFile(where.projectDir)), { recursive: true });
+    fs.writeFileSync(panelFile(where.projectDir), JSON.stringify({ made: new Date().toISOString().slice(0, 10), how: 'eval.mjs --make-panel: components already read, then one per page in a fixed hash order', components }, null, 2) + '\n');
+    console.log(`${label}: a panel of ${components.length} written to ${panelFile(where.projectDir)}`);
+    process.exit(0);
+  }
+  if (panel) {
+    const p = readPanel(where.projectDir);
+    if (!p) { console.error(`no panel at ${panelFile(where.projectDir)}: make one with --make-panel 30`); process.exit(2); }
+    argv.push(...p.filter((c) => !argv.includes(c)));
+    // a panel shrinks only out loud: a component it names that the library no longer has is said
+    const have = new Set(contracts(where).map(({ folder }) => folder));
+    for (const c of argv.filter((x) => !have.has(x))) console.log(`panel: ${c} is not in the library now`);
+  }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);
   if (into) {
-    // the bridge proved fit first (figma-audit/probe.mjs), so a draw that would fail an hour in is refused in seconds
-    const { probe, listeners } = await import('../figma-audit/probe.mjs');
-    const { serviceFor, call, figmaExec } = await import('../figma-audit/services.mjs');
-    const health = await probe(label, into, { service: () => serviceFor(where.audit), listeners, status: (svc) => call(svc, '/status'), exec: (svc, f, code, ms) => figmaExec(svc, f, code, ms) });
+    // the bridge proved fit once the lock is held (figma-audit/probe.mjs), so no other draw is using it and a draw that
+    // would fail an hour in is refused in seconds; what it could not check is said
+    const { probe, world } = await import('../figma-audit/probe.mjs');
+    const health = await probe(label, into, world(where));
     const bad = health.find((h) => !h.ok);
     if (bad) { console.log(`the bridge is not fit to draw (${bad.check}): ${bad.said}`); process.exit(1); }
-    draw(where, label, into, argv); process.exit();
+    for (const h of health.filter((x) => x.skipped)) console.log(`the bridge's ${h.check} check had nothing to check: ${h.said}`);
   }
+  if (into) { draw(where, label, into, argv); process.exit(); }
   if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
   if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
   if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }
   if (second) { await readSelf(where, label, argv, true, opts); process.exit(); }
-  const m = measure(where);
+  const m = measure(where, panel ? argv : []);
   report(label, m, fields, byCause);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
@@ -474,19 +523,20 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     if (!was) console.log('no accepted counts yet: this accept is the first');
     else {
       if (!why) console.log(`no accepted causes at ${causesFile} (accepted before they were kept): counts only`);
-      for (const l of diff(now, was, causesOf(m.legs), why || {})) console.log(l);
+      for (const l of diff(now, panel ? scoped(was, argv) : was, causesOf(m.legs), panel ? scoped(why, argv) : why || {})) console.log(l);
     }
   }
   if (accept) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(now, null, 2) + '\n');
-    fs.writeFileSync(causesFile, JSON.stringify(causesOf(m.legs), null, 2) + '\n');
+    // a panel's accept replaces its own components' counts and keeps every other's
+    fs.writeFileSync(file, JSON.stringify(panel ? merged(readJson(file), now, argv) : now, null, 2) + '\n');
+    fs.writeFileSync(causesFile, JSON.stringify(panel ? merged(readJson(causesFile), causesOf(m.legs), argv) : causesOf(m.legs), null, 2) + '\n');
     console.log(`accepted: ${path.relative(process.cwd(), file)}`);
   } else if (check) {
     if (!fs.existsSync(file)) { console.log(`no accepted counts at ${file}: run with --accept once`); process.exit(1); }
     // a check that measured nothing has not passed: the project reads its components first, or rules the gate out
     if (!Object.values(now).some((cs) => Object.keys(cs).length)) { console.log('nothing measured: no component has a reading from code or from Figma'); process.exit(1); }
-    const bad = worse(now, JSON.parse(fs.readFileSync(file, 'utf8')));
+    const bad = worse(now, panel ? scoped(JSON.parse(fs.readFileSync(file, 'utf8')), argv) : JSON.parse(fs.readFileSync(file, 'utf8')));
     for (const b of bad) console.log(`  rose: ${b}`);
     if (bad.length) { console.log('a count rose against the accepted one: fix what the rows say, or accept with a reason in the commit'); process.exit(1); }
   }

@@ -702,6 +702,7 @@ export function assertionsFor(at, ctx) {
   // a mirror, carried apart from the turn: recorded as a 180° turn, a mirrored
   // illustration's scaleX(-1) read as a difference and was waived for weeks
   if (node.flip) add('text', '-flip', node.flip, 'mirrored');
+  // the image fill's own turn added in the layer's direction: figma-fact:image-fill-turn, unchecked
   if (node.rotation !== undefined || node.fillRotation !== undefined) {
     add('rotation', 'rotate', (node.rotation || 0) + (node.fillRotation || 0), 'rotation and the image fill\'s own turn');
   }

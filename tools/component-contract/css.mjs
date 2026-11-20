@@ -156,7 +156,7 @@ export function declarations(e, { root = false, holds = false, row = true, ancho
   const blend = take('blend');
   if (blend) put('mix-blend-mode', String(blend).replace(/_/g, '-'));
   const rotation = take('rotation');
-  // Figma's rotation turns counter-clockwise on screen (the Plugin API: atan2(-m10, m00), y down) and CSS's rotate
+  // Figma's rotation turns counter-clockwise on screen (figma-fact:rotation-direction; the Plugin API: atan2(-m10, m00), y down) and CSS's rotate
   // clockwise: the same turn is its negative. (Figma turns about the layer's top-left, CSS about its centre: a limit)
   if (rotation) put('rotate', `${-rotation}deg`);
   // a mirror: its own property, as rotate is, so neither undoes the other

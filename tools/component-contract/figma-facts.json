@@ -1,0 +1,62 @@
+{
+  "about": "What Figma does that the translation rests on. Each fact is checked (a primary source read or a probe run, with its date), derived (worked out from a documented API, not observed), believed or unchecked; a fact not checked names the check that settles it. Code that relies on one cites it as figma-fact:<id>; test-figma-facts.mjs holds every citation to an entry here. A fix's plan cites the facts its assumption rests on, under Claims.",
+  "facts": [
+    {
+      "id": "rotation-direction",
+      "fact": "A layer's rotation turns counter-clockwise on screen; CSS's rotate turns clockwise.",
+      "status": "derived",
+      "source": "developers.figma.com Plugin API, node rotation: rotation = atan2(-m10, m00) of the relative transform, with y down",
+      "on": "2026-11-19",
+      "settles": "draw a layer at rotation 30 through the bridge and read its corners' absolute positions"
+    },
+    {
+      "id": "no-nested-position-override",
+      "fact": "An instance cannot override the position, constraints or order of a layer inside its component.",
+      "status": "checked",
+      "source": "help.figma.com 'Apply changes to instances' (360039150733), \"You can't override\": \"The order, or z-index, of any layers within the instance\"; \"Position of any layers within the component, including items in an auto layout frame\"; \"Any constraints applied to the layers\"; \"The bounds of any text layers\"",
+      "on": "2026-11-20"
+    },
+    {
+      "id": "nested-resize-override",
+      "fact": "An instance can override the size of a non-text layer inside its component.",
+      "status": "unchecked",
+      "source": "help.figma.com 'Apply changes to instances' (360039150733, read 2026-11-20) names only text layers' bounds as not overridable, and is silent on other layers",
+      "settles": "resize a nested rectangle in an instance through the bridge, then reset the main's size and read whether the instance keeps its own"
+    },
+    {
+      "id": "image-fill-turn",
+      "fact": "An image fill's own rotation turns in the same direction as the layer's rotation.",
+      "status": "unchecked",
+      "source": "parity/adapt.mjs adds the two; its only test (180 + 180) cannot tell the direction",
+      "settles": "an image fill turned 90 on a layer turned 0, read against a render"
+    },
+    {
+      "id": "empty-hug-keeps-size",
+      "fact": "An auto-layout frame that hugs its contents keeps the size it last had once it holds nothing.",
+      "status": "believed",
+      "source": "a source file's empty slot at 172 px, the size it had before it was emptied",
+      "settles": "empty a hugging frame through the bridge and read its size"
+    },
+    {
+      "id": "override-back-kept",
+      "fact": "An override set to a different value and back to the main's value is kept as an override.",
+      "status": "checked",
+      "source": "probe through the bridge on an icon button's instance (the round-trip plan's Phase 4b claims, 2026-11-17); no script kept",
+      "on": "2026-11-17"
+    },
+    {
+      "id": "component-root-not-hidden",
+      "fact": "A component's root layer cannot be hidden by one of its own properties, so a prop that takes the whole component away is not drawn.",
+      "status": "believed",
+      "source": "a boolean property binds only to the visibility of layers inside the component (to-figma's drawing, 2026-11-13)",
+      "settles": "try to bind a boolean property to a component's own visible through the bridge"
+    },
+    {
+      "id": "smoothing-not-superellipse",
+      "fact": "Figma's corner smoothing is not a superellipse, so CSS can only approximate it.",
+      "status": "believed",
+      "source": "figma.com/blog/desperately-seeking-squircles ('Desperately seeking squircles', read 2026-11-20): Figma built a parametrizable smoothing scheme after \"the superellipse formula wasn't quite right\" for Apple's shape; it never states outright that its smoothing is not a superellipse",
+      "settles": "export a smoothed corner's vector path through the bridge and fit it against a superellipse"
+    }
+  ]
+}

@@ -369,7 +369,7 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const sheet = toCss(bar, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('an override two placed components deep is written on the innermost one\'s part, level by level',
     /\.ds-bar > \.ds-bar__row > \.ds-row__dot > \.ds-dot__mark \{[^}]*background: var\(--c-strong\)/.test(sheet));
-  // the middle component's own override is the base two deep: set back to the inner's value, it is written
+  // the middle component's own override is the base two deep: set back to the inner's value, it is written (figma-fact:override-back-kept)
   const row2 = { ...row, anatomy: { ...row.anatomy, 'dot/mark': { kind: 'graphic', parent: 'dot', background: 'C/strong', width: 4, height: 4 } } };
   const bar2 = { ...bar, anatomy: { ...bar.anatomy, 'row/dot/mark': { ...bar.anatomy['row/dot/mark'], background: 'C/soft' } } };
   const sheet2 = toCss(bar2, 'bar', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: (x) => ({ Dot: dot, Row: row2 })[x] || null });

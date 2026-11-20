@@ -345,7 +345,7 @@ export function plan(contract, { axisOrder = [] } = {}) {
   // nor one that hides a layer when on (button's Loading takes its label away): a boolean shows layers, and every
   // variant is drawn with every boolean on, so that layer was drawn nowhere
   const styles = (k) => props[k].axis === true || contract.variants.some((v) => !v.combination && Object.keys(v.when).join() === k && (Object.keys(v.set || {}).some((f) => !/\.order$/.test(f)) || (v.when[k] === true && (v.remove || []).length > 0)));
-  // a prop that takes the whole component away (a dialog's Open, off) draws nothing to show or hide: Figma cannot hide
+  // a prop that takes the whole component away (a dialog's Open, off) draws nothing to show or hide (figma-fact:component-root-not-hidden, believed): Figma cannot hide
   // a component's own root, so the drawing is at its default and the prop is not drawn
   // an enum loses only the values that do (a State's hidden), and keeps its axis
   const gone = (k) => contract.variants.filter((v) => Object.keys(v.when).join() === k && (v.remove || []).includes('root')).map((v) => v.when[k]);
