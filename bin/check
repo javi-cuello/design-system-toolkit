@@ -220,9 +220,10 @@ OUT=$(node tools/figma-audit/test-rows.mjs 2>&1)
 # has nothing for the library suites to read: a skip, said, never a red that
 # blocks every other project's push.
 # Exit 0: a library; 1: none stored yet; 2: the project cannot be read (said).
-has_library() { node -e "const p=require('./tools/snapshot/projects.cjs');const fs=require('fs');const w=p.layout(undefined,process.argv[1]);if(!w||w.error){console.log(w?w.error:'no layout');process.exit(2)}const d=w.paths&&w.paths.components;process.exit(typeof d==='string'&&fs.existsSync(d)&&fs.readdirSync(d).length?0:1)" "$1"; }
-# Runs the step's suite only where there is a library: a skip for none, a failure for a project that cannot be read.
-library_or_skip() { LIB=$(has_library "$1"); case $? in 0) return 0;; 1) skip "$1 has no stored library yet";; *) bad "$1: $LIB";; esac; return 1; }
+has_library() { node -e "const p=require('./tools/snapshot/projects.cjs');const fs=require('fs');const w=p.layout(undefined,process.argv[1]);if(!w||w.error){console.log(w?w.error:'no layout');process.exit(2)}if(w.design==='none')process.exit(3);const d=w.paths&&w.paths.components;process.exit(typeof d==='string'&&fs.existsSync(d)&&fs.readdirSync(d).length?0:1)" "$1"; }
+# Runs the step's suite only where there is a library: a skip for none, not applicable for a code-only project
+# ("design": "none", snapshot-standard rule 18: neither passed nor skipped), a failure for a project that cannot be read.
+library_or_skip() { LIB=$(has_library "$1"); case $? in 0) return 0;; 1) skip "$1 has no stored library yet";; 3) echo "not applicable: no design";; *) bad "$1: $LIB";; esac; return 1; }
 HOMES=$(node tools/snapshot/projects.cjs homes) || { step "the project list reads"; bad "projects.cjs homes failed: no project's site or specs were checked"; }
 TAB=$(printf '\t')
 while IFS="$TAB" read -r label home; do
