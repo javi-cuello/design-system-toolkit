@@ -153,7 +153,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   const left = leftToCode(c, () => null), known = leftToCode(c, (n) => (n === 'Glyph' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null));
   ok('a placed component the library does not hold (marked, data-icon) leaves its insides, props, layout and clipping to code; its size and place stay measured, and a held one\'s are not left',
     left('icon/glyph', { library: {}, drawn: null }) && left('icon/glyph.width', { library: 12 }) && left('icon.with', { library: { size: 'S' } }) && left('icon.with.size', { library: 'S' }) && left('icon.layout', { library: {} })
-    && !left('icon.width', { library: 'fill' }) && !left('icon.minWidth', { library: 24 }) && !left('root.layout', { library: {} })
+    && !left('icon.with.Size', { library: '16' }) && !left('icon.width', { library: 'fill' }) && !left('icon.minWidth', { library: 24 }) && !left('root.layout', { library: {} })
     && !known('icon.with.size', { library: 'S' })); }
 
 {

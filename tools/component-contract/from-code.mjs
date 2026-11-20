@@ -1315,7 +1315,7 @@ async function main() {
               if (EDGES.some((k, i) => bw[i] && s[`border${k}Style`] === 'dashed')) e.border.dash = 'dashed';
             }
             // a stroke drawn as an inset shadow with no offset and no blur is a border (values.mjs insetStroke, as the code audit reads it)
-            else if (ss) e.border = { color: ss.colour, width: ['top', 'end', 'bottom', 'start'].map((k) => px(ss.sides[k])), sides: ss.sides, ...(ss.align === 'outside' && { align: 'outside' }) };
+            else if (ss) e.border = { color: ss.colour, width: ['top', 'end', 'bottom', 'start'].map((k) => px(ss.sides[k])), sides: ss.sides, ...(ss.align === 'outside' && { align: 'outside' }), ...(clear(ss.colour) && { clearRing: true }) };
             else { const st = layers.map(insetStroke).find((x) => x && x.width > 0); if (st) e.border = { color: st.colour, width: px(st.width) }; }
             if (s.overflow === 'hidden') e.overflow = 'hidden';
             // its shadow: drop shadows and inner ones
@@ -1640,11 +1640,15 @@ async function main() {
         delete x.full;
         if (x.cornerShape) { const sm = smoothingFromCss(x.cornerShape); if (sm) x.smoothing = sm; delete x.cornerShape; }
         if (x.border) {
+          const clearRing = x.border.clearRing;
           const raw0 = x.border.width;
           // a width per side where the sides differ: each side's token, 0 where it draws none. The token is the one the code
           // wrote, in a border or in the inset shadow to-code draws a stroke inside the box with (Figma's inside stroke)
           const width = Array.isArray(x.border.width) ? await Promise.all(x.border.width.map((v, i) => (v ? tok('width', v, `${id}.border-width`, [`border-${['top', 'right', 'bottom', 'left'][i]}-width`, `border-${['top', 'right', 'bottom', 'left'][i]}`, 'border-width', 'border', ...(x.border.align === 'outside' ? ['box-shadow:width-out'] : ['box-shadow:width'])]) : 0))) : await tok('width', x.border.width, `${id}.border-width`, ['border-top-width', 'border-width', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', ...(x.border.align === 'outside' ? ['box-shadow:width-out'] : ['box-shadow:width'])]);
           x.border = { color: await tok('stroke', x.border.color, `${id}.border`, ['border-top-color', 'border-color', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', ...(x.border.align === 'outside' ? ['box-shadow:colour-out'] : ['box-shadow:colour'])]), width, ...(x.border.sides && { sides: x.border.sides }), ...(x.border.align && { align: x.border.align }), ...(x.border.inLayout && { inLayout: true }), ...(x.border.dash && { dash: x.border.dash }) };
+          // (a clear side ring is a stroke only where the code names its colour, a Transparent token as to-code writes
+          // one; a raw transparent ring is a placeholder a transition starts from, drawing nothing: no border)
+          if (clearRing && typeof x.border.color === 'string' && /^(rgba?\(|transparent$)/.test(x.border.color)) delete x.border;
           // a line (a shape no wide or no tall): css.mjs draws its stroke as the one edge it has, the leading one, so that
           // edge is the shape's whole stroke
           // (no wide: 0, or the edge's own width where a border-box reset counts it in)
@@ -1656,7 +1660,9 @@ async function main() {
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way
         // the box's own outline beside a ring of a box of its own, or a dashed one: its own stroke (css.mjs), its alignment
         // where the outline stands, no focus ring
-        if (x.outline && !x.outline.after && !focused) { x.ownOutline = x.outline; delete x.outline; }
+        // (a clear outline at rest is a placeholder, high contrast's, drawing nothing; and a box with a border of its own
+        // keeps it: there the outline is no stroke of the design's)
+        if (x.outline && !x.outline.after && !focused && !x.border && !/^(rgba\((?:[^,)]*,){3}\s*0\)|transparent)$/.test(String(x.outline.color).trim())) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
