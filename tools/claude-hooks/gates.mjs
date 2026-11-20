@@ -61,7 +61,7 @@ const VERSION = 4;
 // A state of a version listed here is carried forward; any other is read afresh, from the
 // transcript's start, which on a long session outlasts the hook's timeout (2026-11-01 review).
 const CARRIES = [3, VERSION];
-const fresh = () => ({ version: VERSION, closedAt: '', turnStart: '', offsets: {}, total: empty(), since: empty(), docs: [], turnEdited: false, owed: false, measured: {}, denied: [], counted: {}, shell: {}, pre: {}, reviewing: [], checks: {}, checkedAt: {}, firstEdit: {}, inherited: empty(), cleared: [], reviewedAt: '' });
+const fresh = () => ({ version: VERSION, closedAt: '', turnStart: '', offsets: {}, total: empty(), since: empty(), docs: [], turnEdited: false, owed: false, measured: {}, denied: [], counted: {}, shell: {}, pre: {}, reviewing: [], checks: {}, checkedAt: {}, firstEdit: {}, inherited: empty(), cleared: [], reviewedAt: '', wrote: {} });
 // Read afresh, the work a closed plan already ended stays ended: its edits are not counted again.
 const closedBefore = (session) => { try { const pre = path.basename(planPath(session)).replace(/\.md$/, '-'); return fs.readdirSync(os.tmpdir()).map((f) => f.startsWith(pre) && Number(f.slice(pre.length).replace(/\.done\.md$/, ''))).filter(Boolean).reduce((a, b) => Math.max(a, b), 0); } catch { return 0; } };
 const load = (session) => {
@@ -257,6 +257,8 @@ function scriptWrites(st, win, repos) {
     try { t = fs.statSync(file).mtimeMs; } catch { try { t = fs.statSync(path.dirname(file)).mtimeMs; } catch { continue; } } // deleted: its folder changed
     // from the snapshot taken as the call began (a Write in the same message lands before it), else the call's record
     if (t < (before ? before.at : win.start - 1000) || t > win.end) continue;
+    // kept across closes, bookkeeping included: the Stop hook's own-uncommitted check reads it (scriptWritten)
+    (st.wrote ||= {})[file] = Math.max(st.wrote[file] || 0, t);
     if (path.basename(rel) === 'README.md' && !st.docs.includes(file)) st.docs.push(file);
     if (BOOKKEEPING.test(rel)) continue;
     now ||= diffs(repo).lines;
@@ -598,6 +600,12 @@ const planGaps = (text, st = {}, work = [], changed = Infinity) => [
   // top-down: the whole goal is measured before a part is built, so parts are chosen by what the measure says (14 Nov)
   ...(/^\W*before\W*:[ \t*_`"(-]*(?!(?:tbd|todo|later|n\/a)(?![a-z0-9]))[a-z0-9]/im.test(section(text, 'Measure')) ? [] : ['a "before:" line under Measure: the goal measured end to end before any part is built — the command and what it said']),
   ...(/\(\d+ readers?\)/.test(text) ? [] : ["impact.mjs's output under Impact (its \"(N readers)\" lines, pasted, not summarised)"])];
+
+/* The files a shell call's own code wrote this session (found on disk, as scriptWrites finds them), with when: the
+   transcript shows only redirects and sed -i, so a python or cp edit is known here alone. { file: ms } */
+export function scriptWritten(session) {
+  try { return JSON.parse(fs.readFileSync(statePath(session), 'utf8')).wrote || {}; } catch { return {}; }
+}
 
 /* A refused shell call is refused whole: what else it carried did not run either (a plan's end lines were lost with a
    refused push on 2026-11-20). */

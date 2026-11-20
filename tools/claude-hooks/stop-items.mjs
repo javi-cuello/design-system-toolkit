@@ -154,6 +154,11 @@ export async function ownUncommitted(transcript, repos) {
     let rec; try { rec = JSON.parse(line); } catch { continue; }
     for (const c of rec.message?.content || []) if (c.type === 'tool_use') for (const f of written(c, rec.cwd || process.cwd())) last.set(f, Date.parse(rec.timestamp) || 0);
   }
+  // and what its scripts wrote (python, cp, a generator), which the gates find on disk and the transcript never shows
+  try {
+    const { scriptWritten } = await import('./gates.mjs');
+    for (const [f, t] of Object.entries(scriptWritten(path.basename(transcript).replace(/\.jsonl$/, '')))) last.set(f, Math.max(last.get(f) || 0, t));
+  } catch { /* no gates state: the transcript's writes alone */ }
   // macOS folders are case-insensitive: ~/projects/toolkit is ~/Projects/toolkit
   const fold = process.platform === 'darwin' ? (x) => x.toLowerCase() : (x) => x;
   for (const repo of repos) {

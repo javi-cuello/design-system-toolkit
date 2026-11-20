@@ -352,7 +352,7 @@ test('a file written just before a shell call is not that call\'s, and a subagen
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('a script over work already there counts only what it adds (a formatter over reviewed work)', () => {
+test('a script over work already there counts only what it adds (a formatter over reviewed work)', async () => {
   const dir = repo();
   const base = path.join(dir, 'base.mjs');
   fs.writeFileSync(base, lines(200));
@@ -366,6 +366,9 @@ test('a script over work already there counts only what it adds (a formatter ove
   fs.utimesSync(base, new Date(t0 + 1000), new Date(t0 + 1000));
   fs.appendFileSync(s.file, [at({ ...withId(call('Bash', { command: 'npx prettier --write .' }), 'b2'), cwd: dir }, t0 - 1000), at(result('b2', false), t0 + 3000)].map((l) => JSON.stringify(l)).join('\n') + '\n');
   assert.equal(advance(s.id, s.file, [dir]).total.files[path.join(dir, 'base.mjs')], 2);
+  // the script's write is kept for the Stop check, which the transcript alone would never show it
+  const { ownUncommitted } = await import('./stop-items.mjs');
+  assert.deepEqual(await ownUncommitted(s.file, [dir]), { [dir]: ['base.mjs'] }, "a file the session's script wrote is named while uncommitted");
   s.clean(); fs.rmSync(dir, { recursive: true, force: true });
 });
 
