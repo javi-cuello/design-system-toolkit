@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { ownFiles } from './stop-items.mjs';
 import { sessionName } from '../shared/lock.mjs';
 
-const PROJECTS = () => process.env.TOOLKIT_TRANSCRIPTS || path.join(os.homedir(), '.claude', 'projects');
+const PROJECTS = () => process.env.TOOLKIT_TRANSCRIPTS || path.join(os.homedir(), '.claude', 'projects'); // projects-path: Claude Code's transcripts, not a toolkit project
 const DAYS = 3;
 
 /* The session transcripts written in the last few days: [{ id, file }]. */
