@@ -310,7 +310,7 @@ test('feedback gate: a background review is waited on until its notification com
 
 test('worktrees: each is its own repo; bin/land is its push; its reviewers diff from where it left main', () => {
   assert.equal(isPush('bin/land'), true);
-  assert.equal(isPush('cd ~/Projects/toolkit/.claude/worktrees/w1 && bin/land 2>&1 | tail -5'), true);
+  assert.equal(isPush('cd /repo/.claude/worktrees/w1 && bin/land 2>&1 | tail -5'), true);
   assert.equal(isPush('bin/land --queue'), false, 'listing the queue sends nothing');
   assert.equal(isPush('bin/land worktree-x --queue-later'), true, 'only bin/land --queue itself is a listing');
   const W1 = path.join(TOOLKIT, '.claude/worktrees/w1');
