@@ -489,7 +489,7 @@ async function readTwice(where, label, only, opts) {
 /* Every project's panel measured in turn (--projects): per project each leg (--self, then --second) and then --diff, each
    its own eval.mjs process, so each measuring leg takes the lock and lets it go, and a queued bin/land gets in between. Each
    step is logged `== HH:MM <args>` before and `== rc N` after; three failures in a row (rc 2 or more) stop the run.
-   run(args) → its exit code; say(line) logs. Returns 1 when any step failed (stopped or not), else 0. */
+   run(args) → its exit code; say(line) logs. Returns 1 when any step returned 2 or more (stopped or not), else 0. */
 export async function runAll(projects, legs, { run, say, jobs = 4, now = () => new Date() }) {
   const hhmm = () => now().toTimeString().slice(0, 5);
   let fails = 0, failed = false;
