@@ -30,7 +30,7 @@ The table is data: `tools/shared/model-routing.json` in the toolkit, one row per
 
 ## In a workflow
 
-A workflow script sets each `agent()`'s model and effort from the same table, so a mechanical stage runs on Sonnet and a judging stage on Opus at high effort without anyone choosing per run. A script has no filesystem, so pass the routes in as the Workflow's `args`: run `node tools/shared/model-routing.mjs` from the toolkit, put its output in `args.routes`, and spread a stage's route into its options — `agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })`. A skill whose mode moves the tier has only `skill:mode` keys (`design-system-research:deep`, `oklch-color-scale-system:free`): decide the mode before the stage, since a key that is not there spreads nothing and the stage silently keeps the session's model. A Default row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`. This skill is the instruction to set `effort` there; a stage the table has no row for keeps the session's model and effort.
+A workflow script sets each `agent()`'s model and effort from the same table, so a mechanical stage runs on Sonnet and a judging stage on Opus at high effort without anyone choosing per run. A script has no filesystem, so pass the routes in as the Workflow's `args`: run `node tools/shared/model-routing.mjs` from the toolkit, put its output in `args.routes`, and spread a stage's route into its options — `agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })`. A skill whose mode moves the tier has only `skill:mode` keys (`design-system-research:deep`, `oklch-color-scale-system:free`): decide the mode before the stage, since a key that is not there spreads nothing and the stage silently keeps the session's model. A Medium row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`. This skill is the instruction to set `effort` there; a stage the table has no row for keeps the session's model and effort.
 
 ## Escalation triggers (regardless of task family)
 
@@ -47,7 +47,7 @@ Recommend stepping DOWN when the task is:
 
 ## Context beats model choice
 
-A recurring practitioner finding (TJ Pitre / Southleft, among others): well-structured context — accurate component metadata, bound tokens, good descriptions, tight MCP servers — improves reliability more than upgrading models does. If results are inconsistent on a design systems task, first check whether the underlying library metadata and skills are in order before recommending a bigger model. With good context, Sonnet at default covers most of the table; without it, even the top tier produces confident nonsense.
+A recurring practitioner finding (TJ Pitre / Southleft, among others): well-structured context — accurate component metadata, bound tokens, good descriptions, tight MCP servers — improves reliability more than upgrading models does. If results are inconsistent on a design systems task, first check whether the underlying library metadata and skills are in order before recommending a bigger model. With good context, Sonnet at medium covers most of the table; without it, even the top tier produces confident nonsense.
 
 ## Claude Code note
 
