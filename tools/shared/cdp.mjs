@@ -66,7 +66,7 @@ export function findChrome() {
 
 /* The Chrome findChrome finds, as it says its version ('' where there is none), and its major (null where none): what a
    reading is taken under, so one taken under another major is said stale (Chrome 158 read flex-start as flow-start). */
-export function chromeVersion(chrome = findChrome()) { try { return execFileSync(chrome, ['--version'], { encoding: 'utf8' }); } catch { return ''; } }
+export function chromeVersion(chrome = findChrome(), timeout = 10_000) { try { return execFileSync(chrome, ['--version'], { encoding: 'utf8', timeout }); } catch { return ''; } }
 export function chromeMajor(version = chromeVersion()) { const m = /(\d+)\./.exec(version); return m ? +m[1] : null; }
 
 export async function launch({ chrome = findChrome(), port = 0, profile, args = [], timeout = 30_000 }) {

@@ -6,9 +6,9 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
-import { chromeMajor } from '../shared/cdp.mjs';
+import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -37,6 +37,11 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a sheet whose every rule names its element is scoped; one rule past it is not', scopedTo('@layer c { ds-tag { color: red } :where(ds-tag[size="s"]) > [data-part="x"], ds-tag:hover { gap: 0 } }', 'ds-tag') && !scopedTo('ds-tag { a: 0 } button { b: 0 }', 'ds-tag') && !scopedTo('ds-tag-item { a: 0 }', 'ds-tag') && scopedTo('ds-tag:where(:disabled, :has(> :disabled)) > b { a: 0 }', 'ds-tag') && !scopedTo('ds-tag { animation: spin 1s } @keyframes spin { from { a: 0 } }', 'ds-tag'));
   const part = closureHashes(lib, { a: '1', b: '1', c: '1' }, 's', ['a']);
   ok('closureOf: a component and what it places, transitively; hashes asked for some are theirs, from their closure\'s own only', JSON.stringify([...closureOf(lib, ['a', 'gone'])].sort()) === '["a","b","c"]' && JSON.stringify(part) === JSON.stringify({ a: before.a }));
+  { const slow = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-')), 'chrome'); fs.writeFileSync(slow, '#!/bin/sh\nsleep 3; echo Chrome 99.0\n'); fs.chmodSync(slow, 0o755);
+    const t0 = Date.now(), v = chromeVersion(slow, 300);
+    ok('a Chrome that does not answer its version in time is none, never a hang', v === '' && Date.now() - t0 < 2500); }
+  { const said = [], t = await todayOf('no-such-project', { projectDir: os.tmpdir(), paths: {} }, [], (l) => said.push(l));
+    ok('the installed Chrome is read though the self leg\'s inputs cannot be: the browser leg stays checked', Object.hasOwn(t, 'chrome') && !t.inputs && /inputs not checked/.test(said[0] || '')); }
   ok('a Chrome major read from its version line, none from none', chromeMajor('Google Chrome 158.0.8127.37\n') === 158 && chromeMajor('') === null);
   ok('and a change all share moves every one', Object.keys(before).every((f) => closureHashes(lib, { a: '1', b: '1', c: '1', d: '1' }, 't')[f] !== before[f]));
 }
@@ -90,7 +95,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   // a reading read from other inputs than today's, or under another Chrome major, is stale; one from today's is not
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c), inputs: 'i1', reader: 'r1', chrome: 158 } } }));
   ok('a reading from today\'s inputs under the installed Chrome is current', !measure(where, [], { inputs: { tag: 'i1' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale);
-  ok('a reading whose inputs moved is stale, the reader\'s code named where it moved', /inputs changed since: the reader's code/.test(measure(where, [], { inputs: { tag: 'i2' }, reader: 'r2', chrome: 158 }).legs.self.tag.stale)
+  ok('a reading whose inputs moved is stale, the reader\'s code named where it moved', /inputs changed since, the reader's code among them/.test(measure(where, [], { inputs: { tag: 'i2' }, reader: 'r2', chrome: 158 }).legs.self.tag.stale)
     && measure(where, [], { inputs: { tag: 'i2' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale === 'its inputs changed since');
   ok('a reading taken under another Chrome major is stale', /taken under Chrome 158, 159 installed now/.test(measure(where, [], { inputs: { tag: 'i1' }, reader: 'r1', chrome: 159 }).legs.self.tag.stale));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c) } } }));

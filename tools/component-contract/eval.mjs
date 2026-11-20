@@ -175,7 +175,7 @@ export function measure(where, only = [], now = {}) {
   const browserMoved = (was) => (!now.chrome ? null : !was ? 'taken before its Chrome was recorded' : was !== now.chrome ? `taken under Chrome ${was}, ${now.chrome} installed now` : null);
   // a self or second reading read from other inputs than today's, or under another Chrome major, is stale too
   const moved = (t, key) => ((t.chrome && browserMoved(t.chrome)) || (!key ? null : !t.inputs ? 'taken before its inputs were recorded' : t.inputs === key ? null
-      : now.reader && t.reader && t.reader !== now.reader ? 'its inputs changed since: the reader\'s code' : 'its inputs changed since'));
+      : now.reader && t.reader && t.reader !== now.reader ? 'its inputs changed since, the reader\'s code among them' : 'its inputs changed since'));
   // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
   const selfDir = path.join(drawn, 'self', 'from-code');
@@ -424,6 +424,14 @@ export async function selfInputs(label, where, only = []) {
 /* A second reading's inputs: the first's, and the first reading it goes round from. */
 const secondKey = (inputs, first) => createHash('sha1').update(`${inputs}\0${first || ''}`).digest('hex');
 
+/* What a reading is read from today, for measure: the installed Chrome's major, read on its own so the browser leg is
+   checked by it even where the self leg's inputs cannot be computed (said, then left out). */
+export async function todayOf(label, where, only = [], log = console.log) {
+  const today = { chrome: chromeMajor() };
+  try { Object.assign(today, { inputs: await selfInputs(label, where, only), reader: readerCode() }); } catch (e) { log(`warning: the self leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading taken from other inputs is not said stale`); }
+  return today;
+}
+
 /* Whether every rule of a sheet names its element (`ds-x`), so it styles nothing outside it: its selectors, at-rules aside. */
 export function scopedTo(css, root) {
   const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -625,8 +633,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }
   if (second) { await readSelf(where, label, argv, true, opts); process.exit(); }
   // what a self reading is read from today, so one read from other inputs or under another Chrome is said stale
-  let today = {};
-  try { today = { inputs: await selfInputs(label, where, panel ? argv : []), reader: readerCode(), chrome: chromeMajor() }; } catch (e) { console.log(`warning: the self leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading taken from other inputs is not said stale`); }
+  const today = await todayOf(label, where, panel ? argv : []);
   const m = measure(where, panel ? argv : [], today);
   report(label, m, fields, byCause);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
