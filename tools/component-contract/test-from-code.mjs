@@ -5,6 +5,7 @@ import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, d
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
+import { drawn as toCodeDrawn } from './to-code.mjs';
 import { judge } from '../parity/external.mjs';
 
 let n = 0;
@@ -261,13 +262,23 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   // (the focus error variant first: a first-found pick takes its error stroke for the ring)
   const errored = { props, anatomy, variants: [{ when: { state: 'focus', invalid: true }, add: { 'input/errorBorder': { ...ring, parent: 'input', border: { color: 'Support/error', width: 2 } } } },
     { when: { state: 'focus' }, add: { 'input/focusBorder': { ...ring, parent: 'input' } } }, { when: { state: 'focus', type: 'b' }, add: { 'input/focusBorder': { ...ring, parent: 'input' } } }] };
-  ok('a focus error stroke is not the ring: the one every focus draws is, in the error render too',
-    ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: true }).key === 'input/focusBorder' && ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: false }).key === 'input/focusBorder'
+  ok('a focus error stroke is not the ring in a plain focus render, nor with no render named',
+    ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: false }).key === 'input/focusBorder'
     && ringKeyOf(errored, 'input').key === 'input/focusBorder');
   // (two variants only, the error one first: a tie on how many focus variants add each)
   const pair = { props, anatomy, variants: errored.variants.slice(0, 2) };
-  ok('of a ring and an error stroke added as often, the broadest variant\'s is the ring, in every render',
-    ['input/focusBorder'].every((k) => ringKeyOf(pair, 'input', {}, { state: 'focus', invalid: true, type: 'a' }).key === k && ringKeyOf(pair, 'input', {}, { state: 'focus', invalid: false, type: 'a' }).key === k && ringKeyOf(pair, 'input').key === k));
+  ok('of a ring and an error stroke added as often, the broadest variant\'s is the ring where no render says otherwise',
+    ringKeyOf(pair, 'input', {}, { state: 'focus', invalid: false, type: 'a' }).key === 'input/focusBorder' && ringKeyOf(pair, 'input').key === 'input/focusBorder');
+  // (the outline to-code draws: of the rings expand's anatomy holds for a box, the last, its outline written over the
+  // others'. expand applies variants in the contract's order, so the order decides: to-code's drawing is asked)
+  const err = { 'input/errorBorder': { ...ring, parent: 'input', border: { color: 'Support/error', width: 2 } } }, foc = { 'input/focusBorder': { ...ring, parent: 'input' } };
+  // (to-code's own drawing says which: the outline's colour is the error stroke's or the ring's)
+  const drawsLast = (c, when) => (/support-error/.test(toCodeDrawn(c, when).input.decls.get('outline').v) ? 'input/errorBorder' : 'input/focusBorder');
+  const focusFirst = { props, anatomy, variants: [{ when: { state: 'focus' }, add: foc }, { when: { state: 'focus', invalid: true }, add: err }] };
+  const errorFirst = { props, anatomy, variants: [{ when: { state: 'focus', invalid: true }, add: err }, { when: { state: 'focus' }, add: foc }] };
+  ok('a render\'s ring is the layer whose outline to-code draws there, in either order: the error stroke where it is written last, the ring in a plain focus render',
+    [focusFirst, errorFirst].every((c) => [{ state: 'focus', invalid: true }, { state: 'focus' }].every((w) => ringKeyOf(c, 'input', {}, w).key === drawsLast(c, w)))
+    && ringKeyOf(focusFirst, 'input', {}, { state: 'focus', invalid: true }).key === 'input/errorBorder' && ringKeyOf(focusFirst, 'input', {}, { state: 'focus' }).key === 'input/focusBorder');
   const twoRings = { props, anatomy, variants: [{ when: { type: 'a', state: 'focus' }, add: { focusBorder: { ...ring, parent: 'root' } } }, { when: { type: 'b', state: 'focus' }, add: { outerRing: { ...ring, parent: 'root', name: 'Outer ring' } } }] };
   ok('a prop the render leaves unset is at its default, never a match for another value\'s variant',
     (() => { const d = { props, anatomy, variants: [{ when: { state: 'focus', type: 'b', invalid: false }, add: { bRing: { ...ring, parent: 'root' } } }, { when: { state: 'focus', type: 'b', invalid: true }, add: { bRing: { ...ring, parent: 'root' } } }, { when: { state: 'focus', type: 'a' }, add: { aRing: { ...ring, parent: 'root' } } }] };

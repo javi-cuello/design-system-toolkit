@@ -129,30 +129,33 @@ export function layerNames(ids, design, drawnFrom = null) {
 
 /* The layer a design draws as box `id`'s focus ring, which code draws as that box's outline (to-code's ringOf, the one
    rule): its key and name, so a ring read back from an outline is the design's own layer (Carbon's `focusBorder`),
-   and a synthesised `<id>/focusRing` only where the design has none. Of several stroke boxes that pass ringOf (a focus
-   variant that adds an error border too), the one of the variants this render draws (`when`, the design's props) is
-   taken, then the one most focus variants add, then the one the broadest of them adds (fewest props in its `when`):
-   the ring every focus draws, the same key in each. `when` holds every prop, defaults where the render sets none. A design layer the
-   reading already holds (code drew it as a box of its own) is not taken twice. Only a layer a variant adds is found,
-   as ringOf finds one: a ring kept in the base anatomy and shown by a variant's `set` is not, and stays a focusRing.
-   Tested by test-from-code.mjs. */
+   and a synthesised `<id>/focusRing` only where the design has none. For a render (`when`, the design's props) it is
+   the outline to-code draws there: of the layers its expanded anatomy holds that ringOf takes for this box, the last,
+   whose outline to-code writes over the others' (a {focus, invalid} render's error stroke over the ring {focus} adds).
+   With no render, or none there, the one most focus variants add, then the broadest of them's (fewest props in its
+   `when`). A design layer the reading already holds (code drew it as a box of its own) is not taken twice. Only a layer
+   a variant adds is found, as ringOf finds one: a ring kept in the base anatomy and shown by a variant's `set` is not,
+   and stays a focusRing. Tested by test-from-code.mjs. */
 export function ringKeyOf(design, id, taken = {}, when = null) {
   const own = `${id === 'root' ? '' : `${id}/`}focusRing`;
   if (!design || !design.props) return { key: own };
-  const low = (x) => String(x).toLowerCase();
-  const drawn = (w) => !!when && Object.entries(w || {}).every(([k, v]) => !(k in when) || (Array.isArray(v) ? v : [v]).some((x) => low(x) === low(when[k])));
-  const hits = new Map(); // key → { name, n: focus variants adding it, here: whether this render's variants add it }
+  const named = ([k, e]) => ({ key: k, ...(e.name && { name: e.name }) });
+  if (when) {
+    const w = { ...variantDefaults(design), ...when }, a = expand(design, w);
+    const here = Object.entries(a).filter(([k, e]) => e && e.parent === id && !(k in taken) && ringOf(design, w, k, e, a));
+    if (here.length) return named(here[here.length - 1]);
+  }
+  const hits = new Map(); // key → { name, n: focus variants adding it, keys: the fewest props a variant adding it names }
   for (const v of design.variants || []) {
     const a = { ...(design.anatomy || {}), ...(v.add || {}) };
     for (const [k, e] of Object.entries(v.add || {})) {
       if (e.parent !== id || k in taken || !ringOf(design, v.when || {}, k, e, a)) continue;
-      const h = hits.get(k) || { key: k, ...(e.name && { name: e.name }), n: 0, here: false, keys: Infinity };
-      h.n++; h.here = h.here || drawn(v.when); h.keys = Math.min(h.keys, Object.keys(v.when || {}).length); hits.set(k, h);
+      const h = hits.get(k) || { ...named([k, e]), n: 0, keys: Infinity };
+      h.n++; h.keys = Math.min(h.keys, Object.keys(v.when || {}).length); hits.set(k, h);
     }
   }
-  const all = [...hits.values()], pool = all.some((h) => h.here) ? all.filter((h) => h.here) : all;
-  // (a tie, the broadest variant's: a ring {state: focus} adds before an error stroke {state: focus, invalid} adds)
-  const best = pool.find((h) => h.key === own) || pool.sort((x, y) => y.n - x.n || x.keys - y.keys)[0];
+  const all = [...hits.values()];
+  const best = all.find((h) => h.key === own) || all.sort((x, y) => y.n - x.n || x.keys - y.keys)[0];
   return best ? { key: best.key, ...(best.name && { name: best.name }) } : { key: own };
 }
 
