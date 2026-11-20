@@ -1241,7 +1241,7 @@ async function main() {
             if (!inside && n.hasAttribute('data-figma-id')) { let i = 0; for (const c of n.children) { const cs = getComputedStyle(c); if (cs.display === 'none' || cs.visibility === 'hidden') continue; walk(c, id, i++, id); } }
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
-          if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
+          if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
           else if (kind === 'text') { e.color = entryEl && !n.value ? getComputedStyle(n, '::placeholder').color : s.color; e.type = typeOf(s); e.textAlign = s.textAlign === 'left' ? 'start' : s.textAlign === 'right' ? 'end' : s.textAlign; e.content = text; }
           if (kind === 'container' || kind === 'text' || kind === 'slot') {
             if (/flex/.test(s.display)) {
@@ -1357,9 +1357,11 @@ async function main() {
       // a minimum or maximum the code writes (a set size is the size's own, read with the sizing below)
       // (one taken from a var's computed length: kept only where the tokens name it back, never as the length a window gave)
       const viaVar = new Set();
+      // the icon marks (the walk's `mark`), kept here and off the reading
+      const mark = new Set(raw.filter((e) => e.mark).map((e) => e.id)); for (const e of raw) delete e.mark;
       // (a placed instance's too, on the box in its parent's flow: a host that draws none, display: contents, through its control)
       const boxOf = async (e) => { const q = `[data-contract-id="${e.id}"]`; return e.kind === 'instance' && await call(L.tab, (s) => { const n = document.querySelector(s); return !!n && getComputedStyle(n).display === 'contents' && !!n.firstElementChild; }, q) ? `${q} > :first-child` : q; };
-      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind)) { const q = await boxOf(e); for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
+      for (const e of raw) if (['container', 'slot', 'text', 'instance'].includes(e.kind) || mark.has(e.id)) { const q = await boxOf(e); for (const [css, field] of [['min-height', 'minHeight'], ['min-block-size', 'minHeight'], ['min-width', 'minWidth'], ['min-inline-size', 'minWidth'], ['max-height', 'maxHeight'], ['max-block-size', 'maxHeight'], ['max-width', 'maxWidth'], ['max-inline-size', 'maxWidth']]) {
         const w = await authoredWidth(L.tab, q, css, { raw: true, cache: styles });
         // (one written as a token, var(): the length it computes to, which the tokens below name back as that token)
         const own = lengthOf(w), v = own ?? (/^\s*var\(/.test(w || '') ? lengthOf(await call(L.tab, ([q, prop]) => { const n = document.querySelector(q); return n ? getComputedStyle(n).getPropertyValue(prop) : null; }, [q, css])) : null);
@@ -1436,7 +1438,9 @@ async function main() {
             continue;
           }
         }
-        if (e.kind === 'graphic' || e.absolute) continue;
+        // (an icon mark, the empty element to-markup leaves for the icon set's component, is a box the sheet sizes: its
+        // fill, hug or length read as any box's; an svg draws at its own size)
+        if ((e.kind === 'graphic' && !mark.has(e.id)) || e.absolute) continue;
         const own = {}, up = {};
         // words loose in a box (no element of their own) are its anonymous child: the box is their parent
         const loose = e.kind === 'text' && !(e.id in shown);
