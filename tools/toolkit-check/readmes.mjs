@@ -19,7 +19,7 @@
  * page it names (as GitHub spells it); a fenced block of any length is code.
  * The `skills/`, `plugins/` and `tools/` READMEs are indexes, and an index links every folder beside it, so a new one cannot go unlisted;
  * `knowledge/`'s names every page under it.
- * Whether the words help a newcomer is a read.
+ * How plainly the words read is readability.mjs's; whether they help a newcomer is a read.
  */
 import { existsSync, readdirSync, readFileSync, statSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve, posix } from 'node:path';

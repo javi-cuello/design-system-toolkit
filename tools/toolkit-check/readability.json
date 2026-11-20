@@ -1,0 +1,261 @@
+{
+ "README.md": {
+  "words": 596,
+  "longSentences": 7,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 7.2
+ },
+ "bin/README.md": {
+  "words": 1002,
+  "longSentences": 19,
+  "longParagraphs": 2,
+  "codeParagraphs": 4,
+  "grade": 8.6
+ },
+ "docs/README.md": {
+  "words": 93,
+  "longSentences": 1,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 5.7
+ },
+ "knowledge/README.md": {
+  "words": 691,
+  "longSentences": 11,
+  "longParagraphs": 3,
+  "codeParagraphs": 3,
+  "grade": 9.7
+ },
+ "plugins/README.md": {
+  "words": 334,
+  "longSentences": 3,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 8.4
+ },
+ "plugins/_shared/README.md": {
+  "words": 159,
+  "longSentences": 3,
+  "longParagraphs": 1,
+  "codeParagraphs": 2,
+  "grade": 14.5
+ },
+ "plugins/adoption-score/README.md": {
+  "words": 642,
+  "longSentences": 10,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 8.2
+ },
+ "plugins/audit-lite/README.md": {
+  "words": 645,
+  "longSentences": 10,
+  "longParagraphs": 1,
+  "codeParagraphs": 1,
+  "grade": 10.3
+ },
+ "plugins/component-graph/README.md": {
+  "words": 3190,
+  "longSentences": 48,
+  "longParagraphs": 5,
+  "codeParagraphs": 1,
+  "grade": 13.6
+ },
+ "plugins/component-guidelines/README.md": {
+  "words": 172,
+  "longSentences": 1,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 10.9
+ },
+ "plugins/design-system-snapshot/README.md": {
+  "words": 1314,
+  "longSentences": 24,
+  "longParagraphs": 3,
+  "codeParagraphs": 2,
+  "grade": 12.5
+ },
+ "plugins/lucide-icon-importer/README.md": {
+  "words": 812,
+  "longSentences": 12,
+  "longParagraphs": 1,
+  "codeParagraphs": 1,
+  "grade": 9.3
+ },
+ "plugins/organize-layers/README.md": {
+  "words": 673,
+  "longSentences": 10,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 9.1
+ },
+ "plugins/theme-switcher/README.md": {
+  "words": 983,
+  "longSentences": 18,
+  "longParagraphs": 1,
+  "codeParagraphs": 0,
+  "grade": 10.4
+ },
+ "research/README.md": {
+  "words": 848,
+  "longSentences": 8,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 6.9
+ },
+ "skills/README.md": {
+  "words": 522,
+  "longSentences": 4,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 8.8
+ },
+ "skills/frontend-build/assets/design-system-scaffold/design-system/README.md": {
+  "words": 409,
+  "longSentences": 3,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 9.3
+ },
+ "standards/README.md": {
+  "words": 398,
+  "longSentences": 5,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 8.4
+ },
+ "stock-ui/README.md": {
+  "words": 593,
+  "longSentences": 10,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 9.6
+ },
+ "tools/README.md": {
+  "words": 467,
+  "longSentences": 3,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 5.6
+ },
+ "tools/claude-hooks/README.md": {
+  "words": 2464,
+  "longSentences": 32,
+  "longParagraphs": 8,
+  "codeParagraphs": 6,
+  "grade": 12.1
+ },
+ "tools/component-contract/README.md": {
+  "words": 7509,
+  "longSentences": 99,
+  "longParagraphs": 13,
+  "codeParagraphs": 14,
+  "grade": 18.3
+ },
+ "tools/component-validator/README.md": {
+  "words": 193,
+  "longSentences": 3,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 10.9
+ },
+ "tools/contract-editor/README.md": {
+  "words": 5522,
+  "longSentences": 79,
+  "longParagraphs": 18,
+  "codeParagraphs": 8,
+  "grade": 10.4
+ },
+ "tools/css-lint/README.md": {
+  "words": 560,
+  "longSentences": 3,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 5.2
+ },
+ "tools/docs-site/README.md": {
+  "words": 1477,
+  "longSentences": 25,
+  "longParagraphs": 3,
+  "codeParagraphs": 4,
+  "grade": 10.8
+ },
+ "tools/figma-audit/README.md": {
+  "words": 5474,
+  "longSentences": 85,
+  "longParagraphs": 12,
+  "codeParagraphs": 22,
+  "grade": 10.8
+ },
+ "tools/parity/README.md": {
+  "words": 4742,
+  "longSentences": 62,
+  "longParagraphs": 12,
+  "codeParagraphs": 25,
+  "grade": 10.6
+ },
+ "tools/project-check/README.md": {
+  "words": 945,
+  "longSentences": 15,
+  "longParagraphs": 1,
+  "codeParagraphs": 4,
+  "grade": 8.8
+ },
+ "tools/shared/README.md": {
+  "words": 1151,
+  "longSentences": 20,
+  "longParagraphs": 2,
+  "codeParagraphs": 4,
+  "grade": 7.9
+ },
+ "tools/skill-evals/README.md": {
+  "words": 2522,
+  "longSentences": 38,
+  "longParagraphs": 9,
+  "codeParagraphs": 6,
+  "grade": 11.2
+ },
+ "tools/snapshot/README.md": {
+  "words": 2886,
+  "longSentences": 46,
+  "longParagraphs": 8,
+  "codeParagraphs": 10,
+  "grade": 11.2
+ },
+ "tools/system-mcp/README.md": {
+  "words": 876,
+  "longSentences": 10,
+  "longParagraphs": 0,
+  "codeParagraphs": 2,
+  "grade": 7.8
+ },
+ "tools/tokens/README.md": {
+  "words": 2399,
+  "longSentences": 42,
+  "longParagraphs": 6,
+  "codeParagraphs": 6,
+  "grade": 9.8
+ },
+ "tools/tokens/schemas/README.md": {
+  "words": 92,
+  "longSentences": 2,
+  "longParagraphs": 0,
+  "codeParagraphs": 0,
+  "grade": 11
+ },
+ "tools/toolkit-check/README.md": {
+  "words": 1031,
+  "longSentences": 14,
+  "longParagraphs": 1,
+  "codeParagraphs": 4,
+  "grade": 7.9
+ },
+ "tools/ui-check/README.md": {
+  "words": 353,
+  "longSentences": 6,
+  "longParagraphs": 0,
+  "codeParagraphs": 1,
+  "grade": 12.1
+ }
+}
