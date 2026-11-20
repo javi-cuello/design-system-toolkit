@@ -32,7 +32,14 @@ ok('the table cannot be changed by a caller', Object.isFrozen(WEIGHTS));
   ok('a shadow with blur or a ring all round is no stroke on some sides, and of two colours only the first is taken',
     sideStrokes([`${c} 0px 2px 8px 0px`]) === null && sideStrokes([`${c} 0px 0px 0px 1px inset`]) === null
     && JSON.stringify(sideStrokes([`${c} 0px 1px 0px 0px inset`, `rgb(9, 9, 9) 0px -1px 0px 0px inset`]).used) === '[0]');
-  ok('a clear layer is no stroke, and black is not clear', sideStrokes(['rgba(0, 0, 0, 0) 0px 1px 0px 0px']) === null && sideStrokes(['rgb(0, 0, 0) 0px 1px 0px 0px']).sides.bottom === 1);
+  ok('a clear layer beside a shadow or a ring that draws is no stroke, and black is not clear',
+    sideStrokes(['rgba(0, 0, 0, 0) 0px 1px 0px 0px', `${c} 0px 2px 8px 0px`]) === null
+    && JSON.stringify(sideStrokes(['rgba(0, 0, 0, 0) 0px 1px 0px 0px inset', `${c} 0px -1px 0px 0px inset`]).used) === '[1]'
+    && sideStrokes(['rgb(0, 0, 0) 0px 1px 0px 0px']).sides.bottom === 1);
+  // a stroke whose colour token is transparent (Carbon's Transparent), drawn by css.mjs as the shadow's only layer
+  const clearRing = sideStrokes(['rgba(255, 255, 255, 0) 0px -1px 0px 0px inset']);
+  ok('a shadow of clear side rings alone is the stroke, its clear colour kept',
+    clearRing && clearRing.sides.bottom === 1 && clearRing.colour === 'rgba(255, 255, 255, 0)' && clearRing.align === 'inside');
   ok('a colour Chrome keeps as oklch is read whole, its zeros not taken for lengths', sideStrokes(['oklch(0 0 0) 0px 1px 0px 0px inset']).sides.top === 1 && sideStrokes(['oklch(0 0 0) 0px 1px 0px 0px inset']).colour === 'oklch(0 0 0)');
 }
 

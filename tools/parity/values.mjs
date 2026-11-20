@@ -97,12 +97,21 @@ export function insetStrokeVars(raw, { outside = false } = {}) {
 export function sideStrokes(layers) {
   const sides = { top: 0, end: 0, bottom: 0, start: 0 }, used = [];
   let colour = null, align = null;
-  layers.forEach((layer, i) => {
+  const read = (layer) => {
     const c = (layer.match(/(?:rgba?|hsla?|oklch|oklab|lch|lab|color)\([^)]*\)|#[0-9a-f]{3,8}/i) || [''])[0];
     const len = (layer.replace(c, '').match(/-?[\d.]+px|(?<![\w.-])0(?![\w.])/g) || []).map((v) => parseFloat(v));
-    // a clear layer draws nothing (a transition's resting placeholder): no stroke
-    if (/transparent|rgba\((?:[^,)]*,){3}\s*0\)|\/\s*0\s*\)/i.test(c || layer)) return;
-    if (len.length !== 4 || len[2] !== 0 || len[3] !== 0 || (len[0] !== 0) === (len[1] !== 0)) return;
+    const ring = len.length === 4 && len[2] === 0 && len[3] === 0 && (len[0] !== 0) !== (len[1] !== 0);
+    return { c, len, ring, clear: /transparent|rgba\((?:[^,)]*,){3}\s*0\)|\/\s*0\s*\)/i.test(c || layer) };
+  };
+  const all = layers.map(read);
+  // a clear layer is a stroke only where the shadow is nothing but clear sharp side rings (a stroke whose colour token
+  // is transparent, as css.mjs draws one); beside a shadow or a ring that draws, it is a transition's resting
+  // placeholder and no stroke
+  const clearRingsOnly = all.length > 0 && all.every((l) => l.ring && l.clear);
+  layers.forEach((layer, i) => {
+    const { c, len, ring } = all[i];
+    if (all[i].clear && !clearRingsOnly) return;
+    if (!ring) return;
     const inset = /\binset\b/.test(layer), [x, y] = len;
     const side = inset ? (y > 0 ? 'top' : y < 0 ? 'bottom' : x < 0 ? 'end' : 'start') : (y < 0 ? 'top' : y > 0 ? 'bottom' : x > 0 ? 'end' : 'start');
     const a = inset ? 'inside' : 'outside';
