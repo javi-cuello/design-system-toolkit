@@ -1,4 +1,6 @@
-# Eval cases — ds-model-routing (v1.3.2)
+# Eval cases — ds-model-routing (v1.3.3)
+
+**Walked: 2026-11-21 for 1.3.3** — A1–A4 re-read: each advised effort is now a level that matches the row's agent effort (0 of 24 rows say "default"); `node tools/shared/test-model-routing.mjs` 5/5.
 
 **Walked: 2026-11-11 for 1.3.2** — two pointers only; A1–A4 re-read against them (step 1 now names where the families are); `node tools/shared/test-model-routing.mjs` 5/5.
 

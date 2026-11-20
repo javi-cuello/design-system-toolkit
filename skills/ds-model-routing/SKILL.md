@@ -5,7 +5,7 @@ description: Advise on the right Claude model and Effort setting before starting
 
 # Design systems model routing
 
-**Version 1.3.2** — history in CHANGELOG.md.
+**Version 1.3.3** — history in CHANGELOG.md.
 
 Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table (`tools/shared/model-routing.json`, printed as the *Routing table* section says) and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
 
@@ -14,10 +14,11 @@ Claude cannot change the model or Effort setting itself — only the user can, v
 1. Identify which task family the request belongs to (the routing table's families).
 2. Compare against the model currently powering the session (from the system prompt) and, if known, the effort level.
 3. If there's a mismatch, give a one-sentence recommendation with the reason, e.g.:
-   - "This is a mechanical audit — Sonnet at default effort handles it and uses far less of your limit. Want to switch, or continue here?"
+   - "This is a mechanical audit — Sonnet at medium effort handles it and uses far less of your limit. Want to switch, or continue here?"
    - "Designing a new skill is one-time work that compounds — worth switching to Opus or Fable at high effort before we start."
 4. If the user declines or doesn't respond to the suggestion, proceed with the current model without further comment. Never repeat the suggestion in the same conversation.
-5. If the effort level isn't visible, only mention effort when it clearly matters (highest for plugin design and deep research; low is fine for pure math tasks).
+5. Name the effort level, never "default": the default is medium on Opus 5.5 and Haiku 5.5 but high on Sonnet 5.5 and Fable 5.2 (Anthropic's model docs, as cached 2026-11-03).
+6. If the effort level isn't visible, only mention effort when it clearly matters (highest for plugin design and deep research; low is fine for pure math tasks).
 
 ## Routing table
 

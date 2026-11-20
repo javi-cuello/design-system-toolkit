@@ -8,7 +8,7 @@
       "figma-components-audit"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -24,7 +24,7 @@
       "figma-variable-audit"
     ],
     "model": "Sonnet",
-    "effort": "Low–default",
+    "effort": "Low–medium",
     "agent": {
       "model": "sonnet",
       "effort": "low"
@@ -40,7 +40,7 @@
       "figma-file-diff"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -56,7 +56,7 @@
       "figma-contrast-matrix"
     ],
     "model": "Sonnet",
-    "effort": "Low–default",
+    "effort": "Low–medium",
     "agent": {
       "model": "sonnet",
       "effort": "low"
@@ -72,7 +72,7 @@
       "figma-doc-generator"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -88,7 +88,7 @@
       "figma-tokens-examples"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -104,7 +104,7 @@
       "figma-properties-table"
     ],
     "model": "Sonnet",
-    "effort": "Low–default",
+    "effort": "Low–medium",
     "agent": {
       "model": "sonnet",
       "effort": "low"
@@ -120,7 +120,7 @@
       "figma-component-descriptions"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -138,7 +138,7 @@
       "oklch-color-scale-system"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -171,7 +171,7 @@
       "type-scale"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -187,7 +187,7 @@
       "figma-context-capture"
     ],
     "model": "Opus or Fable",
-    "effort": "Default–high",
+    "effort": "Medium–high",
     "agent": {
       "model": "opus",
       "effort": "high"
@@ -203,7 +203,7 @@
       "figma-component-pass"
     ],
     "model": "Opus or Fable",
-    "effort": "Default–high",
+    "effort": "Medium–high",
     "agent": {
       "model": "opus",
       "effort": "high"
@@ -237,7 +237,7 @@
       "component-validator"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -253,7 +253,7 @@
       "figma-foundations-audit"
     ],
     "model": "Sonnet",
-    "effort": "Low–default",
+    "effort": "Low–medium",
     "agent": {
       "model": "sonnet",
       "effort": "low"
@@ -269,7 +269,7 @@
       "figma-project-audit"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -285,7 +285,7 @@
       "design-code-parity"
     ],
     "model": "Opus or Fable",
-    "effort": "Default–high",
+    "effort": "Medium–high",
     "agent": {
       "model": "opus",
       "effort": "high"
@@ -301,7 +301,7 @@
       "frontend-build"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -317,7 +317,7 @@
       "figma-prototype"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -333,7 +333,7 @@
       "design-system-research"
     ],
     "model": "Sonnet",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "sonnet",
       "effort": "medium"
@@ -363,7 +363,7 @@
     "task": "Long-form docs prose, guides, narrative writing",
     "skills": [],
     "model": "Fable",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "fable",
       "effort": "medium"
@@ -379,7 +379,7 @@
       "humanizer"
     ],
     "model": "Fable",
-    "effort": "Default",
+    "effort": "Medium",
     "agent": {
       "model": "fable",
       "effort": "medium"
