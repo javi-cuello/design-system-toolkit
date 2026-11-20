@@ -1,6 +1,6 @@
 # Changelog — figma-components-audit
 
-- 2.50.0 (2026-11-20): six probes from `scripts/probes.js` become scanner rules, so the dashboard and Audit lite run them: fixed-height text (`structure|fixed-text`, user-visible), a state missing from one combination of a set (`states|gap`; single-state rows, disabled or coupled to their own axis, excused), switched-off paints (`structure|disabled-paint`), orphan instances (`structure|orphan`), single-option and visibility-only axes (`properties`, breaking). Raw min/max width and height ask for a size token (`tokens.sizing`, optional). From a workshop library whose two planted breaks no run caught.
+- 2.50.0 (2026-11-20): six probes from probes.js become scanner rules (fixed-text, states gap, disabled-paint, orphan, single-option and visibility-only axes), plus raw min/max sizes (`tokens.sizing`).
 - 2.49.2 (2026-11-20): property-name findings (`naming|prop-*`, `naming|value-case`) take rule `properties`, so they land in bucket 3 on every path, and carry `breaking: true`; scored under Properties, not Structure. A live Audit lite run had filed a renamed boolean as a bucket 1 fix.
 - 2.49.1 (2026-11-19): the tracked metric (semantic-token coverage in every closing metrics block, no composite score unless asked) moves here from figma-standard rule 17, now retired.
 - 2.49.0 (2026-11-19): step 2c asks where the results go: here, as a page too (Audit lite's results page, from `fix-queue.mjs --page`), or on the dashboard too where the project has a record; no offer to set up a dashboard. A139.
