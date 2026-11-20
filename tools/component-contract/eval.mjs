@@ -33,8 +33,9 @@
  * back as (from-code --second, <home>/round-trip/self2/from-code/), and the `second` leg holds that to the first: a row
  * there is the translation not settling, a cause the first leg's count cannot show. --projects runs, per project in turn,
  * each leg on its panel (--jobs 4 unless said) and then --diff, each its own eval.mjs taking and letting go the measuring
- * lock, logged `== HH:MM <args>` and `== rc N` (to --log, appended, else the terminal), stopping after three failures
- * in a row (rc 2 or more) and ending `== done HH:MM`.
+ * lock, logged `== HH:MM <args>` and `== rc N` (to --log, appended, read from the folder run in, else the terminal),
+ * stopping after three failures in a row (rc 2 or more) and ending `== done HH:MM`; every label is checked first, and
+ * any failed step makes it exit 1.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -487,22 +488,37 @@ async function readTwice(where, label, only, opts) {
 /* Every project's panel measured in turn (--projects): per project each leg (--self, then --second) and then --diff, each
    its own eval.mjs process, so each takes the measuring lock and lets it go, and a queued bin/land gets in between. Each
    step is logged `== HH:MM <args>` before and `== rc N` after; three failures in a row (rc 2 or more) stop the run.
-   run(args) → its exit code; say(line) logs. Returns 1 when stopped, else 0. */
+   run(args) → its exit code; say(line) logs. Returns 1 when any step failed (stopped or not), else 0. */
 export async function runAll(projects, legs, { run, say, jobs = 4, now = () => new Date() }) {
   const hhmm = () => now().toTimeString().slice(0, 5);
-  let fails = 0;
+  let fails = 0, failed = false;
   for (const p of projects) {
     for (const args of [...legs.map((l) => ['--project', p, `--${l}`, '--panel', '--jobs', String(jobs)]), ['--project', p, '--panel', '--diff']]) {
       say(`== ${hhmm()} ${args.join(' ')}`);
       const rc = await run(args);
       say(`== rc ${rc}`);
       if (rc < 2) { fails = 0; continue; }
+      failed = true;
       if (++fails >= 3) { say('== three failures in a row: stopped'); return 1; }
     }
   }
   say(`== done ${hhmm()}`);
-  return 0;
+  return failed ? 1 : 0;
 }
+
+export const PROJECTS_USAGE = 'usage: eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       (--log is read from the folder run in; the steps run from the toolkit\'s root)';
+/* --projects' options checked before any step runs: every label a project (labelError(p) → why not, or nothing), the
+   legs known, jobs a whole number, the log made absolute against cwd. { error } or { projects, legs, jobs, log }. */
+export function projectsOptions({ projects, legs, jobs, log, rest = [] }, { cwd, labelError }) {
+  const ps = (projects || '').split(',').filter(Boolean), ls = (legs || 'self,second').split(',').filter(Boolean);
+  if (rest.length || !ps.length || !ls.length || ls.some((l) => !['self', 'second'].includes(l)) || (jobs != null && !/^[1-9]\d*$/.test(jobs))) return { error: PROJECTS_USAGE };
+  const bad = ps.map((p) => labelError(p)).filter(Boolean);
+  if (bad.length) return { error: bad.join('\n') };
+  return { projects: ps, legs: ls, jobs: +(jobs || 4), log: log ? path.resolve(cwd, log) : null };
+}
+/* A step's environment: never TOOLKIT_LOCK_HELD, which would let the step run under its caller's lock and keep it held
+   between steps; each step takes the lock itself. */
+export const childEnv = (env) => { const { TOOLKIT_LOCK_HELD, ...rest } = env; return rest; };
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
@@ -511,12 +527,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const all = opt('--projects');
   if (all) {
     // no lock here: each step is its own eval.mjs, which takes it, so it is let go between steps
-    const legs = (opt('--legs') || 'self,second').split(',').filter(Boolean), log = opt('--log'), jobs = Math.max(1, +(opt('--jobs') || 4));
-    if (argv.length || legs.some((l) => !['self', 'second'].includes(l))) { console.error('usage: eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]'); process.exit(2); }
+    const o = projectsOptions({ projects: all, legs: opt('--legs'), jobs: opt('--jobs'), log: opt('--log'), rest: argv }, { cwd: process.cwd(), labelError: (p) => req('../snapshot/projects.cjs').layout(null, p).error });
+    if (o.error) { console.error(o.error); process.exit(2); }
+    const { legs, log, jobs } = o;
     const fd = log ? fs.openSync(log, 'a') : null;
     const say = (l) => (fd == null ? console.log(l) : fs.writeSync(fd, l + '\n'));
-    const run = (args) => { const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd: path.resolve(HERE, '../..'), stdio: ['ignore', fd ?? 'inherit', fd ?? 'inherit'] }); return r.status ?? 2; };
-    process.exit(await runAll(all.split(',').filter(Boolean), legs, { run, say, jobs }));
+    const run = (args) => { const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd: path.resolve(HERE, '../..'), env: childEnv(process.env), stdio: ['ignore', fd ?? 'inherit', fd ?? 'inherit'] }); return r.status ?? 2; };
+    process.exit(await runAll(o.projects, legs, { run, say, jobs }));
   }
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), panel = flag('--panel'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');

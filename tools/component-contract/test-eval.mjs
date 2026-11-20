@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, childEnv } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 
 let n = 0;
@@ -196,6 +196,14 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   ok('runAll: each step logged before with its time and args, after with its rc, and the end with its time', a.log[0] === '== 09:05 --project carbon --self --panel --jobs 4' && a.log[1] === '== rc 0' && a.log.at(-1) === '== done 09:05' && a.log.length === 13);
   const b = await go(['carbon', 'atlassian', 'material3'], ['self'], (i) => (i === 1 ? 2 : i === 2 ? 1 : 3));
   ok('runAll: three failures in a row (rc 2 or more) stop the run; rc 1 is not a failure and resets the count', b.rc === 1 && b.ran.length === 5 && b.log.at(-1) === '== three failures in a row: stopped' && !b.log.some((l) => /done/.test(l)));
+  const c = await go(['carbon', 'atlassian'], ['self'], (i) => (i === 1 ? 2 : 0));
+  ok('runAll: a step that failed, short of three in a row, still fails the run, which goes on to the end', c.rc === 1 && c.ran.length === 4 && c.log.at(-1) === '== done 09:05');
+  const opts = (o) => projectsOptions(o, { cwd: '/here', labelError: (p) => (p === 'nope' ? `no context document for ${p}` : null) });
+  ok('--projects: a misspelled label is refused, named, before any step', opts({ projects: 'carbon,nope' }).error === 'no context document for nope');
+  ok('--projects: jobs that are not a whole number, or no project, are refused', /usage/.test(opts({ projects: 'carbon', jobs: 'abc' }).error) && /usage/.test(opts({ projects: ',' }).error) && /usage/.test(opts({ projects: 'carbon', jobs: '0' }).error));
+  const good = opts({ projects: 'carbon,atlassian', log: 'l.txt' });
+  ok('--projects: the log made absolute against the folder run in, the rest defaulted', good.log === '/here/l.txt' && good.jobs === 4 && good.legs.join() === 'self,second' && good.projects.join() === 'carbon,atlassian' && opts({ projects: 'a', log: '/abs/l' }).log === '/abs/l');
+  ok('--projects: a step never inherits TOOLKIT_LOCK_HELD, so it takes the lock and lets it go itself', !('TOOLKIT_LOCK_HELD' in childEnv({ TOOLKIT_LOCK_HELD: '1', TOOLKIT_PROJECTS_ROOT: '/r' })) && childEnv({ TOOLKIT_PROJECTS_ROOT: '/r' }).TOOLKIT_PROJECTS_ROOT === '/r');
   const r = spawnSync(process.execPath, [new URL('./eval.mjs', import.meta.url).pathname, '--projects', 'x', '--legs', 'draw'], { encoding: 'utf8' });
   ok('--projects refuses a leg it does not run, before any step', r.status === 2 && /usage: eval.mjs --projects/.test(r.stderr));
 }
