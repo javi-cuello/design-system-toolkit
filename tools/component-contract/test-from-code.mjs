@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName } from './from-code.mjs';
+import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, shownRead, asShape, boundText, keepsName } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand } = createRequire(import.meta.url)('./derive.cjs');
@@ -207,6 +207,11 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   const btn = { props: { size: { type: 'enum', values: ['sm', 'md'], default: 'md' }, icon16: { type: 'instance', figma: 'Icon (16)', swaps: ['icon16'] }, icon20: { type: 'instance', figma: 'Icon (20)', swaps: ['icon20'] } },
     anatomy: { root: { kind: 'container' }, icon20: { kind: 'instance', parent: 'root' } }, variants: [{ when: { size: 'sm' }, remove: ['icon20'], add: { icon16: { kind: 'instance', parent: 'root' } } }] };
   ok('a glyph goes to the swap drawn at the size it is placed at, never both', JSON.stringify(glyphSwaps(btn, { size: 'sm' })) === '["Icon (16)"]' && JSON.stringify(glyphSwaps(btn, { size: 'md' })) === '["Icon (20)"]');
+  const cb = { props: { state: { type: 'enum', values: ['enabled', 'invalid'], figmaValues: ['Enabled', 'Invalid'], default: 'enabled', figma: 'State' }, err: { type: 'boolean', default: true, figma: 'Error message', shows: ['error'] }, label: { type: 'boolean', default: true, figma: 'Label', shows: ['label'] } },
+    anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root' } }, variants: [{ when: { state: 'invalid' }, add: { error: { kind: 'container', parent: 'root' } } }] };
+  ok('a boolean whose layer the main draws not at the placed props, on or off, is left unread; one it draws there is read from being seen',
+    JSON.stringify(shownRead(cb, { State: 'Enabled' }, { 'Error message': false, Label: false })) === '{"Label":false}'
+    && JSON.stringify(shownRead(cb, { State: 'Invalid' }, { 'Error message': false })) === '{"Error message":false}');
   ok('a full-round empty box where the design draws an ellipse is the ellipse', asShape({ kind: 'container', full: true, radius: 99 }, { kind: 'graphic', shape: 'ellipse' }, false).shape === 'ellipse');
   ok('an empty box where the design draws a line is the line; one holding parts, or under an icon, stays a box', asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, false).kind === 'graphic' && asShape({ kind: 'container' }, { kind: 'graphic', shape: 'line' }, true).kind === 'container' && asShape({ kind: 'container' }, { kind: 'graphic', icon: true }, false).kind === 'container');
 }
