@@ -231,6 +231,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
       { name: 'Items', type: 'SLOT', layout: 'VERTICAL' },
       { name: 'Words', type: 'TEXT', text: 'Hi', textAutoResize: 'HEIGHT', textAlignVertical: 'CENTER', letterSpacing: '2%', textCase: 'UPPER' }] }] });
   const A1 = one.anatomy;
+  { const held = derive({ name: 'Held', props: {}, variants: [{ name: 'Held', type: 'COMPONENT', layout: 'VERTICAL', children: [
+      { name: 'Skel', type: 'INSTANCE', instanceOf: 'Skeleton', w: 40, h: 8, children: [{ name: 'Bar', type: 'RECTANGLE', x: 0, y: 0, w: 40, h: 8, constraints: 'STRETCH/STRETCH', fills: ['C/x'] }] }] }] }).anatomy;
+    ok('a layer inside an instance keeps no constraints, as no position: an instance cannot override them (figma-fact: no-nested-position-override)', !!held['skel/bar'] && held['skel/bar'].constraints === undefined); }
   ok('a corner bound to a token is said by it at 0, and an opacity by its token', A1.root.radius === 'R/0' && A1.root.opacity === 'O/half');
   ok('a stroke a side, each bound side by its token and the others by their width, drawn on its centre and taking room', JSON.stringify(A1.box.border.width) === '["S/1",0,"S/1",0]' && A1.box.border.align === 'center' && A1.box.border.inLayout === true);
   ok('a rectangle is one, turned as it is, following its parent as it does, and a weight bound with no stroke painted is no stroke (nothing draws it)', A1['free/ring'].constraints.horizontal === 'stretch' && A1['free/ring'].constraints.vertical === 'center' && A1['free/ring'].shape === 'rectangle' && A1['free/ring'].rotation === 45 && A1['free/ring'].border === undefined);

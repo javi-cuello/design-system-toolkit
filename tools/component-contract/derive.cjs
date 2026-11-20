@@ -317,6 +317,10 @@ function flatten(list, characters = new Map(), known = [], axes = []) {
     const e = element(node, parent == null ? null : idOf(parent), known, up, axes);
     const inInstance = segs.slice(0, -1).some((_, i) => (nodeAt.get(keyOf(segs.slice(0, i + 1))) || {}).type === 'INSTANCE');
     if (up && !up.layout && !inInstance && !e.absolute && node.x != null) e.absolute = boxAt(node);
+    // and inside an instance, a layer its component places in a frame keeps no constraints either: like its position, an
+    // instance cannot override them (figma-fact: no-nested-position-override), so they are the component's, and code reads
+    // none there (one placed absolutely in an auto layout keeps them, with the position it states)
+    if (inInstance && !e.absolute) delete e.constraints;
     // its far edges where it follows its parent's (a focus ring 4 outside its box, all round): how far from the
     // parent's end and bottom, as CSS's right and bottom say it; stretched, its size is its parent's less both
     // offsets, never a number measured at one label's width
