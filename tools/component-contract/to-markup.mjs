@@ -222,7 +222,7 @@ function slotParts(c, key) {
    that take it away, a pointer state's left to the stylesheet. A part only a pointer state draws is a gap; a focus ring
    drawn as a layer of its own is the ringed element's outline; a part inside a placed component is that component's;
    one inside a slot is a caller's sample. */
-export function partsOf(c) {
+export function partsOf(c, t = HOUSE) {
   const props = c.props || {};
   const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
   const parts = new Map();
@@ -232,7 +232,7 @@ export function partsOf(c) {
     const byPointer = Object.entries(when).some(([k, x]) => pointer(k, x));
     for (const [id, e] of Object.entries(v.add || {})) {
       if (!parts.has(id)) parts.set(id, { id, e, base: false, adds: [], removes: [], pointerOnly: true, rings: [], words: [] });
-      if (byPointer) { parts.get(id).rings.push(!!ringOf(c, when, id, e, { ...c.anatomy, ...v.add })); continue; }
+      if (byPointer) { parts.get(id).rings.push(!!ringOf(c, when, id, e, { ...c.anatomy, ...v.add }, t)); continue; }
       parts.get(id).pointerOnly = false;
       parts.get(id).adds.push(when);
       const at = parts.get(id);
@@ -332,7 +332,7 @@ function conditionOf(c, part, props, known = { yes: new Set(), no: new Set() }, 
 function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOUSE }) {
   const n = namer(folder, naming);
   const props = propsOf(c, library, lang, settings), ref = lang.ref;
-  const parts = partsOf(c);
+  const parts = partsOf(c, settings);
   const entry = entryOf(c);
   const control = controlOf(c.component, placedIn(c));
   const inline = phrasing(c);
@@ -836,7 +836,7 @@ export function toParity(c, folder, { naming, library = {}, platform = null, fra
       axes[fig] = { [figmaWord(entry.on)]: { [arg]: (value && value.default) || 'Value' }, [figmaWord(!entry.on)]: {} };
     } else if (p.type === 'boolean' && (p.axis || (p.shows || []).length || key === disabledKey(c, settings))) axes[fig] = { False: p.default === true ? { [name]: false } : {}, True: p.default === true ? {} : { [name]: true } };
   }
-  const parts = partsOf(c);
+  const parts = partsOf(c, settings);
   const root = selectorOf(c, n, 'root');
   // a layer as the store spells its path (tools/parity layers.mjs): a repeat by its number, Item#2
   const nameOf = (id) => { const e = (parts.get(id) || {}).e || {}; const m = /_(\d+)$/.exec(id); return (e.name || partName(id)) + (m ? `#${m[1]}` : ''); };

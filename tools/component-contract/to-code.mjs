@@ -368,7 +368,7 @@ const hostIn = (c, id, mains) => { const a = allOf(c); const h = hostOf(a, id), 
   return !!placedOf(a, h, placedAs(a, h, m, mains).M)[id.slice(h.length + 1)]; };
 
 /* Each part's declarations at one combination, as a map property → value (with its note). */
-export function drawn(c, when, mains = () => null) {
+export function drawn(c, when, mains = () => null, t = HOUSE) {
   const a = expand(c, when);
   const out = {}, extra = [], ringNotes = {};
   // the component at its defaults: what the base rule writes, which every other combination inherits
@@ -433,7 +433,7 @@ export function drawn(c, when, mains = () => null) {
     // placeholder's text alone (its box is the input's)
     const entry = entryOf(c);
     if (entry && (id === entry.value || id === entry.placeholder)) continue;
-    const ring = ringOf(c, when, id, e, a);
+    const ring = ringOf(c, when, id, e, a, t);
     if (ring) {
       // an outline follows its box's corners: a box that paints nothing (a bare frame around what it holds) takes the
       // ring's corners less the ring's clearance while focused, which shows only as the ring; one that paints keeps its own
@@ -467,7 +467,7 @@ export function drawn(c, when, mains = () => null) {
     // parent that stretches it is obeyed; a component that keeps its own width says so in its own sheet
     const sample = id === 'root' && e.layout && e.layout.direction && typeof e.width === 'number';
     if (sample) e = { ...e, width: 'fill' };
-    const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a));
+    const anchors = Object.values(a).some((x) => x.parent === id && (x.position === 'absolute' || x.absolute) && !ringOf(c, when, Object.keys(a).find((k) => a[k] === x), x, a, t));
     // the parent's own size, where it is a number: what a part that scales with it is a share of
     const box = parent ? { width: typeof parent.width === 'number' ? parent.width : null, height: typeof parent.height === 'number' ? parent.height : null } : null;
     // in a box whose gap is below 0 in any combination, every child says its pull back in every one: the gap after
@@ -548,14 +548,14 @@ function cascade(rules, full, id) {
 /* The contract's rules: the defaults, then each variant layer, each saying only what it changes. */
 // the parts a pointer state takes away at this combination (outermost only): drawn with the state at its default, gone
 // at this one
-function pointerGone(c, full, dflt, mains) {
+function pointerGone(c, full, dflt, mains, t = HOUSE) {
   const pk = Object.keys(c.props || {}).find((k) => c.props[k].role === 'interaction');
   if (!pk || full[pk] === dflt[pk] || !(c.props[pk].pointer || []).includes(full[pk])) return [];
-  const at = { ...full, [pk]: dflt[pk] }, rest = drawn(c, at, mains), restA = expand(c, at), nowA = expand(c, full);
+  const at = { ...full, [pk]: dflt[pk] }, rest = drawn(c, at, mains, t), restA = expand(c, at), nowA = expand(c, full);
   return Object.keys(rest).filter((id) => restA[id] && !nowA[id] && !id.includes('::') && (!restA[id].parent || restA[id].parent === 'root' || nowA[restA[id].parent]));
 }
 
-export function rulesOf(c, mains) {
+export function rulesOf(c, mains, t = HOUSE) {
   const dflt = variantDefaults(c);
   const layers = [{ when: {} }, ...(c.variants || []).filter((v) => !v.combination), ...(c.variants || []).filter((v) => v.combination)]
     .map((v, i) => ({ v, i })).sort((x, y) => Object.keys(x.v.when || {}).length - Object.keys(y.v.when || {}).length || x.i - y.i).map((x) => x.v);
@@ -563,7 +563,7 @@ export function rulesOf(c, mains) {
   for (const v of layers) {
     const when = v.combination ? { ...v.when } : Object.fromEntries(Object.entries(v.when || {}).filter(([k, x]) => x !== dflt[k] || v.combination));
     const full = { ...dflt, ...when };
-    const now = drawn(c, full, mains);
+    const now = drawn(c, full, mains, t);
     const parts = {};
     for (const [id, { decls, unread: u }] of Object.entries(now)) {
       for (const f of u) { if (!unread.has(f)) unread.set(f, new Set()); unread.get(f).add(id); }
@@ -576,13 +576,13 @@ export function rulesOf(c, mains) {
     }
     // a part a pointer state takes away (a field's chevron at focus, where another stands): the markup holds it at every
     // state, so the sheet hides it there (to-markup names it pointerGone); the outermost part gone, its insides with it
-    for (const id of pointerGone(c, full, dflt, mains)) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
+    for (const id of pointerGone(c, full, dflt, mains, t)) if ((cascade(rules, full, id).get('display') || {}).v !== 'none') (parts[id] ||= new Map()).set('display', { v: 'none' });
     if (Object.keys(parts).length || !rules.length) rules.push({ when, weight: Object.keys(when).length, parts });
   }
   // CSS decides by specificity where the contract applies its layers in order, so a combination the two read
   // differently gets a rule of its own, naming every prop the grid is chosen by, which outranks every layer's
   // (as derive's per-combination entries do)
-  for (const [key, miss] of groupBy(selfCheck(c, rules, mains), (o) => JSON.stringify(o.when))) {
+  for (const [key, miss] of groupBy(selfCheck(c, rules, mains, t), (o) => JSON.stringify(o.when))) {
     const when = JSON.parse(key), parts = {};
     for (const o of miss) (parts[o.part] ||= new Map()).set(o.property, { v: o.want ?? 'unset', ...(o.knob && { knob: o.knob }) });
     rules.push({ when, weight: Object.keys(when).length, parts });
@@ -600,19 +600,19 @@ export function combinations(c) {
 }
 
 /* The combinations whose drawn declarations the cascade does not rebuild: none, or it is a defect. */
-export function selfCheck(c, rules, mains) {
-  rules ||= rulesOf(c, mains).rules;
+export function selfCheck(c, rules, mains, t = HOUSE) {
+  rules ||= rulesOf(c, mains, t).rules;
   const dflt = variantDefaults(c);
   const out = [];
   for (const m of combinations(c)) {
     const full = { ...dflt, ...m };
-    for (const [id, { decls }] of Object.entries(drawn(c, full, mains))) {
+    for (const [id, { decls }] of Object.entries(drawn(c, full, mains, t))) {
       const got = cascade(rules, full, id);
       for (const [p, d] of decls) if (d.given ? got.has(p) && got.get(p).v !== d.v : !got.has(p) || got.get(p).v !== d.v) out.push({ when: m, part: id, property: p, want: d.v, got: got.get(p)?.v, ...(d.knob && { knob: d.knob }) });
       for (const [p, g] of got) if (!decls.has(p) && g.v !== 'unset') out.push({ when: m, part: id, property: p, want: undefined, got: g.v });
     }
     // and a part a pointer state takes away stays hidden there, whatever a rule of the same weight gives it
-    for (const id of pointerGone(c, full, dflt, mains)) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
+    for (const id of pointerGone(c, full, dflt, mains, t)) { const g = cascade(rules, full, id).get('display'); if (!g || g.v !== 'none') out.push({ when: m, part: id, property: 'display', want: 'none', got: g?.v }); }
   }
   return out;
 }
@@ -664,7 +664,7 @@ export function partSeg(c, id) {
 /* The stylesheet. */
 export function toCss(c, folder, { naming, layer = 'components', settings = HOUSE, mains } = {}) {
   const n = namer(folder, naming);
-  const { rules, unread } = rulesOf(c, mains);
+  const { rules, unread } = rulesOf(c, mains, settings);
   const lines = [`/* ${BANNER} */`];
   const keys = [...new Set(rules.flatMap((r) => Object.keys(r.when)))];
   const hooks = keys.map((k) => {
@@ -766,8 +766,8 @@ if (isMain) {
   for (const f of folders) {
     const c = draft || of(JSON.parse(fs.readFileSync(path.join(dir, f, 'contract.json'), 'utf8')));
     const mains = mainsFor(f);
-    const { rules } = rulesOf(c, mains);
-    const off = selfCheck(c, rules, mains);
+    const { rules } = rulesOf(c, mains, settingsOf(f));
+    const off = selfCheck(c, rules, mains, settingsOf(f));
     if (off.length) { broken++; console.error(`to-code: ${f}: ${off.length} declaration(s) the stylesheet does not rebuild, first ${JSON.stringify(off[0])}`); }
     const css = toCss(c, f, { naming: styles.naming, layer: styles.componentsLayer || 'components', settings: settingsOf(f), mains });
     files.set(`${f}.css`, draft ? css.replace(BANNER, DRAFT) : css);

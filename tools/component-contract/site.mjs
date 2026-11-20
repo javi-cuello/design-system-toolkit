@@ -18,8 +18,9 @@ const { byComponentName } = createRequire(import.meta.url)('./derive.cjs');
 
 export const ELEMENT = { kind: 'element', prefix: 'ds-' };
 
-/* The site's files, by path: { 'index.html', 'all.css', 'components/dom.js', 'components/<folder>/<folder>.js' }. */
-export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = ELEMENT } = {}) {
+/* The site's files, by path: { 'index.html', 'all.css', 'components/dom.js', 'components/<folder>/<folder>.js' }.
+   Each component written under its library's settings (`settingsOf`, by folder: its state names), the house's where none. */
+export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = ELEMENT, settingsOf = () => undefined } = {}) {
   const files = { 'components/dom.js': DOM };
   // the base the sheets assume first (to-code's BASE), then the tokens and each component's sheet
   let css = `${BASE}${tokensCss}\n`;
@@ -28,11 +29,11 @@ export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = 
   // the components each places, as the project's build gives them (to-code's main), so a rule reaching inside one is written
   const mains = byComponentName(Object.values(library));
   for (const c of Object.values(library)) {
-    const js = toElement(c, c.folder, { naming, library });
+    const js = toElement(c, c.folder, { naming, library, settings: settingsOf(c.folder) });
     files[`components/${c.folder}/${c.folder}.js`] = js;
     fn[c.folder] = (/export function (\w+)\(/.exec(js) || [])[1];
     if (!fn[c.folder]) throw new Error(`${c.component}: to-markup's file exports no render function`);
-    css += toCss(c, c.folder, { naming, mains });
+    css += toCss(c, c.folder, { naming, mains, settings: settingsOf(c.folder) });
   }
   files['all.css'] = css;
   const imports = Object.entries(fn).map(([f, n], i) => `import { ${n} as C${i} } from './components/${f}/${f}.js';`).join('');

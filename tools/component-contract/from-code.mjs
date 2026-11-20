@@ -188,6 +188,10 @@ export function designCombo(design, props, joinedProps, args, pseudoOf = {}, set
   return combo;
 }
 
+/* A library's settings by component folder (the house's where it keeps none): the one source the self leg writes its
+   sheet, markup and mapping under and the reading reads them back under, as to-code and to-markup take them. */
+export const librarySettings = (componentsDir) => req('../snapshot/projects.cjs').librarySettingsFor(componentsDir);
+
 /* Whether a design keeps a focus ring on box `id`: its `<id>/focusRing`, or a ring layer of its own name (ringKeyOf).
    Tested by test-from-code.mjs. */
 export function keepsRing(c, id, settings = undefined) {
@@ -949,6 +953,8 @@ async function governedSource(project, name) {
  * project's code is the project's. Its readings go to <home>/round-trip/self/from-code/, which eval.mjs's self leg reads.
  */
 async function selfSource(project, name, { second = false } = {}) {
+  // the sheet, the markup and the mapping written under the library's own settings, the ones the reading reads under
+  const settingsOf = librarySettings(project.paths.components);
   const { bridge } = req('./derive.cjs');
   const X = await import('../parity/external.mjs');
   const { expand } = await import('../parity/project.mjs');
@@ -1020,7 +1026,7 @@ async function selfSource(project, name, { second = false } = {}) {
   const tier = project.parity.tiers[0], container = '[data-parity="c"]';
   // to-markup's mapping, its rulings (a layer another instance draws, a slot's sample, a pointer-only part) left out
   // as a governed mapping keeps them in its waivers: what is not placed is not read
-  const mappingOf = (x) => { const m = toParity(x, x.folder, { naming: ELEMENT, library, framework: 'web-components' }); return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
+  const mappingOf = (x) => { const m = toParity(x, x.folder, { naming: ELEMENT, library, framework: 'web-components', settings: settingsOf(x.folder) }); return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
   const targetOf = (x) => { const mapping = mappingOf(x); return { mapping, variants: expand(mapping, store.readSpec(project.paths.components, x.folder, { compact: true }).variants, project.parity.variants) }; };
   const t = targetOf(c);
   const b = bridge(store.readSpec(project.paths.components, name, { compact: true }));
@@ -1032,7 +1038,7 @@ async function selfSource(project, name, { second = false } = {}) {
   const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
   const tokensCss = (where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '');
   if (!tokensCss) throw Object.assign(new Error(`${project.config.project}: no _tokens.scss under paths.styles to render the tokens with`), { usage: true });
-  const site = await serveSite(siteFiles(library, { tokensCss }));
+  const site = await serveSite(siteFiles(library, { tokensCss, settingsOf }));
   const browser = await launch({});
   const tab = await attach(await newPage(browser.endpoint));
   // the code's props as a story's controls say them: to-markup's own, at their defaults
@@ -1158,7 +1164,7 @@ async function main() {
   const official = new Map(officialContracts(req('../snapshot/projects.cjs').layout(null, label)).map((x) => [x.folder, x.contract]));
   // the library's own settings, the ones to-code and to-markup write its sheet under (its pointer states' pseudo-classes:
   // which outline is a focus ring, and which design value a forced state is)
-  const settings = req('../snapshot/projects.cjs').librarySettingsFor(req('../snapshot/projects.cjs').layout(null, label).paths.components)(name);
+  const settings = librarySettings(req('../snapshot/projects.cjs').layout(null, label).paths.components)(name);
   // a component only in code has no Figma contract: nothing to pair its elements with or compare it to
   const figmaContract = codeOnly ? null : official.get(name);
   if (!codeOnly && !figmaContract) { console.error(`from-code: ${name} has no contract: snapshot the library first`); process.exit(2); }
