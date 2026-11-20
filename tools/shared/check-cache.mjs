@@ -76,6 +76,6 @@ export async function run(repo, args) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const [repo, ...args] = process.argv.slice(2);
-  if (!repo) { console.error('usage: check-cache.mjs <repo> [bin/check options…]'); process.exit(2); }
+  if (!repo) { console.error('usage: check-cache.mjs <repo> [--quick] [other bin/check options…]'); process.exit(2); }
   process.exitCode = await run(path.resolve(repo), args); // exitCode, not exit(): piped output still queued is written first
 }
