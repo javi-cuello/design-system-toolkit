@@ -113,6 +113,10 @@ ok('a component measured since the accept is held until accepted; one that came 
     overW('org/icon.component') && overW('org/icon/glyph.background') && overW('org/box/t.content') && !overW('org/box/t/x.background') && !overW('org/box/t.width'));
   ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
     over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
+  // (Atlassian's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
+  // and modes that tile's own)
+  ok('a swap no prop passes takes its key and its component\'s own look and modes with it; its size stays a difference',
+    over('org/icon.key') && over('org/icon.radius') && over('org/icon.background') && over('org/icon.modes.tile-colour') && !over('org/icon.height') && !over('org/icon.minWidth') && !over('org/dot.background'));
   const typed = { ...c, anatomy: { ...c.anatomy, 'field/text': { kind: 'text', parent: 'field', content: '{p}' } }, variants: [...c.variants, { when: { state: 'focus' }, set: { 'field/text.content': 'Search', 'field.width': 10 } }] };
   const item = { component: 'Item', props: { label: { type: 'string', figma: 'Label', sets: ['label'] } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'A' } }, variants: [] };
   const menu = { component: 'Menu', props: {}, anatomy: { root: { kind: 'container' }, items: { kind: 'slot', parent: 'root' } }, variants: [] };
