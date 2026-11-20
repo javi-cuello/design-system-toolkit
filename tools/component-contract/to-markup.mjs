@@ -430,6 +430,31 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // marked as a slot, so a reading of a component that fills it finds it (from-code)
       out = { tag, attrs: [...hook(id), ...((slot.slots || [slot.slot]).includes(id) ? [['data-slot', { lit: slot.key }]] : [])], children: [lang.php ? { code: `$slots->${slot.name}()`, raw: true } : { code: slot.name }] };
     } else if (e.kind === 'instance') {
+      // a variant that places another of the library's components here (a card's Elevated state for its Outlined one,
+      // an app bar's Text Large at Large): each drawn where its variant holds and no later one swaps it again, the
+      // base's where none does, as expand layers them (a combination last)
+      const layers = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string').sort((x, y) => !!x.combination - !!y.combination)
+        .map((v) => ({ t: testOf(v.when || {}), e: { ...e, component: v.set[`${id}.component`], key: (v.set || {})[`${id}.key`] ?? null } }))
+        .filter((x) => x.t && x.t !== 'false' && placedOf(library, x.e));
+      if (layers.some((x) => placedOf(library, x.e) !== placedOf(library, e))) {
+        const wrap = (x) => (/^!?[\w$]+$/.test(x) || /^!\([^()]*\)$/.test(x) ? x : `(${x})`), not = (x) => (x === 'true' ? 'false' : /^[\w$]+$/.test(x) ? `!${x}` : `!(${x})`);
+        const all = (ts) => { const xs = ts.filter((x) => x !== 'true'); return ts.includes('false') ? 'false' : !xs.length ? 'true' : xs.length === 1 ? xs[0] : xs.map(wrap).join(' && '); };
+        // (a later layer at another value of the same prop never holds with this one: not said)
+        const one = (t) => /^([\w$.]+) === ("[^"]*"|'[^']*')$/.exec(t), apart = (a, b) => { const x = one(a), y = one(b); return !!x && !!y && x[1] === y[1] && x[2] !== y[2]; };
+        const alts = [{ t: all(layers.map((x) => not(x.t))), e }, ...layers.map((x, i) => ({ t: all([x.t, ...layers.slice(i + 1).filter((y) => !apart(x.t, y.t)).map((y) => not(y.t))]), e: x.e }))].filter((x) => x.t !== 'false');
+        return alts.map((x) => { const t = all([...(when ? [when] : []), x.t]); const item = placedItem(x.e); return t === 'true' ? item : { when: t, node: item }; });
+      }
+      out = placedItem(e);
+    } else if (e.kind === 'graphic') {
+      out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: [] };
+    } else if (e.kind === 'text') {
+      out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
+    } else {
+      out = { tag, attrs: hook(id), children: (kids.get(id) || []).flatMap((k) => node(k, known, fill)).filter(Boolean) };
+    }
+    return when ? { when, node: out } : out;
+    // a placed instance of the library's: the component, the props it is given and what this one puts in its slots
+    function placedItem(e) {
       const placed = placedOf(library, e), theirs = propsOf(placed, library, lang, settings);
       const valueOf = (fig, v, w = e.with || {}) => {
         const x = theirs.find((y) => (y.figmas || [y.p.figma]).includes(fig));
@@ -507,22 +532,15 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
         if (!under.length) continue;
         if (lang.php) { gaps.push(`${partName(id)}: what it puts in ${placed.component}'s ${x.name} (a snippet takes no markup there)`); continue; }
         // under the instance's own condition (known), so an item repeats none of it
-        const items = under.map((k) => node(k, known, true)).filter(Boolean);
+        const items = under.flatMap((k) => node(k, known, true)).filter(Boolean);
         if (!items.length) continue;
         for (let i = given.length - 1; i >= 0; i--) if (given[i][0] === x.name) given.splice(i, 1);
         given.push([x.name, { nodes: items }]);
       }
       for (const x of props.filter((y) => y.pass && y.pass.part === id && y.type !== 'value')) { const i = given.findIndex(([k]) => k === x.pass.to); if (i >= 0) given.splice(i, 1); given.push([x.pass.to, { code: ref(x.name) }]); }
-      out = { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name) };
       used.add(placed.component);
-    } else if (e.kind === 'graphic') {
-      out = { tag: 'span', attrs: [...hook(id), ['aria-hidden', { lit: 'true' }]], children: [] };
-    } else if (e.kind === 'text') {
-      out = { tag, attrs: hook(id), children: [textOf(id, e, part.words)] };
-    } else {
-      out = { tag, attrs: hook(id), children: (kids.get(id) || []).map((k) => node(k, known, fill)).filter(Boolean) };
+      return { placed: placed, folder: placedFolder(placed), attrs: given, hook: hook(id), own: theirs.map((x) => x.name) };
     }
-    return when ? { when, node: out } : out;
   };
   // a text entry: one input, its own value the Value text and its ::placeholder the Placeholder (to-code's entryOf)
   const input = () => {
@@ -545,7 +563,7 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
     // a server's markup has no handler to refuse the click: the page's script does, as a busy control is not disabled
     if (lang.php) gaps.push(`${busy.name}: the page's script refuses the click while aria-disabled is "true", as a busy control stays enabled`);
   }
-  const children = (kids.get('root') || []).map((k) => node(k)).filter(Boolean);
+  const children = (kids.get('root') || []).flatMap((k) => node(k)).filter(Boolean);
   // an override a placed component has no prop for: the markup cannot pass it (only the outermost such part is named)
   const ancestors = (id) => { const out = []; for (let up = (at(c, id) || {}).parent; up && up !== 'root'; up = (at(c, up) || {}).parent) out.push(up); return out; };
   for (const part of partsOf(c).values()) if (unexposed(c, part.id, (name, key) => placedOf(library, { component: name, key })) && !ancestors(part.id).some((up) => unexposed(c, up, (name, key) => placedOf(library, { component: name, key })) === 'part')) gaps.push(`${partName(part.id)}: drawn here inside ${partName(overrideHost(c, part.id))}, which has no prop for it — an override frontend-build adds, or a prop to give that component`);
