@@ -98,6 +98,24 @@ export function opensPlaced(inside, id, mapped) {
   return !!mapped && (!inside || String(id).startsWith(`${inside}/`));
 }
 
+/* A layer's name where the walk reads it inside a placed component (`inside`: that instance's id): the markup there is
+   the placed component's own, so its data-figma-name is that component's name for its layer (Select's
+   <ChevronDownIcon>), never this design's for the layer the mapping places on it (a date picker's <SelectClearIcon>):
+   the design's own (`names`, by id; none where its id spells it) is taken. Elsewhere the markup's. Runs in the page
+   (passed as source); tested by test-from-code.mjs. */
+export function nameInside(inside, id, markup, names) {
+  return inside && names && String(id).startsWith(`${inside}/`) ? names[id] ?? null : markup;
+}
+
+/* Whether a layer of a reading sits inside a placed component's insides: an instance among its ancestors. An outline
+   there is that layer's own stroke (a spinner's ellipse), never the focus ring a focused render draws on this
+   component's own boxes. Tested by test-from-code.mjs. */
+export function insidePlaced(raw, id) {
+  const by = new Map(raw.map((e) => [e.id, e]));
+  for (let up = by.get((by.get(id) || {}).parent); up; up = by.get(up.parent)) if (up.kind === 'instance') return true;
+  return false;
+}
+
 /* The element a mapped layer names. A placed component's own layer is mapped to that component's root, inside its host
    (ds-button > button): the host is the instance, so it takes the layer's id and the walk names it by its layer, not by
    the component it places. Only an instance moves: another layer mapped to that root (an override there) stays on it,
@@ -1162,6 +1180,9 @@ async function main() {
     // library's are paired by rule, a guess, so its parts keep the names their markup gives them
     // (each with its kind in the design, for where a placed component's layer lands: elementOfLayer)
     const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id, figmaContract ? kindIn(figmaContract, id) || null : null]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
+    // and its name there (none where its id spells it), for a layer placed inside another component's markup: nameInside
+    const nameIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).name;
+    const designNames = L.governed && figmaContract ? Object.fromEntries(named.map(([, id]) => [id, nameIn(figmaContract, id) ?? null])) : null;
     let remPx = null;
     // the room the component is given: Figma's own, so a root that fills its room fills the width Figma draws it at
     // (a canvas fact, as derive records a root fill's), and a fixed or hugging root is read in the same room. Its
@@ -1226,7 +1247,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc, nameInsideSrc, designNames]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1239,6 +1260,7 @@ async function main() {
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
         const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
+        const nameInside = new Function(`return ${nameInsideSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -1292,7 +1314,8 @@ async function main() {
           const fills = inside && n.getAttribute('data-slot');
           const kind = filled || fills ? 'slot' : tag === 'svg' || (n.hasAttribute('data-icon') && !n.children.length && !n.textContent.trim()) ? 'graphic' : text && !n.children.length && (entryEl || !n.hasAttribute('data-figma-text')) ? 'text' : 'container';
           // the design's own name for a layer whose name its id does not give back, where the markup carries it (to-markup's data-figma-name)
-          const figmaName = n.getAttribute('data-figma-name');
+          // (inside a placed component, the design's for the layer the mapping places there: nameInside)
+          const figmaName = nameInside(inside, n.getAttribute('data-figma-id'), n.getAttribute('data-figma-name'), designNames);
           // a variable mode it sets, under the attribute the token build writes it as (to-markup writes it so)
           // (the root's, where a custom element hosts the control and carries the root's hooks, its host's: only the host the
           // root's own selector names as its parent (`ds-button > button`), never a wrapper around it, a story's decorator or
@@ -1320,7 +1343,7 @@ async function main() {
           if (other && !n.hasAttribute('data-figma-id')) { seen[counted]--; id = `${parent === 'root' ? '' : `${parent}/`}${other[0].toLowerCase()}${other.slice(1).replace(/-(.)/g, (_, c) => c.toUpperCase())}`; seen[id] = (seen[id] || 0) + 1; if (seen[id] > 1) id += seen[id]; }
           if (other) {
             n.setAttribute('data-contract-id', id); up(id);
-            out.push({ id, kind: 'instance', parent, order, ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(n.getAttribute('data-figma-name') && { name: n.getAttribute('data-figma-name') }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
+            out.push({ id, kind: 'instance', parent, order, ...(placedBy(n, s, parent) && { cssOrder: +s.order }), ...(mirrored(s) && { flip: mirrored(s) }), ...(turned.get(n) && { rotation: turned.get(n) }), ...(Object.keys(modes).length && { modes }), ...(inside && parent === inside && n.parentElement && n.parentElement.getAttribute('data-contract-id') === inside && { keepOrder: true }), ...(figmaName && { name: figmaName }), component: others[other], width: px(s.width), height: px(s.height), box: [px(n.getBoundingClientRect().width), px(n.getBoundingClientRect().height)], ...(n.querySelector('img') && { image: true }),
               // placed by code at a point over its parent (a loading button's spinner over the content), as a box is
               ...(s.position === 'absolute' && placed(n)),
               // what its own markup says of its props (data-size="xs", disabled), and its icons' names, for the props it is drawn at
@@ -1443,7 +1466,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString(), nameInside.toString(), designNames]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
@@ -1745,7 +1768,8 @@ async function main() {
         // where the outline stands, no focus ring
         // (a clear outline at rest is a placeholder, high contrast's, drawing nothing; and a box with a border of its own
         // keeps it: there the outline is no stroke of the design's)
-        if (x.outline && !x.outline.after && !focused && !x.border && !/^(rgba\((?:[^,)]*,){3}\s*0\)|transparent)$/.test(String(x.outline.color).trim())) { x.ownOutline = x.outline; delete x.outline; }
+        // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
+        if (x.outline && !x.outline.after && (!focused || insidePlaced(raw, id)) && !x.border && !/^(rgba\((?:[^,)]*,){3}\s*0\)|transparent)$/.test(String(x.outline.color).trim())) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };

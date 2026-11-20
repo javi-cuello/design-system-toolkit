@@ -205,6 +205,26 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     !inPage(false, 'stops', false) && !inPage('showStopsStops', 'showStopsStops/trackStop1', false) && !inPage('other', 'showStopsStops/trackStop1', true));
 }
 
+// a layer the mapping places inside a placed component takes the design's name there, never the placed component's own
+// name for the element it lands on (Atlassian's date picker: Select's chevron, <ChevronDownIcon>, carries the design's
+// <SelectClearIcon>; read under Select's name, the second trip's mapping named a layer the design has not)
+{
+  const { nameInside } = await import('./from-code.mjs');
+  const inPage = new Function(`return ${nameInside.toString()}`)();
+  const names = { 'select/textField': null, 'select/textField/selectClearIcon': '<SelectClearIcon>' };
+  ok('inside a placed component: the design\'s name, not the markup\'s', inPage('select', 'select/textField/selectClearIcon', '<ChevronDownIcon>', names) === '<SelectClearIcon>');
+  ok('inside a placed component, a layer whose id spells its name: none', inPage('select', 'select/textField', 'Text field', names) === null);
+  ok('outside one, or with no design to name it, the markup\'s', inPage(false, 'select', '<Select>', names) === '<Select>' && inPage('select', 'select/textField/selectClearIcon', '<ChevronDownIcon>', null) === '<ChevronDownIcon>');
+}
+// an outline on a part inside a placed component's insides is that part's own stroke, even in a focused render: no
+// focus ring of this component's (Atlassian's loading button: the spinner's ellipse read a focusRing at state focus)
+{
+  const { insidePlaced } = await import('./from-code.mjs');
+  const raw = [{ id: 'root', kind: 'container' }, { id: 'spinner', kind: 'instance', parent: 'root' }, { id: 'spinner/anim', kind: 'instance', parent: 'spinner' }, { id: 'spinner/anim/ellipse1', kind: 'graphic', parent: 'spinner/anim' }, { id: 'label', kind: 'text', parent: 'root' }];
+  ok('a part under a placed instance is inside it, at any depth', insidePlaced(raw, 'spinner/anim/ellipse1') && insidePlaced(raw, 'spinner/anim'));
+  ok('the component\'s own boxes are not', !insidePlaced(raw, 'root') && !insidePlaced(raw, 'label') && !insidePlaced(raw, 'spinner'));
+}
+
 {
   const state = { default: {}, loading: { loading: true }, disabled: { disabled: true } };
   ok('an axis takes the value whose args the host carries', axisValueOf(state, { loading: '' }) === 'loading');
