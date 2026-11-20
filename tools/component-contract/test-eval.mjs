@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepOptions } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 
 let n = 0;
@@ -203,9 +203,11 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   ok('--projects: jobs that are not a whole number, or no project, are refused', /usage/.test(opts({ projects: 'carbon', jobs: 'abc' }).error) && /usage/.test(opts({ projects: ',' }).error) && /usage/.test(opts({ projects: 'carbon', jobs: '0' }).error));
   const good = opts({ projects: 'carbon,atlassian', log: 'l.txt' });
   ok('--projects: the log made absolute against the folder run in, the rest defaulted', good.log === '/here/l.txt' && good.jobs === 4 && good.legs.join() === 'self,second' && good.projects.join() === 'carbon,atlassian' && opts({ projects: 'a', log: '/abs/l' }).log === '/abs/l');
-  { const was = process.env.TOOLKIT_LOCK_HELD; process.env.TOOLKIT_LOCK_HELD = '1'; const o = stepOptions(null);
-    ok('--projects: a step keeps its caller\'s TOOLKIT_LOCK_HELD, so under a holder it never waits on that holder\'s lock', o.env === undefined || o.env.TOOLKIT_LOCK_HELD === '1');
+  { const was = process.env.TOOLKIT_LOCK_HELD; process.env.TOOLKIT_LOCK_HELD = '1'; let seen;
+    const rc = stepRunner(null, (cmd, args, o) => { seen = { args, o }; return { status: 3 }; })(['--project', 'p', '--panel', '--diff']);
+    ok('--projects: a step keeps its caller\'s TOOLKIT_LOCK_HELD, so under a holder it never waits on that holder\'s lock', (seen.o.env === undefined || seen.o.env.TOOLKIT_LOCK_HELD === '1') && rc === 3 && /eval\.mjs$/.test(seen.args[0]) && seen.args.at(-1) === '--diff');
     if (was === undefined) delete process.env.TOOLKIT_LOCK_HELD; else process.env.TOOLKIT_LOCK_HELD = was; }
+  ok('--projects: a log it cannot write is said, not thrown', /cannot write the log .*ENOENT/.test(openLog(path.join(os.tmpdir(), 'no-such-dir-eval', 'l.txt')).error || ''));
   const r = spawnSync(process.execPath, [new URL('./eval.mjs', import.meta.url).pathname, '--projects', 'x', '--legs', 'draw'], { encoding: 'utf8' });
   ok('--projects refuses a leg it does not run, before any step', r.status === 2 && /usage: eval.mjs --projects/.test(r.stderr));
 }

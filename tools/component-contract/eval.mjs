@@ -32,10 +32,11 @@
  * differs: a measure is trusted only where it repeats. --second goes round the self leg again from what the first came
  * back as (from-code --second, <home>/round-trip/self2/from-code/), and the `second` leg holds that to the first: a row
  * there is the translation not settling, a cause the first leg's count cannot show. --projects runs, per project in turn,
- * each leg on its panel (--jobs 4 unless said) and then --diff, each its own eval.mjs taking and letting go the measuring
- * lock, logged `== HH:MM <args>` and `== rc N` (to --log, appended, read from the folder run in, else the terminal),
+ * each leg on its panel (--jobs 4 unless said) and then --diff, each its own eval.mjs, each measuring leg taking and
+ * letting go the lock, logged `== HH:MM <args>` and `== rc N` (to --log, appended, read from the folder run in, else the terminal),
  * stopping after three failures in a row (rc 2 or more) and ending `== done HH:MM`; run under a lock holder, the steps
- * stay under its lock. It exits 2 on a usage error or an unknown label (before any step), 1 where any step failed, else 0.
+ * stay under its lock. It exits 2 on a usage error, an unknown label or a --log it cannot write (before any step), 1 where a step
+ * ended with rc 2 or more, else 0.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -486,7 +487,7 @@ async function readTwice(where, label, only, opts) {
 }
 
 /* Every project's panel measured in turn (--projects): per project each leg (--self, then --second) and then --diff, each
-   its own eval.mjs process, so each takes the measuring lock and lets it go, and a queued bin/land gets in between. Each
+   its own eval.mjs process, so each measuring leg takes the lock and lets it go, and a queued bin/land gets in between. Each
    step is logged `== HH:MM <args>` before and `== rc N` after; three failures in a row (rc 2 or more) stop the run.
    run(args) → its exit code; say(line) logs. Returns 1 when any step failed (stopped or not), else 0. */
 export async function runAll(projects, legs, { run, say, jobs = 4, now = () => new Date() }) {
@@ -506,7 +507,7 @@ export async function runAll(projects, legs, { run, say, jobs = 4, now = () => n
   return failed ? 1 : 0;
 }
 
-export const PROJECTS_USAGE = 'usage: eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       (--log is read from the folder run in; the steps run from the toolkit\'s root, under a lock holder\'s lock if run under one)\n       exits 2 on a usage error or an unknown label, 1 where any step failed';
+export const PROJECTS_USAGE = 'usage: eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]\n       (--log is read from the folder run in; the steps run from the toolkit\'s root, under a lock holder\'s lock if run under one)\n       exits 2 on a usage error, an unknown label or a --log it cannot write, 1 where a step ended with rc 2 or more';
 /* --projects' options checked before any step runs: every label a project (labelError(p) → why not, or nothing), the
    legs known, jobs a whole number, the log made absolute against cwd. { error } or { projects, legs, jobs, log }. */
 export function projectsOptions({ projects, legs, jobs, log, rest = [] }, { cwd, labelError }) {
@@ -516,10 +517,13 @@ export function projectsOptions({ projects, legs, jobs, log, rest = [] }, { cwd,
   if (bad.length) return { error: bad.join('\n') };
   return { projects: ps, legs: ls, jobs: +(jobs || 4), log: log ? path.resolve(cwd, log) : null };
 }
-/* How a step runs: from the toolkit's root, its output to the log (fd) or the terminal, and the caller's environment
-   unchanged, TOOLKIT_LOCK_HELD included: under a holder the steps stay under its lock (stripped, the first step would
-   wait on it for ever); a plain run has none, so each step takes the lock and lets it go. */
-export const stepOptions = (fd) => ({ cwd: path.resolve(HERE, '../..'), stdio: ['ignore', fd ?? 'inherit', fd ?? 'inherit'] });
+/* A step's run(args) → its exit code: this eval.mjs from the toolkit's root, its output to the log (fd) or the terminal,
+   and the caller's environment unchanged, TOOLKIT_LOCK_HELD included: under a holder the steps stay under its lock
+   (stripped, the first step would wait on it for ever); a plain run has none, so each measuring leg takes the lock and
+   lets it go. spawn is spawnSync but in the tests. */
+export const stepRunner = (fd, spawn = spawnSync) => (args) => spawn(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd: path.resolve(HERE, '../..'), stdio: ['ignore', fd ?? 'inherit', fd ?? 'inherit'] }).status ?? 2;
+/* The log opened to append, or why not: { fd } | { error }. */
+export const openLog = (file) => { try { return { fd: fs.openSync(file, 'a') }; } catch (e) { return { error: `cannot write the log ${file}: ${e.code || e.message}` }; } };
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
@@ -527,14 +531,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
   const all = opt('--projects');
   if (all) {
-    // no lock here: each step is its own eval.mjs, which takes it, so it is let go between steps
+    // no lock here: each measuring leg is its own eval.mjs, which takes it, so it is let go between steps
     const o = projectsOptions({ projects: all, legs: opt('--legs'), jobs: opt('--jobs'), log: opt('--log'), rest: argv }, { cwd: process.cwd(), labelError: (p) => req('../snapshot/projects.cjs').layout(null, p).error });
     if (o.error) { console.error(o.error); process.exit(2); }
     const { legs, log, jobs } = o;
-    const fd = log ? fs.openSync(log, 'a') : null;
+    const opened = log ? openLog(log) : { fd: null };
+    if (opened.error) { console.error(opened.error); process.exit(2); }
+    const { fd } = opened;
     const say = (l) => (fd == null ? console.log(l) : fs.writeSync(fd, l + '\n'));
-    const run = (args) => { const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], stepOptions(fd)); return r.status ?? 2; };
-    process.exit(await runAll(o.projects, legs, { run, say, jobs }));
+    process.exit(await runAll(o.projects, legs, { run: stepRunner(fd), say, jobs }));
   }
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), panel = flag('--panel'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
