@@ -646,4 +646,14 @@
    order, with no `!important` (code-standard rule 4): hidden is hidden. */
 @layer utilities {
   [hidden] { display: none; }
+  /* Read, not seen: a caption, a label a picture already gives. 1px, not 0: some screen readers skip an element
+     with no size. A script may read it (the docs site's "On this page" leaves out a heading that wears it). */
+  .visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
