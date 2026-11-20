@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.51.1)
+# Eval cases — figma-components-audit (v2.51.2)
+
+**Walked: 2026-11-21 for 2.51.2** — `node tests/test-audit.mjs` 142 of 142; live: example library 38 findings, Tab bar fill names 5. Semantic/Colour/Control/Neutral/ghost-rest; FW3 probe names FW1's 5. Semantic/Colour/Text/Success/default.
 
 **Walked: 2026-11-20 for 2.51.1** — the dashboard citation moved to tools/figma-audit/REFERENCE.md (the README rewrite); no case reads it, so none re-traced.
 
