@@ -433,7 +433,9 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       // a variant that places another of the library's components here (a card's Elevated state for its Outlined one,
       // an app bar's Text Large at Large): each drawn where its variant holds and no later one swaps it again, the
       // base's where none does, as expand layers them (a combination last)
-      const layers = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string').sort((x, y) => !!x.combination - !!y.combination)
+      // (the combinations last and reversed: of those, the first that holds is drawn, as expand and layers.mjs take it)
+      const swaps = (c.variants || []).filter((v) => typeof (v.set || {})[`${id}.component`] === 'string');
+      const layers = [...swaps.filter((v) => !v.combination), ...swaps.filter((v) => v.combination).reverse()]
         .map((v) => ({ t: testOf(v.when || {}), e: { ...e, component: v.set[`${id}.component`], key: (v.set || {})[`${id}.key`] ?? null } }))
         .filter((x) => x.t && x.t !== 'false' && placedOf(library, x.e));
       if (layers.some((x) => placedOf(library, x.e) !== placedOf(library, e))) {

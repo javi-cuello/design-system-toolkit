@@ -74,7 +74,10 @@ ok('a placed component with a swap per size is given the one its size draws (xs:
   const r = toReact(card, 'card', { naming: CLASS, library: lib }), w = toElement(card, 'card', { naming: ELEMENT, library: lib }), k = toSnippet(card, 'card', { naming: KIRBY, library: lib });
   ok('a variant that swaps a placed component draws the one it swaps in where it holds, the base\'s elsewhere',
     /\{show && \(styleOption === "elevated"\) && \(\s*<Elevated/.test(r) && /\{show && \(styleOption === "filled"\) && \(\s*<Filled/.test(r) && /\{show && \(!\(styleOption === "elevated"\) && !\(styleOption === "filled"\)\) && \(\s*<Outlined/.test(r)
-    && /renderElevated\(/.test(w) && /renderFilled\(/.test(w) && /renderOutlined\(/.test(w) && /elevated/.test(k) && /filled/.test(k), r); }
+    && /renderElevated\(/.test(w) && /renderFilled\(/.test(w) && /renderOutlined\(/.test(w) && /elevated/.test(k) && /filled/.test(k), r);
+  const combos = { ...card, variants: [{ when: { style: 'elevated', show: true }, combination: true, set: { 'bg.component': 'Elevated', 'bg.key': 'k-Elevated' } }, { when: { style: 'elevated' }, combination: true, set: { 'bg.component': 'Filled', 'bg.key': 'k-Filled' } }] };
+  const rc = toReact(combos, 'card', { naming: CLASS, library: { ...lib, Card: combos } });
+  ok('of two combinations that swap it, the first that holds is drawn, as expand takes it', /\{styleOption === "elevated" && show && \(\s*<Elevated/.test(rc) && /!\(styleOption === "elevated" && show\) && \(\s*<Filled/.test(rc), rc); }
 const two = { component: 'Find', props: { placeholderText: { type: 'string', figma: 'Placeholder text', sets: ['label'] }, valueText: { type: 'string', default: 'Value', figma: 'Value text', sets: ['label'] }, value: { type: 'boolean', default: false, figma: 'Value' } }, anatomy: { root: { kind: 'container' }, label: { kind: 'text', parent: 'root', content: 'Search' } }, variants: [{ when: { value: true }, set: { 'label.content': '{valueText}' } }], folder: 'find' };
 { const out = toElement(two, 'find', { naming: ELEMENT, library: {} });
   ok('one text two strings set is the one a variant swaps in where drawn, else the other, which draws its layer\'s words', /value \? valueText : placeholderText/.test(out) && /placeholderText = "Search"/.test(out)); }
