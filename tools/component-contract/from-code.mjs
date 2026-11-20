@@ -961,7 +961,7 @@ async function selfSource(project, name, { second = false } = {}) {
   const { rootPattern } = await import('../parity/pair.mjs');
   const { contracts } = await import('./official.mjs');
   const { propsOf } = await import('./to-markup.mjs');
-  const { siteFiles, serveSite, selfDrawn } = await import('./site.mjs');
+  const { siteFiles, serveSite, selfMapping } = await import('./site.mjs');
   const { launch, newPage, attach, navigate, call, waitFor } = await import('../shared/cdp.mjs');
   const { valueOf } = req('../snapshot/tokens.cjs');
   const store = req('../snapshot/store.cjs');
@@ -1026,7 +1026,7 @@ async function selfSource(project, name, { second = false } = {}) {
   const tier = project.parity.tiers[0], container = '[data-parity="c"]';
   // to-markup's mapping, its rulings (a layer another instance draws, a slot's sample, a pointer-only part) left out
   // as a governed mapping keeps them in its waivers: what is not placed is not read
-  const mappingOf = (x) => { const m = selfDrawn(x, { library, mains: req('./derive.cjs').byComponentName(Object.values(library)), settings: settingsOf(x.folder) }).mapping; return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
+  const mappingOf = (x) => { const m = selfMapping(x, { library, settings: settingsOf(x.folder) }); return { ...m, layers: Object.fromEntries(Object.entries(m.layers).filter(([, s]) => typeof s === 'string')) }; };
   const targetOf = (x) => { const mapping = mappingOf(x); return { mapping, variants: expand(mapping, store.readSpec(project.paths.components, x.folder, { compact: true }).variants, project.parity.variants) }; };
   const t = targetOf(c);
   const b = bridge(store.readSpec(project.paths.components, name, { compact: true }));

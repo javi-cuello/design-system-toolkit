@@ -321,14 +321,14 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
     ok('under the library\'s own settings a two-word focus state is the render\'s, and its ring the design\'s layer',
       JSON.stringify(combo) === '{"interaction":"focus-visible"}' && placeRings({ root: {} }, [['root', { ...ring, parent: 'root' }]], d3, combo, own).rings.join() === 'focusBorder'
       && keepsRing(d3, 'root', own) && !keepsRing(d3, 'root')); }
-  // (the self leg end to end in its functions: site.mjs writes the sheet and markup, to-markup the mapping, the reading
+  // (the self leg end to end in its functions: site.mjs writes the sheet, markup and mapping (selfDrawn), the reading
   // reads them back, all under the library's own settings, where its focus state is two words)
-  { const { siteFiles, ELEMENT } = await import('./site.mjs'), { toParity } = await import('./to-markup.mjs');
+  { const { siteFiles, selfDrawn } = await import('./site.mjs');
     const own = { pseudoClasses: { 'Focus visible': ':focus-visible' } };
     const tile = { contract: 1, component: 'Tile', folder: 'tile', props: { state: { type: 'enum', values: ['rest', 'focus-visible'], default: 'rest', role: 'interaction', pointer: ['focus-visible'] } },
       anatomy: { root: { kind: 'container', background: 'Bg/x' } }, variants: [{ when: { state: 'focus-visible' }, add: { focusBorder: { ...ring, parent: 'root' } } }] };
     const css = siteFiles({ Tile: tile }, { settingsOf: () => own })['all.css'];
-    const m = toParity(tile, 'tile', { naming: ELEMENT, library: { Tile: tile }, framework: 'web-components', settings: own });
+    const m = selfDrawn(tile, { library: { Tile: tile }, mains: () => null, settings: own }).mapping;
     const pseudo = m.axes.state['Focus-visible'].pseudo;
     const combo = designCombo(tile, { state: { code: '__state' } }, {}, { __state: 'focus-visible' }, { 'focus-visible': { pseudo } }, own);
     ok('a library with a two-word focus state: the self leg writes its ring as the outline the reading reads back as the design\'s layer',
