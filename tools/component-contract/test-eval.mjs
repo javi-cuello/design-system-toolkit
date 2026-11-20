@@ -4,6 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
@@ -79,6 +80,17 @@ ok('a component measured since the accept is held until accepted; one that came 
   fs.writeFileSync(path.join(selfDir, 'tag.json'), JSON.stringify({ asFigma: firstNow }));
   fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: 'old' } }, second: { tag: { hash: hashOf(firstNow) } } }));
   ok('a second trip on a first reading of another contract is stale too', /first reading is stale/.test(measure(where).legs.second.tag.stale));
+  // a reading read from other inputs than today's, or under another Chrome major, is stale; one from today's is not
+  fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c), inputs: 'i1', reader: 'r1', chrome: 158 } } }));
+  ok('a reading from today\'s inputs under the installed Chrome is current', !measure(where, [], { inputs: { tag: 'i1' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale);
+  ok('a reading whose inputs moved is stale, the reader\'s code named where it moved', /inputs changed since: the reader's code/.test(measure(where, [], { inputs: { tag: 'i2' }, reader: 'r2', chrome: 158 }).legs.self.tag.stale)
+    && /inputs changed since: the generator/.test(measure(where, [], { inputs: { tag: 'i2' }, reader: 'r1', chrome: 158 }).legs.self.tag.stale));
+  ok('a reading taken under another Chrome major is stale', /taken under Chrome 158, 159 installed now/.test(measure(where, [], { inputs: { tag: 'i1' }, reader: 'r1', chrome: 159 }).legs.self.tag.stale));
+  fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c) } } }));
+  ok('a reading with no inputs recorded is stale once today\'s are known', /before its inputs were recorded/.test(measure(where, [], { inputs: { tag: 'i1' } }).legs.self.tag.stale));
+  const firstText = fs.readFileSync(path.join(selfDir, 'tag.json'), 'utf8'), key2 = (i) => createHash('sha1').update(`${i}\0${firstText}`).digest('hex');
+  const second = (i) => { fs.writeFileSync(path.join(home, 'round-trip', 'taken.json'), JSON.stringify({ self: { tag: { hash: hashOf(c), inputs: 'i1' } }, second: { tag: { hash: hashOf(firstNow), inputs: key2(i) } } })); return measure(where, [], { inputs: { tag: 'i1' } }).legs; };
+  ok('a second trip read from other inputs is stale; from today\'s, current', /inputs changed since/.test(second('i0').second.tag.stale) && !second('i0').self.tag.stale && !second('i1').second.tag.stale);
   fs.rmSync(home, { recursive: true, force: true });
 }
 

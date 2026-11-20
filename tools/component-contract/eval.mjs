@@ -28,7 +28,9 @@
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
  * part missing or extra is one cause at its root, `causes`); a reading taken of another contract than today's, or kept
- * from an earlier drawing, is stale and said (taken.json). --twice reads the self leg twice and fails where a reading
+ * from an earlier drawing, is stale and said (taken.json); so is a self or second reading taken from other inputs than
+ * today's (selfInputs: the reader's code, the generator, tokens, settings) or under another Chrome major than the one
+ * installed (Chrome 158 read flex-start as flow-start). --twice reads the self leg twice and fails where a reading
  * differs: a measure is trusted only where it repeats. --second goes round the self leg again from what the first came
  * back as (from-code --second, <home>/round-trip/self2/from-code/), and the `second` leg holds that to the first: a row
  * there is the translation not settling, a cause the first leg's count cannot show. --projects runs, per project in turn,
@@ -55,12 +57,15 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const fieldOf = (at) => (at.includes('.') ? `*.${at.split('.').slice(1).join('.')}` : at).replace(/\.\d+(?=\.|$)/g, '.N');
 
 export { hashOf };
-/* When each reading was taken, of which contract: <home>/round-trip/taken.json, { self|figma: { <component>: { hash, kept? } } }. */
+/* When each reading was taken, of which contract: <home>/round-trip/taken.json, { self|second|figma: { <component>: { hash,
+   kept?, inputs?, reader?, chrome? } } }: a self or second reading also the hash of its inputs (selfInputs), of the reader's
+   code (readerCode) and the Chrome major it was read under. */
 const takenFile = (home) => path.join(home, 'round-trip', 'taken.json');
 const readTaken = (home) => { try { return JSON.parse(fs.readFileSync(takenFile(home), 'utf8')); } catch { return {}; } };
-function noteTaken(home, leg, folder, contract, kept = false, inputs = null) {
+function noteTaken(home, leg, folder, contract, kept = false, seen = {}) {
   const t = readTaken(home);
-  t[leg] = { ...(t[leg] || {}), [folder]: kept && t[leg] && t[leg][folder] ? { ...t[leg][folder], kept: true } : { hash: hashOf(contract), ...(kept && { kept: true }), ...(inputs && { inputs }) } };
+  const known = Object.fromEntries(Object.entries(seen).filter(([, v]) => v != null));
+  t[leg] = { ...(t[leg] || {}), [folder]: kept && t[leg] && t[leg][folder] ? { ...t[leg][folder], kept: true } : { hash: hashOf(contract), ...(kept && { kept: true }), ...known } };
   // written whole and renamed into place, so a reader never meets half a file (two runs at once can still lose one entry,
   // which then reads stale: the safe side)
   fs.mkdirSync(path.dirname(takenFile(home)), { recursive: true });
@@ -151,8 +156,10 @@ export function staleContracts(dir) {
   return (checkSpecs(dir).bad || []).filter((b) => /contract\.json is not what the spec derives|no contract\.json beside the spec|no contract can be derived/.test(b)).map((b) => b.split(':')[0].trim());
 }
 
-/* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }. */
-export function measure(where, only = []) {
+/* Every leg for one project: { home, legs: { browser, self, figma } }, each leg { <component>: { rows, combinations, cut? } | { skipped } }.
+   `now` is what a self reading is read from today ({ inputs: selfInputs, reader: readerCode, chrome: chromeMajor }); a
+   field left out is not checked. */
+export function measure(where, only = [], now = {}) {
   const home = where.projectDir;
   const readings = path.join(home, 'parity', 'from-code');
   const drawn = path.join(home, 'round-trip');
@@ -160,7 +167,11 @@ export function measure(where, only = []) {
   const legs = { browser: {}, self: {}, second: {}, figma: {} };
   const taken = readTaken(home);
   // a reading of another contract than today's, or one kept when its drawing went unanswered, is stale: measured, said apart
-  const stale = (leg, folder, contract) => { const t = (taken[leg] || {})[folder]; return !t ? 'taken before readings were fingerprinted' : t.kept ? 'kept from an earlier drawing (an import went unanswered)' : t.hash !== hashOf(contract) ? 'its contract changed since' : null; };
+  const stale = (leg, folder, contract) => { const t = (taken[leg] || {})[folder]; return !t ? 'taken before readings were fingerprinted' : t.kept ? 'kept from an earlier drawing (an import went unanswered)' : t.hash !== hashOf(contract) ? 'its contract changed since' : leg === 'self' ? moved(t, now.inputs && now.inputs[folder]) : null; };
+  // a self or second reading read from other inputs than today's, or under another Chrome major, is stale too
+  const moved = (t, key) => (now.chrome && t.chrome && t.chrome !== now.chrome ? `taken under Chrome ${t.chrome}, ${now.chrome} installed now`
+    : !key ? null : !t.inputs ? 'taken before its inputs were recorded' : t.inputs === key ? null
+      : now.reader && t.reader && t.reader !== now.reader ? 'its inputs changed since: the reader\'s code' : 'its inputs changed since: the generator, tokens or settings');
   // each component by its name, as the pipeline resolves it, for what an instance of it draws at its defaults
   const mains = req('./derive.cjs').byComponentName(contracts(where).map(({ contract }) => contract));
   const selfDir = path.join(drawn, 'self', 'from-code');
@@ -180,7 +191,8 @@ export function measure(where, only = []) {
       // held to the first reading as it stands: one taken again since the second trip went round is stale
       // only the combinations the library draws (a reading carries no invalid list of its own)
       const r = roundTrip({ ...own.asFigma, invalid: contract.invalid }, again.asFigma, { mains, layoutUnit: true }), t = (taken.second || {})[folder];
-      const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : null;
+      const key = now.inputs && now.inputs[folder] && secondKey(now.inputs[folder], fs.readFileSync(path.join(selfDir, `${folder}.json`), 'utf8'));
+      const st = !t ? 'taken before readings were fingerprinted' : t.hash !== hashOf(own.asFigma) ? 'its first reading was taken again since' : legs.self[folder].stale ? `its first reading is stale (${legs.self[folder].stale})` : moved(t, key);
       legs.second[folder] = { ...splitLeft(r.rows, leftToCode(contract, mains)), combinations: r.combinations, ...(r.cut && { cut: r.cut }), ...(st && { stale: st }) };
     }
     const back = read(path.join(drawn, `${folder}.roundtrip.json`));
@@ -394,13 +406,20 @@ export async function selfInputs(label, where) {
   // pointer states, the pseudo-classes), the base sheet, an unscoped sheet, the tokens and the project's settings, every
   // contract (a token named by a raw value breaks its ties by the whole library's use, from-code usageIn), and the
   // browser and system the page is measured in (its fallback font)
-  let chrome = ''; try { const { findChrome } = await import('../shared/cdp.mjs'); chrome = execFileSync(findChrome(), ['--version'], { encoding: 'utf8' }); } catch { /* none: no reading either */ }
+  const chrome = await chromeVersion();
   // (and the fonts installed here: a family the tokens name, once installed, is measured in place of the fallback)
   const fonts = ['/Library/Fonts', '/System/Library/Fonts', path.join(process.env.HOME || '', 'Library', 'Fonts'), '/usr/share/fonts', '/usr/local/share/fonts', path.join(process.env.HOME || '', '.fonts'), path.join(process.env.HOME || '', '.local', 'share', 'fonts')]
     .flatMap((d) => { try { return fs.readdirSync(d, { recursive: true }).map((f) => `${d}/${f}`); } catch { return []; } }).sort().join('\n');
   const shared = hash([readerCode(), read(path.join(HERE, '..', '..', 'standards', 'audit-settings.json')), read(path.join(HERE, '..', '..', 'standards', 'naming-preferences.json')), BASE, DOM, JSON.stringify(pseudoClasses()), fonts, ...unscoped, where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '', JSON.stringify(project.parity), JSON.stringify(project.snapshot || null), JSON.stringify(project.lib || null), JSON.stringify(Object.values(library)), chrome, `${process.platform} ${(await import('node:os')).release()}`]);
   return closureHashes(library, own, shared);
 }
+
+/* The Chrome the readers launch (findChrome), as it says its version ('' where there is none: no reading either), and
+   its major (null where there is none). */
+async function chromeVersion() { try { const { findChrome } = await import('../shared/cdp.mjs'); return execFileSync(findChrome(), ['--version'], { encoding: 'utf8' }); } catch { return ''; } }
+export const chromeMajor = async () => { const m = /(\d+)\./.exec(await chromeVersion()); return m ? +m[1] : null; };
+/* A second reading's inputs: the first's, and the first reading it goes round from. */
+const secondKey = (inputs, first) => createHash('sha1').update(`${inputs}\0${first || ''}`).digest('hex');
 
 /* Whether every rule of a sheet names its element (`ds-x`), so it styles nothing outside it: its selectors, at-rules aside. */
 export function scopedTo(css, root) {
@@ -438,7 +457,9 @@ async function readSelf(where, label, only, second = false, { changed = false, j
   const inputs = await selfInputs(label, where);
   const firstOf = (folder) => read1(path.join(where.projectDir, 'round-trip', 'self', 'from-code', `${folder}.json`));
   const read1 = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return null; } };
-  const keyOf = (folder) => (second ? createHash('sha1').update(`${inputs[folder]}\0${firstOf(folder) || ''}`).digest('hex') : inputs[folder]);
+  const keyOf = (folder) => (second ? secondKey(inputs[folder], firstOf(folder)) : inputs[folder]);
+  const reader = readerCode(), chrome = await chromeMajor();
+  const seen = (folder) => ({ inputs: keyOf(folder), reader, chrome });
   const taken = readTaken(where.projectDir)[second ? 'second' : 'self'] || {};
   const todo = [];
   for (const { folder, contract } of contracts(where)) {
@@ -456,9 +477,9 @@ async function readSelf(where, label, only, second = false, { changed = false, j
       console.log(`${folder}: ${ok ? last.split(' — ')[0] : `not read — ${last}`}`);
       if (ok) {
         fails = 0;
-        if (!second) noteTaken(where.projectDir, 'self', folder, contract, false, keyOf(folder));
+        if (!second) noteTaken(where.projectDir, 'self', folder, contract, false, seen(folder));
         // the second trip is fingerprinted with the first reading it went round from
-        else { const f = firstOf(folder); if (f) noteTaken(where.projectDir, 'second', folder, JSON.parse(f).asFigma, false, keyOf(folder)); }
+        else { const f = firstOf(folder); if (f) noteTaken(where.projectDir, 'second', folder, JSON.parse(f).asFigma, false, seen(folder)); }
       } else {
         process.exitCode = 1;
         if (++fails >= 3 && !stopped) { stopped = true; console.log('three failures in a row: stopped'); }
@@ -592,7 +613,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
   if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }
   if (second) { await readSelf(where, label, argv, true, opts); process.exit(); }
-  const m = measure(where, panel ? argv : []);
+  // what a self reading is read from today, so one read from other inputs or under another Chrome is said stale
+  let today = {};
+  try { today = { inputs: await selfInputs(label, where), reader: readerCode(), chrome: await chromeMajor() }; } catch (e) { console.log(`warning: the self leg's inputs not checked (${String(e.message).split('\n')[0]}): a reading taken from other inputs is not said stale`); }
+  const m = measure(where, panel ? argv : [], today);
   report(label, m, fields, byCause);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
