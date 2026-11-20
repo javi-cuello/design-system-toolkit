@@ -31,6 +31,10 @@ const dirty = wt('agent-dirty');          // merged, but an uncommitted file
 fs.writeFileSync(path.join(dirty, 'new.txt'), 'x');
 const ignored = wt('agent-ignored');      // merged, but an ignored file (a local .env) git worktree remove would delete
 fs.writeFileSync(path.join(repo, '.git/info/exclude'), '.env\n'); fs.writeFileSync(path.join(ignored, '.env'), 'k');
+const linked = wt('linked');               // merged, holding only bin/worktree's links to installs and a build cache
+fs.appendFileSync(path.join(repo, '.git/info/exclude'), '/tool-bin\n/.astro/\n');
+fs.writeFileSync(path.join(repo, 'tool'), 'x'); fs.symlinkSync(path.join(repo, 'tool'), path.join(linked, 'tool-bin'));
+fs.mkdirSync(path.join(linked, '.astro')); fs.writeFileSync(path.join(linked, '.astro', 'c'), 'x');
 const wip = wt('agent-wip');              // a "wip" that only shares its subject with one on main
 commit(wip, 'w.txt', 'wip'); commit(repo, 'other.txt', 'wip');
 git(repo, 'branch', 'old-merged');        // a branch alone, merged
@@ -51,7 +55,8 @@ assert.deepEqual(await leftovers(repo), [], 'and is not warned of');
 
 const later = Date.now() + 2 * 864e5;
 const gone = sweep(repo, later).map((g) => g.replace(/ \(was [0-9a-f]{8}\)$/, '')).sort();
-assert.deepEqual(gone, ['.claude/worktrees/agent-merged', '.claude/worktrees/agent-picked', 'old-merged'], 'merged, clean and a day old: removed');
+assert.deepEqual(gone, ['.claude/worktrees/agent-merged', '.claude/worktrees/agent-picked', '.claude/worktrees/linked', 'old-merged'], 'merged, clean and a day old: removed, links to installs and a build cache being nobody\'s work');
+assert.ok(fs.existsSync(path.join(repo, 'tool')), "a link's target in the main checkout stays");
 assert.ok(!fs.existsSync(fast) && !fs.existsSync(picked), 'their folders are gone');
 assert.equal(git(repo, 'branch', '--list', 'wt-agent-merged', 'wt-agent-picked', 'old-merged').trim(), '', 'with their branches');
 assert.ok(fs.existsSync(path.join(open, 'o.txt')) && fs.existsSync(path.join(dirty, 'new.txt')), 'the unmerged and the dirty worktree are untouched');

@@ -49,10 +49,12 @@ function inventory(repo, now) {
     if (i === 0) return; // the main checkout
     if (branch && `refs/heads/${branch}` === main) return; // main checked out in a linked worktree: never removed with it
     const there = fs.existsSync(f.worktree);
-    // ignored files count (git worktree remove deletes them: a local .env, notes), installed packages aside; -unormal
-    // whatever status.showUntrackedFiles says
+    // ignored files count (git worktree remove deletes them: a local .env, notes), aside from what nobody wrote by hand:
+    // installed packages, a build cache, and the links bin/worktree makes to the main checkout's installs
+    // (tools/shared/worktree.mjs); -unormal whatever status.showUntrackedFiles says
     const st = there ? git(f.worktree, ['status', '--porcelain', '--ignored=matching', '-unormal']) : '';
-    const dirty = st === null || st.split('\n').some((l) => l && !(l.startsWith('!! ') && /(^|\/)node_modules\/?$/.test(l.slice(3))));
+    const made = (p) => /(^|\/)(node_modules|\.astro)\/?$/.test(p) || (() => { try { return fs.lstatSync(path.join(f.worktree, p.replace(/\/$/, ''))).isSymbolicLink(); } catch { return false; } })();
+    const dirty = st === null || st.split('\n').some((l) => l && !(l.startsWith('!! ') && made(l.slice(3))));
     const admin = there ? git(f.worktree, ['rev-parse', '--absolute-git-dir']) : null;
     const tip = Number(git(repo, ['log', '-1', '--format=%ct', f.HEAD])) * 1000 || 0;
     const age = now - Math.max(tip, admin ? mtime(path.join(admin, 'index')) : 0, there ? mtime(f.worktree) : 0);
