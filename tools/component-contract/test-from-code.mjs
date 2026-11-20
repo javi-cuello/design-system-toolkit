@@ -112,6 +112,8 @@ ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a fu
   const G = governedReading(t, b, { stateAxis: 'State', container: '#root' });
   const figma = { props: { selected: { type: 'boolean', default: false }, state: { type: 'enum', values: ['rest', 'hover', 'focus'], default: 'rest', role: 'interaction' } }, anatomy: {}, variants: [] };
   ok('a Figma combination draws the variant the mapping expands for it, its sample copy beside', JSON.stringify(G.argsOf({ selected: true, state: 'rest' })) === '{"children":"Label","selected":true}' && G.argsOf({ selected: true, state: 'press' }) === null);
+  { const sp = governedReading({ ...t, mapping: { ...t.mapping, layers: { 'Frame > 96': '.frame' } } }, { ...b, ids: { 'Frame  > 96': ['frame/96'] } }, { container: '#root' }).elements();
+    ok('a layer whose name ends in a space (the store\'s "Frame  > 96") is the mapping\'s trimmed path', !!sp['frame/96']); }
   ok('a Figma prop\'s code prop is the arg that moves when it alone moves', JSON.stringify(G.joins(figma, { selected: false, state: 'rest' }).props) === '{"selected":{"arg":"selected","values":{"true":true}}}');
   {
     const unset = governedReading({ ...t, variants: new Map([['Selected=False, State=Rest', { args: { tone: 'plain' } }], ['Selected=True, State=Rest', { args: {} }]]) }, b, {});

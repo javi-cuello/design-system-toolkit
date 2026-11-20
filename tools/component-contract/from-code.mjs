@@ -569,6 +569,12 @@ export function governedReading(t, b, { stateAxis = null, container = '' } = {})
     elements() {
       const out = {}, skipped = [];
       Object.defineProperty(out, 'skipped', { value: skipped });
+      // a layer name with a space at its end ("Frame ", as Figma keeps it) is the store's path with that space ("Frame  > 96"),
+      // which a mapping written by hand or by the toolkit spells trimmed: each path also found by its trimmed segments
+      const trimmed = (x) => x.split(' > ').map((g) => g.trim()).join(' > ');
+      const byTrim = {};
+      for (const [k, v] of Object.entries(b.ids)) if (trimmed(k) !== k) (byTrim[trimmed(k)] = byTrim[trimmed(k)] || []).push(...v);
+      const idsAt = (x) => b.ids[x] || byTrim[trimmed(x)];
       for (const [path, sel] of Object.entries(t.mapping.layers || {})) {
         if (sel === null) continue;
         if (typeof sel !== 'string') throw new Error(`the layer ${path} carries a ruling (${JSON.stringify(sel)}): a governed mapping rules in its waivers`);
@@ -577,8 +583,8 @@ export function governedReading(t, b, { stateAxis = null, container = '' } = {})
         // (x, x_2, …), and `#N` takes the N-th
         const nth = /^(.*)#(\d+)$/.exec(path), named = t.mapping.layers || {};
         const order = (xs) => [...xs].sort((a, c) => (+(a.match(/_(\d+)$/) || [0, 1])[1]) - (+(c.match(/_(\d+)$/) || [0, 1])[1]));
-        const direct = b.ids[path] || [];
-        const all = nth ? order(b.ids[nth[1]] || []) : order(direct);
+        const direct = idsAt(path) || [];
+        const all = nth ? order(idsAt(nth[1]) || []) : order(direct);
         const ids = direct.length === 1 ? direct : all.length > 1 && (nth || `${path}#2` in named) ? [all[nth ? +nth[2] - 1 : 0]].filter(Boolean) : nth ? [] : direct;
         // a layer inside another component's instance (Feedback message > Icon) is that component's, compared in its
         // own audit: the contract draws the instance, not its insides. Its nearest stored ancestor is said here, and
