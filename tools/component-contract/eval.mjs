@@ -24,17 +24,21 @@
  *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
  *   node tools/component-contract/eval.mjs --project <label> --make-panel 30, then --panel with any of the above
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
+ *   node tools/component-contract/eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
  * part missing or extra is one cause at its root, `causes`); a reading taken of another contract than today's, or kept
  * from an earlier drawing, is stale and said (taken.json). --twice reads the self leg twice and fails where a reading
  * differs: a measure is trusted only where it repeats. --second goes round the self leg again from what the first came
  * back as (from-code --second, <home>/round-trip/self2/from-code/), and the `second` leg holds that to the first: a row
- * there is the translation not settling, a cause the first leg's count cannot show.
+ * there is the translation not settling, a cause the first leg's count cannot show. --projects runs, per project in turn,
+ * each leg on its panel (--jobs 4 unless said) and then --diff, each its own eval.mjs taking and letting go the measuring
+ * lock, logged `== HH:MM <args>` and `== rc N` (to --log, appended, else the terminal), stopping after three failures
+ * in a row (rc 2 or more) and ending `== done HH:MM`.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync, execFile } from 'node:child_process';
+import { execFileSync, execFile, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -480,16 +484,46 @@ async function readTwice(where, label, only, opts) {
   return differ.length || process.exitCode ? 1 : 0;
 }
 
+/* Every project's panel measured in turn (--projects): per project each leg (--self, then --second) and then --diff, each
+   its own eval.mjs process, so each takes the measuring lock and lets it go, and a queued bin/land gets in between. Each
+   step is logged `== HH:MM <args>` before and `== rc N` after; three failures in a row (rc 2 or more) stop the run.
+   run(args) → its exit code; say(line) logs. Returns 1 when stopped, else 0. */
+export async function runAll(projects, legs, { run, say, jobs = 4, now = () => new Date() }) {
+  const hhmm = () => now().toTimeString().slice(0, 5);
+  let fails = 0;
+  for (const p of projects) {
+    for (const args of [...legs.map((l) => ['--project', p, `--${l}`, '--panel', '--jobs', String(jobs)]), ['--project', p, '--panel', '--diff']]) {
+      say(`== ${hhmm()} ${args.join(' ')}`);
+      const rc = await run(args);
+      say(`== rc ${rc}`);
+      if (rc < 2) { fails = 0; continue; }
+      if (++fails >= 3) { say('== three failures in a row: stopped'); return 1; }
+    }
+  }
+  say(`== done ${hhmm()}`);
+  return 0;
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
+  const all = opt('--projects');
+  if (all) {
+    // no lock here: each step is its own eval.mjs, which takes it, so it is let go between steps
+    const legs = (opt('--legs') || 'self,second').split(',').filter(Boolean), log = opt('--log'), jobs = Math.max(1, +(opt('--jobs') || 4));
+    if (argv.length || legs.some((l) => !['self', 'second'].includes(l))) { console.error('usage: eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]'); process.exit(2); }
+    const fd = log ? fs.openSync(log, 'a') : null;
+    const say = (l) => (fd == null ? console.log(l) : fs.writeSync(fd, l + '\n'));
+    const run = (args) => { const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd: path.resolve(HERE, '../..'), stdio: ['ignore', fd ?? 'inherit', fd ?? 'inherit'] }); return r.status ?? 2; };
+    process.exit(await runAll(all.split(',').filter(Boolean), legs, { run, say, jobs }));
+  }
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
   const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), panel = flag('--panel'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
   const makeAt = argv.indexOf('--make-panel'), makePanel = makeAt >= 0 ? argv.splice(makeAt, 2)[1] : null;
   if (makeAt >= 0 && !/^[1-9]\d*$/.test(makePanel || '')) { console.error('--make-panel takes the panel\'s size, a whole number (30)'); process.exit(2); }
   const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
-  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--panel] [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --make-panel <n>\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]\n       eval.mjs --projects <label,label…> [--legs self,second] [--jobs N] [--log <file>]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   if (makePanel) {

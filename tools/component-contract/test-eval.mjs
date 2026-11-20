@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll } from './eval.mjs';
+import { spawnSync } from 'node:child_process';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -187,4 +188,15 @@ ok('a component measured since the accept is held until accepted; one that came 
 }
 ok('a panel\'s check and diff hold only its own components', JSON.stringify(scoped({ self: { a: 1, b: 2 }, figma: { b: 3 } }, ['a'])) === '{"self":{"a":1},"figma":{}}');
 ok('a panel\'s accept replaces its own components and keeps every other\'s', JSON.stringify(merged({ self: { a: 1, b: 2 } }, { self: { a: 5 }, second: { a: 0 } }, ['a'])) === '{"self":{"b":2,"a":5},"second":{"a":0}}');
+// --projects: the steps as child runs, stubbed (a real one measures and takes the lock)
+{
+  const go = async (projects, legs, rcs = () => 0) => { const ran = [], log = []; const rc = await runAll(projects, legs, { run: (a) => { ran.push(a.join(' ')); return rcs(ran.length); }, say: (l) => log.push(l), now: () => new Date(2026, 10, 20, 9, 5) }); return { ran, log, rc }; };
+  const a = await go(['carbon', 'material3'], ['self', 'second']);
+  ok('runAll: per project, self then second on the panel, then its diff, project by project', JSON.stringify(a.ran) === JSON.stringify(['--project carbon --self --panel --jobs 4', '--project carbon --second --panel --jobs 4', '--project carbon --panel --diff', '--project material3 --self --panel --jobs 4', '--project material3 --second --panel --jobs 4', '--project material3 --panel --diff']) && a.rc === 0);
+  ok('runAll: each step logged before with its time and args, after with its rc, and the end with its time', a.log[0] === '== 09:05 --project carbon --self --panel --jobs 4' && a.log[1] === '== rc 0' && a.log.at(-1) === '== done 09:05' && a.log.length === 13);
+  const b = await go(['carbon', 'atlassian', 'material3'], ['self'], (i) => (i === 1 ? 2 : i === 2 ? 1 : 3));
+  ok('runAll: three failures in a row (rc 2 or more) stop the run; rc 1 is not a failure and resets the count', b.rc === 1 && b.ran.length === 5 && b.log.at(-1) === '== three failures in a row: stopped' && !b.log.some((l) => /done/.test(l)));
+  const r = spawnSync(process.execPath, [new URL('./eval.mjs', import.meta.url).pathname, '--projects', 'x', '--legs', 'draw'], { encoding: 'utf8' });
+  ok('--projects refuses a leg it does not run, before any step', r.status === 2 && /usage: eval.mjs --projects/.test(r.stderr));
+}
 console.log(`${n} passed`);
