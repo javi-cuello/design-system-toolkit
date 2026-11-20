@@ -11,7 +11,9 @@
  * Reused only when the tree is clean (nothing modified, staged or untracked), its git tree id and the options
  * match, the result is under MAX_AGE old, and the run is not --no-fix (the pre-push check, which always runs).
  * A run is recorded only when the tree was clean before it and unchanged after (a --fix heal that rewrote a file
- * is not this tree's result). TOOLKIT_CHECK_FRESH=1 always runs. What it cannot see: state outside the repo
+ * is not this tree's result), and only a green that ran to its end: a red may be a flake a re-run should retry.
+ * TOOLKIT_CHECK_FRESH=1 always runs. Ignored files (node_modules) are not in the key: a green that skipped a step
+ * for a missing install is reused until the tree changes. What it cannot see: state outside the repo
  * (another project's files, a running dashboard); a red from there is reused until the tree changes or MAX_AGE.
  */
 import fs from 'node:fs';
@@ -53,18 +55,21 @@ export async function run(repo, args) {
   const can = reusable(args);
   let hit = can && lookup(treeKey(repo), args);
   if (hit) return replay(hit);
-  await hold(`bin/check${args.length ? ' ' + args.join(' ') : ''}`);
+  // unlocked (no python3): still mark the run held, or the child bin/check would come back here without end
+  if (!(await hold(`bin/check${args.length ? ' ' + args.join(' ') : ''}`))) process.env.TOOLKIT_LOCK_HELD = String(process.pid);
   const before = can ? treeKey(repo) : null;
   hit = before && lookup(before, args);
   if (hit) { release(); return replay(hit); }
   const result = await new Promise((resolve) => {
     let tail = '';
     const c = spawn(path.join(repo, 'bin', 'check'), args, { stdio: ['inherit', 'pipe', 'inherit'], env: process.env });
+    c.stdout.setEncoding('utf8');
     c.stdout.on('data', (d) => { process.stdout.write(d); tail = (tail + d).split('\n').slice(-KEEP - 1).join('\n'); });
     c.on('error', () => resolve({ code: 1, tail }));
-    c.on('close', (code) => resolve({ code: code ?? 1, tail }));
+    c.on('close', (code, signal) => resolve({ code: code ?? 1, signal, tail }));
   });
-  if (before && treeKey(repo) === before) store({ tree: before, args: args.join(' '), status: result.code, tail: result.tail, at: Date.now() });
+  // only a green that ran to its end: a red may be a flake that a plain re-run should retry, and a killed run proves nothing
+  if (before && result.code === 0 && !result.signal && treeKey(repo) === before) store({ tree: before, args: args.join(' '), status: result.code, tail: result.tail, at: Date.now() });
   release();
   return result.code;
 }
@@ -72,5 +77,5 @@ export async function run(repo, args) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const [repo, ...args] = process.argv.slice(2);
   if (!repo) { console.error('usage: check-cache.mjs <repo> [bin/check options…]'); process.exit(2); }
-  process.exit(await run(path.resolve(repo), args));
+  process.exitCode = await run(path.resolve(repo), args); // exitCode, not exit(): piped output still queued is written first
 }

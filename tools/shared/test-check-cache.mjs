@@ -69,17 +69,16 @@ fs.writeFileSync(path.join(repo, 'a.txt'), 'd\n'); git('-c', 'user.email=t@t', '
 r = check([], { FAILME: '1' });
 assert.equal(r.status, 1);
 r = check();
-assert.equal(runs(), 11, 'a red is recorded too');
-assert.equal(r.status, 1, 'and replayed with its exit status');
-assert.match(r.stdout, /^== 1 FAILED/m);
+assert.equal(runs(), 12, 'a red is never recorded: a re-run retries it, as for a flake');
+assert.equal(r.status, 0);
 
 // a run queued behind a run of the same tree takes that run's answer once it holds the lock
 fs.writeFileSync(path.join(repo, 'a.txt'), 'e\n'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', 'five');
 const first = spawn('node', [CACHE, repo], { env: { ...base, SLOW: '1' }, stdio: 'ignore' });
-for (let i = 0; i < 100 && runs() < 12; i++) await new Promise((res) => setTimeout(res, 50));
+for (let i = 0; i < 100 && runs() < 13; i++) await new Promise((res) => setTimeout(res, 50));
 r = check();
 await new Promise((res) => (first.exitCode !== null ? res() : first.on('close', res)));
-assert.equal(runs(), 12, 'a queued run on the same tree is answered by the run it waited for');
+assert.equal(runs(), 13, 'a queued run on the same tree is answered by the run it waited for');
 assert.match(r.stderr, /waiting for bin\/check/, 'after waiting for it');
 assert.match(r.stdout, /^green/m);
 
