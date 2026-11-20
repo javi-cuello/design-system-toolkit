@@ -820,6 +820,14 @@ expect("a layer that is the same in every variant still fires when some forget i
     ks("Autocomplete input", /^states\|gap\|/), ["states|gap|Disabled=False, Menu=False, Validation=Error, Value=True states visible"]);
   expect("an axis that only shows or hides a layer is a breaking boolean question", ks("Toggle", /^properties\|visibility-axis\|/), ["properties|visibility-axis|Icon properties breaking"]);
   expect("an axis that also changes a colour is a real axis, not a boolean", ks("Pick", /^properties\|visibility-axis\|/), []);
+  const fx3 = fresh(), pg3 = fx3.pages.find((p) => p.sets.includes(find(fx3, "Chip")));
+  const row = (h, hidden) => leaf("FRAME", "Content", { width: 40, height: h, children: [leaf("FRAME", "Label"), glyph(hidden ? { visible: false } : {})] });
+  pg3.sets.push({ id: "0:11", type: "COMPONENT_SET", name: "Nested", description: "Nested.", visible: true, fills: [], strokes: [], effects: [], boundVariables: {},
+    componentPropertyDefinitions: { Icon: { type: "VARIANT", variantOptions: ["On", "Off"] } },
+    children: [leaf("COMPONENT", "Icon=On", { children: [row(40, false)] }), leaf("COMPONENT", "Icon=Off", { children: [row(24, true)] })] });
+  const r3 = await run(fx3);
+  expect("a layer hidden inside a hug frame that shrinks still marks the axis as a boolean",
+    r3.audited.filter((e) => e.set === "Nested").flatMap((e) => e.candidates.filter((c) => /^properties\|visibility-axis\|/.test(c.key)).map((c) => c.key)), ["properties|visibility-axis|Icon"]);
 }
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");
 process.exit(failed ? 1 : 0);

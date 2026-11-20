@@ -1100,7 +1100,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       const F=[];
       // The layer paths any variant draws visibly, so a layer one variant hides and another shows is not dead.
       const shown=new Set();
-      const showsAt=(n,path)=>{ if(n.visible!==false) shown.add(path||"/"); if("children" in n&&n.type!=="INSTANCE"&&n.type!=="SLOT") for(const c of n.children) showsAt(c,path+"/"+c.name); };
+      const showsAt=(n,path)=>{ if(n.visible===false) return; shown.add(path||"/"); if("children" in n&&n.type!=="INSTANCE"&&n.type!=="SLOT") for(const c of n.children) showsAt(c,path+"/"+c.name); };
       for(const v of vs) showsAt(v,"");
       // The variant being walked and whether it is disabled (its disabled axis
       // True, from the settings): disabled text is exempt from the contrast
@@ -1317,7 +1317,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       for(const [kk,e] of Object.entries(rawSize)){ const vals=[...e.values], v=vals[0];
         F.push({sev:"warning",rule:"tokens",key:"tokens|"+kk,
           text:e.name+" has a raw "+SAY[e.k]+" of "+vals.join(", ")+(vals.length===1?onScale(v,SIZING,"sizing"):"")+" in "+nV(e.variants.length)+", so a change to the size tokens never reaches it",
-          advice:bindTo(SAY[e.k],v,SIZING,"sizing")}); }
+          advice:vals.length===1?bindTo(SAY[e.k],v,SIZING,"sizing"):"Bind the "+SAY[e.k]+" in each variant to a size variable."}); }
       for(const [at,e] of Object.entries(fixedText))
         F.push({sev:"warning",rule:"structure",visible:true,key:"structure|fixed-text|"+at,
           text:'Text "'+e.name+'" is fixed at '+e.w+"\u00d7"+e.h+" in "+nV(e.variants.length)+", so a longer label or a translation is clipped instead of growing \u2014 e.g. "+e.variants.slice(0,3).join("; "),
@@ -1789,9 +1789,10 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // which layers show is a boolean drawn as variants (probes.js §3.10e): it
       // doubles the grid. One pair proves nothing; every pair must agree.
       if(set.type==="COMPONENT_SET"){
+        // Paints and text, never size: hiding a layer resizes the frame that hugs it.
         const vsig=v=>{const out=[];(function g(n,d,path){ if(n.type==="INSTANCE"||d>6) return;
             const pt=x=>Array.isArray(x)?x.filter(y=>y&&y.visible!==false).map(y=>y.type==="SOLID"&&y.color?[y.color.r,y.color.g,y.color.b,def(y.opacity,1)].map(z=>Math.round(z*255)).join(","):y.type).join("/"):"";
-            if(d>0) out.push(path+"|"+n.name+"|"+n.type+"|f"+pt(n.fills)+"|s"+pt(n.strokes)+"|"+Math.round(def(n.width,0))+"x"+Math.round(def(n.height,0))+"|"+(n.characters||"")+"|"+(n.visible!==false));
+            if(d>0) out.push(path+"|"+n.name+"|"+n.type+"|f"+pt(n.fills)+"|s"+pt(n.strokes)+"|"+(n.characters||"")+"|"+(n.visible!==false));
             if(n.children) n.children.forEach((c,i)=>g(c,d+1,path+"/"+i)); })(v,0,""); return out;};
         const rows=vs.map(v=>({props:variantValues(v.name),sig:vsig(v)})), tally={};
         for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++){ const a=rows[i],c=rows[j];
