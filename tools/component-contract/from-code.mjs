@@ -489,8 +489,8 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
     }
     return { ...x, when };
   });
-  // a layer inside a placed component keeps no constraints, as derive keeps none in the design's (figma-fact:
-  // no-nested-position-override): one placed absolutely, or a glyph's scale both ways, keeps them
+  // a layer inside a placed component keeps no constraints, as derive keeps none in the design's
+  // (figma-fact: no-nested-position-override); one placed absolutely, or a glyph's scale both ways, keeps them
   const all = { ...contract.anatomy, ...Object.assign({}, ...variants.map((v) => v.add || {})) };
   const inside = (id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return true; return false; };
   const loose = (e) => !e.absolute && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale');
