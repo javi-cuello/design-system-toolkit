@@ -6,9 +6,10 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf, selfDrawn } from './eval.mjs';
+import { scoped, merged, pickPanel, importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode, staleContracts, runAll, projectsOptions, stepRunner, openLog, closureOf, todayOf } from './eval.mjs';
 import { spawnSync } from 'node:child_process';
 import { chromeMajor, chromeVersion } from '../shared/cdp.mjs';
+import { selfDrawn, siteFiles } from './site.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -244,9 +245,15 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
     anatomy: { root: { kind: 'container', background: 'Bg/x' } }, variants: [{ when: { state: 'focus-visible' }, add: { focusBorder: { ...ring, parent: 'root' } } }] };
   ok('under the library\'s settings its focus ring is compared, not left to the code; under the house\'s it would be left',
     !leftToCode(tile, null, own)('focusBorder.border') && leftToCode(tile, null)('focusBorder.border'));
-  const d = await selfDrawn(tile, { library: { Tile: tile }, mains: () => null, settings: own });
+  const d = selfDrawn(tile, { library: { Tile: tile }, mains: () => null, settings: own });
   ok('the self leg\'s inputs are drawn under the library\'s settings: the ring an outline at its focus, mapped to the box',
     /:focus-visible[^{]*\{\s*outline:/.test(d.sheet) && d.mapping.layers['Focus border'] === 'ds-tile');
+  // (one source: the files the site writes are what the hash is taken of, and a change of settings moves both)
+  const both = (settings) => { const library = { Tile: tile }, x = selfDrawn(tile, { library, mains: () => null, settings }), f = siteFiles(library, { settingsOf: () => settings });
+    return { x, same: f['components/tile/tile.js'] === x.markup && f['all.css'].includes(x.sheet) }; };
+  const [a, b] = [both(own), both(undefined)];
+  ok('the site writes exactly what the inputs hash is taken of, under any settings, and a change of settings moves both',
+    a.same && b.same && a.x.sheet !== b.x.sheet && a.x.markup !== b.x.markup);
 }
 
 console.log(`${n} passed`);

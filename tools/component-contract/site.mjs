@@ -11,12 +11,21 @@
  * (the project's generated _tokens.scss, which is plain CSS, or a :root block built from a sample).
  */
 import http from 'node:http';
-import { toElement, DOM } from './to-markup.mjs';
+import { toElement, toParity, DOM } from './to-markup.mjs';
 import { toCss, BASE } from './to-code.mjs';
 import { createRequire } from 'node:module';
 const { byComponentName } = createRequire(import.meta.url)('./derive.cjs');
 
 export const ELEMENT = { kind: 'element', prefix: 'ds-' };
+
+/* What the self leg draws of one component: its markup, its sheet and its parity mapping, under its library's settings
+   (`settings`, the house's where none). The one source: the site's files are written from it (siteFiles), the self
+   source maps from it (from-code), and the inputs hash is taken of it (eval.mjs selfInputs), so a reading's hash moves
+   with what is written. Tested by test-eval.mjs. */
+export function selfDrawn(c, { library, mains, settings, naming = ELEMENT }) {
+  return { markup: toElement(c, c.folder, { naming, library, settings }), sheet: toCss(c, c.folder, { naming, mains, settings }),
+    mapping: toParity(c, c.folder, { naming, library, framework: 'web-components', settings }) };
+}
 
 /* The site's files, by path: { 'index.html', 'all.css', 'components/dom.js', 'components/<folder>/<folder>.js' }.
    Each component written under its library's settings (`settingsOf`, by folder: its state names), the house's where none. */
@@ -29,11 +38,11 @@ export function siteFiles(library, { tokensCss = '', stylesheets = [], naming = 
   // the components each places, as the project's build gives them (to-code's main), so a rule reaching inside one is written
   const mains = byComponentName(Object.values(library));
   for (const c of Object.values(library)) {
-    const js = toElement(c, c.folder, { naming, library, settings: settingsOf(c.folder) });
+    const { markup: js, sheet } = selfDrawn(c, { library, mains, settings: settingsOf(c.folder), naming });
     files[`components/${c.folder}/${c.folder}.js`] = js;
     fn[c.folder] = (/export function (\w+)\(/.exec(js) || [])[1];
     if (!fn[c.folder]) throw new Error(`${c.component}: to-markup's file exports no render function`);
-    css += toCss(c, c.folder, { naming, mains, settings: settingsOf(c.folder) });
+    css += sheet;
   }
   files['all.css'] = css;
   const imports = Object.entries(fn).map(([f, n], i) => `import { ${n} as C${i} } from './components/${f}/${f}.js';`).join('');

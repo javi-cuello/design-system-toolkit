@@ -390,19 +390,12 @@ function readerCode() {
    transitively (each one's contract, spec, markup, sheet, parity mapping and props as stories give them), the base sheet,
    the tokens and their values, the project's parity settings, and the reader's own code. Two readings from the same
    inputs are the same reading (--twice holds the leg to that), so --changed reads only the components whose hash moved. */
-/* What the self leg draws of one component, as site.mjs and from-code's self source write it: its markup, its sheet
-   and its parity mapping, under the library's settings (`settings`, the house's where none). Tested by test-eval.mjs. */
-export async function selfDrawn(c, { library, mains, settings }) {
-  const { toElement, toParity } = await import('./to-markup.mjs'), { toCss } = await import('./to-code.mjs'), { ELEMENT } = await import('./site.mjs');
-  return { markup: toElement(c, c.folder, { naming: ELEMENT, library, settings }), sheet: toCss(c, c.folder, { naming: ELEMENT, mains, settings }), mapping: toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components', settings }) };
-}
-
 export async function selfInputs(label, where, only = []) {
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label, { self: true });
-  const { toElement, toParity, propsOf, DOM } = await import('./to-markup.mjs');
-  const { toCss, BASE, pseudoClasses, entryOf } = await import('./to-code.mjs');
-  const { ELEMENT } = await import('./site.mjs');
+  const { propsOf, DOM } = await import('./to-markup.mjs');
+  const { BASE, pseudoClasses, entryOf } = await import('./to-code.mjs');
+  const { selfDrawn } = await import('./site.mjs');
   const store = req('../snapshot/store.cjs');
   const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
   const byFolder = Object.fromEntries(Object.values(library).map((c) => [c.folder, c]));
@@ -412,7 +405,7 @@ export async function selfInputs(label, where, only = []) {
   // only what the components asked for place, transitively (every sheet is still made: one unscoped reaches them all)
   const need = only.length ? closureOf(library, only) : new Set(Object.keys(byFolder));
   for (const c of Object.values(library)) {
-    const { sheet, markup, mapping } = await selfDrawn(c, { library, mains, settings: settingsOf(c.folder) });
+    const { sheet, markup, mapping } = selfDrawn(c, { library, mains, settings: settingsOf(c.folder) });
     // every sheet is on the one page: one whose rules reach past its own element reaches every reading
     if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
     if (!need.has(c.folder)) continue;
