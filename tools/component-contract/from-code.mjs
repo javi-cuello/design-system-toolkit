@@ -1098,6 +1098,11 @@ async function main() {
     };
     const read = async (args) => {
       await show(args);
+      // whether this combination is drawn focused (a forced :focus or :focus-visible): only there is an outline a focus
+      // ring, as to-code writes one (ringOf) and code shows one; at any other state it is the box's own stroke (css.mjs
+      // draws a centred or outside stroke as a solid outline)
+      // (or drawn so by an arg: a state the code takes as a prop, focus among its values)
+      const focused = /focus/.test(JSON.stringify((L.pseudoOf || {})[args.__state] || '')) || Object.values(args).some((v) => typeof v === 'string' && /focus/i.test(v));
       const room = roomOf(args);
       if (room) await call(L.tab, ([sel, container, climb, w]) => {
         let root = document.querySelector(sel); if (!root) return;
@@ -1623,6 +1628,7 @@ async function main() {
         // edge clears it, its corners this box's own grown by as much, as to-code's ringOf writes it the other way
         // the box's own outline beside a ring of a box of its own, or a dashed one: its own stroke (css.mjs), its alignment
         // where the outline stands, no focus ring
+        if (x.outline && !x.outline.after && !focused) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };
