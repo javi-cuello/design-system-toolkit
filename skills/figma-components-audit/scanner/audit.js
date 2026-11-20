@@ -1218,7 +1218,11 @@ const used=(await Promise.all([...usedIds].filter(id=>!localIds.has(id)).map(id=
 // the library's colours lead wherever the file can reach them.
 const SEM=typeof TOKENS!=="undefined"&&TOKENS&&TOKENS.semantic?[].concat(TOKENS.semantic):[];
 const fromLibrary=[];
-try{ if(SEM.length&&figma.teamLibrary){
+// Imports cost a round trip each the first time a file asks (one first run took 249s, 2026-11-20), so they happen only
+// when some layer in scope has a raw colour for the advice to name.
+const rawPaint=n=>["fills","strokes"].some(k=>Array.isArray(n[k])&&n[k].some((p,i)=>p.type==="SOLID"&&p.visible!==false&&!(n.boundVariables&&n.boundVariables[k]&&[].concat(n.boundVariables[k])[i])));
+const anyRaw=pages.some(p=>p.sets.filter(inScope).some(s=>rawPaint(s)||s.findOne(x=>x.type!=="INSTANCE"&&rawPaint(x))));
+try{ if(anyRaw&&SEM.length&&figma.teamLibrary){
   for(const lc of (await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()).filter(c=>SEM.includes(c.name)))
     fromLibrary.push(...(await Promise.all((await figma.teamLibrary.getVariablesInLibraryCollectionAsync(lc.key))
       .filter(x=>x.resolvedType==="COLOR").map(lv=>figma.variables.importVariableByKeyAsync(lv.key).catch(()=>null)))).filter(Boolean)); } }
