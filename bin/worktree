@@ -1,0 +1,3 @@
+#!/bin/sh
+# A worktree per piece of work: tools/shared/worktree.mjs <work-name> prints its folder.
+exec node "$(cd "$(dirname "$0")/.." && pwd)/tools/shared/worktree.mjs" "$@"

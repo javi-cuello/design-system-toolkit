@@ -41,7 +41,11 @@ export const WIDE = /^(standards|tools\/shared)\//;
 export const WIDE_LINES = 10;
 // Bookkeeping that a change of any size carries; counting it made every
 // skill edit "full" (version, changelog, cases).
-const WORKTREE = /^\.claude\/worktrees\//;
+// A worktree under a repo (.claude/worktrees/<name>) is a repo of its own: its tree, branch, size, check and
+// review are its own (one worktree per piece of work, tools/shared/worktree.mjs). agent-<id> ones are background
+// subagents' (Claude Code's isolation), counted when their branch is merged.
+const IN_WORKTREE = /^\.claude\/worktrees\/([^/]+)(?:\/|$)/;
+const subagentTree = (w) => !!w?.worktree && w.worktree.startsWith('agent-');
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
 // The plan's sections, each a heading; Aim is the main goal the work serves, as agreed with the person, kept unchanged
 // from piece to piece; Before must hold bin/check's closing line, Measure the goal measured
@@ -141,7 +145,11 @@ function disk(f) {
 function where(raw, repos) {
   const file = disk(raw);
   const r = repos.map(realPath).find((d) => file === d || file.startsWith(d + path.sep));
-  return r ? { repo: r, rel: path.relative(r, file), file } : null;
+  if (!r) return null;
+  const m = path.relative(r, file).match(IN_WORKTREE);
+  if (!m) return { repo: r, rel: path.relative(r, file), file };
+  const repo = path.join(r, '.claude', 'worktrees', m[1]);
+  return { repo, rel: path.relative(repo, file), file, worktree: m[1] };
 }
 
 /* What a shell command writes, read strictly: quoted text and heredoc bodies
@@ -220,9 +228,11 @@ export function shellWrites(cmd, cwd) {
 }
 // git (by any path), its own options (-C dir, -c k=v, --git-dir x, --no-pager, -p), then push; a dry run sends nothing
 const PUSH = /(?:^|[;&|(]\s*|\s)(?:\S*\/)?git((?:\s+(?:-[Cc]\s+\S+|--(?:git-dir|work-tree|namespace)\s+\S+|--[\w-]+(?:=\S+)?|-[pP]))*)\s+push\b([^;&|]*)/;
-export const isPush = (cmd) => { const m = bareShell(cmd).match(PUSH); return !!m && !/--dry-run|\s-n\b/.test(m[2]); };
+// bin/land is the push of a worktree's branch (tools/shared/land.mjs): the same review holds it
+const LAND = /(?:^|[\n;&|(]\s*)(?:[^\s;&|()]*\/)?bin\/land(?![\w.-])(?:[ \t]+([^\s;&|()-][^\s;&|()]*))?/;
+export const isPush = (cmd) => { const b = bareShell(cmd); if (LAND.test(b) && !/--queue/.test(b)) return true; const m = b.match(PUSH); return !!m && !/--dry-run|\s-n\b/.test(m[2]); };
 /* The repo a push sends: its -C folder, else where the command runs. */
-const pushDir = (cmd, cwd) => { const bare = bareShell(cmd); const m = bare.match(PUSH); const c = (m?.[1] || '').match(/-C\s+(\S+)/); return path.resolve(shellDir(bare, cwd), expandHome(c ? c[1] : '.')); };
+const pushDir = (cmd, cwd) => { const bare = bareShell(cmd); const l = bare.match(LAND); if (l && !bare.match(PUSH)) { const d = shellDir(bare, cwd); return l[1] && !/^worktree-|^[\w.-]+$/.test(l[1]) ? path.resolve(d, expandHome(l[1])) : d; } const m = bare.match(PUSH); const c = (m?.[1] || '').match(/-C\s+(\S+)/); return path.resolve(shellDir(bare, cwd), expandHome(c ? c[1] : '.')); };
 
 /* The uncommitted files among these: { file: true }. A repo git cannot read
    holds nothing uncommitted. */
@@ -327,7 +337,7 @@ function inherit(st, session, repos, cwd) {
   const here = where(cwd, repos);
   if (!here) return;
   const theirs = Object.entries(readCarry()).filter(([id]) => id !== session)
-    .flatMap(([, c]) => Object.keys(c.files).filter((f) => f.startsWith(here.repo + path.sep)).map((f) => [f, c]));
+    .flatMap(([, c]) => Object.keys(c.files).filter((f) => where(f, repos)?.repo === here.repo).map((f) => [f, c]));
   if (!theirs.length) return;
   const open = dirty([...new Set(theirs.map(([f]) => f))]);
   for (const [f, c] of theirs) {
@@ -381,7 +391,7 @@ function add(st, c, cwd, repos, sub = false) {
     const w = where(f, repos);
     // a background agent's edits in its own worktree are counted when its branch is merged, not as it writes them;
     // the session's own edits in a worktree count like any other
-    if (w && sub && WORKTREE.test(w.rel)) continue;
+    if (w && sub && subagentTree(w)) continue;
     if (w && path.basename(w.rel) === 'README.md' && !st.docs.includes(w.file)) st.docs.push(w.file);
     if (!w || BOOKKEEPING.test(w.rel)) continue;
     const n = changed(c, st.measured);
@@ -532,7 +542,7 @@ function record(st, line, repos, sub) {
     // the repo's own check, run in that repo: a run elsewhere is that repo's
     // a subagent's run counts as the session's (a background agent that spans turns ran it), except in its own
     // worktree, whose tree is not the repo's
-    if (c.name === 'Bash' && c.id && CHECK_RUN.test(bareShell(c.input?.command))) { const d = checkDir(bareShell(c.input?.command), rec.cwd || process.cwd()); if (!(sub && d && /\/\.claude\/worktrees\//.test(d + '/'))) st.checks[c.id] = (d && where(d, repos)?.repo) || ''; }
+    if (c.name === 'Bash' && c.id && CHECK_RUN.test(bareShell(c.input?.command))) { const d = checkDir(bareShell(c.input?.command), rec.cwd || process.cwd()); const w = d && where(d, repos); if (!(sub && subagentTree(w))) st.checks[c.id] = w?.repo || ''; }
     if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart };
     if (c.id && st.counted[c.id]) continue; // counted when the plan gate saw it pending
     if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) continue; // a subagent's edit the session's review already covered
@@ -574,12 +584,32 @@ export function advance(session, transcript, repos, st = load(session, repos)) {
   let list = [];
   try { list = fs.readdirSync(subs).filter((f) => f.endsWith('.jsonl')); } catch { /* none */ }
   for (const f of list) readFrom(st, path.join(subs, f), repos, true, persist);
+  restored(st, repos);
   // a review that never reported back (killed with its session) stops being waited on after a day
   st.reviewing = st.reviewing.filter((r) => Date.now() - r.at < 24 * 3600 * 1000);
   for (const [id, sh] of Object.entries(st.shell)) if (Date.now() - sh.start > 24 * 3600 * 1000) { delete st.shell[id]; delete st.pre[id]; }
   for (const [id, p] of Object.entries(st.pre)) if (!st.shell[id] && Date.now() - p.at > 24 * 3600 * 1000) delete st.pre[id];
   save(session, st);
   return st;
+}
+
+/* Files this session changed and then put back: nothing uncommitted, and no commit touching them since the session's
+   first edit in their repo. They are not work: counting them held a one-line fix for a review of a 198-line report a
+   check had rewritten and the session had restored (20 Nov 2026). */
+function restored(st, repos) {
+  const files = Object.keys(st.since.files);
+  if (!files.length) return;
+  const open = dirty(files);
+  for (const f of files) {
+    if (open[f] || !fs.existsSync(f)) continue; // a file gone or never written is not one put back
+    const w = where(f, repos), first = w && st.firstEdit?.[w.repo];
+    if (!w || !first) continue;
+    const g = spawnSync('git', ['-C', w.repo, 'log', '-1', '--format=%cI', '--', w.rel], { encoding: 'utf8' });
+    const last = g.status === 0 ? g.stdout.trim() : '';
+    if (!last) continue; // untracked or unreadable: not known to be put back
+    if (last && Date.parse(last) >= Date.parse(first)) continue; // committed since: work, reviewed before it leaves
+    for (const a of [st.since, st.total]) { delete a.files[f]; a.wide = a.wide.filter((x) => x !== f); }
+  }
 }
 
 /* What the plan lacks: a missing section, a Before without bin/check's closing line
@@ -673,6 +703,27 @@ export const compound = (call) => call.name === 'Bash' && bareShell(call.input?.
 
 /* PreToolUse: measures a rewrite against the file it replaces, then refuses
    the call that makes the session's work full-size until the plan exists. */
+/* A repo that lands through bin/land is edited in a worktree, one per piece of work, never in its main checkout:
+   sessions sharing one working tree waited on and blocked one another all day (20 Nov 2026). A session that edited the
+   main checkout before this rule finishes its work there. The worktrees this session made are named, so a session
+   that moves between pieces of work goes back to the right one. TOOLKIT_WORKTREES=off turns it off. */
+function intoMain(st, call, cwd, repos, session) {
+  if (process.env.TOOLKIT_WORKTREES === 'off') return null;
+  for (const f of writes(call, cwd)) {
+    const w = where(f, repos);
+    if (!w || w.worktree || w.rel.startsWith('.claude' + path.sep) || !fs.existsSync(path.join(w.repo, 'bin', 'land'))) continue;
+    if (st.firstEdit?.[w.repo]) continue;
+    let mine = [];
+    try { mine = JSON.parse(fs.readFileSync(path.join(w.repo, '.git', 'worktree-sessions.json'), 'utf8'))[session] || []; } catch { /* none yet */ }
+    const have = mine.filter((n) => fs.existsSync(path.join(w.repo, '.claude', 'worktrees', n)));
+    return `${w.repo} is worked on in a worktree, one per piece of work, never in its main checkout, which other sessions share. `
+      + `Make or reopen the one for this work, named for the work (e.g. check-cache): ${path.join(w.repo, 'bin', 'worktree')} <work-name> — it prints its folder. `
+      + `Then write ${path.join('<folder>', w.rel)} instead, run checks there, commit on its branch, and land with bin/land from the folder.`
+      + (have.length ? ` This session's worktrees: ${have.join(', ')}.` : '');
+  }
+  return null;
+}
+
 export function planGate(session, transcript, repos, call, cwd, sub = false) {
   if (off()) return null;
   let h;
@@ -685,6 +736,8 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   }
   const plan = planPath(session);
   advance(session, transcript, repos, st);
+  const away = intoMain(st, call, cwd, repos, session);
+  if (away) { if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; } save(session, st); return away; }
   // the repos the work is in: those its files are in, and the one this call writes
   const work = [...new Set([...Object.keys(st.total.files), ...writes(call, cwd)].map((f) => where(f, repos)?.repo).filter(Boolean))];
   const gaps = fs.existsSync(plan) ? planGaps(fs.readFileSync(plan, 'utf8'), st, work, fs.statSync(plan).mtimeMs) : null;
@@ -694,7 +747,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   if (call.name === 'Bash' && isPush(call.input?.command)) {
     // only the pushed repo's work: unreviewed work elsewhere does not hold this one back
     const repo = where(pushDir(call.input.command, cwd), repos)?.repo;
-    const files = Object.fromEntries(Object.entries(st.since.files).filter(([f]) => repo && f.startsWith(repo + path.sep)));
+    const files = Object.fromEntries(Object.entries(st.since.files).filter(([f]) => repo && where(f, repos)?.repo === repo));
     const s = size({ files, wide: st.since.wide.filter((f) => files[f] !== undefined) });
     const why = s.full ? `${s.why.join(', ')} changed since the last independent review` : st.reviewing.length ? 'a review is still running' : '';
     if (why) {
@@ -776,10 +829,12 @@ export function stopGate(session, transcript, repos, lastMessage, cwd = process.
   const s = size(plus(st.since, st.inherited));
   if (st.turnEdited && s.full) {
     carry(session, st); save(session, st);
-    const dirs = [...new Set(Object.keys(plus(st.since, st.inherited).files).map((f) => repos.map(realPath).find((d) => f.startsWith(d + path.sep))).filter(Boolean))];
+    const dirs = [...new Set(Object.keys(plus(st.since, st.inherited).files).map((f) => where(f, repos)?.repo).filter(Boolean))];
+    // a worktree's work is mostly committed on its branch: its diff runs from where the branch left main
+    const diff = (d) => (IN_WORKTREE.test(path.relative(repos.map(realPath).find((r) => d.startsWith(r + path.sep)) || d, d)) ? `git -C ${d} diff $(git -C ${d} merge-base origin/main HEAD)` : `git -C ${d} diff`);
     // the person sees this too: short, the method in §D 13
     return `Not done yet: ${s.why.join(', ')} changed since the last review (toolkit-standard §D 13). `
-      + `Run the checks, then fresh read-only reviewers (Explore, never a fork, "review" in the description) on the diff (git -C ${dirs.join(' / git -C ')} diff) and the plan at ${planPath(session)}, one area each. `
+      + `Run the checks, then fresh read-only reviewers (Explore, never a fork, "review" in the description) on the diff (${dirs.map(diff).join(' / ')}) and the plan at ${planPath(session)}, one area each. `
       + `Fix what is real; repeat until no new High. End with "Measure:" (before → after), "Toolkit:", "Open:" and "Docs:" lines.${theirs(st, session)}`;
   }
   // a review still running has not closed the work: launching one is not finishing (28 Oct, the gate's first run)

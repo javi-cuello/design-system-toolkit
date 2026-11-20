@@ -215,8 +215,8 @@ if (mode === 'stop') {
     reason = payload.stop_hook_active || off || !inEcosystem(payload.cwd || process.cwd()) ? null : `The review gate (${SHOWN}/tools/claude-hooks/gates.mjs) failed and did not judge this turn: ${String(e?.message ?? e)}. Fix it, then run the review it would have asked for.`;
   }
   if (reason) { console.log(JSON.stringify({ decision: 'block', reason })); process.exit(0); }
-  // the session's own edits, left uncommitted, block every other session's push (the user's standing rule: commit
-  // each green step at once, unfinished work too, saying what is left). Once a turn; never another session's paths.
+  // the session's own edits, left uncommitted, are lost to the next session (the user's standing rule: commit each
+  // green step at once, unfinished work too, saying what is left). Once a turn; never another session's paths.
   if (!payload.stop_hook_active && process.env.TOOLKIT_GATES !== 'off' && !process.env.TOOLKIT_EVAL_COPY) {
     let loose = {};
     try {
@@ -225,7 +225,7 @@ if (mode === 'stop') {
     } catch { loose = {}; /* unreadable: the closing pass still lists uncommitted work */ }
     const where = Object.entries(loose);
     if (where.length) {
-      console.log(JSON.stringify({ decision: 'block', reason: `Your own edits are uncommitted, and an uncommitted tree blocks every other session's push. Commit them now, only these paths (git -C <repo> commit -- <paths>), unfinished work too with a message saying what is left:\n${where.map(([r, fs_]) => `  ${r}: ${fs_.join(' ')}`).join('\n')}` }));
+      console.log(JSON.stringify({ decision: 'block', reason: `Your own edits are uncommitted: a session can end at any turn, and work only in its tree is lost to the next one. Commit them now, only these paths (git -C <repo> commit -- <paths>), unfinished work too with a message saying what is left; in a worktree that is its own branch, landed with bin/land once green:\n${where.map(([r, fs_]) => `  ${r}: ${fs_.join(' ')}`).join('\n')}` }));
       process.exit(0);
     }
   }

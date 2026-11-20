@@ -26,7 +26,7 @@ The toolkit holds no project. Each project keeps its design-system files in its 
 | [`knowledge/`](knowledge/README.md) | Guidance past the rules, with sources: UI fundamentals, patterns and code practice. |
 | [`research/`](research/README.md) | Long-form research articles on how design systems are built; not part of the knowledge base. |
 | [`docs/`](docs/README.md) | Setting up the whole toolkit, and how its parts fit together. |
-| [`bin/`](bin/README.md) | The commands you run: `bin/check`, `bin/closing`, `bin/review`, `bin/get`, `bin/audit`, `bin/deploy`, `bin/set-key`. |
+| [`bin/`](bin/README.md) | The commands you run: `bin/check`, `bin/worktree`, `bin/land`, `bin/closing`, `bin/review`, `bin/get`, `bin/audit`, `bin/deploy`, `bin/set-key`. |
 
 ## Getting started
 

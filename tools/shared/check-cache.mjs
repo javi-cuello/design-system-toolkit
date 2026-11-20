@@ -68,7 +68,7 @@ export async function run(repo, args) {
   if (hit) { release(); return replay(hit); }
   const result = await new Promise((resolve) => {
     let tail = '';
-    const c = spawn(path.join(repo, 'bin', 'check'), args, { stdio: ['inherit', 'pipe', 'inherit'], env: process.env });
+    const c = spawn(path.join(repo, 'bin', 'check'), args, { cwd: repo, stdio: ['inherit', 'pipe', 'inherit'], env: process.env });
     c.stdout.setEncoding('utf8');
     c.stdout.on('data', (d) => { process.stdout.write(d); tail = (tail + d).split('\n').slice(-KEEP - 1).join('\n'); });
     c.on('error', () => resolve({ code: 1, tail }));
@@ -98,7 +98,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
     process.exitCode = await atCommit(path.resolve(repo), rev);
   } else {
   const [repo, ...args] = process.argv.slice(2);
-  if (!repo) { console.error('usage: check-cache.mjs <repo> [--quick] [other bin/check options…]'); process.exit(2); }
+  if (!repo) { console.error('usage: check-cache.mjs <repo> [--quick] [--no-fix] | --commit <repo> <commit>'); process.exit(2); }
   process.exitCode = await run(path.resolve(repo), args); // exitCode, not exit(): piped output still queued is written first
   }
 }

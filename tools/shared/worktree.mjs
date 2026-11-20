@@ -63,6 +63,15 @@ export function ensure(anyDir, work, base = 'origin/main') {
   link(main, dir);
   return dir;
 }
+/* Which worktrees a session made, so the gate can name them when the session comes back to the main checkout. */
+export function remember(main, session, name) {
+  if (!session) return;
+  const file = path.join(git(main, 'rev-parse', '--path-format=absolute', '--git-common-dir'), 'worktree-sessions.json');
+  let all = {}; try { all = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* first */ }
+  all[session] = [...new Set([...(all[session] || []), name])];
+  const tmp = `${file}.${process.pid}`;
+  fs.writeFileSync(tmp, JSON.stringify(all)); fs.renameSync(tmp, file);
+}
 
 /* A clean, detached worktree of one commit, for a check that must read exactly that commit. */
 export function temp(anyDir, rev) {
@@ -77,5 +86,5 @@ export function temp(anyDir, rev) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
   const work = process.argv[2];
   if (!work) { console.error('usage: worktree.mjs <work>   (a short name for the work, e.g. check-cache)'); process.exit(2); }
-  try { console.log(ensure(TOOLKIT, work)); } catch (e) { console.error(String(e.stderr || e.message).trim()); process.exit(1); }
+  try { const dir = ensure(process.cwd().startsWith(TOOLKIT) ? process.cwd() : TOOLKIT, work); remember(mainOf(dir), process.env.CLAUDE_CODE_SESSION_ID, slug(work)); console.log(dir); } catch (e) { console.error(String(e.stderr || e.message).trim()); process.exit(1); }
 }

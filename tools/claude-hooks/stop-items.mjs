@@ -161,8 +161,15 @@ export async function ownUncommitted(transcript, repos) {
   } catch { /* no gates state: the transcript's writes alone */ }
   // macOS folders are case-insensitive: ~/projects/toolkit is ~/Projects/toolkit
   const fold = process.platform === 'darwin' ? (x) => x.toLowerCase() : (x) => x;
-  for (const repo of repos) {
-    const mine = [...last.keys()].filter((f) => fold(f).startsWith(fold(repo + path.sep)) && !/\/\.claude\/worktrees\//.test(f)).map((f) => [f, repo + f.slice(repo.length)]);
+  // a session's own worktree (.claude/worktrees/<work>) is a repo of its own; a background subagent's (agent-<id>) is
+  // the subagent's, merged by the session
+  const trees = new Set();
+  for (const f of last.keys()) for (const repo of repos) {
+    const m = fold(f).startsWith(fold(repo + path.sep)) && f.slice(repo.length + 1).match(/^\.claude\/worktrees\/([^/]+)\//);
+    if (m && !m[1].startsWith('agent-')) trees.add(path.join(repo, '.claude', 'worktrees', m[1]));
+  }
+  for (const repo of [...repos, ...trees]) {
+    const mine = [...last.keys()].filter((f) => fold(f).startsWith(fold(repo + path.sep)) && !/\/\.claude\/worktrees\//.test(f.slice(repo.length))).map((f) => [f, repo + f.slice(repo.length)]);
     if (!mine.length) continue;
     const g = (args) => execFileSync('git', ['-C', repo, '--literal-pathspecs', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     let st = '';

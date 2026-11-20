@@ -1,0 +1,3 @@
+#!/bin/sh
+# Land this branch: tools/shared/land.mjs (one queue, one check per batch, push from an integration worktree).
+exec node "$(cd "$(dirname "$0")/.." && pwd)/tools/shared/land.mjs" "$@"

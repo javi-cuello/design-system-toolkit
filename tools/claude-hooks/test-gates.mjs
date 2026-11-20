@@ -10,6 +10,8 @@ import { planGate, stopGate, shellWrites, planPath, size, advance, isReview, lin
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOLKIT = fs.realpathSync(path.resolve(HERE, '../..'));
 const REPOS = [TOOLKIT];
+// the tests edit the main checkout as sessions did before worktrees; the redirect has its own test, which turns it on
+process.env.TOOLKIT_WORKTREES = 'off';
 delete process.env.TOOLKIT_GATES; delete process.env.TOOLKIT_EVAL_COPY;
 // state, plans and the carry between sessions live in tmp: the tests keep their own
 process.env.TMPDIR = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'test-gates-')));
@@ -107,7 +109,8 @@ test('size: a few small edits are small; more files, more lines, a standard or b
   for (const [lines, why] of [
     [[edit('a.mjs'), edit('b.mjs'), edit('c.mjs'), edit('d.mjs')], /4 files/],
     [[edit('a.mjs', 101)], /101 lines/],
-    [[edit('standards/code-standard.md', 11)], /a standard or shared tool/],
+    // a path that is not on disk: an existing standard, unchanged on disk, reads as put back (restored())
+    [[edit('standards/new-standard.md', 11)], /a standard or shared tool/],
   ]) {
     const t = session(lines);
     const z = size(advance(t.id, t.file, REPOS).total);
@@ -117,6 +120,20 @@ test('size: a few small edits are small; more files, more lines, a standard or b
   const outside = session([edit('../../elsewhere/a.mjs', 900)]);
   assert.equal(size(advance(outside.id, outside.file, REPOS).total).full, false, 'a file outside every repo does not count');
   outside.clean();
+});
+
+test('a tracked file changed and put back is no longer work; one still changed, or committed since, is', () => {
+  const f = 'tools/claude-hooks/impact.mjs'; // tracked, and clean in the test's checkout
+  const s = session([edit(f, 150)]);
+  assert.equal(size(advance(s.id, s.file, REPOS).total).lines, 0, 'clean and not committed since: put back');
+  s.clean();
+  const abs = path.join(TOOLKIT, f), was = fs.readFileSync(abs, 'utf8');
+  fs.appendFileSync(abs, 'x\n');
+  try {
+    const t = session([edit(f, 150)]);
+    assert.equal(size(advance(t.id, t.file, REPOS).total).lines, 150, 'still changed on disk: work');
+    t.clean();
+  } finally { fs.writeFileSync(abs, was); }
 });
 
 test('plan gate: the call that makes the work full is refused until a plan with an Impact section exists', () => {
@@ -289,6 +306,36 @@ test('feedback gate: a background review is waited on until its notification com
     { type: 'attachment', attachment: { type: 'queued_command', prompt: '<task-notification>\n<tool-use-id>r2</tool-use-id>\n<status>completed</status>' } }]);
   assert.match(stopGate(m.id, m.file, REPOS, 'Done.'), /^Reviewed full-size work ends/);
   m.clean();
+});
+
+test('worktrees: each is its own repo; bin/land is its push; its reviewers diff from where it left main', () => {
+  assert.equal(isPush('bin/land'), true);
+  assert.equal(isPush('cd ~/Projects/toolkit/.claude/worktrees/w1 && bin/land 2>&1 | tail -5'), true);
+  assert.equal(isPush('bin/land --queue'), false, 'listing the queue sends nothing');
+  const W1 = path.join(TOOLKIT, '.claude/worktrees/w1');
+  const s = session([user('build it'), edit('.claude/worktrees/w1/a.mjs', 200)]);
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT);
+  assert.match(planGate(s.id, s.file, REPOS, { id: 'l1', name: 'Bash', input: { command: `cd ${W1} && bin/land` } }, W1), /^Not pushed/, "the worktree's unreviewed work does not land");
+  assert.equal(planGate(s.id, s.file, REPOS, { id: 'l2', name: 'Bash', input: { command: 'git push' } }, TOOLKIT), null, "nor does it hold a push of the main checkout, another repo");
+  assert.match(String(stopGate(s.id, s.file, REPOS, 'Done.', W1)), new RegExp(`git -C ${W1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} diff \\$\\(git -C [^)]* merge-base origin/main HEAD\\)`), 'the reviewers see the committed work too');
+  s.clean();
+});
+
+test('a repo that lands through bin/land is edited in a worktree; a session already editing its main checkout finishes there', () => {
+  delete process.env.TOOLKIT_WORKTREES;
+  try {
+    const W = (id, file) => ({ id, name: 'Write', input: { file_path: path.join(TOOLKIT, file), content: 'x' } });
+    const s = session([user('build it')]);
+    const said = String(planGate(s.id, s.file, REPOS, W('r1', 'tools/x.mjs'), TOOLKIT));
+    assert.match(said, /worked on in a worktree[\s\S]*bin\/worktree <work-name>[\s\S]*<folder>\/tools\/x\.mjs/, 'the edit is sent to a worktree, with the command and the path to use');
+    assert.equal(planGate(s.id, s.file, REPOS, W('r2', '.claude/worktrees/w1/tools/x.mjs'), TOOLKIT), null, 'its worktree takes the edit');
+    assert.equal(planGate(s.id, s.file, REPOS, W('r3', '.claude/settings.local.json'), TOOLKIT), null, "the checkout's own .claude is not work");
+    assert.match(String(planGate(s.id, s.file, REPOS, { id: 'r4', name: 'Bash', input: { command: `echo x > ${path.join(TOOLKIT, 'tools/y.mjs')}` } }, TOOLKIT)), /worked on in a worktree/, 'a shell write too');
+    s.clean();
+    const old = session([user('build it'), edit('tools/z.mjs', 3)]);
+    assert.equal(planGate(old.id, old.file, REPOS, W('r5', 'tools/x.mjs'), TOOLKIT), null, 'a session that already edited the main checkout finishes there');
+    old.clean();
+  } finally { process.env.TOOLKIT_WORKTREES = 'off'; }
 });
 
 test('push gate: unreviewed full-size work is not pushed; reviewed or small work is', () => {
@@ -722,6 +769,22 @@ test("the stop gate names the session whose uncommitted work counts in this one'
     assert.match(said, new RegExp(`another session's uncommitted work.*session ${a.id.slice(0, 8)} \\(not running\\): base\\.mjs`), 'named, with its file');
     assert.doesNotMatch(said, /next\.mjs\./, "this session's own file is not said to be another's");
   } finally { for (const x of [a, b]) x.clean(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("the stop check lists a session's own worktree's uncommitted paths under that worktree; a subagent's worktree is not the session's", async () => {
+  const { ownUncommitted } = await import('./stop-items.mjs');
+  const dir = repo();
+  const git = (...a) => spawnSync('git', ['-C', dir, ...a], { encoding: 'utf8' });
+  fs.writeFileSync(path.join(dir, '.gitignore'), '.claude/\n'); git('add', '.gitignore'); git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'ignore');
+  const w1 = path.join(dir, '.claude/worktrees/w1'), ag = path.join(dir, '.claude/worktrees/agent-x');
+  git('worktree', 'add', '-q', '-b', 'worktree-w1', w1); git('worktree', 'add', '-q', '-b', 'worktree-agent-x', ag);
+  fs.writeFileSync(path.join(w1, 'base.mjs'), 'changed'); fs.writeFileSync(path.join(ag, 'base.mjs'), 'changed');
+  const wrote = (f) => at({ ...call('Write', { file_path: f, content: 'x' }), cwd: dir }, Date.now() + 5000); // after the repo's commits
+  const t = path.join(os.tmpdir(), `own-wt-${process.pid}.jsonl`);
+  fs.writeFileSync(t, [wrote(path.join(w1, 'base.mjs')), wrote(path.join(ag, 'base.mjs'))].map((l) => JSON.stringify(l)).join('\n') + '\n');
+  try {
+    assert.deepEqual(await ownUncommitted(t, [dir]), { [w1]: ['base.mjs'] });
+  } finally { fs.rmSync(t, { force: true }); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test("the stop check lists this session's own uncommitted paths, never another's, and nothing once committed", async () => {
