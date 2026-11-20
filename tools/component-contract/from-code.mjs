@@ -90,6 +90,14 @@ export function wordsOf(fc, texts, own = {}) {
   return Object.fromEntries(said.map((q, i) => [q.figma, ownProp(texts[i])]));
 }
 
+/* Whether the walk opens a placed instance to read the layers the mapping names inside it: one the mapping names, at
+   any depth of placing, where it is itself named inside the instance holding it (`inside`: that one's id), so an
+   override two deep (a slider's stop's dot, inside its Stops) is read as the design keeps it and not left to the
+   component's own value. Runs in the page (passed as source); tested by test-from-code.mjs. */
+export function opensPlaced(inside, id, mapped) {
+  return !!mapped && (!inside || String(id).startsWith(`${inside}/`));
+}
+
 /* The element a mapped layer names. A placed component's own layer is mapped to that component's root, inside its host
    (ds-button > button): the host is the instance, so it takes the layer's id and the walk names it by its layer, not by
    the component it places. Only an instance moves: another layer mapped to that root (an override there) stays on it,
@@ -1218,7 +1226,7 @@ async function main() {
       const P = req('../snapshot/projects.cjs');
       // (the tokens this read already holds, the self leg's included, which has no project paths to load them by)
       const modeKeys = modeKeysOf(req('../tokens/modes.cjs').axesOfTokens(L.tokens || (L.where && L.where.paths ? P.tokensOf(L.where.paths) : null)), figmaContract);
-      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc]) => {
+      const raw = await call(L.tab, ([sel, others, rootRe, container, named, partRe, modRe, iconRe, cornerSrc, WEIGHT, strokeSrc, marks, climb, shownSel, sidesSrc, elementOfLayerSrc, entryIds, modeKeys, unturnSrc, opensPlacedSrc]) => {
         const corner = new Function(`return ${cornerSrc}`)();
         const insetStroke = new Function(`return ${strokeSrc}`)();
         const sideStrokes = new Function(`return ${sidesSrc}`)();
@@ -1230,6 +1238,7 @@ async function main() {
         if (climb) while (root.parentElement && root.parentElement !== holder && root.parentElement !== document.body) root = root.parentElement;
         // the shallowest layer an element plays names it; a deeper one on the same element is its own words (a label written straight into its box)
         const elementOfLayer = new Function(`return ${elementOfLayerSrc}`)();
+        const opensPlaced = new Function(`return ${opensPlacedSrc}`)();
         for (const [s, id, kind] of named) { const [n, words] = elementOfLayer(document.querySelector(s), id, kind, rootRe, others); if (!n) continue; if (words) { if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); continue; } if (!n.hasAttribute('data-figma-id')) n.setAttribute('data-figma-id', id); else if (!n.hasAttribute('data-figma-text')) n.setAttribute('data-figma-text', id); }
         const out = [], seen = {};
         const px = (v) => +(+parseFloat(v) || 0).toFixed(2);
@@ -1339,10 +1348,10 @@ async function main() {
                 return true;
               }).map((t) => [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim()),
               glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) });
-            // the layers the mapping names inside it, one level of placing deep, where the mapping names it too (an
+            // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
-            if (!inside && n.hasAttribute('data-figma-id')) { let i = 0; for (const c of n.children) { const cs = getComputedStyle(c); if (cs.display === 'none' || cs.visibility === 'hidden') continue; walk(c, id, i++, id); } }
+            if (opensPlaced(inside, id, n.hasAttribute('data-figma-id'))) { let i = 0; for (const c of n.children) { const cs = getComputedStyle(c); if (cs.display === 'none' || cs.visibility === 'hidden') continue; walk(c, id, i++, id); } }
             return; }
           // an icon set's name for it, where its markup says it (data-icon) or its class carries one (lucide-circle-x), as Figma's swap names it
           if (kind === 'graphic') { e.width = px(s.width); e.height = px(s.height); e.icon = s.color; if (tag !== 'svg') e.mark = true; const set = iconRe && [...n.classList].map((c) => c.match(new RegExp(iconRe))).find(Boolean); if (n.getAttribute('data-icon')) e.asset = n.getAttribute('data-icon'); else if (set) e.asset = set[1]; if (n.getAttribute('data-icon-size')) e.iconSize = n.getAttribute('data-icon-size'); }
@@ -1434,7 +1443,7 @@ async function main() {
         // placed by CSS order before the markup's (a variant that reverses its parts, to-code's `order`), ties as written
         for (const xs of Object.values(byParent)) xs.map((e, i) => [e, i]).sort((a, b) => (a[0].cssOrder || 0) - (b[0].cssOrder || 0) || a[1] - b[1]).forEach(([e], i) => { if (!e.keepOrder) e.order = i; delete e.keepOrder; delete e.cssOrder; });
         return out;
-      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString()]);
+      }, [rootSel, others, L.instancePattern, L.container, named, partClass, partModifiers, iconClass, cornerOf.toString(), Object.fromEntries([100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((w) => [w, weightName(w)])), insetStroke.toString(), marks, !L.root, shownSel, sideStrokes.toString(), elementOfLayer.toString(), entryIds, modeKeys, unturn.toString(), opensPlaced.toString()]);
       if (!raw) throw new Error(`${rootSel} drew nothing with ${JSON.stringify(args)}`);
       // a name its id here spells back is no name of its own (a placed menu's "Action footer" at actionFooter), by
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)

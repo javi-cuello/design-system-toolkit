@@ -194,6 +194,16 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('a layer inside a placed component, mapped to its root, stays on that root', elementOfLayer(inner, 'footer/button/container', 'container', R, others)[0] === inner);
   ok('a text inside a placed component, mapped to its root, is that root\'s words', elementOfLayer(inner, 'footer/button/label', 'text', R, others)[1] === true);
 }
+// a placed instance the mapping names is opened at any depth of placing: an override two deep (a slider's stop's dot,
+// inside its Stops) is read, not left to the inner component's own value (Material 3's standard slider)
+{
+  const { opensPlaced } = await import('./from-code.mjs');
+  const inPage = new Function(`return ${opensPlaced.toString()}`)();
+  ok('a placed instance the mapping names is opened at the top, and inside another the mapping names it under',
+    inPage(false, 'showStopsStops', true) && inPage('showStopsStops', 'showStopsStops/trackStop1', true));
+  ok('one the mapping does not name, or named under another instance, is not opened',
+    !inPage(false, 'stops', false) && !inPage('showStopsStops', 'showStopsStops/trackStop1', false) && !inPage('other', 'showStopsStops/trackStop1', true));
+}
 
 {
   const state = { default: {}, loading: { loading: true }, disabled: { disabled: true } };
