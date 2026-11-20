@@ -14,6 +14,7 @@ node tools/shared/check-cache.mjs --commit <repo> <commit>         # the pre-pus
 node tools/shared/lock.mjs --run <what> -- <command…>              # run a command under the measuring lock
 node tools/shared/lock.mjs --who                                   # who holds the lock
 node tools/shared/worktree.mjs <work>                              # make or find a work's worktree
+node tools/shared/worktree.mjs <work> --join                       # join a worktree another session holds
 node tools/shared/model-routing.mjs                                # print the model routes
 ```
 

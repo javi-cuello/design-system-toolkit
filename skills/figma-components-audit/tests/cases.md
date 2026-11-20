@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.51.0)
+# Eval cases — figma-components-audit (v2.51.1)
+
+**Walked: 2026-11-20 for 2.51.1** — the dashboard citation moved to tools/figma-audit/REFERENCE.md (the README rewrite); no case reads it, so none re-traced.
 
 **Walked: 2026-11-20 for 2.51.0** — `node tests/test-audit.mjs` 142 of 142 (A140, A141 new, and a targeted run leaving page names and size-shared to the full run; the 2.50.0 rules' cases, in it since, re-run unchanged), `node tests/test-probes.mjs` 56 of 56 (the text-size probe retired, its assertions now A140's), `node ../../tools/shared/test-colour.mjs` 18 (the OKLab copy held character for character).
 

@@ -38,6 +38,7 @@ node tools/component-contract/eval.mjs --project <label> --accept
 node tools/component-contract/eval.mjs --project <label> --make-panel <n>
 node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey>
 node tools/component-contract/eval.mjs --project <label> --self --twice --changed --jobs 4 --second
+node tools/component-contract/eval.mjs --projects <label,label…> --legs self,second --jobs 4 --log <file>
 
 # which contract is official, and a component's properties table
 node tools/component-contract/official.mjs --project <label>
