@@ -264,7 +264,14 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('a focus error stroke is not the ring: the one every focus draws is, in the error render too',
     ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: true }).key === 'input/focusBorder' && ringKeyOf(errored, 'input', {}, { state: 'focus', invalid: false }).key === 'input/focusBorder'
     && ringKeyOf(errored, 'input').key === 'input/focusBorder');
+  // (two variants only, the error one first: a tie on how many focus variants add each)
+  const pair = { props, anatomy, variants: errored.variants.slice(0, 2) };
+  ok('of a ring and an error stroke added as often, the broadest variant\'s is the ring, in every render',
+    ['input/focusBorder'].every((k) => ringKeyOf(pair, 'input', {}, { state: 'focus', invalid: true, type: 'a' }).key === k && ringKeyOf(pair, 'input', {}, { state: 'focus', invalid: false, type: 'a' }).key === k && ringKeyOf(pair, 'input').key === k));
   const twoRings = { props, anatomy, variants: [{ when: { type: 'a', state: 'focus' }, add: { focusBorder: { ...ring, parent: 'root' } } }, { when: { type: 'b', state: 'focus' }, add: { outerRing: { ...ring, parent: 'root', name: 'Outer ring' } } }] };
+  ok('a prop the render leaves unset is at its default, never a match for another value\'s variant',
+    (() => { const d = { props, anatomy, variants: [{ when: { state: 'focus', type: 'b', invalid: false }, add: { bRing: { ...ring, parent: 'root' } } }, { when: { state: 'focus', type: 'b', invalid: true }, add: { bRing: { ...ring, parent: 'root' } } }, { when: { state: 'focus', type: 'a' }, add: { aRing: { ...ring, parent: 'root' } } }] };
+      return placeRings({ root: {} }, [['root', { ...ring, parent: 'root' }]], d, { state: 'focus' }).rings.join() === 'aRing'; })());
   ok('two candidate rings in one box, each in only some variants: each render takes its own variant\'s',
     ringKeyOf(twoRings, 'root', {}, { type: 'a', state: 'focus' }).key === 'focusBorder' && JSON.stringify(ringKeyOf(twoRings, 'root', {}, { type: 'b', state: 'focus' })) === '{"key":"outerRing","name":"Outer ring"}');
   ok('a ring kept in the base anatomy and shown by a set is not found (as ringOf finds none): a focusRing',

@@ -131,7 +131,8 @@ export function layerNames(ids, design, drawnFrom = null) {
    rule): its key and name, so a ring read back from an outline is the design's own layer (Carbon's `focusBorder`),
    and a synthesised `<id>/focusRing` only where the design has none. Of several stroke boxes that pass ringOf (a focus
    variant that adds an error border too), the one of the variants this render draws (`when`, the design's props) is
-   taken, then the one most focus variants add: the ring every focus draws, the same key in each. A design layer the
+   taken, then the one most focus variants add, then the one the broadest of them adds (fewest props in its `when`):
+   the ring every focus draws, the same key in each. `when` holds every prop, defaults where the render sets none. A design layer the
    reading already holds (code drew it as a box of its own) is not taken twice. Only a layer a variant adds is found,
    as ringOf finds one: a ring kept in the base anatomy and shown by a variant's `set` is not, and stays a focusRing.
    Tested by test-from-code.mjs. */
@@ -145,12 +146,13 @@ export function ringKeyOf(design, id, taken = {}, when = null) {
     const a = { ...(design.anatomy || {}), ...(v.add || {}) };
     for (const [k, e] of Object.entries(v.add || {})) {
       if (e.parent !== id || k in taken || !ringOf(design, v.when || {}, k, e, a)) continue;
-      const h = hits.get(k) || { key: k, ...(e.name && { name: e.name }), n: 0, here: false };
-      h.n++; h.here = h.here || drawn(v.when); hits.set(k, h);
+      const h = hits.get(k) || { key: k, ...(e.name && { name: e.name }), n: 0, here: false, keys: Infinity };
+      h.n++; h.here = h.here || drawn(v.when); h.keys = Math.min(h.keys, Object.keys(v.when || {}).length); hits.set(k, h);
     }
   }
   const all = [...hits.values()], pool = all.some((h) => h.here) ? all.filter((h) => h.here) : all;
-  const best = pool.find((h) => h.key === own) || pool.sort((x, y) => y.n - x.n)[0];
+  // (a tie, the broadest variant's: a ring {state: focus} adds before an error stroke {state: focus, invalid} adds)
+  const best = pool.find((h) => h.key === own) || pool.sort((x, y) => y.n - x.n || x.keys - y.keys)[0];
   return best ? { key: best.key, ...(best.name && { name: best.name }) } : { key: own };
 }
 
@@ -163,9 +165,10 @@ export function keepsRing(c, id) {
 
 /* A render's rings read from outlines (`ring`: [box id, layer]) placed in its reading as the design's ring layers
    (ringKeyOf), after the box's other children; the keys listed on the reading as `rings` (not enumerable), so delta
-   knows them whatever they are called. Tested by test-from-code.mjs. */
-export function placeRings(anatomy, ring, design, when) {
-  const rings = [];
+   knows them whatever they are called; `combo` the render's design props. Tested by test-from-code.mjs. */
+export function placeRings(anatomy, ring, design, combo) {
+  // (the render's props, each it leaves unset at its default: an unset prop never matches another value's variant)
+  const when = combo && design && design.props ? { ...variantDefaults(design), ...combo } : combo, rings = [];
   for (const [id, e] of ring) { const { key, name } = ringKeyOf(design, id, anatomy, when); rings.push(key); anatomy[key] = { ...e, ...(name && { name }), order: Object.values(anatomy).filter((y) => y.parent === id).length }; }
   Object.defineProperty(anatomy, 'rings', { value: rings, configurable: true });
   return anatomy;
