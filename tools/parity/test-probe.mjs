@@ -44,6 +44,7 @@ const PAGE = `<!doctype html><html data-theme="dark"><head><style>
   #slot { position: relative; width: 20px; height: 20px; } #slot > span { position: absolute; inset: 0; }
   #inring { width: 20px; height: 20px; outline: 1px solid rgb(0, 0, 0); outline-offset: -1px; }
   #hidden { width: 24px; height: 24px; display: none; } #faded { width: 24px; height: 24px; opacity: 0; }
+  #endy { display: flex; justify-content: flex-end; align-items: flex-start; }
   #acut { height: 6px; overflow-x: clip; white-space: nowrap; font: 16px/1 sans-serif; }
   #spin { width: 16px; height: 16px; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
 </style></head><body>
@@ -79,6 +80,7 @@ try {
   ok('a size is the border box, padding and border included, as Figma\'s w is', (await one('#box', ['width', 'height'])).width === '124px');
   ok('a turned box is its own size, not the rect its turn sweeps', (await one('#turned', ['width'])).width === '40px');
   ok('an inline element has a width too (its computed width is auto)', /^\d+(\.\d+)?px$/.test((await one('#inline', ['width'])).width));
+  ok('an alignment reads as the sheet wrote it (Chrome 158 says flow-end for flex-end)', (await one('#endy', ['justify-content', 'align-items']))['justify-content'] === 'flex-end' && (await one('#endy', ['align-items']))['align-items'] === 'flex-start');
   ok('a gap nobody set is 0px, not normal', (await one('#flex', ['row-gap', 'column-gap']))['row-gap'] === '0px' && (await one('#row', ['column-gap']))['column-gap'] === '12px');
   ok('a block, a flex column and a grid all stack their children down the page; a flex row runs across',
     (await one('#box', ['-stacking']))['-stacking'] === 'column' && (await one('#flex', ['-stacking']))['-stacking'] === 'column'

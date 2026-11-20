@@ -359,7 +359,8 @@ export function probe(sections, opts) {
       return null;
     }
     if ((p === 'width' || p === 'height') && !pseudo) return borderBox(el, cs, p);
-    const v = cs.getPropertyValue(p).trim();
+    // Chrome 158 (2026-11) gives flex-start and flex-end back as flow-start and flow-end: the value the sheet wrote is read
+    const v = cs.getPropertyValue(p).trim().replace(/^flow-(start|end)$/, 'flex-$1');
     return (p === 'row-gap' || p === 'column-gap') && v === 'normal' ? '0px' : v;
   };
 
@@ -377,14 +378,14 @@ export function probe(sections, opts) {
       self: at.get(el), anc, w: pseudo ? px(cs.width) || b.width : b.width, h: pseudo ? px(cs.height) || b.height : b.height,
       left: b.left + scrollX, top: b.top + scrollY, text: el.textContent.replace(/\s+/g, ' ').trim(), attrs,
       pad: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map(px),
-      rowGap: px(cs.rowGap) || 0, columnGap: px(cs.columnGap) || 0, justify: cs.justifyContent,
+      rowGap: px(cs.rowGap) || 0, columnGap: px(cs.columnGap) || 0, justify: cs.justifyContent.replace(/^flow-(start|end)$/, 'flex-$1'),
       radius: [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius].map(px),
       minHeight: px(cs.minHeight) || 0, minWidth: px(cs.minWidth) || 0, maxWidth: cs.maxWidth, maxHeight: cs.maxHeight,
       bg: cs.backgroundColor, bgImage: cs.backgroundImage, color: cs.color, shadow: cs.boxShadow, opacity: px(cs.opacity),
       clipped: (cs.overflow !== 'visible' || cs.textOverflow === 'ellipsis') && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1),
       textAlign: cs.textAlign, direction: cs.direction, rotate: px(cs.rotate) || 0, lineClamp: cs.webkitLineClamp === 'none' ? null : cs.webkitLineClamp,
       whiteSpace: cs.whiteSpace, textOverflow: cs.textOverflow, textCase: cs.textTransform, textDecoration: cs.textDecorationLine,
-      letterSpacing: cs.letterSpacing, blendMode: cs.mixBlendMode, borderStyle: cs.borderTopStyle, alignItems: cs.alignItems,
+      letterSpacing: cs.letterSpacing, blendMode: cs.mixBlendMode, borderStyle: cs.borderTopStyle, alignItems: cs.alignItems.replace(/^flow-(start|end)$/, 'flex-$1'),
       border: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth].map(px),
       outline: cs.outlineStyle === 'none' ? 0 : px(cs.outlineWidth), outlineOffset: px(cs.outlineOffset) || 0, outlineColor: cs.outlineColor,
       font: { size: px(cs.fontSize), weight: +cs.fontWeight, lineHeight: px(cs.lineHeight), family: cs.fontFamily.split(',')[0].replace(/"/g, '') },
