@@ -232,8 +232,12 @@ const PUSH = /(?:^|[;&|(]\s*|\s)(?:\S*\/)?git((?:\s+(?:-[Cc]\s+\S+|--(?:git-dir|
 const LAND = /(?:^|[\n;&|(]\s*)(?:[^\s;&|()]*\/)?bin\/land(?![\w.-])(?:[ \t]+([^\s;&|()-][^\s;&|()]*))?/;
 export const isPush = (cmd) => { const b = bareShell(cmd); if (LAND.test(b) && !/bin\/land[ \t]+--queue\b/.test(b)) return true; const m = b.match(PUSH); return !!m && !/--dry-run|\s-n\b/.test(m[2]); };
 /* The repo a push sends: its -C folder, else where the command runs. */
-const pushDir = (cmd, cwd, repos = []) => { const bare = bareShell(cmd); const l = bare.match(LAND); if (l && !bare.match(PUSH)) { const d = shellDir(bare, cwd); if (!l[1]) return d; if (/[/~]/.test(l[1]) || l[1] === '.' || l[1] === '..') return path.resolve(d, expandHome(l[1]));
-    // a branch name: its worktree, under the main checkout that holds the folder it ran in
+const pushDir = (cmd, cwd, repos = []) => { const bare = bareShell(cmd); const l = bare.match(LAND); if (l && !bare.match(PUSH)) { const d = shellDir(bare, cwd); if (!l[1]) return d;
+    const asPath = path.resolve(d, expandHome(l[1]));
+    if (fs.existsSync(asPath) || /^[/~.]/.test(l[1])) return asPath;
+    // a branch name: the worktree git has it checked out in, else its work name's folder under the main checkout
+    const wl = spawnSync('git', ['-C', d, 'worktree', 'list', '--porcelain'], { encoding: 'utf8' });
+    let at = null; for (const x of (wl.status === 0 ? wl.stdout : '').split('\n')) { if (x.startsWith('worktree ')) at = x.slice(9); else if (x === `branch refs/heads/${l[1]}`) return at; }
     const home = repos.filter((r) => d === r || d.startsWith(r + path.sep)).sort((a, b) => b.length - a.length)[0] || d.replace(/\/\.claude\/worktrees\/.*$/, '');
     return path.join(home, '.claude', 'worktrees', l[1].replace(/^worktree-/, '')); } const m = bare.match(PUSH); const c = (m?.[1] || '').match(/-C\s+(\S+)/); return path.resolve(shellDir(bare, cwd), expandHome(c ? c[1] : '.')); };
 
@@ -615,9 +619,9 @@ function restored(st, repos) {
     const g = (...a) => { const r = spawnSync('git', ['-C', repo, '--literal-pathspecs', ...a], { encoding: 'utf8', maxBuffer: 64 << 20 }); return r.status === 0 ? r.stdout : null; };
     const tracked = g('ls-files', '-z', '--', ...list.map(([, r]) => r));
     // git dates are whole seconds: a commit in the second of the first edit counts as after it
-    const since = g('log', `--since=${new Date(Date.parse(st.firstEdit[repo]) - 2000).toISOString()}`, '--name-only', '--format=', '--', ...list.map(([, r]) => r));
+    const since = g('log', '-z', `--since=${new Date(Date.parse(st.firstEdit[repo]) - 2000).toISOString()}`, '--name-only', '--format=', '--', ...list.map(([, r]) => r));
     if (tracked === null || since === null) continue;
-    const isTracked = new Set(tracked.split('\0')), committed = new Set(since.split('\n'));
+    const isTracked = new Set(tracked.split('\0')), committed = new Set(since.split(/[\0\n]/));
     for (const [f, rel] of list) {
       if (!isTracked.has(rel) || committed.has(rel)) continue; // untracked: not known to be put back; committed since: work
       for (const a of [st.since, st.total]) { delete a.files[f]; a.wide = a.wide.filter((x) => x !== f); }

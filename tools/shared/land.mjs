@@ -102,8 +102,18 @@ function settled(main, me) {
   say(`${me.branch} left the queue unlanded and no outcome was kept: run bin/land again`); return 'lost';
 }
 
+/* Outcomes are for the waiters of the moment; a day on, and a crashed write's .tmp, nobody reads. */
+function sweep(main) {
+  const old = Date.now() - 24 * 3600 * 1000;
+  for (const d of [queueDir(main), outcomes(main)]) {
+    let names = []; try { names = fs.readdirSync(d); } catch { continue; }
+    for (const f of names) { const p = path.join(d, f); try { const s = fs.statSync(p); if (s.isFile() && (f.endsWith('.tmp') || d === outcomes(main)) && s.mtimeMs < old) fs.rmSync(p, { force: true }); } catch { /* gone */ } }
+  }
+}
+
 async function landBatch(main, me) {
   const dir = integration(main);
+  sweep(main);
   let alone = null; // a batch red together though each is green alone: one branch at a time
   for (let attempt = 0; attempt < 4; attempt++) {
     tryGit(main, 'fetch', '-q', 'origin');

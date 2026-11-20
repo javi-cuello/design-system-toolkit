@@ -320,6 +320,7 @@ test('worktrees: each is its own repo; bin/land is its push; its reviewers diff 
   assert.equal(planGate(s.id, s.file, REPOS, { id: 'l2', name: 'Bash', input: { command: 'git push' } }, TOOLKIT), null, "nor does it hold a push of the main checkout, another repo");
   assert.match(String(planGate(s.id, s.file, REPOS, { id: 'l3', name: 'Bash', input: { command: 'bin/land worktree-w1' } }, TOOLKIT)), /^Not pushed/, 'a branch named from the main checkout is its worktree');
   assert.match(String(planGate(s.id, s.file, REPOS, { id: 'l4', name: 'Bash', input: { command: 'bin/land w1' } }, TOOLKIT)), /^Not pushed/, 'and so is its work name');
+  assert.match(String(planGate(s.id, s.file, REPOS, { id: 'l5', name: 'Bash', input: { command: `bin/land ${W1}` } }, TOOLKIT)), /^Not pushed/, 'and its folder');
   assert.match(String(stopGate(s.id, s.file, REPOS, 'Done.', W1)), new RegExp(`git -C ${W1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} diff \\$\\(git -C [^)]* merge-base origin/main HEAD\\)`), 'the reviewers see the committed work too');
   s.clean();
 });
