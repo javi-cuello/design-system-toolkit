@@ -493,6 +493,9 @@ function normalForm(anatomy) {
     const w = Array.isArray(b.width) ? b.width : b.width !== undefined ? [b.width, b.width, b.width, b.width] : sides;
     const even = w && w.every((v) => j(v) === j(w[0])) && w[0] !== 0 && w[0] != null && (!sides || (sides.every((v) => v === sides[0]) && sides[0] !== 0));
     if (even) { const { sides: _, ...rest } = b; anatomy[id] = { ...e, border: { ...rest, width: w[0] } }; }
+    // and a weight per side that only repeats the sides, plain numbers (code's [0, 0, 1, 0] beside a bottom of 1): the
+    // sides alone, as Figma says a stroke whose weight no variable binds
+    else if (sides && Array.isArray(b.width) && b.width.every((v, i) => typeof v === 'number' && v === (sides[i] || 0))) { const { width: _, ...rest } = b; anatomy[id] = { ...e, border: rest }; }
   }
   return anatomy;
 }

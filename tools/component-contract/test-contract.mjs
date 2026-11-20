@@ -396,6 +396,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     JSON.stringify(nf({ border: { color: 'S/a', width: ['S/1', 'S/1', 'S/1', 'S/1'], sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border) === '{"color":"S/a","width":"S/1"}'
     && nf({ border: { color: 'S/a', sides: { top: 1, end: 1, bottom: 1, start: 1 } } }).border.width === 1
     && Array.isArray(nf({ border: { color: 'S/a', width: ['S/1', 0, 0, 0], sides: { top: 1, end: 0, bottom: 0, start: 0 } } }).border.width));
+  ok('a weight per side in plain numbers that only repeats the sides is the sides alone, as a stroke no variable weights',
+    JSON.stringify(nf({ border: { color: 'S/a', width: [0, 0, 1, 0], sides: { top: 0, end: 0, bottom: 1, start: 0 } } }).border) === '{"color":"S/a","sides":{"top":0,"end":0,"bottom":1,"start":0}}'
+    && Array.isArray(nf({ border: { color: 'S/a', width: [0, 0, 2, 0], sides: { top: 0, end: 0, bottom: 1, start: 0 } } }).border.width));
   ok('a stroke with a weight and no paint is no stroke', nf({ border: { width: 'S/4' } }).border === undefined);
   // the spelling settled before an instance is held to its component: a stroke recorded by its sides is its component's one weight
   const framed = { component: 'Frame', props: {}, anatomy: { root: { kind: 'container', border: { color: 'c', width: 1 } } }, variants: [] };
