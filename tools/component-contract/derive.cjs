@@ -482,7 +482,7 @@ const look = (e) => j(Object.fromEntries(Object.entries(e).filter(([k]) => !IGNO
    stroke, effect, opacity, clipping, smoothing, min and max sizes) that equals its component's root at the instance's
    props is the component's, and left out, so code and a drawing leave it to the component and no sheet writes it
    twice. Its size is the placement's (fill, hug, a fixed width), kept. */
-const OWN = ['layout', 'radius', 'background', 'border', 'shadow', 'opacity', 'overflow', 'smoothing', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight'];
+const OWN = ['layout', 'radius', 'background', 'border', 'shadow', 'opacity', 'overflow', 'smoothing', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'modes'];
 /* The contract's one spelling of what two readings may say two ways, for every reader (derive, from-code): a stroke
    of one weight on all four sides is that weight (no sides). (An instance's prop at its component's default stays
    stated: to-figma picks the variant by it, and a nested instance's default is its holder's, not its component's; the

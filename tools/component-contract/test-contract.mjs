@@ -387,6 +387,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
     at({ Size: 'Sm' }, { radius: 'Corner/8', layout: { direction: 'row', gap: 8 } }).radius === undefined && at({ Size: 'Sm' }, { radius: 'Corner/8' }).width === 'hug'
     && at({ Size: 'Lg' }, { radius: 'Corner/12' }).radius === undefined && at({ Size: 'Lg' }, { radius: 'Corner/8' }).radius === 'Corner/8'
     && at({ Size: 'Sm' }, { layout: { gap: 8, direction: 'row' } }).layout === undefined);
+  { const tinted = { ...button, anatomy: { root: { ...button.anatomy.root, modes: { palette: 'blue' } } } };
+    const t = (m) => ownStyling({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'Button', with: { Size: 'Sm' }, modes: m } }, (n) => (n === 'Button' ? tinted : null)).b.modes;
+    ok('an instance\'s modes equal to its component\'s own are the component\'s; another mode stays', t({ palette: 'blue' }) === undefined && t({ palette: 'red' }).palette === 'red'); }
 }
 
 
