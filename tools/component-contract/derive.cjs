@@ -574,6 +574,17 @@ function arcForm(y) {
   return { ...y, arc: { ...y.arc, start, end: +(start + sweep).toFixed(2) } };
 }
 
+/* A glyph a reading from code marks where a placed component draws an icon's instance (to-markup's data-icon="Information",
+   read as a graphic naming its asset), held to that instance: from-code names it the instance (its asIcon) only after
+   this cut, so compared as the graphic it was, it differed from its component's own in every combination and was kept as
+   an override the design never states (Carbon's Toggletip's Information inside every field's label). The asset is the
+   instance's component by its last name, as asIcon joins them; its mark's size is the icon's Size. Only for a reading. */
+function asGlyphOf(e, x, reading) {
+  const last = (v) => String(v).split('/').pop().toLowerCase();
+  if (!reading || !e || e.kind !== 'graphic' || !e.asset || !x || x.kind !== 'instance' || !x.component || last(e.asset) !== last(x.component)) return e;
+  const { asset: _, iconSize, ...rest } = e;
+  return { ...rest, kind: 'instance', component: x.component, ...(iconSize != null && { with: { ...(rest.with || {}), Size: iconSize } }) };
+}
 function ownInsides(anatomy, mains, { partial = false, whole = new Set(), reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
@@ -618,18 +629,19 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
       const mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       // (a key is no look, but two that differ are two components: a swap to another library's Icon of one name)
       if (!x || !keyMatches(anatomy[k].key, x.key)) return false;
-      if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(anatomy[k]))) === look(arcForm(bare(x))); }
-      if (look(arcForm(anatomy[k])) === look(arcForm(x))) return true;
+      const y = asGlyphOf(anatomy[k], x, reading);
+      if (swapped.some((s) => mk.startsWith(s + '/'))) { const bare = (o) => Object.fromEntries(Object.entries(o).filter(([f]) => !SHAPE_OF.has(f))); return look(arcForm(bare(y))) === look(arcForm(bare(x))); }
+      if (look(arcForm(y)) === look(arcForm(x))) return true;
       // a part pinned to its parent's far edge (bottom, end) stands where the parent's size puts it: its near offset
       // follows from that size (a footer pinned to the bottom of a dialog the instance makes taller), so it is no
       // override; compared without it
       const pinned = (y) => { if (!y.absolute) return y; const c = y.constraints || {}, a = { ...y.absolute };
         if (c.vertical === 'max' && a.bottom != null) delete a.y; if (c.horizontal === 'max' && a.end != null) delete a.x; return { ...y, absolute: a }; };
-      if (look(arcForm(pinned(anatomy[k]))) === look(arcForm(pinned(x)))) return true;
+      if (look(arcForm(pinned(y))) === look(arcForm(pinned(x)))) return true;
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
-      return reading && look(arcForm(sized(anatomy[k]))) === look(arcForm(sized(x)));
+      return reading && look(arcForm(sized(y))) === look(arcForm(sized(x)));
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
