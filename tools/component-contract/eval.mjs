@@ -104,10 +104,10 @@ export function leftToCode(contract, mainOf = null) {
   const over = new Map(mainOf ? [...parts.values()].map((p) => [p.id, unexposed(contract, p.id, mainOf)]).filter(([, w]) => w) : []);
   // (of such an override, only what markup would pass: the part itself, its kind, component, words and props; its
   // styles the sheet reaches, and a name the reading gives it is the reader's)
-  const passed = new Set(['', 'kind', 'component', 'key', 'content', 'with']);
+  const passed = new Set(['', 'kind', 'component', 'content', 'with']);
   // (a placed instance the markup cannot place at all, a swap no prop passes: its key, modes and look are the swapped-in
   // component's own, gone with it; its size and place in this one stay, as the sheet reaches them)
-  const swappedOwn = (el, field) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && /^(modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/.test(field);
+  const swappedOwn = (el, field) => over.get(el) === 'part' && (all[el] || {}).kind === 'instance' && /^(key|modes|background|radius|border|shadow|layout|overflow|smoothing)(\.|$)/.test(field);
   // (a whole part the component does not draw takes its insides with it; a field it draws otherwise, only that field)
   // a part of a placed component's own that the design keeps only as the way down to such an override (an item's
   // content, holding the avatar it has no prop for): its whole-part row goes with the override, its fields stay

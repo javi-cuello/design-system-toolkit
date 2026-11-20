@@ -112,6 +112,7 @@ ok('a component measured since the accept is held until accepted; one that came 
   const overW = leftToCode(holderW, (n) => (n === 'Switcher' ? swW : null));
   ok('a swap no prop passes is left, its insides with it, even where a deeper prop sets them; words no prop passes are left, the insides\' styles stay differences',
     overW('org/icon.component') && overW('org/icon/glyph.background') && overW('org/box/t.content') && !overW('org/box/t/x.background') && !overW('org/box/t.width'));
+  ok('a part whose override is a field, not a swap, keeps its key a difference: two components of one name', !overW('org/box/t.key'));
   ok('an override a placed component has no prop for is left to code, its structure only; one a prop carries, a style the sheet reaches, and a name the reader gives stay differences',
     over('org/icon') && over('org/icon.component') && !over('org/icon.width') && !over('org/icon.name') && !over('org/label.content') && !over('org/dot') && !over('org/dot.background'));
   // (Atlassian's Column / Page: a cell's slot swapped to an icon tile the cell has no prop for, its key, corners, fill
