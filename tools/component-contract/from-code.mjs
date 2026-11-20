@@ -116,6 +116,24 @@ export function insidePlaced(raw, id) {
   return false;
 }
 
+/* The design's name for each layer the mapping places (none where its id spells it), for nameInside: from the contract
+   the markup was drawn from (`drawnFrom`: on --second, the first reading, so a name the first trip changed shows as the
+   drift it is, and a layer only that reading has is named), else the design's. Tested by test-from-code.mjs. */
+export function layerNames(ids, design, drawnFrom = null) {
+  const c = drawnFrom || design;
+  if (!c) return null;
+  const at = (id) => (c.anatomy || {})[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {};
+  return Object.fromEntries(ids.map((id) => [id, at(id).name ?? null]));
+}
+
+/* Whether an outline a box draws is its own stroke (else, in a focused render, a focus ring layer): not one drawn by an
+   ::after, nor on a box with a border of its own, nor clear (a placeholder drawing nothing); and at rest, or inside a
+   placed component's insides (insidePlaced) unless the design keeps a ring there (`ringed`: its `<id>/focusRing`).
+   Tested by test-from-code.mjs. */
+export function outlineIsOwn(x, focused, inPlaced, ringed) {
+  return !!x.outline && !x.outline.after && (!focused || (inPlaced && !ringed)) && !x.border && !/^(rgba\((?:[^,)]*,){3}\s*0\)|transparent)$/.test(String(x.outline.color).trim());
+}
+
 /* The element a mapped layer names. A placed component's own layer is mapped to that component's root, inside its host
    (ds-button > button): the host is the instance, so it takes the layer's id and the walk names it by its layer, not by
    the component it places. Only an instance moves: another layer mapped to that root (an override there) stays on it,
@@ -949,6 +967,8 @@ async function selfSource(project, name, { second = false } = {}) {
   const tokens = project.snapshot;
   const src = {
     governed: true, label: project.config.project, tab, lib, repo: project.repo, out: path.join(where.projectDir, 'round-trip', second ? 'self2' : 'self'), mode: tier, tokens,
+    // (on --second, the contract the markup was drawn from: the first reading's anatomy, for the names and rings it keeps)
+    ...(second && { drawnFrom: c }),
     value: (x) => (typeof x === 'string' ? valueOf(tokens, x, tier) ?? x : x),
     textStyle: (n) => (tokens.textStyles || []).find((x) => x.name === n),
     components: project.paths.components, story: t.mapping.storyId, container, m: { story: t.mapping.storyId }, root: t.mapping.root, pseudoOf: G.pseudoOf,
@@ -1181,8 +1201,8 @@ async function main() {
     // (each with its kind in the design, for where a placed component's layer lands: elementOfLayer)
     const named = L.governed ? Object.entries(m.elements).map(([id, e]) => [e.selector, id, figmaContract ? kindIn(figmaContract, id) || null : null]).sort((a, b) => a[1].split('/').length - b[1].split('/').length) : [];
     // and its name there (none where its id spells it), for a layer placed inside another component's markup: nameInside
-    const nameIn = (c, id) => (c.anatomy[id] || (c.variants || []).map((v) => (v.add || {})[id]).find(Boolean) || {}).name;
-    const designNames = L.governed && figmaContract ? Object.fromEntries(named.map(([, id]) => [id, nameIn(figmaContract, id) ?? null])) : null;
+    // (on --second, the first reading's, which the markup was drawn from: layerNames)
+    const designNames = L.governed ? layerNames(named.map(([, id]) => id), figmaContract, L.drawnFrom) : null;
     let remPx = null;
     // the room the component is given: Figma's own, so a root that fills its room fills the width Figma draws it at
     // (a canvas fact, as derive records a root fill's), and a fixed or hugging root is read in the same room. Its
@@ -1769,7 +1789,9 @@ async function main() {
         // (a clear outline at rest is a placeholder, high contrast's, drawing nothing; and a box with a border of its own
         // keeps it: there the outline is no stroke of the design's)
         // (inside a placed component's insides, an outline is that part's own stroke at any state: insidePlaced)
-        if (x.outline && !x.outline.after && (!focused || insidePlaced(raw, id)) && !x.border && !/^(rgba\((?:[^,)]*,){3}\s*0\)|transparent)$/.test(String(x.outline.color).trim())) { x.ownOutline = x.outline; delete x.outline; }
+        // (a design that keeps a ring there keeps it a ring: outlineIsOwn)
+        const ringIn = (c) => !!c && [c.anatomy || {}, ...(c.variants || []).map((v) => v.add || {})].some((a) => `${id}/focusRing` in a);
+        if (outlineIsOwn(x, focused, insidePlaced(raw, id), ringIn(L.drawnFrom || figmaContract))) { x.ownOutline = x.outline; delete x.outline; }
         if (x.ownOutline) {
           const o = x.ownOutline, align = o.offset <= -o.width + 0.01 ? 'inside' : o.offset < -0.01 ? 'center' : 'outside';
           x.border = { color: await tok('stroke', o.color, `${id}.outline`, ['outline-color', 'outline']), width: await tok('width', o.width, `${id}.outline-width`, ['outline-width', 'outline']), ...(align !== 'inside' && { align }), ...(o.dashed && { dash: 'dashed' }) };

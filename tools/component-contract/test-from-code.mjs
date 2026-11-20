@@ -225,6 +225,26 @@ ok('an arg by its own attribute, else by a data attribute holding its value, nev
   ok('the component\'s own boxes are not', !insidePlaced(raw, 'root') && !insidePlaced(raw, 'label') && !insidePlaced(raw, 'spinner'));
 }
 
+// the names nameInside takes come from the contract the markup was drawn from: on --second the first reading, so a
+// name the first trip changed is not put back to the design's, and a layer only that reading has is named
+{
+  const { layerNames } = await import('./from-code.mjs');
+  const design = { anatomy: { a: { name: '<A>' } }, variants: [{ add: { b: { name: '<B>' } } }] };
+  const first = { anatomy: { a: { name: '<Renamed>' }, c: { name: '<Only first>' } } };
+  ok('names from the design, its variants\' layers included; none where it keeps none', JSON.stringify(layerNames(['a', 'b', 'x'], design)) === '{"a":"<A>","b":"<B>","x":null}');
+  ok('on --second, the first reading\'s names, not the design\'s', JSON.stringify(layerNames(['a', 'c'], design, first)) === '{"a":"<Renamed>","c":"<Only first>"}');
+  ok('no contract: no names', layerNames(['a'], null) === null);
+}
+// which outline is a box's own stroke and which a focus ring
+{
+  const { outlineIsOwn } = await import('./from-code.mjs');
+  const o = { outline: { color: 'rgb(0, 0, 0)', width: 1, offset: 0 } };
+  ok('at rest an outline is its own stroke; focused, a ring', outlineIsOwn(o, false, false, false) && !outlineIsOwn(o, true, false, false));
+  ok('focused, inside a placed component\'s insides: its own stroke, unless the design keeps a ring there', outlineIsOwn(o, true, true, false) && !outlineIsOwn(o, true, true, true));
+  ok('a box with a border of its own never takes its outline as its stroke, inside a placed component too', !outlineIsOwn({ ...o, border: { width: 1 } }, false, false, false) && !outlineIsOwn({ ...o, border: { width: 1 } }, true, true, false));
+  ok('an ::after outline, or a clear one, is no stroke', !outlineIsOwn({ outline: { ...o.outline, after: true } }, false, false, false) && !outlineIsOwn({ outline: { ...o.outline, color: 'transparent' } }, true, true, false));
+}
+
 {
   const state = { default: {}, loading: { loading: true }, disabled: { disabled: true } };
   ok('an axis takes the value whose args the host carries', axisValueOf(state, { loading: '' }) === 'loading');
