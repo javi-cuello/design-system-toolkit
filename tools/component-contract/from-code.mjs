@@ -489,7 +489,14 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
     }
     return { ...x, when };
   });
-  return { contract: { ...contract, props: ordered, variants }, renamed };
+  // a layer inside a placed component keeps no constraints, as derive keeps none in the design's (figma-fact:
+  // no-nested-position-override): one placed absolutely, or a glyph's scale both ways, keeps them
+  const all = { ...contract.anatomy, ...Object.assign({}, ...variants.map((v) => v.add || {})) };
+  const inside = (id) => { for (let up = (all[id] || {}).parent; up; up = (all[up] || {}).parent) if ((all[up] || {}).kind === 'instance') return true; return false; };
+  const loose = (e) => !e.absolute && !(e.constraints && e.constraints.horizontal === 'scale' && e.constraints.vertical === 'scale');
+  const strip = (anatomy) => Object.fromEntries(Object.entries(anatomy).map(([id, e]) => [id, e.constraints && inside(id) && loose(e) ? (({ constraints, ...rest }) => rest)(e) : e]));
+  const kept = variants.map((v) => ({ ...v, ...(v.add && { add: strip(v.add) }), ...(v.set && { set: Object.fromEntries(Object.entries(v.set).filter(([k]) => { const m = /^(.+)\.constraints(\.|$)/.exec(k); return !(m && inside(m[1]) && loose(all[m[1]] || {})); })) }) }));
+  return { contract: { ...contract, anatomy: strip(contract.anatomy), props: ordered, variants: kept }, renamed };
 }
 
 /* ---- where the code is opened ---- */

@@ -266,3 +266,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
     && fot(code, { size: 'sm', open: false }, 'root') === true && fot(code, { size: 'md', open: true }, 'tip') === true && fot(code, { size: 'sm', open: true }, 'pop') === false
     && combos.every((w) => fot(code, w, 'free') === false)); }
 console.log(`${n}/${n} passed`);
+{ // (Atlassian's navigation: a search icon centred in the placed search's frame; the design keeps no constraints there)
+  const c = { component: 'N', props: {}, anatomy: { root: { kind: 'container' }, s: { kind: 'instance', parent: 'root', component: 'Search' }, 's/i': { kind: 'container', parent: 's', constraints: { horizontal: 'center', vertical: 'center' } }, 's/g': { kind: 'graphic', parent: 's', constraints: { horizontal: 'scale', vertical: 'scale' } }, 's/a': { kind: 'graphic', parent: 's', absolute: { x: 1, y: 1 }, constraints: { horizontal: 'max', vertical: 'min' } }, f: { kind: 'container', parent: 'root', constraints: { horizontal: 'center', vertical: 'min' } } }, variants: [{ when: {}, set: { 's/i.constraints': { horizontal: 'max', vertical: 'max' } } }] };
+  const a = asFigma(c).contract.anatomy, v = asFigma(c).contract.variants[0].set;
+  assert.ok(!a['s/i'].constraints && a['s/g'].constraints && a['s/a'].constraints && a.f.constraints && !('s/i.constraints' in v), 'a layer inside a placed component keeps no constraints, but a glyph\'s scale, one placed absolutely and one outside it do');
+  console.log('ok a reading keeps no constraints inside a placed component, as the design keeps none');
+}
