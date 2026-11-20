@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fieldOf, counts, worse, measure, causes, hashOf, closureHashes, scopedTo, leftToCode } from './eval.mjs';
+import { importClosure, fieldOf, counts, worse, diff, causesOf, measure, causes, hashOf, closureHashes, scopedTo, leftToCode } from './eval.mjs';
 
 let n = 0;
 const ok = (name, cond) => { n++; assert.ok(cond, name); console.log('ok', name); };
@@ -15,6 +15,14 @@ ok('the counts are the rows per component, and a component not measured has none
 const accepted = { browser: { a: 2, b: 0, c: 3 }, figma: { a: 2 } };
 const bad = worse({ browser: { a: 3, b: 0 }, figma: { a: 1 } }, accepted);
 ok('a count that rose is said, one that fell is not, and a reading that went is said', bad.length === 2 && bad.includes('browser a: 2 → 3') && bad.some((x) => /browser c: accepted at 3, now not measured/.test(x)));
+{
+  const d = diff({ self: { a: 3, b: 9, n: 4 } }, { self: { a: 5, b: 7, g: 1, s: 2 }, figma: {} }, { self: { a: { x: 1, y: 2 }, b: { x: 9 } } }, { self: { a: { x: 3, y: 2 }, b: { x: 6, z: 1 } } });
+  ok('diff: the total over components measured both times, what fell and rose, new and gone apart', d[0] === 'self: 12 → 12 (0) over the 2 measured both times; 1 fell, 1 rose; 1 newly measured; 2 not measured now');
+  ok('diff: largest move first, each with the causes it moved by', JSON.stringify(d.slice(1, 6)) === JSON.stringify(['  n: newly measured at 4', '  a: 5 → 3 (-2)', '    -2  x', '  b: 7 → 9 (+2)', '    +3  x']));
+  ok('diff: a component that did not move is not listed, and an empty leg says nothing', !d.some((l) => /^  s: 2 → 2|^figma/.test(l)) && d.includes('  s: accepted at 2, not measured now'));
+  ok('diff: a count that held while its causes moved is listed', diff({ s: { a: 3 } }, { s: { a: 3 } }, { s: { a: { y: 3 } } }, { s: { a: { x: 3 } } }).includes('  a: 3 → 3, its causes changed'));
+  ok('causesOf: a component\'s causes per leg, an unmeasured one left out', JSON.stringify(causesOf({ self: { a: { rows: [{ at: 'x.width' }, { at: 'x.width' }], combinations: 1 }, b: { skipped: 'no' } } })) === '{"self":{"a":{"x.width":2}}}');
+}
 ok('a component measured since the accept is held until accepted; one that came back the same is not', worse({ browser: { z: 9 } }, { browser: {} }).length === 1 && worse({ browser: { z: 0 } }, { browser: {} }).length === 0);
 
 // the self leg's fingerprint: a change to one component moves it and what places it (through a variant too), nothing else
@@ -133,4 +141,13 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
     left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
     && !leftToCode(c, () => null)('p.layout', { library: { align: 'center' } }) && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+
+{
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'closure-')), w = (f, s) => { fs.mkdirSync(path.dirname(path.join(d, f)), { recursive: true }); fs.writeFileSync(path.join(d, f), s); };
+  w('a.mjs', "const s = createRequire(import.meta.url)('./h.cjs');\nrequire(`./i`);\nimport { x } from './b.mjs';\nconst c = await import('./sub/c.mjs');\nconst req = createRequire(import.meta.url); req('./d.cjs');\nimport(path.join(HERE, 'e.mjs'));\nimport './skip.mjs';");
+  w('b.mjs', "export const x = 1; import '../outside-missing.mjs';"); w('sub/c.mjs', "import y from '../b.mjs';"); w('d.cjs', "require('./f.json');"); w('f.json', '{}'); w('e.mjs', ''); w('skip.mjs', "import './g.mjs';"); w('g.mjs', ''); w('h.cjs', ''); w('i.js', '');
+  const got = importClosure([path.join(d, 'a.mjs')], new Set([path.join(d, 'skip.mjs')])).map((f) => path.relative(d, f));
+  ok('importClosure: static, literal dynamic and require()d files, transitively; a skipped file and what only it imports left out; a built path not followed', JSON.stringify(got) === JSON.stringify(['a.mjs', 'b.mjs', 'd.cjs', 'f.json', 'h.cjs', 'i.js', 'sub/c.mjs']));
+  fs.rmSync(d, { recursive: true, force: true });
+}
 console.log(`${n} passed`);

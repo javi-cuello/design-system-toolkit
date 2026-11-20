@@ -21,6 +21,7 @@
  *   node tools/component-contract/eval.mjs --project <label> --draw <scratch fileKey> [components…]
  *   node tools/component-contract/eval.mjs --project <label> --self [--twice] [components…]
  *   node tools/component-contract/eval.mjs --project <label> --causes
+ *   node tools/component-contract/eval.mjs --project <label> --diff [--accept]
  *   node tools/component-contract/eval.mjs --project <label> --second [components…]
  *
  * Each leg says how many components came back the same of all, how many were measured, and its rows folded to causes (a
@@ -185,6 +186,42 @@ export function worse(now, accepted) {
   return out;
 }
 
+/* Each component's causes, per leg, as --accept keeps them beside the counts (accepted-causes.json), so --diff can say
+   which causes a count moved by. { leg: { component: { cause: rows } } } */
+export const causesOf = (legs) => Object.fromEntries(Object.entries(legs).flatMap(([leg, cs]) => {
+  const out = [[leg, Object.fromEntries(Object.entries(cs).filter(([, x]) => x.rows).map(([c, x]) => [c, causes(x.rows, x.combinations)]))]];
+  const left = Object.entries(cs).filter(([, x]) => x.rows && x.left);
+  return left.length ? [...out, [`${leg} left`, Object.fromEntries(left.map(([c, x]) => [c, causes(x.left, x.combinations)]))]] : out;
+}));
+
+/* The measure now against the accepted one, component by component: every count that moved, either way, largest first,
+   with the causes it moved by where the accept kept them; a leg's total is over the components measured both times, so
+   a component newly read or no longer read is said apart, never folded into the trend. Lines to print. */
+export function diff(now, accepted = {}, nowCauses = {}, accCauses = {}) {
+  const out = [];
+  for (const leg of [...new Set([...Object.keys(accepted), ...Object.keys(now)])]) {
+    const a = accepted[leg] || {}, n = now[leg] || {};
+    const comps = [...new Set([...Object.keys(a), ...Object.keys(n)])];
+    if (!comps.length) continue;
+    const both = comps.filter((c) => a[c] !== undefined && n[c] !== undefined);
+    const same = (x, y) => JSON.stringify(Object.entries(x || {}).sort()) === JSON.stringify(Object.entries(y || {}).sort());
+    const shifted = (c) => a[c] === n[c] && (accCauses[leg] || {})[c] && (nowCauses[leg] || {})[c] && !same(accCauses[leg][c], nowCauses[leg][c]);
+    const moved = comps.filter((c) => a[c] !== n[c] || shifted(c)).map((c) => ({ c, was: a[c], is: n[c], d: (n[c] ?? 0) - (a[c] ?? 0) })).sort((x, y) => Math.abs(y.d) - Math.abs(x.d) || x.c.localeCompare(y.c));
+    const fell = moved.filter((x) => x.was !== undefined && x.is !== undefined && x.d < 0).length, rose = moved.filter((x) => x.was !== undefined && x.is !== undefined && x.d > 0).length;
+    const sum = (o) => both.reduce((s, c) => s + o[c], 0);
+    const newly = comps.filter((c) => a[c] === undefined).length, gone = comps.filter((c) => n[c] === undefined).length;
+    const d = sum(n) - sum(a);
+    out.push(`${leg}: ${sum(a)} → ${sum(n)} (${d > 0 ? '+' : ''}${d}) over the ${both.length} measured both times; ${fell} fell, ${rose} rose${newly ? `; ${newly} newly measured` : ''}${gone ? `; ${gone} not measured now` : ''}`);
+    for (const x of moved) {
+      out.push(x.was === undefined ? `  ${x.c}: newly measured at ${x.is}` : x.is === undefined ? `  ${x.c}: accepted at ${x.was}, not measured now` : !x.d ? `  ${x.c}: ${x.was} → ${x.is}, its causes changed` : `  ${x.c}: ${x.was} → ${x.is} (${x.d > 0 ? '+' : ''}${x.d})`);
+      const ac = (accCauses[leg] || {})[x.c], nc = (nowCauses[leg] || {})[x.c];
+      if (!ac || !nc) continue;
+      for (const [k, dk] of [...new Set([...Object.keys(ac), ...Object.keys(nc)])].map((k) => [k, (nc[k] || 0) - (ac[k] || 0)]).filter(([, dk]) => dk).sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]) || p[0].localeCompare(q[0]))) out.push(`    ${dk > 0 ? '+' : ''}${dk}  ${k}`);
+    }
+  }
+  return out;
+}
+
 function report(label, { legs }, fields, byCause) {
   for (const [leg, cs] of Object.entries(legs)) {
     const m = Object.entries(cs).filter(([, x]) => x.rows), skipped = Object.entries(cs).filter(([, x]) => x.skipped);
@@ -252,17 +289,32 @@ function draw(where, label, into, only, retry = true) {
   if (retry && unanswered.length) draw(where, label, into, unanswered, false);
 }
 
-/* The reader's own code: every tool file a reading runs through, but to-markup's and to-code's, whose output selfInputs
-   hashes instead (each component's markup, sheet, mapping and props, and what every page shares: the base sheet, the DOM
-   helper, the pointer states) (a change to either moves only the components whose markup or sheet it changes). */
+/* The files a module runs through: its relative imports, static and literal dynamic, and its literal require()s,
+   followed transitively. A path built at run time is not followed: the reader's only ones load a project's own files
+   (parity/project.mjs its parity settings, external.mjs a repo's components), which selfInputs hashes as the project's. */
+export function importClosure(entries, skip = new Set()) {
+  const seen = new Set();
+  const visit = (f) => {
+    if (seen.has(f) || skip.has(f) || !fs.existsSync(f)) return;
+    seen.add(f);
+    const src = fs.readFileSync(f, 'utf8');
+    for (const m of src.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*|\b(?:require|req)\s*\(\s*|\bcreateRequire\([^)]*\)\s*\(\s*)(['"`])(\.{1,2}\/[^'"`$]+)\1/g)) {
+      const to = path.resolve(path.dirname(f), m[2]);
+      visit(['', '.js', '.cjs', '.mjs', '.json'].map((x) => to + x).find((x) => fs.existsSync(x) && fs.statSync(x).isFile()) || to);
+    }
+  };
+  for (const e of entries) visit(e);
+  return [...seen].sort();
+}
+
+/* The reader's own code: every file a self reading runs through (from-code.mjs and what it imports), but to-markup's and
+   to-code's, whose output selfInputs hashes instead (each component's markup, sheet, mapping and props, and what every
+   page shares: the base sheet, the DOM helper, the pointer states), so a change to either moves only the components
+   whose markup or sheet it changes, and a change to a tool the reading never runs (the editor, a test) moves none. */
 function readerCode() {
   const tools = path.join(HERE, '..'), h = createHash('sha1');
-  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (e.isDirectory()) { if (!/^(node_modules|sample|fixtures|\..*)$/.test(e.name)) walk(path.join(d, e.name)); continue; }
-    if (!/\.(mjs|cjs|js)$/.test(e.name) || /^test-/.test(e.name) || (d === HERE && /^(to-markup|to-code)\.mjs$/.test(e.name))) continue;
-    h.update(path.relative(tools, path.join(d, e.name))).update('\0').update(fs.readFileSync(path.join(d, e.name))).update('\0');
-  } };
-  for (const d of ['component-contract', 'parity', 'shared', 'tokens', 'snapshot', 'contract-editor']) if (fs.existsSync(path.join(tools, d))) walk(path.join(tools, d));
+  const skip = new Set(['to-markup.mjs', 'to-code.mjs'].map((f) => path.join(HERE, f)));
+  for (const f of importClosure([path.join(HERE, 'from-code.mjs')], skip)) h.update(path.relative(tools, f)).update('\0').update(fs.readFileSync(f)).update('\0');
   return h.digest('hex');
 }
 
@@ -274,7 +326,7 @@ export async function selfInputs(label, where) {
   const { loadParity } = await import('../parity/project.mjs');
   const project = await loadParity(label, { self: true });
   const { toElement, toParity, propsOf, DOM } = await import('./to-markup.mjs');
-  const { toCss, BASE, pseudoClasses } = await import('./to-code.mjs');
+  const { toCss, BASE, pseudoClasses, entryOf } = await import('./to-code.mjs');
   const { ELEMENT } = await import('./site.mjs');
   const store = req('../snapshot/store.cjs');
   const library = Object.fromEntries(contracts(where).map(({ folder, contract }) => [contract.component, { ...contract, folder }]));
@@ -287,7 +339,7 @@ export async function selfInputs(label, where) {
     const sheet = toCss(c, c.folder, { naming: ELEMENT, mains });
     // every sheet is on the one page: one whose rules reach past its own element reaches every reading
     if (!scopedTo(sheet, `ds-${c.folder}`)) unscoped.push(sheet);
-    own[c.folder] = hash([JSON.stringify(c), spec, toElement(c, c.folder, { naming: ELEMENT, library }), sheet, JSON.stringify(toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components' })), JSON.stringify(propsOf(c, library))]);
+    own[c.folder] = hash([JSON.stringify(c), spec, toElement(c, c.folder, { naming: ELEMENT, library }), sheet, JSON.stringify(toParity(c, c.folder, { naming: ELEMENT, library, framework: 'web-components' })), JSON.stringify(propsOf(c, library)), JSON.stringify(entryOf(c) || null)]);
   }
   // what every reading shares: the reader's code and the house settings it reads (standards/audit-settings.json: the
   // pointer states, the pseudo-classes), the base sheet, an unscoped sheet, the tokens and the project's settings, every
@@ -297,7 +349,7 @@ export async function selfInputs(label, where) {
   // (and the fonts installed here: a family the tokens name, once installed, is measured in place of the fallback)
   const fonts = ['/Library/Fonts', '/System/Library/Fonts', path.join(process.env.HOME || '', 'Library', 'Fonts'), '/usr/share/fonts', '/usr/local/share/fonts', path.join(process.env.HOME || '', '.fonts'), path.join(process.env.HOME || '', '.local', 'share', 'fonts')]
     .flatMap((d) => { try { return fs.readdirSync(d, { recursive: true }).map((f) => `${d}/${f}`); } catch { return []; } }).sort().join('\n');
-  const shared = hash([readerCode(), read(path.join(HERE, '..', '..', 'standards', 'audit-settings.json')), BASE, DOM, JSON.stringify(pseudoClasses()), fonts, ...unscoped, where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '', JSON.stringify(project.parity), JSON.stringify(project.snapshot || null), JSON.stringify(project.lib || null), JSON.stringify(Object.values(library)), chrome, `${process.platform} ${(await import('node:os')).release()}`]);
+  const shared = hash([readerCode(), read(path.join(HERE, '..', '..', 'standards', 'audit-settings.json')), read(path.join(HERE, '..', '..', 'standards', 'naming-preferences.json')), BASE, DOM, JSON.stringify(pseudoClasses()), fonts, ...unscoped, where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '', JSON.stringify(project.parity), JSON.stringify(project.snapshot || null), JSON.stringify(project.lib || null), JSON.stringify(Object.values(library)), chrome, `${process.platform} ${(await import('node:os')).release()}`]);
   return closureHashes(library, own, shared);
 }
 
@@ -390,14 +442,22 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv.splice(i, 2)[1] : null; };
   const flag = (k) => { const i = argv.indexOf(k); if (i >= 0) argv.splice(i, 1); return i >= 0; };
   const label = opt('--project'), into = opt('--draw'), self = flag('--self');
-  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
+  const fields = flag('--fields'), check = flag('--check'), accept = flag('--accept'), showDiff = flag('--diff'), byCause = flag('--causes'), twice = flag('--twice'), second = flag('--second');
   const opts = { changed: flag('--changed'), jobs: Math.max(1, +(opt('--jobs') || 1)) };
-  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]'); process.exit(2); }
+  if (!label) { console.error('usage: eval.mjs --project <label> [--fields] [--causes] [--diff] [--check | --accept]\n       eval.mjs --project <label> --draw <scratch fileKey> [components…]\n       eval.mjs --project <label> --self [--twice] [--changed] [--jobs N] [components…]\n       eval.mjs --project <label> --second [--changed] [--jobs N] [components…]'); process.exit(2); }
   const where = req('../snapshot/projects.cjs').layout(null, label);
   if (where.error) { console.error(where.error); process.exit(2); }
   // the long legs hold the one measuring lock, niced (tools/shared/lock.mjs); from-code, run under it, does not wait
   if (into || self || second) await (await import('../shared/lock.mjs')).hold(`eval.mjs ${process.argv.slice(2).join(' ')}`);
-  if (into) { draw(where, label, into, argv); process.exit(); }
+  if (into) {
+    // the bridge proved fit first (figma-audit/probe.mjs), so a draw that would fail an hour in is refused in seconds
+    const { probe, listeners } = await import('../figma-audit/probe.mjs');
+    const { serviceFor, call, figmaExec } = await import('../figma-audit/services.mjs');
+    const health = await probe(label, into, { service: () => serviceFor(where.audit), listeners, status: (svc) => call(svc, '/status'), exec: (svc, f, code, ms) => figmaExec(svc, f, code, ms) });
+    const bad = health.find((h) => !h.ok);
+    if (bad) { console.log(`the bridge is not fit to draw (${bad.check}): ${bad.said}`); process.exit(1); }
+    draw(where, label, into, argv); process.exit();
+  }
   if (self && second) { console.error('--self and --second are two runs: the first, then the second'); process.exit(2); }
   if (self && twice) { process.exit(await readTwice(where, label, argv, { jobs: opts.jobs })); }
   if (self) { await readSelf(where, label, argv, false, opts); process.exit(); }
@@ -406,9 +466,21 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   report(label, m, fields, byCause);
   const file = path.join(m.home, 'round-trip', 'accepted.json');
   const now = counts(m.legs);
+  const causesFile = path.join(m.home, 'round-trip', 'accepted-causes.json');
+  const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+  if (showDiff) {
+    const was = readJson(file), why = readJson(causesFile);
+    if (!was && !accept) { console.log(`no accepted counts at ${file}: run with --accept once`); process.exit(1); }
+    if (!was) console.log('no accepted counts yet: this accept is the first');
+    else {
+      if (!why) console.log(`no accepted causes at ${causesFile} (accepted before they were kept): counts only`);
+      for (const l of diff(now, was, causesOf(m.legs), why || {})) console.log(l);
+    }
+  }
   if (accept) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(now, null, 2) + '\n');
+    fs.writeFileSync(causesFile, JSON.stringify(causesOf(m.legs), null, 2) + '\n');
     console.log(`accepted: ${path.relative(process.cwd(), file)}`);
   } else if (check) {
     if (!fs.existsSync(file)) { console.log(`no accepted counts at ${file}: run with --accept once`); process.exit(1); }
