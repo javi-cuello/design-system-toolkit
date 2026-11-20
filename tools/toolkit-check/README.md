@@ -19,7 +19,7 @@ bin/closing                                            # what is open across the
 | `rules.mjs`, `strip.mjs`, `settings-allowlist.json` | What `check-standards.mjs` reads rules, code and accepted literals through. |
 | `check-runs.mjs` | Every assertion a skill's `tests/cases.md` says it runs still exists in the test it names. |
 | `owned-check.mjs` + `owned.json` | Fails a repo that writes again a job the toolkit owns, instead of calling the toolkit. |
-| `leftovers.mjs` | Worktrees, branches and stashes left behind. It removes only what is clean, old and merged. |
+| `leftovers.mjs` | Worktrees, branches and stashes left behind. It removes what is clean, old and merged, and parks work left untouched for a week. |
 | `twins.mjs` | Warns when two projects each wrote the same job, before the toolkit owns it. |
 | `readability.mjs` + `readability.json` | Every README reads plainly (§D 22). |
 | `readmes.mjs` | Every folder has a README in the agreed shape (§D 22). |
