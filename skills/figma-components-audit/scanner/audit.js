@@ -1201,9 +1201,30 @@ async function colourOf(v,modeName,hops=0){ const c=collById[v.variableCollectio
   const x=v.valuesByMode[mode.modeId];
   if(x&&x.type==="VARIABLE_ALIAS"){ if(hops>4) return null; const t=await figma.variables.getVariableByIdAsync(x.id).catch(()=>null); return t?colourOf(t,mode.name,hops+1):null; }
   return x&&typeof x.r==="number"?x:null; }
-// a value that cannot be read (an alias into a library the file cannot reach) is left out, never the scan
-const colours=(await Promise.all((await figma.variables.getLocalVariablesAsync("COLOR")).map(async v=>{ const x=await colourOf(v).catch(()=>null);
-  return x?{name:v.name,collection:(collById[v.variableCollectionId]||{}).name,r:x.r,g:x.g,b:x.b,a:x.a===undefined?1:x.a}:null; }))).filter(Boolean);
+// The palette: the file's own colour variables, and every colour variable its components already bind. A file whose
+// variables all come from a linked library has no local ones (the workshop's example library, 2026-11-20), yet the
+// variables its components use are readable by id, so the advice can still name one.
+// A value that cannot be read (an alias into a library the file cannot reach) is left out, never the scan.
+const usedIds=new Set();
+for(const p of pages) for(const s of p.sets) for(const n of [s,...s.findAll(()=>true)]) for(const k of ["fills","strokes"]){
+  const bv=n.boundVariables&&n.boundVariables[k]; for(const a of [].concat(bv||[])) if(a&&a.id) usedIds.add(a.id); }
+const localColour=await figma.variables.getLocalVariablesAsync("COLOR"), localIds=new Set(localColour.map(v=>v.id));
+const used=(await Promise.all([...usedIds].filter(id=>!localIds.has(id)).map(id=>figma.variables.getVariableByIdAsync(id).catch(()=>null)))).filter(v=>v&&v.resolvedType==="COLOR");
+// First choice: the linked library's own semantic colours, every one it publishes, where the file has the library
+// enabled (figma.teamLibrary needs the "teamlibrary" permission; a listing has no values, so each is imported to read
+// it, and the docs do not say whether an import counts as an edit). Only collections TOKENS.semantic names, so a large
+// palette is never imported whole; none named, or no access, and the palette above is the whole answer.
+const SEM=TOKENS&&TOKENS.semantic?[].concat(TOKENS.semantic):[];
+const fromLibrary=[];
+try{ if(SEM.length&&figma.teamLibrary){
+  for(const lc of (await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()).filter(c=>SEM.includes(c.name)))
+    for(const lv of (await figma.teamLibrary.getVariablesInLibraryCollectionAsync(lc.key)).filter(x=>x.resolvedType==="COLOR")){
+      const v=await figma.variables.importVariableByKeyAsync(lv.key).catch(()=>null); if(v) fromLibrary.push(v); } } }
+catch(e){ /* no access to the library: the components' own variables stand in */ }
+const seen=new Set();
+const colours=(await Promise.all([...fromLibrary,...localColour,...used].filter(v=>!seen.has(v.id)&&seen.add(v.id)).map(async v=>{ const x=await colourOf(v).catch(()=>null);
+  const c=collById[v.variableCollectionId]||await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId).catch(()=>null);
+  return x?{name:v.name,collection:c&&c.name,r:x.r,g:x.g,b:x.b,a:x.a===undefined?1:x.a}:null; }))).filter(Boolean);
 const file={
   colours,
   collections:colls.map(c=>({modes:c.modes.map(m=>({name:m.name}))})),
