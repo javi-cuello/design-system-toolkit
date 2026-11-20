@@ -130,7 +130,7 @@ export function leftToCode(contract, mainOf = null) {
   const foreign = (el) => !!mainOf && (all[el] || {}).kind === 'instance' && !mainOf(all[el].component, all[el].key);
   const inForeign = (el) => el.split('/').some((_, i, s) => i < s.length - 1 && foreign(s.slice(0, i + 1).join('/')));
   const foreignOwn = (el, field) => foreign(el) && /^(with|layout|overflow)(\.|$)/.test(field);
-  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field)))); };
+  return (at, row) => { const el = at.split('.')[0], field = at.slice(el.length + 1); return said(at, row) || !!ownColour(el, field, row) || ownLook(el, field, row) || inForeign(el) || foreignOwn(el, field) || (field === '' && !!carries(el)) || ids.some((id) => (el === id || el.startsWith(`${id}/`)) && !(over.has(id) && !((el !== id && over.get(id) === 'part') || passed.has(field) || (field.startsWith('with.') && el === id)))); };
 }
 const splitLeft = (rows, isLeft) => ({ rows: rows.filter((r) => !isLeft(r.at, r)), left: rows.filter((r) => isLeft(r.at, r)) });
 

@@ -141,6 +141,14 @@ ok('a component measured since the accept is held until accepted; one that came 
   ok('a placed component\'s own layout overridden on the instance is code\'s to say (its own sheet styles it); its size, its fill, and a look the design leaves to the component (its sheet drifting), are not',
     left('p.layout', { library: { align: 'center' } }) && left('p.layout.align', { library: 'center' }) && !left('p.width', { library: 'fill' }) && !left('p.background', { library: 'C/x' })
     && !left('p.layout', { library: null, drawn: { align: 'end' } })); }
+{ const item = { contract: 1, component: 'Item', props: {}, anatomy: { root: { kind: 'container' } }, variants: [] };
+  const list = { contract: 1, component: 'List', props: { size: { type: 'enum', values: ['l', 's'], default: 'l' } }, anatomy: { root: { kind: 'container' }, item: { kind: 'instance', parent: 'root', component: 'Item', with: { Size: 'L' } } },
+    variants: [{ when: { size: 's' }, set: { 'item.with': { Size: 'S' } } }] };
+  const holder = { contract: 1, component: 'Drop', props: {}, anatomy: { root: { kind: 'container' }, list: { kind: 'instance', parent: 'root', component: 'List' }, 'list/item': { kind: 'instance', parent: 'list', component: 'Item', with: { Size: 'L', Type: 'Multi' } } }, variants: [] };
+  const left = leftToCode(holder, (n) => ({ List: list, Item: item })[n] || null);
+  ok('a prop given to an instance nested in a placed component that no variant of it ever sets so is code\'s to say, though another prop of that instance varies; one a variant sets is passed',
+    left('list/item.with.Type', { library: 'Multi' }) && left('list/item.with', { library: { Size: 'L', Type: 'Multi' } })
+    && !leftToCode({ ...holder, anatomy: { ...holder.anatomy, 'list/item': { ...holder.anatomy['list/item'], with: { Size: 'S' } } } }, (n) => ({ List: list, Item: item })[n] || null)('list/item.with.Size', { library: 'S' })); }
 { const c = { contract: 1, component: 'Tile', props: {}, anatomy: { root: { kind: 'container' }, icon: { kind: 'instance', parent: 'root', component: 'Glyph', width: 'fill', with: { size: 'S' } }, 'icon/glyph': { kind: 'graphic', parent: 'icon' } }, variants: [] };
   const left = leftToCode(c, () => null), known = leftToCode(c, (n) => (n === 'Glyph' ? { contract: 1, component: n, props: {}, anatomy: { root: { kind: 'container' } }, variants: [] } : null));
   ok('a placed component the library does not hold (marked, data-icon) leaves its insides, props, layout and clipping to code; its size and place stay measured, and a held one\'s are not left',

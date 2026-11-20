@@ -163,7 +163,12 @@ export function unexposed(c, id, mainOf) {
   if (differs('component') && !by('swaps') && !varied('component')) return 'part';
   if (differs('content') && !by('sets') && !varied('content')) return 'field';
   // a nested instance's own props reach it through a prop the component passes down to it
-  if (differs('with') && !varied('with') && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return 'field';
+  // (each prop it is given on its own: one a variant of the component sets to that value is passed by that variant's
+  // prop; one no variant ever sets so, a Type no prop of the list reaches, is not, though another prop of it varies)
+  const mine = (part.e.with && typeof part.e.with === 'object') ? part.e.with : {}, theirs = (own.with && typeof own.with === 'object') ? own.with : {};
+  const reached = (k) => passing.some((v) => { const w = (v.set || {})[`${rel}.with`]; return w && typeof w === 'object' && JSON.stringify(w[k]) === JSON.stringify(mine[k]); });
+  const unreached = Object.keys(mine).some((k) => JSON.stringify(mine[k]) !== JSON.stringify(theirs[k] ?? null) && !reached(k));
+  if (differs('with') && (!varied('with') || unreached) && !props.some((q) => [...(q.sets || []), ...(q.swaps || [])].some((l) => l.startsWith(`${rel}/`) || l === rel))) return 'field';
   return false;
 }
 
