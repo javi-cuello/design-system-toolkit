@@ -17,7 +17,7 @@
      "who": "scanner",
      "text": "Every non-zero padding, gap and per-corner radius is bound to a variable",
      "status": "scanner",
-     "note": "audit.js notes each raw padding and gap as on or off the <code>spacing</code> scale, and each radius against <code>radius</code>, naming the nearest step when off. An off-scale padding of 80 or more is filed as review — usually a progress or slider fill, which is a question, not a defect."
+     "note": "audit.js notes each raw padding and gap as on or off the <code>spacing</code> scale, and each radius against <code>radius</code>, naming the nearest step when off; a raw fill or stroke colour's advice names the colour variable holding it, or the closest within OKLab 0.03. An off-scale padding of 80 or more is filed as review — usually a progress or slider fill, which is a question, not a defect."
     },
     {
      "tier": "error",
@@ -364,9 +364,9 @@
     {
      "tier": "review",
      "who": "scanner",
-     "text": "Text size against the smallest step of the type scale",
-     "status": "session",
-     "note": "probes.js FCA.textSizes lists them; the reader drops disabled text (figma-standard rule 26)."
+     "text": "Text size against the project's minimum (minText)",
+     "status": "scanner",
+     "note": "audit.js accessibility|small-text| (visible) raises each text layer under minText, disabled variants exempt (figma-standard rule 26); from probes.js FCA.textSizes, 2026-11-20."
     },
     {
      "tier": "review",

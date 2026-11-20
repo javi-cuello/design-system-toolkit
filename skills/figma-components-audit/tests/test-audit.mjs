@@ -829,5 +829,44 @@ expect("a layer that is the same in every variant still fires when some forget i
   expect("a layer hidden inside a hug frame that shrinks still marks the axis as a boolean",
     r3.audited.filter((e) => e.set === "Nested").flatMap((e) => e.candidates.filter((c) => /^properties\|visibility-axis\|/.test(c.key)).map((c) => c.key)), ["properties|visibility-axis|Icon"]);
 }
+// ---- Text under minText (figma-standard rule 26) ----------------------
+{
+  const fx = fresh();
+  descend(find(fx, "Chip"), (n) => { if (n.type === "TEXT") n.fontSize = 10; });
+  const tok = Object.assign({}, fx.settings.tokens, { minText: 12 });
+  let r = await run(fx, { tokens: tok });
+  const small = r.audited.filter((e) => e.set === "Chip").flatMap((e) => e.candidates.filter((c) => /^accessibility\|small-text\|/.test(c.key)));
+  expect("text under minText is one row per layer, seen by users, naming the size and the minimum",
+    small.map((c) => [c.sev, c.visible, /is 10px in .* under the 12px minimum/.test(c.text)]), small.length ? small.map(() => ["warning", true, true]) : [["warning", true, true]]);
+  r = await run(fx, { tokens: Object.assign({}, fx.settings.tokens) });
+  expect("without minText the check does not run", keyed(r, "Chip", /^accessibility\|small-text\|/).length, 0);
+  const fx2 = fresh();
+  descend(find(fx2, "Chip"), (n) => { if (n.type === "TEXT") n.fontSize = 14; });
+  r = await run(fx2, { tokens: tok });
+  expect("text at or over minText raises nothing", keyed(r, "Chip", /^accessibility\|small-text\|/).length, 0);
+}
+
+// ---- A raw colour names the colour variable that holds it ---------------
+{
+  const advice = async (colours, color, tokens) => {
+    const fx = fresh();
+    fx.file.colours = colours;
+    let done = false;
+    descend(find(fx, "Chip"), (n) => { if (!done && n.type !== "TEXT" && n.type !== "INSTANCE" && Array.isArray(n.fills) && n.fills.some((f) => f.type === "SOLID")) {
+      n.fills = [{ type: "SOLID", visible: true, opacity: 1, color }]; delete n.boundVariables.fills; done = true; } });
+    const r = await run(fx, tokens ? { tokens } : {});
+    return r.audited.filter((e) => e.set === "Chip").flatMap((e) => e.candidates.filter((c) => /^tokens\|fill\|/.test(c.key)).map((c) => c.advice))[0];
+  };
+  const blue = { r: 0, g: 0.4, b: 1 };
+  const pal = [{ name: "Background/brand", collection: "Semantic", r: 0, g: 0.4, b: 1, a: 1 }, { name: "blue/600", collection: "Primitives", r: 0, g: 0.4, b: 1, a: 1 }, { name: "Background/danger", collection: "Semantic", r: 0.9, g: 0.1, b: 0.1, a: 1 }];
+  expect("an exact colour names the semantic variable holding it", await advice(pal, blue), "Bind the fill to Semantic/Background/brand, which holds this colour (#0066FF).");
+  expect("a colour a hand's breadth off names the closest, and asks why it differs", await advice(pal, { r: 0.01, g: 0.41, b: 0.99 }),
+    "Bind the fill to Semantic/Background/brand, the closest colour variable to #0369FC, or record why it differs.");
+  expect("a colour far from every variable names none, and says so", /^Bind the fill to a colour variable from Semantic\. No colour variable holds #33CC33/.test(await advice(pal, { r: 0.2, g: 0.8, b: 0.2 })), true);
+  expect("without the file's colours the advice is the plain one", /^Bind the fill to a colour variable from Semantic\.$/.test(await advice(undefined, blue)), true);
+  expect("with no semantic collection named, any collection's variable is offered",
+    /Primitives\/blue\/600|Semantic\/Background\/brand/.test(await advice(pal, blue, Object.assign({}, fresh().settings.tokens, { semantic: undefined }))), true);
+}
+
 console.log((failed ? "FAIL" : "pass") + " — " + passed + " of " + (passed + failed) + " assertions");
 process.exit(failed ? 1 : 0);

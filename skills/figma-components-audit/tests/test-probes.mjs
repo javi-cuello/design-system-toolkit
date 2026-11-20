@@ -114,14 +114,9 @@ expect("focus: a Focus identical to its Rest sibling fires, one with a ring does
   FCA.focusRings(s, { stateAxis: "State", focus: "Focus", rest: "Rest" }).findings.map((f) => f.variant), ["Size=md, State=Focus"]);
 expect("focus: no state words, no verdict (negative)", typeof FCA.focusRings(s, {}).skip, "string");
 
-// ---- §3.7b text size ----------------------------------------------------
-const plain = node("COMPONENT", "Badge", { width: 16, height: 16, children: [node("FRAME", "Dot", { width: 400, height: 400 }), text("N", { fontSize: 10 })] });
-const sz = FCA.textSizes(plain, { minText: 12 });
-expect("text size: a plain COMPONENT is measured itself, never its layers as variants", sz.smallText.map((x) => x.variant + "/" + x.layer), ["Badge/N"]);
-expect("text size: the minimum passed in is the one applied", sz.minText, 12);
-expect("text size: with no minimum in the settings, nothing is measured against a guess", FCA.textSizes(plain).smallText.length, 0);
+// ---- §3.7b text size: audit.js's accessibility|small-text (tests/test-audit.mjs) --
 expect("target size and contrast are audit.js's alone: probes.js has no second engine",
-  [typeof FCA.sizes, typeof FCA.contrast, typeof FCA.contrastRatio, typeof FCA.luminance], ["undefined", "undefined", "undefined", "undefined"]);
+  [typeof FCA.sizes, typeof FCA.contrast, typeof FCA.contrastRatio, typeof FCA.luminance, typeof FCA.textSizes], ["undefined", "undefined", "undefined", "undefined", "undefined"]);
 
 const VARS = {
   sem: { variableCollectionId: "c-sem", valuesByMode: { "m-l": { type: "VARIABLE_ALIAS", id: "pal" }, "m-d": { type: "VARIABLE_ALIAS", id: "pal" } } },

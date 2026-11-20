@@ -280,7 +280,7 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 <div class="panel" id="panel-audit" role="tabpanel" aria-label="Audit">
   <div class="panel-body">
     <p class="title" id="file">Reading the file…</p>
-    <p class="what">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
+    <p class="what" id="what">Audits every component in this file and saves a report. Upload it to Claude and type <b>show me results</b>.</p>
     <div class="status" id="status" role="status" hidden>
       <div class="status-head">
         <fig-spinner id="bar" hidden></fig-spinner>
@@ -312,7 +312,13 @@ License: https://github.com/rogie/figui3/blob/main/LICENSE
 
 <script>
 var $ = function (id) { return document.getElementById(id); };
-var last = null, busy = false;
+var last = null, busy = false, scoped = 0;
+// what Run audit will scan: the selected components, or every one when nothing is selected
+function scope(n) {
+  scoped = n;
+  $('what').firstChild.textContent = n ? 'Audits the ' + (n === 1 ? 'selected component' : n + ' selected components') + ' and saves a report (select nothing for the whole file). Upload it to Claude and type '
+    : 'Audits every component in this file and saves a report. Upload it to Claude and type ';
+}
 // while an audit runs the settings links ignore a click rather than show disabled: FigUI3 draws a disabled link as a grey filled button
 var HINT = 'Kept on this computer; nothing is saved in the Figma file.';
 // the tabs show one panel; fig-tabs owns the keyboard (roving focus) and says which tab is chosen
@@ -337,7 +343,7 @@ function hint(text) { $('settings-hint').textContent = text || HINT; }
 $('run').addEventListener('click', function () {
   if (busy) return;
   busy = true; $('run').setAttribute('disabled', '');
-  say(undefined, 'Auditing the components…', 'A large library takes about a minute.');
+  say(undefined, 'Auditing the components…', scoped ? '' : 'A large library takes about a minute.');
   parent.postMessage({ pluginMessage: { type: 'run', id: Date.now(), draft: !!$('draft').checked } }, '*');
 });
 parent.postMessage({ pluginMessage: { type: 'hello' } }, '*');
@@ -359,13 +365,14 @@ $('ctx-file').onchange = function () {
 onmessage = function (e) {
   var msg = e.data.pluginMessage;
   if (!msg) return;
-  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); return; }
+  if (msg.type === 'init') { $('file').textContent = msg.file; $('version').textContent = 'v' + msg.version; context(msg.context); scope(msg.selected || 0); return; }
+  if (msg.type === 'selection') { scope(msg.selected); return; }
   if (msg.type === 'context') { context(msg.name); hint(''); return; }
   if (msg.type === 'context-failed') { hint('That document was not used: ' + msg.why + '.'); return; }
   busy = false; $('run').removeAttribute('disabled');
   if (msg.type === 'done') {
     last = msg; download(msg); $('save').hidden = false;
-    say('done', 'Saved ' + msg.name, msg.sets + ' components, ' + msg.found + ' possible issues for Claude to review' + (msg.from === 'context' ? ', judged by the context document' : '') + '. Upload the file and type "show me results".');
+    say('done', 'Saved ' + msg.name, msg.sets + (msg.scoped ? ' selected' : '') + ' components, ' + msg.found + ' possible issues for Claude to review' + (msg.from === 'context' ? ', judged by the context document' : '') + '. Upload the file and type "show me results".');
   } else if (msg.type === 'failed') {
     say('error', 'The audit stopped', msg.why + '. Press Run audit to try again.');
   }

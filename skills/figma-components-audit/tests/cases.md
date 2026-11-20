@@ -1,4 +1,6 @@
-# Eval cases — figma-components-audit (v2.49.1)
+# Eval cases — figma-components-audit (v2.51.0)
+
+**Walked: 2026-11-20 for 2.51.0** — `node tests/test-audit.mjs` 138 of 138 (A140, A141 new; the 2.50.0 rules' cases, in it since, re-run unchanged), `node tests/test-probes.mjs` 56 of 56 (the text-size probe retired, its assertions now A140's), `node ../../tools/shared/test-colour.mjs` 18 (the OKLab copy held character for character).
 
 **Walked: 2026-11-19 for 2.49.1** — prose only: figma-standard rule 17's tracked metric moves into *Reporting: the fix queue*; the closing-metrics and scoring cases (A24 and the decomposition assertion) re-read against it, unchanged in what they assert; no script reads the moved text.
 
@@ -1819,7 +1821,7 @@ Runs: node tests/test-audit.mjs — "figma-standard rule 6: a size property not 
 ## A103 · Every preference comes from the settings; an absent key skips its check — WALKED 2026-10-07
 Fixture: sets with a size property, a True/False variant out of order, a state axis named `Interaction`, a bare boolean `Avatar` and a text property `Label text`; run once with the house settings and once with none.
 Assert: with the settings, the size, renders-nothing and property-name findings are raised from `sizeAxis`, `stateAxis`, `booleanPrefix` and `textPropertyAvoid`; with none, none of them is raised. Boolean order takes no setting: figma-standard rule 1 raises a True/False axis whose default is not listed first (`schema|bool-default|`) in both runs. The probes behave the same for metadata, minima and exempt pages.
-Runs: node tests/test-audit.mjs — "without sizeAxis in the settings, no size finding is raised", "without sizeShared, the shared-value review is not raised", "figma-standard rule 1: a True/False axis whose default is not first is raised; one listing its default first is not", "a state axis named otherwise still gets the renders-nothing check", "a bare boolean and a text property ending in text are raised from the settings", "and without those settings no property name is raised"; node tests/test-audit.mjs — "without the settings, a placeholder word and a short description pass (negative)"; node tests/test-probes.mjs — "text size: with no minimum in the settings, nothing is measured against a guess", "detached: with no exempt pages in the settings, a cover page is a candidate like any other"
+Runs: node tests/test-audit.mjs — "without sizeAxis in the settings, no size finding is raised", "without sizeShared, the shared-value review is not raised", "figma-standard rule 1: a True/False axis whose default is not first is raised; one listing its default first is not", "a state axis named otherwise still gets the renders-nothing check", "a bare boolean and a text property ending in text are raised from the settings", "and without those settings no property name is raised"; node tests/test-audit.mjs — "without the settings, a placeholder word and a short description pass (negative)"; node tests/test-probes.mjs — "detached: with no exempt pages in the settings, a cover page is a candidate like any other"
 
 ## A104 · A component's sizes run unbroken — WALKED 2026-10-07
 Fixture: a set whose `Size` options are `xl`, `md`, `sm`, `2xs` against the house scale; then `lg`, `md`, `sm`, `xs`.
@@ -2013,3 +2015,15 @@ Fixture: `tools/figma-audit/fixtures/queue-record.json`, the record a run on a p
 Assert: step 2c asks the one question beside the step-2 confirmation, offering the dashboard only where the project has a record, and never asks when the person already named one; the chat report comes whatever the answer. **As a page too** publishes what `fix-queue.mjs --data <record> --page` prints: Audit lite's page, its rows the queue's open rows in the queue's order, a Decide warning shown as a ruling to make, and *About this run* saying they are the record's open rows (no dropped count).
 Negative: a page assembled by hand or a second page design; an offer to set up a dashboard (the last line only says one can be); a page instead of the chat report.
 Walked: 2026-11-19 for 2.49.0 — `node tools/figma-audit/test-fix-queue.mjs` (30 passed: the page's six assertions, its rows equal to the mirror's order); the question itself traced to SKILL.md step 2c and *Delivery*, not yet met on a live run.
+
+## A140 · Text under minText is a finding seen by users, and only with minText — WALKED 2026-11-20
+Fixture: the library slice, every `Chip` text at 10px; then the settings without `minText`; then every `Chip` text at 14px.
+Assert: one `accessibility|small-text` warning per text layer, `visible`, naming 10px and the 12px minimum; none without `minText`; none at 14px.
+Negative: a finding from a guessed minimum; a disabled variant's text raised.
+Runs: node tests/test-audit.mjs — "text under minText is one row per layer, seen by users, naming the size and the minimum", "without minText the check does not run", "text at or over minText raises nothing".
+
+## A141 · A raw colour's advice names the colour variable that holds it — WALKED 2026-11-20
+Fixture: the library slice, one `Chip` fill unbound and set raw; `file.colours` with a semantic and a primitive variable of the same colour and a far one.
+Assert: the exact colour names the semantic variable; a near copy names the closest and asks why it differs; a far colour names none and says so; no `file.colours` gives the plain advice; with no semantic collection any collection's variable may be named.
+Negative: a variable suggested across a visible difference (over OKLab 0.03); a second OKLab conversion beside colour.js's.
+Runs: node tests/test-audit.mjs — "an exact colour names the semantic variable holding it", "a colour a hand's breadth off names the closest, and asks why it differs", "a colour far from every variable names none, and says so", "without the file's colours the advice is the plain one", "with no semantic collection named, any collection's variable is offered"; node ../../tools/shared/test-colour.mjs.

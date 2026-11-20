@@ -13,12 +13,16 @@ ok('the threshold is WCAG 2.2\'s 0.04045: 0.04 is on the linear segment', near(C
 ok('the transfer round-trips', [0, 0.003, 0.2, 0.5, 1].every((x) => near(C.linearToSrgb(C.srgbToLinear(x)), x, 1e-12)));
 ok('OKLab white and black are sRGB white and black', C.oklabToLinearSrgb(1, 0, 0).every((x) => near(x, 1, 1e-6)) && C.oklabToLinearSrgb(0, 0, 0).every((x) => x === 0));
 
+ok('sRGB white is OKLab 1,0,0 and black 0,0,0', C.srgbToOklab({ r: 1, g: 1, b: 1 }).every((x, i) => near(x, i ? 0 : 1, 1e-6)) && C.srgbToOklab({ r: 0, g: 0, b: 0 }).every((x) => near(x, 0, 1e-12)));
+ok('sRGB to OKLab inverts OKLab to linear sRGB', (() => { const c = { r: 0.2, g: 0.5, b: 0.8 }; const back = C.oklabToLinearSrgb(...C.srgbToOklab(c)).map(C.linearToSrgb); return near(back[0], 0.2, 1e-6) && near(back[1], 0.5, 1e-6) && near(back[2], 0.8, 1e-6); })());
+ok('the OKLab distance from black to white is 1, from a colour to itself 0', near(C.oklabDistance({ r: 0, g: 0, b: 0 }, { r: 1, g: 1, b: 1 }), 1, 1e-6) && C.oklabDistance({ r: 0.3, g: 0.3, b: 0.3 }, { r: 0.3, g: 0.3, b: 0.3 }) === 0);
+
 // The copies: Figma's sandbox imports nothing, and the OKLCH skill ships alone (toolkit-standard §D 1).
 // Four copies with two thresholds were found by the 2026-10-31 review.
 const src = (f) => readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
 const decl = (name) => `const ${name} = ${C[name].toString()};`;
 const COPIES = {
-  'skills/figma-components-audit/scanner/audit.js': ['srgbToLinear', 'relativeLuminance', 'contrastRatio'],
+  'skills/figma-components-audit/scanner/audit.js': ['srgbToLinear', 'relativeLuminance', 'contrastRatio', 'srgbToOklab', 'oklabDistance'],
   'skills/oklch-color-scale-system/scripts/generate.js': ['srgbToLinear', 'linearToSrgb', 'oklabToLinearSrgb'],
 };
 for (const [f, names] of Object.entries(COPIES)) for (const name of names)

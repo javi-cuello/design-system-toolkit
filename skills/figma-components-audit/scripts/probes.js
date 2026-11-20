@@ -249,22 +249,7 @@ globalThis.__FCA_PROBES_FACTORY = function () {
     return { set: set.name, findings };
   };
 
-  // ---- §3.7b text size ---------------------------------------------------
-  // Target size and contrast are scanner/audit.js's (accessibility|target,
-  // accessibility|contrast). Text below opts.minText, from the settings (a
-  // missing minimum skips the probe), is listed for the reader, who drops
-  // disabled text (figma-standard rule 26).
-  FCA.textSizes = (set, opts) => {
-    opts = opts || {};
-    const MIN_TEXT = opts.minText || null, smallText = [];
-    if (MIN_TEXT) for (const v of FCA.variantsOf(set)) (function walk(n, d) {
-      if (d > 6) return;
-      if (n.type === "TEXT" && typeof n.fontSize === "number" && n.fontSize < MIN_TEXT)
-        smallText.push({ variant: v.name, layer: n.name, fontSize: n.fontSize });
-      if (n.children) for (const c of n.children) walk(c, d + 1);
-    })(v, 0);
-    return { set: set.name, minText: MIN_TEXT, smallText };
-  };
+  // §3.7b text size is scanner/audit.js's (accessibility|small-text), moved 2026-11-20.
 
   // One bound variable in one mode, following aliases BY MODE NAME — into
   // modes[0] returns a real colour that is simply the wrong one. `api` is

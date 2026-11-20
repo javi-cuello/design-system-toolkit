@@ -8,7 +8,7 @@ It is the components and foundations audits with nothing else to install: no bri
 
 1. Figma desktop → Plugins → Development → Import plugin from manifest → this folder's `manifest.json`.
 2. Open the library, run **Audit lite**, and, if the project has a context document, upload it with **Upload…** in the Context document section of the **Settings** tab; without one, the **Draft one** switch there has Claude draft one from the file with the results. Claude ends by offering the results, and any drafted document, as files.
-3. Press **Run audit**. The report downloads as `audit-<file>-<date>.md`.
+3. Press **Run audit**. With nothing selected it audits every component; with components selected (or a section or frame holding them) only those, and the report says so. The report downloads as `audit-<file>-<date>.md`.
 4. Upload the report to a Claude chat, type `show me results`, and answer chat or page.
 
 As a page, the results are laid out as the audit dashboard's queue, its words and colours taken from the dashboard's own files by `sync.mjs`: three buckets, a card per finding, filters by component and area, a Done mark, a note, **Ask about this row** (copies a question for the chat) and **Record as ruling**. Rulings live in the context document only: decide in the chat (or bring the page's **Download rulings** file to it), ask Claude for the updated context document, and upload it with **Upload…** in the Context document header; every later run judges by them. Marks and notes stay in that browser.

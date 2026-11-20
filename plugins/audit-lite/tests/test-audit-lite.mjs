@@ -9,7 +9,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 const mod = { exports: {} };
 new Function('module', fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8'))(mod);
-const { report, settingsFor, LITE, scan, foundations } = /** @type {any} */ (mod.exports);
+const { report, settingsFor, LITE, scan, foundations, selectedSets } = /** @type {any} */ (mod.exports);
 const projects = createRequire(import.meta.url)(path.join(ROOT, 'tools/snapshot/projects.cjs'));
 
 let failed = 0, passed = 0;
@@ -159,6 +159,25 @@ const plugin = ({ fileKey, store = {} }) => {
   ok('removing it deletes it', !p.store['context:KEY123']);
   ok('opening, setting and removing a document write nothing to the file', p.wrote() === 0);
 }
+// Selection: what the selection is, sits in or holds, by name; nothing a component scans the whole file
+{
+  const page = { type: 'PAGE', name: 'P', parent: null };
+  const set = { type: 'COMPONENT_SET', name: 'Button', parent: page };
+  const variant = { type: 'COMPONENT', name: 'Size=md', parent: set };
+  const label = { type: 'TEXT', name: 'Label', parent: variant };
+  const lone = { type: 'COMPONENT', name: 'Divider', parent: page };
+  const chip = { type: 'COMPONENT_SET', name: 'Chip', parent: null }, chipV = { type: 'COMPONENT', name: 'State=Rest', parent: chip };
+  const section = { type: 'SECTION', name: 'Inputs', parent: page, findAllWithCriteria: () => [chip, chipV, lone] };
+  const frame = { type: 'FRAME', name: 'Notes', parent: page, findAllWithCriteria: () => [] };
+  ok('a layer inside a variant selects its set', JSON.stringify(selectedSets([label])) === '["Button"]');
+  ok('a variant and its set count once; a plain component is itself', JSON.stringify(selectedSets([variant, set, lone])) === '["Button","Divider"]');
+  ok('a section holding components selects each, never a variant on its own', JSON.stringify(selectedSets([section])) === '["Chip","Divider"]');
+  ok('nothing selected, or nothing a component, is the whole file', selectedSets([]).length === 0 && selectedSets([frame]).length === 0);
+  const scoped = report(Object.assign({}, r, { scope: ['Button', 'Chip'] }), { fileName: 'X', fileKey: 'K', date: 'd' });
+  ok('a selection run says its scope, and that the rest was not looked at', /- Scope: the selection only, 2 components \(Button, Chip\); every other component, and the file-level checks, were not looked at/.test(scoped));
+  ok('a whole-file run says so', /- Scope: the whole file \(nothing was selected\)/.test(report(r, { fileName: 'X', fileKey: 'K', date: 'd' })));
+}
+
 ok('the plugin has no way to write to the file', !/setPluginData|setSharedPluginData/.test(fs.readFileSync(path.join(HERE, '..', 'code.js'), 'utf8').split('/* audit-lite generated end */')[1]));
 
 console.log(failed ? `${failed} failed, ${passed} passed` : `${passed} passed`);

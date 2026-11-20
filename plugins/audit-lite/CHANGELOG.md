@@ -1,6 +1,11 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.13.0] - 2026-11-20
+### Added
+- Runs on the selected components when something is selected (a layer, a variant, a set, or a section or frame holding components), the whole file when nothing is; the window says which, and the report's *Scope* line tells Claude the rest was not looked at. A selection run leaves out the file-level checks.
+- From the scanner (figma-components-audit 2.51.0): text under the 12px minimum is a finding seen by users, and a raw colour's advice names the colour variable that holds it, or the closest.
+
 ## [0.12.0] - 2026-11-20
 ### Added
 - The scanner's new rules: text fixed in height, a state missing from one combination of a set, switched-off paints, orphan instances, single-option and visibility-only axes, and raw min/max sizes.

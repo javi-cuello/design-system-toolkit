@@ -76,6 +76,34 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
   const FIELD={fontWeight:"font weight",fills:"fill",strokes:"stroke colour",effects:"effect",opacity:"opacity",itemSpacing:"gap",strokeWeight:"stroke weight",
     strokeTopWeight:"top stroke weight",strokeBottomWeight:"bottom stroke weight",strokeLeftWeight:"left stroke weight",strokeRightWeight:"right stroke weight"};
   const fieldName=f=>FIELD[f]||SAY[f]||f;
+  // The colour variable a raw colour should be bound to: the one holding exactly that
+  // colour, else the closest by OKLab distance when it is close enough to be the same
+  // colour drawn by hand (NEAR_COLOUR), from the semantic collections when the project
+  // names them. The same rule as the nearest spacing step. The caller passes the file's
+  // colour variables in file.colours ({name, collection, r, g, b, a}, the collection's
+  // default mode); without them no suggestion is made.
+  const NEAR_COLOUR=0.03;
+  const PALETTE=(file&&Array.isArray(file.colours)?file.colours:[]).filter(c=>c&&typeof c.r==="number");
+  // colour.js srgbToOklab and oklabDistance, held to it by tools/shared/test-colour.mjs
+  const srgbToOklab = (c) => {
+  const r = srgbToLinear(c.r), g = srgbToLinear(c.g), b = srgbToLinear(c.b);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+};
+  const oklabDistance = (x, y) => { const p = srgbToOklab(x), q = srgbToOklab(y); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+  const hex=(c,a)=>"#"+[c.r,c.g,c.b].map(x=>Math.round(x*255).toString(16).padStart(2,"0")).join("").toUpperCase()+(a<1?" at "+Math.round(a*100)+"%":"");
+  const suggest=(paint)=>{
+    if(!paint||!paint.color||!PALETTE.length) return null;
+    const a=(paint.opacity===undefined?1:paint.opacity)*(paint.color.a===undefined?1:paint.color.a);
+    const pool=COLL&&PALETTE.some(c=>COLL.includes(c.collection))?PALETTE.filter(c=>COLL.includes(c.collection)):PALETTE;
+    let best=null;
+    for(const c of pool){ if(Math.abs((c.a===undefined?1:c.a)-a)>0.01) continue; const d=oklabDistance(paint.color,c); if(!best||d<best.d) best={c,d}; }
+    if(!best||best.d>NEAR_COLOUR) return {hex:hex(paint.color,a)};
+    return {hex:hex(paint.color,a),name:best.c.collection+"/"+best.c.name,exact:best.d<0.002};
+  };
+  const bindColour=(label,paint)=>{ const s=suggest(paint);
+    if(s&&s.name) return s.exact?"Bind the "+label+" to "+s.name+", which holds this colour ("+s.hex+").":"Bind the "+label+" to "+s.name+", the closest colour variable to "+s.hex+", or record why it differs.";
+    return "Bind the "+label+" to a colour variable"+(COLL?" from "+COLL.join(" or "):"")+"."+(s?" No colour variable holds "+s.hex+" or one close to it.":""); };
   const bindTo=(label,v,s,scale)=>s?(s.includes(v)?"Bind the "+label+" to the "+scale+" variable for "+v+".":"Bind the "+label+" to the nearest "+scale+" step, "+near(v,s)+", or record why it is "+v+"."):"Bind the "+label+" to a "+scale+" variable.";
   // Which pages hold components, as a regex source. One project marks them with
   // ❖/🚧 and a second inherited that, but a third library will not — a page
@@ -243,7 +271,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
       // floor (WCAG 1.4.3, figma-standard rule 32).
       let curV=null, curDisabled=false; const contrast={};
       const overlay={};
-      const fixedText={}, offPaint={}, orphan={}, rawSize={};
+      const fixedText={}, offPaint={}, orphan={}, rawSize={}, smallText={};
       const walk=async(n,path,par)=>{
         if(n.type==="SLOT") return;
         M.nodes++;
@@ -271,6 +299,14 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         // decides; FILL in auto layout grows with its parent, and a truncation is a choice.
         if(shown.has(at)&&n.type==="TEXT"&&n.textAutoResize==="NONE"&&n.layoutSizingVertical!=="FILL"&&n.textTruncation!=="ENDING"&&!(typeof n.maxLines==="number"&&n.maxLines>0)){
           const e=(fixedText[at]=fixedText[at]||{name:n.name,w:Math.round(n.width),h:Math.round(n.height),variants:[]}); e.variants.push(curV); }
+        // figma-standard rule 26: text under the settings' minText is hard to read at
+        // all, whatever its contrast (probes.js §3.7b, moved here 2026-11-20). Disabled
+        // variants are exempt, as for contrast. A text of mixed sizes is read by its
+        // smallest run. Without minText the check does not run.
+        if(TOK.minText&&shown.has(at)&&n.type==="TEXT"&&!curDisabled){
+          let fs=typeof n.fontSize==="number"?n.fontSize:null;
+          if(fs===null&&typeof n.getStyledTextSegments==="function"){ try{ fs=Math.min(...n.getStyledTextSegments(["fontSize"]).map(x=>x.fontSize)); }catch(e){ fs=null; } }
+          if(typeof fs==="number"&&Number.isFinite(fs)&&fs<TOK.minText){ const e=(smallText[at]=smallText[at]||{name:n.name,sizes:new Set(),variants:[]}); e.sizes.add(fs); e.variants.push(curV); } }
         // A paint, stroke or effect switched off in the panel still carries its colour
         // and binding into Dev Mode and generated code (probes.js §3.10a).
         if(n.type!=="INSTANCE"&&shown.has(at)) for(const prop of ["fills","strokes","effects"]){ const arr=n[prop];
@@ -313,7 +349,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
             if(k in n&&typeof n[k]==="number"&&n[k]!==0&&!b(n,k)) F.push({sev:"error",rule:"tokens",key:"tokens|"+k+"|"+at,text:n.name+" has a raw "+SAY[k]+" of "+n[k]+onScale(n[k],RADIUS,"radius")+", "+RAW.radius,advice:bindTo(SAY[k],n[k],RADIUS,"radius")});
           if(Array.isArray(n.fills)&&n.fills.some(f=>f.visible!==false&&f.type==="SOLID")){
             const fb=b(n,"fills");
-            if(!fb) F.push({sev:"error",rule:"tokens",key:"tokens|fill|"+at,text:n.name+" has a raw fill colour, "+RAW.colour,advice:"Bind the fill to a colour variable"+(COLL?" from "+COLL.join(" or "):"")+"."});
+            if(!fb) F.push({sev:"error",rule:"tokens",key:"tokens|fill|"+at,text:n.name+" has a raw fill colour, "+RAW.colour,advice:bindColour("fill",n.fills.filter(f=>f.visible!==false&&f.type==="SOLID").pop())});
             else{const t=await resolveVar(Array.isArray(fb)?fb[0].id:fb.id);
               // `semantic` is a name or a list: a project can publish more than one
               // semantic collection (a brand layer can sit beside the base one).
@@ -334,7 +370,7 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
                   advice:"Rebind it to a colour meant for its job: an icon, border or background colour."});}
           }
           if(Array.isArray(n.strokes)&&n.strokes.some(x=>x.visible!==false)){
-            if(!b(n,"strokes")) F.push({sev:"error",rule:"tokens",key:"tokens|stroke|"+at,text:n.name+" has a raw stroke colour, "+RAW.colour,advice:"Bind the stroke to a colour variable"+(COLL?" from "+COLL.join(" or "):"")+"."});
+            if(!b(n,"strokes")) F.push({sev:"error",rule:"tokens",key:"tokens|stroke|"+at,text:n.name+" has a raw stroke colour, "+RAW.colour,advice:bindColour("stroke",(n.strokes||[]).filter(f=>f.visible!==false&&f.type==="SOLID").pop())});
             const sides=["strokeTopWeight","strokeBottomWeight","strokeLeftWeight","strokeRightWeight"].filter(k=>k in n);
             if(!b(n,"strokeWeight")&&sides.length===4){const u=sides.filter(k=>!b(n,k)&&n[k]!==0);
               if(u.length) F.push({sev:"error",rule:"tokens",key:"tokens|strokeWeight|"+at,text:n.name+" has an unbound stroke weight ("+u.map(k=>SAY[k]).join(", ")+"), "+RAW.stroke,advice:"Bind the stroke weight to a stroke variable on every side that draws one."});}
@@ -454,6 +490,10 @@ async function checkFacts(facts, T, SCALES, TARGETS, resolveVar, file) {
         F.push({sev:"warning",rule:"tokens",key:"tokens|"+kk,
           text:e.name+" has a raw "+SAY[e.k]+" of "+vals.join(", ")+(vals.length===1?onScale(v,SIZING,"sizing"):"")+" in "+nV(e.variants.length)+", so a change to the size tokens never reaches it",
           advice:vals.length===1?bindTo(SAY[e.k],v,SIZING,"sizing"):"Bind the "+SAY[e.k]+" in each variant to a size variable."}); }
+      for(const [at,e] of Object.entries(smallText)){ const sz=[...e.sizes].sort((a,b)=>a-b);
+        F.push({sev:"warning",rule:"accessibility",visible:true,key:"accessibility|small-text|"+at,
+          text:'Text "'+e.name+'" is '+sz.join(", ")+"px in "+nV(e.variants.length)+", under the "+TOK.minText+"px minimum, so many people cannot read it comfortably at any contrast — e.g. "+e.variants.slice(0,3).join("; "),
+          advice:"Use a text style of "+TOK.minText+"px or more, or record why this text may be smaller (a badge count, a legal line)."}); }
       for(const [at,e] of Object.entries(fixedText))
         F.push({sev:"warning",rule:"structure",visible:true,key:"structure|fixed-text|"+at,
           text:'Text "'+e.name+'" is fixed at '+e.w+"\u00d7"+e.h+" in "+nV(e.variants.length)+", so a longer label or a translation is clipped instead of growing \u2014 e.g. "+e.variants.slice(0,3).join("; "),
@@ -1148,7 +1188,18 @@ for(const p of figma.root.children){
     .filter(n=>!(n.type==="COMPONENT"&&n.parent&&n.parent.type==="COMPONENT_SET"))});
 }
 const colls=await figma.variables.getLocalVariableCollectionsAsync();
+// Each local colour variable's value in its collection's default mode, aliases followed
+// (by mode name, then the target's default), for the raw-colour suggestion.
+const collById=Object.fromEntries(colls.map(c=>[c.id,c]));
+async function colourOf(v,modeName,hops=0){ const c=collById[v.variableCollectionId]||await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId); if(!c) return null;
+  const mode=(modeName&&c.modes.find(m=>m.name===modeName))||c.modes.find(m=>m.modeId===c.defaultModeId)||c.modes[0];
+  const x=v.valuesByMode[mode.modeId];
+  if(x&&x.type==="VARIABLE_ALIAS"){ if(hops>4) return null; const t=await figma.variables.getVariableByIdAsync(x.id).catch(()=>null); return t?colourOf(t,mode.name,hops+1):null; }
+  return x&&typeof x.r==="number"?x:null; }
+const colours=[];
+for(const v of await figma.variables.getLocalVariablesAsync("COLOR")){ const x=await colourOf(v); if(x) colours.push({name:v.name,collection:(collById[v.variableCollectionId]||{}).name,r:x.r,g:x.g,b:x.b,a:x.a===undefined?1:x.a}); }
 const file={
+  colours,
   collections:colls.map(c=>({modes:c.modes.map(m=>({name:m.name}))})),
   variables:(await figma.variables.getLocalVariablesAsync()).length,
   pages:figma.root.children.length,
