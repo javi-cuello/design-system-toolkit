@@ -111,9 +111,9 @@ registered anywhere.
 
 ## Where the code is
 
-- `src/styles/system.css` — tokens, reset, plain elements, and the
-  components both the pages and the dashboard draw (button, figures strip,
-  segmented filter).
+- [stock-ui](../../stock-ui/README.md), the toolkit's design system, outside this folder — tokens,
+  reset, plain elements, the components the pages, the dashboard and the contract editor
+  share (button, figures strip, segmented filter, dialog), and the theme switch.
 - `src/styles/site.scss` — the pages' own layout and components.
 - `src/pages/changes.astro` — every recorded snapshot change, with the names
   behind each count; the overview's "Recent changes" is its last five.

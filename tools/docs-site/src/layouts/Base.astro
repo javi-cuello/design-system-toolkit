@@ -1,6 +1,6 @@
 ---
 import * as sass from 'sass';
-import '../styles/system.css';
+import '../../../../stock-ui/stock-ui.css';
 import '../styles/site.scss';
 import { project, shows, language, codeAudit, systems } from '../lib/project.js';
 
@@ -87,10 +87,10 @@ const auditViews = [['Queue', '#queue'], ['History', '#history'], ['About', '#ab
 // A repo stamps the moment (snapshotAt); the toolkit's store keeps the day.
 const taken = meta.snapshotAt || meta.snapshot;
 const stamp = date(taken) || 'none yet';
-// The tab icon: the project's initial on the site's accent (system.css
+// The tab icon: the project's initial on the site's accent (stock-ui
 // --accent), both themes, inlined so there is no file to serve.
 const favicon = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#8f4100}@media (prefers-color-scheme:dark){rect{fill:#f17300}}</style><rect width="32" height="32" rx="7"/><text x="16" y="22.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" font-weight="600" fill="#fff">${project.name.trim().charAt(0).toUpperCase().replace(/[<&]/g, '')}</text></svg>`);
-import themeScript from '../scripts/theme.js?raw';
+import themeScript from '../../../../stock-ui/theme.js?raw';
 ---
 <!doctype html>
 <html lang={language || "en"}>

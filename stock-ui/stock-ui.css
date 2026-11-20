@@ -1,17 +1,20 @@
 /*
- * The toolkit's own UI system: one stylesheet for everything the toolkit
- * draws for people, the docs site and the dashboard alike. Tokens, reset and
- * the base look of plain elements (type, links, focus, tables, code) live
- * here and nowhere else; each surface adds only its own components on top.
+ * stock-ui, the toolkit's design system (README.md beside this file): one
+ * stylesheet for everything the toolkit draws for people, and for any project
+ * built on it. Tokens, reset and the base look of plain elements (type, links,
+ * focus, tables, code) live here and nowhere else, with the components more
+ * than one surface draws; each surface adds only its own components on top,
+ * in the same layers, and themes by re-pointing tokens.
  *
- * It exists because the two had one look copied into two stylesheets under
- * two sets of names (--fg and --text, --space-16 and --s4), which drifted the
- * way copies do.
+ * It exists because the docs site and the dashboard had one look copied into
+ * two stylesheets under two sets of names (--fg and --text, --space-16 and
+ * --s4), which drifted the way copies do.
  *
- * Consumer: the docs site, which inlines it (layouts/Base.astro); the
- * dashboard is a page of that site, so it has it too.
+ * Consumers: the docs site and its dashboard (layouts/Base.astro), the
+ * contract editor (serve.mjs), audit-lite's tokens (sync.mjs).
  *
- * Layered, so a surface's own unlayered or later-layer rules always win.
+ * Layered, so a surface's later sheet in the same layers wins over it; a
+ * surface writes nothing unlayered, which would beat every layer here.
  */
 @layer tokens, reset, base, layout, components, utilities;
 

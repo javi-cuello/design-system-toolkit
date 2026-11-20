@@ -1,7 +1,7 @@
 /*
  * The audit dashboard's own components: the queue, its rows and badges, the
  * history, the About view and the Ask drawer. Tokens, reset and
- * plain elements are the site's (styles/system.css); nothing here restates
+ * plain elements are the site's (stock-ui); nothing here restates
  * them.
  *
  * Scoped to .dash, and the site's own component rules stop at .dash (their
@@ -81,7 +81,7 @@
     display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-8) var(--space-12);
     font-size: var(--text-sm); color: var(--fg-muted);
   }
-  /* The freshness, weights and counts are the site's one badge (system.css
+  /* The freshness, weights and counts are the site's one badge (stock-ui
      .sev). Its padding and border hang into the row gap, so the head is one
      height with the badge or without it (a file never run has none). */
   .freshness { margin-block: calc(-2px - 1px); }
@@ -111,7 +111,7 @@
   .lands-tag[data-lands="figma"], .lands-tag[data-lands="both"] { color: var(--fg); border-color: var(--fg-soft); }
 
   /* The file switch: links, the one in view marked as the site marks a
-     selected tab (styles/system.css .tab[aria-selected]). */
+     selected tab (stock-ui .tab[aria-selected]). */
   .tabs--scope { margin-block-start: 0; padding: 0; list-style: none; }
   a.tab { text-decoration: none; }
   .tab[aria-current] { color: var(--fg); box-shadow: inset 0 -2px 0 var(--fg); } /* the heavier stroke as an underline drawn in a shadow, taking no room */
@@ -128,7 +128,7 @@
   .empty-file[hidden] { display: none; }
   .empty-file h2 { font-size: var(--text-lg); line-height: var(--leading-lg); margin: 0; margin-block-end: var(--space-8); }
 
-  /* .segmented and .seg come from the UI system (styles/system.css). */
+  /* .segmented and .seg come from the UI system (stock-ui). */
   /* In the queue toolbar, aligned with its button: no margins of its own. */
   .view[hidden] { display: none; }
 
@@ -205,7 +205,7 @@
   }
   .checks li:first-child { border-block-start: 0; }
   .checks li > span:last-child { max-inline-size: 66ch; }
-  /* The check's tier is the queue's severity badge (styles/system.css .sev);
+  /* The check's tier is the queue's severity badge (stock-ui .sev);
      hygiene, which the queue never files, is its quiet ink. */
   .checks .sev { justify-self: start; }
   .checks .sev.hygiene { color: var(--fg-soft); }
@@ -305,7 +305,7 @@
 
 
   /* The queue's figures and its toolbar. The figures are the site's KPI
-     strip (styles/system.css .kpis). */
+     strip (stock-ui .kpis). */
   #queueTiles { margin-block-end: var(--space-16); }
   #metrics { margin-block-start: var(--space-16); }
 
@@ -417,7 +417,7 @@
     color: var(--fg-soft); padding: 0 var(--space-4);
   }
   @media (hover: hover) { .toast-close:hover { color: var(--fg); } }
-  /* Stilled by system.css's one reduced-motion block. */
+  /* Stilled by stock-ui's one reduced-motion block. */
   .toast { animation: toast-in .18s ease-out; }
 
   /* ---- fix queue ---- */
@@ -508,7 +508,7 @@
     font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 500;
     color: var(--fg-soft); font-variant-numeric: tabular-nums;
   }
-  /* The chip itself (.sev and its kin) is in styles/system.css: Parity's Properties and Visual pages draw it too. */
+  /* The chip itself (.sev and its kin) is in stock-ui: Parity's Properties and Visual pages draw it too. */
   .visible-flag { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft); }
   /* Who owns the row: quiet, because it is context rather than a call to act. */
   .owner-tag { color: var(--fg-soft); border-color: var(--line); }

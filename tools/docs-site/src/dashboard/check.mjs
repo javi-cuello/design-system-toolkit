@@ -297,10 +297,10 @@ try {
 }
 
 // Every custom property the page reads is defined, here or in the site's
-// UI system (styles/system.css). A var() nothing defines makes its
+// UI system (stock-ui). A var() nothing defines makes its
 // declaration drop without a word; the dashboard and the docs site moved onto
 // one set of token names at once, which is exactly where one gets missed.
-const system = readFileSync(join(here, "..", "styles", "system.css"), "utf8");
+const system = readFileSync(join(here, "..", "..", "..", "..", "stock-ui", "stock-ui.css"), "utf8");
 const site = readFileSync(join(here, "..", "styles", "site.scss"), "utf8");
 const defined = new Set([...(css + system + site).matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
 for (const m of js.matchAll(/setProperty\(\s*["'](--[a-z0-9-]+)/g)) defined.add(m[1]);
@@ -334,7 +334,7 @@ for (const v of reads) if (!defined.has(v)) fail.push(`var(${v}) is read with no
 // centred by margin: auto, and one such rule, later in the same layer, gave the icon dialog a 24px top
 // margin and pinned it to the top of the screen.
 const topLevel = (list) => { const out = [""]; let depth = 0; for (const c of list) { depth += c === "(" ? 1 : c === ")" ? -1 : 0; if (c === "," && !depth) out.push(""); else out[out.length - 1] += c; } return out.map((x) => x.trim()); };
-for (const [file, text] of [["system.css", system], ["site.scss", site]]) {
+for (const [file, text] of [["stock-ui.css", system], ["site.scss", site]]) {
   const bare = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   for (const m of bare.matchAll(/([^{};]+)\{/g)) {
     // its own declarations only, up to a nested block or its end, so a nested rule is read as its own

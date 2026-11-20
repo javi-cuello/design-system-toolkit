@@ -1,5 +1,5 @@
 // The docs site's own layout and components, over its UI system
-// (system.css: tokens, reset, plain elements and the components the dashboard
+// (stock-ui: tokens, reset, plain elements and the components the dashboard
 // shares). The site documents any project, so it wears none of them: a
 // project's colours and type appear only in the content being shown.
 //
@@ -31,7 +31,7 @@
 
 // The site's breakpoints, written once (code-standard rule 54). No design file
 // publishes them: they are where this site's own layouts run out of room.
-// system.css and dashboard.css are plain CSS and cannot read these, so they
+// stock-ui and dashboard.css are plain CSS and cannot read these, so they
 // write the same values with a comment naming the one here.
 $sm: 40rem;
 $md: 48rem;
@@ -43,7 +43,7 @@ $xxl: 90rem;
 // hover behind (css-architecture.md *States*); written once, used at every hover.
 @mixin hover { @media (hover: hover) { &:hover { @content; } } }
 
-// Same order as system.css: whichever the browser meets first sets it.
+// Same order as stock-ui: whichever the browser meets first sets it.
 @layer tokens, reset, base, layout, components, utilities;
 
 @layer tokens {
@@ -346,7 +346,7 @@ $xxl: 90rem;
       font-weight: var(--weight-medium);
     }
     .nav[open] > summary { margin-block-end: var(--space-12); }
-    // The list itself is the toolkit's one sidebar list (system.css .sidenav), the editor's too.
+    // The list itself is the toolkit's one sidebar list (stock-ui .sidenav), the editor's too.
     // An extended collection under its parent, on a guide line, as Figma draws it.
     .nav__child { margin-inline-start: var(--space-16); border-inline-start: var(--stroke-1) solid var(--line); padding-inline-start: var(--space-4); }
     // On this page: the page's sections on a guide line, a step quieter than
@@ -444,11 +444,11 @@ $xxl: 90rem;
       .filter-bar .filter-bar__menu { display: none; }
     }
     // The search box sits in a <search> landmark, which takes the place in
-    // the bar the field had (system.css .toolbar input.filter).
+    // the bar the field had (stock-ui .toolbar input.filter).
     .toolbar > search { inline-size: 100%; }
     .toolbar search input.filter { inline-size: 100%; max-inline-size: none; }
     @include from($sm) {
-      // system.css's search width, now on the landmark around the field.
+      // stock-ui's search width, now on the landmark around the field.
       .toolbar > search { inline-size: auto; flex: 1 1 12rem; max-inline-size: 18rem; }
     }
     // Nothing left: what was asked and the way back, where the list was.
@@ -707,7 +707,7 @@ $xxl: 90rem;
     // the word (Primer). A coloured rule over each column doubled the
     // section's own hairline.
     .dodont ul { display: grid; gap: var(--space-8); margin: 0; padding-inline-start: var(--space-20); }
-    // The site's one badge (system.css .sev): green Do, red Don't.
+    // The site's one badge (stock-ui .sev): green Do, red Don't.
     .dodont__label { margin-block-end: var(--space-12); }
 
     // Code in running text sits on a quiet chip, as Primer, Atlassian and
@@ -860,7 +860,7 @@ $xxl: 90rem;
     }
 
     .pills { display: flex; flex-wrap: wrap; gap: var(--space-4); }
-    // The badge's shape is the UI system's (.pill in system.css); a default
+    // The badge's shape is the UI system's (.pill in stock-ui); a default
     // value is marked by its edge.
     .pill--default { background: var(--accent-soft); border-color: var(--accent); }
 
@@ -1381,7 +1381,7 @@ $xxl: 90rem;
     // Twice the gap above as below (16, from the heading-to-table rule), so a
     // subheading sits with its table, not the strip above (design-standard rule 7).
     .panel__sub { font-size: var(--text-sm); color: var(--fg-muted); margin-block-start: var(--space-32); }
-    // A strip of figures inside a card (KpiStrip, system.css `.kpis`) runs to
+    // A strip of figures inside a card (KpiStrip, stock-ui `.kpis`) runs to
     // the card's edges: a hairline under the card's head, hairlines between
     // the columns, reaching the card's bottom edge when it ends it. The card
     // is the strip's frame, so there is no box inside the box.
@@ -1492,7 +1492,7 @@ $xxl: 90rem;
     // A section holding one long table reads as the page, not as a box on it.
     .panel--plain { padding: 0; border: 0; border-radius: 0; background: none; }
 
-    // The toggles together on the left of the bar (system.css .toolbar).
+    // The toggles together on the left of the bar (stock-ui .toolbar).
     .toolbar__filters { display: flex; flex-wrap: wrap; gap: var(--space-12); }
 
     // Progress: one bar of at most five groups (Primer's limit); the filter
@@ -1670,7 +1670,7 @@ $xxl: 90rem;
 
   // The ladder's levels, each with what it means.
 
-  // The one dialog's rules (Modal.astro) are system.css's `.modal`, shared with the toolkit's other pages.
+  // The one dialog's rules (Modal.astro) are stock-ui's `.modal`, shared with the toolkit's other pages.
   // A swatch in running text: one em, set on the text's baseline.
   // What a change moved, inside a value: the moved part in the text's own
   // colour, set off by weight and an accent underline; the browser's yellow

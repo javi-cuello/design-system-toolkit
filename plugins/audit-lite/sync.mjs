@@ -60,10 +60,10 @@ const DASH = {
   owners: OWNER_LABEL,
 };
 if (Object.keys(DASH.buckets).length !== 3) throw new Error('sync: the dashboard\'s three bucket titles were not found in Dashboard.astro');
-const systemCss = read('tools/docs-site/src/styles/system.css');
+const systemCss = read('stock-ui/stock-ui.css');
 const pageSrc = read('plugins/audit-lite/report.html');
 const used = [...new Set([...pageSrc.matchAll(/var\((--[\w-]+)\)/g)].map((m) => m[1]))];
-const tokens_ = used.map((v) => { const m = new RegExp('^\\s*' + v + ':\\s*([^;]+);', 'm').exec(systemCss); if (!m) throw new Error('sync: ' + v + ' is not in the dashboard\'s system.css'); return v + ':' + m[1].trim(); });
+const tokens_ = used.map((v) => { const m = new RegExp('^\\s*' + v + ':\\s*([^;]+);', 'm').exec(systemCss); if (!m) throw new Error('sync: ' + v + ' is not in the dashboard\'s stock-ui'); return v + ':' + m[1].trim(); });
 const template = pageSrc.replace(':root{--dash-tokens:none}', () => ':root{' + tokens_.join(';') + '}').replace('const DASH = {};', () => 'const DASH = ' + JSON.stringify(DASH) + ';');
 if (template === pageSrc) throw new Error('sync: report.html has no token or DASH slot');
 
@@ -96,7 +96,7 @@ const judgeRules = read('tools/figma-audit/judge-rules.mjs').replace(/^export /g
 // The full audit's discovery and probes (figma-components-audit scripts/probes.js), its factory by source.
 const probes = `const FCA_FACTORY = ${globalThis.__FCA_PROBES_FACTORY.toString()};`;
 
-const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md, report.html, and the audit dashboard's words and tokens (tools/docs-site/src/dashboard, styles/system.css); never edit by hand */
+const block = `/* audit-lite generated start — written by plugins/audit-lite/sync.mjs from ${SCANNER}, ${FOUNDATIONS}/foundations.js, skills/figma-components-audit/scripts/probes.js, ${REFERENCES}/conventions-universal.md, tools/snapshot/projects.cjs, tools/figma-audit/judge-rules.mjs, skills/figma-context-capture/assets/context-template.md, standards/audit-settings.json, standards/naming-preferences.json, instructions.md, report.html, and the audit dashboard's words and tokens (tools/docs-site/src/dashboard, stock-ui); never edit by hand */
 const LITE = ${JSON.stringify(LITE)};
 ${readers}
 ${judgeRules}

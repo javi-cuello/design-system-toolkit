@@ -84,7 +84,7 @@ export function renderQueuePane(metrics, runs) {
     tiles.appendChild(li);
   });
 }
-// One figure in the site's KPI strip (styles/system.css .kpis), the shape the
+// One figure in the site's KPI strip (stock-ui .kpis), the shape the
 // overview and the Tracker use: a label, the value, and a note whose dot
 // confirms its words (good, warn, or idle for a measure a ruling defers).
 function kpi(label, value, note, state, why) {

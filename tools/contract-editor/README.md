@@ -99,7 +99,7 @@ On Variants, the grid is the page. A header is a button: its value alone, at the
 
 **Writes** nothing of its own but a library's official contracts, where it takes the contract as its source (**Save as official**, through `component-contract/official.mjs`); otherwise the contract leaves through the browser's download. `/sync` runs the toolkit tool that owns each side, which writes what it writes (Create a project, `projects.create` and `deliver.cjs` the project's home, context document and kept snapshot; `to-figma.mjs` a drawing in the scratch file, or the library's component set with `--patch`; Settings the library's `draw.scratch` and `source` in its context document, and a connected repo's `init.mjs` files and its styles settings; `to-code.mjs` a new component's stylesheet and `to-markup.mjs` its component, mapping and story; `from-code.mjs` its report under the project's `parity/from-code/`).
 
-**Needs:** Node 22.12+. The page uses the toolkit's UI stylesheet ([system.css](../docs-site/src/styles/system.css)), served from where it lives, and Lucide's icons (`icons.mjs`, ISC, notice kept).
+**Needs:** Node 22.12+. The page uses the toolkit's UI stylesheet ([stock-ui](../../stock-ui/README.md)), served from where it lives, and Lucide's icons (`icons.mjs`, ISC, notice kept).
 
 ## What it adds to the contract
 

@@ -1,4 +1,4 @@
-/* The contract editor's own components, over the toolkit's UI system (system.css). */
+/* The contract editor's own components, over the toolkit's UI system (stock-ui). */
 @layer components {
   body { margin: 0; background: var(--bg); color: var(--fg); }
 
@@ -43,7 +43,7 @@
   .ce-nav { block-size: calc(100vh - var(--bar)); }
   .ce-nav, .ce-palette { border-inline-end: var(--stroke-1) solid var(--line); }
   .ce-head { padding: var(--space-16) var(--space-24) 0; border-block-end: var(--stroke-1) solid var(--line); }
-  /* the list is the toolkit's one sidebar list (system.css .sidenav), the docs site's too; here a long name is
+  /* the list is the toolkit's one sidebar list (stock-ui .sidenav), the docs site's too; here a long name is
      one line ending in an ellipsis, said whole in its title */
   .ce-nav__list li > button:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   /* the preview and JSON: docked beside the work, as a preview compared with the work is (sidebars.md: object header
@@ -210,7 +210,7 @@
   @media (prefers-reduced-motion: reduce) { .ce-row--slot { animation: none; } }
   .ce-library-empty { margin-block-start: var(--space-24); }
 
-  /* the dialog is the toolkit's one modal (system.css .modal); its form only lays out the fields */
+  /* the dialog is the toolkit's one modal (stock-ui .modal); its form only lays out the fields */
   .ce-dialog-form { display: contents; }
   /* a form reads top to bottom, one idea per box: a box's title, then its fields, stacked */
   [data-dialog] { --modal-width: 32rem; }

@@ -154,11 +154,12 @@ if (arg('--project') && !projects.projects().list.some((p) => p.name === start))
 if (arg('--project') && SNAP) { console.error('one library per server: --project or --snapshot'); process.exit(2); }
 // the page's own files, read from this folder on each request, so a file added here is served without a restart
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' };
-const SYSTEM = path.join(HERE, '..', 'docs-site', 'src', 'styles', 'system.css');
+// stock-ui, the toolkit's design system (stock-ui/README.md): its stylesheet and its theme switch, served from where they live
+const STOCK = path.join(HERE, '..', '..', 'stock-ui');
 const fileFor = (url) => {
   if (url === '/') return path.join(HERE, 'index.html');
-  if (url === '/system.css') return SYSTEM;
-  if (url === '/theme.js') return path.join(HERE, '..', 'docs-site', 'src', 'scripts', 'theme.js');
+  if (url === '/stock-ui.css') return path.join(STOCK, 'stock-ui.css');
+  if (url === '/theme.js') return path.join(STOCK, 'theme.js');
   // the toolkit's own modules the page imports beside its own, each the one owner of what it does: the variants drawn as
   // the contract says (component-contract), and a value read as the parity engine reads it (a font weight, a colour, through shared/colour.js)
   if (['/component-contract/layers.mjs', '/component-contract/css.mjs', '/component-contract/rules.mjs', '/parity/values.mjs', '/parity/schema.mjs' /* rules.mjs's stop positions */, '/shared/colour.js'].includes(url)) return path.join(HERE, '..', url.slice(1));

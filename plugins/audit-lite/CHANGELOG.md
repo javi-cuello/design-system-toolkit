@@ -1,6 +1,10 @@
 # Changelog — Audit lite
 All notable changes. Format: Keep a Changelog; versioning: SemVer.
 
+## [0.11.5] - 2026-11-20
+### Changed
+- The dashboard's colour tokens are read from stock-ui (`stock-ui/stock-ui.css`), the toolkit's design system, where the stylesheet moved from the docs site; no value changed.
+
 ## [0.11.4] - 2026-11-20
 ### Fixed
 - A property-name finding (a boolean without "Show", a property or option out of sentence case, and the rest) carries `breaking: true` from the scanner and goes to Decide marked breaking. A live run had filed Alert's "Close Button" in Fix on approval, unmarked.
