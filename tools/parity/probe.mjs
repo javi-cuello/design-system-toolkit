@@ -360,7 +360,7 @@ export function probe(sections, opts) {
     }
     if ((p === 'width' || p === 'height') && !pseudo) return borderBox(el, cs, p);
     // Chrome 158 (2026-11) gives flex-start and flex-end back as flow-start and flow-end: the value the sheet wrote is read
-    const v = cs.getPropertyValue(p).trim().replace(/\bflow-(start|end)\b/g, 'flex-$1');
+    const v = /^(justify|align|place)-/.test(p) ? cs.getPropertyValue(p).trim().replace(/\bflow-(start|end)\b/g, 'flex-$1') : cs.getPropertyValue(p).trim();
     return (p === 'row-gap' || p === 'column-gap') && v === 'normal' ? '0px' : v;
   };
 
