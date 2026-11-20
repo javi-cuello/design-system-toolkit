@@ -1207,8 +1207,14 @@ async function colourOf(v,modeName,hops=0){ const c=collById[v.variableCollectio
 // A value that cannot be read (an alias into a library the file cannot reach) is left out, never the scan.
 const usedIds=new Set();
 const inScope=s=>!TARGETS.length||TARGETS.includes(s.name);
-for(const p of pages) for(const s of p.sets.filter(inScope)) for(const n of [s,...s.findAll(x=>x.type!=="INSTANCE"&&!!x.boundVariables)]) for(const k of ["fills","strokes"]){
-  const bv=n.boundVariables&&n.boundVariables[k]; for(const a of [].concat(bv||[])) if(a&&a.id) usedIds.add(a.id); }
+// one walk over the layers checkFacts reads (it stops at an instance and a slot, which are another set's), collecting
+// the colour variables bound and whether any paint is raw
+const rawPaint=n=>["fills","strokes"].some(k=>Array.isArray(n[k])&&n[k].some((p,i)=>p.type==="SOLID"&&p.visible!==false&&!(n.boundVariables&&n.boundVariables[k]&&[].concat(n.boundVariables[k])[i])));
+let anyRaw=false;
+const visit=n=>{ for(const k of ["fills","strokes"]){ const bv=n.boundVariables&&n.boundVariables[k]; for(const a of [].concat(bv||[])) if(a&&a.id) usedIds.add(a.id); }
+  if(!anyRaw&&rawPaint(n)) anyRaw=true;
+  if(n.type!=="INSTANCE"&&n.type!=="SLOT"&&"children" in n) for(const c of n.children) visit(c); };
+for(const p of pages) for(const s of p.sets.filter(inScope)) visit(s);
 const localColour=await figma.variables.getLocalVariablesAsync("COLOR"), localIds=new Set(localColour.map(v=>v.id));
 const used=(await Promise.all([...usedIds].filter(id=>!localIds.has(id)).map(id=>figma.variables.getVariableByIdAsync(id).catch(()=>null)))).filter(v=>v&&v.resolvedType==="COLOR");
 // First choice: the linked library's own semantic colours, every one it publishes, where the file has the library
@@ -1220,8 +1226,6 @@ const SEM=typeof TOKENS!=="undefined"&&TOKENS&&TOKENS.semantic?[].concat(TOKENS.
 const fromLibrary=[];
 // Imports cost a round trip each the first time a file asks (one first run took 249s, 2026-11-20), so they happen only
 // when some layer in scope has a raw colour for the advice to name.
-const rawPaint=n=>["fills","strokes"].some(k=>Array.isArray(n[k])&&n[k].some((p,i)=>p.type==="SOLID"&&p.visible!==false&&!(n.boundVariables&&n.boundVariables[k]&&[].concat(n.boundVariables[k])[i])));
-const anyRaw=pages.some(p=>p.sets.filter(inScope).some(s=>rawPaint(s)||s.findOne(x=>x.type!=="INSTANCE"&&rawPaint(x))));
 try{ if(anyRaw&&SEM.length&&figma.teamLibrary){
   for(const lc of (await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()).filter(c=>SEM.includes(c.name)))
     fromLibrary.push(...(await Promise.all((await figma.teamLibrary.getVariablesInLibraryCollectionAsync(lc.key))
