@@ -1655,7 +1655,10 @@ async function main() {
           // whole shadow is a style, or every ring taken is a layer the style the code names draws itself, it is the
           // style's, not a border; a ring the style does not draw (a divider beside an elevation) stays the border
           const theirs = (l) => (named.layers || []).some((nl) => /SHADOW/.test(nl.type) && keyOf({ layers: [nl] }) === shadowKey(cssShadows(l)));
-          const whole = x.shadowAll && effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadowAll)));
+          // (but a shadow that is all strokes, every layer read as a side's, the code naming no style: a border that looks
+          // like a style, an inside bottom stroke as Carbon's `Border bottom` draws it, is the border it was written as)
+          const strokesOnly = !named && (x.ringsUsed || []).length && x.ringsUsed.length === cssShadows(x.shadowAll || '').length;
+          const whole = x.shadowAll && !strokesOnly && effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadowAll)));
           if (whole || (x.shadowAll && named && (x.ringsUsed || []).length && x.ringsUsed.every(theirs))) { x.shadow = (whole || named).name; if (!x.ownStroke) delete x.border; }
           else if (x.shadow) {
             const hit = named || effects.find((fx) => keyOf(fx) === shadowKey(cssShadows(x.shadow)));
