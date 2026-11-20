@@ -598,8 +598,9 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
     // an icon coloured as code colours it (on the instance, or the svg that stands for it until from-code's asIcon; no
     // glyph read) at the colour its component gives the one
     // glyph inside it (Figma's way) is its component's, which Figma does not say on the instance: to-figma's glyph
-    // equivalence, for a reading (from-code), whole or not
-    if (reading) for (const k of inner) {
+    // equivalence, for a reading (from-code); not in an instance the design keeps whole, where the design keeps the
+    // glyph's colour as it keeps every layer, so the reading keeps the icon's (Carbon's select chevron)
+    if (reading && !whole.has(id)) for (const k of inner) {
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x || x.kind !== 'instance' || !['instance', 'graphic'].includes(e.kind) || e.background == null || x.background != null || inner.some((q) => q.startsWith(k + '/'))) continue;
       const kids = Object.keys(M).filter((q) => M[q] && M[q].parent === mk), g = kids.length === 1 && M[kids[0]];

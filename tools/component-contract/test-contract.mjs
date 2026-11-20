@@ -445,7 +445,8 @@ ok('combinations too many to list are said to be unlisted, never left to read as
 
 {
   // an icon coloured on its instance (code's way) at the colour its component gives the glyph inside (Figma's way) is the
-  // component's, whole instance or not; a colour the component does not give is the instance's own
+  // component's; a colour the component does not give is the instance's own. In an instance the design keeps whole it
+  // stays: the design keeps the glyph's colour there too (Carbon's select chevron: Icon/icon-primary, read back as none)
   const main = { component: 'IB', props: {}, anatomy: { root: { kind: 'container' }, content: { kind: 'container', parent: 'root' }, 'content/icon': { kind: 'instance', parent: 'content', component: 'Icon/x', width: 20, height: 20 }, 'content/icon/icon': { kind: 'graphic', parent: 'content/icon', background: 'C/strong' } }, variants: [] };
   const read = (bg, kind = 'graphic') => ({ root: { kind: 'container' }, b: { kind: 'instance', parent: 'root', component: 'IB' }, 'b/content': { kind: 'container', parent: 'b', background: 'C/own' }, 'b/content/icon': { kind, parent: 'b/content', width: 20, height: 20, ...(kind === 'instance' && { component: 'Icon/x' }), background: bg } });
   const m = (x) => (x === 'IB' ? main : null);
@@ -453,7 +454,9 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(whole, m, { partial: true, whole: new Set(['b']), reading: true });
   const design = read('C/strong'); ownInsides(design, m, { partial: true });
   ok('in a reading, an icon at its component\'s glyph colour is the component\'s; another colour, or a design\'s, is kept',
-    same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && whole['b/content/icon'].background === undefined && design['b/content/icon'].background === 'C/strong');
+    same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && design['b/content/icon'].background === 'C/strong');
+  ok('in an instance the design keeps whole, a reading keeps the icon\'s colour, as the design keeps its glyph\'s',
+    whole['b/content/icon'].background === 'C/strong');
 }
 
 { // a mirrored layer stands where its box does (the snapshot's visual), not at its matrix's origin: CSS's left and code's box
