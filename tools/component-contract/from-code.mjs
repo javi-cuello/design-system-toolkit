@@ -2182,8 +2182,8 @@ async function main() {
           || fromCode.variants.some((v) => [(v.set || {})[`${id}.layout.gap`], ((v.set || {})[`${id}.layout`] || {}).gap].some((g) => g != null && !(Number(val(g)) >= 0)) ||Object.entries(v.set || {}).some(([f, x]) => /\.position$/.test(f) && x === 'absolute' && (fromCode.anatomy[f.slice(0, -9)] || {}).parent === id && !placedToo(f.slice(0, -9))) || Object.entries(v.add || {}).some(([cid, c]) => c.parent === id && c.position === 'absolute' && !placedToo(cid)));
         if (gap >= 0 && !loose) {
           e.layout.firstOnTop = true;
-          // a variant that sets the whole layout (another padding at another size) stacks the same
-          for (const v of fromCode.variants) { const l = (v.set || {})[`${id}.layout`]; if (l && typeof l === 'object') l.firstOnTop = true; }
+          // a variant that sets the whole layout (another padding at another size) stacks the same, where the design stacks it so there
+          for (const v of fromCode.variants) { const l = (v.set || {})[`${id}.layout`]; if (l && typeof l === 'object' && ((designOf(id, v.when) || {}).layout || {}).firstOnTop) l.firstOnTop = true; }
         }
       }
       // an opacity the code writes raw (0.5 when disabled) takes the design's opacity token that holds it, where exactly
