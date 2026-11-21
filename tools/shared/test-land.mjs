@@ -117,5 +117,19 @@ const { unqueueForTest } = await import('./land.mjs');
 unqueueForTest(main, { branch: 'worktree-h', sha: old }, 'landed');
 assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'rev-parse', 'HEAD'), 'the newer entry is kept');
 
+// (j) a push the remote refuses while main has not moved (a hook) is said whole, once, never retried as "main moved"
+{ const J = wt('j');
+  edit(J, 'e.txt', 'e1\n');
+  const hook = path.join(remote, 'hooks', 'pre-receive');
+  fs.writeFileSync(hook, '#!/bin/sh\necho "refused: a commit names a project" >&2\necho "second line of why" >&2\nexit 1\n', { mode: 0o755 });
+  const before = runs();
+  r = await quiet(() => land(J));
+  fs.rmSync(hook);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /refused: a commit names a project/, 'the remote\'s reason is said');
+  assert.doesNotMatch(r.out, /main moved/, r.out);
+  assert.equal(runs() - before, 1, 'one check, no retries');
+  assert.equal(queued(main).some((q) => q.branch === 'worktree-j'), false, 'off the queue'); }
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

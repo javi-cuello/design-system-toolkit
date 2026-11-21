@@ -121,6 +121,7 @@ async function landBatch(main, me) {
     if (done) return done;
     let batch = queued(main);
     if (alone) batch = batch.filter((b) => b.branch === alone).concat(batch.some((b) => b.branch === alone) ? [] : batch.slice(0, 1)).slice(0, 1);
+    const base = tryGit(dir, 'rev-parse', 'origin/main').out;
     const { applied, conflicted } = replay(dir, 'origin/main', batch);
     for (const c of conflicted) { say(c.gone ? `${c.branch}: commit ${c.sha.slice(0, 8)} no longer exists: dropped` : `${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c, 'conflict'); }
     if (conflicted.length) continue;
@@ -140,7 +141,15 @@ async function landBatch(main, me) {
     }
     const sha = git(dir, 'rev-parse', 'HEAD');
     const push = tryGit(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
-    if (!push.ok) { say(`main moved during the check (${push.out.split('\n').pop()}): again`); continue; }
+    if (!push.ok) {
+      // only a main that moved is worth another attempt; a push refused with main where it was (a hook: a commit naming
+      // a project) is said whole and fails each branch, never four "main moved" retries that hide the reason (2026-11-21)
+      tryGit(dir, 'fetch', '-q', 'origin');
+      if (tryGit(dir, 'rev-parse', 'origin/main').out !== base) { say(`main moved during the check (${push.out.split('\n').pop()}): again`); continue; }
+      say(`the push was refused, main where it was:\n${push.out.split('\n').map((l) => `  ${l}`).join('\n')}`);
+      for (const a of applied) { say(`${a.branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, a, 'refused'); }
+      continue;
+    }
     for (const a of applied) {
       unqueue(main, a, 'landed');
       say(`landed ${a.branch} (${a.commits} commit${a.commits === 1 ? '' : 's'}) at ${sha.slice(0, 8)}`);
