@@ -23,7 +23,7 @@ execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
 execFileSync('git', ['clone', '-q', remote, main], { stdio: 'ignore' });
 fs.mkdirSync(path.join(main, 'bin'));
 // the fake check counts its runs and is red when any tracked file says BAD
-fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho run >> "${count}"\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
+fs.writeFileSync(path.join(main, 'bin', 'check'), `#!/bin/sh\ncd "$(dirname "$0")/.."\necho "run $(sed 's/.*"at":\\([0-9]*\\).*/\\1/' "$TOOLKIT_LOCK_DIR/toolkit-measure.holder.json" 2>/dev/null)" >> "${count}"\nif git grep -q BAD -- ':!bin'; then echo "== 1 FAILED (BAD)"; exit 1; fi\necho "green"\n`, { mode: 0o755 });
 fs.writeFileSync(path.join(main, '.gitignore'), '.claude/\n');
 for (const f of ['a', 'b', 'c', 'd', 'e']) fs.writeFileSync(path.join(main, `${f}.txt`), `${f}\n`);
 git(main, 'add', '.'); git(main, 'commit', '-qm', 'base'); git(main, 'push', '-q', 'origin', 'main');
@@ -147,6 +147,31 @@ assert.equal(queued(main).find((q) => q.branch === 'worktree-h')?.sha, git(H, 'r
   assert.equal(remoteHas('e.txt'), 'e-ok', `the second other branch landed: ${r.out}`);
   assert.match(r.out, /worktree-k: not landed/, r.out);
   assert.equal(queued(main).length, 0, 'the refused branch, last in the queue, is refused, not left queued'); }
+
+// (l) one red branch among six: the batch is halved, not each tried alone (7 checks), and every check is its own hold
+{ const dirs = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'].map((x) => wt(x));
+  // each adds its own file, so none conflicts; n6's says BAD
+  dirs.forEach((d, i) => { fs.writeFileSync(path.join(d, `n${i + 1}.txt`), i === 5 ? 'BAD\n' : `n${i + 1}\n`); git(d, 'add', '.'); git(d, 'commit', '-qm', `n${i + 1}`); });
+  const before = runs();
+  const t0 = Date.now();
+  dirs.slice(1).forEach((d, i) => fs.writeFileSync(path.join(main, '.git', 'land-queue', `worktree-n${i + 2}`), JSON.stringify({ branch: `worktree-n${i + 2}`, sha: git(d, 'rev-parse', 'HEAD'), at: t0 + i + 1 })));
+  r = await quiet(() => land(dirs[0]));
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /trying it in halves of 3 and 3/, r.out);
+  assert.match(r.out, /worktree-n6 is red on main/, r.out);
+  const used = runs() - before;
+  assert.ok(used <= 5, `halving costs at most 5 checks here, each alone cost 7: ${used}\n${r.out}`);
+  const holds = fs.readFileSync(count, 'utf8').split('\n').filter(Boolean).slice(-used).map((l) => l.split(' ')[1]);
+  assert.equal(new Set(holds).size, used, `each check under its own hold of the lock: ${holds.join(',')}`);
+  assert.equal(queued(main).length, 0, 'the queue is empty');
+  assert.equal(fs.existsSync(path.join(main, '.git', 'land-queue', '.split')), false, 'and no split is left');
+  // (m) the red branch, unchanged, is not queued or checked again
+  const n0 = runs();
+  r = await quiet(() => land(dirs[5]));
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /was red on main at .*: commit a fix/, r.out);
+  assert.equal(runs(), n0, 'no check');
+  assert.equal(queued(main).length, 0, 'not queued'); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('test-land: passed');

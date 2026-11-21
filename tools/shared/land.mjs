@@ -4,8 +4,9 @@
  * worktree.mjs) and runs bin/land; the branch joins a queue, and whoever holds the measuring lock lands every queued
  * branch together: their new commits replayed onto origin/main in an integration worktree, one full check of the
  * result, and a push from there. N sessions landing at once cost one check, not N (the bors model: test main with the
- * change applied, then move main; github.com/bors-ng/bors-ng). A branch whose commits do not apply, or that is red
- * when tried alone, is dropped from the batch and told; the others still land.
+ * change applied, then move main; github.com/bors-ng/bors-ng). A branch whose commits do not apply is dropped and told;
+ * a red batch is split in half until the red branch is alone (step()). The lock is held for one check at a time, never
+ * a whole batch's retries, and a branch red at the same commit is not queued again.
  *
  *   bin/land [<branch or worktree folder>]     default: the branch checked out where it is run
  *
@@ -111,72 +112,81 @@ function sweep(main) {
   }
 }
 
-async function landBatch(main, me) {
+/* A red batch is split in half, recursively, and the halves wait in .split, the first half next: whichever bin/land holds
+   the lock next goes on from there, so 1 red branch in 12 costs about 2·log2(12) checks, not 12 (2026-11-21: a red batch
+   re-checked one branch at a time held the lock five hours). A half landed before the other moves main, so a branch
+   red only beside another is found red on main by the same split. The second half keeps the red batch's tree: once
+   the first half has landed green, the second half on top of it is that tree again, so it is red without a check
+   (bin/check records only greens). A push refused for a batch splits it to one each. */
+const splitFile = (main) => path.join(queueDir(main), '.split');
+const same = (a, b) => a.branch === b.branch && a.sha === b.sha;
+const key = (b) => ({ branch: b.branch, sha: b.sha });
+const group = (m, red) => (red ? { m: m.map(key), red } : { m: m.map(key) });
+function setGroups(main, g) { if (g.length) writeJSON(splitFile(main), g); else fs.rmSync(splitFile(main), { force: true }); }
+
+/* One step, under the lock: one replay, at most one check, at most one push; then the lock is let go, so a queued land
+   or measure is never held behind a whole batch's history. Returns this bin/land's outcome once it is settled, else null. */
+async function step(main, me, state) {
   const dir = integration(main);
   sweep(main);
-  let alone = null; // a batch red together though each is green alone: one branch at a time
-  // a push refused for a batch: one branch at a time for the rest of this run, an attempt each, so the refusal falls on
-  // its carrier wherever it stands in the queue
-  let single = false, limit = 4;
-  for (let attempt = 0; attempt < limit; attempt++) {
-    tryGit(main, 'fetch', '-q', 'origin');
-    const done = settled(main, me);
-    if (done) return done;
-    let batch = queued(main);
-    if (alone) batch = batch.filter((b) => b.branch === alone).concat(batch.some((b) => b.branch === alone) ? [] : batch.slice(0, 1)).slice(0, 1);
-    else if (single) batch = batch.slice(0, 1);
-    const base = tryGit(dir, 'rev-parse', 'origin/main').out;
-    const { applied, conflicted } = replay(dir, 'origin/main', batch);
-    for (const c of conflicted) { say(c.gone ? `${c.branch}: commit ${c.sha.slice(0, 8)} no longer exists: dropped` : `${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c, 'conflict'); }
-    if (conflicted.length) continue;
-    if (!applied.length) return 'landed';
-    const code = applied.some((a) => a.commits) ? await check(dir, ['--no-fix']) : 0;
-    if (code !== 0) {
-      if (applied.length === 1) { say(`${applied[0].branch} is red on main: fix it, then land again`); unqueue(main, applied[0], 'red'); continue; }
-      // one red branch must not hold the others: each alone; the green ones land together on the next attempt
-      say(`the batch of ${applied.length} is red: trying each alone`);
-      let dropped = 0;
-      for (const a of applied) {
-        replay(dir, 'origin/main', [a]);
-        if (await check(dir, ['--no-fix']) !== 0) { say(`${a.branch} is red on main: fix it, then land again`); unqueue(main, a, 'red'); dropped++; }
-      }
-      if (!dropped) { alone = applied[0].branch; say('each is green alone, red together: landing one at a time'); }
-      continue;
-    }
-    const sha = git(dir, 'rev-parse', 'HEAD');
-    const push = tryGit(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
-    if (!push.ok) {
-      // only a main that moved is worth another attempt; a push refused with main where it was (a hook: a commit naming
-      // a project) is said whole and fails each branch, never four "main moved" retries that hide the reason (2026-11-21)
-      // (a fetch that fails cannot say main is unmoved: tried again, as before)
-      if (!tryGit(dir, 'fetch', '-q', 'origin').ok || tryGit(dir, 'rev-parse', 'origin/main').out !== base) { say(`main moved during the check, or could not be asked (${push.out.split('\n').pop()}): again`); continue; }
-      say(`the push was refused, main where it was:\n${push.out.split('\n').map((l) => `  ${l}`).join('\n')}`);
-      // a batch: each alone, so the refusal falls on the branch that carries it and the rest still land
-      if (applied.length > 1) { single = true; limit = Math.max(limit, attempt + 2 + applied.length); say('landing one at a time'); continue; }
-      say(`${applied[0].branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, applied[0], 'refused');
-      continue;
-    }
-    for (const a of applied) {
-      unqueue(main, a, 'landed');
-      say(`landed ${a.branch} (${a.commits} commit${a.commits === 1 ? '' : 's'}) at ${sha.slice(0, 8)}`);
-      const wt = worktreeOf(main, a.branch);
-      // a branch not moved since it was queued now is main; one committed on since keeps its work for the next landing
-      if (wt && tryGit(wt, 'rev-parse', 'HEAD').out === a.sha) {
-        const r = tryGit(wt, 'reset', '-q', '--keep', sha);
-        if (!r.ok) say(`${a.branch}: left where it was (${r.out.split('\n')[0]})`);
-      }
-    }
-    tryGit(main, 'fetch', '-q', 'origin');
-    if (tryGit(main, 'symbolic-ref', '-q', 'HEAD').out === 'refs/heads/main') {
-      const ff = tryGit(main, 'merge', '-q', '--ff-only', 'origin/main');
-      if (!ff.ok) say(`the main checkout stays where it was (${ff.out.split('\n')[0]}); main itself is landed`);
-    }
-    alone = null;
+  tryGit(main, 'fetch', '-q', 'origin');
+  const done = settled(main, me);
+  if (done) return done;
+  const q = queued(main);
+  const g = (readJSON(splitFile(main)) || []).filter((x) => Array.isArray(x?.m)).map((x) => ({ ...x, m: x.m.filter((e) => q.some((y) => same(y, e))) })).filter((x) => x.m.length);
+  const batch = g.length ? q.filter((y) => g[0].m.some((e) => same(y, e))) : q;
+  const rest = g.slice(1);
+  const base = tryGit(dir, 'rev-parse', 'origin/main').out;
+  const { applied, conflicted } = replay(dir, 'origin/main', batch);
+  for (const c of conflicted) { say(c.gone ? `${c.branch}: commit ${c.sha.slice(0, 8)} no longer exists: dropped` : `${c.branch} does not apply on main (${c.files.join(', ') || 'conflict'}): rebase it on origin/main, then land again`); unqueue(main, c, 'conflict'); }
+  if (conflicted.length) { setGroups(main, g); return null; } // the rest of its group is tried next, without it
+  if (!applied.length) return settled(main, me) || 'landed';
+  const tree = git(dir, 'rev-parse', 'HEAD^{tree}');
+  const known = g.length && g[0].red === tree;
+  if (known) say(`${applied.map((a) => a.branch).join(', ')}: the same tree as the red batch before it: red, not checked again`);
+  const code = known ? 1 : applied.some((a) => a.commits) ? await check(dir, ['--no-fix']) : 0;
+  if (code !== 0) {
+    if (applied.length === 1) { say(`${applied[0].branch} is red on main: fix it, then land again`); unqueue(main, applied[0], 'red'); setGroups(main, rest); return null; }
+    const h = Math.ceil(applied.length / 2);
+    say(`the batch of ${applied.length} is red: trying it in halves of ${h} and ${applied.length - h}`);
+    setGroups(main, [group(applied.slice(0, h)), group(applied.slice(h), tree), ...rest]);
+    return null;
   }
-  const end = settled(main, me);
-  if (end) return end;
-  say('main kept moving, or other branches kept failing, through its attempts: run bin/land again');
-  return 'busy';
+  const sha = git(dir, 'rev-parse', 'HEAD');
+  const push = tryGit(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  if (!push.ok) {
+    // only a main that moved is worth another attempt; a push refused with main where it was (a hook: a commit naming
+    // a project) is said whole and fails each branch, never four "main moved" retries that hide the reason (2026-11-21)
+    // (a fetch that fails cannot say main is unmoved: tried again, as before)
+    if (!tryGit(dir, 'fetch', '-q', 'origin').ok || tryGit(dir, 'rev-parse', 'origin/main').out !== base) {
+      say(`main moved during the check, or could not be asked (${push.out.split('\n').pop()}): again`);
+      if (++state.moved >= 4) { say('main kept moving through four attempts: run bin/land again'); return 'busy'; }
+      return null;
+    }
+    say(`the push was refused, main where it was:\n${push.out.split('\n').map((l) => `  ${l}`).join('\n')}`);
+    // a batch: one each, so the refusal falls on the branch that carries it and the rest still land
+    if (applied.length > 1) { setGroups(main, [...applied.map((a) => group([a])), ...rest]); say('landing one at a time'); return null; }
+    say(`${applied[0].branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, applied[0], 'refused');
+    setGroups(main, rest);
+    return null;
+  }
+  for (const a of applied) {
+    unqueue(main, a, 'landed');
+    say(`landed ${a.branch} (${a.commits} commit${a.commits === 1 ? '' : 's'}) at ${sha.slice(0, 8)}`);
+    const wt = worktreeOf(main, a.branch);
+    // a branch not moved since it was queued now is main; one committed on since keeps its work for the next landing
+    if (wt && tryGit(wt, 'rev-parse', 'HEAD').out === a.sha) {
+      const r = tryGit(wt, 'reset', '-q', '--keep', sha);
+      if (!r.ok) say(`${a.branch}: left where it was (${r.out.split('\n')[0]})`);
+    }
+  }
+  setGroups(main, rest);
+  tryGit(main, 'fetch', '-q', 'origin');
+  if (tryGit(main, 'symbolic-ref', '-q', 'HEAD').out === 'refs/heads/main') {
+    const ff = tryGit(main, 'merge', '-q', '--ff-only', 'origin/main');
+    if (!ff.ok) say(`the main checkout stays where it was (${ff.out.split('\n')[0]}); main itself is landed`);
+  }
+  return null;
 }
 
 export async function land(from, target) {
@@ -190,12 +200,20 @@ export async function land(from, target) {
   // only commits land: what is uncommitted stays where it is, said so nobody thinks it went
   if (wt && git(wt, 'status', '--porcelain', '--untracked-files=no')) say(`${branch} has uncommitted changes in ${wt}: they stay there; only its commits land`);
   const sha = git(main, 'rev-parse', `refs/heads/${branch}`);
+  // red on main at this very commit: another try checks the same tree for the same answer
+  const was = readJSON(path.join(outcomes(main), `${encodeURIComponent(branch)}@${sha}`));
+  if (was?.outcome === 'red') { say(`${branch} at ${sha.slice(0, 8)} was red on main at ${new Date(was.at).toTimeString().slice(0, 5)}: commit a fix, or rebase on origin/main, then land again`); return 1; }
   fs.mkdirSync(queueDir(main), { recursive: true });
   writeJSON(qfile(main, branch), { branch, sha, at: Date.now() });
   say(`${branch} queued at ${sha.slice(0, 8)}`);
   // a run inside a holder (a test, a nested call) holds nothing new
-  await hold(`bin/land ${branch}`, { first: true });
-  try { return (await landBatch(main, { branch, sha })) === 'landed' ? 0 : 1; } finally { release(); }
+  const state = { moved: 0 };
+  for (;;) {
+    await hold(`bin/land ${branch}`, { first: true });
+    let out;
+    try { out = await step(main, { branch, sha }, state); } finally { release(); }
+    if (out) return out === 'landed' ? 0 : 1;
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return fs.realpathSync(process.argv[1]); } catch { return null; } })()) {
