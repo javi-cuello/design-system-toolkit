@@ -358,13 +358,16 @@ export function axisValueOf(vals, attrs, innerDisabled = false) {
    (named by the layers it shows) or a name another prop holds is left. Changes props in place. Tested by test-from-code.mjs. */
 export function joinedNames(props, design, map = {}) {
   const joins = (x, c) => (typeof x === 'string' ? x === c : !!x && (x.code === c || x.arg === c));
-  const held = new Set(Object.values(props).map((p) => p.figma).filter(Boolean));
-  for (const p of Object.values(props)) {
+  // names taken: one a prop already carries, the names a swap is drawn under (its boolean and its swap), and the
+  // convention's name of every other prop, which an unpaired one falls back to in asFigma
+  const held = new Set(Object.entries(props).flatMap(([k, p]) => [p.figma, p.showName, p.showName && `${p.showName} swap`, p.swapName, sentence(k)]).filter(Boolean));
+  for (const [k, p] of Object.entries(props)) {
     if (p.figma || p.type === 'enum' || p.type === 'swap' || !p.code) continue;
     const hits = Object.entries(design).filter(([dk, q]) => q.type === p.type && joins((map || {})[dk], p.code));
     if (hits.length !== 1) continue;
     const name = hits[0][1].figma || hits[0][0];
-    if (held.has(name)) continue;
+    // (its own convention name is no other prop's: it may take a design name spelled so)
+    if (held.has(name) && name !== sentence(k)) continue;
     p.figma = name; held.add(name);
   }
   return props;

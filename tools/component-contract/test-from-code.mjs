@@ -126,6 +126,10 @@ ok('an emphasis is not a category: values whose own word is the token\'s leaf ke
   const named = asFigma({ ...code, props: joinedNames(props, design, { label: 'label', bold: { arg: 'isBold' }, tw: 'twin' }), variants: [] }).contract.props;
   ok('a prop the mapping pairs with a design prop takes the design\'s own Figma name; an unpaired one, or one paired with another kind, the convention',
     named.label.figma === 'Label text' && named.isBold.figma === 'isBold' && named.extra.figma === 'Extra' && named.twin.figma === 'Twin');
+  // never a name another prop is drawn under: an unpaired prop's convention name, or a swap's boolean (review)
+  const clash = joinedNames({ children: { type: 'string', code: 'children' }, label: { type: 'string', code: 'label' }, hasIcon: { type: 'boolean', default: false, code: 'hasIcon' }, icon: { type: 'swap', code: 'icon', shows: ['icon'], showName: 'Show icon' } },
+    { label: { type: 'string', figma: 'Label' }, show: { type: 'boolean', figma: 'Show icon' } }, { label: 'children', show: 'hasIcon' });
+  ok('a design name another prop is drawn under is not taken: an unpaired prop\'s convention, a swap\'s boolean', !clash.children.figma && !clash.hasIcon.figma);
 }
 
 ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a full round of 60, 10% a corner of 12',
