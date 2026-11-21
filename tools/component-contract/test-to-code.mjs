@@ -420,6 +420,10 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const m2 = (x) => ({ Knob: knob, Rail: rail })[x] || null;
   const other = { ...slider, anatomy: { ...slider.anatomy, 'rail/knob': { kind: 'instance', parent: 'rail', component: 'Knob', with: { State: 'Read-only' } } } };
   ok('a nested instance at other props, with no styling of its own, is left to its own sheet', !/\.ds-rail__knob \{[^}]*background/.test(toCss(other, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
+  const quiet = { ...slider, anatomy: { ...slider.anatomy, 'rail/knob': { ...slider.anatomy['rail/knob'], with: { State: 'Read-only' } } }, props: { quiet: { type: 'boolean', default: false, axis: true, figma: 'Quiet' } }, variants: [{ when: { quiet: true }, set: { 'rail/knob.background': null } }] };
+  const qs = toCss(quiet, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 });
+  ok('a nested override a variant takes away, where neither the instance nor its component draws one there, is unset',
+    /data-quiet[^{]*> \.ds-rail__knob \{[^}]*background: unset/.test(qs) && selfCheck(quiet, rulesOf(quiet, m2).rules, m2).length === 0);
   ok('a nested instance\'s own override is written through its holder', /\.ds-slider > \.ds-slider__rail > \.ds-rail__knob \{[^}]*background: var\(--c-strong\)/.test(toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
 }
 console.log(`${n} passed`);

@@ -471,7 +471,10 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
       // it no longer differs, the placed component's own value, not the base's override)
       const at = B[id] && overrideOf(B, host, rel, m, mains), base = new Set(at ? at.changed.map(([p]) => p) : []);
       // what the component declares that the instance does not goes back to what an undeclared property is (unset)
-      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p)), ...over.removed.map((p) => [p, 'unset'])];
+      // (and what the defaults override that neither draws here, a fill the base sets and this combination takes away
+      // where the component has none: unset, or the base's override would stand)
+      const said = new Set([...over.mine.map(([p]) => p), ...over.removed]);
+      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p)), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset'])];
       if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
       continue;
     }
