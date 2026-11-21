@@ -175,7 +175,7 @@ async function landBatch(main, me) {
   }
   const end = settled(main, me);
   if (end) return end;
-  say('main kept moving, or other branches kept failing, through four attempts: run bin/land again');
+  say('main kept moving, or other branches kept failing, through its attempts: run bin/land again');
   return 'busy';
 }
 
