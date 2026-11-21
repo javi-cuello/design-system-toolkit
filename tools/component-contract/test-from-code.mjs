@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, designKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -439,5 +439,6 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   // a glyph the design places only by a variant's swap takes that swap's key
   const swapped = { ...set, variants: [{ when: { error: true }, set: { 'glyph.component': 'Warning', 'glyph.key': 'warn' } }] };
   ok('a glyph a variant swaps to takes the key the design swaps it under', designKeyOf(swapped, null, 'Warning') === 'warn');
+  ok('a swap to a glyph the design keys nowhere says no key, as null where the base icon has one (else it keeps the base\'s)', swapKeyOf(swapped, 'icon', 'Info') === null && swapKeyOf(swapped, undefined, 'Info') === undefined && swapKeyOf(swapped, 'icon', 'Warning') === 'warn');
 }
 console.log(`${n}/${n} passed`);
