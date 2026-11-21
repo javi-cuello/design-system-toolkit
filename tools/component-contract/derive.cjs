@@ -595,7 +595,7 @@ function asGlyphOf(e, x, reading) {
   const { asset: _, iconSize, ...rest } = e;
   return { ...rest, kind: 'instance', component: x.component, ...(iconSize != null && { with: { ...(rest.with || {}), Size: iconSize } }) };
 }
-function ownInsides(anatomy, mains, { partial = false, whole = new Set(), reading = false, found = null } = {}) {
+function ownInsides(anatomy, mains, { partial = false, whole = new Set(), coloured = null, reading = false, found = null } = {}) {
   ownStyling(anatomy, mains);
   for (const id of Object.keys(anatomy)) {
     const e = anatomy[id];
@@ -622,9 +622,13 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), readin
     // an icon coloured as code colours it (on the instance, or the svg that stands for it until from-code's asIcon; no
     // glyph read) at the colour its component gives the one
     // glyph inside it (Figma's way) is its component's, which Figma does not say on the instance: to-figma's glyph
-    // equivalence, for a reading (from-code); not in an instance the design keeps whole, where the design keeps the
-    // glyph's colour as it keeps every layer, so the reading keeps the icon's (Carbon's select chevron)
-    if (reading && !whole.has(id)) for (const k of inner) {
+    // equivalence, for a reading (from-code); not in an instance the design keeps whole where the design states a colour
+    // for that icon or its glyph (`coloured`: the layers it states one for; none given, every layer there), so the reading
+    // keeps the icon's (Carbon's select chevron); one it states none for there is its component's still (Carbon's Status
+    // notification's Warning--filled, kept whole in a slider's error state)
+    const states = (k) => !coloured || [...coloured].some((c) => c === k || c.startsWith(`${k}/`));
+    if (reading) for (const k of inner) {
+      if (whole.has(id) && states(k)) continue;
       const e = anatomy[k], mk = match[k.slice(id.length + 1)], x = mk && M[mk];
       if (!x || x.kind !== 'instance' || !['instance', 'graphic'].includes(e.kind) || e.background == null || x.background != null || inner.some((q) => q.startsWith(k + '/'))) continue;
       const kids = Object.keys(M).filter((q) => M[q] && M[q].parent === mk), g = kids.length === 1 && M[kids[0]];

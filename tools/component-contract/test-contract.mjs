@@ -515,6 +515,13 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   const same = read('C/strong'), other = read('C/danger'), whole = read('C/strong', 'instance');
   ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(whole, m, { partial: true, whole: new Set(['b']), reading: true });
   const design = read('C/strong'); ownInsides(design, m, { partial: true });
+  // kept whole, but the design states no colour for that icon nor its glyph (Carbon's Status notification's Warning--filled
+  // in a slider's error state): the reading's colour at the component's own is the component's there too
+  const unstated = read('C/strong', 'instance'), stated = read('C/strong', 'instance');
+  ownInsides(unstated, m, { partial: true, whole: new Set(['b']), coloured: new Set(['b/content']), reading: true });
+  ownInsides(stated, m, { partial: true, whole: new Set(['b']), coloured: new Set(['b/content/icon/icon']), reading: true });
+  ok('in an instance kept whole, a reading keeps the icon\'s colour only where the design states one for the icon or its glyph',
+    unstated['b/content/icon'].background === undefined && stated['b/content/icon'].background === 'C/strong');
   ok('in a reading, an icon at its component\'s glyph colour is the component\'s; another colour, or a design\'s, is kept',
     same['b/content/icon'] && same['b/content/icon'].background === undefined && other['b/content/icon'].background === 'C/danger' && design['b/content/icon'].background === 'C/strong');
   ok('in an instance the design keeps whole, a reading keeps the icon\'s colour, as the design keeps its glyph\'s',

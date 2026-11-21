@@ -245,6 +245,15 @@ export async function readCombinations(lists, layered, readOne) {
   return { read, skipped };
 }
 
+/* The layers a design states a colour for, in its base or any variant (an add's background, or a set of one). */
+export function colouredIn(design) {
+  const out = new Set();
+  if (!design) return out;
+  for (const a of [design.anatomy || {}, ...(design.variants || []).map((v) => v.add || {})]) for (const [id, e] of Object.entries(a)) if (e && e.background != null) out.add(id);
+  for (const v of design.variants || []) for (const k of Object.keys(v.set || {})) if (k.endsWith('.background') && v.set[k] != null) out.add(k.slice(0, -'.background'.length));
+  return out;
+}
+
 /* The placed instances a design keeps whole (one hides a layer no prop shows, so derive kept layers equal to its
    component's): the ones the reading's own cut (ownInsides, partial, `reading`) drops something from, so the reading
    keeps them whole too. The same cut as the reading's: Carbon's Status notification, kept whole in a slider's error
@@ -1539,6 +1548,8 @@ async function main() {
     // the instances the design keeps whole (one hides a layer no prop shows): there it keeps layers equal to its component's,
     // which a partial cut would drop (keptWhole)
     const wholeIn = keptWhole(figmaContract, mainOf, ownInsides);
+    // (and the layers it states a colour for: inside an instance kept whole, only there is the reading's icon colour kept)
+    const colouredOf = figmaContract ? colouredIn(figmaContract) : null;
     // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.
     // Joined by name, as the code's props are the design's on the toolkit's own render; a project's own names that
     // differ fall back to the base room, as before
@@ -2199,7 +2210,7 @@ async function main() {
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);
         for (const [rel, e] of Object.entries(inner)) if (match[rel] && M[match[rel]].kind === e.kind) zeroTokens(e, M[match[rel]], L.value, { fill: true });
       }
-      normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, reading: true });
+      normalForm(anatomy); ownInsides(anatomy, mainOf, { partial: true, whole: wholeIn, coloured: colouredOf, reading: true });
       Object.defineProperty(anatomy, 'drawn', { value: drawn });
       return anatomy;
     };

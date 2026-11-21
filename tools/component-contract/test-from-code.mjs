@@ -582,4 +582,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('an instance whose kept glyph is its component\'s but for place and constraints is kept whole; one with a glyph of its own is not',
     keptWhole(design('C/w'), mains, ownInsides).has('i') && !keptWhole(design('C/x'), mains, ownInsides).has('i') && !keptWhole(null, mains, ownInsides).size);
 }
+{ // the layers a design states a colour for: a background in its base or a variant's add, or a variant's set of one
+  const { colouredIn } = await import('./from-code.mjs');
+  const c = colouredIn({ anatomy: { a: { background: 'C/1' }, b: {} }, variants: [{ when: {}, add: { c: { background: 'C/2' } }, set: { 'd.background': 'C/3', 'e.background': null, 'b.radius': 4 } }] });
+  ok('a design\'s coloured layers: base, add and set, never a set to none', [...c].sort().join() === 'a,c,d' && !colouredIn(null).size);
+}
 console.log(`${n}/${n} passed`);
