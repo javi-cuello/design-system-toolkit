@@ -331,7 +331,8 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
         if (k === 'key' && other) continue;
         const before = adds;
         diff(a[k], b[k], at ? `${at}.${k}` : k);
-        if (k === 'component') other = adds > before;
+        // (an element's own fields only, one with a kind: never a map of parts that names one `component`)
+        if (k === 'component' && (a.kind || b.kind)) other = adds > before;
       }
     }
     else add(at, a, b);
