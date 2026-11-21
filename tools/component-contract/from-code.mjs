@@ -353,6 +353,23 @@ export function axisValueOf(vals, attrs, innerDisabled = false) {
   return (hit || rest || [])[0];
 }
 
+/* A prop the mapping joins to exactly one design prop of its own kind (a boolean to a boolean, a text to a text) takes
+   that prop's Figma name, as the design spells it; one already named, an enum (named by its values above), a swap
+   (named by the layers it shows) or a name another prop holds is left. Changes props in place. Tested by test-from-code.mjs. */
+export function designNames(props, design, map = {}) {
+  const joins = (x, c) => (typeof x === 'string' ? x === c : !!x && (x.code === c || x.arg === c));
+  const held = new Set(Object.values(props).map((p) => p.figma).filter(Boolean));
+  for (const p of Object.values(props)) {
+    if (p.figma || p.type === 'enum' || p.type === 'swap' || !p.code) continue;
+    const hits = Object.entries(design).filter(([dk, q]) => q.type === p.type && joins((map || {})[dk], p.code));
+    if (hits.length !== 1) continue;
+    const name = hits[0][1].figma || hits[0][0];
+    if (held.has(name)) continue;
+    p.figma = name; held.add(name);
+  }
+  return props;
+}
+
 /* An icon the code takes by name (a string) where the design swaps an instance: the design's swap, one per size where
    the code merged them (to-markup's one `icon` for Icon (16) and Icon (20)); never a key the design holds as another
    kind. Returns the props, changed in place. Tested by test-from-code.mjs. */
@@ -667,8 +684,8 @@ export function asFigma(contract, { axisOrder = [] } = {}) {
       valueMap[k] = { ...Object.fromEntries(p.values.map((v) => [v, v])), __key: key };
       continue;
     }
-    const name = sentence(k);
-    props[k] = { ...p, figma: name };
+    // a prop that took the design's own name keeps it; the rest are named by the house's convention
+    props[k] = { ...p, figma: p.figma || sentence(k) };
   }
   // figma-standard rule 1's order: props and booleans, then the axes the house orders (audit-settings
   // axisOrder, by the contract's own spelling of them), then the rest of the enums
@@ -2517,6 +2534,9 @@ async function main() {
         // and its name: the design's Hierarchy for the code's variant, where the values are the same words
         if (fp && fp.figma) p.figma = fp.figma;
       }
+      // and every other prop the mapping joins to a design prop of its kind: under the design's own name (isBold, ✏️ label),
+      // never one made up by convention for the code's
+      designNames(fromCode.props, figmaContract.props, (side.map || {}).props);
       // a fill or colour the code draws as nothing where the design binds a token that draws the same (a tertiary
       // button's ghost-rest, which is see-through): the design's token, at that combination and every one that holds it
       for (const r of compare) {

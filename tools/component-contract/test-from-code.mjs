@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, dropOwnGlyph, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, designNames, boundText, keepsName, dropOwnGlyph, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -117,6 +117,16 @@ ok('an enum whose tokens share no word of their own keeps the code\'s words',
 ok('an emphasis is not a category: values whose own word is the token\'s leaf keep the code\'s names',
   asFigma({ ...code, props: { color: { type: 'enum', values: ['primary', 'secondary'], default: 'primary', code: 'color' } }, anatomy: { root: { background: 'Color/Background/Brand/primary' } },
     variants: [{ when: { color: 'secondary' }, set: { 'root.background': 'Color/Background/Brand/secondary' } }] }).contract.props.color.figma === 'Color');
+
+{
+  // a prop the mapping pairs with a design prop of its kind carries that prop's Figma name as the design spells it, never
+  // the code's name in the house convention (a reading named the design's isBold "Is bold", so the round trip saw a prop change)
+  const props = { label: { type: 'string', code: 'label' }, isBold: { type: 'boolean', default: false, code: 'isBold' }, extra: { type: 'boolean', default: false, code: 'extra' }, twin: { type: 'string', code: 'twin' } };
+  const design = { label: { type: 'string', figma: 'Label text' }, bold: { type: 'boolean', figma: 'isBold' }, tw: { type: 'boolean', figma: 'Twin flag' } };
+  const named = asFigma({ ...code, props: designNames(props, design, { label: 'label', bold: { arg: 'isBold' }, tw: 'twin' }), variants: [] }).contract.props;
+  ok('a prop the mapping pairs with a design prop takes the design\'s own Figma name; an unpaired one, or one paired with another kind, the convention',
+    named.label.figma === 'Label text' && named.isBold.figma === 'isBold' && named.extra.figma === 'Extra' && named.twin.figma === 'Twin');
+}
 
 ok('a percentage radius is of the box, not pixels: 50% on a 120px avatar is a full round of 60, 10% a corner of 12',
   JSON.stringify(cornerOf('50%', 120, 120)) === '{"radius":60,"full":true}' && JSON.stringify(cornerOf('10%', 120, 120)) === '{"radius":12}'
