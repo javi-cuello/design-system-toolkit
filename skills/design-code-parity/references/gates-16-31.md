@@ -216,4 +216,4 @@ A path in a list names a layer, or it is a finding. A map's `copy`, `runtime` an
 
 ## Gate 31 · Translations, stated once
 
-In waivers.md, with the waiver model.
+In [waivers.md](waivers.md#gate-31--a-conversion-rule-is-a-translation-stated-once), with the waiver model.

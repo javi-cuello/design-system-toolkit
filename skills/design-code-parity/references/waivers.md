@@ -25,8 +25,8 @@ There are four kinds, each keyed so it can go stale:
 | Key | What it excuses | Keyed by |
 |---|---|---|
 | `waivers` | A measured difference | Layer and property |
-| `unmeasured` | A Figma variant no story renders, such as a placeholder-only variant | The variant |
-| `codeOnly` | A control value the code offers and the design never drew | The control value |
+| `unmeasured` | A Figma variant no story renders, such as a placeholder-only variant | The Figma variant's name |
+| `codeOnly` | A control value the code offers and the design never drew | The control (`size`), or one value (`size=xl`) |
 | `literals` | A raw value typed in Figma where a token belongs | `Layer.kind` |
 
 A spec folder holding only `figma.json` is a component nobody has built yet. The check says so until someone does, or until the backlog names it with a reason.

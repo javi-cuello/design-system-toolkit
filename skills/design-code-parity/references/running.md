@@ -129,7 +129,7 @@ The run and the file it leaves for readers are both the toolkit's. Every project
 saveReport(file, results, { fullRun })
 ```
 
-The file is at the path `snapshot.config.json` names as `paths.parity`. The docs site, the dashboard and the record then read one shape on every project.
+The file is at the path `snapshot.config.json` names as `paths.parity`. The docs site, the dashboard and the tracker then read one shape on every project.
 
 | Field | What it holds |
 |---|---|

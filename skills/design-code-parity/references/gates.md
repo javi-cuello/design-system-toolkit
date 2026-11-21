@@ -57,7 +57,7 @@ No value the comparison cannot name passes. That means a hex fill or stroke, a l
 
 ## Gate 6 · Stale waivers and the waiver's shape
 
-In waivers.md, with the waiver model.
+In [waivers.md](waivers.md#gate-6--stale-waivers-and-the-waivers-shape), with the waiver model.
 
 ## Gate 7 · Generated files match what is committed
 
