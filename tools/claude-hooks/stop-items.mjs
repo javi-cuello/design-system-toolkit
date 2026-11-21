@@ -162,8 +162,7 @@ export async function ownUncommitted(transcript, repos) {
   // macOS folders are case-insensitive: ~/projects/toolkit is ~/Projects/toolkit
   const fold = process.platform === 'darwin' ? (x) => x.toLowerCase() : (x) => x;
   // a session's own worktree (.claude/worktrees/<work>) is a repo of its own; a background subagent's (agent-<id>) is
-  // the subagent's, merged by the session (and what a subagent's scripts write in any worktree never reaches
-  // scriptWritten: gates.mjs leaves it to the subagent)
+  // the subagent's, merged by the session
   const trees = new Set();
   for (const f of last.keys()) for (const repo of repos) {
     const m = fold(f).startsWith(fold(repo + path.sep)) && f.slice(repo.length + 1).match(/^\.claude\/worktrees\/([^/]+)\//);

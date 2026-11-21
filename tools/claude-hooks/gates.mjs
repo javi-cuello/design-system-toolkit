@@ -42,12 +42,17 @@ export const WIDE_LINES = 10;
 // Bookkeeping that a change of any size carries; counting it made every
 // skill edit "full" (version, changelog, cases).
 // A worktree under a repo (.claude/worktrees/<name>) is a repo of its own: its tree, branch, size, check and
-// review are its own (one worktree per piece of work, tools/shared/worktree.mjs). What a background subagent writes in
-// a worktree is the subagent's, counted when its branch lands: Claude Code's isolation (agent-<id>) or one it made with
-// bin/worktree (a session's agents each in diag-<cause>, 2026-11-21: counted as the session's, the review gate and the
-// uncommitted-edits block fired on agents mid-work, six reviews of unfinished diffs and five forced WIP commits).
+// review are its own (one worktree per piece of work, tools/shared/worktree.mjs). agent-<id> ones are background
+// subagents' (Claude Code's isolation), counted when their branch is merged.
 const IN_WORKTREE = /^\.claude\/worktrees\/([^/]+)(?:\/|$)/;
-const subagentTree = (w) => !!w?.worktree;
+const subagentTree = (w) => !!w?.worktree && w.worktree.startsWith('agent-');
+// A worktree a background subagent writes in that it made itself (bin/worktree: diag-<cause>) is the agent's work: its
+// writes count as ever, so its landing (bin/land, the push gate) needs their review, but the session's own gates (the
+// Stop review demand, the plan gate) leave that tree to the agent, which is still at work (2026-11-21: counted as the
+// session's, those gates fired on agents mid-work and on shelved branches: six reviews of unfinished diffs, five forced
+// WIP commits in one night; counting it only at landing let a branch land unreviewed, so it is counted as written).
+const agentsTree = (st, f, repos) => { const w = where(f, repos); return !!w?.worktree && (st.agentTrees || []).includes(w.repo); };
+const sessionsOwn = (st, a, repos) => { const files = Object.fromEntries(Object.entries(a.files).filter(([f]) => !agentsTree(st, f, repos))); return { files, wide: a.wide.filter((f) => files[f] !== undefined) }; };
 const BOOKKEEPING = /(^|\/)(CHANGELOG\.md|README\.md)$|(^|\/)tests\/cases\.md$|^standards\/changelog\//;
 // The plan's sections, each a heading; Aim is the main goal the work serves, as agreed with the person, kept unchanged
 // from piece to piece; Before must hold bin/check's closing line, Measure the goal measured
@@ -270,22 +275,6 @@ function dirty(files) {
 
 /* Lines each tracked file in a repo differs from its last commit by, from
    one git call (renames off, so a moved file is its two halves). */
-/* A worktree branch's committed work since the session's last review: what a subagent wrote there is not counted as it
-   writes (add), so it is counted here, at its landing: the diff from the branch's last commit before that review (its
-   merge-base with origin/main when none) to HEAD, per file. Without it a background agent's branch landed unreviewed
-   (review of a3acb70c, 2026-11-21). */
-function branchSince(repo, reviewedAt) {
-  const git = (a) => spawnSync('git', ['-C', repo, ...a], { encoding: 'utf8', maxBuffer: 1 << 26 });
-  const mb = git(['merge-base', 'origin/main', 'HEAD']).stdout.trim();
-  if (!mb) return {};
-  let base = mb;
-  if (reviewedAt) { const b = git(['rev-list', '-1', `--before=${reviewedAt}`, 'HEAD']).stdout.trim(); if (b && git(['merge-base', '--is-ancestor', mb, b]).status === 0) base = b; }
-  const lines = {};
-  const g = git(['-c', 'core.quotePath=off', 'diff', '--numstat', '--no-renames', '-z', base, 'HEAD']);
-  for (const e of (g.stdout || '').split('\0')) { const m = e.match(/^(\d+|-)\t(\d+|-)\t(.+)$/); if (m && !BOOKKEEPING.test(m[3])) lines[path.join(repo, m[3])] = Math.max(+m[1] || 0, +m[2] || 0); }
-  return lines;
-}
-
 function diffs(repo) {
   const lines = {};
   const g = spawnSync('git', ['-C', repo, '-c', 'core.quotePath=off', 'diff', '--numstat', '--no-renames', '-z', 'HEAD'], { encoding: 'utf8', maxBuffer: 1 << 26 });
@@ -317,7 +306,10 @@ function scriptWrites(st, win, repos) {
     // from the snapshot taken as the call began (a Write in the same message lands before it), else the call's record
     if (t < (before ? before.at : win.start - 1000) || t > win.end) continue;
     // kept across closes, bookkeeping included: the Stop hook's own-uncommitted check reads it (scriptWritten)
-    (st.wrote ||= {})[file] = Math.max(st.wrote[file] || 0, t);
+    // (a subagent's script in a worktree it writes is the agent's: never the session's to commit, gated at its landing)
+    const agents = win.sub && where(file, repos)?.worktree;
+    if (agents && !(st.agentTrees ||= []).includes(repo)) st.agentTrees.push(repo);
+    if (!agents) (st.wrote ||= {})[file] = Math.max(st.wrote[file] || 0, t);
     if (path.basename(rel) === 'README.md' && !st.docs.includes(file)) st.docs.push(file);
     if (BOOKKEEPING.test(rel)) continue;
     now ||= diffs(repo).lines;
@@ -417,6 +409,7 @@ function add(st, c, cwd, repos, sub = false) {
     // a background agent's edits in its own worktree are counted when its branch is merged, not as it writes them;
     // the session's own edits in a worktree count like any other
     if (w && sub && subagentTree(w)) continue;
+    if (w && sub && w.worktree && !(st.agentTrees ||= []).includes(w.repo)) st.agentTrees.push(w.repo);
     if (w && path.basename(w.rel) === 'README.md' && !st.docs.includes(w.file)) st.docs.push(w.file);
     if (!w || BOOKKEEPING.test(w.rel)) continue;
     const n = changed(c, st.measured);
@@ -542,7 +535,7 @@ function record(st, line, repos, sub) {
       if (r.is_error && st.counted[r.tool_use_id]) uncount(st, r.tool_use_id);
       const sh = st.shell[r.tool_use_id];
       // a subagent's call that ended before the session's last review is that review's
-      if (sh && !st.denied.includes(r.tool_use_id) && !(sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) && !(sub && subagentTree(where(sh.dir, repos)))) scriptWrites(st, { ...sh, pre: st.pre[r.tool_use_id], end: Date.parse(rec.timestamp) || Date.now() }, repos);
+      if (sh && !st.denied.includes(r.tool_use_id) && !(sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt)) scriptWrites(st, { ...sh, pre: st.pre[r.tool_use_id], end: Date.parse(rec.timestamp) || Date.now() }, repos);
       if (sh) { delete st.shell[r.tool_use_id]; delete st.pre[r.tool_use_id]; }
       // a foreground review is done when its result comes back; a background one only says it was launched
       const out = typeof r.content === 'string' ? r.content : (r.content || []).map((x) => x.text || '').join('\n');
@@ -569,7 +562,7 @@ function record(st, line, repos, sub) {
     // a subagent's run counts as the session's (a background agent that spans turns ran it), except in its own
     // worktree, whose tree is not the repo's
     if (c.name === 'Bash' && c.id && CHECK_RUN.test(bareShell(c.input?.command))) { const d = checkDir(bareShell(c.input?.command), rec.cwd || process.cwd()); const w = d && where(d, repos); if (!(sub && subagentTree(w))) st.checks[c.id] = w?.repo || ''; }
-    if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart };
+    if (c.name === 'Bash' && c.id) st.shell[c.id] = { start: Date.parse(rec.timestamp) || Date.now(), dir: shellDir(bareShell(c.input?.command), rec.cwd || process.cwd()), this: !sub || !rec.timestamp || rec.timestamp > st.turnStart, sub };
     if (c.id && st.counted[c.id]) continue; // counted when the plan gate saw it pending
     if (sub && st.reviewedAt && rec.timestamp && rec.timestamp < st.reviewedAt) continue; // a subagent's edit the session's review already covered
     const got = add(st, c, rec.cwd || process.cwd(), repos, sub);
@@ -810,10 +803,7 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     // only the pushed repo's work: unreviewed work elsewhere does not hold this one back
     const repo = where(pushDir(call.input.command, cwd, repos), repos)?.repo;
     const files = Object.fromEntries(Object.entries(st.since.files).filter(([f]) => repo && where(f, repos)?.repo === repo));
-    // a worktree's branch: its committed work since the last review too, a subagent's included (never counted as written)
-    if (repo && IN_WORKTREE.test(path.relative(repos.map(realPath).find((r) => repo.startsWith(r + path.sep)) || repo, repo))) for (const [f, n] of Object.entries(branchSince(repo, st.reviewedAt))) files[f] = Math.max(files[f] || 0, n);
-    const wideOf = (f) => st.since.wide.includes(f) || WIDE.test(path.relative(repo || '', f));
-    const s = size({ files, wide: Object.keys(files).filter(wideOf) });
+    const s = size({ files, wide: st.since.wide.filter((f) => files[f] !== undefined) });
     const why = s.full ? `${s.why.join(', ')} changed since the last independent review` : st.reviewing.length ? 'a review is still running' : '';
     if (why) {
       if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; }
@@ -829,7 +819,9 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
   const pending = { ...st, total: plus(st.total, st.inherited), since: empty(), docs: [...st.docs] };
   const already = call.id && st.counted[call.id];
   if (!already && !add(pending, call, cwd, repos, sub).length) { save(session, st); return null; }
-  const s = size(pending.total);
+  // a subagent writing a worktree is the agent's own work, gated when its branch lands
+  if (sub && writes(call, cwd).every((f) => where(f, repos)?.worktree)) { save(session, st); return null; }
+  const s = size(sessionsOwn(pending, pending.total, repos));
   if (!s.full) { save(session, st); return null; }
   if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; if (st.counted[call.id]) uncount(st, call.id); } // a refused call never ran, so it never counts
   save(session, st);
@@ -891,10 +883,11 @@ export function stopGate(session, transcript, repos, lastMessage, cwd = process.
   const st = advance(session, transcript, repos);
   inherit(st, session, repos, cwd);
   // another session's unreviewed work in this repo is measured with this one's
-  const s = size(plus(st.since, st.inherited));
+  const mine = sessionsOwn(st, plus(st.since, st.inherited), repos);
+  const s = size(mine);
   if (st.turnEdited && s.full) {
     carry(session, st); save(session, st);
-    const dirs = [...new Set(Object.keys(plus(st.since, st.inherited).files).map((f) => where(f, repos)?.repo).filter(Boolean))];
+    const dirs = [...new Set(Object.keys(mine.files).map((f) => where(f, repos)?.repo).filter(Boolean))];
     // a worktree's work is mostly committed on its branch: its diff runs from where the branch left main
     const diff = (d) => (IN_WORKTREE.test(path.relative(repos.map(realPath).find((r) => d.startsWith(r + path.sep)) || d, d)) ? `git -C ${d} diff $(git -C ${d} merge-base origin/main HEAD)` : `git -C ${d} diff`);
     // the person sees this too: short, the method in §D 13

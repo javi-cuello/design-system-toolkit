@@ -325,28 +325,6 @@ test('worktrees: each is its own repo; bin/land is its push; its reviewers diff 
   s.clean();
 });
 
-test("a worktree branch's committed work since the last review is counted at its landing, a subagent's too", () => {
-  const dir = repo();
-  try {
-    const git = (cwd, ...a) => spawnSync('git', ['-C', cwd, '-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { encoding: 'utf8' });
-    git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
-    const W = path.join(dir, '.claude/worktrees/w');
-    git(dir, 'worktree', 'add', '-q', '-b', 'worktree-w', W);
-    // an agent's work, committed in its worktree and never seen as written by this session
-    fs.writeFileSync(path.join(W, 'big.mjs'), lines(200)); git(W, 'add', '.'); git(W, 'commit', '-qm', 'agent work');
-    const t0 = Date.now();
-    const s = session([at(user('land it'), t0)]);
-    fs.writeFileSync(planPath(s.id), PLAN_TEXT);
-    const land = (id) => planGate(s.id, s.file, [dir], { id, name: 'Bash', input: { command: `cd ${W} && bin/land` } }, W);
-    assert.match(String(land('k1')), /^Not pushed/, 'an unreviewed branch does not land');
-    s.clean();
-    const r = session([at(user('land it'), t0), at(review(), t0 + 60000)]);
-    fs.writeFileSync(planPath(r.id), PLAN_TEXT);
-    assert.equal(planGate(r.id, r.file, [dir], { id: 'k2', name: 'Bash', input: { command: `cd ${W} && bin/land` } }, W), null, 'reviewed after its last commit, it lands');
-    r.clean();
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-});
-
 test('a repo that lands through bin/land is edited in a worktree; a session already editing its main checkout finishes there', () => {
   delete process.env.TOOLKIT_WORKTREES;
   try {
@@ -565,12 +543,16 @@ test("a background agent's edits in its own worktree are not the session's; the 
   own.clean();
 });
 
-test("a background agent's work in a worktree it made itself (bin/worktree, no agent- name) is its own too", () => {
+test("a background agent's work in a worktree it made itself (bin/worktree, no agent- name) is left to it until it lands", () => {
+  const W = path.join(TOOLKIT, '.claude/worktrees/diag-x');
   const s = session([user('build it'), call('Agent', { description: 'Fix a cause', prompt: 'x', subagent_type: 'general-purpose' })]);
   const dir = path.join(s.file.replace(/\.jsonl$/, ''), 'subagents');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'agent-1.jsonl'), JSON.stringify(edit('.claude/worktrees/diag-x/a.mjs', 150)) + '\n');
-  assert.equal(size(advance(s.id, s.file, REPOS).total).lines, 0);
+  fs.writeFileSync(planPath(s.id), PLAN_TEXT);
+  assert.doesNotMatch(String(stopGate(s.id, s.file, REPOS, 'Waiting on the agent.')), /^Not done yet/, 'the Stop gate leaves an agent mid-work alone');
+  assert.equal(planGate(s.id, s.file, REPOS, { id: 'p1', name: 'Write', input: { file_path: path.join(W, 'b.mjs'), content: lines(900) } }, W, true), null, 'and the plan gate lets it write its own tree');
+  assert.match(String(planGate(s.id, s.file, REPOS, { id: 'p2', name: 'Bash', input: { command: `cd ${W} && bin/land` } }, W)), /^Not pushed/, 'but its branch never lands unreviewed');
   fs.rmSync(path.dirname(dir), { recursive: true, force: true });
   s.clean();
   const own = session([user('build it'), edit('.claude/worktrees/diag-x/a.mjs', 150)]);
