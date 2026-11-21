@@ -245,6 +245,14 @@ export function ringOf(c, when, id, e, a, t = HOUSE) {
   return { parent: e.parent, clear, decls: [['outline', `${w} solid ${tokenNames.token(b.color)}`, undefined, 'ring'], ['outline-offset', offset, clear ? 'no token in the design' : undefined]] };
 }
 
+// whether the markup draws a layer as an element of its own: anything but a ring only pointer states add, each a ring
+// there (to-markup's partsOf `ring`, read the same way)
+function boxedSomewhere(c, id, t) {
+  if (c.anatomy[id]) return true;
+  const pointer = ([k, v]) => (c.props[k] || {}).role === 'interaction' && (c.props[k].pointer || []).includes(v);
+  return (c.variants || []).some((v) => v.add && v.add[id] && (!Object.entries(v.when || {}).some(pointer) || !ringOf(c, v.when || {}, id, v.add[id], { ...c.anatomy, ...v.add }, t)));
+}
+
 // where a box out of the flow stands to cover another's border box: an absolute box is placed in its parent's padding
 // box, so out past the border css.mjs draws as one (an inside stroke in the layout; any other is a shadow or an
 // outline, which takes no room), side by side
@@ -434,6 +442,9 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     const entry = entryOf(c);
     if (entry && (id === entry.value || id === entry.placeholder)) continue;
     const ring = ringOf(c, when, id, e, a, t);
+    // (a layer the markup draws as an element of its own, a box at another combination, draws nothing where its outline
+    // rings: a rule of that combination would otherwise reach here and draw the layer twice, the box and the outline)
+    if (ring && boxedSomewhere(c, id, t)) out[id] = { decls: new Map([['display', { v: 'none' }]]), unread: [] };
     if (ring) {
       // an outline follows its box's corners: a box that paints nothing (a bare frame around what it holds) takes the
       // ring's corners less the ring's clearance while focused, which shows only as the ring; one that paints keeps its own

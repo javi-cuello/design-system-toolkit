@@ -146,6 +146,12 @@ ok('a box painted in one combination is ringed by a box of its own there, and dr
 ok('a bare box that clips what it holds keeps its corners at focus', !/calc\(var\(--corner-16\)/.test(cornered({ overflow: 'hidden' })));
 const outside = JSON.parse(JSON.stringify(ringed)); outside.variants.at(-1).add.ring.border.align = 'outside';
 ok('a ring stroked outside its layer starts at the layer\'s edge: offset 4, not 6', /outline-offset: 4px;/.test(toCss(outside, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } })));
+// a ring layer another combination draws as a box (Carbon's focusBorder, shown open and drawn at focus): where its outline
+// rings, the box draws nothing, or a rule of that combination reaches there and the layer is drawn twice
+const boxed = JSON.parse(JSON.stringify(ringed)); boxed.variants.push({ when: { selected: true }, add: { ring: boxed.variants.at(-1).add.ring } });
+const bcss = toCss(boxed, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
+ok('a ring layer drawn as a box at another combination draws nothing where its outline rings it, and the cascade replays it',
+  /:focus-visible[^{]*> \.ds-chip__ring \{\s*display: none;/.test(bcss) && /outline: var\(--ds-ring/.test(bcss) && selfCheck(boxed).length === 0 && !/__ring \{\s*display: none/.test(rcss));
 // the disabled dim on the root reads the dim knob, so a holder that dims sets it to 1 and its parts dim once (code-standard rule 62)
 const dimmed = toCss(chip, 'chip', { naming: { kind: 'class', prefix: 'ds-', part: '__' } });
 ok('the disabled dim on the root reads the dim knob first, and sets it on what the root holds', /opacity: var\(--ds-dim, var\(--state-disabled-opacity\)\);/.test(dimmed) && /\) > \* \{ --ds-dim: 1; \}/.test(dimmed));
