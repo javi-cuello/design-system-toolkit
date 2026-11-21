@@ -1,4 +1,6 @@
-# Eval cases — figma-foundations-audit (v1.27.2)
+# Eval cases — figma-foundations-audit (v1.28.0)
+
+**Walked: 2026-11-21 for 1.28.0** — prose moved to references/ (checks, gather, filing, libraries) under skill-standard §A clause I; every case read against the new text: each assertion's rule survives (F3 and F23 in checks.md, F6 in filing.md, F25 in gather.md, F24 in the script alone as before, F20, F21, F26 and F27 in libraries.md); no case cites a moved section. `node tests/test-foundations.mjs` 88 of 88.
 
 **Walked: 2026-11-19 for 1.27.2** — prose only (the Propstar note moved in from figma-standard rule 15); `node tests/test-foundations.mjs` 88 of 88, F-cases on the template unchanged.
 
@@ -196,4 +198,5 @@ Runs: node tests/test-foundations.mjs — "tokens: letter spacing in percent may
 - **Assert:** `tokens-unused` lists `Grey/2` alone under Primitives; `Size/8` is reached through `Caption`.
 - **Negative:** before the fix, `Size/8` was raised as unused (the assertion failed, 87 of 88).
 - **Traced:** a project's font-size primitives, reached through a text-styles collection by heading and display styles no component drew, were raised as unused; figma-standard rule 42 counts any style. Run 2026-11-16, `tokenChecks` on that project's stored tokens with no component use at all: no `Font/Size` token raised (17 others in its Global collection still are, radii and spacing nothing binds).
+Runs: node tests/test-foundations.mjs — "tokens: a token no component, style or used token reaches is unused; an alias target and a style's binding are used, the style used by a component or not (Caption, case F27)"
 
