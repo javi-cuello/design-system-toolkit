@@ -42,7 +42,7 @@ const TRY = 'import fcntl,sys\ntry: f=open(sys.argv[1],"a")\nexcept Exception: s
 // the note (argv[2] into argv[3]) is written under the lock, before "held", so a waiter never reads the last holder's
 // argv: the note, then lock file and note file per slot; the first slot free is taken, else every slot is tried again each second
 // a measure (D set) never takes slot 0 (info file Z) while a check or land (a live want note with first) waits for it
-const HOLD = 'import fcntl,sys,time,glob,json,os\nn=sys.argv[1]; D=sys.argv[2]; Z=sys.argv[3]; p=sys.argv[4:]; fs=[]\nfor i in range(0,len(p),2):\n  try: fs.append((open(p[i],"a"),p[i+1]))\n  except Exception: pass\nif not fs:\n  print("nolock",flush=True); sys.exit(0)\ndef landing():\n  for g in glob.glob(os.path.join(D,"want-*.json")):\n    try:\n      w=json.load(open(g))\n      if not w.get("first"): continue\n      os.kill(int(w["pid"]),0); return True\n    except PermissionError: return True\n    except Exception: pass\n  return False\nsaid=False\nwhile True:\n  for f,w in fs:\n    if D and w==Z and landing(): continue\n    try: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\n    except OSError: continue\n    try: open(w,"w").write(n)\n    except Exception: pass\n    print("held "+p[p.index(w)-1],flush=True); sys.stdin.read(); sys.exit(0)\n  if not said: print("busy",flush=True); said=True\n  time.sleep(1)\n';
+const HOLD = 'import fcntl,sys,time,glob,json,os\nn=sys.argv[1]; D=sys.argv[2]; Z=sys.argv[3]; p=sys.argv[4:]; fs=[]\nfor i in range(0,len(p),2):\n  try: fs.append((open(p[i],"a"),p[i+1]))\n  except Exception: pass\nif not fs:\n  print("nolock",flush=True); sys.exit(0)\ndef landing():\n  for g in glob.glob(os.path.join(D,"want-*.json")):\n    try:\n      w=json.load(open(g))\n      if not w.get("first") or time.time()-os.path.getmtime(g)>180: continue\n      os.kill(int(w["pid"]),0); return True\n    except PermissionError: return True\n    except Exception: pass\n  return False\nsaid=False\nwhile True:\n  for f,w in fs:\n    if D and w==Z and landing(): continue\n    try: fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\n    except OSError: continue\n    try: open(w,"w").write(n)\n    except Exception: pass\n    print("held "+p[p.index(w)-1],flush=True); sys.stdin.read(); sys.exit(0)\n  if not said: print("busy",flush=True); said=True\n  time.sleep(1)\n';
 
 /* The live session's name, from Claude Code's registry (~/.claude/sessions/<pid>.json), else its id. */
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
@@ -83,9 +83,10 @@ process.once('exit', unwant); // once for the process, not per hold
 export function waiters() {
   let names = [];
   try { names = fs.readdirSync(lockDir()).filter((f) => /^want-\d+\.json$/.test(f)); } catch { return []; }
-  return names.map((f) => { try { return JSON.parse(fs.readFileSync(path.join(lockDir(), f), 'utf8')); } catch { return null; } })
+  return names.map((f) => { try { const g = path.join(lockDir(), f); return { ...JSON.parse(fs.readFileSync(g, 'utf8')), mtime: fs.statSync(g).mtimeMs }; } catch { return null; } })
     // a waiter killed before it could clear its note is removed here, so a reused pid never reads as a waiter later
-    .filter((w) => { if (w && !alive(w.pid)) { try { fs.rmSync(wantFile(w.pid), { force: true }); } catch { /* gone */ } return false; } return w && w.pid !== process.pid; });
+    // (a note its waiter has not touched for three minutes is no one either: a waiter touches it each minute)
+    .filter((w) => { if (w && (!alive(w.pid) || Date.now() - w.mtime > 180000)) { try { fs.rmSync(wantFile(w.pid), { force: true }); } catch { /* gone */ } return false; } return w && w.pid !== process.pid; });
 }
 /* Whether a live waiter could take the slot this process holds (a first-only waiter, bin/check or bin/land, only slot 0). */
 export function wanted() {
@@ -121,7 +122,11 @@ export function hold(what, { say = (l) => console.error(l), first = false } = {}
         const l = buf.slice(0, i); buf = buf.slice(i + 1);
         if (l === 'busy') {
           try { fs.writeFileSync(wantFile(), note.replace(/^\{/, `{"first":${first},`)); } catch { /* unsaid: no one yields to it */ }
-          const tell = () => { const h = holder({ first }); if (h) say(`measuring lock: waiting for ${describe(h)}`); };
+          const tell = () => {
+            try { const s = new Date(); fs.utimesSync(wantFile(), s, s); } catch { /* not written */ }
+            const h = holder({ first }), l = !h && !first && waiters().find((w) => w.first);
+            if (h) say(`measuring lock: waiting for ${describe(h)}`); else if (l) say(`measuring lock: slot 0 is kept for ${describe(l)}`);
+          };
           tell(); timer = setInterval(tell, 60000);
         } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
         else if (l.startsWith('held')) {

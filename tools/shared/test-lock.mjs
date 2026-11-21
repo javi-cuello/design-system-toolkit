@@ -107,6 +107,8 @@ await new Promise((r) => (l1.exitCode !== null ? r() : l1.on('close', r)));
   const m2 = spawnSync('node', [LOCK, '--run', 'measure two', '--', 'echo', 'two'], { env: env3, encoding: 'utf8', timeout: 20000 });
   assert.equal(m2.stdout.trim(), 'two', 'the second measure runs in the end');
   assert.ok(Date.now() - t5 > 2500, 'but only once measure one let slot 1 go, not in slot 0 the land waits for');
+  const old = new Date(Date.now() - 240000); fs.utimesSync(note, old, old);
+  assert.equal((await import('./lock.mjs')).waiters().length, 0, 'a note untouched for minutes is no one, even under a live (reused) pid');
   landPid.kill(); fs.rmSync(note, { force: true });
   await new Promise((r) => (m1.exitCode !== null ? r() : m1.on('close', r))); }
-console.log('test-lock: 33 assertions passed');
+console.log('test-lock: 34 assertions passed');
