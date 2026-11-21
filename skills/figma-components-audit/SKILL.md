@@ -118,6 +118,10 @@ A score from 0 to 100 per component is produced only when the maintainer asks. I
 | [scan-and-probes.md](references/scan-and-probes.md) | Running the scanner, the scope of counts, the probes, composed frames, tools and bridge traps |
 | [knowledge-pages.md](references/knowledge-pages.md) | Step 4b in full |
 | [judgment-protocol.md](references/judgment-protocol.md) | Discovery, verification, mechanisms, classification, applying fixes |
+| [fix-queue.md](references/fix-queue.md) | The report's rules, the chat template and the commands that render it |
+| [record.md](references/record.md) | The record's shape, filing rows, delivery, re-audit, sweep, consistency rows |
+| [scoring.md](references/scoring.md) | The on-request score: its model, rules and report |
+| [scanner-checks.md](references/scanner-checks.md) | Why each scanner check and probe exists |
 | [conventions-universal.md](references/conventions-universal.md) | The portable rules, each tagged scanner or agent |
 | [scanner-checks.md](references/scanner-checks.md) | Why each scanner check and probe exists |
 | [fix-queue.md](references/fix-queue.md) | The report's rules and the chat template |
