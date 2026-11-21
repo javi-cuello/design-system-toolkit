@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { designSetsColour, unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, joinedNames, boundText, keepsName, dropOwnGlyph, selectorParts, writtenByHolder, INSTANCE_CSS, designKeyOf, swapKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
 const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
@@ -504,5 +504,23 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('a variant back at the component\'s own colour says null over an overriding base; a swap is held to the component it swaps to',
     back.background === 'color/blue' && bv[0].set['slotChildren.background'] === null
     && sv[0].set['slotChildren.background'] === 'color/magenta' && !('slotChildren.background' in sv[1].set));
+}
+// a placed instance's own styling is what the component read writes on it: a rule that reaches the instance through the
+// component's root (to-code's `.toggle > … > .toggle__item`), never one of the instance's own sheet (`.toggle-item`,
+// `.toggle-item:where([data-state="read only"])`), which is that component's drawing (Carbon's dropdown read a menu
+// list's firstOnTop, a tag's pull-back gap, as overrides on every holder)
+{
+  const parts = selectorParts('.toggle:where([data-state="read only"]) > .a  .b, .c:is(.d, .e)~.f');
+  ok('a selector list splits at the top level into selectors and their compounds, never inside brackets or quotes',
+    parts.length === 2 && parts[0].compounds.join('|') === '.toggle:where([data-state="read only"])|.a|.b' && parts[1].text === '.c:is(.d, .e)~.f' && parts[1].compounds.length === 2);
+  // a stand-in page: the root matches `.toggle` and its state; the instance `.toggle-item` and its part class
+  const el = { matches: (q) => ['.toggle-item', '.toggle__item', '.toggle > .toggle__item', '.toggle-item:where([data-state="read only"])', '.toggle:where([data-on]) > .toggle__item'].includes(q) };
+  const root = { matches: (q) => ['.toggle', '.toggle:where([data-on])'].includes(q) };
+  const was = globalThis.document; globalThis.document = { querySelector: (q) => (q === 'el' ? el : q === 'root' ? root : null) };
+  const by = (sel) => writtenByHolder(selectorParts(sel), 'el', 'root');
+  ok('a rule reaching the instance through the component read is its override; the instance\'s own sheet\'s is not',
+    by('.toggle > .toggle__item') && by('.toggle:where([data-on]) > .toggle__item') && !by('.toggle-item') && !by('.toggle-item:where([data-state="read only"])') && !by('.other > .toggle__item'));
+  globalThis.document = was;
+  ok('every field a placed instance\'s styling is read into names the CSS it is read from', ['background', 'layout', 'radius', 'border', 'shadow', 'overflow'].every((f) => INSTANCE_CSS[f] && INSTANCE_CSS[f].length));
 }
 console.log(`${n}/${n} passed`);

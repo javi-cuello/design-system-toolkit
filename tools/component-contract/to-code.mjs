@@ -474,8 +474,9 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
       // (and what the defaults override that neither draws here, a fill the base sets and this combination takes away
       // where the component has none: unset, or the base's override would stand)
       const said = new Set([...over.mine.map(([p]) => p), ...over.removed]);
-      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p)), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset'])];
-      if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };
+      // (a value only the defaults' override makes it say, the component's own here, is `given`: said where a rule sets it)
+      const decls = [...over.mine.filter(([p, v]) => over.theirs.get(p) !== v || base.has(p)).map(([p, v, note]) => [p, v, note, over.theirs.get(p) === v]), ...over.removed.map((p) => [p, 'unset']), ...[...base].filter((p) => !said.has(p) && !over.theirs.has(p)).map((p) => [p, 'unset', undefined, true])];
+      if (decls.length) out[id] = { decls: new Map(decls.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: [] };
       continue;
     }
     // a slot's children are samples of what a caller puts there: the first says where any child sits, as
@@ -550,12 +551,14 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     if (e.kind === 'instance' && !slotted) {
       const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors: false, box: null, pull: null };
       const over = ownOverride(e, ictx, mains), said = new Set(over.changed.map(([p]) => p));
-      kept.push(...over.changed, ...[...everOverrides(c, id, mains, ictx)].filter((p) => !said.has(p)).map((p) => [p, over.theirs.get(p) ?? 'unset']));
+      // (the component's own value said only where a rule before this one sets it otherwise, `given`: elsewhere nothing,
+      // so the component's own sheet, its pointer states included, holds there)
+      kept.push(...over.changed, ...[...everOverrides(c, id, mains, ictx)].filter((p) => !said.has(p)).map((p) => [p, over.theirs.get(p) ?? 'unset', undefined, true]));
     }
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);
-    out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note]) => [p, { v, note }])), unread: e.kind === 'instance' || slotted ? [] : unread };
+    out[slotted ? `${e.parent}/*` : id] = { decls: new Map(kept.map(([p, v, note, given]) => [p, { v, note, ...(given && { given: true }) }])), unread: e.kind === 'instance' || slotted ? [] : unread };
     if (slotted) { /* the sample's: above */ } else if (empty.length) {
       const only = declarations(Object.fromEntries(empty.map((f) => [f, a[id][f]])), { root: false, holds: false, row: true, anchors: false, box: null, pull: null }, tokenNames);
       out[`${slotted ? `${e.parent}/*` : id}::empty`] = { decls: new Map(only.decls.map(([p, v, note]) => [p, { v, note }])), unread: [] };

@@ -442,6 +442,47 @@ export function modeKeysOf(axes, contract) {
 
 export const keepsName = (name, id) => partName(id) !== name;
 
+/* The CSS each field of a placed instance's own styling is read from (from-code's walk, boxStyling), for asking whose
+   rule wrote it. */
+export const INSTANCE_CSS = {
+  background: ['background-color', 'background-image', 'background'], paint: ['background-image', 'background'],
+  layout: ['justify-content', 'align-items', 'flex-direction', 'gap', 'row-gap', 'column-gap', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'padding'],
+  radius: ['border-top-left-radius', 'border-radius'], full: ['border-top-left-radius', 'border-radius'], cornerShape: ['corner-top-left-shape', 'corner-shape'],
+  border: ['border-top-width', 'border-top-color', 'border-top', 'border', 'border-width', 'border-color', 'box-shadow'],
+  shadow: ['box-shadow'], shadowAll: ['box-shadow'], ringsUsed: ['box-shadow'], overflow: ['overflow'],
+};
+
+/* The selectors of a list, each as written and as its compounds in order (`.a > .b:where([x="1 2"]) .c` → .a,
+   .b:where([x="1 2"]), .c): split at the top level only, never inside brackets, parentheses or quotes. Self-contained,
+   so it runs in the page too (writtenByHolder takes its source). */
+export function selectorParts(list) {
+  const out = []; let sel = '', cs = [], cur = '', depth = 0, quote = null;
+  const word = () => { if (cur.trim()) cs.push(cur.trim()); cur = ''; };
+  const done = () => { word(); if (cs.length) out.push({ text: sel.trim(), compounds: cs }); sel = ''; cs = []; };
+  for (const ch of list) {
+    if (quote) { cur += ch; sel += ch; if (ch === quote) quote = null; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; cur += ch; sel += ch; continue; }
+    if (ch === '(' || ch === '[') depth++;
+    if (ch === ')' || ch === ']') depth--;
+    if (depth === 0 && ch === ',') { done(); continue; }
+    sel += ch;
+    if (depth === 0 && /[\s>+~]/.test(ch)) { word(); continue; }
+    cur += ch;
+  }
+  done();
+  return out;
+}
+
+/* In the page: whether a rule's selector list reaches the element through the component read (its root matches a
+   compound before the last of a selector the element matches): this component's rule on a placed instance, not the
+   instance's own. `parts` is selectorParts of the list, worked out beside the page. */
+export function writtenByHolder(parts, elSel, rootSel) {
+  const el = document.querySelector(elSel), root = document.querySelector(rootSel);
+  if (!el || !root) return false;
+  const ok = (q, n) => { try { return n.matches(q); } catch { return false; } };
+  return parts.some((p) => ok(p.text, el) && p.compounds.slice(0, -1).some((c) => ok(c, root)));
+}
+
 /* A glyph read as the instance of a component this library holds (asIcon) keeps no colour that component draws its glyph
    in itself (derive's glyphColour, the colour to-code writes on it): that is the component's own, no override, as an
    instance's styling equal to its component's root is (ownStyling). Atlassian's Slot, placed in a banner's and a top
@@ -1569,7 +1610,8 @@ async function main() {
               glyphs: [...n.querySelectorAll('svg, [data-icon]:empty')].flatMap((g) => [g.getAttribute('data-icon'), ...(iconRe ? [...g.classList].map((c) => (c.match(new RegExp(iconRe)) || [])[1]) : [])].filter(Boolean)) });
             // its own styling over its component's root (a toggle's fill on its toggle item), folded back where it is that root's
             // (ownStyling); drawn over its parent where it paints, as a box is
-            { const ie = out[out.length - 1]; boxStyling(ie); if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
+            // (no arc, focus ring or outline: those are its component's drawing, or the ring rule's, never an override read here)
+            { const ie = out[out.length - 1]; boxStyling(ie); delete ie.arc; delete ie.outline; delete ie.ownOutline; if (ie.background) { let a = n.parentElement; while (a && !ie.under) { const bg = getComputedStyle(a).backgroundColor; if (!clear(bg)) ie.under = bg; a = a.parentElement; } } }
             // the layers the mapping names inside it, where the mapping names it too, at any depth of placing (opensPlaced; an
             // unmapped one's code id, avatar2, is not yet the design's, avatar_2, so its overrides could not be told apart)
             // (each at its place among the component's own drawn children, which this reading does not all read)
@@ -1898,6 +1940,14 @@ async function main() {
           if (glyphOf.length) Object.defineProperty(x, 'glyphOf', { value: glyphOf });
         }
         delete x.slug; delete x.attrs; delete x.innerDisabled; delete x.glyphs; delete x.texts; delete x.shown;
+        // an instance's own styling is what this component writes on it: a field whose CSS wins from a rule of the placed
+        // component's own (its sheet, a theme) is that component's drawing, whatever the design's root says, never an override
+        if (x.kind === 'instance') for (const [f, css] of Object.entries(INSTANCE_CSS)) {
+          if (x[f] === undefined) continue;
+          let mine = false;
+          for (const p of css) { const sel = await authoredSelector(L.tab, `[data-contract-id="${id}"]`, p, styles); if (sel && await call(L.tab, writtenByHolder, selectorParts(sel), `[data-contract-id="${id}"]`, '[data-contract-id="root"]')) { mine = true; break; } }
+          if (!mine) delete x[f];
+        }
         asShape(x, fa, raw.some((r) => r.parent === id));
         drawn[id] = { background: x.background || x.icon || null, color: x.color || null, under: u, border: x.border ? x.border.color : null, box: x.box, layers: !!x.paint };
         delete x.box;
@@ -2053,6 +2103,8 @@ async function main() {
       for (const [hid, h] of Object.entries(anatomy)) {
         const hm = h.kind === 'instance' && mainOf(h.component, h.key);
         if (!hm) continue;
+        // (and the instance's own styling against its component's root at its props, a zero there that root's token)
+        { const R = atProps(hm, h.with || {}).root; if (R) zeroTokens(h, R, L.value, { fill: true }); }
         const inner = Object.fromEntries(Object.keys(anatomy).filter((k) => k.startsWith(`${hid}/`)).map((k) => [k.slice(hid.length + 1), anatomy[k]]));
         if (!Object.keys(inner).length) continue;
         const { M } = placedAs(anatomy, hid, hm, mainOf), match = placedMatch(M, inner);

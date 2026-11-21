@@ -414,10 +414,18 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   const ss = toCss(small, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
   ok('an instance a variant adds, its override dropped further on, goes back to its component\'s own value, never unset',
     /data-on="false"[^{]*> \.ds-switch__knob \{[^}]*justify-content: flex-start/.test(ss) && !/justify-content: unset/.test(ss) && selfCheck(small, rulesOf(small, mains).rules, mains).length === 0);
+  // the component's own value where no rule before sets the property otherwise is not written: its own sheet, its
+  // pointer states included, holds there (an override only a variant makes leaves the defaults' rule without it)
+  const late = { ...sw, anatomy: { root: sw.anatomy.root, knob: { kind: 'instance', parent: 'root', component: 'Knob', with: { State: 'Enabled' }, width: 48 } }, variants: [{ when: { on: false }, set: { 'knob.background': 'C/off' } }] };
+  const lt = toCss(late, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override only a variant makes is written there alone: the defaults\' rule restates nothing, so the component\'s own states hold',
+    !/\.ds-switch > \.ds-switch__knob \{[^}]*background/.test(lt) && /data-on="false"[^{]*> \.ds-switch__knob \{[^}]*background: var\(--c-off\)/.test(lt) && selfCheck(late, rulesOf(late, mains).rules, mains).length === 0);
+  // (a guard, not a fix's case: the old sheet wrote no styling on an instance at all; this holds that the new path needs the library)
   ok('without the library, an instance is placed only', !/background/.test(toCss(sw, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }).split('@layer')[1]));
   const rail = { contract: 1, component: 'Rail', props: {}, anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob', with: { State: 'Enabled' } } }, variants: [] };
   const slider = { contract: 1, component: 'Slider', props: {}, anatomy: { root: { kind: 'container' }, rail: { kind: 'instance', parent: 'root', component: 'Rail', with: {} }, 'rail/knob': { kind: 'instance', parent: 'rail', component: 'Knob', with: { State: 'Enabled' }, background: 'C/strong' } }, variants: [] };
   const m2 = (x) => ({ Knob: knob, Rail: rail })[x] || null;
+  // (a guard against the first version of this fix, which held a nested instance to its holder's record's props)
   const other = { ...slider, anatomy: { ...slider.anatomy, 'rail/knob': { kind: 'instance', parent: 'rail', component: 'Knob', with: { State: 'Read-only' } } } };
   ok('a nested instance at other props, with no styling of its own, is left to its own sheet', !/\.ds-rail__knob \{[^}]*background/.test(toCss(other, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
   const quiet = { ...slider, anatomy: { ...slider.anatomy, 'rail/knob': { ...slider.anatomy['rail/knob'], with: { State: 'Read-only' } } }, props: { quiet: { type: 'boolean', default: false, axis: true, figma: 'Quiet' } }, variants: [{ when: { quiet: true }, set: { 'rail/knob.background': null } }] };
