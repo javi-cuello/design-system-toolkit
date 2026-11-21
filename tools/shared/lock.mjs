@@ -121,9 +121,11 @@ export function hold(what, { say = (l) => console.error(l), first = false } = {}
       for (let i; (i = buf.indexOf('\n')) >= 0;) {
         const l = buf.slice(0, i); buf = buf.slice(i + 1);
         if (l === 'busy') {
-          try { fs.writeFileSync(wantFile(), note.replace(/^\{/, `{"first":${first},`)); } catch { /* unsaid: no one yields to it */ }
+          const want = () => { try { fs.writeFileSync(wantFile(), note.replace(/^\{/, `{"first":${first},`)); } catch { /* unsaid: no one yields to it */ } };
+          want();
           const tell = () => {
-            try { const s = new Date(); fs.utimesSync(wantFile(), s, s); } catch { /* not written */ }
+            // (a note gone, removed as stale after a sleep, is written again)
+            try { const s = new Date(); fs.utimesSync(wantFile(), s, s); } catch { want(); }
             const h = holder({ first }), l = !h && !first && waiters().find((w) => w.first);
             if (h) say(`measuring lock: waiting for ${describe(h)}`); else if (l) say(`measuring lock: slot 0 is kept for ${describe(l)}`);
           };
