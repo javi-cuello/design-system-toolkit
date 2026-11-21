@@ -1,4 +1,6 @@
-# Eval cases — design-code-parity (v1.70.3)
+# Eval cases — design-code-parity (v1.71.0)
+
+**Walked: 2026-11-21 against v1.71.0** — SKILL.md split into references/ for skill-standard §A clause I; no rule changed. The 26 `node tools/parity/test-*.mjs` suites green. Every Traced pointer moved to its new home (§1–§4 loop-parts.md, §5 measurement.md and adapter.md, §6 waivers.md and gates.md / gates-16-31.md, Running it running.md, Comparison mode comparison-mode.md, Traps traps.md, *The loop to work in* habits.md); a literals case pointed at gate 4 now names gate 5. Every code span of the old text was checked present in the references, bar a few illustrative names.
 
 **Walked: 2026-11-20 against v1.70.3** — a citation moved to tools/parity/REFERENCE.md; no case reads it, so none re-walked. 
 
@@ -232,37 +234,37 @@ Method-only skill: no engine, nothing to execute (clause G does not apply — th
 
 ## T1 · The release gate fails on being behind, never on edits since
 Fixture: a library whose last publish is older than the snapshot's stamp, and whose last-modified moved afterwards on a canvas nudge.
-Assert: the skill says the snapshot passes the gate and the edits are a *note*. It must not describe a gate on last-modified as acceptable. Traced to §1 and the trap "The gate on last-modified cannot be cleared"; code-standard rule 32 cited by number.
+Assert: the skill says the snapshot passes the gate and the edits are a *note*. It must not describe a gate on last-modified as acceptable. Traced to loop-parts.md part 1 and the trap "The gate on last-modified cannot be cleared"; code-standard rule 32 cited by number.
 
 Not walked.
 
 ## T2 · Specs are default plus deltas, bound values as token names
 Fixture: a button with thirty variants, one of which changes only its fill.
-Assert: the skill requires the hover variant to be stored as the difference against a named base, the fill as a token name, and a round-trip test holding reader and writer together. Traced to §2 "Spec shape".
+Assert: the skill requires the hover variant to be stored as the difference against a named base, the fill as a token name, and a round-trip test holding reader and writer together. Traced to loop-parts.md "Spec shape".
 
 Walked live: 2026-09-19 — three projects' stored specs through `check-specs.cjs`: 53, 40 and 117 clean, and red on two planted defects (a delta against a base that precedes nothing, a spec stored in full).
 
 ## T3 · Children are compared, not only geometry
 Fixture: a nav bar frame that dropped three links and added a toggle, with every mapped layer measuring the same.
-Assert: the skill requires the instance list (outermost, in order, labelled unless placeholder) to be compared against the rendered component elements, and names this as the check geometry cannot do. Traced to §5 and code-standard rule 31.
+Assert: the skill requires the instance list (outermost, in order, labelled unless placeholder) to be compared against the rendered component elements, and names this as the check geometry cannot do. Traced to measurement.md and code-standard rule 31.
 
 Not walked.
 
 ## T4 · A value the comparison cannot name is a finding *(negative)*
 Fixture: a spec with a hex fill typed in Figma where a token belongs.
-Assert: the skill forbids skipping it — it must be reported, with `literals` keyed `Layer.kind` as the only way past. Traced to §6 gate 4 and code-standard rule 33.
+Assert: the skill forbids skipping it — it must be reported, with `literals` keyed `Layer.kind` as the only way past. Traced to gate 5 and code-standard rule 33.
 
 Not walked.
 
 ## T5 · Every variant measured or waived by name
 Fixture: a story that renders three of a component's eight Figma variants.
-Assert: the skill's gates fail the five unmeasured ones unless each is listed under `unmeasured` with a reason; a story's coverage is what it lists, nothing more. Traced to §4 last sentence and §6 gate 3.
+Assert: the skill's gates fail the five unmeasured ones unless each is listed under `unmeasured` with a reason; a story's coverage is what it lists, nothing more. Traced to loop-parts.md part 4 and gate 3.
 
 Not walked.
 
 ## T6 · Waivers go stale
 Fixture: a waiver for a padding difference, after the code was fixed.
-Assert: the skill says the check fails on a waiver that no longer matches a real difference. Traced to §6 second bullet and gate 5.
+Assert: the skill says the check fails on a waiver that no longer matches a real difference. Traced to waivers.md (three honest answers) and gate 6.
 
 Runs: node tools/parity/test-waivers.mjs — "a waiver nothing used is stale, unless it is content or a decision"
 
@@ -292,79 +294,79 @@ Walked live: 2026-09-01 — the reference project: 239 parity runs in one day, 1
 
 ## C1 · Comparison mode reports unmapped things as not compared *(negative)*
 Fixture: a snapshot of a component with eight variants and a mapping covering three.
-Assert: the skill requires the five others, and any layer without a selector or selector matching nothing, to appear under *not compared* — neither as a pass nor as a failure — and forbids a gate in this mode. Traced to §Comparison mode, third paragraph.
+Assert: the skill requires the five others, and any layer without a selector or selector matching nothing, to appear under *not compared* — neither as a pass nor as a failure — and forbids a gate in this mode. Traced to comparison-mode.md, third paragraph.
 
 Not walked.
 
 ## C2 · A typed code spec is not a measurement *(negative)*
 Fixture: a request to "just describe the component's CSS values and score them against the Figma node".
-Assert: the skill refuses to call that a check, says why (it measures the typist), and asks for a rendered, computed-style read or an explicit label that the result is a reading. Traced to §Comparison mode, fourth paragraph.
+Assert: the skill refuses to call that a check, says why (it measures the typist), and asks for a rendered, computed-style read or an explicit label that the result is a reading. Traced to comparison-mode.md, fourth paragraph.
 
 Not walked.
 
 ## T8 · A measurement that does not repeat is refused
 Fixture: a layer whose width is randomised on load.
-Assert: the skill requires two renders, and a disagreement fails by layer name with nothing from the run counted — not a retry, not a pass on the first reading. Traced to §5 "Measured twice"; observed on the reference project's runner.
+Assert: the skill requires two renders, and a disagreement fails by layer name with nothing from the run counted — not a retry, not a pass on the first reading. Traced to measurement.md "Measured twice"; observed on the reference project's runner.
 
 Runs: node tools/parity/test-measurements.mjs — "a moved property is named with both values, not just its layer"
 
 ## T9 · Code ahead of the design is a finding
 Fixture: a component whose story controls offer `tint` in six colours while the library draws one variant.
-Assert: the skill's gate 4 fails each unmapped value unless waived under `codeOnly` with a reason, and says the gap is the designer's question, not a pass. Traced to §6 gate 4; observed on the reference project (four components).
+Assert: the skill's gate 4 fails each unmapped value unless waived under `codeOnly` with a reason, and says the gap is the designer's question, not a pass. Traced to gate 4; observed on the reference project (four components).
 
 Walked live: 2026-08-21 — the reference project, four components offering values the library does not draw, each waived.
 
 ## T10 · Validation sits between snapshot and build
 Fixture: a snapshot that brings a new component.
-Assert: the skill requires `component-validator` to run over it and the designer to choose Figma / code / accept before the component starts in code. Traced to §Running it, "Validate before building".
+Assert: the skill requires `component-validator` to run over it and the designer to choose Figma / code / accept before the component starts in code. Traced to running.md, "Validate before building".
 
 Not walked.
 
 ## T11 · What a frame says is measured, not only what it draws
 Fixture: a footer whose menu is centred where the frame packs it to the end; a bar whose instance is `Scroll=End` while the element says `scrolling`; an empty state titled differently from the frame's `Title text`.
-Assert: the skill requires each to be a measured difference — position on the undecided axis, instance prop as attribute, copy — and requires pages to be measured in the state their frame declares with scripts running. Traced to §5 "And what each frame says"; observed on the reference project.
+Assert: the skill requires each to be a measured difference — position on the undecided axis, instance prop as attribute, copy — and requires pages to be measured in the state their frame declares with scripts running. Traced to measurement.md "And what each frame says"; observed on the reference project.
 
 Walked live: 2026-08-22 — the reference project; four findings the new reads produced in one run, one the check found unaided.
 
 ## T12 · The environment is pinned and every shipped state measured
 Fixture: a headless run on a machine whose OS is in dark mode, against a token set with a light and a dark tier.
-Assert: the skill requires the theme to be stamped on the page and asserted after the render, and both tiers to be measured; it forbids inheriting the host's setting. Traced to §5 "Both tiers, and the environment pinned"; observed on the reference project, where the unstamped check had measured the dark tier only.
+Assert: the skill requires the theme to be stamped on the page and asserted after the render, and both tiers to be measured; it forbids inheriting the host's setting. Traced to measurement.md "Both tiers, and the environment pinned"; observed on the reference project, where the unstamped check had measured the dark tier only.
 
 Walked live: 2026-08-23 — the reference project, where the unstamped check had measured the dark tier only; check counts doubled from 754 to 1508 on one component.
 
 ## T13 · Coverage is total, credited, and gated
 Fixture: a project whose screens report "0 differ" with 22% of their layers mapped, three hero renders shipping misplaced; a toggle whose box-model lives on its inner fieldset; a modal slot holding the caller's paragraph.
-Assert: the skill requires gate 8 to fail on any unmeasured layer or element by name; counts a library instance as one layer of a screen; credits an element sharing a measured relative's exact box and a nested component under a measured layer's children comparison; excludes what the design never draws (vector innards, accessibility-only elements, `display: contents`) but **not** what a page places in a slot, which is the screen's own (T69). Traced to §6 gate 8; observed on the reference project (22%/56% → 100%/100%, two shipping bugs found by the first newly mapped layer).
+Assert: the skill requires gate 8 to fail on any unmeasured layer or element by name; counts a library instance as one layer of a screen; credits an element sharing a measured relative's exact box and a nested component under a measured layer's children comparison; excludes what the design never draws (vector innards, accessibility-only elements, `display: contents`) but **not** what a page places in a slot, which is the screen's own (T69). Traced to gate 8; observed on the reference project (22%/56% → 100%/100%, two shipping bugs found by the first newly mapped layer).
 
 Walked live: 2026-08-25 — the reference project, 22%/56% → 100%/100% coverage, two shipping bugs found by the first newly mapped layer.
 
 ## T14 · The design file says which frames count, and the gate runs both ways
 Fixture: a screens file holding a finished frame nobody has mapped, a draft frame nobody has marked, and a map entry whose frame was renamed in Figma.
-Assert: the skill takes only frames marked Ready for dev, fails on the marked-but-unmapped frame *and* on the mapped-but-missing one, and leaves the unmarked draft out of the repo entirely while naming it in the run's output. It must prefer the file's own status over a name prefix or a repo-side draft list, and must not treat a silently absent frame as a pass. Traced to §6 gate 9 and §Running it "Building a screen"; observed on the reference project, which had carried an unmapped marked frame since its first snapshot and where both directions were proven red by removing each in turn.
+Assert: the skill takes only frames marked Ready for dev, fails on the marked-but-unmapped frame *and* on the mapped-but-missing one, and leaves the unmarked draft out of the repo entirely while naming it in the run's output. It must prefer the file's own status over a name prefix or a repo-side draft list, and must not treat a silently absent frame as a pass. Traced to gate 9 and running.md "Building a screen"; observed on the reference project, which had carried an unmapped marked frame since its first snapshot and where both directions were proven red by removing each in turn.
 
 Walked live: 2026-08-25 — the reference project, which had carried an unmapped marked frame since its first snapshot; both directions proved red by removing each in turn.
 
 ## T15 · A state the map cannot reach must fail, and the shot must show the state
 Fixture: a page whose script moves the attribute a click selector keys on from the opener to the closer; a frame measured at scroll end whose screenshot is clipped from the document top.
-Assert: the skill requires a click selector that matches nothing to be fatal rather than measured as the rest state, and requires the screenshot to be taken where the state left the page. It must treat both as failures that report green, not as cosmetic. Traced to §Traps; observed on the reference project, where the filter modal measured shut for a day under waivers that read as though it were open.
+Assert: the skill requires a click selector that matches nothing to be fatal rather than measured as the rest state, and requires the screenshot to be taken where the state left the page. It must treat both as failures that report green, not as cosmetic. Traced to traps.md; observed on the reference project, where the filter modal measured shut for a day under waivers that read as though it were open.
 
 Walked live: 2026-08-25 — the reference project, where the filter modal measured shut for a day under waivers that read as though it were open.
 
 ## T16 · A property recorded and never read is not measured
 Fixture: a nav bar whose library icon changed from an arrow to a house, the swap recorded in the snapshot and skipped by the comparison; a 180-rotated hero layer whose `rotation` is recorded and whose visible box is derived by hand in two places, differently.
-Assert: the skill requires an instance swap to be compared against what the code renders, and rejects the children check as cover for it (every icon is the same element). It requires a waiver whose reason is arithmetic about Figma's storage to be replaced by recording the thing. Traced to §Traps; observed on the reference project, where both shipped visibly wrong behind green runs.
+Assert: the skill requires an instance swap to be compared against what the code renders, and rejects the children check as cover for it (every icon is the same element). It requires a waiver whose reason is arithmetic about Figma's storage to be replaced by recording the thing. Traced to traps.md; observed on the reference project, where both shipped visibly wrong behind green runs.
 
 Walked live: 2026-08-25 — the reference project, where both shipped visibly wrong behind green runs.
 
 ## T17 · Measured means compared, and credited means provable
 Fixture: a snapshot carrying a property no comparison reads; a mapped layer whose selector resolves and about which nothing is asserted; two different layers sharing a name and a parent, one mapped and one credited to it.
-Assert: the skill requires a gate that fails on any recorded property neither compared nor named with a reason; requires a mapped layer producing no assertion to be reported and to fail; and requires a credit to hold only when the sibling holds the same thing, by child type rather than name, with the credits printed. It must reject a coverage percentage as evidence that a layer was looked at. Traced to §6 gates 10 and 11; all three observed on the reference project, each proved red on purpose.
+Assert: the skill requires a gate that fails on any recorded property neither compared nor named with a reason; requires a mapped layer producing no assertion to be reported and to fail; and requires a credit to hold only when the sibling holds the same thing, by child type rather than name, with the credits printed. It must reject a coverage percentage as evidence that a layer was looked at. Traced to gate 10 and 11; all three observed on the reference project, each proved red on purpose.
 
 Walked live: 2026-08-25 — the reference project, all three proved red on purpose.
 
 ## T18 · Figma resolves once, and the baseline gates in both directions
 Fixture: a first-generation comparison where translation and judging are one enumeration, being restructured; and a run whose measurements are kept as the accepted set.
-Assert: the skill requires the adapter → schema → differ layering with every translation rule pinned as a fixture, and requires a port onto it to be proven by equivalence — reproduce the previous run check for check before improving anything. It requires gate 12's baseline to be trusted only after two consecutive runs measure byte-identical, with volatile fields a stated choice rather than a tolerance, and proven in both directions (a style change fires; a content change stays quiet). It requires gate 10's consumption check to be a declaration in data, naming the regex-over-source version as the trap. Traced to §5 "Figma resolves exactly once", §6 gates 10 and 12; observed on the reference project 2026-08-25.
+Assert: the skill requires the adapter → schema → differ layering with every translation rule pinned as a fixture, and requires a port onto it to be proven by equivalence — reproduce the previous run check for check before improving anything. It requires gate 12's baseline to be trusted only after two consecutive runs measure byte-identical, with volatile fields a stated choice rather than a tolerance, and proven in both directions (a style change fires; a content change stays quiet). It requires gate 10's consumption check to be a declaration in data, naming the regex-over-source version as the trap. Traced to adapter.md "Figma resolves exactly once", gate 10 and 12; observed on the reference project 2026-08-25.
 
 Walked live: 2026-08-25 — the reference project: the ported enumeration reproduced check for check (5,838 checks, 478 waived rows, 0 differences) and the baseline proved in both directions.
 
@@ -972,19 +974,19 @@ Walked live: 2026-09-15 — the reference project: the parallel runner hanging o
 
 ## T69 · A slot's contents are mapped, not skipped with the instance
 Fixture: a screen placing five filter groups into a dialog component's slot, the dialog mapped as one layer, the component's own check rendering that slot empty; a second list in a second slot holding blocks of the same shape.
-Assert: the skill requires the walk to descend into what the page placed in a slot and to fail naming those layers until they are mapped, while still counting the component's own chrome with the instance that holds it and letting a mapped block stand for its cousin in a second slot. A gate reporting 100% with a slot's contents unmapped is the failure this case exists for. Traced to §6 gate 8; observed on the reference project, where a group the frame drew went unbuilt past two green runs until a designer pointed at it, and where the corrected walk moved the denominator 1756 → 2933 layers and surfaced three real differences (a sheet 144px too tall, a dialog subtree judged from the scrim's corner, a variant axis written in only one of its two values).
+Assert: the skill requires the walk to descend into what the page placed in a slot and to fail naming those layers until they are mapped, while still counting the component's own chrome with the instance that holds it and letting a mapped block stand for its cousin in a second slot. A gate reporting 100% with a slot's contents unmapped is the failure this case exists for. Traced to gate 8; observed on the reference project, where a group the frame drew went unbuilt past two green runs until a designer pointed at it, and where the corrected walk moved the denominator 1756 → 2933 layers and surfaced three real differences (a sheet 144px too tall, a dialog subtree judged from the scrim's corner, a variant axis written in only one of its two values).
 
 Walked live: 2026-09-17 — the reference project, where the dialog's five filter groups went from invisible to named by the gate and the denominator moved 1756 → 2933 layers.
 
 ## T70 · A collapsed pair is mapped, not waived
 Fixture: a card whose design draws an outer frame padding nothing around a Content frame padding 20, and a group whose frame gaps 12 between a label and a list the DOM holds in one fieldset; the browser has one element for each pair.
-Assert: the skill requires the wrapper to be mapped `null` — permitted because it paints nothing — and the inner frame to be mapped to the element, rather than waiving the `pad` or `gap` the collapse produces. A waiver there is a disagreement recorded where a translation happened, and it hides which of the two layers the element answers for. Traced to §Traps; observed on the reference project, where this turned 52 of 56 newly-surfaced differences into mappings and left four that were real defects.
+Assert: the skill requires the wrapper to be mapped `null` — permitted because it paints nothing — and the inner frame to be mapped to the element, rather than waiving the `pad` or `gap` the collapse produces. A waiver there is a disagreement recorded where a translation happened, and it hides which of the two layers the element answers for. Traced to traps.md; observed on the reference project, where this turned 52 of 56 newly-surfaced differences into mappings and left four that were real defects.
 
 Walked live: 2026-09-17 — the reference project, where the collapsed pairs turned 52 of 56 differences into mappings and left four that were real defects.
 
 ## T71 · A dialog is mapped at the sheet, never at the scrim
 Fixture: a modal whose design layer is a full-frame scrim with the sheet inside it, against code whose element is the sheet, placed in the browser's top layer and centred there; only the scrim is mapped.
-Assert: the skill requires the dialog's own layer to be mapped to the same element beside the scrim, and explains the symptom of not doing it — every descendant judged from the scrim's corner, so the subtree reads as displaced by half the viewport while nothing is wrong with it. Traced to §Traps; observed on the reference project, where four `x` differences read "609 vs 20" until the sheet's layer was mapped, and where the pre-existing scrim waiver had been describing the same cause for weeks.
+Assert: the skill requires the dialog's own layer to be mapped to the same element beside the scrim, and explains the symptom of not doing it — every descendant judged from the scrim's corner, so the subtree reads as displaced by half the viewport while nothing is wrong with it. Traced to traps.md; observed on the reference project, where four `x` differences read "609 vs 20" until the sheet's layer was mapped, and where the pre-existing scrim waiver had been describing the same cause for weeks.
 
 Walked live: 2026-09-17 — the reference project, where the dialog subtree moved from "x 609 vs 20" to agreement once the sheet's own layer was mapped beside the scrim.
 

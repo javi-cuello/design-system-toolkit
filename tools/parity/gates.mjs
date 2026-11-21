@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /*
  * tools/parity/gates.mjs — the parity loop's gates, part of the design-to-code
- * parity engine (README.md here; the method is skills/design-code-parity §6).
+ * parity engine (README.md here; the method is
+ * skills/design-code-parity, references/gates.md and gates-16-31.md).
  *
  *   node tools/parity/gates.mjs --repo <dir>    every gate that needs no browser
  *

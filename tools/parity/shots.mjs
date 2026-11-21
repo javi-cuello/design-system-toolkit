@@ -1,7 +1,7 @@
 /*
  * tools/parity/shots.mjs — pictures of what a run measured, part of the
  * design-to-code parity engine (README.md here; the method is
- * skills/design-code-parity, "Pixels are for eyes, never for gates").
+ * skills/design-code-parity/references/pixels.md).
  *
  * Every gate is arithmetic on data. These are the two advisory views of what
  * data cannot see — compositing: two paints in one pixel, a ring under an

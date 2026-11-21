@@ -49,16 +49,6 @@
   "dated": 3,
   "noContents": 1
  },
- "skills/design-code-parity/SKILL.md": {
-  "words": 20661,
-  "longSentences": 365,
-  "longParagraphs": 83,
-  "codeParagraphs": 22,
-  "grade": 15.9,
-  "lines": 413,
-  "dated": 1,
-  "noContents": 0
- },
  "skills/design-system-research/SKILL.md": {
   "words": 5024,
   "longSentences": 88,

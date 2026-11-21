@@ -1,7 +1,7 @@
 /*
  * tools/parity/adapt.mjs — Figma, translated once into expectations, part of
  * the design-to-code parity engine (README.md here; the method is
- * skills/design-code-parity §5).
+ * skills/design-code-parity/references/adapter.md).
  *
  *   adapt(tree, mapping, ctx) → Doc[]
  *   tree     a variant, or a screen frame, from the stored snapshot

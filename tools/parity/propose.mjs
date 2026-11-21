@@ -2,7 +2,7 @@
 /*
  * tools/parity/propose.mjs — the map for a screen, proposed instead of typed,
  * part of the design-to-code parity engine (README.md here; the method is
- * skills/design-code-parity, "Propose the map, do not type it").
+ * skills/design-code-parity/references/running.md, "Propose the map, do not type it").
  *
  *   node tools/parity/propose.mjs --repo <dir> <screen-key> [/route]           # print the proposal
  *   node tools/parity/propose.mjs --repo <dir> <screen-key> [/route] --write   # merge what is missing into the screens map
