@@ -71,7 +71,7 @@ Whether a finding is a defect stays your call. Case T1 records a file whose pill
 
 | Mistake | What goes wrong | Guard |
 |---|---|---|
-| **Binding the pill instead of the swatch** | The pill still renders a colour, often a leftover from the clone's source, so the row looks filled | Name the swatch layer ([anatomy.md](anatomy.md)) |
+| **Binding the pill instead of the swatch** | The most common and hardest-to-spot mistake. The pill still renders a colour, often a leftover from the clone's source, so the row looks filled | Name the swatch layer ([anatomy.md](anatomy.md)) |
 | **Variant-switch bleed** | An old override carries onto a same-named layer in the new variant | Reset the "must stay neutral" layers after every switch |
 | **Stale frame `.name`** | A cloned, relabelled frame keeps its source's name | Step 6 of *Building a branch* |
 | **Wrong Feedback type names** | One category says "Warning" where another still says "Yellow", or lacks a type | Read names per category from its variables |

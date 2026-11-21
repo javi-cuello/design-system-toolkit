@@ -15,7 +15,7 @@
 //
 //   const MODE = "rows"; const SAMPLE = ["Colour/Background/Accent/Primary/soft-rest", …];
 //       The rows a section shows, from the sample of variable names chosen for
-//       it (SKILL.md step 4): each row's Role, Type, Emphasis and State labels, which
+//       it (SKILL.md step 5): each row's Role, Type, Emphasis and State labels, which
 //       of them is an `Empy` cell, and the token cell — `Content` variant and
 //       label — ready to pass as `token` mode's CELLS once the ids exist. Each
 //       name is resolved as `token` mode resolves it; one that resolves to
@@ -88,7 +88,7 @@ function rowsFor(names) {
   if (categories.size > 1) issues.push({ problem: `the sample spans ${[...categories].join(", ")} — a section shows one category` });
   const category = categories.size === 1 ? [...categories][0] : null;
   const content = category ? CONTENT_BY_CATEGORY[category] || null : null;
-  if (category && !content) issues.push({ problem: `references/anatomy.md's Content table has no Content variant for "${category}" — decide which, and add it there` });
+  if (category && !content) issues.push({ problem: `no Content variant for "${category}" in CONTENT_BY_CATEGORY (scripts/tokens-mapping.js) — decide which, and add it there` });
   // The chain references/building.md builds: Role → Type (or Empy) → Emphasis → State (or Empy) → token.
   const tree = [];
   const node = (list, label) => {

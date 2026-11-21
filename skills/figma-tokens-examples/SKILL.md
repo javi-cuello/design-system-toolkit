@@ -74,7 +74,7 @@ An issue names a name fitting none of step 4's shapes, or a sample spanning two 
 - Add the page to the context document's authored-vs-generated split for that file. Update the document in the same turn where it is writable.
 - Say so in the closing report.
 
-The page is hand-built content on a documentation surface `figma-doc-generator` also writes to. That skill refills generated pages, and skips only the pages the context document lists as **authored**.
+The page is hand-built content on a documentation surface `figma-doc-generator` also writes to. That skill refills generated pages. As of its 1.6.0, it skips only the pages the context document lists as **authored**.
 
 Neither skill can check the other, since a skill never reads another skill's files. So the context document is the only place this coordination can live. An unrecorded page is regenerated over on a later refill, while that run reports ordinary success. The loss is silent and total: the hand-written rows exist nowhere else.
 
