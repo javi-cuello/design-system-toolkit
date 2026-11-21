@@ -152,7 +152,7 @@ async function landBatch(main, me) {
       if (!tryGit(dir, 'fetch', '-q', 'origin').ok || tryGit(dir, 'rev-parse', 'origin/main').out !== base) { say(`main moved during the check, or could not be asked (${push.out.split('\n').pop()}): again`); continue; }
       say(`the push was refused, main where it was:\n${push.out.split('\n').map((l) => `  ${l}`).join('\n')}`);
       // a batch: each alone, so the refusal falls on the branch that carries it and the rest still land
-      if (applied.length > 1) { single = true; limit = attempt + 1 + applied.length; say('landing one at a time'); continue; }
+      if (applied.length > 1) { single = true; limit = Math.max(limit, attempt + 2 + applied.length); say('landing one at a time'); continue; }
       say(`${applied[0].branch}: not landed (the push was refused, above): fix it, then land again`); unqueue(main, applied[0], 'refused');
       continue;
     }
