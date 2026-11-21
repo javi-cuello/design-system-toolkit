@@ -558,6 +558,28 @@ test("a background agent's work in a worktree it made itself (bin/worktree, no a
   const own = session([user('build it'), edit('.claude/worktrees/diag-x/a.mjs', 150)]);
   assert.equal(size(advance(own.id, own.file, REPOS).total).lines, 150, 'the session\'s own edits there still count');
   own.clean();
+  // a review of other work does not clear an agent's tree it never named; one that names it does (review of the fix)
+  const reviewOf = (text) => call('Agent', { description: 'Review it', prompt: text, subagent_type: 'Explore' });
+  for (const [prompt, lands] of [['the diff in /elsewhere', false], [`the diff in ${W}`, true]]) {
+    const r = session([user('build it'), call('Agent', { description: 'Fix a cause', prompt: 'x', subagent_type: 'general-purpose' })]);
+    const sd = path.join(r.file.replace(/\.jsonl$/, ''), 'subagents');
+    fs.mkdirSync(sd, { recursive: true });
+    fs.writeFileSync(path.join(sd, 'agent-1.jsonl'), JSON.stringify({ ...edit('.claude/worktrees/diag-x/a.mjs', 150), timestamp: '2026-01-01T00:00:00.000Z' }) + '\n');
+    advance(r.id, r.file, REPOS);
+    fs.appendFileSync(r.file, JSON.stringify({ ...reviewOf(prompt), timestamp: '2026-01-01T00:01:00.000Z' }) + '\n');
+    fs.writeFileSync(planPath(r.id), PLAN_TEXT);
+    const got = planGate(r.id, r.file, REPOS, { id: 'p3', name: 'Bash', input: { command: `cd ${W} && bin/land` } }, W);
+    if (lands) assert.doesNotMatch(String(got), /changed since the last independent review/, 'a review that names the tree covers it');
+    else assert.match(String(got), /^Not pushed/, 'a review of other work leaves the agent\'s lines owed');
+    fs.rmSync(path.dirname(sd), { recursive: true, force: true }); r.clean();
+  }
+  // a fork's edit in a tree the session writes in itself leaves it the session's
+  const f = session([user('build it'), edit('.claude/worktrees/diag-y/a.mjs', 10), call('Agent', { description: 'Fork', prompt: 'x', subagent_type: 'fork' })]);
+  const fd = path.join(f.file.replace(/\.jsonl$/, ''), 'subagents');
+  fs.mkdirSync(fd, { recursive: true });
+  fs.writeFileSync(path.join(fd, 'agent-2.jsonl'), JSON.stringify(edit('.claude/worktrees/diag-y/b.mjs', 300)) + '\n');
+  assert.match(String(stopGate(f.id, f.file, REPOS, 'Done.')), /^Not done yet/, 'the session\'s own tree is never exempt');
+  fs.rmSync(path.dirname(fd), { recursive: true, force: true }); f.clean();
 });
 
 test("the plan gate lets a subagent write its own worktree, and holds the session there", () => {
