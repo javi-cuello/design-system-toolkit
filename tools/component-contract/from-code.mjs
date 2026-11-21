@@ -215,6 +215,22 @@ export function combinationsToRead(keys, valuesOf, draws = null, from = 4) {
   return out;
 }
 
+/* A combination's key, its [prop, value] pairs in one order. */
+export const comboKey = (list) => list.map(([k, v]) => `${k}=${String(v)}`).sort().join('&');
+
+/* Whether a combination of five props or more is worth reading: some three or more of its props, fewer than all,
+   already build a layer together (`layered`, comboKey's keys). One whose props do nothing together beyond pairs is
+   predicted by the layers (Carbon's radio button: of 1,071, the 290 this reads hold every layer the rest would add).
+   Tested by test-from-code.mjs. */
+export function worthReading(list, layered) {
+  const go = (i, acc) => {
+    if (acc.length >= 3 && acc.length < list.length && layered.has(comboKey(acc))) return true;
+    for (let j = i; j < list.length; j++) if (go(j + 1, [...acc, list[j]])) return true;
+    return false;
+  };
+  return go(0, []);
+}
+
 /* A library's settings by component folder (the house's where it keeps none): the one source the self leg writes its
    sheet, markup and mapping under and the reading reads them back under, as to-code and to-markup take them. */
 export const librarySettings = (componentsDir) => req('../snapshot/projects.cjs').librarySettingsFor(componentsDir);
@@ -2272,13 +2288,20 @@ async function main() {
     });
     const beyond = combinationsToRead(keys, (k) => valuesOf(props[k]), drawsIt);
     let fourLayers = 0;
-    for (const four of beyond) {
+    // (one of five props or more is read only where some three or more of them already build a layer together: on
+    // every panel component measured, each such combination that kept a layer of its own had one, and the rest, three
+    // in four on Carbon's radio button, were predicted by the layers; `worthReading`)
+    const layered = new Set(variants.filter((x) => !x.combination && Object.keys(x.when).length >= 3).map((x) => comboKey(Object.entries(x.when))));
+    let readBeyond = 0, skipped = 0;
+    for (const four of [...beyond].sort((a, b) => a.length - b.length)) {
+      if (four.length > 4 && !worthReading(four, layered)) { skipped++; continue; }
+      readBeyond++;
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
       // (held only where it was read, every other prop at its default, as derive pins what is left over: an open four-prop
       // layer reached combinations no read saw, a Carbon tag's close button Cyan where its icon draws it Blue)
-      if (Object.keys(d).length) { variants.push({ when: { ...allDefaults, ...when }, combination: true, ...d }); fourLayers++; }
+      if (Object.keys(d).length) { variants.push({ when: { ...allDefaults, ...when }, combination: true, ...d }); fourLayers++; layered.add(comboKey(Object.entries(when))); }
     }
 
     // self-check, as derive.cjs's: every render rebuilt by expand(), and every unread one predicted
@@ -2717,8 +2740,8 @@ async function main() {
     }
     const propsCompare = figmaContract ? compareProps(figmaContract, side.map, side.code, side.framework, side.fw || {}) : [];
     // a check that read nothing the layers were not built from cannot fail: said, not passed
-    const heldOut = beyond.length;
-    const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), chrome: (await import('../shared/cdp.mjs')).chromeMajor(), selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
+    const heldOut = readBeyond;
+    const report = { at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), ...(figmaContract && { of: (await import('./official.mjs')).hashOf(figmaContract) }), chrome: (await import('../shared/cdp.mjs')).chromeMajor(), selfCheck: bad.length ? { notRebuilt: bad } : heldOut ? `every render rebuilt, ${heldOut} combination(s) of four props or more among them: ${heldOut - fourLayers} predicted by the layers, ${fourLayers} kept as layers of their own, each from one read${skipped ? `; ${skipped} of five props or more left unread, no three or more of their props building a layer together` : ''}` : 'every render rebuilt, but fewer than four props vary: nothing was left unread to check the layers against',
       ...(notes.length && { notes }), ties, compare, propsCompare, structure, renamed: shaped.renamed, contract: fromCode, asFigma: shaped.contract };
     const out = path.join(L.out, 'from-code', `${name}.json`);
     fs.mkdirSync(path.dirname(out), { recursive: true });

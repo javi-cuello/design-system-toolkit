@@ -558,4 +558,9 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('after the pairs and triples: every four-prop combination, and every larger one the design draws; a reading only in code stops at four',
     sizes(all) === [...Array(15).fill(4), ...Array(6).fill(5), 6].join() && sizes(none) === Array(15).fill(4).join() && sizes(code) === sizes(none)
     && combinationsToRead(keys, vals, (l) => !l.some(([k]) => k === 'f')).filter((x) => x.length > 4).map((x) => x.map(([k]) => k).join('')).join() === 'abcde'); }
+{ const { worthReading, comboKey } = await import('./from-code.mjs');
+  const five = [['a', 1], ['b', 1], ['c', 1], ['d', 1], ['e', 1]];
+  ok('one of five props or more is read where three or more of its props build a layer together, and not where none does, nor where only all of them do',
+    worthReading(five, new Set([comboKey([['c', 1], ['a', 1], ['e', 1]])])) && worthReading(five, new Set([comboKey(five.slice(0, 4))]))
+    && !worthReading(five, new Set([comboKey(five.slice(0, 2)), comboKey(five), comboKey([['a', 2], ['b', 1], ['c', 1]])]))); }
 console.log(`${n}/${n} passed`);
