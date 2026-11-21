@@ -59,6 +59,7 @@ import { realpathSync } from 'node:fs';
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const req = createRequire(import.meta.url);
 const { expand, variantDefaults, atProps } = req('./derive.cjs');
+import { recorder, pageKey, pageCode, fontsInstalled, cacheOff } from './read-cache.mjs';
 
 /* ---- pure parts ---- */
 
@@ -1258,9 +1259,17 @@ async function selfSource(project, name, { second = false } = {}) {
   const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
   const tokensCss = (where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '');
   if (!tokensCss) throw Object.assign(new Error(`${project.config.project}: no _tokens.scss under paths.styles to render the tokens with`), { usage: true });
-  const site = await serveSite(siteFiles(library, { tokensCss, settingsOf }));
-  const browser = await launch({});
-  const tab = await attach(await newPage(browser.endpoint));
+  const files = siteFiles(library, { tokensCss, settingsOf });
+  // the page served and Chrome launched when a read first needs them: with the read cache, a reading whose every
+  // answer is kept needs neither (read-cache.mjs)
+  let site = null, browser = null, tab = null;
+  const live = async () => {
+    if (tab) return tab;
+    site = await serveSite(files);
+    browser = await launch({});
+    tab = await attach(await newPage(browser.endpoint));
+    return tab;
+  };
   // the code's props as a story's controls say them: to-markup's own, at their defaults
   const own = propsOf(c, library).filter((x) => x.type !== 'event');
   // a text entry's has-value is its input's, no prop of the markup's (to-markup folds it): the story says it as a
@@ -1297,6 +1306,7 @@ async function selfSource(project, name, { second = false } = {}) {
       if (flag && flag.name in args) { if (args[flag.name] === flag.on && !args[flag.value]) args[flag.value] = flag.sample; delete args[flag.name]; }
       // a page loaded once serves the next read, unless the last one forced a pointer state or left anything outside the
       // stage (a popover on the body): then it is loaded again, so nothing a read did reaches the next
+      const tab = await live();
       if (!src.clean || !(await call(tab, () => window.ready && document.body.childElementCount === window.bodyAt && !window.forced))) {
         await navigate(tab, `${site.url}index.html`);
         await waitFor(tab, '!!window.ready', { timeout: 10000 }).catch((e) => { throw new Error(`the toolkit's own page did not load: ${(tab.trouble || []).join('; ') || e.message}`); });
@@ -1317,8 +1327,21 @@ async function selfSource(project, name, { second = false } = {}) {
     elements: async () => elements,
     joins: (figma, argTypes, g = G.joins(figma, variantDefaults(figma))) => ({ twice: g.twice, map: { props: X.effectiveProps(figma, g.props, Object.fromEntries(Object.keys(argTypes).map((k) => [k, {}])), argTypes, lib.codeProfile || {}) }, code: argTypes, framework: null, fw: lib.codeProfile || {} }),
     argsOf: (all) => G.argsOf(all) || {},
-    close: async () => { await browser.close(); await site.close(); },
+    close: async () => { if (browser) await browser.close(); if (site) await site.close(); },
   };
+  if (cacheOff()) { src.tab = await live(); return src; }
+  // the read cache (read-cache.mjs): the page's key, every render a combination of it, and every question put to the
+  // page through a tab that answers from it
+  const { chromeVersion } = await import('../shared/cdp.mjs');
+  const key = pageKey({ files, chrome: chromeVersion(), fonts: fontsInstalled(), system: `${process.platform} ${(await import('node:os')).release()}`,
+    code: [pageCode(), serveSite.toString(), forceAt.toString(), src.render.toString(), JSON.stringify({ name, tier, container, flag })].join('\0') });
+  const rec = recorder({ key, live });
+  const render = src.render, close = src.close;
+  // (an arg left undefined said so: the render tells it from one not given only by its value, but the label must not merge them)
+  src.render = (all) => rec.reset(JSON.stringify([all, src.pseudoOf[all.__state] || null, src.stateArg || null], (k, v) => (v === undefined ? '\u0000undefined' : v)), () => render(all));
+  src.tab = { evaluate: (expr) => rec.step('eval', expr, (t) => t.evaluate(expr)), send: (method, params) => rec.send(method, params) };
+  src.cache = rec;
+  src.close = async () => { await rec.close(); await close(); };
   return src;
 }
 
@@ -1375,7 +1398,7 @@ async function main() {
   if (!label || !name) { console.error('usage: from-code.mjs --project <label> <component> [--rebuild] [--code-only | --self | --second]'); process.exit(2); }
   // a run by hand, or a loop of them, holds the measuring lock; one eval.mjs started already holds it (tools/shared/lock.mjs)
   await (await import('../shared/lock.mjs')).hold(`from-code.mjs ${process.argv.slice(2).join(' ')}`);
-  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey } = await import('../parity/external.mjs');
+  const { judge, elementIn, authoredWidth, authoredVars, layerVars, authoredValue, authoredSelector, compareProps, invisibleBorder, cssShadows, shadowKey, fetchLevels } = await import('../parity/external.mjs');
   const { call } = await import('../shared/cdp.mjs');
   let L;
   try { L = await openSource(label, name, { rebuild, codeOnly, self, second }); } catch (e) { if (!e.usage) throw e; console.error(e.message); process.exit(2); }
@@ -1798,7 +1821,8 @@ async function main() {
       // derive's own test, which keeps one the id does not say ("Context menu item / Default", "Item 2" at item2)
       for (const e of raw) if (e.name && (e.parent == null || !keepsName(e.name, e.id))) delete e.name;
       // each element's matched styles fetched once for all the properties this render reads of it
-      const styles = new Map();
+      // (through the read cache, where the reading has one: read-cache.mjs; fetchLevels' source is part of the question)
+      const styles = L.cache ? Object.assign(new Map(), { through: (sel, f) => L.cache.step('levels', `${fetchLevels}\0${sel}`, f) }) : new Map();
       // a whole computed border may be a floored one (1.5px reads 1px): the cascade's, as the code audit reads it
       for (const e of raw) if (e.border && Number.isInteger(e.border.width)) { const w = await authoredWidth(L.tab, `[data-contract-id="${e.id}"]`, 'border-top-width', { cache: styles }); if (w != null && Math.floor(w) === e.border.width) e.border.width = w; }
       // a box the code sizes itself (height: 24px, a minimum), which a hug would lose: the cascade's own value,
@@ -2765,7 +2789,10 @@ async function main() {
     console.log(`${name}: ${Object.keys(props).length} props, ${Object.keys(base).length} elements, ${variants.length} variant layers; self-check ${bad.length ? `${bad.length} not rebuilt` : heldOut ? `ok on ${heldOut} unread combination(s)` : 'nothing left unread to check'}; ${ties.length} tie(s); ${figmaContract ? `against Figma at ${whens.length} combinations: ${n('same token')} same token, ${n('same on screen')} same on screen, ${compare.length - n('same token') - n('same on screen')} differ; props ${propsCompare.filter((x) => x.findings.every((f) => f.kind === 'ok')).length} of ${propsCompare.length} without a finding` : 'only in code: nothing in Figma to compare'} — ${path.relative(TOOLKIT, out)}, ${report.seconds}s`);
     // what the run could not read as asked reaches whoever ran it, not only the file
     for (const x of notes) console.log(`  note: ${x}`);
-  } finally { L.close(); }
+  } finally {
+    if (L.cache) { const c = L.cache.stats; console.log(`read cache: ${c.hits} answers kept, ${c.misses} combination(s) asked of the page, ${c.kept} answer(s) newly kept; Chrome ${c.launched ? 'launched' : 'not launched'}`); }
+    L.close();
+  }
 }
 
 const sortKeys = (v) => (Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])])) : v);

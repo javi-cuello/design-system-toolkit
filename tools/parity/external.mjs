@@ -894,10 +894,21 @@ export async function authoredSelector(tab, selector, property, cache = null) {
 }
 
 /* An element's matched styles, its own and then each ancestor's (lowest precedence first in each), fetched once per
-   `cache` (a Map one render's reads share) for every property read of it. */
+   `cache` (a Map one render's reads share) for every property read of it. A cache with `through(selector, fetch)` is
+   asked for them first (from-code's read cache, component-contract/read-cache.mjs): it answers them or puts `fetch(tab)`
+   to the page itself. */
 async function matchedLevels(tab, selector, cache) {
   let levels = cache && cache.get(selector);
   if (levels) return levels;
+  const got = cache && cache.through ? await cache.through(selector, (t) => fetchLevels(t, selector)) : await fetchLevels(tab, selector);
+  if (!got) return null;
+  if (cache && got.after) cache.set(`${selector}::after`, got.after);
+  if (cache) cache.set(selector, got.levels);
+  return got.levels;
+}
+/* What matchedLevels keeps of an element, fetched from Chrome: { levels, after } (its ::after's, where it has one), or
+   null where no element matches. */
+export async function fetchLevels(tab, selector) {
   // the node found without fetching the document again: that resets the node ids a forced :hover or :active is held
   // against (shared/cdp.mjs forceState), and the rules matched would be the resting ones
   // (a page no one has asked the document of since it loaded gives node 0: asked once then, which drops nothing, as a
@@ -912,13 +923,10 @@ async function matchedLevels(tab, selector, cache) {
   // (each rule's style keeps its selector, `selector`: which rule a declaration won from, authoredSelector)
   const own = [...(r.matchedCSSRules || []).map((x) => ({ ...x.rule.style, selector: x.rule.selectorList && x.rule.selectorList.text })), ...(r.inlineStyle ? [r.inlineStyle] : [])];
   const inherited = (r.inherited || []).map((x) => [...(x.matchedCSSRules || []).map((m) => m.rule.style), ...(x.inlineStyle ? [x.inlineStyle] : [])]);
-  levels = [own, ...inherited];
   // the element's ::after, as a level of its own before the element's (it inherits the element's custom properties):
   // read as `<selector>::after` (a focus ring to-code draws on a box of its own over the element)
   const after = (r.pseudoElements || []).find((x) => x.pseudoType === 'after');
-  if (cache && after) cache.set(`${selector}::after`, [(after.matches || []).map((m) => m.rule.style), own, ...inherited]);
-  if (cache) cache.set(selector, levels);
-  return levels;
+  return { levels: [own, ...inherited], ...(after && { after: [(after.matches || []).map((m) => m.rule.style), own, ...inherited] }) };
 }
 // a property asked of an element's ::after (`outline::after`): that pseudo-element's levels, the property's own name
 async function levelsFor(tab, selector, property, cache) {

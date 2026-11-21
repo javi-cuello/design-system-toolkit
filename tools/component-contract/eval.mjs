@@ -55,6 +55,7 @@ import { partsOf, unexposed, pointerWords } from './to-markup.mjs';
 import { chromeVersion, chromeMajor } from '../shared/cdp.mjs';
 import { importClosure } from '../shared/import-closure.mjs';
 import { closureOf } from './site.mjs';
+import { fontsInstalled } from './read-cache.mjs';
 export { importClosure, closureOf };
 
 const req = createRequire(import.meta.url);
@@ -425,8 +426,7 @@ export async function selfInputs(label, where, only = []) {
   // browser and system the page is measured in (its fallback font)
   const chrome = chromeVersion();
   // (and the fonts installed here: a family the tokens name, once installed, is measured in place of the fallback)
-  const fonts = ['/Library/Fonts', '/System/Library/Fonts', path.join(process.env.HOME || '', 'Library', 'Fonts'), '/usr/share/fonts', '/usr/local/share/fonts', path.join(process.env.HOME || '', '.fonts'), path.join(process.env.HOME || '', '.local', 'share', 'fonts')]
-    .flatMap((d) => { try { return fs.readdirSync(d, { recursive: true }).map((f) => `${d}/${f}`); } catch { return []; } }).sort().join('\n');
+  const fonts = fontsInstalled();
   const shared = hash([readerCode(), read(path.join(HERE, '..', '..', 'standards', 'audit-settings.json')), read(path.join(HERE, '..', '..', 'standards', 'naming-preferences.json')), BASE, DOM, JSON.stringify(pseudoClasses()), fonts, ...unscoped, where.paths.styles ? read(path.join(where.paths.styles, '_tokens.scss')) : '', JSON.stringify(project.parity), JSON.stringify(project.snapshot || null), JSON.stringify(project.lib || null), JSON.stringify(Object.values(library)), chrome, `${process.platform} ${(await import('node:os')).release()}`]);
   return closureHashes(library, own, shared, only);
 }
@@ -532,8 +532,13 @@ async function readTwice(where, label, only, opts) {
   const snap = () => Object.fromEntries(contracts(where).filter(({ folder }) => !only.length || only.includes(folder)).map(({ folder }) => { try { const { at, seconds, ...r } = JSON.parse(fs.readFileSync(path.join(dir, `${folder}.json`), 'utf8')); return [folder, JSON.stringify(r)]; } catch { return [folder, null]; } }));
   // each pass starts with no readings, so one that fails is missing, never the last pass's file compared with itself
   const clear = () => { for (const f of Object.keys(snap())) fs.rmSync(path.join(dir, `${f}.json`), { force: true }); };
-  clear(); await readSelf(where, label, only, false, opts); const first = snap();
-  clear(); await readSelf(where, label, only, false, opts); const second = snap();
+  // both passes read through Chrome (no read cache, read-cache.mjs): it is Chrome's readings this holds to each other
+  const was = process.env.TOOLKIT_READ_CACHE; process.env.TOOLKIT_READ_CACHE = 'off';
+  let first, second;
+  try {
+    clear(); await readSelf(where, label, only, false, opts); first = snap();
+    clear(); await readSelf(where, label, only, false, opts); second = snap();
+  } finally { if (was === undefined) delete process.env.TOOLKIT_READ_CACHE; else process.env.TOOLKIT_READ_CACHE = was; }
   const differ = Object.keys(first).filter((f) => first[f] === null || second[f] === null || first[f] !== second[f]);
   for (const f of differ) console.log(`  ${f}: ${first[f] === null || second[f] === null ? 'not read' : 'read differently the second time'}`);
   console.log(`${label} self, read twice: ${Object.keys(first).length - differ.length} of ${Object.keys(first).length} the same both times`);
