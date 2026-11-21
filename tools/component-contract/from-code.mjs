@@ -231,6 +231,20 @@ export function worthReading(list, layered) {
   return go(0, []);
 }
 
+/* Reads the combinations combinationsToRead gave, fewest props first: every one of four, and one of more only where
+   worthReading says so; `readOne(list)` reads it and says whether it kept a layer of its own, which then counts as a
+   layer its larger combinations can build on. { read, skipped }: the count of each, said in the self-check.
+   Tested by test-from-code.mjs. */
+export async function readCombinations(lists, layered, readOne) {
+  let read = 0, skipped = 0;
+  for (const list of [...lists].sort((a, b) => a.length - b.length)) {
+    if (list.length > 4 && !worthReading(list, layered)) { skipped++; continue; }
+    read++;
+    if (await readOne(list)) layered.add(comboKey(list));
+  }
+  return { read, skipped };
+}
+
 /* A library's settings by component folder (the house's where it keeps none): the one source the self leg writes its
    sheet, markup and mapping under and the reading reads them back under, as to-code and to-markup take them. */
 export const librarySettings = (componentsDir) => req('../snapshot/projects.cjs').librarySettingsFor(componentsDir);
@@ -2292,17 +2306,16 @@ async function main() {
     // every panel component measured, each such combination that kept a layer of its own had one, and the rest, three
     // in four on Carbon's radio button, were predicted by the layers; `worthReading`)
     const layered = new Set(variants.filter((x) => !x.combination && Object.keys(x.when).length >= 3).map((x) => comboKey(Object.entries(x.when))));
-    let readBeyond = 0, skipped = 0;
-    for (const four of [...beyond].sort((a, b) => a.length - b.length)) {
-      if (four.length > 4 && !worthReading(four, layered)) { skipped++; continue; }
-      readBeyond++;
+    const { read: readBeyond, skipped } = await readCombinations(beyond, layered, async (four) => {
       const when = Object.fromEntries(four.map(([k, v]) => [k, argOf(props[k], v)]));
       const got = await read({ ...defaults, ...Object.fromEntries(four.map(([k, v]) => [props[k].code, v])) });
       const d = delta(expand(fromCode, { ...allDefaults, ...when }), got, base);
       // (held only where it was read, every other prop at its default, as derive pins what is left over: an open four-prop
       // layer reached combinations no read saw, a Carbon tag's close button Cyan where its icon draws it Blue)
-      if (Object.keys(d).length) { variants.push({ when: { ...allDefaults, ...when }, combination: true, ...d }); fourLayers++; layered.add(comboKey(Object.entries(when))); }
-    }
+      if (!Object.keys(d).length) return false;
+      variants.push({ when: { ...allDefaults, ...when }, combination: true, ...d }); fourLayers++;
+      return true;
+    });
 
     // self-check, as derive.cjs's: every render rebuilt by expand(), and every unread one predicted
     // (by delta, so a corner a focus ring takes off its box counts as rebuilt)

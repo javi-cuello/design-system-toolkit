@@ -563,4 +563,11 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   ok('one of five props or more is read where three or more of its props build a layer together, and not where none does, nor where only all of them do',
     worthReading(five, new Set([comboKey([['c', 1], ['a', 1], ['e', 1]])])) && worthReading(five, new Set([comboKey(five.slice(0, 4))]))
     && !worthReading(five, new Set([comboKey(five.slice(0, 2)), comboKey(five), comboKey([['a', 2], ['b', 1], ['c', 1]])]))); }
+{ const { readCombinations, comboKey } = await import('./from-code.mjs');
+  const L = (s) => s.split('').map((k) => [k, true]);
+  // abcde rests on the three-prop layer abc; abdef rests on abde, a layer one read keeps; cdefg rests on nothing
+  const seen = [];
+  const got = await readCombinations([L('cdefg'), L('abdef'), L('abde'), L('abcde')], new Set([comboKey(L('abc'))]), async (l) => { const k = l.map(([x]) => x).join(''); seen.push(k); return k === 'abde'; });
+  ok('a combination of five props or more is read where three or more of its props build a layer (one a smaller read kept, too), and skipped and counted where none does; four-prop ones always read, first',
+    seen.join() === 'abde,abdef,abcde' && got.read === 3 && got.skipped === 1); }
 console.log(`${n}/${n} passed`);
