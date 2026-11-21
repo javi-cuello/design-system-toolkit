@@ -503,6 +503,14 @@ ok('combinations too many to list are said to be unlisted, never left to read as
   ownInsides(same, m, { partial: true, reading: true }); ownInsides(other, m, { partial: true, reading: true }); ownInsides(design, m, { partial: true });
   ok('in a reading, a layer inside an instance that differs from its component\'s only in place and constraints is the component\'s; one of another fill is kept, and a design keeps its rule',
     !same['i/box'] && !same['i/box/check'] && other['i/box/check'].background === 'C/b' && !!other['i/box'] && !!design['i/box/check']);
+  // one the reading places elsewhere than its component does is a difference the reading states, kept; at the component's
+  // own place, the component's
+  const moved = read('C/a'), atOwn = read('C/a');
+  moved['i/box/check'] = { ...moved['i/box/check'], absolute: { x: 3, y: 3 } };
+  atOwn['i/box/check'] = { ...atOwn['i/box/check'], absolute: { x: 1, y: 1 }, constraints: { horizontal: 'scale', vertical: 'scale' } };
+  ownInsides(moved, m, { partial: true, reading: true }); ownInsides(atOwn, m, { partial: true, reading: true });
+  ok('in a reading, a part placed elsewhere than its component places it is kept; at its component\'s place it is the component\'s',
+    !!moved['i/box/check'] && moved['i/box/check'].absolute.x === 3 && !atOwn['i/box/check']);
 }
 
 {

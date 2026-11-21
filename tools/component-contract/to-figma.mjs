@@ -230,21 +230,8 @@ function iconSize(x) {
    draws there (the outermost that holds it); a part with no such instance above it, one none of them draws (or draws
    as another kind or component), or one inside an instance the library keeps whole, stays missing. Only the
    drawn side is filled: a part the library lacks may be one its instance hides. Tested by test-to-figma.mjs. */
-/* The instances a contract keeps whole (one hides a layer no prop shows), over every variant at once, as from-code's
-   wholeIn finds them for its reading: each whose insides a partial cut (derive's ownInsides) would shrink. */
-export function wholeHosts(contract, mains) {
-  const { ownInsides } = req('./derive.cjs'), out = new Set();
-  if (!contract || !mains) return out;
-  const all = Object.assign({}, ...[...(contract.variants || [])].reverse().map((v) => v.add || {}), contract.anatomy || {});
-  for (const [id, x] of Object.entries(all)) {
-    if (!x || x.kind !== 'instance' || !mains(x.component, x.key)) continue;
-    const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
-    const n = Object.keys(sub).length;
-    ownInsides(sub, mains, { partial: true });
-    if (Object.keys(sub).length < n) out.add(id);
-  }
-  return out;
-}
+/* The instances a contract keeps whole: derive's wholeHosts, the one source from-code's reading keeps them by. */
+export const wholeHosts = (contract, mains) => req('./derive.cjs').wholeHosts(contract, mains);
 
 export function ownInPlaced(library, drawn, mains, whole = new Set()) {
   if (!mains || !library || !drawn) return drawn;

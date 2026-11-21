@@ -254,26 +254,6 @@ export function colouredIn(design) {
   return out;
 }
 
-/* The placed instances a design keeps whole (one hides a layer no prop shows, so derive kept layers equal to its
-   component's): the ones the reading's own cut (ownInsides, partial, `reading`) drops something from, so the reading
-   keeps them whole too. The same cut as the reading's: Carbon's Status notification, kept whole in a slider's error
-   state with its glyph's place and constraints unstated (derive keeps none inside an instance), read as nothing to drop
-   under a cut that held those against its component's, and its insides were then cut from the reading. `mains` is
-   byComponentName over the library, `ownInsides` derive's. */
-export function keptWhole(design, mains, ownInsides) {
-  const out = new Set();
-  if (!design) return out;
-  const all = Object.assign({}, ...[...(design.variants || [])].reverse().map((v) => v.add || {}), design.anatomy);
-  for (const [id, x] of Object.entries(all)) {
-    if (x.kind !== 'instance' || !mains(x.component, x.key)) continue;
-    const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
-    const n = Object.keys(sub).length;
-    ownInsides(sub, mains, { partial: true, reading: true });
-    if (Object.keys(sub).length < n) out.add(id);
-  }
-  return out;
-}
-
 /* A library's settings by component folder (the house's where it keeps none): the one source the self leg writes its
    sheet, markup and mapping under and the reading reads them back under, as to-code and to-markup take them. */
 export const librarySettings = (componentsDir) => req('../snapshot/projects.cjs').librarySettingsFor(componentsDir);
@@ -1543,11 +1523,11 @@ async function main() {
     const fr = figmaContract && figmaContract.anatomy && figmaContract.anatomy.root || {};
     const room = typeof fr.width === 'number' ? fr.width : fr.width === 'fill' && fr.canvas && typeof fr.canvas.width === 'number' ? fr.canvas.width : null;
     if (room) notes.push(`read in a room ${room} wide, the width Figma draws the component at`);
-    const { ownStyling, ownInsides, normalForm, byComponentName, placedAs, placedMatch } = req('./derive.cjs');
+    const { ownStyling, ownInsides, normalForm, byComponentName, placedAs, placedMatch, wholeHosts } = req('./derive.cjs');
     const mainOf = byComponentName([...official.values()]);
     // the instances the design keeps whole (one hides a layer no prop shows): there it keeps layers equal to its component's,
-    // which a partial cut would drop (keptWhole)
-    const wholeIn = keptWhole(figmaContract, mainOf, ownInsides);
+    // which a partial cut would drop (derive's wholeHosts, the one roundTrip fills by)
+    const wholeIn = wholeHosts(figmaContract, mainOf);
     // (and the layers it states a colour for: inside an instance kept whole, only there is the reading's icon colour kept)
     const colouredOf = figmaContract ? colouredIn(figmaContract) : null;
     // the room at the combination read: a variant that sets the root's width (a small breakpoint's 404) gives its own.

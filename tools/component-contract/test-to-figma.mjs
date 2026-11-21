@@ -271,8 +271,8 @@ delete globalThis.figma;
   // the component's and so left out of the library's (derive's inherit), are left out of the fill too
   const chev = { component: 'Chev', props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 }, down: { kind: 'instance', parent: 'root', component: 'Down', width: 16, height: 16, constraints: { horizontal: 'scale', vertical: 'scale' }, absolute: { x: 0, y: 0 } } }, variants: [] };
   const mains = (n) => (n === 'Chev' ? chev : null);
-  const holder = (kept) => ({ component: 'Select', props: {}, anatomy: { root: { kind: 'container' }, c: { kind: 'instance', parent: 'root', component: 'Chev', width: 16, height: 16 }, ...(kept && { 'c/down': { kind: 'instance', parent: 'c', component: 'Down', width: 16, height: 16 } }) }, variants: [] });
-  ok('a part filled from the placed component it is the direct part of keeps no constraints, as the library keeps none for it', roundTrip(holder(true), holder(false), { mains }).rows.length === 0);
+  const holder = (kept) => ({ component: 'Select', props: {}, anatomy: { root: { kind: 'container' }, c: { kind: 'instance', parent: 'root', component: 'Chev', width: 16, height: 16 }, ...(kept && { 'c/down': { kind: 'instance', parent: 'c', component: 'Down', width: 16, height: 16, overflow: 'hidden' } }) }, variants: [] });
+  ok('a part filled from the placed component it is the direct part of keeps no constraints, as the library keeps none for it', !roundTrip(holder(true), holder(false), { mains }).rows.some((r) => /constraints/.test(r.at)));
 }
 
 {

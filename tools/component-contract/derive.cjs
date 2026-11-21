@@ -667,11 +667,12 @@ function ownInsides(anatomy, mains, { partial = false, whole = new Set(), colour
       // an icon's size said by its width, as code says it (a Size that is its width and height): to-figma's iconSize
       // equivalence, for a reading (from-code)
       const sized = (y) => { const { Size, ...w } = y.with || {}; const same = Size != null && String(Size) === String(y.width) && y.width === y.height; const { with: _, ...r } = y; return same ? (Object.keys(w).length ? { ...r, with: w } : r) : y; };
-      // and its place and constraints, which no instance can override (figma-fact: no-nested-position-override): code
-      // reads none where the component places a layer in a frame (Atlassian's Checkbox icon's box at 1, 1, scaled), so a
-      // reading's are never the instance's own (a design's are compared as walked, above)
-      const placeless = (y) => { const { absolute: _a, constraints: _c, ...r } = y; return r; };
-      return reading && look(arcForm(placeless(sized(y)))) === look(arcForm(placeless(sized(x))));
+      // and its place and constraints where the reading states none, which no instance can
+      // override (figma-fact: no-nested-position-override): code reads none where the component places a layer in a frame (Atlassian's
+      // Checkbox icon's box at 1, 1, scaled), so their absence is the component's own; one the reading does state is
+      // compared, so a part code places elsewhere stays a difference (a design's are compared as walked, above)
+      const unstated = (m, by) => { const r = { ...m }; for (const f of ['absolute', 'constraints']) if (by[f] === undefined) delete r[f]; return r; };
+      return reading && look(arcForm(sized(y))) === look(arcForm(unstated(sized(x), y)));
     };
     const kept = new Set(inner.filter((k) => !own(k)));
     for (const k of inner) if (!kept.has(k) && ![...kept].some((x) => x.startsWith(k + '/'))) delete anatomy[k];
@@ -963,4 +964,24 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs };
+/* The placed instances a contract keeps whole (one hides a layer no prop shows, so derive kept layers equal to its
+   component's), over every variant at once: each whose insides the reading's own cut (ownInsides, partial, `reading`)
+   would shrink. One source for from-code, which keeps them whole in its reading, and to-figma's roundTrip, which fills
+   no part of one (a part code did not draw there stays missing). With the reading's cut: Carbon's Status notification,
+   kept whole in a slider's error state with its glyph's place unstated, read as nothing to drop under a cut that held
+   place against its component. `mains` is byComponentName over the library. */
+function wholeHosts(contract, mains) {
+  const out = new Set();
+  if (!contract || !mains) return out;
+  const all = Object.assign({}, ...[...(contract.variants || [])].reverse().map((v) => v.add || {}), contract.anatomy || {});
+  for (const [id, x] of Object.entries(all)) {
+    if (!x || x.kind !== 'instance' || !mains(x.component, x.key)) continue;
+    const sub = Object.fromEntries(Object.entries(all).filter(([k]) => k === id || k.startsWith(`${id}/`)).map(([k, v]) => [k, JSON.parse(JSON.stringify(v))]));
+    const n = Object.keys(sub).length;
+    ownInsides(sub, mains, { partial: true, reading: true });
+    if (Object.keys(sub).length < n) out.add(id);
+  }
+  return out;
+}
+
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs, wholeHosts };

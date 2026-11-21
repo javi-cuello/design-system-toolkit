@@ -573,14 +573,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
 { // an instance the design keeps whole, its glyph's place and constraints unstated as derive keeps none inside an instance
   // (Carbon's Status notification in a slider's error state), is kept whole by the reading: the reading's cut drops that
   // glyph as its component's, so it is one that cut drops something from; one the design keeps a different glyph in is not
-  const { keptWhole } = await import('./from-code.mjs');
-  const { ownInsides } = createRequire(import.meta.url)('./derive.cjs');
+  const { wholeHosts } = createRequire(import.meta.url)('./derive.cjs');
+  const { wholeHosts: viaRoundTrip } = await import('./to-figma.mjs');
   const mains = byComponentName([{ component: 'Status', figma: { key: 'k' }, props: {}, anatomy: { root: { kind: 'container', width: 16, height: 16 },
     fill: { kind: 'graphic', parent: 'root', width: 8, height: 10, absolute: { x: 4, y: 3 }, constraints: { horizontal: 'scale', vertical: 'scale' }, background: 'C/w' } }, variants: [] }]);
   const design = (bg) => ({ props: {}, anatomy: { root: { kind: 'container' }, i: { kind: 'instance', parent: 'root', component: 'Status', key: 'k', width: 16, height: 16 },
     'i/fill': { kind: 'graphic', parent: 'i', width: 8, height: 10, background: bg } }, variants: [] });
   ok('an instance whose kept glyph is its component\'s but for place and constraints is kept whole; one with a glyph of its own is not',
-    keptWhole(design('C/w'), mains, ownInsides).has('i') && !keptWhole(design('C/x'), mains, ownInsides).has('i') && !keptWhole(null, mains, ownInsides).size);
+    wholeHosts(design('C/w'), mains).has('i') && !wholeHosts(design('C/x'), mains).has('i') && !wholeHosts(null, mains).size);
+  ok('roundTrip fills by the same instances kept whole as the reading keeps (one source)', viaRoundTrip(design('C/w'), mains).has('i'));
 }
 { // the layers a design states a colour for: a background in its base or a variant's add, or a variant's set of one
   const { colouredIn } = await import('./from-code.mjs');
