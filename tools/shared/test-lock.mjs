@@ -93,5 +93,7 @@ await new Promise((r) => (l1.exitCode !== null ? r() : l1.on('close', r)));
   assert.ok(Date.now() - t4 < 15000, 'promptly');
   assert.equal(await yieldIfWanted('long run'), false, 'with no one waiting it keeps the slot');
   release(); await new Promise((r) => (w.exitCode !== null ? r() : w.on('close', r)));
+  fs.writeFileSync(path.join(process.env.TOOLKIT_LOCK_DIR, 'want-999999.json'), JSON.stringify({ pid: 999999, what: 'gone', first: false, at: 0 }));
+  assert.equal((await import('./lock.mjs')).waiters().length, 0, 'a dead waiter is no one');
   assert.equal(fs.readdirSync(process.env.TOOLKIT_LOCK_DIR).filter((f) => f.startsWith('want-')).length, 0, 'no waiter note is left behind'); }
-console.log('test-lock: 30 assertions passed');
+console.log('test-lock: 31 assertions passed');

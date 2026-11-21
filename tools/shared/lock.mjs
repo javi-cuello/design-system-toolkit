@@ -78,11 +78,13 @@ let child = null, slotHeld = null;
    (2026-11-21). A note whose process is gone is no one. */
 const wantFile = (pid = process.pid) => path.join(lockDir(), `want-${pid}.json`);
 const unwant = () => { try { fs.rmSync(wantFile(), { force: true }); } catch { /* gone */ } };
+process.once('exit', unwant); // once for the process, not per hold
 export function waiters() {
   let names = [];
   try { names = fs.readdirSync(lockDir()).filter((f) => /^want-\d+\.json$/.test(f)); } catch { return []; }
   return names.map((f) => { try { return JSON.parse(fs.readFileSync(path.join(lockDir(), f), 'utf8')); } catch { return null; } })
-    .filter((w) => w && w.pid !== process.pid && alive(w.pid));
+    // a waiter killed before it could clear its note is removed here, so a reused pid never reads as a waiter later
+    .filter((w) => { if (w && !alive(w.pid)) { try { fs.rmSync(wantFile(w.pid), { force: true }); } catch { /* gone */ } return false; } return w && w.pid !== process.pid; });
 }
 /* Whether a live waiter could take the slot this process holds (a first-only waiter, bin/check or bin/land, only slot 0). */
 export function wanted() {
@@ -117,7 +119,7 @@ export function hold(what, { say = (l) => console.error(l), first = false } = {}
       for (let i; (i = buf.indexOf('\n')) >= 0;) {
         const l = buf.slice(0, i); buf = buf.slice(i + 1);
         if (l === 'busy') {
-          try { fs.writeFileSync(wantFile(), note.replace(/^\{/, `{"first":${first},`)); process.once('exit', unwant); } catch { /* unsaid: no one yields to it */ }
+          try { fs.writeFileSync(wantFile(), note.replace(/^\{/, `{"first":${first},`)); } catch { /* unsaid: no one yields to it */ }
           const tell = () => { const h = holder({ first }); if (h) say(`measuring lock: waiting for ${describe(h)}`); };
           tell(); timer = setInterval(tell, 60000);
         } else if (l === 'nolock') finish(false, `cannot open ${lockFile()}`);
