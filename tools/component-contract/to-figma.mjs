@@ -304,7 +304,8 @@ function atDefault(x, mains) {
 export function roundTrip(library, drawn, { limit = Infinity, mains = null, layoutUnit = false } = {}) {
   library = figmaSide(library); drawn = figmaSide(drawn);
   const rows = new Map();
-  const add = (at, a, b) => { const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
+  let adds = 0; // every row added, a repeat too (diff reads it to tell whether a component differed)
+  const add = (at, a, b) => { adds++; const k = JSON.stringify([at, a, b]); const r = rows.get(k) || { at, library: a ?? null, drawn: b ?? null, in: 0 }; r.in++; rows.set(k, r); };
   const diff = (a, b, at) => {
     if (JSON.stringify(a) === JSON.stringify(b)) return;
     // a placed instance's key is which component it is, compared only where both sides hold one (a reading from code
@@ -328,9 +329,9 @@ export function roundTrip(library, drawn, { limit = Infinity, mains = null, layo
       let other = false;
       for (const k of ks) {
         if (k === 'key' && other) continue;
-        const before = rows.size, seen = [...rows.values()].reduce((n, r) => n + r.in, 0);
+        const before = adds;
         diff(a[k], b[k], at ? `${at}.${k}` : k);
-        if (k === 'component') other = rows.size > before || [...rows.values()].reduce((n, r) => n + r.in, 0) > seen;
+        if (k === 'component') other = adds > before;
       }
     }
     else add(at, a, b);
