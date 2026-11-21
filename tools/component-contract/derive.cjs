@@ -939,4 +939,4 @@ function bridge(stored) {
   return { paths: out(paths), ids: out(ids), props, clashes: [...new Set(clashes)] };
 }
 
-module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs };
+module.exports = { derive, expand, selfCheck, SHAPE, variantDefaults, bridge, fold, mainsFrom, atProps, glyphColour, ownStyling, OWN, normalForm, byComponentName, ownGlyph, ownInsides, asPlaced, placedMatch, placedAs };

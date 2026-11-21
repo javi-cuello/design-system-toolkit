@@ -36,7 +36,7 @@ import { officials, homeIn } from './official.mjs';
 import { expand, variantDefaults, kebab, camel, keyMatches } from './layers.mjs';
 import { declarations, holds } from './css.mjs';
 import { negative } from './rules.mjs';
-const { atProps, asPlaced, placedMatch, placedAs, glyphColour } = createRequire(import.meta.url)('./derive.cjs');
+const { atProps, asPlaced, placedMatch, placedAs, glyphColour, OWN } = createRequire(import.meta.url)('./derive.cjs');
 const { folderOf } = createRequire(import.meta.url)('../snapshot/store.cjs');
 import { cssName } from '../tokens/names.mjs';
 import { attrWords, propAttr } from '../shared/prop-attr.mjs';
@@ -353,18 +353,42 @@ function overrideOf(a, host, rel, m, mains, B = a) {
   if (!own || !inner) return null;
   const ctx = (x, par) => ({ root: false, holds: holds(x.kind), row: !par || (par.layout || {}).direction !== 'column', anchors: false, box: null, pull: null });
   // a nested instance is placed, never restyled here: where it sits and how big (PLACED), as any placed instance
-  const placedOnly = (ds) => (own.kind === 'instance' ? ds.filter(([p]) => PLACED.test(p)) : ds);
-  const theirs = new Map(placedOnly(declarations(own, ctx(own, mid ? ownUp[mid.e.parent] : M[own.parent]), tokenNames).decls).map(([p, v]) => [p, v]));
+  // (and its own styling over its component's root, drawn whole on both sides: an override set on the nested instance itself)
+  const styled = (x, par) => (x.kind === 'instance' ? placedDecls(x, ctx(x, par), mains) : declarations(x, ctx(x, par), tokenNames).decls);
+  const theirs = new Map(styled(own, mid ? ownUp[mid.e.parent] : M[own.parent]).map(([p, v]) => [p, v]));
   if (!e) return { mine: [...theirs], theirs, removed: [], changed: [] };
   // the instance lays its insides out as its component's root does, where it states no layout of its own
   // where a layer sits inside a placed component is never the instance's to change (figma-fact:no-nested-position-override; Figma's help, "Apply changes to
   // instances": no override of the position of any layer within the component, its constraints or its order): neither
   // what a record says of it is written, nor what it leaves out (derive keeps no place for a layer two deep) unset
   const fixed = (p) => /^(position|inset.*|top|right|bottom|left|translate|order|z-index)$/.test(p);
-  const mine = placedOnly(declarations(e, ctx(e, e.parent === host ? { ...M.root, ...a[host], layout: (a[host] || {}).layout || M.root.layout } : a[e.parent]), tokenNames).decls).filter(([p]) => !fixed(p));
+  const mine = styled(e, e.parent === host ? { ...M.root, ...a[host], layout: (a[host] || {}).layout || M.root.layout } : a[e.parent]).filter(([p]) => !fixed(p));
   const said = new Set(mine.map(([p]) => p));
   const removed = [...theirs.keys()].filter((p) => !said.has(p) && !fixed(p));
   return { mine, theirs, removed, changed: [...mine.filter(([p, v]) => theirs.get(p) !== v), ...removed.map((p) => [p, 'unset'])] };
+}
+
+/* A placed instance's declarations drawn whole: where it sits and how big (PLACED), and its own styling over its
+   component's root at its props (derive's ownStyling keeps on an instance only a field that differs from that root: a
+   fill, stroke or layout set on the instance itself, an override), said as that root with those fields over it; only
+   PLACED where the library does not hold the component. `ctx` is the instance's own (where it sits). */
+function placedDecls(x, ctx, mains) {
+  const m = x.component && mains(x.component, x.key), R = m && atProps(m, x.with).root;
+  const placed = declarations(x, ctx, tokenNames).decls.filter(([p]) => PLACED.test(p));
+  if (!R) return placed;
+  const whole = { ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) };
+  return [...placed, ...declarations(whole, { ...ctx, holds: holds(R.kind) }, tokenNames).decls.filter(([p]) => !PLACED.test(p))];
+}
+
+/* An instance's own styling against its component's root at its props: what it writes that the root does not (or
+   unsets), each beside the root's own value (`theirs`), so a combination where the instance no longer overrides a
+   property the base rule writes says the component's own value. */
+function ownOverride(x, ctx, mains) {
+  const m = x.component && mains(x.component, x.key), R = m && atProps(m, x.with).root;
+  if (!R) return { changed: [], theirs: new Map() };
+  const styled = (y) => new Map(declarations(y, { ...ctx, holds: holds(R.kind) }, tokenNames).decls.filter(([p]) => !PLACED.test(p)));
+  const theirs = styled(R), mine = styled({ ...R, ...Object.fromEntries(OWN.filter((f) => x[f] != null).map((f) => [f, x[f]])) });
+  return { theirs, changed: [...[...mine].filter(([p, v]) => theirs.get(p) !== v), ...[...theirs.keys()].filter((p) => !mine.has(p)).map((p) => [p, 'unset'])] };
 }
 
 /* The layers recorded inside a placed instance, each matched to the part of its component it is (derive's placedMatch). */
@@ -496,6 +520,15 @@ export function drawn(c, when, mains = () => null, t = HOUSE) {
     // a placed component is placed here and looks as its own sheet says (code-standard rule 5): where it sits and
     // how big, never its fill, stroke, corners or type, which a prop changes in code
     const kept = e.kind === 'instance' || slotted ? decls.filter(([p]) => PLACED.test(p)) : decls;
+    // save an override set on the instance itself (derive keeps only what differs from its component's root at its
+    // props: Carbon's toggle fills its toggle item per state): written on the instance, and where the defaults' override
+    // no longer holds, the component's own value, as an override inside one is
+    if (e.kind === 'instance' && !slotted) {
+      const ictx = { root: false, holds: holds(e.kind), row: !parent || (parent.layout || {}).direction !== 'column', anchors: false, box: null, pull: null };
+      const over = ownOverride(e, ictx, mains), said = new Set(over.changed.map(([p]) => p));
+      const at = B[id] && B[id].component === e.component ? ownOverride(B[id], ictx, mains) : { changed: [] };
+      kept.push(...over.changed, ...at.changed.filter(([p]) => !said.has(p)).map(([p]) => [p, over.theirs.get(p) ?? 'unset']));
+    }
     if (sample) kept.push(['inline-size', '100%']);
     // where a variant reorders a box's children (a Reversed), each child says its place, so the order follows the props
     if (parent && reordered(c).has(e.parent) && typeof e.order === 'number') kept.push(['order', String(e.order)]);

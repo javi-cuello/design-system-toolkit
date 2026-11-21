@@ -393,4 +393,25 @@ ok('a placed component stretched by its insets takes no size from its main', dec
   ok('a layer\'s place inside a placed component is never unset by a record that leaves it out', /background: var\(--c-strong\)/.test(markRule) && !/position|inset/.test(markRule));
   ok('a graphic directly under a placed component takes its override', /\.ds-bar > \.ds-bar__row > \.ds-row__line \{[^}]*background: var\(--c-strong\)/.test(sheet));
 }
+// an override set on a placed instance itself (a fill on Carbon's toggle item, per state) is written on the instance,
+// against its component's root at its props; where a variant drops it, the component's own value there; a nested
+// instance's own override likewise, through its holder
+{
+  const knob = { contract: 1, component: 'Knob', props: { state: { type: 'enum', values: ['enabled', 'read-only'], default: 'enabled', figmaValues: ['Enabled', 'Read-only'], figma: 'State' } },
+    anatomy: { root: { kind: 'container', layout: { direction: 'row', gap: 0, align: 'start', crossAlign: 'start' }, background: 'C/soft', width: 48 } }, variants: [{ when: { state: 'read-only' }, set: { 'root.background': null } }] };
+  const sw = { contract: 1, component: 'Switch', props: { on: { type: 'boolean', default: true, axis: true, figma: 'On' }, state: { type: 'enum', values: ['enabled', 'read-only'], default: 'enabled', figmaValues: ['Enabled', 'Read-only'], figma: 'State' } },
+    anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob', with: { State: 'Enabled' }, width: 48, background: 'C/success', layout: { direction: 'row', gap: 0, align: 'end', crossAlign: 'start' } } },
+    variants: [{ when: { on: false }, set: { 'knob.background': 'C/off', 'knob.layout': null } }, { when: { state: 'read-only' }, set: { 'knob.with': { State: 'Read-only' }, 'knob.background': null } }] };
+  const mains = (x) => (x === 'Knob' ? knob : null);
+  const sheet = toCss(sw, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains });
+  ok('an override on a placed instance itself is written on it: its fill and its layout, only what differs from its component',
+    /\.ds-switch > \.ds-switch__knob \{[^}]*justify-content: flex-end;[^}]*background: var\(--c-success\)/.test(sheet) && !/\.ds-switch > \.ds-switch__knob \{[^}]*(gap|flex-direction)/.test(sheet)
+    && /data-on="false"[^{]*> \.ds-switch__knob \{[^}]*background: var\(--c-off\)/.test(sheet) && selfCheck(sw, rulesOf(sw, mains).rules, mains).length === 0);
+  ok('where a variant drops the instance\'s override, the component\'s own value there (none: unset)', /read-only[^{]*> \.ds-switch__knob \{[^}]*background: unset/.test(sheet));
+  ok('without the library, an instance is placed only', !/background/.test(toCss(sw, 'switch', { naming: { kind: 'class', prefix: 'ds-', part: '__' } }).split('@layer')[1]));
+  const rail = { contract: 1, component: 'Rail', props: {}, anatomy: { root: { kind: 'container' }, knob: { kind: 'instance', parent: 'root', component: 'Knob', with: { State: 'Enabled' } } }, variants: [] };
+  const slider = { contract: 1, component: 'Slider', props: {}, anatomy: { root: { kind: 'container' }, rail: { kind: 'instance', parent: 'root', component: 'Rail', with: {} }, 'rail/knob': { kind: 'instance', parent: 'rail', component: 'Knob', with: { State: 'Enabled' }, background: 'C/strong' } }, variants: [] };
+  const m2 = (x) => ({ Knob: knob, Rail: rail })[x] || null;
+  ok('a nested instance\'s own override is written through its holder', /\.ds-slider > \.ds-slider__rail > \.ds-rail__knob \{[^}]*background: var\(--c-strong\)/.test(toCss(slider, 'slider', { naming: { kind: 'class', prefix: 'ds-', part: '__' }, mains: m2 })));
+}
 console.log(`${n} passed`);
