@@ -109,7 +109,8 @@ export function mechanisms(by) {
   const out = new Map();
   for (const [c, rows] of Object.entries(by)) for (const r of rows) {
     const last = r.at.split('/').pop();
-    const key = `${last.includes('.') ? last.slice(last.indexOf('.') + 1).replace(/\.\d+$/, '') : 'element'} | ${shapeOf(r.library)} → ${shapeOf(r.drawn)}`;
+    const field = last.includes('.') ? last.slice(last.indexOf('.') + 1).replace(/\.\d+(?=\.|$)/g, '.N') : ['props', 'name'].includes(r.at) ? r.at : 'element';
+    const key = `${field} | ${shapeOf(r.library)} → ${shapeOf(r.drawn)}`;
     const g = out.get(key) || { components: new Set(), rows: 0, examples: [] };
     g.components.add(c); g.rows++;
     if (g.examples.length < 2) g.examples.push(`${c}: ${r.at} ${JSON.stringify(r.library)?.slice(0, 60)} | ${JSON.stringify(r.drawn)?.slice(0, 60)}`);
@@ -571,15 +572,21 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === (() => { try { return 
   const all = opt('--projects');
   if (all && flag('--mechanisms')) {
     // read only: each project's panel, its stored readings measured as the report measures them, grouped across all
-    const legs = (opt('--legs') || 'self').split(','), by = {};
+    const legs = (opt('--legs') || 'self').split(','), by = {}, stale = [];
     for (const p of all.split(',')) {
       const w = req('../snapshot/projects.cjs').layout(null, p);
       if (w.error) { console.error(w.error); process.exit(2); }
       const panel = readPanel(w.projectDir);
       if (!panel) { console.error(`no panel at ${panelFile(w.projectDir)}: make one with --make-panel 30`); process.exit(2); }
+      // an official contract derive would write otherwise is said; whether a reading's inputs moved since is not asked here
+      // (todayOf hashes every drawing: minutes, too slow for a ranking), so the run says so
+      const old = staleContracts(w.paths.components).filter((f) => panel.includes(f));
+      if (old.length) console.log(`warning: ${p}: ${old.length} official contract(s) are not what their specs derive now: run node tools/component-contract/write.cjs ${w.paths.components}`);
       const m = measure(w, panel);
-      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows;
+      for (const l of legs) for (const [c, x] of Object.entries(m.legs[l] || {})) if (x.rows) { by[`${p}:${c}${legs.length > 1 ? ` (${l})` : ''}`] = x.rows; if (x.stale) stale.push(`${p}:${c}`); }
     }
+    console.log('(readings ranked as stored: a reading whose inputs moved since is not marked here; the report says which)');
+    if (stale.length) console.log(`warning: ${stale.length} stale reading(s) ranked with the rest (${stale.slice(0, 3).join(', ')}${stale.length > 3 ? ', …' : ''}): read them again for a true ranking`);
     const all2 = Object.values(by);
     console.log(`${all2.length} measured, ${all2.filter((r) => !r.length).length} the same, ${all2.reduce((a, r) => a + r.length, 0)} rows`);
     for (const g of mechanisms(by).slice(0, +(opt('--top') || 25))) console.log(`${String(g.components).padStart(4)} ${String(g.rows).padStart(5)}  ${g.key}\n            ${g.examples.join('\n            ')}`);

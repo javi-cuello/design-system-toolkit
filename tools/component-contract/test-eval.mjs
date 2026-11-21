@@ -280,8 +280,9 @@ ok('a panel\'s accept replaces its own components and keeps every other\'s', JSO
   const g = mechanisms({
     'a:x': [{ at: 'icon.absolute.x', library: -2, drawn: 10 }, { at: 'label', library: { kind: 'text' }, drawn: null }],
     'b:y': [{ at: 'box/icon.absolute.x', library: 4, drawn: 5 }],
-    'b:z': [] });
-  assert.deepStrictEqual(g.map((x) => [x.key, x.components, x.rows]), [['absolute.x | num → num', 2, 2], ['element | el:text → none', 1, 1]]);
+    'b:z': [],
+    'c:p': [{ at: 'props', library: 'a', drawn: 'b' }, { at: 'box.fills.0.color', library: 'x/y', drawn: 'x/z' }] });
+  assert.deepStrictEqual(g.map((x) => [x.key, x.components, x.rows]), [['absolute.x | num → num', 2, 2], ['element | el:text → none', 1, 1], ['props | word → word', 1, 1], ['fills.N.color | token → token', 1, 1]]);
   assert.match(g[0].examples[0], /^a:x: icon\.absolute\.x -2 \| 10$/); n++;
 }
 
