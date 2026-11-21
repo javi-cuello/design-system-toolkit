@@ -5,50 +5,102 @@ description: Advise on the right Claude model and Effort setting before starting
 
 # Design systems model routing
 
-**Version 1.3.3** — history in CHANGELOG.md.
+**Version 1.4.0** — history in CHANGELOG.md.
 
-Claude cannot change the model or Effort setting itself — only the user can, via the model picker. This skill's job is to check the current task against the routing table (`tools/shared/model-routing.json`, printed as the *Routing table* section says) and, when there is a mismatch, tell the user **before starting work** so they can switch. If the current model/effort already fits, say nothing about routing and just proceed.
+This skill checks a design systems task against the routing table before work starts. When the session's model or effort does not fit the task, it tells the user so they can switch. Only the user can change the model or Effort setting, via the model picker; Claude cannot change either. If the current model and effort already fit, say nothing about routing and just proceed.
 
 ## How to use this skill
 
-1. Identify which task family the request belongs to (the routing table's families).
-2. Compare against the model currently powering the session (from the system prompt) and, if known, the effort level.
-3. If there's a mismatch, give a one-sentence recommendation with the reason, e.g.:
-   - "This is a mechanical audit — Sonnet at medium effort handles it and uses far less of your limit. Want to switch, or continue here?"
-   - "Designing a new skill is one-time work that compounds — worth switching to Opus or Fable at high effort before we start."
-4. If the user declines or doesn't respond to the suggestion, proceed with the current model without further comment. Never repeat the suggestion in the same conversation.
-5. Name the effort level, never "default": the default is medium on Opus 5.5 and Haiku 5.5 but high on Sonnet 5.5 and Fable 5.2 (Anthropic's model docs, as cached 2026-11-03).
-6. If the effort level isn't visible, only mention effort when it clearly matters (highest for plugin design and deep research; low is fine for pure math tasks).
+1. Read the routing table (*Routing table*). Never route from memory.
+2. Find the task family the request belongs to, by its skill or by its task.
+3. For `oklch-color-scale-system` or `design-system-research`, ask which mode before routing (*Modes that move the tier*).
+4. Compare the row with the model powering the session (from the system prompt), and with the effort level if known.
+5. If they match, say nothing about routing and proceed.
+6. If they do not match, give a one-sentence recommendation with its reason, **before starting work**, and offer to switch or continue.
+7. If the user declines or does not respond, proceed on the current model without further comment. Never repeat the suggestion in the same conversation.
+8. If the user says "switch", explain that only they can switch, via the model picker. Never claim a switch has happened.
+
+Two example recommendations:
+
+- "This is a mechanical audit — Sonnet at medium effort handles it and uses far less of your limit. Want to switch, or continue here?"
+- "Designing a new skill is one-time work that compounds — worth switching to Opus or Fable at high effort before we start."
+
+### Naming effort
+
+- Name the effort level, never "default". The default is medium on Opus 5.5 and Haiku 5.5, but high on Sonnet 5.5 and Fable 5.2 (Anthropic's model docs).
+- If the effort level is not visible, mention effort only when it clearly matters.
+- Effort clearly matters at the top: the highest level for plugin design and deep research. Low is fine for pure math tasks.
 
 ## Routing table
 
-The table is data: `tools/shared/model-routing.json` in the toolkit, one row per task family — `task`, the `skills` it covers, the advised `model` and `effort` (ranges, as you say them to the user), `why`, `also` (what else the row covers, where it says), `keys` (the skill, or `skill:mode` in the skill's own mode names, plus `authoring` for work on skills and plugins in the toolkit and `long-form-prose` for the row no skill owns; `grey` and `gray` both work), and `agent`, the single pick a workflow sets. Read it before advising; never route from memory. `node tools/shared/test-model-routing.mjs` holds it: every skill has a row.
+The table is data: `tools/shared/model-routing.json` in the toolkit, one row per task family. `node tools/shared/test-model-routing.mjs` holds it: every skill has a row.
 
-**Two skills appear twice, and the mode is what moves the tier** — `oklch-color-scale-system` in free/grey mode is rule-following, but anchored mode with a brand colour that fails contrast is a trade-off problem; `design-system-research` light is a few searches, deep is multi-source synthesis. Ask which mode before routing, because the skill name alone does not settle it.
+| Field | Holds |
+|---|---|
+| `task` | The task family |
+| `skills` | The skills the row covers |
+| `model`, `effort` | The advice, as ranges you say to the user |
+| `why` | The reason for the tier |
+| `also` | What else the row covers, where it says |
+| `keys` | The skill, or `skill:mode` in the skill's own mode names |
+| `agent` | The single model and effort a workflow sets |
 
-**`ds-model-routing` is not in the table** because it is not a task — it is the thing you consult before one. Every other design-systems skill in the toolkit has a row; `kirby-cms` has none because it is a CMS working reference outside this table's scope, and routing CMS development work is not this skill's question.
+Two keys name no skill: `authoring`, for work on skills and plugins in the toolkit, and `long-form-prose`, for the row no skill owns. As modes, `grey` and `gray` both work.
+
+### Modes that move the tier
+
+Two skills appear twice, and the mode moves the tier. The skill name alone does not settle the route, so ask which mode first.
+
+| Skill | Lower tier | Higher tier |
+|---|---|---|
+| `oklch-color-scale-system` | Free or grey mode: rule-following | Anchored mode, a brand colour failing contrast: a trade-off |
+| `design-system-research` | Light: a few searches | Deep: multi-source synthesis |
+
+### Skills with no row
+
+- `ds-model-routing` has no row: it is not a task, but the thing you consult before one.
+- `kirby-cms` has no row: it is a CMS working reference outside this table's scope. Routing CMS development work is not this skill's question.
+- Every other design-systems skill in the toolkit has a row.
 
 ## In a workflow
 
-A workflow script sets each `agent()`'s model and effort from the same table, so a mechanical stage runs on Sonnet and a judging stage on Opus at high effort without anyone choosing per run. A script has no filesystem, so pass the routes in as the Workflow's `args`: run `node tools/shared/model-routing.mjs` from the toolkit, put its output in `args.routes`, and spread a stage's route into its options — `agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })`. A skill whose mode moves the tier has only `skill:mode` keys (`design-system-research:deep`, `oklch-color-scale-system:free`): decide the mode before the stage, since a key that is not there spreads nothing and the stage silently keeps the session's model. A Medium row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`. This skill is the instruction to set `effort` there; a stage the table has no row for keeps the session's model and effort.
+A workflow script sets each `agent()`'s model and effort from the same table. A mechanical stage then runs on Sonnet, and a judging stage on Opus at high effort, without anyone choosing per run. This skill is the instruction to set `effort` there.
+
+1. Run `node tools/shared/model-routing.mjs` from the toolkit. A script has no filesystem, so the routes go in as the Workflow's `args`.
+2. Put its output in `args.routes`.
+3. Spread a stage's route into its options, as below.
+4. For a skill whose mode moves the tier, decide the mode before the stage. Such a skill has only `skill:mode` keys, such as `design-system-research:deep` or `oklch-color-scale-system:free`.
+
+```js
+agent(prompt, { ...args.routes['figma-components-audit'], phase: 'Audit' })
+```
+
+- A key that is not there spreads nothing, and the stage silently keeps the session's model.
+- A Medium row's pick is `medium`, set explicitly, so a stage does not inherit a session running at `max`.
+- A stage the table has no row for keeps the session's model and effort.
 
 ## Escalation triggers (regardless of task family)
 
-Recommend stepping UP a tier or raising effort when the task involves:
+Recommend stepping UP a tier, or raising effort, when the task involves:
+
 - Ambiguous judgment calls (is this variant structure wrong, or just unconventional?)
 - One-time design decisions (taxonomies, anchoring strategies, skill architecture)
 - Long unsupervised multi-stage runs where errors compound
 - Reconciling conflicting sources of truth (Figma vs code vs docs)
 
 Recommend stepping DOWN when the task is:
+
 - Deterministic (math, lookups, format conversion)
 - Fully specified by an existing skill's procedure
 - High-volume and repetitive (50 components × the same check)
 
 ## Context beats model choice
 
-A recurring practitioner finding (TJ Pitre / Southleft, among others): well-structured context — accurate component metadata, bound tokens, good descriptions, tight MCP servers — improves reliability more than upgrading models does. If results are inconsistent on a design systems task, first check whether the underlying library metadata and skills are in order before recommending a bigger model. With good context, Sonnet at medium covers most of the table; without it, even the top tier produces confident nonsense.
+Well-structured context improves reliability more than a bigger model does. That means accurate component metadata, bound tokens, good descriptions and tight MCP servers. Practitioners report this again and again (TJ Pitre / Southleft, among others).
+
+- If results on a design systems task are inconsistent, first check the library's metadata and the skills. Recommend a bigger model only after that.
+- With good context, Sonnet at medium covers most of the table. Without it, even the top tier produces confident nonsense.
 
 ## Claude Code note
 
-If the user works in Claude Code, mention that routing can be *enforced* there rather than advised: each agent definition can pin its own model, reasoning effort, and tools in frontmatter (e.g. a cheap read-only explorer agent on Haiku/Sonnet, an audit agent on Sonnet, a skill-authoring agent on Opus). Offer to draft those agent files if relevant.
+In Claude Code, routing can be *enforced* rather than advised; mention this to a user working there. Each agent definition can pin its own model, reasoning effort and tools in frontmatter. Examples: a cheap read-only explorer agent on Haiku or Sonnet, an audit agent on Sonnet, a skill-authoring agent on Opus. Offer to draft those agent files if relevant.

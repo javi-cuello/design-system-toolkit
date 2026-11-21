@@ -1,4 +1,6 @@
-# Eval cases — ds-model-routing (v1.3.3)
+# Eval cases — ds-model-routing (v1.4.0)
+
+**Walked: 2026-11-21 for 1.4.0** — rewrite to skill-standard §A clause I, no rule changed. A1 → steps 6–7 (was step 3); A2 → lead and step 5; A3 → lead and step 8; A4 → *Context beats model choice*; A5 → steps 1–3, *Modes that move the tier*, *Skills with no row*. `node tools/shared/test-model-routing.mjs` re-run.
 
 **Walked: 2026-11-21 for 1.3.3** — A1–A4 re-read: each advised effort is now a level that matches the row's agent effort (0 of 24 rows say "default"); `node tools/shared/test-model-routing.mjs` 5/5.
 
@@ -32,7 +34,7 @@
 Fixture: a design systems task arrives on a model the table says is the wrong tier for it.
 Assert: the recommendation is made *before* any work on the task begins, as a one-sentence note with the reason and an explicit continue-or-switch choice. Advising after the work is done is a failure — the point is to save the tokens, not to explain where they went.
 
-Traced: 2026-08-05 — to SKILL.md's before-starting-work rule and step 3.
+Traced: 2026-08-05 — to SKILL.md's before-starting-work rule and step 3 (step 6 since 1.4.0).
 
 ## A2 · A matching model produces silence (negative case)
 Fixture: a mechanical audit running on the tier the table already prescribes.

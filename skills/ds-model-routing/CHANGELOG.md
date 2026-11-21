@@ -1,5 +1,6 @@
 # Changelog — ds-model-routing
 
+- 1.4.0 (2026-11-21): SKILL.md meets skill-standard §A clause I: one lead paragraph, eight one-action steps, effort naming, table fields and mode-dependent skills as tables, *In a workflow* as steps. No rule changed.
 - 1.3.3 (2026-11-21): effort is named as a level, never "default", which is medium on Opus 5.5 and Haiku 5.5 but high on Sonnet 5.5 and Fable 5.2; the table's Default, Low–default and Default–high become Medium, Low–medium and Medium–high, matching each row's agent effort.
 - 1.3.2 (2026-11-11): step 1 and the opening line no longer point at a "table below": the table is `tools/shared/model-routing.json`.
 - 1.3.1 (2026-11-05): the table and its printer are named by their path from the toolkit's root, as skill-standard asks and `bin/get` reads, not by one machine's clone location.
