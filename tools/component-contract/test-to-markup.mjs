@@ -561,6 +561,35 @@ else {
   { const lab3 = { contract: 1, component: 'Lab', props: { required: { type: 'boolean', default: true, figma: 'Required' } }, anatomy: { root: { kind: 'container' }, mark: { kind: 'text', parent: 'root', content: '*' } },
       variants: [{ when: { required: false }, set: { 'mark.content': 'Optional' } }] };
     ok('words a variant sets on a base text are said there', /!required \? "Optional" : "\*"/.test(toReact(lab3, 'lab', { naming: CLASS, library: { Lab: { ...lab3, folder: 'lab' } } }))); }
+  // a part only variants draw, each with its own words (carbon slider's message: the error text at error, the warning
+  // text at warning; its status icon's label: a prop's words at one status, words of its own at another)
+  { const msg = { contract: 1, component: 'Msg', props: { state: { type: 'enum', values: ['enabled', 'error', 'warning', 'done'], default: 'enabled', figma: 'State' },
+      errorText: { type: 'string', default: 'Error', figma: 'Error text', sets: ['label'] }, warningText: { type: 'string', default: 'Warning', figma: 'Warning text', sets: ['label'] } },
+      anatomy: { root: { kind: 'container' } },
+      variants: [{ when: { state: 'error' }, add: { label: { kind: 'text', parent: 'root', content: '{errorText}' } } }, { when: { state: 'warning' }, add: { label: { kind: 'text', parent: 'root', content: '{warningText}' } } },
+        { when: { state: 'done' }, add: { label: { kind: 'text', parent: 'root', content: 'Done' } } }] };
+    const label = (c) => toReact(c, 'msg', { naming: CLASS, library: { Msg: { ...c, folder: 'msg' } } }).split('\n').find((l) => l.includes('ds-msg__label')) || '';
+    const r = label(msg);
+    ok('a part only variants draw says each one\'s words there: another prop\'s, or words of its own', /\(state === "warning"\) \? warningText/.test(r) && /errorText/.test(r) && /"Done"/.test(r), r);
+    ok('which words a part only variants draw shows is the same whatever order the variants come in', r === label({ ...msg, variants: [...msg.variants].reverse() }), `${r}\n${label({ ...msg, variants: [...msg.variants].reverse() })}`);
+    const lit = { ...msg, props: { state: msg.props.state }, variants: [{ when: { state: 'error' }, add: { label: { kind: 'text', parent: 'root', content: 'Error' } } }, { when: { state: 'warning' }, add: { label: { kind: 'text', parent: 'root', content: 'Warning' } } }] };
+    ok('a part only variants draw, with words of its own in each, says each one\'s', /"Warning"/.test(label(lit)) && /"Error"/.test(label(lit)) && /state === "(warning|error)"/.test(label(lit)), label(lit)); }
+  // a variant's words that a prop setting the text gives anyway stay that prop: never written in where the prop was
+  { const f = { contract: 1, component: 'Fld', props: { filled: { type: 'boolean', default: false, figma: 'Filled' }, placeholderText: { type: 'string', default: 'Search', figma: 'Placeholder', sets: ['t'] }, valueText: { type: 'string', default: 'Search', figma: 'Value', sets: ['t'] } },
+      anatomy: { root: { kind: 'container' }, t: { kind: 'text', parent: 'root', content: '{placeholderText}' } }, variants: [{ when: { filled: true }, set: { 't.content': 'Search' } }] };
+    const r = toReact(f, 'fld', { naming: CLASS, library: { Fld: { ...f, folder: 'fld' } } }).split('\n').find((l) => l.includes('ds-fld__t')) || '';
+    ok('a variant\'s words that another prop setting the text gives are that prop there, never a literal in its place', r.includes('{filled ? valueText : placeholderText}'), r);
+    const one = { ...f, props: { filled: f.props.filled, placeholderText: f.props.placeholderText } };
+    const r1 = toReact(one, 'fld', { naming: CLASS, library: { Fld: { ...one, folder: 'fld' } } }).split('\n').find((l) => l.includes('ds-fld__t')) || '';
+    ok('a variant\'s words its own prop gives anyway leave the text that prop, with no choice between equals', r1.includes('>{placeholderText}<'), r1);
+    // overlapping variants of as many props come in one order whatever order their props are written in
+    const ov = { contract: 1, component: 'Ov', props: { a: { type: 'boolean', default: false, figma: 'A' }, b: { type: 'boolean', default: false, figma: 'B' }, z: { type: 'boolean', default: false, figma: 'Z' } }, anatomy: { root: { kind: 'container' } },
+      variants: [{ when: { z: true, a: true }, add: { m: { kind: 'text', parent: 'root', content: 'ZA' } } }, { when: { b: true, z: true }, add: { m: { kind: 'text', parent: 'root', content: 'BZ' } } }] };
+    const ovl = (c) => toReact(c, 'ov', { naming: CLASS, library: { Ov: { ...c, folder: 'ov' } } }).split('\n').find((l) => l.includes('ds-ov__m')) || '';
+    const ov2 = { ...ov, variants: [{ ...ov.variants[0], when: { a: true, z: true } }, { ...ov.variants[1], when: { z: true, b: true } }] };
+    // (a condition's terms stay in the order written; which words are the fallback and which the choice is the order)
+    const terms = (l) => l.replace(/\(([a-z]+) && ([a-z]+)\)/g, (_, x, y) => `(${[x, y].sort().join(' && ')})`);
+    ok('overlapping variants of as many props are ordered by their props, not the order they are written in', terms(ovl(ov)) === terms(ovl(ov2)), `${ovl(ov)}\n${ovl(ov2)}`); }
   // a snippet's nested choice is bracketed (PHP 8 refuses it bare), and no value is the language's null
   const php = toSnippet(lib.Row, 'row', { naming: KIRBY, library: lib });
   const phpFile = path.join(os.tmpdir(), `row-${process.pid}.php`); fs.writeFileSync(phpFile, php);

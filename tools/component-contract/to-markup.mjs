@@ -226,6 +226,7 @@ export function partsOf(c, t = HOUSE) {
   const props = c.props || {};
   const pointer = (k, v) => (props[k] || {}).role === 'interaction' && ((props[k] || {}).pointer || []).includes(v);
   const parts = new Map();
+  const swapsIn = (w, id) => { const k = (/^\{(.+)\}$/.exec(w) || [])[1]; return !!k && (props[k] || {}).type === 'string' && (props[k].sets || []).includes(id); };
   for (const [id, e] of Object.entries(c.anatomy || {})) parts.set(id, { id, e, base: true, adds: [], removes: [], pointerOnly: false, rings: [], words: [] });
   for (const v of c.variants || []) {
     const when = v.when || {};
@@ -237,6 +238,8 @@ export function partsOf(c, t = HOUSE) {
       parts.get(id).adds.push(when);
       const at = parts.get(id);
       if (at.base && typeof e.content === 'string' && !/^\{.*\}$/.test(e.content) && (e.content !== at.e.content || at.words.length)) at.words.push([when, e.content]);
+      // (a part only variants draw: each one's words, set out below)
+      if (!at.base && typeof e.content === 'string') (at.texts = at.texts || []).push([when, e.content]);
     }
     for (const id of v.remove || []) if (parts.has(id)) { if (byPointer) parts.get(id).pointerGone = true; else parts.get(id).removes.push(when); }
     // words a pointer state sets on a base text (a field's "Search" at focus): marked, for textOf's gap
@@ -250,6 +253,17 @@ export function partsOf(c, t = HOUSE) {
     }
   }
   for (const part of parts.values()) {
+    // a part only variants draw, each with its own words (a message at error says the error text, at warning the warning
+    // text): in an order no listing changes, the broader variant first and a narrower one over it, so its words are
+    // the first's and each other's where it draws them, a prop's that sets this text or words of its own
+    if (part.texts && part.texts.length > 1) {
+      // (each when said with its props sorted, so the order they are written in changes nothing)
+      const said = (w) => JSON.stringify(Object.keys(w).sort().map((k) => [k, w[k]]));
+      const ts = [...part.texts].sort(([a], [b]) => Object.keys(a).length - Object.keys(b).length || (said(a) < said(b) ? -1 : said(a) > said(b) ? 1 : 0));
+      part.e = { ...part.e, content: ts[0][1] };
+      for (const [when, w] of ts.slice(1)) if ((!/^\{.*\}$/.test(w) || swapsIn(w, part.id)) && (w !== part.e.content || part.words.length)) part.words.push([when, w]);
+    }
+    delete part.texts;
     // a ring where to-code makes it the ringed element's outline at every focus that draws it (to-code's ringOf, the one rule)
     part.ring = !part.base && part.pointerOnly && part.rings.length > 0 && part.rings.every(Boolean);
     for (let up = part.e.parent; up && up !== 'root'; up = ((parts.get(up) || {}).e || {}).parent) {
@@ -374,7 +388,13 @@ function build(c, folder, { naming, library = {}, jsx, lang = JS, settings = HOU
       const literal = e.content && !/^\{[^}]*\}$/.test(e.content) && xs.every((y) => words.some(([, w]) => swapped(w) === y));
       let code = literal ? lang.str(e.content) : ref(first.name);
       let nested = false;
-      for (const [when, w] of words) { const y = swapped(w), t = y && testOf(when); if (!t) continue; code = t === 'true' ? ref(y.name) : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${ref(y.name)} : ${nested ? `(${code})` : code}`; nested = true; }
+      // (and words of its own a variant gives it, a status label's "Incomplete" beside the props' words)
+      // (words a prop setting the text gives anyway are that prop's, never written in where the prop was: another prop's
+      // first, a variant that gives the text other words being that prop's place, else the one shown otherwise; a
+      // choice between the same words is none)
+      const holds = (y, w) => ((y.p || {}).default ?? y.default) === w;
+      const gives = (w) => (/^\{.*\}$/.test(w) ? undefined : xs.find((y) => y !== first && holds(y, w)) || (holds(first, w) ? first : undefined));
+      for (const [when, w0] of words) { const g = gives(w0), w = g ? `{${g.key}}` : w0; const y = swapped(w), t = (y || !/^\{.*\}$/.test(w)) && testOf(when); if (!t) continue; const say = y ? ref(y.name) : lang.str(w); if (say === code) continue; code = t === 'true' ? say : `${t.includes('&&') || t.includes('===') ? `(${t})` : t} ? ${say} : ${nested ? `(${code})` : code}`; nested = true; }
       return { code };
     }
     let code = lang.str(e.content || ''), any = false;
