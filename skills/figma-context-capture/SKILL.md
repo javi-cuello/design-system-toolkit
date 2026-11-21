@@ -53,7 +53,7 @@ Read [discovery-passes.md](references/discovery-passes.md) before the first `fig
    | Every file, every mode | M, which reads nothing and is asked at step 5 |
 
    - Where the registry does not state the role, infer it from pass A and confirm it with the user. Doc-contract pages and zero component sets mean a source file.
-   - An icon library holds only icons or assets, and no control. Route it with `"roles": ["icons"]` in `snapshot-routing`, never `components`. The docs site gives an icons-role file its own Icons tab; a components role files its icons under Foundations. Propose it at step 5 like any role.
+   - In an icon library every published component is an icon or an asset, and none is a control. Route it with `"roles": ["icons"]` in `snapshot-routing`, never `components`. The docs site gives an icons-role file its own Icons tab; a components role files its icons under Foundations. Propose it at step 5 like any role.
 
 4. **Run the passes** from the shipped scripts, as [discovery-passes.md](references/discovery-passes.md) says. Batch the calls, and re-probe after any failure. Two rules carry the failure modes:
 
