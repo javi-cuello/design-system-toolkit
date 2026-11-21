@@ -421,6 +421,17 @@ export function modeKeysOf(axes, contract) {
 
 export const keepsName = (name, id) => partName(id) !== name;
 
+/* The key a reading's icon instance takes: the design's own, from the instance it places at that layer (or, for another
+   glyph of the set, any instance of that name the design places). An instance named without its key resolves by name,
+   so an icon that shares a component's name (Carbon's Checkbox glyph inside the Checkbox set) would become that
+   component, and a component that places itself recurses without end when drawn again. */
+export function designKeyOf(design, fe, name) {
+  if (fe && fe.component === name) return fe.key || null;
+  const all = [design.anatomy || {}, ...(design.variants || []).map((v) => v.add || {})].flatMap((a) => Object.values(a));
+  const keys = [...new Set(all.filter((x) => x.kind === 'instance' && x.component === name && x.key).map((x) => x.key))];
+  return keys.length === 1 ? keys[0] : null;
+}
+
 export function asShape(x, fa, hasChildren) {
   if (x.kind !== 'container' || !fa || fa.kind !== 'graphic' || hasChildren) return x;
   if (fa.shape === 'ellipse') { if (x.full) { x.kind = 'graphic'; x.shape = 'ellipse'; delete x.radius; delete x.full; delete x.layout; } }
@@ -2326,6 +2337,8 @@ async function main() {
         const glyphs = fromCode.variants.map((v) => (v.set || {})[`${id}.asset`]).filter((g) => typeof g === 'string');
         if (!swapped && (!held(named) || !glyphs.every((g) => held(whole(g))))) return;
         e.kind = 'instance'; e.component = swapped ? fe.component : named; delete e.asset;
+        // (with the design's key, so it stays that icon and is never a same-named component of the library: designKeyOf)
+        { const k = designKeyOf(figmaContract, fe, e.component); if (k) e.key = k; else delete e.key; }
         // the glyph's own size the mark says (to-markup's data-icon-size): its set's variant, as Figma's Size
         if (e.iconSize) { e.with = { ...(e.with || {}), Size: e.iconSize }; delete e.iconSize; }
         // a colour it only takes from around it is no override of the placed icon: the design leaves it the icon's own

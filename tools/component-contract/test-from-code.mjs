@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // tools/component-contract/from-code.mjs: the pure parts of reading a contract from code.
 import assert from 'node:assert/strict';
-import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
+import { unplacedIn, designTokenFor, tokenTable, writtenAs, styleFor, usageIn, delta, asFigma, offerFor, governedReading, controlsApi, cornerOf, isSlot, slotMark, wordsOf, zeroTokens, carries, axisValueOf, asDesignSwaps, glyphSwaps, asShape, boundText, keepsName, designKeyOf, modeKeysOf, shownRead, stackLikeDesign } from './from-code.mjs';
 import { cssName } from '../tokens/names.mjs';
 import { createRequire } from 'node:module';
-const { expand } = createRequire(import.meta.url)('./derive.cjs');
+const { expand, byComponentName } = createRequire(import.meta.url)('./derive.cjs');
 import { drawn as toCodeDrawn } from './to-code.mjs';
 import { judge } from '../parity/external.mjs';
 
@@ -426,5 +426,15 @@ ok('a name its id spells back is no name of its own; one it does not (a slash, o
   const wv = asFigma(w).contract.variants[0];
   ok('a variant\'s own layer under a placed component, and a dotted key, are judged as the design judges them; a layer a variant moves out of the flow keeps its constraints, one outside keeps them',
     !wv.add['s/box/x'].absolute && !wv.add['s/box/x'].constraints && !('s/box.constraints.horizontal' in wv.set) && 'f.constraints' in wv.set && 'f/y.constraints' in wv.set);
+}
+{ // an icon named as a component of the library (Carbon's Checkbox glyph inside the Checkbox set) keeps the design's key,
+  // so a second trip resolves it to the icon, never to the set that holds it (which would place itself without end)
+  const set = { component: 'Checkbox', figma: { key: 'set' }, anatomy: { root: { kind: 'container' }, glyph: { kind: 'instance', parent: 'root', component: 'Checkbox', key: 'icon' } },
+    variants: [{ when: { checked: true }, add: { tick: { kind: 'instance', parent: 'root', component: 'Checkbox checked', key: 'tick' } } }] };
+  const mains = byComponentName([set]);
+  const k = designKeyOf(set, set.anatomy.glyph, 'Checkbox');
+  ok('a read icon takes the design\'s key for its layer, or the one key the design places that glyph under; and with it is never the same-named component',
+    k === 'icon' && mains('Checkbox', k) === null && mains('Checkbox', null) === set
+    && designKeyOf(set, set.anatomy.glyph, 'Checkbox checked') === 'tick' && designKeyOf(set, null, 'Close') === null);
 }
 console.log(`${n}/${n} passed`);
