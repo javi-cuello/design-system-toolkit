@@ -325,6 +325,28 @@ test('worktrees: each is its own repo; bin/land is its push; its reviewers diff 
   s.clean();
 });
 
+test("a worktree branch's committed work since the last review is counted at its landing, a subagent's too", () => {
+  const dir = repo();
+  try {
+    const git = (cwd, ...a) => spawnSync('git', ['-C', cwd, '-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { encoding: 'utf8' });
+    git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+    const W = path.join(dir, '.claude/worktrees/w');
+    git(dir, 'worktree', 'add', '-q', '-b', 'worktree-w', W);
+    // an agent's work, committed in its worktree and never seen as written by this session
+    fs.writeFileSync(path.join(W, 'big.mjs'), lines(200)); git(W, 'add', '.'); git(W, 'commit', '-qm', 'agent work');
+    const t0 = Date.now();
+    const s = session([at(user('land it'), t0)]);
+    fs.writeFileSync(planPath(s.id), PLAN_TEXT);
+    const land = (id) => planGate(s.id, s.file, [dir], { id, name: 'Bash', input: { command: `cd ${W} && bin/land` } }, W);
+    assert.match(String(land('k1')), /^Not pushed/, 'an unreviewed branch does not land');
+    s.clean();
+    const r = session([at(user('land it'), t0), at(review(), t0 + 60000)]);
+    fs.writeFileSync(planPath(r.id), PLAN_TEXT);
+    assert.equal(planGate(r.id, r.file, [dir], { id: 'k2', name: 'Bash', input: { command: `cd ${W} && bin/land` } }, W), null, 'reviewed after its last commit, it lands');
+    r.clean();
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('a repo that lands through bin/land is edited in a worktree; a session already editing its main checkout finishes there', () => {
   delete process.env.TOOLKIT_WORKTREES;
   try {

@@ -270,6 +270,22 @@ function dirty(files) {
 
 /* Lines each tracked file in a repo differs from its last commit by, from
    one git call (renames off, so a moved file is its two halves). */
+/* A worktree branch's committed work since the session's last review: what a subagent wrote there is not counted as it
+   writes (add), so it is counted here, at its landing: the diff from the branch's last commit before that review (its
+   merge-base with origin/main when none) to HEAD, per file. Without it a background agent's branch landed unreviewed
+   (review of a3acb70c, 2026-11-21). */
+function branchSince(repo, reviewedAt) {
+  const git = (a) => spawnSync('git', ['-C', repo, ...a], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  const mb = git(['merge-base', 'origin/main', 'HEAD']).stdout.trim();
+  if (!mb) return {};
+  let base = mb;
+  if (reviewedAt) { const b = git(['rev-list', '-1', `--before=${reviewedAt}`, 'HEAD']).stdout.trim(); if (b && git(['merge-base', '--is-ancestor', mb, b]).status === 0) base = b; }
+  const lines = {};
+  const g = git(['-c', 'core.quotePath=off', 'diff', '--numstat', '--no-renames', '-z', base, 'HEAD']);
+  for (const e of (g.stdout || '').split('\0')) { const m = e.match(/^(\d+|-)\t(\d+|-)\t(.+)$/); if (m && !BOOKKEEPING.test(m[3])) lines[path.join(repo, m[3])] = Math.max(+m[1] || 0, +m[2] || 0); }
+  return lines;
+}
+
 function diffs(repo) {
   const lines = {};
   const g = spawnSync('git', ['-C', repo, '-c', 'core.quotePath=off', 'diff', '--numstat', '--no-renames', '-z', 'HEAD'], { encoding: 'utf8', maxBuffer: 1 << 26 });
@@ -794,7 +810,10 @@ export function planGate(session, transcript, repos, call, cwd, sub = false) {
     // only the pushed repo's work: unreviewed work elsewhere does not hold this one back
     const repo = where(pushDir(call.input.command, cwd, repos), repos)?.repo;
     const files = Object.fromEntries(Object.entries(st.since.files).filter(([f]) => repo && where(f, repos)?.repo === repo));
-    const s = size({ files, wide: st.since.wide.filter((f) => files[f] !== undefined) });
+    // a worktree's branch: its committed work since the last review too, a subagent's included (never counted as written)
+    if (repo && IN_WORKTREE.test(path.relative(repos.map(realPath).find((r) => repo.startsWith(r + path.sep)) || repo, repo))) for (const [f, n] of Object.entries(branchSince(repo, st.reviewedAt))) files[f] = Math.max(files[f] || 0, n);
+    const wideOf = (f) => st.since.wide.includes(f) || WIDE.test(path.relative(repo || '', f));
+    const s = size({ files, wide: Object.keys(files).filter(wideOf) });
     const why = s.full ? `${s.why.join(', ')} changed since the last independent review` : st.reviewing.length ? 'a review is still running' : '';
     if (why) {
       if (call.id) { st.denied.push(call.id); delete st.pre[call.id]; }
