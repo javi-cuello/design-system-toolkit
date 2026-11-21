@@ -139,26 +139,6 @@
   "dated": 26,
   "noContents": 1
  },
- "skills/figma-context-capture/SKILL.md": {
-  "words": 2256,
-  "longSentences": 34,
-  "longParagraphs": 7,
-  "codeParagraphs": 1,
-  "grade": 12,
-  "lines": 124,
-  "dated": 1,
-  "noContents": 0
- },
- "skills/figma-context-capture/references/discovery-passes.md": {
-  "words": 3269,
-  "longSentences": 47,
-  "longParagraphs": 5,
-  "codeParagraphs": 16,
-  "grade": 10.8,
-  "lines": 141,
-  "dated": 1,
-  "noContents": 1
- },
  "skills/figma-contrast-matrix/SKILL.md": {
   "words": 1968,
   "longSentences": 33,

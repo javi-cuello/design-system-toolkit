@@ -1,4 +1,6 @@
-# Eval cases — figma-context-capture (v2.15.3)
+# Eval cases — figma-context-capture (v2.16.0)
+
+**Walked: 2026-11-21 for 2.16.0** — readability rewrite, no rule changed: C1–C19 re-traced to the new text (pass M, slot names and the role rule in discovery-passes.md and SKILL.md steps 3 and 5; state, overrides and output paths in references/assembly.md), and their step pointers moved from step 2 to step 5; `node tests/test-passes.mjs` 78/78.
 
 **Walked: 2026-11-19 for 2.15.3** — template only: the tracked metric is cited at figma-components-audit, figma-standard rule 17 having retired into it; C10 re-read and its citation repointed, assertion unchanged.
 
@@ -103,7 +105,7 @@ Traced: 2026-08-08 — to the shipped template and SKILL.md, by inspection; no l
 
 ## C7 · File evidence never answers a maintainer-only question
 Fixture: a library containing a page named `Deprecated`, three components prefixed `[old]`, and a sibling file named `… Mobile`.
-Assert: lifecycle, versioning/deprecation and platform parity are all recorded `[TBD]`, each carrying the observation as an attached hypothesis ("a `Deprecated` page exists — is this the marking convention?"), and the run puts them to the maintainer at step 2 as a block distinct from the discovered-values summary. The failure is recording "deprecation is marked by an `[old]` prefix" as `[inferred]` — the sample supports the pattern and says nothing about the intent, and a wrong answer here makes later skills skip live components.
+Assert: lifecycle, versioning/deprecation and platform parity are all recorded `[TBD]`, each carrying the observation as an attached hypothesis ("a `Deprecated` page exists — is this the marking convention?"), and the run puts them to the maintainer at step 5 as a block distinct from the discovered-values summary. The failure is recording "deprecation is marked by an `[old]` prefix" as `[inferred]` — the sample supports the pattern and says nothing about the intent, and a wrong answer here makes later skills skip live components.
 
 Walked live: 2026-08-08 — a live refresh run, in which pass M's four questions were asked as a distinct block before assembly.
 
@@ -117,7 +119,7 @@ Traced: 2026-08-08 — to the template's §2, which carries the Audience column 
 Fixture: token list `Colour/Background/Feedback/Danger/soft`, no taxonomy page, maintainer present.
 Assert: the ask offers the published synonym sets (Carbon's element/role/order/state, Primer's prefix/namespace/property/variant/scale) rather than one invented label, and captures per slot whether it is required, optional or at-most-one. Extends C1, which asserts only that the labels are tagged `[TBD]` and not invented — a `[TBD]` slot list with no cardinality still lets a later skill accept a token name the project would reject.
 
-Traced: 2026-08-08 — to pass M, which exists, runs no code, and is routed from SKILL.md's step 1 and step 2.
+Traced: 2026-08-08 — to pass M, which exists, runs no code, and is routed from SKILL.md's steps 3 and 5.
 
 ## C10 · A house rule is cited, never copied into the document
 Fixture: a capture run for a project that follows every house default, where the maintainer says nothing about finding classification, `[check-token]`, the tracked metric or refills.
@@ -164,7 +166,7 @@ Runs: node tests/test-passes.mjs — "pass S1: hiding on every variable is told 
 ## C16 · Passes B, E, F/S4, S2 and the registry run from scripts; what the counts mean stays the agent's — 2026-10-31
 Fixture: fake files (`tests/test-passes.mjs`): a pass A output with three `_` names, a lone `.` name, a two-sibling `Top bar / …` stem and a lone slash-name, and `Label` bare on one page while `_Label` is on another; pass D layers from two sets sharing `-icon` and `-label`; a described set beside an undescribed component, a header instance outside any component and one inside; remote doc cells, a local table and a `_Ratios grid`; a primitives collection of every variable hidden with a 12-step ramp carrying `8-anchor` and an alpha ramp, beside a published one; and two files' pass A with one pass C.
 Assert: pass B marks `_` recordable and `.` not, records the `Top bar` stem and not the lone one, does not count ` / ` as a bare `/`, reports the `Label` contradiction with both pages, lists only suffixes found in two sets, and says suffixes are unread with no pass D. Pass E samples the described set and never a variant, returns headings as written, bullets and stops, both spellings counted, and the header candidate outside a component only. Pass F counts local, instance and remote furniture with the set's key, and `_Ratios grid` per page. Pass S2 reads only hidden collections by default, groups the ramp with its marker and the alpha ramp, tallies step lengths, and reads a named collection whatever its hiding. The registry tags each role `[inferred]` and audience `[TBD]`, and draws the dependency from collection keys, `[TBD]` with no pass C.
-Assert the negative: none of these scripts decides a convention; each contradiction stays an open question for step 2.
+Assert the negative: none of these scripts decides a convention; each contradiction stays an open question for step 5.
 Recorded under toolkit-standard §D 23: passes B, E, F, S2, S4 and the registry were done by hand each run.
 
 Runs: node tests/test-passes.mjs — "pass B: a name prefixed on one page and bare on another is a contradiction, with both pages", "pass S2: a ramp is its parent path, its steps in library order, with a marker found", "registry: the dependency line names each library and the collection keys behind the edge". Walked live 2026-10-31 (the line at the top).
@@ -203,7 +205,7 @@ Assert:
 - `pass-c-libraries.js` names the file and lists each local collection's own names.
 - `4px` reads 4 and `-4` reads −4; the word-named radius with no snapshot is skipped, never lost.
 
-Assert the negative: no number read from a name reaches `audit`; the script names no slot and its `kind` is confirmed at step 2.
+Assert the negative: no number read from a name reaches `audit`; the script names no slot and its `kind` is confirmed at step 5.
 Recorded under toolkit-standard §D 23: pass C's scales, grammar and spelling were derived by hand from up to 400 names per collection, and feed the audit's `TOKENS.spacing` and `TOKENS.radius`. Two reviews then found the first versions:
 - took a name's number for its px;
 - read a value from any collection of that name;
@@ -217,11 +219,11 @@ Runs: node tests/test-passes.mjs — "pass C scales: a step named late among man
 Fixture: a project whose §5 snapshot routing names a screens file with three stored screens, one named `<Screens> List - Empty`.
 Assert: pass M asks which screen types exist, the template each starts from, their required states and where the shell config lives; the empty screen is put as a hypothesis ("is empty a required state of every list?"); §3's Screens table holds only those answers, `[TBD]` where unanswered, and names no region, example screen or component other than the type's template.
 Negative: a table of each screen's regions and components copied from the stored screens; a required state recorded from a screen name without asking; the item asked of a project with no screens file.
-Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKILL.md step 2 and the template's §3.
+Traced: 2026-11-11 for 2.13.0 — to references/discovery-passes.md pass M, SKILL.md step 5 and the template's §3.
 
 ## C19 · An icon library is routed as icons — 2026-11-15
 
 Fixture: a project with a foundations file, a components file and a file whose published components are all icons (1,756 icon sets, no controls).
-Assert: the summary at step 2 proposes `"roles": ["icons"]` for the icon file, and the `snapshot-routing` block written carries it; the docs site then shows an Icons tab of its own.
-Negative: the icon file is routed `components` (the docs site puts its icons under Foundations, with no Icons tab), or the role is written without being proposed at step 2.
+Assert: the summary at step 5 proposes `"roles": ["icons"]` for the icon file, and the `snapshot-routing` block written carries it; the docs site then shows an Icons tab of its own.
+Negative: the icon file is routed `components` (the docs site puts its icons under Foundations, with no Icons tab), or the role is written without being proposed at step 5.
 Traced: 2026-11-15 — the live run this case comes from routed the icon file `components`; with SKILL.md's new sentence the role is stated where pass A infers roles, and the template says what it buys.
