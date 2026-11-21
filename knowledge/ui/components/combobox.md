@@ -1,6 +1,6 @@
 # Combobox
 
-A combobox is a text field with a list of suggestions: the person types to narrow a long list, then picks, or enters a value of their own where the field allows it. This page owns the single-value combobox as a component, in design, in Figma and in code: its model, matching, keys, the no-results message, the no-script path and its states. What spans the selection controls stays in [`../patterns/selection.md`](../patterns/selection.md): choosing the control, the visible listbox, and the multi-select that adds chips to a combobox. Related: [select](select.md), [chip](chip.md), [popover](popover.md), [search](../patterns/search.md).
+A combobox is a text field with a list of suggestions: the person types to narrow a long list, then picks, or enters a value of their own where the field allows it. This page owns the single-value combobox as a component, in design, in Figma and in code: its model, matching, keys, the no-results message, the no-script path, the list's size and placement, and its states. What spans the selection controls stays in [`../patterns/selection.md`](../patterns/selection.md): choosing the control, the visible listbox, and the multi-select that adds chips to a combobox. Related: [select](select.md), [chip](chip.md), [popover](popover.md), [search](../patterns/search.md).
 
 ## Overview
 
@@ -53,6 +53,45 @@ A combobox is a text field with a list of suggestions: the person types to narro
 - *Judgement:* Is the list long enough to need typing, and does matching find what people type?
 
 **Sources:** APG, Baymard and Carbon as linked; they agree.
+
+## List size and placement
+
+How wide and how tall a combobox's list is, and where it opens. The mechanics every anchored popup shares (the top layer, anchor positioning, flipping, the script fallback, scroll) are [popover: *Placement*](popover.md#placement).
+
+**What good looks like**
+- [strong] **As wide as the field.** MUI sets its Popper's `width` to the input's `clientWidth` ([MUI Autocomplete source](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/Autocomplete/Autocomplete.js)). Carbon sets the list's width to its field's `clientWidth` ([Carbon ComboBox source](https://github.com/carbon-design-system/carbon/blob/main/packages/react/src/components/ComboBox/ComboBox.tsx)). Polaris opens its Combobox popover `fullWidth`, documented as "Allow popover to stretch to the full width of its activator" ([Polaris Combobox source](https://github.com/Shopify/polaris/blob/main/polaris-react/src/components/Combobox/Combobox.tsx), [Polaris Popover source](https://github.com/Shopify/polaris/blob/main/polaris-react/src/components/Popover/Popover.tsx)). Atlassian's Select runs on a fork of react-select ([`@atlaskit/select` package](https://unpkg.com/@atlaskit/select/package.json)), whose menu is `width: '100%'` of the control, or the control's measured width when portaled ([react-select Menu source](https://github.com/JedWatson/react-select/blob/master/packages/react-select/src/components/Menu.tsx)).
+- [strong] **Libraries without a fixed width expose the field's.** React Aria sets `--trigger-width` on the ComboBox popover, and its docs style it `width: var(--trigger-width)` ([React Aria ComboBox docs](https://react-aria.adobe.com/ComboBox), [React Aria ComboBox.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/ComboBox.tsx)). Radix sets `--radix-popper-anchor-width` ([Radix Popper source](https://github.com/radix-ui/primitives/blob/main/packages/react/popper/src/popper.tsx)), and its Popover docs match "the trigger width" with `--radix-popover-trigger-width` ([Radix Popover docs](https://www.radix-ui.com/primitives/docs/components/popover)). Headless UI exposes `--input-width` and `--button-width` on `ComboboxOptions`, with `w-(--input-width)` in its example ([Headless UI Combobox](https://headlessui.com/react/combobox)).
+- [weak] **At least as wide, so a long option can widen it.** Floating UI's `size` example sets `minWidth`, not `width`, to the reference's width ([Floating UI size](https://floating-ui.com/docs/size)).
+- [strong] **A few rows tall, then it scrolls.** Carbon caps the list at 5.5 rows ("item height * 5.5 items shown", [Carbon list-box styles](https://github.com/carbon-design-system/carbon/blob/main/packages/styles/scss/components/list-box/_list-box.scss)). MUI's listbox takes `maxHeight: '40vh'` and `overflow: auto` (MUI Autocomplete source). react-select, and so Atlassian's Select, defaults `maxMenuHeight` to 300 and `minMenuHeight`, the height below which it flips, to 140 ([react-select Select source](https://github.com/JedWatson/react-select/blob/master/packages/react-select/src/Select.tsx), [`@atlaskit/react-select` build](https://unpkg.com/@atlaskit/react-select@4.12.17/dist/es2019/select.js)). The systems agree on a cap and differ on its size.
+- [weak] **Half a row showing at the cut.** Carbon's cap of 5.5 rows leaves the last visible row cut in half (Carbon list-box styles).
+- [strong] **Opens below the field.** React Aria's ComboBox places its popover at `'bottom start'` (React Aria ComboBox.tsx). Polaris defaults `preferredPosition` to `'below'` (Polaris Combobox source). react-select defaults `menuPlacement` to `'bottom'` (react-select Select source). Headless UI's `anchor` defaults to `bottom` (Headless UI Combobox). Flipping above is [popover: *Placement*](popover.md#placement).
+- [strong] **Never pushes the layout.** Every system above draws the list out of flow. Carbon's list is `position: absolute` (Carbon list-box styles), and `fixed` under `autoAlign` (Carbon ComboBox source). react-select's menu is `position: absolute` (react-select Menu source). MUI portals its Popper unless `disablePortal` is set (MUI Autocomplete source). Polaris renders its popover in a `Portal` (Polaris Popover source). Headless UI portals the options once `anchor` is set (Headless UI Combobox).
+- [required] **In a dialog, opening the list leaves the dialog's height alone.** An absolutely positioned list inside the dialog still adds to the dialog's scrollable overflow; a list in the top layer adds nothing and is not clipped ([popover: *Placement*](popover.md#placement), first item).
+
+**How**
+- [strong] **The width tracks the field.** MUI re-renders when the input resizes, through a `ResizeObserver` (MUI Autocomplete source). React Aria measures the input on resize with `useResizeObserver` (React Aria ComboBox.tsx). Floating UI's `autoUpdate` re-runs on either element's resize ([Floating UI autoUpdate](https://floating-ui.com/docs/autoUpdate)).
+- [moderate] **Measured across the input and its button.** React Aria spans from the leftmost to the rightmost of input and button, or takes its `Group` (React Aria ComboBox.tsx). Headless UI exposes the input's and the button's widths apart (Headless UI Combobox).
+- [moderate] **Height from the space left.** React Aria fills up to the viewport's height by default ([useOverlayPosition source](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useOverlayPosition.ts)). Radix publishes `--radix-popper-available-height` for a `max-height` (Radix Popper source). A fixed cap, as above, applies inside that.
+
+**Cases**
+- A country combobox in a modal dialog adds a scroll bar to the dialog when the list opens → the list moves to the top layer, still inside the dialog's DOM.
+- A list narrower than its field, sized by its longest option → `width` from the field, or `min-width` where long options must not wrap.
+- A list of 250 options runs past the bottom of the window → a capped height with scroll inside, and a flip above when the space below is short.
+
+**Accessibility**
+- [required] The list stays inside a modal dialog's DOM, or it turns inert while the dialog is open ([popover: *Placement*](popover.md#placement), *Accessibility*).
+- [moderate] The list is a non-modal popup: focus stays in the input. The APG keeps DOM focus on the combobox ([APG combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)), and React Aria opens the ComboBox popover with `isNonModal: true`, so it takes no `role="dialog"` (React Aria ComboBox.tsx, [React Aria Popover.tsx](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/Popover.tsx)).
+
+**Build**
+- [required] The `listbox` is a `popover` inside the field's markup, so a dialog around the field holds it too ([popover: *Placement*](popover.md#placement), *Build*).
+- [strong] Width with anchor positioning is `width: anchor-size(width)` ([MDN: Using CSS anchor positioning](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Anchor_positioning/Using)). In a library it is the variable it exposes: `--trigger-width`, `--radix-popper-anchor-width`, `--input-width`. In the script fallback, the field's `clientWidth` is written on resize, as MUI and Carbon do (sources as above).
+- [strong] The `listbox` carries a `max-height` and `overflow-y: auto`, as MUI's and Carbon's do (sources as above).
+
+**Check**
+- *Script*: could open the list inside a modal dialog and assert the dialog's height and `scrollHeight` are unchanged, and that the list's width equals the field's.
+- *Judgement*: does the longest option fit the field's width, or wrap?
+
+**Sources.** MUI, Carbon, Polaris, react-select and its Atlassian fork, React Aria, Radix and Headless UI source and docs, read for width, height, placement and portals; Floating UI for `minWidth`; MDN for `anchor-size()`. They agree on matching the field's width and on capping the height; the cap's size differs.
 
 ## In Figma
 
